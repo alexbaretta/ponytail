@@ -50,3 +50,15 @@ test('imported skills have valid project-neutral metadata and attribution', () =
     }
   }
 });
+
+test('versioned contract schema is valid JSON with a portable identifier', () => {
+  const schemaPath = path.join(
+    skillsRoot,
+    'versioned-data-contracts',
+    'schemas',
+    'versioned-data-contracts.schema.json',
+  );
+  const schema = JSON.parse(fs.readFileSync(schemaPath, 'utf8'));
+  assert.match(schema.$id, /githubusercontent\.com\/alexbaretta\/ponytail/);
+  assert.match(schema.$comment, /Alex Baretta/);
+});
