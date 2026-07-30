@@ -11,17 +11,31 @@ from typing import Any, Callable
 DEFAULT_MODE = "full"
 RUNTIME_MODES = {"off", "lite", "full", "ultra"}
 CONFIG_MODES = RUNTIME_MODES | {"review"}
-SKILL_COMMANDS = {
-    "ponytail-review": "Review the current diff or provided target for over-engineering.",
-    "ponytail-audit": "Audit the repo for over-engineering and deletion opportunities.",
-    "ponytail-debt": "List every exceptional `tech-debt:` marker and its upgrade path.",
-}
-
 ROOT = Path(__file__).resolve().parent
 SKILLS_DIR = ROOT / "skills"
 PONYTAIL_SKILL = SKILLS_DIR / "ponytail" / "SKILL.md"
 REVIEW_SKILL = SKILLS_DIR / "ponytail-review" / "SKILL.md"
 HELP_COMMAND = ROOT / "commands" / "ponytail-help.md"
+REGISTRY = json.loads((ROOT / "generated" / "registry.json").read_text(encoding="utf-8"))["entries"]
+HERMES_SKILLS = {
+    entry["name"]: entry
+    for entry in REGISTRY
+    if entry["kind"] == "skill"
+    and entry["status"] == "enabled"
+    and "hermes" in entry["hosts"]
+}
+HERMES_COMMANDS = {
+    entry["name"]: entry
+    for entry in REGISTRY
+    if entry["kind"] == "command"
+    and entry["status"] == "enabled"
+    and "hermes" in entry["hosts"]
+}
+SKILL_COMMANDS = {
+    name: entry["reason"]
+    for name, entry in HERMES_COMMANDS.items()
+    if name in HERMES_SKILLS and name != "ponytail"
+}
 
 _current_mode = None
 
@@ -180,10 +194,8 @@ def _make_skill_command_handler(ctx: Any, command: str) -> Callable[[str], str]:
 
 def register(ctx: Any) -> None:
     """Register Ponytail hooks, skills, and slash commands with Hermes."""
-    for child in sorted(SKILLS_DIR.iterdir() if SKILLS_DIR.exists() else []):
-        skill_md = child / "SKILL.md"
-        if child.is_dir() and skill_md.exists():
-            ctx.register_skill(child.name, skill_md)
+    for name, entry in sorted(HERMES_SKILLS.items()):
+        ctx.register_skill(name, ROOT / entry["source"] / "SKILL.md")
 
     ctx.register_hook("pre_llm_call", _pre_llm_call)
     ctx.register_hook("pre_gateway_dispatch", rewrite_gateway_command)

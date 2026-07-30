@@ -24,6 +24,11 @@ const PONYTAIL_COMMAND_DESCRIPTION = `Set mode: ${RUNTIME_MODE_LIST}. Commands: 
 const HELP_TEXT = readFileSync(new URL("../commands/ponytail-help.md", import.meta.url), "utf8")
   .replace(/^<!--[\s\S]*?-->\s*/, "")
   .trim();
+const REGISTRY_COMMANDS = JSON.parse(
+  readFileSync(new URL("../generated/registry.json", import.meta.url), "utf8"),
+).entries.filter(
+  (entry) => entry.kind === "command" && entry.status === "enabled" && entry.hosts.includes("pi"),
+);
 
 export function resolveSessionMode(entries, fallbackMode = DEFAULT_MODE) {
   const fallback = normalizePersistedMode(fallbackMode) || DEFAULT_MODE;
@@ -102,7 +107,7 @@ export default function ponytailExtension(pi) {
     ctx?.ui?.notify?.(`Ponytail mode set to ${normalized}.`, "info");
   };
 
-  const sendAlias = (skillName, args, ctx) => {
+  const sendSkillCommand = (skillName, args, ctx) => {
     const normalized = String(args || "").trim();
     const message = normalized ? `${skillName} ${normalized}` : skillName;
 
@@ -150,20 +155,13 @@ export default function ponytailExtension(pi) {
     },
   });
 
-  pi.registerCommand("ponytail-review", {
-    description: "Run /skill:ponytail-review",
-    handler: (_args, ctx) => sendAlias("/skill:ponytail-review", "", ctx),
-  });
-
-  pi.registerCommand("ponytail-audit", {
-    description: "Run /skill:ponytail-audit",
-    handler: (_args, ctx) => sendAlias("/skill:ponytail-audit", "", ctx),
-  });
-
-  pi.registerCommand("ponytail-debt", {
-    description: "Run /skill:ponytail-debt",
-    handler: (_args, ctx) => sendAlias("/skill:ponytail-debt", "", ctx),
-  });
+  for (const entry of REGISTRY_COMMANDS) {
+    if (entry.name === "ponytail" || entry.name === "ponytail-help") continue;
+    pi.registerCommand(entry.name, {
+      description: entry.reason,
+      handler: (args, ctx) => sendSkillCommand(`/skill:${entry.name}`, args, ctx),
+    });
+  }
 
   pi.registerCommand("ponytail-help", {
     description: "Show the Ponytail command reference",

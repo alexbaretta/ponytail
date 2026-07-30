@@ -24,6 +24,7 @@ while project-wide management records remain under `pm/`.
   adapters identify their canonical source in their validation tests.
 - `scripts/` owns local generation, validation, installation, cleanup, and
   publication tooling.
+- `generated/` owns runtime data derived from `registry.tsv`.
 - `tests/` owns core live-development tests.
 - `benchmarks/` is an optional isolated subsystem. It owns all benchmark
   code, tests, dependencies, assets, results, and reproduction instructions.
