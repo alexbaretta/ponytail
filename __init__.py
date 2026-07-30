@@ -86,39 +86,16 @@ def _filter_skill_body_for_mode(body: str, mode: str) -> str:
     return "\n".join(lines)
 
 
-def _fallback_instructions(mode: str) -> str:
-    return (
-        f"PONYTAIL MODE ACTIVE — level: {mode}\n\n"
-        "You are a lazy senior developer. Lazy means efficient, not careless. "
-        "The best code is the code never written.\n\n"
-        "Before any code, stop at the first rung that holds: YAGNI, stdlib, "
-        "native platform, installed dependency, one line, then minimum code. "
-        "No unrequested abstractions, avoidable dependencies, boilerplate, or "
-        "speculative scaffolding. Deletion over addition. Boring over clever. "
-        "Do not simplify away trust-boundary validation, data-loss handling, "
-        "security, accessibility, explicitly requested behavior, or one small "
-        "runnable check for non-trivial logic."
-    )
-
-
 def build_injected_context(mode: str | None = None) -> str:
     """Return the mode-filtered Ponytail context injected before LLM turns."""
     configured = _normalize_config_mode(mode) or _default_mode()
-    if configured == "off":
-        return ""
-    if configured == "review":
-        try:
-            body = REVIEW_SKILL.read_text(encoding="utf-8")
-            return f"PONYTAIL MODE ACTIVE — level: review\n\n{_strip_frontmatter(body)}"
-        except OSError:
-            return "PONYTAIL MODE ACTIVE — level: review. Review diffs for unnecessary complexity."
-
     effective = _normalize_runtime_mode(configured) or DEFAULT_MODE
-    try:
-        body = PONYTAIL_SKILL.read_text(encoding="utf-8")
-        return f"PONYTAIL MODE ACTIVE — level: {effective}\n\n{_filter_skill_body_for_mode(body, effective)}"
-    except OSError:
-        return _fallback_instructions(effective)
+    body = PONYTAIL_SKILL.read_text(encoding="utf-8")
+    context = f"PONYTAIL MODE ACTIVE — level: {configured}\n\n{_filter_skill_body_for_mode(body, effective)}"
+    if configured == "review":
+        review = REVIEW_SKILL.read_text(encoding="utf-8")
+        context += f"\n\n{_strip_frontmatter(review)}"
+    return context
 
 
 def _pre_llm_call(session_id: str = "", **_: Any) -> dict[str, str] | None:

@@ -106,7 +106,7 @@ print(json.dumps({'ctx': ctx}))
   const { ctx } = JSON.parse(output);
 
   assert.match(ctx, /PONYTAIL MODE ACTIVE — level: ultra/);
-  assert.match(ctx, /The best\s+code is the code never written/);
+  assert.match(ctx, /The best code is code that does not need to\s+exist/);
   assert.match(ctx, /ultra/i);
   assert.doesNotMatch(ctx, /^---/);
   assert.doesNotMatch(ctx, /\|\s*\*\*Lite\*\*/i);
@@ -142,7 +142,8 @@ print(json.dumps({
 `, { XDG_CONFIG_HOME: tmp, PONYTAIL_DEFAULT_MODE: 'ultra' });
   const data = JSON.parse(output);
   assert.match(data.default, /level: ultra/);
-  assert.equal(data.off, '');
+  assert.match(data.off, /level: off/);
+  assert.match(data.off, /All always-on rules still apply/);
   assert.match(data.status_before, /Ponytail mode: ultra/);
   assert.match(data.invalid, /Usage:/);
   assert.match(data.status_after, /Ponytail mode: ultra/);

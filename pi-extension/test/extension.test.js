@@ -137,7 +137,7 @@ test("skill alias commands delegate to Pi skill commands", async () => {
   ]);
 });
 
-test("normal mode disables persistent instructions", async () => withTempConfig(async () => {
+test("normal mode disables compaction but preserves core policy", async () => withTempConfig(async () => {
   const { commands, events } = createPiHarness();
   const ctx = createCommandContext();
 
@@ -145,8 +145,9 @@ test("normal mode disables persistent instructions", async () => withTempConfig(
   await commands.get("ponytail").handler("ultra", ctx);
   await events.get("input")({ text: "normal mode", source: "interactive" }, ctx);
 
-  const disabled = await events.get("before_agent_start")({ systemPrompt: "BASE" }, ctx);
-  assert.equal(disabled, undefined);
+  const result = await events.get("before_agent_start")({ systemPrompt: "BASE" }, ctx);
+  assert.match(result.systemPrompt, /PONYTAIL MODE ACTIVE — level: off/);
+  assert.match(result.systemPrompt, /All always-on rules still apply/);
 }));
 
 test("a request mentioning normal mode stays active", async () => withTempConfig(async () => {

@@ -41,7 +41,7 @@ test('system.transform injects the ruleset at the default mode (full)', async ()
   const system = await transform(hooks);
   assert.equal(system.length, 1);
   assert.match(system[0], /PONYTAIL MODE ACTIVE — level: full/);
-  assert.match(system[0], /lazy senior developer/);
+  assert.match(system[0], /smallest correct change/);
 });
 
 test('command.execute.before persists /ponytail ultra, transform follows it', async () => {
@@ -52,12 +52,14 @@ test('command.execute.before persists /ponytail ultra, transform follows it', as
   assert.match(system[0], /PONYTAIL MODE ACTIVE — level: ultra/);
 });
 
-test('/ponytail off persists off and transform injects nothing', async () => {
+test('/ponytail off disables compaction but preserves core policy', async () => {
   const hooks = await loadPlugin({});
   await hooks['command.execute.before']({ command: 'ponytail', arguments: 'off', sessionID: 's' });
   assert.equal(fs.readFileSync(statePath, 'utf8'), 'off');
   const system = await transform(hooks);
-  assert.deepEqual(system, []);
+  assert.equal(system.length, 1);
+  assert.match(system[0], /level: off/);
+  assert.match(system[0], /All always-on rules still apply/);
 });
 
 test('system.transform merges into existing system entry (Qwen compat, #296)', async () => {

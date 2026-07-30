@@ -133,19 +133,16 @@ test("filterSkillBodyForMode does not drop a rule bullet whose label matches a m
 });
 
 test("filterSkillBodyForMode keeps rule bullets that contain a colon", () => {
-  // Regression: rule bullets outside the Intensity section (e.g. the
-  // "No unrequested abstractions:" rule or the `ponytail:` comment convention)
-  // contain a colon and must not be mistaken for mode-example lines.
+  // Regression: ordinary rule prose containing a colon must not be mistaken
+  // for a mode-specific table row or worked example.
   const skillPath = new URL("../../skills/ponytail/SKILL.md", import.meta.url);
   const body = readFileSync(skillPath, "utf8");
 
   const filtered = filterSkillBodyForMode(body, "full");
 
-  assert.ok(filtered.includes("No unrequested abstractions"));
-  assert.ok(filtered.includes("Mark deliberate simplifications that cut a real corner"));
-  assert.ok(filtered.includes("`ponytail:` comment naming the ceiling and upgrade path"));
-  // The Intensity examples are still filtered down to the active mode.
-  assert.ok(filtered.includes('full: "`@lru_cache'));
-  assert.ok(!filtered.includes('lite: "Done'));
-  assert.ok(!filtered.includes('ultra: "No cache'));
+  assert.ok(filtered.includes("Do not create aliases"));
+  assert.ok(filtered.includes("tech-debt:"));
+  assert.ok(filtered.includes("| **full** |"));
+  assert.ok(!filtered.includes("| **lite** |"));
+  assert.ok(!filtered.includes("| **ultra** |"));
 });

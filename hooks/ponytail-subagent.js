@@ -15,8 +15,8 @@ const { readMode, writeHookOutput } = require('./ponytail-runtime');
 
 const mode = readMode();
 
-// Absent flag or off → ponytail isn't active; inject nothing.
-if (!mode || mode === 'off') {
+// An absent flag means the session has not initialized yet.
+if (!mode) {
   process.exit(0);
 }
 

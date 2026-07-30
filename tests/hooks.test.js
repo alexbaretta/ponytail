@@ -99,9 +99,13 @@ result = run(
   JSON.stringify({ prompt: 'normal mode' }),
 );
 assert.equal(result.status, 0, result.stderr);
-assert.equal(fs.existsSync(codexState), false);
+assert.equal(fs.readFileSync(codexState, 'utf8'), 'off');
 output = JSON.parse(result.stdout);
 assert.equal(output.systemMessage, 'PONYTAIL:OFF');
+assert.equal(
+  output.hookSpecificOutput.additionalContext,
+  'PONYTAIL COMPACTION OFF',
+);
 
 // A request that merely mentions "normal mode" must not deactivate ponytail.
 result = run('ponytail-mode-tracker.js', codexEnv, JSON.stringify({ prompt: '@ponytail lite' }));
@@ -368,16 +372,17 @@ assert.match(
   /PONYTAIL MODE CHANGED — level: ultra/,
 );
 
-// "stop ponytail": deactivates, clears flag, no ruleset output.
+// "stop ponytail": disables compaction but preserves the core ruleset.
 result = run(
   'ponytail-mode-tracker.js',
   qoderEnv,
   JSON.stringify({ prompt: 'stop ponytail' }),
 );
 assert.equal(result.status, 0, result.stderr);
-assert.equal(fs.existsSync(qoderState), false, 'flag must be cleared after stop ponytail');
+assert.equal(fs.readFileSync(qoderState, 'utf8'), 'off');
 output = JSON.parse(result.stdout);
-assert.equal(output.hookSpecificOutput.additionalContext, 'PONYTAIL MODE OFF');
+assert.match(output.hookSpecificOutput.additionalContext, /PONYTAIL MODE CHANGED — level: off/);
+assert.match(output.hookSpecificOutput.additionalContext, /All always-on rules still apply/);
 
 // Subagent injection via PreToolUse (task|Task matcher): when ponytail is
 // active, the subagent hook injects the ruleset. Qoder shares the same

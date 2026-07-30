@@ -11,7 +11,6 @@ const path = require('path');
 const { getDefaultMode, getClaudeDir, isShellSafe } = require('./ponytail-config');
 const { getPonytailInstructions } = require('./ponytail-instructions');
 const {
-  clearMode,
   isCodex,
   isCopilot,
   setMode,
@@ -22,14 +21,6 @@ const claudeDir = getClaudeDir();
 const settingsPath = path.join(claudeDir, 'settings.json');
 
 const mode = getDefaultMode();
-
-// "off" mode — skip activation entirely, don't write flag or emit rules
-if (mode === 'off') {
-  clearMode();
-  const hookOutput = (isCodex || isCopilot) ? '' : 'OK';
-  writeHookOutput('SessionStart', 'off', hookOutput);
-  process.exit(0);
-}
 
 // 1. Write flag file
 try {

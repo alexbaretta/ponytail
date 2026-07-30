@@ -197,7 +197,7 @@ export default function ponytailExtension(pi) {
   });
 
   pi.on("before_agent_start", async (event) => {
-    if (!currentMode || currentMode === "off") return;
+    if (!currentMode) return;
     // Guard a null/undefined event or a missing systemPrompt: don't crash, and
     // don't prepend the literal string "undefined" to the prompt (#439, #440).
     const base = event?.systemPrompt ? `${event.systemPrompt}\n\n` : "";

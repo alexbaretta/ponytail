@@ -73,7 +73,6 @@ export default async ({ client } = {}) => {
     // Append the ruleset to the system prompt every turn.
     'experimental.chat.system.transform': async (_input, output) => {
       const mode = readMode();
-      if (mode === 'off') return;
       const instructions = getPonytailInstructions(mode);
       if (output.system.length > 0) {
         output.system[output.system.length - 1] += '\n\n' + instructions;
@@ -88,7 +87,7 @@ export default async ({ client } = {}) => {
     // synchronous store if same-turn switching ever matters.
     'command.execute.before': async (input) => {
       if (!input || input.command !== 'ponytail') return;
-      // `off` is persisted like any mode; the transform reads it and stays silent.
+      // `off` is persisted like any mode; only aggressive compaction is disabled.
       const args = String(input.arguments || '').trim();
       const mode = args ? normalizePersistedMode(args) : getDefaultMode();
       if (!mode) return;

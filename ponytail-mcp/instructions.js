@@ -7,18 +7,16 @@ const require = createRequire(import.meta.url);
 const { getPonytailInstructions } = require("../hooks/ponytail-instructions.js");
 const { getDefaultMode, normalizeMode } = require("../hooks/ponytail-config.js");
 
-// The three intensities the server offers. "off" has no instructions to serve.
-export const MODES = ["lite", "full", "ultra"];
+export const MODES = ["off", "lite", "full", "ultra"];
 
-// Resolve a requested mode to a runtime intensity. Unknown, empty, or "off"
-// falls back to the configured default, then to "full".
-// ponytail: keep the surface to these three; "off"/"review" aren't served here.
+// Resolve a requested compaction level. Unknown or empty values fall back to
+// the configured default, then to full.
 export function resolveMode(requested) {
   const asked = normalizeMode(requested);
-  if (asked && asked !== "off") return asked;
+  if (asked) return asked;
 
   const fallback = normalizeMode(getDefaultMode());
-  return fallback && fallback !== "off" ? fallback : "full";
+  return fallback || "full";
 }
 
 export function buildInstructions(requested) {
