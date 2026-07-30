@@ -16,13 +16,6 @@ jobs:
         with:
           node-version: '22'
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-
-      - name: Install Python deps for correctness checks
-        run: pip install pandas
-
       - name: Install MCP deps
         run: npm install --prefix ponytail-mcp
 

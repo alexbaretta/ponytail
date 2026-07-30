@@ -25,4 +25,5 @@ test('CI installs MCP dependencies before root npm test', () => {
     workflow.indexOf('npm install --prefix ponytail-mcp') < workflow.indexOf('npm test'),
     'MCP dependencies must be installed before the root test command runs',
   );
+  assert.doesNotMatch(workflow, /setup-python|pip install|pandas|benchmark/i);
 });
