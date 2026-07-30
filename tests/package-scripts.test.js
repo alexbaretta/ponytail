@@ -1,4 +1,8 @@
 #!/usr/bin/env node
+// Copyright (c) 2026 DietrichGebert.
+// Copyright (c) 2026 Alex Baretta. All rights reserved.
+// Licensed under the MIT License. See LICENSE in the project root.
+
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
@@ -13,8 +17,7 @@ test('root npm test delegates only to the core suite', () => {
   assert.equal(packageJson.scripts.test, 'npm run test:core');
   assert.match(packageJson.scripts['test:core'], /npm test --prefix pi-extension/);
   assert.match(packageJson.scripts['test:core'], /npm test --prefix ponytail-mcp/);
-  assert.doesNotMatch(packageJson.scripts['test:core'], /benchmark/);
-  assert.equal(packageJson.scripts['test:benchmarks'], 'node --test benchmarks/*.test.js');
+  assert.doesNotMatch(JSON.stringify(packageJson), /benchmark/i);
   for (const file of fs.readdirSync(path.join(root, 'tests'))) {
     assert.doesNotMatch(file, /behavior|correctness|benchmark/i);
   }

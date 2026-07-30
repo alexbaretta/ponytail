@@ -1,4 +1,8 @@
 #!/usr/bin/env node
+// Copyright (c) 2026 DietrichGebert.
+// Copyright (c) 2026 Alex Baretta. All rights reserved.
+// Licensed under the MIT License. See LICENSE in the project root.
+
 // ponytail — UserPromptSubmit hook to track which ponytail mode is active
 // Inspects user input for /ponytail commands and writes mode to flag file
 

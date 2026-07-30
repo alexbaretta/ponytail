@@ -12,6 +12,7 @@ license: MIT
 ---
 
 <!--
+Copyright (c) 2026 DietrichGebert.
 Copyright (c) 2026 Alex Baretta. All rights reserved.
 Author: Alex Baretta <alex@baretta.com>
 

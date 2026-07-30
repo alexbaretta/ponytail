@@ -1,3 +1,7 @@
+// Copyright (c) 2026 DietrichGebert.
+// Copyright (c) 2026 Alex Baretta. All rights reserved.
+// Licensed under the MIT License. See LICENSE in the project root.
+
 // Pure instruction selection for the Ponytail MCP server. No MCP/SDK imports,
 // so this stays unit-testable on its own. Reuses the same builder the Claude
 // hooks and Pi extension use, so every host emits identical rules.

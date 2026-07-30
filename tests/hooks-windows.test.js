@@ -1,4 +1,8 @@
 #!/usr/bin/env node
+// Copyright (c) 2026 DietrichGebert.
+// Copyright (c) 2026 Alex Baretta. All rights reserved.
+// Licensed under the MIT License. See LICENSE in the project root.
+
 // Regression test for issue #19: on Windows the lifecycle hooks run via
 // PowerShell, which does NOT expand cmd.exe-style %VAR% — it needs $env:VAR.
 // The hook also has to point at a script that actually ships in hooks/.

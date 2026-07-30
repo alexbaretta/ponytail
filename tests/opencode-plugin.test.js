@@ -1,4 +1,8 @@
 #!/usr/bin/env node
+// Copyright (c) 2026 DietrichGebert.
+// Copyright (c) 2026 Alex Baretta. All rights reserved.
+// Licensed under the MIT License. See LICENSE in the project root.
+
 // Smoke test for the OpenCode adapter: the plugin's hooks behave against the
 // real (structural) OpenCode hook shapes. No live OpenCode needed.
 

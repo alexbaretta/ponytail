@@ -49,13 +49,10 @@ services. `PROJECT_STRUCTURE.md` is authoritative for that boundary.
 - Codex installation: `./scripts/install-to-codex.sh`; add each explicit
   project-local skill root with `--project-skills <directory>`.
 - Codex installer tests: `./scripts/test-install-to-codex.sh`.
-- Optional isolated benchmark tests: `npm run test:benchmarks`; benchmark
-  dependencies and instructions belong exclusively to `benchmarks/`.
 - Deployment: not applicable.
 
 Run focused tests while editing. Run `npm test`, the rule-copy check, and the
-version check for final core acceptance. Benchmark validation is never part of
-core acceptance.
+version check for final core acceptance.
 
 ## Local Rules
 

@@ -1,4 +1,8 @@
 #!/usr/bin/env node
+// Copyright (c) 2026 DietrichGebert.
+// Copyright (c) 2026 Alex Baretta. All rights reserved.
+// Licensed under the MIT License. See LICENSE in the project root.
+
 // Hermes support is a real plugin, not just copied rules: the repo root must be
 // installable with `hermes plugins install owner/repo`, register bundled skills,
 // inject active mode context, and expose slash commands.

@@ -1,3 +1,10 @@
+<!--
+Copyright (c) 2026 DietrichGebert.
+Copyright (c) 2026 Alex Baretta. All rights reserved.
+
+Licensed under the MIT License. See LICENSE in the project root.
+-->
+
 # Platform-Native Solutions
 
 The lazy senior dev's first question is always: *does the platform already do this?*

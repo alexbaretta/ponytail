@@ -36,7 +36,6 @@
     "./plugin": "./.opencode/plugins/ponytail.mjs"
   },
   "files": [
-    "AGENTS.md",
     "hooks/",
     "skills/",
     "commands/",
@@ -50,12 +49,12 @@
     "scripts/install-to-codex.sh",
     "scripts/uninstall.js",
     "assets/",
-    "LICENSE"
+    "LICENSE",
+    "NOTICE"
   ],
   "scripts": {
     "test": "npm run test:core",
-    "test:core": "node scripts/registry.js && node scripts/build-registry-data.js && node scripts/build-command-adapters.js && node scripts/build-manifests.js && node scripts/check-rule-copies.js && node --test tests/*.test.js && ./scripts/test-install-to-codex.sh && npm test --prefix pi-extension && npm test --prefix ponytail-mcp",
-    "test:benchmarks": "node --test benchmarks/*.test.js"
+    "test:core": "node scripts/registry.js && node scripts/build-registry-data.js && node scripts/build-command-adapters.js && node scripts/build-manifests.js && node scripts/check-rule-copies.js && node --test tests/*.test.js && ./scripts/test-install-to-codex.sh && npm test --prefix pi-extension && npm test --prefix ponytail-mcp"
   },
   "pi": {
     "extensions": ["./pi-extension/index.js"],

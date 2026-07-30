@@ -1,4 +1,8 @@
 #!/usr/bin/env node
+// Copyright (c) 2026 DietrichGebert.
+// Copyright (c) 2026 Alex Baretta. All rights reserved.
+// Licensed under the MIT License. See LICENSE in the project root.
+
 // ponytail — removes state ponytail wrote outside the plugin's own files:
 // the mode flag, the config file, and the statusLine entry it added to
 // settings.json. Plugin files themselves are removed by each host's own

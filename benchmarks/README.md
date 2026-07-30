@@ -1,4 +1,21 @@
+<!--
+Copyright (c) 2026 DietrichGebert.
+Copyright (c) 2026 Alex Baretta. All rights reserved.
+
+Licensed under the MIT License. See LICENSE in the project root.
+-->
+
 # Benchmark
+
+This directory is an independent optional subsystem. Its dependencies,
+commands, tests, results, and acceptance criteria are not part of Ponytail's
+live-development core.
+
+Run its Node-based checks from this directory:
+
+```bash
+npm test
+```
 
 Three arms (no skill, [caveman](https://github.com/JuliusBrussee/caveman), ponytail), three models, five everyday tasks, **10 runs per cell, median reported**. Code LOC is counted from fenced code blocks; tokens, cost, and latency come straight from the API.
 

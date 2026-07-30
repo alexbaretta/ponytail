@@ -1,4 +1,8 @@
 #!/usr/bin/env node
+// Copyright (c) 2026 DietrichGebert.
+// Copyright (c) 2026 Alex Baretta. All rights reserved.
+// Licensed under the MIT License. See LICENSE in the project root.
+
 // Smoke test for the Copilot plugin adapter: keep command wiring minimal and
 // ensure the debt command is part of the shared command surface.
 

@@ -1,4 +1,8 @@
 #!/usr/bin/env node
+// Copyright (c) 2026 DietrichGebert.
+// Copyright (c) 2026 Alex Baretta. All rights reserved.
+// Licensed under the MIT License. See LICENSE in the project root.
+
 // ponytail — Claude Code SubagentStart hook
 //
 // SessionStart context is parent-thread only and never reaches subagents, so
