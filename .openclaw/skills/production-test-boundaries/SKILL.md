@@ -18,11 +18,15 @@ configuration and orchestration without changing the product path they prove.
 
 ## Project Configuration Contract
 
-Use the host's configured unit, integration, focused-workflow, build,
-packaging, and final-acceptance commands. The host should also identify, directly
-or by reference, its production compilation and packaging inputs and its
-integration-environment setup when those are not discoverable from those
-commands.
+The host configures this skill in `AGENTS.md`, directly or by reference, with:
+
+- `Production compilation and packaging inputs`; and
+- `Integration-environment setup`.
+
+The host's standard project configuration supplies the unit, integration,
+focused-workflow, build, packaging, and final-acceptance commands. Production
+inputs default to those consumed by the configured build and packaging commands.
+Integration-environment setup defaults to `not configured`.
 
 Do not invent a test environment, provider substitute, or integration command
 when project configuration is absent. Apply the host's configuration-

@@ -12,6 +12,7 @@ const configuredSkills = new Map([
   ['cloud-cli-reauth', ['Cloud CLI\nreauthentication command']],
   ['lossless-json-contracts', ['Lossless JSON standard', 'Lossless JSON boundary inventory']],
   ['ponytail-debt', ['Technical-debt document']],
+  ['production-test-boundaries', ['Production compilation and packaging inputs', 'Integration-environment setup']],
   ['test-credentials', ['Test-credentials policy']],
   ['typescript-unit-testing', ['TypeScript unit-test command', 'TypeScript unit-test indexes and discovery']],
   ['ux-testing', ['UX connection skill']],
