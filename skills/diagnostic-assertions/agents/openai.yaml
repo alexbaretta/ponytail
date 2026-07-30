@@ -1,0 +1,4 @@
+interface:
+  display_name: "Diagnostic Assertions"
+  short_description: "Classify diagnostics and hard invariants"
+  default_prompt: "Use $diagnostic-assertions to review these production assertions and diagnostic checks."

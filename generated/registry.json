@@ -54,6 +54,23 @@
     },
     {
       "kind": "skill",
+      "status": "enabled",
+      "name": "diagnostic-assertions",
+      "source": "skills/diagnostic-assertions",
+      "hosts": [
+        "claude",
+        "codex",
+        "copilot",
+        "devin",
+        "hermes",
+        "openclaw",
+        "pi",
+        "qoder"
+      ],
+      "reason": "Diagnostic and invariant classification"
+    },
+    {
+      "kind": "skill",
       "status": "disabled",
       "name": "git-write-escalation",
       "source": "-",
