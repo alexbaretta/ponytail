@@ -1,0 +1,7 @@
+# Copyright (c) 2026 Alex Baretta. All rights reserved.
+# Author: Alex Baretta <alex@baretta.com>.
+# Licensed under the MIT License. See LICENSE in the project root.
+interface:
+  display_name: "Bash Parse-Safe Scripts"
+  short_description: "Structure Bash scripts for parse safety"
+  default_prompt: "Use $bash-parse-safe-scripts to make this Bash script safe against on-disk changes while it runs."
