@@ -38,6 +38,8 @@ services. `PROJECT_STRUCTURE.md` is authoritative for that boundary.
 - Integration arc listing: not applicable.
 - Rule-copy check: `node scripts/check-rule-copies.js`.
 - Registry check: `node scripts/registry.js`.
+- Command-adapter generation: `node scripts/build-command-adapters.js
+  --write`; omit `--write` to check generated output.
 - Version check: `node scripts/check-versions.js`.
 - OpenClaw generation: `node scripts/build-openclaw-skills.js`.
 - Optional isolated benchmark tests: `npm run test:benchmarks`; benchmark

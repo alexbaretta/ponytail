@@ -1,9 +1,5 @@
 #!/usr/bin/env node
-// Every ponytail command the pi extension registers must also ship as a
-// file-based command for the hosts that need one: Claude Code (commands/*.toml)
-// and OpenCode (.opencode/command/*.md). /ponytail-help
-// was advertised in the README and the help card but missing both files; this
-// guards that drift -- a registered command with no adapter file fails here.
+// File-based adapters are generated from registry-owned canonical commands.
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
@@ -12,28 +8,28 @@ const path = require('path');
 
 const root = path.join(__dirname, '..');
 
-// pi-extension registers the canonical command set.
-const piSource = fs.readFileSync(path.join(root, 'pi-extension', 'index.js'), 'utf8');
-const commands = [...piSource.matchAll(/registerCommand\(["']([\w-]+)["']/g)].map((m) => m[1]);
+const { enabled, readRegistry } = require('../scripts/registry');
+const { renderOpenCode } = require('../scripts/build-command-adapters');
+const commands = enabled(readRegistry(), 'command');
 
-test('pi registers at least the base command', () => {
-  assert.ok(commands.includes('ponytail'), 'expected pi to register a ponytail command');
+test('registry contains the base command', () => {
+  assert.ok(commands.some((entry) => entry.name === 'ponytail'));
 });
 
 test('every registered command ships a Claude commands/*.toml', () => {
-  for (const name of commands) {
+  for (const entry of commands.filter((entry) => entry.hosts.includes('claude'))) {
     assert.ok(
-      fs.existsSync(path.join(root, 'commands', `${name}.toml`)),
-      `missing commands/${name}.toml`,
+      fs.existsSync(path.join(root, entry.source)),
+      `missing ${entry.source}`,
     );
   }
 });
 
-test('every registered command ships an OpenCode .opencode/command/*.md', () => {
-  for (const name of commands) {
-    assert.ok(
-      fs.existsSync(path.join(root, '.opencode', 'command', `${name}.md`)),
-      `missing .opencode/command/${name}.md`,
+test('every OpenCode command matches its generated adapter', () => {
+  for (const entry of commands.filter((entry) => entry.hosts.includes('opencode'))) {
+    assert.equal(
+      fs.readFileSync(path.join(root, '.opencode', 'command', `${entry.name}.md`), 'utf8'),
+      renderOpenCode(entry),
     );
   }
 });

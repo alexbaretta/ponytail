@@ -2,4 +2,10 @@
 description: "Harvest tech-debt: markers into the canonical debt document"
 ---
 
+<!--
+Copyright (c) 2026 DietrichGebert.
+Copyright (c) 2026 Alex Baretta. All rights reserved.
+Licensed under the MIT License. See LICENSE in the project root.
+-->
+
 Load and follow the ponytail-debt skill. Reconcile exceptional `tech-debt:` markers into the project's configured technical-debt document without creating a second ledger.

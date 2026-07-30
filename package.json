@@ -49,7 +49,7 @@
   ],
   "scripts": {
     "test": "npm run test:core",
-    "test:core": "node scripts/registry.js && node scripts/check-rule-copies.js && node --test tests/*.test.js && npm test --prefix pi-extension && npm test --prefix ponytail-mcp",
+    "test:core": "node scripts/registry.js && node scripts/build-command-adapters.js && node scripts/check-rule-copies.js && node --test tests/*.test.js && npm test --prefix pi-extension && npm test --prefix ponytail-mcp",
     "test:benchmarks": "node --test benchmarks/*.test.js"
   },
   "pi": {
