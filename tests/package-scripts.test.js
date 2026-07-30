@@ -7,11 +7,14 @@ const path = require('path');
 
 const root = path.join(__dirname, '..');
 
-test('root npm test covers bundled subprojects', () => {
+test('root npm test delegates only to the core suite', () => {
   const packageJson = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
 
-  assert.match(packageJson.scripts.test, /npm test --prefix pi-extension/);
-  assert.match(packageJson.scripts.test, /npm test --prefix ponytail-mcp/);
+  assert.equal(packageJson.scripts.test, 'npm run test:core');
+  assert.match(packageJson.scripts['test:core'], /npm test --prefix pi-extension/);
+  assert.match(packageJson.scripts['test:core'], /npm test --prefix ponytail-mcp/);
+  assert.doesNotMatch(packageJson.scripts['test:core'], /benchmark/);
+  assert.equal(packageJson.scripts['test:benchmarks'], 'node --test benchmarks/*.test.js');
 });
 
 test('CI installs MCP dependencies before root npm test', () => {
