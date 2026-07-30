@@ -284,6 +284,23 @@
     {
       "kind": "skill",
       "status": "enabled",
+      "name": "variant-neutrality",
+      "source": "skills/variant-neutrality",
+      "hosts": [
+        "claude",
+        "codex",
+        "copilot",
+        "devin",
+        "hermes",
+        "openclaw",
+        "pi",
+        "qoder"
+      ],
+      "reason": "Shared contract and dispatch neutrality"
+    },
+    {
+      "kind": "skill",
+      "status": "enabled",
       "name": "versioned-data-contracts",
       "source": "skills/versioned-data-contracts",
       "hosts": [

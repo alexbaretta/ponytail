@@ -31,4 +31,5 @@ provides_skills:
   - static-type-safety
   - test-credentials
   - typescript-unit-testing
+  - variant-neutrality
   - versioned-data-contracts

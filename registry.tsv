@@ -18,6 +18,7 @@ skill	enabled	react-error-containment	skills/react-error-containment	claude,code
 skill	enabled	static-type-safety	skills/static-type-safety	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Static type and contract safety
 skill	enabled	test-credentials	skills/test-credentials	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Test credential discovery and safety
 skill	enabled	typescript-unit-testing	skills/typescript-unit-testing	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Contract-safe TypeScript unit testing
+skill	enabled	variant-neutrality	skills/variant-neutrality	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Shared contract and dispatch neutrality
 skill	enabled	versioned-data-contracts	skills/versioned-data-contracts	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Serialized contract versioning
 command	enabled	ponytail	commands/ponytail.toml	claude,codex,copilot,hermes,opencode,pi,qoder	Select compaction level
 command	enabled	ponytail-audit	commands/ponytail-audit.toml	claude,codex,copilot,hermes,opencode,pi	Run repository complexity audit
