@@ -2,7 +2,7 @@
 
 Plan ID: `unified-agentic-harness`
 
-Status: `IN_PROGRESS`
+Status: `DONE`
 
 ## Objective
 
@@ -422,7 +422,7 @@ Ponytail edits.
 - [S02](sprints/S02.md): `DONE` - Establish the isolated core.
 - [S03](sprints/S03.md): `DONE` - Migrate reusable skills.
 - [S04](sprints/S04.md): `DONE` - Generate supported host adapters.
-- [S05](sprints/S05.md): `PENDING` - Complete publication quality.
+- [S05](sprints/S05.md): `DONE` - Complete publication quality.
 
 ## Approval
 
@@ -432,4 +432,11 @@ planned Ponytail edits.
 
 ## Final Validation Record
 
-Pending.
+- `npm test`: passed 110 root tests, 23 Pi tests, four MCP tests, and the
+  Codex installer lifecycle suite.
+- Codex plugin validation: passed.
+- Version, registry, generated runtime registry, command adapter, manifest,
+  rule-copy, distribution-content, and whitespace checks: passed.
+- Core acceptance executed no benchmark code and required no benchmark
+  dependency.
+- All five sprints and every tasklet are `DONE`.
