@@ -16,6 +16,8 @@ while project-wide management records remain under `pm/`.
 
 - `skills/` owns canonical reusable skills and the portable Ponytail policy.
 - `commands/` owns canonical command prompts.
+- `config/AGENTS.md` is the generated global Codex policy installed by the
+  Codex installer.
 - `registry.tsv` owns enabled and disabled skill and command publication
   across supported hosts. Benchmark entries are prohibited.
 - `hooks/` owns shared lifecycle behavior and policy injection.
@@ -23,7 +25,9 @@ while project-wide management records remain under `pm/`.
   `.opencode/`, `.qoder/`, and `.openclaw/` own host adapters. Generated
   adapters identify their canonical source in their validation tests.
 - `scripts/` owns local generation, validation, installation, cleanup, and
-  publication tooling.
+  publication tooling. `scripts/install-to-codex.sh` owns Codex installation;
+  it binds only registry-enabled bundled skills and explicitly supplied
+  project-local skill roots.
 - `generated/` owns runtime data derived from `registry.tsv`.
 - `tests/` owns core live-development tests.
 - `benchmarks/` is an optional isolated subsystem. It owns all benchmark

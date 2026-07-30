@@ -10,6 +10,7 @@ Copyright (c) 2026 Alex Baretta. All rights reserved.
 Licensed under the MIT License. See LICENSE in the project root.
 -->`;
 const targets = [
+  ['config/AGENTS.md', ''],
   ['.cursor/rules/ponytail.mdc', `---
 description: Ponytail portable engineering policy.
 globs:
@@ -48,6 +49,7 @@ let failed = false;
 for (const [relativePath, frontmatter] of targets) {
   const expected = render(frontmatter);
   if (process.argv.includes('--write')) {
+    fs.mkdirSync(path.dirname(path.join(root, relativePath)), { recursive: true });
     fs.writeFileSync(path.join(root, relativePath), expected);
   } else if (read(relativePath) !== expected) {
     console.error(`${relativePath} drifted from skills/ponytail/SKILL.md`);

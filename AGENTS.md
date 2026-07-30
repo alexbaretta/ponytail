@@ -46,6 +46,9 @@ services. `PROJECT_STRUCTURE.md` is authoritative for that boundary.
 - Manifest generation: `node scripts/build-manifests.js --write`; omit
   `--write` to check repeated metadata.
 - OpenClaw generation: `node scripts/build-openclaw-skills.js`.
+- Codex installation: `./scripts/install-to-codex.sh`; add each explicit
+  project-local skill root with `--project-skills <directory>`.
+- Codex installer tests: `./scripts/test-install-to-codex.sh`.
 - Optional isolated benchmark tests: `npm run test:benchmarks`; benchmark
   dependencies and instructions belong exclusively to `benchmarks/`.
 - Deployment: not applicable.
