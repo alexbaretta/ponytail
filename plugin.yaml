@@ -28,6 +28,7 @@ provides_skills:
   - ponytail-debt
   - ponytail-review
   - project-structure
+  - production-test-boundaries
   - react-error-containment
   - static-type-safety
   - test-credentials

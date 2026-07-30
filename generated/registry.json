@@ -233,6 +233,23 @@
     {
       "kind": "skill",
       "status": "enabled",
+      "name": "production-test-boundaries",
+      "source": "skills/production-test-boundaries",
+      "hosts": [
+        "claude",
+        "codex",
+        "copilot",
+        "devin",
+        "hermes",
+        "openclaw",
+        "pi",
+        "qoder"
+      ],
+      "reason": "Production and test architecture separation"
+    },
+    {
+      "kind": "skill",
+      "status": "enabled",
       "name": "react-error-containment",
       "source": "skills/react-error-containment",
       "hosts": [

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Production Test Boundaries"
+  short_description: "Keep test mechanisms out of production"
+  default_prompt: "Use $production-test-boundaries to review this test architecture and integration path."

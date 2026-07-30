@@ -15,6 +15,7 @@ skill	enabled	ponytail-audit	skills/ponytail-audit	claude,codex,copilot,devin,he
 skill	enabled	ponytail-debt	skills/ponytail-debt	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Technical debt reconciliation
 skill	enabled	ponytail-review	skills/ponytail-review	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Change-set complexity review
 skill	enabled	project-structure	skills/project-structure	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Project configuration workflow
+skill	enabled	production-test-boundaries	skills/production-test-boundaries	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Production and test architecture separation
 skill	enabled	react-error-containment	skills/react-error-containment	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	React failure containment
 skill	enabled	static-type-safety	skills/static-type-safety	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Static type and contract safety
 skill	enabled	test-credentials	skills/test-credentials	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Test credential discovery and safety
