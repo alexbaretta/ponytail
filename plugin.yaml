@@ -30,4 +30,5 @@ provides_skills:
   - react-error-containment
   - static-type-safety
   - test-credentials
+  - typescript-unit-testing
   - versioned-data-contracts
