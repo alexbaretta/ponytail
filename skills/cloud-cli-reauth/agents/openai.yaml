@@ -1,0 +1,7 @@
+# Copyright (c) 2026 Alex Baretta. All rights reserved.
+# Author: Alex Baretta <alex@baretta.com>.
+# Licensed under the MIT License. See LICENSE in the project root.
+interface:
+  display_name: "Cloud CLI Reauthentication"
+  short_description: "Recover expired cloud CLI authentication"
+  default_prompt: "Use $cloud-cli-reauth to recover a failed cloud CLI command with the host project reauthentication command."

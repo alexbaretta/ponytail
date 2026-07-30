@@ -37,6 +37,23 @@
     },
     {
       "kind": "skill",
+      "status": "enabled",
+      "name": "cloud-cli-reauth",
+      "source": "skills/cloud-cli-reauth",
+      "hosts": [
+        "claude",
+        "codex",
+        "copilot",
+        "devin",
+        "hermes",
+        "openclaw",
+        "pi",
+        "qoder"
+      ],
+      "reason": "Cloud CLI authentication recovery"
+    },
+    {
+      "kind": "skill",
       "status": "disabled",
       "name": "git-write-escalation",
       "source": "-",
