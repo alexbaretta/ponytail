@@ -5,6 +5,7 @@
 
 # Dependencies
 node_modules/
+tmp/
 
 # promptfoo eval artifacts
 .promptfoo/
