@@ -7,7 +7,7 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const behavior = require('../benchmarks/behavior');
+const behavior = require('./behavior');
 
 function check(probe, output) {
   return behavior(output, { vars: { probe } });

@@ -15,6 +15,9 @@ test('root npm test delegates only to the core suite', () => {
   assert.match(packageJson.scripts['test:core'], /npm test --prefix ponytail-mcp/);
   assert.doesNotMatch(packageJson.scripts['test:core'], /benchmark/);
   assert.equal(packageJson.scripts['test:benchmarks'], 'node --test benchmarks/*.test.js');
+  for (const file of fs.readdirSync(path.join(root, 'tests'))) {
+    assert.doesNotMatch(file, /behavior|correctness|benchmark/i);
+  }
 });
 
 test('CI installs MCP dependencies before root npm test', () => {

@@ -5,7 +5,7 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const correctness = require('../benchmarks/correctness');
+const correctness = require('./correctness');
 
 // Helper: wrap code in a fenced block and call the assertion with task vars.
 function check(task, lang, code) {
