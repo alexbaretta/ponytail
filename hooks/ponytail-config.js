@@ -42,7 +42,7 @@ function isDeactivationCommand(text) {
   return t === 'stop ponytail' || t === 'normal mode';
 }
 
-// ponytail: only embed the plugin install path in a statusline shell command when
+// Only embed the plugin install path in a statusline shell command when
 // it's made of ordinary path characters. An allowlist beats escaping every shell's
 // metacharacters; a hostile clone path (quotes, &, $, backtick, ;, etc.) falls back
 // to manual setup instead. Allows : \ / for normal Windows and POSIX paths. Full
@@ -69,14 +69,14 @@ function getConfigPath() {
 }
 
 function getClaudeDir() {
-  // ponytail: CLAUDE_CONFIG_DIR overrides ~/.claude, matching Claude Code.
+  // CLAUDE_CONFIG_DIR overrides ~/.claude, matching Claude Code.
   return process.env.CLAUDE_CONFIG_DIR || path.join(os.homedir(), '.claude');
 }
 
 function getDefaultMode() {
   // 1. Environment variable (highest priority)
   const envMode = process.env.PONYTAIL_DEFAULT_MODE;
-  // ponytail: a default must be a runtime level (off/lite/full/ultra); review is
+  // A default must be a runtime level (off/lite/full/ultra); review is
   // a session-only mode, never a valid default (#377). Validate against
   // RUNTIME_MODES so a stray env var or config can't make review the default.
   if (envMode && RUNTIME_MODES.includes(envMode.toLowerCase())) {
@@ -134,7 +134,7 @@ function getHideStatus() {
 }
 
 function writeDefaultMode(mode) {
-  // ponytail: only a runtime level can be a default; review is session-only (#377).
+  // Only a runtime level can be a default; review is session-only (#377).
   const normalized = normalizeMode(mode);
   if (!normalized) return null;
 

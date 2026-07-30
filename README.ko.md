@@ -45,7 +45,7 @@ Ponytail은 그를 당신의 AI 에이전트 안에 앉혀 둔다.
 ponytail이라면:
 
 ```html
-<!-- ponytail: browser has one -->
+<!-- tech-debt: 브라우저 기본 기능으로 충분하지 않을 때 재검토 -->
 <input type="date">
 ```
 
@@ -204,7 +204,7 @@ Codex 확장을 쓰는 VS Code는 이 저장소가 함께 싣는 `AGENTS.md`를 
 | `/ponytail [lite \| full \| ultra \| off]` | 강도를 정하거나, 끈다. 인수가 없으면 지금 레벨을 알려 준다. |
 | `/ponytail-review` | 지금 diff를 과잉 구현 관점에서 훑고, 삭제 목록을 돌려준다. |
 | `/ponytail-audit` | diff만이 아니라 저장소 전체를 과잉 구현 관점에서 감사한다. |
-| `/ponytail-debt` | 미뤄 둔 `ponytail:` 간소화들을 장부로 모아, "나중에"가 "영영"이 되지 않게 한다. |
+| `/ponytail-debt` | 예외적인 `tech-debt:` 표시를 표준 기술 부채 문서에 반영한다. |
 | `/ponytail-help` | 위 명령들의 빠른 참조. |
 
 명령들은 스킬을 지원하는 호스트가 있어야 돈다(Claude Code, Codex, Devin CLI, OpenCode, pi, Swival). Codex에선 스킬이라 `@`로 부른다(`@ponytail-review`). 지시문 전용 어댑터(Cursor, Windsurf, Cline, Copilot, Kiro, Antigravity)는 명령 없이 늘 켜진 룰셋만 불러온다.

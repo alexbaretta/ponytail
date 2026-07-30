@@ -66,7 +66,7 @@ if (!isCodex && !isCopilot) try {
         statusLineSnippet + " " +
         "Proactively offer to set this up for the user on first interaction.";
     } else {
-      // ponytail: install path has shell metacharacters — don't embed it in a
+      // Install path has shell metacharacters, so do not embed it in a
       // command snippet; have the agent wire it up by hand instead.
       output += "\n\n" +
         "STATUSLINE SETUP NEEDED: The ponytail plugin includes a statusline badge showing active mode. " +

@@ -45,7 +45,7 @@ Le pides un selector de fechas. Tu agente instala flatpickr, escribe un componen
 Con ponytail:
 
 ```html
-<!-- ponytail: el browser ya tiene uno -->
+<!-- tech-debt: el navegador ya tiene uno; revisar si no basta -->
 <input type="date">
 ```
 
@@ -186,7 +186,7 @@ Qué archivos corresponden a qué agente: [Portabilidad de agentes](docs/agent-p
 | `/ponytail [lite \| full \| ultra \| off]` | Cambia la intensidad, o apágalo. Sin argumento, reporta el nivel actual. |
 | `/ponytail-review` | Revisa el diff actual en busca de sobre-ingeniería y devuelve una lista de qué eliminar. |
 | `/ponytail-audit` | Audita el repo completo en busca de sobre-ingeniería, no solo el diff. |
-| `/ponytail-debt` | Recolecta los atajos marcados con `ponytail:` que dejaste pendientes en un registro, para que "después" no se convierta en "nunca". |
+| `/ponytail-debt` | Integra marcadores excepcionales `tech-debt:` en el documento técnico canónico. |
 | `/ponytail-help` | Referencia rápida de los comandos anteriores. |
 
 Los comandos requieren un host compatible con skills (Claude Code, Codex, Devin CLI, OpenCode, pi, Swival). En Codex son skills; se invocan con `@` (`@ponytail-review`). Los adaptadores de solo instrucciones (Cursor, Windsurf, Cline, Copilot, Kiro, Antigravity) cargan el ruleset permanente sin los comandos.

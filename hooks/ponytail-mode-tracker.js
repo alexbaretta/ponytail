@@ -63,7 +63,7 @@ function finish() {
       } else if (mode) {
         setMode(mode);
         modeSwitched = true;
-        // ponytail: Qoder needs the full ruleset every turn, so when a mode
+        // Qoder needs the full ruleset every turn, so when a mode
         // switch happens we fold the confirmation into the ruleset output
         // below (one JSON on stdout) instead of emitting two separate writes.
         if (!isQoder) {
@@ -97,7 +97,7 @@ function finish() {
         try { setMode(currentMode); } catch (e) {}
       }
       if (currentMode) {
-        // ponytail: one JSON per invocation — mode-switch confirmation is
+        // One JSON per invocation; mode-switch confirmation is
         // folded into the ruleset header so Qoder gets both in one write.
         const header = modeSwitched
           ? 'PONYTAIL MODE CHANGED — level: ' + currentMode + '\n\n'

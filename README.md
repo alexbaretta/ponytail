@@ -45,7 +45,7 @@ You ask for a date picker. Your agent installs flatpickr, writes a wrapper compo
 With ponytail:
 
 ```html
-<!-- ponytail: browser has one -->
+<!-- tech-debt: browser has one; revisit if native support is insufficient -->
 <input type="date">
 ```
 
@@ -237,7 +237,7 @@ These remove the plugin's own files. They leave behind a small amount of state p
 | `/ponytail [lite \| full \| ultra \| off]` | Set the intensity, or turn it off. No argument reports the current level. |
 | `/ponytail-review` | Review the current diff for over-engineering, hands back a delete-list. |
 | `/ponytail-audit` | Audit the whole repo for over-engineering, not just the diff. |
-| `/ponytail-debt` | Harvest the `ponytail:` shortcuts you've deferred into a ledger, so "later" doesn't become "never". |
+| `/ponytail-debt` | Reconcile exceptional `tech-debt:` markers into the canonical technical-debt document. |
 | `/ponytail-help` | Quick reference for the commands above. |
 
 Commands need a skill-capable host (Claude Code, Codex, Devin CLI, OpenCode, pi, Swival, Hermes Agent, Qoder). In Codex they're skills, invoke with `@` (`@ponytail-review`). The instruction-only adapters (Cursor, Windsurf, Cline, Copilot, Kiro, Antigravity) load the always-on ruleset without the commands.

@@ -1,44 +1,37 @@
 ---
 name: ponytail-debt
 description: >
-  Harvest every `ponytail:` comment in the codebase into a debt ledger, so the
-  deliberate shortcuts and deferrals ponytail leaves behind get tracked instead
-  of rotting into "later means never". Use when the user says "ponytail debt",
-  "/ponytail-debt", "what did ponytail defer", "list the shortcuts", "ponytail
-  ledger", or "what did we mark to do later". One-shot report, changes nothing.
+  Use when asked to find, harvest, review, or record technical debt in a
+  project. Prefer the project's canonical technical-debt document and
+  recognize exceptional tech-debt: inline markers without treating them
+  as the primary record.
 ---
 
-Every deliberate ponytail shortcut is marked with a `ponytail:` comment naming
-its ceiling and upgrade path. This collects them into one ledger so a deferral
-can't quietly become permanent.
+<!--
+Copyright (c) 2026 Alex Baretta. All rights reserved.
+Licensed under the MIT License. See LICENSE in the project root.
+-->
 
-## Scan
+# Technical Debt
 
-Grep the repo for comment markers, skipping `node_modules`, `.git`, and build
-output:
+Use the project's configured technical-debt document. If project-local
+configuration names no document, use `tech_debt.md` at the project root.
 
-`grep -rnE '(#|//) ?ponytail:' .`  (add other comment prefixes if your stack uses them)
+The canonical document is the source of truth. Prefer a concise entry
+there over an inline marker. When an inline marker is unavoidable, use
+`tech-debt:` in the language's ordinary comment syntax and state both the
+known limitation and the concrete trigger or condition for revisiting it.
 
-Each hit is one ledger row. The comment prefix keeps prose that merely mentions
-the convention out of the ledger.
+To harvest debt:
 
-## Output
+1. Read the canonical technical-debt document.
+2. Search tracked source and documentation for `tech-debt:` markers,
+   excluding dependencies, generated output, build output, and VCS data.
+3. Add missing entries to the canonical document without duplicating
+   existing records.
+4. Report malformed markers that lack a limitation or revisit trigger.
+5. Report the number of markers found, entries added, and malformed
+   markers. If no markers exist, say so without changing the document.
 
-One row per marker, grouped by file:
-
-`<file>:<line>, <what was simplified>. ceiling: <the limit named>. upgrade: <the trigger to revisit>.`
-
-The convention is `ponytail: <ceiling>, <upgrade path>`, so pull the ceiling
-and the trigger straight from the comment. Want an owner per row too? add
-`git blame -L<line>,<line>`.
-
-Flag the rot risk: any `ponytail:` comment that names no upgrade path or
-trigger gets a `no-trigger` tag, those are the ones that silently rot.
-
-End with `<N> markers, <M> with no trigger.` Nothing found: `No ponytail: debt. Clean ledger.`
-
-## Boundaries
-
-Reads and reports only, changes nothing. To persist it, ask and it writes the
-ledger to a file (e.g. `PONYTAIL-DEBT.md`). One-shot. "stop ponytail-debt" or
-"normal mode" to revert.
+Do not use product or project branding as a debt-marker namespace. Do not
+create a second debt ledger.

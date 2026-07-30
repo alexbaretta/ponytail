@@ -17,7 +17,7 @@ const skillCommands = commands.filter(
 
 const root = path.join(__dirname, '..');
 
-// ponytail: probe once; on Windows `python3` is the Store-alias stub that fails
+// Probe once; on Windows `python3` is the Store-alias stub that fails
 // even when Python is installed, so fall back to `python`.
 let pythonCmd;
 function pythonExe() {

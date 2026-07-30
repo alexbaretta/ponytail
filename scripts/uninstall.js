@@ -30,7 +30,7 @@ try {
   const cmd = settings.statusLine && settings.statusLine.command;
   // Only remove the parts ponytail owns. If the user combined statuslines
   // (e.g. caveman && ponytail), keep the other plugin's command intact.
-  // ponytail: splits on && / ; to detect other segments — good enough; a user
+  // Splits on && / ; to detect other segments. See tech_debt.md.
   // piping statuslines together is on their own.
   if (typeof cmd === 'string' && cmd.includes(STATUSLINE_SCRIPT)) {
     const parts = cmd
@@ -52,7 +52,7 @@ try {
   if (e.code === 'ENOENT') {
     // no settings.json — nothing to clean
   } else if (e instanceof SyntaxError) {
-    // ponytail: malformed settings.json — can't safely edit it; leave intact, warn
+    // Malformed settings.json cannot be edited safely. See tech_debt.md.
     console.warn(`settings.json is malformed — could not remove the ponytail statusLine entry. Remove it manually from: ${settingsPath} (${e.message})`);
   } else {
     throw e;

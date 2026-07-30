@@ -24,3 +24,17 @@ Codex's bundled `plugin-creator` validator still rejects the otherwise
 supported `hooks` manifest field. Ponytail now uses automatic discovery,
 so that defect no longer blocks validation. It remains tracked in
 [openai/codex#27141](https://github.com/openai/codex/issues/27141).
+
+## Uninstaller parsing
+
+The uninstaller recognizes shell command segments using a narrow
+separator heuristic and leaves malformed `settings.json` files untouched
+because it cannot safely reconstruct them. Revisit this when a supported
+host exposes a structured uninstallation API.
+
+## Status-line install paths
+
+Ponytail embeds its install path in a status-line shell command only when
+the path contains allowlisted ordinary path characters. Other paths fall
+back to manual status-line setup. Revisit this when every supported host
+provides a shell-independent status API.

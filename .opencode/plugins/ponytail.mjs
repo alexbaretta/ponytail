@@ -82,7 +82,7 @@ export default async ({ client } = {}) => {
     },
 
     // Persist `/ponytail <level>` so the next turn's injection follows it.
-    // ponytail: mode applies from the next message, not the current one — the
+    // Mode applies from the next message, not the current one; the
     // transform reads the flag the command writes. Good enough; switch to a
     // synchronous store if same-turn switching ever matters.
     'command.execute.before': async (input) => {
