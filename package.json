@@ -1,5 +1,5 @@
 {
-  "name": "@dietrichgebert/ponytail",
+  "name": "@alexbaretta/ponytail",
   "version": "4.8.4",
   "description": "Lazy senior dev mode for AI agents. The best code is the code you never wrote.",
   "keywords": ["opencode-plugin", "opencode", "ponytail", "pi-package", "pi", "skills", "qoder"],
@@ -8,13 +8,27 @@
     "name": "Dietrich Gebert",
     "url": "https://github.com/DietrichGebert"
   },
-  "homepage": "https://github.com/DietrichGebert/ponytail",
+  "contributors": [
+    {
+      "name": "Alex Baretta",
+      "email": "alex@baretta.com",
+      "url": "https://github.com/alexbaretta"
+    }
+  ],
+  "maintainers": [
+    {
+      "name": "Alex Baretta",
+      "email": "alex@baretta.com",
+      "url": "https://github.com/alexbaretta"
+    }
+  ],
+  "homepage": "https://github.com/alexbaretta/ponytail",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/DietrichGebert/ponytail.git"
+    "url": "git+https://github.com/alexbaretta/ponytail.git"
   },
   "bugs": {
-    "url": "https://github.com/DietrichGebert/ponytail/issues"
+    "url": "https://github.com/alexbaretta/ponytail/issues"
   },
   "main": "./.opencode/plugins/ponytail.mjs",
   "exports": {
@@ -44,4 +58,3 @@
     "access": "public"
   }
 }
-

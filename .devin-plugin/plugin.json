@@ -3,11 +3,11 @@
   "version": "4.8.4",
   "description": "Lazy senior dev mode. Forces the simplest, shortest solution that actually works: YAGNI, stdlib first, no unrequested abstractions.",
   "author": {
-    "name": "Dietrich Gebert",
-    "url": "https://github.com/DietrichGebert"
+    "name": "Alex Baretta",
+    "url": "https://github.com/alexbaretta"
   },
-  "homepage": "https://github.com/DietrichGebert/ponytail",
-  "repository": "https://github.com/DietrichGebert/ponytail",
+  "homepage": "https://github.com/alexbaretta/ponytail",
+  "repository": "https://github.com/alexbaretta/ponytail",
   "license": "MIT",
   "keywords": ["yagni", "minimalism", "code-review", "productivity"]
 }

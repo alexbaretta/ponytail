@@ -12,9 +12,9 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/github/stars/DietrichGebert/ponytail?style=flat-square&color=111111&label=stars" alt="Stars">
-  <img src="https://img.shields.io/github/v/release/DietrichGebert/ponytail?style=flat-square&color=111111&label=release" alt="Release">
-  <img src="https://img.shields.io/npm/v/@dietrichgebert/ponytail?style=flat-square&color=111111&label=npm" alt="npm">
+  <img src="https://img.shields.io/github/stars/alexbaretta/ponytail?style=flat-square&color=111111&label=stars" alt="Stars">
+  <img src="https://img.shields.io/github/v/release/alexbaretta/ponytail?style=flat-square&color=111111&label=release" alt="Release">
+  <img src="https://img.shields.io/npm/v/@alexbaretta/ponytail?style=flat-square&color=111111&label=npm" alt="npm">
   <img src="https://img.shields.io/badge/funciona%20con-15%20agentes-111111?style=flat-square" alt="Works with 15 agents">
   <img src="https://img.shields.io/badge/licencia-MIT-111111?style=flat-square" alt="MIT license">
 </p>
@@ -53,8 +53,6 @@ Con ponytail:
 <!-- ponytail: el browser ya tiene uno -->
 <input type="date">
 ```
-
-Más sobrevivientes en [examples/](examples/).
 
 ## Números
 
@@ -114,7 +112,7 @@ Los plugins de Claude Code y Codex ejecutan dos pequeños lifecycle hooks de Nod
 ### Claude Code
 
 ```
-/plugin marketplace add DietrichGebert/ponytail
+/plugin marketplace add alexbaretta/ponytail
 /plugin install ponytail@ponytail
 ```
 
@@ -123,7 +121,7 @@ La app de escritorio no tiene el comando `/plugin`. Instálala desde la interfaz
 ### Codex
 
 ```bash
-codex plugin marketplace add DietrichGebert/ponytail
+codex plugin marketplace add alexbaretta/ponytail
 codex
 ```
 
@@ -134,14 +132,14 @@ Esta misma instalación cubre también la app de escritorio de Codex: reinicia l
 ### GitHub Copilot CLI
 
 ```bash
-copilot plugin marketplace add DietrichGebert/ponytail
+copilot plugin marketplace add alexbaretta/ponytail
 copilot plugin install ponytail@ponytail
 ```
 
 En una sesión interactiva de Copilot CLI, usa los equivalentes con slash:
 
 ```
-/plugin marketplace add DietrichGebert/ponytail
+/plugin marketplace add alexbaretta/ponytail
 /plugin install ponytail@ponytail
 ```
 
@@ -155,7 +153,7 @@ Copilot CLI agrupa los comandos del plugin bajo el nombre del plugin. Por ejempl
 ### Pi agent harness
 
 ```
-pi install git:github.com/DietrichGebert/ponytail
+pi install git:github.com/alexbaretta/ponytail
 ```
 
 ### OpenCode
@@ -163,7 +161,7 @@ pi install git:github.com/DietrichGebert/ponytail
 Agrega esto a `opencode.json`:
 
 ```json
-{ "plugin": ["@dietrichgebert/ponytail"] }
+{ "plugin": ["@alexbaretta/ponytail"] }
 ```
 
 O ejecútalo desde un checkout (el plugin reutiliza sus `hooks/` y `skills/`):
@@ -176,23 +174,10 @@ Inyecta el ruleset en cada turno con el nivel activo; agrega los comandos `/pony
 
 El path `./` se resuelve contra el `opencode.json` de tu proyecto; para compartir un único checkout entre proyectos, apunta al path absoluto del `.mjs` (encuentra sus `hooks/` y `skills/` relativo a su propio archivo).
 
-### Gemini CLI
-
-```bash
-gemini extensions install https://github.com/DietrichGebert/ponytail
-```
-
-Carga el ruleset como contexto permanente en cada sesión y registra los comandos `/ponytail`; los `skills/` también se incluyen, activados cuando una tarea los necesita.
-
 ### Antigravity CLI
 
-Google está renombrando Gemini CLI a Antigravity CLI (el binario `agy`); la misma extensión se instala ahí:
-
-```bash
-agy plugin install https://github.com/DietrichGebert/ponytail
-```
-
-Reutiliza el `gemini-extension.json` de este repo. Una diferencia: Antigravity convierte los comandos `/ponytail` en skills, así que los escribes en el chat (por ejemplo `/ponytail-review` como mensaje) en vez de seleccionarlos de un menú slash. Hasta que la migración se complete (alrededor del 18 de junio de 2026), `gemini extensions install` también funciona. Para usarlo como regla permanente, coloca el ruleset en `.agents/rules/`.
+Antigravity puede usar Ponytail como ruleset de solo instrucciones. Copia el
+ruleset a `.agents/rules/`.
 
 ### CodeWhale
 
@@ -201,7 +186,7 @@ Lee `AGENTS.md` desde la raíz del proyecto, sin configuración. Copia [`AGENTS.
 ### Devin CLI
 
 ```bash
-devin plugins install DietrichGebert/ponytail
+devin plugins install alexbaretta/ponytail
 ```
 
 Instala ponytail como plugin de Devin; los skills quedan disponibles como `/ponytail:ponytail`, `/ponytail:ponytail-review`, etc.
@@ -240,7 +225,7 @@ Qué archivos corresponden a qué agente: [Portabilidad de agentes](docs/agent-p
 | `/ponytail-debt` | Recolecta los atajos marcados con `ponytail:` que dejaste pendientes en un registro, para que "después" no se convierta en "nunca". |
 | `/ponytail-help` | Referencia rápida de los comandos anteriores. |
 
-Los comandos requieren un host compatible con skills (Claude Code, Codex, Devin CLI, OpenCode, Gemini, pi, Swival). En Codex son skills; se invocan con `@` (`@ponytail-review`). Los adaptadores de solo instrucciones (Cursor, Windsurf, Cline, Copilot, Kiro, Antigravity) cargan el ruleset permanente sin los comandos.
+Los comandos requieren un host compatible con skills (Claude Code, Codex, Devin CLI, OpenCode, pi, Swival). En Codex son skills; se invocan con `@` (`@ponytail-review`). Los adaptadores de solo instrucciones (Cursor, Windsurf, Cline, Copilot, Kiro, Antigravity) cargan el ruleset permanente sin los comandos.
 
 ## Desarrollo
 

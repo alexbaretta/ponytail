@@ -242,7 +242,7 @@ result = run('ponytail-subagent.js', subEnv);
 assert.equal(result.status, 0, result.stderr);
 assert.equal(result.stdout, '', 'SubagentStart must stay silent when ponytail is off');
 
-// Codex shares claude-codex-hooks.json, so SubagentStart is reachable under Codex
+// Codex auto-discovers hooks/hooks.json, so SubagentStart is reachable under Codex
 // too — assert the codex branch emits the badge plus hookSpecificOutput.
 const subCodex = path.join(temp, 'sub-codex');
 fs.mkdirSync(subCodex, { recursive: true });

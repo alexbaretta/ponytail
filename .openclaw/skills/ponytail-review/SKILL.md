@@ -1,7 +1,7 @@
 ---
 name: ponytail-review
 description: "Review a diff for over-engineering. Finds what to delete: reinvented stdlib, needless deps, speculative abstractions. One line per finding."
-homepage: https://github.com/DietrichGebert/ponytail
+homepage: https://github.com/alexbaretta/ponytail
 license: MIT
 ---
 

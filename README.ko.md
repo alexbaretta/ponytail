@@ -12,9 +12,9 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/github/stars/DietrichGebert/ponytail?style=flat-square&color=111111&label=stars" alt="Stars">
-  <img src="https://img.shields.io/github/v/release/DietrichGebert/ponytail?style=flat-square&color=111111&label=release" alt="Release">
-  <img src="https://img.shields.io/npm/v/@dietrichgebert/ponytail?style=flat-square&color=111111&label=npm" alt="npm">
+  <img src="https://img.shields.io/github/stars/alexbaretta/ponytail?style=flat-square&color=111111&label=stars" alt="Stars">
+  <img src="https://img.shields.io/github/v/release/alexbaretta/ponytail?style=flat-square&color=111111&label=release" alt="Release">
+  <img src="https://img.shields.io/npm/v/@alexbaretta/ponytail?style=flat-square&color=111111&label=npm" alt="npm">
   <img src="https://img.shields.io/badge/works%20with-15%20agents-111111?style=flat-square" alt="Works with 15 agents">
   <img src="https://img.shields.io/badge/license-MIT-111111?style=flat-square" alt="MIT license">
 </p>
@@ -53,8 +53,6 @@ ponytail이라면:
 <!-- ponytail: browser has one -->
 <input type="date">
 ```
-
-살아남은 것들이 더 궁금하다면 [examples/](examples/)로.
 
 ## Numbers
 
@@ -114,7 +112,7 @@ Claude Code와 Codex 플러그인은 자그마한 Node.js 라이프사이클 훅
 ### Claude Code
 
 ```
-/plugin marketplace add DietrichGebert/ponytail
+/plugin marketplace add alexbaretta/ponytail
 ```
 ```
 /plugin install ponytail@ponytail
@@ -126,7 +124,7 @@ Claude Code와 Codex 플러그인은 자그마한 Node.js 라이프사이클 훅
 ### Codex
 
 ```bash
-codex plugin marketplace add DietrichGebert/ponytail
+codex plugin marketplace add alexbaretta/ponytail
 codex
 ```
 
@@ -138,14 +136,14 @@ codex
 ### GitHub Copilot CLI
 
 ```bash
-copilot plugin marketplace add DietrichGebert/ponytail
+copilot plugin marketplace add alexbaretta/ponytail
 copilot plugin install ponytail@ponytail
 ```
 
 대화형 Copilot CLI 세션에서는 슬래시 명령으로 똑같이 하면 된다:
 
 ```
-/plugin marketplace add DietrichGebert/ponytail
+/plugin marketplace add alexbaretta/ponytail
 /plugin install ponytail@ponytail
 ```
 
@@ -159,7 +157,7 @@ Copilot CLI는 플러그인 명령에 그 이름을 네임스페이스로 붙인
 ### Pi agent harness
 
 ```
-pi install git:github.com/DietrichGebert/ponytail
+pi install git:github.com/alexbaretta/ponytail
 ```
 
 ### OpenCode
@@ -167,7 +165,7 @@ pi install git:github.com/DietrichGebert/ponytail
 `opencode.json`에 다음을 더한다:
 
 ```json
-{ "plugin": ["@dietrichgebert/ponytail"] }
+{ "plugin": ["@alexbaretta/ponytail"] }
 ```
 
 체크아웃에서 직접 돌려도 된다(플러그인이 `hooks/`와 `skills/`를 그대로 쓴다):
@@ -180,24 +178,10 @@ pi install git:github.com/DietrichGebert/ponytail
 
 `./` 경로는 프로젝트의 `opencode.json`을 기준으로 풀린다. 체크아웃 하나를 여러 프로젝트에서 같이 쓰려면, 대신 `.mjs`의 절대 경로를 가리키면 된다(그 파일은 제 위치를 기준으로 `hooks/`와 `skills/`를 찾는다).
 
-### Gemini CLI
-
-```bash
-gemini extensions install https://github.com/DietrichGebert/ponytail
-```
-
-매 세션 룰셋을 늘 켜진 컨텍스트로 불러오고 `/ponytail` 명령들을 등록한다. `skills/`도 함께 실리며, 작업에 필요할 때 켜진다.
-Gemini 어댑터는 일부러 루트 `hooks/hooks.json`을 두지 않는다. Gemini는 그 경로를 자동으로 불러오는데, ponytail의 라이프사이클 훅은 Claude/Codex 이벤트 이름을 쓰기 때문이다.
-
 ### Antigravity CLI
 
-Google이 Gemini CLI를 Antigravity CLI(`agy` 바이너리)로 이름을 바꾸는 중인데, 같은 확장이 거기에도 설치된다:
-
-```bash
-agy plugin install https://github.com/DietrichGebert/ponytail
-```
-
-이 저장소의 `gemini-extension.json`을 그대로 재사용한다. 차이는 하나다. Antigravity는 `/ponytail` 명령들을 스킬로 바꿔 버려서, 슬래시 메뉴에서 고르는 대신 채팅에 직접 친다(예: `/ponytail-review`를 메시지로). 전환이 마무리될 때까지(2026년 6월 18일경)는 `gemini extensions install`도 여전히 먹힌다. 늘 켜진 규칙으로 돌리고 싶으면, 룰셋을 `.agents/rules/`에 넣으면 된다.
+Antigravity에서는 Ponytail을 지시문 전용 룰셋으로 사용할 수 있다.
+룰셋을 `.agents/rules/`에 복사한다.
 
 ### CodeWhale
 
@@ -208,7 +192,7 @@ agy plugin install https://github.com/DietrichGebert/ponytail
 먼저 컬렉션을 라이브러리에 스테이징한 다음, 원하는 스킬을 더한다:
 
 ```bash
-swival skills add --global https://github.com/DietrichGebert/ponytail  # ~/.config/swival/library에 스테이징
+swival skills add --global https://github.com/alexbaretta/ponytail  # ~/.config/swival/library에 스테이징
 swival skills add ponytail                                             # 이 프로젝트에 컬렉션 설치
 swival skills add --global ponytail                                    # 또는 모든 프로젝트에서 켜기
 ```
@@ -220,7 +204,7 @@ Swival도 프로젝트 루트의 `AGENTS.md`와 전역의 `~/.config/swival/AGEN
 ### Devin CLI
 
 ```bash
-devin plugins install DietrichGebert/ponytail
+devin plugins install alexbaretta/ponytail
 ```
 
 ponytail을 Devin 플러그인으로 설치한다. 스킬은 `/ponytail:ponytail`, `/ponytail:ponytail-review` 등으로 쓸 수 있다.
@@ -260,7 +244,7 @@ Codex 확장을 쓰는 VS Code는 이 저장소가 함께 싣는 `AGENTS.md`를 
 | `/ponytail-gain` | 벤치마크로 잰 효과 스코어보드(코드 절감, 비용 절감, 속도 향상)를 보여 준다. |
 | `/ponytail-help` | 위 명령들의 빠른 참조. |
 
-명령들은 스킬을 지원하는 호스트가 있어야 돈다(Claude Code, Codex, Devin CLI, OpenCode, Gemini, pi, Swival). Codex에선 스킬이라 `@`로 부른다(`@ponytail-review`). 지시문 전용 어댑터(Cursor, Windsurf, Cline, Copilot, Kiro, Antigravity)는 명령 없이 늘 켜진 룰셋만 불러온다.
+명령들은 스킬을 지원하는 호스트가 있어야 돈다(Claude Code, Codex, Devin CLI, OpenCode, pi, Swival). Codex에선 스킬이라 `@`로 부른다(`@ponytail-review`). 지시문 전용 어댑터(Cursor, Windsurf, Cline, Copilot, Kiro, Antigravity)는 명령 없이 늘 켜진 룰셋만 불러온다.
 
 ## Development
 

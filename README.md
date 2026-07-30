@@ -12,9 +12,9 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/github/stars/DietrichGebert/ponytail?style=flat-square&color=111111&label=stars" alt="Stars">
-  <img src="https://img.shields.io/github/v/release/DietrichGebert/ponytail?style=flat-square&color=111111&label=release" alt="Release">
-  <img src="https://img.shields.io/npm/v/@dietrichgebert/ponytail?style=flat-square&color=111111&label=npm" alt="npm">
+  <img src="https://img.shields.io/github/stars/alexbaretta/ponytail?style=flat-square&color=111111&label=stars" alt="Stars">
+  <img src="https://img.shields.io/github/v/release/alexbaretta/ponytail?style=flat-square&color=111111&label=release" alt="Release">
+  <img src="https://img.shields.io/npm/v/@alexbaretta/ponytail?style=flat-square&color=111111&label=npm" alt="npm">
   <img src="https://img.shields.io/badge/works%20with-20%20agents-111111?style=flat-square" alt="Works with 20 agents">
   <img src="https://img.shields.io/badge/license-MIT-111111?style=flat-square" alt="MIT license">
 </p>
@@ -53,8 +53,6 @@ With ponytail:
 <!-- ponytail: browser has one -->
 <input type="date">
 ```
-
-More survivors in [examples/](examples/).
 
 ## Numbers
 
@@ -114,7 +112,7 @@ The Claude Code and Codex plugins run two tiny Node.js lifecycle hooks, so `node
 ### Claude Code
 
 ```
-/plugin marketplace add DietrichGebert/ponytail
+/plugin marketplace add alexbaretta/ponytail
 ```
 ```
 /plugin install ponytail@ponytail
@@ -126,7 +124,7 @@ Same steps in the Claude Code Desktop app's Code tab: type the two `/plugin` com
 ### Codex
 
 ```bash
-codex plugin marketplace add DietrichGebert/ponytail
+codex plugin marketplace add alexbaretta/ponytail
 codex plugin add ponytail@ponytail
 ```
 
@@ -137,14 +135,14 @@ This same install also covers the Codex desktop app: restart the app after insta
 ### GitHub Copilot CLI
 
 ```bash
-copilot plugin marketplace add DietrichGebert/ponytail
+copilot plugin marketplace add alexbaretta/ponytail
 copilot plugin install ponytail@ponytail
 ```
 
 In an interactive Copilot CLI session, use the slash equivalents:
 
 ```
-/plugin marketplace add DietrichGebert/ponytail
+/plugin marketplace add alexbaretta/ponytail
 /plugin install ponytail@ponytail
 ```
 
@@ -158,7 +156,7 @@ Copilot CLI namespaces plugin commands by plugin name. For example:
 ### Pi agent harness
 
 ```
-pi install git:github.com/DietrichGebert/ponytail
+pi install git:github.com/alexbaretta/ponytail
 ```
 
 ### OpenCode
@@ -166,7 +164,7 @@ pi install git:github.com/DietrichGebert/ponytail
 Add to `opencode.json`:
 
 ```json
-{ "plugin": ["@dietrichgebert/ponytail"] }
+{ "plugin": ["@alexbaretta/ponytail"] }
 ```
 
 Run from a checkout instead (the plugin reuses `hooks/` and `skills/`):
@@ -179,15 +177,6 @@ Injects the ruleset every turn at the active level; adds the `/ponytail` command
 
 The `./` path resolves against your project's `opencode.json`; to share one checkout across projects, point it at the absolute path of the `.mjs` instead (it finds its `hooks/` and `skills/` relative to its own file).
 
-### Gemini CLI
-
-```bash
-gemini extensions install https://github.com/DietrichGebert/ponytail
-```
-
-Loads the ruleset as always-on context every session and registers the `/ponytail` commands; the `skills/` ship too, activated when a task needs them.
-The Gemini adapter intentionally does not ship a root `hooks/hooks.json`: Gemini auto-loads that path, while Ponytail's lifecycle hooks use Claude/Codex event names.
-
 ### Qoder
 
 Qoder auto-loads `AGENTS.md` from the repo root as always-on context, so running ponytail from a checkout works with zero setup. For per-project rules, copy [`.qoder/rules/ponytail.md`](.qoder/rules/ponytail.md) into your project's `.qoder/rules/`. The six ponytail skills (`/ponytail`, `/ponytail-review`, `/ponytail-audit`, `/ponytail-debt`, `/ponytail-gain`, `/ponytail-help`) are available via Qoder's Skill system; the plugin manifest at [`.qoder-plugin/plugin.json`](.qoder-plugin/plugin.json) points at the `skills/` directory.
@@ -196,18 +185,13 @@ For full plugin-tier support (automatic mode activation + ruleset injection on e
 
 ### Antigravity CLI
 
-Google is renaming Gemini CLI to Antigravity CLI (the `agy` binary); the same extension installs there:
-
-```bash
-agy plugin install https://github.com/DietrichGebert/ponytail
-```
-
-It reuses this repo's `gemini-extension.json`. One difference: Antigravity converts the `/ponytail` commands into skills, so you type them into the chat (e.g. `/ponytail-review` as a message) instead of picking them from a slash menu. Until the migration completes (around June 18, 2026), `gemini extensions install` still works too. To run it as an always-on rule instead, drop the ruleset into `.agents/rules/`.
+Antigravity can use Ponytail as an instruction-only ruleset. Copy the
+ruleset into `.agents/rules/`.
 
 ### Hermes Agent
 
 ```bash
-hermes plugins install DietrichGebert/ponytail --enable
+hermes plugins install alexbaretta/ponytail --enable
 ```
 
 Restart Hermes after installing. The plugin injects the active Ponytail mode before each LLM turn, registers the bundled skills as `ponytail:<skill>`, and adds `/ponytail`, `/ponytail-review`, `/ponytail-audit`, `/ponytail-debt`, `/ponytail-gain`, and `/ponytail-help`. In shared gateways, restrict `/ponytail` to trusted users with Hermes slash-command access controls; runtime mode is process-local.
@@ -221,7 +205,7 @@ Reads `AGENTS.md` from the project root, zero setup. Copy [`AGENTS.md`](AGENTS.m
 Stage the collection in your library first, then add the skills you want:
 
 ```bash
-swival skills add --global https://github.com/DietrichGebert/ponytail  # stage into ~/.config/swival/library
+swival skills add --global https://github.com/alexbaretta/ponytail  # stage into ~/.config/swival/library
 swival skills add ponytail                                             # install the collection into this project
 swival skills add --global ponytail                                    # or activate it in every project
 ```
@@ -233,7 +217,7 @@ On the command line, use a `$` prefix to explicitly activate a skill. For exampl
 ### Devin CLI
 
 ```bash
-devin plugins install DietrichGebert/ponytail
+devin plugins install alexbaretta/ponytail
 ```
 
 Installs ponytail as a Devin plugin; skills are available as `/ponytail:ponytail`, `/ponytail:ponytail-review`, and so on.
@@ -293,7 +277,7 @@ These remove the plugin's own files. They leave behind a small amount of state p
 | `/ponytail-gain` | Show the measured impact scoreboard (less code, less cost, more speed) from the benchmark. |
 | `/ponytail-help` | Quick reference for the commands above. |
 
-Commands need a skill-capable host (Claude Code, Codex, Devin CLI, OpenCode, Gemini, pi, Swival, Hermes Agent, Qoder). In Codex they're skills, invoke with `@` (`@ponytail-review`). The instruction-only adapters (Cursor, Windsurf, Cline, Copilot, Kiro, Antigravity) load the always-on ruleset without the commands.
+Commands need a skill-capable host (Claude Code, Codex, Devin CLI, OpenCode, pi, Swival, Hermes Agent, Qoder). In Codex they're skills, invoke with `@` (`@ponytail-review`). The instruction-only adapters (Cursor, Windsurf, Cline, Copilot, Kiro, Antigravity) load the always-on ruleset without the commands.
 
 ## Development
 
