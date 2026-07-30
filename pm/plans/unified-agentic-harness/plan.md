@@ -419,7 +419,7 @@ Ponytail edits.
 ## Sprint Manifest
 
 - [S01](sprints/S01.md): `DONE` - Resolve semantics and architecture.
-- [S02](sprints/S02.md): `PENDING` - Establish the isolated core.
+- [S02](sprints/S02.md): `DONE` - Establish the isolated core.
 - [S03](sprints/S03.md): `PENDING` - Migrate reusable skills.
 - [S04](sprints/S04.md): `PENDING` - Generate supported host adapters.
 - [S05](sprints/S05.md): `PENDING` - Complete publication quality.

@@ -3,74 +3,60 @@ const fs = require('fs');
 const path = require('path');
 
 const root = path.join(__dirname, '..');
+const copyright = `<!--
+Copyright (c) 2026 DietrichGebert.
+Copyright (c) 2026 Alex Baretta. All rights reserved.
 
-function read(relPath) {
-  return fs.readFileSync(path.join(root, relPath), 'utf8').replace(/\r\n/g, '\n').trim();
-}
-
-function stripFrontmatter(text) {
-  return text.replace(/^---\n[\s\S]*?\n---\n*/, '').trim();
-}
-
-const agents = read('AGENTS.md');
-const canonical = agents.replace(/\n\n\(Yes, this file also applies[\s\S]*?\)$/, '').trim();
-
-// Compact copies: same body as AGENTS.md, host-specific frontmatter stripped.
-const copies = [
-  ['.cursor/rules/ponytail.mdc', stripFrontmatter],
-  ['.windsurf/rules/ponytail.md', text => text.trim()],
-  ['.clinerules/ponytail.md', text => text.trim()],
-  ['.agents/rules/ponytail.md', text => text.trim()],
-  ['.qoder/rules/ponytail.md', text => text.trim()],
-  ['.github/copilot-instructions.md', text => text.trim()],
-  ['.kiro/steering/ponytail.md', stripFrontmatter],
+Licensed under the MIT License. See LICENSE in the project root.
+-->`;
+const targets = [
+  ['.cursor/rules/ponytail.mdc', `---
+description: Ponytail portable engineering policy.
+globs:
+alwaysApply: true
+---`],
+  ['.windsurf/rules/ponytail.md', ''],
+  ['.clinerules/ponytail.md', ''],
+  ['.agents/rules/ponytail.md', ''],
+  ['.qoder/rules/ponytail.md', ''],
+  ['.github/copilot-instructions.md', ''],
+  ['.kiro/steering/ponytail.md', `---
+title: Ponytail portable engineering policy
+inclusion: always
+---`],
 ];
 
-let failed = false;
+function read(relativePath) {
+  return fs.readFileSync(path.join(root, relativePath), 'utf8')
+    .replace(/\r\n/g, '\n');
+}
 
-for (const [relPath, normalize] of copies) {
-  const actual = normalize(read(relPath));
-  if (actual !== canonical) {
-    console.error(`${relPath} drifted from AGENTS.md`);
+function canonicalPolicy() {
+  return read('skills/ponytail/SKILL.md')
+    .replace(/^---\n[\s\S]*?\n---\n*/, '')
+    .replace(/^<!--\n[\s\S]*?\n-->\n*/, '')
+    .trim();
+}
+
+function render(frontmatter) {
+  return [frontmatter, copyright, canonicalPolicy()]
+    .filter(Boolean)
+    .join('\n\n') + '\n';
+}
+
+let failed = false;
+for (const [relativePath, frontmatter] of targets) {
+  const expected = render(frontmatter);
+  if (process.argv.includes('--write')) {
+    fs.writeFileSync(path.join(root, relativePath), expected);
+  } else if (read(relativePath) !== expected) {
+    console.error(`${relativePath} drifted from skills/ponytail/SKILL.md`);
     failed = true;
   }
 }
 
-// SKILL.md is the runtime source of truth and is longer than the compact body,
-// so it cannot be byte-compared. ponytail: canary, not full equality. Assert the
-// load-bearing rules survive verbatim in both the source and AGENTS.md. Changing
-// a rule's wording trips this, which is the reminder to propagate it everywhere.
-// Upgrade path: generate the copies from SKILL.md if this ever misses a real drift.
-const INVARIANTS = [
-  'in this codebase',                      // ladder rung: reuse what already exists (#217)
-  'naive heuristic',                       // ceiling-comment rule
-  'ONE runnable check',                    // test reflex
-  'flimsier algorithm',                    // robust-variant rule
-  // the four "not lazy about" safety carve-outs: pin each so a reword in either
-  // file can't silently drop one. Only validation was pinned before. These are the
-  // continuous substrings present in both files ("prevents data loss" because the
-  // full "error handling that prevents data loss" wraps a line in SKILL.md).
-  'input validation at trust boundaries',
-  'prevents data loss',
-  'security',
-  'accessibility',
-  'Lazy code without its check is unfinished', // one-check promoted to headline
-];
+if (failed) process.exit(1);
 
-const skill = read('skills/ponytail/SKILL.md');
-const sources = [['skills/ponytail/SKILL.md', skill], ['AGENTS.md', agents]];
-for (const phrase of INVARIANTS) {
-  for (const [label, text] of sources) {
-    if (!text.includes(phrase)) {
-      console.error(`${label} is missing rule invariant: "${phrase}"`);
-      failed = true;
-    }
-  }
-}
-
-if (failed) {
-  console.error('Update the copied rule text, AGENTS.md, or SKILL.md so the shared rules match.');
-  process.exit(1);
-}
-
-console.log(`Rule copies match AGENTS.md; ${INVARIANTS.length} rule invariants present in SKILL.md and AGENTS.md.`);
+console.log(process.argv.includes('--write')
+  ? `Generated ${targets.length} rule copies from skills/ponytail/SKILL.md.`
+  : `${targets.length} rule copies match skills/ponytail/SKILL.md.`);
