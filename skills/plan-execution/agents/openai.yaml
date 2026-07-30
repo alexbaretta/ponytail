@@ -2,6 +2,6 @@
 # Author: Alex Baretta <alex@baretta.com>.
 # Licensed under the MIT License. See LICENSE in the project root.
 interface:
-  display_name: "Plan Tasklets"
+  display_name: "Plan Execution"
   short_description: "Manage plans, bugs, tasklets, and validation"
-  default_prompt: "Use $plan-tasklets to manage this approved project work."
+  default_prompt: "Use $plan-execution to manage this approved project work."

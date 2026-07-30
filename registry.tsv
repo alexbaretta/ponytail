@@ -9,7 +9,7 @@ skill	disabled	git-write-escalation	-	-	Current Codex manages these approvals wi
 skill	enabled	indeterminate-list-ux	skills/indeterminate-list-ux	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Bounded infinite-scroll UX
 skill	enabled	lossless-json-contracts	skills/lossless-json-contracts	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Exact JSON boundary rules
 skill	enabled	monetary-contract-safety	skills/monetary-contract-safety	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Monetary contract rules
-skill	enabled	plan-tasklets	skills/plan-tasklets	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Durable project management workflow
+skill	enabled	plan-execution	skills/plan-execution	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Durable project management workflow
 skill	enabled	ponytail	skills/ponytail	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Portable core policy
 skill	enabled	ponytail-audit	skills/ponytail-audit	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Repository complexity audit
 skill	enabled	ponytail-debt	skills/ponytail-debt	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Technical debt reconciliation

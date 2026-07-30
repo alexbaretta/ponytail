@@ -131,8 +131,8 @@
     {
       "kind": "skill",
       "status": "enabled",
-      "name": "plan-tasklets",
-      "source": "skills/plan-tasklets",
+      "name": "plan-execution",
+      "source": "skills/plan-execution",
       "hosts": [
         "claude",
         "codex",

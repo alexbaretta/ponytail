@@ -1,5 +1,5 @@
 ---
-name: plan-tasklets
+name: plan-execution
 description: >-
   Use when creating, updating, reviewing, approving, resuming, or executing
   long-lived plans, sprints, features or stories, atomic tasklets, and
@@ -15,7 +15,7 @@ Author: Alex Baretta <alex@baretta.com>.
 Licensed under the MIT License. See LICENSE in the project root.
 -->
 
-# Plan Tasklets
+# Plan Execution
 
 Manage durable project work without depending on chat history, one Git branch,
 or one repository. The host project's agent configuration supplies paths,

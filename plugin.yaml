@@ -22,7 +22,7 @@ provides_skills:
   - indeterminate-list-ux
   - lossless-json-contracts
   - monetary-contract-safety
-  - plan-tasklets
+  - plan-execution
   - ponytail
   - ponytail-audit
   - ponytail-debt
