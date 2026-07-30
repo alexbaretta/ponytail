@@ -25,11 +25,6 @@
 </p>
 
 <p align="center">
-  <strong>코드 약 54% 감소(최대 94%) &middot; 약 20% 저렴 &middot; 약 27% 빠름 &middot; 100% 안전</strong><br>
-  <sub>실제 오픈소스 저장소(FastAPI + React)를 고치는 실제 Claude Code 세션에서, 스킬을 끈 같은 에이전트와 견줘 측정했다. 약 54%는 기능 작업 12건의 평균이다(Haiku 4.5, n=4). 에이전트가 과하게 짤 여지가 있는 곳(날짜 선택기)에선 94%까지 오르고, 코드가 이미 최소한인 곳에선 0에 가깝다. ponytail은 안전 가드를 하나도 빼놓지 않지만, 그냥 "한 줄로 써"라고만 시킨 프롬프트는 그중 하나를 놓친다. (예전 단발성 벤치마크는 80-94%를 단일 수치로 내세웠는데, 공정한 에이전트 기준선에 견주면 그건 평균이 아니라 작업별 상한이다.) <a href="benchmarks/results/2026-06-18-agentic.md">전체 보고서</a> &middot; <a href="benchmarks/">직접 재현하기</a>.</sub>
-</p>
-
-<p align="center">
   <sub>커뮤니티 번역이다. 기준이 되는 최신 버전은 <a href="README.md">영어 README</a>다.</sub>
 </p>
 
@@ -53,37 +48,6 @@ ponytail이라면:
 <!-- ponytail: browser has one -->
 <input type="date">
 ```
-
-## Numbers
-
-공정하게 재려면 실제 에이전트에게 실질적인 작업을 시켜 봐야 한다. 헤드리스 Claude Code 세션에게 [tiangolo의 full-stack-fastapi-template](https://github.com/fastapi/full-stack-fastapi-template)(진짜 FastAPI + React 저장소)을 맡기고, 남긴 `git diff`로 점수를 매겼다. 기능 티켓 12건, 같은 에이전트를 스킬만 켜고 끄며 비교, n=4, Haiku 4.5.
-
-<p align="center">
-  <img src="assets/benchmark-agentic.svg" width="860" alt="Each arm as a percent of the no-skill baseline across LOC, tokens, cost and time (Haiku 4.5). ponytail is lowest on every metric (LOC 46%, tokens 78%, cost 80%, time 73%); caveman rises above 100% on tokens, cost and time; yagni-oneliner LOC 67%. Safety, separate adversarial tier: baseline, caveman and ponytail 100%, yagni-oneliner 95%.">
-</p>
-
-| 스킬 없는 기준선 대비 | LOC | tokens | cost | time | safe |
-|---|--:|--:|--:|--:|--:|
-| **ponytail** | **-54%** | **-22%** | **-20%** | **-27%** | **100%** |
-| caveman (간결한 산문 대조군) | -20% | +7% | +3% | +2% | 100% |
-| "YAGNI + one-liners" 프롬프트 | -33% | -14% | -21% | -30% | 95% |
-
-모든 지표를 깎은 건 ponytail뿐이고, 그러면서 안전까지 온전히 지킨 것도 ponytail뿐이다. 깎이는 폭은 과잉 구현의 함정이 실제로 있는 곳에서 가장 크다. 컴포넌트 대신 네이티브 `<input>`으로 손이 가니 날짜 선택기는 404줄에서 23줄로, 색상 선택기는 287줄에서 23줄로 줄어든다. 반대로 이미 군더더기 없는 코드에선 거의 0이다. 전체 방법론, 작업별 표, 한계는 [benchmarks/results/2026-06-18-agentic.md](benchmarks/results/2026-06-18-agentic.md)에 있다.
-
-<details>
-<summary><strong>예전 단발성 수치 (격리된 생성)</strong></summary>
-
-일상적인 작업 다섯 가지, 모델 셋, 비교군 셋(스킬 없음, [caveman](https://github.com/JuliusBrussee/caveman), ponytail), 10회 실행, 중앙값 기준. 프롬프트 하나에 응답 하나, 답변의 줄 수를 셌다:
-
-<p align="center">
-  <img src="assets/benchmark-3model.svg" width="860" alt="Median lines of code per arm across Haiku, Sonnet and Opus">
-</p>
-
-여기선 **코드 80-94% 감소**가 나왔다. 다만 [#126](https://github.com/DietrichGebert/ponytail/issues/126)이 맞게 짚었듯, 스킬을 전혀 안 붙인 기준선 모델은 답변을 설명과 선택지로 부풀린다. 그래서 그 격차의 일부는 대화형 기준선이 만들어 낸 착시다. 위의 에이전트 수치가 그걸 바로잡은, 근거 있는 버전이다. 단발성 실행은 `npx promptfoo eval -c benchmarks/promptfooconfig.yaml`로 재현할 수 있다.
-
-</details>
-
-**규칙은 애초에 "토큰 최소화"가 아니었다.** 작업에 필요한 만큼만 쓰되, 검증·에러 처리·보안·접근성은 절대 덜어내지 않는다는 것이다. 코드가 작아지는 건 억지로 줄여서가 아니라 딱 그만큼만 필요해서다. 비용과 지연이 낮아지는 것도 단계를 충실히 밟는 모델에서나 부수적으로 딸려 오는 효과일 뿐이다. 그 단계를 고민하느라 사고 토큰을 쏟는 간결한 추론 모델은 오히려 거꾸로 갈 수도 있다(GPT-5.5가 그렇다).
 
 ## How it works
 
@@ -241,7 +205,6 @@ Codex 확장을 쓰는 VS Code는 이 저장소가 함께 싣는 `AGENTS.md`를 
 | `/ponytail-review` | 지금 diff를 과잉 구현 관점에서 훑고, 삭제 목록을 돌려준다. |
 | `/ponytail-audit` | diff만이 아니라 저장소 전체를 과잉 구현 관점에서 감사한다. |
 | `/ponytail-debt` | 미뤄 둔 `ponytail:` 간소화들을 장부로 모아, "나중에"가 "영영"이 되지 않게 한다. |
-| `/ponytail-gain` | 벤치마크로 잰 효과 스코어보드(코드 절감, 비용 절감, 속도 향상)를 보여 준다. |
 | `/ponytail-help` | 위 명령들의 빠른 참조. |
 
 명령들은 스킬을 지원하는 호스트가 있어야 돈다(Claude Code, Codex, Devin CLI, OpenCode, pi, Swival). Codex에선 스킬이라 `@`로 부른다(`@ponytail-review`). 지시문 전용 어댑터(Cursor, Windsurf, Cline, Copilot, Kiro, Antigravity)는 명령 없이 늘 켜진 룰셋만 불러온다.
@@ -256,8 +219,6 @@ npm test
 ```
 
 OpenClaw 스킬 패키지(`.openclaw/skills/`)는 `skills/`에서 생성된다. 스킬을 바꾼 뒤에는 `node scripts/build-openclaw-skills.js`를 다시 돌린다. 묵은 상태면 테스트 스위트가 실패한다.
-
-정확성 벤치마크는 이메일·CSV 검사를 위해 Python을 띄운다. `python`보다 `python3`를 먼저 시도한다. CSV 검사는 로컬에 `pandas`가 깔려 있어야 한다.
 
 ## FAQ
 

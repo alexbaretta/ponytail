@@ -10,13 +10,13 @@ const os = require('os');
 const path = require('path');
 const { spawnSync } = require('child_process');
 
-const commands = ['ponytail', 'ponytail-review', 'ponytail-audit', 'ponytail-debt', 'ponytail-gain', 'ponytail-help'];
+const commands = ['ponytail', 'ponytail-review', 'ponytail-audit', 'ponytail-debt', 'ponytail-help'];
 const skillCommands = commands.filter((name) => name !== 'ponytail');
 
 const root = path.join(__dirname, '..');
 
 // ponytail: probe once; on Windows `python3` is the Store-alias stub that fails
-// even when Python is installed, so fall back to `python` (mirrors benchmarks/correctness.js).
+// even when Python is installed, so fall back to `python`.
 let pythonCmd;
 function pythonExe() {
   if (pythonCmd) return pythonCmd;
@@ -84,7 +84,6 @@ print(json.dumps({'skills': ctx.skills, 'hooks': ctx.hooks, 'commands': ctx.comm
     'ponytail',
     'ponytail-audit',
     'ponytail-debt',
-    'ponytail-gain',
     'ponytail-help',
     'ponytail-review',
   ]);
