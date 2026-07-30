@@ -22,20 +22,25 @@ dependencies, which may require test doubles.
 
 ## Project-Configured Test Metadata
 
-Before designing or editing a test, inspect the host project's local
-configuration for any declared:
+The host configures this skill in `AGENTS.md`, directly or by reference, with
+these entries:
 
-- unit-test indexes and their discovery procedure;
-- index or audit-metadata regeneration commands;
-- index validation commands; and
-- project-specific audit metadata required on tests or mock boundaries.
+- `TypeScript unit-test command`;
+- `TypeScript unit-test indexes and discovery`;
+- `TypeScript unit-test audit metadata`;
+- `TypeScript unit-test metadata regeneration command`; and
+- `TypeScript unit-test metadata validation command`.
+
+An entry may be `not configured` when the project does not own that mechanism.
+The default unit-test command is the host's configured full unit-test command.
+The defaults for every metadata entry are `not configured`.
 
 When configured, consult the declared indexes, inspect their referenced owners
 and reusable doubles, update the required metadata, and run the configured
 regeneration and validation commands. Also perform a narrow source search
 because an index may be stale or incomplete.
 
-When these features are not declared by project configuration, do not assume a
+When these features are `not configured`, do not assume a
 counterpart skill, conventional path, generated index, metadata schema, or
 bootstrap workflow exists. Search the source and tests directly, then extend an
 existing owning suite or shared double when one represents the required

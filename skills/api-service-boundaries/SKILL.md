@@ -16,6 +16,20 @@ Licensed under the MIT License. See LICENSE in the project root.
 
 # API Service Boundaries
 
+## Project Configuration Contract
+
+The host configures this skill in `AGENTS.md`, directly or by reference, with:
+
+- `API architecture and ownership`;
+- `Authorization owner`;
+- `Public identifier policy`; and
+- `API validation commands`.
+
+The defaults are a backend authorization owner, opaque public identifiers that
+are distinct from database primary keys, focused endpoint and service tests,
+and the host's configured milestone gate. Concrete owners and formats must be
+discovered from implementation and recorded before a change depends on them.
+
 ## Trust Boundaries And Identity
 
 - Never expose an internal database primary key across a trust boundary.
@@ -62,5 +76,5 @@ Licensed under the MIT License. See LICENSE in the project root.
    public identity, service failure, and transaction or external-call edges.
 8. Run the host's focused API checks, then its milestone gate.
 
-Host configuration supplies concrete service names, public-ID formats,
-and authentication mechanisms.
+The configured API architecture supplies concrete service names, public-ID
+formats, and authentication mechanisms.

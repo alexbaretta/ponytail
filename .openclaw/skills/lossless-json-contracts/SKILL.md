@@ -17,6 +17,21 @@ Treat an owned JSON boundary as an explicit contract. Ordinary JSON codecs
 commonly coerce number tokens through a binary floating-point type and can
 silently change integer or decimal values.
 
+## Project Configuration Contract
+
+The host configures this skill in `AGENTS.md`, directly or by reference, with:
+
+- `Lossless JSON standard`;
+- `Lossless JSON boundary inventory`;
+- `Lossless JSON numeric representation`; and
+- `Lossless JSON validation commands`.
+
+The standard and inventory default to `not configured`. The numeric
+representation defaults to a lossless representation appropriate to the
+language and contract. Validation defaults to focused boundary tests followed
+by the host's configured milestone gate. Do not create an inventory or select
+a second numeric representation when the host already owns one.
+
 ## Boundary Inventory
 
 Before editing, identify every affected:
@@ -28,7 +43,7 @@ Before editing, identify every affected:
 - signature, hash, or byte-forwarding path; and
 - generated or third-party adapter.
 
-Use the host project's canonical inventory and standard when configured.
+Use the configured inventory and standard when present.
 Update that inventory in the same change as an added, removed, or changed
 boundary.
 
@@ -50,8 +65,8 @@ need semantic number conversion or numeric round-trip tests.
 - Reject non-finite values and any value the owned contract cannot represent.
 - Keep parsing and serialization symmetric across every supported boundary.
 
-The host configuration may prescribe a specific lossless-number library or
-type. Use that canonical representation rather than introducing another.
+Use the configured lossless-number library or type rather than introducing
+another.
 
 ## Raw-Byte Integrity
 

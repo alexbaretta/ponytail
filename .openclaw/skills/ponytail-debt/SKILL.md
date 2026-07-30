@@ -13,8 +13,8 @@ Licensed under the MIT License. See LICENSE in the project root.
 
 # Technical Debt
 
-Use the project's configured technical-debt document. If project-local
-configuration names no document, use `tech_debt.md` at the project root.
+The host configures this skill in `AGENTS.md` with `Technical-debt document`.
+The default is `tech_debt.md` at the project root.
 
 The canonical document is the source of truth. Prefer a concise entry
 there over an inline marker. When an inline marker is unavoidable, use

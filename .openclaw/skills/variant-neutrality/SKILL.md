@@ -20,8 +20,9 @@ them.
 
 ## Project Configuration Contract
 
-Read the host project's configured variant-neutrality owner before changing a
-covered surface. It should identify, directly or by reference:
+The host configures this skill in `AGENTS.md` with `Variant-neutrality
+configuration`, naming one owner document or `not configured`. That owner must
+identify:
 
 - variant-family terminology and the current variants in each family;
 - exact discriminant fields and values or canonical registries that own them;
@@ -31,7 +32,9 @@ covered surface. It should identify, directly or by reference:
 - serialization or contract documentation that must remain synchronized; and
 - focused audit, generation, test, and build commands.
 
-Do not assume a companion project-local skill, conventional paths, particular
+The default is `not configured`; in that state the skill defines no project
+families and must not invent them. Do not assume a companion project-local
+skill, conventional paths, particular
 provider names, or a specific validation tool. If required project-specific
 facts are absent, apply the host's configuration-discrepancy policy instead of
 inventing them.

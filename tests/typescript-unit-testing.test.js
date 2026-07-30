@@ -13,9 +13,10 @@ const skill = fs.readFileSync(
 );
 
 test('TypeScript test metadata is owned by project configuration', () => {
-  assert.match(skill, /inspect the host project's local\nconfiguration/);
+  assert.match(skill, /host configures this skill in `AGENTS\.md`/);
+  assert.match(skill, /`TypeScript unit-test indexes and discovery`/);
   assert.match(skill, /When configured, consult the declared indexes/);
-  assert.match(skill, /When these features are not declared by project configuration/);
+  assert.match(skill, /When these features are `not configured`/);
   assert.match(skill, /do not assume a\ncounterpart skill, conventional path, generated index, metadata schema/);
   assert.match(skill, /Do not invent project-local indexing or auditing infrastructure/);
 });

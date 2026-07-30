@@ -16,6 +16,14 @@ Licensed under the MIT License. See LICENSE in the project root.
 Use this workflow only for a confirmed authentication failure. Preserve the
 failed command and its diagnostic output before starting recovery.
 
+## Project Configuration Contract
+
+The host configures this skill in `AGENTS.md` with one `Cloud CLI
+reauthentication command` entry per supported CLI, account or profile, and
+environment where those distinctions change the command. There is no generic
+default. A host that does not support cloud reauthentication may declare the
+entry `not applicable`.
+
 ## Workflow
 
 1. Identify the cloud CLI, account or profile, environment, and exact command

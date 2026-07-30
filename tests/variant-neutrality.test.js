@@ -13,10 +13,11 @@ const skill = fs.readFileSync(
 );
 
 test('variant-specific facts come only from project configuration', () => {
-  assert.match(skill, /host project's configured variant-neutrality owner/);
+  assert.match(skill, /host configures this skill in `AGENTS\.md`/);
+  assert.match(skill, /`Variant-neutrality\nconfiguration`/);
   assert.match(skill, /exact discriminant fields and values or canonical registries/);
   assert.match(skill, /neutral and variant-specific source ownership paths/);
-  assert.match(skill, /Do not assume a companion project-local skill/);
+  assert.match(skill, /Do not assume a companion project-local\nskill/);
   assert.match(skill, /configuration-discrepancy policy instead of\ninventing them/);
 });
 

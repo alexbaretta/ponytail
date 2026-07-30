@@ -13,10 +13,10 @@ Licensed under the MIT License. See LICENSE in the project root.
 
 # Test Credentials
 
-Use this skill only when the host repository declares or already uses the
-project-local, ignored `test_credentials/` convention. Otherwise follow the
-host repository's credential policy; do not introduce this layout merely
-because this skill is installed.
+The host configures this skill in `AGENTS.md` with `Test-credentials policy`,
+set to either `not adopted` or `adopted at the ignored test_credentials/ root`,
+plus any referenced policy document. The default is `not adopted`; do not
+introduce this layout merely because this skill is installed.
 
 When adopted, treat `test_credentials/` as the canonical source for test
 credentials. Inspect it before concluding that credentials are unavailable or
