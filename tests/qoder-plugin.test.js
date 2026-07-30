@@ -13,7 +13,6 @@ const SKILL_DIRS = [
   'ponytail-review',
   'ponytail-audit',
   'ponytail-debt',
-  'ponytail-help',
 ];
 
 function readJSON(relPath) {

@@ -120,9 +120,12 @@ test("session_start restores latest persisted mode", async () => withTempConfig(
   assert.ok(result.systemPrompt.includes("lite"));
 }));
 
-test("skill alias commands delegate to Pi skill commands", async () => {
+test("skill commands delegate and help displays directly", async () => {
   const { commands, sentUserMessages } = createPiHarness();
-  const ctx = createCommandContext();
+  const notices = [];
+  const ctx = createCommandContext({
+    ui: { notify(text, level) { notices.push({ text, level }); } },
+  });
 
   await commands.get("ponytail-review").handler("", ctx);
   await commands.get("ponytail-audit").handler("", ctx);
@@ -133,8 +136,10 @@ test("skill alias commands delegate to Pi skill commands", async () => {
     "/skill:ponytail-review",
     "/skill:ponytail-audit",
     "/skill:ponytail-debt",
-    "/skill:ponytail-help",
   ]);
+  assert.equal(notices.length, 1);
+  assert.match(notices[0].text, /# Ponytail Help/);
+  assert.match(notices[0].text, /Core\s+engineering rules remain active/);
 });
 
 test("normal mode disables compaction but preserves core policy", async () => withTempConfig(async () => {

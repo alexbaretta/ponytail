@@ -10,7 +10,6 @@ provides_commands:
   - ponytail-review
   - ponytail-audit
   - ponytail-debt
-  - ponytail-help
 provides_skills:
   - ponytail
   - ponytail-review

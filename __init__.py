@@ -14,14 +14,14 @@ CONFIG_MODES = RUNTIME_MODES | {"review"}
 SKILL_COMMANDS = {
     "ponytail-review": "Review the current diff or provided target for over-engineering.",
     "ponytail-audit": "Audit the repo for over-engineering and deletion opportunities.",
-    "ponytail-debt": "List every deliberate `ponytail:` shortcut and its upgrade path.",
-    "ponytail-help": "Show the Ponytail command reference.",
+    "ponytail-debt": "List every exceptional `tech-debt:` marker and its upgrade path.",
 }
 
 ROOT = Path(__file__).resolve().parent
 SKILLS_DIR = ROOT / "skills"
 PONYTAIL_SKILL = SKILLS_DIR / "ponytail" / "SKILL.md"
 REVIEW_SKILL = SKILLS_DIR / "ponytail-review" / "SKILL.md"
+HELP_COMMAND = ROOT / "commands" / "ponytail-help.md"
 
 _current_mode = None
 
@@ -113,6 +113,15 @@ def _skill_prompt(command: str, args: str = "") -> str:
     )
 
 
+def _help_text() -> str:
+    return re.sub(
+        r"^<!--[\s\S]*?-->\s*",
+        "",
+        HELP_COMMAND.read_text(encoding="utf-8"),
+        count=1,
+    )
+
+
 def _slash_access_denied(event: Any, gateway: Any, command: str) -> bool:
     if gateway is None or event is None:
         return False
@@ -133,11 +142,12 @@ def rewrite_gateway_command(event: Any = None, gateway: Any = None, **_: Any) ->
         return None
     head, _, rest = text[1:].partition(" ")
     command = head.replace("_", "-").lower()
-    if command not in SKILL_COMMANDS:
+    if command != "ponytail-help" and command not in SKILL_COMMANDS:
         return None
     if _slash_access_denied(event, gateway, command):
         return None
-    return {"action": "rewrite", "text": _skill_prompt(command, rest)}
+    text = _help_text() if command == "ponytail-help" else _skill_prompt(command, rest)
+    return {"action": "rewrite", "text": text}
 
 
 def _handle_mode_command(raw_args: str) -> str:
@@ -191,3 +201,8 @@ def register(ctx: Any) -> None:
             description=description,
             args_hint="[target or notes]",
         )
+    ctx.register_command(
+        "ponytail-help",
+        lambda _: _help_text(),
+        description="Show the Ponytail command reference.",
+    )

@@ -11,7 +11,9 @@ const path = require('path');
 const { spawnSync } = require('child_process');
 
 const commands = ['ponytail', 'ponytail-review', 'ponytail-audit', 'ponytail-debt', 'ponytail-help'];
-const skillCommands = commands.filter((name) => name !== 'ponytail');
+const skillCommands = commands.filter(
+  (name) => name !== 'ponytail' && name !== 'ponytail-help',
+);
 
 const root = path.join(__dirname, '..');
 
@@ -84,7 +86,6 @@ print(json.dumps({'skills': ctx.skills, 'hooks': ctx.hooks, 'commands': ctx.comm
     'ponytail',
     'ponytail-audit',
     'ponytail-debt',
-    'ponytail-help',
     'ponytail-review',
   ]);
   assert.ok(data.skills.every(([, skillPath]) => skillPath.endsWith('/SKILL.md')));

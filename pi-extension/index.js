@@ -1,4 +1,5 @@
 import { createRequire } from "node:module";
+import { readFileSync } from "node:fs";
 
 const require = createRequire(import.meta.url);
 const {
@@ -20,6 +21,9 @@ export const readQuietStartup = getQuietStartup;
 
 const RUNTIME_MODE_LIST = RUNTIME_MODES.join("|");
 const PONYTAIL_COMMAND_DESCRIPTION = `Set mode: ${RUNTIME_MODE_LIST}. Commands: status, default <mode>`;
+const HELP_TEXT = readFileSync(new URL("../commands/ponytail-help.md", import.meta.url), "utf8")
+  .replace(/^<!--[\s\S]*?-->\s*/, "")
+  .trim();
 
 export function resolveSessionMode(entries, fallbackMode = DEFAULT_MODE) {
   const fallback = normalizePersistedMode(fallbackMode) || DEFAULT_MODE;
@@ -162,8 +166,8 @@ export default function ponytailExtension(pi) {
   });
 
   pi.registerCommand("ponytail-help", {
-    description: "Run /skill:ponytail-help",
-    handler: (_args, ctx) => sendAlias("/skill:ponytail-help", "", ctx),
+    description: "Show the Ponytail command reference",
+    handler: (_args, ctx) => ctx?.ui?.notify?.(HELP_TEXT, "info"),
   });
 
   pi.on("input", async (event) => {
