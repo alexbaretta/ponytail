@@ -1,15 +1,19 @@
+# Copyright (c) 2026 DietrichGebert.
+# Copyright (c) 2026 Alex Baretta. All rights reserved.
+# Licensed under the MIT License. See LICENSE in the project root.
 name: ponytail
 version: 4.8.4
-description: Lazy senior dev mode for Hermes Agent, always-on context, bundled skills, and slash commands.
+description: Lazy senior dev mode for AI agents. The best code is the code you never wrote.
 author: Dietrich Gebert
 provides_hooks:
   - pre_llm_call
   - pre_gateway_dispatch
 provides_commands:
   - ponytail
-  - ponytail-review
   - ponytail-audit
   - ponytail-debt
+  - ponytail-help
+  - ponytail-review
 provides_skills:
   - api-service-boundaries
   - bash-parse-safe-scripts
@@ -25,4 +29,3 @@ provides_skills:
   - static-type-safety
   - test-credentials
   - versioned-data-contracts
-  - ponytail-help

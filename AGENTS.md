@@ -43,6 +43,8 @@ services. `PROJECT_STRUCTURE.md` is authoritative for that boundary.
 - Runtime-registry generation: `node scripts/build-registry-data.js
   --write`; omit `--write` to check generated output.
 - Version check: `node scripts/check-versions.js`.
+- Manifest generation: `node scripts/build-manifests.js --write`; omit
+  `--write` to check repeated metadata.
 - OpenClaw generation: `node scripts/build-openclaw-skills.js`.
 - Optional isolated benchmark tests: `npm run test:benchmarks`; benchmark
   dependencies and instructions belong exclusively to `benchmarks/`.

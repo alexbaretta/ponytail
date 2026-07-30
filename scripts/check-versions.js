@@ -1,6 +1,5 @@
 #!/usr/bin/env node
-// Version-consistency guard. Ponytail declares its version across
-// five host ecosystems, and every release bumps all of them by hand.
+// Version-consistency guard for generated host metadata.
 //
 // Checking manifests against each other cannot catch the failure mode that
 // shipped in v4.8.0:

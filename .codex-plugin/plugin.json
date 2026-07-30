@@ -1,7 +1,7 @@
 {
   "name": "ponytail",
   "version": "4.8.4",
-  "description": "Lazy senior dev mode. Forces the simplest, shortest solution that actually works: YAGNI, stdlib first, no unrequested abstractions.",
+  "description": "Lazy senior dev mode for AI agents. The best code is the code you never wrote.",
   "author": {
     "name": "Alex Baretta",
     "email": "alex@baretta.com",
@@ -10,7 +10,12 @@
   "homepage": "https://github.com/alexbaretta/ponytail",
   "repository": "https://github.com/alexbaretta/ponytail",
   "license": "MIT",
-  "keywords": ["yagni", "minimalism", "code-review", "productivity"],
+  "keywords": [
+    "yagni",
+    "minimalism",
+    "code-review",
+    "productivity"
+  ],
   "skills": "./skills/",
   "interface": {
     "displayName": "Ponytail",
@@ -18,7 +23,10 @@
     "longDescription": "Prefer YAGNI, the standard library, native platform features, and the smallest correct implementation.",
     "developerName": "Alex Baretta",
     "category": "Productivity",
-    "capabilities": ["Instructions", "Lifecycle hooks"],
+    "capabilities": [
+      "Instructions",
+      "Lifecycle hooks"
+    ],
     "websiteURL": "https://github.com/alexbaretta/ponytail",
     "defaultPrompt": [
       "Use Ponytail mode for this task.",
