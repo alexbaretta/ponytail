@@ -11,8 +11,18 @@ provides_commands:
   - ponytail-audit
   - ponytail-debt
 provides_skills:
+  - api-service-boundaries
+  - bash-parse-safe-scripts
+  - lossless-json-contracts
+  - monetary-contract-safety
+  - plan-tasklets
   - ponytail
-  - ponytail-review
   - ponytail-audit
   - ponytail-debt
+  - ponytail-review
+  - project-structure
+  - react-error-containment
+  - static-type-safety
+  - test-credentials
+  - versioned-data-contracts
   - ponytail-help

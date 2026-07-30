@@ -16,6 +16,9 @@ const skillCommands = commands.filter(
 );
 
 const root = path.join(__dirname, '..');
+const shippedSkills = fs.readdirSync(path.join(root, 'skills'))
+  .filter((name) => fs.existsSync(path.join(root, 'skills', name, 'SKILL.md')))
+  .sort();
 
 // Probe once; on Windows `python3` is the Store-alias stub that fails
 // even when Python is installed, so fall back to `python`.
@@ -47,15 +50,11 @@ test('Hermes plugin manifest matches runtime skills, hooks, commands, and packag
   assert.ok(fs.existsSync(manifestPath), 'missing root plugin.yaml');
   const manifest = fs.readFileSync(manifestPath, 'utf8');
   const packageJson = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
-  const skillDirs = fs.readdirSync(path.join(root, 'skills'))
-    .filter((name) => fs.existsSync(path.join(root, 'skills', name, 'SKILL.md')))
-    .sort();
-
   assert.match(manifest, /^name:\s*ponytail$/m);
   assert.match(manifest, new RegExp(`^version:\\s*${packageJson.version}$`, 'm'));
   assert.match(manifest, new RegExp(`^author:\\s*${packageJson.author.name}$`, 'm'));
   assert.deepEqual(commands.filter((name) => manifest.includes(`  - ${name}`)), commands);
-  assert.deepEqual(skillDirs.filter((name) => manifest.includes(`  - ${name}`)), skillDirs);
+  assert.deepEqual(shippedSkills.filter((name) => manifest.includes(`  - ${name}`)), shippedSkills);
   assert.match(manifest, /pre_llm_call/);
   assert.match(manifest, /pre_gateway_dispatch/);
 });
@@ -82,12 +81,7 @@ mod.register(ctx)
 print(json.dumps({'skills': ctx.skills, 'hooks': ctx.hooks, 'commands': ctx.commands}, sort_keys=True))
 `);
   const data = JSON.parse(output);
-  assert.deepEqual(data.skills.map(([name]) => name).sort(), [
-    'ponytail',
-    'ponytail-audit',
-    'ponytail-debt',
-    'ponytail-review',
-  ]);
+  assert.deepEqual(data.skills.map(([name]) => name).sort(), shippedSkills);
   assert.ok(data.skills.every(([, skillPath]) => skillPath.endsWith('/SKILL.md')));
   assert.ok(data.hooks.includes('pre_llm_call'));
   assert.ok(data.commands.includes('ponytail'));
