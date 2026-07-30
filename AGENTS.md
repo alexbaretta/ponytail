@@ -37,6 +37,7 @@ services. `PROJECT_STRUCTURE.md` is authoritative for that boundary.
   bundled-subproject behavior is exercised by the core unit command.
 - Integration arc listing: not applicable.
 - Rule-copy check: `node scripts/check-rule-copies.js`.
+- Registry check: `node scripts/registry.js`.
 - Version check: `node scripts/check-versions.js`.
 - OpenClaw generation: `node scripts/build-openclaw-skills.js`.
 - Optional isolated benchmark tests: `npm run test:benchmarks`; benchmark

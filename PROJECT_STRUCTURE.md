@@ -16,6 +16,8 @@ while project-wide management records remain under `pm/`.
 
 - `skills/` owns canonical reusable skills and the portable Ponytail policy.
 - `commands/` owns canonical command prompts.
+- `registry.tsv` owns enabled and disabled skill and command publication
+  across supported hosts. Benchmark entries are prohibited.
 - `hooks/` owns shared lifecycle behavior and policy injection.
 - Host directories such as `.claude-plugin/`, `.codex-plugin/`, `.github/`,
   `.opencode/`, `.qoder/`, and `.openclaw/` own host adapters. Generated

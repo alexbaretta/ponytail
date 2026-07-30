@@ -1,0 +1,23 @@
+# Copyright (c) 2026 Alex Baretta. All rights reserved.
+# Licensed under the MIT License. See LICENSE in the project root.
+# kind	status	name	source	hosts	reason
+skill	enabled	api-service-boundaries	skills/api-service-boundaries	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	API trust and service architecture
+skill	enabled	bash-parse-safe-scripts	skills/bash-parse-safe-scripts	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Bash runtime safety
+skill	disabled	git-write-escalation	-	-	Current Codex manages these approvals without a skill
+skill	enabled	lossless-json-contracts	skills/lossless-json-contracts	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Exact JSON boundary rules
+skill	enabled	monetary-contract-safety	skills/monetary-contract-safety	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Monetary contract rules
+skill	enabled	plan-tasklets	skills/plan-tasklets	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Durable project management workflow
+skill	enabled	ponytail	skills/ponytail	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Portable core policy
+skill	enabled	ponytail-audit	skills/ponytail-audit	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Repository complexity audit
+skill	enabled	ponytail-debt	skills/ponytail-debt	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Technical debt reconciliation
+skill	enabled	ponytail-review	skills/ponytail-review	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Change-set complexity review
+skill	enabled	project-structure	skills/project-structure	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Project configuration workflow
+skill	enabled	react-error-containment	skills/react-error-containment	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	React failure containment
+skill	enabled	static-type-safety	skills/static-type-safety	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Static type and contract safety
+skill	enabled	test-credentials	skills/test-credentials	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Test credential discovery and safety
+skill	enabled	versioned-data-contracts	skills/versioned-data-contracts	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Serialized contract versioning
+command	enabled	ponytail	commands/ponytail.toml	claude,codex,copilot,hermes,opencode,pi,qoder	Select compaction level
+command	enabled	ponytail-audit	commands/ponytail-audit.toml	claude,codex,copilot,hermes,opencode,pi	Run repository complexity audit
+command	enabled	ponytail-debt	commands/ponytail-debt.toml	claude,codex,copilot,hermes,opencode,pi	Reconcile technical debt
+command	enabled	ponytail-help	commands/ponytail-help.toml	claude,codex,copilot,hermes,opencode,pi	Display command reference
+command	enabled	ponytail-review	commands/ponytail-review.toml	claude,codex,copilot,hermes,opencode,pi,qoder	Review current changes
