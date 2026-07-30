@@ -5,6 +5,7 @@ skill	enabled	api-service-boundaries	skills/api-service-boundaries	claude,codex,
 skill	enabled	bash-parse-safe-scripts	skills/bash-parse-safe-scripts	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Bash runtime safety
 skill	enabled	cloud-cli-reauth	skills/cloud-cli-reauth	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Cloud CLI authentication recovery
 skill	disabled	git-write-escalation	-	-	Current Codex manages these approvals without a skill
+skill	enabled	indeterminate-list-ux	skills/indeterminate-list-ux	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Bounded infinite-scroll UX
 skill	enabled	lossless-json-contracts	skills/lossless-json-contracts	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Exact JSON boundary rules
 skill	enabled	monetary-contract-safety	skills/monetary-contract-safety	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Monetary contract rules
 skill	enabled	plan-tasklets	skills/plan-tasklets	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Durable project management workflow

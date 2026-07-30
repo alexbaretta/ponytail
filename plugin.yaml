@@ -18,6 +18,7 @@ provides_skills:
   - api-service-boundaries
   - bash-parse-safe-scripts
   - cloud-cli-reauth
+  - indeterminate-list-ux
   - lossless-json-contracts
   - monetary-contract-safety
   - plan-tasklets

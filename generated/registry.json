@@ -63,6 +63,23 @@
     {
       "kind": "skill",
       "status": "enabled",
+      "name": "indeterminate-list-ux",
+      "source": "skills/indeterminate-list-ux",
+      "hosts": [
+        "claude",
+        "codex",
+        "copilot",
+        "devin",
+        "hermes",
+        "openclaw",
+        "pi",
+        "qoder"
+      ],
+      "reason": "Bounded infinite-scroll UX"
+    },
+    {
+      "kind": "skill",
+      "status": "enabled",
       "name": "lossless-json-contracts",
       "source": "skills/lossless-json-contracts",
       "hosts": [

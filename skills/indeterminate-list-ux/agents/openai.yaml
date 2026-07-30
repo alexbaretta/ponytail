@@ -1,0 +1,7 @@
+# Copyright (c) 2026 Alex Baretta. All rights reserved.
+# Author: Alex Baretta <alex@baretta.com>.
+# Licensed under the MIT License. See LICENSE in the project root.
+interface:
+  display_name: "Indeterminate List UX"
+  short_description: "Require bounded infinite scrolling without row fanout"
+  default_prompt: "Use $indeterminate-list-ux to implement or review an indeterminate React list with bounded infinite scrolling and request-shape tests."
