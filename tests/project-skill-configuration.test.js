@@ -14,6 +14,7 @@ const configuredSkills = new Map([
   ['ponytail-debt', ['Technical-debt document']],
   ['test-credentials', ['Test-credentials policy']],
   ['typescript-unit-testing', ['TypeScript unit-test command', 'TypeScript unit-test indexes and discovery']],
+  ['ux-testing', ['UX connection skill']],
   ['variant-neutrality', ['Variant-neutrality\nconfiguration']],
 ]);
 

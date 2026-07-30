@@ -284,6 +284,23 @@
     {
       "kind": "skill",
       "status": "enabled",
+      "name": "ux-testing",
+      "source": "skills/ux-testing",
+      "hosts": [
+        "claude",
+        "codex",
+        "copilot",
+        "devin",
+        "hermes",
+        "openclaw",
+        "pi",
+        "qoder"
+      ],
+      "reason": "Real-path UX validation"
+    },
+    {
+      "kind": "skill",
+      "status": "enabled",
       "name": "variant-neutrality",
       "source": "skills/variant-neutrality",
       "hosts": [
