@@ -1,5 +1,5 @@
 ---
-name: plan-tasklets
+name: plan-execution
 description: "Durable project management workflow"
 homepage: https://github.com/alexbaretta/ponytail
 license: MIT
@@ -11,7 +11,7 @@ Copyright (c) 2026 Alex Baretta. All rights reserved.
 Licensed under the MIT License. See LICENSE in the project root.
 -->
 
-# Plan Tasklets
+# Plan Execution
 
 Manage durable project work without depending on chat history, one Git branch,
 or one repository. The host project's agent configuration supplies paths,
