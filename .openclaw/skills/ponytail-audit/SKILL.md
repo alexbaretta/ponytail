@@ -1,9 +1,15 @@
 ---
 name: ponytail-audit
-description: "Audit the whole repo for over-engineering. A ranked list of what to delete, simplify, or replace with stdlib or native features."
+description: "Repository complexity audit"
 homepage: https://github.com/alexbaretta/ponytail
 license: MIT
 ---
+
+<!--
+Copyright (c) 2026 DietrichGebert.
+Copyright (c) 2026 Alex Baretta. All rights reserved.
+Licensed under the MIT License. See LICENSE in the project root.
+-->
 
 ponytail-review, repo-wide. Scan the whole tree instead of a diff. Rank
 findings biggest cut first.

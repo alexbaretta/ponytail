@@ -1,58 +1,81 @@
 #!/usr/bin/env node
-// Generate the OpenClaw / ClawHub skill package (.openclaw/skills/) from the
-// canonical skills/. OpenClaw skills are SKILL.md (frontmatter + body), the same
-// format ponytail already uses, with one difference: `description` must be a
-// single line under 160 chars. The canonical descriptions are long (tuned for
-// Claude's skill picker), so each ships a short one here. The body is copied
-// verbatim from skills/<name>/SKILL.md so the ruleset never drifts; only the
-// frontmatter is rewritten.
-//
-// Run:  node scripts/build-openclaw-skills.js
-// tests/openclaw-skills.test.js fails if the committed copies are stale.
+// Copyright (c) 2026 Alex Baretta. All rights reserved.
+// Licensed under the MIT License. See LICENSE in the project root.
 
-const fs = require('fs');
-const path = require('path');
+const fs = require('node:fs');
+const path = require('node:path');
+const { enabled, readRegistry } = require('./registry');
 
-const ROOT = path.join(__dirname, '..');
-const HOMEPAGE = 'https://github.com/alexbaretta/ponytail';
+const root = path.join(__dirname, '..');
+const homepage = 'https://github.com/alexbaretta/ponytail';
+const copyright = `<!--
+Copyright (c) 2026 DietrichGebert.
+Copyright (c) 2026 Alex Baretta. All rights reserved.
+Licensed under the MIT License. See LICENSE in the project root.
+-->
 
-const DESCRIPTIONS = {
-  'ponytail': 'Lazy senior dev mode for any coding task (write, refactor, fix, review): YAGNI, stdlib first, no unrequested abstractions. Not for non-coding requests.',
-  'ponytail-review': 'Review a diff for over-engineering. Finds what to delete: reinvented stdlib, needless deps, speculative abstractions. One line per finding.',
-  'ponytail-audit': 'Audit the whole repo for over-engineering. A ranked list of what to delete, simplify, or replace with stdlib or native features.',
-  'ponytail-debt': 'Harvest exceptional tech-debt: markers into the canonical technical-debt document without creating a second ledger.',
-};
-
-const NAMES = Object.keys(DESCRIPTIONS);
+`;
+const entries = enabled(readRegistry(), 'skill')
+  .filter((entry) => entry.hosts.includes('openclaw'));
+const NAMES = entries.map((entry) => entry.name);
+const DESCRIPTIONS = Object.fromEntries(entries.map((entry) => [entry.name, entry.reason]));
 
 function sourceBody(name) {
-  const src = fs.readFileSync(path.join(ROOT, 'skills', name, 'SKILL.md'), 'utf8').replace(/\r\n/g, '\n');
-  const fm = src.match(/^---\n[\s\S]*?\n---\n?/);
-  if (!fm) throw new Error(`skills/${name}/SKILL.md has no frontmatter`);
-  return src.slice(fm[0].length);
+  return fs.readFileSync(path.join(root, 'skills', name, 'SKILL.md'), 'utf8')
+    .replace(/\r\n/g, '\n')
+    .replace(/^---\n[\s\S]*?\n---\n?/, '')
+    .replace(/^\n?<!--[\s\S]*?-->\n?/, '')
+    .replace(/^\n+/, '');
 }
 
 function render(name) {
-  const desc = DESCRIPTIONS[name];
-  if (desc.length > 160 || desc.includes('\n') || desc.includes('"')) {
+  const description = DESCRIPTIONS[name];
+  if (!description || description.length > 160 || description.includes('\n') || description.includes('"')) {
     throw new Error(`description for ${name} must be one line, no quotes, under 160 chars`);
   }
-  const frontmatter =
-    `---\nname: ${name}\ndescription: "${desc}"\nhomepage: ${HOMEPAGE}\nlicense: MIT\n---\n`;
-  return frontmatter + sourceBody(name);
+  return `---
+name: ${name}
+description: ${JSON.stringify(description)}
+homepage: ${homepage}
+license: MIT
+---
+
+${copyright}${sourceBody(name)}`;
 }
 
 function outPath(name) {
-  return path.join(ROOT, '.openclaw', 'skills', name, 'SKILL.md');
+  return path.join(root, '.openclaw', 'skills', name, 'SKILL.md');
 }
 
-module.exports = { DESCRIPTIONS, NAMES, render, outPath, sourceBody };
-
-if (require.main === module) {
-  for (const name of NAMES) {
-    const p = outPath(name);
-    fs.mkdirSync(path.dirname(p), { recursive: true });
-    fs.writeFileSync(p, render(name));
-    console.log('wrote', path.relative(ROOT, p).replace(/\\/g, '/'));
+function copyResources(name) {
+  const source = path.join(root, 'skills', name);
+  const output = path.dirname(outPath(name));
+  for (const entry of fs.readdirSync(source, { withFileTypes: true })) {
+    if (entry.name === 'SKILL.md' || entry.name === 'agents') continue;
+    fs.cpSync(
+      path.join(source, entry.name),
+      path.join(output, entry.name),
+      { recursive: true },
+    );
   }
 }
+
+function build() {
+  const outputRoot = path.join(root, '.openclaw', 'skills');
+  for (const entry of fs.readdirSync(outputRoot, { withFileTypes: true })) {
+    if (entry.isDirectory() && !NAMES.includes(entry.name)) {
+      throw new Error(`unregistered OpenClaw skill directory: ${entry.name}`);
+    }
+  }
+  for (const name of NAMES) {
+    const output = outPath(name);
+    fs.mkdirSync(path.dirname(output), { recursive: true });
+    fs.writeFileSync(output, render(name));
+    copyResources(name);
+    console.log('wrote', path.relative(root, output).replace(/\\/g, '/'));
+  }
+}
+
+module.exports = { DESCRIPTIONS, NAMES, copyResources, outPath, render, sourceBody };
+
+if (require.main === module) build();

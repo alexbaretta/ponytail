@@ -1,11 +1,12 @@
 ---
 name: ponytail-debt
-description: "Harvest exceptional tech-debt: markers into the canonical technical-debt document without creating a second ledger."
+description: "Technical debt reconciliation"
 homepage: https://github.com/alexbaretta/ponytail
 license: MIT
 ---
 
 <!--
+Copyright (c) 2026 DietrichGebert.
 Copyright (c) 2026 Alex Baretta. All rights reserved.
 Licensed under the MIT License. See LICENSE in the project root.
 -->
