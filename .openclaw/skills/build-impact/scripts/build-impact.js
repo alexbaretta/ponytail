@@ -182,6 +182,20 @@ function inputMatches(input, changedFile) {
   return input.path === changedFile || changedFile.startsWith(`${input.path}/`);
 }
 
+function canBeTypescriptCompilerInput(changedFile) {
+  return [
+    '.cjs',
+    '.cts',
+    '.js',
+    '.jsx',
+    '.json',
+    '.mjs',
+    '.mts',
+    '.ts',
+    '.tsx',
+  ].includes(path.posix.extname(changedFile));
+}
+
 function makeAffected(target, changedFiles) {
   return {
     name: target.name,
@@ -239,33 +253,42 @@ function listTypescriptFiles(projectRoot, compilerPath, tsconfig) {
 
 function queryTypescriptAdapter(adapter, projectRoot, changedFiles) {
   let compilerPath;
-  try {
-    compilerPath = resolveTypescript(projectRoot);
-  } catch (error) {
-    return {
-      affected: [],
-      indeterminate: adapter.targets.map((target) => makeIndeterminate(target, error.message)),
-    };
-  }
+  let compilerError;
   const affected = [];
   const indeterminate = [];
   for (const target of adapter.targets) {
     try {
-      const compilerInputs = listTypescriptFiles(projectRoot, compilerPath, target.tsconfig);
       const fixedInputs = new Set([target.tsconfig, ...target.configurationInputs]);
-      const matching = changedFiles.filter((changedFile) =>
-        compilerInputs.has(changedFile)
-        || fixedInputs.has(changedFile)
+      const configuredMatches = changedFiles.filter((changedFile) =>
+        fixedInputs.has(changedFile)
         || target.additionalInputs.some((input) => inputMatches(input, changedFile)));
-      const unmatchedMissing = changedFiles.filter((changedFile) =>
-        !matching.includes(changedFile) && !fs.existsSync(path.join(projectRoot, changedFile)));
+      if (configuredMatches.length > 0) {
+        affected.push(makeAffected(target, configuredMatches));
+        continue;
+      }
+      const compilerCandidates = changedFiles.filter(canBeTypescriptCompilerInput);
+      if (compilerCandidates.length === 0) continue;
+      if (compilerPath === undefined && compilerError === undefined) {
+        try {
+          compilerPath = resolveTypescript(projectRoot);
+        } catch (error) {
+          compilerError = error;
+        }
+      }
+      if (compilerError !== undefined) throw compilerError;
+      const compilerInputs = listTypescriptFiles(projectRoot, compilerPath, target.tsconfig);
+      const compilerMatches = compilerCandidates.filter((changedFile) =>
+        compilerInputs.has(changedFile));
+      const unmatchedMissing = compilerCandidates.filter((changedFile) =>
+        !compilerMatches.includes(changedFile)
+        && !fs.existsSync(path.join(projectRoot, changedFile)));
       if (unmatchedMissing.length > 0) {
         indeterminate.push(makeIndeterminate(
           target,
           `cannot determine whether missing paths were prior TypeScript inputs: ${unmatchedMissing.join(', ')}`,
         ));
-      } else if (matching.length > 0) {
-        affected.push(makeAffected(target, matching));
+      } else if (compilerMatches.length > 0) {
+        affected.push(makeAffected(target, compilerMatches));
       }
     } catch (error) {
       indeterminate.push(makeIndeterminate(target, error.message));

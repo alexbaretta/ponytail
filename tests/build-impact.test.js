@@ -387,6 +387,22 @@ test('configuration and compiler failures are indeterminate', () => withFixture(
   assert.match(missingCompiler.indeterminateTargets[0].reason, /TypeScript is not installed/);
 }));
 
+test('non-compiler paths skip TypeScript resolution', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ponytail-build-impact-'));
+  try {
+    writeFixtureFile(root, 'README.md');
+    const config = projectConfig([
+      { type: 'typescript', targets: [target('backend', 'apps/backend/tsconfig.json')] },
+    ]);
+    const result = queryBuildImpact(config, root, ['README.md']);
+    assert.equal(result.status, 'ok');
+    assert.deepEqual(result.affectedTargets, []);
+    assert.deepEqual(result.indeterminateTargets, []);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test('changed paths cannot escape the project root', () => withFixture((root) => {
   const config = projectConfig([{
     type: 'custom',
