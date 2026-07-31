@@ -22,7 +22,7 @@ test('UX interaction comes from explicit host configuration', () => {
 test('UX validation covers the real path at complementary layers', () => {
   assert.match(skill, /real user path/);
   assert.match(skill, /focused unit tests for the causal mechanism/);
-  assert.match(skill, /integration\n\s+steps for the user-visible workflow/);
+  assert.match(skill, /integration\n\s+Steps for the user-visible workflow/);
   assert.match(skill, /Do not add a testing mode/);
   assert.match(skill, /Do not use mocks, fake provider responses/);
 });

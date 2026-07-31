@@ -55,8 +55,9 @@ should identify, directly or by reference:
 - the local-environment update command;
 - the full build command;
 - the full unit-test command;
-- the full integration-test command;
-- the command that lists integration-test arcs or focused workflows;
+- the command that runs all registered integration Arcs;
+- Suite selectors and explicit Arc-selection commands;
+- the command that lists registered Arcs and focused workflows;
 - additional quality commands and when each applies;
 - the deployment command or commands;
 - other project-specific operational commands;
@@ -73,6 +74,9 @@ A host may explicitly mark a configuration category not applicable, with a
 short reason. Documentation-only repositories, libraries, local-only tools,
 and partial component repositories need not invent build, integration,
 deployment, cloud, or ancillary-service configuration they do not own.
+
+Integration-test hierarchy and execution semantics use the canonical Suite,
+Arc, and Step definitions from `production-test-boundaries`.
 
 If the current change establishes or changes a required project-specific
 value, discover it from authoritative repository sources and add it to the

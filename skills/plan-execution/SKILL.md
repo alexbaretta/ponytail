@@ -31,7 +31,9 @@ identify, directly or by reference:
 - component repositories and their ownership boundaries;
 - focused, package, integration, browser, milestone, and final validation
   commands;
-- the command that lists integration arcs or focused workflows;
+- the command that runs all registered integration Arcs;
+- Suite selectors and explicit Arc-selection commands;
+- the command that lists registered Arcs and focused workflows;
 - additional quality gates and when they apply;
 - commit conventions; and
 - any project-specific approval or safety gates.
@@ -47,6 +49,9 @@ Use these terms consistently:
 - **component repository**: owns implementation or validation work; and
 - **project change-set**: all coordinated commits that deliver one approved
   tasklet, story, bug resolution, sprint, or plan.
+
+Integration-test hierarchy and execution semantics use the canonical Suite,
+Arc, and Step definitions from `production-test-boundaries`.
 
 One repository may serve both roles.
 
@@ -205,20 +210,22 @@ meaningfully own it:
 ### Feature/Story
 
 - Run the affected package's complete unit suite.
-- Run the integration tests for the complete executable vertical slice.
+- Run the affected integration Arcs for the complete executable vertical
+  slice.
 - Run browser tests for user-visible behavior and relevant contract guards.
 - Prove the story's success and failure paths.
 
 ### Sprint
 
 - Run configured milestone checks for the committed sprint tree.
-- Run cross-story integration needed to prove the sprint objective.
+- Run the selected cross-story integration Arcs needed to prove the sprint
+  objective.
 - Reconcile every tasklet and story status and deferred check.
 
 ### Plan
 
-- Run the configured final acceptance command and all required integration,
-  SDK, demo, browser, packaging, and documentation gates.
+- Run the configured final acceptance command and all required integration
+  Suites and Arcs, SDK, demo, browser, packaging, and documentation gates.
 - Reconcile all sprint results across the affected repositories.
 
 A broader check may be deferred only to a named owning gate. An unnamed

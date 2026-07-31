@@ -23,7 +23,10 @@ The host configures this skill in `AGENTS.md` with `UX connection skill`,
 naming the skill that owns interaction with the project's UX. There is no
 generic default. The host's standard project configuration also supplies the
 local-environment commands, focused and full unit-test commands, integration
-arc inventory, focused integration command, and final acceptance command.
+Arc inventory, focused Arc command, and final acceptance command.
+
+Integration-test hierarchy and execution semantics use the canonical Suite,
+Arc, and Step definitions from `production-test-boundaries`.
 
 Load and follow the configured UX connection skill before interacting with the
 UX. Do not assume a browser, DOM, desktop automation protocol, operating-system
@@ -49,7 +52,7 @@ configuration-discrepancy policy.
 6. Re-run the real UX workflow through the configured connection skill,
    including the relevant failure or denial path.
 7. Add or update focused unit tests for the causal mechanism and integration
-   steps for the user-visible workflow. Do not make both layers copies of the
+   Steps for the user-visible workflow. Do not make both layers copies of the
    same mocked call graph.
 8. Run the smallest focused unit and integration selections that prove the
    change, then the host's configured milestone gate.
@@ -70,8 +73,8 @@ test-only product branch in full-stack integration coverage. Harness code may
 create state and isolate external dependencies, but must not replace the
 product behavior under test.
 
-Extend an existing integration arc when the scenario shares its setup, actor,
-fixtures, starting state, and contiguous workflow. Create a new arc when setup,
+Extend an existing integration Arc when the scenario shares its setup, actor,
+fixtures, starting state, and contiguous workflow. Create a new Arc when setup,
 isolation, provider, role, destructive state, or reset requirements differ
 materially. Prefer the smallest selectable portion during development.
 
@@ -80,7 +83,7 @@ materially. Prefer the smallest selectable portion during development.
 - The configured UX connection skill proves the changed observable behavior.
 - Failure, denial, empty, or edge behavior relevant to the change is covered.
 - Focused unit tests prove the causal mechanism.
-- Full-stack integration steps prove the user workflow without product mocks or
+- Full-stack integration Steps prove the user workflow without product mocks or
   test-only behavior.
 - Test state is isolated from unrelated environments and data.
 - Applicable focused tests and the configured milestone gate pass.

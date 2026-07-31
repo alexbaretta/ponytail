@@ -32,6 +32,20 @@ Do not invent a test environment, provider substitute, or integration command
 when project configuration is absent. Apply the host's configuration-
 discrepancy policy.
 
+## Integration-Test Hierarchy
+
+Use these terms consistently:
+
+- **Suite**: a named set of related Arcs.
+- **Arc**: a named ordered sequence of one or more Steps.
+- **Step**: the smallest independently reported executable integration-test
+  operation together with its assertions.
+
+Steps execute in their declared Arc order. When a Step fails, stop that Arc's
+ordinary Steps after running required harness finalization. Do not stop the
+complete run: attempt every remaining selected Arc, report the aggregate
+results, and return a nonzero final status when any selected Arc failed.
+
 ## Production Boundary
 
 - Keep test modes, test-only environment variables, fake scenarios, synthetic
@@ -79,4 +93,7 @@ explicitly unverified gate rather than substituting a fake success.
 - Production behavior has one path regardless of who invokes it.
 - Unit doubles replace only legitimate boundaries.
 - Integration tests execute the real vertical slice with isolated state.
+- Integration Steps execute in Arc order and stop their Arc on failure.
+- Every remaining selected Arc runs before aggregate success or failure is
+  reported.
 - Focused guards prevent test support from entering shipped artifacts.
