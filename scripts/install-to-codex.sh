@@ -92,25 +92,50 @@ link_is_installer_owned() {
     [[ "$(readlink "${link_path}")" == "${previous_source}" ]]
 }
 
-preflight_link() {
+installed_skill_matches() {
+  local installed_path="$1"
+  local source_path="$2"
+
+  [[ -d "${installed_path}" ]] && \
+    [[ ! -L "${installed_path}" ]] && \
+    diff -qr "${source_path}" "${installed_path}" >/dev/null
+}
+
+installed_skill_is_installer_owned() {
   local kind="$1"
   local name="$2"
-  local link_path="$3"
-  local source_path="$4"
+  local installed_path="$3"
+  local previous_source
 
-  if link_matches "${link_path}" "${source_path}"; then
+  previous_source="$(manifest_source_for "${kind}" "${name}" || true)"
+  if [[ -z "${previous_source}" ]]; then
+    return 1
+  fi
+
+  if [[ -L "${installed_path}" ]]; then
+    [[ "$(readlink "${installed_path}")" == "${previous_source}" ]]
     return
   fi
 
-  if [[ -L "${link_path}" ]]; then
-    if link_is_installer_owned "${kind}" "${name}" "${link_path}"; then
-      return
-    fi
-    fail "refusing to replace unowned symlink: ${link_path}"
+  [[ -d "${installed_path}" ]]
+}
+
+preflight_skill() {
+  local kind="$1"
+  local name="$2"
+  local installed_path="$3"
+  local source_path="$4"
+
+  if installed_skill_matches "${installed_path}" "${source_path}"; then
+    return
   fi
 
-  if [[ -e "${link_path}" ]]; then
-    fail "refusing to replace non-symlink path: ${link_path}"
+  if [[ -L "${installed_path}" ]] || [[ -e "${installed_path}" ]]; then
+    if installed_skill_is_installer_owned \
+      "${kind}" "${name}" "${installed_path}"; then
+      return
+    fi
+    fail "refusing to replace unowned skill path: ${installed_path}"
   fi
 }
 
@@ -183,14 +208,14 @@ preflight_project_skill() {
 
   status="$(registry_status_for_skill "${skill_name}" || true)"
   if [[ "${status}" != 'enabled' ]] && \
-    link_is_installer_owned \
+    installed_skill_is_installer_owned \
       'bundled' \
       "${skill_name}" \
       "${INSTALL_TO_CODEX_SKILLS_TARGET}/${skill_name}"; then
     return
   fi
 
-  preflight_link \
+  preflight_skill \
     'project' \
     "${skill_name}" \
     "${INSTALL_TO_CODEX_SKILLS_TARGET}/${skill_name}" \
@@ -217,7 +242,7 @@ preflight_installation() {
       if [[ ! -d "${source_path}" ]]; then
         fail "registered skill directory not found: ${source_path}"
       fi
-      preflight_link \
+      preflight_skill \
         'bundled' \
         "${skill_name}" \
         "${INSTALL_TO_CODEX_SKILLS_TARGET}/${skill_name}" \
@@ -250,6 +275,52 @@ install_link() {
   fi
 }
 
+install_skill_copy() {
+  local installed_path="$1"
+  local source_path="$2"
+  local backup_path=''
+  local staged_path
+
+  if installed_skill_matches "${installed_path}" "${source_path}"; then
+    return
+  fi
+
+  if [[ "${INSTALL_TO_CODEX_CHECK}" == 'true' ]]; then
+    fail "installed skill differs from source: ${installed_path}"
+  fi
+
+  print_action "copy ${source_path} -> ${installed_path}"
+  if [[ "${INSTALL_TO_CODEX_DRY_RUN}" == 'true' ]]; then
+    return
+  fi
+
+  staged_path="$(mktemp -d \
+    "${INSTALL_TO_CODEX_SKILLS_TARGET}/.ponytail-install-new.XXXXXX")"
+  if ! cp -R "${source_path}/." "${staged_path}/"; then
+    rm -rf "${staged_path}"
+    fail "could not stage skill copy: ${source_path}"
+  fi
+
+  if [[ -L "${installed_path}" ]] || [[ -e "${installed_path}" ]]; then
+    backup_path="$(mktemp -d \
+      "${INSTALL_TO_CODEX_SKILLS_TARGET}/.ponytail-install-old.XXXXXX")"
+    rmdir "${backup_path}"
+    mv "${installed_path}" "${backup_path}"
+  fi
+
+  if ! mv "${staged_path}" "${installed_path}"; then
+    if [[ -n "${backup_path}" ]]; then
+      mv "${backup_path}" "${installed_path}"
+    fi
+    rm -rf "${staged_path}"
+    fail "could not install skill copy: ${installed_path}"
+  fi
+
+  if [[ -n "${backup_path}" ]]; then
+    rm -rf "${backup_path}"
+  fi
+}
+
 install_ponytail_skills() {
   local hosts
   local kind
@@ -270,7 +341,9 @@ install_ponytail_skills() {
     fi
 
     source_path="${INSTALL_TO_CODEX_PONYTAIL_ROOT}/${source_relative}"
-    install_link "${INSTALL_TO_CODEX_SKILLS_TARGET}/${skill_name}" "${source_path}"
+    install_skill_copy \
+      "${INSTALL_TO_CODEX_SKILLS_TARGET}/${skill_name}" \
+      "${source_path}"
   done < "${INSTALL_TO_CODEX_REGISTRY}"
 }
 
@@ -278,19 +351,19 @@ install_project_skill() {
   local skill_name="$1"
   local source_path="$2"
 
-  install_link "${INSTALL_TO_CODEX_SKILLS_TARGET}/${skill_name}" "${source_path}"
+  install_skill_copy "${INSTALL_TO_CODEX_SKILLS_TARGET}/${skill_name}" "${source_path}"
 }
 
-remove_link() {
-  local link_path="$1"
+remove_installed_skill() {
+  local installed_path="$1"
 
   if [[ "${INSTALL_TO_CODEX_CHECK}" == 'true' ]]; then
-    fail "obsolete installer-owned skill remains linked: $(basename "${link_path}")"
+    fail "obsolete installer-owned skill remains installed: $(basename "${installed_path}")"
   fi
 
-  print_action "unlink ${link_path}"
+  print_action "remove ${installed_path}"
   if [[ "${INSTALL_TO_CODEX_DRY_RUN}" == 'false' ]]; then
-    rm -f "${link_path}"
+    rm -rf "${installed_path}"
   fi
 }
 
@@ -313,7 +386,7 @@ remove_current_root_stale_links() {
     skill_name="$(basename "${link_path}")"
     status="$(registry_status_for_skill "${skill_name}" || true)"
     if [[ "${status}" != 'enabled' ]]; then
-      remove_link "${link_path}"
+      remove_installed_skill "${link_path}"
     fi
   done
 }
@@ -334,9 +407,10 @@ remove_manifest_stale_links() {
       if project_source_is_managed_now "${source_path}" && \
         [[ ! -f "${source_path}/SKILL.md" ]]; then
         link_path="${INSTALL_TO_CODEX_SKILLS_TARGET}/${name}"
-        if [[ -L "${link_path}" ]] && \
-          [[ "$(readlink "${link_path}")" == "${source_path}" ]]; then
-          remove_link "${link_path}"
+        if { [[ -L "${link_path}" ]] && \
+          [[ "$(readlink "${link_path}")" == "${source_path}" ]]; } || \
+          { [[ -d "${link_path}" ]] && [[ ! -L "${link_path}" ]]; }; then
+          remove_installed_skill "${link_path}"
         fi
       fi
       continue
@@ -347,13 +421,15 @@ remove_manifest_stale_links() {
     fi
 
     status="$(registry_status_for_skill "${name}" || true)"
-    if [[ "${status}" == 'enabled' ]]; then
+    if [[ "${status}" == 'enabled' ]] || project_skill_name_is_active "${name}"; then
       continue
     fi
 
     link_path="${INSTALL_TO_CODEX_SKILLS_TARGET}/${name}"
-    if [[ -L "${link_path}" ]] && [[ "$(readlink "${link_path}")" == "${source_path}" ]]; then
-      remove_link "${link_path}"
+    if { [[ -L "${link_path}" ]] && \
+      [[ "$(readlink "${link_path}")" == "${source_path}" ]]; } || \
+      { [[ -d "${link_path}" ]] && [[ ! -L "${link_path}" ]]; }; then
+      remove_installed_skill "${link_path}"
     fi
   done < "${INSTALL_TO_CODEX_MANIFEST}"
 }
