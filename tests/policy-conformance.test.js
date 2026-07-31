@@ -14,6 +14,10 @@ const alwaysOnRules = [
   'Preserve strong static types',
   'Add the smallest durable regression proof',
   'Do not duplicate the same behavioral',
+  'run only the smallest',
+  'Do not run a full unit-test command or a broad unit-test subset',
+  'Run each applicable configured full unit-test command once',
+  'never fall',
   'When the configured build-impact query reports affected targets',
   'no affected or indeterminate targets, skip the build',
 ];

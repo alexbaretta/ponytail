@@ -33,9 +33,11 @@ services. `PROJECT_STRUCTURE.md` is authoritative for that boundary.
   lockfile changes.
 - Full build: not applicable; Ponytail ships source files.
 - Build-impact configuration: not applicable; Ponytail has no build target.
-- Core unit tests: `npm test`.
+- Unit-test command families:
+  - Node focused: `node --test [--test-name-pattern=<pattern>] <test-files>`.
+  - Node full: `npm test`.
 - Integration tests: no separate integration suite; supported adapter and
-  bundled-subproject behavior is exercised by the core unit command.
+  bundled-subproject behavior is exercised by the Node full command.
 - Integration arc listing: not applicable.
 - Rule-copy check: `node scripts/check-rule-copies.js`.
 - Registry check: `node scripts/registry.js`.
@@ -52,8 +54,8 @@ services. `PROJECT_STRUCTURE.md` is authoritative for that boundary.
 - Codex installer tests: `./scripts/test-install-to-codex.sh`.
 - Deployment: not applicable.
 
-Run focused tests while editing. Run `npm test`, the rule-copy check, and the
-version check for final core acceptance.
+Use the Node focused command while editing. Run the Node full command, the
+rule-copy check, and the version check for final core acceptance.
 
 ## Local Rules
 

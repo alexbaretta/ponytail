@@ -50,6 +50,14 @@ These rules remain active at every compaction level, including `off`:
   assertion across test layers. Use broader integration and acceptance checks
   only when they prove a distinct affected boundary, following the host
   project's configured cadence.
+- During tasklet, feature, sprint, and standalone work, run only the smallest
+  explicit unit-test selection needed under the host's configured focused
+  command. Do not run a full unit-test command or a broad unit-test subset.
+  Run each applicable configured full unit-test command once at plan final
+  acceptance after final relevant edits, or when the user or a named host
+  merge, CI, release, or equivalent acceptance gate explicitly requires it.
+  If focused selection is not configured, repair that discrepancy; never fall
+  back to a full command.
 - When the configured build-impact query reports affected targets, run their
   build commands once after the final change to their inputs. When it reports
   no affected or indeterminate targets, skip the build. When it reports an

@@ -18,9 +18,47 @@ test('planned work reuses unchanged proof instead of rerunning nested gates', ()
   const skill = readSkill('plan-execution');
 
   assert.match(skill, /Run the applicable portions of configured final acceptance once/);
-  assert.match(skill, /Reuse a\npassing result while the relevant code and configuration remain unchanged/);
-  assert.match(skill, /do\nnot rerun an identical command solely because a higher management level/);
+  assert.match(skill, /Run every applicable configured full unit-test command once/);
+  assert.match(skill, /Reuse a passing result while the relevant\s+code and configuration remain unchanged/);
+  assert.match(skill, /do not rerun an identical command\s+solely because a higher management level/);
   assert.doesNotMatch(skill, /Run the affected package's complete unit suite\./);
+});
+
+test('planned work uses focused unit tests until final acceptance', () => {
+  const skill = readSkill('plan-execution');
+
+  assert.match(skill, /Run only explicit test files or named cases/);
+  assert.match(skill, /Do not run a\n  whole package, workspace, language family/);
+  assert.match(skill, /Do not run a full unit-test command/);
+  assert.match(skill, /never fall back to a full command/);
+  assert.match(skill, /Standalone bugs and direct bounded changes run only explicit selections/);
+});
+
+test('portable unit-test cadence names no project tool', () => {
+  const portableSkills = [
+    'ponytail',
+    'plan-execution',
+    'project-structure',
+    'production-test-boundaries',
+  ].map(readSkill).join('\n');
+
+  assert.doesNotMatch(
+    portableSkills,
+    /\bnpm\b|\bpnpm\b|\bvitest\b|\bjest\b|\bctest\b|\bGWEN\b|\bIPG\b/i,
+  );
+});
+
+test('host configuration supports named unit-test families', () => {
+  const structure = readSkill('project-structure');
+  const boundaries = readSkill('production-test-boundaries');
+
+  assert.match(structure, /one named family per independently selected test/);
+  assert.match(structure, /focused command form that accepts\nexplicit test files or named cases/);
+  assert.match(structure, /A host may configure multiple families/);
+  assert.match(structure, /There is no portable command default/);
+  assert.match(structure, /Missing\nfocused selection is a configuration discrepancy/);
+  assert.match(boundaries, /`Unit-test command families`/);
+  assert.match(boundaries, /Unit-test\ncommand families default to `not configured`/);
 });
 
 test('planned work builds only targets reported by build impact', () => {
@@ -29,7 +67,7 @@ test('planned work builds only targets reported by build impact', () => {
   assert.match(skill, /Run the configured build-impact query with the intended tasklet paths/);
   assert.match(skill, /When it reports no affected or indeterminate targets, skip the build/);
   assert.match(skill, /Requery build impact only for target inputs changed after their last/);
-  assert.match(skill, /ordinary final command that cannot skip an inapplicable\nbuild must be split/);
+  assert.match(skill, /ordinary final command\s+that cannot skip an inapplicable build must be split/);
   assert.doesNotMatch(skill, /Build distributable output only when/);
 });
 

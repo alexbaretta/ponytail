@@ -56,8 +56,7 @@ should identify, directly or by reference:
 - the build-impact configuration and query command;
 - build target commands;
 - the full release or CI build command and when it applies;
-- the focused unit-test command;
-- the full unit-test command;
+- named unit-test families and their focused and full commands;
 - the command that runs all registered integration Arcs;
 - Suite selectors and explicit Arc-selection commands;
 - the command that lists registered Arcs and focused workflows;
@@ -85,6 +84,15 @@ Ordinary change validation uses the canonical `build-impact` skill. A host
 with buildable targets must configure its query and target commands. A host
 without buildable targets may mark build impact not applicable. Keep
 release-only or CI-wide builds separate from ordinary agent validation.
+
+Configure unit tests as one named family per independently selected test
+runner or language. Each family owns a focused command form that accepts
+explicit test files or named cases and a full command for its complete suite.
+A host may configure multiple families. There is no portable command default.
+Mark a command `not configured` when its owner exists but the command is
+missing, and `not applicable` when the host owns no such tests. Missing
+focused selection is a configuration discrepancy; never substitute the full
+command.
 
 If the current change establishes or changes a required project-specific
 value, discover it from authoritative repository sources and add it to the
