@@ -25,6 +25,7 @@ identify, directly or by reference:
 - the project workspace and management repository;
 - the project-management root and its plan and bug directories;
 - component repositories and their ownership boundaries;
+- named unit-test families and their focused and full commands;
 - focused, package, integration, browser, milestone, and final validation
   commands;
 - the command that runs all registered integration Arcs;
@@ -198,8 +199,9 @@ meaningfully own it:
 - Add or adjust the smallest focused regression proof not already supplied by
   an existing test, static check, or higher-level test. Cover a failure or edge
   path only when the tasklet introduces, changes, or relies on it.
-- Run directly affected tests, applicable cached typecheck or compiler checks,
-  and focused lint or format checks.
+- Run only explicit test files or named cases under the applicable configured
+  focused unit-test commands, plus applicable cached typecheck or compiler
+  checks and focused lint or format checks.
 - Run specialized contract guards only when the tasklet changes the protected
   contract.
 - Run the configured build-impact query with the intended tasklet paths. When
@@ -208,9 +210,9 @@ meaningfully own it:
 
 ### Feature/Story
 
-- Run an affected package's complete unit suite only when the story crosses
-  multiple tasklets or package boundaries and the suite adds evidence not
-  already obtained against the current tree.
+- Run additional explicit test files or named cases only when they add
+  behavior proof not already obtained against the current tree. Do not run a
+  whole package, workspace, language family, or other broad unit-test subset.
 - Run affected integration Arcs only when they prove a distinct complete
   executable vertical slice.
 - Run browser tests for changed user-visible behavior and affected contract
@@ -219,14 +221,17 @@ meaningfully own it:
 
 ### Sprint
 
-- Run only configured milestone checks and selected cross-story integration
-  Arcs that add proof not already obtained against the committed sprint tree.
+- Run only focused unit-test selections, configured milestone checks, and
+  selected cross-story integration Arcs that add proof not already obtained
+  against the committed sprint tree. Do not run a full unit-test command.
 - Requery build impact only for target inputs changed after their last
   successful build.
 - Reconcile every tasklet and story status and deferred check.
 
 ### Plan
 
+- Run every applicable configured full unit-test command once in each affected
+  repository after its final relevant edit.
 - Run the applicable portions of configured final acceptance once against the
   final tree, plus required integration Suites and Arcs, SDK, demo, browser,
   packaging, and documentation gates not already included.
@@ -234,15 +239,15 @@ meaningfully own it:
   target or the approved deliverable is a build, package, or release artifact.
 - Reconcile all sprint results across the affected repositories.
 
-A broader check may be deferred only to a named owning gate. An unnamed
-deferral is a skip. Record required checks that cannot run and do not claim the
-owning level complete. Record validation against the tested tree. Reuse a
-passing result while the relevant code and configuration remain unchanged; do
-not rerun an identical command solely because a higher management level
-completed. The host's configured merge or CI gate remains the authoritative
-full-suite proof. An ordinary final command that cannot skip an inapplicable
-build must be split into selectable validation commands or made
-build-impact-aware.
+If an applicable focused command is missing, repair the host configuration;
+never fall back to a full command. A broader non-unit check may be deferred
+only to a named owning gate. An unnamed deferral is a skip. Record required
+checks that cannot run and do not claim the owning level complete. Record
+validation against the tested tree. Reuse a passing result while the relevant
+code and configuration remain unchanged; do not rerun an identical command
+solely because a higher management level completed. An ordinary final command
+that cannot skip an inapplicable build must be split into selectable
+validation commands or made build-impact-aware.
 
 ## Commit And Execution Workflow
 
@@ -300,6 +305,11 @@ confirmed diagnosis and proposed resolution, obtain explicit user approval,
 and move the file to `in_progress`. Resolve it through the same atomic edit,
 testing, configuration-sync, and selective-commit rules as tasklets. Move it to
 `closed` only after its acceptance evidence is complete.
+
+Standalone bugs and direct bounded changes run only explicit selections under
+the applicable configured focused unit-test commands. Run a full unit-test
+command only when the user explicitly requests it or a named host merge, CI,
+release, or equivalent acceptance gate requires it.
 
 One to four bugs may be managed independently. A requested batch of five or
 more bugs requires a long-lived plan: reference the canonical bug files from

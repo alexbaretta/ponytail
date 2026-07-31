@@ -22,14 +22,17 @@ The host configures this skill in `AGENTS.md`, directly or by reference, with:
 
 - `Production compilation and packaging inputs`; and
 - `Integration-environment setup`; and
-- `Build-impact configuration`.
+- `Build-impact configuration`; and
+- `Unit-test command families`.
 
-The host's standard project configuration supplies focused and full unit,
-integration, focused-workflow, build, packaging, and final-acceptance commands.
+The host's standard project configuration supplies named unit-test families
+with focused and full commands, plus integration, focused-workflow, build,
+packaging, and final-acceptance commands.
 Production inputs default to those consumed by the configured build and
 packaging commands. Integration-environment setup defaults to `not configured`.
 Build-impact configuration defaults to `ponytail.json` when the project owns
-buildable targets and otherwise defaults to `not applicable`.
+buildable targets and otherwise defaults to `not applicable`. Unit-test
+command families default to `not configured`.
 
 Do not invent a test environment, provider substitute, or integration command
 when project configuration is absent. Apply the host's configuration-

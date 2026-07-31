@@ -22,19 +22,18 @@ dependencies, which may require test doubles.
 The host configures this skill in `AGENTS.md`, directly or by reference, with
 these entries:
 
-- `TypeScript focused unit-test command`;
-- `TypeScript full unit-test command`;
+- `Unit-test command families`;
 - `TypeScript unit-test indexes and discovery`;
 - `TypeScript unit-test audit metadata`;
 - `TypeScript unit-test metadata regeneration command`; and
 - `TypeScript unit-test metadata validation command`.
 
-An entry may be `not configured` when the project does not own that mechanism.
-The focused command defaults to `not configured`; select the affected test
-through the test runner directly in that state. The full command defaults to
-the host's configured full unit-test command and runs only at its owning
-milestone, merge, or CI gate. The defaults for every metadata entry are `not
-configured`.
+The TypeScript family, when owned, uses the focused and full commands from the
+host's single unit-test-family registry. It has no separate command owner.
+Every entry defaults to `not configured`. A missing focused command is a
+project-configuration discrepancy; do not infer a runner or fall back to the
+full command. The full command runs only at plan final acceptance or another
+explicitly configured owning gate.
 
 When configured, consult the declared indexes, inspect their referenced owners
 and reusable doubles, update the required metadata, and run the configured
@@ -165,8 +164,9 @@ read its configuration, or select it through a test-mode branch.
 - Reusable boundary doubles have one test-only owner.
 - Configured indexes, audit metadata, regeneration, and validation commands
   are satisfied; unconfigured mechanisms were not invented.
-- The smallest affected test selection passes under the host project's focused
-  command or a direct test-runner selector.
+- The smallest affected test selection passes under the TypeScript family's
+  configured focused command.
 - Failure or edge-path coverage exists only where the change introduces,
   modifies, or relies on that path.
-- The full unit-test command is left to its configured owning gate.
+- The TypeScript family's full command is left to plan final acceptance or
+  another explicitly configured owning gate.
