@@ -2,7 +2,7 @@
 
 Plan ID: `build-impact-tooling`
 
-Status: `DONE`
+Status: `IN_PROGRESS`
 
 ## Objective
 
@@ -147,6 +147,7 @@ No open plan-level questions.
 
 1. [S01: Implement Portable Build-Impact Tooling](sprints/S01.md) — `DONE`
 2. [S02: Configure Governed Projects](sprints/S02.md) — `DONE`
+3. [S03: Install Consistent Skill Snapshots](sprints/S03.md) — `IN_PROGRESS`
 
 ## Approval
 
@@ -171,3 +172,7 @@ Positive and negative evidence for every configured target and both language
 adapter kinds is recorded in Sprint S02. The adoption files themselves
 reported no affected targets, so no product build was applicable. No
 deployment or non-local environment mutation occurred.
+
+The user reopened the plan on 2026-07-31 after identifying that installed
+skills were live symlinks into the working repository. Sprint S03 owns the
+copy-based installation correction and remediation.
