@@ -2,7 +2,7 @@
 
 Plan ID: `configurable-unit-test-commands`
 
-Status: `IN_PROGRESS`
+Status: `DONE`
 
 ## Objective
 
@@ -128,7 +128,7 @@ No open plan-level questions.
 ## Sprint Manifest
 
 1. [S01: Define Portable Unit-Test Cadence](sprints/S01.md) — `DONE`
-2. [S02: Configure Governed Projects](sprints/S02.md) — `IN_PROGRESS`
+2. [S02: Configure Governed Projects](sprints/S02.md) — `DONE`
 
 ## Approval
 
@@ -137,4 +137,8 @@ agent to implement the plan and install the skills.
 
 ## Final Validation
 
-Pending implementation and approval.
+Completed. Portable policy, generated host copies, and the Ponytail, IPG, and
+GWEN host configurations expose named focused/full unit-test families. Focused
+proof, build-impact decisions, consumer commits, final full-suite results,
+remaining Ponytail checks, installation, and installed-copy verification are
+recorded in S01 and S02.
