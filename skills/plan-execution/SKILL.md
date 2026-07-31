@@ -199,7 +199,9 @@ meaningfully own it:
 
 ### Tasklet
 
-- Add or adjust focused success and failure or edge-path unit coverage.
+- Add or adjust the smallest focused regression proof not already supplied by
+  an existing test, static check, or higher-level test. Cover a failure or edge
+  path only when the tasklet introduces, changes, or relies on it.
 - Run directly affected tests, applicable cached typecheck or compiler checks,
   and focused lint or format checks.
 - Run specialized contract guards only when the tasklet changes the protected
@@ -209,28 +211,35 @@ meaningfully own it:
 
 ### Feature/Story
 
-- Run the affected package's complete unit suite.
-- Run the affected integration Arcs for the complete executable vertical
-  slice.
-- Run browser tests for user-visible behavior and relevant contract guards.
+- Run an affected package's complete unit suite only when the story crosses
+  multiple tasklets or package boundaries and the suite adds evidence not
+  already obtained against the current tree.
+- Run affected integration Arcs only when they prove a distinct complete
+  executable vertical slice.
+- Run browser tests for changed user-visible behavior and affected contract
+  guards.
 - Prove the story's success and failure paths.
 
 ### Sprint
 
-- Run configured milestone checks for the committed sprint tree.
-- Run the selected cross-story integration Arcs needed to prove the sprint
-  objective.
+- Run only configured milestone checks and selected cross-story integration
+  Arcs that add proof not already obtained against the committed sprint tree.
 - Reconcile every tasklet and story status and deferred check.
 
 ### Plan
 
-- Run the configured final acceptance command and all required integration
-  Suites and Arcs, SDK, demo, browser, packaging, and documentation gates.
+- Run the configured final acceptance command once against the final tree,
+  plus required integration Suites and Arcs, SDK, demo, browser, packaging,
+  and documentation gates not already included in that command.
 - Reconcile all sprint results across the affected repositories.
 
 A broader check may be deferred only to a named owning gate. An unnamed
 deferral is a skip. Record required checks that cannot run and do not claim the
-owning level complete.
+owning level complete. Record validation against the tested tree. Reuse a
+passing result while the relevant code and configuration remain unchanged; do
+not rerun an identical command solely because a higher management level
+completed. The host's configured merge or CI gate remains the authoritative
+full-suite proof.
 
 ## Commit And Execution Workflow
 

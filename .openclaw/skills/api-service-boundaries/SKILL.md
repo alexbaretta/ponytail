@@ -23,9 +23,10 @@ The host configures this skill in `AGENTS.md`, directly or by reference, with:
 - `API validation commands`.
 
 The defaults are a backend authorization owner, opaque public identifiers that
-are distinct from database primary keys, focused endpoint and service tests,
-and the host's configured milestone gate. Concrete owners and formats must be
-discovered from implementation and recorded before a change depends on them.
+are distinct from database primary keys, and focused endpoint and service
+tests. The host's configured broader gate runs at its owning milestone.
+Concrete owners and formats must be discovered from implementation and
+recorded before a change depends on them.
 
 ## Trust Boundaries And Identity
 
@@ -69,9 +70,11 @@ discovered from implementation and recorded before a change depends on them.
    explicitly versioned, or consumed by independently deployed or external
    clients under a compatibility commitment. Internal controller-to-service
    arguments released atomically do not trigger serialized-contract versioning.
-7. Add focused tests for authentication failure, authorization denial, invalid
-   public identity, service failure, and transaction or external-call edges.
-8. Run the host's focused API checks, then its milestone gate.
+7. Add focused tests only for affected authentication, authorization, public
+   identity, service failure, transaction, or external-call behavior. Do not
+   reproduce an invariant already proved by an unchanged test or static check.
+8. Run the host's focused API checks. Leave the broader gate to its owning
+   milestone.
 
 The configured API architecture supplies concrete service names, public-ID
 formats, and authentication mechanisms.

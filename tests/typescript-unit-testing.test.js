@@ -14,11 +14,19 @@ const skill = fs.readFileSync(
 
 test('TypeScript test metadata is owned by project configuration', () => {
   assert.match(skill, /host configures this skill in `AGENTS\.md`/);
+  assert.match(skill, /`TypeScript focused unit-test command`/);
+  assert.match(skill, /`TypeScript full unit-test command`/);
   assert.match(skill, /`TypeScript unit-test indexes and discovery`/);
   assert.match(skill, /When configured, consult the declared indexes/);
   assert.match(skill, /When these features are `not configured`/);
   assert.match(skill, /do not assume a\ncounterpart skill, conventional path, generated index, metadata schema/);
   assert.match(skill, /Do not invent project-local indexing or auditing infrastructure/);
+});
+
+test('focused tests do not fall back to the full suite', () => {
+  assert.match(skill, /select the affected test\nthrough the test runner directly/);
+  assert.match(skill, /full command defaults to\nthe host's configured full unit-test command/);
+  assert.match(skill, /full unit-test command is left to its configured owning gate/);
 });
 
 test('valid and invalid test values preserve their real contracts', () => {

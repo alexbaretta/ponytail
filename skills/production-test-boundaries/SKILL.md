@@ -26,10 +26,10 @@ The host configures this skill in `AGENTS.md`, directly or by reference, with:
 - `Production compilation and packaging inputs`; and
 - `Integration-environment setup`.
 
-The host's standard project configuration supplies the unit, integration,
-focused-workflow, build, packaging, and final-acceptance commands. Production
-inputs default to those consumed by the configured build and packaging commands.
-Integration-environment setup defaults to `not configured`.
+The host's standard project configuration supplies focused and full unit,
+integration, focused-workflow, build, packaging, and final-acceptance commands.
+Production inputs default to those consumed by the configured build and
+packaging commands. Integration-environment setup defaults to `not configured`.
 
 Do not invent a test environment, provider substitute, or integration command
 when project configuration is absent. Apply the host's configuration-

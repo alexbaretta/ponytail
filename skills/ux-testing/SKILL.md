@@ -55,11 +55,13 @@ configuration-discrepancy policy.
    interaction path.
 6. Re-run the real UX workflow through the configured connection skill,
    including the relevant failure or denial path.
-7. Add or update focused unit tests for the causal mechanism and integration
-   Steps for the user-visible workflow. Do not make both layers copies of the
-   same mocked call graph.
+7. Add or update the smallest durable regression proof for the causal
+   mechanism. Use a focused unit test when it proves owned logic efficiently.
+   Add an integration Step only when the change crosses a boundary that the
+   unit test cannot prove. Do not duplicate the same behavioral assertion
+   across layers.
 8. Run the smallest focused unit and integration selections that prove the
-   change, then the host's configured milestone gate.
+   change. Leave the configured milestone gate to its owning milestone.
 
 Direct backend, database, or component probes may support differential
 diagnosis, but label them as supporting evidence. They do not replace proof
@@ -86,11 +88,12 @@ materially. Prefer the smallest selectable portion during development.
 
 - The configured UX connection skill proves the changed observable behavior.
 - Failure, denial, empty, or edge behavior relevant to the change is covered.
-- Focused unit tests prove the causal mechanism.
-- Full-stack integration Steps prove the user workflow without product mocks or
-  test-only behavior.
+- The smallest applicable unit or static check proves the causal mechanism.
+- Full-stack integration Steps prove only affected boundaries that focused
+  checks cannot cover, without product mocks or test-only behavior.
 - Test state is isolated from unrelated environments and data.
-- Applicable focused tests and the configured milestone gate pass.
+- Applicable focused tests pass; broader gate results are owned and may be
+  reused according to the host's configured cadence.
 - Required plan or bug records contain the implementation and validation
   evidence.
 

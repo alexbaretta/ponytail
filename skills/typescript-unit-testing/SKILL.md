@@ -25,15 +25,19 @@ dependencies, which may require test doubles.
 The host configures this skill in `AGENTS.md`, directly or by reference, with
 these entries:
 
-- `TypeScript unit-test command`;
+- `TypeScript focused unit-test command`;
+- `TypeScript full unit-test command`;
 - `TypeScript unit-test indexes and discovery`;
 - `TypeScript unit-test audit metadata`;
 - `TypeScript unit-test metadata regeneration command`; and
 - `TypeScript unit-test metadata validation command`.
 
 An entry may be `not configured` when the project does not own that mechanism.
-The default unit-test command is the host's configured full unit-test command.
-The defaults for every metadata entry are `not configured`.
+The focused command defaults to `not configured`; select the affected test
+through the test runner directly in that state. The full command defaults to
+the host's configured full unit-test command and runs only at its owning
+milestone, merge, or CI gate. The defaults for every metadata entry are `not
+configured`.
 
 When configured, consult the declared indexes, inspect their referenced owners
 and reusable doubles, update the required metadata, and run the configured
@@ -164,5 +168,8 @@ read its configuration, or select it through a test-mode branch.
 - Reusable boundary doubles have one test-only owner.
 - Configured indexes, audit metadata, regeneration, and validation commands
   are satisfied; unconfigured mechanisms were not invented.
-- Success and failure or edge-path tests pass under the host project's
-  configured unit-test command.
+- The smallest affected test selection passes under the host project's focused
+  command or a direct test-runner selector.
+- Failure or edge-path coverage exists only where the change introduces,
+  modifies, or relies on that path.
+- The full unit-test command is left to its configured owning gate.

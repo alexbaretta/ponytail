@@ -31,9 +31,10 @@ The host configures this skill in `AGENTS.md`, directly or by reference, with:
 
 The standard and inventory default to `not configured`. The numeric
 representation defaults to a lossless representation appropriate to the
-language and contract. Validation defaults to focused boundary tests followed
-by the host's configured milestone gate. Do not create an inventory or select
-a second numeric representation when the host already owns one.
+language and contract. Validation defaults to the smallest focused boundary
+tests that prove the changed invariant. The host's broader gate runs at its
+owning milestone. Do not create an inventory or select a second numeric
+representation when the host already owns one.
 
 ## Boundary Inventory
 

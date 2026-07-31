@@ -94,8 +94,10 @@ exhaustive neutral dispatch point.
    fallback branch.
 5. Update the configured serialization or contract documentation when the
    structural tree changes.
-6. Run focused success and failure or edge-path tests, the configured
-   neutrality audit, and the affected build commands.
+6. Run the smallest focused tests that prove changed dispatch or ownership,
+   the configured neutrality audit, and affected build commands. Add failure
+   or edge-path coverage only when the change introduces, modifies, or relies
+   on that path.
 
 When a violation is found, fix the owning contract or module. Do not mask it
 with aliases, duplicate fields, compensating conversions, secondary lookups,

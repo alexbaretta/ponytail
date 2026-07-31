@@ -54,6 +54,7 @@ should identify, directly or by reference:
 - the initial local-environment setup command;
 - the local-environment update command;
 - the full build command;
+- the focused unit-test command;
 - the full unit-test command;
 - the command that runs all registered integration Arcs;
 - Suite selectors and explicit Arc-selection commands;

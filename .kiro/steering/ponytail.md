@@ -42,9 +42,13 @@ These rules remain active at every compaction level, including `off`:
 - Preserve trust-boundary validation, authorization, security, accessibility,
   data-loss prevention, actionable error handling, and explicit transaction
   boundaries.
-- Add success and failure or edge-path unit coverage for changed behavior.
-  Use broader integration and acceptance checks when the affected boundary
-  requires them. Testing scope follows the host project's configured cadence.
+- Add the smallest durable regression proof for changed behavior whose failure
+  is not already caught by existing tests, static checks, or a higher-level
+  test. Add failure or edge-path coverage only when the change introduces,
+  modifies, or relies on that path. Do not duplicate the same behavioral
+  assertion across test layers. Use broader integration and acceptance checks
+  only when they prove a distinct affected boundary, following the host
+  project's configured cadence.
 - Use as few files and abstractions as necessary given architecture and best
   practices. Avoid re-export-only files and speculative extension points.
 - Prefer deletion within approved scope. A clean committed file may be

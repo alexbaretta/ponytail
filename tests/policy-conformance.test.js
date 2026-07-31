@@ -12,7 +12,8 @@ const alwaysOnRules = [
   'Do not create aliases',
   'Do not add fallback',
   'Preserve strong static types',
-  'Add success and failure or edge-path unit coverage',
+  'Add the smallest durable regression proof',
+  'Do not duplicate the same behavioral',
 ];
 
 function withoutModeSelection(text) {
