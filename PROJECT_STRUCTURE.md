@@ -28,8 +28,8 @@ while project-wide management records remain under `pm/`.
   adapters identify their canonical source in their validation tests.
 - `scripts/` owns local generation, validation, installation, cleanup, and
   publication tooling. `scripts/install-to-codex.sh` owns Codex installation;
-  it binds only registry-enabled bundled skills and explicitly supplied
-  project-local skill roots.
+  it binds only registry-enabled bundled skills. Codex discovers
+  project-local skills from `.agents/skills/` automatically.
 - `generated/` owns runtime data derived from `registry.tsv`.
 - `tests/` owns core live-development tests.
 - `benchmarks/` is an optional isolated subsystem. It owns all benchmark

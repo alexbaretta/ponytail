@@ -20,12 +20,8 @@ For Codex from a checkout:
 ./scripts/install-to-codex.sh
 ```
 
-Add project-owned skills explicitly; the installer never scans for them:
-
-```bash
-./scripts/install-to-codex.sh \
-  --project-skills /absolute/path/to/project/.agents/skills
-```
+Codex discovers project-owned skills automatically from `.agents/skills/`
+between the working directory and repository root.
 
 Other supported installation paths include:
 
@@ -64,7 +60,7 @@ compaction changes.
 `registry.tsv` is the source of truth for published skills and commands.
 Reusable skills live in `skills/`. A host project keeps its own configuration
 in `AGENTS.md` and its project-local skills in `.agents/skills/`; Ponytail does
-not copy or infer those bindings.
+not install them globally.
 
 ## Development
 

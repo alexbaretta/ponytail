@@ -8,10 +8,9 @@ print_usage() {
   cat <<'EOF'
 Usage:
   ./scripts/install-to-codex.sh [--check] [--dry-run]
-    [--codex-home <path>] [--project-skills <directory>]...
+    [--codex-home <path>]
 
 Installs enabled bundled skills and the global AGENTS.md into CODEX_HOME.
-Project-local skill directories may be supplied explicitly and repeatedly.
 EOF
 }
 
@@ -135,6 +134,11 @@ preflight_skill() {
       "${kind}" "${name}" "${installed_path}"; then
       return
     fi
+    if [[ "${kind}" == 'bundled' ]] && \
+      installed_skill_is_installer_owned \
+        'project' "${name}" "${installed_path}"; then
+      return
+    fi
     fail "refusing to replace unowned skill path: ${installed_path}"
   fi
 }
@@ -157,69 +161,6 @@ preflight_global_agents() {
   if [[ -e "${target_path}" ]] && [[ -s "${target_path}" ]]; then
     fail "refusing to replace non-empty global instructions: ${target_path}"
   fi
-}
-
-for_each_project_skill() {
-  local callback="$1"
-  local project_skills_directory
-  local skill_name
-  local source_path
-
-  for project_skills_directory in "${INSTALL_TO_CODEX_PROJECT_SKILLS[@]}"; do
-    if [[ ! -d "${project_skills_directory}" ]]; then
-      fail "project skills directory not found: ${project_skills_directory}"
-    fi
-
-    for source_path in "${project_skills_directory}"/*; do
-      if [[ ! -d "${source_path}" ]] || [[ ! -f "${source_path}/SKILL.md" ]]; then
-        continue
-      fi
-
-      skill_name="$(basename "${source_path}")"
-      "${callback}" "${skill_name}" "${source_path}"
-    done
-  done
-}
-
-assert_project_skill_name_available() {
-  local skill_name="$1"
-  local source_path="$2"
-  local other_directory
-  local other_source
-  local status
-
-  status="$(registry_status_for_skill "${skill_name}" || true)"
-  if [[ "${status}" == 'enabled' ]]; then
-    fail "project skill collides with enabled bundled skill: ${skill_name}"
-  fi
-
-  for other_directory in "${INSTALL_TO_CODEX_PROJECT_SKILLS[@]}"; do
-    other_source="${other_directory}/${skill_name}"
-    if [[ -d "${other_source}" ]] && [[ "${other_source}" != "${source_path}" ]]; then
-      fail "project skill name has multiple owners: ${skill_name}"
-    fi
-  done
-}
-
-preflight_project_skill() {
-  local skill_name="$1"
-  local source_path="$2"
-  local status
-
-  status="$(registry_status_for_skill "${skill_name}" || true)"
-  if [[ "${status}" != 'enabled' ]] && \
-    installed_skill_is_installer_owned \
-      'bundled' \
-      "${skill_name}" \
-      "${INSTALL_TO_CODEX_SKILLS_TARGET}/${skill_name}"; then
-    return
-  fi
-
-  preflight_skill \
-    'project' \
-    "${skill_name}" \
-    "${INSTALL_TO_CODEX_SKILLS_TARGET}/${skill_name}" \
-    "${source_path}"
 }
 
 preflight_installation() {
@@ -252,8 +193,6 @@ preflight_installation() {
     fi
   done < "${INSTALL_TO_CODEX_REGISTRY}"
 
-  for_each_project_skill assert_project_skill_name_available
-  for_each_project_skill preflight_project_skill
   preflight_global_agents
 }
 
@@ -347,13 +286,6 @@ install_ponytail_skills() {
   done < "${INSTALL_TO_CODEX_REGISTRY}"
 }
 
-install_project_skill() {
-  local skill_name="$1"
-  local source_path="$2"
-
-  install_skill_copy "${INSTALL_TO_CODEX_SKILLS_TARGET}/${skill_name}" "${source_path}"
-}
-
 remove_installed_skill() {
   local installed_path="$1"
 
@@ -404,14 +336,15 @@ remove_manifest_stale_links() {
 
   while IFS=$'\t' read -r kind name source_path; do
     if [[ "${kind}" == 'project' ]]; then
-      if project_source_is_managed_now "${source_path}" && \
-        [[ ! -f "${source_path}/SKILL.md" ]]; then
-        link_path="${INSTALL_TO_CODEX_SKILLS_TARGET}/${name}"
-        if { [[ -L "${link_path}" ]] && \
-          [[ "$(readlink "${link_path}")" == "${source_path}" ]]; } || \
-          { [[ -d "${link_path}" ]] && [[ ! -L "${link_path}" ]]; }; then
-          remove_installed_skill "${link_path}"
-        fi
+      status="$(registry_status_for_skill "${name}" || true)"
+      if [[ "${status}" == 'enabled' ]]; then
+        continue
+      fi
+      link_path="${INSTALL_TO_CODEX_SKILLS_TARGET}/${name}"
+      if { [[ -L "${link_path}" ]] && \
+        [[ "$(readlink "${link_path}")" == "${source_path}" ]]; } || \
+        { [[ -d "${link_path}" ]] && [[ ! -L "${link_path}" ]]; }; then
+        remove_installed_skill "${link_path}"
       fi
       continue
     fi
@@ -421,7 +354,7 @@ remove_manifest_stale_links() {
     fi
 
     status="$(registry_status_for_skill "${name}" || true)"
-    if [[ "${status}" == 'enabled' ]] || project_skill_name_is_active "${name}"; then
+    if [[ "${status}" == 'enabled' ]]; then
       continue
     fi
 
@@ -432,32 +365,6 @@ remove_manifest_stale_links() {
       remove_installed_skill "${link_path}"
     fi
   done < "${INSTALL_TO_CODEX_MANIFEST}"
-}
-
-project_source_is_managed_now() {
-  local source_path="$1"
-  local project_skills_directory
-
-  for project_skills_directory in "${INSTALL_TO_CODEX_PROJECT_SKILLS[@]}"; do
-    if [[ "${source_path}" == "${project_skills_directory}/"* ]]; then
-      return
-    fi
-  done
-
-  return 1
-}
-
-project_skill_name_is_active() {
-  local skill_name="$1"
-  local project_skills_directory
-
-  for project_skills_directory in "${INSTALL_TO_CODEX_PROJECT_SKILLS[@]}"; do
-    if [[ -f "${project_skills_directory}/${skill_name}/SKILL.md" ]]; then
-      return
-    fi
-  done
-
-  return 1
 }
 
 install_global_agents() {
@@ -506,42 +413,13 @@ write_manifest() {
   printf 'global\tAGENTS.md\t%s\n' \
     "${INSTALL_TO_CODEX_PONYTAIL_ROOT}/config/AGENTS.md" >> "${manifest_temporary}"
 
-  INSTALL_TO_CODEX_MANIFEST_TEMPORARY="${manifest_temporary}"
-  for_each_project_skill append_project_manifest_entry
-  preserve_unmanaged_project_manifest_entries
   mv "${manifest_temporary}" "${INSTALL_TO_CODEX_MANIFEST}"
-}
-
-append_project_manifest_entry() {
-  local skill_name="$1"
-  local source_path="$2"
-
-  printf 'project\t%s\t%s\n' "${skill_name}" "${source_path}" >> \
-    "${INSTALL_TO_CODEX_MANIFEST_TEMPORARY}"
-}
-
-preserve_unmanaged_project_manifest_entries() {
-  local kind
-  local name
-  local source_path
-
-  if [[ ! -f "${INSTALL_TO_CODEX_MANIFEST}" ]]; then
-    return
-  fi
-
-  while IFS=$'\t' read -r kind name source_path; do
-    if [[ "${kind}" == 'project' ]] && \
-      ! project_source_is_managed_now "${source_path}" && \
-      ! project_skill_name_is_active "${name}"; then
-      printf 'project\t%s\t%s\n' "${name}" "${source_path}" >> \
-        "${INSTALL_TO_CODEX_MANIFEST_TEMPORARY}"
-    fi
-  done < "${INSTALL_TO_CODEX_MANIFEST}"
 }
 
 check_manifest() {
   local hosts
   local kind
+  local name
   local reason
   local recorded_source
   local skill_name
@@ -569,35 +447,9 @@ check_manifest() {
     fail 'installer ownership manifest is missing current global instructions'
   fi
 
-  for_each_project_skill check_project_manifest_entry
-  check_for_stale_managed_project_manifest_entries
-}
-
-check_project_manifest_entry() {
-  local skill_name="$1"
-  local source_path="$2"
-  local recorded_source
-
-  recorded_source="$(manifest_source_for 'project' "${skill_name}" || true)"
-  if [[ "${recorded_source}" != "${source_path}" ]]; then
-    fail "installer ownership manifest is missing current project skill: ${skill_name}"
-  fi
-}
-
-check_for_stale_managed_project_manifest_entries() {
-  local kind
-  local name
-  local source_path
-
-  if [[ ! -f "${INSTALL_TO_CODEX_MANIFEST}" ]]; then
-    return
-  fi
-
   while IFS=$'\t' read -r kind name source_path; do
-    if [[ "${kind}" == 'project' ]] && \
-      project_source_is_managed_now "${source_path}" && \
-      [[ ! -f "${source_path}/SKILL.md" ]]; then
-      fail "installer ownership manifest contains stale project skill: ${name}"
+    if [[ "${kind}" == 'project' ]]; then
+      fail "installer ownership manifest contains obsolete project skill: ${name}"
     fi
   done < "${INSTALL_TO_CODEX_MANIFEST}"
 }
@@ -606,8 +458,6 @@ parse_arguments() {
   INSTALL_TO_CODEX_CHECK='false'
   INSTALL_TO_CODEX_DRY_RUN='false'
   INSTALL_TO_CODEX_CODEX_HOME=''
-  INSTALL_TO_CODEX_PROJECT_SKILLS=()
-
   while (($# > 0)); do
     case "$1" in
       --check)
@@ -620,11 +470,6 @@ parse_arguments() {
         shift
         (($# > 0)) || fail '--codex-home requires a path'
         INSTALL_TO_CODEX_CODEX_HOME="$1"
-        ;;
-      --project-skills)
-        shift
-        (($# > 0)) || fail '--project-skills requires a directory'
-        INSTALL_TO_CODEX_PROJECT_SKILLS+=("$1")
         ;;
       -h|--help)
         print_usage
@@ -672,7 +517,6 @@ main() {
   fi
 
   install_ponytail_skills
-  for_each_project_skill install_project_skill
   remove_current_root_stale_links
   remove_manifest_stale_links
   install_global_agents

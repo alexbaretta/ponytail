@@ -296,12 +296,11 @@ Store project-local skills under `.agents/skills/` in their owning
 repository. Project-wide skills belong to the management repository;
 component-specific skills belong to the owning component repository.
 
-Project configuration declares every skill root and binding explicitly.
-Ponytail registers or links those roots through the selected host
-adapter without copying the skills into Ponytail or inferring roots from
-directory scans.
+Codex discovers those skills automatically between the working directory and
+repository root. Ponytail does not install project-local skills globally.
 
-Source: user approval while resolving Sprint S01 question Q14.
+Correction: user approval on 2026-07-30 superseded the explicit-binding
+mechanism selected while resolving Sprint S01 question Q14.
 
 ### [RESOLVED] D23: Migration History
 

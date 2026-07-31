@@ -24,6 +24,8 @@ assert_copy() {
 
   [[ -d "${copy_path}" ]] || fail "expected copied directory: ${copy_path}"
   [[ ! -L "${copy_path}" ]] || fail "expected copy, found symlink: ${copy_path}"
+  [[ ! "${source_path}/SKILL.md" -ef "${copy_path}/SKILL.md" ]] || \
+    fail "installed skill shares source files: ${copy_path}"
   diff -qr "${source_path}" "${copy_path}" >/dev/null || \
     fail "copied directory differs from source: ${copy_path}"
 }
@@ -40,7 +42,6 @@ cleanup() {
 
 main() {
   local ponytail_root
-  local project_skills
   local temporary_parent
   local temporary_root
 
@@ -49,9 +50,6 @@ main() {
   temporary_parent="${temporary_parent%/}"
   temporary_root="$(mktemp -d "${temporary_parent}/ponytail-install.XXXXXX")"
   trap 'cleanup "${temporary_root}" "${temporary_parent}"' EXIT
-  project_skills="${temporary_root}/project-skills"
-  mkdir -p "${project_skills}/example-project-skill"
-  touch "${project_skills}/example-project-skill/SKILL.md"
   mkdir -p "${temporary_root}/codex/skills"
   ln -s \
     "${ponytail_root}/skills/git-write-escalation" \
@@ -63,43 +61,26 @@ main() {
 
   "${ponytail_root}/scripts/install-to-codex.sh" \
     --dry-run \
-    --codex-home "${temporary_root}/codex" \
-    --project-skills "${project_skills}" >/dev/null
+    --codex-home "${temporary_root}/codex" >/dev/null
   [[ -f "${temporary_root}/codex/AGENTS.md" ]] || \
     fail 'dry-run changed the empty global instructions file'
 
   "${ponytail_root}/scripts/install-to-codex.sh" \
-    --codex-home "${temporary_root}/codex" \
-    --project-skills "${project_skills}"
+    --codex-home "${temporary_root}/codex"
   "${ponytail_root}/scripts/install-to-codex.sh" \
     --check \
-    --codex-home "${temporary_root}/codex" \
-    --project-skills "${project_skills}"
+    --codex-home "${temporary_root}/codex"
 
+  assert_link \
+    "${temporary_root}/codex/AGENTS.md" \
+    "${ponytail_root}/config/AGENTS.md"
   assert_copy \
     "${temporary_root}/codex/skills/static-type-safety" \
     "${ponytail_root}/skills/static-type-safety"
-  assert_copy \
-    "${temporary_root}/codex/skills/example-project-skill" \
-    "${project_skills}/example-project-skill"
-
-  printf '%s\n' 'source edit' > \
-    "${project_skills}/example-project-skill/source-edit.txt"
-  [[ ! -e \
-    "${temporary_root}/codex/skills/example-project-skill/source-edit.txt" ]] || \
-    fail 'source edit changed an installed skill without reinstalling'
-  if "${ponytail_root}/scripts/install-to-codex.sh" \
-    --check \
-    --codex-home "${temporary_root}/codex" \
-    --project-skills "${project_skills}" >/dev/null 2>&1; then
-    fail 'installer check accepted source drift'
-  fi
-  "${ponytail_root}/scripts/install-to-codex.sh" \
-    --codex-home "${temporary_root}/codex" \
-    --project-skills "${project_skills}" >/dev/null
-  assert_copy \
-    "${temporary_root}/codex/skills/example-project-skill" \
-    "${project_skills}/example-project-skill"
+  [[ ! -e "${temporary_root}/codex/skills/git-write-escalation" ]] || \
+    fail 'disabled skill remains installed'
+  [[ ! -e "${temporary_root}/codex/skills/typed-contract-safety" ]] || \
+    fail 'unregistered skill remains installed'
 
   rm -rf "${temporary_root}/codex/skills/static-type-safety"
   ln -s \
@@ -107,51 +88,35 @@ main() {
     "${temporary_root}/codex/skills/static-type-safety"
   if "${ponytail_root}/scripts/install-to-codex.sh" \
     --check \
-    --codex-home "${temporary_root}/codex" \
-    --project-skills "${project_skills}" >/dev/null 2>&1; then
+    --codex-home "${temporary_root}/codex" >/dev/null 2>&1; then
     fail 'installer check accepted a skill symlink'
   fi
   "${ponytail_root}/scripts/install-to-codex.sh" \
-    --codex-home "${temporary_root}/codex" \
-    --project-skills "${project_skills}" >/dev/null
-  assert_copy \
-    "${temporary_root}/codex/skills/static-type-safety" \
-    "${ponytail_root}/skills/static-type-safety"
+    --codex-home "${temporary_root}/codex" >/dev/null
 
   printf '%s\n' 'installed drift' >> \
     "${temporary_root}/codex/skills/static-type-safety/SKILL.md"
   if "${ponytail_root}/scripts/install-to-codex.sh" \
     --check \
-    --codex-home "${temporary_root}/codex" \
-    --project-skills "${project_skills}" >/dev/null 2>&1; then
+    --codex-home "${temporary_root}/codex" >/dev/null 2>&1; then
     fail 'installer check accepted installed content drift'
   fi
   "${ponytail_root}/scripts/install-to-codex.sh" \
-    --codex-home "${temporary_root}/codex" \
-    --project-skills "${project_skills}" >/dev/null
+    --codex-home "${temporary_root}/codex" >/dev/null
   assert_copy \
     "${temporary_root}/codex/skills/static-type-safety" \
     "${ponytail_root}/skills/static-type-safety"
-  assert_link \
-    "${temporary_root}/codex/AGENTS.md" \
-    "${ponytail_root}/config/AGENTS.md"
-  [[ ! -e "${temporary_root}/codex/skills/git-write-escalation" ]] || \
-    fail 'disabled skill remains installed'
-  [[ ! -e "${temporary_root}/codex/skills/typed-contract-safety" ]] || \
-    fail 'unregistered skill remains installed'
 
-  mv \
-    "${project_skills}/example-project-skill/SKILL.md" \
-    "${project_skills}/example-project-skill/SKILL.md.removed"
-  "${ponytail_root}/scripts/install-to-codex.sh" \
-    --codex-home "${temporary_root}/codex" \
-    --project-skills "${project_skills}" >/dev/null
-  [[ ! -L "${temporary_root}/codex/skills/example-project-skill" ]] || \
-    fail 'installer retained a removed project skill'
-  "${ponytail_root}/scripts/install-to-codex.sh" \
+  printf 'project\texample-project-skill\t%s\n' \
+    '/project/.agents/skills/example-project-skill' >> \
+    "${temporary_root}/codex/.ponytail-install.tsv"
+  if "${ponytail_root}/scripts/install-to-codex.sh" \
     --check \
-    --codex-home "${temporary_root}/codex" \
-    --project-skills "${project_skills}"
+    --codex-home "${temporary_root}/codex" >/dev/null 2>&1; then
+    fail 'installer check accepted an obsolete project manifest entry'
+  fi
+  "${ponytail_root}/scripts/install-to-codex.sh" \
+    --codex-home "${temporary_root}/codex" >/dev/null
 
   mkdir -p "${temporary_root}/protected-codex/skills"
   printf '%s\n' 'existing instructions' > \
@@ -177,13 +142,9 @@ main() {
   [[ ! -e "${temporary_root}/foreign-codex/skills/api-service-boundaries" ]] || \
     fail 'foreign-link failure partially installed skills'
 
-  mkdir -p "${temporary_root}/collision-skills/static-type-safety"
-  touch "${temporary_root}/collision-skills/static-type-safety/SKILL.md"
   if "${ponytail_root}/scripts/install-to-codex.sh" \
-    --dry-run \
-    --codex-home "${temporary_root}/collision-codex" \
-    --project-skills "${temporary_root}/collision-skills" >/dev/null 2>&1; then
-    fail 'installer accepted a bundled/project skill-name collision'
+    --project-skills "${temporary_root}/project-skills" >/dev/null 2>&1; then
+    fail 'installer accepted the removed project-skills option'
   fi
 
   "${ponytail_root}/scripts/install-to-codex.sh" \
@@ -207,23 +168,27 @@ main() {
   [[ ! -L "${temporary_root}/moved-codex/skills/git-write-escalation" ]] || \
     fail 'installer retained a disabled link from a moved ponytail checkout'
 
-  mkdir -p \
-    "${temporary_root}/transition-codex/skills" \
-    "${temporary_root}/transition-skills/git-write-escalation"
-  touch "${temporary_root}/transition-skills/git-write-escalation/SKILL.md"
+  mkdir -p "${temporary_root}/transition-codex/skills"
   touch "${temporary_root}/transition-codex/AGENTS.md"
+  ln -s "/project/.agents/skills/example-project-skill" \
+    "${temporary_root}/transition-codex/skills/example-project-skill"
   ln -s \
-    "/old/ponytail/skills/git-write-escalation" \
-    "${temporary_root}/transition-codex/skills/git-write-escalation"
-  printf 'bundled\tgit-write-escalation\t%s\n' \
-    '/old/ponytail/skills/git-write-escalation' > \
+    "/project/.agents/skills/static-type-safety" \
+    "${temporary_root}/transition-codex/skills/static-type-safety"
+  printf 'project\texample-project-skill\t%s\nproject\tstatic-type-safety\t%s\n' \
+    '/project/.agents/skills/example-project-skill' \
+    '/project/.agents/skills/static-type-safety' > \
     "${temporary_root}/transition-codex/.ponytail-install.tsv"
   "${ponytail_root}/scripts/install-to-codex.sh" \
-    --codex-home "${temporary_root}/transition-codex" \
-    --project-skills "${temporary_root}/transition-skills" >/dev/null
+    --codex-home "${temporary_root}/transition-codex" >/dev/null
+  [[ ! -L "${temporary_root}/transition-codex/skills/example-project-skill" ]] || \
+    fail 'installer retained a formerly managed project skill'
   assert_copy \
-    "${temporary_root}/transition-codex/skills/git-write-escalation" \
-    "${temporary_root}/transition-skills/git-write-escalation"
+    "${temporary_root}/transition-codex/skills/static-type-safety" \
+    "${ponytail_root}/skills/static-type-safety"
+  if grep -q $'^project\t' "${temporary_root}/transition-codex/.ponytail-install.tsv"; then
+    fail 'installer retained project entries in its ownership manifest'
+  fi
 
   printf '%s\n' 'installer tests passed'
   exit 0
