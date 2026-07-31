@@ -231,6 +231,18 @@ process.stdout.write(JSON.stringify({
   assert.deepEqual(result.affectedTargets.map(({ name }) => name), ['backend', 'native-addon']);
 }));
 
+test('build-impact configuration does not affect product build targets implicitly', () =>
+  withFixture((root) => {
+    writeFixtureFile(root, 'apps/backend/tsconfig.json', JSON.stringify({ fixtureFiles: [] }));
+    writeFixtureFile(root, 'ponytail.json');
+    const config = projectConfig([
+      { type: 'typescript', targets: [target('backend', 'apps/backend/tsconfig.json')] },
+    ]);
+    const result = queryBuildImpact(config, root, ['ponytail.json']);
+    assert.deepEqual(result.affectedTargets, []);
+    assert.deepEqual(result.indeterminateTargets, []);
+  }));
+
 test('dispatcher composes TypeScript and multiple custom adapters', () => withFixture((root) => {
   writeFixtureFile(root, 'apps/backend/tsconfig.json', JSON.stringify({
     fixtureFiles: ['src/index.ts'],

@@ -460,17 +460,13 @@ function queryCustomAdapter(adapter, projectRoot, changedFiles) {
   }
 }
 
-function queryBuildImpact(config, projectRoot, intendedFiles, configPath = 'ponytail.json') {
+function queryBuildImpact(config, projectRoot, intendedFiles) {
   const root = fs.realpathSync(path.resolve(projectRoot));
   const changedFiles = [...new Set(intendedFiles.map((file, index) =>
     normalizeChangedFile(root, file, `changedFiles[${index}]`)))].sort();
   const targets = config.buildImpact.adapters.flatMap((adapter) => adapter.targets);
-  const globalInputs = [
-    { kind: 'file', path: normalizeChangedFile(root, configPath, 'configuration path') },
-    ...config.buildImpact.globalInputs,
-  ];
   const globalChanges = changedFiles.filter((changedFile) =>
-    globalInputs.some((input) => inputMatches(input, changedFile)));
+    config.buildImpact.globalInputs.some((input) => inputMatches(input, changedFile)));
   if (globalChanges.length > 0) {
     return makeResponse(targets.map((target) => makeAffected(target, globalChanges)), []);
   }
@@ -540,7 +536,6 @@ function run(argv = process.argv.slice(2)) {
       config,
       options.projectRoot,
       options.files,
-      absoluteConfig,
     );
     process.stdout.write(`${JSON.stringify(response)}\n`);
     return response.status === 'ok' ? 0 : 2;
