@@ -206,8 +206,9 @@ meaningfully own it:
   and focused lint or format checks.
 - Run specialized contract guards only when the tasklet changes the protected
   contract.
-- Build distributable output only when packaging, generation, or executable
-  artifact behavior is part of the tasklet.
+- Run the configured build-impact query with the intended tasklet paths. When
+  it reports affected targets, build them once after their final input edits.
+  When it reports no affected or indeterminate targets, skip the build.
 
 ### Feature/Story
 
@@ -224,13 +225,17 @@ meaningfully own it:
 
 - Run only configured milestone checks and selected cross-story integration
   Arcs that add proof not already obtained against the committed sprint tree.
+- Requery build impact only for target inputs changed after their last
+  successful build.
 - Reconcile every tasklet and story status and deferred check.
 
 ### Plan
 
-- Run the configured final acceptance command once against the final tree,
-  plus required integration Suites and Arcs, SDK, demo, browser, packaging,
-  and documentation gates not already included in that command.
+- Run the applicable portions of configured final acceptance once against the
+  final tree, plus required integration Suites and Arcs, SDK, demo, browser,
+  packaging, and documentation gates not already included.
+- Run a build portion only when the build-impact query reports an affected
+  target or the approved deliverable is a build, package, or release artifact.
 - Reconcile all sprint results across the affected repositories.
 
 A broader check may be deferred only to a named owning gate. An unnamed
@@ -239,7 +244,9 @@ owning level complete. Record validation against the tested tree. Reuse a
 passing result while the relevant code and configuration remain unchanged; do
 not rerun an identical command solely because a higher management level
 completed. The host's configured merge or CI gate remains the authoritative
-full-suite proof.
+full-suite proof. An ordinary final command that cannot skip an inapplicable
+build must be split into selectable validation commands or made
+build-impact-aware.
 
 ## Commit And Execution Workflow
 

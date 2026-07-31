@@ -20,6 +20,8 @@ while project-wide management records remain under `pm/`.
   Codex installer.
 - `registry.tsv` owns enabled and disabled skill and command publication
   across supported hosts. Benchmark entries are prohibited.
+- `versioned-data-contracts.json` inventories Ponytail's durable serialized
+  contracts and their reader registries.
 - `hooks/` owns shared lifecycle behavior and policy injection.
 - Host directories such as `.claude-plugin/`, `.codex-plugin/`, `.github/`,
   `.opencode/`, `.qoder/`, and `.openclaw/` own host adapters. Generated

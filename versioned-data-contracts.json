@@ -1,0 +1,54 @@
+{
+  "$schema": "./skills/versioned-data-contracts/schemas/versioned-data-contracts.schema.json",
+  "schemaVersion": 1,
+  "families": [
+    {
+      "id": "build-impact-project-config",
+      "implementation": {
+        "workspace": "ponytail",
+        "module": "skills/build-impact/scripts/build-impact.js",
+        "readerRegistryExport": "BuildImpactProjectConfigReaders"
+      },
+      "currentVersion": "V1",
+      "versions": ["V1"],
+      "supportedReadVersions": ["V1"],
+      "supportedDowngradeVersions": []
+    },
+    {
+      "id": "build-impact-custom-request",
+      "implementation": {
+        "workspace": "ponytail",
+        "module": "skills/build-impact/scripts/build-impact.js",
+        "readerRegistryExport": "BuildImpactCustomRequestReaders"
+      },
+      "currentVersion": "V1",
+      "versions": ["V1"],
+      "supportedReadVersions": ["V1"],
+      "supportedDowngradeVersions": []
+    },
+    {
+      "id": "build-impact-custom-result",
+      "implementation": {
+        "workspace": "ponytail",
+        "module": "skills/build-impact/scripts/build-impact.js",
+        "readerRegistryExport": "BuildImpactCustomResultReaders"
+      },
+      "currentVersion": "V1",
+      "versions": ["V1"],
+      "supportedReadVersions": ["V1"],
+      "supportedDowngradeVersions": []
+    },
+    {
+      "id": "build-impact-query-result",
+      "implementation": {
+        "workspace": "ponytail",
+        "module": "skills/build-impact/scripts/build-impact.js",
+        "readerRegistryExport": "BuildImpactQueryResultReaders"
+      },
+      "currentVersion": "V1",
+      "versions": ["V1"],
+      "supportedReadVersions": ["V1"],
+      "supportedDowngradeVersions": []
+    }
+  ]
+}

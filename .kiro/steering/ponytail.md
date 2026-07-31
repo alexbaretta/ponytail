@@ -49,6 +49,11 @@ These rules remain active at every compaction level, including `off`:
   assertion across test layers. Use broader integration and acceptance checks
   only when they prove a distinct affected boundary, following the host
   project's configured cadence.
+- When the configured build-impact query reports affected targets, run their
+  build commands once after the final change to their inputs. When it reports
+  no affected or indeterminate targets, skip the build. When it reports an
+  indeterminate result, resolve the tool or configuration failure before
+  claiming build validation is unnecessary.
 - Use as few files and abstractions as necessary given architecture and best
   practices. Avoid re-export-only files and speculative extension points.
 - Prefer deletion within approved scope. A clean committed file may be

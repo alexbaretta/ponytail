@@ -32,6 +32,7 @@ services. `PROJECT_STRUCTURE.md` is authoritative for that boundary.
 - Dependency update: use the same two install commands after dependency or
   lockfile changes.
 - Full build: not applicable; Ponytail ships source files.
+- Build-impact configuration: not applicable; Ponytail has no build target.
 - Core unit tests: `npm test`.
 - Integration tests: no separate integration suite; supported adapter and
   bundled-subproject behavior is exercised by the core unit command.

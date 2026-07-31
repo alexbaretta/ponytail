@@ -42,7 +42,10 @@ test('distribution contains the live-development harness only', () => {
     'generated/registry.json',
     'registry.tsv',
     'scripts/install-to-codex.sh',
+    'skills/build-impact/SKILL.md',
+    'skills/build-impact/scripts/build-impact.js',
     'skills/ponytail/SKILL.md',
+    'versioned-data-contracts.json',
   ]) {
     assert.ok(files.includes(required), `missing ${required}`);
   }

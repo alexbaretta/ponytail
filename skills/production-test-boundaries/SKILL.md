@@ -24,12 +24,15 @@ configuration and orchestration without changing the product path they prove.
 The host configures this skill in `AGENTS.md`, directly or by reference, with:
 
 - `Production compilation and packaging inputs`; and
-- `Integration-environment setup`.
+- `Integration-environment setup`; and
+- `Build-impact configuration`.
 
 The host's standard project configuration supplies focused and full unit,
 integration, focused-workflow, build, packaging, and final-acceptance commands.
 Production inputs default to those consumed by the configured build and
 packaging commands. Integration-environment setup defaults to `not configured`.
+Build-impact configuration defaults to `ponytail.json` when the project owns
+buildable targets and otherwise defaults to `not applicable`.
 
 Do not invent a test environment, provider substitute, or integration command
 when project configuration is absent. Apply the host's configuration-
@@ -61,6 +64,8 @@ results, and return a nonzero final status when any selected Arc failed.
 - Inspect compilation and packaging inputs before adding test infrastructure.
   Add a focused automated guard when test support could otherwise be imported,
   bundled, configured, or enabled by production code.
+- Apply the canonical `build-impact` query before running a build for ordinary
+  change validation.
 
 ## Unit-Test Boundary
 

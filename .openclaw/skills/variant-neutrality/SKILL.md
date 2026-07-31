@@ -89,10 +89,10 @@ exhaustive neutral dispatch point.
    fallback branch.
 5. Update the configured serialization or contract documentation when the
    structural tree changes.
-6. Run the smallest focused tests that prove changed dispatch or ownership,
-   the configured neutrality audit, and affected build commands. Add failure
-   or edge-path coverage only when the change introduces, modifies, or relies
-   on that path.
+6. Run the smallest focused tests that prove changed dispatch or ownership
+   and the configured neutrality audit. Apply the canonical `build-impact`
+   query and run only reported target commands. Add failure or edge-path
+   coverage only when the change introduces, modifies, or relies on that path.
 
 When a violation is found, fix the owning contract or module. Do not mask it
 with aliases, duplicate fields, compensating conversions, secondary lookups,
@@ -105,4 +105,5 @@ or fake-generic names.
 - Neutral dispatch covers every current configured variant exactly once.
 - Variant-owned modules do not depend on siblings.
 - Configured structural documentation matches the implementation.
-- Configured neutrality audits and affected tests and builds pass.
+- Configured neutrality audits, affected tests, and build-impact-reported
+  target builds pass.

@@ -17,6 +17,7 @@ provides_commands:
 provides_skills:
   - api-service-boundaries
   - bash-parse-safe-scripts
+  - build-impact
   - cloud-cli-reauth
   - diagnostic-assertions
   - indeterminate-list-ux

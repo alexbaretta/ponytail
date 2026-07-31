@@ -14,6 +14,8 @@ const alwaysOnRules = [
   'Preserve strong static types',
   'Add the smallest durable regression proof',
   'Do not duplicate the same behavioral',
+  'When the configured build-impact query reports affected targets',
+  'no affected or indeterminate targets, skip the build',
 ];
 
 function withoutModeSelection(text) {

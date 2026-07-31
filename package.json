@@ -49,6 +49,7 @@
     "scripts/install-to-codex.sh",
     "scripts/uninstall.js",
     "assets/",
+    "versioned-data-contracts.json",
     "LICENSE",
     "NOTICE"
   ],

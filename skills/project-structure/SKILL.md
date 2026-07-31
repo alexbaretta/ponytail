@@ -53,7 +53,9 @@ should identify, directly or by reference:
 - the cloud infrastructure architecture document;
 - the initial local-environment setup command;
 - the local-environment update command;
-- the full build command;
+- the build-impact configuration and query command;
+- build target commands;
+- the full release or CI build command and when it applies;
 - the focused unit-test command;
 - the full unit-test command;
 - the command that runs all registered integration Arcs;
@@ -78,6 +80,11 @@ deployment, cloud, or ancillary-service configuration they do not own.
 
 Integration-test hierarchy and execution semantics use the canonical Suite,
 Arc, and Step definitions from `production-test-boundaries`.
+
+Ordinary change validation uses the canonical `build-impact` skill. A host
+with buildable targets must configure its query and target commands. A host
+without buildable targets may mark build impact not applicable. Keep
+release-only or CI-wide builds separate from ordinary agent validation.
 
 If the current change establishes or changes a required project-specific
 value, discover it from authoritative repository sources and add it to the

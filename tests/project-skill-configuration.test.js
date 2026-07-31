@@ -9,10 +9,11 @@ const test = require('node:test');
 
 const configuredSkills = new Map([
   ['api-service-boundaries', ['API architecture and ownership', 'Authorization owner']],
+  ['build-impact', ['Build-impact configuration', 'Build-impact query command', 'Build target commands']],
   ['cloud-cli-reauth', ['Cloud CLI\nreauthentication command']],
   ['lossless-json-contracts', ['Lossless JSON standard', 'Lossless JSON boundary inventory']],
   ['ponytail-debt', ['Technical-debt document']],
-  ['production-test-boundaries', ['Production compilation and packaging inputs', 'Integration-environment setup']],
+  ['production-test-boundaries', ['Production compilation and packaging inputs', 'Integration-environment setup', 'Build-impact configuration']],
   ['test-credentials', ['Test-credentials policy']],
   ['typescript-unit-testing', ['TypeScript focused unit-test command', 'TypeScript full unit-test command', 'TypeScript unit-test indexes and discovery']],
   ['ux-testing', ['UX connection skill']],

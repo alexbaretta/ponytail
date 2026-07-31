@@ -17,10 +17,20 @@ function readSkill(name) {
 test('planned work reuses unchanged proof instead of rerunning nested gates', () => {
   const skill = readSkill('plan-execution');
 
-  assert.match(skill, /Run the configured final acceptance command once/);
+  assert.match(skill, /Run the applicable portions of configured final acceptance once/);
   assert.match(skill, /Reuse a\npassing result while the relevant code and configuration remain unchanged/);
   assert.match(skill, /do\nnot rerun an identical command solely because a higher management level/);
   assert.doesNotMatch(skill, /Run the affected package's complete unit suite\./);
+});
+
+test('planned work builds only targets reported by build impact', () => {
+  const skill = readSkill('plan-execution');
+
+  assert.match(skill, /Run the configured build-impact query with the intended tasklet paths/);
+  assert.match(skill, /When it reports no affected or indeterminate targets, skip the build/);
+  assert.match(skill, /Requery build impact only for target inputs changed after their last/);
+  assert.match(skill, /ordinary final command that cannot skip an inapplicable\nbuild must be split/);
+  assert.doesNotMatch(skill, /Build distributable output only when/);
 });
 
 test('specialized skills leave broad gates to their owning milestones', () => {

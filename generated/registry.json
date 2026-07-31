@@ -38,6 +38,23 @@
     {
       "kind": "skill",
       "status": "enabled",
+      "name": "build-impact",
+      "source": "skills/build-impact",
+      "hosts": [
+        "claude",
+        "codex",
+        "copilot",
+        "devin",
+        "hermes",
+        "openclaw",
+        "pi",
+        "qoder"
+      ],
+      "reason": "Build only affected targets"
+    },
+    {
+      "kind": "skill",
+      "status": "enabled",
       "name": "cloud-cli-reauth",
       "source": "skills/cloud-cli-reauth",
       "hosts": [
