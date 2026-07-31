@@ -165,7 +165,8 @@ and 4 MCP tests, plus installer, rule-copy, version, registry, distribution,
 manifest, and diff checks. The installed Codex skill resolves to the committed
 repository skill.
 
-IPG adoption is commit `db6ca8d40`; GWEN adoption is commit `9ce05709`.
+IPG adoption is commits `db6ca8d40` and `64d1f5405`; GWEN adoption is commit
+`9ce05709`.
 Positive and negative evidence for every configured target and both language
 adapter kinds is recorded in Sprint S02. The adoption files themselves
 reported no affected targets, so no product build was applicable. No
