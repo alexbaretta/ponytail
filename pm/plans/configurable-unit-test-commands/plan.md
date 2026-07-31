@@ -128,7 +128,7 @@ No open plan-level questions.
 ## Sprint Manifest
 
 1. [S01: Define Portable Unit-Test Cadence](sprints/S01.md) — `DONE`
-2. [S02: Configure Governed Projects](sprints/S02.md) — `PENDING`
+2. [S02: Configure Governed Projects](sprints/S02.md) — `IN_PROGRESS`
 
 ## Approval
 
