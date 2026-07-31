@@ -33,10 +33,10 @@ function target(name, tsconfig) {
   };
 }
 
-function projectConfig(adapters, globalInputs = []) {
+function projectConfig(adapters, globalInputs = [], version = 1) {
   return parseProjectConfig({
-    version: 1,
-    buildImpact: { version: 1, globalInputs, adapters },
+    version,
+    buildImpact: { version, globalInputs, adapters },
   });
 }
 
@@ -102,11 +102,18 @@ test('configuration requires exact versioned adapter and target ownership', () =
   );
   assert.throws(
     () => parseProjectConfig({ version: 2, buildImpact: { version: 1, adapters: [] } }),
-    /version must be 1/,
+    /version must be 2/,
+  );
+  assert.throws(
+    () => projectConfig(
+      [{ type: 'typescript', targets: [target('backend', 'apps/backend/tsconfig.json')] }],
+      [input('apps/backend/src/**/*.css', 'glob')],
+    ),
+    /kind must be file, directory/,
   );
 });
 
-test('durable build-impact contracts have exact V1 reader owners', () => {
+test('durable build-impact contracts have exact reader owners', () => {
   const manifest = JSON.parse(fs.readFileSync(
     path.join(__dirname, '..', 'versioned-data-contracts.json'),
     'utf8',
@@ -120,10 +127,13 @@ test('durable build-impact contracts have exact V1 reader owners', () => {
     'build-impact-query-result',
   ]) {
     const family = families.get(id);
-    assert.deepEqual(family.versions, ['V1']);
-    assert.deepEqual(family.supportedReadVersions, ['V1']);
-    assert.equal(family.currentVersion, 'V1');
-    assert.ok(implementation[family.implementation.readerRegistryExport].V1);
+    const versions = id === 'build-impact-project-config' ? ['V1', 'V2'] : ['V1'];
+    assert.deepEqual(family.versions, versions);
+    assert.deepEqual(family.supportedReadVersions, versions);
+    assert.equal(family.currentVersion, versions.at(-1));
+    for (const version of versions) {
+      assert.ok(implementation[family.implementation.readerRegistryExport][version]);
+    }
   }
 });
 
@@ -153,6 +163,29 @@ test('TypeScript adapter reports compiler and configured inputs only', () => wit
   assert.deepEqual(documentation.affectedTargets, []);
   assert.deepEqual(documentation.indeterminateTargets, []);
 }));
+
+test('V2 glob inputs select non-TypeScript build inputs without selecting tests', () =>
+  withFixture((root) => {
+    writeFixtureFile(root, 'apps/frontend/tsconfig.json', JSON.stringify({ fixtureFiles: [] }));
+    writeFixtureFile(root, 'apps/frontend/src/index.css');
+    writeFixtureFile(root, 'apps/frontend/src/index.test.ts');
+    const frontendTarget = {
+      ...target('frontend', 'apps/frontend/tsconfig.json'),
+      additionalInputs: [input('apps/frontend/src/**/*.css', 'glob')],
+    };
+    const config = projectConfig(
+      [{ type: 'typescript', targets: [frontendTarget] }],
+      [],
+      2,
+    );
+
+    const stylesheet = queryBuildImpact(config, root, ['apps/frontend/src/index.css']);
+    assert.deepEqual(stylesheet.affectedTargets.map(({ name }) => name), ['frontend']);
+
+    const testOnly = queryBuildImpact(config, root, ['apps/frontend/src/index.test.ts']);
+    assert.deepEqual(testOnly.affectedTargets, []);
+    assert.deepEqual(testOnly.indeterminateTargets, []);
+  }));
 
 test('TypeScript adapter requires a pre-deletion query for unmatched missing paths', () =>
   withFixture((root) => {

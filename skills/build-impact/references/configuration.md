@@ -7,13 +7,13 @@ Licensed under the MIT License. See LICENSE in the project root.
 # Build-Impact Configuration
 
 Store project build-impact configuration in `ponytail.json` at the project
-root. Version 1 has this shape:
+root. Version 2 has this shape:
 
 ```json
 {
-  "version": 1,
+  "version": 2,
   "buildImpact": {
-    "version": 1,
+    "version": 2,
     "globalInputs": [
       { "kind": "file", "path": "pnpm-lock.yaml" }
     ],
@@ -29,7 +29,8 @@ root. Version 1 has this shape:
               "tsconfig.base.json"
             ],
             "additionalInputs": [
-              { "kind": "directory", "path": "apps/backend/public" }
+              { "kind": "directory", "path": "apps/backend/public" },
+              { "kind": "glob", "path": "apps/backend/src/**/*.css" }
             ]
           }
         ]
@@ -50,7 +51,9 @@ root. Version 1 has this shape:
 ```
 
 Paths are project-root-relative. A `file` input matches one path. A
-`directory` input matches that directory and every descendant.
+`directory` input matches that directory and every descendant. A Version 2
+`glob` input uses Node's project-root-relative glob matching. Version 1 remains
+readable but accepts only `file` and `directory` inputs.
 
 `globalInputs` affect every configured target. Use them for shared lockfiles,
 workspace manifests, or build definitions genuinely consumed by every target.

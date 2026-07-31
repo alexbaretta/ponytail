@@ -9,9 +9,9 @@
         "module": "skills/build-impact/scripts/build-impact.js",
         "readerRegistryExport": "BuildImpactProjectConfigReaders"
       },
-      "currentVersion": "V1",
-      "versions": ["V1"],
-      "supportedReadVersions": ["V1"],
+      "currentVersion": "V2",
+      "versions": ["V1", "V2"],
+      "supportedReadVersions": ["V1", "V2"],
       "supportedDowngradeVersions": []
     },
     {

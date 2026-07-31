@@ -8,7 +8,8 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 
-const VERSION = 1;
+const PROJECT_CONFIG_VERSION = 2;
+const PROTOCOL_VERSION = 1;
 const QUERY_TIMEOUT_MS = 30000;
 
 class BuildImpactError extends Error {}
@@ -29,8 +30,8 @@ function assertExactKeys(value, keys, context) {
   }
 }
 
-function assertVersion(value, context) {
-  if (value !== VERSION) throw new BuildImpactError(`${context}.version must be ${VERSION}`);
+function assertVersion(value, expected, context) {
+  if (value !== expected) throw new BuildImpactError(`${context}.version must be ${expected}`);
 }
 
 function assertString(value, context) {
@@ -46,15 +47,16 @@ function assertArray(value, context) {
   return value;
 }
 
-function parseInput(input, context) {
+function parseInput(input, context, version) {
   assertExactKeys(input, ['kind', 'path'], context);
-  if (!['file', 'directory'].includes(input.kind)) {
-    throw new BuildImpactError(`${context}.kind must be file or directory`);
+  const kinds = version === 1 ? ['file', 'directory'] : ['file', 'directory', 'glob'];
+  if (!kinds.includes(input.kind)) {
+    throw new BuildImpactError(`${context}.kind must be ${kinds.join(', ')}`);
   }
   return { kind: input.kind, path: normalizeConfiguredPath(input.path, `${context}.path`) };
 }
 
-function parseTarget(target, context, type) {
+function parseTarget(target, context, type, version) {
   const keys = ['name', 'buildCommand'];
   if (type === 'typescript') {
     keys.push('tsconfig', 'configurationInputs', 'additionalInputs');
@@ -75,12 +77,12 @@ function parseTarget(target, context, type) {
       target.additionalInputs || [],
       `${context}.additionalInputs`,
     ).map((input, index) =>
-      parseInput(input, `${context}.additionalInputs[${index}]`));
+      parseInput(input, `${context}.additionalInputs[${index}]`, version));
   }
   return current;
 }
 
-function parseAdapter(adapter, index) {
+function parseAdapter(adapter, index, version) {
   const context = `ponytail.json.buildImpact.adapters[${index}]`;
   assertObject(adapter, context);
   if (adapter.type === 'typescript') {
@@ -91,7 +93,8 @@ function parseAdapter(adapter, index) {
     throw new BuildImpactError(`${context}.type must be typescript or custom`);
   }
   const targets = assertArray(adapter.targets, `${context}.targets`)
-    .map((target, targetIndex) => parseTarget(target, `${context}.targets[${targetIndex}]`, adapter.type));
+    .map((target, targetIndex) =>
+      parseTarget(target, `${context}.targets[${targetIndex}]`, adapter.type, version));
   if (targets.length === 0) throw new BuildImpactError(`${context}.targets must not be empty`);
   const current = { type: adapter.type, targets };
   if (adapter.type === 'custom') {
@@ -104,13 +107,13 @@ function parseAdapter(adapter, index) {
   return current;
 }
 
-function parseProjectConfig(value) {
+function parseProjectConfigVersion(value, version) {
   assertExactKeys(value, ['version', 'buildImpact'], 'ponytail.json');
-  assertVersion(value.version, 'ponytail.json');
+  assertVersion(value.version, version, 'ponytail.json');
   assertExactKeys(value.buildImpact, ['version', 'globalInputs', 'adapters'], 'ponytail.json.buildImpact');
-  assertVersion(value.buildImpact.version, 'ponytail.json.buildImpact');
+  assertVersion(value.buildImpact.version, version, 'ponytail.json.buildImpact');
   const adapters = assertArray(value.buildImpact.adapters, 'ponytail.json.buildImpact.adapters')
-    .map(parseAdapter);
+    .map((adapter, index) => parseAdapter(adapter, index, version));
   if (adapters.length === 0) {
     throw new BuildImpactError('ponytail.json.buildImpact.adapters must not be empty');
   }
@@ -118,7 +121,7 @@ function parseProjectConfig(value) {
     value.buildImpact.globalInputs || [],
     'ponytail.json.buildImpact.globalInputs',
   ).map((input, index) =>
-    parseInput(input, `ponytail.json.buildImpact.globalInputs[${index}]`));
+    parseInput(input, `ponytail.json.buildImpact.globalInputs[${index}]`, version));
   const targetNames = new Set();
   for (const adapter of adapters) {
     for (const target of adapter.targets) {
@@ -128,7 +131,25 @@ function parseProjectConfig(value) {
       targetNames.add(target.name);
     }
   }
-  return { version: VERSION, buildImpact: { version: VERSION, globalInputs, adapters } };
+  return {
+    version: PROJECT_CONFIG_VERSION,
+    buildImpact: { version: PROJECT_CONFIG_VERSION, globalInputs, adapters },
+  };
+}
+
+function parseProjectConfigV1(value) {
+  return parseProjectConfigVersion(value, 1);
+}
+
+function parseProjectConfigV2(value) {
+  return parseProjectConfigVersion(value, 2);
+}
+
+function parseProjectConfig(value) {
+  assertObject(value, 'ponytail.json');
+  if (value.version === 1) return parseProjectConfigV1(value);
+  if (value.version === 2) return parseProjectConfigV2(value);
+  throw new BuildImpactError('ponytail.json.version must be 1 or 2');
 }
 
 function normalizeConfiguredPath(value, context) {
@@ -157,6 +178,7 @@ function normalizeChangedFile(projectRoot, value, context = 'changed file') {
 
 function inputMatches(input, changedFile) {
   if (input.kind === 'file') return input.path === changedFile;
+  if (input.kind === 'glob') return path.matchesGlob(changedFile, input.path);
   return input.path === changedFile || changedFile.startsWith(`${input.path}/`);
 }
 
@@ -258,7 +280,7 @@ function parseAdapterResult(value, adapter) {
     ['version', 'status', 'affectedTargets', 'indeterminateTargets', 'error'],
     'custom adapter response',
   );
-  assertVersion(value.version, 'custom adapter response');
+  assertVersion(value.version, PROTOCOL_VERSION, 'custom adapter response');
   if (!['ok', 'indeterminate'].includes(value.status)) {
     throw new BuildImpactError('custom adapter response.status must be ok or indeterminate');
   }
@@ -305,11 +327,11 @@ function parseAdapterResult(value, adapter) {
 
 function parseCustomRequest(value) {
   assertExactKeys(value, ['version', 'projectRoot', 'changedFiles'], 'custom adapter request');
-  assertVersion(value.version, 'custom adapter request');
+  assertVersion(value.version, PROTOCOL_VERSION, 'custom adapter request');
   const projectRoot = assertString(value.projectRoot, 'custom adapter request.projectRoot');
   const changedFiles = assertArray(value.changedFiles, 'custom adapter request.changedFiles')
     .map((file, index) => assertString(file, `custom adapter request.changedFiles[${index}]`));
-  return { version: VERSION, projectRoot, changedFiles };
+  return { version: PROTOCOL_VERSION, projectRoot, changedFiles };
 }
 
 function parseQueryResult(value) {
@@ -318,7 +340,7 @@ function parseQueryResult(value) {
     ['version', 'status', 'affectedTargets', 'indeterminateTargets', 'error'],
     'build-impact query result',
   );
-  assertVersion(value.version, 'build-impact query result');
+  assertVersion(value.version, PROTOCOL_VERSION, 'build-impact query result');
   if (!['ok', 'indeterminate'].includes(value.status)) {
     throw new BuildImpactError('build-impact query result.status must be ok or indeterminate');
   }
@@ -364,7 +386,7 @@ function parseQueryResult(value) {
     throw new BuildImpactError('indeterminate query result has no reason');
   }
   return {
-    version: VERSION,
+    version: PROTOCOL_VERSION,
     status: value.status,
     affectedTargets,
     indeterminateTargets,
@@ -378,7 +400,7 @@ function queryCustomAdapter(adapter, projectRoot, changedFiles) {
     command[0] = path.resolve(projectRoot, command[0]);
   }
   const request = JSON.stringify(parseCustomRequest({
-    version: VERSION,
+    version: PROTOCOL_VERSION,
     projectRoot,
     changedFiles,
   }));
@@ -443,7 +465,7 @@ function queryBuildImpact(config, projectRoot, intendedFiles, configPath = 'pony
 
 function makeResponse(affectedTargets, indeterminateTargets, error = null) {
   return {
-    version: VERSION,
+    version: PROTOCOL_VERSION,
     status: error !== null || indeterminateTargets.length > 0 ? 'indeterminate' : 'ok',
     affectedTargets,
     indeterminateTargets,
@@ -506,7 +528,7 @@ function run(argv = process.argv.slice(2)) {
   }
 }
 
-const BuildImpactProjectConfigReaders = { V1: parseProjectConfig };
+const BuildImpactProjectConfigReaders = { V1: parseProjectConfigV1, V2: parseProjectConfigV2 };
 const BuildImpactCustomResultReaders = { V1: parseAdapterResult };
 const BuildImpactCustomRequestReaders = { V1: parseCustomRequest };
 const BuildImpactQueryResultReaders = { V1: parseQueryResult };
