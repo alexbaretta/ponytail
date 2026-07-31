@@ -2,7 +2,7 @@
 
 Plan ID: `build-impact-tooling`
 
-Status: `IN_PROGRESS`
+Status: `DONE`
 
 ## Objective
 
@@ -146,7 +146,7 @@ No open plan-level questions.
 ## Sprint Manifest
 
 1. [S01: Implement Portable Build-Impact Tooling](sprints/S01.md) — `DONE`
-2. [S02: Configure Governed Projects](sprints/S02.md) — `PENDING`
+2. [S02: Configure Governed Projects](sprints/S02.md) — `DONE`
 
 ## Approval
 
@@ -155,8 +155,18 @@ build it. Sprint S01 began on 2026-07-30.
 
 ## Final Validation
 
-Sprint S01 passed `npm test`, `node scripts/check-rule-copies.js`,
-`node scripts/check-versions.js`, and `git diff --check`. The implementation
-is commit `c67aa58`. Ponytail has no build target, so no project build was
-applicable. Sprint S02 remains pending on its project inventory and
-per-repository approval gates.
+Sprint S01 and Sprint S02 are complete. The portable implementation began at
+`c67aa58`; Version 2 exact glob inputs, non-code fast-path classification, and
+classifier-only configuration handling were completed in `2f2b1e0`,
+`8ad69ae`, and `cef278c`.
+
+Final Ponytail acceptance passed with 187 core tests, 23 Pi extension tests,
+and 4 MCP tests, plus installer, rule-copy, version, registry, distribution,
+manifest, and diff checks. The installed Codex skill resolves to the committed
+repository skill.
+
+IPG adoption is commit `db6ca8d40`; GWEN adoption is commit `9ce05709`.
+Positive and negative evidence for every configured target and both language
+adapter kinds is recorded in Sprint S02. The adoption files themselves
+reported no affected targets, so no product build was applicable. No
+deployment or non-local environment mutation occurred.
