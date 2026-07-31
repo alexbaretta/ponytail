@@ -2,7 +2,7 @@
 
 Plan ID: `build-impact-tooling`
 
-Status: `IN_PROGRESS`
+Status: `DONE`
 
 ## Objective
 
@@ -147,7 +147,7 @@ No open plan-level questions.
 
 1. [S01: Implement Portable Build-Impact Tooling](sprints/S01.md) — `DONE`
 2. [S02: Configure Governed Projects](sprints/S02.md) — `DONE`
-3. [S03: Install Consistent Skill Snapshots](sprints/S03.md) — `IN_PROGRESS`
+3. [S03: Install Consistent Skill Snapshots](sprints/S03.md) — `DONE`
 
 ## Approval
 
@@ -174,5 +174,17 @@ reported no affected targets, so no product build was applicable. No
 deployment or non-local environment mutation occurred.
 
 The user reopened the plan on 2026-07-31 after identifying that installed
-skills were live symlinks into the working repository. Sprint S03 owns the
-copy-based installation correction and remediation.
+skills were live symlinks into the working repository. Sprint S03 completed
+the copy-based installation correction in `7c073ca`. The 22 live Ponytail
+skill symlinks were removed and reinstalled as independent verified copies.
+
+The final GWEN exactness audit added transitive frontend artifact dependencies,
+SDK generator inputs, and the Elixir workspace input in `1dd6a784`. Positive
+queries selected the frontend and SDK consumers, shared generator inputs
+selected both SDKs, and `pnpm-workspace.yaml` selected the custom Elixir
+target. The two correction files reported no affected product target, so no
+GWEN product build was required.
+
+Final Ponytail acceptance passed again with 187 core tests, 23 Pi extension
+tests, and 4 MCP tests. The installer suite, Bash syntax check, rule-copy
+check, version check, registry and generated-output checks all passed.
