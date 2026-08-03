@@ -20,6 +20,7 @@ const alwaysOnRules = [
   'never fall',
   'When the configured build-impact query reports affected targets',
   'no affected or indeterminate targets, skip the build',
+  'Whenever returning control to the user, print the current local timestamp',
 ];
 
 function withoutModeSelection(text) {

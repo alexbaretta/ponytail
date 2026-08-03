@@ -69,6 +69,8 @@ These rules remain active at every compaction level, including `off`:
   file requires explicit user authorization.
 - Keep implementation and project-local configuration synchronized in the
   same project change-set.
+- Whenever returning control to the user, print the current local timestamp in
+  ISO 8601 format with its UTC offset.
 
 ## Compaction Ladder
 
