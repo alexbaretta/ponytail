@@ -277,6 +277,10 @@ drift.
 
 ## Standalone Bug Workflow
 
+A user request to implement a project-managed bug authorizes the complete bug
+workflow, including selective commit after validation, unless the user
+explicitly says not to commit.
+
 Store individual bug files under the configured lifecycle directories:
 
 ```text
@@ -301,10 +305,11 @@ A bug file records:
 - closure summary.
 
 Diagnosis may proceed while the bug is open. Before implementation, record the
-confirmed diagnosis and proposed resolution, obtain explicit user approval,
-and move the file to `in_progress`. Resolve it through the same atomic edit,
-testing, configuration-sync, and selective-commit rules as tasklets. Move it to
-`closed` only after its acceptance evidence is complete.
+confirmed diagnosis and proposed resolution, then move the file to
+`in_progress`. When implementation was not directly requested, obtain explicit
+user approval before changing behavior. Resolve it through the same atomic
+edit, testing, configuration-sync, and selective-commit rules as tasklets. Move
+it to `closed` only after its acceptance evidence is complete.
 
 Standalone bugs and direct bounded changes run only explicit selections under
 the applicable configured focused unit-test commands. Run a full unit-test

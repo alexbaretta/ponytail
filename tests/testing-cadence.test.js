@@ -34,6 +34,13 @@ test('planned work uses focused unit tests until final acceptance', () => {
   assert.match(skill, /Standalone bugs and direct bounded changes run only explicit selections/);
 });
 
+test('bug implementation requests authorize the complete workflow by default', () => {
+  const skill = readSkill('plan-execution');
+
+  assert.match(skill, /A user request to implement a project-managed bug authorizes the complete bug\s+workflow, including selective commit after validation, unless the user\s+explicitly says not to commit\./);
+  assert.match(skill, /When implementation was not directly requested, obtain explicit\s+user approval before changing behavior\./);
+});
+
 test('portable unit-test cadence names no project tool', () => {
   const portableSkills = [
     'ponytail',
