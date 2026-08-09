@@ -134,6 +134,24 @@ for pid in $(pgrep -f '/Applications/ChatGPT.app|SkyComputerUseService' 2>/dev/n
 done
 echo
 
+echo "=== local servers ==="
+cat "$HOME/Library/Application Support/Codex/browser-sidebar-local-servers.json" 2>&1
+
+echo
+echo "=== browser app paths ==="
+find "$HOME/Library/Application Support/Codex" \
+  -maxdepth 3 \
+  \( -path '*codex-browser-app*' -o -name 'browser-sidebar-*.json' \) \
+  -print
+
+echo
+echo "=== browser app metadata ==="
+find "$HOME/Library/Application Support/Codex" \
+  -maxdepth 4 \
+  \( -path '*codex-browser-app*' -o -name 'browser-sidebar-*.json' \) \
+  -type f \
+  -exec stat -f '%Sp %Su:%Sg %z %Sm %N' -t '%Y-%m-%d %H:%M:%S' {} \; 2>/dev/null
+
 echo "=== DONE ==="
 echo "output_file: $OUT"
 echo
