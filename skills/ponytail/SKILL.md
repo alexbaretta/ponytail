@@ -76,6 +76,12 @@ These rules remain active at every compaction level, including `off`:
 - Prefer deletion within approved scope. A clean committed file may be
   deleted without separate authorization; deleting an untracked or edited
   file requires explicit user authorization.
+- Treat the project directory supplied for the task as a fixed operational
+  boundary. Do not switch to another checkout or worktree, and do not create a
+  worktree. Modify a path outside the project directory only when the user
+  literally and explicitly asks to modify that outside path. Never infer that
+  authorization from the task, repository, branch, plan, or nearby worktrees;
+  without it, refuse the outside modification.
 - Keep implementation and project-local configuration synchronized in the
   same project change-set.
 - Whenever returning control to the user, print the current local timestamp in

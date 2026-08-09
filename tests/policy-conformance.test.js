@@ -20,6 +20,13 @@ const alwaysOnRules = [
   'never fall',
   'When the configured build-impact query reports affected targets',
   'no affected or indeterminate targets, skip the build',
+  'Treat the project directory supplied for the task as a fixed operational',
+  'boundary. Do not switch to another checkout or worktree',
+  'worktree, and do not create a',
+  'worktree. Modify a path outside the project directory only when the user',
+  'literally and explicitly asks to modify that outside path',
+  'outside path. Never infer that',
+  'without it, refuse the outside modification',
   'Whenever returning control to the user, print the current local timestamp',
 ];
 
