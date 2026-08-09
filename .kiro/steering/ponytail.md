@@ -65,8 +65,17 @@ These rules remain active at every compaction level, including `off`:
 - Use as few files and abstractions as necessary given architecture and best
   practices. Avoid re-export-only files and speculative extension points.
 - Prefer deletion within approved scope. A clean committed file may be
-  deleted without separate authorization; deleting an untracked or edited
-  file requires explicit user authorization.
+  deleted without separate authorization. Codex has standing authorization to
+  undo an uncommitted edit or deletion when Codex made it during the current
+  task and can reconstruct the exact pre-edit content from the conversation, a
+  recorded diff, or the task's known starting revision. The undo must be
+  limited to Codex's own edits and must preserve every pre-existing
+  uncommitted change. If any affected content predates Codex's current-task
+  edit, or the exact pre-edit content cannot be reconstructed, explicit user
+  authorization is required. This standing authorization includes precise
+  inverse patches and narrowly targeted git restore operations affecting only
+  files whose uncommitted changes were created entirely by Codex during the
+  current task.
 - Treat the project directory supplied for the task as a fixed operational
   boundary. Do not switch to another checkout or worktree, and do not create a
   worktree. Modify a path outside the project directory only when the user
