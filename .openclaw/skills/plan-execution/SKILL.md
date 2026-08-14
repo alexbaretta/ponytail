@@ -175,6 +175,13 @@ performed without another approval when it remains inside the architectural
 areas and contract boundaries already approved. Extra files, tasklets, tests,
 control-flow cases, or effort do not alone broaden scope.
 
+A narrow, source-proven, local project-configuration repair authorized by the
+host's synchronization policy is plan maintenance, not scope growth and not an
+approval gate. Record it and continue. If one tasklet or path is genuinely
+blocked, continue independent approved work unless the plan requires strict
+serial execution. Stop the whole goal only when the unresolved condition
+blocks its next critical path.
+
 Material scope expansion includes substantive changes to an unapproved:
 
 - user interface or client application;
@@ -345,10 +352,12 @@ Stop when:
 - active plan ownership or current sprint selection is ambiguous;
 - required work materially broadens scope;
 - a new contract, destructive action, or external mutation lacks approval;
-- project configuration conflicts and the host policy does not authorize an
-  immediate repair; or
+- a project-configuration conflict remains ambiguous or requires a material
+  unapproved decision after applying the host's synchronization policy; or
 - a concrete blocker cannot be resolved within approved scope.
 
 Do not stop merely because implementation is difficult, a sprint contains many
 tasklets, a progress update was sent, or broader validation belongs to a later
-named gate.
+named gate. A condition does not count as a whole-goal blocker while an
+applicable skill authorizes its safe local repair or independent approved work
+remains available.

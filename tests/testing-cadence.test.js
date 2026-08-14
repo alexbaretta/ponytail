@@ -78,6 +78,28 @@ test('planned work builds only targets reported by build impact', () => {
   assert.doesNotMatch(skill, /Build distributable output only when/);
 });
 
+test('source-proven configuration drift is repaired without an approval stop', () => {
+  const structure = readSkill('project-structure');
+
+  assert.match(structure, /When that state is unambiguous and\s+the repair is narrow, local, reversible/);
+  assert.match(structure, /continue approved work without requesting\s+user approval/);
+  assert.match(structure, /An explicit diagnosis-only or report-only instruction prohibits repair/);
+  assert.match(structure, /Do not stop for a source-proven mechanical synchronization\s+repair/);
+  assert.doesNotMatch(structure, /session-scope persistent instruction/);
+});
+
+test('material configuration decisions still stop without halting independent work', () => {
+  const structure = readSkill('project-structure');
+  const plan = readSkill('plan-execution');
+
+  assert.match(structure, /authoritative sources conflict/);
+  assert.match(structure, /authorization, security posture, infrastructure\s+topology/);
+  assert.match(structure, /overwrite user-owned uncommitted work/);
+  assert.match(plan, /plan maintenance, not scope growth and not an\s+approval gate/);
+  assert.match(plan, /continue independent approved work unless the plan requires strict\s+serial execution/);
+  assert.match(plan, /does not count as a whole-goal blocker while an\s+applicable skill authorizes its safe local repair/);
+});
+
 test('specialized skills leave broad gates to their owning milestones', () => {
   for (const name of ['api-service-boundaries', 'lossless-json-contracts', 'ux-testing']) {
     assert.match(readSkill(name), /broader gate|milestone gate/);

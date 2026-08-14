@@ -123,39 +123,28 @@ existed:
   fact, update the configuration in the same change without treating that
   synchronization as additional scope.
 - If investigation discovers a pre-existing discrepancy between the
-  implementation and project-local configuration, pause the current activity
-  before relying on either side. Report the conflicting implementation and
-  configuration facts, their sources, and their impact to the user. The user
-  decides whether to fix the discrepancy immediately or resume the paused
-  activity without fixing it.
+  implementation and project-local configuration, determine the correct state
+  from authoritative repository evidence. When that state is unambiguous and
+  the repair is narrow, local, reversible, and within established ownership,
+  pause only the affected operation, repair the canonical owner, run the
+  smallest applicable focused validation, record the repair in the durable
+  plan or next progress report, and continue approved work without requesting
+  user approval. Separate the repair from unrelated work only when repository
+  ownership or the host commit policy requires it.
 
-The user may explicitly give a session-scope persistent instruction to always
-fix pre-existing project-configuration discrepancies immediately. While that
-instruction remains active:
+Stop and request user direction when authoritative sources conflict; the
+correct state or owner is ambiguous; the repair would materially broaden
+approved scope; it would change product behavior, a public contract, data
+retention or persistence, authorization, security posture, infrastructure
+topology, deployment responsibility, or external-system state; it is
+destructive or difficult to reverse; it requires authority not granted by the
+user; it would overwrite user-owned uncommitted work; or focused validation
+reveals a larger unresolved defect. Continue independent approved work when
+the discrepancy blocks only one path and the plan does not require strict
+serial execution.
 
-1. Do not interrupt a long-running plan or goal merely to report a discovered
-   discrepancy.
-2. Pause the affected work internally and determine the correct configuration
-   from authoritative implementation and repository evidence.
-3. Fix the discrepancy and run focused validation for the configuration and
-   implementation facts involved.
-4. Stage and commit only the discrepancy repair in each owning repository,
-   separately from the current tasklet or activity, using the host project's
-   commit rules.
-5. Resume the paused plan or goal immediately after the repair commit.
-6. Report the repair in the next ordinary progress or completion update rather
-   than requesting a decision.
-
-Treat this as a workflow preference, not permission for unrelated cleanup,
-destructive actions, external-environment mutation, or speculative resolution.
-If the correct source of truth is ambiguous, the repair would materially
-broaden scope, or the repair cannot be completed safely, stop and report the
-blocker despite the persistent instruction.
-
-Do not silently choose one side of a pre-existing discrepancy, repair it as
-incidental work, or let its discovery disappear into a completion report. If
-the user elects to resume without fixing it, preserve that decision and avoid
-making claims that depend on the unresolved configuration fact.
+An explicit diagnosis-only or report-only instruction prohibits repair. Report
+the discrepancy and avoid claims that depend on its unresolved facts.
 
 Examples:
 
@@ -251,10 +240,10 @@ identifies canonical entry points.
 
 - Stop if competing documents claim the same source ownership and the conflict
   materially affects the requested work.
-- Stop and report any pre-existing discrepancy between implementation and
-  project-local configuration. Resume or repair only after the user chooses,
-  unless an explicit session-scope instruction requires immediate selective
-  repair and continuation.
+- Stop for a pre-existing implementation/configuration discrepancy only when
+  its correct resolution is ambiguous or requires a material decision outside
+  approved scope. Do not stop for a source-proven mechanical synchronization
+  repair covered by this skill.
 - Stop if the intended placement or configuration update would materially
   broaden the approved scope.
 - Stop before inventing a new owner when the host configuration is ambiguous.
