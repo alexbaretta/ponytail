@@ -130,6 +130,13 @@ New questions discovered during execution must be recorded. Stop only when the
 answer is required to proceed safely or would select among materially different
 outcomes; otherwise finish independent approved work first.
 
+Before requesting any execution-time approval, identify the reasonable safe
+outcome if the user declines. Do not request approval when declining would only
+leave damage caused by the agent, preserve a known-bad state, or abandon work
+that is already approved. Repair the agent-caused condition under Ponytail's
+standing authorization and continue. A tool or sandbox rejection is not a
+substitute for a user decision.
+
 Once an approved sprint starts, execute it continuously through its tasklets,
 stories, and owned validation. Progress updates are not handoff points. Return
 control only for a stop condition, required user action, or sprint completion.
@@ -360,4 +367,5 @@ Do not stop merely because implementation is difficult, a sprint contains many
 tasklets, a progress update was sent, or broader validation belongs to a later
 named gate. A condition does not count as a whole-goal blocker while an
 applicable skill authorizes its safe local repair or independent approved work
-remains available.
+remains available. Never stop or mark a whole goal blocked solely because
+repair of the agent's own current-task changes remains pending.

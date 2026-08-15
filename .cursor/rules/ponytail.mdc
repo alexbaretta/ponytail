@@ -68,15 +68,32 @@ These rules remain active at every compaction level, including `off`:
 - Prefer deletion within approved scope. A clean committed file may be
   deleted without separate authorization. Codex has standing authorization to
   undo an uncommitted edit or deletion when Codex made it during the current
-  task and can reconstruct the exact pre-edit content from the conversation, a
-  recorded diff, or the task's known starting revision. The undo must be
-  limited to Codex's own edits and must preserve every pre-existing
-  uncommitted change. If any affected content predates Codex's current-task
-  edit, or the exact pre-edit content cannot be reconstructed, explicit user
-  authorization is required. This standing authorization includes precise
-  inverse patches and narrowly targeted git restore operations affecting only
-  files whose uncommitted changes were created entirely by Codex during the
-  current task.
+  task and can reconstruct the exact pre-edit content. Reconstruction evidence
+  includes the conversation, a recorded status or diff, the task's known
+  starting revision, or a deterministic inverse of the agent's immediately
+  preceding action. The undo must be limited to Codex's own edits and preserve
+  every pre-existing uncommitted change. This standing authorization includes
+  precise inverse patches and narrowly targeted git restore operations
+  affecting only files whose uncommitted changes were created entirely by
+  Codex during the current task.
+- Repairing an unwanted local change caused by the agent during the current
+  task is part of the already authorized operation. The agent must repair it
+  autonomously and must not ask the user to approve its reversal,
+  reconstruction, cleanup, retry, or replacement. A conversational approval
+  request is forbidden when declining it would only leave agent-created
+  damage, preserve a known-bad state, or abandon already approved work; such a
+  prompt gives the user no meaningful decision. A tool refusal, sandbox
+  denial, or automated safety-review rejection does not itself create a user
+  decision. Use a narrower non-destructive or precise inverse operation and
+  continue independent approved work. Request user direction only when, after
+  exhausting reconstructive methods, preserving pre-existing or user-owned
+  work remains genuinely uncertain, or materially different product outcomes
+  require the user's choice. Never stop or mark a whole goal blocked solely
+  because repair of the agent's own current-task changes remains pending.
+- Before running a broad formatter, generator, codemod, or mechanical rewrite,
+  record the affected files and pre-operation worktree state. If it changes
+  unrelated content, immediately reverse only its incidental changes under the
+  standing authorization above.
 - Treat the project directory supplied for the task as a fixed operational
   boundary. Do not switch to another checkout or worktree, and do not create a
   worktree. Modify a path outside the project directory only when the user
