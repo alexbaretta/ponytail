@@ -41,6 +41,14 @@ test('bug implementation requests authorize the complete workflow by default', (
   assert.match(skill, /When implementation was not directly requested, obtain explicit\s+user approval before changing behavior\./);
 });
 
+test('plan and bug names sort chronologically by creation date', () => {
+  const skill = readSkill('plan-execution');
+
+  assert.match(skill, /`YYYY-MM-DD-<plan-name>`/);
+  assert.match(skill, /bugs\/open\/YYYY-MM-DD-<bug-name>\.md/);
+  assert.match(skill, /Keep that date and\s+filename unchanged when its lifecycle changes/);
+});
+
 test('portable unit-test cadence names no project tool', () => {
   const portableSkills = [
     'ponytail',

@@ -78,11 +78,13 @@ tasklets when proof spans several atomic implementation tasklets.
 
 ## Plan Placement And Shape
 
-Create a stable, branch-independent plan ID. Under the configured plan root,
-use:
+Create a stable, branch-independent plan ID prefixed with its creation date as
+`YYYY-MM-DD-<plan-name>`. Keep that date unchanged for the life of the plan so
+alphabetical directory order is chronological creation order. Under the
+configured plan root, use:
 
 ```text
-<plan-id>/
+YYYY-MM-DD-<plan-name>/
   plan.md
   sprints/
     S01.md
@@ -302,13 +304,15 @@ explicitly says not to commit.
 Store individual bug files under the configured lifecycle directories:
 
 ```text
-bugs/open/
-bugs/in_progress/
-bugs/closed/
+bugs/open/YYYY-MM-DD-<bug-name>.md
+bugs/in_progress/YYYY-MM-DD-<bug-name>.md
+bugs/closed/YYYY-MM-DD-<bug-name>.md
 ```
 
-The directory is the lifecycle source of truth. Move the same bug file between
-directories; do not duplicate it.
+Prefix each filename with the bug report's creation date. Keep that date and
+filename unchanged when its lifecycle changes so alphabetical filename order
+is chronological creation order. The directory is the lifecycle source of
+truth. Move the same bug file between directories; do not duplicate it.
 
 A bug file records:
 
