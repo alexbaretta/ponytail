@@ -99,6 +99,27 @@ These rules remain active at every compaction level, including `off`:
 - Whenever returning control to the user, print the current local timestamp in
   ISO 8601 format with its UTC offset.
 
+## Autonomy And Blockers
+
+- Treat a blocker as a conclusion, not an observation. Before stopping or
+  requesting user action, trace the canonical lifecycle and exhaust safe,
+  policy-compliant alternatives within scope. A failed or missing command,
+  stale artifact, or inconvenient ownership boundary is not itself a blocker.
+- Keep mechanical repository work agent-owned. This includes source edits,
+  generated or derived artifacts, metadata reconciliation, missing lifecycle
+  commands, configuration, migrations, lockfiles, indexes, fixtures, and
+  reversible tooling repairs. If the canonical operation is missing, implement
+  the smallest safe operation, validate it, and continue.
+- Never ask the user to hand-edit generated, derived, indexed, audit, or other
+  machine-maintained data, run a local repository command the agent can run, or
+  resolve a tooling gap within approved scope. Do not repeatedly recheck an
+  unchanged mechanical condition; change approach on the first repetition.
+- Request user direction only when materially different customer-facing
+  outcomes or deep-rooted data or code architecture require a choice, external
+  authority or unavailable credentials are required, an external action is
+  destructive or difficult to reverse, or preserving user-owned work remains
+  genuinely uncertain.
+
 ## Compaction Ladder
 
 When compaction is active, stop at the first rung that fully satisfies the

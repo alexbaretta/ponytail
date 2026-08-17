@@ -18,6 +18,16 @@ test('Ponytail forbids meaningless approval requests for agent-caused repairs', 
   assert.match(ponytail, /Never stop or mark a whole goal blocked solely\s+because repair of the agent's own current-task changes remains pending/);
 });
 
+test('Ponytail keeps mechanical blockers agent-owned', () => {
+  const ponytail = read('skills/ponytail/SKILL.md');
+
+  assert.match(ponytail, /Treat a blocker as a conclusion, not an observation/);
+  assert.match(ponytail, /missing lifecycle\s+commands/);
+  assert.match(ponytail, /Never ask the user to hand-edit generated, derived, indexed, audit, or other\s+machine-maintained data/);
+  assert.match(ponytail, /change approach on the first repetition/);
+  assert.match(ponytail, /materially different customer-facing\s+outcomes or deep-rooted data or code architecture/);
+});
+
 test('plan execution applies the same guard before returning control', () => {
   const planExecution = read('skills/plan-execution/SKILL.md');
 
