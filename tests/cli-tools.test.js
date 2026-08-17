@@ -126,6 +126,29 @@ test('audit_pm --fix leaves untracked records and collisions unchanged', () => {
   assert.ok(fs.existsSync(path.join(project, 'pm/bugs/open/untracked.md')));
 });
 
+test('audit_pm --dryrun previews fixes with or without --fix', () => {
+  const project = fixture();
+  write(project, 'pm/plans/example/plan.md', '# Plan\n');
+  write(project, 'pm/plans/example/sprints/S01.md', '# Sprint\n');
+  write(project, 'pm/bugs/open/example.md', '# Bug\n');
+  commit(project, '2024-05-06');
+
+  for (const args of [
+    ['--dryrun'],
+    ['--fix', '--dryrun'],
+    ['--dryrun', '--fix'],
+  ]) {
+    const result = run(auditPm, args, { cwd: project });
+    assert.equal(result.status, 1);
+    assert.match(result.stdout, /WOULD FIX pm\/plans\/example -> pm\/plans\/2024-05-06-example/);
+    assert.match(result.stdout, /WOULD FIX pm\/bugs\/open\/example\.md -> pm\/bugs\/open\/2024-05-06-example\.md/);
+    assert.doesNotMatch(result.stdout, /^FIXED /m);
+    assert.equal(run('git', ['status', '--short'], { cwd: project }).stdout, '');
+    assert.ok(fs.existsSync(path.join(project, 'pm/plans/example')));
+    assert.ok(fs.existsSync(path.join(project, 'pm/bugs/open/example.md')));
+  }
+});
+
 test('plan_stats counts open and done task lines from the exact plan', () => {
   const project = fixture();
   write(project, 'pm/plans/2026-08-17-example/plan.md', '### [ ] First\n### [DONE] Second\n');

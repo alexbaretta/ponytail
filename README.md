@@ -70,7 +70,7 @@ Installed shell tools:
 
 | Tool | Purpose |
 | --- | --- |
-| `audit_pm.sh [--fix]` | Audit PM structure and fix missing date prefixes |
+| `audit_pm.sh [--fix] [--dryrun]` | Audit PM structure and preview or fix missing date prefixes |
 | `plan_stats.sh <plan-name>` | Count open and done task lines in a plan |
 | `bug_stats.sh [date]` | Count bugs by lifecycle state on or after a date |
 

@@ -6,10 +6,11 @@ set -euo pipefail
 
 print_usage() {
   cat <<'EOF'
-Usage: audit_pm.sh [--fix]
+Usage: audit_pm.sh [--fix] [--dryrun]
 
 Audits the current Git project's mandated pm/ directory structure. With
 --fix, date-prefixes tracked plan directories and bug files from Git history.
+With --dryrun, prints those actions without changing the worktree.
 EOF
 }
 
@@ -71,6 +72,11 @@ fix_missing_prefix() {
   target="${parent}/${creation_date}-${name}"
   if [[ -e "${target}" ]] || [[ -L "${target}" ]]; then
     report "${path}" "missing date prefix; destination exists: ${target}"
+    return
+  fi
+  if [[ "${dry_run}" == 'true' ]]; then
+    printf 'WOULD FIX %s -> %s\n' "${path}" "${target}"
+    issues=$((issues + 1))
     return
   fi
   if ! git mv -- "${path}" "${target}"; then
@@ -244,23 +250,27 @@ audit_pm_root() {
 }
 
 main() {
+  local dry_run='false'
   local fix='false'
   local issues=0
   local project_root
+  local repair='false'
   local renamed_path
 
-  if [[ "$#" -gt 1 ]]; then
-    fail 'usage: audit_pm.sh [--fix]'
-  fi
-  if [[ "$#" -eq 1 ]]; then
+  while [[ "$#" -gt 0 ]]; do
     case "$1" in
       --fix) fix='true' ;;
+      --dryrun) dry_run='true' ;;
       --help|-h)
         print_usage
         exit 0
         ;;
       *) fail "unknown option: $1" ;;
     esac
+    shift
+  done
+  if [[ "${fix}" == 'true' ]] || [[ "${dry_run}" == 'true' ]]; then
+    repair='true'
   fi
 
   project_root="$(git rev-parse --show-toplevel 2>/dev/null)" || \
@@ -269,8 +279,8 @@ main() {
   [[ -d pm ]] && [[ ! -L pm ]] || fail 'pm directory is missing'
 
   audit_pm_root
-  audit_plans "${fix}"
-  audit_bugs "${fix}"
+  audit_plans "${repair}"
+  audit_bugs "${repair}"
 
   if [[ "${issues}" -gt 0 ]]; then
     printf 'PM audit found %s deviation(s).\n' "${issues}"
