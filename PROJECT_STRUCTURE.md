@@ -30,6 +30,8 @@ while project-wide management records remain under `pm/`.
   publication tooling. `scripts/install-to-codex.sh` owns Codex installation;
   it binds only registry-enabled bundled skills. Codex discovers
   project-local skills from `.agents/skills/` automatically.
+- `cli/` owns user-facing shell tools. `scripts/install-cli.sh` installs all or
+  selected tools into the user's configured executable directory.
 - `generated/` owns runtime data derived from `registry.tsv`.
 - `tests/` owns core live-development tests.
 - `benchmarks/` is an optional isolated subsystem. It owns all benchmark

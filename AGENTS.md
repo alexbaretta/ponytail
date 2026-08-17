@@ -52,6 +52,8 @@ services. `PROJECT_STRUCTURE.md` is authoritative for that boundary.
 - Codex installation: `./scripts/install-to-codex.sh`; Codex discovers
   project-local skills from `.agents/skills/` automatically.
 - Codex installer tests: `./scripts/test-install-to-codex.sh`.
+- CLI installation: `./scripts/install-cli.sh`.
+- CLI focused tests: `node --test tests/cli-tools.test.js`.
 - Deployment: not applicable.
 
 Use the Node focused command while editing. Run the Node full command, the

@@ -1,0 +1,163 @@
+#!/usr/bin/env node
+// Copyright (c) 2026 Alex Baretta. All rights reserved.
+// Licensed under the MIT License. See LICENSE in the project root.
+
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
+const { spawnSync } = require('node:child_process');
+const test = require('node:test');
+
+const root = path.join(__dirname, '..');
+const planStats = path.join(root, 'cli', 'plan_stats.sh');
+const bugStats = path.join(root, 'cli', 'bug_stats.sh');
+const installer = path.join(root, 'scripts', 'install-cli.sh');
+
+function run(command, args, options = {}) {
+  return spawnSync(command, args, { encoding: 'utf8', ...options });
+}
+
+function fixture() {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'ponytail-cli-'));
+  assert.equal(run('git', ['init', '-q'], { cwd: directory }).status, 0);
+  return directory;
+}
+
+function write(directory, relativePath, contents = '') {
+  const target = path.join(directory, relativePath);
+  fs.mkdirSync(path.dirname(target), { recursive: true });
+  fs.writeFileSync(target, contents);
+}
+
+function cliEnvironment(home) {
+  return { ...process.env, HOME: home, PATH: '/usr/bin:/bin' };
+}
+
+test('CLI shell scripts are parse-safe', () => {
+  for (const script of [planStats, bugStats, installer]) {
+    assert.equal(run('bash', ['-n', script]).status, 0, script);
+    const contents = fs.readFileSync(script, 'utf8');
+    assert.match(contents, /^#!\/usr\/bin\/env bash\nset -euo pipefail\n/);
+    assert.match(contents, /\nmain "\$@"\n$/);
+  }
+});
+
+test('plan_stats counts open and done task lines from the exact plan', () => {
+  const project = fixture();
+  write(project, 'pm/plans/2026-08-17-example/plan.md', '### [ ] First\n### [DONE] Second\n');
+  write(project, 'pm/plans/2026-08-17-example/sprints/S01.md', '### [ ] Third\n');
+  write(project, 'pm/plans/2026-08-17-other/plan.md', '### [DONE] Other\n');
+  fs.mkdirSync(path.join(project, 'nested'));
+  assert.equal(run('git', ['add', '.'], { cwd: project }).status, 0);
+
+  const result = run(planStats, ['2026-08-17-example'], {
+    cwd: path.join(project, 'nested'),
+  });
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.stdout, 'open: 2\ndone: 1\n');
+});
+
+test('plan_stats rejects missing and non-basename plan names', () => {
+  const project = fixture();
+  assert.notEqual(run(planStats, ['missing'], { cwd: project }).status, 0);
+  assert.notEqual(run(planStats, ['../other'], { cwd: project }).status, 0);
+});
+
+test('bug_stats counts lifecycle files on or after an inclusive date', () => {
+  const project = fixture();
+  write(project, 'pm/bugs/open/2026-01-01-first.md');
+  write(project, 'pm/bugs/open/2026-02-01-second.md');
+  write(project, 'pm/bugs/in_progress/2026-02-15-third.md');
+  write(project, 'pm/bugs/closed/2025-12-31-fourth.md');
+  write(project, 'pm/bugs/closed/not-a-bug.md');
+
+  const compact = run(bugStats, ['20260201'], { cwd: project });
+  assert.equal(compact.status, 0, compact.stderr);
+  assert.equal(compact.stdout, 'open: 1\nin_progress: 1\nclosed: 0\n');
+
+  const all = run(bugStats, [], { cwd: project });
+  assert.equal(all.status, 0, all.stderr);
+  assert.equal(all.stdout, 'open: 2\nin_progress: 1\nclosed: 1\n');
+});
+
+test('bug_stats validates its date argument', () => {
+  const project = fixture();
+  assert.notEqual(run(bugStats, ['2026/01/01'], { cwd: project }).status, 0);
+  assert.notEqual(run(bugStats, ['2026-13-01'], { cwd: project }).status, 0);
+  assert.notEqual(run(bugStats, ['2026-00-01'], { cwd: project }).status, 0);
+});
+
+test('CLI installer installs all tools and verifies owned updates', () => {
+  const home = fixture();
+  const options = { env: cliEnvironment(home), input: 'n\n' };
+  let result = run(installer, [], options);
+  assert.equal(result.status, 0, result.stderr);
+
+  const bin = path.join(home, '.local', 'bin');
+  for (const tool of ['bug_stats.sh', 'plan_stats.sh']) {
+    assert.ok(fs.statSync(path.join(bin, tool)).mode & 0o100);
+  }
+  assert.equal(run(installer, ['--check'], { env: cliEnvironment(home) }).status, 0);
+
+  fs.writeFileSync(path.join(bin, 'plan_stats.sh'), 'owned drift\n');
+  result = run(installer, ['plan_stats.sh'], options);
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(
+    fs.readFileSync(path.join(bin, 'plan_stats.sh'), 'utf8'),
+    fs.readFileSync(planStats, 'utf8'),
+  );
+});
+
+test('CLI installer supports selection and refuses unowned collisions', () => {
+  const selectedHome = fixture();
+  let result = run(installer, ['plan_stats.sh'], {
+    env: cliEnvironment(selectedHome),
+    input: 'n\n',
+  });
+  assert.equal(result.status, 0, result.stderr);
+  assert.ok(fs.existsSync(path.join(selectedHome, '.local/bin/plan_stats.sh')));
+  assert.ok(!fs.existsSync(path.join(selectedHome, '.local/bin/bug_stats.sh')));
+
+  const collisionHome = fixture();
+  write(collisionHome, '.local/bin/plan_stats.sh', 'foreign\n');
+  result = run(installer, ['plan_stats.sh'], {
+    env: cliEnvironment(collisionHome),
+    input: 'n\n',
+  });
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /refusing to replace unowned CLI path/);
+
+  fs.rmSync(path.join(collisionHome, '.local/bin/plan_stats.sh'));
+  fs.symlinkSync(planStats, path.join(collisionHome, '.local/bin/plan_stats.sh'));
+  result = run(installer, ['plan_stats.sh'], {
+    env: cliEnvironment(collisionHome),
+    input: 'n\n',
+  });
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /refusing to replace CLI symlink/);
+});
+
+test('CLI installer prompts for or explicitly updates Bash PATH', () => {
+  const promptedHome = fixture();
+  let result = run(installer, [], {
+    env: cliEnvironment(promptedHome),
+    input: 'y\n',
+  });
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(fs.readFileSync(path.join(promptedHome, '.bashrc'), 'utf8'), /Added by Ponytail CLI installer/);
+
+  const explicitHome = fixture();
+  result = run(installer, ['--update-shell-path'], {
+    env: cliEnvironment(explicitHome),
+  });
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(fs.readFileSync(path.join(explicitHome, '.bashrc'), 'utf8'), /Added by Ponytail CLI installer/);
+});
+
+test('CLI installer dry-run does not modify the target home', () => {
+  const home = fixture();
+  const result = run(installer, ['--dry-run'], { env: cliEnvironment(home) });
+  assert.equal(result.status, 0, result.stderr);
+  assert.ok(!fs.existsSync(path.join(home, '.local')));
+});

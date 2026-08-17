@@ -20,6 +20,17 @@ For Codex from a checkout:
 ./scripts/install-to-codex.sh
 ```
 
+Install Ponytail's user-facing CLI tools into `~/.local/bin`:
+
+```bash
+./scripts/install-cli.sh
+```
+
+The CLI installer prompts before adding that directory to `~/.bashrc`; pass
+`--update-shell-path` to approve the update non-interactively. Install only
+selected tools by naming them, for example
+`./scripts/install-cli.sh plan_stats.sh`.
+
 Codex discovers project-owned skills automatically from `.agents/skills/`
 between the working directory and repository root.
 
@@ -54,6 +65,13 @@ compaction changes.
 | `/ponytail-audit` | Audit repository complexity |
 | `/ponytail-debt` | Reconcile technical debt |
 | `/ponytail-help` | Show command help |
+
+Installed shell tools:
+
+| Tool | Purpose |
+| --- | --- |
+| `plan_stats.sh <plan-name>` | Count open and done task lines in a plan |
+| `bug_stats.sh [date]` | Count bugs by lifecycle state on or after a date |
 
 ## Skills and project configuration
 
