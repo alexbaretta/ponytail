@@ -39,6 +39,7 @@ test('distribution contains the live-development harness only', () => {
     'NOTICE',
     'README.md',
     'config/AGENTS.md',
+    'cli/audit_pm.sh',
     'cli/bug_stats.sh',
     'cli/plan_stats.sh',
     'generated/registry.json',

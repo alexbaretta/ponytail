@@ -12,6 +12,7 @@ const test = require('node:test');
 const root = path.join(__dirname, '..');
 const planStats = path.join(root, 'cli', 'plan_stats.sh');
 const bugStats = path.join(root, 'cli', 'bug_stats.sh');
+const auditPm = path.join(root, 'cli', 'audit_pm.sh');
 const installer = path.join(root, 'scripts', 'install-cli.sh');
 
 function run(command, args, options = {}) {
@@ -34,13 +35,95 @@ function cliEnvironment(home) {
   return { ...process.env, HOME: home, PATH: '/usr/bin:/bin' };
 }
 
+function commit(project, date, message = 'fixture') {
+  const environment = {
+    ...process.env,
+    GIT_AUTHOR_DATE: `${date}T12:00:00Z`,
+    GIT_COMMITTER_DATE: `${date}T12:00:00Z`,
+  };
+  assert.equal(run('git', ['add', '.'], { cwd: project }).status, 0);
+  const result = run(
+    'git',
+    ['-c', 'user.name=Test', '-c', 'user.email=test@example.com', 'commit', '-qm', message],
+    { cwd: project, env: environment },
+  );
+  assert.equal(result.status, 0, result.stderr);
+}
+
 test('CLI shell scripts are parse-safe', () => {
-  for (const script of [planStats, bugStats, installer]) {
+  for (const script of [planStats, bugStats, auditPm, installer]) {
     assert.equal(run('bash', ['-n', script]).status, 0, script);
     const contents = fs.readFileSync(script, 'utf8');
     assert.match(contents, /^#!\/usr\/bin\/env bash\nset -euo pipefail\n/);
     assert.match(contents, /\nmain "\$@"\n$/);
   }
+});
+
+test('audit_pm accepts the mandated PM structure', () => {
+  const project = fixture();
+  write(project, 'pm/plans/2026-08-17-example/plan.md', '# Plan\n');
+  write(project, 'pm/plans/2026-08-17-example/sprints/S01.md', '# Sprint\n');
+  write(project, 'pm/bugs/open/2026-08-17-example.md', '# Bug\n');
+
+  const result = run(auditPm, [], { cwd: project });
+  assert.equal(result.status, 0, result.stdout + result.stderr);
+  assert.equal(result.stdout, 'PM structure is compliant.\n');
+});
+
+test('audit_pm reports non-fixable structural deviations without mutation', () => {
+  const project = fixture();
+  write(project, 'pm/unexpected.md');
+  write(project, 'pm/plans/2026-99-99-invalid/extra.md');
+  write(project, 'pm/plans/2026-99-99-invalid/sprints/first.md');
+  write(project, 'pm/bugs/triaged/bug.md');
+  write(project, 'pm/bugs/open/2026-08-17-duplicate.md');
+  write(project, 'pm/bugs/closed/2026-08-17-duplicate.md');
+
+  const result = run(auditPm, [], { cwd: project });
+  assert.equal(result.status, 1);
+  assert.match(result.stdout, /unexpected entry under pm\//);
+  assert.match(result.stdout, /invalid date prefix/);
+  assert.match(result.stdout, /required plan manifest is missing/);
+  assert.match(result.stdout, /expected a sprint file named SNN\.md/);
+  assert.match(result.stdout, /unexpected entry under pm\/bugs/);
+  assert.match(result.stdout, /same bug file exists in multiple lifecycle directories/);
+  assert.ok(fs.existsSync(path.join(project, 'pm/plans/2026-99-99-invalid')));
+});
+
+test('audit_pm --fix date-prefixes tracked plans and bugs from oldest Git history', () => {
+  const project = fixture();
+  write(project, 'pm/plans/example/plan.md', '# Plan\n');
+  write(project, 'pm/plans/example/sprints/S01.md', '# Sprint\n');
+  write(project, 'pm/bugs/in_progress/example.md', '# Bug\n');
+  commit(project, '2024-05-06', 'create PM records');
+  fs.appendFileSync(path.join(project, 'pm/plans/example/plan.md'), 'updated\n');
+  fs.appendFileSync(path.join(project, 'pm/bugs/in_progress/example.md'), 'updated\n');
+  commit(project, '2025-07-08', 'update PM records');
+
+  const result = run(auditPm, ['--fix'], { cwd: project });
+  assert.equal(result.status, 0, result.stdout + result.stderr);
+  assert.match(result.stdout, /FIXED pm\/plans\/example -> pm\/plans\/2024-05-06-example/);
+  assert.match(result.stdout, /FIXED pm\/bugs\/in_progress\/example\.md -> pm\/bugs\/in_progress\/2024-05-06-example\.md/);
+  assert.ok(fs.existsSync(path.join(project, 'pm/plans/2024-05-06-example/plan.md')));
+  assert.ok(fs.existsSync(path.join(project, 'pm/bugs/in_progress/2024-05-06-example.md')));
+  assert.match(run('git', ['status', '--short'], { cwd: project }).stdout, /^R  pm\/plans\/example\/plan\.md -> pm\/plans\/2024-05-06-example\/plan\.md/m);
+});
+
+test('audit_pm --fix leaves untracked records and collisions unchanged', () => {
+  const project = fixture();
+  write(project, 'pm/plans/example/plan.md', '# Plan\n');
+  write(project, 'pm/plans/example/sprints/S01.md', '# Sprint\n');
+  write(project, 'pm/plans/2024-05-06-example/plan.md', '# Existing\n');
+  write(project, 'pm/plans/2024-05-06-example/sprints/S01.md', '# Sprint\n');
+  commit(project, '2024-05-06');
+  write(project, 'pm/bugs/open/untracked.md', '# Bug\n');
+
+  const result = run(auditPm, ['--fix'], { cwd: project });
+  assert.equal(result.status, 1);
+  assert.match(result.stdout, /destination exists/);
+  assert.match(result.stdout, /Git creation date unavailable/);
+  assert.ok(fs.existsSync(path.join(project, 'pm/plans/example')));
+  assert.ok(fs.existsSync(path.join(project, 'pm/bugs/open/untracked.md')));
 });
 
 test('plan_stats counts open and done task lines from the exact plan', () => {
@@ -95,7 +178,7 @@ test('CLI installer installs all tools and verifies owned updates', () => {
   assert.equal(result.status, 0, result.stderr);
 
   const bin = path.join(home, '.local', 'bin');
-  for (const tool of ['bug_stats.sh', 'plan_stats.sh']) {
+  for (const tool of ['audit_pm.sh', 'bug_stats.sh', 'plan_stats.sh']) {
     assert.ok(fs.statSync(path.join(bin, tool)).mode & 0o100);
   }
   assert.equal(run(installer, ['--check'], { env: cliEnvironment(home) }).status, 0);
