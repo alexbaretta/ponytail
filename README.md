@@ -71,8 +71,12 @@ Installed shell tools:
 | Tool | Purpose |
 | --- | --- |
 | `audit_pm.sh [--fix] [--dryrun]` | Audit PM structure and preview or fix missing date prefixes |
+| `plan_pdf.sh [--sprints] <plan-name> [output.pdf]` | Render a plan, optionally with its sprints, as PDF using Pandoc |
 | `plan_stats.sh <plan-name>` | Count open and done task lines in a plan |
 | `bug_stats.sh [date]` | Count bugs by lifecycle state on or after a date |
+
+`plan_pdf.sh` requires Pandoc and writes to `tmp/<plan-name>.pdf` unless an
+output path is supplied.
 
 ## Skills and project configuration
 

@@ -11,6 +11,7 @@ const test = require('node:test');
 
 const root = path.join(__dirname, '..');
 const planStats = path.join(root, 'cli', 'plan_stats.sh');
+const planPdf = path.join(root, 'cli', 'plan_pdf.sh');
 const bugStats = path.join(root, 'cli', 'bug_stats.sh');
 const auditPm = path.join(root, 'cli', 'audit_pm.sh');
 const installer = path.join(root, 'scripts', 'install-cli.sh');
@@ -51,12 +52,53 @@ function commit(project, date, message = 'fixture') {
 }
 
 test('CLI shell scripts are parse-safe', () => {
-  for (const script of [planStats, bugStats, auditPm, installer]) {
+  for (const script of [planStats, planPdf, bugStats, auditPm, installer]) {
     assert.equal(run('bash', ['-n', script]).status, 0, script);
     const contents = fs.readFileSync(script, 'utf8');
     assert.match(contents, /^#!\/usr\/bin\/env bash\nset -euo pipefail\n/);
     assert.match(contents, /\nmain "\$@"\n$/);
   }
+});
+
+test('plan_pdf renders the manifest and optionally ordered sprints', () => {
+  const project = fixture();
+  const bin = path.join(project, 'bin');
+  const pandoc = path.join(bin, 'pandoc');
+  write(project, 'pm/plans/2026-08-17-example/plan.md', '# Plan\n');
+  write(project, 'pm/plans/2026-08-17-example/sprints/S02.md', '# Two\n');
+  write(project, 'pm/plans/2026-08-17-example/sprints/S01.md', '# One\n');
+  write(project, 'bin/pandoc', `#!/usr/bin/env bash\nprintf '%s\\n' "$@" > "${project}/pandoc-args"\nprintf 'PDF' > "\${@: -1}"\n`);
+  fs.chmodSync(pandoc, 0o755);
+  const env = { ...process.env, PATH: `${bin}:/usr/bin:/bin` };
+
+  let result = run(planPdf, ['2026-08-17-example'], { cwd: project, env });
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.stdout, 'tmp/2026-08-17-example.pdf\n');
+  assert.ok(fs.existsSync(path.join(project, 'tmp/2026-08-17-example.pdf')));
+  assert.doesNotMatch(fs.readFileSync(path.join(project, 'pandoc-args'), 'utf8'), /S01\.md/);
+
+  result = run(planPdf, ['--sprints', '2026-08-17-example', 'tmp/all.pdf'], {
+    cwd: project,
+    env,
+  });
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(
+    fs.readFileSync(path.join(project, 'pandoc-args'), 'utf8'),
+    /plan\.md\n.*S01\.md\n.*S02\.md\n--output\ntmp\/all\.pdf/s,
+  );
+});
+
+test('plan_pdf validates its plan, output, and renderer', () => {
+  const project = fixture();
+  write(project, 'pm/plans/2026-08-17-example/plan.md', '# Plan\n');
+  assert.notEqual(run(planPdf, ['../example'], { cwd: project }).status, 0);
+  assert.notEqual(run(planPdf, ['2026-08-17-example', 'tmp/plan.txt'], { cwd: project }).status, 0);
+  const result = run(planPdf, ['2026-08-17-example'], {
+    cwd: project,
+    env: { ...process.env, PATH: '/usr/bin:/bin' },
+  });
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /pandoc is required/);
 });
 
 test('audit_pm accepts the mandated PM structure', () => {
@@ -201,7 +243,7 @@ test('CLI installer installs all tools and verifies owned updates', () => {
   assert.equal(result.status, 0, result.stderr);
 
   const bin = path.join(home, '.local', 'bin');
-  for (const tool of ['audit_pm.sh', 'bug_stats.sh', 'plan_stats.sh']) {
+  for (const tool of ['audit_pm.sh', 'bug_stats.sh', 'plan_pdf.sh', 'plan_stats.sh']) {
     assert.ok(fs.statSync(path.join(bin, tool)).mode & 0o100);
   }
   assert.equal(run(installer, ['--check'], { env: cliEnvironment(home) }).status, 0);
