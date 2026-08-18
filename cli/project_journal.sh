@@ -8,8 +8,8 @@ print_usage() {
   cat <<'EOF'
 Usage:
   project_journal.sh start [context options] --action-type <type> --description <text>
-  project_journal.sh run_command [context options] --action-type <type>
-    --description <text> -- '<quoted bash command>'
+  project_journal.sh run_command [context options] --description <text>
+    -- '<quoted bash command>'
   project_journal.sh over --plan <plan> --agent-id <canonical-agent-id>
 
 Context options:
@@ -60,12 +60,7 @@ discover_project() {
 }
 
 load_config() {
-  jq -e '
-    type == "object" and .schemaVersion == 1 and
-    (.projectId | type == "string" and test("^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$")) and
-    (.projectName | type == "string" and length > 0) and
-    (.database | type == "object")
-  ' "${config_path}" >/dev/null || fail "invalid journal configuration: ${config_path}"
+  validate_config_file "${config_path}"
   project_id="$(jq -er '.projectId' "${config_path}")"
   database_name="$(jq -er '.database.name // "ponytail"' "${config_path}")"
   database_host="$(jq -r '.database.host // ""' "${config_path}")"
@@ -74,12 +69,29 @@ load_config() {
   [[ -n "${database_role}" ]] || database_role="$(id -un)"
   password_environment="$(jq -r '.database.passwordEnvironment // ""' "${config_path}")"
   if [[ -n "${password_environment}" ]]; then
-    [[ "${password_environment}" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]] || \
-      fail 'invalid passwordEnvironment'
     [[ -n "${!password_environment:-}" ]] || \
       fail "password environment variable is missing: ${password_environment}"
     export PGPASSWORD="${!password_environment}"
   fi
+}
+
+validate_config_file() {
+  local path="$1"
+  jq -e '
+    type == "object" and
+    ((keys - ["database", "projectId", "projectName", "schemaVersion"]) | length == 0) and
+    .schemaVersion == 1 and
+    (.projectId | type == "string" and test("^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$")) and
+    (.projectName | type == "string" and length > 0) and
+    (.database | type == "object" and
+      ((keys - ["host", "name", "passwordEnvironment", "port", "role"]) | length == 0)) and
+    ((.database.name // "ponytail") | type == "string" and length > 0) and
+    ((.database.host // "") | type == "string") and
+    ((.database.port // 5432) | type == "number" and floor == . and . > 0 and . < 65536) and
+    ((.database.role // "") | type == "string") and
+    ((.database.passwordEnvironment // "") |
+      type == "string" and test("^$|^[A-Za-z_][A-Za-z0-9_]*$"))
+  ' "${path}" >/dev/null || fail "invalid V1 journal configuration: ${path}"
 }
 
 set_connection_args() {
@@ -550,10 +562,20 @@ main() {
   operation="${subcommand:-project_journal}"
   shift || true
   case "${subcommand}" in
+    validate-config)
+      [[ "$#" -eq 1 ]] || fail 'validate-config requires one path'
+      require_command jq
+      validate_config_file "$1"
+      jq -cn '{ok:true,schemaVersion:1}'
+      ;;
     start|run_command)
       parse_context_options "$@"
       [[ "${subcommand}" != 'run_command' ]] || [[ -n "${command_text}" ]] || \
         fail 'run_command requires one quoted command after --'
+      if [[ "${subcommand}" == 'run_command' ]]; then
+        [[ -z "${action_type}" ]] || fail 'run_command infers its action type'
+        action_type='run_command'
+      fi
       validate_identifier 'action type' "${action_type}"
       validate_identifier 'description' "${description}"
       require_command jq

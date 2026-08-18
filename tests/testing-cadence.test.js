@@ -49,6 +49,17 @@ test('plan and bug names sort chronologically by creation date', () => {
   assert.match(skill, /Keep that date and\s+filename unchanged when its lifecycle changes/);
 });
 
+test('long-lived plan execution journals actions without blocking work', () => {
+  const skill = readSkill('plan-execution');
+
+  assert.match(skill, /start the first intentional action/);
+  assert.match(skill, /project_journal\.sh run_command/);
+  assert.match(skill, /automatic post-command state is\s+`waiting_for_agent_action`/);
+  assert.match(skill, /Before every handoff, invoke `project_journal\.sh over`/);
+  assert.match(skill, /Journaling is non-blocking/);
+  assert.match(skill, /report the failed operation and diagnostic in chat/);
+});
+
 test('portable unit-test cadence names no project tool', () => {
   const portableSkills = [
     'ponytail',

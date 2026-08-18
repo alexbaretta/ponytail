@@ -74,9 +74,32 @@ Installed shell tools:
 | `plan_pdf.sh [--sprints] <plan-name> [output.pdf]` | Render a plan, optionally with its sprints, as PDF using Pandoc |
 | `plan_stats.sh <plan-name>` | Count open and done task lines in a plan |
 | `bug_stats.sh [date]` | Count bugs by lifecycle state on or after a date |
+| `project_journal.sh start\|run_command\|over ...` | Record long-lived-plan action telemetry in PostgreSQL |
 
 `plan_pdf.sh` requires Pandoc and writes to `tmp/<plan-name>.pdf` unless an
 output path is supplied.
+
+### Project journaling
+
+Long-lived-plan telemetry uses PostgreSQL 18 rather than Git. A project owns a
+root-level `ponytail-journal.json` containing `schemaVersion`, a stable UUIDv7
+`projectId`, `projectName`, and non-secret database settings. Database name
+defaults to `ponytail`, role defaults to the current Unix user, and an omitted
+host uses PostgreSQL's local Unix socket. Optional `host`, `port`, `role`, and
+`passwordEnvironment` fields override those defaults; passwords never belong
+in the JSON file.
+
+An authorized database administrator provisions or reconciles the database,
+roles, schema, policies, functions, and project registration with:
+
+```bash
+./scripts/setup-project-journal.sh
+```
+
+The tool records actions through sanitizing database functions, keeps its
+disposable heartbeat state under ignored `tmp/project-journal/`, and emits
+one-line JSON. Journal failures do not stop engineering work and must be
+reported in the agent's reply.
 
 ## Skills and project configuration
 

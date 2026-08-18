@@ -1,7 +1,7 @@
 # PostgreSQL Project Journaling
 
 - Plan ID: `2026-08-17-postgresql-project-journaling`
-- Status: `IN_PROGRESS`
+- Status: `DONE`
 - Approval: Approved by the user on 2026-08-17 with the instruction to
   implement the plan and validate it by journaling its final tasklets.
 
@@ -182,8 +182,8 @@ The reference table permits later extension without changing the action table.
 
 - [S01](sprints/S01.md): PostgreSQL contract and project configuration — `DONE`
 - [S02](sprints/S02.md): CLI lifecycle and heartbeat — `DONE`
-- [S03](sprints/S03.md): Agent workflow and project integration — `IN_PROGRESS`
-- [S04](sprints/S04.md): Final acceptance and reconciliation — `PENDING`
+- [S03](sprints/S03.md): Agent workflow and project integration — `DONE`
+- [S04](sprints/S04.md): Final acceptance and reconciliation — `DONE`
 
 ## Plan-Level Questions
 
@@ -198,4 +198,12 @@ The reference table permits later extension without changing the action table.
 
 ## Final Validation
 
-Pending execution and approval.
+- Focused integration acceptance passed 118 tests.
+- Full acceptance passed 217 core tests, 23 Pi extension tests, and four MCP
+  tests; all eight rule copies and all seven version files passed their
+  explicit checks.
+- PostgreSQL 18 setup was repeatable and its transactional role and function
+  contract suite passed.
+- Live journal data proved action sequencing, continuous foreground
+  heartbeats, abnormal recovery at the last local heartbeat, command redaction,
+  waiting transitions, subagent completion, and final-tasklet telemetry.

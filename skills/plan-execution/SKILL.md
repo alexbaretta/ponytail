@@ -177,6 +177,34 @@ For each tasklet, record:
 Do not mark a parent complete while a child remains unfinished or while its
 owned validation has not passed.
 
+## Action Journaling
+
+When the host configures `project_journal.sh`, journal all wall-clock activity
+performed for an approved long-lived plan. Journal telemetry is operational
+data outside Git; plan and sprint files remain the durable execution record.
+
+- After processing a developer prompt, start the first intentional action
+  before performing it. Supply the current plan, sprint, feature, tasklet,
+  canonical agent ID, nullable parent-agent ID, model, action type, and a short
+  description as required by the CLI.
+- Start a new action at every meaningful boundary. The journal closes the
+  preceding action at the same database timestamp. Deliberate reasoning may be
+  reported as `reasoning`; the automatic post-command state is
+  `waiting_for_agent_action`.
+- Run shell commands through `project_journal.sh run_command` whenever
+  possible. Pass the complete Bash command as one quoted argument. Supply
+  sensitive values through environment variables referenced by the quoted
+  command so their values are not persisted.
+- Subagents use their runtime-provided canonical ID and immediate parent ID.
+  They share the top-level agent's prompt automatically through plan-local
+  state and close their own active action before returning.
+- Before every handoff, invoke `project_journal.sh over` for the current plan
+  and agent. Use its returned database timestamp in the reply. The top-level
+  invocation ends the prompt and removes its temporary state.
+- Journaling is non-blocking. If any journal invocation fails, continue the
+  approved work, report the failed operation and diagnostic in chat, and use
+  the host's ordinary timestamp command if `over` cannot return one.
+
 ## Approval And Scope Growth
 
 Direct user requests that add behavior to an active plan must be recorded in

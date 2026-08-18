@@ -43,14 +43,18 @@ test('distribution contains the live-development harness only', () => {
     'cli/bug_stats.sh',
     'cli/plan_pdf.sh',
     'cli/plan_stats.sh',
+    'cli/project_journal.sh',
     'generated/registry.json',
     'registry.tsv',
     'scripts/install-to-codex.sh',
     'scripts/install-cli.sh',
+    'scripts/setup-project-journal.sh',
+    'scripts/project-journal.sql',
     'skills/build-impact/SKILL.md',
     'skills/build-impact/scripts/build-impact.js',
     'skills/ponytail/SKILL.md',
     'versioned-data-contracts.json',
+    'ponytail-journal.json',
   ]) {
     assert.ok(files.includes(required), `missing ${required}`);
   }

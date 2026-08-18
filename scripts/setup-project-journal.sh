@@ -25,21 +25,6 @@ json_value() {
   jq -er "${expression}" "${path}"
 }
 
-validate_config() {
-  local config_path="$1"
-  jq -e '
-    type == "object" and
-    .schemaVersion == 1 and
-    (.projectId | type == "string" and test("^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$")) and
-    (.projectName | type == "string" and length > 0) and
-    (.database | type == "object") and
-    ((.database.name // "ponytail") | type == "string" and length > 0) and
-    ((.database.host // "") | type == "string") and
-    ((.database.port // 5432) | type == "number" and floor == . and . > 0 and . < 65536) and
-    ((.database.role // "") | type == "string")
-  ' "${config_path}" >/dev/null || fail "invalid journal configuration: ${config_path}"
-}
-
 psql_connection_args() {
   local database="$1"
   local host="$2"
@@ -63,6 +48,7 @@ main() {
   local reporter_role
   local runtime_role
   local script_root
+  local journal_cli
   local -a connection_args=()
 
   while [[ "$#" -gt 0 ]]; do
@@ -87,7 +73,9 @@ main() {
     fail 'not inside a Git worktree'
   [[ -n "${config_path}" ]] || config_path="${project_root}/ponytail-journal.json"
   [[ -f "${config_path}" ]] || fail "journal configuration is missing: ${config_path}"
-  validate_config "${config_path}"
+  script_root="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  journal_cli="${script_root}/../cli/project_journal.sh"
+  "${journal_cli}" validate-config "${config_path}" >/dev/null
 
   database_name="$(json_value '.database.name // "ponytail"' "${config_path}")"
   host="$(jq -r '.database.host // ""' "${config_path}")"
@@ -118,7 +106,6 @@ SELECT format('CREATE DATABASE %I OWNER %I', :'database_name', 'ponytail_journal
 WHERE NOT EXISTS (SELECT 1 FROM pg_database WHERE datname = :'database_name') \gexec
 SQL
 
-  script_root="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
   psql_connection_args "${database_name}" "${host}" "${port}" "${PGUSER:-}"
   psql "${connection_args[@]}" --file "${script_root}/project-journal.sql"
   psql "${connection_args[@]}" \

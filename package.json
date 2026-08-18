@@ -49,9 +49,12 @@
     "pi-extension/",
     "scripts/install-to-codex.sh",
     "scripts/install-cli.sh",
+    "scripts/setup-project-journal.sh",
+    "scripts/project-journal.sql",
     "scripts/uninstall.js",
     "assets/",
     "versioned-data-contracts.json",
+    "ponytail-journal.json",
     "LICENSE",
     "NOTICE"
   ],

@@ -53,6 +53,7 @@ services. `PROJECT_STRUCTURE.md` is authoritative for that boundary.
   project-local skills from `.agents/skills/` automatically.
 - Codex installer tests: `./scripts/test-install-to-codex.sh`.
 - CLI installation: `./scripts/install-cli.sh`.
+- Project-journal setup: `./scripts/setup-project-journal.sh`.
 - CLI focused tests: `node --test tests/cli-tools.test.js`.
 - Deployment: not applicable.
 

@@ -134,6 +134,21 @@ test('audit_pm accepts the mandated PM structure', () => {
   assert.equal(result.stdout, 'PM structure is compliant.\n');
 });
 
+test('audit_pm requires valid project journal configuration', () => {
+  const project = fixture();
+  write(project, 'pm/plans/2026-08-17-example/plan.md', '# Plan\n');
+  write(project, 'pm/plans/2026-08-17-example/sprints/S01.md', '# Sprint\n');
+
+  let result = run(auditPm, [], { cwd: project });
+  assert.equal(result.status, 1);
+  assert.match(result.stdout, /required project journal configuration is missing/);
+
+  write(project, 'ponytail-journal.json', '{}');
+  result = run(auditPm, [], { cwd: project });
+  assert.equal(result.status, 1);
+  assert.match(result.stdout, /invalid V1 project journal configuration/);
+});
+
 test('audit_pm reports non-fixable structural deviations without mutation', () => {
   const project = fixture();
   writeJournalConfig(project);
@@ -279,6 +294,17 @@ test('project journal rejects missing configuration and split commands', () => {
   ], { cwd: project });
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /requires one quoted command/);
+
+  write(project, 'invalid.json', JSON.stringify({
+    schemaVersion: 1,
+    projectId: '019c0000-0000-7000-8000-000000000001',
+    projectName: 'fixture',
+    database: {},
+    unknown: true,
+  }));
+  result = run(projectJournal, ['validate-config', path.join(project, 'invalid.json')]);
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /invalid V1 journal configuration/);
 });
 
 test('journal contracts retain a stable relational core and versioned JSON payload', () => {

@@ -249,6 +249,19 @@ audit_pm_root() {
   done < <(find pm -mindepth 1 -maxdepth 1 -print0)
 }
 
+audit_journal_config() {
+  local config_path='ponytail-journal.json'
+  local journal_cli
+
+  if [[ ! -f "${config_path}" ]] || [[ -L "${config_path}" ]]; then
+    report "${config_path}" 'required project journal configuration is missing'
+    return
+  fi
+  journal_cli="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/project_journal.sh"
+  "${journal_cli}" validate-config "${config_path}" >/dev/null 2>&1 || \
+    report "${config_path}" 'invalid V1 project journal configuration'
+}
+
 main() {
   local dry_run='false'
   local fix='false'
@@ -279,6 +292,7 @@ main() {
   [[ -d pm ]] && [[ ! -L pm ]] || fail 'pm directory is missing'
 
   audit_pm_root
+  audit_journal_config
   audit_plans "${repair}"
   audit_bugs "${repair}"
 
