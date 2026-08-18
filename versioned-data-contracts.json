@@ -3,6 +3,30 @@
   "schemaVersion": 1,
   "families": [
     {
+      "id": "ponytail-journal-project-config",
+      "implementation": {
+        "workspace": "ponytail",
+        "module": "cli/project_journal.sh",
+        "readerRegistryExport": "PonytailJournalProjectConfigReaders"
+      },
+      "currentVersion": "V1",
+      "versions": ["V1"],
+      "supportedReadVersions": ["V1"],
+      "supportedDowngradeVersions": []
+    },
+    {
+      "id": "ponytail-journal-action-payload",
+      "implementation": {
+        "workspace": "ponytail",
+        "module": "scripts/project-journal.sql",
+        "readerRegistryExport": "PonytailJournalActionPayloadReaders"
+      },
+      "currentVersion": "V1",
+      "versions": ["V1"],
+      "supportedReadVersions": ["V1"],
+      "supportedDowngradeVersions": []
+    },
+    {
       "id": "build-impact-project-config",
       "implementation": {
         "workspace": "ponytail",

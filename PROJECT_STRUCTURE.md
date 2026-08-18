@@ -22,6 +22,8 @@ while project-wide management records remain under `pm/`.
   across supported hosts. Benchmark entries are prohibited.
 - `versioned-data-contracts.json` inventories Ponytail's durable serialized
   contracts and their reader registries.
+- `ponytail-journal.json` owns the project's stable identity and non-secret
+  PostgreSQL journal connection settings.
 - `hooks/` owns shared lifecycle behavior and policy injection.
 - Host directories such as `.claude-plugin/`, `.codex-plugin/`, `.github/`,
   `.opencode/`, `.qoder/`, and `.openclaw/` own host adapters. Generated
@@ -30,6 +32,8 @@ while project-wide management records remain under `pm/`.
   publication tooling. `scripts/install-to-codex.sh` owns Codex installation;
   it binds only registry-enabled bundled skills. Codex discovers
   project-local skills from `.agents/skills/` automatically.
+- `scripts/setup-project-journal.sh` and `scripts/project-journal.sql` own
+  PostgreSQL 18 journal provisioning and its immutable V1 storage contract.
 - `cli/` owns user-facing parse-safe Bash tools. Adding a tool there makes it
   installable by `scripts/install-cli.sh`, which installs all `cli/*.sh` files
   or selected tools into the user's configured executable directory. Add each
@@ -45,7 +49,8 @@ while project-wide management records remain under `pm/`.
   record is added; do not add placeholder files.
 - `tech_debt.md` is the canonical local technical-debt record.
 - `tmp/` owns ignored local logs, probes, generated previews, and other
-  temporary artifacts.
+  temporary artifacts, including disposable `tmp/project-journal/` process
+  coordination state.
 
 ## Boundaries
 

@@ -1,8 +1,9 @@
 # PostgreSQL Project Journaling
 
 - Plan ID: `2026-08-17-postgresql-project-journaling`
-- Status: `PENDING`
-- Approval: Not yet approved for execution.
+- Status: `IN_PROGRESS`
+- Approval: Approved by the user on 2026-08-17 with the instruction to
+  implement the plan and validate it by journaling its final tasklets.
 
 ## Objective
 
@@ -179,8 +180,8 @@ The reference table permits later extension without changing the action table.
 
 ## Sprint Manifest
 
-- [S01](sprints/S01.md): PostgreSQL contract and project configuration — `PENDING`
-- [S02](sprints/S02.md): CLI lifecycle and heartbeat — `PENDING`
+- [S01](sprints/S01.md): PostgreSQL contract and project configuration — `DONE`
+- [S02](sprints/S02.md): CLI lifecycle and heartbeat — `IN_PROGRESS`
 - [S03](sprints/S03.md): Agent workflow and project integration — `PENDING`
 - [S04](sprints/S04.md): Final acceptance and reconciliation — `PENDING`
 
