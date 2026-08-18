@@ -93,6 +93,25 @@ BEGIN
 END;
 $function$;
 
+CREATE OR REPLACE FUNCTION merge_payload(base_payload jsonb, payload_patch jsonb)
+RETURNS jsonb
+LANGUAGE sql
+IMMUTABLE
+AS $function$
+  SELECT base_payload || payload_patch || jsonb_build_object(
+    'action',
+      CASE WHEN jsonb_typeof(base_payload -> 'action') = 'object'
+        THEN base_payload -> 'action' ELSE '{}'::jsonb END ||
+      CASE WHEN jsonb_typeof(payload_patch -> 'action') = 'object'
+        THEN payload_patch -> 'action' ELSE '{}'::jsonb END,
+    'command',
+      CASE WHEN jsonb_typeof(base_payload -> 'command') = 'object'
+        THEN base_payload -> 'command' ELSE '{}'::jsonb END ||
+      CASE WHEN jsonb_typeof(payload_patch -> 'command') = 'object'
+        THEN payload_patch -> 'command' ELSE '{}'::jsonb END
+  );
+$function$;
+
 CREATE OR REPLACE FUNCTION start_action(
   requested_project_id uuid,
   requested_prompt_id uuid,
@@ -144,7 +163,7 @@ BEGIN
   UPDATE action_v1
   SET end_timestamp = action_timestamp,
       last_heartbeat_at = action_timestamp,
-      payload = payload || previous_payload_patch
+      payload = merge_payload(payload, previous_payload_patch)
   WHERE project_id = requested_project_id
     AND prompt_id = effective_prompt_id
     AND agent_id = requested_agent_id
@@ -226,7 +245,7 @@ BEGIN
   UPDATE action_v1
   SET end_timestamp = greatest(start_timestamp, requested_end_timestamp),
       last_heartbeat_at = greatest(last_heartbeat_at, requested_end_timestamp),
-      payload = payload || requested_payload_patch
+      payload = merge_payload(payload, requested_payload_patch)
   WHERE action_id = requested_action_id
     AND reported_by = session_user
     AND end_timestamp IS NULL
@@ -251,6 +270,12 @@ DROP POLICY IF EXISTS analyst_all_rows ON action_v1;
 CREATE POLICY analyst_all_rows ON action_v1
 FOR SELECT TO ponytail_analyst
 USING (true);
+
+DROP POLICY IF EXISTS super_journalist_all_rows ON action_v1;
+CREATE POLICY super_journalist_all_rows ON action_v1
+TO ponytail_super_journalist
+USING (true)
+WITH CHECK (true);
 
 REVOKE ALL ON SCHEMA ponytail_journal FROM PUBLIC;
 REVOKE ALL ON ALL TABLES IN SCHEMA ponytail_journal FROM PUBLIC;

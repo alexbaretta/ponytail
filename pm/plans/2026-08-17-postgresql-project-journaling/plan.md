@@ -181,8 +181,8 @@ The reference table permits later extension without changing the action table.
 ## Sprint Manifest
 
 - [S01](sprints/S01.md): PostgreSQL contract and project configuration — `DONE`
-- [S02](sprints/S02.md): CLI lifecycle and heartbeat — `IN_PROGRESS`
-- [S03](sprints/S03.md): Agent workflow and project integration — `PENDING`
+- [S02](sprints/S02.md): CLI lifecycle and heartbeat — `DONE`
+- [S03](sprints/S03.md): Agent workflow and project integration — `IN_PROGRESS`
 - [S04](sprints/S04.md): Final acceptance and reconciliation — `PENDING`
 
 ## Plan-Level Questions

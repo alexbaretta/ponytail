@@ -14,7 +14,10 @@ const planStats = path.join(root, 'cli', 'plan_stats.sh');
 const planPdf = path.join(root, 'cli', 'plan_pdf.sh');
 const bugStats = path.join(root, 'cli', 'bug_stats.sh');
 const auditPm = path.join(root, 'cli', 'audit_pm.sh');
+const projectJournal = path.join(root, 'cli', 'project_journal.sh');
 const installer = path.join(root, 'scripts', 'install-cli.sh');
+const journalSetup = path.join(root, 'scripts', 'setup-project-journal.sh');
+const journalPostgresTest = path.join(root, 'scripts', 'test-project-journal-postgres.sh');
 
 function run(command, args, options = {}) {
   return spawnSync(command, args, { encoding: 'utf8', ...options });
@@ -51,8 +54,26 @@ function commit(project, date, message = 'fixture') {
   assert.equal(result.status, 0, result.stderr);
 }
 
+function writeJournalConfig(project) {
+  write(project, 'ponytail-journal.json', JSON.stringify({
+    schemaVersion: 1,
+    projectId: '019c0000-0000-7000-8000-000000000001',
+    projectName: 'fixture',
+    database: {},
+  }));
+}
+
 test('CLI shell scripts are parse-safe', () => {
-  for (const script of [planStats, planPdf, bugStats, auditPm, installer]) {
+  for (const script of [
+    planStats,
+    planPdf,
+    bugStats,
+    auditPm,
+    projectJournal,
+    installer,
+    journalSetup,
+    journalPostgresTest,
+  ]) {
     assert.equal(run('bash', ['-n', script]).status, 0, script);
     const contents = fs.readFileSync(script, 'utf8');
     assert.match(contents, /^#!\/usr\/bin\/env bash\nset -euo pipefail\n/);
@@ -103,6 +124,7 @@ test('plan_pdf validates its plan, output, and renderer', () => {
 
 test('audit_pm accepts the mandated PM structure', () => {
   const project = fixture();
+  writeJournalConfig(project);
   write(project, 'pm/plans/2026-08-17-example/plan.md', '# Plan\n');
   write(project, 'pm/plans/2026-08-17-example/sprints/S01.md', '# Sprint\n');
   write(project, 'pm/bugs/open/2026-08-17-example.md', '# Bug\n');
@@ -114,6 +136,7 @@ test('audit_pm accepts the mandated PM structure', () => {
 
 test('audit_pm reports non-fixable structural deviations without mutation', () => {
   const project = fixture();
+  writeJournalConfig(project);
   write(project, 'pm/unexpected.md');
   write(project, 'pm/plans/2026-99-99-invalid/extra.md');
   write(project, 'pm/plans/2026-99-99-invalid/sprints/first.md');
@@ -134,6 +157,7 @@ test('audit_pm reports non-fixable structural deviations without mutation', () =
 
 test('audit_pm --fix date-prefixes tracked plans and bugs from oldest Git history', () => {
   const project = fixture();
+  writeJournalConfig(project);
   write(project, 'pm/plans/example/plan.md', '# Plan\n');
   write(project, 'pm/plans/example/sprints/S01.md', '# Sprint\n');
   write(project, 'pm/bugs/in_progress/example.md', '# Bug\n');
@@ -153,6 +177,7 @@ test('audit_pm --fix date-prefixes tracked plans and bugs from oldest Git histor
 
 test('audit_pm --fix leaves untracked records and collisions unchanged', () => {
   const project = fixture();
+  writeJournalConfig(project);
   write(project, 'pm/plans/example/plan.md', '# Plan\n');
   write(project, 'pm/plans/example/sprints/S01.md', '# Sprint\n');
   write(project, 'pm/plans/2024-05-06-example/plan.md', '# Existing\n');
@@ -170,6 +195,7 @@ test('audit_pm --fix leaves untracked records and collisions unchanged', () => {
 
 test('audit_pm --dryrun previews fixes with or without --fix', () => {
   const project = fixture();
+  writeJournalConfig(project);
   write(project, 'pm/plans/example/plan.md', '# Plan\n');
   write(project, 'pm/plans/example/sprints/S01.md', '# Sprint\n');
   write(project, 'pm/bugs/open/example.md', '# Bug\n');
@@ -236,6 +262,39 @@ test('bug_stats validates its date argument', () => {
   assert.notEqual(run(bugStats, ['2026-00-01'], { cwd: project }).status, 0);
 });
 
+test('project journal rejects missing configuration and split commands', () => {
+  const project = fixture();
+  let result = run(projectJournal, [
+    'start', '--agent-id', '/root', '--agent-model', 'model', '--plan',
+    '2026-08-17-example', '--sprint', 'S01', '--feature', 'F01', '--tasklet',
+    'S01-F01-T01', '--action-type', 'read_files', '--description', 'Read files',
+  ], { cwd: project });
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /journal configuration is missing/);
+
+  result = run(projectJournal, [
+    'run_command', '--agent-id', '/root', '--plan', '2026-08-17-example',
+    '--action-type', 'run_command', '--description', 'Run command', '--',
+    'printf one', 'printf two',
+  ], { cwd: project });
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /requires one quoted command/);
+});
+
+test('journal contracts retain a stable relational core and versioned JSON payload', () => {
+  const config = JSON.parse(fs.readFileSync(path.join(root, 'ponytail-journal.json'), 'utf8'));
+  assert.equal(config.schemaVersion, 1);
+  assert.match(config.projectId, /^[0-9a-f]{8}-[0-9a-f]{4}-7/);
+
+  const sql = fs.readFileSync(path.join(root, 'scripts', 'project-journal.sql'), 'utf8');
+  assert.match(sql, /CREATE TABLE IF NOT EXISTS action_v1/);
+  assert.match(sql, /duration interval GENERATED ALWAYS AS/);
+  assert.match(sql, /payload ->> 'schemaVersion' = '1'/);
+  assert.match(sql, /ENABLE ROW LEVEL SECURITY/);
+  assert.match(sql, /SECURITY DEFINER/g);
+  assert.doesNotMatch(sql, /ALTER TABLE action_v1 ADD/);
+});
+
 test('CLI installer installs all tools and verifies owned updates', () => {
   const home = fixture();
   const options = { env: cliEnvironment(home), input: 'n\n' };
@@ -243,7 +302,13 @@ test('CLI installer installs all tools and verifies owned updates', () => {
   assert.equal(result.status, 0, result.stderr);
 
   const bin = path.join(home, '.local', 'bin');
-  for (const tool of ['audit_pm.sh', 'bug_stats.sh', 'plan_pdf.sh', 'plan_stats.sh']) {
+  for (const tool of [
+    'audit_pm.sh',
+    'bug_stats.sh',
+    'plan_pdf.sh',
+    'plan_stats.sh',
+    'project_journal.sh',
+  ]) {
     assert.ok(fs.statSync(path.join(bin, tool)).mode & 0o100);
   }
   assert.equal(run(installer, ['--check'], { env: cliEnvironment(home) }).status, 0);
