@@ -7,6 +7,7 @@ set -euo pipefail
 print_usage() {
   cat <<'EOF'
 Usage:
+  project_journal.sh init [--project-name <name>] [--database-name <name>]
   project_journal.sh start [context options] --action-type <type> --description <text>
   project_journal.sh run_command [context options] --description <text>
     -- '<quoted bash command>'
@@ -50,6 +51,65 @@ validate_identifier() {
   local value="$2"
   [[ -n "${value}" ]] || fail "${label} is required"
   [[ "${value}" != *$'\n'* ]] || fail "invalid ${label}"
+}
+
+uuid_v7() {
+  local milliseconds
+  local random
+  local timestamp
+  local variant
+  milliseconds="$(jq -nr 'now * 1000 | floor')"
+  printf -v timestamp '%012x' "${milliseconds}"
+  random="$(od -An -N10 -tx1 /dev/urandom | tr -d ' \n')"
+  [[ "${#random}" -eq 20 ]] || fail 'could not generate project ID'
+  printf -v variant '%x' "$((16#${random:3:1} & 3 | 8))"
+  printf '%s-%s-7%s-%s%s-%s\n' \
+    "${timestamp:0:8}" "${timestamp:8:4}" "${random:0:3}" \
+    "${variant}" "${random:4:3}" "${random:7:12}"
+}
+
+init_project() {
+  local database_name='ponytail'
+  local project_name=''
+  local temporary
+  while [[ "$#" -gt 0 ]]; do
+    case "$1" in
+      --project-name|--database-name)
+        local option="$1"
+        shift
+        [[ "$#" -gt 0 ]] || fail "${option} requires a value"
+        case "${option}" in
+          --project-name) project_name="$1" ;;
+          --database-name) database_name="$1" ;;
+        esac
+        ;;
+      *) fail "unknown option: $1" ;;
+    esac
+    shift
+  done
+  project_root="$(git rev-parse --show-toplevel 2>/dev/null)" || \
+    fail 'not inside a Git worktree'
+  config_path="${project_root}/ponytail-journal.json"
+  [[ ! -e "${config_path}" ]] || fail "journal configuration already exists: ${config_path}"
+  [[ -n "${project_name}" ]] || project_name="$(basename "${project_root}")"
+  validate_identifier 'project name' "${project_name}"
+  validate_identifier 'database name' "${database_name}"
+  temporary="$(mktemp "${config_path}.tmp.XXXXXX")"
+  jq -n \
+    --arg project_id "$(uuid_v7)" \
+    --arg project_name "${project_name}" \
+    --arg database_name "${database_name}" \
+    '{schemaVersion:1,projectId:$project_id,projectName:$project_name,database:{name:$database_name}}' \
+    > "${temporary}"
+  chmod 0644 "${temporary}"
+  if ! ln "${temporary}" "${config_path}"; then
+    rm -f "${temporary}"
+    fail "journal configuration already exists: ${config_path}"
+  fi
+  rm -f "${temporary}"
+  validate_config_file "${config_path}"
+  jq -cn --arg path "${config_path}" --arg project_id "$(jq -r '.projectId' "${config_path}")" \
+    '{ok:true,operation:"init",path:$path,projectId:$project_id}'
 }
 
 discover_project() {
@@ -562,6 +622,10 @@ main() {
   operation="${subcommand:-project_journal}"
   shift || true
   case "${subcommand}" in
+    init)
+      require_command jq
+      init_project "$@"
+      ;;
     validate-config)
       [[ "$#" -eq 1 ]] || fail 'validate-config requires one path'
       require_command jq

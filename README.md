@@ -74,7 +74,7 @@ Installed shell tools:
 | `plan_pdf.sh [--sprints] <plan-name> [output.pdf]` | Render a plan, optionally with its sprints, as PDF using Pandoc |
 | `plan_stats.sh <plan-name>` | Count open and done task lines in a plan |
 | `bug_stats.sh [date]` | Count bugs by lifecycle state on or after a date |
-| `project_journal.sh start\|run_command\|over ...` | Record long-lived-plan action telemetry in PostgreSQL |
+| `project_journal.sh init\|start\|run_command\|over ...` | Initialize or record long-lived-plan telemetry in PostgreSQL |
 
 `plan_pdf.sh` requires Pandoc and writes to `tmp/<plan-name>.pdf` unless an
 output path is supplied.
@@ -88,6 +88,18 @@ defaults to `ponytail`, role defaults to the current Unix user, and an omitted
 host uses PostgreSQL's local Unix socket. Optional `host`, `port`, `role`, and
 `passwordEnvironment` fields override those defaults; passwords never belong
 in the JSON file.
+
+Initialize an adopting Git repository once, then commit the generated project
+configuration so every checkout and agent uses the same identity:
+
+```bash
+project_journal.sh init
+git add ponytail-journal.json
+```
+
+Use `--project-name` or `--database-name` to override the derived repository
+name or default database name. Initialization refuses to replace an existing
+configuration; action commands never create one implicitly.
 
 An authorized database administrator provisions or reconciles the database,
 roles, schema, policies, functions, and project registration with:

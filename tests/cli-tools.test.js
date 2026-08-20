@@ -307,6 +307,48 @@ test('project journal rejects missing configuration and split commands', () => {
   assert.match(result.stderr, /invalid V1 journal configuration/);
 });
 
+test('project journal initializes a stable V1 project configuration', () => {
+  const project = fixture();
+  const nested = path.join(project, 'nested');
+  fs.mkdirSync(nested);
+
+  let result = run(projectJournal, ['init'], { cwd: nested });
+  assert.equal(result.status, 0, result.stderr);
+  const response = JSON.parse(result.stdout);
+  const configPath = path.join(fs.realpathSync(project), 'ponytail-journal.json');
+  const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+  assert.deepEqual(config, {
+    schemaVersion: 1,
+    projectId: config.projectId,
+    projectName: path.basename(project),
+    database: { name: 'ponytail' },
+  });
+  assert.match(config.projectId, /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+  assert.deepEqual(response, {
+    ok: true,
+    operation: 'init',
+    path: configPath,
+    projectId: config.projectId,
+  });
+  assert.equal(run(projectJournal, ['validate-config', configPath]).status, 0);
+
+  result = run(projectJournal, ['init'], { cwd: project });
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /journal configuration already exists/);
+  assert.deepEqual(JSON.parse(fs.readFileSync(configPath, 'utf8')), config);
+});
+
+test('project journal initialization accepts explicit non-secret names', () => {
+  const project = fixture();
+  const result = run(projectJournal, [
+    'init', '--project-name', 'Example Project', '--database-name', 'example_journal',
+  ], { cwd: project });
+  assert.equal(result.status, 0, result.stderr);
+  const config = JSON.parse(fs.readFileSync(path.join(project, 'ponytail-journal.json'), 'utf8'));
+  assert.equal(config.projectName, 'Example Project');
+  assert.deepEqual(config.database, { name: 'example_journal' });
+});
+
 test('journal contracts retain a stable relational core and versioned JSON payload', () => {
   const config = JSON.parse(fs.readFileSync(path.join(root, 'ponytail-journal.json'), 'utf8'));
   assert.equal(config.schemaVersion, 1);

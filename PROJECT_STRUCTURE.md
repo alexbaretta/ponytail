@@ -23,7 +23,9 @@ while project-wide management records remain under `pm/`.
 - `versioned-data-contracts.json` inventories Ponytail's durable serialized
   contracts and their reader registries.
 - `ponytail-journal.json` owns the project's stable identity and non-secret
-  PostgreSQL journal connection settings.
+  PostgreSQL journal connection settings. Create it once with
+  `project_journal.sh init`, then commit it; action commands never create it
+  implicitly.
 - `hooks/` owns shared lifecycle behavior and policy injection.
 - Host directories such as `.claude-plugin/`, `.codex-plugin/`, `.github/`,
   `.opencode/`, `.qoder/`, and `.openclaw/` own host adapters. Generated
