@@ -73,6 +73,30 @@
       "versions": ["V1"],
       "supportedReadVersions": ["V1"],
       "supportedDowngradeVersions": []
+    },
+    {
+      "id": "parallel-sprint-metadata",
+      "implementation": {
+        "workspace": "ponytail",
+        "module": "skills/plan-execution/scripts/ready-sprints.js",
+        "readerRegistryExport": "SprintMetadataReaders"
+      },
+      "currentVersion": "V1",
+      "versions": ["V1"],
+      "supportedReadVersions": ["V1"],
+      "supportedDowngradeVersions": []
+    },
+    {
+      "id": "parallel-tasklet-scheduling-metadata",
+      "implementation": {
+        "workspace": "ponytail",
+        "module": "skills/plan-execution/scripts/next-tasklet.js",
+        "readerRegistryExport": "TaskletMetadataReaders"
+      },
+      "currentVersion": "V1",
+      "versions": ["V1"],
+      "supportedReadVersions": ["V1"],
+      "supportedDowngradeVersions": []
     }
   ]
 }
