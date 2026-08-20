@@ -436,7 +436,8 @@ completed tasklet's affinity, greatest number of unfinished descendants,
 longest remaining dependency path, then lowest tasklet ID. It rejects missing
 or extra nodes, malformed metadata, unknown dependencies, cycles, unjustified
 high risk, invalid Markdown status, and an unfinished graph with no ready
-node, without mutation.
+node, without mutation. A fully `[DONE]` graph returns exactly
+`{"next":null}`; criterion values appear only when a tasklet is selected.
 
 The skill-local readiness tool accepts `planning` or `execution` and one plan
 directory. The orchestrator runs it before planning dispatch, after each

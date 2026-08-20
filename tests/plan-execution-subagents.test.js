@@ -39,6 +39,7 @@ test('parallel sprint policy preserves atomic, delegated orchestration boundarie
   assert.match(skill, /runs it before planning dispatch, after each\s+planning reconciliation, before implementation dispatch/);
   assert.match(skill, /one-to-one Markdown\/JSON tasklet ID set and an acyclic graph/);
   assert.match(skill, /high risk, greatest overlap.*unfinished descendants,\s+longest remaining dependency path, then lowest tasklet ID/s);
+  assert.match(skill, /fully `\[DONE\]` graph returns exactly\s+`\{"next":null\}`; criterion values appear only when a tasklet is selected/);
   assert.match(skill, /least\s+expensive available model reasonably expected to implement frozen tasklets/);
   assert.match(skill, /only when documented coordination cost, insufficient model\s+capability, resource contention, or quality loss/);
   assert.match(skill, /edits only its declared implementation paths\s+and sprint file/);
