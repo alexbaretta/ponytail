@@ -98,8 +98,16 @@ git add ponytail-journal.json
 ```
 
 Use `--project-name` or `--database-name` to override the derived repository
-name or default database name. Initialization refuses to replace an existing
-configuration; action commands never create one implicitly.
+name or default database name. Initialization is idempotent: an existing valid
+configuration succeeds without mutation, while invalid configurations and
+explicit names that conflict with the existing identity fail. Action commands
+never create the configuration implicitly.
+
+The committed file is the single logical project identity across Git
+worktrees. Each worktree has its own checked-out copy, so the initialization
+commit must be merged into every worktree branch that uses journaling. `init`
+prints the required commit commands and this worktree reminder to standard
+error while reserving standard output for its JSON result.
 
 An authorized database administrator provisions or reconciles the database,
 roles, schema, policies, functions, and project registration with:

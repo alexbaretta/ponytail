@@ -70,7 +70,9 @@ uuid_v7() {
 
 init_project() {
   local database_name='ponytail'
+  local database_name_set='false'
   local project_name=''
+  local project_name_set='false'
   local temporary
   while [[ "$#" -gt 0 ]]; do
     case "$1" in
@@ -79,8 +81,14 @@ init_project() {
         shift
         [[ "$#" -gt 0 ]] || fail "${option} requires a value"
         case "${option}" in
-          --project-name) project_name="$1" ;;
-          --database-name) database_name="$1" ;;
+          --project-name)
+            project_name="$1"
+            project_name_set='true'
+            ;;
+          --database-name)
+            database_name="$1"
+            database_name_set='true'
+            ;;
         esac
         ;;
       *) fail "unknown option: $1" ;;
@@ -90,7 +98,20 @@ init_project() {
   project_root="$(git rev-parse --show-toplevel 2>/dev/null)" || \
     fail 'not inside a Git worktree'
   config_path="${project_root}/ponytail-journal.json"
-  [[ ! -e "${config_path}" ]] || fail "journal configuration already exists: ${config_path}"
+  if [[ -e "${config_path}" ]]; then
+    validate_config_file "${config_path}"
+    if [[ "${project_name_set}" == 'true' ]] && \
+      [[ "$(jq -r '.projectName' "${config_path}")" != "${project_name}" ]]; then
+      fail 'existing journal project name does not match --project-name'
+    fi
+    if [[ "${database_name_set}" == 'true' ]] && \
+      [[ "$(jq -r '.database.name // "ponytail"' "${config_path}")" != "${database_name}" ]]; then
+      fail 'existing journal database name does not match --database-name'
+    fi
+    jq -cn --arg path "${config_path}" --arg project_id "$(jq -r '.projectId' "${config_path}")" \
+      '{ok:true,operation:"init",created:false,path:$path,projectId:$project_id}'
+    return
+  fi
   [[ -n "${project_name}" ]] || project_name="$(basename "${project_root}")"
   validate_identifier 'project name' "${project_name}"
   validate_identifier 'database name' "${database_name}"
@@ -109,7 +130,12 @@ init_project() {
   rm -f "${temporary}"
   validate_config_file "${config_path}"
   jq -cn --arg path "${config_path}" --arg project_id "$(jq -r '.projectId' "${config_path}")" \
-    '{ok:true,operation:"init",path:$path,projectId:$project_id}'
+    '{ok:true,operation:"init",created:true,path:$path,projectId:$project_id}'
+  printf 'Next: git -C %q add ponytail-journal.json\n' "${project_root}" >&2
+  printf '      git -C %q commit -m %q\n' \
+    "${project_root}" 'Add project journal identity' >&2
+  printf '%s\n' \
+    'Then merge that commit into every worktree branch that uses journaling.' >&2
 }
 
 discover_project() {

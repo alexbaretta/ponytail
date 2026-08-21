@@ -327,14 +327,25 @@ test('project journal initializes a stable V1 project configuration', () => {
   assert.deepEqual(response, {
     ok: true,
     operation: 'init',
+    created: true,
     path: configPath,
     projectId: config.projectId,
   });
+  assert.match(result.stderr, /git -C .* add ponytail-journal\.json/);
+  assert.match(result.stderr, /git -C .* commit -m Add\\ project\\ journal\\ identity/);
+  assert.match(result.stderr, /merge that commit into every worktree branch/);
   assert.equal(run(projectJournal, ['validate-config', configPath]).status, 0);
 
   result = run(projectJournal, ['init'], { cwd: project });
-  assert.notEqual(result.status, 0);
-  assert.match(result.stderr, /journal configuration already exists/);
+  assert.equal(result.status, 0, result.stderr);
+  assert.deepEqual(JSON.parse(result.stdout), {
+    ok: true,
+    operation: 'init',
+    created: false,
+    path: configPath,
+    projectId: config.projectId,
+  });
+  assert.equal(result.stderr, '');
   assert.deepEqual(JSON.parse(fs.readFileSync(configPath, 'utf8')), config);
 });
 
@@ -347,6 +358,13 @@ test('project journal initialization accepts explicit non-secret names', () => {
   const config = JSON.parse(fs.readFileSync(path.join(project, 'ponytail-journal.json'), 'utf8'));
   assert.equal(config.projectName, 'Example Project');
   assert.deepEqual(config.database, { name: 'example_journal' });
+
+  assert.equal(run(projectJournal, [
+    'init', '--project-name', 'Example Project', '--database-name', 'example_journal',
+  ], { cwd: project }).status, 0);
+  const mismatch = run(projectJournal, ['init', '--project-name', 'Other'], { cwd: project });
+  assert.notEqual(mismatch.status, 0);
+  assert.match(mismatch.stderr, /does not match --project-name/);
 });
 
 test('journal contracts retain a stable relational core and versioned JSON payload', () => {
