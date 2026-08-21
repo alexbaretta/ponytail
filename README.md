@@ -105,9 +105,10 @@ never create the configuration implicitly.
 
 The committed file is the single logical project identity across Git
 worktrees. Each worktree has its own checked-out copy, so the initialization
-commit must be merged into every worktree branch that uses journaling. `init`
-prints the required commit commands and this worktree reminder to standard
-error while reserving standard output for its JSON result.
+commit must be merged into every worktree branch that uses journaling. When
+the configuration does not match `HEAD`, `init` prints the required commit
+commands and this worktree reminder to standard error while reserving standard
+output for its JSON result.
 
 An authorized database administrator provisions or reconciles the database,
 roles, schema, policies, functions, and project registration with:

@@ -345,8 +345,14 @@ test('project journal initializes a stable V1 project configuration', () => {
     path: configPath,
     projectId: config.projectId,
   });
-  assert.equal(result.stderr, '');
+  assert.match(result.stderr, /git -C .* add ponytail-journal\.json/);
   assert.deepEqual(JSON.parse(fs.readFileSync(configPath, 'utf8')), config);
+
+  commit(project, '2026-08-20', 'add journal identity');
+  result = run(projectJournal, ['init'], { cwd: project });
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(JSON.parse(result.stdout).created, false);
+  assert.equal(result.stderr, '');
 });
 
 test('project journal initialization accepts explicit non-secret names', () => {

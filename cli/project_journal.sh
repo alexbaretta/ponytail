@@ -68,6 +68,19 @@ uuid_v7() {
     "${variant}" "${random:4:3}" "${random:7:12}"
 }
 
+config_matches_head() {
+  git cat-file -e HEAD:ponytail-journal.json 2>/dev/null &&
+    git diff --quiet HEAD -- ponytail-journal.json
+}
+
+print_commit_instructions() {
+  printf 'Next: git -C %q add ponytail-journal.json\n' "${project_root}" >&2
+  printf '      git -C %q commit -m %q\n' \
+    "${project_root}" 'Add project journal identity' >&2
+  printf '%s\n' \
+    'Then merge that commit into every worktree branch that uses journaling.' >&2
+}
+
 init_project() {
   local database_name='ponytail'
   local database_name_set='false'
@@ -110,6 +123,7 @@ init_project() {
     fi
     jq -cn --arg path "${config_path}" --arg project_id "$(jq -r '.projectId' "${config_path}")" \
       '{ok:true,operation:"init",created:false,path:$path,projectId:$project_id}'
+    config_matches_head || print_commit_instructions
     return
   fi
   [[ -n "${project_name}" ]] || project_name="$(basename "${project_root}")"
@@ -131,11 +145,7 @@ init_project() {
   validate_config_file "${config_path}"
   jq -cn --arg path "${config_path}" --arg project_id "$(jq -r '.projectId' "${config_path}")" \
     '{ok:true,operation:"init",created:true,path:$path,projectId:$project_id}'
-  printf 'Next: git -C %q add ponytail-journal.json\n' "${project_root}" >&2
-  printf '      git -C %q commit -m %q\n' \
-    "${project_root}" 'Add project journal identity' >&2
-  printf '%s\n' \
-    'Then merge that commit into every worktree branch that uses journaling.' >&2
+  print_commit_instructions
 }
 
 discover_project() {
