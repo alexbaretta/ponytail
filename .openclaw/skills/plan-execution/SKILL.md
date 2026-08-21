@@ -470,11 +470,13 @@ bugs/closed/YYYY-MM-DD-<bug-name>.md
 Prefix each filename with the bug report's creation date. Keep that date and
 filename unchanged when its lifecycle changes so alphabetical filename order
 is chronological creation order. The directory is the lifecycle source of
-truth. Move the same bug file between directories; do not duplicate it.
+truth. The filename stem `YYYY-MM-DD-<bug-name>` is the canonical bug name;
+record that exact name in the bug file. Move the same bug file between
+directories; do not duplicate it.
 
 A bug file records:
 
-- stable bug ID and title;
+- canonical bug name and title;
 - report and observable impact;
 - evidence, hypotheses, and confirmed root cause;
 - proposed resolution and explicit exclusions;

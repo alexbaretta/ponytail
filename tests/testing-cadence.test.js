@@ -47,6 +47,8 @@ test('plan and bug names sort chronologically by creation date', () => {
   assert.match(skill, /`YYYY-MM-DD-<plan-name>`/);
   assert.match(skill, /bugs\/open\/YYYY-MM-DD-<bug-name>\.md/);
   assert.match(skill, /Keep that date and\s+filename unchanged when its lifecycle changes/);
+  assert.match(skill, /filename stem `YYYY-MM-DD-<bug-name>` is the canonical bug name/);
+  assert.match(skill, /record that exact name in the bug file/);
 });
 
 test('long-lived plan execution journals actions without blocking work', () => {
