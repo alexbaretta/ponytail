@@ -15,6 +15,7 @@ const planPdf = path.join(root, 'cli', 'plan_pdf.sh');
 const bugStats = path.join(root, 'cli', 'bug_stats.sh');
 const auditPm = path.join(root, 'cli', 'audit_pm.sh');
 const projectJournal = path.join(root, 'cli', 'project_journal.sh');
+const combinedInstaller = path.join(root, 'scripts', 'install.sh');
 const installer = path.join(root, 'scripts', 'install-cli.sh');
 const journalSetup = path.join(root, 'scripts', 'setup-project-journal.sh');
 const journalPostgresTest = path.join(root, 'scripts', 'test-project-journal-postgres.sh');
@@ -70,6 +71,7 @@ test('CLI shell scripts are parse-safe', () => {
     bugStats,
     auditPm,
     projectJournal,
+    combinedInstaller,
     installer,
     journalSetup,
     journalPostgresTest,
@@ -79,6 +81,19 @@ test('CLI shell scripts are parse-safe', () => {
     assert.match(contents, /^#!\/usr\/bin\/env bash\nset -euo pipefail\n/);
     assert.match(contents, /\nmain "\$@"\n$/);
   }
+});
+
+test('combined installer installs Codex skills and CLI tools', () => {
+  const home = fixture();
+  const codexHome = path.join(home, '.codex');
+  const result = run(combinedInstaller, [], {
+    env: { ...cliEnvironment(home), CODEX_HOME: codexHome },
+    input: 'n\n',
+  });
+  assert.equal(result.status, 0, result.stderr);
+  assert.ok(fs.existsSync(path.join(codexHome, 'skills/ponytail/SKILL.md')));
+  assert.ok(fs.existsSync(path.join(codexHome, 'skills/cross-session-effects/SKILL.md')));
+  assert.ok(fs.existsSync(path.join(home, '.local/bin/plan_stats.sh')));
 });
 
 test('plan_pdf renders the manifest and optionally ordered sprints', () => {

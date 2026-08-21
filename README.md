@@ -14,15 +14,18 @@ runtime safety.
 
 ## Install
 
-For Codex from a checkout:
+Install Ponytail's Codex skills and user-facing CLI tools from a checkout:
+
+```bash
+./scripts/install.sh
+```
+
+The combined installer installs all enabled skills, including `ponytail` and
+`cross-session-effects`, into Codex and installs CLI tools into
+`~/.local/bin`. To run either installer separately:
 
 ```bash
 ./scripts/install-to-codex.sh
-```
-
-Install Ponytail's user-facing CLI tools into `~/.local/bin`:
-
-```bash
 ./scripts/install-cli.sh
 ```
 

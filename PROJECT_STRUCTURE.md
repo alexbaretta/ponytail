@@ -31,9 +31,10 @@ while project-wide management records remain under `pm/`.
   `.opencode/`, `.qoder/`, and `.openclaw/` own host adapters. Generated
   adapters identify their canonical source in their validation tests.
 - `scripts/` owns local generation, validation, installation, cleanup, and
-  publication tooling. `scripts/install-to-codex.sh` owns Codex installation;
-  it binds only registry-enabled bundled skills. Codex discovers
-  project-local skills from `.agents/skills/` automatically.
+  publication tooling. `scripts/install.sh` owns combined Codex and CLI
+  installation. `scripts/install-to-codex.sh` owns Codex installation; it
+  binds only registry-enabled bundled skills. Codex discovers project-local
+  skills from `.agents/skills/` automatically.
 - `scripts/setup-project-journal.sh` and `scripts/project-journal.sql` own
   PostgreSQL 18 journal provisioning and its immutable V1 storage contract.
 - `cli/` owns user-facing parse-safe Bash tools. Adding a tool there makes it

@@ -46,6 +46,7 @@ test('distribution contains the live-development harness only', () => {
     'cli/project_journal.sh',
     'generated/registry.json',
     'registry.tsv',
+    'scripts/install.sh',
     'scripts/install-to-codex.sh',
     'scripts/install-cli.sh',
     'scripts/setup-project-journal.sh',

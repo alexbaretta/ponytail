@@ -47,6 +47,7 @@
     ".qoder/",
     ".qoder-plugin/",
     "pi-extension/",
+    "scripts/install.sh",
     "scripts/install-to-codex.sh",
     "scripts/install-cli.sh",
     "scripts/setup-project-journal.sh",
