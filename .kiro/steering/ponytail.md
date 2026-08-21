@@ -42,6 +42,11 @@ These rules remain active at every compaction level, including `off`:
 - Preserve trust-boundary validation, authorization, security, accessibility,
   data-loss prevention, actionable error handling, and explicit transaction
   boundaries.
+- When activity from one user, tenant, device, process, network origin,
+  deployment instance, or time window can change another independent
+  session's success, failure, delay, or observable behavior, apply the
+  `cross-session-effects` skill before recommending, planning, implementing,
+  reviewing, or testing that behavior.
 - Add the smallest durable regression proof for changed behavior whose failure
   is not already caught by existing tests, static checks, or a higher-level
   test. Add failure or edge-path coverage only when the change introduces,

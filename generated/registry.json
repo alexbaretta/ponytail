@@ -72,6 +72,23 @@
     {
       "kind": "skill",
       "status": "enabled",
+      "name": "cross-session-effects",
+      "source": "skills/cross-session-effects",
+      "hosts": [
+        "claude",
+        "codex",
+        "copilot",
+        "devin",
+        "hermes",
+        "openclaw",
+        "pi",
+        "qoder"
+      ],
+      "reason": "Cross-session behavior approval and test-first safety"
+    },
+    {
+      "kind": "skill",
+      "status": "enabled",
       "name": "diagnostic-assertions",
       "source": "skills/diagnostic-assertions",
       "hosts": [
