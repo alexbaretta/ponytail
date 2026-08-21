@@ -370,22 +370,72 @@ test('project journal initializes a stable V1 project configuration', () => {
   assert.equal(result.stderr, '');
 });
 
-test('project journal initialization accepts explicit non-secret names', () => {
+test('project journal initialization accepts explicit non-secret connection settings', () => {
   const project = fixture();
   const result = run(projectJournal, [
-    'init', '--project-name', 'Example Project', '--database-name', 'example_journal',
+    'init',
+    '--project-name', 'Example Project',
+    '--database-host', 'postgres.example.test',
+    '--database-port', '5544',
+    '--database-name', 'example_journal',
+    '--database-role', 'example_writer',
+    '--pgpassword-variable', 'EXAMPLE_JOURNAL_PASSWORD',
   ], { cwd: project });
   assert.equal(result.status, 0, result.stderr);
   const config = JSON.parse(fs.readFileSync(path.join(project, 'ponytail-journal.json'), 'utf8'));
   assert.equal(config.projectName, 'Example Project');
-  assert.deepEqual(config.database, { name: 'example_journal' });
+  assert.deepEqual(config.database, {
+    name: 'example_journal',
+    host: 'postgres.example.test',
+    port: 5544,
+    role: 'example_writer',
+    passwordEnvironment: 'EXAMPLE_JOURNAL_PASSWORD',
+  });
 
   assert.equal(run(projectJournal, [
-    'init', '--project-name', 'Example Project', '--database-name', 'example_journal',
+    'init',
+    '--project-name', 'Example Project',
+    '--database-host', 'postgres.example.test',
+    '--database-port', '5544',
+    '--database-name', 'example_journal',
+    '--database-role', 'example_writer',
+    '--pgpassword-variable', 'EXAMPLE_JOURNAL_PASSWORD',
   ], { cwd: project }).status, 0);
   const mismatch = run(projectJournal, ['init', '--project-name', 'Other'], { cwd: project });
   assert.notEqual(mismatch.status, 0);
   assert.match(mismatch.stderr, /does not match --project-name/);
+
+  const portMismatch = run(projectJournal, ['init', '--database-port', '5432'], { cwd: project });
+  assert.notEqual(portMismatch.status, 0);
+  assert.match(portMismatch.stderr, /does not match --database-port/);
+
+  const invalidPortProject = fixture();
+  const invalidPort = run(projectJournal, ['init', '--database-port', '65536'], {
+    cwd: invalidPortProject,
+  });
+  assert.notEqual(invalidPort.status, 0);
+  assert.match(invalidPort.stderr, /integer between 1 and 65535/);
+
+  const shorthandProject = fixture();
+  const shorthand = run(projectJournal, [
+    'init',
+    '--dbhost', '/var/run/postgresql',
+    '--dbport', '5433',
+    '--dbname', 'short_journal',
+    '--dbrole', 'short_writer',
+    '--pgpassvar', 'SHORT_JOURNAL_PASSWORD',
+  ], { cwd: shorthandProject });
+  assert.equal(shorthand.status, 0, shorthand.stderr);
+  assert.deepEqual(
+    JSON.parse(fs.readFileSync(path.join(shorthandProject, 'ponytail-journal.json'), 'utf8')).database,
+    {
+      name: 'short_journal',
+      host: '/var/run/postgresql',
+      port: 5433,
+      role: 'short_writer',
+      passwordEnvironment: 'SHORT_JOURNAL_PASSWORD',
+    },
+  );
 });
 
 test('journal contracts retain a stable relational core and versioned JSON payload', () => {

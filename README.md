@@ -100,11 +100,23 @@ project_journal.sh init
 git add ponytail-journal.json
 ```
 
-Use `--project-name` or `--database-name` to override the derived repository
-name or default database name. Initialization is idempotent: an existing valid
-configuration succeeds without mutation, while invalid configurations and
-explicit names that conflict with the existing identity fail. Action commands
-never create the configuration implicitly.
+Use `--project-name`, `--database-host`, `--database-port`, `--database-name`,
+`--database-role`, and `--pgpassword-variable` to set the complete
+non-secret connection configuration during initialization. Initialization is
+idempotent: an existing valid configuration succeeds without mutation, while
+invalid configurations and explicit settings that conflict with the existing
+identity fail. Action commands never create the configuration implicitly.
+The connection options also accept the PostgreSQL-style shorthands `--dbhost`,
+`--dbport`, `--dbname`, `--dbrole`, and `--pgpassvar`.
+
+```bash
+project_journal.sh init \
+  --database-host postgres.example.internal \
+  --database-port 5432 \
+  --database-name example_project_journal \
+  --database-role example_journal_writer \
+  --pgpassword-variable EXAMPLE_JOURNAL_PASSWORD
+```
 
 The committed file is the single logical project identity across Git
 worktrees. Each worktree has its own checked-out copy, so the initialization

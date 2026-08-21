@@ -7,7 +7,7 @@ set -euo pipefail
 print_usage() {
   cat <<'EOF'
 Usage:
-  project_journal.sh init [--project-name <name>] [--database-name <name>]
+  project_journal.sh init [--project-name <name>] [database options]
   project_journal.sh start [context options] --action-type <type> --description <text>
   project_journal.sh run_command [context options] --description <text>
     -- '<quoted bash command>'
@@ -22,6 +22,18 @@ Context options:
   --feature <id>              Required when no prior local context exists.
   --tasklet <id>              Required when no prior local context exists.
   --prompt-id <uuid>          Reuse one prompt across multiple plans.
+
+Database options:
+  --database-host, --dbhost <host>
+                              PostgreSQL host or Unix-socket directory.
+  --database-port, --dbport <port>
+                              PostgreSQL port.
+  --database-name, --dbname <name>
+                              PostgreSQL database name.
+  --database-role, --dbrole <role>
+                              PostgreSQL runtime role.
+  --pgpassword-variable, --pgpassvar <variable>
+                              Environment variable containing the password.
 EOF
 }
 
@@ -82,25 +94,42 @@ print_commit_instructions() {
 }
 
 init_project() {
+  local database_host=''
   local database_name='ponytail'
   local database_name_set='false'
+  local pgpassword_variable=''
+  local database_port=''
+  local database_role=''
   local project_name=''
   local project_name_set='false'
   local temporary
   while [[ "$#" -gt 0 ]]; do
     case "$1" in
-      --project-name|--database-name)
+      --project-name|--database-host|--dbhost|--database-port|--dbport|--database-name|--dbname|--database-role|--dbrole|--pgpassword-variable|--pgpassvar)
         local option="$1"
         shift
         [[ "$#" -gt 0 ]] || fail "${option} requires a value"
+        [[ -n "$1" ]] || fail "${option} requires a value"
         case "${option}" in
           --project-name)
             project_name="$1"
             project_name_set='true'
             ;;
-          --database-name)
+          --database-host|--dbhost)
+            database_host="$1"
+            ;;
+          --database-port|--dbport)
+            database_port="$1"
+            ;;
+          --database-name|--dbname)
             database_name="$1"
             database_name_set='true'
+            ;;
+          --database-role|--dbrole)
+            database_role="$1"
+            ;;
+          --pgpassword-variable|--pgpassvar)
+            pgpassword_variable="$1"
             ;;
         esac
         ;;
@@ -111,6 +140,20 @@ init_project() {
   project_root="$(git rev-parse --show-toplevel 2>/dev/null)" || \
     fail 'not inside a Git worktree'
   config_path="${project_root}/ponytail-journal.json"
+  [[ "${project_name_set}" == 'false' ]] || validate_identifier 'project name' "${project_name}"
+  validate_identifier 'database name' "${database_name}"
+  [[ -z "${database_host}" ]] || validate_identifier 'database host' "${database_host}"
+  if [[ -n "${database_port}" ]]; then
+    [[ "${database_port}" =~ ^[0-9]+$ ]] && \
+      ((10#${database_port} > 0 && 10#${database_port} < 65536)) || \
+      fail 'database port must be an integer between 1 and 65535'
+    database_port="$((10#${database_port}))"
+  fi
+  [[ -z "${database_role}" ]] || validate_identifier 'database role' "${database_role}"
+  if [[ -n "${pgpassword_variable}" ]]; then
+    [[ "${pgpassword_variable}" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]] || \
+      fail 'PGPASSWORD variable must be an environment variable name'
+  fi
   if [[ -e "${config_path}" ]]; then
     validate_config_file "${config_path}"
     if [[ "${project_name_set}" == 'true' ]] && \
@@ -121,6 +164,24 @@ init_project() {
       [[ "$(jq -r '.database.name // "ponytail"' "${config_path}")" != "${database_name}" ]]; then
       fail 'existing journal database name does not match --database-name'
     fi
+    if [[ -n "${database_host}" ]] && \
+      [[ "$(jq -r '.database.host // ""' "${config_path}")" != "${database_host}" ]]; then
+      fail 'existing journal database host does not match --database-host'
+    fi
+    if [[ -n "${database_port}" ]] && \
+      [[ "$(jq -r '.database.port // 5432' "${config_path}")" != "${database_port}" ]]; then
+      fail 'existing journal database port does not match --database-port'
+    fi
+    if [[ -n "${database_role}" ]] && \
+      [[ "$(jq -r --arg default_role "$(id -un)" \
+        'if (.database.role // "") == "" then $default_role else .database.role end' \
+        "${config_path}")" != "${database_role}" ]]; then
+      fail 'existing journal database role does not match --database-role'
+    fi
+    if [[ -n "${pgpassword_variable}" ]] && \
+      [[ "$(jq -r '.database.passwordEnvironment // ""' "${config_path}")" != "${pgpassword_variable}" ]]; then
+      fail 'existing journal PGPASSWORD variable does not match --pgpassword-variable'
+    fi
     jq -cn --arg path "${config_path}" --arg project_id "$(jq -r '.projectId' "${config_path}")" \
       '{ok:true,operation:"init",created:false,path:$path,projectId:$project_id}'
     config_matches_head || print_commit_instructions
@@ -128,13 +189,22 @@ init_project() {
   fi
   [[ -n "${project_name}" ]] || project_name="$(basename "${project_root}")"
   validate_identifier 'project name' "${project_name}"
-  validate_identifier 'database name' "${database_name}"
   temporary="$(mktemp "${config_path}.tmp.XXXXXX")"
   jq -n \
     --arg project_id "$(uuid_v7)" \
     --arg project_name "${project_name}" \
+    --arg database_host "${database_host}" \
     --arg database_name "${database_name}" \
-    '{schemaVersion:1,projectId:$project_id,projectName:$project_name,database:{name:$database_name}}' \
+    --arg pgpassword_variable "${pgpassword_variable}" \
+    --arg database_port "${database_port}" \
+    --arg database_role "${database_role}" \
+    '{schemaVersion:1,projectId:$project_id,projectName:$project_name,database:{name:$database_name}}
+      | if $database_host != "" then .database.host = $database_host else . end
+      | if $database_port != "" then .database.port = ($database_port | tonumber) else . end
+      | if $database_role != "" then .database.role = $database_role else . end
+      | if $pgpassword_variable != "" then
+          .database.passwordEnvironment = $pgpassword_variable
+        else . end' \
     > "${temporary}"
   chmod 0644 "${temporary}"
   if ! ln "${temporary}" "${config_path}"; then
