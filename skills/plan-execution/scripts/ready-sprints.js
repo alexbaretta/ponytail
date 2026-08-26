@@ -8,7 +8,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const METADATA_MARKER = 'ponytail-plan-sprint';
-const SCHEMA_VERSION = 1;
+const SCHEMA_VERSION = 2;
 const PLANNING_STATUSES = new Set(['STUB', 'PLANNING', 'READY_FOR_REVIEW', 'APPROVED', 'ERROR']);
 const EXECUTION_STATUSES = new Set(['PENDING', 'IN_PROGRESS', 'READY_FOR_REVIEW', 'DONE', 'ERROR']);
 
@@ -18,9 +18,7 @@ function exactKeys(value, expected, label) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) fail(`${label} must be an object`);
   const actual = Object.keys(value).sort();
   const wanted = [...expected].sort();
-  if (actual.length !== wanted.length || actual.some((key, index) => key !== wanted[index])) {
-    fail(`${label} must contain exactly: ${wanted.join(', ')}`);
-  }
+  if (actual.length !== wanted.length || actual.some((key, index) => key !== wanted[index])) fail(`${label} must contain exactly: ${wanted.join(', ')}`);
 }
 
 function strings(value, label) {
@@ -36,31 +34,58 @@ function relativePath(value, label) {
   return value;
 }
 
-function parseSprintFile(filePath, text = fs.readFileSync(filePath, 'utf8')) {
+function metadataBlock(filePath, text) {
   const marker = new RegExp(`^<!--\\s*${METADATA_MARKER}\\s*$([\\s\\S]*?)^-->\\s*$`, 'gm');
   const blocks = [...text.matchAll(marker)];
   if (blocks.length !== 1) fail(`${filePath} must contain exactly one ${METADATA_MARKER} metadata block`);
-  let metadata;
-  try { metadata = JSON.parse(blocks[0][1]); } catch (error) { fail(`${filePath} metadata is not valid JSON: ${error.message}`); }
+  try { return JSON.parse(blocks[0][1]); } catch (error) { fail(`${filePath} metadata is not valid JSON: ${error.message}`); }
+}
+
+function commonMetadata(filePath, metadata, schemaVersion, executionKeys) {
   exactKeys(metadata, ['schemaVersion', 'id', 'planning', 'execution'], 'sprint metadata');
-  if (metadata.schemaVersion !== SCHEMA_VERSION) fail(`${filePath} has unsupported schemaVersion: ${metadata.schemaVersion}`);
+  if (metadata.schemaVersion !== schemaVersion) fail(`${filePath} has unsupported schemaVersion: ${metadata.schemaVersion}`);
   const expectedId = path.basename(filePath, '.md');
   if (metadata.id !== expectedId) fail(`${filePath} metadata id must be ${expectedId}`);
   exactKeys(metadata.planning, ['status', 'depends_on', 'scope_roots'], 'planning metadata');
   if (!PLANNING_STATUSES.has(metadata.planning.status)) fail(`${filePath} has invalid planning status`);
-  const planningDeps = strings(metadata.planning.depends_on, 'planning.depends_on');
-  const roots = strings(metadata.planning.scope_roots, 'planning.scope_roots').map((value) => relativePath(value, 'scope root'));
+  const planning = {
+    status: metadata.planning.status,
+    depends_on: strings(metadata.planning.depends_on, 'planning.depends_on'),
+    scope_roots: strings(metadata.planning.scope_roots, 'planning.scope_roots').map((value) => relativePath(value, 'scope root')),
+  };
   let execution = null;
   if (metadata.execution !== null) {
-    exactKeys(metadata.execution, ['status', 'depends_on', 'planned_paths'], 'execution metadata');
+    exactKeys(metadata.execution, executionKeys, 'execution metadata');
     if (!EXECUTION_STATUSES.has(metadata.execution.status)) fail(`${filePath} has invalid execution status`);
     execution = {
       status: metadata.execution.status,
       depends_on: strings(metadata.execution.depends_on, 'execution.depends_on'),
-      planned_paths: strings(metadata.execution.planned_paths, 'execution.planned_paths').map((value) => relativePath(value, 'planned path')),
     };
+    if (executionKeys.includes('planned_paths')) execution.planned_paths = strings(metadata.execution.planned_paths, 'execution.planned_paths').map((value) => relativePath(value, 'planned path'));
   }
-  return { schemaVersion: SCHEMA_VERSION, id: metadata.id, planning: { status: metadata.planning.status, depends_on: planningDeps, scope_roots: roots }, execution, filePath };
+  return { schemaVersion, id: metadata.id, planning, execution, filePath };
+}
+
+function readSprintMetadataV1(filePath, metadata) {
+  return commonMetadata(filePath, metadata, 1, ['status', 'depends_on', 'planned_paths']);
+}
+
+function readSprintMetadataV2(filePath, metadata) {
+  const sprint = commonMetadata(filePath, metadata, 2, ['status', 'depends_on', 'tasklets_reviewed']);
+  if (metadata.execution !== null) {
+    if (typeof metadata.execution.tasklets_reviewed !== 'boolean') fail(`${filePath} execution.tasklets_reviewed must be Boolean`);
+    sprint.execution.tasklets_reviewed = metadata.execution.tasklets_reviewed;
+  }
+  return sprint;
+}
+
+const SprintMetadataReaders = Object.freeze({ V1: readSprintMetadataV1, V2: readSprintMetadataV2 });
+
+function parseSprintFile(filePath, text = fs.readFileSync(filePath, 'utf8')) {
+  const metadata = metadataBlock(filePath, text);
+  const reader = SprintMetadataReaders[`V${metadata.schemaVersion}`];
+  if (!reader) fail(`${filePath} has unsupported schemaVersion: ${metadata.schemaVersion}`);
+  return reader(filePath, metadata);
 }
 
 function readSprints(planDirectory) {
@@ -70,10 +95,15 @@ function readSprints(planDirectory) {
   if (files.length === 0) fail(`no SNN.md sprint files found in ${sprintDirectory}`);
   const sprints = files.map((name) => parseSprintFile(path.join(sprintDirectory, name)));
   const ids = new Set();
+  const ordinals = new Set();
   for (const sprint of sprints) {
     if (ids.has(sprint.id)) fail(`duplicate sprint id: ${sprint.id}`);
     ids.add(sprint.id);
+    const ordinal = Number(sprint.id.slice(1));
+    if (ordinals.has(ordinal)) fail(`duplicate numeric sprint order: ${ordinal}`);
+    ordinals.add(ordinal);
   }
+  if (new Set(sprints.map(({ schemaVersion }) => schemaVersion)).size !== 1) fail('plan must not mix physical sprint schema versions');
   return sprints;
 }
 
@@ -139,8 +169,29 @@ function selectPlanningReadySprints(sprints, sprintById) {
   return sprints.filter((sprint) => sprint.planning.status === 'STUB' && sprint.planning.depends_on.every((id) => sprintById.get(id).planning.status === 'APPROVED')).map((sprint) => sprint.id);
 }
 
-function selectExecutionReadySprints(sprints, sprintById) {
+function selectExecutionReadySprintsV1(sprints, sprintById) {
   return sprints.filter((sprint) => sprint.planning.status === 'APPROVED' && sprint.execution?.status === 'PENDING' && sprint.execution.depends_on.every((id) => sprintById.get(id).execution?.status === 'DONE')).map((sprint) => sprint.id);
+}
+
+function validateCheckpointOrder(sprints) {
+  let unfinished = null;
+  for (const sprint of sprints) {
+    if (unfinished && sprint.execution && sprint.execution.status !== 'PENDING') fail(`sprint ${sprint.id} advanced before unfinished predecessor ${unfinished}`);
+    if (!unfinished && sprint.execution?.status !== 'DONE') unfinished = sprint.id;
+  }
+}
+
+function selectExecutionReadySprintsV2(sprints, sprintById) {
+  validateCheckpointOrder(sprints);
+  const sprint = sprints.find(({ execution }) => execution?.status !== 'DONE');
+  if (!sprint || sprint.planning.status !== 'APPROVED' || sprint.execution?.status !== 'PENDING') return [];
+  if (!sprint.execution.tasklets_reviewed) fail(`sprint ${sprint.id} tasklets must be reviewed before execution`);
+  return sprint.execution.depends_on.every((id) => sprintById.get(id).execution?.status === 'DONE') ? [sprint.id] : [];
+}
+
+function selectExecutionReadySprints(sprints, sprintById) {
+  if (sprints[0]?.schemaVersion === 1) return selectExecutionReadySprintsV1(sprints, sprintById);
+  return selectExecutionReadySprintsV2(sprints, sprintById);
 }
 
 function main(argv = process.argv.slice(2)) {
@@ -148,15 +199,13 @@ function main(argv = process.argv.slice(2)) {
   const planDirectory = path.resolve(argv[1]);
   const sprints = readSprints(planDirectory);
   const sprintById = validateDependencies(sprints);
-  if (argv[0] === 'execution') validatePathOwnership(sprints, sprintById);
+  if (argv[0] === 'execution' && sprints[0].schemaVersion === 1) validatePathOwnership(sprints, sprintById);
   const result = argv[0] === 'planning' ? selectPlanningReadySprints(sprints, sprintById) : selectExecutionReadySprints(sprints, sprintById);
   process.stdout.write(`${JSON.stringify(result)}\n`);
   return result;
 }
 
-const SprintMetadataReaders = Object.freeze({ V1: parseSprintFile });
-
-module.exports = { SCHEMA_VERSION, SprintMetadataReaders, parseSprintFile, readSprints, validateDependencies, validatePathOwnership, selectPlanningReadySprints, selectExecutionReadySprints, main };
+module.exports = { SCHEMA_VERSION, SprintMetadataReaders, parseSprintFile, readSprints, validateDependencies, validatePathOwnership, validateCheckpointOrder, selectPlanningReadySprints, selectExecutionReadySprints, main };
 
 if (require.main === module) {
   try { main(); } catch (error) { process.stderr.write(`${error.message}\n`); process.exitCode = 1; }

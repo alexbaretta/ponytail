@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "sprint": "S01",
+  "tasklets": {
+    "S01-F01-T01": {
+      "depends_on": [],
+      "affinity": ["policy", "checkpoint"],
+      "risk": "high",
+      "risk_reason": "The canonical policy controls ownership and convergence for every future long-lived plan."
+    },
+    "S01-F02-T01": {
+      "depends_on": [],
+      "affinity": ["sprint-reader", "checkpoint"],
+      "risk": "high",
+      "risk_reason": "The selector directly prevents a later sprint from advancing before checkpoint convergence."
+    },
+    "S01-F02-T02": {
+      "depends_on": ["S01-F02-T01"],
+      "affinity": ["sprint-reader", "checkpoint", "tests"],
+      "risk": "normal"
+    },
+    "S01-F03-T01": {
+      "depends_on": [],
+      "affinity": ["tasklet-reader", "tasklet-wave", "feature-gate"],
+      "risk": "high",
+      "risk_reason": "The selector controls concurrent writers and must reject malformed gates and overlapping exact paths."
+    },
+    "S01-F03-T02": {
+      "depends_on": ["S01-F03-T01"],
+      "affinity": ["tasklet-reader", "tasklet-wave", "feature-gate", "tests"],
+      "risk": "normal"
+    },
+    "S01-F04-T01": {
+      "depends_on": ["S01-F02-T02", "S01-F03-T02"],
+      "affinity": ["versioned-contract"],
+      "risk": "normal"
+    },
+    "S01-F04-T02": {
+      "depends_on": ["S01-F01-T01", "S01-F02-T02", "S01-F03-T02"],
+      "affinity": ["policy", "tests"],
+      "risk": "normal"
+    },
+    "S01-F04-T03": {
+      "depends_on": ["S01-F01-T01", "S01-F02-T02", "S01-F03-T02"],
+      "affinity": ["generated-adapter"],
+      "risk": "normal"
+    },
+    "S01-F05-T01": {
+      "depends_on": ["S01-F04-T01", "S01-F04-T02", "S01-F04-T03"],
+      "affinity": ["sprint", "validation"],
+      "risk": "normal"
+    }
+  }
+}

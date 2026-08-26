@@ -81,21 +81,21 @@
         "module": "skills/plan-execution/scripts/ready-sprints.js",
         "readerRegistryExport": "SprintMetadataReaders"
       },
-      "currentVersion": "V1",
-      "versions": ["V1"],
-      "supportedReadVersions": ["V1"],
+      "currentVersion": "V2",
+      "versions": ["V1", "V2"],
+      "supportedReadVersions": ["V1", "V2"],
       "supportedDowngradeVersions": []
     },
     {
       "id": "parallel-tasklet-scheduling-metadata",
       "implementation": {
         "workspace": "ponytail",
-        "module": "skills/plan-execution/scripts/next-tasklet.js",
+        "module": "skills/plan-execution/scripts/ready-tasklets.js",
         "readerRegistryExport": "TaskletMetadataReaders"
       },
-      "currentVersion": "V1",
-      "versions": ["V1"],
-      "supportedReadVersions": ["V1"],
+      "currentVersion": "V2",
+      "versions": ["V1", "V2"],
+      "supportedReadVersions": ["V1", "V2"],
       "supportedDowngradeVersions": []
     }
   ]

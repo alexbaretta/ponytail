@@ -360,22 +360,23 @@ and the current story and tasklet. Read historical artifacts or referenced
 configuration only when the active work depends on them or evidence suggests
 drift.
 
-## Parallel Sprint Orchestration
+## Checkpoint Sprint Orchestration
 
-Every long-lived plan uses this orchestration lifecycle. Before any sprint
+Every long-lived plan uses this orchestration lifecycle. Sprints are sequential
+execution checkpoints: at most one sprint may be active, and no later sprint
+may advance until every earlier sprint is `DONE`. Parallelism occurs only in
+exact-path-disjoint tasklet waves inside the active sprint. Before any sprint
 planning or implementation edit, the orchestrator runs the applicable
 readiness selector; selector output, rather than an agent's subjective
-classification, determines which sprints are ready for parallel dispatch.
+classification, determines what may be dispatched.
 
-Before planning dispatch, every sprint contains exactly one marked Markdown
-comment with strict JSON. This metadata is the canonical contract for sprint
-identity, planning lifecycle, execution lifecycle, dependencies, scope roots,
-and exact paths:
+Every sprint contains exactly one marked Markdown comment with strict JSON.
+V2 is the only version written for new or updated records after adoption:
 
 ```md
 <!-- ponytail-plan-sprint
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "id": "S01",
   "planning": {
     "status": "APPROVED",
@@ -385,7 +386,7 @@ and exact paths:
   "execution": {
     "status": "PENDING",
     "depends_on": [],
-    "planned_paths": ["path/to/file"]
+    "tasklets_reviewed": true
   }
 }
 -->
@@ -393,98 +394,105 @@ and exact paths:
 
 Planning states are `STUB`, `PLANNING`, `READY_FOR_REVIEW`, `APPROVED`, and
 `ERROR`. Execution states are `PENDING`, `IN_PROGRESS`, `READY_FOR_REVIEW`,
-`DONE`, and `ERROR`. `execution` is `null` until detailed planning is ready
-for orchestrator review. Planning dependencies decide which sprint
-architectures may start; execution dependencies decide which implementations
-may start. Scope roots and exact paths use `/` separators, are relative to the
-owning repository, and contain no `.` or `..` segments or glob syntax. Every
-production, test, generated, configuration, and sprint-record path must be
-declared. An undeclared path is reassigned and graph safety revalidated by the
-orchestrator before its sprint edits it.
+`DONE`, and `ERROR`. `execution` is `null` until detailed planning is ready for
+orchestrator review. Planning dependencies decide which sprint architectures
+may be drafted in parallel. Execution dependencies are retained as explicit
+historical and architectural relations, but checkpoint order additionally
+requires every earlier numeric sprint to be `DONE` before a later sprint may
+execute. Scope roots use `/` separators, are relative to the owning repository,
+and contain no `.` or `..` segments or glob syntax. V1 sprint execution retains
+its historical `planned_paths`; V2 sprint execution contains exactly `status`,
+`depends_on`, and `tasklets_reviewed` and owns no write paths.
 
-The sprint metadata and sibling tasklet JSON each declare `"schemaVersion":
-1`. Their selectors reject an unsupported schema version before scheduling or
-mutation.
+The physical V1 sprint and tasklet readers remain immutable so historical V1
+plans retain their original dependency-based sprint readiness and scalar
+tasklet selection. Selectors dispatch solely by the physical `schemaVersion`,
+reject unsupported versions, and reject a plan containing mixed physical
+sprint versions. V2 is the latest write format; do not migrate a V1 record in
+place merely to execute or inspect it.
 
 The orchestrator first settles plan-wide architecture, approved scope, shared
 contracts, and coarse ownership, then creates intent-level sprint stubs. A
-stub states its intent, acceptance criteria, scope and exclusions, candidate
+stub states intent, acceptance criteria, scope and exclusions, candidate
 repository roots, global contracts to preserve, planning dependencies,
 questions, and required planning deliverables; it does not prescribe local
-declarations, algorithms, or tasklets.
+declarations, algorithms, or tasklets. The planning selector may return every
+dependency-ready `STUB`, and the orchestrator may dispatch those drafts in
+parallel to separate capable planning agents. A planning agent may inspect the
+repository read-only and edit only its assigned sprint Markdown and sibling
+tasklet metadata. It returns unspecified shared or public contract decisions
+to the orchestrator.
 
-The planning-readiness selector returns every `STUB` whose planning
-dependencies are `APPROVED`. The orchestrator assigns ready stubs, up to safe
-runtime capacity, to separate instances of the strongest available planning
-model. A planning agent may inspect the repository read-only and edit only its
-assigned sprint Markdown and sibling tasklet metadata. It supplies local
-architecture, exact paths, atomic tasklets, tasklet scheduling metadata,
-focused validation, implementation capability guidance, and discovered
-cross-sprint relations. It does not edit implementation, the plan manifest,
-or another sprint; it returns an unspecified shared or public contract
-decision to the orchestrator instead of deciding it unilaterally.
+The orchestrator reconciles each completed planning wave before approval. Only
+the orchestrator changes planning state to `APPROVED`. Before implementation
+of a sprint starts, the orchestrator reviews the entire sprint and rejects any
+tasklet that is not atomic under `Atomic Tasklet Eligibility`, lacks frozen
+exact paths, overlaps another tasklet's path without transitive ordering,
+has incomplete or cyclic dependencies, or leaves a material question open.
+It records completion with V2 `execution.tasklets_reviewed: true`; the
+execution selector rejects an unreviewed V2 sprint.
 
-The orchestrator reconciles every completed planning wave before approval or
-implementation dispatch. It resolves conflicting paths, declarations, sources
-of truth, contracts, dependencies, integration ownership, and open questions.
-Only the orchestrator changes planning state to `APPROVED`; implementation
-cannot start until that state is approved and exact paths and execution
-dependencies are frozen.
+Each approved V2 `SNN.md` has one sibling `SNN.tasklets.json`. Markdown owns
+tasklet descriptions and lifecycle markers. JSON owns feature dependencies and
+validation ownership, plus each tasklet's hard `depends_on`, soft `affinity`,
+`risk`, optional `risk_reason`, feature identity, and exact `planned_paths`.
+V2 tasklet metadata is the sole exact write-path owner. Its paths use `/`
+separators, are relative to the owning repository, and contain no `.` or `..`
+segments or glob syntax. Every implementation, test, generated, and
+configuration path edited by an implementer must be declared there.
+Every non-validation tasklet owns at least one path. A feature's sole
+`validation_tasklet` directly depends on every other tasklet in that feature;
+it may own focused-test paths, while a pure validation gate may have no paths.
+Feature and tasklet graphs must be acyclic and contain exact canonical IDs.
+A tasklet dependency crossing a feature boundary requires the corresponding
+feature dependency so it cannot bypass feature convergence.
+The graph validator rejects any pair of tasklets with an overlapping planned
+path unless one transitively depends on the other through the effective hard
+tasklet and feature-validation dependency graph. This rule applies within and
+across features; ordered overlap remains valid.
 
-Before implementation dispatch, each selected `SNN.md` has one sibling
-`SNN.tasklets.json`. A `STUB` or dependency-blocked sprint need not yet have a
-tasklet graph. Markdown owns tasklet
-descriptions and `[ ]`, `[DONE]`, or `[ERROR]` lifecycle markers. JSON owns
-only each tasklet's hard `depends_on`, soft `affinity`, `risk`, and required
-`risk_reason` for `high` risk. The tasklet selector validates an exact
-one-to-one Markdown/JSON tasklet ID set and an acyclic graph, then selects one
-ready unfinished tasklet by: high risk, greatest overlap with the last
-completed tasklet's affinity, greatest number of unfinished descendants,
-longest remaining dependency path, then lowest tasklet ID. It rejects missing
-or extra nodes, malformed metadata, unknown dependencies, cycles, unjustified
-high risk, invalid Markdown status, and an unfinished graph with no ready
-node, without mutation. A fully `[DONE]` graph returns exactly
-`{"next":null}`; criterion values appear only when a tasklet is selected.
+A V2 tasklet is ready only when its direct tasklet dependencies and every
+dependency feature's validation tasklet are `[DONE]`. The selector ranks ready
+tasklets by high risk, greatest affinity overlap with the last completed
+tasklet, greatest number of unfinished descendants, longest remaining
+dependency path, then lowest tasklet ID. In that order it greedily selects the
+deterministic maximal set whose exact planned paths are pairwise disjoint.
+Every simultaneously ready set is therefore path-disjoint on a valid graph;
+the greedy selection preserves deterministic wave construction and empty-path
+validation tasklets do not conflict. It returns
+`{"next":[...],"criteria":{...}}`; a fully complete V1 or V2 graph returns
+exactly `{"next":null}`.
 
-The skill-local readiness tool accepts `planning` or `execution` and one plan
-directory. The orchestrator MUST run it before planning dispatch, after each
-planning reconciliation, before implementation dispatch, and after each
-implementation reconciliation. Before dispatching a sprint returned for
-execution, it MUST run that sprint's tasklet selector to validate the sibling
-tasklet graph and select its first tasklet.
+The orchestrator runs the sprint readiness selector before planning dispatch,
+after planning reconciliation, before implementation dispatch, and after
+sprint reconciliation. For V2 execution, it returns at most the earliest
+unfinished sprint, and only when its planning is `APPROVED`, execution is
+`PENDING`, tasklets are reviewed, dependencies are `DONE`, and every numeric
+predecessor is `DONE`. A later sprint already advanced beyond `PENDING` while
+a predecessor is unfinished is invalid plan state.
 
-Every sprint returned by the applicable readiness selector MUST be assigned to
-a separate subagent, up to safe available runtime capacity. The root remains
-the orchestrator and MUST NOT implement a returned sprint while a safe
-subagent slot is available. Planning uses separate instances of the strongest
-available planning model. Implementation uses the least expensive available
-model reasonably expected to implement the frozen tasklets.
+Before each implementation wave, the orchestrator runs `ready-tasklets.js`,
+then assigns each returned tasklet to a separate capable implementation agent
+up to safe runtime capacity. Implementers edit only their frozen implementation
+paths and return structured evidence. They do not edit sprint Markdown,
+tasklet metadata, the plan manifest, or shared Git state, and do not stage or
+commit. If safe capacity is smaller than the selected wave, the orchestrator
+dispatches a deterministic prefix and reruns the selector after reconciliation.
 
-The orchestrator may retain a ready sprint only when no safe subagent slot is
-available, the host lacks an isolated execution capability required by the
-sprint, available subagents lack a required capability, or delegation would
-violate an explicit authorization or safety boundary. Before implementing a
-retained sprint, it records the specific reason and concrete evidence in that
-sprint file. Convenience, prior partial implementation, small task size,
-elapsed time, generic coordination cost, quality preference, or agent
-preference are not valid exceptions.
+The orchestrator alone updates shared plan, sprint, and tasklet records; owns
+the Git index; inspects and reconciles each returned wave; records focused
+proof; and commits accepted tasklets. A feature advances through its single
+approval gate only after every implementation tasklet is reconciled and its
+validation tasklet passes against the combined feature tree. A sprint advances
+to `READY_FOR_REVIEW` and then `DONE` only after every feature converges and
+the sprint's distinct focused integration proof passes against the reconciled
+tree. Only then may the next checkpoint begin.
 
-If planning or implementation begins without the required selector run or
-dispatch decision, stop new implementation edits. Preserve completed valid
-work, reconstruct and validate the sprint metadata and applicable tasklet
-graphs, freeze exact-path ownership and dependencies, record any permitted
-retention decision, dispatch every independently ready sprint up to safe
-capacity, and resume only after ownership is unambiguous. The root and
-subagents must not edit another active agent's assigned paths.
-
-A sprint implementation agent edits only its declared implementation paths
-and sprint file, executes tasklets sequentially, records focused evidence and
-discoveries, moves its execution state to `READY_FOR_REVIEW`, closes its
-journal action when configured, and returns its result. It does not stage or
-commit. The orchestrator alone owns the plan manifest, shared Git index,
-cross-sprint reconciliation, selective commits, full validation, and final
-acceptance. It inspects the owned paths and distinct integration proof,
-selectively commits the cluster, then alone changes the sprint to `DONE`.
+If implementation begins without the required sprint-wide atomicity review,
+selector run, or exact-path dispatch decision, stop new implementation edits.
+Preserve valid completed work, reconstruct and validate the metadata and
+graphs, freeze ownership and dependencies, reconcile all partial waves, and
+resume only after ownership and the active checkpoint are unambiguous.
 
 ## Standalone Bug Workflow
 
