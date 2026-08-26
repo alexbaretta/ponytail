@@ -276,17 +276,28 @@ decision, an unapproved destructive action, or competing sources of truth.
 
 ## Testing Ownership
 
-Use the host-configured commands. Assign proof to the smallest level that can
-meaningfully own it:
+Use the host-configured commands. Automated product QA applies only to work
+that edits a **QA-relevant input**: a file consumed by a configured product
+execution, compilation, packaging, deployment, schema or migration,
+generation, or automated-test path. Classify the file by its consumers, not
+its extension or directory. Pure prose, project-management records, and inert
+reference data are exempt from product tests only when none of those paths
+consume them; still run applicable syntax, schema, link, generator, and
+comparable structural checks.
+
+A tasklet is subject to the product-QA ladder when it edits a QA-relevant
+input. A feature, sprint, or plan is subject when any of its descendant work
+edits one. Assign proof to the smallest level that can meaningfully own it:
 
 ### Tasklet
 
 - Add or adjust the smallest focused regression proof not already supplied by
   an existing test, static check, or higher-level test. Cover a failure or edge
   path only when the tasklet introduces, changes, or relies on it.
-- Run only explicit test files or named cases under the applicable configured
-  focused unit-test commands, plus applicable cached typecheck or compiler
-  checks and focused lint or format checks.
+- Run only the smallest applicable focused unit, static, or contract proof:
+  explicit test files or named cases under configured focused commands, plus
+  applicable cached typecheck or compiler checks and focused lint or format
+  checks. Do not run an integration Step, Arc, or Suite at this gate.
 - Run specialized contract guards only when the tasklet changes the protected
   contract.
 - Run the configured build-impact query with the intended tasklet paths. When
@@ -295,31 +306,38 @@ meaningfully own it:
 
 ### Feature/Story
 
-- Run additional explicit test files or named cases only when they add
-  behavior proof not already obtained against the current tree. Do not run a
-  whole package, workspace, language family, or other broad unit-test subset.
-- Run affected integration Arcs only when they prove a distinct complete
-  executable vertical slice.
+- Reuse passing tasklet proof while its relevant inputs remain unchanged. Run
+  additional explicit unit-test files or named cases only when they add
+  combined-behavior proof not already obtained against the current tree. Do
+  not run a whole package, workspace, language family, or other broad
+  unit-test subset.
+- Run the smallest sufficient independently executable integration workflow
+  that proves the feature's vertical slice. Use one integration Step only
+  when the harness can execute it independently and that Step is sufficient;
+  otherwise run the minimum ordered workflow that is independently
+  executable and sufficient.
 - Run browser tests for changed user-visible behavior and affected contract
   guards.
 - Prove the story's success and failure paths.
 
 ### Sprint
 
-- Run only focused unit-test selections, configured milestone checks, and
-  selected cross-story integration Arcs that add proof not already obtained
-  against the committed sprint tree. Do not run a full unit-test command.
+- Run every affected integration Arc once against the reconciled sprint tree.
+  Reuse unchanged tasklet and feature proof; do not run a full unit-test
+  command or rerun focused proof solely because the sprint completed.
+- Run configured milestone checks and browser tests only when applicable and
+  not already proved against the same relevant inputs.
 - Requery build impact only for target inputs changed after their last
   successful build.
 - Reconcile every tasklet and story status and deferred check.
 
 ### Plan
 
-- Run every applicable configured full unit-test command once in each affected
-  repository after its final relevant edit.
-- Run the applicable portions of configured final acceptance once against the
-  final tree, plus required integration Suites and Arcs, SDK, demo, browser,
-  packaging, and documentation gates not already included.
+- Run each affected repository's applicable configured full unit-test command
+  once after its final relevant edit.
+- Run every applicable integration Suite once against the final tree, plus
+  configured final-acceptance, SDK, demo, browser, packaging, and documentation
+  gates not already contained in those Suites.
 - Run a build portion only when the build-impact query reports an affected
   target or the approved deliverable is a build, package, or release artifact.
 - Reconcile all sprint results across the affected repositories.

@@ -56,21 +56,28 @@ These rules remain active at every compaction level, including `off`:
   session's success, failure, delay, or observable behavior, apply the
   `cross-session-effects` skill before recommending, planning, implementing,
   reviewing, or testing that behavior.
-- Add the smallest durable regression proof for changed behavior whose failure
-  is not already caught by existing tests, static checks, or a higher-level
-  test. Add failure or edge-path coverage only when the change introduces,
-  modifies, or relies on that path. Do not duplicate the same behavioral
-  assertion across test layers. Use broader integration and acceptance checks
-  only when they prove a distinct affected boundary, following the host
-  project's configured cadence.
-- During tasklet, feature, sprint, and standalone work, run only the smallest
-  explicit unit-test selection needed under the host's configured focused
-  command. Do not run a full unit-test command or a broad unit-test subset.
-  Run each applicable configured full unit-test command once at plan final
-  acceptance after final relevant edits, or when the user or a named host
-  merge, CI, release, or equivalent acceptance gate explicitly requires it.
-  If focused selection is not configured, repair that discrepancy; never fall
-  back to a full command.
+- Treat an input as QA-relevant when a configured product execution,
+  compilation, packaging, deployment, schema or migration, generation, or
+  automated-test path consumes it. Pure prose, project-management records,
+  and inert reference data that no such path consumes are exempt from product
+  tests, but still require applicable syntax, schema, link, generator, or
+  comparable structural checks.
+- For QA-relevant changes, add the smallest durable regression proof for
+  changed behavior whose failure is not already caught by an existing test,
+  static check, or higher-level test. At the tasklet or standalone-change
+  gate, run only the smallest focused unit, static, or contract proof. At the
+  feature gate, reuse unchanged tasklet evidence, add focused proof only for
+  distinct combined behavior, and run the smallest sufficient independently
+  executable integration workflow. At the sprint gate, run every affected
+  integration Arc against the reconciled sprint tree. At plan final
+  acceptance, run each affected repository's applicable full unit-test
+  command once after its final relevant edit and every applicable integration
+  Suite against the final tree. Add failure or edge-path coverage only when
+  the change introduces, modifies, or relies on that path, and do not
+  duplicate the same behavioral assertion across test layers. Reuse passing
+  evidence while its relevant inputs remain unchanged. If a required focused
+  selection is not configured, repair that discrepancy; never fall back to a
+  broader command.
 - When the configured build-impact query reports affected targets, run their
   build commands once after the final change to their inputs. When it reports
   no affected or indeterminate targets, skip the build. When it reports an

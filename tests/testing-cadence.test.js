@@ -14,24 +14,28 @@ function readSkill(name) {
   );
 }
 
-test('planned work reuses unchanged proof instead of rerunning nested gates', () => {
+test('planned work classifies QA eligibility by configured consumers', () => {
   const skill = readSkill('plan-execution');
 
-  assert.match(skill, /Run the applicable portions of configured final acceptance once/);
-  assert.match(skill, /Run every applicable configured full unit-test command once/);
-  assert.match(skill, /Reuse a passing result while the relevant\s+code and configuration remain unchanged/);
-  assert.match(skill, /do not rerun an identical command\s+solely because a higher management level/);
-  assert.doesNotMatch(skill, /Run the affected package's complete unit suite\./);
+  assert.match(skill, /a \*\*QA-relevant input\*\*: a file consumed by a configured product\s+execution, compilation, packaging, deployment, schema or migration,\s+generation, or automated-test path/);
+  assert.match(skill, /Classify the file by its consumers, not\s+its extension or directory/);
+  assert.match(skill, /Pure prose, project-management records, and inert\s+reference data are exempt from product tests only when none of those paths\s+consume them/);
+  assert.match(skill, /still run applicable syntax, schema, link, generator, and\s+comparable structural checks/);
+  assert.match(skill, /A feature, sprint, or plan is subject when any of its descendant work\s+edits one/);
 });
 
-test('planned work uses focused unit tests until final acceptance', () => {
+test('planned work assigns the smallest sufficient proof to each gate', () => {
   const skill = readSkill('plan-execution');
 
-  assert.match(skill, /Run only explicit test files or named cases/);
-  assert.match(skill, /Do not run a\n  whole package, workspace, language family/);
-  assert.match(skill, /Do not run a full unit-test command/);
-  assert.match(skill, /never fall back to a full command/);
-  assert.match(skill, /Standalone bugs and direct bounded changes run only explicit selections/);
+  assert.match(skill, /Run only the smallest applicable focused unit, static, or contract proof/);
+  assert.match(skill, /Reuse passing tasklet proof while its relevant inputs remain unchanged/);
+  assert.match(skill, /additional explicit unit-test files or named cases only when they add\s+combined-behavior proof not already obtained against the current tree/);
+  assert.match(skill, /Use one integration Step only\s+when the harness can execute it independently and that Step is sufficient/);
+  assert.match(skill, /Run every affected integration Arc once against the reconciled sprint tree/);
+  assert.match(skill, /Run each affected repository's applicable configured full unit-test command\s+once after its final relevant edit/);
+  assert.match(skill, /Run every applicable integration Suite once against the final tree/);
+  assert.match(skill, /Reuse a passing result while the relevant\s+code and configuration remain unchanged/);
+  assert.match(skill, /do not rerun an identical command\s+solely because a higher management level/);
 });
 
 test('bug implementation requests authorize the complete workflow by default', () => {

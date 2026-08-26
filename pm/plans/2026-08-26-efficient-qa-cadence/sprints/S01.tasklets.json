@@ -1,0 +1,94 @@
+{
+  "schemaVersion": 2,
+  "sprint": "S01",
+  "features": {
+    "S01-F01": {
+      "depends_on": [],
+      "validation_tasklet": "S01-F01-T02"
+    },
+    "S01-F02": {
+      "depends_on": [],
+      "validation_tasklet": "S01-F02-T02"
+    },
+    "S01-F03": {
+      "depends_on": ["S01-F01", "S01-F02"],
+      "validation_tasklet": "S01-F03-T03"
+    },
+    "S01-F04": {
+      "depends_on": ["S01-F03"],
+      "validation_tasklet": "S01-F04-T01"
+    }
+  },
+  "tasklets": {
+    "S01-F01-T01": {
+      "depends_on": [],
+      "affinity": ["qa-policy", "plan-execution"],
+      "risk": "high",
+      "risk_reason": "This rule decides which changes require product QA and which proof owns each convergence gate.",
+      "feature": "S01-F01",
+      "planned_paths": ["skills/plan-execution/SKILL.md"]
+    },
+    "S01-F01-T02": {
+      "depends_on": ["S01-F01-T01"],
+      "affinity": ["qa-policy", "plan-execution", "tests"],
+      "risk": "normal",
+      "feature": "S01-F01",
+      "planned_paths": ["tests/testing-cadence.test.js"]
+    },
+    "S01-F02-T01": {
+      "depends_on": [],
+      "affinity": ["qa-policy", "ponytail"],
+      "risk": "high",
+      "risk_reason": "The always-on rule is injected into every supported host and compaction mode.",
+      "feature": "S01-F02",
+      "planned_paths": ["skills/ponytail/SKILL.md"]
+    },
+    "S01-F02-T02": {
+      "depends_on": ["S01-F02-T01"],
+      "affinity": ["qa-policy", "ponytail", "tests"],
+      "risk": "normal",
+      "feature": "S01-F02",
+      "planned_paths": ["tests/policy-conformance.test.js"]
+    },
+    "S01-F03-T01": {
+      "depends_on": [],
+      "affinity": ["generated-policy", "rule-copies"],
+      "risk": "normal",
+      "feature": "S01-F03",
+      "planned_paths": [
+        "config/AGENTS.md",
+        ".cursor/rules/ponytail.mdc",
+        ".windsurf/rules/ponytail.md",
+        ".clinerules/ponytail.md",
+        ".agents/rules/ponytail.md",
+        ".qoder/rules/ponytail.md",
+        ".github/copilot-instructions.md",
+        ".kiro/steering/ponytail.md"
+      ]
+    },
+    "S01-F03-T02": {
+      "depends_on": [],
+      "affinity": ["generated-policy", "openclaw"],
+      "risk": "normal",
+      "feature": "S01-F03",
+      "planned_paths": [
+        ".openclaw/skills/plan-execution/SKILL.md",
+        ".openclaw/skills/ponytail/SKILL.md"
+      ]
+    },
+    "S01-F03-T03": {
+      "depends_on": ["S01-F03-T01", "S01-F03-T02"],
+      "affinity": ["generated-policy", "tests"],
+      "risk": "normal",
+      "feature": "S01-F03",
+      "planned_paths": []
+    },
+    "S01-F04-T01": {
+      "depends_on": [],
+      "affinity": ["sprint", "validation"],
+      "risk": "normal",
+      "feature": "S01-F04",
+      "planned_paths": []
+    }
+  }
+}
