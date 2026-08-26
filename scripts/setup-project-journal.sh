@@ -112,9 +112,7 @@ SQL
     --set=project_id="${project_id}" \
     --set=project_name="${project_name}" <<'SQL'
 SET ROLE ponytail_journal_owner;
-INSERT INTO ponytail_journal.project (project_id, project_name)
-VALUES (:'project_id'::uuid, :'project_name')
-ON CONFLICT (project_id) DO UPDATE SET project_name = EXCLUDED.project_name;
+SELECT ponytail_journal.register_project(:'project_id'::uuid, :'project_name');
 RESET ROLE;
 SQL
   printf '{"ok":true,"database":"%s","project_id":"%s"}\n' \

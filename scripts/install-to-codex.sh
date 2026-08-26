@@ -10,7 +10,8 @@ Usage:
   ./scripts/install-to-codex.sh [--check] [--dry-run]
     [--codex-home <path>]
 
-Installs enabled bundled skills and the global AGENTS.md into CODEX_HOME.
+Installs enabled bundled skills, the global AGENTS.md, and the project journal
+allow rule into CODEX_HOME.
 EOF
 }
 
@@ -163,6 +164,35 @@ preflight_global_agents() {
   fi
 }
 
+project_journal_rule() {
+  local escaped_path="${INSTALL_TO_CODEX_PROJECT_JOURNAL_PATH//\\/\\\\}"
+  escaped_path="${escaped_path//\"/\\\"}"
+  printf '%s\n' \
+    "prefix_rule(pattern=[\"${escaped_path}\", [\"init\", \"start\", \"over\"]], decision=\"allow\", justification=\"Allow fixed project-journal database operations\", match=[\"${escaped_path} init\", \"${escaped_path} start\", \"${escaped_path} over\"], not_match=[\"${escaped_path} run_command\"])"
+}
+
+legacy_project_journal_rules() {
+  local escaped_path="${INSTALL_TO_CODEX_PROJECT_JOURNAL_PATH//\\/\\\\}"
+  escaped_path="${escaped_path//\"/\\\"}"
+  printf 'prefix_rule(pattern=["%s"], decision="allow")\n' "${escaped_path}"
+  printf '%s\n' \
+    "prefix_rule(pattern=[\"${escaped_path}\", [\"start\", \"over\"]], decision=\"allow\", justification=\"Allow fixed project-journal database operations\", match=[\"${escaped_path} start\", \"${escaped_path} over\"], not_match=[\"${escaped_path} run_command\"])"
+}
+
+preflight_rules() {
+  if [[ -L "${INSTALL_TO_CODEX_RULES_TARGET}" ]] || \
+    { [[ -e "${INSTALL_TO_CODEX_RULES_TARGET}" ]] && \
+      [[ ! -d "${INSTALL_TO_CODEX_RULES_TARGET}" ]]; }; then
+    fail "refusing to replace non-directory rules path: ${INSTALL_TO_CODEX_RULES_TARGET}"
+  fi
+
+  if [[ -L "${INSTALL_TO_CODEX_RULES_FILE}" ]] || \
+    { [[ -e "${INSTALL_TO_CODEX_RULES_FILE}" ]] && \
+      [[ ! -f "${INSTALL_TO_CODEX_RULES_FILE}" ]]; }; then
+    fail "refusing to replace non-file rules path: ${INSTALL_TO_CODEX_RULES_FILE}"
+  fi
+}
+
 preflight_installation() {
   local hosts
   local kind
@@ -194,6 +224,7 @@ preflight_installation() {
   done < "${INSTALL_TO_CODEX_REGISTRY}"
 
   preflight_global_agents
+  preflight_rules
 }
 
 install_link() {
@@ -387,6 +418,49 @@ install_global_agents() {
   install_link "${target_path}" "${source_path}"
 }
 
+install_project_journal_rule() {
+  local legacy_rule
+  local rule
+  local temporary_rules
+
+  rule="$(project_journal_rule)"
+  while IFS= read -r legacy_rule; do
+    if [[ -f "${INSTALL_TO_CODEX_RULES_FILE}" ]] && \
+      grep -Fxq "${legacy_rule}" "${INSTALL_TO_CODEX_RULES_FILE}"; then
+      if [[ "${INSTALL_TO_CODEX_CHECK}" == 'true' ]]; then
+        fail "obsolete project journal allow rule remains: ${INSTALL_TO_CODEX_RULES_FILE}"
+      fi
+      print_action "remove obsolete project journal allow rule from ${INSTALL_TO_CODEX_RULES_FILE}"
+      if [[ "${INSTALL_TO_CODEX_DRY_RUN}" == 'false' ]]; then
+        temporary_rules="$(mktemp "${INSTALL_TO_CODEX_RULES_FILE}.XXXXXX")"
+        awk -v legacy_rule="${legacy_rule}" \
+          '$0 != legacy_rule' "${INSTALL_TO_CODEX_RULES_FILE}" > "${temporary_rules}"
+        mv "${temporary_rules}" "${INSTALL_TO_CODEX_RULES_FILE}"
+      fi
+    fi
+  done < <(legacy_project_journal_rules)
+
+  if [[ -f "${INSTALL_TO_CODEX_RULES_FILE}" ]] && \
+    grep -Fxq "${rule}" "${INSTALL_TO_CODEX_RULES_FILE}"; then
+    return
+  fi
+
+  if [[ "${INSTALL_TO_CODEX_CHECK}" == 'true' ]]; then
+    fail "project journal allow rule is missing: ${INSTALL_TO_CODEX_RULES_FILE}"
+  fi
+
+  print_action "add project journal allow rule to ${INSTALL_TO_CODEX_RULES_FILE}"
+  if [[ "${INSTALL_TO_CODEX_DRY_RUN}" == 'true' ]]; then
+    return
+  fi
+
+  if [[ -s "${INSTALL_TO_CODEX_RULES_FILE}" ]] && \
+    [[ -n "$(tail -c 1 "${INSTALL_TO_CODEX_RULES_FILE}")" ]]; then
+    printf '\n' >> "${INSTALL_TO_CODEX_RULES_FILE}"
+  fi
+  printf '%s\n' "${rule}" >> "${INSTALL_TO_CODEX_RULES_FILE}"
+}
+
 write_manifest() {
   local hosts
   local kind
@@ -496,6 +570,8 @@ parse_arguments() {
       fail 'HOME or --codex-home is required'
     fi
   fi
+  [[ -n "${HOME:-}" ]] || \
+    fail 'HOME is required to configure the project journal allow rule'
 }
 
 main() {
@@ -504,6 +580,9 @@ main() {
   parse_arguments "$@"
   INSTALL_TO_CODEX_SKILLS_TARGET="${INSTALL_TO_CODEX_CODEX_HOME}/skills"
   INSTALL_TO_CODEX_MANIFEST="${INSTALL_TO_CODEX_CODEX_HOME}/.ponytail-install.tsv"
+  INSTALL_TO_CODEX_RULES_TARGET="${INSTALL_TO_CODEX_CODEX_HOME}/rules"
+  INSTALL_TO_CODEX_RULES_FILE="${INSTALL_TO_CODEX_RULES_TARGET}/default.rules"
+  INSTALL_TO_CODEX_PROJECT_JOURNAL_PATH="${HOME}/.local/bin/project_journal.sh"
 
   if [[ ! -f "${INSTALL_TO_CODEX_REGISTRY}" ]]; then
     fail "skill registry not found: ${INSTALL_TO_CODEX_REGISTRY}"
@@ -513,13 +592,14 @@ main() {
 
   if [[ "${INSTALL_TO_CODEX_CHECK}" == 'false' ]] && \
     [[ "${INSTALL_TO_CODEX_DRY_RUN}" == 'false' ]]; then
-    mkdir -p "${INSTALL_TO_CODEX_SKILLS_TARGET}"
+    mkdir -p "${INSTALL_TO_CODEX_SKILLS_TARGET}" "${INSTALL_TO_CODEX_RULES_TARGET}"
   fi
 
   install_ponytail_skills
   remove_current_root_stale_links
   remove_manifest_stale_links
   install_global_agents
+  install_project_journal_rule
   write_manifest
   check_manifest
   exit 0

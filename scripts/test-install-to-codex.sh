@@ -50,7 +50,13 @@ main() {
   temporary_parent="${temporary_parent%/}"
   temporary_root="$(mktemp -d "${temporary_parent}/ponytail-install.XXXXXX")"
   trap 'cleanup "${temporary_root}" "${temporary_parent}"' EXIT
-  mkdir -p "${temporary_root}/codex/skills"
+  export HOME="${temporary_root}/home"
+  mkdir -p "${temporary_root}/codex/skills" "${temporary_root}/codex/rules"
+  printf '%s\n%s\n%s' \
+    'prefix_rule(pattern=["existing"], decision="allow")' \
+    "prefix_rule(pattern=[\"${HOME}/.local/bin/project_journal.sh\"], decision=\"allow\")" \
+    "prefix_rule(pattern=[\"${HOME}/.local/bin/project_journal.sh\", [\"start\", \"over\"]], decision=\"allow\", justification=\"Allow fixed project-journal database operations\", match=[\"${HOME}/.local/bin/project_journal.sh start\", \"${HOME}/.local/bin/project_journal.sh over\"], not_match=[\"${HOME}/.local/bin/project_journal.sh run_command\"])" > \
+    "${temporary_root}/codex/rules/default.rules"
   ln -s \
     "${ponytail_root}/skills/git-write-escalation" \
     "${temporary_root}/codex/skills/git-write-escalation"
@@ -64,6 +70,8 @@ main() {
     --codex-home "${temporary_root}/codex" >/dev/null
   [[ -f "${temporary_root}/codex/AGENTS.md" ]] || \
     fail 'dry-run changed the empty global instructions file'
+  [[ "$(wc -l < "${temporary_root}/codex/rules/default.rules")" -eq 2 ]] || \
+    fail 'dry-run changed the existing rules file'
 
   "${ponytail_root}/scripts/install-to-codex.sh" \
     --codex-home "${temporary_root}/codex"
@@ -74,6 +82,31 @@ main() {
   assert_link \
     "${temporary_root}/codex/AGENTS.md" \
     "${ponytail_root}/config/AGENTS.md"
+  grep -Fxq 'prefix_rule(pattern=["existing"], decision="allow")' \
+    "${temporary_root}/codex/rules/default.rules" || \
+    fail 'installer replaced an existing Codex rule'
+  grep -Fxq \
+    "prefix_rule(pattern=[\"${HOME}/.local/bin/project_journal.sh\", [\"init\", \"start\", \"over\"]], decision=\"allow\", justification=\"Allow fixed project-journal database operations\", match=[\"${HOME}/.local/bin/project_journal.sh init\", \"${HOME}/.local/bin/project_journal.sh start\", \"${HOME}/.local/bin/project_journal.sh over\"], not_match=[\"${HOME}/.local/bin/project_journal.sh run_command\"])" \
+    "${temporary_root}/codex/rules/default.rules" || \
+    fail 'installer did not add the project journal allow rule'
+  if grep -Fxq \
+    "prefix_rule(pattern=[\"${HOME}/.local/bin/project_journal.sh\"], decision=\"allow\")" \
+    "${temporary_root}/codex/rules/default.rules"; then
+    fail 'installer retained the broad project journal allow rule'
+  fi
+  if grep -Fq '["start", "over"]' \
+    "${temporary_root}/codex/rules/default.rules"; then
+    fail 'installer retained the previous project journal allow rule'
+  fi
+  printf '%s\n' 'prefix_rule(pattern=["existing"], decision="allow")' > \
+    "${temporary_root}/codex/rules/default.rules"
+  if "${ponytail_root}/scripts/install-to-codex.sh" \
+    --check \
+    --codex-home "${temporary_root}/codex" >/dev/null 2>&1; then
+    fail 'installer check accepted a missing project journal allow rule'
+  fi
+  "${ponytail_root}/scripts/install-to-codex.sh" \
+    --codex-home "${temporary_root}/codex" >/dev/null
   assert_copy \
     "${temporary_root}/codex/skills/static-type-safety" \
     "${ponytail_root}/skills/static-type-safety"

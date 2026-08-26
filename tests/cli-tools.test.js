@@ -64,6 +64,24 @@ function writeJournalConfig(project) {
   }));
 }
 
+function journalInitEnvironment(project) {
+  const bin = path.join(project, 'bin');
+  const psql = path.join(bin, 'psql');
+  write(project, 'bin/psql', `#!/bin/sh
+printf '%s\n' "$*" >> "$JOURNAL_PSQL_ARGS_LOG"
+printf '%s\n' "\${PGPASSWORD-}" >> "$JOURNAL_PSQL_PASSWORD_LOG"
+cat >> "$JOURNAL_PSQL_SQL_LOG"
+`);
+  fs.chmodSync(psql, 0o755);
+  return {
+    ...process.env,
+    PATH: `${bin}:${process.env.PATH}`,
+    JOURNAL_PSQL_ARGS_LOG: path.join(project, 'psql-args.log'),
+    JOURNAL_PSQL_PASSWORD_LOG: path.join(project, 'psql-password.log'),
+    JOURNAL_PSQL_SQL_LOG: path.join(project, 'psql-sql.log'),
+  };
+}
+
 test('CLI shell scripts are parse-safe', () => {
   for (const script of [
     planStats,
@@ -324,10 +342,11 @@ test('project journal rejects missing configuration and split commands', () => {
 
 test('project journal initializes a stable V1 project configuration', () => {
   const project = fixture();
+  const env = journalInitEnvironment(project);
   const nested = path.join(project, 'nested');
   fs.mkdirSync(nested);
 
-  let result = run(projectJournal, ['init'], { cwd: nested });
+  let result = run(projectJournal, ['init'], { cwd: nested, env });
   assert.equal(result.status, 0, result.stderr);
   const response = JSON.parse(result.stdout);
   const configPath = path.join(fs.realpathSync(project), 'ponytail-journal.json');
@@ -351,7 +370,7 @@ test('project journal initializes a stable V1 project configuration', () => {
   assert.match(result.stderr, /merge that commit into every worktree branch/);
   assert.equal(run(projectJournal, ['validate-config', configPath]).status, 0);
 
-  result = run(projectJournal, ['init'], { cwd: project });
+  result = run(projectJournal, ['init'], { cwd: project, env });
   assert.equal(result.status, 0, result.stderr);
   assert.deepEqual(JSON.parse(result.stdout), {
     ok: true,
@@ -364,14 +383,24 @@ test('project journal initializes a stable V1 project configuration', () => {
   assert.deepEqual(JSON.parse(fs.readFileSync(configPath, 'utf8')), config);
 
   commit(project, '2026-08-20', 'add journal identity');
-  result = run(projectJournal, ['init'], { cwd: project });
+  result = run(projectJournal, ['init'], { cwd: project, env });
   assert.equal(result.status, 0, result.stderr);
   assert.equal(JSON.parse(result.stdout).created, false);
   assert.equal(result.stderr, '');
+  assert.equal(
+    fs.readFileSync(env.JOURNAL_PSQL_SQL_LOG, 'utf8')
+      .match(/SELECT ponytail_journal\.register_project/g).length,
+    3,
+  );
+  assert.match(fs.readFileSync(env.JOURNAL_PSQL_ARGS_LOG, 'utf8'), /--dbname ponytail/);
 });
 
 test('project journal initialization accepts explicit non-secret connection settings', () => {
   const project = fixture();
+  const env = {
+    ...journalInitEnvironment(project),
+    EXAMPLE_JOURNAL_PASSWORD: 'example-secret',
+  };
   const result = run(projectJournal, [
     'init',
     '--project-name', 'Example Project',
@@ -380,7 +409,7 @@ test('project journal initialization accepts explicit non-secret connection sett
     '--database-name', 'example_journal',
     '--database-role', 'example_writer',
     '--pgpassword-variable', 'EXAMPLE_JOURNAL_PASSWORD',
-  ], { cwd: project });
+  ], { cwd: project, env });
   assert.equal(result.status, 0, result.stderr);
   const config = JSON.parse(fs.readFileSync(path.join(project, 'ponytail-journal.json'), 'utf8'));
   assert.equal(config.projectName, 'Example Project');
@@ -400,23 +429,35 @@ test('project journal initialization accepts explicit non-secret connection sett
     '--database-name', 'example_journal',
     '--database-role', 'example_writer',
     '--pgpassword-variable', 'EXAMPLE_JOURNAL_PASSWORD',
-  ], { cwd: project }).status, 0);
-  const mismatch = run(projectJournal, ['init', '--project-name', 'Other'], { cwd: project });
+  ], { cwd: project, env }).status, 0);
+  const mismatch = run(projectJournal, ['init', '--project-name', 'Other'], {
+    cwd: project,
+    env,
+  });
   assert.notEqual(mismatch.status, 0);
   assert.match(mismatch.stderr, /does not match --project-name/);
 
-  const portMismatch = run(projectJournal, ['init', '--database-port', '5432'], { cwd: project });
+  const portMismatch = run(projectJournal, ['init', '--database-port', '5432'], {
+    cwd: project,
+    env,
+  });
   assert.notEqual(portMismatch.status, 0);
   assert.match(portMismatch.stderr, /does not match --database-port/);
 
   const invalidPortProject = fixture();
+  const invalidPortEnvironment = journalInitEnvironment(invalidPortProject);
   const invalidPort = run(projectJournal, ['init', '--database-port', '65536'], {
     cwd: invalidPortProject,
+    env: invalidPortEnvironment,
   });
   assert.notEqual(invalidPort.status, 0);
   assert.match(invalidPort.stderr, /integer between 1 and 65535/);
 
   const shorthandProject = fixture();
+  const shorthandEnvironment = {
+    ...journalInitEnvironment(shorthandProject),
+    SHORT_JOURNAL_PASSWORD: 'short-secret',
+  };
   const shorthand = run(projectJournal, [
     'init',
     '--dbhost', '/var/run/postgresql',
@@ -424,7 +465,7 @@ test('project journal initialization accepts explicit non-secret connection sett
     '--dbname', 'short_journal',
     '--dbrole', 'short_writer',
     '--pgpassvar', 'SHORT_JOURNAL_PASSWORD',
-  ], { cwd: shorthandProject });
+  ], { cwd: shorthandProject, env: shorthandEnvironment });
   assert.equal(shorthand.status, 0, shorthand.stderr);
   assert.deepEqual(
     JSON.parse(fs.readFileSync(path.join(shorthandProject, 'ponytail-journal.json'), 'utf8')).database,
@@ -436,6 +477,12 @@ test('project journal initialization accepts explicit non-secret connection sett
       passwordEnvironment: 'SHORT_JOURNAL_PASSWORD',
     },
   );
+  assert.match(
+    fs.readFileSync(env.JOURNAL_PSQL_ARGS_LOG, 'utf8'),
+    /--dbname example_journal --username example_writer --host postgres\.example\.test --port 5544/,
+  );
+  assert.equal(fs.readFileSync(env.JOURNAL_PSQL_PASSWORD_LOG, 'utf8').trim(),
+    'example-secret\nexample-secret');
 });
 
 test('journal contracts retain a stable relational core and versioned JSON payload', () => {
@@ -445,10 +492,12 @@ test('journal contracts retain a stable relational core and versioned JSON paylo
 
   const sql = fs.readFileSync(path.join(root, 'scripts', 'project-journal.sql'), 'utf8');
   assert.match(sql, /CREATE TABLE IF NOT EXISTS action_v1/);
+  assert.match(sql, /CREATE OR REPLACE FUNCTION register_project/);
   assert.match(sql, /duration interval GENERATED ALWAYS AS/);
   assert.match(sql, /payload ->> 'schemaVersion' = '1'/);
   assert.match(sql, /ENABLE ROW LEVEL SECURITY/);
   assert.match(sql, /SECURITY DEFINER/g);
+  assert.match(sql, /GRANT EXECUTE ON FUNCTION register_project\(uuid, text\)/);
   assert.doesNotMatch(sql, /ALTER TABLE action_v1 ADD/);
 });
 

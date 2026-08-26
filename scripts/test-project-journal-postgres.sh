@@ -29,12 +29,30 @@ CREATE ROLE ponytail_journal_test_bob;
 CREATE ROLE ponytail_journal_test_cto;
 GRANT ponytail_reporter TO ponytail_journal_test_alice, ponytail_journal_test_bob;
 GRANT ponytail_analyst TO ponytail_journal_test_cto;
-SET ROLE ponytail_journal_owner;
-INSERT INTO ponytail_journal.project (project_id, project_name)
-VALUES ('019c0000-0000-7000-8000-000000000099', 'journal-contract-test');
-RESET ROLE;
-
 SET SESSION AUTHORIZATION ponytail_journal_test_alice;
+SELECT ponytail_journal.register_project(
+  '019c0000-0000-7000-8000-000000000099',
+  'journal-contract-test'
+);
+SELECT ponytail_journal.register_project(
+  '019c0000-0000-7000-8000-000000000099',
+  'journal-contract-test'
+);
+DO $block$
+BEGIN
+  BEGIN
+    PERFORM ponytail_journal.register_project(
+      '019c0000-0000-7000-8000-000000000099',
+      'different-project-name'
+    );
+    RAISE EXCEPTION 'conflicting project registration unexpectedly succeeded';
+  EXCEPTION WHEN raise_exception THEN
+    IF SQLERRM = 'conflicting project registration unexpectedly succeeded' THEN
+      RAISE;
+    END IF;
+  END;
+END;
+$block$;
 SELECT ponytail_journal.start_action(
   '019c0000-0000-7000-8000-000000000099',
   '019c0000-0000-7000-8000-000000000098',

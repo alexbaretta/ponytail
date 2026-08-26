@@ -112,6 +112,35 @@ AS $function$
   );
 $function$;
 
+CREATE OR REPLACE FUNCTION register_project(
+  requested_project_id uuid,
+  requested_project_name text
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ponytail_journal, pg_catalog, pg_temp
+AS $function$
+BEGIN
+  PERFORM require_text(requested_project_name, 'project_name');
+  INSERT INTO project (project_id, project_name)
+  VALUES (requested_project_id, requested_project_name)
+  ON CONFLICT (project_id) DO NOTHING;
+  IF NOT EXISTS (
+    SELECT 1 FROM project
+    WHERE project_id = requested_project_id
+      AND project_name = requested_project_name
+  ) THEN
+    RAISE EXCEPTION 'project registration conflicts with existing project';
+  END IF;
+  RETURN jsonb_build_object(
+    'ok', true,
+    'project_id', requested_project_id,
+    'project_name', requested_project_name
+  );
+END;
+$function$;
+
 CREATE OR REPLACE FUNCTION start_action(
   requested_project_id uuid,
   requested_prompt_id uuid,
@@ -284,7 +313,8 @@ GRANT USAGE ON SCHEMA ponytail_journal TO ponytail_reporter, ponytail_analyst,
   ponytail_super_journalist;
 GRANT SELECT ON action_v1, project, action_type TO ponytail_reporter;
 GRANT SELECT ON action_v1, project, action_type TO ponytail_analyst;
-GRANT EXECUTE ON FUNCTION start_action(uuid, uuid, text, text, text, text, text, text, jsonb, jsonb),
+GRANT EXECUTE ON FUNCTION register_project(uuid, text),
+  start_action(uuid, uuid, text, text, text, text, text, text, jsonb, jsonb),
   heartbeat_action(uuid), finish_action(uuid, timestamptz, jsonb)
 TO ponytail_reporter;
 GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA ponytail_journal

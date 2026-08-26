@@ -24,8 +24,8 @@ while project-wide management records remain under `pm/`.
   contracts and their reader registries.
 - `ponytail-journal.json` owns the project's stable identity and non-secret
   PostgreSQL journal connection settings. Create it once with
-  `project_journal.sh init`, then commit it; action commands never create it
-  implicitly.
+  `project_journal.sh init`, which also owns idempotent database registration,
+  then commit it; action commands never create it implicitly.
 - `hooks/` owns shared lifecycle behavior and policy injection.
 - Host directories such as `.claude-plugin/`, `.codex-plugin/`, `.github/`,
   `.opencode/`, `.qoder/`, and `.openclaw/` own host adapters. Generated
@@ -33,8 +33,9 @@ while project-wide management records remain under `pm/`.
 - `scripts/` owns local generation, validation, installation, cleanup, and
   publication tooling. `scripts/install.sh` owns combined Codex and CLI
   installation. `scripts/install-to-codex.sh` owns Codex installation; it
-  binds only registry-enabled bundled skills. Codex discovers project-local
-  skills from `.agents/skills/` automatically.
+  binds only registry-enabled bundled skills and installs persistent allow
+  rules for the default `project_journal.sh` CLI path's database operations.
+  Codex discovers project-local skills from `.agents/skills/` automatically.
 - `scripts/setup-project-journal.sh` and `scripts/project-journal.sql` own
   PostgreSQL 18 journal provisioning and its immutable V1 storage contract.
 - `cli/` owns user-facing parse-safe Bash tools. Adding a tool there makes it

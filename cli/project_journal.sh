@@ -94,6 +94,7 @@ print_commit_instructions() {
 }
 
 init_project() {
+  local created='false'
   local database_host=''
   local database_name='ponytail'
   local database_name_set='false'
@@ -182,40 +183,43 @@ init_project() {
       [[ "$(jq -r '.database.passwordEnvironment // ""' "${config_path}")" != "${pgpassword_variable}" ]]; then
       fail 'existing journal PGPASSWORD variable does not match --pgpassword-variable'
     fi
-    jq -cn --arg path "${config_path}" --arg project_id "$(jq -r '.projectId' "${config_path}")" \
-      '{ok:true,operation:"init",created:false,path:$path,projectId:$project_id}'
-    config_matches_head || print_commit_instructions
-    return
-  fi
-  [[ -n "${project_name}" ]] || project_name="$(basename "${project_root}")"
-  validate_identifier 'project name' "${project_name}"
-  temporary="$(mktemp "${config_path}.tmp.XXXXXX")"
-  jq -n \
-    --arg project_id "$(uuid_v7)" \
-    --arg project_name "${project_name}" \
-    --arg database_host "${database_host}" \
-    --arg database_name "${database_name}" \
-    --arg pgpassword_variable "${pgpassword_variable}" \
-    --arg database_port "${database_port}" \
-    --arg database_role "${database_role}" \
-    '{schemaVersion:1,projectId:$project_id,projectName:$project_name,database:{name:$database_name}}
-      | if $database_host != "" then .database.host = $database_host else . end
-      | if $database_port != "" then .database.port = ($database_port | tonumber) else . end
-      | if $database_role != "" then .database.role = $database_role else . end
-      | if $pgpassword_variable != "" then
-          .database.passwordEnvironment = $pgpassword_variable
-        else . end' \
-    > "${temporary}"
-  chmod 0644 "${temporary}"
-  if ! ln "${temporary}" "${config_path}"; then
+  else
+    [[ -n "${project_name}" ]] || project_name="$(basename "${project_root}")"
+    validate_identifier 'project name' "${project_name}"
+    temporary="$(mktemp "${config_path}.tmp.XXXXXX")"
+    jq -n \
+      --arg project_id "$(uuid_v7)" \
+      --arg project_name "${project_name}" \
+      --arg database_host "${database_host}" \
+      --arg database_name "${database_name}" \
+      --arg pgpassword_variable "${pgpassword_variable}" \
+      --arg database_port "${database_port}" \
+      --arg database_role "${database_role}" \
+      '{schemaVersion:1,projectId:$project_id,projectName:$project_name,database:{name:$database_name}}
+        | if $database_host != "" then .database.host = $database_host else . end
+        | if $database_port != "" then .database.port = ($database_port | tonumber) else . end
+        | if $database_role != "" then .database.role = $database_role else . end
+        | if $pgpassword_variable != "" then
+            .database.passwordEnvironment = $pgpassword_variable
+          else . end' \
+      > "${temporary}"
+    chmod 0644 "${temporary}"
+    if ! ln "${temporary}" "${config_path}"; then
+      rm -f "${temporary}"
+      fail "journal configuration already exists: ${config_path}"
+    fi
     rm -f "${temporary}"
-    fail "journal configuration already exists: ${config_path}"
+    validate_config_file "${config_path}"
+    created='true'
   fi
-  rm -f "${temporary}"
-  validate_config_file "${config_path}"
-  jq -cn --arg path "${config_path}" --arg project_id "$(jq -r '.projectId' "${config_path}")" \
-    '{ok:true,operation:"init",created:true,path:$path,projectId:$project_id}'
-  print_commit_instructions
+
+  load_config
+  set_connection_args
+  database_register_project
+  jq -cn --arg path "${config_path}" --arg project_id "${project_id}" \
+    --argjson created "${created}" \
+    '{ok:true,operation:"init",created:$created,path:$path,projectId:$project_id}'
+  config_matches_head || print_commit_instructions
 }
 
 discover_project() {
@@ -228,6 +232,7 @@ discover_project() {
 load_config() {
   validate_config_file "${config_path}"
   project_id="$(jq -er '.projectId' "${config_path}")"
+  project_name="$(jq -er '.projectName' "${config_path}")"
   database_name="$(jq -er '.database.name // "ponytail"' "${config_path}")"
   database_host="$(jq -r '.database.host // ""' "${config_path}")"
   database_port="$(jq -r '.database.port // empty' "${config_path}")"
@@ -272,6 +277,17 @@ set_connection_args() {
   )
   [[ -z "${database_host}" ]] || connection_args+=(--host "${database_host}")
   [[ -z "${database_port}" ]] || connection_args+=(--port "${database_port}")
+}
+
+database_register_project() {
+  psql "${connection_args[@]}" \
+    --set=project_id="${project_id}" \
+    --set=project_name="${project_name}" >/dev/null <<'SQL'
+SELECT ponytail_journal.register_project(
+  :'project_id'::uuid,
+  :'project_name'
+);
+SQL
 }
 
 database_start_action() {
@@ -730,6 +746,7 @@ main() {
   case "${subcommand}" in
     init)
       require_command jq
+      require_command psql
       init_project "$@"
       ;;
     validate-config)

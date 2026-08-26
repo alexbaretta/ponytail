@@ -29,6 +29,10 @@ The combined installer installs all enabled skills, including `ponytail` and
 ./scripts/install-cli.sh
 ```
 
+The Codex installer also adds a persistent allow rule for the `init`, `start`,
+and `over` operations of `~/.local/bin/project_journal.sh`. It does not allow
+`run_command`.
+
 The CLI installer prompts before adding that directory to `~/.bashrc`; pass
 `--update-shell-path` to approve the update non-interactively. Install only
 selected tools by naming them, for example
@@ -103,9 +107,10 @@ git add ponytail-journal.json
 Use `--project-name`, `--database-host`, `--database-port`, `--database-name`,
 `--database-role`, and `--pgpassword-variable` to set the complete
 non-secret connection configuration during initialization. Initialization is
-idempotent: an existing valid configuration succeeds without mutation, while
-invalid configurations and explicit settings that conflict with the existing
-identity fail. Action commands never create the configuration implicitly.
+idempotent: it registers the configured identity in the provisioned journal
+database on every run, an existing valid configuration succeeds without file
+mutation, and invalid configurations or conflicting explicit settings fail.
+Action commands never create the configuration implicitly.
 The connection options also accept the PostgreSQL-style shorthands `--dbhost`,
 `--dbport`, `--dbname`, `--dbrole`, and `--pgpassvar`.
 
@@ -125,8 +130,8 @@ the configuration does not match `HEAD`, `init` prints the required commit
 commands and this worktree reminder to standard error while reserving standard
 output for its JSON result.
 
-An authorized database administrator provisions or reconciles the database,
-roles, schema, policies, functions, and project registration with:
+An authorized database administrator first provisions or reconciles the
+database, roles, schema, policies, and functions with:
 
 ```bash
 ./scripts/setup-project-journal.sh
