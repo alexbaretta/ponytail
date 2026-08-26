@@ -358,7 +358,12 @@ drift.
 
 ## Parallel Sprint Orchestration
 
-For a parallelized plan, every sprint contains exactly one marked Markdown
+Every long-lived plan uses this orchestration lifecycle. Before any sprint
+planning or implementation edit, the orchestrator runs the applicable
+readiness selector; selector output, rather than an agent's subjective
+classification, determines which sprints are ready for parallel dispatch.
+
+Before planning dispatch, every sprint contains exactly one marked Markdown
 comment with strict JSON. This metadata is the canonical contract for sprint
 identity, planning lifecycle, execution lifecycle, dependencies, scope roots,
 and exact paths:
@@ -422,7 +427,9 @@ Only the orchestrator changes planning state to `APPROVED`; implementation
 cannot start until that state is approved and exact paths and execution
 dependencies are frozen.
 
-Each `SNN.md` has one sibling `SNN.tasklets.json`. Markdown owns tasklet
+Before implementation dispatch, each selected `SNN.md` has one sibling
+`SNN.tasklets.json`. A `STUB` or dependency-blocked sprint need not yet have a
+tasklet graph. Markdown owns tasklet
 descriptions and `[ ]`, `[DONE]`, or `[ERROR]` lifecycle markers. JSON owns
 only each tasklet's hard `depends_on`, soft `affinity`, `risk`, and required
 `risk_reason` for `high` risk. The tasklet selector validates an exact
@@ -436,13 +443,35 @@ node, without mutation. A fully `[DONE]` graph returns exactly
 `{"next":null}`; criterion values appear only when a tasklet is selected.
 
 The skill-local readiness tool accepts `planning` or `execution` and one plan
-directory. The orchestrator runs it before planning dispatch, after each
+directory. The orchestrator MUST run it before planning dispatch, after each
 planning reconciliation, before implementation dispatch, and after each
-implementation reconciliation. It dispatches ready sprints up to safe runtime
-capacity, normally one subagent per sprint, and normally chooses the least
-expensive available model reasonably expected to implement frozen tasklets. It
-may retain work only when documented coordination cost, insufficient model
-capability, resource contention, or quality loss would make delegation worse.
+implementation reconciliation. Before dispatching a sprint returned for
+execution, it MUST run that sprint's tasklet selector to validate the sibling
+tasklet graph and select its first tasklet.
+
+Every sprint returned by the applicable readiness selector MUST be assigned to
+a separate subagent, up to safe available runtime capacity. The root remains
+the orchestrator and MUST NOT implement a returned sprint while a safe
+subagent slot is available. Planning uses separate instances of the strongest
+available planning model. Implementation uses the least expensive available
+model reasonably expected to implement the frozen tasklets.
+
+The orchestrator may retain a ready sprint only when no safe subagent slot is
+available, the host lacks an isolated execution capability required by the
+sprint, available subagents lack a required capability, or delegation would
+violate an explicit authorization or safety boundary. Before implementing a
+retained sprint, it records the specific reason and concrete evidence in that
+sprint file. Convenience, prior partial implementation, small task size,
+elapsed time, generic coordination cost, quality preference, or agent
+preference are not valid exceptions.
+
+If planning or implementation begins without the required selector run or
+dispatch decision, stop new implementation edits. Preserve completed valid
+work, reconstruct and validate the sprint metadata and applicable tasklet
+graphs, freeze exact-path ownership and dependencies, record any permitted
+retention decision, dispatch every independently ready sprint up to safe
+capacity, and resume only after ownership is unambiguous. The root and
+subagents must not edit another active agent's assigned paths.
 
 A sprint implementation agent edits only its declared implementation paths
 and sprint file, executes tasklets sequentially, records focused evidence and
