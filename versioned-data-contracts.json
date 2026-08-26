@@ -81,9 +81,9 @@
         "module": "skills/plan-execution/scripts/ready-sprints.js",
         "readerRegistryExport": "SprintMetadataReaders"
       },
-      "currentVersion": "V2",
-      "versions": ["V1", "V2"],
-      "supportedReadVersions": ["V1", "V2"],
+      "currentVersion": "V3",
+      "versions": ["V1", "V2", "V3"],
+      "supportedReadVersions": ["V1", "V2", "V3"],
       "supportedDowngradeVersions": []
     },
     {
@@ -93,9 +93,9 @@
         "module": "skills/plan-execution/scripts/ready-tasklets.js",
         "readerRegistryExport": "TaskletMetadataReaders"
       },
-      "currentVersion": "V2",
-      "versions": ["V1", "V2"],
-      "supportedReadVersions": ["V1", "V2"],
+      "currentVersion": "V3",
+      "versions": ["V1", "V2", "V3"],
+      "supportedReadVersions": ["V1", "V2", "V3"],
       "supportedDowngradeVersions": []
     }
   ]

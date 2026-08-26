@@ -6,9 +6,10 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
+const { readTaskletGraph } = require('./ready-tasklets.js');
 
 const METADATA_MARKER = 'ponytail-plan-sprint';
-const SCHEMA_VERSION = 2;
+const SCHEMA_VERSION = 3;
 const PLANNING_STATUSES = new Set(['STUB', 'PLANNING', 'READY_FOR_REVIEW', 'APPROVED', 'ERROR']);
 const EXECUTION_STATUSES = new Set(['PENDING', 'IN_PROGRESS', 'READY_FOR_REVIEW', 'DONE', 'ERROR']);
 
@@ -79,7 +80,16 @@ function readSprintMetadataV2(filePath, metadata) {
   return sprint;
 }
 
-const SprintMetadataReaders = Object.freeze({ V1: readSprintMetadataV1, V2: readSprintMetadataV2 });
+function readSprintMetadataV3(filePath, metadata) {
+  const sprint = commonMetadata(filePath, metadata, 3, ['status', 'depends_on', 'tasklets_reviewed']);
+  if (metadata.execution !== null) {
+    if (typeof metadata.execution.tasklets_reviewed !== 'boolean') fail(`${filePath} execution.tasklets_reviewed must be Boolean`);
+    sprint.execution.tasklets_reviewed = metadata.execution.tasklets_reviewed;
+  }
+  return sprint;
+}
+
+const SprintMetadataReaders = Object.freeze({ V1: readSprintMetadataV1, V2: readSprintMetadataV2, V3: readSprintMetadataV3 });
 
 function parseSprintFile(filePath, text = fs.readFileSync(filePath, 'utf8')) {
   const metadata = metadataBlock(filePath, text);
@@ -165,6 +175,41 @@ function validatePathOwnership(sprints, sprintById) {
   }
 }
 
+function readV3PlannedPaths(sprint) {
+  const metadata = readTaskletGraph(sprint.filePath);
+  if (metadata.schemaVersion !== 3) fail(`${metadata.filePath} must contain V3 tasklet metadata for ${sprint.id}`);
+  const paths = [];
+  for (const tasklet of metadata.tasklets.values()) paths.push(...tasklet.planned_paths);
+  return [...new Set(paths)];
+}
+
+function validateV3PathOwnership(sprints, sprintById) {
+  const reachability = new Map();
+  const reachable = (id) => {
+    if (reachability.has(id)) return reachability.get(id);
+    const result = new Set();
+    const sprint = sprintById.get(id);
+    if (sprint?.execution) for (const dependency of sprint.execution.depends_on) {
+      result.add(dependency);
+      for (const ancestor of reachable(dependency)) result.add(ancestor);
+    }
+    reachability.set(id, result);
+    return result;
+  };
+  const paths = new Map(sprints.filter(({ execution }) => execution).map((sprint) => [sprint.id, readV3PlannedPaths(sprint)]));
+  for (let first = 0; first < sprints.length; first += 1) {
+    const left = sprints[first];
+    if (!left.execution) continue;
+    for (let second = first + 1; second < sprints.length; second += 1) {
+      const right = sprints[second];
+      if (!right.execution || reachable(left.id).has(right.id) || reachable(right.id).has(left.id)) continue;
+      const rightPaths = new Set(paths.get(right.id));
+      const overlap = paths.get(left.id).find((candidate) => rightPaths.has(candidate));
+      if (overlap) fail(`unordered sprint path overlap: ${left.id}, ${right.id}, ${overlap}`);
+    }
+  }
+}
+
 function selectPlanningReadySprints(sprints, sprintById) {
   return sprints.filter((sprint) => sprint.planning.status === 'STUB' && sprint.planning.depends_on.every((id) => sprintById.get(id).planning.status === 'APPROVED')).map((sprint) => sprint.id);
 }
@@ -181,6 +226,14 @@ function validateCheckpointOrder(sprints) {
   }
 }
 
+function validateDependencyExecutionOrder(sprints, sprintById) {
+  for (const sprint of sprints) {
+    if (!sprint.execution || sprint.execution.status === 'PENDING') continue;
+    const unfinished = sprint.execution.depends_on.find((id) => sprintById.get(id).execution?.status !== 'DONE');
+    if (unfinished) fail(`sprint ${sprint.id} advanced before unfinished dependency ${unfinished}`);
+  }
+}
+
 function selectExecutionReadySprintsV2(sprints, sprintById) {
   validateCheckpointOrder(sprints);
   const sprint = sprints.find(({ execution }) => execution?.status !== 'DONE');
@@ -189,9 +242,19 @@ function selectExecutionReadySprintsV2(sprints, sprintById) {
   return sprint.execution.depends_on.every((id) => sprintById.get(id).execution?.status === 'DONE') ? [sprint.id] : [];
 }
 
+function selectExecutionReadySprintsV3(sprints, sprintById) {
+  validateDependencyExecutionOrder(sprints, sprintById);
+  return sprints.filter((sprint) => sprint.planning.status === 'APPROVED'
+    && sprint.execution?.status === 'PENDING'
+    && sprint.execution.tasklets_reviewed
+    && sprint.execution.depends_on.every((id) => sprintById.get(id).execution?.status === 'DONE'))
+    .map((sprint) => sprint.id);
+}
+
 function selectExecutionReadySprints(sprints, sprintById) {
   if (sprints[0]?.schemaVersion === 1) return selectExecutionReadySprintsV1(sprints, sprintById);
-  return selectExecutionReadySprintsV2(sprints, sprintById);
+  if (sprints[0]?.schemaVersion === 2) return selectExecutionReadySprintsV2(sprints, sprintById);
+  return selectExecutionReadySprintsV3(sprints, sprintById);
 }
 
 function main(argv = process.argv.slice(2)) {
@@ -200,12 +263,13 @@ function main(argv = process.argv.slice(2)) {
   const sprints = readSprints(planDirectory);
   const sprintById = validateDependencies(sprints);
   if (argv[0] === 'execution' && sprints[0].schemaVersion === 1) validatePathOwnership(sprints, sprintById);
+  if (argv[0] === 'execution' && sprints[0].schemaVersion === 3) validateV3PathOwnership(sprints, sprintById);
   const result = argv[0] === 'planning' ? selectPlanningReadySprints(sprints, sprintById) : selectExecutionReadySprints(sprints, sprintById);
   process.stdout.write(`${JSON.stringify(result)}\n`);
   return result;
 }
 
-module.exports = { SCHEMA_VERSION, SprintMetadataReaders, parseSprintFile, readSprints, validateDependencies, validatePathOwnership, validateCheckpointOrder, selectPlanningReadySprints, selectExecutionReadySprints, main };
+module.exports = { SCHEMA_VERSION, SprintMetadataReaders, parseSprintFile, readSprints, validateDependencies, validatePathOwnership, validateV3PathOwnership, validateCheckpointOrder, validateDependencyExecutionOrder, selectPlanningReadySprints, selectExecutionReadySprints, main };
 
 if (require.main === module) {
   try { main(); } catch (error) { process.stderr.write(`${error.message}\n`); process.exitCode = 1; }

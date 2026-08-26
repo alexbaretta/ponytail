@@ -25,16 +25,24 @@ function metadata(id, version = 2, overrides = {}) {
   };
 }
 
-function writePlan(sprints) {
+function writePlan(sprints, plannedPaths = {}) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ready-sprints-'));
   const dir = path.join(root, 'sprints');
   fs.mkdirSync(dir);
-  for (const sprint of sprints) fs.writeFileSync(path.join(dir, `${sprint.id}.md`), `<!-- ponytail-plan-sprint\n${JSON.stringify(sprint, null, 2)}\n-->\n## Sprint\n`);
+  for (const sprint of sprints) {
+    fs.writeFileSync(path.join(dir, `${sprint.id}.md`), `<!-- ponytail-plan-sprint\n${JSON.stringify(sprint, null, 2)}\n-->\n## Sprint\n`);
+    if (sprint.schemaVersion === 3 && sprint.execution) fs.writeFileSync(path.join(dir, `${sprint.id}.tasklets.json`), JSON.stringify({
+      schemaVersion: 3,
+      sprint: sprint.id,
+      features: { [`${sprint.id}-F01`]: { depends_on: [], validation_tasklet: `${sprint.id}-F01-T01` } },
+      tasklets: { [`${sprint.id}-F01-T01`]: { depends_on: [], affinity: [], risk: 'normal', feature: `${sprint.id}-F01`, planned_paths: plannedPaths[sprint.id] ?? [`src/${sprint.id}.js`] } },
+    }));
+  }
   return root;
 }
 
-test('dispatches strict physical V1 and V2 sprint readers', () => {
-  assert.deepEqual(Object.keys(SprintMetadataReaders), ['V1', 'V2']);
+test('dispatches strict physical V1, V2, and V3 sprint readers', () => {
+  assert.deepEqual(Object.keys(SprintMetadataReaders), ['V1', 'V2', 'V3']);
   const v1 = metadata('S01', 1);
   const v2 = metadata('S01', 2);
   const parsedV1 = parseSprintFile('/tmp/S01.md', `<!-- ponytail-plan-sprint\n${JSON.stringify(v1)}\n-->`);
@@ -46,7 +54,9 @@ test('dispatches strict physical V1 and V2 sprint readers', () => {
   assert.throws(() => parseSprintFile('/tmp/S01.md', `<!-- ponytail-plan-sprint\n${JSON.stringify({ ...v1, execution: { ...v1.execution, tasklets_reviewed: true } })}\n-->`), /exactly/);
   assert.throws(() => parseSprintFile('/tmp/S01.md', `<!-- ponytail-plan-sprint\n${JSON.stringify({ ...v2, execution: { status: 'PENDING', depends_on: [], planned_paths: ['a'] } })}\n-->`), /exactly/);
   assert.throws(() => parseSprintFile('/tmp/S01.md', `<!-- ponytail-plan-sprint\n${JSON.stringify({ ...v2, execution: { ...v2.execution, planned_paths: ['a'] } })}\n-->`), /exactly/);
-  assert.throws(() => parseSprintFile('/tmp/S01.md', `<!-- ponytail-plan-sprint\n${JSON.stringify({ ...v2, schemaVersion: 3 })}\n-->`), /unsupported schemaVersion/);
+  const parsedV3 = parseSprintFile('/tmp/S01.md', `<!-- ponytail-plan-sprint\n${JSON.stringify({ ...v2, schemaVersion: 3 })}\n-->`);
+  assert.equal(parsedV3.schemaVersion, 3);
+  assert.throws(() => parseSprintFile('/tmp/S01.md', `<!-- ponytail-plan-sprint\n${JSON.stringify({ ...v2, schemaVersion: 4 })}\n-->`), /unsupported schemaVersion/);
 });
 
 test('rejects malformed metadata, collections, paths, and duplicate numeric order', () => {
@@ -104,6 +114,33 @@ test('blocks dependencies and rejects a later advanced checkpoint', () => {
   assert.deepEqual(selectExecutionReadySprints(blocked, validateDependencies(blocked)), []);
   const advanced = readSprints(writePlan([metadata('S01'), metadata('S02', 2, { execution: { ...metadata('S02').execution, status: 'IN_PROGRESS' } })]));
   assert.throws(() => validateCheckpointOrder(advanced), /advanced before unfinished predecessor/);
+});
+
+test('selects every reviewed dependency-ready V3 sprint', () => {
+  const sprints = readSprints(writePlan([
+    metadata('S01', 3, { execution: { ...metadata('S01').execution, status: 'DONE' } }),
+    metadata('S02', 3, { execution: { ...metadata('S02').execution, depends_on: ['S01'] } }),
+    metadata('S03', 3, { execution: { ...metadata('S03').execution, depends_on: ['S01'] } }),
+    metadata('S04', 3, { execution: { ...metadata('S04').execution, depends_on: ['S02'], tasklets_reviewed: false } }),
+  ]));
+  assert.deepEqual(selectExecutionReadySprints(sprints, validateDependencies(sprints)), ['S02', 'S03']);
+});
+
+test('rejects advanced V3 dependencies and unordered cross-sprint paths', () => {
+  const advanced = readSprints(writePlan([
+    metadata('S01', 3),
+    metadata('S02', 3, { execution: { ...metadata('S02').execution, status: 'IN_PROGRESS', depends_on: ['S01'] } }),
+  ]));
+  assert.throws(() => selectExecutionReadySprints(advanced, validateDependencies(advanced)), /advanced before unfinished dependency/);
+
+  const unorderedRoot = writePlan([metadata('S01', 3), metadata('S02', 3)], { S01: ['src/shared.js'], S02: ['src/shared.js'] });
+  assert.throws(() => execFileSync(process.execPath, [tool, 'execution', unorderedRoot], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }), (error) => /unordered sprint path overlap/.test(error.stderr));
+
+  const orderedRoot = writePlan([
+    metadata('S01', 3, { execution: { ...metadata('S01').execution, status: 'DONE' } }),
+    metadata('S02', 3, { execution: { ...metadata('S02').execution, depends_on: ['S01'] } }),
+  ], { S01: ['src/shared.js'], S02: ['src/shared.js'] });
+  assert.equal(execFileSync(process.execPath, [tool, 'execution', orderedRoot], { encoding: 'utf8' }), '["S02"]\n');
 });
 
 test('CLI returns exact JSON without mutating inputs', () => {

@@ -350,22 +350,26 @@ validation commands or made build-impact-aware.
 
 ## Commit And Execution Workflow
 
-For each tasklet:
+For each V1/V2 tasklet or V3 tasklet packet:
 
 1. Rehydrate the manifest, active sprint, current story, and current tasklet.
 2. Confirm approval, dependencies, and applicable host configuration.
-3. Make only the atomic edit and its focused tests.
+3. Make only the ordered atomic edits in the selection and their focused
+   tests. Preserve separate evidence and lifecycle state for every tasklet in
+   a packet.
 4. Synchronize affected project configuration in the same project change-set.
 5. Run the tasklet's focused checks.
-6. Inspect the complete tasklet change-set in each owning repository.
+6. Inspect the complete selected change-set in each owning repository.
 7. With multiple repositories, commit each non-management component owner
    selectively before changing tasklet status.
-8. Record the validation result, mark the tasklet `[DONE]`, and commit the
-   management record last. When implementation, configuration, and management
-   artifacts share a repository, include them in this one tasklet commit.
-   Treat the working-tree `[DONE]` marker as provisional until that commit
-   succeeds; restore `[ ]` and record the pending reason if it fails.
-9. Continue immediately to the next tasklet unless a stop condition applies.
+8. Record each tasklet's validation result, mark every accepted tasklet
+   `[DONE]`, and commit the management record last. When implementation,
+   configuration, and management artifacts share a repository, include them
+   in one commit for the selected V1/V2 tasklet or V3 packet. Treat working-tree
+   `[DONE]` markers as provisional until that commit succeeds; restore `[ ]`
+   and record the pending reason for any tasklet whose commit fails.
+9. Continue immediately to the next selected tasklet or packet unless a stop
+   condition applies.
 
 After context compaction or session resumption, do not reread every completed
 sprint or the whole repository instruction file by default. Rehydrate from the
@@ -374,23 +378,24 @@ and the current story and tasklet. Read historical artifacts or referenced
 configuration only when the active work depends on them or evidence suggests
 drift.
 
-## Checkpoint Sprint Orchestration
+## Dependency-Parallel Sprint Orchestration
 
-Every long-lived plan uses this orchestration lifecycle. Sprints are sequential
-execution checkpoints: at most one sprint may be active, and no later sprint
-may advance until every earlier sprint is `DONE`. Parallelism occurs only in
-exact-path-disjoint tasklet waves inside the active sprint. Before any sprint
+Every long-lived plan uses this orchestration lifecycle. Before any sprint
 planning or implementation edit, the orchestrator runs the applicable
 readiness selector; selector output, rather than an agent's subjective
-classification, determines what may be dispatched.
+classification, determines what may be dispatched. V3 maximizes safe
+parallelism across dependency-ready sprints and within each sprint. Numeric
+sprint order is presentation order, not an execution dependency. An explicit
+dependency or exact-path ownership relation is the only valid reason to
+serialize otherwise independent work.
 
 Every sprint contains exactly one marked Markdown comment with strict JSON.
-V2 is the only version written for new or updated records after adoption:
+V3 is the only version written for new or updated records after adoption:
 
 ```md
 <!-- ponytail-plan-sprint
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "id": "S01",
   "planning": {
     "status": "APPROVED",
@@ -410,19 +415,19 @@ Planning states are `STUB`, `PLANNING`, `READY_FOR_REVIEW`, `APPROVED`, and
 `ERROR`. Execution states are `PENDING`, `IN_PROGRESS`, `READY_FOR_REVIEW`,
 `DONE`, and `ERROR`. `execution` is `null` until detailed planning is ready for
 orchestrator review. Planning dependencies decide which sprint architectures
-may be drafted in parallel. Execution dependencies are retained as explicit
-historical and architectural relations, but checkpoint order additionally
-requires every earlier numeric sprint to be `DONE` before a later sprint may
-execute. Scope roots use `/` separators, are relative to the owning repository,
+may be drafted in parallel. Execution dependencies express every historical,
+architectural, and shared-path ordering relation. Scope roots use `/`
+separators, are relative to the owning repository,
 and contain no `.` or `..` segments or glob syntax. V1 sprint execution retains
-its historical `planned_paths`; V2 sprint execution contains exactly `status`,
-`depends_on`, and `tasklets_reviewed` and owns no write paths.
+its historical `planned_paths`; V2 and V3 sprint execution contain exactly
+`status`, `depends_on`, and `tasklets_reviewed` and own no write paths.
 
-The physical V1 sprint and tasklet readers remain immutable so historical V1
-plans retain their original dependency-based sprint readiness and scalar
-tasklet selection. Selectors dispatch solely by the physical `schemaVersion`,
-reject unsupported versions, and reject a plan containing mixed physical
-sprint versions. V2 is the latest write format; do not migrate a V1 record in
+The physical V1 and V2 sprint and tasklet readers remain immutable. Historical
+V1 plans retain dependency-based sprint readiness and scalar tasklet selection;
+historical V2 plans retain numeric checkpoint execution and path-disjoint
+tasklet waves. Selectors dispatch solely by physical `schemaVersion`, reject
+unsupported versions, and reject a plan containing mixed physical sprint
+versions. V3 is the latest write format; do not migrate an older record in
 place merely to execute or inspect it.
 
 The orchestrator first settles plan-wide architecture, approved scope, shared
@@ -443,14 +448,14 @@ of a sprint starts, the orchestrator reviews the entire sprint and rejects any
 tasklet that is not atomic under `Atomic Tasklet Eligibility`, lacks frozen
 exact paths, overlaps another tasklet's path without transitive ordering,
 has incomplete or cyclic dependencies, or leaves a material question open.
-It records completion with V2 `execution.tasklets_reviewed: true`; the
-execution selector rejects an unreviewed V2 sprint.
+It records completion with V3 `execution.tasklets_reviewed: true`; the
+execution selector does not dispatch an unreviewed V3 sprint.
 
-Each approved V2 `SNN.md` has one sibling `SNN.tasklets.json`. Markdown owns
+Each approved V3 `SNN.md` has one sibling `SNN.tasklets.json`. Markdown owns
 tasklet descriptions and lifecycle markers. JSON owns feature dependencies and
 validation ownership, plus each tasklet's hard `depends_on`, soft `affinity`,
 `risk`, optional `risk_reason`, feature identity, and exact `planned_paths`.
-V2 tasklet metadata is the sole exact write-path owner. Its paths use `/`
+V3 tasklet metadata is the sole exact write-path owner. Its paths use `/`
 separators, are relative to the owning repository, and contain no `.` or `..`
 segments or glob syntax. Every implementation, test, generated, and
 configuration path edited by an implementer must be declared there.
@@ -465,48 +470,75 @@ path unless one transitively depends on the other through the effective hard
 tasklet and feature-validation dependency graph. This rule applies within and
 across features; ordered overlap remains valid.
 
-A V2 tasklet is ready only when its direct tasklet dependencies and every
+A V3 tasklet is ready only when its direct tasklet dependencies and every
 dependency feature's validation tasklet are `[DONE]`. The selector ranks ready
 tasklets by high risk, greatest affinity overlap with the last completed
 tasklet, greatest number of unfinished descendants, longest remaining
-dependency path, then lowest tasklet ID. In that order it greedily selects the
-deterministic maximal set whose exact planned paths are pairwise disjoint.
-Every simultaneously ready set is therefore path-disjoint on a valid graph;
-the greedy selection preserves deterministic wave construction and empty-path
-validation tasklets do not conflict. It returns
-`{"next":[...],"criteria":{...}}`; a fully complete V1 or V2 graph returns
-exactly `{"next":null}`.
+dependency path, then lowest tasklet ID. It greedily selects a deterministic
+maximal set of path-disjoint roots, then extends each root with up to sixteen
+ordered descendants whose dependencies are already `DONE` or earlier in that
+same packet. Packet path unions remain pairwise disjoint; cross-packet
+convergence and feature validation tasklets wait for reconciliation. Tasklets remain the atomic acceptance
+and evidence units; packets only amortize agent startup, context, validation,
+and commit overhead. V3 returns
+`{"next":[{"tasklets":[...],"planned_paths":[...]}],"criteria":{...}}`;
+a fully complete graph returns exactly `{"next":null}`. V2 retains its
+historical `{"next":[...],"criteria":{...}}` wave output.
 
 The orchestrator runs the sprint readiness selector before planning dispatch,
 after planning reconciliation, before implementation dispatch, and after
-sprint reconciliation. For V2 execution, it returns at most the earliest
-unfinished sprint, and only when its planning is `APPROVED`, execution is
-`PENDING`, tasklets are reviewed, dependencies are `DONE`, and every numeric
-predecessor is `DONE`. A later sprint already advanced beyond `PENDING` while
-a predecessor is unfinished is invalid plan state.
+sprint reconciliation. For V3 execution, it returns every sprint whose
+planning is `APPROVED`, execution is `PENDING`, tasklets are reviewed, and
+execution dependencies are `DONE`. A sprint advanced beyond `PENDING` while
+an execution dependency is unfinished is invalid plan state. Before returning
+V3 execution work, the selector reads every sibling tasklet graph and rejects
+an exact path shared by execution-incomparable sprints. Shared schema,
+migration, lockfile, generated aggregate, composition-root, and equivalent
+paths therefore require an explicit dependency chain.
 
-Before each implementation wave, the orchestrator runs `ready-tasklets.js`,
-then assigns each returned tasklet to a separate capable implementation agent
-up to safe runtime capacity. Implementers edit only their frozen implementation
-paths and return structured evidence. They do not edit sprint Markdown,
-tasklet metadata, the plan manifest, or shared Git state, and do not stage or
-commit. If safe capacity is smaller than the selected wave, the orchestrator
-dispatches a deterministic prefix and reruns the selector after reconciliation.
+Before each implementation wave, the orchestrator runs `ready-tasklets.js` for
+every returned sprint, then assigns each returned packet to one capable writer
+up to safe runtime capacity. A same-checkout subagent edits only its packet's
+frozen paths, returns structured evidence, never edits management records or
+shared Git state, and does not stage or commit. If safe capacity is smaller
+than the selected set, the orchestrator dispatches a deterministic prefix and
+reruns selectors after reconciliation.
 
-The orchestrator alone updates shared plan, sprint, and tasklet records; owns
-the Git index; inspects and reconciles each returned wave; records focused
-proof; and commits accepted tasklets. A feature advances through its single
+For multiple user-owned Codex sessions or additional Codex instances, never
+allow independent writers to share one checkout, worktree, Git index, database,
+port, mutable cache, or external resource. Give each writer a separate branch
+and worktree at a recorded base commit, a frozen V3 packet lease, and isolated
+runtime resources. A remote writer may commit only source, tests, generated
+artifacts, and configuration declared by its packet; it must not edit plan,
+sprint, tasklet, or journal records. The canonical orchestrator owns those
+records, integrates packet commits in dependency order, resolves drift, reruns
+the selectors, and records evidence. Additional agents in one isolated
+worktree should be read-only or test-only unless their write paths are also
+provably disjoint and one writer owns that worktree's Git index.
+
+Centralize work that cannot be isolated safely: Prisma schema and migration
+epochs, package lockfiles, generated aggregate indexes, composition roots,
+shared external-provider effects, and acceptance campaigns. Give databases,
+ports, caches, queues, buckets, credentials, and rate-limited external scopes
+explicit per-worker ownership wherever parallel tests could otherwise create
+cross-session effects.
+
+The canonical orchestrator alone updates shared plan, sprint, and tasklet
+records; owns the canonical Git index; inspects and reconciles each returned
+packet; records focused proof; and commits or integrates accepted packets. A
+feature advances through its single
 approval gate only after every implementation tasklet is reconciled and its
 validation tasklet passes against the combined feature tree. A sprint advances
 to `READY_FOR_REVIEW` and then `DONE` only after every feature converges and
 the sprint's distinct focused integration proof passes against the reconciled
-tree. Only then may the next checkpoint begin.
+tree. Completed sprints unlock their dependency descendants immediately; they
+do not wait for unrelated numeric predecessors.
 
 If implementation begins without the required sprint-wide atomicity review,
 selector run, or exact-path dispatch decision, stop new implementation edits.
 Preserve valid completed work, reconstruct and validate the metadata and
-graphs, freeze ownership and dependencies, reconcile all partial waves, and
-resume only after ownership and the active checkpoint are unambiguous.
+graphs, freeze ownership and dependencies, reconcile all partial packets, and
+resume only after ownership and the active dependency frontier are unambiguous.
 
 ## Standalone Bug Workflow
 

@@ -9,7 +9,8 @@ const path = require('node:path');
 
 const TASKLET_STATUSES = new Set([' ', 'DONE', 'ERROR']);
 const RISK_VALUES = new Set(['normal', 'high']);
-const SCHEMA_VERSION = 2;
+const SCHEMA_VERSION = 3;
+const MAX_PACKET_TASKLETS = 16;
 
 function fail(message) { throw new Error(message); }
 
@@ -102,7 +103,30 @@ function readTaskletMetadataV2(sprintId, metadata, graphFile) {
   return { schemaVersion: 2, sprint: sprintId, features, tasklets, filePath: graphFile };
 }
 
-const TaskletMetadataReaders = Object.freeze({ V1: readTaskletMetadataV1, V2: readTaskletMetadataV2 });
+function readTaskletMetadataV3(sprintId, metadata, graphFile) {
+  exactKeys(metadata, ['schemaVersion', 'sprint', 'features', 'tasklets'], 'tasklet metadata');
+  if (metadata.schemaVersion !== 3) fail(`${graphFile} has unsupported schemaVersion: ${metadata.schemaVersion}`);
+  if (metadata.sprint !== sprintId) fail(`tasklet metadata sprint must be ${sprintId}`);
+  exactKeys(metadata.features, Object.keys(metadata.features), 'features');
+  exactKeys(metadata.tasklets, Object.keys(metadata.tasklets), 'tasklets');
+  const features = new Map();
+  for (const [id, value] of Object.entries(metadata.features)) {
+    if (!/^S\d+-F\d+$/.test(id) || !id.startsWith(`${sprintId}-`)) fail(`invalid feature id: ${id}`);
+    exactKeys(value, ['depends_on', 'validation_tasklet'], `feature ${id}`);
+    if (typeof value.validation_tasklet !== 'string' || !value.validation_tasklet) fail(`feature ${id} validation_tasklet must be a nonempty string`);
+    features.set(id, { depends_on: uniqueStrings(value.depends_on, `${id}.depends_on`), validation_tasklet: value.validation_tasklet });
+  }
+  const tasklets = new Map();
+  for (const [id, value] of Object.entries(metadata.tasklets)) {
+    if (!/^S\d+-F\d+-T\d+$/.test(id) || !id.startsWith(`${sprintId}-`)) fail(`invalid tasklet id: ${id}`);
+    const tasklet = taskletValue(id, value, ['depends_on', 'affinity', 'risk', 'feature', 'planned_paths'], true);
+    if (!features.has(tasklet.feature) || !id.startsWith(`${tasklet.feature}-T`)) fail(`tasklet ${id} has invalid feature membership: ${tasklet.feature}`);
+    tasklets.set(id, tasklet);
+  }
+  return { schemaVersion: 3, sprint: sprintId, features, tasklets, filePath: graphFile };
+}
+
+const TaskletMetadataReaders = Object.freeze({ V1: readTaskletMetadataV1, V2: readTaskletMetadataV2, V3: readTaskletMetadataV3 });
 
 function readTaskletGraph(sprintFile) {
   const graphFile = sprintFile.replace(/\.md$/, '.tasklets.json');
@@ -198,7 +222,7 @@ function validateTaskletGraph(graph, statuses) {
     depth.set(id, maxDepth);
   };
   for (const id of ids) derive(id);
-  if (graph.schemaVersion === 2) {
+  if (graph.schemaVersion >= 2) {
     const taskletIds = [...ids];
     for (let first = 0; first < taskletIds.length; first += 1) {
       const left = taskletIds[first];
@@ -243,6 +267,7 @@ function selectNextTasklet(graph, statuses, derived, lastTasklet = null) {
 
 function selectReadyTasklets(graph, statuses, derived, lastTasklet = null) {
   if (graph.schemaVersion === 1) return selectNextTasklet(graph, statuses, derived, lastTasklet);
+  if (graph.schemaVersion === 3) return selectReadyTaskletPackets(graph, statuses, derived, lastTasklet);
   const ranked = rankedReadyTasklets(graph, statuses, derived, lastTasklet);
   if (ranked.length === 0) return { next: null };
   const usedPaths = new Set();
@@ -258,6 +283,48 @@ function selectReadyTasklets(graph, statuses, derived, lastTasklet = null) {
   return { next: selected, criteria };
 }
 
+function selectReadyTaskletPackets(graph, statuses, derived, lastTasklet = null) {
+  const ranked = rankedReadyTasklets(graph, statuses, derived, lastTasklet);
+  if (ranked.length === 0) return { next: null };
+  const validationTasklets = new Set([...graph.features.values()].map(({ validation_tasklet: id }) => id));
+  const criteria = Object.fromEntries(ranked);
+  const usedPaths = new Set();
+  const packets = [];
+  for (const [id] of ranked) {
+    const paths = graph.tasklets.get(id).planned_paths;
+    if (paths.some((candidate) => usedPaths.has(candidate))) continue;
+    packets.push({ tasklets: [id], planned_paths: [...paths] });
+    for (const candidate of paths) usedPaths.add(candidate);
+  }
+  for (const packet of packets) {
+    const completed = new Set([...statuses].filter(([, status]) => status === 'DONE').map(([id]) => id));
+    completed.add(packet.tasklets[0]);
+    while (packet.tasklets.length < MAX_PACKET_TASKLETS) {
+      const candidates = [...graph.tasklets.keys()].filter((id) => {
+        if (statuses.get(id) !== 'PENDING' || completed.has(id) || validationTasklets.has(id)) return false;
+        const dependencies = effectiveDependencies(graph, id);
+        return dependencies.some((dependency) => completed.has(dependency) && packet.tasklets.includes(dependency))
+          && dependencies.every((dependency) => completed.has(dependency));
+      }).sort((left, right) => left.localeCompare(right));
+      const next = candidates.find((id) => graph.tasklets.get(id).planned_paths.every((candidate) => !usedPaths.has(candidate) || packet.planned_paths.includes(candidate)));
+      if (!next) break;
+      packet.tasklets.push(next);
+      completed.add(next);
+      for (const candidate of graph.tasklets.get(next).planned_paths) {
+        if (!packet.planned_paths.includes(candidate)) packet.planned_paths.push(candidate);
+        usedPaths.add(candidate);
+      }
+      criteria[next] = {
+        risk: graph.tasklets.get(next).risk,
+        affinity_overlap: 0,
+        unfinished_descendants: derived.unfinishedDescendants.get(next),
+        remaining_depth: derived.depth.get(next),
+      };
+    }
+  }
+  return { next: packets, criteria };
+}
+
 function main(argv = process.argv.slice(2)) {
   if (argv.length < 1 || argv.length > 2) fail('usage: ready-tasklets.js <sprint.md> [last-completed-tasklet-id]');
   const sprintFile = path.resolve(argv[0]);
@@ -268,7 +335,7 @@ function main(argv = process.argv.slice(2)) {
   return result;
 }
 
-module.exports = { SCHEMA_VERSION, TaskletMetadataReaders, parseTaskletStatuses, readTaskletGraph, validateTaskletGraph, selectNextTasklet, selectReadyTasklets, main };
+module.exports = { SCHEMA_VERSION, MAX_PACKET_TASKLETS, TaskletMetadataReaders, parseTaskletStatuses, readTaskletGraph, validateTaskletGraph, selectNextTasklet, selectReadyTasklets, selectReadyTaskletPackets, main };
 
 if (require.main === module) {
   try { main(); } catch (error) { process.stderr.write(`${error.message}\n`); process.exitCode = 1; }

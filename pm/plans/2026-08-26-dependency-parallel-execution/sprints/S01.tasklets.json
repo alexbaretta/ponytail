@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 2,
+  "sprint": "S01",
+  "features": {
+    "S01-F01": {
+      "depends_on": [],
+      "validation_tasklet": "S01-F01-T07"
+    }
+  },
+  "tasklets": {
+    "S01-F01-T01": {
+      "depends_on": [],
+      "affinity": ["plan-execution", "selectors"],
+      "risk": "high",
+      "risk_reason": "Changes durable sprint scheduling while preserving two historical versions.",
+      "feature": "S01-F01",
+      "planned_paths": ["skills/plan-execution/scripts/ready-sprints.js", "tests/ready-sprints.test.js"]
+    },
+    "S01-F01-T02": {
+      "depends_on": [],
+      "affinity": ["plan-execution", "selectors"],
+      "risk": "high",
+      "risk_reason": "Changes durable tasklet scheduling and distributed write ownership.",
+      "feature": "S01-F01",
+      "planned_paths": ["skills/plan-execution/scripts/ready-tasklets.js", "tests/ready-tasklets.test.js"]
+    },
+    "S01-F01-T03": {
+      "depends_on": ["S01-F01-T01", "S01-F01-T02"],
+      "affinity": ["plan-execution", "policy"],
+      "risk": "high",
+      "risk_reason": "Defines the canonical safety and Git ownership contract for multi-session writes.",
+      "feature": "S01-F01",
+      "planned_paths": ["skills/plan-execution/SKILL.md", "tests/plan-execution-subagents.test.js"]
+    },
+    "S01-F01-T04": {
+      "depends_on": ["S01-F01-T03"],
+      "affinity": ["plan-execution", "versioned-contracts"],
+      "risk": "high",
+      "risk_reason": "Advances two immutable durable contract families to their latest physical version.",
+      "feature": "S01-F01",
+      "planned_paths": ["versioned-data-contracts.json", "tests/plan-execution-subagents.test.js"]
+    },
+    "S01-F01-T05": {
+      "depends_on": ["S01-F01-T03"],
+      "affinity": ["plan-execution", "generation"],
+      "risk": "normal",
+      "feature": "S01-F01",
+      "planned_paths": [
+        ".openclaw/skills/plan-execution/SKILL.md",
+        ".openclaw/skills/plan-execution/scripts/ready-sprints.js",
+        ".openclaw/skills/plan-execution/scripts/ready-tasklets.js"
+      ]
+    },
+    "S01-F01-T06": {
+      "depends_on": ["S01-F01-T04", "S01-F01-T05"],
+      "affinity": ["plan-execution", "validation", "installation"],
+      "risk": "high",
+      "risk_reason": "Runs repository-wide acceptance and mutates installed local Ponytail copies under explicit user authority.",
+      "feature": "S01-F01",
+      "planned_paths": ["skills/plan-execution/SKILL.md"]
+    },
+    "S01-F01-T07": {
+      "depends_on": ["S01-F01-T01", "S01-F01-T02", "S01-F01-T03", "S01-F01-T04", "S01-F01-T05", "S01-F01-T06"],
+      "affinity": ["plan-execution", "validation"],
+      "risk": "normal",
+      "feature": "S01-F01",
+      "planned_paths": []
+    }
+  }
+}

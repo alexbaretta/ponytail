@@ -6,7 +6,7 @@ const path = require('node:path');
 const { execFileSync } = require('node:child_process');
 
 const tool = path.join(__dirname, '..', 'skills', 'plan-execution', 'scripts', 'ready-tasklets.js');
-const { TaskletMetadataReaders, parseTaskletStatuses, readTaskletGraph, validateTaskletGraph, selectReadyTasklets } = require(tool);
+const { MAX_PACKET_TASKLETS, TaskletMetadataReaders, parseTaskletStatuses, readTaskletGraph, validateTaskletGraph, selectReadyTasklets } = require(tool);
 
 function writeFixture(metadata, statuses = Object.fromEntries(Object.keys(metadata.tasklets).map((id) => [id, ' ']))) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ready-tasklets-'));
@@ -39,6 +39,10 @@ function graphV2(overrides = {}) {
   };
 }
 
+function graphV3(overrides = {}) {
+  return { ...graphV2(overrides), schemaVersion: 3 };
+}
+
 function select(fixture, last = null) {
   const graph = readTaskletGraph(fixture.sprint);
   const statuses = parseTaskletStatuses(fixture.sprint);
@@ -46,7 +50,7 @@ function select(fixture, last = null) {
 }
 
 test('retains strict physical V1 parsing and scalar selection', () => {
-  assert.deepEqual(Object.keys(TaskletMetadataReaders), ['V1', 'V2']);
+  assert.deepEqual(Object.keys(TaskletMetadataReaders), ['V1', 'V2', 'V3']);
   const metadata = {
     schemaVersion: 1,
     sprint: 'S01',
@@ -66,7 +70,8 @@ test('retains strict physical V1 parsing and scalar selection', () => {
 test('requires strict V2 identity, keys, feature membership, risks, and paths', () => {
   const valid = writeFixture(graphV2());
   assert.equal(readTaskletGraph(valid.sprint).schemaVersion, 2);
-  const unsupported = writeFixture({ ...graphV2(), schemaVersion: 3 });
+  assert.equal(readTaskletGraph(writeFixture(graphV3()).sprint).schemaVersion, 3);
+  const unsupported = writeFixture({ ...graphV2(), schemaVersion: 4 });
   assert.throws(() => readTaskletGraph(unsupported.sprint), /unsupported schemaVersion/);
   const extra = graphV2(); extra.tasklets['S01-F01-T01'].description = 'not scheduling metadata';
   assert.throws(() => readTaskletGraph(writeFixture(extra).sprint), /exactly/);
@@ -188,4 +193,48 @@ test('returns exact completion JSON and never mutates inputs', () => {
   assert.equal(execFileSync(process.execPath, [tool, fixture.sprint], { encoding: 'utf8' }), '{"next":null}\n');
   assert.equal(fs.readFileSync(fixture.sprint, 'utf8'), sprintBefore);
   assert.equal(fs.readFileSync(graphFile, 'utf8'), graphBefore);
+});
+
+test('V3 returns path-disjoint ordered packets and defers cross-packet convergence', () => {
+  const metadata = graphV3({
+    features: {
+      'S01-F01': { depends_on: [], validation_tasklet: 'S01-F01-T03' },
+      'S01-F02': { depends_on: [], validation_tasklet: 'S01-F02-T03' },
+      'S01-F03': { depends_on: ['S01-F01', 'S01-F02'], validation_tasklet: 'S01-F03-T02' },
+    },
+    tasklets: {
+      'S01-F01-T01': tasklet('S01-F01', ['src/a.js']),
+      'S01-F01-T02': tasklet('S01-F01', ['src/a-helper.js'], { depends_on: ['S01-F01-T01'] }),
+      'S01-F01-T03': tasklet('S01-F01', ['tests/a.test.js'], { depends_on: ['S01-F01-T01', 'S01-F01-T02'] }),
+      'S01-F02-T01': tasklet('S01-F02', ['src/b.js']),
+      'S01-F02-T02': tasklet('S01-F02', ['src/b-helper.js'], { depends_on: ['S01-F02-T01'] }),
+      'S01-F02-T03': tasklet('S01-F02', ['tests/b.test.js'], { depends_on: ['S01-F02-T01', 'S01-F02-T02'] }),
+      'S01-F03-T01': tasklet('S01-F03', ['src/converged.js']),
+      'S01-F03-T02': tasklet('S01-F03', [], { depends_on: ['S01-F03-T01'] }),
+    },
+  });
+  const result = select(writeFixture(metadata));
+  assert.deepEqual(result.next, [
+    { tasklets: ['S01-F01-T01', 'S01-F01-T02'], planned_paths: ['src/a.js', 'src/a-helper.js'] },
+    { tasklets: ['S01-F02-T01', 'S01-F02-T02'], planned_paths: ['src/b.js', 'src/b-helper.js'] },
+  ]);
+  assert.equal('S01-F03-T01' in result.criteria, false);
+  assert.equal('S01-F01-T03' in result.criteria, false);
+});
+
+test('V3 bounds a serial packet while preserving V2 wave output', () => {
+  const tasklets = {};
+  for (let index = 1; index <= MAX_PACKET_TASKLETS + 2; index += 1) {
+    const id = `S01-F01-T${String(index).padStart(2, '0')}`;
+    tasklets[id] = tasklet('S01-F01', [`src/${index}.js`], index === 1 ? {} : { depends_on: [`S01-F01-T${String(index - 1).padStart(2, '0')}`] });
+  }
+  const validation = `S01-F01-T${String(MAX_PACKET_TASKLETS + 2).padStart(2, '0')}`;
+  tasklets[validation].depends_on = Object.keys(tasklets).filter((id) => id !== validation);
+  const result = select(writeFixture(graphV3({
+    features: { 'S01-F01': { depends_on: [], validation_tasklet: validation } },
+    tasklets,
+  })));
+  assert.equal(result.next.length, 1);
+  assert.equal(result.next[0].tasklets.length, MAX_PACKET_TASKLETS);
+  assert.deepEqual(select(writeFixture(graphV2())).next, ['S01-F01-T01', 'S01-F02-T01']);
 });
