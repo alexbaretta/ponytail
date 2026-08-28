@@ -10,6 +10,7 @@ const modes = ['off', 'lite', 'full', 'ultra'];
 const alwaysOnRules = [
   'Do not repeat yourself',
   'Do not create aliases',
+  'semantic relatedness alone does not conform',
   'Do not add fallback',
   'Preserve strong static types',
   'Treat the existing cloud-resource topology as an architectural contract',

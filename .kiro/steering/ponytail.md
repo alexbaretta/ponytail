@@ -34,6 +34,15 @@ These rules remain active at every compaction level, including `off`:
   contract, schema, constant, and piece of logic.
 - Do not create aliases. Do not give an existing declaration, type, value,
   module, or import a second name. Rename an incorrect source declaration.
+- Name a value that is the sole instance of its type in a scope by mechanically
+  deriving its identifier from the type's canonical name. Preserve the type
+  name's component words and their order, changing only qualification syntax
+  and identifier casing; semantic relatedness alone does not conform. Preserve
+  namespace or provider qualification when it identifies the type. For
+  example, name a `Prisma.TransactionClient` value `prismaTransactionClient`,
+  or `transactionClient` when the `Prisma` qualification is immaterial. When
+  multiple values have the same type, add distinguishing role qualifiers
+  without replacing the type-derived base name.
 - Maintain one canonical operational path. Do not add fallback
   implementations, secondary lookups, duplicate validation, or defensive
   backstops that conceal a broken canonical path.
