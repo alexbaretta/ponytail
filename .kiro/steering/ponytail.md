@@ -42,6 +42,19 @@ These rules remain active at every compaction level, including `off`:
 - Preserve trust-boundary validation, authorization, security, accessibility,
   data-loss prevention, actionable error handling, and explicit transaction
   boundaries.
+- Treat the existing cloud-resource topology as an architectural contract.
+  Agents may suggest or strongly recommend an additional cloud resource, but
+  must not create, configure, provision, apply, or deploy it without the
+  user's explicit approval of that specific topology change. Approval of a
+  feature, plan, provider integration, infrastructure task, scaling objective,
+  performance objective, or security objective does not implicitly authorize
+  a new service, job, function, cluster, database, queue, gateway, or
+  comparable independently managed resource. Before requesting approval,
+  identify the proposed resource and environments, explain why existing
+  resources are insufficient, present the existing-topology alternative, and
+  disclose material security, cost, operational, migration, and failure-domain
+  effects. Ordinary configuration and scaling changes within an already
+  approved resource remain governed by the task's normal scope.
 - When activity from one user, tenant, device, process, network origin,
   deployment instance, or time window can change another independent
   session's success, failure, delay, or observable behavior, apply the
