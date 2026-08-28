@@ -140,6 +140,20 @@ These rules remain active at every compaction level, including `off`:
 
 ## Autonomy And Blockers
 
+- Before requesting approval or user direction, identify the decision and the
+  outcomes available to the user. An ordinary decision request is valid only
+  when at least two materially different, safe, policy-compliant outcomes
+  remain and their tradeoffs affect the result. If there is one clearly
+  correct authorized outcome, take it and continue.
+- Do not turn comments, whitespace, formatting, routine implementation
+  choices, mechanical repository work, generated metadata, reversible
+  in-scope repairs, or tool failures into user decisions. Resolve them
+  autonomously.
+- A single-path request is valid only when explicit user authority is required
+  for a destructive, external, security-sensitive, or user-owned action, or
+  when only the user can supply an unavailable credential or perform an
+  external action. Present it as a required authorization or action, not as a
+  choice among implementation alternatives.
 - Treat a blocker as a conclusion, not an observation. Before stopping or
   requesting user action, trace the canonical lifecycle and exhaust safe,
   policy-compliant alternatives within scope. A failed or missing command,
@@ -153,11 +167,9 @@ These rules remain active at every compaction level, including `off`:
   machine-maintained data, run a local repository command the agent can run, or
   resolve a tooling gap within approved scope. Do not repeatedly recheck an
   unchanged mechanical condition; change approach on the first repetition.
-- Request user direction only when materially different customer-facing
-  outcomes or deep-rooted data or code architecture require a choice, external
-  authority or unavailable credentials are required, an external action is
-  destructive or difficult to reverse, or preserving user-owned work remains
-  genuinely uncertain.
+- When a legitimate gate blocks one path, continue independent approved work.
+  Stop or mark the whole goal blocked only when the condition blocks the next
+  critical path and no independent approved work remains.
 
 ## Compaction Ladder
 

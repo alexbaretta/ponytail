@@ -167,6 +167,16 @@ that is already approved. Repair the agent-caused condition under Ponytail's
 standing authorization and continue. A tool or sandbox rejection is not a
 substitute for a user decision.
 
+Apply Ponytail's meaningful-decision rule before creating a plan question or
+returning control. Comments, whitespace, formatting, routine implementation
+choices, mechanical work, generated metadata, reversible in-scope repairs, and
+tool failures do not create approval gates. Record reasonable implementation
+decisions in the plan and continue. Ask for an ordinary decision only when at
+least two materially different, safe, policy-compliant outcomes remain. Keep
+required authorization for destructive, external, security-sensitive, or
+user-owned actions, and required user-supplied credentials or external actions,
+as explicit exceptions.
+
 Once an approved sprint starts, execute it continuously through its tasklets,
 stories, and owned validation. Progress updates are not handoff points. Return
 control only for a stop condition, required user action, or sprint completion.
@@ -623,4 +633,9 @@ tasklets, a progress update was sent, or broader validation belongs to a later
 named gate. A condition does not count as a whole-goal blocker while an
 applicable skill authorizes its safe local repair or independent approved work
 remains available. Never stop or mark a whole goal blocked solely because
-repair of the agent's own current-task changes remains pending.
+repair of the agent's own current-task changes remains pending. Mark a whole
+goal blocked only after safe in-scope alternatives are exhausted, the condition
+blocks the next critical path, no independent approved work remains, and
+progress requires a materially consequential user decision, explicit authority,
+an unavailable user-controlled capability, or preservation of uncertain
+user-owned work.
