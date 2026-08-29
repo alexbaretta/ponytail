@@ -518,17 +518,50 @@ shared Git state, and does not stage or commit. If safe capacity is smaller
 than the selected set, the orchestrator dispatches a deterministic prefix and
 reruns selectors after reconciliation.
 
-For multiple user-owned Codex sessions or additional Codex instances, never
-allow independent writers to share one checkout, worktree, Git index, database,
-port, mutable cache, or external resource. Give each writer a separate branch
-and worktree at a recorded base commit, a frozen V3 packet lease, and isolated
-runtime resources. A remote writer may commit only source, tests, generated
-artifacts, and configuration declared by its packet; it must not edit plan,
-sprint, tasklet, or journal records. The canonical orchestrator owns those
-records, integrates packet commits in dependency order, resolves drift, reruns
-the selectors, and records evidence. Additional agents in one isolated
-worktree should be read-only or test-only unless their write paths are also
-provably disjoint and one writer owns that worktree's Git index.
+When the user explicitly authorizes automatic secondary Codex task creation,
+the canonical orchestrator uses separate user-owned Codex tasks rather than
+treating same-session subagents as equivalent. The canonical orchestrator
+creates and supervises those tasks without requiring the user to create,
+prompt, monitor, or manage them. Each secondary task runs as its own root
+orchestrator in a separate branch and worktree at a recorded base commit. It
+owns that worktree's Git index and may create its own subagents within the
+frozen lease. An ordinary plan approval does not itself authorize creation of
+user-owned tasks when the host requires that authority explicitly.
+
+Prefer one persistent secondary root task per dependency-ready sprint. Sprint
+assignment provides session affinity and retained repository context, not
+authority to bypass selectors. The canonical orchestrator sends that task the
+sprint's currently selected V3 packets as immutable leases, waits for or
+monitors its result, integrates accepted commits, updates canonical status,
+reruns both selectors, and sends the next ready wave to the same task through
+a follow-up. If several path-disjoint packets from one sprint are ready, the
+secondary root may delegate them to same-worktree subagents, but it remains the
+only owner of that worktree's Git index and commit. Nested subagents never
+change packet membership, ordering, paths, dependencies, or exclusions and do
+not stage or commit. If one task per sprint leaves safe capacity unused, the
+canonical orchestrator may instead create packet-specific secondary root tasks
+while preserving the same isolation and ownership rules.
+
+Every secondary-task lease records the task ID, sprint and packet IDs,
+permitted exact paths, exclusions, base commit, branch and worktree, focused
+validation, and isolated database, port, cache, queue, bucket, credential, and
+external-rate-limit ownership that apply. Independent writers never share a
+checkout, worktree, Git index, database, port, mutable cache, or external
+resource. A secondary root may commit only source, tests, generated artifacts,
+and configuration declared by its leases; it must not edit plan, sprint,
+tasklet, or journal records. It returns ordered commit SHAs and separate
+focused evidence for every tasklet. Whole-sprint autonomy requires a selector
+contract that explicitly returns a complete sprint lease; V3 sprint affinity
+alone does not grant it.
+
+The canonical orchestrator owns all secondary-task lifecycle decisions and
+handles completion, attention requests, retries, and follow-up waves. It
+integrates returned commits in topological dependency order with a
+deterministic tie-breaker for independent packets, rejects undeclared paths,
+resolves drift, reruns selectors, and records evidence. A secondary task does
+not return control to the user for routine implementation or tooling choices;
+it reports legitimate stop conditions to the canonical orchestrator, which
+continues independent approved work before involving the user.
 
 Centralize work that cannot be isolated safely: Prisma schema and migration
 epochs, package lockfiles, generated aggregate indexes, composition roots,
