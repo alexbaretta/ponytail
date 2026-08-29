@@ -1,7 +1,7 @@
 # Multi-Session Sprint Workers
 
 - Plan ID: `2026-08-29-multi-session-sprint-workers`
-- Status: `IN_PROGRESS`
+- Status: `DONE`
 - Approval: The user explicitly requested implementation and installation on
   2026-08-29.
 
@@ -34,7 +34,7 @@ index, and may use subagents for its frozen packet leases.
 ## Sprints
 
 1. [S01](sprints/S01.md): define, verify, generate, and install multi-session
-   sprint workers. Status: `IN_PROGRESS`.
+   sprint workers. Status: `DONE`.
 
 ## Questions
 
@@ -60,4 +60,14 @@ index, and may use subagents for its frozen packet leases.
 
 ## Final Validation
 
-- Pending.
+- Completed: `2026-08-29T02:49:20-07:00`.
+- Focused multi-session policy tests passed: 4 tests.
+- Generated OpenClaw skill checks passed: 92 tests.
+- `npm test` passed: 249 core tests, installer checks, 23 Pi tests, and 4
+  Ponytail MCP tests.
+- `node scripts/check-rule-copies.js` reported all 8 rule copies matched.
+- `node scripts/check-versions.js` reported all 7 version files pinned at
+  `4.8.4`.
+- Build impact is not applicable because Ponytail declares no build target.
+- `./scripts/install.sh` completed, and the installed Codex
+  `plan-execution/SKILL.md` matched the canonical source byte-for-byte.
