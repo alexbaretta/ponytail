@@ -6,7 +6,7 @@ const path = require('node:path');
 const { execFileSync } = require('node:child_process');
 
 const tool = path.join(__dirname, '..', 'skills', 'plan-execution', 'scripts', 'ready-tasklets.js');
-const { MAX_PACKET_TASKLETS, TaskletMetadataReaders, parseTaskletStatuses, readTaskletGraph, validateTaskletGraph, selectReadyTasklets } = require(tool);
+const { MAX_BATCH_TASKLETS, TaskletMetadataReaders, parseTaskletStatuses, readTaskletGraph, validateTaskletGraph, selectReadyTasklets } = require(tool);
 
 function writeFixture(metadata, statuses = Object.fromEntries(Object.keys(metadata.tasklets).map((id) => [id, ' ']))) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ready-tasklets-'));
@@ -113,7 +113,7 @@ test('rejects tasklet and feature dependency errors and cycles', () => {
   assert.throws(() => validateTaskletGraph(readTaskletGraph(identity.sprint), parseTaskletStatuses(identity.sprint)), /exactly the same/);
 });
 
-test('selects a deterministic maximal exact-path-disjoint wave', () => {
+test('selects the highest-ranked V2 tasklet', () => {
   const metadata = graphV2({
     features: {
       'S01-F01': { depends_on: [], validation_tasklet: 'S01-F01-T02' },
@@ -131,7 +131,7 @@ test('selects a deterministic maximal exact-path-disjoint wave', () => {
     },
   });
   const result = select(writeFixture(metadata));
-  assert.deepEqual(result.next, ['S01-F01-T01', 'S01-F01-T03', 'S01-F02-T01', 'S01-F03-T01']);
+  assert.deepEqual(result.next, ['S01-F01-T01']);
   assert.deepEqual(Object.keys(result.criteria), result.next);
   assert.equal(result.criteria['S01-F01-T01'].risk, 'high');
 });
@@ -178,7 +178,7 @@ test('uses prior affinity and graph criteria deterministically', () => {
     'S01-F01-T01': 'DONE', 'S01-F01-T02': ' ', 'S01-F02-T01': ' ', 'S01-F02-T02': ' ',
   });
   const result = select(fixture, 'S01-F01-T01');
-  assert.deepEqual(result.next, ['S01-F02-T01', 'S01-F01-T02']);
+  assert.deepEqual(result.next, ['S01-F02-T01']);
   assert.equal(result.criteria['S01-F02-T01'].affinity_overlap, 1);
 });
 
@@ -195,7 +195,7 @@ test('returns exact completion JSON and never mutates inputs', () => {
   assert.equal(fs.readFileSync(graphFile, 'utf8'), graphBefore);
 });
 
-test('V3 returns path-disjoint ordered packets and defers cross-packet convergence', () => {
+test('V3 returns one complete ordered batch', () => {
   const metadata = graphV3({
     features: {
       'S01-F01': { depends_on: [], validation_tasklet: 'S01-F01-T03' },
@@ -216,25 +216,25 @@ test('V3 returns path-disjoint ordered packets and defers cross-packet convergen
   const result = select(writeFixture(metadata));
   assert.deepEqual(result.next, [
     { tasklets: ['S01-F01-T01', 'S01-F01-T02'], planned_paths: ['src/a.js', 'src/a-helper.js'] },
-    { tasklets: ['S01-F02-T01', 'S01-F02-T02'], planned_paths: ['src/b.js', 'src/b-helper.js'] },
   ]);
   assert.equal('S01-F03-T01' in result.criteria, false);
   assert.equal('S01-F01-T03' in result.criteria, false);
+  assert.equal('S01-F02-T01' in result.criteria, false);
 });
 
-test('V3 bounds a serial packet while preserving V2 wave output', () => {
+test('V3 bounds one batch and V2 selects one tasklet', () => {
   const tasklets = {};
-  for (let index = 1; index <= MAX_PACKET_TASKLETS + 2; index += 1) {
+  for (let index = 1; index <= MAX_BATCH_TASKLETS + 2; index += 1) {
     const id = `S01-F01-T${String(index).padStart(2, '0')}`;
     tasklets[id] = tasklet('S01-F01', [`src/${index}.js`], index === 1 ? {} : { depends_on: [`S01-F01-T${String(index - 1).padStart(2, '0')}`] });
   }
-  const validation = `S01-F01-T${String(MAX_PACKET_TASKLETS + 2).padStart(2, '0')}`;
+  const validation = `S01-F01-T${String(MAX_BATCH_TASKLETS + 2).padStart(2, '0')}`;
   tasklets[validation].depends_on = Object.keys(tasklets).filter((id) => id !== validation);
   const result = select(writeFixture(graphV3({
     features: { 'S01-F01': { depends_on: [], validation_tasklet: validation } },
     tasklets,
   })));
   assert.equal(result.next.length, 1);
-  assert.equal(result.next[0].tasklets.length, MAX_PACKET_TASKLETS);
-  assert.deepEqual(select(writeFixture(graphV2())).next, ['S01-F01-T01', 'S01-F02-T01']);
+  assert.equal(result.next[0].tasklets.length, MAX_BATCH_TASKLETS);
+  assert.deepEqual(select(writeFixture(graphV2())).next, ['S01-F01-T01']);
 });

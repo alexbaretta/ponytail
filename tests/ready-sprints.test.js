@@ -41,7 +41,7 @@ function writePlan(sprints, plannedPaths = {}) {
   return root;
 }
 
-test('dispatches strict physical V1, V2, and V3 sprint readers', () => {
+test('retains strict physical V1, V2, and V3 sprint readers', () => {
   assert.deepEqual(Object.keys(SprintMetadataReaders), ['V1', 'V2', 'V3']);
   const v1 = metadata('S01', 1);
   const v2 = metadata('S01', 2);
@@ -78,20 +78,20 @@ test('rejects plans containing mixed physical sprint versions', () => {
   assert.throws(() => readSprints(writePlan([metadata('S01', 1), metadata('S02', 2)])), /must not mix physical sprint schema versions/);
 });
 
-test('retains V1 dependency scheduling and unordered-path validation', () => {
+test('selects one V1 sprint and retains unordered-path validation', () => {
   const sprints = readSprints(writePlan([metadata('S01', 1), metadata('S02', 1)]));
   const map = validateDependencies(sprints);
-  assert.deepEqual(selectExecutionReadySprints(sprints, map), ['S01', 'S02']);
+  assert.deepEqual(selectExecutionReadySprints(sprints, map), ['S01']);
   sprints[1].execution.planned_paths = [...sprints[0].execution.planned_paths];
   assert.throws(() => validatePathOwnership(sprints, map), /unordered sprint path overlap/);
 });
 
-test('keeps V2 planning dependency-ready and parallel', () => {
+test('selects one dependency-ready planning sprint', () => {
   const sprints = readSprints(writePlan([
     metadata('S01', 2, { planning: { status: 'STUB', depends_on: [], scope_roots: ['x'] }, execution: null }),
     metadata('S02', 2, { planning: { status: 'STUB', depends_on: [], scope_roots: ['y'] }, execution: null }),
   ]));
-  assert.deepEqual(selectPlanningReadySprints(sprints, validateDependencies(sprints)), ['S01', 'S02']);
+  assert.deepEqual(selectPlanningReadySprints(sprints, validateDependencies(sprints)), ['S01']);
 });
 
 test('selects at most the earliest reviewed V2 execution checkpoint', () => {
@@ -116,14 +116,14 @@ test('blocks dependencies and rejects a later advanced checkpoint', () => {
   assert.throws(() => validateCheckpointOrder(advanced), /advanced before unfinished predecessor/);
 });
 
-test('selects every reviewed dependency-ready V3 sprint', () => {
+test('selects the first reviewed dependency-ready V3 sprint', () => {
   const sprints = readSprints(writePlan([
     metadata('S01', 3, { execution: { ...metadata('S01').execution, status: 'DONE' } }),
     metadata('S02', 3, { execution: { ...metadata('S02').execution, depends_on: ['S01'] } }),
     metadata('S03', 3, { execution: { ...metadata('S03').execution, depends_on: ['S01'] } }),
     metadata('S04', 3, { execution: { ...metadata('S04').execution, depends_on: ['S02'], tasklets_reviewed: false } }),
   ]));
-  assert.deepEqual(selectExecutionReadySprints(sprints, validateDependencies(sprints)), ['S02', 'S03']);
+  assert.deepEqual(selectExecutionReadySprints(sprints, validateDependencies(sprints)), ['S02']);
 });
 
 test('rejects advanced V3 dependencies and unordered cross-sprint paths', () => {

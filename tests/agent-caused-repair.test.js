@@ -41,5 +41,5 @@ test('plan execution applies the same guard before returning control', () => {
   assert.match(planExecution, /Ask for an ordinary decision only when at\s+least two materially different, safe, policy-compliant outcomes remain/);
   assert.match(planExecution, /Never stop or mark a whole goal blocked solely because\s+repair of the agent's own current-task changes remains pending/);
   assert.match(planExecution, /Mark a whole\s+goal blocked only after safe in-scope alternatives are exhausted/);
-  assert.match(planExecution, /blocks the next critical path, no independent approved work remains/);
+  assert.match(planExecution, /blocks the next critical path, no other approved work remains/);
 });

@@ -211,11 +211,16 @@ function validateV3PathOwnership(sprints, sprintById) {
 }
 
 function selectPlanningReadySprints(sprints, sprintById) {
-  return sprints.filter((sprint) => sprint.planning.status === 'STUB' && sprint.planning.depends_on.every((id) => sprintById.get(id).planning.status === 'APPROVED')).map((sprint) => sprint.id);
+  const sprint = sprints.find((candidate) => candidate.planning.status === 'STUB'
+    && candidate.planning.depends_on.every((id) => sprintById.get(id).planning.status === 'APPROVED'));
+  return sprint ? [sprint.id] : [];
 }
 
 function selectExecutionReadySprintsV1(sprints, sprintById) {
-  return sprints.filter((sprint) => sprint.planning.status === 'APPROVED' && sprint.execution?.status === 'PENDING' && sprint.execution.depends_on.every((id) => sprintById.get(id).execution?.status === 'DONE')).map((sprint) => sprint.id);
+  const sprint = sprints.find((candidate) => candidate.planning.status === 'APPROVED'
+    && candidate.execution?.status === 'PENDING'
+    && candidate.execution.depends_on.every((id) => sprintById.get(id).execution?.status === 'DONE'));
+  return sprint ? [sprint.id] : [];
 }
 
 function validateCheckpointOrder(sprints) {
@@ -244,11 +249,11 @@ function selectExecutionReadySprintsV2(sprints, sprintById) {
 
 function selectExecutionReadySprintsV3(sprints, sprintById) {
   validateDependencyExecutionOrder(sprints, sprintById);
-  return sprints.filter((sprint) => sprint.planning.status === 'APPROVED'
-    && sprint.execution?.status === 'PENDING'
-    && sprint.execution.tasklets_reviewed
-    && sprint.execution.depends_on.every((id) => sprintById.get(id).execution?.status === 'DONE'))
-    .map((sprint) => sprint.id);
+  const sprint = sprints.find((candidate) => candidate.planning.status === 'APPROVED'
+    && candidate.execution?.status === 'PENDING'
+    && candidate.execution.tasklets_reviewed
+    && candidate.execution.depends_on.every((id) => sprintById.get(id).execution?.status === 'DONE'));
+  return sprint ? [sprint.id] : [];
 }
 
 function selectExecutionReadySprints(sprints, sprintById) {

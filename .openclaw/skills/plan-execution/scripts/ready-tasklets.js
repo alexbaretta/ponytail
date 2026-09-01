@@ -10,7 +10,7 @@ const path = require('node:path');
 const TASKLET_STATUSES = new Set([' ', 'DONE', 'ERROR']);
 const RISK_VALUES = new Set(['normal', 'high']);
 const SCHEMA_VERSION = 3;
-const MAX_PACKET_TASKLETS = 16;
+const MAX_BATCH_TASKLETS = 16;
 
 function fail(message) { throw new Error(message); }
 
@@ -267,62 +267,46 @@ function selectNextTasklet(graph, statuses, derived, lastTasklet = null) {
 
 function selectReadyTasklets(graph, statuses, derived, lastTasklet = null) {
   if (graph.schemaVersion === 1) return selectNextTasklet(graph, statuses, derived, lastTasklet);
-  if (graph.schemaVersion === 3) return selectReadyTaskletPackets(graph, statuses, derived, lastTasklet);
+  if (graph.schemaVersion === 3) return selectReadyTaskletBatch(graph, statuses, derived, lastTasklet);
   const ranked = rankedReadyTasklets(graph, statuses, derived, lastTasklet);
   if (ranked.length === 0) return { next: null };
-  const usedPaths = new Set();
-  const selected = [];
-  const criteria = {};
-  for (const [id, values] of ranked) {
-    const paths = graph.tasklets.get(id).planned_paths;
-    if (paths.some((candidate) => usedPaths.has(candidate))) continue;
-    selected.push(id);
-    criteria[id] = values;
-    for (const candidate of paths) usedPaths.add(candidate);
-  }
-  return { next: selected, criteria };
+  const [id, criteria] = ranked[0];
+  return { next: [id], criteria: { [id]: criteria } };
 }
 
-function selectReadyTaskletPackets(graph, statuses, derived, lastTasklet = null) {
+function selectReadyTaskletBatch(graph, statuses, derived, lastTasklet = null) {
   const ranked = rankedReadyTasklets(graph, statuses, derived, lastTasklet);
   if (ranked.length === 0) return { next: null };
   const validationTasklets = new Set([...graph.features.values()].map(({ validation_tasklet: id }) => id));
-  const criteria = Object.fromEntries(ranked);
-  const usedPaths = new Set();
-  const packets = [];
-  for (const [id] of ranked) {
-    const paths = graph.tasklets.get(id).planned_paths;
-    if (paths.some((candidate) => usedPaths.has(candidate))) continue;
-    packets.push({ tasklets: [id], planned_paths: [...paths] });
-    for (const candidate of paths) usedPaths.add(candidate);
-  }
-  for (const packet of packets) {
-    const completed = new Set([...statuses].filter(([, status]) => status === 'DONE').map(([id]) => id));
-    completed.add(packet.tasklets[0]);
-    while (packet.tasklets.length < MAX_PACKET_TASKLETS) {
-      const candidates = [...graph.tasklets.keys()].filter((id) => {
-        if (statuses.get(id) !== 'PENDING' || completed.has(id) || validationTasklets.has(id)) return false;
-        const dependencies = effectiveDependencies(graph, id);
-        return dependencies.some((dependency) => completed.has(dependency) && packet.tasklets.includes(dependency))
-          && dependencies.every((dependency) => completed.has(dependency));
-      }).sort((left, right) => left.localeCompare(right));
-      const next = candidates.find((id) => graph.tasklets.get(id).planned_paths.every((candidate) => !usedPaths.has(candidate) || packet.planned_paths.includes(candidate)));
-      if (!next) break;
-      packet.tasklets.push(next);
-      completed.add(next);
-      for (const candidate of graph.tasklets.get(next).planned_paths) {
-        if (!packet.planned_paths.includes(candidate)) packet.planned_paths.push(candidate);
-        usedPaths.add(candidate);
-      }
-      criteria[next] = {
-        risk: graph.tasklets.get(next).risk,
-        affinity_overlap: 0,
-        unfinished_descendants: derived.unfinishedDescendants.get(next),
-        remaining_depth: derived.depth.get(next),
-      };
+  const [root, rootCriteria] = ranked[0];
+  const batch = {
+    tasklets: [root],
+    planned_paths: [...graph.tasklets.get(root).planned_paths],
+  };
+  const criteria = { [root]: rootCriteria };
+  const completed = new Set([...statuses].filter(([, status]) => status === 'DONE').map(([id]) => id));
+  completed.add(root);
+  while (batch.tasklets.length < MAX_BATCH_TASKLETS) {
+    const next = [...graph.tasklets.keys()].filter((id) => {
+      if (statuses.get(id) !== 'PENDING' || completed.has(id) || validationTasklets.has(id)) return false;
+      const dependencies = effectiveDependencies(graph, id);
+      return dependencies.some((dependency) => completed.has(dependency) && batch.tasklets.includes(dependency))
+        && dependencies.every((dependency) => completed.has(dependency));
+    }).sort((left, right) => left.localeCompare(right))[0];
+    if (!next) break;
+    batch.tasklets.push(next);
+    completed.add(next);
+    for (const candidate of graph.tasklets.get(next).planned_paths) {
+      if (!batch.planned_paths.includes(candidate)) batch.planned_paths.push(candidate);
     }
+    criteria[next] = {
+      risk: graph.tasklets.get(next).risk,
+      affinity_overlap: 0,
+      unfinished_descendants: derived.unfinishedDescendants.get(next),
+      remaining_depth: derived.depth.get(next),
+    };
   }
-  return { next: packets, criteria };
+  return { next: [batch], criteria };
 }
 
 function main(argv = process.argv.slice(2)) {
@@ -335,7 +319,7 @@ function main(argv = process.argv.slice(2)) {
   return result;
 }
 
-module.exports = { SCHEMA_VERSION, MAX_PACKET_TASKLETS, TaskletMetadataReaders, parseTaskletStatuses, readTaskletGraph, validateTaskletGraph, selectNextTasklet, selectReadyTasklets, selectReadyTaskletPackets, main };
+module.exports = { SCHEMA_VERSION, MAX_BATCH_TASKLETS, TaskletMetadataReaders, parseTaskletStatuses, readTaskletGraph, validateTaskletGraph, selectNextTasklet, selectReadyTasklets, selectReadyTaskletBatch, main };
 
 if (require.main === module) {
   try { main(); } catch (error) { process.stderr.write(`${error.message}\n`); process.exitCode = 1; }

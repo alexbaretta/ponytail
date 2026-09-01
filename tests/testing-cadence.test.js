@@ -61,7 +61,7 @@ test('long-lived plan execution journals actions without blocking work', () => {
   assert.match(skill, /start the first intentional action/);
   assert.match(skill, /project_journal\.sh run_command/);
   assert.match(skill, /automatic post-command state is\s+`waiting_for_agent_action`/);
-  assert.match(skill, /Before every handoff, invoke `project_journal\.sh over`/);
+  assert.match(skill, /Before returning control, invoke `project_journal\.sh over`/);
   assert.match(skill, /Journaling is non-blocking/);
   assert.match(skill, /report the failed operation and diagnostic in chat/);
 });
@@ -113,7 +113,7 @@ test('source-proven configuration drift is repaired without an approval stop', (
   assert.doesNotMatch(structure, /session-scope persistent instruction/);
 });
 
-test('material configuration decisions still stop without halting independent work', () => {
+test('material configuration decisions still stop without halting other ready work', () => {
   const structure = readSkill('project-structure');
   const plan = readSkill('plan-execution');
 
@@ -121,7 +121,7 @@ test('material configuration decisions still stop without halting independent wo
   assert.match(structure, /authorization, security posture, infrastructure\s+topology/);
   assert.match(structure, /overwrite user-owned uncommitted work/);
   assert.match(plan, /plan maintenance, not scope growth and not an\s+approval gate/);
-  assert.match(plan, /continue independent approved work unless the plan requires strict\s+serial execution/);
+  assert.match(plan, /continue with other dependency-ready approved work/);
   assert.match(plan, /does not count as a whole-goal blocker while an\s+applicable skill authorizes its safe local repair/);
 });
 
