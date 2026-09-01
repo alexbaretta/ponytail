@@ -346,25 +346,60 @@ SQL
 acquire_lock() {
   local attempts=0
   mkdir -p "${plan_state}"
-  while ! mkdir "${plan_state}/lock" 2>/dev/null; do
+  lock_path="${plan_state}/lock"
+  while true; do
+    if mkdir "${lock_path}" 2>/dev/null; then
+      lock_owner="${BASHPID}"
+      if : > "${lock_path}/${lock_owner}" 2>/dev/null; then
+        lock_held='true'
+        return
+      fi
+    fi
     attempts=$((attempts + 1))
+    recover_stale_lock "${attempts}"
     [[ "${attempts}" -lt 200 ]] || fail 'timed out waiting for journal state lock'
     sleep 0.05
   done
-  lock_held='true'
 }
 
 release_lock() {
   if [[ "${lock_held:-false}" == 'true' ]]; then
-    rmdir "${plan_state}/lock" 2>/dev/null || true
+    rm -f "${lock_path}/${lock_owner}"
+    rmdir "${lock_path}" 2>/dev/null || true
     lock_held='false'
   fi
 }
 
 set_lock_trap() {
-  local quoted_lock
-  printf -v quoted_lock '%q' "${plan_state}/lock"
-  trap "rmdir -- ${quoted_lock} 2>/dev/null || true" EXIT
+  trap release_lock EXIT
+}
+
+journal_process_is_alive() {
+  local pid="$1"
+  local process_command
+  [[ "${pid}" =~ ^[1-9][0-9]*$ ]] || return 1
+  kill -0 "${pid}" 2>/dev/null || return 1
+  process_command="$(ps -p "${pid}" -o command= 2>/dev/null)" || return 1
+  [[ "${process_command}" == *'project_journal.sh'* ]] && \
+    [[ "${process_command}" == *"${plan_name}"* ]]
+}
+
+recover_stale_lock() {
+  local attempts="$1"
+  local owner_path=''
+  local path
+  for path in "${lock_path}"/*; do
+    [[ -f "${path}" ]] || continue
+    owner_path="${path}"
+    break
+  done
+  if [[ -n "${owner_path}" ]]; then
+    journal_process_is_alive "${owner_path##*/}" && return
+    rm -f "${owner_path}"
+    rmdir "${lock_path}" 2>/dev/null || true
+  elif [[ "${attempts}" -ge 20 ]]; then
+    rmdir "${lock_path}" 2>/dev/null || true
+  fi
 }
 
 atomic_write() {
@@ -394,24 +429,17 @@ epoch_timestamp() {
 }
 
 heartbeat_is_alive() {
-  local action="$1"
-  local pid="$2"
-  local process_command
-  [[ "${pid}" =~ ^[1-9][0-9]*$ ]] || return 1
-  kill -0 "${pid}" 2>/dev/null || return 1
-  process_command="$(ps -p "${pid}" -o command= 2>/dev/null)" || return 1
-  [[ "${process_command}" == *'project_journal.sh'* ]] && \
-    [[ "${process_command}" == *"${plan_name}"* ]]
+  journal_process_is_alive "$1"
 }
 
 stop_heartbeat() {
-  local action="$1"
-  local pid="$2"
+  local pid="$1"
   local attempts=0
-  if ! heartbeat_is_alive "${action}" "${pid}"; then
+  if ! heartbeat_is_alive "${pid}"; then
     return
   fi
   kill -TERM "${pid}"
+  wait "${pid}" 2>/dev/null || true
   while kill -0 "${pid}" 2>/dev/null; do
     attempts=$((attempts + 1))
     [[ "${attempts}" -lt 100 ]] || fail 'heartbeat process did not stop'
@@ -493,7 +521,7 @@ recover_dead_action() {
   [[ -f "${action_state}" ]] || return 0
   old_action="$(jq -er '.action_id' "${action_state}")"
   old_pid="$(jq -er '.heartbeat_pid' "${action_state}")"
-  if heartbeat_is_alive "${old_action}" "${old_pid}"; then
+  if heartbeat_is_alive "${old_pid}"; then
     return 0
   fi
   [[ -f "${heartbeat_file}" ]] || return 0
@@ -522,7 +550,6 @@ record_action_state() {
   local state
   action_id="$(jq -er '.action_id' <<<"${response}")"
   mkdir -p "${agent_state}"
-  : > "${heartbeat_file}"
   heartbeat_pid="${owner_pid}"
   state="$(jq -cn \
     --arg action_id "${action_id}" \
@@ -544,6 +571,17 @@ record_action_state() {
   fi
 }
 
+start_heartbeat() {
+  local action="$1"
+  mkdir -p "${agent_state}"
+  : > "${heartbeat_file}"
+  (
+    trap - EXIT
+    heartbeat_loop "${action}"
+  ) </dev/null >/dev/null 2>&1 &
+  heartbeat_pid="$!"
+}
+
 start_action_operation() {
   local old_action=''
   local old_pid=''
@@ -560,10 +598,11 @@ start_action_operation() {
   response="$(database_start_action "${payload}" "${result_patch}" "${prompt_id}")" || \
     fail 'database action transition failed'
   if [[ -n "${old_action}" ]] && [[ "${old_pid}" != "$$" ]]; then
-    stop_heartbeat "${old_action}" "${old_pid}"
+    stop_heartbeat "${old_pid}"
   fi
   prompt_id="$(jq -er '.prompt_id' <<<"${response}")"
-  record_action_state "${response}" "$$"
+  start_heartbeat "$(jq -er '.action_id' <<<"${response}")"
+  record_action_state "${response}" "${heartbeat_pid}"
   last_response="${response}"
 }
 
@@ -628,27 +667,16 @@ prepare_action_context() {
 }
 
 run_command_operation() {
-  local action_id
   local command_pid
   local command_status
-  local iteration=0
   local result_patch
   local start_response
   start_action_operation '{}'
   start_response="${last_response}"
-  action_id="$(jq -er '.action_id' "${action_state}")"
   printf '%s\n' "${start_response}"
   release_lock
   bash -c "${command_text}" &
   command_pid="$!"
-  while kill -0 "${command_pid}" 2>/dev/null; do
-    touch "${heartbeat_file}"
-    iteration=$((iteration + 1))
-    if [[ $((iteration % 10)) -eq 0 ]]; then
-      database_heartbeat "${action_id}" >/dev/null || true
-    fi
-    sleep 1
-  done
   if wait "${command_pid}"; then
     command_status=0
   else
@@ -661,11 +689,9 @@ run_command_operation() {
   result_patch="$(jq -cn --argjson status "${command_status}" \
     '{action:{outcome:(if $status == 0 then "SUCCEEDED" else "FAILED" end)},command:{exitStatus:$status}}')"
   start_action_operation "${result_patch}"
-  action_id="$(jq -er '.action_id' "${action_state}")"
   jq -cn --argjson start "${start_response}" --argjson status "${command_status}" \
     '{ok:($status == 0),action:$start,exit_status:$status}'
   release_lock
-  heartbeat_loop "${action_id}"
 }
 
 over_operation() {
@@ -685,7 +711,7 @@ over_operation() {
   response="$(database_finish_action "${action_id}" '' \
     '{"action":{"terminationReason":"NORMAL","timestampSource":"DATABASE"}}')" || \
     fail 'database action completion failed'
-  stop_heartbeat "${action_id}" "${heartbeat_pid_value}"
+  stop_heartbeat "${heartbeat_pid_value}"
   rm -f "${action_state}" "${heartbeat_file}"
   if [[ -z "${parent_agent_id}" ]]; then
     rm -f "${prompt_state}"
@@ -724,6 +750,8 @@ main() {
   local action_state=''
   local heartbeat_file=''
   local prompt_state=''
+  local lock_path=''
+  local lock_owner=''
   local lock_held='false'
   local heartbeat_pid=''
   local last_response=''
@@ -777,7 +805,6 @@ main() {
         start_action_operation '{}'
         printf '%s\n' "${last_response}"
         release_lock
-        heartbeat_loop "$(jq -er '.action_id' "${action_state}")"
       else
         run_command_operation
       fi

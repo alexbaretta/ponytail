@@ -82,6 +82,27 @@ cat >> "$JOURNAL_PSQL_SQL_LOG"
   };
 }
 
+function journalEnvironment(project) {
+  const environment = journalInitEnvironment(project);
+  write(project, 'bin/psql', `#!/bin/sh
+set -eu
+sql="$(cat)"
+case "$sql" in
+  *start_action*)
+    printf '{"ok":true,"action_id":"019c0000-0000-7000-8000-%012d","prompt_id":"019c0000-0000-7000-8000-000000000001","timestamp":"2026-08-30T12:00:00.000000+00:00","sequence_number":1}\n' "$$"
+    ;;
+  *finish_action*)
+    printf '%s\n' '{"ok":true,"action_id":"019c0000-0000-7000-8000-000000000001","timestamp":"2026-08-30T12:00:01.000000+00:00"}'
+    ;;
+  *heartbeat_action*)
+    printf '%s\n' '{"ok":true,"timestamp":"2026-08-30T12:00:00.500000+00:00"}'
+    ;;
+esac
+`);
+  fs.chmodSync(path.join(project, 'bin/psql'), 0o755);
+  return environment;
+}
+
 test('CLI shell scripts are parse-safe', () => {
   for (const script of [
     planStats,
@@ -338,6 +359,74 @@ test('project journal rejects missing configuration and split commands', () => {
   result = run(projectJournal, ['validate-config', path.join(project, 'invalid.json')]);
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /invalid V1 journal configuration/);
+});
+
+test('project journal detaches heartbeats and recovers stale locks', () => {
+  const project = fixture();
+  const plan = '2026-08-17-example';
+  writeJournalConfig(project);
+  commit(project, '2026-08-30', 'add journal fixture');
+  const environment = journalEnvironment(project);
+  const planState = path.join(project, 'tmp/project-journal', plan);
+  write(planState, 'lock/999999');
+
+  const context = [
+    '--agent-id', '/root', '--agent-model', 'model', '--plan', plan,
+    '--sprint', 'S01', '--feature', 'F01', '--tasklet', 'S01-F01-T01',
+  ];
+  let result = run(projectJournal, [
+    'start', ...context, '--action-type', 'reasoning', '--description', 'Reason',
+  ], { cwd: project, env: environment, timeout: 3000 });
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.error, undefined);
+  assert.equal(JSON.parse(result.stdout).ok, true);
+
+  const actionState = path.join(planState, 'agents/root/current-action');
+  const firstHeartbeatPid = JSON.parse(fs.readFileSync(actionState, 'utf8')).heartbeat_pid;
+  assert.doesNotThrow(() => process.kill(firstHeartbeatPid, 0));
+
+  result = run(projectJournal, [
+    'run_command', '--agent-id', '/root', '--plan', plan,
+    '--description', 'Print wrapped output', '--', 'printf wrapped',
+  ], { cwd: project, env: environment, timeout: 3000 });
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.error, undefined);
+  assert.match(result.stdout, /wrapped/);
+  const waitingHeartbeatPid = JSON.parse(fs.readFileSync(actionState, 'utf8')).heartbeat_pid;
+  assert.notEqual(waitingHeartbeatPid, firstHeartbeatPid);
+  assert.doesNotThrow(() => process.kill(waitingHeartbeatPid, 0));
+
+  const subagentCommand = (agent) => [
+    projectJournal, 'start', '--agent-id', agent, '--parent-agent-id', '/root',
+    '--agent-model', 'model', '--plan', plan, '--sprint', 'S01', '--feature',
+    'F01', '--tasklet', 'S01-F01-T01', '--action-type', 'reasoning',
+    '--description', agent,
+  ].map((argument) => `'${argument}'`).join(' ');
+  result = run('bash', ['-c', `${subagentCommand('/root/a')} & ${subagentCommand('/root/b')} & wait`], {
+    cwd: project,
+    env: environment,
+    timeout: 3000,
+  });
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.error, undefined);
+
+  for (const agent of ['/root/a', '/root/b']) {
+    result = run(projectJournal, ['over', '--agent-id', agent, '--plan', plan], {
+      cwd: project,
+      env: environment,
+      timeout: 3000,
+    });
+    assert.equal(result.status, 0, result.stderr);
+  }
+
+  result = run(projectJournal, [
+    'over', '--agent-id', '/root', '--plan', plan,
+  ], { cwd: project, env: environment, timeout: 3000 });
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.error, undefined);
+  assert.equal(JSON.parse(result.stdout).ok, true);
+  assert.ok(!fs.existsSync(actionState));
+  assert.throws(() => process.kill(waitingHeartbeatPid, 0), { code: 'ESRCH' });
 });
 
 test('project journal initializes a stable V1 project configuration', () => {
