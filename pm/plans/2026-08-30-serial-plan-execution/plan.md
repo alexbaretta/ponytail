@@ -1,7 +1,7 @@
 # Serial Plan Execution
 
 - Plan ID: `2026-08-30-serial-plan-execution`
-- Status: `IN_PROGRESS`
+- Status: `DONE`
 - Approval: the user explicitly requested disabling plan-execution
   parallelization, removing its delegation language, updating Ponytail's
   canonical skill, and installing the result on 2026-08-30.
@@ -34,7 +34,7 @@ agent, one review and validation cycle, and one commit before reselection.
 ## Sprint
 
 - [S01](sprints/S01.md): implement, validate, install, and commit serial plan
-  execution. Status: `IN_PROGRESS`.
+  execution. Status: `DONE`.
 
 ## Acceptance
 
@@ -48,3 +48,14 @@ agent, one review and validation cycle, and one commit before reselection.
 - Immutable V1-V3 readers and the versioned-contract manifest remain valid.
 - Focused tests, full repository acceptance, generated-copy checks, and the
   complete installer pass.
+
+## Final Validation
+
+- Journal lifecycle prerequisite: committed as `44641da`.
+- Serial implementation batch: committed as `f866eaa`.
+- Focused plan-execution campaign: 38/38 tests passed.
+- Generated OpenClaw skill checks: 92/92 tests passed.
+- Full repository acceptance: 249 core tests, 23 Pi extension tests, and four
+  MCP tests passed.
+- Rule-copy and version checks passed; installed journal and plan-execution
+  copies match their canonical sources.
