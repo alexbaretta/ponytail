@@ -3,6 +3,42 @@
   "schemaVersion": 1,
   "families": [
     {
+      "id": "ponytail-user-config",
+      "implementation": {
+        "workspace": "ponytail",
+        "module": "cli/ponytail",
+        "readerRegistryExport": "PonytailUserConfigReaders"
+      },
+      "currentVersion": "V1",
+      "versions": ["V1"],
+      "supportedReadVersions": ["V1"],
+      "supportedDowngradeVersions": []
+    },
+    {
+      "id": "codex-execpolicy-project-proposal",
+      "implementation": {
+        "workspace": "ponytail",
+        "module": "cli/condense_codex_rules.sh",
+        "readerRegistryExport": "CodexExecpolicyProjectProposalReaders"
+      },
+      "currentVersion": "V1",
+      "versions": ["V1"],
+      "supportedReadVersions": ["V1"],
+      "supportedDowngradeVersions": []
+    },
+    {
+      "id": "codex-execpolicy-accepted-state",
+      "implementation": {
+        "workspace": "ponytail",
+        "module": "cli/condense_codex_rules.sh",
+        "readerRegistryExport": "CodexExecpolicyAcceptedStateReaders"
+      },
+      "currentVersion": "V1",
+      "versions": ["V1"],
+      "supportedReadVersions": ["V1"],
+      "supportedDowngradeVersions": []
+    },
+    {
       "id": "ponytail-journal-project-config",
       "implementation": {
         "workspace": "ponytail",

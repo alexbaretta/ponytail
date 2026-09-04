@@ -14,6 +14,8 @@ const planStats = path.join(root, 'cli', 'plan_stats.sh');
 const planPdf = path.join(root, 'cli', 'plan_pdf.sh');
 const bugStats = path.join(root, 'cli', 'bug_stats.sh');
 const auditPm = path.join(root, 'cli', 'audit_pm.sh');
+const condenseCodexRules = path.join(root, 'cli', 'condense_codex_rules.sh');
+const ponytail = path.join(root, 'cli', 'ponytail');
 const projectJournal = path.join(root, 'cli', 'project_journal.sh');
 const combinedInstaller = path.join(root, 'scripts', 'install.sh');
 const installer = path.join(root, 'scripts', 'install-cli.sh');
@@ -109,6 +111,8 @@ test('CLI shell scripts are parse-safe', () => {
     planPdf,
     bugStats,
     auditPm,
+    condenseCodexRules,
+    ponytail,
     projectJournal,
     combinedInstaller,
     installer,
@@ -127,11 +131,20 @@ test('combined installer installs Codex skills and CLI tools', () => {
   const codexHome = path.join(home, '.codex');
   const result = run(combinedInstaller, [], {
     env: { ...cliEnvironment(home), CODEX_HOME: codexHome },
-    input: 'n\n',
+    input: 'n\ny\n',
   });
   assert.equal(result.status, 0, result.stderr);
   assert.ok(fs.existsSync(path.join(codexHome, 'skills/ponytail/SKILL.md')));
   assert.ok(fs.existsSync(path.join(codexHome, 'skills/cross-session-effects/SKILL.md')));
+  assert.ok(fs.existsSync(path.join(codexHome, 'skills/codex-execpolicy/SKILL.md')));
+  assert.ok(fs.existsSync(path.join(codexHome, 'rules/ponytail.rules')));
+  assert.ok(fs.existsSync(path.join(home, '.ponytail/codex-execpolicy/state.json')));
+  assert.deepEqual(JSON.parse(fs.readFileSync(path.join(home, '.ponytail/config.json'), 'utf8')), {
+    schemaVersion: 1,
+    sourceRoot: fs.realpathSync(root),
+    projects: [],
+  });
+  assert.ok(fs.existsSync(path.join(home, '.local/bin/ponytail')));
   assert.ok(fs.existsSync(path.join(home, '.local/bin/plan_stats.sh')));
 });
 
@@ -598,8 +611,10 @@ test('CLI installer installs all tools and verifies owned updates', () => {
 
   const bin = path.join(home, '.local', 'bin');
   for (const tool of [
+    'ponytail',
     'audit_pm.sh',
     'bug_stats.sh',
+    'condense_codex_rules.sh',
     'plan_pdf.sh',
     'plan_stats.sh',
     'project_journal.sh',

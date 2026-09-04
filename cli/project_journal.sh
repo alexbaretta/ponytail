@@ -349,7 +349,7 @@ acquire_lock() {
   lock_path="${plan_state}/lock"
   while true; do
     if mkdir "${lock_path}" 2>/dev/null; then
-      lock_owner="${BASHPID}"
+      lock_owner="$$"
       if : > "${lock_path}/${lock_owner}" 2>/dev/null; then
         lock_held='true'
         return
@@ -429,20 +429,30 @@ epoch_timestamp() {
 }
 
 heartbeat_is_alive() {
-  journal_process_is_alive "$1"
+  local pid="$1"
+  local action="$2"
+  local heartbeat_age
+  [[ "${pid}" =~ ^[1-9][0-9]*$ ]] || return 1
+  kill -0 "${pid}" 2>/dev/null || return 1
+  [[ -f "${heartbeat_owner_file}" ]] || return 1
+  [[ "$(<"${heartbeat_owner_file}")" == "${action}" ]] || return 1
+  [[ -f "${heartbeat_file}" ]] || return 1
+  heartbeat_age="$(($(date +%s) - $(file_epoch "${heartbeat_file}")))"
+  [[ "${heartbeat_age}" -le 3 ]]
 }
 
 stop_heartbeat() {
   local pid="$1"
+  local action="$2"
   local attempts=0
-  if ! heartbeat_is_alive "${pid}"; then
+  if ! heartbeat_is_alive "${pid}" "${action}"; then
     return
   fi
   kill -TERM "${pid}"
-  wait "${pid}" 2>/dev/null || true
+  rm -f "${heartbeat_owner_file}"
   while kill -0 "${pid}" 2>/dev/null; do
     attempts=$((attempts + 1))
-    [[ "${attempts}" -lt 100 ]] || fail 'heartbeat process did not stop'
+    [[ "${attempts}" -lt 100 ]] || return
     sleep 0.05
   done
 }
@@ -521,7 +531,7 @@ recover_dead_action() {
   [[ -f "${action_state}" ]] || return 0
   old_action="$(jq -er '.action_id' "${action_state}")"
   old_pid="$(jq -er '.heartbeat_pid' "${action_state}")"
-  if heartbeat_is_alive "${old_pid}"; then
+  if heartbeat_is_alive "${old_pid}" "${old_action}"; then
     return 0
   fi
   [[ -f "${heartbeat_file}" ]] || return 0
@@ -575,11 +585,11 @@ start_heartbeat() {
   local action="$1"
   mkdir -p "${agent_state}"
   : > "${heartbeat_file}"
-  (
-    trap - EXIT
-    heartbeat_loop "${action}"
-  ) </dev/null >/dev/null 2>&1 &
+  printf '%s\n' "${action}" > "${heartbeat_owner_file}"
+  "${script_path}" __heartbeat "${action}" "${agent_id}" "${plan_name}" \
+    </dev/null >/dev/null 2>&1 &
   heartbeat_pid="$!"
+  disown "${heartbeat_pid}" 2>/dev/null || true
 }
 
 start_action_operation() {
@@ -598,7 +608,7 @@ start_action_operation() {
   response="$(database_start_action "${payload}" "${result_patch}" "${prompt_id}")" || \
     fail 'database action transition failed'
   if [[ -n "${old_action}" ]] && [[ "${old_pid}" != "$$" ]]; then
-    stop_heartbeat "${old_pid}"
+    stop_heartbeat "${old_pid}" "${old_action}"
   fi
   prompt_id="$(jq -er '.prompt_id' <<<"${response}")"
   start_heartbeat "$(jq -er '.action_id' <<<"${response}")"
@@ -657,6 +667,7 @@ prepare_action_context() {
   agent_state="${plan_state}/agents/${agent_id}"
   action_state="${agent_state}/current-action"
   heartbeat_file="${agent_state}/heartbeat"
+  heartbeat_owner_file="${agent_state}/heartbeat-owner"
   prompt_state="${plan_state}/prompt"
   acquire_lock
   load_existing_context
@@ -711,8 +722,8 @@ over_operation() {
   response="$(database_finish_action "${action_id}" '' \
     '{"action":{"terminationReason":"NORMAL","timestampSource":"DATABASE"}}')" || \
     fail 'database action completion failed'
-  stop_heartbeat "${heartbeat_pid_value}"
-  rm -f "${action_state}" "${heartbeat_file}"
+  stop_heartbeat "${heartbeat_pid_value}" "${action_id}"
+  rm -f "${action_state}" "${heartbeat_file}" "${heartbeat_owner_file}"
   if [[ -z "${parent_agent_id}" ]]; then
     rm -f "${prompt_state}"
   fi
@@ -723,7 +734,8 @@ heartbeat_loop() {
   local action="$1"
   local iteration=0
   trap 'exit 0' TERM INT
-  while true; do
+  while [[ -f "${heartbeat_owner_file}" ]] && \
+    [[ "$(<"${heartbeat_owner_file}")" == "${action}" ]]; do
     touch "${heartbeat_file}"
     iteration=$((iteration + 1))
     if [[ $((iteration % 10)) -eq 0 ]]; then
@@ -749,6 +761,7 @@ main() {
   local agent_state=''
   local action_state=''
   local heartbeat_file=''
+  local heartbeat_owner_file=''
   local prompt_state=''
   local lock_path=''
   local lock_owner=''
@@ -772,6 +785,23 @@ main() {
   operation="${subcommand:-project_journal}"
   shift || true
   case "${subcommand}" in
+    __heartbeat)
+      [[ "$#" -eq 3 ]] || fail 'invalid heartbeat invocation'
+      action_id="$1"
+      agent_id="$(normalize_agent_id "$2")"
+      plan_name="$3"
+      validate_identifier 'action ID' "${action_id}"
+      validate_identifier 'plan' "${plan_name}"
+      require_command psql
+      discover_project
+      load_config
+      set_connection_args
+      plan_state="${project_root}/tmp/project-journal/${plan_name}"
+      agent_state="${plan_state}/agents/${agent_id}"
+      heartbeat_file="${agent_state}/heartbeat"
+      heartbeat_owner_file="${agent_state}/heartbeat-owner"
+      heartbeat_loop "${action_id}"
+      ;;
     init)
       require_command jq
       require_command psql
@@ -825,6 +855,7 @@ main() {
       agent_state="${plan_state}/agents/${agent_id}"
       action_state="${agent_state}/current-action"
       heartbeat_file="${agent_state}/heartbeat"
+      heartbeat_owner_file="${agent_state}/heartbeat-owner"
       prompt_state="${plan_state}/prompt"
       acquire_lock
       set_lock_trap

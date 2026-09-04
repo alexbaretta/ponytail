@@ -19,6 +19,7 @@ provides_skills:
   - bash-parse-safe-scripts
   - build-impact
   - cloud-cli-reauth
+  - codex-execpolicy
   - cross-session-effects
   - diagnostic-assertions
   - indeterminate-list-ux

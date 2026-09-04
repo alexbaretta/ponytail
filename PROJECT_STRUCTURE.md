@@ -18,6 +18,13 @@ while project-wide management records remain under `pm/`.
 - `commands/` owns canonical command prompts.
 - `config/AGENTS.md` is the generated global Codex policy installed by the
   Codex installer.
+- `.ponytail/codex-execpolicy.json` is this project's versioned Codex command
+  policy proposal. Every adopting project uses that same root-relative path;
+  accepted user policy is stored outside repositories under
+  `~/.ponytail/codex-execpolicy/`.
+- `~/.ponytail/config.json` is the external V1 user configuration written by
+  `ponytail setup-project` and `ponytail install-cli`; it owns the canonical
+  Ponytail source root and explicit registered-project list.
 - `registry.tsv` owns enabled and disabled skill and command publication
   across supported hosts. Benchmark entries are prohibited.
 - `versioned-data-contracts.json` inventories Ponytail's durable serialized
@@ -31,17 +38,20 @@ while project-wide management records remain under `pm/`.
   `.opencode/`, `.qoder/`, and `.openclaw/` own host adapters. Generated
   adapters identify their canonical source in their validation tests.
 - `scripts/` owns local generation, validation, installation, cleanup, and
-  publication tooling. `scripts/install.sh` owns combined Codex and CLI
-  installation. `scripts/install-to-codex.sh` owns Codex installation; it
-  binds only registry-enabled bundled skills and installs persistent allow
-  rules for the default `project_journal.sh` CLI path's database operations.
+  publication tooling. `scripts/install.sh` is the source-checkout bootstrap;
+  the safety-checked CLI and Codex installer implementations remain callable
+  behind the canonical `ponytail` command.
   Codex discovers project-local skills from `.agents/skills/` automatically.
 - `scripts/setup-project-journal.sh` and `scripts/project-journal.sql` own
   PostgreSQL 18 journal provisioning and its immutable V1 storage contract.
-- `cli/` owns user-facing parse-safe Bash tools. Adding a tool there makes it
+- `cli/` owns user-facing parse-safe Bash tools. `cli/ponytail` owns project
+  registration and the public installation lifecycle. Adding a `.sh` tool
+  there makes it
   installable by `scripts/install-cli.sh`, which installs all `cli/*.sh` files
   or selected tools into the user's configured executable directory. Add each
   tool to the focused CLI syntax, behavior, installer, and distribution tests.
+  `cli/condense_codex_rules.sh` owns the V1 accepted-policy reader/writer,
+  one-time Codex import, synthesis, restoration, and installation pipeline.
 - `generated/` owns runtime data derived from `registry.tsv`.
 - `tests/` owns core live-development tests.
 - `benchmarks/` is an optional isolated subsystem. It owns all benchmark

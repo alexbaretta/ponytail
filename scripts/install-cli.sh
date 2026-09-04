@@ -10,7 +10,8 @@ Usage:
   ./scripts/install-cli.sh [--check] [--dry-run] [--update-shell-path]
     [--bin-dir <path>] [tool.sh ...]
 
-Installs all Ponytail CLI tools by default, or only the named tools.
+Installs the `ponytail` command and all standalone CLI tools by default, or
+only the named tools.
 EOF
 }
 
@@ -168,6 +169,7 @@ main() {
   ponytail_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
   cli_root="${ponytail_root}/cli"
   if [[ "${#selected_tools[@]}" -eq 0 ]]; then
+    selected_tools+=("ponytail")
     for source_path in "${cli_root}"/*.sh; do
       [[ -f "${source_path}" ]] || fail 'no Ponytail CLI tools found'
       selected_tools+=("$(basename "${source_path}")")

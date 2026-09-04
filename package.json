@@ -41,6 +41,7 @@
     "commands/",
     "cli/",
     "config/",
+    ".ponytail/",
     "generated/",
     "registry.tsv",
     ".opencode/",

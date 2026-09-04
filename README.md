@@ -20,23 +20,31 @@ Install Ponytail's Codex skills and user-facing CLI tools from a checkout:
 ./scripts/install.sh
 ```
 
-The combined installer installs all enabled skills, including `ponytail` and
-`cross-session-effects`, into Codex and installs CLI tools into
-`~/.local/bin`. To run either installer separately:
+This bootstraps the `ponytail` executable into `~/.local/bin`, installs the
+enabled Codex skills, and installs the accepted command policy. Subsequent
+installation uses the CLI directly:
 
 ```bash
-./scripts/install-to-codex.sh
-./scripts/install-cli.sh
+ponytail install-cli
+ponytail install-to-codex
+ponytail install-permissions
+ponytail install
 ```
 
-The Codex installer also adds a persistent allow rule for the `init`, `start`,
-and `over` operations of `~/.local/bin/project_journal.sh`. It does not allow
-`run_command`.
+From each adopting repository, register its Git root once:
+
+```bash
+ponytail setup-project
+```
+
+Registration is stored in `~/.ponytail/config.json`; no filesystem-wide scan
+is performed. `ponytail install-permissions` evaluates every registered
+repository's `.ponytail/codex-execpolicy.json` proposal together.
 
 The CLI installer prompts before adding that directory to `~/.bashrc`; pass
 `--update-shell-path` to approve the update non-interactively. Install only
-selected tools by naming them, for example
-`./scripts/install-cli.sh plan_stats.sh`.
+selected standalone tools by naming them, for example
+`ponytail install-cli plan_stats.sh`.
 
 Codex discovers project-owned skills automatically from `.agents/skills/`
 between the working directory and repository root.
@@ -77,14 +85,19 @@ Installed shell tools:
 
 | Tool | Purpose |
 | --- | --- |
+| `ponytail setup-project\|install-permissions\|install-cli\|install-to-codex\|install` | Register repositories and install Ponytail components |
 | `audit_pm.sh [--fix] [--dryrun]` | Audit PM structure and preview or fix missing date prefixes |
 | `plan_pdf.sh [--sprints] <plan-name> [output.pdf]` | Render a plan, optionally with its sprints, as PDF using Pandoc |
 | `plan_stats.sh <plan-name>` | Count open and done task lines in a plan |
 | `bug_stats.sh [date]` | Count bugs by lifecycle state on or after a date |
+| `condense_codex_rules.sh [--project root] [--dry-run\|--check\|--restore]` | Legacy low-level Codex command-policy compiler |
 | `project_journal.sh init\|start\|run_command\|over ...` | Initialize or record long-lived-plan telemetry in PostgreSQL |
 
 `plan_pdf.sh` requires Pandoc and writes to `tmp/<plan-name>.pdf` unless an
 output path is supplied.
+
+See [managing Codex command policy](docs/condense-codex-rules.md) for project
+proposals, confirmation, accepted state, and single-command recovery.
 
 ### Project journaling
 

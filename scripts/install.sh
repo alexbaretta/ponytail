@@ -9,8 +9,7 @@ print_usage() {
 Usage:
   ./scripts/install.sh
 
-Installs Ponytail skills and global instructions into Codex, then installs all
-Ponytail CLI tools into the user's default bin directory.
+Bootstraps the `ponytail` CLI and runs `ponytail install`.
 EOF
 }
 
@@ -34,8 +33,7 @@ main() {
   fi
 
   ponytail_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-  "${ponytail_root}/scripts/install-to-codex.sh"
-  "${ponytail_root}/scripts/install-cli.sh"
+  "${ponytail_root}/cli/ponytail" install
   exit 0
 }
 

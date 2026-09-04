@@ -1,0 +1,214 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Copyright (c) 2026 Alex Baretta. All rights reserved.
+# Licensed under the MIT License. See LICENSE in the project root.
+
+main() {
+  local python_source=''
+  local status=0
+
+  IFS= read -r -d '' python_source <<'PYTHON' || true
+import fcntl
+import hashlib
+import json
+import os
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
+
+
+def fail(message):
+    raise ValueError(message)
+
+
+def path_has_symlink(path):
+    current = path
+    while current != current.parent:
+        if current.is_symlink():
+            return True
+        current = current.parent
+    return False
+
+
+def valid_source_root(path):
+    return all((path / relative).is_file() for relative in (
+        "cli/ponytail",
+        "cli/condense_codex_rules.sh",
+        "scripts/install-cli.sh",
+        "scripts/install-to-codex.sh",
+        "registry.tsv",
+    ))
+
+
+def exact_config(value, config_path):
+    if not isinstance(value, dict) or set(value) != {"schemaVersion", "sourceRoot", "projects"}:
+        fail(f"invalid V1 Ponytail configuration: {config_path}")
+    if value["schemaVersion"] != 1 or not isinstance(value["sourceRoot"], str) or not Path(value["sourceRoot"]).is_absolute():
+        fail(f"invalid V1 Ponytail configuration: {config_path}")
+    projects = value["projects"]
+    if not isinstance(projects, list) or any(not isinstance(project, str) or not Path(project).is_absolute() for project in projects):
+        fail(f"invalid V1 Ponytail configuration: {config_path}")
+    if projects != sorted(set(projects)):
+        fail(f"invalid V1 Ponytail configuration: {config_path}")
+    return value
+
+
+def read_config(config_path):
+    if not config_path.exists():
+        return None
+    if path_has_symlink(config_path) or not config_path.is_file():
+        fail(f"Ponytail configuration must be a regular non-symlink file: {config_path}")
+    try:
+        return exact_config(json.loads(config_path.read_text(encoding="utf-8")), config_path)
+    except json.JSONDecodeError as error:
+        fail(f"invalid V1 Ponytail configuration {config_path}: {error}")
+    except TypeError:
+        fail(f"invalid V1 Ponytail configuration: {config_path}")
+
+
+def atomic_write(config_path, value):
+    if path_has_symlink(config_path) or (config_path.exists() and not config_path.is_file()):
+        fail(f"refusing to replace non-regular or symlink path: {config_path}")
+    config_path.parent.mkdir(parents=True, exist_ok=True)
+    descriptor, temporary = tempfile.mkstemp(prefix=f".{config_path.name}.", dir=config_path.parent)
+    try:
+        with os.fdopen(descriptor, "w", encoding="utf-8") as output:
+            json.dump(value, output, indent=2, sort_keys=True)
+            output.write("\n")
+            output.flush()
+            os.fsync(output.fileno())
+        os.chmod(temporary, 0o600)
+        os.replace(temporary, config_path)
+    finally:
+        if os.path.exists(temporary):
+            os.unlink(temporary)
+
+
+def source_root_for(script_path, config):
+    candidate = script_path.resolve().parent.parent
+    if valid_source_root(candidate):
+        return candidate
+    if config is None:
+        fail("Ponytail source is not configured; run cli/ponytail install-cli from the Ponytail repository")
+    source_root = Path(config["sourceRoot"])
+    if path_has_symlink(source_root) or not source_root.is_dir() or not valid_source_root(source_root):
+        fail(f"configured Ponytail source is unavailable: {source_root}")
+    return source_root
+
+
+def write_config(config_path, source_root, projects):
+    atomic_write(config_path, {
+        "schemaVersion": 1,
+        "sourceRoot": str(source_root.resolve()),
+        "projects": sorted(set(projects)),
+    })
+
+
+def setup_project(config_path, source_root):
+    result = subprocess.run(
+        ["git", "rev-parse", "--show-toplevel"],
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        fail("setup-project must run inside a Git worktree")
+    project_root = Path(result.stdout.strip()).resolve()
+    proposal_path = project_root / ".ponytail/codex-execpolicy.json"
+    if path_has_symlink(proposal_path) or not proposal_path.is_file():
+        fail(f"project policy must be a regular non-symlink file: {proposal_path}")
+    config = read_config(config_path)
+    projects = [] if config is None else config["projects"]
+    registered = str(project_root) not in projects
+    if registered or config is None or config["sourceRoot"] != str(source_root.resolve()):
+        write_config(config_path, source_root, projects + [str(project_root)])
+    print(f"{'registered' if registered else 'already registered'}: {project_root}")
+
+
+def install_cli(source_root, config_path, arguments):
+    status = subprocess.call([str(source_root / "scripts/install-cli.sh"), *arguments])
+    if status == 0 and "--check" not in arguments and "--dry-run" not in arguments:
+        config = read_config(config_path)
+        write_config(config_path, source_root, [] if config is None else config["projects"])
+    return status
+
+
+def install_to_codex(source_root, arguments):
+    return subprocess.call([str(source_root / "scripts/install-to-codex.sh"), *arguments])
+
+
+def install_permissions(source_root, config, arguments):
+    if "--project" in arguments or "--replace-projects" in arguments:
+        fail("install-permissions gets projects only from Ponytail registration")
+    command = [str(source_root / "cli/condense_codex_rules.sh"), "--replace-projects"]
+    for project in ([] if config is None else config["projects"]):
+        command.extend(["--project", project])
+    return subprocess.call([*command, *arguments])
+
+
+def print_usage():
+    print("""Usage:
+  ponytail setup-project
+  ponytail install-permissions [permission options]
+  ponytail install-cli [CLI installer options]
+  ponytail install-to-codex [Codex installer options]
+  ponytail install
+
+Project registration is explicit. The install command runs install-cli,
+install-to-codex, and install-permissions; it does not register the project.""")
+
+
+def run():
+    script_path = Path(sys.argv[1])
+    arguments = sys.argv[2:]
+    if not arguments or arguments[0] in {"-h", "--help", "help"}:
+        print_usage()
+        return 0
+    operation = arguments.pop(0)
+    home_value = os.environ.get("HOME")
+    if not home_value:
+        fail("HOME is required")
+    home = Path(home_value).expanduser().resolve()
+    config_path = home / ".ponytail/config.json"
+    lock_name = hashlib.sha256(str(home).encode()).hexdigest()
+    with open(Path(tempfile.gettempdir()) / f"ponytail-{lock_name}.lock", "a+", encoding="utf-8") as lock:
+        fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
+        config = read_config(config_path)
+        source_root = source_root_for(script_path, config)
+        if operation == "setup-project":
+            if arguments:
+                fail("setup-project accepts no arguments")
+            setup_project(config_path, source_root)
+            return 0
+        if operation == "install-cli":
+            return install_cli(source_root, config_path, arguments)
+        if operation == "install-to-codex":
+            return install_to_codex(source_root, arguments)
+        if operation == "install-permissions":
+            return install_permissions(source_root, config, arguments)
+        if operation == "install":
+            if arguments:
+                fail("install accepts no arguments")
+            status = install_cli(source_root, config_path, [])
+            if status != 0:
+                return status
+            status = install_to_codex(source_root, [])
+            if status != 0:
+                return status
+            return install_permissions(source_root, read_config(config_path), [])
+        fail(f"unknown command: {operation}")
+
+
+try:
+    sys.exit(run())
+except (OSError, ValueError) as error:
+    print(f"error: {error}", file=sys.stderr)
+    sys.exit(1)
+PYTHON
+
+  python3 -c "${python_source}" "${BASH_SOURCE[0]}" "$@" || status="$?"
+  exit "${status}"
+}
+
+main "$@"

@@ -49,11 +49,14 @@ services. `PROJECT_STRUCTURE.md` is authoritative for that boundary.
 - Manifest generation: `node scripts/build-manifests.js --write`; omit
   `--write` to check repeated metadata.
 - OpenClaw generation: `node scripts/build-openclaw-skills.js`.
-- Complete installation: `./scripts/install.sh`.
-- Codex installation: `./scripts/install-to-codex.sh`; Codex discovers
+- Complete installation: `ponytail install` after initial
+  `./scripts/install.sh` bootstrap.
+- Project registration: `ponytail setup-project`.
+- Permission installation: `ponytail install-permissions`.
+- Codex installation: `ponytail install-to-codex`; Codex discovers
   project-local skills from `.agents/skills/` automatically.
 - Codex installer tests: `./scripts/test-install-to-codex.sh`.
-- CLI installation: `./scripts/install-cli.sh`.
+- CLI installation: `ponytail install-cli`.
 - Project-journal setup: `./scripts/setup-project-journal.sh`.
 - CLI focused tests: `node --test tests/cli-tools.test.js`.
 - Deployment: not applicable.

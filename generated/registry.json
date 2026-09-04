@@ -72,6 +72,23 @@
     {
       "kind": "skill",
       "status": "enabled",
+      "name": "codex-execpolicy",
+      "source": "skills/codex-execpolicy",
+      "hosts": [
+        "claude",
+        "codex",
+        "copilot",
+        "devin",
+        "hermes",
+        "openclaw",
+        "pi",
+        "qoder"
+      ],
+      "reason": "Codex command policy proposals and accepted-state management"
+    },
+    {
+      "kind": "skill",
+      "status": "enabled",
       "name": "cross-session-effects",
       "source": "skills/cross-session-effects",
       "hosts": [
