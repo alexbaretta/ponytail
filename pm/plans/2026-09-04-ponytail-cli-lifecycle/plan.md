@@ -1,7 +1,7 @@
 # Ponytail CLI Lifecycle
 
 - Plan ID: `2026-09-04-ponytail-cli-lifecycle`
-- Status: `IN_PROGRESS`
+- Status: `DONE`
 - Approval: on 2026-09-04 the user explicitly requested a `ponytail` CLI
   owning project registration, permission installation, CLI installation,
   Codex installation, and combined installation.
@@ -32,7 +32,7 @@ of repositories considered during permission synthesis.
 ## Sprint
 
 - [S01](sprints/S01.md): implement and validate the CLI lifecycle. Status:
-  `IN_PROGRESS`.
+  `DONE`.
 
 ## Acceptance
 
@@ -46,4 +46,12 @@ of repositories considered during permission synthesis.
 
 ## Final Validation
 
-Pending.
+- Implementation commit: `5308d30`.
+- Installed Codex parser validation passed all 11 focused permission and CLI
+  tests.
+- `npm test` passed 264 core tests, 23 Pi extension tests, and 4 MCP tests,
+  including registry, generated-output, rule-copy, installer, and distribution
+  checks.
+- Version, shell syntax, durable-contract, selector, and diff checks passed.
+- All installation tests used isolated homes; the invoking user's live
+  `~/.ponytail` and `~/.codex` were not changed.
