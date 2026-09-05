@@ -31,7 +31,7 @@ function relativePaths(value, label) {
   if (!Array.isArray(value)) fail(`${label} must be an array`);
   if (new Set(value).size !== value.length) fail(`${label} must not contain duplicates`);
   for (const candidate of value) {
-    if (typeof candidate !== 'string' || !candidate || candidate.includes('\\') || /[*?{}[\]]/.test(candidate)) fail(`${label} must contain relative paths without glob syntax`);
+    if (typeof candidate !== 'string' || !candidate || candidate.includes('\\') || /[*?{}]/.test(candidate)) fail(`${label} must contain relative paths without glob syntax`);
     if (candidate.split('/').some((segment) => !segment || segment === '.' || segment === '..')) fail(`${label} contains an invalid path segment`);
   }
   return value;

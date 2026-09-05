@@ -238,3 +238,21 @@ test('V3 bounds one batch and V2 selects one tasklet', () => {
   assert.equal(result.next[0].tasklets.length, MAX_BATCH_TASKLETS);
   assert.deepEqual(select(writeFixture(graphV2())).next, ['S01-F01-T01']);
 });
+
+
+test('preserves bracket route paths as exact tasklet leases', (t) => {
+  for (const route of ['app/[id]/page.tsx', 'app/[...slug]/page.tsx', 'app/[[...slug]]/page.tsx']) {
+    const graph = graphV3();
+    graph.tasklets['S01-F01-T01'].planned_paths = [route];
+    const fixture = writeFixture(graph);
+    t.after(() => fs.rmSync(fixture.root, { recursive: true, force: true }));
+    assert.deepEqual(select(fixture).next[0].planned_paths, [route]);
+  }
+  for (const invalid of ['app/*/page.tsx', 'app/?/page.tsx', 'app/{a,b}/page.tsx', '../app/page.tsx', '/app/page.tsx']) {
+    const graph = graphV3();
+    graph.tasklets['S01-F01-T01'].planned_paths = [invalid];
+    const fixture = writeFixture(graph);
+    t.after(() => fs.rmSync(fixture.root, { recursive: true, force: true }));
+    assert.throws(() => readTaskletGraph(fixture.sprint), /glob syntax|invalid path segment/);
+  }
+});

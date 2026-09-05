@@ -29,7 +29,7 @@ function strings(value, label) {
 }
 
 function relativePath(value, label) {
-  if (typeof value !== 'string' || !value || value.includes('\\') || /[*?{}[\]]/.test(value)) fail(`${label} must be a relative path without glob syntax`);
+  if (typeof value !== 'string' || !value || value.includes('\\') || /[*?{}]/.test(value)) fail(`${label} must be a relative path without glob syntax`);
   const segments = value.split('/');
   if (segments.some((segment) => !segment || segment === '.' || segment === '..')) fail(`${label} contains an invalid path segment`);
   return value;

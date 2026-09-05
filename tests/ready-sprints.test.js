@@ -151,3 +151,20 @@ test('CLI returns exact JSON without mutating inputs', () => {
   assert.equal(fs.readFileSync(file, 'utf8'), before);
   assert.throws(() => execFileSync(process.execPath, [tool, 'bad', root], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }), (error) => error.status !== 0 && /usage/.test(error.stderr));
 });
+
+
+test('preserves literal bracket scope roots and legacy execution paths', () => {
+  for (const route of ['app/[id]', 'app/[...slug]', 'app/[[...slug]]']) {
+    const value = metadata('S01', 1);
+    value.planning.scope_roots = [route];
+    value.execution.planned_paths = [`${route}/page.tsx`];
+    const parsed = parseSprintFile('/tmp/S01.md', `<!-- ponytail-plan-sprint\n${JSON.stringify(value)}\n-->`);
+    assert.deepEqual(parsed.planning.scope_roots, [route]);
+    assert.deepEqual(parsed.execution.planned_paths, [`${route}/page.tsx`]);
+  }
+  for (const invalid of ['app/*', 'app/?', 'app/{a,b}', '../app', '/app']) {
+    const value = metadata('S01', 1);
+    value.planning.scope_roots = [invalid];
+    assert.throws(() => parseSprintFile('/tmp/S01.md', `<!-- ponytail-plan-sprint\n${JSON.stringify(value)}\n-->`), /glob syntax|invalid path segment/);
+  }
+});
