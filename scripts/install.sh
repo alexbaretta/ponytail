@@ -9,7 +9,7 @@ print_usage() {
 Usage:
   ./scripts/install.sh
 
-Bootstraps the `ponytail` CLI and runs `ponytail install`.
+Installs Ponytail's Codex skills and CLI tools.
 EOF
 }
 
@@ -33,7 +33,8 @@ main() {
   fi
 
   ponytail_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-  "${ponytail_root}/cli/ponytail" install
+  "${ponytail_root}/scripts/install-to-codex.sh"
+  "${ponytail_root}/scripts/install-cli.sh"
   exit 0
 }
 

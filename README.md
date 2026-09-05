@@ -20,15 +20,15 @@ Install Ponytail's Codex skills and user-facing CLI tools from a checkout:
 ./scripts/install.sh
 ```
 
-This bootstraps the `ponytail` executable into `~/.local/bin`, installs the
-enabled Codex skills, and installs the accepted command policy. Subsequent
-installation uses the CLI directly:
+This installs the `ponytail` executable into `~/.local/bin` and installs the
+enabled Codex skills. The executable links to this checkout so it can find
+Ponytail's canonical scripts and assets. Use it for subsequent configuration
+updates:
 
 ```bash
-ponytail install-cli
-ponytail install-to-codex
-ponytail install-permissions
-ponytail install
+ponytail update-skills
+ponytail update-permissions
+ponytail update
 ```
 
 From each adopting repository, register its Git root once:
@@ -38,13 +38,13 @@ ponytail setup-project
 ```
 
 Registration is stored in `~/.ponytail/config.json`; no filesystem-wide scan
-is performed. `ponytail install-permissions` evaluates every registered
+is performed. `ponytail update-permissions` evaluates every registered
 repository's `.ponytail/codex-execpolicy.json` proposal together.
 
 The CLI installer prompts before adding that directory to `~/.bashrc`; pass
 `--update-shell-path` to approve the update non-interactively. Install only
-selected standalone tools by naming them, for example
-`ponytail install-cli plan_stats.sh`.
+selected standalone tools by naming them to `scripts/install-cli.sh`, for
+example `./scripts/install-cli.sh plan_stats.sh`.
 
 Codex discovers project-owned skills automatically from `.agents/skills/`
 between the working directory and repository root.
@@ -85,7 +85,7 @@ Installed shell tools:
 
 | Tool | Purpose |
 | --- | --- |
-| `ponytail setup-project\|install-permissions\|install-cli\|install-to-codex\|install` | Register repositories and install Ponytail components |
+| `ponytail setup-project\|update-permissions\|update-skills\|update` | Register repositories and update Codex configuration |
 | `audit_pm.sh [--fix] [--dryrun]` | Audit PM structure and preview or fix missing date prefixes |
 | `plan_pdf.sh [--sprints] <plan-name> [output.pdf]` | Render a plan, optionally with its sprints, as PDF using Pandoc |
 | `plan_stats.sh <plan-name>` | Count open and done task lines in a plan |

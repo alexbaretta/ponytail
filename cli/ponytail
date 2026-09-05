@@ -36,7 +36,6 @@ def valid_source_root(path):
     return all((path / relative).is_file() for relative in (
         "cli/ponytail",
         "cli/condense_codex_rules.sh",
-        "scripts/install-cli.sh",
         "scripts/install-to-codex.sh",
         "registry.tsv",
     ))
@@ -91,7 +90,7 @@ def source_root_for(script_path, config):
     if valid_source_root(candidate):
         return candidate
     if config is None:
-        fail("Ponytail source is not configured; run cli/ponytail install-cli from the Ponytail repository")
+        fail("Ponytail source is not configured; run scripts/install-cli.sh from the Ponytail repository")
     source_root = Path(config["sourceRoot"])
     if path_has_symlink(source_root) or not source_root.is_dir() or not valid_source_root(source_root):
         fail(f"configured Ponytail source is unavailable: {source_root}")
@@ -126,21 +125,13 @@ def setup_project(config_path, source_root):
     print(f"{'registered' if registered else 'already registered'}: {project_root}")
 
 
-def install_cli(source_root, config_path, arguments):
-    status = subprocess.call([str(source_root / "scripts/install-cli.sh"), *arguments])
-    if status == 0 and "--check" not in arguments and "--dry-run" not in arguments:
-        config = read_config(config_path)
-        write_config(config_path, source_root, [] if config is None else config["projects"])
-    return status
-
-
-def install_to_codex(source_root, arguments):
+def update_skills(source_root, arguments):
     return subprocess.call([str(source_root / "scripts/install-to-codex.sh"), *arguments])
 
 
-def install_permissions(source_root, config, arguments):
+def update_permissions(source_root, config, arguments):
     if "--project" in arguments or "--replace-projects" in arguments:
-        fail("install-permissions gets projects only from Ponytail registration")
+        fail("update-permissions gets projects only from Ponytail registration")
     command = [str(source_root / "cli/condense_codex_rules.sh"), "--replace-projects"]
     for project in ([] if config is None else config["projects"]):
         command.extend(["--project", project])
@@ -150,13 +141,12 @@ def install_permissions(source_root, config, arguments):
 def print_usage():
     print("""Usage:
   ponytail setup-project
-  ponytail install-permissions [permission options]
-  ponytail install-cli [CLI installer options]
-  ponytail install-to-codex [Codex installer options]
-  ponytail install
+  ponytail update-permissions [permission options]
+  ponytail update-skills [Codex installer options]
+  ponytail update
 
-Project registration is explicit. The install command runs install-cli,
-install-to-codex, and install-permissions; it does not register the project.""")
+Project registration is explicit. The update command runs update-skills and
+update-permissions; it does not register the project.""")
 
 
 def run():
@@ -181,22 +171,17 @@ def run():
                 fail("setup-project accepts no arguments")
             setup_project(config_path, source_root)
             return 0
-        if operation == "install-cli":
-            return install_cli(source_root, config_path, arguments)
-        if operation == "install-to-codex":
-            return install_to_codex(source_root, arguments)
-        if operation == "install-permissions":
-            return install_permissions(source_root, config, arguments)
-        if operation == "install":
+        if operation == "update-skills":
+            return update_skills(source_root, arguments)
+        if operation == "update-permissions":
+            return update_permissions(source_root, config, arguments)
+        if operation == "update":
             if arguments:
-                fail("install accepts no arguments")
-            status = install_cli(source_root, config_path, [])
+                fail("update accepts no arguments")
+            status = update_skills(source_root, [])
             if status != 0:
                 return status
-            status = install_to_codex(source_root, [])
-            if status != 0:
-                return status
-            return install_permissions(source_root, read_config(config_path), [])
+            return update_permissions(source_root, config, [])
         fail(f"unknown command: {operation}")
 
 

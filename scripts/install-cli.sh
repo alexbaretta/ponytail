@@ -34,6 +34,11 @@ preflight_tool() {
   local tool_name="$4"
 
   if [[ -L "${target_path}" ]]; then
+    if [[ "${tool_name}" == 'ponytail' ]] && \
+      { [[ "$(readlink "${target_path}")" == "${source_path}" ]] || \
+        manifest_owns "${manifest_path}" "${tool_name}"; }; then
+      return
+    fi
     fail "refusing to replace CLI symlink: ${target_path}"
   fi
   if [[ ! -e "${target_path}" ]]; then
@@ -53,6 +58,25 @@ install_tool() {
   local dry_run="$2"
   local source_path="$3"
   local target_path="$4"
+  local tool_name="$5"
+
+  if [[ "${tool_name}" == 'ponytail' ]]; then
+    if [[ "${check}" == 'true' ]]; then
+      [[ -L "${target_path}" ]] && \
+        [[ "$(readlink "${target_path}")" == "${source_path}" ]] || \
+        fail "installed CLI does not link to source: ${target_path}"
+      return
+    fi
+    if [[ -L "${target_path}" ]] && \
+      [[ "$(readlink "${target_path}")" == "${source_path}" ]]; then
+      return
+    fi
+    printf 'link %s -> %s\n' "${target_path}" "${source_path}"
+    if [[ "${dry_run}" == 'false' ]]; then
+      ln -sfn "${source_path}" "${target_path}"
+    fi
+    return
+  fi
 
   if [[ "${check}" == 'true' ]]; then
     [[ -x "${target_path}" ]] && cmp -s "${source_path}" "${target_path}" || \
@@ -191,7 +215,8 @@ main() {
   for tool_name in "${selected_tools[@]}"; do
     source_path="${cli_root}/${tool_name}"
     target_path="${bin_dir}/${tool_name}"
-    install_tool "${check}" "${dry_run}" "${source_path}" "${target_path}"
+    install_tool \
+      "${check}" "${dry_run}" "${source_path}" "${target_path}" "${tool_name}"
   done
 
   if [[ "${check}" == 'false' ]] && [[ "${dry_run}" == 'false' ]]; then

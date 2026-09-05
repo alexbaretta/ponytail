@@ -26,15 +26,15 @@ using the shared policy.
 Run `ponytail setup-project` inside each adopting Git worktree to register its
 root in user-owned `~/.ponytail/config.json`. Registration resolves only the
 enclosing Git root; never scan the filesystem for projects. Run
-`ponytail install-permissions` to compute the complete registered policy
+`ponytail update-permissions` to compute the complete registered policy
 proposal. Review the displayed additions, removals, and decision changes.
 Accept interactively or rerun with the exact displayed `--accept <digest>`.
 Never accept a digest on the user's behalf.
 
 The first accepted run imports existing Codex prefix rules once. Later runs do
 not re-import generated output. Restore an accepted policy after loss of
-`~/.codex` with `ponytail install-permissions --restore`; verify installed
-state with `ponytail install-permissions --check`.
+`~/.codex` with `ponytail update-permissions --restore`; verify installed
+state with `ponytail update-permissions --check`.
 
 Do not describe package managers, Git commands, repository scripts, or
 forbidden patterns as intrinsically safe. Prefix rules authorize every suffix,

@@ -23,8 +23,8 @@ while project-wide management records remain under `pm/`.
   accepted user policy is stored outside repositories under
   `~/.ponytail/codex-execpolicy/`.
 - `~/.ponytail/config.json` is the external V1 user configuration written by
-  `ponytail setup-project` and `ponytail install-cli`; it owns the canonical
-  Ponytail source root and explicit registered-project list.
+  `ponytail setup-project`; it owns the canonical Ponytail source root and
+  explicit registered-project list.
 - `registry.tsv` owns enabled and disabled skill and command publication
   across supported hosts. Benchmark entries are prohibited.
 - `versioned-data-contracts.json` inventories Ponytail's durable serialized
@@ -38,15 +38,15 @@ while project-wide management records remain under `pm/`.
   `.opencode/`, `.qoder/`, and `.openclaw/` own host adapters. Generated
   adapters identify their canonical source in their validation tests.
 - `scripts/` owns local generation, validation, installation, cleanup, and
-  publication tooling. `scripts/install.sh` is the source-checkout bootstrap;
-  the safety-checked CLI and Codex installer implementations remain callable
-  behind the canonical `ponytail` command.
+  publication tooling. `scripts/install.sh` combines CLI and Codex skill
+  installation; `scripts/install-cli.sh` configures the installed `ponytail`
+  symlink with this checkout as its canonical source.
   Codex discovers project-local skills from `.agents/skills/` automatically.
 - `scripts/setup-project-journal.sh` and `scripts/project-journal.sql` own
   PostgreSQL 18 journal provisioning and its immutable V1 storage contract.
 - `cli/` owns user-facing parse-safe Bash tools. `cli/ponytail` owns project
-  registration and the public installation lifecycle. Adding a `.sh` tool
-  there makes it
+  registration and Codex configuration updates. Adding a `.sh` tool there
+  makes it
   installable by `scripts/install-cli.sh`, which installs all `cli/*.sh` files
   or selected tools into the user's configured executable directory. Add each
   tool to the focused CLI syntax, behavior, installer, and distribution tests.

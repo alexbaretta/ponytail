@@ -11,6 +11,7 @@ const test = require('node:test');
 
 const root = path.join(__dirname, '..');
 const ponytail = path.join(root, 'cli', 'ponytail');
+const installer = path.join(root, 'scripts', 'install-cli.sh');
 
 function temporaryDirectory(prefix) {
   return fs.mkdtempSync(path.join(os.tmpdir(), `${prefix}-`));
@@ -106,12 +107,12 @@ test('setup-project requires a policy and rejects malformed user configuration',
     projects: [],
     unexpected: true,
   }));
-  result = run(home, 'install-permissions');
+  result = run(home, 'update-permissions');
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /invalid V1 Ponytail configuration/);
 });
 
-test('install-permissions consumes every registered project and is idempotent', () => {
+test('update-permissions consumes every registered project and is idempotent', () => {
   const home = temporaryDirectory('ponytail-home');
   const first = project({
     safe: [{ pattern: ['./scripts/first.sh'], justification: 'Run first project command' }],
@@ -122,7 +123,7 @@ test('install-permissions consumes every registered project and is idempotent', 
   assert.equal(run(home, 'setup-project', [], { cwd: first }).status, 0);
   assert.equal(run(home, 'setup-project', [], { cwd: second }).status, 0);
 
-  let result = run(home, 'install-permissions', [], { input: 'yes\n' });
+  let result = run(home, 'update-permissions', [], { input: 'yes\n' });
   assert.equal(result.status, 0, result.stderr);
   const state = JSON.parse(fs.readFileSync(path.join(home, '.ponytail/codex-execpolicy/state.json'), 'utf8'));
   assert.deepEqual(state.projects, [fs.realpathSync(first), fs.realpathSync(second)].sort());
@@ -132,31 +133,50 @@ test('install-permissions consumes every registered project and is idempotent', 
   const config = JSON.parse(fs.readFileSync(configPath(home), 'utf8'));
   config.projects = [fs.realpathSync(first)];
   fs.writeFileSync(configPath(home), `${JSON.stringify(config, null, 2)}\n`, { mode: 0o600 });
-  result = run(home, 'install-permissions', [], { input: 'yes\n' });
+  result = run(home, 'update-permissions', [], { input: 'yes\n' });
   assert.equal(result.status, 0, result.stderr);
   const reduced = JSON.parse(fs.readFileSync(path.join(home, '.ponytail/codex-execpolicy/state.json'), 'utf8'));
   assert.deepEqual(reduced.projects, [fs.realpathSync(first)]);
   assert.ok(reduced.acceptedRules.every(({ pattern }) => pattern[0] !== './scripts/second.sh'));
 
-  result = run(home, 'install-permissions');
+  result = run(home, 'update-permissions');
   assert.equal(result.status, 0, result.stderr);
   assert.doesNotMatch(result.stderr, /Accept this shared policy change/);
 });
 
-test('installation subcommands install and run the unified CLI', () => {
+test('CLI installer links the checkout and the installed command updates skills', () => {
   const home = temporaryDirectory('ponytail-home');
   const bin = path.join(home, 'bin');
-  let result = run(home, 'install-cli', ['--bin-dir', bin], { input: 'n\n' });
+  let result = spawnSync(installer, ['--bin-dir', bin], {
+    encoding: 'utf8',
+    env: environment(home),
+    input: 'n\n',
+  });
   assert.equal(result.status, 0, result.stderr);
   const installed = path.join(bin, 'ponytail');
-  assert.ok(fs.statSync(installed).mode & 0o100);
+  assert.equal(fs.realpathSync(installed), fs.realpathSync(ponytail));
   assert.equal(spawnSync(installed, ['--help'], { encoding: 'utf8', env: environment(home) }).status, 0);
 
   const codexHome = path.join(home, '.codex-test');
-  result = spawnSync(installed, ['install-to-codex', '--codex-home', codexHome], {
+  result = spawnSync(installed, ['update-skills', '--codex-home', codexHome], {
     encoding: 'utf8',
     env: environment(home),
   });
   assert.equal(result.status, 0, result.stderr);
   assert.ok(fs.existsSync(path.join(codexHome, 'skills/ponytail/SKILL.md')));
+});
+
+test('update refreshes Codex skills and permissions without installing the CLI', () => {
+  const home = temporaryDirectory('ponytail-home');
+  const codexHome = path.join(home, '.codex-test');
+  const result = run(home, 'update', [], {
+    env: { CODEX_HOME: codexHome },
+    input: 'yes\n',
+  });
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.ok(fs.existsSync(path.join(codexHome, 'skills/ponytail/SKILL.md')));
+  assert.ok(fs.existsSync(path.join(home, '.codex/rules/ponytail.rules')));
+  assert.ok(fs.existsSync(path.join(home, '.ponytail/codex-execpolicy/state.json')));
+  assert.ok(!fs.existsSync(path.join(home, '.local/bin/ponytail')));
 });

@@ -126,25 +126,23 @@ test('CLI shell scripts are parse-safe', () => {
   }
 });
 
-test('combined installer installs Codex skills and CLI tools', () => {
+test('combined installer installs Codex skills and CLI tools only', () => {
   const home = fixture();
   const codexHome = path.join(home, '.codex');
   const result = run(combinedInstaller, [], {
     env: { ...cliEnvironment(home), CODEX_HOME: codexHome },
-    input: 'n\ny\n',
+    input: 'n\n',
   });
   assert.equal(result.status, 0, result.stderr);
   assert.ok(fs.existsSync(path.join(codexHome, 'skills/ponytail/SKILL.md')));
   assert.ok(fs.existsSync(path.join(codexHome, 'skills/cross-session-effects/SKILL.md')));
   assert.ok(fs.existsSync(path.join(codexHome, 'skills/codex-execpolicy/SKILL.md')));
-  assert.ok(fs.existsSync(path.join(codexHome, 'rules/ponytail.rules')));
-  assert.ok(fs.existsSync(path.join(home, '.ponytail/codex-execpolicy/state.json')));
-  assert.deepEqual(JSON.parse(fs.readFileSync(path.join(home, '.ponytail/config.json'), 'utf8')), {
-    schemaVersion: 1,
-    sourceRoot: fs.realpathSync(root),
-    projects: [],
-  });
-  assert.ok(fs.existsSync(path.join(home, '.local/bin/ponytail')));
+  assert.ok(!fs.existsSync(path.join(codexHome, 'rules/ponytail.rules')));
+  assert.ok(!fs.existsSync(path.join(home, '.ponytail')));
+  assert.equal(
+    fs.realpathSync(path.join(home, '.local/bin/ponytail')),
+    fs.realpathSync(ponytail),
+  );
   assert.ok(fs.existsSync(path.join(home, '.local/bin/plan_stats.sh')));
 });
 

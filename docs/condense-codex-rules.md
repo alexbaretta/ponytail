@@ -1,6 +1,6 @@
 # Managing Codex command policy
 
-`ponytail install-permissions` is Ponytail's Codex execpolicy installer. It
+`ponytail update-permissions` is Ponytail's Codex execpolicy updater. It
 combines Ponytail's baseline, existing Codex rules imported during the first
 accepted run, explicitly refreshed imports, and proposals from registered
 projects. `condense_codex_rules.sh` remains the low-level compiler.
@@ -54,14 +54,14 @@ of accepted alternatives. A prefix governs every suffix.
 Display the complete effective diff for all registered projects:
 
 ```bash
-ponytail install-permissions --dry-run
+ponytail update-permissions --dry-run
 ```
 
 Without `--dry-run`, the tool displays the proposal and asks for confirmation.
 For automation, accept exactly the displayed digest:
 
 ```bash
-ponytail install-permissions --accept <proposal-digest>
+ponytail update-permissions --accept <proposal-digest>
 ```
 
 A missing or rejected confirmation leaves both policy locations unchanged.
@@ -72,8 +72,8 @@ rules outside Ponytail should replace the saved bootstrap import.
 ## Verification and recovery
 
 ```bash
-ponytail install-permissions --check
-ponytail install-permissions --restore
+ponytail update-permissions --check
+ponytail update-permissions --restore
 ```
 
 `--check` verifies registered project digests and the installed projection.
