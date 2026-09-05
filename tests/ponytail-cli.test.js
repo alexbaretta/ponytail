@@ -47,15 +47,26 @@ function configPath(home) {
   return path.join(home, '.ponytail/config.json');
 }
 
-test('setup-project registers the enclosing Git root idempotently', () => {
+test('setup initializes and registers the enclosing Git root idempotently', () => {
   const home = temporaryDirectory('ponytail-home');
-  const projectRoot = project();
+  const projectRoot = temporaryDirectory('ponytail-project');
+  assert.equal(spawnSync('git', ['init', '-q'], { cwd: projectRoot }).status, 0);
   const nested = path.join(projectRoot, 'one/two');
   fs.mkdirSync(nested, { recursive: true });
 
-  let result = run(home, 'setup-project', [], { cwd: nested });
+  let result = run(home, 'setup', [], { cwd: nested });
   assert.equal(result.status, 0, result.stderr);
-  assert.equal(result.stdout, `registered: ${fs.realpathSync(projectRoot)}\n`);
+  const proposalPath = path.join(fs.realpathSync(projectRoot), '.ponytail/codex-execpolicy.json');
+  assert.equal(
+    result.stdout,
+    `initialized: ${proposalPath}\nregistered: ${fs.realpathSync(projectRoot)}\n`,
+  );
+  assert.deepEqual(JSON.parse(fs.readFileSync(proposalPath, 'utf8')), {
+    schemaVersion: 1,
+    safe: [],
+    unsafe: [],
+  });
+  assert.equal(fs.statSync(proposalPath).mode & 0o777, 0o644);
   const first = fs.readFileSync(configPath(home), 'utf8');
   assert.deepEqual(JSON.parse(first), {
     schemaVersion: 1,
@@ -64,20 +75,20 @@ test('setup-project registers the enclosing Git root idempotently', () => {
   });
   assert.equal(fs.statSync(configPath(home)).mode & 0o777, 0o600);
 
-  result = run(home, 'setup-project', [], { cwd: projectRoot });
+  result = run(home, 'setup', [], { cwd: projectRoot });
   assert.equal(result.status, 0, result.stderr);
   assert.equal(result.stdout, `already registered: ${fs.realpathSync(projectRoot)}\n`);
   assert.equal(fs.readFileSync(configPath(home), 'utf8'), first);
 });
 
-test('concurrent setup-project calls retain both registrations', () => {
+test('concurrent setup calls retain both registrations', () => {
   const home = temporaryDirectory('ponytail-home');
   const first = project();
   const second = project();
   const quote = (value) => `'${value.replaceAll("'", "'\\''")}'`;
   const command = [
-    `(cd ${quote(first)} && ${quote(ponytail)} setup-project) &`,
-    `(cd ${quote(second)} && ${quote(ponytail)} setup-project) &`,
+    `(cd ${quote(first)} && ${quote(ponytail)} setup) &`,
+    `(cd ${quote(second)} && ${quote(ponytail)} setup) &`,
     'wait',
   ].join(' ');
   const result = spawnSync('bash', ['-c', command], {
@@ -92,11 +103,13 @@ test('concurrent setup-project calls retain both registrations', () => {
   ].sort());
 });
 
-test('setup-project requires a policy and rejects malformed user configuration', () => {
+test('setup rejects a symlinked policy and malformed user configuration', () => {
   const home = temporaryDirectory('ponytail-home');
   const projectRoot = temporaryDirectory('ponytail-project');
   assert.equal(spawnSync('git', ['init', '-q'], { cwd: projectRoot }).status, 0);
-  let result = run(home, 'setup-project', [], { cwd: projectRoot });
+  fs.mkdirSync(path.join(projectRoot, '.ponytail'));
+  fs.symlinkSync('/tmp/untrusted-policy', path.join(projectRoot, '.ponytail/codex-execpolicy.json'));
+  let result = run(home, 'setup', [], { cwd: projectRoot });
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /project policy must be a regular non-symlink file/);
 
@@ -120,8 +133,8 @@ test('update-permissions consumes every registered project and is idempotent', (
   const second = project({
     unsafe: [{ pattern: ['./scripts/second.sh'], decision: 'prompt', justification: 'Review second project command' }],
   });
-  assert.equal(run(home, 'setup-project', [], { cwd: first }).status, 0);
-  assert.equal(run(home, 'setup-project', [], { cwd: second }).status, 0);
+  assert.equal(run(home, 'setup', [], { cwd: first }).status, 0);
+  assert.equal(run(home, 'setup', [], { cwd: second }).status, 0);
 
   let result = run(home, 'update-permissions', [], { input: 'yes\n' });
   assert.equal(result.status, 0, result.stderr);

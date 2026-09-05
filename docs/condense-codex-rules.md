@@ -15,7 +15,7 @@ the sorted unique list of registered Git roots. Register an adopting project
 from any directory inside its worktree:
 
 ```bash
-ponytail setup-project
+ponytail setup
 ```
 
 Registration resolves only the enclosing Git root and requires that root's

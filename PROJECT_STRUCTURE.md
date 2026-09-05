@@ -23,7 +23,7 @@ while project-wide management records remain under `pm/`.
   accepted user policy is stored outside repositories under
   `~/.ponytail/codex-execpolicy/`.
 - `~/.ponytail/config.json` is the external V1 user configuration written by
-  `ponytail setup-project`; it owns the canonical Ponytail source root and
+  `ponytail setup`; it owns the canonical Ponytail source root and
   explicit registered-project list.
 - `registry.tsv` owns enabled and disabled skill and command publication
   across supported hosts. Benchmark entries are prohibited.

@@ -23,9 +23,10 @@ and `justification`. An unsafe entry also specifies `decision` as `prompt` or
 `forbidden`. Prefer `prompt`; `forbidden` can deny service to every Codex task
 using the shared policy.
 
-Run `ponytail setup-project` inside each adopting Git worktree to register its
-root in user-owned `~/.ponytail/config.json`. Registration resolves only the
-enclosing Git root; never scan the filesystem for projects. Run
+Run `ponytail setup` inside each adopting Git worktree to initialize its V1
+project proposal and register its root in user-owned
+`~/.ponytail/config.json`. Registration resolves only the enclosing Git root;
+never scan the filesystem for projects. Run
 `ponytail update-permissions` to compute the complete registered policy
 proposal. Review the displayed additions, removals, and decision changes.
 Accept interactively or rerun with the exact displayed `--accept <digest>`.

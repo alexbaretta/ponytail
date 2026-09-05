@@ -34,7 +34,7 @@ ponytail update
 From each adopting repository, register its Git root once:
 
 ```bash
-ponytail setup-project
+ponytail setup
 ```
 
 Registration is stored in `~/.ponytail/config.json`; no filesystem-wide scan
@@ -85,7 +85,7 @@ Installed shell tools:
 
 | Tool | Purpose |
 | --- | --- |
-| `ponytail setup-project\|update-permissions\|update-skills\|update` | Register repositories and update Codex configuration |
+| `ponytail setup\|update-permissions\|update-skills\|update` | Initialize and register repositories, and update Codex configuration |
 | `audit_pm.sh [--fix] [--dryrun]` | Audit PM structure and preview or fix missing date prefixes |
 | `plan_pdf.sh [--sprints] <plan-name> [output.pdf]` | Render a plan, optionally with its sprints, as PDF using Pandoc |
 | `plan_stats.sh <plan-name>` | Count open and done task lines in a plan |

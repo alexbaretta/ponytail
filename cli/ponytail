@@ -67,7 +67,7 @@ def read_config(config_path):
         fail(f"invalid V1 Ponytail configuration: {config_path}")
 
 
-def atomic_write(config_path, value):
+def atomic_write(config_path, value, mode=0o600):
     if path_has_symlink(config_path) or (config_path.exists() and not config_path.is_file()):
         fail(f"refusing to replace non-regular or symlink path: {config_path}")
     config_path.parent.mkdir(parents=True, exist_ok=True)
@@ -78,7 +78,7 @@ def atomic_write(config_path, value):
             output.write("\n")
             output.flush()
             os.fsync(output.fileno())
-        os.chmod(temporary, 0o600)
+        os.chmod(temporary, mode)
         os.replace(temporary, config_path)
     finally:
         if os.path.exists(temporary):
@@ -105,18 +105,25 @@ def write_config(config_path, source_root, projects):
     })
 
 
-def setup_project(config_path, source_root):
+def setup(config_path, source_root):
     result = subprocess.run(
         ["git", "rev-parse", "--show-toplevel"],
         capture_output=True,
         text=True,
     )
     if result.returncode != 0:
-        fail("setup-project must run inside a Git worktree")
+        fail("setup must run inside a Git worktree")
     project_root = Path(result.stdout.strip()).resolve()
     proposal_path = project_root / ".ponytail/codex-execpolicy.json"
-    if path_has_symlink(proposal_path) or not proposal_path.is_file():
+    if path_has_symlink(proposal_path) or (proposal_path.exists() and not proposal_path.is_file()):
         fail(f"project policy must be a regular non-symlink file: {proposal_path}")
+    if not proposal_path.exists():
+        atomic_write(proposal_path, {
+            "schemaVersion": 1,
+            "safe": [],
+            "unsafe": [],
+        }, 0o644)
+        print(f"initialized: {proposal_path}")
     config = read_config(config_path)
     projects = [] if config is None else config["projects"]
     registered = str(project_root) not in projects
@@ -140,7 +147,7 @@ def update_permissions(source_root, config, arguments):
 
 def print_usage():
     print("""Usage:
-  ponytail setup-project
+  ponytail setup
   ponytail update-permissions [permission options]
   ponytail update-skills [Codex installer options]
   ponytail update
@@ -166,10 +173,10 @@ def run():
         fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
         config = read_config(config_path)
         source_root = source_root_for(script_path, config)
-        if operation == "setup-project":
+        if operation == "setup":
             if arguments:
-                fail("setup-project accepts no arguments")
-            setup_project(config_path, source_root)
+                fail("setup accepts no arguments")
+            setup(config_path, source_root)
             return 0
         if operation == "update-skills":
             return update_skills(source_root, arguments)

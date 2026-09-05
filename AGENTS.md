@@ -50,7 +50,7 @@ services. `PROJECT_STRUCTURE.md` is authoritative for that boundary.
   `--write` to check repeated metadata.
 - OpenClaw generation: `node scripts/build-openclaw-skills.js`.
 - Complete installation: `./scripts/install.sh`.
-- Project registration: `ponytail setup-project`.
+- Project initialization and registration: `ponytail setup`.
 - Permission update: `ponytail update-permissions`.
 - Codex skill update: `ponytail update-skills`; Codex discovers
   project-local skills from `.agents/skills/` automatically.
