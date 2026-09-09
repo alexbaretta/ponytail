@@ -88,7 +88,10 @@
       "planned_paths": [
         "pm/plans/2026-09-08-issue-requirements-skills/plan.md",
         "pm/plans/2026-09-08-issue-requirements-skills/sprints/S01.md",
-        "pm/plans/2026-09-08-issue-requirements-skills/sprints/S01.tasklets.json"
+        "pm/plans/2026-09-08-issue-requirements-skills/sprints/S01.tasklets.json",
+        "pm/plans/closed/2026-09-08-issue-requirements-skills/plan.md",
+        "pm/plans/closed/2026-09-08-issue-requirements-skills/sprints/S01.md",
+        "pm/plans/closed/2026-09-08-issue-requirements-skills/sprints/S01.tasklets.json"
       ]
     }
   }

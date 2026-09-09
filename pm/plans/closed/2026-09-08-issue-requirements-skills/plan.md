@@ -1,7 +1,7 @@
 # Issue tracking and requirements skills
 
 Plan ID: 2026-09-08-issue-requirements-skills
-Status: in_progress
+Status: closed
 
 ## Objective and authority
 
@@ -25,7 +25,7 @@ existing-record migration, or external-system mutation is included.
 
 ## Sprint and acceptance
 
-1. [S01](sprints/S01.md): define and publish the skills, validate their contracts.
+1. [S01](sprints/S01.md): define and publish the skills, validate their contracts — DONE.
 
 Validate frontmatter, references, publication metadata, focused policy tests,
 build impact, full Node acceptance, rule copies, and versions. Review default
@@ -34,3 +34,15 @@ TASK activation, epic links, reopen, and plan moves against the written rules.
 
 Questions: [RESOLVED] The request supplies types, statuses, naming, epic meaning,
 and requirements timing. Use the existing agent-readable configuration model.
+
+## Acceptance evidence
+
+Implementation: `4c64098`. All focused policy/publication checks, skill syntax
+and metadata checks, full `npm test`, rule-copy validation, version validation,
+and command-adapter validation passed. Build impact reported no affected or
+indeterminate targets. No tracked dependency changes resulted from setup.
+
+This plan alone moves into the new closed lifecycle directory at acceptance;
+all pre-existing plans and issues retain their paths. Legacy PM CLI commands
+remain limited to their documented old layout. The requested deliverable is
+agent skills and publication, not executable lifecycle automation.
