@@ -114,6 +114,10 @@ configured plan root (default `pm/plans`), use:
 ```text
 <status>/YYYY-MM-DD-<plan-name>/
   plan.md
+  evidence/
+    integration/
+      plan/
+      S01/
   sprints/
     S01.md
     S01.tasklets.json
@@ -169,6 +173,14 @@ Each sprint file records:
 - atomic tasklets and applicable tests; and
 - sprint validation evidence.
 
+The host configuration defines the exact integration-evidence representation.
+Retain a structured record for every sprint-wide and plan-wide integration
+run, including the exact commit, dirty-tree state, command and selection,
+start and completion timestamps, outcome and counts, skips, and failure
+details. Retain complete output for failures. A host may also require complete
+successful output. Commit the evidence with the lifecycle transition it
+supports.
+
 Keep the manifest short enough to rehydrate cheaply. Keep executable detail in
 the active sprint file. A completed plan is an immutable historical execution
 record except for an explicit correction; create a new stable plan for later
@@ -185,9 +197,15 @@ Before requesting approval to start a plan:
 4. Mark every question `[RESOLVED]`.
 5. Make scope, stories, tasklets, and acceptance criteria executable without
    relying on chat history.
+6. Establish a green starting checkpoint by running every applicable test that
+   does not require a human participant against the exact recorded Git state.
 
 A plan may not start while a known question is open. Approval is explicit; do
-not infer it from discussion, urgency, or approval of a different plan.
+not infer it from discussion, urgency, or approval of a different plan. A
+failing or unavailable required automated test also prevents the plan from
+starting. Record tests that inherently require a human participant as manual
+acceptance; do not put them on the automatic development critical path or
+represent them as automated evidence.
 
 Before starting any later sprint, apply the same readiness gate to that sprint.
 New questions discovered during execution must be recorded. Stop only when the
@@ -288,6 +306,12 @@ Direct user requests that add behavior to an active plan must be recorded in
 the applicable sprint before implementation and explicitly approved when they
 change approved scope.
 
+Every planned deliverable must trace to an approved requirement. Do not turn
+an architectural aspiration, illustrative example, possible future migration,
+or implementation opportunity into current scope. When a necessary outcome is
+absent from the requirements, record it as a proposal and obtain stakeholder
+approval before planning or implementing it.
+
 Work discovered while implementing an approved objective may be added and
 performed without another approval when it remains inside the architectural
 areas and contract boundaries already approved. Extra files, tasklets, tests,
@@ -312,6 +336,21 @@ When required work crosses such a boundary, update the plan with the reason,
 proposed work, and acceptance criteria, then stop before changing that area and
 obtain explicit approval. Also stop for an unspecified product or safety
 decision, an unapproved destructive action, or competing sources of truth.
+
+Prefer decomposing a plan before it exceeds 300 atomic tasklets. A plan may
+contain 301 through 1,000 tasklets only after a recorded high-confidence review
+establishes that the tasklets are genuinely atomic, collectively cover only
+the approved requirements, and leave the architecture and dependency graph
+comprehensible, followed by explicit human approval of that exception. A plan
+must never exceed 1,000 tasklets. If planning or implementation reaches that
+limit, stop, preserve valid evidence, and narrow or decompose the work before
+implementation continues.
+
+Tasklet count is a diagnostic threshold, not a substitute for judgment. The
+user and agent each may stop an unmanageable effort. The agent must stop when
+scope or coupling leaves no realistic sequence of independently verifiable
+increments, even below the numeric limit. Redesign or narrow the plan before
+dependent work proceeds.
 
 ## Testing Ownership
 
@@ -372,6 +411,7 @@ edits one. Assign proof to the smallest level that can meaningfully own it:
 
 ### Plan
 
+- Confirm that the plan began from its recorded green checkpoint.
 - Run each affected repository's applicable configured full unit-test command
   once after its final relevant edit.
 - Run every applicable integration Suite once against the final tree, plus
@@ -380,6 +420,9 @@ edits one. Assign proof to the smallest level that can meaningfully own it:
 - Run a build portion only when the build-impact query reports an affected
   target or the approved deliverable is a build, package, or release artifact.
 - Reconcile all sprint results across the affected repositories.
+- Record a green ending checkpoint at the exact accepted Git state. Every
+  applicable test that does not require a human participant must pass; manual
+  acceptance remains separately identified.
 
 If an applicable focused command is missing, repair the host configuration;
 never fall back to a full command. A broader non-unit check may be deferred
@@ -432,6 +475,20 @@ tasklet batch, one executing agent, one checkout, and one Git index. Finish the
 batch's implementation, review, validation, lifecycle reconciliation, and
 commit before selecting more work. Do not delegate plan drafting,
 implementation, review, validation, Git ownership, or lifecycle updates.
+
+### Campaign Orchestration
+
+A campaign may relate multiple plans through an explicit dependency graph.
+Backward compatibility often enables concurrent plans, but it is not the only
+valid parallel structure. Separate sessions, agents, branches, and worktrees
+are optional. Use coordinated multi-agent execution only when the developer
+requests it. In that mode, assign each concurrent plan to one worker, maximize
+safe parallelism, and serialize integration where dependency branches join.
+Each worker rebases its completed branch onto the campaign's main feature
+branch. The coordinator verifies the rebased plan evidence and fast-forward
+merges that branch. Failure of a sequential prerequisite blocks its dependent
+campaign path. Examples used to explain possible campaign decomposition do not
+authorize those plans.
 
 Before any sprint planning or implementation edit, the executing agent runs
 the applicable readiness selector. Selector output, rather than subjective

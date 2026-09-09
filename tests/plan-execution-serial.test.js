@@ -35,7 +35,14 @@ test('serial policy preserves atomic batch and convergence boundaries', () => {
   assert.match(skill, /Add every\s+foreseeable in-scope correction to the sprint and tasklet graph together/);
   assert.match(skill, /runs final\s+input validation once/);
   assert.match(skill, /feature advances through its single\s+approval gate only after every implementation tasklet is reconciled/);
-  assert.doesNotMatch(skill, /parallel|wave|packet|dispatch|subagent|secondary task|worktree|path-disjoint|runtime capacity|capable writer|orchestrator|handoff/i);
+  const serialPlanPolicy = skill.slice(
+    skill.indexOf('## Serial Plan Orchestration'),
+    skill.indexOf('### Campaign Orchestration'),
+  );
+  assert.doesNotMatch(serialPlanPolicy, /parallel|wave|packet|dispatch|subagent|secondary task|worktree|path-disjoint|runtime capacity|capable writer|orchestrator|handoff/i);
+  assert.match(skill, /Use coordinated multi-agent execution only when the developer\s+requests it/);
+  assert.match(skill, /Each worker rebases its completed branch onto the campaign's main feature\s+branch/);
+  assert.match(skill, /coordinator verifies the rebased plan evidence and fast-forward\s+merges that branch/);
 });
 
 test('sandbox-blocked journaling requires explicit persistent-rule authorization', () => {

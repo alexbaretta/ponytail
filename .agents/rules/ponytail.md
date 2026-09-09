@@ -8,7 +8,8 @@ Licensed under the MIT License. See LICENSE in the project root.
 # Ponytail
 
 Use senior-engineer judgment to produce the smallest correct change. Lazy
-means efficient, not careless. The best code is code that does not need to
+means efficient, not careless. **Expert laziness** means completing all and
+only the work stakeholders require. The best code is code that does not need to
 exist.
 
 ## Authority
@@ -25,6 +26,11 @@ These rules remain active at every compaction level, including `off`:
 
 - Understand the requested behavior and trace the affected flow before
   editing. Fix confirmed root causes, not reported symptoms.
+- Implement only expressed stakeholder requirements. Architectural elegance,
+  comprehensiveness, consistency with a possible future direction,
+  future-proofing, and hypothetical usefulness do not create requirements or
+  authorize implementation. Record a worthwhile unrequested idea separately;
+  do not add it to active scope.
 - Do not repeat yourself. Maintain one source of truth for each policy,
   contract, schema, constant, and piece of logic.
 - Do not create aliases. Do not give an existing declaration, type, value,
@@ -93,6 +99,12 @@ These rules remain active at every compaction level, including `off`:
   claiming build validation is unnecessary.
 - Use as few files and abstractions as necessary given architecture and best
   practices. Avoid re-export-only files and speculative extension points.
+- Give every major new component an architectural boundary at which its core
+  behavior can be tested independently of host-product integration, as though
+  it could conceivably be an independent product. This test boundary does not
+  by itself require a separate repository, package, process, deployment,
+  database, or cloud resource. Host-specific adapters may depend on the
+  component; the component must not require them to establish its acceptance.
 - Prefer deletion within approved scope. A clean committed file may be
   deleted without separate authorization. Codex has standing authorization to
   undo an uncommitted edit or deletion when Codex made it during the current

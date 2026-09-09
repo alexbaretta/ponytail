@@ -18,6 +18,14 @@ configured requirements root, by default `pm/requirements`. Aim for complete
 coverage of intended behavior over time. Do not invent requirements to fill
 gaps or claim completeness without evidence.
 
+Every approved requirement must be traceable to an expressed stakeholder
+need, decision, or authoritative external contract. Examples, aspirations,
+possible future migrations, architectural preferences, inferred
+comprehensiveness, and opportunities discovered during implementation remain
+proposals until a stakeholder approves them as requirements. Do not convert
+them into active scope merely because they would make the product more useful,
+elegant, uniform, extensible, or future-proof.
+
 ## A Browsable Markdown Web
 
 Use `index.md` as the entry point. Organize topic pages by the project's domain
@@ -77,6 +85,11 @@ this reconciliation. After deferral, rejection, or a scope change, reassess any
 requirements introduced by that issue: keep their approval and implementation
 state accurate. Do not automatically remove a requirement that remains
 approved or is shared by other issues.
+
+When an issue or plan proposes an outcome absent from the approved
+requirements, reconcile that outcome with the stakeholder before adding it to
+active scope. Approval of a related requirement or broader architectural
+direction does not authorize the new outcome.
 
 ## Validation
 
