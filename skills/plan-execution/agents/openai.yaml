@@ -3,5 +3,5 @@
 # Licensed under the MIT License. See LICENSE in the project root.
 interface:
   display_name: "Plan Execution"
-  short_description: "Manage plans, bugs, tasklets, and validation"
+  short_description: "Manage plans, issue execution, tasklets, and validation"
   default_prompt: "Use $plan-execution to manage this approved project work."

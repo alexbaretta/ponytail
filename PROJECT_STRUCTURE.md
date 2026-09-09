@@ -68,10 +68,19 @@ while project-wide management records remain under `pm/`.
 - `benchmarks/` is an optional isolated subsystem. It owns all benchmark
   code, tests, dependencies, assets, results, and reproduction instructions.
 - `docs/` owns detailed project and host documentation.
-- `pm/plans/` owns long-lived plans and sprint records.
-- `pm/bugs/open/`, `pm/bugs/in_progress/`, and `pm/bugs/closed/` own bug
-  records by lifecycle state. Create a lifecycle directory when its first
-  record is added; do not add placeholder files.
+- `pm/plans/<status>/<plan-id>/` owns new long-lived plans and their sprint
+  records. Existing flat `pm/plans/<plan-id>/` records are historical layouts
+  and remain in place until an explicitly scoped migration.
+- `pm/bugs/<status>/` owns all issue types. New issue filenames follow
+  `YYYY-MM-DD-<type>-<short_description>.md`. Existing filenames remain stable
+  until an explicitly scoped migration.
+- `pm/requirements/index.md` is the entry point for the linked requirements
+  web. Create it with the first requirements content, not as a placeholder.
+- `skills/issue-tracking/SKILL.md` supplies this project's default issue types
+  and shared issue/plan lifecycle. No local overrides are configured. The
+  host configuration in `AGENTS.md` references this owner; do not duplicate
+  the defaults in either `ponytail.json` contract. Create lifecycle directories
+  with their first record, without placeholder files.
 - `tech_debt.md` is the canonical local technical-debt record.
 - `tmp/` owns ignored local logs, probes, generated previews, and other
   temporary artifacts, including disposable `tmp/project-journal/` process

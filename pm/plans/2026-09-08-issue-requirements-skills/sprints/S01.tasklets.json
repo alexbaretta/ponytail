@@ -1,0 +1,95 @@
+{
+  "schemaVersion": 3,
+  "sprint": "S01",
+  "features": {
+    "S01-F01": {
+      "depends_on": [],
+      "validation_tasklet": "S01-F01-T05"
+    }
+  },
+  "tasklets": {
+    "S01-F01-T01": {
+      "depends_on": [],
+      "affinity": [
+        "management-skills"
+      ],
+      "risk": "normal",
+      "feature": "S01-F01",
+      "planned_paths": [
+        "skills/issue-tracking/SKILL.md",
+        "skills/issue-tracking/agents/openai.yaml"
+      ]
+    },
+    "S01-F01-T02": {
+      "depends_on": [
+        "S01-F01-T01"
+      ],
+      "affinity": [
+        "management-skills"
+      ],
+      "risk": "normal",
+      "feature": "S01-F01",
+      "planned_paths": [
+        "skills/requirements/SKILL.md",
+        "skills/requirements/agents/openai.yaml"
+      ]
+    },
+    "S01-F01-T03": {
+      "depends_on": [
+        "S01-F01-T02"
+      ],
+      "affinity": [
+        "management-skills"
+      ],
+      "risk": "normal",
+      "feature": "S01-F01",
+      "planned_paths": [
+        "skills/plan-execution/SKILL.md",
+        "skills/plan-execution/agents/openai.yaml",
+        "skills/project-structure/SKILL.md",
+        "tests/testing-cadence.test.js",
+        "tests/debugging.test.js"
+      ]
+    },
+    "S01-F01-T04": {
+      "depends_on": [
+        "S01-F01-T03"
+      ],
+      "affinity": [
+        "management-skills"
+      ],
+      "risk": "normal",
+      "feature": "S01-F01",
+      "planned_paths": [
+        "registry.tsv",
+        "generated/registry.json",
+        "plugin.yaml",
+        ".openclaw/skills/issue-tracking/SKILL.md",
+        ".openclaw/skills/requirements/SKILL.md",
+        ".openclaw/skills/plan-execution/SKILL.md",
+        ".openclaw/skills/project-structure/SKILL.md",
+        "AGENTS.md",
+        "PROJECT_STRUCTURE.md",
+        "README.md"
+      ]
+    },
+    "S01-F01-T05": {
+      "depends_on": [
+        "S01-F01-T01",
+        "S01-F01-T02",
+        "S01-F01-T03",
+        "S01-F01-T04"
+      ],
+      "affinity": [
+        "management-skills"
+      ],
+      "risk": "normal",
+      "feature": "S01-F01",
+      "planned_paths": [
+        "pm/plans/2026-09-08-issue-requirements-skills/plan.md",
+        "pm/plans/2026-09-08-issue-requirements-skills/sprints/S01.md",
+        "pm/plans/2026-09-08-issue-requirements-skills/sprints/S01.tasklets.json"
+      ]
+    }
+  }
+}

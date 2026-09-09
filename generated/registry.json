@@ -165,6 +165,23 @@
     {
       "kind": "skill",
       "status": "enabled",
+      "name": "issue-tracking",
+      "source": "skills/issue-tracking",
+      "hosts": [
+        "claude",
+        "codex",
+        "copilot",
+        "devin",
+        "hermes",
+        "openclaw",
+        "pi",
+        "qoder"
+      ],
+      "reason": "Issue identity, configurable lifecycle, and epic associations"
+    },
+    {
+      "kind": "skill",
+      "status": "enabled",
       "name": "lossless-json-contracts",
       "source": "skills/lossless-json-contracts",
       "hosts": [
@@ -331,6 +348,23 @@
         "qoder"
       ],
       "reason": "React failure containment"
+    },
+    {
+      "kind": "skill",
+      "status": "enabled",
+      "name": "requirements",
+      "source": "skills/requirements",
+      "hosts": [
+        "claude",
+        "codex",
+        "copilot",
+        "devin",
+        "hermes",
+        "openclaw",
+        "pi",
+        "qoder"
+      ],
+      "reason": "Linked requirements and issue activation reconciliation"
     },
     {
       "kind": "skill",

@@ -24,6 +24,7 @@ provides_skills:
   - debugging
   - diagnostic-assertions
   - indeterminate-list-ux
+  - issue-tracking
   - lossless-json-contracts
   - monetary-contract-safety
   - plan-execution
@@ -34,6 +35,7 @@ provides_skills:
   - project-structure
   - production-test-boundaries
   - react-error-containment
+  - requirements
   - static-type-safety
   - test-credentials
   - typescript-unit-testing

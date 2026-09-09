@@ -93,6 +93,19 @@ Installed shell tools:
 | `condense_codex_rules.sh [--project root] [--dry-run\|--check\|--restore]` | Legacy low-level Codex command-policy compiler |
 | `project_journal.sh init\|start\|run_command\|over ...` | Initialize or record long-lived-plan telemetry in PostgreSQL |
 
+The `issue-tracking` skill defines configurable issue types and shared
+issue/plan statuses. The `requirements` skill maintains a linked Markdown web
+under `pm/requirements` and requires reconciliation whenever an issue enters
+active work. `plan-execution` places new plans under `pm/plans/<status>/`.
+Configure these skills in the project's agent instructions or a referenced
+management document; see [issue tracking](skills/issue-tracking/SKILL.md).
+
+The PM CLI commands above implement the legacy flat plan layout and three bug
+states. They do not yet implement the configurable skill layout: do not use
+`audit_pm.sh --fix` to migrate it, or treat that audit or `bug_stats.sh` as a
+complete check of the new structure. The plan readiness selectors accept the
+current plan/sprint path explicitly and remain usable after a status move.
+
 `plan_pdf.sh` requires Pandoc and writes to `tmp/<plan-name>.pdf` unless an
 output path is supplied.
 

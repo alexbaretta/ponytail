@@ -1,0 +1,6 @@
+# Copyright (c) 2026 Alex Baretta. All rights reserved.
+# Licensed under the MIT License. See LICENSE in the project root.
+interface:
+  display_name: "Issue Tracking"
+  short_description: "Manage issue types, statuses, identity, and epics"
+  default_prompt: "Use $issue-tracking to manage this project's issues."

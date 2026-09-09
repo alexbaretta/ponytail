@@ -11,6 +11,7 @@ skill	enabled	debugging	skills/debugging	claude,codex,copilot,devin,hermes,openc
 skill	enabled	diagnostic-assertions	skills/diagnostic-assertions	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Diagnostic and invariant classification
 skill	disabled	git-write-escalation	-	-	Current Codex manages these approvals without a skill
 skill	enabled	indeterminate-list-ux	skills/indeterminate-list-ux	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Bounded infinite-scroll UX
+skill	enabled	issue-tracking	skills/issue-tracking	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Issue identity, configurable lifecycle, and epic associations
 skill	enabled	lossless-json-contracts	skills/lossless-json-contracts	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Exact JSON boundary rules
 skill	enabled	monetary-contract-safety	skills/monetary-contract-safety	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Monetary contract rules
 skill	enabled	plan-execution	skills/plan-execution	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Durable project management workflow
@@ -21,6 +22,7 @@ skill	enabled	ponytail-review	skills/ponytail-review	claude,codex,copilot,devin,
 skill	enabled	project-structure	skills/project-structure	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Project configuration workflow
 skill	enabled	production-test-boundaries	skills/production-test-boundaries	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Production and test architecture separation
 skill	enabled	react-error-containment	skills/react-error-containment	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	React failure containment
+skill	enabled	requirements	skills/requirements	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Linked requirements and issue activation reconciliation
 skill	enabled	static-type-safety	skills/static-type-safety	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Static type and contract safety
 skill	enabled	test-credentials	skills/test-credentials	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Test credential discovery and safety
 skill	enabled	typescript-unit-testing	skills/typescript-unit-testing	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Contract-safe TypeScript unit testing

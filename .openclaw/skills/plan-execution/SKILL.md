@@ -23,7 +23,8 @@ Use the project-local agent instructions already in context. They should
 identify, directly or by reference:
 
 - the project workspace and management repository;
-- the project-management root and its plan and bug directories;
+- the project-management root and its plan, issue, and requirements directories;
+- the shared issue/plan lifecycle configuration owned by `issue-tracking`;
 - component repositories and their ownership boundaries;
 - named unit-test families and their focused and full commands;
 - focused, package, integration, browser, milestone, and final validation
@@ -104,15 +105,45 @@ the sprint records that reason and keeps the work with the executing agent.
 Create a stable, branch-independent plan ID prefixed with its creation date as
 `YYYY-MM-DD-<plan-name>`. Keep that date unchanged for the life of the plan so
 alphabetical directory order is chronological creation order. Under the
-configured plan root, use:
+configured plan root (default `pm/plans`), use:
 
 ```text
-YYYY-MM-DD-<plan-name>/
+<status>/YYYY-MM-DD-<plan-name>/
   plan.md
   sprints/
     S01.md
+    S01.tasklets.json
     S02.md
+    S02.tasklets.json
 ```
+
+Use the exact shared statuses, meanings, and allowed transitions defined by
+`issue-tracking` or overridden by the host's Ponytail project configuration.
+Do not define a second plan-specific status set. The containing status
+directory is the whole-plan lifecycle source of truth; keep the manifest's
+status synchronized. Create status directories only when needed.
+
+Create a new plan in the configured initial state (default `open`). Move its
+whole directory into the active-work state only when implementation is
+approved and ready, and into the successful-completion state only after final
+acceptance. Deferral and rejection require a recorded reason, never a claim of
+successful completion. Custom configurations must identify the initial state
+as well as the active and completion roles. Keep the stable plan ID unchanged
+across moves and repair inbound and outbound relative links, including epic
+and requirements links, in the same change.
+
+An associated issue makes that issue an epic under `issue-tracking`; link the
+issue and plan manifest in both directions. Whenever an issue enters active
+work alongside its plan, complete the issue's `requirements` reconciliation
+before completing that transition. Whole-plan placement does not replace the
+sprint readiness and tasklet selectors below. Pass the current plan directory
+or sprint file explicitly to those selectors after a move.
+
+Existing plans retain their recorded locations until an explicit migration;
+do not move historical records or rewrite serialized sprint metadata merely
+to adopt the new directory layout. Before using a host PM audit, statistics,
+or rendering command, verify it supports the configured layout and paths.
+A legacy flat-layout command is not validation of status-directory plans.
 
 `plan.md` is a compact manifest. It records:
 
@@ -196,9 +227,12 @@ Every tasklet heading uses exactly one marker:
 - `[ERROR]` means irrecoverably blocked inside approved scope; record decisive
   evidence and the remaining impact.
 
-Use `[OPEN]` and `[RESOLVED]` for questions. Give plans, sprints, and stories an
-explicit lifecycle status using the host's configured vocabulary, or use
-`PENDING`, `IN_PROGRESS`, `DONE`, and `ERROR` when none is configured.
+Use `[OPEN]` and `[RESOLVED]` for questions. Whole plans use the shared
+issue/plan lifecycle vocabulary and directory placement described above.
+Sprint planning and execution retain their versioned states defined under
+`Serial Plan Orchestration`; do not replace them with directory status names.
+Stories use the host's configured execution vocabulary, or `PENDING`,
+`IN_PROGRESS`, `DONE`, and `ERROR` when none is configured.
 
 For each tasklet, record:
 
@@ -528,46 +562,30 @@ valid completed work, reconstruct and validate the metadata and graphs, freeze
 ownership and dependencies, reconcile the partial batch, and resume only after
 ownership and the active dependency frontier are unambiguous.
 
-## Standalone Bug Workflow
+## Standalone Issue Execution
 
 A user request to implement a project-managed bug authorizes the complete bug
 workflow, including selective commit after validation, unless the user
 explicitly says not to commit.
 
-Store individual bug files under the configured lifecycle directories:
-
-```text
-bugs/open/YYYY-MM-DD-<bug-name>.md
-bugs/in_progress/YYYY-MM-DD-<bug-name>.md
-bugs/closed/YYYY-MM-DD-<bug-name>.md
-```
-
-Prefix each filename with the bug report's creation date. Keep that date and
-filename unchanged when its lifecycle changes so alphabetical filename order
-is chronological creation order. The directory is the lifecycle source of
-truth. The filename stem `YYYY-MM-DD-<bug-name>` is the canonical bug name;
-record that exact name in the bug file. Move the same bug file between
-directories; do not duplicate it.
-
-A bug file records:
-
-- canonical bug name and title;
-- report and observable impact;
-- evidence, hypotheses, and confirmed root cause;
-- proposed resolution and explicit exclusions;
-- questions and `[RESOLVED]` answers;
-- user approval;
-- atomic edits and affected repositories;
-- focused and integration validation; and
-- closure summary.
+Use `issue-tracking` for all issue types, canonical filenames, lifecycle
+placement, record fields, transitions, and epic associations. It owns the
+`requirements` gate for every entry into active work. Do not maintain a second
+bug-specific storage convention here.
 
 Diagnosis may proceed while the bug is open. Apply `debugging` to establish the
 root cause. Before implementation, record the confirmed diagnosis and proposed
-resolution, then move the file to
-`in_progress`. When implementation was not directly requested, obtain explicit
+resolution, then apply `issue-tracking` to enter the configured active-work
+state, including its requirements gate.
+When implementation was not directly requested, obtain explicit
 user approval before changing behavior. Resolve it through the same atomic
-edit, testing, configuration-sync, and selective-commit rules as tasklets. Move
-it to `closed` only after its acceptance evidence is complete.
+edit, testing, configuration-sync, and selective-commit rules as tasklets.
+Use the configured successful-completion transition only after its acceptance
+evidence is complete.
+
+For other issue types, use the same execution, approval, and validation rules;
+root-cause diagnosis applies when the issue reports a defect. Issue creation or
+classification alone does not authorize implementation.
 
 Standalone bugs and direct bounded changes run only explicit selections under
 the applicable configured focused unit-test commands. Run a full unit-test
@@ -581,7 +599,7 @@ lifecycle evidence synchronized with the plan.
 
 ## Non-Local Mutation Authorship
 
-Never author an instruction in a plan or bug file to deploy, redeploy, promote,
+Never author an instruction in a plan or issue file to deploy, redeploy, promote,
 roll back, or otherwise mutate a non-local environment. This includes
 tasklets, stories, sprints, milestones, acceptance criteria, closure gates, and
 equivalent language.

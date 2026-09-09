@@ -45,14 +45,16 @@ test('bug implementation requests authorize the complete workflow by default', (
   assert.match(skill, /When implementation was not directly requested, obtain explicit\s+user approval before changing behavior\./);
 });
 
-test('plan and bug names sort chronologically by creation date', () => {
-  const skill = readSkill('plan-execution');
+test('plan and issue identities survive lifecycle moves', () => {
+  const plan = readSkill('plan-execution');
+  const issue = readSkill('issue-tracking');
 
-  assert.match(skill, /`YYYY-MM-DD-<plan-name>`/);
-  assert.match(skill, /bugs\/open\/YYYY-MM-DD-<bug-name>\.md/);
-  assert.match(skill, /Keep that date and\s+filename unchanged when its lifecycle changes/);
-  assert.match(skill, /filename stem `YYYY-MM-DD-<bug-name>` is the canonical bug name/);
-  assert.match(skill, /record that exact name in the bug file/);
+  assert.match(plan, /`YYYY-MM-DD-<plan-name>`/);
+  assert.match(plan, /<status>\/YYYY-MM-DD-<plan-name>\//);
+  assert.match(issue, /<status>\/YYYY-MM-DD-<type>-<short_description>\.md/);
+  assert.match(issue, /Keep the date and ID stable during status changes/);
+  assert.match(issue, /filename stem is the canonical issue ID/);
+  assert.match(plan, /Keep the stable plan ID unchanged\nacross moves/);
 });
 
 test('long-lived plan execution journals actions without blocking work', () => {
