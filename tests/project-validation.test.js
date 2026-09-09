@@ -294,6 +294,22 @@ test('pre-commit runs reference QA and blocks findings', t => {
   assert.equal(git(current, 'rev-parse', 'HEAD'), before);
 });
 
+test('commit -am keeps its temporary index out of foreign repository checks', t => {
+  const f = fixture(t);
+  const current = repository(f, 'current');
+  const foreign = repository(f, 'OtherProduct');
+  assert.equal(run(f.home, current, 'pre-commit').status, 0);
+  configure(current, { components: ['current-worker'] });
+  const result = spawnSync(
+    'git',
+    ['-C', current, '-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.test', 'commit', '-am', 'Configure ponytail'],
+    { encoding: 'utf8', env: { ...process.env, HOME: f.home } },
+  );
+  assert.equal(result.status, 0, result.stdout + result.stderr);
+  assert.equal(git(current, 'status', '--porcelain'), '');
+  assert.equal(git(foreign, 'status', '--porcelain'), '');
+});
+
 test('registration and validation leave pre-commit installation optional', t => {
   const f = fixture(t);
   const root = repository(f, 'current');

@@ -120,12 +120,12 @@ class ProjectError(ValueError):
         self.status = status
 
 
-def repository_roots(directory, missing_status=2):
-    result = subprocess.run(["git", "-C", str(directory), "rev-parse", "--show-toplevel"], capture_output=True, text=True)
+def repository_roots(directory, missing_status=2, env=None):
+    result = subprocess.run(["git", "-C", str(directory), "rev-parse", "--show-toplevel"], capture_output=True, text=True, env=env)
     if result.returncode:
         raise ProjectError(f"no Git worktree detected: {directory}", missing_status)
     root = Path(result.stdout.strip()).resolve()
-    worktrees = subprocess.run(["git", "-C", str(root), "worktree", "list", "--porcelain", "-z"], capture_output=True, check=True)
+    worktrees = subprocess.run(["git", "-C", str(root), "worktree", "list", "--porcelain", "-z"], capture_output=True, check=True, env=env)
     first = worktrees.stdout.split(b"\0", 1)[0].decode()
     if not first.startswith("worktree "):
         fail("Git did not identify the main checkout")
@@ -379,18 +379,18 @@ def detect_components(root, arguments):
         print(name)
 
 
-def tracked_project(root):
+def tracked_project(root, env=None):
     for relative in (".agents/config/ponytail.json", ".agents/config/codex-execpolicy.json"):
-        tracked = subprocess.run(["git", "-C", str(root), "ls-files", "--error-unmatch", "--", relative], capture_output=True)
+        tracked = subprocess.run(["git", "-C", str(root), "ls-files", "--error-unmatch", "--", relative], capture_output=True, env=env)
         if tracked.returncode:
             fail(f"project configuration must be tracked in Git: {root / relative}")
     return read_project(root)
 
 
-def tracked_clean_project(root):
-    metadata = tracked_project(root)
+def tracked_clean_project(root, env=None):
+    metadata = tracked_project(root, env)
     relative = ".agents/config"
-    changed = subprocess.run(["git", "-C", str(root), "status", "--porcelain", "--", relative], capture_output=True, text=True, check=True)
+    changed = subprocess.run(["git", "-C", str(root), "status", "--porcelain", "--", relative], capture_output=True, text=True, check=True, env=env)
     if changed.stdout:
         fail(f"project configuration must be committed before blessing: {root / relative}")
     return metadata
@@ -400,9 +400,12 @@ def blessed_project(project):
     if project["blessedWorktree"] is None:
         fail(f"repository has no blessed worktree: {project['root']}; run ponytail register from that repository or one of its worktrees")
     blessed = Path(project["blessedWorktree"])
-    if not blessed.is_dir() or repository_roots(blessed, 1)[1] != Path(project["root"]):
+    # Hooks export repository-local Git variables, including a temporary commit index.
+    local_variables = subprocess.run(["git", "rev-parse", "--local-env-vars"], capture_output=True, text=True, check=True).stdout.splitlines()
+    env = {key: value for key, value in os.environ.items() if key not in local_variables}
+    if not blessed.is_dir() or repository_roots(blessed, 1, env)[1] != Path(project["root"]):
         fail(f"blessed worktree is unavailable or belongs to another repository: {blessed}")
-    return blessed, tracked_clean_project(blessed)
+    return blessed, tracked_clean_project(blessed, env)
 
 
 def bless(config_path, source_root, config, root, main_root):
