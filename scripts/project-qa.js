@@ -4,9 +4,25 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
+const os = require('node:os');
 const { spawnSync } = require('node:child_process');
 const { parse: parseToml } = require('smol-toml');
 const { parseDocument } = require('yaml');
+const { METADATA_MARKER } = require('../skills/plan-execution/scripts/ready-sprints');
+const SPRINT_METADATA_OPENING = new RegExp(`^<!--\\s*${METADATA_MARKER}\\s*$`);
+const { entries } = require('../generated/registry.json');
+
+function installedSkillNames(root) {
+  const directories = [path.join(root, '.agents/skills'), path.join(process.env.CODEX_HOME || path.join(os.homedir(), '.codex'), 'skills')];
+  return entries.filter(entry => entry.kind === 'skill' && entry.status === 'enabled' && directories.some(directory => {
+    const file = path.join(directory, entry.name, 'SKILL.md');
+    if (!fs.existsSync(file)) return false;
+    const frontmatter = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/.exec(fs.readFileSync(file, 'utf8'));
+    if (!frontmatter) return false;
+    const document = parseDocument(frontmatter[1]);
+    return !document.errors.length && document.get('name') === entry.name;
+  })).map(entry => entry.name);
+}
 
 function git(root, args, accepted = [0]) {
   const result = spawnSync('git', ['-C', root, ...args], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
@@ -167,6 +183,7 @@ function submoduleUrls(root) {
 }
 
 function checkReferences(root, project, projects) {
+  const skillNames = installedSkillNames(root);
   const dependencies = declaredDependencies(root, project);
   const submodules = submoduleUrls(root);
   const components = new Set(project.components.map(name => name.toLocaleLowerCase()));
@@ -186,9 +203,14 @@ function checkReferences(root, project, projects) {
       const output = git(root, ['grep', '--no-recurse-submodules', '--no-textconv', '--no-color', '--no-column', '--no-heading', '--no-break', '-I', '-n', '-z', '-i', '-F', '-e', name, '--', '.'], [0, 1]);
       for (const match of output.matchAll(/([^\0]+)\0(\d+)\0([^\n]*)\n/g)) {
         const [, file, lineNumber, text] = match;
+        // The sprint protocol marker is required tooling metadata, not a project reference.
+        if (file.endsWith('.md') && SPRINT_METADATA_OPENING.test(text)) continue;
         const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         const pattern = new RegExp(`(?<![\\p{L}\\p{N}_])${escaped}(?![\\p{L}\\p{N}_])`, 'giu');
-        const occurrences = [...text.matchAll(pattern)];
+        const occurrences = [...text.matchAll(pattern)].filter(occurrence => !skillNames.some(skillName => {
+          const skillPattern = new RegExp(`(?<![\\p{L}\\p{N}_-])${skillName}(?![\\p{L}\\p{N}_-])`, 'giu');
+          return [...text.matchAll(skillPattern)].some(skill => occurrence.index >= skill.index && occurrence.index + occurrence[0].length <= skill.index + skill[0].length);
+        }));
         if (!occurrences.length) continue;
         if (file === metadataPath && occurrences.every(item => {
           const offset = lineOffsets[Number(lineNumber) - 1] + item.index;

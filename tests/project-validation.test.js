@@ -22,7 +22,7 @@ function git(root, ...args) {
   return result.stdout.trim();
 }
 function run(home, root, ...args) {
-  return spawnSync(cli, args, { cwd: root, env: { ...process.env, HOME: home }, encoding: 'utf8' });
+  return spawnSync(cli, args, { cwd: root, env: { ...process.env, HOME: home, CODEX_HOME: path.join(home, '.codex') }, encoding: 'utf8' });
 }
 function write(root, file, text) {
   fs.mkdirSync(path.dirname(path.join(root, file)), { recursive: true });
@@ -287,11 +287,66 @@ test('pre-commit runs reference QA and blocks findings', t => {
   const result = spawnSync(
     'git',
     ['-C', current, '-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.test', 'commit', '-m', 'forbidden reference'],
-    { encoding: 'utf8', env: { ...process.env, HOME: f.home } },
+    { encoding: 'utf8', env: { ...process.env, HOME: f.home, CODEX_HOME: path.join(f.home, '.codex') } },
   );
   assert.notEqual(result.status, 0);
   assert.match(result.stdout + result.stderr, /reference\.txt:1: forbidden reference/);
   assert.equal(git(current, 'rev-parse', 'HEAD'), before);
+});
+
+test('pre-commit permits sprint metadata markers while scanning sprint content', t => {
+  const f = fixture(t);
+  const current = repository(f, 'current');
+  repository(f, 'Ponytail');
+  assert.equal(run(f.home, current, 'pre-commit').status, 0);
+  const file = 'pm/plans/open/example/sprints/S01.md';
+  const marker = '<!-- ponytail-plan-sprint\n{}\n-->\n';
+  write(current, file, marker);
+  git(current, 'add', file);
+  const result = spawnSync(
+    'git',
+    ['-C', current, '-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.test', 'commit', '-m', 'Plan sprint'],
+    { encoding: 'utf8', env: { ...process.env, HOME: f.home, CODEX_HOME: path.join(f.home, '.codex') } },
+  );
+  assert.equal(result.status, 0, result.stdout + result.stderr);
+  for (const content of [
+    `${marker}Ponytail implementation detail\n`,
+    '<!-- ponytail-plan-sprint-extra\n',
+    '<!-- ponytail-plan-sprint Ponytail\n',
+    '<!-- ponytail-plan-sprint\n{"description":"Ponytail"}\n-->\n',
+  ]) {
+    write(current, file, content);
+    const qa = run(f.home, current, 'qa');
+    assert.equal(qa.status, 4, qa.stdout + qa.stderr);
+    assert.match(qa.stdout, /forbidden reference to "Ponytail"/);
+  }
+});
+
+test('QA recognizes installed Ponytail skill names across the client project', t => {
+  const f = fixture(t);
+  const current = repository(f, 'current');
+  repository(f, 'Ponytail');
+  repository(f, 'OtherProduct');
+  write(current, 'usage.md', 'Use ponytail-review.\n');
+  git(current, 'add', 'usage.md');
+  assert.equal(run(f.home, current, 'qa').status, 4);
+  const skill = 'ponytail-review';
+  const source = path.resolve(__dirname, '../skills', skill, 'SKILL.md');
+  for (const directory of [path.join(current, '.agents/skills'), path.join(f.home, '.codex/skills')]) {
+    const installed = path.join(directory, skill, 'SKILL.md');
+    write(directory, `${skill}/SKILL.md`, '---\nname: unrelated\n---\n');
+    assert.equal(run(f.home, current, 'qa').status, 4);
+    fs.copyFileSync(source, installed);
+    let result = run(f.home, current, 'qa');
+    assert.equal(result.status, 0, result.stdout + result.stderr);
+    for (const content of ['ponytail-review-extra', 'ponytail-review and Ponytail', 'ponytail-review and OtherProduct']) {
+      write(current, 'usage.md', content);
+      result = run(f.home, current, 'qa');
+      assert.equal(result.status, 4, result.stdout + result.stderr);
+    }
+    write(current, 'usage.md', 'Use ponytail-review.\n');
+    fs.unlinkSync(installed);
+  }
 });
 
 test('commit -am keeps its temporary index out of foreign repository checks', t => {
@@ -303,7 +358,7 @@ test('commit -am keeps its temporary index out of foreign repository checks', t 
   const result = spawnSync(
     'git',
     ['-C', current, '-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.test', 'commit', '-am', 'Configure ponytail'],
-    { encoding: 'utf8', env: { ...process.env, HOME: f.home } },
+    { encoding: 'utf8', env: { ...process.env, HOME: f.home, CODEX_HOME: path.join(f.home, '.codex') } },
   );
   assert.equal(result.status, 0, result.stdout + result.stderr);
   assert.equal(git(current, 'status', '--porcelain'), '');

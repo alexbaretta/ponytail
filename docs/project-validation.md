@@ -143,6 +143,18 @@ case-insensitively, like the reference scan. No recursion into dependency
 checkouts occurs. A missing registered checkout or its metadata is a
 configuration error, not a successful incomplete scan.
 
+The exact `<!-- ponytail-plan-sprint` opening line in Markdown is recognized
+as required sprint protocol metadata. The metadata body and all other lines
+remain scanned; this does not exempt ordinary Ponytail references.
+
+QA also recognizes enabled Ponytail skill names from its bundled registry when
+their `SKILL.md` is installed in the client's `.agents/skills/<name>/` or
+`CODEX_HOME/skills/<name>/` (`~/.codex/skills/<name>/` by default) and declares
+the matching frontmatter name. Those skill names are valid references throughout
+the client project. Longer identifiers and other references on the same line
+remain scanned. An empty directory or a mismatched skill declaration grants
+no permission.
+
 An exact-file exception requires all four fields below:
 
 ```json
