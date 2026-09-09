@@ -47,7 +47,8 @@ while project-wide management records remain under `pm/`.
 - `tsts/` owns the canonical TypeScript analyzer and its Node tests. Root npm dependencies and `npm run build:tsts` produce ignored `tsts/dist/`; npm distributes only its compiled runtime. `cli/tsts` is the registered-project launcher installed alongside `ponytail`.
 - `ponytail.json` owns the TSTS build-impact target.
 - `cli/` owns user-facing parse-safe Bash tools. `cli/ponytail` owns project
-  registration and Codex configuration updates. The `ponytail` and `tsts` executables are linked to canonical source. Adding a `.sh` tool there
+  registration, optional pre-commit integration, and Codex configuration
+  updates. The `ponytail` and `tsts` executables are linked to canonical source. Adding a `.sh` tool there
   makes it
   installable by `scripts/install-cli.sh`, which installs all `cli/*.sh` files
   or selected tools into the user's configured executable directory. Add each

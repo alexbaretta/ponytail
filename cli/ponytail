@@ -13,6 +13,7 @@ import fcntl
 import hashlib
 import json
 import os
+import re
 import shlex
 import subprocess
 import sys
@@ -193,7 +194,7 @@ def registered_project(config, main_root):
     return next((project for project in config["projects"] if project["root"] == str(main_root)), None)
 
 
-def configure_precommit_hook(root, source_root, config_path, install):
+def install_precommit_hook(root, source_root, config_path):
     result = subprocess.run(
         ["git", "-C", str(root), "rev-parse", "--path-format=absolute", "--git-path", "hooks/pre-commit"],
         capture_output=True,
@@ -201,40 +202,45 @@ def configure_precommit_hook(root, source_root, config_path, install):
         check=True,
     )
     target = Path(result.stdout.strip())
-    marker = "# Managed by ponytail register.\n"
-    contents = f'''#!/usr/bin/env bash
+    if path_has_symlink(target) or (target.exists() and not target.is_file()):
+        fail(f"pre-commit hook must be a regular non-symlink file: {target}")
+    begin = "# ponytail pre-commit: begin\n"
+    end = "# ponytail pre-commit: end\n"
+    block = f'''{begin}HOME={shlex.quote(str(config_path.parent.parent))} {shlex.quote(str(source_root / "cli/ponytail"))} qa || exit $?
+{end}'''
+    standalone = f'''#!/usr/bin/env bash
 set -euo pipefail
-{marker}
 
 main() {{
-  HOME={shlex.quote(str(config_path.parent.parent))} {shlex.quote(str(source_root / "cli/ponytail"))} qa
-  exit 0
+{block}  exit 0
 }}
 
 main "$@"
 '''
-    if path_has_symlink(target) or (target.exists() and not target.is_file()):
-        fail(f"pre-commit hook must be a regular non-symlink file: {target}")
     existing = target.read_text(encoding="utf-8") if target.exists() else None
-    if existing is not None and existing != contents:
-        if not install:
-            fail(f"outdated Ponytail pre-commit hook: {target}; run ponytail register")
-        if not existing.startswith(f"#!/usr/bin/env bash\nset -euo pipefail\n{marker}"):
-            fail(f"refusing to replace existing pre-commit hook: {target}")
-        atomic_write_text(target, contents, 0o755)
-        return
-    if not target.exists():
-        if not install:
-            fail(f"missing Ponytail pre-commit hook: {target}; run ponytail register")
-        atomic_write_text(target, contents, 0o755)
+    old_prefix = "#!/usr/bin/env bash\nset -euo pipefail\n# Managed by ponytail register.\n"
+    if existing is None or existing.startswith(old_prefix):
+        updated = standalone
+    elif begin in existing or end in existing:
+        if existing.count(begin) != 1 or existing.count(end) != 1 or existing.index(begin) > existing.index(end):
+            fail(f"invalid Ponytail block in pre-commit hook: {target}")
+        finish = existing.index(end) + len(end)
+        updated = existing[:existing.index(begin)] + block + existing[finish:]
+    else:
+        first_line = existing.partition("\n")[0]
+        if not re.match(r"^#![^\r\n]*(?:/|[ \t])(?:sh|bash|dash|ksh|zsh)(?:[ \t]|$)", first_line):
+            fail(f"existing pre-commit hook is not a supported shell script: {target}")
+        split = existing.find("\n")
+        updated = existing + "\n" + block if split < 0 else existing[:split + 1] + block + existing[split + 1:]
+    if existing != updated:
+        mode = 0o755 if existing is None else (target.stat().st_mode & 0o777) | 0o111
+        atomic_write_text(target, updated, mode)
     elif not os.access(target, os.X_OK):
-        if not install:
-            fail(f"Ponytail pre-commit hook is not executable: {target}; run ponytail register")
-        target.chmod(0o755)
+        target.chmod((target.stat().st_mode & 0o777) | 0o111)
+    print(f"pre-commit hook: {target}")
 
 
 def register(config_path, source_root, root, main_root):
-    configure_precommit_hook(root, source_root, config_path, True)
     proposal_path = root / ".agents/config/codex-execpolicy.json"
     if path_has_symlink(proposal_path) or (proposal_path.exists() and not proposal_path.is_file()):
         fail(f"project policy must be a regular non-symlink file: {proposal_path}")
@@ -383,11 +389,10 @@ def blessed(config, main_root):
     print(project["blessedWorktree"])
 
 
-def validate_project(config, source_root, config_path, root, main_root):
+def validate_project(config, source_root, root, main_root):
     project = registered_project(config, main_root)
     if project is None:
         raise ProjectError(f"Git repository is not registered with Ponytail: {main_root}; run ponytail register", 3)
-    configure_precommit_hook(root, source_root, config_path, False)
     metadata = tracked_project(root)
     result = subprocess.run([str(source_root / "cli/condense_codex_rules.sh"), "--validate-project", str(root)], capture_output=True, text=True)
     if result.returncode:
@@ -432,6 +437,7 @@ def print_usage():
   ponytail register-component <name>
   ponytail unregister-component <name>
   ponytail detect-components [--language typescript|javascript|auto]
+  ponytail pre-commit
   ponytail validate
   ponytail qa [references]
   ponytail update-permissions [permission options]
@@ -493,7 +499,7 @@ def run():
         else:
             detect_components(root, arguments)
         return 0
-    metadata = validate_project(config, source_root, config_path, root, main_root)
+    metadata = validate_project(config, source_root, root, main_root)
     if operation in {"-h", "--help", "help"}:
         print_usage()
         return 0
@@ -501,6 +507,11 @@ def run():
         if arguments:
             fail("validate accepts no arguments")
         print(f"valid: {root} (registered main checkout: {main_root})")
+        return 0
+    if operation == "pre-commit":
+        if arguments:
+            fail("pre-commit accepts no arguments")
+        install_precommit_hook(root, source_root, config_path)
         return 0
     if operation == "qa":
         return qa(source_root, config, root, main_root, metadata, arguments)

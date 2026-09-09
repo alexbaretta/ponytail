@@ -2,9 +2,7 @@
 
 `ponytail register` replaces `ponytail setup`. Run it once inside a project's
 Git worktree. It initializes `.agents/config/ponytail.json` in the invoking
-worktree together with its Codex policy proposal. It also installs an
-executable Git pre-commit hook that runs `ponytail qa`; registration refuses
-to replace an existing hook that Ponytail does not manage. The
+worktree together with its Codex policy proposal. The
 global `~/.ponytail/config.json` records the repository's main root and blesses
 the invoking worktree whenever the repository has no current blessing,
 including when it was already registered. It contains no project identity data.
@@ -26,7 +24,6 @@ All commands except `register` first require repository registration; blessing
 commands perform their own configuration checks.
 `ponytail validate` checks registration and local configuration; it does not
 scan project contents, load other projects, run package managers, or run tests.
-It also verifies that the Ponytail pre-commit hook is installed and executable.
 `ponytail qa [references]` separately scans for forbidden references. It does
 not run integrations or arbitrary project commands. Future moderately
 expensive checks belong in this dispatcher, with explicit selectors.
@@ -34,6 +31,13 @@ expensive checks belong in this dispatcher, with explicit selectors.
 Exit codes: 0 success; 1 configuration/tool/usage error; 2 no Git worktree;
 3 repository not registered; 4 reference QA findings. Child update commands
 preserve their own failure status.
+
+`ponytail pre-commit` optionally installs `ponytail qa` at Git's configured
+pre-commit hook path. When a shell hook already exists, Ponytail inserts a
+marked block after its shebang and preserves the existing hook body. Ponytail
+runs first; a QA finding stops the commit, while successful QA continues into
+the client project's hooks. Repeating the command updates only Ponytail's
+marked block. Hooks using another interpreter are left unchanged.
 
 ## Project configuration V1
 

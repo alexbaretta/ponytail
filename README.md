@@ -37,6 +37,12 @@ From each adopting repository, register its Git root once:
 ponytail register
 ```
 
+Optionally add reference QA to the repository's existing pre-commit flow:
+
+```bash
+ponytail pre-commit
+```
+
 Registration is stored in `~/.ponytail/config.json`; no filesystem-wide scan
 is performed. `ponytail update-permissions` evaluates every registered
 repository's `.agents/config/codex-execpolicy.json` proposal together.
@@ -85,7 +91,7 @@ Installed shell tools:
 
 | Tool | Purpose |
 | --- | --- |
-| `ponytail register\|bless[-worktree]\|blessed[-worktree]\|register-component\|unregister-component\|detect-components\|validate\|qa\|update-permissions\|update-skills\|update` | Register repositories, select worktree configuration, manage components, run local QA, and update Codex configuration |
+| `ponytail register\|bless[-worktree]\|blessed[-worktree]\|register-component\|unregister-component\|detect-components\|pre-commit\|validate\|qa\|update-permissions\|update-skills\|update` | Register repositories, select worktree configuration, manage components, install pre-commit QA, run local QA, and update Codex configuration |
 | `audit_pm.sh [--fix] [--dryrun]` | Audit PM structure and preview or fix missing date prefixes |
 | `plan_pdf.sh [--sprints] <plan-name> [output.pdf]` | Render a plan, optionally with its sprints, as PDF using Pandoc |
 | `plan_stats.sh <plan-name>` | Count open and done task lines in a plan |

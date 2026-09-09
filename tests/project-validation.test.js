@@ -58,7 +58,7 @@ test('every command distinguishes missing Git from absent registration', t => {
     assert.match(result.stderr, /no Git worktree/);
   }
   git(f.home, 'init', '-q');
-  for (const command of ['bless', 'blessed', 'validate', 'qa', '--help', 'update-skills', 'setup']) {
+  for (const command of ['bless', 'blessed', 'pre-commit', 'validate', 'qa', '--help', 'update-skills', 'setup']) {
     const result = run(f.home, f.home, command);
     assert.equal(result.status, 3, result.stderr);
     assert.match(result.stderr, /not registered/);
@@ -249,6 +249,7 @@ test('pre-commit runs reference QA and blocks findings', t => {
   const f = fixture(t);
   const current = repository(f, 'current');
   repository(f, 'OtherProduct');
+  assert.equal(run(f.home, current, 'pre-commit').status, 0);
   write(current, 'reference.txt', 'OtherProduct');
   git(current, 'add', 'reference.txt');
   const before = git(current, 'rev-parse', 'HEAD');
@@ -262,17 +263,15 @@ test('pre-commit runs reference QA and blocks findings', t => {
   assert.equal(git(current, 'rev-parse', 'HEAD'), before);
 });
 
-test('validate requires the registered pre-commit hook', t => {
+test('registration and validation leave pre-commit installation optional', t => {
   const f = fixture(t);
   const root = repository(f, 'current');
   const hookPath = path.join(root, '.git/hooks/pre-commit');
-  fs.unlinkSync(hookPath);
-  let result = run(f.home, root, 'validate');
-  assert.equal(result.status, 1);
-  assert.match(result.stderr, /missing Ponytail pre-commit hook/);
+  assert.equal(fs.existsSync(hookPath), false);
   assert.equal(run(f.home, root, 'register').status, 0);
-  result = run(f.home, root, 'validate');
+  const result = run(f.home, root, 'validate');
   assert.equal(result.status, 0, result.stderr);
+  assert.equal(fs.existsSync(hookPath), false);
 });
 
 test('exact local exceptions suppress intended matches without exempting other files', t => {

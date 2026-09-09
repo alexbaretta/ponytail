@@ -103,8 +103,7 @@ test('register initializes and registers the enclosing Git root idempotently', (
   });
   assert.equal(fs.statSync(configPath(home)).mode & 0o777, 0o600);
   const hookPath = path.join(projectRoot, '.git/hooks/pre-commit');
-  assert.equal(fs.statSync(hookPath).mode & 0o111, 0o111);
-  assert.match(fs.readFileSync(hookPath, 'utf8'), /cli\/ponytail qa/);
+  assert.equal(fs.existsSync(hookPath), false);
 
   result = run(home, 'register', [], { cwd: projectRoot });
   assert.equal(result.status, 0, result.stderr);
@@ -120,17 +119,37 @@ test('register initializes and registers the enclosing Git root idempotently', (
   assert.equal(JSON.parse(fs.readFileSync(configPath(home))).projects[0].blessedWorktree, fs.realpathSync(projectRoot));
 });
 
-test('register preserves an existing pre-commit hook', () => {
+test('pre-commit composes with an existing shell hook idempotently', () => {
   const home = temporaryDirectory('ponytail-home');
-  const projectRoot = temporaryDirectory('ponytail-project');
-  assert.equal(spawnSync('git', ['init', '-q'], { cwd: projectRoot }).status, 0);
-  const hookPath = path.join(projectRoot, '.git/hooks/pre-commit');
-  fs.writeFileSync(hookPath, '#!/bin/sh\nexit 0\n', { mode: 0o755 });
+  const projectRoot = project();
+  assert.equal(spawnSync('git', ['config', 'core.hooksPath', '.husky/_'], { cwd: projectRoot }).status, 0);
+  const hookPath = path.join(projectRoot, '.husky/_/pre-commit');
+  const clientHook = '#!/usr/bin/env sh\n. "$(dirname "$0")/h"';
+  fs.mkdirSync(path.dirname(hookPath), { recursive: true });
+  fs.writeFileSync(hookPath, clientHook, { mode: 0o755 });
+  assert.equal(run(home, 'register', [], { cwd: projectRoot }).status, 0);
+  assert.equal(fs.readFileSync(hookPath, 'utf8'), clientHook);
 
-  const result = run(home, 'register', [], { cwd: projectRoot });
-  assert.equal(result.status, 1);
-  assert.match(result.stderr, /refusing to replace existing pre-commit hook/);
-  assert.equal(fs.readFileSync(hookPath, 'utf8'), '#!/bin/sh\nexit 0\n');
+  let result = run(home, 'pre-commit', [], { cwd: projectRoot });
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.stdout, `pre-commit hook: ${fs.realpathSync(hookPath)}\n`);
+  const installed = fs.readFileSync(hookPath, 'utf8');
+  assert.match(installed, /ponytail pre-commit: begin/);
+  assert.match(installed, /cli\/ponytail qa \|\| exit \$\?/);
+  assert.match(installed, /\. "\$\(dirname "\$0"\)\/h"$/);
+  assert.ok(installed.indexOf('ponytail pre-commit: begin') < installed.indexOf('. "$(dirname'));
+  result = run(home, 'pre-commit', [], { cwd: projectRoot });
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(fs.readFileSync(hookPath, 'utf8'), installed);
+  const clientLog = path.join(projectRoot, 'client-hook.log');
+  fs.writeFileSync(path.join(projectRoot, '.husky/_/h'), 'printf "client hook ran\\n" >> "$CLIENT_HOOK_LOG"\n');
+  result = spawnSync(hookPath, [], {
+    cwd: projectRoot,
+    encoding: 'utf8',
+    env: { ...process.env, CLIENT_HOOK_LOG: clientLog },
+  });
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(fs.readFileSync(clientLog, 'utf8'), 'client hook ran\n');
 });
 
 test('concurrent register calls retain both registrations', () => {
