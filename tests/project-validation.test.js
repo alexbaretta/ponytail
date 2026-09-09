@@ -245,6 +245,36 @@ test('validate remains cheap while qa scans tracked working-tree text, not untra
   assert.equal(run(f.home, current, 'qa').status, 0);
 });
 
+test('pre-commit runs reference QA and blocks findings', t => {
+  const f = fixture(t);
+  const current = repository(f, 'current');
+  repository(f, 'OtherProduct');
+  write(current, 'reference.txt', 'OtherProduct');
+  git(current, 'add', 'reference.txt');
+  const before = git(current, 'rev-parse', 'HEAD');
+  const result = spawnSync(
+    'git',
+    ['-C', current, '-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.test', 'commit', '-m', 'forbidden reference'],
+    { encoding: 'utf8', env: { ...process.env, HOME: f.home } },
+  );
+  assert.notEqual(result.status, 0);
+  assert.match(result.stdout + result.stderr, /reference\.txt:1: forbidden reference/);
+  assert.equal(git(current, 'rev-parse', 'HEAD'), before);
+});
+
+test('validate requires the registered pre-commit hook', t => {
+  const f = fixture(t);
+  const root = repository(f, 'current');
+  const hookPath = path.join(root, '.git/hooks/pre-commit');
+  fs.unlinkSync(hookPath);
+  let result = run(f.home, root, 'validate');
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /missing Ponytail pre-commit hook/);
+  assert.equal(run(f.home, root, 'register').status, 0);
+  result = run(f.home, root, 'validate');
+  assert.equal(result.status, 0, result.stderr);
+});
+
 test('exact local exceptions suppress intended matches without exempting other files', t => {
   const f = fixture(t);
   const current = repository(f, 'current'); repository(f, 'OtherProduct');
@@ -297,7 +327,7 @@ test('reference QA reads foreign identities only from the blessed worktree', t =
   git(foreign, 'worktree', 'add', '-qb', 'foreign-candidate', candidate);
   configure(candidate, { components: ['candidate-only'] });
   git(candidate, 'add', '.agents/config/ponytail.json');
-  git(candidate, '-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.test', 'commit', '-qm', 'candidate identity');
+  git(candidate, '-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.test', 'commit', '--no-verify', '-qm', 'candidate identity');
   assert.equal(run(f.home, candidate, 'bless').status, 0);
   write(current, 'reference.txt', 'candidate-only');
   git(current, 'add', 'reference.txt');
@@ -374,7 +404,7 @@ test('reference scope and diagnostic format ignore Git grep user preferences', t
   repository(f, 'OtherProduct'); const helper = repository(f, 'helper');
   configure(helper, { repositoryUrls: [helper] });
   write(helper, 'foreign.txt', 'OtherProduct'); git(helper, 'add', '.');
-  git(helper, '-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.test', 'commit', '-qm', 'helper content');
+  git(helper, '-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.test', 'commit', '--no-verify', '-qm', 'helper content');
   git(current, '-c', 'protocol.file.allow=always', 'submodule', 'add', '-q', helper, 'external/helper');
   git(current, 'config', 'grep.recurseSubmodules', 'true');
   let result = run(f.home, current, 'qa');

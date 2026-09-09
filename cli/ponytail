@@ -13,6 +13,7 @@ import fcntl
 import hashlib
 import json
 import os
+import shlex
 import subprocess
 import sys
 import tempfile
@@ -71,22 +72,25 @@ def read_config(config_path):
         fail(f"invalid V1 Ponytail configuration: {config_path}")
 
 
-def atomic_write(config_path, value, mode=0o600):
-    if path_has_symlink(config_path) or (config_path.exists() and not config_path.is_file()):
-        fail(f"refusing to replace non-regular or symlink path: {config_path}")
-    config_path.parent.mkdir(parents=True, exist_ok=True)
-    descriptor, temporary = tempfile.mkstemp(prefix=f".{config_path.name}.", dir=config_path.parent)
+def atomic_write_text(target, text, mode):
+    if path_has_symlink(target) or (target.exists() and not target.is_file()):
+        fail(f"refusing to replace non-regular or symlink path: {target}")
+    target.parent.mkdir(parents=True, exist_ok=True)
+    descriptor, temporary = tempfile.mkstemp(prefix=f".{target.name}.", dir=target.parent)
     try:
         with os.fdopen(descriptor, "w", encoding="utf-8") as output:
-            json.dump(value, output, indent=2, sort_keys=True)
-            output.write("\n")
+            output.write(text)
             output.flush()
             os.fsync(output.fileno())
         os.chmod(temporary, mode)
-        os.replace(temporary, config_path)
+        os.replace(temporary, target)
     finally:
         if os.path.exists(temporary):
             os.unlink(temporary)
+
+
+def atomic_write(config_path, value, mode=0o600):
+    atomic_write_text(config_path, f"{json.dumps(value, indent=2, sort_keys=True)}\n", mode)
 
 
 def source_root_for(script_path, config):
@@ -189,7 +193,48 @@ def registered_project(config, main_root):
     return next((project for project in config["projects"] if project["root"] == str(main_root)), None)
 
 
+def configure_precommit_hook(root, source_root, config_path, install):
+    result = subprocess.run(
+        ["git", "-C", str(root), "rev-parse", "--path-format=absolute", "--git-path", "hooks/pre-commit"],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    target = Path(result.stdout.strip())
+    marker = "# Managed by ponytail register.\n"
+    contents = f'''#!/usr/bin/env bash
+set -euo pipefail
+{marker}
+
+main() {{
+  HOME={shlex.quote(str(config_path.parent.parent))} {shlex.quote(str(source_root / "cli/ponytail"))} qa
+  exit 0
+}}
+
+main "$@"
+'''
+    if path_has_symlink(target) or (target.exists() and not target.is_file()):
+        fail(f"pre-commit hook must be a regular non-symlink file: {target}")
+    existing = target.read_text(encoding="utf-8") if target.exists() else None
+    if existing is not None and existing != contents:
+        if not install:
+            fail(f"outdated Ponytail pre-commit hook: {target}; run ponytail register")
+        if not existing.startswith(f"#!/usr/bin/env bash\nset -euo pipefail\n{marker}"):
+            fail(f"refusing to replace existing pre-commit hook: {target}")
+        atomic_write_text(target, contents, 0o755)
+        return
+    if not target.exists():
+        if not install:
+            fail(f"missing Ponytail pre-commit hook: {target}; run ponytail register")
+        atomic_write_text(target, contents, 0o755)
+    elif not os.access(target, os.X_OK):
+        if not install:
+            fail(f"Ponytail pre-commit hook is not executable: {target}; run ponytail register")
+        target.chmod(0o755)
+
+
 def register(config_path, source_root, root, main_root):
+    configure_precommit_hook(root, source_root, config_path, True)
     proposal_path = root / ".agents/config/codex-execpolicy.json"
     if path_has_symlink(proposal_path) or (proposal_path.exists() and not proposal_path.is_file()):
         fail(f"project policy must be a regular non-symlink file: {proposal_path}")
@@ -338,12 +383,12 @@ def blessed(config, main_root):
     print(project["blessedWorktree"])
 
 
-def validate_project(config, root, main_root):
+def validate_project(config, source_root, config_path, root, main_root):
     project = registered_project(config, main_root)
     if project is None:
         raise ProjectError(f"Git repository is not registered with Ponytail: {main_root}; run ponytail register", 3)
+    configure_precommit_hook(root, source_root, config_path, False)
     metadata = tracked_project(root)
-    source_root = source_root_for(Path(sys.argv[1]), config)
     result = subprocess.run([str(source_root / "cli/condense_codex_rules.sh"), "--validate-project", str(root)], capture_output=True, text=True)
     if result.returncode:
         fail(result.stderr.strip() or "invalid project policy")
@@ -448,7 +493,7 @@ def run():
         else:
             detect_components(root, arguments)
         return 0
-    metadata = validate_project(config, root, main_root)
+    metadata = validate_project(config, source_root, config_path, root, main_root)
     if operation in {"-h", "--help", "help"}:
         print_usage()
         return 0
