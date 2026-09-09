@@ -1,0 +1,100 @@
+{
+  "schemaVersion": 1,
+  "sprint": "S02",
+  "tasklets": {
+    "S02-F01-T01": {
+      "depends_on": [],
+      "affinity": ["sprint-tool-envelope"],
+      "risk": "normal"
+    },
+    "S02-F01-T02": {
+      "depends_on": ["S02-F01-T01"],
+      "affinity": ["sprint-metadata"],
+      "risk": "high",
+      "risk_reason": "Metadata parsing establishes the trusted input boundary for sprint scheduling."
+    },
+    "S02-F01-T03": {
+      "depends_on": ["S02-F01-T02"],
+      "affinity": ["sprint-metadata"],
+      "risk": "normal"
+    },
+    "S02-F01-T04": {
+      "depends_on": ["S02-F01-T01"],
+      "affinity": ["sprint-graph"],
+      "risk": "high",
+      "risk_reason": "Dependency validation determines whether any reported ready sprint is safe to dispatch."
+    },
+    "S02-F01-T05": {
+      "depends_on": ["S02-F01-T04"],
+      "affinity": ["sprint-graph"],
+      "risk": "normal"
+    },
+    "S02-F02-T01": {
+      "depends_on": ["S02-F01-T04"],
+      "affinity": ["planning-sprint-graph"],
+      "risk": "normal"
+    },
+    "S02-F02-T02": {
+      "depends_on": ["S02-F01-T04", "S02-F01-T05"],
+      "affinity": ["execution-sprint-graph"],
+      "risk": "normal"
+    },
+    "S02-F02-T03": {
+      "depends_on": ["S02-F01-T03", "S02-F01-T05", "S02-F02-T01", "S02-F02-T02"],
+      "affinity": ["sprint-cli"],
+      "risk": "normal"
+    },
+    "S02-F03-T01": {
+      "depends_on": ["S02-F01-T01"],
+      "affinity": ["sprint-tool-tests"],
+      "risk": "normal"
+    },
+    "S02-F03-T02": {
+      "depends_on": ["S02-F01-T02", "S02-F01-T03", "S02-F01-T04", "S02-F01-T05", "S02-F03-T01"],
+      "affinity": ["sprint-tool-tests"],
+      "risk": "normal"
+    },
+    "S02-F03-T03": {
+      "depends_on": ["S02-F02-T01", "S02-F02-T02", "S02-F02-T03", "S02-F03-T02"],
+      "affinity": ["sprint-tool-tests"],
+      "risk": "normal"
+    },
+    "S02-F04-T01": {
+      "depends_on": [],
+      "affinity": ["tasklet-tool-envelope"],
+      "risk": "normal"
+    },
+    "S02-F04-T02": {
+      "depends_on": ["S02-F04-T01"],
+      "affinity": ["tasklet-metadata"],
+      "risk": "normal"
+    },
+    "S02-F04-T03": {
+      "depends_on": ["S02-F04-T01", "S02-F04-T02"],
+      "affinity": ["tasklet-metadata"],
+      "risk": "high",
+      "risk_reason": "The JSON and Markdown identity join is the trusted boundary for tasklet selection."
+    },
+    "S02-F04-T04": {
+      "depends_on": ["S02-F04-T03"],
+      "affinity": ["tasklet-graph"],
+      "risk": "high",
+      "risk_reason": "Graph validation prevents deterministic selection from legitimizing impossible execution order."
+    },
+    "S02-F04-T05": {
+      "depends_on": ["S02-F04-T04"],
+      "affinity": ["tasklet-graph"],
+      "risk": "normal"
+    },
+    "S02-F04-T06": {
+      "depends_on": ["S02-F04-T02", "S02-F04-T03", "S02-F04-T04", "S02-F04-T05"],
+      "affinity": ["tasklet-cli"],
+      "risk": "normal"
+    },
+    "S02-F04-T07": {
+      "depends_on": ["S02-F04-T02", "S02-F04-T03", "S02-F04-T04", "S02-F04-T05", "S02-F04-T06"],
+      "affinity": ["tasklet-tool-tests"],
+      "risk": "normal"
+    }
+  }
+}

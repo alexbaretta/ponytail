@@ -1,0 +1,7 @@
+# Copyright (c) 2026 Alex Baretta. All rights reserved.
+# Author: Alex Baretta <alex@baretta.com>.
+# Licensed under the MIT License. See LICENSE in the project root.
+interface:
+  display_name: "Project Structure"
+  short_description: "Keep repository structure and configuration aligned"
+  default_prompt: "Use $project-structure to place this change correctly and keep the host project configuration synchronized."

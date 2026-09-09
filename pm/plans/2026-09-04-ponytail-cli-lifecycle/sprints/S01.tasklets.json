@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 3,
+  "sprint": "S01",
+  "features": {
+    "S01-F01": {
+      "depends_on": [],
+      "validation_tasklet": "S01-F01-T04"
+    }
+  },
+  "tasklets": {
+    "S01-F01-T01": {
+      "depends_on": [],
+      "affinity": ["cli", "configuration", "registration"],
+      "risk": "high",
+      "risk_reason": "Defines durable user-owned registration state consumed across Codex sessions.",
+      "feature": "S01-F01",
+      "planned_paths": ["cli/ponytail", "tests/ponytail-cli.test.js", "versioned-data-contracts.json"]
+    },
+    "S01-F01-T02": {
+      "depends_on": ["S01-F01-T01"],
+      "affinity": ["cli", "installation", "execpolicy"],
+      "risk": "high",
+      "risk_reason": "Installs shared command authorization and denial policy for every registered project.",
+      "feature": "S01-F01",
+      "planned_paths": ["cli/ponytail", "cli/condense_codex_rules.sh", "tests/ponytail-cli.test.js", "tests/condense-codex-rules.test.js"]
+    },
+    "S01-F01-T03": {
+      "depends_on": ["S01-F01-T02"],
+      "affinity": ["installation", "documentation", "distribution"],
+      "risk": "normal",
+      "feature": "S01-F01",
+      "planned_paths": ["scripts/install.sh", "scripts/install-cli.sh", "scripts/install-to-codex.sh", "tests/cli-tools.test.js", "tests/distribution.test.js", "docs/condense-codex-rules.md", "skills/codex-execpolicy/SKILL.md", ".openclaw/skills/codex-execpolicy/SKILL.md", ".ponytail/codex-execpolicy.json", "AGENTS.md", "README.md", "PROJECT_STRUCTURE.md", "package.json"]
+    },
+    "S01-F01-T04": {
+      "depends_on": ["S01-F01-T01", "S01-F01-T02", "S01-F01-T03"],
+      "affinity": ["validation", "reconciliation"],
+      "risk": "normal",
+      "feature": "S01-F01",
+      "planned_paths": ["pm/plans/2026-09-04-ponytail-cli-lifecycle/plan.md", "pm/plans/2026-09-04-ponytail-cli-lifecycle/sprints/S01.md", "pm/plans/2026-09-04-ponytail-cli-lifecycle/sprints/S01.tasklets.json"]
+    }
+  }
+}

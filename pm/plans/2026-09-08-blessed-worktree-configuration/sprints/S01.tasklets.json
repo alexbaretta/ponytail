@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 3,
+  "sprint": "S01",
+  "features": {
+    "S01-F01": {
+      "depends_on": [],
+      "validation_tasklet": "S01-F01-T06"
+    }
+  },
+  "tasklets": {
+    "S01-F01-T01": {
+      "depends_on": [],
+      "affinity": ["blessed-worktree"],
+      "risk": "normal",
+      "feature": "S01-F01",
+      "planned_paths": ["cli/ponytail"]
+    },
+    "S01-F01-T02": {
+      "depends_on": ["S01-F01-T01"],
+      "affinity": ["blessed-worktree"],
+      "risk": "normal",
+      "feature": "S01-F01",
+      "planned_paths": ["cli/ponytail", ".ponytail/project.json", ".agents/config/ponytail.json"]
+    },
+    "S01-F01-T03": {
+      "depends_on": ["S01-F01-T02"],
+      "affinity": ["blessed-worktree"],
+      "risk": "normal",
+      "feature": "S01-F01",
+      "planned_paths": ["cli/ponytail"]
+    },
+    "S01-F01-T04": {
+      "depends_on": ["S01-F01-T03"],
+      "affinity": ["blessed-worktree"],
+      "risk": "normal",
+      "feature": "S01-F01",
+      "planned_paths": ["cli/ponytail", "scripts/project-qa.js"]
+    },
+    "S01-F01-T05": {
+      "depends_on": ["S01-F01-T04"],
+      "affinity": ["blessed-worktree"],
+      "risk": "normal",
+      "feature": "S01-F01",
+      "planned_paths": [
+        "tests/project-validation.test.js",
+        "tests/ponytail-cli.test.js",
+        "tests/tsts-cli.test.js",
+        "AGENTS.md",
+        "PROJECT_STRUCTURE.md",
+        "README.md",
+        "docs/project-validation.md",
+        "tsts/README.md",
+        "skills/project-structure/SKILL.md",
+        ".openclaw/skills/project-structure/SKILL.md",
+        ".openclaw/skills/ponytail/SKILL.md"
+      ]
+    },
+    "S01-F01-T06": {
+      "depends_on": ["S01-F01-T01", "S01-F01-T02", "S01-F01-T03", "S01-F01-T04", "S01-F01-T05"],
+      "affinity": ["blessed-worktree"],
+      "risk": "normal",
+      "feature": "S01-F01",
+      "planned_paths": [
+        "pm/plans/2026-09-08-blessed-worktree-configuration/plan.md",
+        "pm/plans/2026-09-08-blessed-worktree-configuration/sprints/S01.md",
+        "pm/plans/2026-09-08-blessed-worktree-configuration/sprints/S01.tasklets.json"
+      ]
+    }
+  }
+}

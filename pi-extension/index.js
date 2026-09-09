@@ -1,4 +1,9 @@
+// Copyright (c) 2026 DietrichGebert.
+// Copyright (c) 2026 Alex Baretta. All rights reserved.
+// Licensed under the MIT License. See LICENSE in the project root.
+
 import { createRequire } from "node:module";
+import { readFileSync } from "node:fs";
 
 const require = createRequire(import.meta.url);
 const {
@@ -20,6 +25,14 @@ export const readQuietStartup = getQuietStartup;
 
 const RUNTIME_MODE_LIST = RUNTIME_MODES.join("|");
 const PONYTAIL_COMMAND_DESCRIPTION = `Set mode: ${RUNTIME_MODE_LIST}. Commands: status, default <mode>`;
+const HELP_TEXT = readFileSync(new URL("../commands/ponytail-help.md", import.meta.url), "utf8")
+  .replace(/^<!--[\s\S]*?-->\s*/, "")
+  .trim();
+const REGISTRY_COMMANDS = JSON.parse(
+  readFileSync(new URL("../generated/registry.json", import.meta.url), "utf8"),
+).entries.filter(
+  (entry) => entry.kind === "command" && entry.status === "enabled" && entry.hosts.includes("pi"),
+);
 
 export function resolveSessionMode(entries, fallbackMode = DEFAULT_MODE) {
   const fallback = normalizePersistedMode(fallbackMode) || DEFAULT_MODE;
@@ -49,7 +62,7 @@ export function parsePonytailCommand(text, defaultMode = DEFAULT_MODE) {
   if (primary === "status") return { type: "status" };
 
   if (primary === "default") {
-    // ponytail: a default must be a runtime level; review is session-only (#377).
+    // A default must be a runtime level; review is session-only (#377).
     const mode = normalizeMode(secondary);
     return mode ? { type: "set-default", mode } : { type: "invalid", reason: "invalid-default-mode" };
   }
@@ -71,10 +84,10 @@ export default function ponytailExtension(pi) {
   function syncStatus(ctx) {
     if (ctx) lastCtx = ctx;
     const c = ctx || lastCtx;
-    // ponytail: hide the indicator but keep the ruleset active (#324).
+    // Hide the indicator but keep the ruleset active (#324).
     if (hideStatus) return;
     if (!c?.ui?.setStatus) return;
-    // ponytail: try/catch guards against pi-web theme proxy throwing before initTheme
+    // The pi-web theme proxy can throw before initTheme.
     let theme;
     try { theme = c.ui.theme; if (!theme?.fg) return; } catch { return; }
     if (currentMode === "off") {
@@ -98,7 +111,7 @@ export default function ponytailExtension(pi) {
     ctx?.ui?.notify?.(`Ponytail mode set to ${normalized}.`, "info");
   };
 
-  const sendAlias = (skillName, args, ctx) => {
+  const sendSkillCommand = (skillName, args, ctx) => {
     const normalized = String(args || "").trim();
     const message = normalized ? `${skillName} ${normalized}` : skillName;
 
@@ -146,29 +159,17 @@ export default function ponytailExtension(pi) {
     },
   });
 
-  pi.registerCommand("ponytail-review", {
-    description: "Run /skill:ponytail-review",
-    handler: (_args, ctx) => sendAlias("/skill:ponytail-review", "", ctx),
-  });
-
-  pi.registerCommand("ponytail-audit", {
-    description: "Run /skill:ponytail-audit",
-    handler: (_args, ctx) => sendAlias("/skill:ponytail-audit", "", ctx),
-  });
-
-  pi.registerCommand("ponytail-gain", {
-    description: "Run /skill:ponytail-gain",
-    handler: (_args, ctx) => sendAlias("/skill:ponytail-gain", "", ctx),
-  });
-
-  pi.registerCommand("ponytail-debt", {
-    description: "Run /skill:ponytail-debt",
-    handler: (_args, ctx) => sendAlias("/skill:ponytail-debt", "", ctx),
-  });
+  for (const entry of REGISTRY_COMMANDS) {
+    if (entry.name === "ponytail" || entry.name === "ponytail-help") continue;
+    pi.registerCommand(entry.name, {
+      description: entry.reason,
+      handler: (args, ctx) => sendSkillCommand(`/skill:${entry.name}`, args, ctx),
+    });
+  }
 
   pi.registerCommand("ponytail-help", {
-    description: "Run /skill:ponytail-help",
-    handler: (_args, ctx) => sendAlias("/skill:ponytail-help", "", ctx),
+    description: "Show the Ponytail command reference",
+    handler: (_args, ctx) => ctx?.ui?.notify?.(HELP_TEXT, "info"),
   });
 
   pi.on("input", async (event) => {
@@ -202,7 +203,7 @@ export default function ponytailExtension(pi) {
   });
 
   pi.on("before_agent_start", async (event) => {
-    if (!currentMode || currentMode === "off") return;
+    if (!currentMode) return;
     // Guard a null/undefined event or a missing systemPrompt: don't crash, and
     // don't prepend the literal string "undefined" to the prompt (#439, #440).
     const base = event?.systemPrompt ? `${event.systemPrompt}\n\n` : "";

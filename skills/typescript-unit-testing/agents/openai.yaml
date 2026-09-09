@@ -1,0 +1,7 @@
+# Copyright (c) 2026 Alex Baretta. All rights reserved.
+# Author: Alex Baretta <alex@baretta.com>.
+# Licensed under the MIT License. See LICENSE in the project root.
+interface:
+  display_name: "TypeScript Unit Testing"
+  short_description: "Keep TypeScript tests tied to production contracts"
+  default_prompt: "Use $typescript-unit-testing to create or revise contract-safe TypeScript unit tests, fixtures, factories, and test doubles."

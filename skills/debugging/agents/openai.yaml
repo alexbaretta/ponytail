@@ -1,0 +1,7 @@
+# Copyright (c) 2026 Alex Baretta. All rights reserved.
+# Author: Alex Baretta <alex@baretta.com>.
+# Licensed under the MIT License. See LICENSE in the project root.
+interface:
+  display_name: "Debugging"
+  short_description: "Diagnose root causes with hypothesis testing"
+  default_prompt: "Use $debugging to diagnose this failure through differential diagnosis and focused hypothesis testing before implementing a fix."

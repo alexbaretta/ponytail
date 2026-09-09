@@ -1,0 +1,7 @@
+# Copyright (c) 2026 Alex Baretta. All rights reserved.
+# Author: Alex Baretta <alex@baretta.com>.
+# Licensed under the MIT License. See LICENSE in the project root.
+interface:
+  display_name: "Static Type Safety"
+  short_description: "Preserve exact types and safe unions"
+  default_prompt: "Use $static-type-safety to review this typed contract, its fixtures, and exhaustive dispatch without type-system bypasses."

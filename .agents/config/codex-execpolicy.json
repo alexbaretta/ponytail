@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "safe": [
+    {
+      "pattern": ["./scripts/test-install-to-codex.sh"],
+      "justification": "Exercise Ponytail's isolated Codex installer harness"
+    },
+    {
+      "pattern": ["node", "scripts/registry.js"],
+      "justification": "Validate Ponytail's repository-owned registry"
+    }
+  ],
+  "unsafe": [
+    {
+      "pattern": ["ponytail", ["setup-project", "install-permissions", "install-cli", "install-to-codex", "install"]],
+      "decision": "prompt",
+      "justification": "Ponytail installation commands change shared user-level state"
+    },
+    {
+      "pattern": ["./scripts/install.sh"],
+      "decision": "prompt",
+      "justification": "Installation changes shared user-level Codex state"
+    }
+  ]
+}

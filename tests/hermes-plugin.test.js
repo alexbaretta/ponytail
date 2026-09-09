@@ -1,4 +1,8 @@
 #!/usr/bin/env node
+// Copyright (c) 2026 DietrichGebert.
+// Copyright (c) 2026 Alex Baretta. All rights reserved.
+// Licensed under the MIT License. See LICENSE in the project root.
+
 // Hermes support is a real plugin, not just copied rules: the repo root must be
 // installable with `hermes plugins install owner/repo`, register bundled skills,
 // inject active mode context, and expose slash commands.
@@ -10,13 +14,18 @@ const os = require('os');
 const path = require('path');
 const { spawnSync } = require('child_process');
 
-const commands = ['ponytail', 'ponytail-review', 'ponytail-audit', 'ponytail-debt', 'ponytail-gain', 'ponytail-help'];
-const skillCommands = commands.filter((name) => name !== 'ponytail');
+const commands = ['ponytail', 'ponytail-review', 'ponytail-audit', 'ponytail-debt', 'ponytail-help'];
+const skillCommands = commands.filter(
+  (name) => name !== 'ponytail' && name !== 'ponytail-help',
+);
 
 const root = path.join(__dirname, '..');
+const shippedSkills = fs.readdirSync(path.join(root, 'skills'))
+  .filter((name) => fs.existsSync(path.join(root, 'skills', name, 'SKILL.md')))
+  .sort();
 
-// ponytail: probe once; on Windows `python3` is the Store-alias stub that fails
-// even when Python is installed, so fall back to `python` (mirrors benchmarks/correctness.js).
+// Probe once; on Windows `python3` is the Store-alias stub that fails
+// even when Python is installed, so fall back to `python`.
 let pythonCmd;
 function pythonExe() {
   if (pythonCmd) return pythonCmd;
@@ -45,15 +54,11 @@ test('Hermes plugin manifest matches runtime skills, hooks, commands, and packag
   assert.ok(fs.existsSync(manifestPath), 'missing root plugin.yaml');
   const manifest = fs.readFileSync(manifestPath, 'utf8');
   const packageJson = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
-  const skillDirs = fs.readdirSync(path.join(root, 'skills'))
-    .filter((name) => fs.existsSync(path.join(root, 'skills', name, 'SKILL.md')))
-    .sort();
-
   assert.match(manifest, /^name:\s*ponytail$/m);
   assert.match(manifest, new RegExp(`^version:\\s*${packageJson.version}$`, 'm'));
   assert.match(manifest, new RegExp(`^author:\\s*${packageJson.author.name}$`, 'm'));
   assert.deepEqual(commands.filter((name) => manifest.includes(`  - ${name}`)), commands);
-  assert.deepEqual(skillDirs.filter((name) => manifest.includes(`  - ${name}`)), skillDirs);
+  assert.deepEqual(shippedSkills.filter((name) => manifest.includes(`  - ${name}`)), shippedSkills);
   assert.match(manifest, /pre_llm_call/);
   assert.match(manifest, /pre_gateway_dispatch/);
 });
@@ -80,14 +85,7 @@ mod.register(ctx)
 print(json.dumps({'skills': ctx.skills, 'hooks': ctx.hooks, 'commands': ctx.commands}, sort_keys=True))
 `);
   const data = JSON.parse(output);
-  assert.deepEqual(data.skills.map(([name]) => name).sort(), [
-    'ponytail',
-    'ponytail-audit',
-    'ponytail-debt',
-    'ponytail-gain',
-    'ponytail-help',
-    'ponytail-review',
-  ]);
+  assert.deepEqual(data.skills.map(([name]) => name).sort(), shippedSkills);
   assert.ok(data.skills.every(([, skillPath]) => skillPath.endsWith('/SKILL.md')));
   assert.ok(data.hooks.includes('pre_llm_call'));
   assert.ok(data.commands.includes('ponytail'));
@@ -107,7 +105,7 @@ print(json.dumps({'ctx': ctx}))
   const { ctx } = JSON.parse(output);
 
   assert.match(ctx, /PONYTAIL MODE ACTIVE — level: ultra/);
-  assert.match(ctx, /The best\s+code is the code never written/);
+  assert.match(ctx, /The best code is code that does not need to\s+exist/);
   assert.match(ctx, /ultra/i);
   assert.doesNotMatch(ctx, /^---/);
   assert.doesNotMatch(ctx, /\|\s*\*\*Lite\*\*/i);
@@ -143,7 +141,8 @@ print(json.dumps({
 `, { XDG_CONFIG_HOME: tmp, PONYTAIL_DEFAULT_MODE: 'ultra' });
   const data = JSON.parse(output);
   assert.match(data.default, /level: ultra/);
-  assert.equal(data.off, '');
+  assert.match(data.off, /level: off/);
+  assert.match(data.off, /All always-on rules still apply/);
   assert.match(data.status_before, /Ponytail mode: ultra/);
   assert.match(data.invalid, /Usage:/);
   assert.match(data.status_after, /Ponytail mode: ultra/);

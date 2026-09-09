@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 3,
+  "sprint": "S01",
+  "features": {
+    "S01-F01": {
+      "depends_on": [],
+      "validation_tasklet": "S01-F01-T05"
+    }
+  },
+  "tasklets": {
+    "S01-F01-T01": {
+      "depends_on": [],
+      "affinity": ["global-component-registry"],
+      "risk": "normal",
+      "feature": "S01-F01",
+      "planned_paths": ["cli/ponytail"]
+    },
+    "S01-F01-T02": {
+      "depends_on": ["S01-F01-T01"],
+      "affinity": ["global-component-registry"],
+      "risk": "normal",
+      "feature": "S01-F01",
+      "planned_paths": ["cli/ponytail"]
+    },
+    "S01-F01-T03": {
+      "depends_on": ["S01-F01-T02"],
+      "affinity": ["global-component-registry"],
+      "risk": "normal",
+      "feature": "S01-F01",
+      "planned_paths": ["cli/ponytail"]
+    },
+    "S01-F01-T04": {
+      "depends_on": ["S01-F01-T03"],
+      "affinity": ["global-component-registry"],
+      "risk": "normal",
+      "feature": "S01-F01",
+      "planned_paths": [
+        "tests/project-validation.test.js",
+        "tests/ponytail-cli.test.js",
+        "docs/project-validation.md",
+        "PROJECT_STRUCTURE.md"
+      ]
+    },
+    "S01-F01-T05": {
+      "depends_on": ["S01-F01-T01", "S01-F01-T02", "S01-F01-T03", "S01-F01-T04"],
+      "affinity": ["global-component-registry"],
+      "risk": "normal",
+      "feature": "S01-F01",
+      "planned_paths": [
+        "pm/plans/2026-09-08-global-component-registry/plan.md",
+        "pm/plans/2026-09-08-global-component-registry/sprints/S01.md",
+        "pm/plans/2026-09-08-global-component-registry/sprints/S01.tasklets.json"
+      ]
+    }
+  }
+}

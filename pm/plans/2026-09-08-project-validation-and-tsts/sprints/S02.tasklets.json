@@ -1,0 +1,196 @@
+{
+  "schemaVersion": 3,
+  "sprint": "S02",
+  "features": {
+    "S02-F01": {
+      "depends_on": [],
+      "validation_tasklet": "S02-F01-T11"
+    }
+  },
+  "tasklets": {
+    "S02-F01-T01": {
+      "depends_on": [],
+      "affinity": [
+        "tsts"
+      ],
+      "risk": "normal",
+      "feature": "S02-F01",
+      "planned_paths": [
+        "tsts/src/index.ts"
+      ]
+    },
+    "S02-F01-T02": {
+      "depends_on": [
+        "S02-F01-T01"
+      ],
+      "affinity": [
+        "tsts"
+      ],
+      "risk": "normal",
+      "feature": "S02-F01",
+      "planned_paths": [
+        "tsts/src/cli.ts"
+      ]
+    },
+    "S02-F01-T03": {
+      "depends_on": [
+        "S02-F01-T02"
+      ],
+      "affinity": [
+        "tsts"
+      ],
+      "risk": "normal",
+      "feature": "S02-F01",
+      "planned_paths": [
+        "tsts/src/lossless-json.ts"
+      ]
+    },
+    "S02-F01-T04": {
+      "depends_on": [
+        "S02-F01-T03"
+      ],
+      "affinity": [
+        "tsts"
+      ],
+      "risk": "normal",
+      "feature": "S02-F01",
+      "planned_paths": [
+        "tsts/test/cli.test.ts",
+        "tsts/test/config.test.ts",
+        "tsts/test/lossless-json.test.ts",
+        "tsts/test/no-aliasing.test.ts",
+        "tsts/test/public-union-discriminator.test.ts",
+        "tsts/test/public-union-dispatch.test.ts",
+        "tsts/test/type-safe-serdes.test.ts",
+        "tsts/test/unused-code.test.ts",
+        "tsts/test/versioned-data-contracts.test.ts"
+      ]
+    },
+    "S02-F01-T05": {
+      "depends_on": [
+        "S02-F01-T04"
+      ],
+      "affinity": [
+        "tsts"
+      ],
+      "risk": "normal",
+      "feature": "S02-F01",
+      "planned_paths": [
+        "tsts/package.json",
+        "tsts/tsconfig.json",
+        "ponytail.json",
+        ".gitignore"
+      ]
+    },
+    "S02-F01-T06": {
+      "depends_on": [
+        "S02-F01-T05"
+      ],
+      "affinity": [
+        "tsts"
+      ],
+      "risk": "normal",
+      "feature": "S02-F01",
+      "planned_paths": [
+        "cli/tsts"
+      ]
+    },
+    "S02-F01-T07": {
+      "depends_on": [
+        "S02-F01-T06"
+      ],
+      "affinity": [
+        "tsts"
+      ],
+      "risk": "normal",
+      "feature": "S02-F01",
+      "planned_paths": [
+        "scripts/install-cli.sh"
+      ]
+    },
+    "S02-F01-T08": {
+      "depends_on": [
+        "S02-F01-T07"
+      ],
+      "affinity": [
+        "tsts"
+      ],
+      "risk": "normal",
+      "feature": "S02-F01",
+      "planned_paths": [
+        "package.json",
+        "package-lock.json"
+      ]
+    },
+    "S02-F01-T09": {
+      "depends_on": [
+        "S02-F01-T08"
+      ],
+      "affinity": [
+        "tsts"
+      ],
+      "risk": "normal",
+      "feature": "S02-F01",
+      "planned_paths": [
+        "tests/tsts-cli.test.js",
+        "tests/cli-tools.test.js",
+        "tests/distribution.test.js"
+      ]
+    },
+    "S02-F01-T10": {
+      "depends_on": [
+        "S02-F01-T09"
+      ],
+      "affinity": [
+        "tsts"
+      ],
+      "risk": "normal",
+      "feature": "S02-F01",
+      "planned_paths": [
+        "AGENTS.md",
+        "PROJECT_STRUCTURE.md",
+        "README.md",
+        "tsts/README.md",
+        "tsts/docs/architecture.md",
+        "tsts/docs/configuration-v2-upgrade.md",
+        "versioned-data-contracts.json",
+        ".ponytail/project.json"
+      ]
+    },
+    "S02-F01-T11": {
+      "depends_on": [
+        "S02-F01-T01",
+        "S02-F01-T02",
+        "S02-F01-T03",
+        "S02-F01-T04",
+        "S02-F01-T05",
+        "S02-F01-T06",
+        "S02-F01-T07",
+        "S02-F01-T08",
+        "S02-F01-T09",
+        "S02-F01-T10",
+        "S02-F01-T12"
+      ],
+      "affinity": [
+        "tsts"
+      ],
+      "risk": "normal",
+      "feature": "S02-F01",
+      "planned_paths": []
+    },
+    "S02-F01-T12": {
+      "depends_on": [
+        "S02-F01-T10"
+      ],
+      "affinity": [
+        "qa"
+      ],
+      "risk": "normal",
+      "feature": "S02-F01",
+      "planned_paths": [
+        "scripts/project-qa.js",
+        "tests/project-validation.test.js"
+      ]
+    }
+  }
+}

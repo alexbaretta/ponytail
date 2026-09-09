@@ -1,3 +1,7 @@
+// Copyright (c) 2026 DietrichGebert.
+// Copyright (c) 2026 Alex Baretta. All rights reserved.
+// Licensed under the MIT License. See LICENSE in the project root.
+
 import assert from "node:assert/strict";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -61,7 +65,7 @@ function withTempConfig(fn) {
 test("extension registers Ponytail commands", () => {
   const { commands } = createPiHarness();
 
-  assert.deepEqual([...commands.keys()].sort(), ["ponytail", "ponytail-audit", "ponytail-debt", "ponytail-gain", "ponytail-help", "ponytail-review"]);
+  assert.deepEqual([...commands.keys()].sort(), ["ponytail", "ponytail-audit", "ponytail-debt", "ponytail-help", "ponytail-review"]);
 });
 
 test("/ponytail updates session mode and injects instructions", async () => withTempConfig(async () => {
@@ -120,26 +124,29 @@ test("session_start restores latest persisted mode", async () => withTempConfig(
   assert.ok(result.systemPrompt.includes("lite"));
 }));
 
-test("skill alias commands delegate to Pi skill commands", async () => {
+test("skill commands delegate and help displays directly", async () => {
   const { commands, sentUserMessages } = createPiHarness();
-  const ctx = createCommandContext();
+  const notices = [];
+  const ctx = createCommandContext({
+    ui: { notify(text, level) { notices.push({ text, level }); } },
+  });
 
   await commands.get("ponytail-review").handler("", ctx);
   await commands.get("ponytail-audit").handler("", ctx);
   await commands.get("ponytail-debt").handler("", ctx);
-  await commands.get("ponytail-gain").handler("", ctx);
   await commands.get("ponytail-help").handler("", ctx);
 
   assert.deepEqual(sentUserMessages.map((entry) => entry.text), [
     "/skill:ponytail-review",
     "/skill:ponytail-audit",
     "/skill:ponytail-debt",
-    "/skill:ponytail-gain",
-    "/skill:ponytail-help",
   ]);
+  assert.equal(notices.length, 1);
+  assert.match(notices[0].text, /# Ponytail Help/);
+  assert.match(notices[0].text, /Core\s+engineering rules remain active/);
 });
 
-test("normal mode disables persistent instructions", async () => withTempConfig(async () => {
+test("normal mode disables compaction but preserves core policy", async () => withTempConfig(async () => {
   const { commands, events } = createPiHarness();
   const ctx = createCommandContext();
 
@@ -147,8 +154,9 @@ test("normal mode disables persistent instructions", async () => withTempConfig(
   await commands.get("ponytail").handler("ultra", ctx);
   await events.get("input")({ text: "normal mode", source: "interactive" }, ctx);
 
-  const disabled = await events.get("before_agent_start")({ systemPrompt: "BASE" }, ctx);
-  assert.equal(disabled, undefined);
+  const result = await events.get("before_agent_start")({ systemPrompt: "BASE" }, ctx);
+  assert.match(result.systemPrompt, /PONYTAIL MODE ACTIVE — level: off/);
+  assert.match(result.systemPrompt, /All always-on rules still apply/);
 }));
 
 test("a request mentioning normal mode stays active", async () => withTempConfig(async () => {

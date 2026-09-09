@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 3,
+  "sprint": "S01",
+  "features": {
+    "S01-F01": {
+      "depends_on": [],
+      "validation_tasklet": "S01-F01-T03"
+    }
+  },
+  "tasklets": {
+    "S01-F01-T01": {
+      "depends_on": [],
+      "affinity": ["project-neutrality"],
+      "risk": "normal",
+      "feature": "S01-F01",
+      "planned_paths": [
+        "tests/cloud-cli-reauth.test.js",
+        "tests/debugging.test.js",
+        "tests/diagnostic-assertions.test.js",
+        "tests/imported-skills.test.js",
+        "tests/indeterminate-list-ux.test.js",
+        "tests/production-test-boundaries.test.js",
+        "tests/typescript-unit-testing.test.js",
+        "tests/ux-testing.test.js",
+        "tests/variant-neutrality.test.js"
+      ]
+    },
+    "S01-F01-T02": {
+      "depends_on": ["S01-F01-T01"],
+      "affinity": ["project-neutrality"],
+      "risk": "normal",
+      "feature": "S01-F01",
+      "planned_paths": [
+        "pm/plans/2026-09-08-blessed-worktree-configuration/sprints/S01.md",
+        "pm/plans/build-impact-tooling/plan.md",
+        "pm/plans/build-impact-tooling/sprints/S02.md",
+        "pm/plans/configurable-unit-test-commands/plan.md",
+        "pm/plans/configurable-unit-test-commands/sprints/S02.md",
+        "pm/plans/unified-agentic-harness/plan.md",
+        "pm/plans/unified-agentic-harness/sprints/S01.md"
+      ]
+    },
+    "S01-F01-T03": {
+      "depends_on": ["S01-F01-T01", "S01-F01-T02"],
+      "affinity": ["project-neutrality"],
+      "risk": "normal",
+      "feature": "S01-F01",
+      "planned_paths": [
+        "pm/plans/2026-09-08-project-neutrality-cleanup/plan.md",
+        "pm/plans/2026-09-08-project-neutrality-cleanup/sprints/S01.md",
+        "pm/plans/2026-09-08-project-neutrality-cleanup/sprints/S01.tasklets.json"
+      ]
+    }
+  }
+}

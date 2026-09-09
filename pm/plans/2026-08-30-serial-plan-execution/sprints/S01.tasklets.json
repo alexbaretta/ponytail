@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 3,
+  "sprint": "S01",
+  "features": {
+    "S01-F01": {
+      "depends_on": [],
+      "validation_tasklet": "S01-F01-T06"
+    }
+  },
+  "tasklets": {
+    "S01-F01-T01": {
+      "depends_on": [],
+      "affinity": ["plan-execution", "serial-selection"],
+      "risk": "high",
+      "risk_reason": "Changes which dependency-ready sprint receives execution authority.",
+      "feature": "S01-F01",
+      "planned_paths": ["skills/plan-execution/scripts/ready-sprints.js", "tests/ready-sprints.test.js"]
+    },
+    "S01-F01-T02": {
+      "depends_on": ["S01-F01-T01"],
+      "affinity": ["plan-execution", "serial-selection"],
+      "risk": "high",
+      "risk_reason": "Changes current tasklet selection while preserving immutable metadata readers.",
+      "feature": "S01-F01",
+      "planned_paths": ["skills/plan-execution/scripts/ready-tasklets.js", "tests/ready-tasklets.test.js"]
+    },
+    "S01-F01-T03": {
+      "depends_on": ["S01-F01-T02"],
+      "affinity": ["plan-execution", "serial-policy"],
+      "risk": "high",
+      "risk_reason": "Removes all delegated and concurrent execution authority from the canonical skill.",
+      "feature": "S01-F01",
+      "planned_paths": ["skills/plan-execution/SKILL.md", "tests/plan-execution-subagents.test.js", "tests/plan-execution-serial.test.js", "tests/testing-cadence.test.js", "tests/agent-caused-repair.test.js"]
+    },
+    "S01-F01-T04": {
+      "depends_on": ["S01-F01-T03"],
+      "affinity": ["plan-execution", "generation"],
+      "risk": "normal",
+      "feature": "S01-F01",
+      "planned_paths": [".openclaw/skills/plan-execution/SKILL.md", ".openclaw/skills/plan-execution/scripts/ready-sprints.js", ".openclaw/skills/plan-execution/scripts/ready-tasklets.js"]
+    },
+    "S01-F01-T05": {
+      "depends_on": ["S01-F01-T04"],
+      "affinity": ["plan-execution", "validation", "installation"],
+      "risk": "high",
+      "risk_reason": "Runs repository-wide acceptance and mutates installed local Ponytail copies under explicit user authority.",
+      "feature": "S01-F01",
+      "planned_paths": ["skills/plan-execution/SKILL.md"]
+    },
+    "S01-F01-T06": {
+      "depends_on": ["S01-F01-T01", "S01-F01-T02", "S01-F01-T03", "S01-F01-T04", "S01-F01-T05"],
+      "affinity": ["plan-execution", "validation"],
+      "risk": "normal",
+      "feature": "S01-F01",
+      "planned_paths": []
+    }
+  }
+}

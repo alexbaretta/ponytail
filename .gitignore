@@ -1,3 +1,9 @@
+# Copyright (c) 2026 DietrichGebert.
+# Copyright (c) 2026 Alex Baretta. All rights reserved.
+# Licensed under the MIT License. See LICENSE in the project root.
+
+.DS_Store
+
 # Secrets, never commit API keys
 .env
 .env.*
@@ -5,11 +11,7 @@
 
 # Dependencies
 node_modules/
-
-# promptfoo eval artifacts
-.promptfoo/
-benchmarks/output*
-benchmarks/benchmark-local-results.json
+tmp/
 
 # Python
 __pycache__/
@@ -22,5 +24,5 @@ ponytail-*.gif
 # Claude Code local settings (machine-specific permission grants)
 .claude/settings.local.json
 
-# agentic benchmark workspaces (agent output, kept locally for inspection)
-benchmarks/agentic/runs/
+# Compiled TSTS runtime and tests
+tsts/dist/

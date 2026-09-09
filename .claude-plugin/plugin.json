@@ -1,10 +1,10 @@
 {
   "name": "ponytail",
   "version": "4.8.4",
-  "description": "Lazy senior dev mode. Forces the simplest, shortest solution that actually works: YAGNI, stdlib first, no unrequested abstractions.",
+  "description": "Lazy senior dev mode for AI agents. The best code is the code you never wrote.",
   "author": {
-    "name": "Dietrich Gebert",
-    "url": "https://github.com/DietrichGebert"
+    "name": "Alex Baretta",
+    "url": "https://github.com/alexbaretta"
   },
-  "hooks": "./hooks/claude-codex-hooks.json"
+  "hooks": "./hooks/hooks.json"
 }

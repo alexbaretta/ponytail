@@ -1,5 +1,5 @@
 {
-  "name": "@dietrichgebert/ponytail",
+  "name": "@alexbaretta/ponytail",
   "version": "4.8.4",
   "description": "Lazy senior dev mode for AI agents. The best code is the code you never wrote.",
   "keywords": ["opencode-plugin", "opencode", "ponytail", "pi-package", "pi", "skills", "qoder"],
@@ -8,13 +8,27 @@
     "name": "Dietrich Gebert",
     "url": "https://github.com/DietrichGebert"
   },
-  "homepage": "https://github.com/DietrichGebert/ponytail",
+  "contributors": [
+    {
+      "name": "Alex Baretta",
+      "email": "alex@baretta.com",
+      "url": "https://github.com/alexbaretta"
+    }
+  ],
+  "maintainers": [
+    {
+      "name": "Alex Baretta",
+      "email": "alex@baretta.com",
+      "url": "https://github.com/alexbaretta"
+    }
+  ],
+  "homepage": "https://github.com/alexbaretta/ponytail",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/DietrichGebert/ponytail.git"
+    "url": "git+https://github.com/alexbaretta/ponytail.git"
   },
   "bugs": {
-    "url": "https://github.com/DietrichGebert/ponytail/issues"
+    "url": "https://github.com/alexbaretta/ponytail/issues"
   },
   "main": "./.opencode/plugins/ponytail.mjs",
   "exports": {
@@ -22,19 +36,39 @@
     "./plugin": "./.opencode/plugins/ponytail.mjs"
   },
   "files": [
-    "AGENTS.md",
     "hooks/",
     "skills/",
+    "commands/",
+    "cli/",
+    "config/",
+    ".agents/config/codex-execpolicy.json",
+    "generated/",
+    "registry.tsv",
     ".opencode/",
     ".qoder/",
     ".qoder-plugin/",
     "pi-extension/",
+    "scripts/install.sh",
+    "scripts/project-qa.js",
+    "scripts/install-to-codex.sh",
+    "scripts/install-cli.sh",
+    "scripts/setup-project-journal.sh",
+    "scripts/project-journal.sql",
     "scripts/uninstall.js",
     "assets/",
-    "LICENSE"
+    "versioned-data-contracts.json",
+    "ponytail-journal.json",
+    "LICENSE",
+    "NOTICE",
+    "tsts/package.json",
+    "tsts/dist/src"
   ],
   "scripts": {
-    "test": "node --test tests/*.test.js && npm test --prefix pi-extension && npm test --prefix ponytail-mcp"
+    "test": "npm run test:core",
+    "test:core": "node scripts/registry.js && node scripts/build-registry-data.js && node scripts/build-command-adapters.js && node scripts/build-manifests.js && node scripts/check-rule-copies.js && node --test tests/*.test.js && ./scripts/test-install-to-codex.sh && npm test --prefix pi-extension && npm test --prefix ponytail-mcp && npm run test:tsts",
+    "build:tsts": "tsc -p tsts/tsconfig.json",
+    "test:tsts": "node --test tsts/dist/test/*.test.js",
+    "prepare": "npm run build:tsts"
   },
   "pi": {
     "extensions": ["./pi-extension/index.js"],
@@ -42,6 +76,18 @@
   },
   "publishConfig": {
     "access": "public"
+  },
+  "dependencies": {
+    "smol-toml": "^1.8.0",
+    "yaml": "^2.9.0",
+    "typescript": "6.0.3",
+    "lossless-json": "^4.3.0"
+  },
+  "bin": {
+    "ponytail": "cli/ponytail",
+    "tsts": "cli/tsts"
+  },
+  "devDependencies": {
+    "@types/node": "25.7.0"
   }
 }
-

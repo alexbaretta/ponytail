@@ -1,0 +1,32 @@
+{
+  "version": 2,
+  "buildImpact": {
+    "version": 2,
+    "globalInputs": [
+      {
+        "kind": "file",
+        "path": "package.json"
+      },
+      {
+        "kind": "file",
+        "path": "package-lock.json"
+      }
+    ],
+    "adapters": [
+      {
+        "type": "typescript",
+        "targets": [
+          {
+            "name": "tsts",
+            "buildCommand": "npm run build:tsts",
+            "tsconfig": "tsts/tsconfig.json",
+            "configurationInputs": [
+              "tsts/package.json"
+            ],
+            "additionalInputs": []
+          }
+        ]
+      }
+    ]
+  }
+}

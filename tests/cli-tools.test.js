@@ -1,0 +1,685 @@
+#!/usr/bin/env node
+// Copyright (c) 2026 Alex Baretta. All rights reserved.
+// Licensed under the MIT License. See LICENSE in the project root.
+
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
+const { spawnSync } = require('node:child_process');
+const test = require('node:test');
+
+const root = path.join(__dirname, '..');
+const planStats = path.join(root, 'cli', 'plan_stats.sh');
+const planPdf = path.join(root, 'cli', 'plan_pdf.sh');
+const bugStats = path.join(root, 'cli', 'bug_stats.sh');
+const auditPm = path.join(root, 'cli', 'audit_pm.sh');
+const condenseCodexRules = path.join(root, 'cli', 'condense_codex_rules.sh');
+const ponytail = path.join(root, 'cli', 'ponytail');
+const projectJournal = path.join(root, 'cli', 'project_journal.sh');
+const combinedInstaller = path.join(root, 'scripts', 'install.sh');
+const installer = path.join(root, 'scripts', 'install-cli.sh');
+const journalSetup = path.join(root, 'scripts', 'setup-project-journal.sh');
+const journalPostgresTest = path.join(root, 'scripts', 'test-project-journal-postgres.sh');
+
+function run(command, args, options = {}) {
+  return spawnSync(command, args, { encoding: 'utf8', ...options });
+}
+
+function fixture() {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'ponytail-cli-'));
+  assert.equal(run('git', ['init', '-q'], { cwd: directory }).status, 0);
+  return directory;
+}
+
+function write(directory, relativePath, contents = '') {
+  const target = path.join(directory, relativePath);
+  fs.mkdirSync(path.dirname(target), { recursive: true });
+  fs.writeFileSync(target, contents);
+}
+
+function cliEnvironment(home) {
+  return { ...process.env, HOME: home, PATH: '/usr/bin:/bin' };
+}
+
+function commit(project, date, message = 'fixture') {
+  const environment = {
+    ...process.env,
+    GIT_AUTHOR_DATE: `${date}T12:00:00Z`,
+    GIT_COMMITTER_DATE: `${date}T12:00:00Z`,
+  };
+  assert.equal(run('git', ['add', '.'], { cwd: project }).status, 0);
+  const result = run(
+    'git',
+    ['-c', 'user.name=Test', '-c', 'user.email=test@example.com', 'commit', '-qm', message],
+    { cwd: project, env: environment },
+  );
+  assert.equal(result.status, 0, result.stderr);
+}
+
+function writeJournalConfig(project) {
+  write(project, 'ponytail-journal.json', JSON.stringify({
+    schemaVersion: 1,
+    projectId: '019c0000-0000-7000-8000-000000000001',
+    projectName: 'fixture',
+    database: {},
+  }));
+}
+
+function journalInitEnvironment(project) {
+  const bin = path.join(project, 'bin');
+  const psql = path.join(bin, 'psql');
+  write(project, 'bin/psql', `#!/bin/sh
+printf '%s\n' "$*" >> "$JOURNAL_PSQL_ARGS_LOG"
+printf '%s\n' "\${PGPASSWORD-}" >> "$JOURNAL_PSQL_PASSWORD_LOG"
+cat >> "$JOURNAL_PSQL_SQL_LOG"
+`);
+  fs.chmodSync(psql, 0o755);
+  return {
+    ...process.env,
+    PATH: `${bin}:${process.env.PATH}`,
+    JOURNAL_PSQL_ARGS_LOG: path.join(project, 'psql-args.log'),
+    JOURNAL_PSQL_PASSWORD_LOG: path.join(project, 'psql-password.log'),
+    JOURNAL_PSQL_SQL_LOG: path.join(project, 'psql-sql.log'),
+  };
+}
+
+function journalEnvironment(project) {
+  const environment = journalInitEnvironment(project);
+  write(project, 'bin/psql', `#!/bin/sh
+set -eu
+sql="$(cat)"
+case "$sql" in
+  *start_action*)
+    printf '{"ok":true,"action_id":"019c0000-0000-7000-8000-%012d","prompt_id":"019c0000-0000-7000-8000-000000000001","timestamp":"2026-08-30T12:00:00.000000+00:00","sequence_number":1}\n' "$$"
+    ;;
+  *finish_action*)
+    printf '%s\n' '{"ok":true,"action_id":"019c0000-0000-7000-8000-000000000001","timestamp":"2026-08-30T12:00:01.000000+00:00"}'
+    ;;
+  *heartbeat_action*)
+    printf '%s\n' '{"ok":true,"timestamp":"2026-08-30T12:00:00.500000+00:00"}'
+    ;;
+esac
+`);
+  fs.chmodSync(path.join(project, 'bin/psql'), 0o755);
+  return environment;
+}
+
+test('CLI shell scripts are parse-safe', () => {
+  for (const script of [
+    planStats,
+    planPdf,
+    bugStats,
+    auditPm,
+    condenseCodexRules,
+    ponytail,
+    path.join(root, "cli/tsts"),
+    projectJournal,
+    combinedInstaller,
+    installer,
+    journalSetup,
+    journalPostgresTest,
+  ]) {
+    assert.equal(run('bash', ['-n', script]).status, 0, script);
+    const contents = fs.readFileSync(script, 'utf8');
+    assert.match(contents, /^#!\/usr\/bin\/env bash\nset -euo pipefail\n/);
+    assert.match(contents, /\nmain "\$@"\n$/);
+  }
+});
+
+test('combined installer installs Codex skills and CLI tools only', () => {
+  const home = fixture();
+  const codexHome = path.join(home, '.codex');
+  const result = run(combinedInstaller, [], {
+    env: { ...cliEnvironment(home), CODEX_HOME: codexHome },
+    input: 'n\n',
+  });
+  assert.equal(result.status, 0, result.stderr);
+  assert.ok(fs.existsSync(path.join(codexHome, 'skills/ponytail/SKILL.md')));
+  assert.ok(fs.existsSync(path.join(codexHome, 'skills/cross-session-effects/SKILL.md')));
+  assert.ok(fs.existsSync(path.join(codexHome, 'skills/codex-execpolicy/SKILL.md')));
+  assert.ok(!fs.existsSync(path.join(codexHome, 'rules/ponytail.rules')));
+  assert.ok(!fs.existsSync(path.join(home, '.ponytail')));
+  assert.equal(
+    fs.realpathSync(path.join(home, '.local/bin/ponytail')),
+    fs.realpathSync(ponytail),
+  );
+  assert.ok(fs.existsSync(path.join(home, '.local/bin/plan_stats.sh')));
+});
+
+test('plan_pdf renders the manifest and optionally ordered sprints', () => {
+  const project = fixture();
+  const bin = path.join(project, 'bin');
+  const pandoc = path.join(bin, 'pandoc');
+  write(project, 'pm/plans/2026-08-17-example/plan.md', '# Plan\n');
+  write(project, 'pm/plans/2026-08-17-example/sprints/S02.md', '# Two\n');
+  write(project, 'pm/plans/2026-08-17-example/sprints/S01.md', '# One\n');
+  write(project, 'bin/pandoc', `#!/usr/bin/env bash\nprintf '%s\\n' "$@" > "${project}/pandoc-args"\nprintf 'PDF' > "\${@: -1}"\n`);
+  fs.chmodSync(pandoc, 0o755);
+  const env = { ...process.env, PATH: `${bin}:/usr/bin:/bin` };
+
+  let result = run(planPdf, ['2026-08-17-example'], { cwd: project, env });
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.stdout, 'tmp/2026-08-17-example.pdf\n');
+  assert.ok(fs.existsSync(path.join(project, 'tmp/2026-08-17-example.pdf')));
+  assert.doesNotMatch(fs.readFileSync(path.join(project, 'pandoc-args'), 'utf8'), /S01\.md/);
+
+  result = run(planPdf, ['--sprints', '2026-08-17-example', 'tmp/all.pdf'], {
+    cwd: project,
+    env,
+  });
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(
+    fs.readFileSync(path.join(project, 'pandoc-args'), 'utf8'),
+    /plan\.md\n.*S01\.md\n.*S02\.md\n--output\ntmp\/all\.pdf/s,
+  );
+});
+
+test('plan_pdf validates its plan, output, and renderer', () => {
+  const project = fixture();
+  write(project, 'pm/plans/2026-08-17-example/plan.md', '# Plan\n');
+  assert.notEqual(run(planPdf, ['../example'], { cwd: project }).status, 0);
+  assert.notEqual(run(planPdf, ['2026-08-17-example', 'tmp/plan.txt'], { cwd: project }).status, 0);
+  const result = run(planPdf, ['2026-08-17-example'], {
+    cwd: project,
+    env: { ...process.env, PATH: '/usr/bin:/bin' },
+  });
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /pandoc is required/);
+});
+
+test('audit_pm accepts the mandated PM structure', () => {
+  const project = fixture();
+  writeJournalConfig(project);
+  write(project, 'pm/plans/2026-08-17-example/plan.md', '# Plan\n');
+  write(project, 'pm/plans/2026-08-17-example/sprints/S01.md', '# Sprint\n');
+  write(project, 'pm/bugs/open/2026-08-17-example.md', '# Bug\n');
+
+  const result = run(auditPm, [], { cwd: project });
+  assert.equal(result.status, 0, result.stdout + result.stderr);
+  assert.equal(result.stdout, 'PM structure is compliant.\n');
+});
+
+test('audit_pm requires valid project journal configuration', () => {
+  const project = fixture();
+  write(project, 'pm/plans/2026-08-17-example/plan.md', '# Plan\n');
+  write(project, 'pm/plans/2026-08-17-example/sprints/S01.md', '# Sprint\n');
+
+  let result = run(auditPm, [], { cwd: project });
+  assert.equal(result.status, 1);
+  assert.match(result.stdout, /required project journal configuration is missing/);
+
+  write(project, 'ponytail-journal.json', '{}');
+  result = run(auditPm, [], { cwd: project });
+  assert.equal(result.status, 1);
+  assert.match(result.stdout, /invalid V1 project journal configuration/);
+});
+
+test('audit_pm reports non-fixable structural deviations without mutation', () => {
+  const project = fixture();
+  writeJournalConfig(project);
+  write(project, 'pm/unexpected.md');
+  write(project, 'pm/plans/2026-99-99-invalid/extra.md');
+  write(project, 'pm/plans/2026-99-99-invalid/sprints/first.md');
+  write(project, 'pm/bugs/triaged/bug.md');
+  write(project, 'pm/bugs/open/2026-08-17-duplicate.md');
+  write(project, 'pm/bugs/closed/2026-08-17-duplicate.md');
+
+  const result = run(auditPm, [], { cwd: project });
+  assert.equal(result.status, 1);
+  assert.match(result.stdout, /unexpected entry under pm\//);
+  assert.match(result.stdout, /invalid date prefix/);
+  assert.match(result.stdout, /required plan manifest is missing/);
+  assert.match(result.stdout, /expected a sprint file named SNN\.md/);
+  assert.match(result.stdout, /unexpected entry under pm\/bugs/);
+  assert.match(result.stdout, /same bug file exists in multiple lifecycle directories/);
+  assert.ok(fs.existsSync(path.join(project, 'pm/plans/2026-99-99-invalid')));
+});
+
+test('audit_pm --fix date-prefixes tracked plans and bugs from oldest Git history', () => {
+  const project = fixture();
+  writeJournalConfig(project);
+  write(project, 'pm/plans/example/plan.md', '# Plan\n');
+  write(project, 'pm/plans/example/sprints/S01.md', '# Sprint\n');
+  write(project, 'pm/bugs/in_progress/example.md', '# Bug\n');
+  commit(project, '2024-05-06', 'create PM records');
+  fs.appendFileSync(path.join(project, 'pm/plans/example/plan.md'), 'updated\n');
+  fs.appendFileSync(path.join(project, 'pm/bugs/in_progress/example.md'), 'updated\n');
+  commit(project, '2025-07-08', 'update PM records');
+
+  const result = run(auditPm, ['--fix'], { cwd: project });
+  assert.equal(result.status, 0, result.stdout + result.stderr);
+  assert.match(result.stdout, /FIXED pm\/plans\/example -> pm\/plans\/2024-05-06-example/);
+  assert.match(result.stdout, /FIXED pm\/bugs\/in_progress\/example\.md -> pm\/bugs\/in_progress\/2024-05-06-example\.md/);
+  assert.ok(fs.existsSync(path.join(project, 'pm/plans/2024-05-06-example/plan.md')));
+  assert.ok(fs.existsSync(path.join(project, 'pm/bugs/in_progress/2024-05-06-example.md')));
+  assert.match(run('git', ['status', '--short'], { cwd: project }).stdout, /^R  pm\/plans\/example\/plan\.md -> pm\/plans\/2024-05-06-example\/plan\.md/m);
+});
+
+test('audit_pm --fix leaves untracked records and collisions unchanged', () => {
+  const project = fixture();
+  writeJournalConfig(project);
+  write(project, 'pm/plans/example/plan.md', '# Plan\n');
+  write(project, 'pm/plans/example/sprints/S01.md', '# Sprint\n');
+  write(project, 'pm/plans/2024-05-06-example/plan.md', '# Existing\n');
+  write(project, 'pm/plans/2024-05-06-example/sprints/S01.md', '# Sprint\n');
+  commit(project, '2024-05-06');
+  write(project, 'pm/bugs/open/untracked.md', '# Bug\n');
+
+  const result = run(auditPm, ['--fix'], { cwd: project });
+  assert.equal(result.status, 1);
+  assert.match(result.stdout, /destination exists/);
+  assert.match(result.stdout, /Git creation date unavailable/);
+  assert.ok(fs.existsSync(path.join(project, 'pm/plans/example')));
+  assert.ok(fs.existsSync(path.join(project, 'pm/bugs/open/untracked.md')));
+});
+
+test('audit_pm --dryrun previews fixes with or without --fix', () => {
+  const project = fixture();
+  writeJournalConfig(project);
+  write(project, 'pm/plans/example/plan.md', '# Plan\n');
+  write(project, 'pm/plans/example/sprints/S01.md', '# Sprint\n');
+  write(project, 'pm/bugs/open/example.md', '# Bug\n');
+  commit(project, '2024-05-06');
+
+  for (const args of [
+    ['--dryrun'],
+    ['--fix', '--dryrun'],
+    ['--dryrun', '--fix'],
+  ]) {
+    const result = run(auditPm, args, { cwd: project });
+    assert.equal(result.status, 1);
+    assert.match(result.stdout, /WOULD FIX pm\/plans\/example -> pm\/plans\/2024-05-06-example/);
+    assert.match(result.stdout, /WOULD FIX pm\/bugs\/open\/example\.md -> pm\/bugs\/open\/2024-05-06-example\.md/);
+    assert.doesNotMatch(result.stdout, /^FIXED /m);
+    assert.equal(run('git', ['status', '--short'], { cwd: project }).stdout, '');
+    assert.ok(fs.existsSync(path.join(project, 'pm/plans/example')));
+    assert.ok(fs.existsSync(path.join(project, 'pm/bugs/open/example.md')));
+  }
+});
+
+test('plan_stats counts open and done task lines from the exact plan', () => {
+  const project = fixture();
+  write(project, 'pm/plans/2026-08-17-example/plan.md', '### [ ] First\n### [DONE] Second\n');
+  write(project, 'pm/plans/2026-08-17-example/sprints/S01.md', '### [ ] Third\n');
+  write(project, 'pm/plans/2026-08-17-other/plan.md', '### [DONE] Other\n');
+  fs.mkdirSync(path.join(project, 'nested'));
+  assert.equal(run('git', ['add', '.'], { cwd: project }).status, 0);
+
+  const result = run(planStats, ['2026-08-17-example'], {
+    cwd: path.join(project, 'nested'),
+  });
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.stdout, 'open: 2\ndone: 1\n');
+});
+
+test('plan_stats rejects missing and non-basename plan names', () => {
+  const project = fixture();
+  assert.notEqual(run(planStats, ['missing'], { cwd: project }).status, 0);
+  assert.notEqual(run(planStats, ['../other'], { cwd: project }).status, 0);
+});
+
+test('bug_stats counts lifecycle files on or after an inclusive date', () => {
+  const project = fixture();
+  write(project, 'pm/bugs/open/2026-01-01-first.md');
+  write(project, 'pm/bugs/open/2026-02-01-second.md');
+  write(project, 'pm/bugs/in_progress/2026-02-15-third.md');
+  write(project, 'pm/bugs/closed/2025-12-31-fourth.md');
+  write(project, 'pm/bugs/closed/not-a-bug.md');
+
+  const compact = run(bugStats, ['20260201'], { cwd: project });
+  assert.equal(compact.status, 0, compact.stderr);
+  assert.equal(compact.stdout, 'open: 1\nin_progress: 1\nclosed: 0\n');
+
+  const all = run(bugStats, [], { cwd: project });
+  assert.equal(all.status, 0, all.stderr);
+  assert.equal(all.stdout, 'open: 2\nin_progress: 1\nclosed: 1\n');
+});
+
+test('bug_stats validates its date argument', () => {
+  const project = fixture();
+  assert.notEqual(run(bugStats, ['2026/01/01'], { cwd: project }).status, 0);
+  assert.notEqual(run(bugStats, ['2026-13-01'], { cwd: project }).status, 0);
+  assert.notEqual(run(bugStats, ['2026-00-01'], { cwd: project }).status, 0);
+});
+
+test('project journal rejects missing configuration and split commands', () => {
+  const project = fixture();
+  let result = run(projectJournal, [
+    'start', '--agent-id', '/root', '--agent-model', 'model', '--plan',
+    '2026-08-17-example', '--sprint', 'S01', '--feature', 'F01', '--tasklet',
+    'S01-F01-T01', '--action-type', 'read_files', '--description', 'Read files',
+  ], { cwd: project });
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /journal configuration is missing/);
+
+  result = run(projectJournal, [
+    'run_command', '--agent-id', '/root', '--plan', '2026-08-17-example',
+    '--action-type', 'run_command', '--description', 'Run command', '--',
+    'printf one', 'printf two',
+  ], { cwd: project });
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /requires one quoted command/);
+
+  write(project, 'invalid.json', JSON.stringify({
+    schemaVersion: 1,
+    projectId: '019c0000-0000-7000-8000-000000000001',
+    projectName: 'fixture',
+    database: {},
+    unknown: true,
+  }));
+  result = run(projectJournal, ['validate-config', path.join(project, 'invalid.json')]);
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /invalid V1 journal configuration/);
+});
+
+test('project journal detaches heartbeats and recovers stale locks', () => {
+  const project = fixture();
+  const plan = '2026-08-17-example';
+  writeJournalConfig(project);
+  commit(project, '2026-08-30', 'add journal fixture');
+  const environment = journalEnvironment(project);
+  const planState = path.join(project, 'tmp/project-journal', plan);
+  write(planState, 'lock/999999');
+
+  const context = [
+    '--agent-id', '/root', '--agent-model', 'model', '--plan', plan,
+    '--sprint', 'S01', '--feature', 'F01', '--tasklet', 'S01-F01-T01',
+  ];
+  let result = run(projectJournal, [
+    'start', ...context, '--action-type', 'reasoning', '--description', 'Reason',
+  ], { cwd: project, env: environment, timeout: 3000 });
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.error, undefined);
+  assert.equal(JSON.parse(result.stdout).ok, true);
+
+  const actionState = path.join(planState, 'agents/root/current-action');
+  const firstHeartbeatPid = JSON.parse(fs.readFileSync(actionState, 'utf8')).heartbeat_pid;
+  assert.doesNotThrow(() => process.kill(firstHeartbeatPid, 0));
+
+  result = run(projectJournal, [
+    'run_command', '--agent-id', '/root', '--plan', plan,
+    '--description', 'Print wrapped output', '--', 'printf wrapped',
+  ], { cwd: project, env: environment, timeout: 3000 });
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.error, undefined);
+  assert.match(result.stdout, /wrapped/);
+  const waitingHeartbeatPid = JSON.parse(fs.readFileSync(actionState, 'utf8')).heartbeat_pid;
+  assert.notEqual(waitingHeartbeatPid, firstHeartbeatPid);
+  assert.doesNotThrow(() => process.kill(waitingHeartbeatPid, 0));
+
+  const subagentCommand = (agent) => [
+    projectJournal, 'start', '--agent-id', agent, '--parent-agent-id', '/root',
+    '--agent-model', 'model', '--plan', plan, '--sprint', 'S01', '--feature',
+    'F01', '--tasklet', 'S01-F01-T01', '--action-type', 'reasoning',
+    '--description', agent,
+  ].map((argument) => `'${argument}'`).join(' ');
+  result = run('bash', ['-c', `${subagentCommand('/root/a')} & ${subagentCommand('/root/b')} & wait`], {
+    cwd: project,
+    env: environment,
+    timeout: 3000,
+  });
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.error, undefined);
+
+  for (const agent of ['/root/a', '/root/b']) {
+    result = run(projectJournal, ['over', '--agent-id', agent, '--plan', plan], {
+      cwd: project,
+      env: environment,
+      timeout: 3000,
+    });
+    assert.equal(result.status, 0, result.stderr);
+  }
+
+  result = run(projectJournal, [
+    'over', '--agent-id', '/root', '--plan', plan,
+  ], { cwd: project, env: environment, timeout: 3000 });
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.error, undefined);
+  assert.equal(JSON.parse(result.stdout).ok, true);
+  assert.ok(!fs.existsSync(actionState));
+  assert.throws(() => process.kill(waitingHeartbeatPid, 0), { code: 'ESRCH' });
+});
+
+test('project journal initializes a stable V1 project configuration', () => {
+  const project = fixture();
+  const env = journalInitEnvironment(project);
+  const nested = path.join(project, 'nested');
+  fs.mkdirSync(nested);
+
+  let result = run(projectJournal, ['init'], { cwd: nested, env });
+  assert.equal(result.status, 0, result.stderr);
+  const response = JSON.parse(result.stdout);
+  const configPath = path.join(fs.realpathSync(project), 'ponytail-journal.json');
+  const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+  assert.deepEqual(config, {
+    schemaVersion: 1,
+    projectId: config.projectId,
+    projectName: path.basename(project),
+    database: { name: 'ponytail' },
+  });
+  assert.match(config.projectId, /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+  assert.deepEqual(response, {
+    ok: true,
+    operation: 'init',
+    created: true,
+    path: configPath,
+    projectId: config.projectId,
+  });
+  assert.match(result.stderr, /git -C .* add ponytail-journal\.json/);
+  assert.match(result.stderr, /git -C .* commit -m Add\\ project\\ journal\\ identity/);
+  assert.match(result.stderr, /merge that commit into every worktree branch/);
+  assert.equal(run(projectJournal, ['validate-config', configPath]).status, 0);
+
+  result = run(projectJournal, ['init'], { cwd: project, env });
+  assert.equal(result.status, 0, result.stderr);
+  assert.deepEqual(JSON.parse(result.stdout), {
+    ok: true,
+    operation: 'init',
+    created: false,
+    path: configPath,
+    projectId: config.projectId,
+  });
+  assert.match(result.stderr, /git -C .* add ponytail-journal\.json/);
+  assert.deepEqual(JSON.parse(fs.readFileSync(configPath, 'utf8')), config);
+
+  commit(project, '2026-08-20', 'add journal identity');
+  result = run(projectJournal, ['init'], { cwd: project, env });
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(JSON.parse(result.stdout).created, false);
+  assert.equal(result.stderr, '');
+  assert.equal(
+    fs.readFileSync(env.JOURNAL_PSQL_SQL_LOG, 'utf8')
+      .match(/SELECT ponytail_journal\.register_project/g).length,
+    3,
+  );
+  assert.match(fs.readFileSync(env.JOURNAL_PSQL_ARGS_LOG, 'utf8'), /--dbname ponytail/);
+});
+
+test('project journal initialization accepts explicit non-secret connection settings', () => {
+  const project = fixture();
+  const env = {
+    ...journalInitEnvironment(project),
+    EXAMPLE_JOURNAL_PASSWORD: 'example-secret',
+  };
+  const result = run(projectJournal, [
+    'init',
+    '--project-name', 'Example Project',
+    '--database-host', 'postgres.example.test',
+    '--database-port', '5544',
+    '--database-name', 'example_journal',
+    '--database-role', 'example_writer',
+    '--pgpassword-variable', 'EXAMPLE_JOURNAL_PASSWORD',
+  ], { cwd: project, env });
+  assert.equal(result.status, 0, result.stderr);
+  const config = JSON.parse(fs.readFileSync(path.join(project, 'ponytail-journal.json'), 'utf8'));
+  assert.equal(config.projectName, 'Example Project');
+  assert.deepEqual(config.database, {
+    name: 'example_journal',
+    host: 'postgres.example.test',
+    port: 5544,
+    role: 'example_writer',
+    passwordEnvironment: 'EXAMPLE_JOURNAL_PASSWORD',
+  });
+
+  assert.equal(run(projectJournal, [
+    'init',
+    '--project-name', 'Example Project',
+    '--database-host', 'postgres.example.test',
+    '--database-port', '5544',
+    '--database-name', 'example_journal',
+    '--database-role', 'example_writer',
+    '--pgpassword-variable', 'EXAMPLE_JOURNAL_PASSWORD',
+  ], { cwd: project, env }).status, 0);
+  const mismatch = run(projectJournal, ['init', '--project-name', 'Other'], {
+    cwd: project,
+    env,
+  });
+  assert.notEqual(mismatch.status, 0);
+  assert.match(mismatch.stderr, /does not match --project-name/);
+
+  const portMismatch = run(projectJournal, ['init', '--database-port', '5432'], {
+    cwd: project,
+    env,
+  });
+  assert.notEqual(portMismatch.status, 0);
+  assert.match(portMismatch.stderr, /does not match --database-port/);
+
+  const invalidPortProject = fixture();
+  const invalidPortEnvironment = journalInitEnvironment(invalidPortProject);
+  const invalidPort = run(projectJournal, ['init', '--database-port', '65536'], {
+    cwd: invalidPortProject,
+    env: invalidPortEnvironment,
+  });
+  assert.notEqual(invalidPort.status, 0);
+  assert.match(invalidPort.stderr, /integer between 1 and 65535/);
+
+  const shorthandProject = fixture();
+  const shorthandEnvironment = {
+    ...journalInitEnvironment(shorthandProject),
+    SHORT_JOURNAL_PASSWORD: 'short-secret',
+  };
+  const shorthand = run(projectJournal, [
+    'init',
+    '--dbhost', '/var/run/postgresql',
+    '--dbport', '5433',
+    '--dbname', 'short_journal',
+    '--dbrole', 'short_writer',
+    '--pgpassvar', 'SHORT_JOURNAL_PASSWORD',
+  ], { cwd: shorthandProject, env: shorthandEnvironment });
+  assert.equal(shorthand.status, 0, shorthand.stderr);
+  assert.deepEqual(
+    JSON.parse(fs.readFileSync(path.join(shorthandProject, 'ponytail-journal.json'), 'utf8')).database,
+    {
+      name: 'short_journal',
+      host: '/var/run/postgresql',
+      port: 5433,
+      role: 'short_writer',
+      passwordEnvironment: 'SHORT_JOURNAL_PASSWORD',
+    },
+  );
+  assert.match(
+    fs.readFileSync(env.JOURNAL_PSQL_ARGS_LOG, 'utf8'),
+    /--dbname example_journal --username example_writer --host postgres\.example\.test --port 5544/,
+  );
+  assert.equal(fs.readFileSync(env.JOURNAL_PSQL_PASSWORD_LOG, 'utf8').trim(),
+    'example-secret\nexample-secret');
+});
+
+test('journal contracts retain a stable relational core and versioned JSON payload', () => {
+  const config = JSON.parse(fs.readFileSync(path.join(root, 'ponytail-journal.json'), 'utf8'));
+  assert.equal(config.schemaVersion, 1);
+  assert.match(config.projectId, /^[0-9a-f]{8}-[0-9a-f]{4}-7/);
+
+  const sql = fs.readFileSync(path.join(root, 'scripts', 'project-journal.sql'), 'utf8');
+  assert.match(sql, /CREATE TABLE IF NOT EXISTS action_v1/);
+  assert.match(sql, /CREATE OR REPLACE FUNCTION register_project/);
+  assert.match(sql, /duration interval GENERATED ALWAYS AS/);
+  assert.match(sql, /payload ->> 'schemaVersion' = '1'/);
+  assert.match(sql, /ENABLE ROW LEVEL SECURITY/);
+  assert.match(sql, /SECURITY DEFINER/g);
+  assert.match(sql, /GRANT EXECUTE ON FUNCTION register_project\(uuid, text\)/);
+  assert.doesNotMatch(sql, /ALTER TABLE action_v1 ADD/);
+});
+
+test('CLI installer installs all tools and verifies owned updates', () => {
+  const home = fixture();
+  const options = { env: cliEnvironment(home), input: 'n\n' };
+  let result = run(installer, [], options);
+  assert.equal(result.status, 0, result.stderr);
+
+  const bin = path.join(home, '.local', 'bin');
+  for (const tool of [
+    'ponytail',
+    'audit_pm.sh',
+    'bug_stats.sh',
+    'condense_codex_rules.sh',
+    'plan_pdf.sh',
+    'plan_stats.sh',
+    'project_journal.sh',
+  ]) {
+    assert.ok(fs.statSync(path.join(bin, tool)).mode & 0o100);
+  }
+  assert.equal(run(installer, ['--check'], { env: cliEnvironment(home) }).status, 0);
+
+  fs.writeFileSync(path.join(bin, 'plan_stats.sh'), 'owned drift\n');
+  result = run(installer, ['plan_stats.sh'], options);
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(
+    fs.readFileSync(path.join(bin, 'plan_stats.sh'), 'utf8'),
+    fs.readFileSync(planStats, 'utf8'),
+  );
+});
+
+test('CLI installer supports selection and refuses unowned collisions', () => {
+  const selectedHome = fixture();
+  let result = run(installer, ['plan_stats.sh'], {
+    env: cliEnvironment(selectedHome),
+    input: 'n\n',
+  });
+  assert.equal(result.status, 0, result.stderr);
+  assert.ok(fs.existsSync(path.join(selectedHome, '.local/bin/plan_stats.sh')));
+  assert.ok(!fs.existsSync(path.join(selectedHome, '.local/bin/bug_stats.sh')));
+
+  const collisionHome = fixture();
+  write(collisionHome, '.local/bin/plan_stats.sh', 'foreign\n');
+  result = run(installer, ['plan_stats.sh'], {
+    env: cliEnvironment(collisionHome),
+    input: 'n\n',
+  });
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /refusing to replace unowned CLI path/);
+
+  fs.rmSync(path.join(collisionHome, '.local/bin/plan_stats.sh'));
+  fs.symlinkSync(planStats, path.join(collisionHome, '.local/bin/plan_stats.sh'));
+  result = run(installer, ['plan_stats.sh'], {
+    env: cliEnvironment(collisionHome),
+    input: 'n\n',
+  });
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /refusing to replace CLI symlink/);
+});
+
+test('CLI installer prompts for or explicitly updates Bash PATH', () => {
+  const promptedHome = fixture();
+  let result = run(installer, [], {
+    env: cliEnvironment(promptedHome),
+    input: 'y\n',
+  });
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(fs.readFileSync(path.join(promptedHome, '.bashrc'), 'utf8'), /Added by Ponytail CLI installer/);
+
+  const explicitHome = fixture();
+  result = run(installer, ['--update-shell-path'], {
+    env: cliEnvironment(explicitHome),
+  });
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(fs.readFileSync(path.join(explicitHome, '.bashrc'), 'utf8'), /Added by Ponytail CLI installer/);
+});
+
+test('CLI installer dry-run does not modify the target home', () => {
+  const home = fixture();
+  const result = run(installer, ['--dry-run'], { env: cliEnvironment(home) });
+  assert.equal(result.status, 0, result.stderr);
+  assert.ok(!fs.existsSync(path.join(home, '.local')));
+});

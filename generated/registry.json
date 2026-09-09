@@ -1,0 +1,532 @@
+{
+  "$comment": "Copyright (c) 2026 Alex Baretta. Licensed under the MIT License.",
+  "entries": [
+    {
+      "kind": "skill",
+      "status": "enabled",
+      "name": "api-service-boundaries",
+      "source": "skills/api-service-boundaries",
+      "hosts": [
+        "claude",
+        "codex",
+        "copilot",
+        "devin",
+        "hermes",
+        "openclaw",
+        "pi",
+        "qoder"
+      ],
+      "reason": "API trust and service architecture"
+    },
+    {
+      "kind": "skill",
+      "status": "enabled",
+      "name": "bash-parse-safe-scripts",
+      "source": "skills/bash-parse-safe-scripts",
+      "hosts": [
+        "claude",
+        "codex",
+        "copilot",
+        "devin",
+        "hermes",
+        "openclaw",
+        "pi",
+        "qoder"
+      ],
+      "reason": "Bash runtime safety"
+    },
+    {
+      "kind": "skill",
+      "status": "enabled",
+      "name": "build-impact",
+      "source": "skills/build-impact",
+      "hosts": [
+        "claude",
+        "codex",
+        "copilot",
+        "devin",
+        "hermes",
+        "openclaw",
+        "pi",
+        "qoder"
+      ],
+      "reason": "Build only affected targets"
+    },
+    {
+      "kind": "skill",
+      "status": "enabled",
+      "name": "cloud-cli-reauth",
+      "source": "skills/cloud-cli-reauth",
+      "hosts": [
+        "claude",
+        "codex",
+        "copilot",
+        "devin",
+        "hermes",
+        "openclaw",
+        "pi",
+        "qoder"
+      ],
+      "reason": "Cloud CLI authentication recovery"
+    },
+    {
+      "kind": "skill",
+      "status": "enabled",
+      "name": "codex-execpolicy",
+      "source": "skills/codex-execpolicy",
+      "hosts": [
+        "claude",
+        "codex",
+        "copilot",
+        "devin",
+        "hermes",
+        "openclaw",
+        "pi",
+        "qoder"
+      ],
+      "reason": "Codex command policy proposals and accepted-state management"
+    },
+    {
+      "kind": "skill",
+      "status": "enabled",
+      "name": "cross-session-effects",
+      "source": "skills/cross-session-effects",
+      "hosts": [
+        "claude",
+        "codex",
+        "copilot",
+        "devin",
+        "hermes",
+        "openclaw",
+        "pi",
+        "qoder"
+      ],
+      "reason": "Cross-session behavior approval and test-first safety"
+    },
+    {
+      "kind": "skill",
+      "status": "enabled",
+      "name": "debugging",
+      "source": "skills/debugging",
+      "hosts": [
+        "claude",
+        "codex",
+        "copilot",
+        "devin",
+        "hermes",
+        "openclaw",
+        "pi",
+        "qoder"
+      ],
+      "reason": "Differential diagnosis and root-cause hypothesis testing"
+    },
+    {
+      "kind": "skill",
+      "status": "enabled",
+      "name": "diagnostic-assertions",
+      "source": "skills/diagnostic-assertions",
+      "hosts": [
+        "claude",
+        "codex",
+        "copilot",
+        "devin",
+        "hermes",
+        "openclaw",
+        "pi",
+        "qoder"
+      ],
+      "reason": "Diagnostic and invariant classification"
+    },
+    {
+      "kind": "skill",
+      "status": "disabled",
+      "name": "git-write-escalation",
+      "source": "-",
+      "hosts": [],
+      "reason": "Current Codex manages these approvals without a skill"
+    },
+    {
+      "kind": "skill",
+      "status": "enabled",
+      "name": "indeterminate-list-ux",
+      "source": "skills/indeterminate-list-ux",
+      "hosts": [
+        "claude",
+        "codex",
+        "copilot",
+        "devin",
+        "hermes",
+        "openclaw",
+        "pi",
+        "qoder"
+      ],
+      "reason": "Bounded infinite-scroll UX"
+    },
+    {
+      "kind": "skill",
+      "status": "enabled",
+      "name": "lossless-json-contracts",
+      "source": "skills/lossless-json-contracts",
+      "hosts": [
+        "claude",
+        "codex",
+        "copilot",
+        "devin",
+        "hermes",
+        "openclaw",
+        "pi",
+        "qoder"
+      ],
+      "reason": "Exact JSON boundary rules"
+    },
+    {
+      "kind": "skill",
+      "status": "enabled",
+      "name": "monetary-contract-safety",
+      "source": "skills/monetary-contract-safety",
+      "hosts": [
+        "claude",
+        "codex",
+        "copilot",
+        "devin",
+        "hermes",
+        "openclaw",
+        "pi",
+        "qoder"
+      ],
+      "reason": "Monetary contract rules"
+    },
+    {
+      "kind": "skill",
+      "status": "enabled",
+      "name": "plan-execution",
+      "source": "skills/plan-execution",
+      "hosts": [
+        "claude",
+        "codex",
+        "copilot",
+        "devin",
+        "hermes",
+        "openclaw",
+        "pi",
+        "qoder"
+      ],
+      "reason": "Durable project management workflow"
+    },
+    {
+      "kind": "skill",
+      "status": "enabled",
+      "name": "ponytail",
+      "source": "skills/ponytail",
+      "hosts": [
+        "claude",
+        "codex",
+        "copilot",
+        "devin",
+        "hermes",
+        "openclaw",
+        "pi",
+        "qoder"
+      ],
+      "reason": "Portable core policy"
+    },
+    {
+      "kind": "skill",
+      "status": "enabled",
+      "name": "ponytail-audit",
+      "source": "skills/ponytail-audit",
+      "hosts": [
+        "claude",
+        "codex",
+        "copilot",
+        "devin",
+        "hermes",
+        "openclaw",
+        "pi",
+        "qoder"
+      ],
+      "reason": "Repository complexity audit"
+    },
+    {
+      "kind": "skill",
+      "status": "enabled",
+      "name": "ponytail-debt",
+      "source": "skills/ponytail-debt",
+      "hosts": [
+        "claude",
+        "codex",
+        "copilot",
+        "devin",
+        "hermes",
+        "openclaw",
+        "pi",
+        "qoder"
+      ],
+      "reason": "Technical debt reconciliation"
+    },
+    {
+      "kind": "skill",
+      "status": "enabled",
+      "name": "ponytail-review",
+      "source": "skills/ponytail-review",
+      "hosts": [
+        "claude",
+        "codex",
+        "copilot",
+        "devin",
+        "hermes",
+        "openclaw",
+        "pi",
+        "qoder"
+      ],
+      "reason": "Change-set complexity review"
+    },
+    {
+      "kind": "skill",
+      "status": "enabled",
+      "name": "project-structure",
+      "source": "skills/project-structure",
+      "hosts": [
+        "claude",
+        "codex",
+        "copilot",
+        "devin",
+        "hermes",
+        "openclaw",
+        "pi",
+        "qoder"
+      ],
+      "reason": "Project configuration workflow"
+    },
+    {
+      "kind": "skill",
+      "status": "enabled",
+      "name": "production-test-boundaries",
+      "source": "skills/production-test-boundaries",
+      "hosts": [
+        "claude",
+        "codex",
+        "copilot",
+        "devin",
+        "hermes",
+        "openclaw",
+        "pi",
+        "qoder"
+      ],
+      "reason": "Production and test architecture separation"
+    },
+    {
+      "kind": "skill",
+      "status": "enabled",
+      "name": "react-error-containment",
+      "source": "skills/react-error-containment",
+      "hosts": [
+        "claude",
+        "codex",
+        "copilot",
+        "devin",
+        "hermes",
+        "openclaw",
+        "pi",
+        "qoder"
+      ],
+      "reason": "React failure containment"
+    },
+    {
+      "kind": "skill",
+      "status": "enabled",
+      "name": "static-type-safety",
+      "source": "skills/static-type-safety",
+      "hosts": [
+        "claude",
+        "codex",
+        "copilot",
+        "devin",
+        "hermes",
+        "openclaw",
+        "pi",
+        "qoder"
+      ],
+      "reason": "Static type and contract safety"
+    },
+    {
+      "kind": "skill",
+      "status": "enabled",
+      "name": "test-credentials",
+      "source": "skills/test-credentials",
+      "hosts": [
+        "claude",
+        "codex",
+        "copilot",
+        "devin",
+        "hermes",
+        "openclaw",
+        "pi",
+        "qoder"
+      ],
+      "reason": "Test credential discovery and safety"
+    },
+    {
+      "kind": "skill",
+      "status": "enabled",
+      "name": "typescript-unit-testing",
+      "source": "skills/typescript-unit-testing",
+      "hosts": [
+        "claude",
+        "codex",
+        "copilot",
+        "devin",
+        "hermes",
+        "openclaw",
+        "pi",
+        "qoder"
+      ],
+      "reason": "Contract-safe TypeScript unit testing"
+    },
+    {
+      "kind": "skill",
+      "status": "enabled",
+      "name": "ux-testing",
+      "source": "skills/ux-testing",
+      "hosts": [
+        "claude",
+        "codex",
+        "copilot",
+        "devin",
+        "hermes",
+        "openclaw",
+        "pi",
+        "qoder"
+      ],
+      "reason": "Real-path UX validation"
+    },
+    {
+      "kind": "skill",
+      "status": "enabled",
+      "name": "variant-neutrality",
+      "source": "skills/variant-neutrality",
+      "hosts": [
+        "claude",
+        "codex",
+        "copilot",
+        "devin",
+        "hermes",
+        "openclaw",
+        "pi",
+        "qoder"
+      ],
+      "reason": "Shared contract and dispatch neutrality"
+    },
+    {
+      "kind": "skill",
+      "status": "enabled",
+      "name": "versioned-data-contracts",
+      "source": "skills/versioned-data-contracts",
+      "hosts": [
+        "claude",
+        "codex",
+        "copilot",
+        "devin",
+        "hermes",
+        "openclaw",
+        "pi",
+        "qoder"
+      ],
+      "reason": "Serialized contract versioning"
+    },
+    {
+      "kind": "skill",
+      "status": "enabled",
+      "name": "worktree-lifecycle",
+      "source": "skills/worktree-lifecycle",
+      "hosts": [
+        "claude",
+        "codex",
+        "copilot",
+        "devin",
+        "hermes",
+        "openclaw",
+        "pi",
+        "qoder"
+      ],
+      "reason": "Agent-owned worktree retention and cleanup"
+    },
+    {
+      "kind": "command",
+      "status": "enabled",
+      "name": "ponytail",
+      "source": "commands/ponytail.toml",
+      "hosts": [
+        "claude",
+        "codex",
+        "copilot",
+        "hermes",
+        "opencode",
+        "pi",
+        "qoder"
+      ],
+      "reason": "Select compaction level"
+    },
+    {
+      "kind": "command",
+      "status": "enabled",
+      "name": "ponytail-audit",
+      "source": "commands/ponytail-audit.toml",
+      "hosts": [
+        "claude",
+        "codex",
+        "copilot",
+        "hermes",
+        "opencode",
+        "pi"
+      ],
+      "reason": "Run repository complexity audit"
+    },
+    {
+      "kind": "command",
+      "status": "enabled",
+      "name": "ponytail-debt",
+      "source": "commands/ponytail-debt.toml",
+      "hosts": [
+        "claude",
+        "codex",
+        "copilot",
+        "hermes",
+        "opencode",
+        "pi"
+      ],
+      "reason": "Reconcile technical debt"
+    },
+    {
+      "kind": "command",
+      "status": "enabled",
+      "name": "ponytail-help",
+      "source": "commands/ponytail-help.toml",
+      "hosts": [
+        "claude",
+        "codex",
+        "copilot",
+        "hermes",
+        "opencode",
+        "pi"
+      ],
+      "reason": "Display command reference"
+    },
+    {
+      "kind": "command",
+      "status": "enabled",
+      "name": "ponytail-review",
+      "source": "commands/ponytail-review.toml",
+      "hosts": [
+        "claude",
+        "codex",
+        "copilot",
+        "hermes",
+        "opencode",
+        "pi",
+        "qoder"
+      ],
+      "reason": "Review current changes"
+    }
+  ]
+}

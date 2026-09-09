@@ -1,5 +1,9 @@
 """Hermes plugin for Ponytail."""
 
+# Copyright (c) 2026 DietrichGebert.
+# Copyright (c) 2026 Alex Baretta. All rights reserved.
+# Licensed under the MIT License. See LICENSE in the project root.
+
 from __future__ import annotations
 
 import json
@@ -11,18 +15,31 @@ from typing import Any, Callable
 DEFAULT_MODE = "full"
 RUNTIME_MODES = {"off", "lite", "full", "ultra"}
 CONFIG_MODES = RUNTIME_MODES | {"review"}
-SKILL_COMMANDS = {
-    "ponytail-review": "Review the current diff or provided target for over-engineering.",
-    "ponytail-audit": "Audit the repo for over-engineering and deletion opportunities.",
-    "ponytail-debt": "List every deliberate `ponytail:` shortcut and its upgrade path.",
-    "ponytail-gain": "Show the measured-impact scoreboard (less code, less cost, more speed).",
-    "ponytail-help": "Show the Ponytail command reference.",
-}
-
 ROOT = Path(__file__).resolve().parent
 SKILLS_DIR = ROOT / "skills"
 PONYTAIL_SKILL = SKILLS_DIR / "ponytail" / "SKILL.md"
 REVIEW_SKILL = SKILLS_DIR / "ponytail-review" / "SKILL.md"
+HELP_COMMAND = ROOT / "commands" / "ponytail-help.md"
+REGISTRY = json.loads((ROOT / "generated" / "registry.json").read_text(encoding="utf-8"))["entries"]
+HERMES_SKILLS = {
+    entry["name"]: entry
+    for entry in REGISTRY
+    if entry["kind"] == "skill"
+    and entry["status"] == "enabled"
+    and "hermes" in entry["hosts"]
+}
+HERMES_COMMANDS = {
+    entry["name"]: entry
+    for entry in REGISTRY
+    if entry["kind"] == "command"
+    and entry["status"] == "enabled"
+    and "hermes" in entry["hosts"]
+}
+SKILL_COMMANDS = {
+    name: entry["reason"]
+    for name, entry in HERMES_COMMANDS.items()
+    if name in HERMES_SKILLS and name != "ponytail"
+}
 
 _current_mode = None
 
@@ -87,39 +104,16 @@ def _filter_skill_body_for_mode(body: str, mode: str) -> str:
     return "\n".join(lines)
 
 
-def _fallback_instructions(mode: str) -> str:
-    return (
-        f"PONYTAIL MODE ACTIVE — level: {mode}\n\n"
-        "You are a lazy senior developer. Lazy means efficient, not careless. "
-        "The best code is the code never written.\n\n"
-        "Before any code, stop at the first rung that holds: YAGNI, stdlib, "
-        "native platform, installed dependency, one line, then minimum code. "
-        "No unrequested abstractions, avoidable dependencies, boilerplate, or "
-        "speculative scaffolding. Deletion over addition. Boring over clever. "
-        "Do not simplify away trust-boundary validation, data-loss handling, "
-        "security, accessibility, explicitly requested behavior, or one small "
-        "runnable check for non-trivial logic."
-    )
-
-
 def build_injected_context(mode: str | None = None) -> str:
     """Return the mode-filtered Ponytail context injected before LLM turns."""
     configured = _normalize_config_mode(mode) or _default_mode()
-    if configured == "off":
-        return ""
-    if configured == "review":
-        try:
-            body = REVIEW_SKILL.read_text(encoding="utf-8")
-            return f"PONYTAIL MODE ACTIVE — level: review\n\n{_strip_frontmatter(body)}"
-        except OSError:
-            return "PONYTAIL MODE ACTIVE — level: review. Review diffs for unnecessary complexity."
-
     effective = _normalize_runtime_mode(configured) or DEFAULT_MODE
-    try:
-        body = PONYTAIL_SKILL.read_text(encoding="utf-8")
-        return f"PONYTAIL MODE ACTIVE — level: {effective}\n\n{_filter_skill_body_for_mode(body, effective)}"
-    except OSError:
-        return _fallback_instructions(effective)
+    body = PONYTAIL_SKILL.read_text(encoding="utf-8")
+    context = f"PONYTAIL MODE ACTIVE — level: {configured}\n\n{_filter_skill_body_for_mode(body, effective)}"
+    if configured == "review":
+        review = REVIEW_SKILL.read_text(encoding="utf-8")
+        context += f"\n\n{_strip_frontmatter(review)}"
+    return context
 
 
 def _pre_llm_call(session_id: str = "", **_: Any) -> dict[str, str] | None:
@@ -134,6 +128,15 @@ def _skill_prompt(command: str, args: str = "") -> str:
     return (
         f"Load and follow the Hermes plugin skill `ponytail:{command}`. "
         f"{SKILL_COMMANDS[command]}{target}"
+    )
+
+
+def _help_text() -> str:
+    return re.sub(
+        r"^<!--[\s\S]*?-->\s*",
+        "",
+        HELP_COMMAND.read_text(encoding="utf-8"),
+        count=1,
     )
 
 
@@ -157,11 +160,12 @@ def rewrite_gateway_command(event: Any = None, gateway: Any = None, **_: Any) ->
         return None
     head, _, rest = text[1:].partition(" ")
     command = head.replace("_", "-").lower()
-    if command not in SKILL_COMMANDS:
+    if command != "ponytail-help" and command not in SKILL_COMMANDS:
         return None
     if _slash_access_denied(event, gateway, command):
         return None
-    return {"action": "rewrite", "text": _skill_prompt(command, rest)}
+    text = _help_text() if command == "ponytail-help" else _skill_prompt(command, rest)
+    return {"action": "rewrite", "text": text}
 
 
 def _handle_mode_command(raw_args: str) -> str:
@@ -194,10 +198,8 @@ def _make_skill_command_handler(ctx: Any, command: str) -> Callable[[str], str]:
 
 def register(ctx: Any) -> None:
     """Register Ponytail hooks, skills, and slash commands with Hermes."""
-    for child in sorted(SKILLS_DIR.iterdir() if SKILLS_DIR.exists() else []):
-        skill_md = child / "SKILL.md"
-        if child.is_dir() and skill_md.exists():
-            ctx.register_skill(child.name, skill_md)
+    for name, entry in sorted(HERMES_SKILLS.items()):
+        ctx.register_skill(name, ROOT / entry["source"] / "SKILL.md")
 
     ctx.register_hook("pre_llm_call", _pre_llm_call)
     ctx.register_hook("pre_gateway_dispatch", rewrite_gateway_command)
@@ -215,3 +217,8 @@ def register(ctx: Any) -> None:
             description=description,
             args_hint="[target or notes]",
         )
+    ctx.register_command(
+        "ponytail-help",
+        lambda _: _help_text(),
+        description="Show the Ponytail command reference.",
+    )

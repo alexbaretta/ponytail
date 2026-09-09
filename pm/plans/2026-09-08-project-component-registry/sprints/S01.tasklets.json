@@ -1,0 +1,86 @@
+{
+  "schemaVersion": 3,
+  "sprint": "S01",
+  "features": {
+    "S01-F01": {
+      "depends_on": [],
+      "validation_tasklet": "S01-F01-T07"
+    }
+  },
+  "tasklets": {
+    "S01-F01-T01": {
+      "depends_on": [],
+      "affinity": ["project-metadata"],
+      "risk": "normal",
+      "feature": "S01-F01",
+      "planned_paths": ["cli/ponytail"]
+    },
+    "S01-F01-T02": {
+      "depends_on": ["S01-F01-T01"],
+      "affinity": ["project-metadata"],
+      "risk": "normal",
+      "feature": "S01-F01",
+      "planned_paths": ["cli/ponytail"]
+    },
+    "S01-F01-T03": {
+      "depends_on": ["S01-F01-T02"],
+      "affinity": ["project-metadata"],
+      "risk": "normal",
+      "feature": "S01-F01",
+      "planned_paths": ["cli/ponytail"]
+    },
+    "S01-F01-T04": {
+      "depends_on": ["S01-F01-T03"],
+      "affinity": ["project-metadata"],
+      "risk": "normal",
+      "feature": "S01-F01",
+      "planned_paths": ["scripts/project-qa.js"]
+    },
+    "S01-F01-T05": {
+      "depends_on": ["S01-F01-T04"],
+      "affinity": ["project-metadata"],
+      "risk": "normal",
+      "feature": "S01-F01",
+      "planned_paths": [
+        "tests/project-validation.test.js",
+        "tests/ponytail-cli.test.js"
+      ]
+    },
+    "S01-F01-T06": {
+      "depends_on": ["S01-F01-T05"],
+      "affinity": ["project-metadata"],
+      "risk": "normal",
+      "feature": "S01-F01",
+      "planned_paths": [
+        ".ponytail/project.json",
+        "AGENTS.md",
+        "PROJECT_STRUCTURE.md",
+        "README.md",
+        "docs/project-validation.md",
+        "skills/project-structure/SKILL.md",
+        ".openclaw/skills/project-structure/SKILL.md",
+        ".openclaw/skills/plan-execution/scripts/ready-sprints.js",
+        ".openclaw/skills/plan-execution/scripts/ready-tasklets.js",
+        "versioned-data-contracts.json"
+      ]
+    },
+    "S01-F01-T07": {
+      "depends_on": [
+        "S01-F01-T01",
+        "S01-F01-T02",
+        "S01-F01-T03",
+        "S01-F01-T04",
+        "S01-F01-T05",
+        "S01-F01-T06"
+      ],
+      "affinity": ["project-metadata"],
+      "risk": "normal",
+      "feature": "S01-F01",
+      "planned_paths": [
+        "pm/plans/2026-09-08-project-component-registry/plan.md",
+        "pm/plans/2026-09-08-project-component-registry/sprints/S01.md",
+        "pm/plans/2026-09-08-project-component-registry/sprints/S01.tasklets.json"
+      ]
+    }
+  }
+}

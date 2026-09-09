@@ -1,0 +1,7 @@
+# Copyright (c) 2026 Alex Baretta. All rights reserved.
+# Author: Alex Baretta <alex@baretta.com>.
+# Licensed under the MIT License. See LICENSE in the project root.
+interface:
+  display_name: "Diagnostic Assertions"
+  short_description: "Classify diagnostics and hard invariants"
+  default_prompt: "Use $diagnostic-assertions to review these production assertions and diagnostic checks."

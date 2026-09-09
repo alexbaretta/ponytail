@@ -1,9 +1,13 @@
 #!/usr/bin/env node
+// Copyright (c) 2026 DietrichGebert.
+// Copyright (c) 2026 Alex Baretta. All rights reserved.
+// Licensed under the MIT License. See LICENSE in the project root.
+
 // ponytail — UserPromptSubmit hook to track which ponytail mode is active
 // Inspects user input for /ponytail commands and writes mode to flag file
 
 const { getDefaultMode, isDeactivationCommand, writeDefaultMode } = require('./ponytail-config');
-const { clearMode, isQoder, readMode, setMode, writeHookOutput } = require('./ponytail-runtime');
+const { isQoder, readMode, setMode, writeHookOutput } = require('./ponytail-runtime');
 const { getPonytailInstructions } = require('./ponytail-instructions');
 
 let input = '';
@@ -19,7 +23,6 @@ function finish() {
 
     // Match /ponytail commands
     let modeSwitched = false;
-    let deactivated = false;
     if (/^[/@$]ponytail/.test(prompt)) {
       const parts = prompt.split(/\s+/);
       const cmd = parts[0].replace(/^[@$]/, '/');
@@ -61,10 +64,10 @@ function finish() {
           mode,
           'PONYTAIL MODE ACTIVE — level: ' + mode,
         );
-      } else if (mode && mode !== 'off') {
+      } else if (mode) {
         setMode(mode);
         modeSwitched = true;
-        // ponytail: Qoder needs the full ruleset every turn, so when a mode
+        // Qoder needs the full ruleset every turn, so when a mode
         // switch happens we fold the confirmation into the ruleset output
         // below (one JSON on stdout) instead of emitting two separate writes.
         if (!isQoder) {
@@ -74,36 +77,31 @@ function finish() {
             'PONYTAIL MODE CHANGED — level: ' + mode,
           );
         }
-      } else if (mode === 'off') {
-        clearMode();
-        deactivated = true;
-        writeHookOutput('UserPromptSubmit', 'off', 'PONYTAIL MODE OFF');
       }
     }
 
-    // Detect deactivation
-    if (!modeSwitched && !deactivated && isDeactivationCommand(prompt)) {
-      clearMode();
-      deactivated = true;
-      writeHookOutput('UserPromptSubmit', 'off', 'PONYTAIL MODE OFF');
+    // Natural-language deactivation disables compaction, not core policy.
+    if (!modeSwitched && isDeactivationCommand(prompt)) {
+      setMode('off');
+      modeSwitched = true;
+      if (!isQoder) {
+        writeHookOutput('UserPromptSubmit', 'off', 'PONYTAIL COMPACTION OFF');
+      }
     }
 
     // Qoder has no SessionStart event, so UserPromptSubmit does double duty:
     // activate the default mode on first prompt (if no flag exists yet), then
     // inject the ruleset on every prompt. Claude Code/Codex do this in
     // SessionStart via ponytail-activate.js; Qoder can't, so we do it here.
-    // Skip when deactivated — user just turned ponytail off.
-    if (isQoder && !deactivated) {
+    if (isQoder) {
       let currentMode = readMode();
       if (!currentMode) {
         // First prompt in session — initialize from config/env default
         currentMode = getDefaultMode();
-        if (currentMode !== 'off') {
-          try { setMode(currentMode); } catch (e) {}
-        }
+        try { setMode(currentMode); } catch (e) {}
       }
-      if (currentMode && currentMode !== 'off') {
-        // ponytail: one JSON per invocation — mode-switch confirmation is
+      if (currentMode) {
+        // One JSON per invocation; mode-switch confirmation is
         // folded into the ruleset header so Qoder gets both in one write.
         const header = modeSwitched
           ? 'PONYTAIL MODE CHANGED — level: ' + currentMode + '\n\n'

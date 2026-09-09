@@ -1,5 +1,11 @@
 ---
-description: Switch ponytail intensity level (lite/full/ultra/off)
+description: "Switch ponytail intensity level (lite/full/ultra/off)"
 ---
 
-Switch to ponytail $ARGUMENTS mode. If no level specified, use full. Lazy senior dev mode, before any code: does it need to exist at all (YAGNI)? Does the standard library do it? A native platform feature? Can it be one line? Build the minimum that works. No unrequested abstractions, no avoidable dependencies, no boilerplate. Mark deliberate simplifications that cut a real corner with a known ceiling using a ponytail: comment that names the ceiling and upgrade path.
+<!--
+Copyright (c) 2026 DietrichGebert.
+Copyright (c) 2026 Alex Baretta. All rights reserved.
+Licensed under the MIT License. See LICENSE in the project root.
+-->
+
+Switch to ponytail $ARGUMENTS mode. If no level is specified, use full. Keep all core engineering rules active and vary only aggressive compaction. Prefer the canonical technical-debt document; if an inline marker is unavoidable, use tech-debt: with the limitation and revisit trigger.

@@ -1,0 +1,174 @@
+{
+  "$schema": "./skills/versioned-data-contracts/schemas/versioned-data-contracts.schema.json",
+  "schemaVersion": 1,
+  "families": [
+    {
+      "id": "ponytail-user-config",
+      "implementation": {
+        "workspace": "ponytail",
+        "module": "cli/ponytail",
+        "readerRegistryExport": "PonytailUserConfigReaders"
+      },
+      "currentVersion": "V1",
+      "versions": ["V1"],
+      "supportedReadVersions": ["V1"],
+      "supportedDowngradeVersions": []
+    },
+    {
+      "id": "codex-execpolicy-project-proposal",
+      "implementation": {
+        "workspace": "ponytail",
+        "module": "cli/condense_codex_rules.sh",
+        "readerRegistryExport": "CodexExecpolicyProjectProposalReaders"
+      },
+      "currentVersion": "V1",
+      "versions": ["V1"],
+      "supportedReadVersions": ["V1"],
+      "supportedDowngradeVersions": []
+    },
+    {
+      "id": "codex-execpolicy-accepted-state",
+      "implementation": {
+        "workspace": "ponytail",
+        "module": "cli/condense_codex_rules.sh",
+        "readerRegistryExport": "CodexExecpolicyAcceptedStateReaders"
+      },
+      "currentVersion": "V1",
+      "versions": ["V1"],
+      "supportedReadVersions": ["V1"],
+      "supportedDowngradeVersions": []
+    },
+    {
+      "id": "ponytail-journal-project-config",
+      "implementation": {
+        "workspace": "ponytail",
+        "module": "cli/project_journal.sh",
+        "readerRegistryExport": "PonytailJournalProjectConfigReaders"
+      },
+      "currentVersion": "V1",
+      "versions": ["V1"],
+      "supportedReadVersions": ["V1"],
+      "supportedDowngradeVersions": []
+    },
+    {
+      "id": "ponytail-journal-action-payload",
+      "implementation": {
+        "workspace": "ponytail",
+        "module": "scripts/project-journal.sql",
+        "readerRegistryExport": "PonytailJournalActionPayloadReaders"
+      },
+      "currentVersion": "V1",
+      "versions": ["V1"],
+      "supportedReadVersions": ["V1"],
+      "supportedDowngradeVersions": []
+    },
+    {
+      "id": "build-impact-project-config",
+      "implementation": {
+        "workspace": "ponytail",
+        "module": "skills/build-impact/scripts/build-impact.js",
+        "readerRegistryExport": "BuildImpactProjectConfigReaders"
+      },
+      "currentVersion": "V2",
+      "versions": ["V1", "V2"],
+      "supportedReadVersions": ["V1", "V2"],
+      "supportedDowngradeVersions": []
+    },
+    {
+      "id": "build-impact-custom-request",
+      "implementation": {
+        "workspace": "ponytail",
+        "module": "skills/build-impact/scripts/build-impact.js",
+        "readerRegistryExport": "BuildImpactCustomRequestReaders"
+      },
+      "currentVersion": "V1",
+      "versions": ["V1"],
+      "supportedReadVersions": ["V1"],
+      "supportedDowngradeVersions": []
+    },
+    {
+      "id": "build-impact-custom-result",
+      "implementation": {
+        "workspace": "ponytail",
+        "module": "skills/build-impact/scripts/build-impact.js",
+        "readerRegistryExport": "BuildImpactCustomResultReaders"
+      },
+      "currentVersion": "V1",
+      "versions": ["V1"],
+      "supportedReadVersions": ["V1"],
+      "supportedDowngradeVersions": []
+    },
+    {
+      "id": "build-impact-query-result",
+      "implementation": {
+        "workspace": "ponytail",
+        "module": "skills/build-impact/scripts/build-impact.js",
+        "readerRegistryExport": "BuildImpactQueryResultReaders"
+      },
+      "currentVersion": "V1",
+      "versions": ["V1"],
+      "supportedReadVersions": ["V1"],
+      "supportedDowngradeVersions": []
+    },
+    {
+      "id": "parallel-sprint-metadata",
+      "implementation": {
+        "workspace": "ponytail",
+        "module": "skills/plan-execution/scripts/ready-sprints.js",
+        "readerRegistryExport": "SprintMetadataReaders"
+      },
+      "currentVersion": "V3",
+      "versions": ["V1", "V2", "V3"],
+      "supportedReadVersions": ["V1", "V2", "V3"],
+      "supportedDowngradeVersions": []
+    },
+    {
+      "id": "parallel-tasklet-scheduling-metadata",
+      "implementation": {
+        "workspace": "ponytail",
+        "module": "skills/plan-execution/scripts/ready-tasklets.js",
+        "readerRegistryExport": "TaskletMetadataReaders"
+      },
+      "currentVersion": "V3",
+      "versions": ["V1", "V2", "V3"],
+      "supportedReadVersions": ["V1", "V2", "V3"],
+      "supportedDowngradeVersions": []
+    },
+    {
+      "id": "ponytail-project-metadata",
+      "implementation": {
+        "workspace": "ponytail",
+        "module": "cli/ponytail",
+        "readerRegistryExport": "PonytailProjectReaders"
+      },
+      "currentVersion": "V1",
+      "versions": ["V1"],
+      "supportedReadVersions": ["V1"],
+      "supportedDowngradeVersions": []
+    },
+    {
+      "id": "tsts-analysis-config",
+      "implementation": {
+        "workspace": "ponytail",
+        "module": "tsts/src/index.ts",
+        "readerRegistryExport": "checkProject"
+      },
+      "currentVersion": "V2",
+      "versions": ["V1", "V2"],
+      "supportedReadVersions": ["V2"],
+      "supportedDowngradeVersions": []
+    },
+    {
+      "id": "tsts-versioned-contract-manifest",
+      "implementation": {
+        "workspace": "ponytail",
+        "module": "tsts/src/index.ts",
+        "readerRegistryExport": "checkProject"
+      },
+      "currentVersion": "V1",
+      "versions": ["V1"],
+      "supportedReadVersions": ["V1"],
+      "supportedDowngradeVersions": []
+    }
+  ]
+}

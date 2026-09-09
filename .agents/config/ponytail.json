@@ -1,0 +1,32 @@
+{
+  "components": [
+    "@alexbaretta/ponytail",
+    "@alexbaretta/ponytail-benchmarks",
+    "TSTS",
+    "ponytail",
+    "ponytail-benchmarks",
+    "ponytail-mcp",
+    "ponytail-pi-extension-dev"
+  ],
+  "exceptions": [],
+  "manifests": [
+    {
+      "manager": "npm",
+      "path": "package.json"
+    }
+  ],
+  "name": "Ponytail",
+  "names": [
+    "ponytail"
+  ],
+  "packages": [
+    {
+      "manager": "npm",
+      "name": "@alexbaretta/ponytail"
+    }
+  ],
+  "repositoryUrls": [
+    "https://github.com/alexbaretta/ponytail"
+  ],
+  "schemaVersion": 1
+}

@@ -1,0 +1,174 @@
+{
+  "schemaVersion": 3,
+  "sprint": "S01",
+  "features": {
+    "S01-F01": {
+      "depends_on": [],
+      "validation_tasklet": "S01-F01-T11"
+    }
+  },
+  "tasklets": {
+    "S01-F01-T01": {
+      "depends_on": [],
+      "affinity": [
+        "cli"
+      ],
+      "risk": "normal",
+      "feature": "S01-F01",
+      "planned_paths": [
+        "cli/ponytail"
+      ]
+    },
+    "S01-F01-T02": {
+      "depends_on": [
+        "S01-F01-T01"
+      ],
+      "affinity": [
+        "cli"
+      ],
+      "risk": "normal",
+      "feature": "S01-F01",
+      "planned_paths": [
+        "cli/ponytail"
+      ]
+    },
+    "S01-F01-T03": {
+      "depends_on": [
+        "S01-F01-T02"
+      ],
+      "affinity": [
+        "cli"
+      ],
+      "risk": "normal",
+      "feature": "S01-F01",
+      "planned_paths": [
+        "cli/ponytail",
+        "cli/condense_codex_rules.sh"
+      ]
+    },
+    "S01-F01-T04": {
+      "depends_on": [
+        "S01-F01-T03"
+      ],
+      "affinity": [
+        "cli"
+      ],
+      "risk": "normal",
+      "feature": "S01-F01",
+      "planned_paths": [
+        "cli/ponytail"
+      ]
+    },
+    "S01-F01-T05": {
+      "depends_on": [
+        "S01-F01-T04"
+      ],
+      "affinity": [
+        "cli"
+      ],
+      "risk": "normal",
+      "feature": "S01-F01",
+      "planned_paths": [
+        "scripts/project-qa.js",
+        "package.json",
+        "package-lock.json"
+      ]
+    },
+    "S01-F01-T06": {
+      "depends_on": [
+        "S01-F01-T05"
+      ],
+      "affinity": [
+        "cli"
+      ],
+      "risk": "normal",
+      "feature": "S01-F01",
+      "planned_paths": [
+        "scripts/project-qa.js"
+      ]
+    },
+    "S01-F01-T07": {
+      "depends_on": [
+        "S01-F01-T06"
+      ],
+      "affinity": [
+        "cli"
+      ],
+      "risk": "normal",
+      "feature": "S01-F01",
+      "planned_paths": [
+        "scripts/project-qa.js"
+      ]
+    },
+    "S01-F01-T08": {
+      "depends_on": [
+        "S01-F01-T07"
+      ],
+      "affinity": [
+        "cli"
+      ],
+      "risk": "normal",
+      "feature": "S01-F01",
+      "planned_paths": [
+        "tests/project-validation.test.js"
+      ]
+    },
+    "S01-F01-T09": {
+      "depends_on": [
+        "S01-F01-T08"
+      ],
+      "affinity": [
+        "cli"
+      ],
+      "risk": "normal",
+      "feature": "S01-F01",
+      "planned_paths": [
+        "tests/ponytail-cli.test.js"
+      ]
+    },
+    "S01-F01-T10": {
+      "depends_on": [
+        "S01-F01-T09"
+      ],
+      "affinity": [
+        "cli"
+      ],
+      "risk": "normal",
+      "feature": "S01-F01",
+      "planned_paths": [
+        "docs/project-validation.md",
+        "README.md",
+        "docs/condense-codex-rules.md",
+        "AGENTS.md",
+        "PROJECT_STRUCTURE.md",
+        "versioned-data-contracts.json",
+        ".ponytail/project.json",
+        "skills/project-structure/SKILL.md",
+        "skills/codex-execpolicy/SKILL.md",
+        ".openclaw/skills/project-structure/SKILL.md",
+        ".openclaw/skills/codex-execpolicy/SKILL.md",
+        "tests/cli-tools.test.js"
+      ]
+    },
+    "S01-F01-T11": {
+      "depends_on": [
+        "S01-F01-T01",
+        "S01-F01-T02",
+        "S01-F01-T03",
+        "S01-F01-T04",
+        "S01-F01-T05",
+        "S01-F01-T06",
+        "S01-F01-T07",
+        "S01-F01-T08",
+        "S01-F01-T09",
+        "S01-F01-T10"
+      ],
+      "affinity": [
+        "cli"
+      ],
+      "risk": "normal",
+      "feature": "S01-F01",
+      "planned_paths": []
+    }
+  }
+}

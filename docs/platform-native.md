@@ -1,3 +1,10 @@
+<!--
+Copyright (c) 2026 DietrichGebert.
+Copyright (c) 2026 Alex Baretta. All rights reserved.
+
+Licensed under the MIT License. See LICENSE in the project root.
+-->
+
 # Platform-Native Solutions
 
 The lazy senior dev's first question is always: *does the platform already do this?*
@@ -79,7 +86,7 @@ Libraries people install that the runtime already ships.
 
 **Debounce one-liner** (no library):
 ```js
-// ponytail: 3 lines beats a dependency
+// tech-debt: native implementation ceiling; revisit if requirements outgrow it
 let t;
 const debounce = (fn, ms) => (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
 ```

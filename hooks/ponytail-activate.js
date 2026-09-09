@@ -1,4 +1,8 @@
 #!/usr/bin/env node
+// Copyright (c) 2026 DietrichGebert.
+// Copyright (c) 2026 Alex Baretta. All rights reserved.
+// Licensed under the MIT License. See LICENSE in the project root.
+
 // ponytail — Claude Code SessionStart activation hook
 //
 // Runs on every session start:
@@ -11,7 +15,6 @@ const path = require('path');
 const { getDefaultMode, getClaudeDir, isShellSafe } = require('./ponytail-config');
 const { getPonytailInstructions } = require('./ponytail-instructions');
 const {
-  clearMode,
   isCodex,
   isCopilot,
   setMode,
@@ -22,14 +25,6 @@ const claudeDir = getClaudeDir();
 const settingsPath = path.join(claudeDir, 'settings.json');
 
 const mode = getDefaultMode();
-
-// "off" mode — skip activation entirely, don't write flag or emit rules
-if (mode === 'off') {
-  clearMode();
-  const hookOutput = (isCodex || isCopilot) ? '' : 'OK';
-  writeHookOutput('SessionStart', 'off', hookOutput);
-  process.exit(0);
-}
 
 // 1. Write flag file
 try {
@@ -75,7 +70,7 @@ if (!isCodex && !isCopilot) try {
         statusLineSnippet + " " +
         "Proactively offer to set this up for the user on first interaction.";
     } else {
-      // ponytail: install path has shell metacharacters — don't embed it in a
+      // Install path has shell metacharacters, so do not embed it in a
       // command snippet; have the agent wire it up by hand instead.
       output += "\n\n" +
         "STATUSLINE SETUP NEEDED: The ponytail plugin includes a statusline badge showing active mode. " +

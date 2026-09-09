@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 3,
+  "sprint": "S01",
+  "features": {
+    "S01-F01": {
+      "depends_on": [],
+      "validation_tasklet": "S01-F01-T05"
+    }
+  },
+  "tasklets": {
+    "S01-F01-T01": {
+      "depends_on": [],
+      "affinity": ["execpolicy", "contracts", "ownership"],
+      "risk": "high",
+      "risk_reason": "Defines durable user policy and cross-session authority boundaries.",
+      "feature": "S01-F01",
+      "planned_paths": [".ponytail/codex-execpolicy.json", "skills/codex-execpolicy/SKILL.md", "registry.tsv", "versioned-data-contracts.json", "PROJECT_STRUCTURE.md"]
+    },
+    "S01-F01-T02": {
+      "depends_on": ["S01-F01-T01"],
+      "affinity": ["execpolicy", "cli", "state"],
+      "risk": "high",
+      "risk_reason": "Compiles and installs rules that govern sandbox bypass and command denial.",
+      "feature": "S01-F01",
+      "planned_paths": ["cli/condense_codex_rules.sh", "tests/condense-codex-rules.test.js"]
+    },
+    "S01-F01-T03": {
+      "depends_on": ["S01-F01-T02"],
+      "affinity": ["execpolicy", "installation", "distribution"],
+      "risk": "high",
+      "risk_reason": "Changes the combined installation lifecycle and generated Codex configuration.",
+      "feature": "S01-F01",
+      "planned_paths": ["scripts/install.sh", "scripts/install-to-codex.sh", "scripts/test-install-to-codex.sh", "tests/cli-tools.test.js", "tests/distribution.test.js", "tests/openclaw-skills.test.js", ".openclaw/skills/codex-execpolicy/SKILL.md", "generated/registry.json", "plugin.yaml", "docs/condense-codex-rules.md", "README.md", "package.json"]
+    },
+    "S01-F01-T04": {
+      "depends_on": ["S01-F01-T03"],
+      "affinity": ["journal", "bash-portability"],
+      "risk": "normal",
+      "feature": "S01-F01",
+      "planned_paths": ["cli/project_journal.sh"]
+    },
+    "S01-F01-T05": {
+      "depends_on": ["S01-F01-T01", "S01-F01-T02", "S01-F01-T03", "S01-F01-T04"],
+      "affinity": ["execpolicy", "validation"],
+      "risk": "normal",
+      "feature": "S01-F01",
+      "planned_paths": ["pm/plans/2026-09-04-codex-execpolicy/plan.md", "pm/plans/2026-09-04-codex-execpolicy/sprints/S01.md", "pm/plans/2026-09-04-codex-execpolicy/sprints/S01.tasklets.json"]
+    }
+  }
+}

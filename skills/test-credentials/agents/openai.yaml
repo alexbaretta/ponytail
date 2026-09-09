@@ -1,0 +1,7 @@
+# Copyright (c) 2026 Alex Baretta. All rights reserved.
+# Author: Alex Baretta <alex@baretta.com>.
+# Licensed under the MIT License. See LICENSE in the project root.
+interface:
+  display_name: "Test Credentials"
+  short_description: "Discover and handle adopted test credentials"
+  default_prompt: "Use $test-credentials to locate and safely consume the correct bundle in a repository that adopts this credential layout."

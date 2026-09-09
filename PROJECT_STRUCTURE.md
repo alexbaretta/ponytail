@@ -1,0 +1,92 @@
+<!--
+Copyright (c) 2026 Alex Baretta. All rights reserved.
+Author: Alex Baretta <alex@baretta.com>
+
+Licensed under the MIT License. See LICENSE in the project root.
+-->
+
+# Ponytail Project Structure
+
+This repository is both Ponytail's management repository and its only
+component repository. The structure remains valid if future components move
+into independently versioned repositories: ownership follows the component,
+while project-wide management records remain under `pm/`.
+
+## Ownership
+
+- `skills/` owns canonical reusable skills and the portable Ponytail policy.
+- `commands/` owns canonical command prompts.
+- `config/AGENTS.md` is the generated global Codex policy installed by the
+  Codex installer.
+- `.agents/config/codex-execpolicy.json` is this project's versioned Codex
+  command policy proposal. Every adopting project uses that same root-relative path;
+  accepted user policy is stored outside repositories under
+  `~/.ponytail/codex-execpolicy/`.
+- `~/.ponytail/config.json` is the external V1 user configuration written by
+  `ponytail register`; it owns the canonical Ponytail source root and
+  registered repositories with their explicitly blessed worktrees.
+- `registry.tsv` owns enabled and disabled skill and command publication
+  across supported hosts. Benchmark entries are prohibited.
+- `versioned-data-contracts.json` inventories Ponytail's durable serialized
+  contracts and their reader registries.
+- `ponytail-journal.json` owns the project's stable identity and non-secret
+  PostgreSQL journal connection settings. Create it once with
+  `project_journal.sh init`, which also owns idempotent database registration,
+  then commit it; action commands never create it implicitly.
+- `hooks/` owns shared lifecycle behavior and policy injection.
+- Host directories such as `.claude-plugin/`, `.codex-plugin/`, `.github/`,
+  `.opencode/`, `.qoder/`, and `.openclaw/` own host adapters. Generated
+  adapters identify their canonical source in their validation tests.
+- `scripts/` owns local generation, validation, installation, cleanup, and
+  publication tooling. `scripts/install.sh` combines CLI and Codex skill
+  installation; `scripts/install-cli.sh` configures the installed `ponytail`
+  symlink with this checkout as its canonical source.
+  Codex discovers project-local skills from `.agents/skills/` automatically.
+- `scripts/setup-project-journal.sh` and `scripts/project-journal.sql` own
+  PostgreSQL 18 journal provisioning and its immutable V1 storage contract.
+- `tsts/` owns the canonical TypeScript analyzer and its Node tests. Root npm dependencies and `npm run build:tsts` produce ignored `tsts/dist/`; npm distributes only its compiled runtime. `cli/tsts` is the registered-project launcher installed alongside `ponytail`.
+- `ponytail.json` owns the TSTS build-impact target.
+- `cli/` owns user-facing parse-safe Bash tools. `cli/ponytail` owns project
+  registration and Codex configuration updates. The `ponytail` and `tsts` executables are linked to canonical source. Adding a `.sh` tool there
+  makes it
+  installable by `scripts/install-cli.sh`, which installs all `cli/*.sh` files
+  or selected tools into the user's configured executable directory. Add each
+  tool to the focused CLI syntax, behavior, installer, and distribution tests.
+  `cli/condense_codex_rules.sh` owns the V1 accepted-policy reader/writer,
+  one-time Codex import, synthesis, restoration, and installation pipeline.
+- `.agents/config/` owns each worktree's committed Ponytail configuration.
+  `ponytail.json` owns project names,
+  components and aliases, package/repository identities, dependency manifests,
+  and reference exceptions. `ponytail register-component`,
+  `unregister-component`, and `detect-components` maintain its component data.
+  Other projects read this file only from the repository's explicitly blessed
+  worktree. `codex-execpolicy.json` owns its Codex command policy proposal. See
+  `docs/project-validation.md`.
+- `scripts/project-qa.js` owns local tracked-reference QA and dependency manifest parsing.
+- `generated/` owns runtime data derived from `registry.tsv`.
+- `tests/` owns core live-development tests.
+- `benchmarks/` is an optional isolated subsystem. It owns all benchmark
+  code, tests, dependencies, assets, results, and reproduction instructions.
+- `docs/` owns detailed project and host documentation.
+- `pm/plans/` owns long-lived plans and sprint records.
+- `pm/bugs/open/`, `pm/bugs/in_progress/`, and `pm/bugs/closed/` own bug
+  records by lifecycle state. Create a lifecycle directory when its first
+  record is added; do not add placeholder files.
+- `tech_debt.md` is the canonical local technical-debt record.
+- `tmp/` owns ignored local logs, probes, generated previews, and other
+  temporary artifacts, including disposable `tmp/project-journal/` process
+  coordination state.
+
+## Boundaries
+
+Core installation, testing, packaging, and publication must not execute
+benchmark code or require benchmark dependencies. Core documentation may link
+to `benchmarks/`, but benchmark results are not core acceptance evidence.
+
+Project-local skills belong under `.agents/skills/` when Ponytail needs one.
+Reusable skills intended for publication belong under `skills/`. Do not copy
+project-local skills into the published reusable collection.
+
+Ponytail owns no cloud environments, deployment topology, or ancillary cloud
+services. If that changes, add a dedicated cloud infrastructure architecture
+document and reference it from `AGENTS.md` in the same change-set.

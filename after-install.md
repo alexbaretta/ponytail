@@ -1,3 +1,10 @@
+<!--
+Copyright (c) 2026 DietrichGebert.
+Copyright (c) 2026 Alex Baretta. All rights reserved.
+
+Licensed under the MIT License. See LICENSE in the project root.
+-->
+
 # Ponytail for Hermes installed
 
 Enable it if you did not install with `--enable`:
@@ -16,7 +23,6 @@ Commands:
 - `/ponytail-review [target]`
 - `/ponytail-audit [target]`
 - `/ponytail-debt`
-- `/ponytail-gain`
 - `/ponytail-help`
 
-Bundled skills are available as `ponytail:ponytail`, `ponytail:ponytail-review`, `ponytail:ponytail-audit`, `ponytail:ponytail-debt`, `ponytail:ponytail-gain`, and `ponytail:ponytail-help`.
+Bundled skills are available as `ponytail:ponytail`, `ponytail:ponytail-review`, `ponytail:ponytail-audit`, and `ponytail:ponytail-debt`. `/ponytail-help` remains a command rather than a skill.

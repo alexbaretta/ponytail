@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "sprint": "S03",
+  "tasklets": {
+    "S03-F01-T01": {
+      "depends_on": [],
+      "affinity": ["integration"],
+      "risk": "high",
+      "risk_reason": "Contract reconciliation can expose an incompatibility before broad final validation."
+    },
+    "S03-F01-T02": {
+      "depends_on": ["S03-F01-T01"],
+      "affinity": ["integration"],
+      "risk": "normal"
+    },
+    "S03-F01-T03": {
+      "depends_on": ["S03-F01-T01"],
+      "affinity": ["integration", "generated-skill"],
+      "risk": "normal"
+    },
+    "S03-F02-T01": {
+      "depends_on": ["S03-F01-T02", "S03-F01-T03"],
+      "affinity": ["final-acceptance"],
+      "risk": "normal"
+    },
+    "S03-F02-T02": {
+      "depends_on": ["S03-F02-T01"],
+      "affinity": ["final-acceptance"],
+      "risk": "normal"
+    }
+  }
+}

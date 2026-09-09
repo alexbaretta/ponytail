@@ -1,32 +1,90 @@
-# Ponytail, lazy senior dev mode
+<!--
+Copyright (c) Ponytail contributors.
+Copyright (c) 2026 Alex Baretta. All rights reserved.
+Author: Alex Baretta <alex@baretta.com>
 
-You are a lazy senior developer. Lazy means efficient, not careless. The best code is the code never written.
+Licensed under the MIT License. See LICENSE in the project root.
+-->
 
-Before writing any code, stop at the first rung that holds:
+# Ponytail Repository Configuration
 
-1. Does this need to be built at all? (YAGNI)
-2. Does it already exist in this codebase? Reuse the helper, util, or pattern that's already here, don't re-write it.
-3. Does the standard library already do this? Use it.
-4. Does a native platform feature cover it? Use it.
-5. Does an already-installed dependency solve it? Use it.
-6. Can this be one line? Make it one line.
-7. Only then: write the minimum code that works.
+This file configures work on the Ponytail repository. Portable engineering
+policy belongs in `skills/ponytail/SKILL.md`; do not duplicate it here.
 
-The ladder runs after you understand the problem, not instead of it: read the task and the code it touches, trace the real flow end to end, then climb.
+## Ownership
 
-Bug fix = root cause, not symptom: a report names a symptom. Grep every caller of the function you touch and fix the shared function once — one guard there is a smaller diff than one per caller, and patching only the path the ticket names leaves a sibling caller still broken.
+- Repository and management root: this repository.
+- Structure and ownership: `PROJECT_STRUCTURE.md`.
+- Project-management root: `pm/`.
+- Long-lived plans: `pm/plans/<plan-id>/`.
+- Bugs: `pm/bugs/open/`, `pm/bugs/in_progress/`, and `pm/bugs/closed/`.
+- Technical debt: `tech_debt.md`.
+- Ignored temporary artifacts: `tmp/`.
+- Reusable skills: `skills/`.
+- Project-local skills, when needed: `.agents/skills/`.
 
-Rules:
+Ponytail owns no cloud environments, deployments, or ancillary cloud
+services. `PROJECT_STRUCTURE.md` is authoritative for that boundary.
 
-- No abstractions that weren't explicitly requested.
-- No new dependency if it can be avoided.
-- No boilerplate nobody asked for.
-- Deletion over addition. Boring over clever. Fewest files possible.
-- Shortest working diff wins, but only once you understand the problem. The smallest change in the wrong place isn't lazy, it's a second bug.
-- Question complex requests: "Do you actually need X, or does Y cover it?"
-- Pick the edge-case-correct option when two stdlib approaches are the same size, lazy means less code, not the flimsier algorithm.
-- Mark deliberate simplifications that cut a real corner with a known ceiling (global lock, O(n²) scan, naive heuristic) with a `ponytail:` comment naming the ceiling and upgrade path.
+## Commands
 
-Not lazy about: understanding the problem (read it fully and trace the real flow before picking a rung, a small diff you don't understand is just laziness dressed up as efficiency), input validation at trust boundaries, error handling that prevents data loss, security, accessibility, the calibration real hardware needs (the platform is never the spec ideal, a clock drifts, a sensor reads off), anything explicitly requested. Lazy code without its check is unfinished: non-trivial logic leaves ONE runnable check behind, the smallest thing that fails if the logic breaks (an assert-based demo/self-check or one small test file; no frameworks, no fixtures). Trivial one-liners need no test.
+- Initial setup: `npm install` and `npm install --prefix ponytail-mcp`.
+- Dependency update: use the same two install commands after dependency or
+  lockfile changes.
+- Build target: `npm run build:tsts`; other Ponytail tooling ships source files.
+- Build-impact configuration: `ponytail.json`.
+- Build-impact query: `node skills/build-impact/scripts/build-impact.js --file <changed-path>`.
+- TSTS focused tests after build: `node --test [--test-name-pattern=<pattern>] tsts/dist/test/<file>.test.js`.
+- TSTS full unit tests: `npm run test:tsts` (included in `npm test`).
+- TypeScript test indexes/audit metadata: not configured; tests discovered in `tsts/test/`.
+- Lossless JSON boundary: `tsts/src/lossless-json.ts`, using `lossless-json`; focused proof `node --test tsts/dist/test/lossless-json.test.js`.
+- Unit-test command families:
+  - Node focused: `node --test [--test-name-pattern=<pattern>] <test-files>`.
+  - Node full: `npm test`.
+- Integration tests: no separate integration suite; supported adapter and
+  bundled-subproject behavior is exercised by the Node full command.
+- Integration arc listing: not applicable.
+- Rule-copy check: `node scripts/check-rule-copies.js`.
+- Registry check: `node scripts/registry.js`.
+- Command-adapter generation: `node scripts/build-command-adapters.js
+  --write`; omit `--write` to check generated output.
+- Runtime-registry generation: `node scripts/build-registry-data.js
+  --write`; omit `--write` to check generated output.
+- Version check: `node scripts/check-versions.js`.
+- Manifest generation: `node scripts/build-manifests.js --write`; omit
+  `--write` to check repeated metadata.
+- OpenClaw generation: `node scripts/build-openclaw-skills.js`.
+- Complete installation: `./scripts/install.sh`.
+- Local setup validation: `ponytail validate`.
+- Local reference QA: `ponytail qa`; no downstream integration suite.
+- Project initialization and registration: `ponytail register`.
+- Worktree selection: `ponytail bless[-worktree]`; display it with `ponytail
+  blessed[-worktree]`.
+- Component registration: `ponytail register-component <name>` and
+  `ponytail unregister-component <name>`.
+- JavaScript/TypeScript component detection: `ponytail detect-components
+  [--language typescript|javascript|auto]`.
+- Permission update: `ponytail update-permissions`.
+- Codex skill update: `ponytail update-skills`; Codex discovers
+  project-local skills from `.agents/skills/` automatically.
+- Codex installer tests: `./scripts/test-install-to-codex.sh`.
+- TSTS CLI: `tsts --project tsconfig.json` or `tsts --config tsts.json`; requires a registered project.
+- CLI installation: `./scripts/install-cli.sh`.
+- Project-journal setup: `./scripts/setup-project-journal.sh`.
+- CLI focused tests: `node --test tests/cli-tools.test.js`.
+- Deployment: not applicable.
 
-(Yes, this file also applies to agents working on the ponytail repo itself. Especially to them.)
+Use the Node focused command while editing. Run the Node full command, the
+rule-copy check, and the version check for final core acceptance.
+
+## Local Rules
+
+- Keep generated host adapters synchronized with their canonical sources in
+  the same commit.
+- Do not hand-edit generated skill copies when the owning generator can
+  produce the change.
+- Preserve the benchmark boundary: core commands, dependencies, packages, and
+  CI must not execute or provision benchmark behavior.
+- Never commit generated distributable archives or other binary release
+  artifacts.
+- Follow the active plan under `pm/plans/` for multi-step work.

@@ -1,0 +1,7 @@
+# Copyright (c) 2026 Alex Baretta. All rights reserved.
+# Author: Alex Baretta <alex@baretta.com>.
+# Licensed under the MIT License. See LICENSE in the project root.
+interface:
+  display_name: "UX Testing"
+  short_description: "Validate real user workflows and regression coverage"
+  default_prompt: "Use $ux-testing to diagnose or validate this user-facing behavior through the configured UX connection skill."

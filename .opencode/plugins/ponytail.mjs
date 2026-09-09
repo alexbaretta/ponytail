@@ -1,3 +1,7 @@
+// Copyright (c) 2026 DietrichGebert.
+// Copyright (c) 2026 Alex Baretta. All rights reserved.
+// Licensed under the MIT License. See LICENSE in the project root.
+
 // ponytail — OpenCode plugin.
 //
 // Injects the ponytail ruleset into every chat's system prompt at the active
@@ -7,7 +11,7 @@
 // source of truth.
 //
 // OpenCode loads this as a server plugin — add it to your opencode.json:
-//   { "plugin": ["@dietrichgebert/ponytail"] }
+//   { "plugin": ["@alexbaretta/ponytail"] }
 
 import { createRequire } from 'module';
 import fs from 'fs';
@@ -73,7 +77,6 @@ export default async ({ client } = {}) => {
     // Append the ruleset to the system prompt every turn.
     'experimental.chat.system.transform': async (_input, output) => {
       const mode = readMode();
-      if (mode === 'off') return;
       const instructions = getPonytailInstructions(mode);
       if (output.system.length > 0) {
         output.system[output.system.length - 1] += '\n\n' + instructions;
@@ -83,12 +86,12 @@ export default async ({ client } = {}) => {
     },
 
     // Persist `/ponytail <level>` so the next turn's injection follows it.
-    // ponytail: mode applies from the next message, not the current one — the
+    // Mode applies from the next message, not the current one; the
     // transform reads the flag the command writes. Good enough; switch to a
     // synchronous store if same-turn switching ever matters.
     'command.execute.before': async (input) => {
       if (!input || input.command !== 'ponytail') return;
-      // `off` is persisted like any mode; the transform reads it and stays silent.
+      // `off` is persisted like any mode; only aggressive compaction is disabled.
       const args = String(input.arguments || '').trim();
       const mode = args ? normalizePersistedMode(args) : getDefaultMode();
       if (!mode) return;

@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Copyright (c) 2026 Alex Baretta <alex@baretta.com>.
+# Licensed under the MIT License. See LICENSE in the project root.
+
+main() {
+  local source_root
+  local status=0
+  source_root="$(python3 -c 'import pathlib,sys; print(pathlib.Path(sys.argv[1]).resolve().parent.parent)' "${BASH_SOURCE[0]}")"
+  "${source_root}/cli/ponytail" validate >/dev/null || { status="$?"; exit "${status}"; }
+  if [[ ! -f "${source_root}/tsts/dist/src/cli.js" ]]; then
+    printf '%s\n' 'error: TSTS is not built; run npm install in the Ponytail source checkout' >&2
+    exit 1
+  fi
+  node "${source_root}/tsts/dist/src/cli.js" "$@" || status="$?"
+  exit "${status}"
+}
+
+main "$@"
