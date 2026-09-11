@@ -490,6 +490,12 @@ merges that branch. Failure of a sequential prerequisite blocks its dependent
 campaign path. Examples used to explain possible campaign decomposition do not
 authorize those plans.
 
+When finite worker capacity or a serialized integration join requires a
+scheduling choice among independent ready plans, prioritize a source-proven
+product repair or bug fix over expansion of test coverage. This priority does
+not create a dependency, pause work already dispatched, or prevent an
+independent coverage plan from proceeding concurrently.
+
 Before any sprint planning or implementation edit, the executing agent runs
 the applicable readiness selector. Selector output, rather than subjective
 classification, determines what may execute. Each selector returns at most
