@@ -56,7 +56,9 @@ while project-wide management records remain under `pm/`.
   `cli/condense_codex_rules.sh` owns the V1 accepted-policy reader/writer,
   one-time Codex import, synthesis, restoration, and installation pipeline.
 - `.agents/config/` owns each worktree's committed Ponytail configuration.
-  `ponytail.json` owns project names,
+  `project/directory-structure.json` owns the machine-readable content-kind,
+  directory, Git-state, and opaque-boundary rules enforced by
+  `npm run check:tsts`. `ponytail.json` owns project names,
   components and aliases, package/repository identities, dependency manifests,
   and reference exceptions. `ponytail register-component`,
   `unregister-component`, and `detect-components` maintain its component data.

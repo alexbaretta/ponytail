@@ -45,6 +45,38 @@ describe('parseTstsCliArguments', (): void => {
         });
     });
 
+    it('parses a directory-structure manifest with a project', (): void => {
+        const result: TstsCliParseResult = parseTstsCliArguments([
+            '--project',
+            'tsconfig.contracts.json',
+            '--directory-structure',
+            '.agents/config/project/directory-structure.json',
+        ]);
+
+        assert.deepEqual(result, {
+            kind: 'run',
+            options: {
+                directoryStructurePath: '.agents/config/project/directory-structure.json',
+                projectPath: 'tsconfig.contracts.json',
+            },
+        });
+    });
+
+    it('runs directory-structure analysis without an implicit TypeScript project', (): void => {
+        const result: TstsCliParseResult = parseTstsCliArguments([
+            '--directory-structure',
+            'structure.json',
+        ]);
+
+        assert.deepEqual(result, {
+            kind: 'run',
+            options: {
+                directoryStructurePath: 'structure.json',
+                projectPath: undefined,
+            },
+        });
+    });
+
     it('parses help requests', (): void => {
         const result: TstsCliParseResult = parseTstsCliArguments(['--help']);
 
@@ -67,5 +99,6 @@ describe('usage', (): void => {
     it('describes the project option', (): void => {
         assert.match(usage(), /--project <tsconfig\.json>/u);
         assert.match(usage(), /--config <tsts\.json>/u);
+        assert.match(usage(), /--directory-structure <manifest\.json>/u);
     });
 });

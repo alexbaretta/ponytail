@@ -1,0 +1,117 @@
+{
+  "schemaVersion": 1,
+  "contentKinds": {
+    "compiled": [
+      "**/dist/**",
+      "**/node_modules/**",
+      "**/__pycache__/**"
+    ],
+    "configuration": [
+      ".agents/**",
+      ".claude-plugin/**",
+      ".clinerules/**",
+      ".codex-plugin/**",
+      ".cursor/**",
+      ".devin-plugin/**",
+      ".github/**",
+      ".kiro/**",
+      ".openclaw/**",
+      ".opencode/**",
+      ".qoder/**",
+      ".qoder-plugin/**",
+      ".windsurf/**",
+      "config/**",
+      "generated/**",
+      "skills/**",
+      ".gitignore",
+      "opencode.json",
+      "package-lock.json",
+      "package.json",
+      "plugin.yaml",
+      "ponytail-journal.json",
+      "ponytail.json",
+      "registry.tsv",
+      "benchmarks/.gitignore",
+      "tsts/package.json",
+      "tsts/tsconfig.json",
+      "versioned-data-contracts.json"
+    ],
+    "data": ["assets/**", "benchmarks/**"],
+    "documentation": [
+      "docs/**",
+      "pm/**",
+      "tsts/README.md",
+      "tsts/docs/**",
+      "*.md",
+      "LICENSE",
+      "NOTICE"
+    ],
+    "environment": [".env", ".env.*", "**/*.env", "**/*.env.*"],
+    "source": [
+      "cli/**",
+      "commands/**",
+      "hooks/**",
+      "pi-extension/**",
+      "ponytail-mcp/**",
+      "scripts/**",
+      "tests/**",
+      "tsts/src/**",
+      "tsts/test/**",
+      "__init__.py"
+    ],
+    "temporary": [
+      ".DS_Store",
+      "**/.DS_Store",
+      ".claude/settings.local.json",
+      "announce-*.png",
+      "changelog-*.png",
+      "ponytail-*.gif",
+      "tmp/**"
+    ]
+  },
+  "directories": [
+    {
+      "path": ".",
+      "recursive": true,
+      "allowedContentKinds": [
+        "configuration",
+        "data",
+        "documentation",
+        "environment",
+        "source"
+      ],
+      "git": "tracked"
+    },
+    {
+      "path": ".claude",
+      "recursive": true,
+      "allowedContentKinds": ["temporary"],
+      "git": "ignored"
+    },
+    {
+      "path": "__pycache__",
+      "recursive": true,
+      "allowedContentKinds": ["compiled"],
+      "git": "ignored"
+    },
+    {
+      "path": "node_modules",
+      "recursive": true,
+      "allowedContentKinds": ["compiled"],
+      "git": "ignored"
+    },
+    {
+      "path": "tmp",
+      "recursive": true,
+      "allowedContentKinds": ["temporary"],
+      "git": "ignored"
+    },
+    {
+      "path": "tsts/dist",
+      "recursive": true,
+      "allowedContentKinds": ["compiled"],
+      "git": "ignored"
+    }
+  ],
+  "opaqueDirectories": ["**/node_modules", "**/__pycache__", "tmp", "tsts/dist"]
+}

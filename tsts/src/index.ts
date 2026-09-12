@@ -8,6 +8,7 @@ import ts from 'typescript';
 import { isLosslessNumber } from 'lossless-json';
 
 import { parseJsonLosslessly } from './lossless-json.js';
+import { checkDirectoryStructure } from './directory-structure.js';
 
 export type TstsDiagnosticSeverity = 'error' | 'warning';
 
@@ -22,6 +23,7 @@ export interface TstsDiagnostic {
 
 export interface TstsCheckProjectInput {
     readonly configPath?: string | undefined;
+    readonly directoryStructurePath?: string | undefined;
     readonly projectPath?: string | undefined;
 }
 
@@ -160,10 +162,15 @@ export async function checkProject(input: TstsCheckProjectInput): Promise<TstsCh
 
         diagnostics.push(...configuredAnalysisResult.diagnostics);
 
-        return {
-            checkedFileCount: checkedFileCount + configuredAnalysisResult.checkedFileCount,
-            diagnostics,
-        };
+        checkedFileCount += configuredAnalysisResult.checkedFileCount;
+    }
+
+    if (input.directoryStructurePath !== undefined) {
+        const directoryStructureResult: TstsCheckResult = await checkDirectoryStructure(
+            input.directoryStructurePath
+        );
+        checkedFileCount += directoryStructureResult.checkedFileCount;
+        diagnostics.push(...directoryStructureResult.diagnostics);
     }
 
     return {

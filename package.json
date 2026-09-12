@@ -65,8 +65,9 @@
   ],
   "scripts": {
     "test": "npm run test:core",
-    "test:core": "node scripts/registry.js && node scripts/build-registry-data.js && node scripts/build-command-adapters.js && node scripts/build-manifests.js && node scripts/check-rule-copies.js && node --test tests/*.test.js && ./scripts/test-install-to-codex.sh && npm test --prefix pi-extension && npm test --prefix ponytail-mcp && npm run test:tsts",
+    "test:core": "node scripts/registry.js && node scripts/build-registry-data.js && node scripts/build-command-adapters.js && node scripts/build-manifests.js && node scripts/check-rule-copies.js && node --test tests/*.test.js && ./scripts/test-install-to-codex.sh && npm test --prefix pi-extension && npm test --prefix ponytail-mcp && npm run test:tsts && npm run check:tsts",
     "build:tsts": "tsc -p tsts/tsconfig.json",
+    "check:tsts": "node tsts/dist/src/cli.js --project tsts/tsconfig.json --directory-structure .agents/config/project/directory-structure.json",
     "test:tsts": "node --test tsts/dist/test/*.test.js",
     "prepare": "npm run build:tsts"
   },

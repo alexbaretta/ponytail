@@ -8,6 +8,7 @@ import type { TstsCheckResult } from './index.js';
 
 export interface TstsCliOptions {
     readonly configPath?: string | undefined;
+    readonly directoryStructurePath?: string | undefined;
     readonly projectPath?: string | undefined;
 }
 
@@ -34,9 +35,19 @@ export function parseTstsCliArguments(args: readonly string[]): TstsCliParseResu
     const configFlagIndex: number = args.indexOf('--config');
     const configPath: string | undefined =
         configFlagIndex >= 0 ? args[configFlagIndex + 1] : undefined;
+    const directoryStructureFlagIndex: number = args.indexOf('--directory-structure');
+    const directoryStructurePath: string | undefined =
+        directoryStructureFlagIndex >= 0
+            ? args[directoryStructureFlagIndex + 1]
+            : undefined;
     const options: TstsCliOptions = {
-        projectPath: projectPath ?? (configPath === undefined ? 'tsconfig.json' : undefined),
+        projectPath:
+            projectPath ??
+            (configPath === undefined && directoryStructurePath === undefined
+                ? 'tsconfig.json'
+                : undefined),
         ...(configPath === undefined ? {} : { configPath }),
+        ...(directoryStructurePath === undefined ? {} : { directoryStructurePath }),
     };
 
     return {
@@ -56,6 +67,7 @@ export async function runTstsCli(args: readonly string[]): Promise<number> {
         case 'run': {
             const result: TstsCheckResult = await checkProject({
                 configPath: parseResult.options.configPath,
+                directoryStructurePath: parseResult.options.directoryStructurePath,
                 projectPath: parseResult.options.projectPath,
             });
             process.stdout.write(`${formatTextReport(result)}\n`);
@@ -68,7 +80,7 @@ export async function runTstsCli(args: readonly string[]): Promise<number> {
 
 export function usage(): string {
     return [
-        'Usage: tsts [--project <tsconfig.json>] [--config <tsts.json>]',
+        'Usage: tsts [--project <tsconfig.json>] [--config <tsts.json>] [--directory-structure <manifest.json>]',
         '',
         'TSTS strengthens TypeScript static type-safety checks.',
     ].join('\n');

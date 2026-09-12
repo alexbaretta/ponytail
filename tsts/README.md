@@ -22,6 +22,8 @@ ponytail register
 tsts --project tsconfig.json
 # For explicitly configured rules:
 tsts --config tsts.json
+# For repository placement rules:
+tsts --directory-structure .agents/config/project/directory-structure.json
 ```
 
 The launcher runs `ponytail validate` first, preserving exit 2 for no worktree
@@ -29,8 +31,10 @@ and 3 for unregistered repositories. The analyzer returns 1 for error-level
 violations and 0 when none occur. `ponytail qa` currently selects reference QA;
 TSTS is an explicitly invoked analyzer, never a whole integration-suite runner.
 
-See [architecture](docs/architecture.md) and
-[configuration V2](docs/configuration-v2-upgrade.md). A minimal configuration:
+See [architecture](docs/architecture.md),
+[configuration V2](docs/configuration-v2-upgrade.md), and the
+[directory-structure manifest](docs/directory-structure.md). A minimal analysis
+configuration:
 
 ```json
 {
@@ -55,6 +59,12 @@ The exported `checkProject` entry point owns reading the physical analysis
 configuration and versioned-contract manifest listed in the root contract
 inventory. V1 analysis configuration remains retired; V2 is the supported
 physical configuration. This import does not change analyzer semantics.
+
+Directory-structure analysis is independent of TypeScript analysis and may run
+alone or in the same invocation as `--project` or `--config`. Client projects
+keep its versioned manifest at
+`.agents/config/project/directory-structure.json` and invoke it from their
+canonical TSTS quality command.
 
 ## Provenance and license
 

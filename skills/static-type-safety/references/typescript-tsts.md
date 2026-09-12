@@ -124,3 +124,15 @@ Expected checks:
 
 Treat a compiler-based contract violation as a design defect, not a lint
 style issue.
+
+## Repository Directory Structure
+
+TSTS also accepts
+`--directory-structure .agents/config/project/directory-structure.json` for a
+whole-repository placement check independent of TypeScript compilation. The
+client-owned schemaVersion 1 manifest declares content-kind globs, directory
+owners, tracked or ignored Git policy, and opaque directories whose contents
+must not be inspected. See `tsts/docs/directory-structure.md` in Ponytail for
+the exact schema and matching rules. Keep this manifest synchronized whenever
+project structure changes and invoke it from the client's canonical TSTS
+quality command.

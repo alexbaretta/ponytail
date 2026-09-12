@@ -65,6 +65,12 @@ should identify, directly or by reference:
 - ancillary cloud services and their ownership; and
 - canonical contract, generated-artifact, credential, and secret owners when
   those conventions affect file placement.
+- the tracked directory-structure manifest at
+  `.agents/config/project/directory-structure.json`, classifying permitted
+  source, compiled, data, environment, configuration, temporary, and other
+  project-owned content; and
+- the canonical TSTS command that passes that manifest with
+  `--directory-structure`.
 
 Keep the agent instructions compact. Put detailed directory trees,
 documentation taxonomies, cloud topology, environment inventories, and
@@ -203,7 +209,10 @@ Before completing or committing the change:
 4. Preserve dependency direction and canonical-source boundaries declared by
    the host.
 5. Update links and inventories when files or owners move.
-6. Apply the configuration synchronization invariant before validation and
+6. Update the client-owned directory-structure manifest when a content kind,
+   directory owner, Git policy, or opaque boundary changes, then
+   run the configured TSTS command.
+7. Apply the configuration synchronization invariant before validation and
    commit.
 
 If the intended owner does not exist, update the documented target structure

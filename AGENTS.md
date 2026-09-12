@@ -71,7 +71,9 @@ services. `PROJECT_STRUCTURE.md` is authoritative for that boundary.
 - Codex skill update: `ponytail update-skills`; Codex discovers
   project-local skills from `.agents/skills/` automatically.
 - Codex installer tests: `./scripts/test-install-to-codex.sh`.
-- TSTS CLI: `tsts --project tsconfig.json` or `tsts --config tsts.json`; requires a registered project.
+- TSTS CLI: `tsts --project tsconfig.json`, `tsts --config tsts.json`, or
+  `tsts --directory-structure .agents/config/project/directory-structure.json`;
+  requires a registered project.
 - CLI installation: `./scripts/install-cli.sh`.
 - Project-journal setup: `./scripts/setup-project-journal.sh`.
 - CLI focused tests: `node --test tests/cli-tools.test.js`.
