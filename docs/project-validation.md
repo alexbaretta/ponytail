@@ -39,21 +39,24 @@ runs first; a QA finding stops the commit, while successful QA continues into
 the client project's hooks. Repeating the command updates only Ponytail's
 marked block. Hooks using another interpreter are left unchanged.
 
-## Project configuration V1
+## Project configuration
 
 `.agents/config/ponytail.json` is tracked in Git and may differ between
-worktrees. All fields are required. Names and components are literal, case-insensitive
-identifiers matched with Unicode letter/number/underscore boundaries.
-Canonical names must be unique across registered projects. Put synonymous
-project names in `names`; put component and subsystem names in `components`.
-Skills read both collections as descriptive data.
+worktrees. V2 is the current writer format; V1 remains readable and normalizes
+to an empty explicit-project dependency list. All physical-version fields are
+required. Names and components are literal, case-insensitive identifiers
+matched with Unicode letter/number/underscore boundaries. Canonical names must
+be unique across registered projects. Put synonymous project names in `names`;
+put component and subsystem names in `components`. Skills read both collections
+as descriptive data.
 
 ```json
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "name": "Example Service",
   "names": ["ExampleService", "EXS"],
   "components": ["@example/api", "example-worker"],
+  "dependencies": [],
   "repositoryUrls": ["https://example.test/team/service.git"],
   "packages": [{"manager": "npm", "name": "@example/service"}],
   "manifests": [{"manager": "npm", "path": "package.json"}],
@@ -67,12 +70,16 @@ Manage component names from any registered checkout:
 ponytail register-component example-worker
 ponytail unregister-component example-worker
 ponytail detect-components --language auto
+ponytail register-dependency "Example Platform"
+ponytail unregister-dependency "Example Platform"
 ```
 
 Registration is idempotent. Unregistration fails when the exact component is
-absent. Component mutations use a repository-specific lock and atomic file
-replacement. Project synonyms remain explicit metadata because package
-manifests do not identify them reliably.
+or dependency is absent. Dependency commands accept the exact canonical name
+of another registered project and resolve it from that project's blessed
+worktree. Component and dependency mutations use a repository-specific lock
+and atomic file replacement. Project synonyms remain explicit metadata because
+package manifests do not identify them reliably.
 
 The `typescript`, `javascript`, and `auto` detection modes currently share one
 JavaScript-package detector. It reads every tracked regular `package.json` in
@@ -115,10 +122,13 @@ Supported declarations:
 
 Unsupported declaration syntax fails explicitly. No network, installation,
 package-manager execution, lockfile traversal, or global environment lookup
-occurs. A registered project is permitted when it has at least one matching
-direct package coordinate or repository URL for an actual indexed Git
-submodule. Permissions are directional. A .gitmodules entry alone grants
-nothing. Relative submodule URLs resolve against the superproject origin.
+occurs. A registered project is permitted when its canonical name is listed in
+the invoking project's explicit `dependencies`, it has at least one matching
+direct package coordinate, or its repository URL identifies an actual indexed
+Git submodule. Permissions are directional. An explicit project dependency
+permits references to that project's canonical name, synonyms, components,
+package names, repository URLs, and registered path. A .gitmodules entry alone
+grants nothing. Relative submodule URLs resolve against the superproject origin.
 
 ## Search and exceptions
 

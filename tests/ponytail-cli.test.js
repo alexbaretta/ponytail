@@ -82,13 +82,14 @@ test('register initializes and registers the enclosing Git root idempotently', (
     JSON.parse(fs.readFileSync(path.join(projectRoot, '.agents/config/ponytail.json'), 'utf8')),
     {
       components: [],
+      dependencies: [],
       exceptions: [],
       manifests: [],
       name: path.basename(projectRoot),
       names: [],
       packages: [],
       repositoryUrls: [],
-      schemaVersion: 1,
+      schemaVersion: 2,
     },
   );
   assert.equal(fs.statSync(proposalPath).mode & 0o777, 0o644);

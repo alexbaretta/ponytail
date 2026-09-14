@@ -179,7 +179,7 @@ function checkReferences(root, project, projects) {
   for (let index = 0; index < metadataSource.length; index++) if (metadataSource[index] === '\n') lineOffsets.push(index + 1);
   const exceptionRanges = project.exceptions.flatMap((exception, index) => ['project', 'name'].map(key => metadataDocument.getIn(['exceptions', index, key], true).range));
   for (const [foreignRoot, foreign] of Object.entries(projects)) {
-    if (foreign.repositoryUrls.some(url => submodules.has(repositoryUrl(url))) || foreign.packages.some(item => dependencies.has(coordinate(item.manager, item.name)))) continue;
+    if (project.dependencies.includes(foreign.name) || foreign.repositoryUrls.some(url => submodules.has(repositoryUrl(url))) || foreign.packages.some(item => dependencies.has(coordinate(item.manager, item.name)))) continue;
     const names = [...new Set([foreign.name, ...foreign.names, ...foreign.components, ...foreign.repositoryUrls, ...foreign.packages.map(item => item.name), foreignRoot])]
       .filter(name => !components.has(name.toLocaleLowerCase()));
     for (const name of names) {

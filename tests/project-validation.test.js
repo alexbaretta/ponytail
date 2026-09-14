@@ -52,13 +52,13 @@ function repository(f, name) {
 
 test('every command distinguishes missing Git from absent registration', t => {
   const f = fixture(t);
-  for (const args of [[], ['--help'], ['register'], ['bless'], ['blessed'], ['validate'], ['qa'], ['update']]) {
+  for (const args of [[], ['--help'], ['register'], ['register-dependency', 'OtherProduct'], ['unregister-dependency', 'OtherProduct'], ['bless'], ['blessed'], ['validate'], ['qa'], ['update']]) {
     const result = run(f.home, f.home, ...args);
     assert.equal(result.status, 2, result.stderr);
     assert.match(result.stderr, /no Git worktree/);
   }
   git(f.home, 'init', '-q');
-  for (const command of ['bless', 'blessed', 'pre-commit', 'validate', 'qa', '--help', 'update-skills', 'setup']) {
+  for (const command of ['bless', 'blessed', 'register-dependency', 'unregister-dependency', 'pre-commit', 'validate', 'qa', '--help', 'update-skills', 'setup']) {
     const result = run(f.home, f.home, command);
     assert.equal(result.status, 3, result.stderr);
     assert.match(result.stderr, /not registered/);
@@ -106,7 +106,24 @@ test('register resolves linked worktrees to the main checkout and validate check
   assert.match(result.stderr, /metadata/);
 });
 
-test('project metadata V1 requires an explicit component list', t => {
+test('project metadata retains exact V1 reads and upgrades through V2 writers', t => {
+  const f = fixture(t);
+  const root = repository(f, 'current');
+  const metadata = JSON.parse(fs.readFileSync(path.join(root, '.agents/config/ponytail.json')));
+  assert.equal(metadata.schemaVersion, 2);
+  assert.deepEqual(metadata.dependencies, []);
+  delete metadata.dependencies;
+  metadata.schemaVersion = 1;
+  write(root, '.agents/config/ponytail.json', JSON.stringify(metadata));
+  assert.equal(run(f.home, root, 'validate').status, 0);
+  assert.equal(run(f.home, root, 'register-component', 'worker-api').status, 0);
+  const upgraded = JSON.parse(fs.readFileSync(path.join(root, '.agents/config/ponytail.json')));
+  assert.equal(upgraded.schemaVersion, 2);
+  assert.deepEqual(upgraded.dependencies, []);
+  assert.deepEqual(upgraded.components, ['worker-api']);
+});
+
+test('project metadata versions retain their exact required fields', t => {
   const f = fixture(t);
   const root = repository(f, 'current');
   const metadata = JSON.parse(fs.readFileSync(path.join(root, '.agents/config/ponytail.json')));
@@ -114,6 +131,20 @@ test('project metadata V1 requires an explicit component list', t => {
   delete metadata.components;
   write(root, '.agents/config/ponytail.json', JSON.stringify(metadata));
   const result = run(f.home, root, 'validate');
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /invalid V2 project metadata fields/);
+});
+
+test('project metadata V2 requires unique explicit dependencies', t => {
+  const f = fixture(t);
+  const root = repository(f, 'current');
+  const metadata = configure(root, { dependencies: ['OtherProduct', 'OtherProduct'] });
+  let result = run(f.home, root, 'validate');
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /dependencies must contain unique nonempty strings/);
+  metadata.schemaVersion = 1;
+  write(root, '.agents/config/ponytail.json', JSON.stringify(metadata));
+  result = run(f.home, root, 'validate');
   assert.equal(result.status, 1);
   assert.match(result.stderr, /invalid V1 project metadata fields/);
 });
@@ -303,6 +334,40 @@ test('direct npm dependencies grant directional permission by package identity',
   assert.equal(run(f.home, current, 'qa').status, 4);
   write(current, 'package.json', '{');
   assert.equal(run(f.home, current, 'qa').status, 1);
+});
+
+test('registered project dependencies grant and revoke reference permission', t => {
+  const f = fixture(t);
+  const current = repository(f, 'current');
+  const foreign = repository(f, 'OtherProduct');
+  configure(foreign, { components: ['foreign-worker'] });
+  commitConfiguration(foreign);
+  write(current, 'reference.txt', 'OtherProduct uses foreign-worker.');
+  git(current, 'add', 'reference.txt');
+  assert.equal(run(f.home, current, 'qa').status, 4);
+
+  let result = run(f.home, current, 'register-dependency', 'OtherProduct');
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.stdout, 'registered dependency: OtherProduct\n');
+  result = run(f.home, current, 'register-dependency', 'OtherProduct');
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.stdout, 'already registered dependency: OtherProduct\n');
+  const metadata = JSON.parse(fs.readFileSync(path.join(current, '.agents/config/ponytail.json')));
+  assert.equal(metadata.schemaVersion, 2);
+  assert.deepEqual(metadata.dependencies, ['OtherProduct']);
+  assert.equal(run(f.home, current, 'qa').status, 0);
+
+  result = run(f.home, current, 'unregister-dependency', 'OtherProduct');
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.stdout, 'unregistered dependency: OtherProduct\n');
+  assert.deepEqual(JSON.parse(fs.readFileSync(path.join(current, '.agents/config/ponytail.json'))).dependencies, []);
+  assert.equal(run(f.home, current, 'qa').status, 4);
+  result = run(f.home, current, 'unregister-dependency', 'OtherProduct');
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /dependency is not registered/);
+  result = run(f.home, current, 'register-dependency', 'MissingProduct');
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /project is not registered/);
 });
 
 test('reference QA treats foreign components as project identities', t => {

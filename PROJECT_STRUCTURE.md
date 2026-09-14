@@ -59,9 +59,11 @@ while project-wide management records remain under `pm/`.
   `project/directory-structure.json` owns the machine-readable content-kind,
   directory, Git-state, and opaque-boundary rules enforced by
   `npm run check:tsts`. `ponytail.json` owns project names,
-  components and aliases, package/repository identities, dependency manifests,
-  and reference exceptions. `ponytail register-component`,
-  `unregister-component`, and `detect-components` maintain its component data.
+  components and aliases, explicit project dependencies, package/repository
+  identities, dependency manifests, and reference exceptions. `ponytail
+  register-component`, `unregister-component`, and `detect-components`
+  maintain its component data; `register-dependency` and
+  `unregister-dependency` maintain explicit project dependencies.
   Other projects read this file only from the repository's explicitly blessed
   worktree. `codex-execpolicy.json` owns its Codex command policy proposal. See
   `docs/project-validation.md`.

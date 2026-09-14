@@ -136,13 +136,12 @@ def relative_path(value):
     return isinstance(value, str) and value and not Path(value).is_absolute() and ".." not in value.split("/") and "." not in value.split("/") and "" not in value.split("/") and "\\" not in value
 
 
-def read_project_v1(value):
-    keys = {"schemaVersion", "name", "names", "components", "repositoryUrls", "packages", "manifests", "exceptions"}
-    if not isinstance(value, dict) or set(value) != keys or type(value["schemaVersion"]) is not int or value["schemaVersion"] != 1:
-        fail("invalid V1 project metadata fields")
+def read_project_version(value, version, keys):
+    if not isinstance(value, dict) or set(value) != keys or type(value["schemaVersion"]) is not int or value["schemaVersion"] != version:
+        fail(f"invalid V{version} project metadata fields")
     if not isinstance(value["name"], str) or not value["name"].strip():
         fail("project name must be a nonempty string")
-    for key in ("names", "components", "repositoryUrls"):
+    for key in ("names", "components", "repositoryUrls") + (("dependencies",) if version >= 2 else ()):
         items = value[key]
         if not isinstance(items, list) or any(not isinstance(item, str) or not item.strip() or "\n" in item or "\r" in item for item in items) or len(set(items)) != len(items):
             fail(f"{key} must contain unique nonempty strings")
@@ -159,7 +158,17 @@ def read_project_v1(value):
     return value
 
 
-PonytailProjectReaders = {1: read_project_v1}
+def read_project_v1(value):
+    keys = {"schemaVersion", "name", "names", "components", "repositoryUrls", "packages", "manifests", "exceptions"}
+    return {**read_project_version(value, 1, keys), "schemaVersion": 2, "dependencies": []}
+
+
+def read_project_v2(value):
+    keys = {"schemaVersion", "name", "names", "components", "dependencies", "repositoryUrls", "packages", "manifests", "exceptions"}
+    return read_project_version(value, 2, keys)
+
+
+PonytailProjectReaders = {1: read_project_v1, 2: read_project_v2}
 
 
 def read_project(root):
@@ -176,7 +185,9 @@ def read_project(root):
 
 
 def write_project(root, metadata):
-    atomic_write(root / ".agents/config/ponytail.json", {**metadata, "schemaVersion": 1}, 0o644)
+    project_metadata = {**metadata, "schemaVersion": 2}
+    read_project_v2(project_metadata)
+    atomic_write(root / ".agents/config/ponytail.json", project_metadata, 0o644)
 
 
 def component_identifiers(components):
@@ -249,7 +260,7 @@ def register(config_path, source_root, root, main_root):
         print(f"initialized: {proposal_path}")
     metadata_path = root / ".agents/config/ponytail.json"
     if not metadata_path.exists() and not metadata_path.is_symlink():
-        write_project(root, {"name": main_root.name, "names": [], "components": [], "repositoryUrls": [], "packages": [], "manifests": [], "exceptions": []})
+        write_project(root, {"name": main_root.name, "names": [], "components": [], "dependencies": [], "repositoryUrls": [], "packages": [], "manifests": [], "exceptions": []})
         print(f"initialized: {metadata_path}")
     read_project(root)
     config = read_config(config_path)
@@ -271,25 +282,49 @@ def checked_component_name(value):
     return value
 
 
-def update_component(root, name, remove):
-    name = checked_component_name(name)
+def update_project_names(root, field, kind, name, additions, remove):
     lock_name = hashlib.sha256(str(root).encode()).hexdigest()
     with open(Path(tempfile.gettempdir()) / f"ponytail-project-{lock_name}.lock", "a+", encoding="utf-8") as lock:
         fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
         metadata = read_project(root)
-        components = set(metadata["components"])
+        values = set(metadata[field])
         if remove:
-            if name not in components:
-                fail(f"component is not registered: {name}")
-            components.remove(name)
+            if name not in values:
+                fail(f"{kind} is not registered: {name}")
+            values.remove(name)
         else:
-            already_registered = name in components
-            components.update(component_identifiers([name]))
-        write_project(root, {**metadata, "components": sorted(components)})
+            already_registered = name in values
+            values.update(additions)
+        write_project(root, {**metadata, field: sorted(values)})
     if remove:
-        print(f"unregistered component: {name}")
+        print(f"unregistered {kind}: {name}")
     else:
-        print(f"{'already registered' if already_registered else 'registered'} component: {name}")
+        print(f"{'already registered' if already_registered else 'registered'} {kind}: {name}")
+
+
+def update_component(root, name, remove):
+    name = checked_component_name(name)
+    update_project_names(root, "components", "component", name, component_identifiers([name]), remove)
+
+
+def registered_dependency_names(config, main_root):
+    names = set()
+    for project in config["projects"]:
+        if project["root"] == str(main_root):
+            continue
+        _, metadata = blessed_project(project)
+        if metadata["name"] in names:
+            fail("registered projects must have unique canonical names")
+        names.add(metadata["name"])
+    return names
+
+
+def update_dependency(root, main_root, config, name, remove):
+    if not name or name != name.strip() or "\n" in name or "\r" in name:
+        fail("dependency name must be a canonical nonempty project name without surrounding whitespace")
+    if name not in registered_dependency_names(config, main_root):
+        fail(f"project is not registered: {name}")
+    update_project_names(root, "dependencies", "dependency", name, [name], remove)
 
 
 def detected_package_names(root):
@@ -437,6 +472,8 @@ def print_usage():
   ponytail blessed[-worktree]
   ponytail register-component <name>
   ponytail unregister-component <name>
+  ponytail register-dependency <project>
+  ponytail unregister-dependency <project>
   ponytail detect-components [--language typescript|javascript|auto]
   ponytail pre-commit
   ponytail validate
@@ -485,7 +522,7 @@ def run():
             fail(f"{operation} accepts no arguments")
         blessed(config, main_root)
         return 0
-    if operation in {"register-component", "unregister-component", "detect-components"}:
+    if operation in {"register-component", "unregister-component", "register-dependency", "unregister-dependency", "detect-components"}:
         if registered_project(config, main_root) is None:
             raise ProjectError(f"Git repository is not registered with Ponytail: {main_root}; run ponytail register", 3)
         read_project(root)
@@ -497,6 +534,10 @@ def run():
             if len(arguments) != 1:
                 fail("usage: ponytail unregister-component <name>")
             update_component(root, arguments[0], True)
+        elif operation in {"register-dependency", "unregister-dependency"}:
+            if len(arguments) != 1:
+                fail(f"usage: ponytail {operation} <project>")
+            update_dependency(root, main_root, config, arguments[0], operation == "unregister-dependency")
         else:
             detect_components(root, arguments)
         return 0

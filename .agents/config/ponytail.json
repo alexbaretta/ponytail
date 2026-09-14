@@ -8,6 +8,7 @@
     "ponytail-mcp",
     "ponytail-pi-extension-dev"
   ],
+  "dependencies": [],
   "exceptions": [],
   "manifests": [
     {
@@ -28,5 +29,5 @@
   "repositoryUrls": [
     "https://github.com/alexbaretta/ponytail"
   ],
-  "schemaVersion": 1
+  "schemaVersion": 2
 }
