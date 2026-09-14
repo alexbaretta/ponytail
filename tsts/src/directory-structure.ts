@@ -19,12 +19,54 @@ export interface DirectoryStructureRule {
     readonly recursive: boolean;
 }
 
-export interface DirectoryStructureManifest {
+export interface DirectoryStructureFileRule {
+    readonly allowedContentKinds: readonly string[];
+    readonly git: DirectoryStructureGitPolicy;
+    readonly path: string;
+}
+
+export interface DirectoryStructureManifestV1 {
     readonly contentKinds: Readonly<Record<string, readonly string[]>>;
     readonly directories: readonly DirectoryStructureRule[];
     readonly opaqueDirectories: readonly string[];
     readonly schemaVersion: 1;
 }
+
+export interface DirectoryStructureManifestV2 {
+    readonly contentKinds: Readonly<Record<string, readonly string[]>>;
+    readonly directories: readonly DirectoryStructureRule[];
+    readonly files: readonly DirectoryStructureFileRule[];
+    readonly opaqueDirectories: readonly string[];
+    readonly schemaVersion: 2;
+}
+
+export type DirectoryStructureManifest = DirectoryStructureManifestV2;
+
+function normalizeDirectoryStructureManifestV1(
+    manifest: DirectoryStructureManifestV1
+): DirectoryStructureManifest {
+    return {
+        contentKinds: manifest.contentKinds,
+        directories: manifest.directories,
+        files: [],
+        opaqueDirectories: manifest.opaqueDirectories,
+        schemaVersion: 2,
+    };
+}
+
+function normalizeDirectoryStructureManifestV2(
+    manifest: DirectoryStructureManifestV2
+): DirectoryStructureManifest {
+    return manifest;
+}
+
+export const DirectoryStructureManifestReaders = {
+    variants: {
+        V1: { normalize: normalizeDirectoryStructureManifestV1 },
+        V2: { normalize: normalizeDirectoryStructureManifestV2 },
+    },
+    writerVariant: 'V2' as const,
+};
 
 interface ClassifiedDirectoryStructurePath {
     readonly contentKind: string;
@@ -45,9 +87,16 @@ interface GitInventory {
     readonly trackedPaths: ReadonlySet<string>;
 }
 
-const manifestKeys: readonly string[] = [
+const manifestV1Keys: readonly string[] = [
     'contentKinds',
     'directories',
+    'opaqueDirectories',
+    'schemaVersion',
+];
+const manifestV2Keys: readonly string[] = [
+    'contentKinds',
+    'directories',
+    'files',
     'opaqueDirectories',
     'schemaVersion',
 ];
@@ -57,6 +106,7 @@ const directoryRuleKeys: readonly string[] = [
     'path',
     'recursive',
 ];
+const fileRuleKeys: readonly string[] = ['allowedContentKinds', 'git', 'path'];
 
 export async function checkDirectoryStructure(
     manifestPath: string
@@ -100,11 +150,16 @@ export async function checkDirectoryStructure(
                 continue;
             }
 
+            const fileRule: DirectoryStructureFileRule | undefined = manifest.files.find(
+                (candidate: DirectoryStructureFileRule): boolean => candidate.path === filePath
+            );
             const directoryRule: DirectoryStructureRule | undefined = findOwningRule({
                 filePath,
                 rules: manifest.directories,
             });
-            if (directoryRule === undefined) {
+            const ownershipRule: DirectoryStructureFileRule | DirectoryStructureRule | undefined =
+                fileRule ?? directoryRule;
+            if (ownershipRule === undefined) {
                 diagnostics.push({
                     filePath,
                     message: 'No directory rule owns this path.',
@@ -115,12 +170,13 @@ export async function checkDirectoryStructure(
             }
 
             const contentKind: string = classifiedPath.contentKind;
-            if (!directoryRule.allowedContentKinds.includes(contentKind)) {
+            if (!ownershipRule.allowedContentKinds.includes(contentKind)) {
                 diagnostics.push({
                     filePath,
                     message:
                         `Content kind "${contentKind}" is not allowed under ` +
-                        `directory rule "${directoryRule.path}".`,
+                        `${fileRule === undefined ? 'directory' : 'file'} rule ` +
+                        `"${ownershipRule.path}".`,
                     ruleId: 'directory-structure-content-kind',
                     severity: 'error',
                 });
@@ -132,12 +188,13 @@ export async function checkDirectoryStructure(
                     : gitInventory.ignoredPaths.has(filePath)
                       ? 'ignored'
                       : 'untracked';
-            if (directoryRule.git !== 'either' && directoryRule.git !== gitState) {
+            if (ownershipRule.git !== 'either' && ownershipRule.git !== gitState) {
                 diagnostics.push({
                     filePath,
                     message:
-                        `Git state "${gitState}" violates the "${directoryRule.git}" policy ` +
-                        `for directory rule "${directoryRule.path}".`,
+                        `Git state "${gitState}" violates the "${ownershipRule.git}" policy ` +
+                        `for ${fileRule === undefined ? 'directory' : 'file'} rule ` +
+                        `"${ownershipRule.path}".`,
                     ruleId: 'directory-structure-git-state',
                     severity: 'error',
                 });
@@ -171,14 +228,19 @@ async function loadDirectoryStructureManifest(
 ): Promise<DirectoryStructureManifest> {
     const value: unknown = parseJsonLosslessly(await readFile(manifestPath, 'utf8'));
 
-    if (!isObjectRecord(value) || !isSchemaVersion1(value.schemaVersion)) {
+    if (!isObjectRecord(value) ||
+        (!isSchemaVersion1(value.schemaVersion) && !isSchemaVersion2(value.schemaVersion))) {
         throw new Error(
             `Invalid directory-structure manifest at ${manifestPath}. ` +
-                'Set "schemaVersion" to 1.'
+                'Set "schemaVersion" to 1 or 2.'
         );
     }
 
-    const rootUnknownKey: string | undefined = firstUnknownKey(value, manifestKeys);
+    const schemaVersion: 1 | 2 = isSchemaVersion1(value.schemaVersion) ? 1 : 2;
+    const rootUnknownKey: string | undefined = firstUnknownKey(
+        value,
+        schemaVersion === 1 ? manifestV1Keys : manifestV2Keys
+    );
     if (rootUnknownKey !== undefined) {
         throw new Error(
             `Invalid directory-structure manifest at ${manifestPath}. ` +
@@ -251,6 +313,49 @@ async function loadDirectoryStructureManifest(
         throw invalidManifestShape(manifestPath);
     }
 
+    const files: DirectoryStructureFileRule[] = [];
+    const ownedFilePaths: Set<string> = new Set();
+    if (schemaVersion === 2) {
+        if (!Array.isArray(value.files)) {
+            throw invalidManifestShape(manifestPath);
+        }
+        for (const [index, candidate] of value.files.entries()) {
+            if (!isObjectRecord(candidate)) {
+                throw invalidManifestShape(manifestPath);
+            }
+            const unknownKey: string | undefined = firstUnknownKey(candidate, fileRuleKeys);
+            if (unknownKey !== undefined) {
+                throw new Error(
+                    `Invalid directory-structure manifest at ${manifestPath}. ` +
+                        `Unknown property "$.files[${index}].${unknownKey}".`
+                );
+            }
+            if (
+                typeof candidate.path !== 'string' ||
+                !isRepositoryFilePath(candidate.path) ||
+                !isGitPolicy(candidate.git) ||
+                !isNonemptyUniqueStringArray(candidate.allowedContentKinds) ||
+                !candidate.allowedContentKinds.every(
+                    (contentKind: string): boolean => contentKinds[contentKind] !== undefined
+                )
+            ) {
+                throw invalidManifestShape(manifestPath);
+            }
+            if (ownedFilePaths.has(candidate.path)) {
+                throw new Error(
+                    `Invalid directory-structure manifest at ${manifestPath}. ` +
+                        `File "${candidate.path}" has more than one owner.`
+                );
+            }
+            ownedFilePaths.add(candidate.path);
+            files.push({
+                allowedContentKinds: candidate.allowedContentKinds,
+                git: candidate.git,
+                path: candidate.path,
+            });
+        }
+    }
+
     if (
         !isUniqueStringArray(value.opaqueDirectories) ||
         !value.opaqueDirectories.every(
@@ -260,12 +365,21 @@ async function loadDirectoryStructureManifest(
         throw invalidManifestShape(manifestPath);
     }
 
-    return {
+    const sharedManifest = {
         contentKinds,
         directories,
         opaqueDirectories: value.opaqueDirectories,
-        schemaVersion: 1,
     };
+    return schemaVersion === 1
+        ? DirectoryStructureManifestReaders.variants.V1.normalize({
+              ...sharedManifest,
+              schemaVersion: 1,
+          })
+        : DirectoryStructureManifestReaders.variants.V2.normalize({
+              ...sharedManifest,
+              files,
+              schemaVersion: 2,
+          });
 }
 
 async function readGitInventory(input: {
@@ -413,7 +527,7 @@ function compareDiagnostics(left: TstsDiagnostic, right: TstsDiagnostic): number
 function invalidManifestShape(manifestPath: string): Error {
     return new Error(
         `Invalid directory-structure manifest at ${manifestPath}. ` +
-            'Use only documented schemaVersion 1 keys and value shapes.'
+            'Use only documented schemaVersion 1 or 2 keys and value shapes.'
     );
 }
 
@@ -434,6 +548,10 @@ function firstUnknownKey(
 
 function isSchemaVersion1(value: unknown): boolean {
     return value === 1 || (isLosslessNumber(value) && value.value === '1');
+}
+
+function isSchemaVersion2(value: unknown): boolean {
+    return value === 2 || (isLosslessNumber(value) && value.value === '2');
 }
 
 function isGitPolicy(value: unknown): value is DirectoryStructureGitPolicy {
@@ -472,6 +590,10 @@ function isRepositoryRelativePath(value: string, allowRoot: boolean): boolean {
             ) &&
         path.posix.normalize(value) === value
     );
+}
+
+function isRepositoryFilePath(value: string): boolean {
+    return isRepositoryRelativePath(value, false) && !/[!*?[\]{}()]/u.test(value);
 }
 
 function isRepositoryGlob(value: string): boolean {

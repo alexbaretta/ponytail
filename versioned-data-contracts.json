@@ -147,6 +147,18 @@
       "supportedDowngradeVersions": []
     },
     {
+      "id": "tsts-directory-structure-manifest",
+      "implementation": {
+        "workspace": "tsts",
+        "module": "tsts/src/directory-structure.ts",
+        "readerRegistryExport": "DirectoryStructureManifestReaders"
+      },
+      "currentVersion": "V2",
+      "versions": ["V1", "V2"],
+      "supportedReadVersions": ["V1", "V2"],
+      "supportedDowngradeVersions": []
+    },
+    {
       "id": "tsts-analysis-config",
       "implementation": {
         "workspace": "ponytail",

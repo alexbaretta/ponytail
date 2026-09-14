@@ -13,7 +13,7 @@ configuration because it describes the whole Git repository.
 
 ```json
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "contentKinds": {
     "source": ["src/**", "test/**"],
     "compiled": ["dist/**"],
@@ -34,14 +34,22 @@ configuration because it describes the whole Git repository.
       "git": "ignored"
     }
   ],
+  "files": [
+    {
+      "path": ".worktree",
+      "allowedContentKinds": ["source"],
+      "git": "ignored"
+    }
+  ],
   "opaqueDirectories": ["**/node_modules", "dist"]
 }
 ```
 
-Version 1 accepts only the displayed root and directory-rule keys. Unknown
-keys, duplicate JSON keys, duplicate directory owners, missing content kinds,
-invalid Git policies, absolute paths, backslashes, empty path segments, and
-paths containing `.` or `..` segments are errors.
+Version 2 adds exact `files` rules. Version 1 remains accepted and normalizes
+to Version 2 with no exact file rules. Each version accepts only its documented
+keys. Unknown keys, duplicate JSON keys, duplicate directory or file owners,
+missing content kinds, invalid Git policies, absolute paths, backslashes, empty
+path segments, and paths containing `.` or `..` segments are errors.
 
 `contentKinds` maps a project-defined semantic kind to one or more
 repository-relative Node glob patterns. A file receives the matching kind with
@@ -53,8 +61,10 @@ precedence explicit and actionable.
 `directories` assigns each directory one owner. The most deeply nested
 matching rule owns a file. A recursive rule also owns descendants; a
 non-recursive rule owns only direct children. `allowedContentKinds` refers to
-declared kinds. `git` is `tracked`, `ignored`, or `either`; an untracked,
-non-ignored file satisfies only `either`.
+declared kinds. An exact `files` rule overrides the containing directory rule
+for only its named repository-relative file. File paths do not accept glob
+syntax. `git` is `tracked`, `ignored`, or `either`; an untracked, non-ignored
+file satisfies only `either`.
 
 TSTS asks Git for tracked, untracked, and ignored paths. Every non-opaque path
 must have one content kind, one directory owner, an allowed kind, and the

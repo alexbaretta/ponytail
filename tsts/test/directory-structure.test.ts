@@ -10,7 +10,9 @@ import { describe, it } from 'node:test';
 
 import { checkDirectoryStructure } from '../src/directory-structure.js';
 import type {
+    DirectoryStructureFileRule,
     DirectoryStructureManifest,
+    DirectoryStructureManifestV1,
     DirectoryStructureRule,
 } from '../src/directory-structure.js';
 import type { TstsCheckResult } from '../src/index.js';
@@ -24,7 +26,7 @@ const rootDirectoryRule: DirectoryStructureRule = {
 };
 
 const cleanManifest: DirectoryStructureManifest = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     contentKinds: {
         configuration: ['.gitignore', 'structure.json'],
         environment: ['**/*.env'],
@@ -52,6 +54,7 @@ const cleanManifest: DirectoryStructureManifest = {
             git: 'ignored',
         },
     ],
+    files: [],
     opaqueDirectories: [],
 };
 
@@ -70,6 +73,54 @@ describe('directory-structure manifest', (): void => {
 
         assert.deepEqual(result.diagnostics, []);
         assert.equal(result.checkedFileCount, 6);
+    });
+
+    it('accepts V1 by normalizing it without exact file rules', async (): Promise<void> => {
+        const manifest: DirectoryStructureManifestV1 = {
+            contentKinds: cleanManifest.contentKinds,
+            directories: cleanManifest.directories,
+            opaqueDirectories: cleanManifest.opaqueDirectories,
+            schemaVersion: 1,
+        };
+        const fixture: DirectoryStructureFixture = await createFixture(manifest);
+
+        const result: TstsCheckResult = await checkDirectoryStructure(fixture.manifestPath);
+
+        assert.deepEqual(result.diagnostics, []);
+    });
+
+    it('lets one exact file override its containing directory policy', async ():
+        Promise<void> => {
+        const worktreeFileRule: DirectoryStructureFileRule = {
+            allowedContentKinds: ['source'],
+            git: 'ignored',
+            path: '.worktree',
+        };
+        const manifest: DirectoryStructureManifest = {
+            ...cleanManifest,
+            contentKinds: {
+                ...cleanManifest.contentKinds,
+                source: ['**/*.ts', '.worktree'],
+            },
+            files: [worktreeFileRule],
+        };
+        const fixture: DirectoryStructureFixture = await createFixture(manifest);
+        await writeFile(
+            path.join(fixture.root, '.gitignore'),
+            'env/private/\ntmp/\n.worktree\nother.ts\n'
+        );
+        await writeFile(path.join(fixture.root, '.worktree'), '{}\n');
+        await writeFile(path.join(fixture.root, 'other.ts'), 'export {};\n');
+        await runGit(fixture.root, ['add', '.gitignore']);
+
+        const result: TstsCheckResult = await checkDirectoryStructure(fixture.manifestPath);
+
+        assert.deepEqual(
+            result.diagnostics.map((diagnostic): string =>
+                `${diagnostic.filePath}:${diagnostic.ruleId}`
+            ),
+            ['other.ts:directory-structure-git-state']
+        );
     });
 
     it('reports misplaced and untracked content together', async (): Promise<void> => {
@@ -220,12 +271,24 @@ describe('directory-structure manifest', (): void => {
     it('rejects unknown keys and escaping paths', async (): Promise<void> => {
         for (const manifest of [
             { ...cleanManifest, unexpected: true },
+            { ...cleanManifest, schemaVersion: 1 },
+            { ...cleanManifest, schemaVersion: 3 },
             {
                 ...cleanManifest,
                 directories: [
                     {
                         ...cleanManifest.directories[0],
                         path: '../outside',
+                    },
+                ],
+            },
+            {
+                ...cleanManifest,
+                files: [
+                    {
+                        allowedContentKinds: ['source'],
+                        git: 'ignored',
+                        path: '*.worktree',
                     },
                 ],
             },
@@ -263,6 +326,23 @@ describe('directory-structure manifest', (): void => {
             duplicateOwnerFixture.manifestPath
         );
         assert.equal(duplicateOwnerResult.diagnostics[0]?.ruleId, 'directory-structure-config');
+
+        const fileRule: DirectoryStructureFileRule = {
+            allowedContentKinds: ['source'],
+            git: 'ignored',
+            path: '.worktree',
+        };
+        const duplicateFileOwnerFixture: DirectoryStructureFixture = await createFixture({
+            ...cleanManifest,
+            files: [fileRule, fileRule],
+        });
+        const duplicateFileOwnerResult: TstsCheckResult = await checkDirectoryStructure(
+            duplicateFileOwnerFixture.manifestPath
+        );
+        assert.equal(
+            duplicateFileOwnerResult.diagnostics[0]?.ruleId,
+            'directory-structure-config'
+        );
     });
 });
 
