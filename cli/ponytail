@@ -403,9 +403,10 @@ def validate_project(config, source_root, root, main_root):
 def qa(source_root, config, root, main_root, metadata, arguments):
     if arguments not in ([], ["references"]):
         fail("usage: ponytail qa [references]")
+    _, source_main_root = repository_roots(source_root)
     projects = {}
     for project in config["projects"]:
-        if project["root"] == str(main_root):
+        if project["root"] in {str(main_root), str(source_main_root)}:
             continue
         _, foreign = blessed_project(project)
         projects[project["root"]] = foreign

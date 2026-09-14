@@ -318,6 +318,17 @@ test('reference QA treats foreign components as project identities', t => {
   assert.match(result.stdout, /reference\.txt:1: forbidden reference to "OtherProduct": "foreign-worker"/);
 });
 
+test('reference QA always permits Ponytail and its components', t => {
+  const f = fixture(t);
+  const ponytail = fs.realpathSync(path.resolve(__dirname, '..'));
+  assert.equal(run(f.home, ponytail, 'register').status, 0);
+  const current = repository(f, 'current');
+  write(current, 'reference.txt', 'Ponytail runs TSTS.');
+  git(current, 'add', 'reference.txt');
+  const result = run(f.home, current, 'qa');
+  assert.equal(result.status, 0, result.stderr + result.stdout);
+});
+
 test('reference QA reads foreign identities only from the blessed worktree', t => {
   const f = fixture(t);
   const current = repository(f, 'current');

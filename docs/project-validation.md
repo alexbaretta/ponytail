@@ -89,9 +89,11 @@ name per line in sorted order, so unwanted results can be passed directly to
 `ponytail unregister-component`.
 
 The invoking worktree's configuration supplies its dependencies and exceptions.
-For every other registered repository, QA reads names and components only from
-its blessed worktree. A missing, dirty, invalid, removed, or unrelated blessed
-worktree is a configuration error rather than an incomplete successful scan.
+For every other registered repository except the configured Ponytail source,
+QA reads names and components only from its blessed worktree. Ponytail and its
+components are always permitted because they provide the QA tooling itself. A
+missing, dirty, invalid, removed, or unrelated blessed worktree is a
+configuration error rather than an incomplete successful scan.
 
 Package coordinates identify what another project's canonical package manager
 must declare to depend on this project. npm and pnpm share npm coordinates;
