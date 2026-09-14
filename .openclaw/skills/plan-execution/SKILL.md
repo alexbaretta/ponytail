@@ -100,6 +100,11 @@ does not silently choose missing structural or algorithmic behavior. If
 preparing this record would predictably cost more than direct implementation,
 the sprint records that reason and keeps the work with the executing agent.
 
+Update the owning plan artifacts whenever a planning gap is discovered. Keep
+the tasklet set atomic under this eligibility rule: add or split tasklets and
+adjust their dependencies and exact paths instead of hiding newly discovered
+work inside a non-atomic tasklet.
+
 ## Plan Placement And Shape
 
 Create a stable, branch-independent plan ID prefixed with its creation date as
