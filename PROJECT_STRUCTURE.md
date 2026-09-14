@@ -79,6 +79,10 @@ while project-wide management records remain under `pm/`.
   until an explicitly scoped migration.
 - `pm/requirements/index.md` is the entry point for the linked requirements
   web. Create it with the first requirements content, not as a placeholder.
+- `pm/architecture/index.md` is the entry point for the linked product
+  architecture web. Its introduction describes the product architecture at a
+  30,000-foot level and links to thematic architecture documents. Create it
+  with the first architecture content, not as a placeholder.
 - `skills/issue-tracking/SKILL.md` supplies this project's default issue types
   and shared issue/plan lifecycle. No local overrides are configured. The
   host configuration in `AGENTS.md` references this owner; do not duplicate

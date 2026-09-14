@@ -19,6 +19,7 @@ policy belongs in `skills/ponytail/SKILL.md`; do not duplicate it here.
 - Long-lived plans: `pm/plans/<status>/<plan-id>/` for new records.
 - Issues of all types: `pm/bugs/<status>/`.
 - Requirements: linked Markdown rooted at `pm/requirements/index.md`.
+- Architecture: linked Markdown rooted at `pm/architecture/index.md`.
 - Issue types and shared issue/plan lifecycle: use `issue-tracking` defaults.
 - Existing records retain their established paths; see `PROJECT_STRUCTURE.md`.
 - Technical debt: `tech_debt.md`.

@@ -102,9 +102,11 @@ Installed shell tools:
 The `issue-tracking` skill defines configurable issue types and shared
 issue/plan statuses. The `requirements` skill maintains a linked Markdown web
 under `pm/requirements` and requires reconciliation whenever an issue enters
-active work. `plan-execution` places new plans under `pm/plans/<status>/`.
-Configure these skills in the project's agent instructions or a referenced
-management document; see [issue tracking](skills/issue-tracking/SKILL.md).
+active work. The `architecture` skill maintains the product's linked
+architecture web under `pm/architecture`, beginning with a 30,000-foot landing
+page. `plan-execution` places new plans under `pm/plans/<status>/`. Configure
+these skills in the project's agent instructions or a referenced management
+document; see [issue tracking](skills/issue-tracking/SKILL.md).
 
 The PM CLI commands above implement the legacy flat plan layout and three bug
 states. They do not yet implement the configurable skill layout: do not use

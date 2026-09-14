@@ -16,6 +16,7 @@ provides_commands:
   - ponytail-review
 provides_skills:
   - api-service-boundaries
+  - architecture
   - bash-parse-safe-scripts
   - build-impact
   - cloud-cli-reauth

@@ -42,9 +42,9 @@ should identify, directly or by reference:
 
 - the repository structure and ownership document;
 - the management repository and project-management root;
-- issue, plan, and requirements roots and the shared lifecycle configuration
-  governed by `issue-tracking`, with requirements navigation owned by
-  `requirements`;
+- issue, plan, requirements, and architecture roots and the shared lifecycle
+  configuration governed by `issue-tracking`, with requirements navigation
+  owned by `requirements` and architecture navigation owned by `architecture`;
 - the component-repository inventory and ownership boundaries;
 - the documentation placement and source-ownership policy;
 - the ignored project-local temporary directory;

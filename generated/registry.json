@@ -21,6 +21,23 @@
     {
       "kind": "skill",
       "status": "enabled",
+      "name": "architecture",
+      "source": "skills/architecture",
+      "hosts": [
+        "claude",
+        "codex",
+        "copilot",
+        "devin",
+        "hermes",
+        "openclaw",
+        "pi",
+        "qoder"
+      ],
+      "reason": "Linked product architecture documentation"
+    },
+    {
+      "kind": "skill",
+      "status": "enabled",
       "name": "bash-parse-safe-scripts",
       "source": "skills/bash-parse-safe-scripts",
       "hosts": [
