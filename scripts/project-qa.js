@@ -169,6 +169,7 @@ function submoduleUrls(root) {
 function checkReferences(root, project, projects) {
   const dependencies = declaredDependencies(root, project);
   const submodules = submoduleUrls(root);
+  const components = new Set(project.components.map(name => name.toLocaleLowerCase()));
   const findings = [];
   const used = new Set();
   const metadataPath = '.agents/config/ponytail.json';
@@ -179,7 +180,8 @@ function checkReferences(root, project, projects) {
   const exceptionRanges = project.exceptions.flatMap((exception, index) => ['project', 'name'].map(key => metadataDocument.getIn(['exceptions', index, key], true).range));
   for (const [foreignRoot, foreign] of Object.entries(projects)) {
     if (foreign.repositoryUrls.some(url => submodules.has(repositoryUrl(url))) || foreign.packages.some(item => dependencies.has(coordinate(item.manager, item.name)))) continue;
-    const names = [...new Set([foreign.name, ...foreign.names, ...foreign.components, ...foreign.repositoryUrls, ...foreign.packages.map(item => item.name), foreignRoot])];
+    const names = [...new Set([foreign.name, ...foreign.names, ...foreign.components, ...foreign.repositoryUrls, ...foreign.packages.map(item => item.name), foreignRoot])]
+      .filter(name => !components.has(name.toLocaleLowerCase()));
     for (const name of names) {
       const output = git(root, ['grep', '--no-recurse-submodules', '--no-textconv', '--no-color', '--no-column', '--no-heading', '--no-break', '-I', '-n', '-z', '-i', '-F', '-e', name, '--', '.'], [0, 1]);
       for (const match of output.matchAll(/([^\0]+)\0(\d+)\0([^\n]*)\n/g)) {

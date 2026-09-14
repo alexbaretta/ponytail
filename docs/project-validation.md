@@ -127,9 +127,11 @@ unstaged edits. It excludes untracked files, binary content, Git history, and
 submodule contents. It searches file contents, not filenames. All tracked
 prose, tests, and generated text participate. A newly added file participates
 after `git add`. Foreign canonical names, synonyms, component names, package
-names, repository URLs, and registered paths are searched. No recursion into
-dependency checkouts occurs. A missing registered checkout or its metadata is
-a configuration error, not a successful incomplete scan.
+names, repository URLs, and registered paths are searched, except identities
+registered as components of the invoking project. Component ownership matches
+case-insensitively, like the reference scan. No recursion into dependency
+checkouts occurs. A missing registered checkout or its metadata is a
+configuration error, not a successful incomplete scan.
 
 An exact-file exception requires all four fields below:
 
