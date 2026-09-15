@@ -276,6 +276,15 @@ def register(config_path, source_root, root, main_root):
     print(f"{'registered' if registered is None else 'already registered'}: {main_root}")
 
 
+def unregister(config_path, source_root, config, requested_root):
+    root = Path(requested_root).expanduser().resolve()
+    registered = registered_project(config, root)
+    if registered is None:
+        fail(f"Git repository is not registered with Ponytail: {root}")
+    write_config(config_path, source_root, [project for project in config["projects"] if project != registered])
+    print(f"unregistered: {root}")
+
+
 def checked_component_name(value):
     if not isinstance(value, str) or not value or value != value.strip() or "\n" in value or "\r" in value:
         fail("component name must be a nonempty string without surrounding whitespace")
@@ -400,6 +409,11 @@ def blessed_project(project):
     if project["blessedWorktree"] is None:
         fail(f"repository has no blessed worktree: {project['root']}; run ponytail register from that repository or one of its worktrees")
     blessed = Path(project["blessedWorktree"])
+    project_root = Path(project["root"])
+    if not blessed.is_dir() and not project_root.is_dir():
+        name = project_root.name
+        command = f"ponytail unregister {shlex.quote(str(project_root))}"
+        fail(f"Ponytail project `{name}` not found. Do you need to unregister it?\nRun: {command}")
     # Hooks export repository-local Git variables, including a temporary commit index.
     local_variables = subprocess.run(["git", "rev-parse", "--local-env-vars"], capture_output=True, text=True, check=True).stdout.splitlines()
     env = {key: value for key, value in os.environ.items() if key not in local_variables}
@@ -471,6 +485,7 @@ def update_permissions(source_root, config, arguments):
 def print_usage():
     print("""Usage:
   ponytail register
+  ponytail unregister <repository-root>
   ponytail bless[-worktree]
   ponytail blessed[-worktree]
   ponytail register-component <name>
@@ -485,7 +500,7 @@ def print_usage():
   ponytail update-skills [Codex installer options]
   ponytail update
 
-All commands require a Git worktree. Only register may run before registration.
+All commands require a Git worktree. Register and unregister may run before registration.
 validate checks setup only; qa runs local checks, never integration suites.
 Exit statuses: 1 invalid setup/command, 2 no Git worktree, 3 unregistered, 4 QA findings.""")
 
@@ -508,6 +523,15 @@ def run():
             fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
             config = read_config(config_path)
             register(config_path, source_root_for(script_path, config), root, main_root)
+        return 0
+    if operation == "unregister":
+        if len(arguments) != 1:
+            fail("usage: ponytail unregister <repository-root>")
+        lock_name = hashlib.sha256(str(home).encode()).hexdigest()
+        with open(Path(tempfile.gettempdir()) / f"ponytail-{lock_name}.lock", "a+", encoding="utf-8") as lock:
+            fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
+            config = read_config(config_path)
+            unregister(config_path, source_root_for(script_path, config), config, arguments[0])
         return 0
     config = read_config(config_path)
     source_root = source_root_for(script_path, config)

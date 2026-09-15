@@ -21,6 +21,11 @@ ponytail register
 Registration resolves only the enclosing Git root and requires that root's
 project policy file. It does not scan the filesystem. Missing, moved, or
 malformed registered projects make permission installation fail explicitly.
+Remove a deleted or moved root with the exact command reported by the failure:
+
+```bash
+ponytail unregister /absolute/repository/root
+```
 
 ## Project policy
 

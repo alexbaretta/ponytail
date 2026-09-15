@@ -52,7 +52,7 @@ function repository(f, name) {
 
 test('every command distinguishes missing Git from absent registration', t => {
   const f = fixture(t);
-  for (const args of [[], ['--help'], ['register'], ['register-dependency', 'OtherProduct'], ['unregister-dependency', 'OtherProduct'], ['bless'], ['blessed'], ['validate'], ['qa'], ['update']]) {
+  for (const args of [[], ['--help'], ['register'], ['unregister', '/missing'], ['register-dependency', 'OtherProduct'], ['unregister-dependency', 'OtherProduct'], ['bless'], ['blessed'], ['validate'], ['qa'], ['update']]) {
     const result = run(f.home, f.home, ...args);
     assert.equal(result.status, 2, result.stderr);
     assert.match(result.stderr, /no Git worktree/);
@@ -63,6 +63,30 @@ test('every command distinguishes missing Git from absent registration', t => {
     assert.equal(result.status, 3, result.stderr);
     assert.match(result.stderr, /not registered/);
   }
+});
+
+test('QA identifies a removed project and its displayed command unregisters it', t => {
+  const f = fixture(t);
+  const current = repository(f, 'current');
+  const removedProjectName = ['g', 'w', 'e'].join('');
+  const removed = repository(f, removedProjectName);
+  fs.rmSync(removed, { recursive: true, force: true });
+
+  let result = run(f.home, current, 'qa');
+  assert.equal(result.status, 1);
+  assert.equal(
+    result.stderr,
+    `error: Ponytail project \`${removedProjectName}\` not found. Do you need to unregister it?\nRun: ponytail unregister ${removed}\n`,
+  );
+
+  result = run(f.home, current, 'unregister', removed);
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.stdout, `unregistered: ${removed}\n`);
+  assert.equal(run(f.home, current, 'qa').status, 0);
+  assert.deepEqual(
+    JSON.parse(fs.readFileSync(path.join(f.home, '.ponytail/config.json'))).projects.map(project => project.root),
+    [current],
+  );
 });
 
 test('blessing selects one clean tracked worktree and both command spellings report it', t => {

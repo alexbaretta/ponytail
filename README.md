@@ -37,6 +37,12 @@ From each adopting repository, register its Git root once:
 ponytail register
 ```
 
+Remove a deleted or moved repository registration by its previous root:
+
+```bash
+ponytail unregister /absolute/repository/root
+```
+
 Optionally add reference QA to the repository's existing pre-commit flow:
 
 ```bash
@@ -91,7 +97,7 @@ Installed shell tools:
 
 | Tool | Purpose |
 | --- | --- |
-| `ponytail register\|bless[-worktree]\|blessed[-worktree]\|register-component\|unregister-component\|detect-components\|pre-commit\|validate\|qa\|update-permissions\|update-skills\|update` | Register repositories, select worktree configuration, manage components, install pre-commit QA, run local QA, and update Codex configuration |
+| `ponytail register\|unregister\|bless[-worktree]\|blessed[-worktree]\|register-component\|unregister-component\|detect-components\|pre-commit\|validate\|qa\|update-permissions\|update-skills\|update` | Register or unregister repositories, select worktree configuration, manage components, install pre-commit QA, run local QA, and update Codex configuration |
 | `audit_pm.sh [--fix] [--dryrun]` | Audit PM structure and preview or fix missing date prefixes |
 | `plan_pdf.sh [--sprints] <plan-name> [output.pdf]` | Render a plan, optionally with its sprints, as PDF using Pandoc |
 | `plan_stats.sh <plan-name>` | Count open and done task lines in a plan |
