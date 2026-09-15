@@ -14,7 +14,9 @@ configuration to be tracked.
 
 Run `ponytail unregister <repository-root>` to remove an exact registration,
 including one whose repository has been deleted or moved. When QA encounters
-such a missing project, its error prints the corresponding command.
+such a missing project, its error prints the corresponding command. Run
+`ponytail list-projects` to print every registered repository root without
+loading its worktree.
 
 `ponytail bless` and `ponytail bless-worktree` select the invoking worktree as
 the configuration other projects read. The configuration must be tracked,
@@ -24,8 +26,9 @@ the path, not a Git object ID; subsequent committed configuration changes in
 that worktree therefore become visible without reblessing.
 
 Every `ponytail` invocation, including help, requires a non-bare Git worktree.
-All commands except `register` and `unregister` first require repository
-registration; blessing commands perform their own configuration checks.
+All commands except `register`, `unregister`, and `list-projects` first require
+repository registration; blessing commands perform their own configuration
+checks.
 `ponytail validate` checks registration and local configuration; it does not
 scan project contents, load other projects, run package managers, or run tests.
 `ponytail qa [references]` separately scans for forbidden references. It does

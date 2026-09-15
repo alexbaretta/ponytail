@@ -103,6 +103,10 @@ test('register initializes and registers the enclosing Git root idempotently', (
     }],
   });
   assert.equal(fs.statSync(configPath(home)).mode & 0o777, 0o600);
+  result = run(home, 'list-projects', [], { cwd: nested });
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.stdout, `${fs.realpathSync(projectRoot)}\n`);
+  assert.equal(run(home, 'list-projects', ['unexpected'], { cwd: nested }).status, 1);
   const hookPath = path.join(projectRoot, '.git/hooks/pre-commit');
   assert.equal(fs.existsSync(hookPath), false);
 
@@ -174,6 +178,10 @@ test('concurrent register calls retain both registrations', () => {
     blessedWorktree: projectRoot,
     root: projectRoot,
   })));
+  assert.equal(
+    run(home, 'list-projects', [], { cwd: first }).stdout,
+    `${[fs.realpathSync(first), fs.realpathSync(second)].sort().join('\n')}\n`,
+  );
 });
 
 test('register rejects a symlinked policy and malformed user configuration', () => {

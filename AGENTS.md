@@ -62,7 +62,7 @@ services. `PROJECT_STRUCTURE.md` is authoritative for that boundary.
 - Local setup validation: `ponytail validate`.
 - Local reference QA: `ponytail qa`; no downstream integration suite.
 - Project initialization and registration: `ponytail register`; removal:
-  `ponytail unregister <repository-root>`.
+  `ponytail unregister <repository-root>`; listing: `ponytail list-projects`.
 - Worktree selection: `ponytail bless[-worktree]`; display it with `ponytail
   blessed[-worktree]`.
 - Component registration: `ponytail register-component <name>` and

@@ -25,7 +25,7 @@ while project-wide management records remain under `pm/`.
 - `~/.ponytail/config.json` is the external V1 user configuration written by
   `ponytail register` and `ponytail unregister`; it owns the canonical
   Ponytail source root and registered repositories with their explicitly
-  blessed worktrees.
+  blessed worktrees, which `ponytail list-projects` displays.
 - `registry.tsv` owns enabled and disabled skill and command publication
   across supported hosts. Benchmark entries are prohibited.
 - `versioned-data-contracts.json` inventories Ponytail's durable serialized

@@ -52,12 +52,13 @@ function repository(f, name) {
 
 test('every command distinguishes missing Git from absent registration', t => {
   const f = fixture(t);
-  for (const args of [[], ['--help'], ['register'], ['unregister', '/missing'], ['register-dependency', 'OtherProduct'], ['unregister-dependency', 'OtherProduct'], ['bless'], ['blessed'], ['validate'], ['qa'], ['update']]) {
+  for (const args of [[], ['--help'], ['register'], ['unregister', '/missing'], ['list-projects'], ['register-dependency', 'OtherProduct'], ['unregister-dependency', 'OtherProduct'], ['bless'], ['blessed'], ['validate'], ['qa'], ['update']]) {
     const result = run(f.home, f.home, ...args);
     assert.equal(result.status, 2, result.stderr);
     assert.match(result.stderr, /no Git worktree/);
   }
   git(f.home, 'init', '-q');
+  assert.equal(run(f.home, f.home, 'list-projects').status, 0);
   for (const command of ['bless', 'blessed', 'list-components', 'register-dependency', 'unregister-dependency', 'list-dependencies', 'pre-commit', 'validate', 'qa', '--help', 'update-skills', 'setup']) {
     const result = run(f.home, f.home, command);
     assert.equal(result.status, 3, result.stderr);

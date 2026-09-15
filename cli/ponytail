@@ -486,6 +486,7 @@ def print_usage():
     print("""Usage:
   ponytail register
   ponytail unregister <repository-root>
+  ponytail list-projects
   ponytail bless[-worktree]
   ponytail blessed[-worktree]
   ponytail register-component <name>
@@ -517,6 +518,14 @@ def run():
         fail("HOME is required")
     home = Path(home_value).expanduser().resolve()
     config_path = home / ".ponytail/config.json"
+    if operation == "list-projects":
+        if arguments:
+            fail("list-projects accepts no arguments")
+        config = read_config(config_path)
+        source_root_for(script_path, config)
+        for project in [] if config is None else config["projects"]:
+            print(project["root"])
+        return 0
     if operation == "register":
         if arguments:
             fail("register accepts no arguments")
