@@ -66,7 +66,10 @@ services. `PROJECT_STRUCTURE.md` is authoritative for that boundary.
 - Worktree selection: `ponytail bless[-worktree]`; display it with `ponytail
   blessed[-worktree]`.
 - Component registration: `ponytail register-component <name>` and
-  `ponytail unregister-component <name>`.
+  `ponytail unregister-component <name>`; listing: `ponytail list-components`.
+- Project dependency registration: `ponytail register-dependency <project>` and
+  `ponytail unregister-dependency <project>`; listing: `ponytail
+  list-dependencies`.
 - JavaScript/TypeScript component detection: `ponytail detect-components
   [--language typescript|javascript|auto]`.
 - Permission update: `ponytail update-permissions`.

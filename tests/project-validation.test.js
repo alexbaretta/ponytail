@@ -58,7 +58,7 @@ test('every command distinguishes missing Git from absent registration', t => {
     assert.match(result.stderr, /no Git worktree/);
   }
   git(f.home, 'init', '-q');
-  for (const command of ['bless', 'blessed', 'register-dependency', 'unregister-dependency', 'pre-commit', 'validate', 'qa', '--help', 'update-skills', 'setup']) {
+  for (const command of ['bless', 'blessed', 'list-components', 'register-dependency', 'unregister-dependency', 'list-dependencies', 'pre-commit', 'validate', 'qa', '--help', 'update-skills', 'setup']) {
     const result = run(f.home, f.home, command);
     assert.equal(result.status, 3, result.stderr);
     assert.match(result.stderr, /not registered/);
@@ -196,9 +196,12 @@ test('manual component registration is idempotent and unregistration is explicit
     JSON.parse(fs.readFileSync(path.join(root, '.agents/config/ponytail.json'))).components,
     ['worker-api'],
   );
+  assert.equal(run(f.home, root, 'list-components').stdout, 'worker-api\n');
+  assert.equal(run(f.home, root, 'list-components', 'unexpected').status, 1);
   result = run(f.home, root, 'unregister-component', 'worker-api');
   assert.equal(result.status, 0, result.stderr);
   assert.equal(result.stdout, 'unregistered component: worker-api\n');
+  assert.equal(run(f.home, root, 'list-components').stdout, '');
   result = run(f.home, root, 'unregister-component', 'worker-api');
   assert.equal(result.status, 1);
   assert.match(result.stderr, /component is not registered/);
@@ -450,12 +453,15 @@ test('registered project dependencies grant and revoke reference permission', t 
   const metadata = JSON.parse(fs.readFileSync(path.join(current, '.agents/config/ponytail.json')));
   assert.equal(metadata.schemaVersion, 2);
   assert.deepEqual(metadata.dependencies, ['OtherProduct']);
+  assert.equal(run(f.home, current, 'list-dependencies').stdout, 'OtherProduct\n');
+  assert.equal(run(f.home, current, 'list-dependencies', 'unexpected').status, 1);
   assert.equal(run(f.home, current, 'qa').status, 0);
 
   result = run(f.home, current, 'unregister-dependency', 'OtherProduct');
   assert.equal(result.status, 0, result.stderr);
   assert.equal(result.stdout, 'unregistered dependency: OtherProduct\n');
   assert.deepEqual(JSON.parse(fs.readFileSync(path.join(current, '.agents/config/ponytail.json'))).dependencies, []);
+  assert.equal(run(f.home, current, 'list-dependencies').stdout, '');
   assert.equal(run(f.home, current, 'qa').status, 4);
   result = run(f.home, current, 'unregister-dependency', 'OtherProduct');
   assert.equal(result.status, 1);

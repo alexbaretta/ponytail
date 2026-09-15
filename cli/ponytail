@@ -490,8 +490,10 @@ def print_usage():
   ponytail blessed[-worktree]
   ponytail register-component <name>
   ponytail unregister-component <name>
+  ponytail list-components
   ponytail register-dependency <project>
   ponytail unregister-dependency <project>
+  ponytail list-dependencies
   ponytail detect-components [--language typescript|javascript|auto]
   ponytail pre-commit
   ponytail validate
@@ -549,10 +551,10 @@ def run():
             fail(f"{operation} accepts no arguments")
         blessed(config, main_root)
         return 0
-    if operation in {"register-component", "unregister-component", "register-dependency", "unregister-dependency", "detect-components"}:
+    if operation in {"register-component", "unregister-component", "list-components", "register-dependency", "unregister-dependency", "list-dependencies", "detect-components"}:
         if registered_project(config, main_root) is None:
             raise ProjectError(f"Git repository is not registered with Ponytail: {main_root}; run ponytail register", 3)
-        read_project(root)
+        metadata = read_project(root)
         if operation == "register-component":
             if len(arguments) != 1:
                 fail("usage: ponytail register-component <name>")
@@ -561,10 +563,20 @@ def run():
             if len(arguments) != 1:
                 fail("usage: ponytail unregister-component <name>")
             update_component(root, arguments[0], True)
+        elif operation == "list-components":
+            if arguments:
+                fail("list-components accepts no arguments")
+            for component in metadata["components"]:
+                print(component)
         elif operation in {"register-dependency", "unregister-dependency"}:
             if len(arguments) != 1:
                 fail(f"usage: ponytail {operation} <project>")
             update_dependency(root, main_root, config, arguments[0], operation == "unregister-dependency")
+        elif operation == "list-dependencies":
+            if arguments:
+                fail("list-dependencies accepts no arguments")
+            for dependency in metadata["dependencies"]:
+                print(dependency)
         else:
             detect_components(root, arguments)
         return 0

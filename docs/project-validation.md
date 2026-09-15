@@ -73,16 +73,19 @@ Manage component names from any registered checkout:
 ```sh
 ponytail register-component example-worker
 ponytail unregister-component example-worker
+ponytail list-components
 ponytail detect-components --language auto
 ponytail register-dependency "Example Platform"
 ponytail unregister-dependency "Example Platform"
+ponytail list-dependencies
 ```
 
 Registration is idempotent. Unregistration fails when the exact component is
 or dependency is absent. Dependency commands accept the exact canonical name
 of another registered project and resolve it from that project's blessed
-worktree. Component and dependency mutations use a repository-specific lock
-and atomic file replacement. Project synonyms remain explicit metadata because
+worktree. Listing commands print the current worktree's configured values, one
+per line. Component and dependency mutations use a repository-specific lock and
+atomic file replacement. Project synonyms remain explicit metadata because
 package manifests do not identify them reliably.
 
 The `typescript`, `javascript`, and `auto` detection modes currently share one
