@@ -274,7 +274,7 @@ function main(argv = process.argv.slice(2)) {
   return result;
 }
 
-module.exports = { SCHEMA_VERSION, SprintMetadataReaders, parseSprintFile, readSprints, validateDependencies, validatePathOwnership, validateV3PathOwnership, validateCheckpointOrder, validateDependencyExecutionOrder, selectPlanningReadySprints, selectExecutionReadySprints, main };
+module.exports = { METADATA_MARKER, SCHEMA_VERSION, SprintMetadataReaders, parseSprintFile, readSprints, validateDependencies, validatePathOwnership, validateV3PathOwnership, validateCheckpointOrder, validateDependencyExecutionOrder, selectPlanningReadySprints, selectExecutionReadySprints, main };
 
 if (require.main === module) {
   try { main(); } catch (error) { process.stderr.write(`${error.message}\n`); process.exitCode = 1; }

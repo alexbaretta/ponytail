@@ -1,0 +1,73 @@
+{
+  "schemaVersion": 3,
+  "sprint": "S01",
+  "features": {
+    "S01-F01": {
+      "depends_on": [],
+      "validation_tasklet": "S01-F01-T05"
+    }
+  },
+  "tasklets": {
+    "S01-F01-T01": {
+      "depends_on": [],
+      "affinity": ["acceptance-policy"],
+      "risk": "normal",
+      "feature": "S01-F01",
+      "planned_paths": ["skills/requirements/SKILL.md"]
+    },
+    "S01-F01-T02": {
+      "depends_on": ["S01-F01-T01"],
+      "affinity": ["acceptance-policy"],
+      "risk": "normal",
+      "feature": "S01-F01",
+      "planned_paths": ["skills/production-test-boundaries/SKILL.md"]
+    },
+    "S01-F01-T03": {
+      "depends_on": ["S01-F01-T02"],
+      "affinity": ["acceptance-policy"],
+      "risk": "normal",
+      "feature": "S01-F01",
+      "planned_paths": [
+        "skills/user-acceptance-testing/SKILL.md",
+        "skills/user-acceptance-testing/agents/openai.yaml"
+      ]
+    },
+    "S01-F01-T04": {
+      "depends_on": ["S01-F01-T03"],
+      "affinity": ["acceptance-policy"],
+      "risk": "normal",
+      "feature": "S01-F01",
+      "planned_paths": [
+        "skills/project-structure/SKILL.md",
+        "README.md"
+      ]
+    },
+    "S01-F01-T05": {
+      "depends_on": [
+        "S01-F01-T01",
+        "S01-F01-T02",
+        "S01-F01-T03",
+        "S01-F01-T04"
+      ],
+      "affinity": ["acceptance-policy"],
+      "risk": "normal",
+      "feature": "S01-F01",
+      "planned_paths": [
+        "registry.tsv",
+        "generated/registry.json",
+        "plugin.yaml",
+        ".openclaw/skills/requirements/SKILL.md",
+        ".openclaw/skills/production-test-boundaries/SKILL.md",
+        ".openclaw/skills/project-structure/SKILL.md",
+        ".openclaw/skills/user-acceptance-testing/SKILL.md",
+        ".openclaw/skills/plan-execution/scripts/ready-sprints.js",
+        "tests/production-test-boundaries.test.js",
+        "tests/project-skill-configuration.test.js",
+        "tests/user-acceptance-testing.test.js",
+        "pm/plans/in_progress/2026-09-16-user-acceptance-testing/plan.md",
+        "pm/plans/in_progress/2026-09-16-user-acceptance-testing/sprints/S01.md",
+        "pm/plans/in_progress/2026-09-16-user-acceptance-testing/sprints/S01.tasklets.json"
+      ]
+    }
+  }
+}

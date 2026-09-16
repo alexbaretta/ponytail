@@ -1,0 +1,6 @@
+# Copyright (c) 2026 Alex Baretta. All rights reserved.
+# Licensed under the MIT License. See LICENSE in the project root.
+interface:
+  display_name: "User Acceptance Testing"
+  short_description: "Derive and record traceable release acceptance"
+  default_prompt: "Use $user-acceptance-testing to maintain this project's UAT."

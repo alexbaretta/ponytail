@@ -34,6 +34,15 @@ test('integration tests prove the real isolated product path', () => {
   assert.match(skill, /not integration evidence/);
 });
 
+test('execution profiles preserve one Arc and test-owned state', () => {
+  assert.match(skill, /An Arc describes behavior independently of where it runs/);
+  assert.match(skill, /An \*\*ephemeral profile\*\*/);
+  assert.match(skill, /A \*\*persistent non-production profile\*\*/);
+  assert.match(skill, /objects whose test ownership it can prove/);
+  assert.match(skill, /never delete or overwrite an object merely because its name resembles test/);
+  assert.match(skill, /Concrete commands, environment names,\ncredentials, tools, and fixture operations belong to project-local/);
+});
+
 test('integration terminology has one canonical hierarchy', () => {
   assert.match(skill, /\*\*Suite\*\*: a named set of related Arcs/);
   assert.match(skill, /\*\*Arc\*\*: a named ordered sequence of one or more Steps/);

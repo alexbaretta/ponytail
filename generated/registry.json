@@ -437,6 +437,23 @@
     {
       "kind": "skill",
       "status": "enabled",
+      "name": "user-acceptance-testing",
+      "source": "skills/user-acceptance-testing",
+      "hosts": [
+        "claude",
+        "codex",
+        "copilot",
+        "devin",
+        "hermes",
+        "openclaw",
+        "pi",
+        "qoder"
+      ],
+      "reason": "Traceable user acceptance and release evidence"
+    },
+    {
+      "kind": "skill",
+      "status": "enabled",
       "name": "ux-testing",
       "source": "skills/ux-testing",
       "hosts": [

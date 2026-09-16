@@ -25,6 +25,7 @@ The host configures this skill in `AGENTS.md`, directly or by reference, with:
 
 - `Production compilation and packaging inputs`; and
 - `Integration-environment setup`; and
+- `Integration execution profiles`; and
 - `Build-impact configuration`; and
 - `Unit-test command families`.
 
@@ -33,6 +34,8 @@ with focused and full commands, plus integration, focused-workflow, build,
 packaging, and final-acceptance commands.
 Production inputs default to those consumed by the configured build and
 packaging commands. Integration-environment setup defaults to `not configured`.
+Integration execution profiles default to `ephemeral` when integration setup
+is configured and otherwise to `not configured`.
 Build-impact configuration defaults to `ponytail.json` when the project owns
 buildable targets and otherwise defaults to `not applicable`. Unit-test
 command families default to `not configured`.
@@ -86,10 +89,10 @@ double typing.
 
 Run the complete executable product stack without mocks, fakes, test-mode
 product branches, or synthetic provider responses. The integration harness,
-not production code, owns repeatable isolated configuration, including:
+not production code, owns repeatable profile configuration, including:
 
-- an isolated database prepared with the same migrations and owned custom SQL
-  as the target environment;
+- database and state isolation appropriate to the execution profile, prepared
+  with the same migrations and owned custom SQL as the target environment;
 - real sandbox accounts or services for configured external dependencies; and
 - credentials, endpoints, cleanup, and isolation that prevent effects on
   development, cloud, or live environment data outside the test run.
@@ -98,12 +101,48 @@ An integration check that replaces the boundary whose behavior it claims to
 prove is not integration evidence. Record unavailable external proof as an
 explicitly unverified gate rather than substituting a fake success.
 
+## Execution Profiles
+
+An Arc describes behavior independently of where it runs. An execution profile
+selects its environment lifecycle without creating a second product path.
+
+An **ephemeral profile** provisions isolated state for the run and ordinarily
+removes that state during finalization. Its database uses the same migrations
+and owned custom SQL as the target product environment.
+
+A **persistent non-production profile** exercises an already deployed product
+and may preserve final state for inspection. It must:
+
+- refuse production targets unless a separate explicit contract authorizes
+  that target and operation;
+- operate only on objects whose test ownership it can prove;
+- use deterministic ownership identifiers and a unique run identity;
+- never delete or overwrite an object merely because its name resembles test
+  data;
+- record every created, reused, modified, and intentionally preserved object;
+- isolate the run from unrelated users and test runs; and
+- use real sandbox dependencies when the Arc claims to prove that boundary.
+
+Setup may reconcile or remove state left by the same owned fixture identity.
+Finalization may intentionally preserve successful state, but cancellation and
+failure handling must still leave an actionable manifest. If intentional
+shared state can change an unrelated session's observable behavior, apply
+`cross-session-effects` before accepting that profile.
+
+The harness owns profile selection, safety checks, fixture reconciliation, and
+evidence capture. Production code must not gain test-only routes, branches, or
+configuration to support a profile. Concrete commands, environment names,
+credentials, tools, and fixture operations belong to project-local
+configuration or a project-local skill, not this reusable policy.
+
 ## Review Checklist
 
 - Production compilation and packaging inputs contain no test mechanism.
 - Production behavior has one path regardless of who invokes it.
 - Unit doubles replace only legitimate boundaries.
 - Integration tests execute the real vertical slice with isolated state.
+- Execution profiles preserve one Arc and one production path.
+- Persistent profiles mutate only proven test-owned non-production state.
 - Integration Steps execute in Arc order and stop their Arc on failure.
 - Every remaining selected Arc runs before aggregate success or failure is
   reported.
