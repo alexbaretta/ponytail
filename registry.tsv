@@ -24,6 +24,7 @@ skill	enabled	project-structure	skills/project-structure	claude,codex,copilot,de
 skill	enabled	production-test-boundaries	skills/production-test-boundaries	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Production and test architecture separation
 skill	enabled	react-error-containment	skills/react-error-containment	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	React failure containment
 skill	enabled	requirements	skills/requirements	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Linked requirements and issue activation reconciliation
+skill	enabled	semantic-rebase	skills/semantic-rebase	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Commit-by-commit textual and semantic rebase review
 skill	enabled	static-type-safety	skills/static-type-safety	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Static type and contract safety
 skill	enabled	test-credentials	skills/test-credentials	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Test credential discovery and safety
 skill	enabled	typescript-unit-testing	skills/typescript-unit-testing	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Contract-safe TypeScript unit testing

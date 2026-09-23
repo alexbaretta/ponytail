@@ -37,6 +37,7 @@ provides_skills:
   - production-test-boundaries
   - react-error-containment
   - requirements
+  - semantic-rebase
   - static-type-safety
   - test-credentials
   - typescript-unit-testing

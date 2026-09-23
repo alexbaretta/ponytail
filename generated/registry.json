@@ -386,6 +386,23 @@
     {
       "kind": "skill",
       "status": "enabled",
+      "name": "semantic-rebase",
+      "source": "skills/semantic-rebase",
+      "hosts": [
+        "claude",
+        "codex",
+        "copilot",
+        "devin",
+        "hermes",
+        "openclaw",
+        "pi",
+        "qoder"
+      ],
+      "reason": "Commit-by-commit textual and semantic rebase review"
+    },
+    {
+      "kind": "skill",
+      "status": "enabled",
       "name": "static-type-safety",
       "source": "skills/static-type-safety",
       "hosts": [
