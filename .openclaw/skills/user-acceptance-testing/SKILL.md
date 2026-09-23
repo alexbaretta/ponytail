@@ -1,6 +1,6 @@
 ---
 name: user-acceptance-testing
-description: "Traceable user acceptance and release evidence"
+description: "Reconcile requirement changes with traceable user acceptance and release evidence"
 homepage: https://github.com/alexbaretta/ponytail
 license: MIT
 ---
@@ -42,6 +42,29 @@ Apply `requirements` when deriving acceptance behavior and
 Apply the host's credential policy before using protected environments or
 external services.
 
+## Requirement Change Reconciliation
+
+Whenever `requirements` incorporates a new requirement or clarification from
+interactive user conversation, a `pm/bugs` issue, or a user-supplied source,
+assess that specific change against the configured UAT root. Do not wait for
+release preparation or test execution.
+
+- Add or update the canonical Arc, Steps, and expected observable results when
+  the requirement or clarification creates or changes acceptance behavior.
+- Link the Arc to the exact requirement identifier or stable anchor while
+  preserving its approval state.
+- When an existing Arc already proves the exact behavior, keep one canonical
+  Arc and record that coverage instead of duplicating the test.
+- When the requirement has no meaningful user-acceptance behavior, record why
+  no UAT change is needed rather than fabricating a test.
+- Preserve the requirement's approval state. Proposed or observed behavior may
+  produce an explicitly exploratory Arc, but it cannot become release evidence
+  until the requirement is approved.
+
+Keep the requirements change and any necessary UAT documentation change in the
+same project change-set. A missing operations skill or execution profile blocks
+running UAT, not maintaining this plain-English acceptance contract.
+
 ## A Browsable Acceptance Web
 
 Use `index.md` as the configured UAT root's entry point. Link the release
@@ -62,7 +85,8 @@ that Arc, not reasons to duplicate it.
 
 Each Arc records:
 
-- the approved requirement identifiers or stable anchors it covers;
+- the requirement identifiers or stable anchors it covers and their approval
+  state;
 - actor, prerequisites, and owned test data;
 - ordered Steps and expected observable outcomes;
 - applicable manual and automated execution profiles;

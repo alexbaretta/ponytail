@@ -1,6 +1,6 @@
 ---
 name: requirements
-description: "Linked requirements and issue activation reconciliation"
+description: "Persist requirements from user, issue, or supplied sources and reconcile UAT coverage"
 homepage: https://github.com/alexbaretta/ponytail
 license: MIT
 ---
@@ -69,6 +69,44 @@ the user-visible outcome and boundary without elevating incidental algorithms,
 defects, or unexplained limitations. Promote an observation to an approved
 requirement only through an authorized stakeholder decision, retaining the
 observation as provenance rather than presenting it as original authority.
+
+## Continuous Requirements And UAT Reconciliation
+
+Whenever an agent learns of a new requirement or receives a clarification to
+an existing requirement, reconcile it into the configured requirements root.
+This obligation applies when the information arrives through interactive user
+conversation, a `pm/bugs` issue, or any document or other artifact the user
+provides as a source of requirements information. It is not deferred until an
+issue enters active work, planning begins, or implementation reaches the
+affected behavior.
+
+Classify the source and approval state before changing the canonical behavior.
+Treat an explicit requirement or clarification from an authorized stakeholder
+in the current conversation as an approved decision unless the stakeholder
+marks it as tentative, proposed, quoted from another source, or unresolved.
+Incorporate claims from issues and supplied sources with their supported
+approved, proposed, observed, or unresolved status; supplying a source does not
+by itself approve every claim it contains. Preserve material conflicts for
+stakeholder resolution rather than choosing one silently.
+
+For each new requirement or clarification:
+
+1. Add or update its one canonical description and provenance in the
+   requirements web. If the behavior is already stated exactly, retain one
+   description and add the new source or clarification evidence instead of
+   duplicating it.
+2. Apply `user-acceptance-testing` and assess whether the requirement changes
+   observable acceptance behavior. When it does, update the configured UAT
+   root in the same project change-set with the specific Arc, Step, and
+   expected result needed to prove that requirement or clarification.
+3. When an existing UAT Arc already proves the exact behavior, preserve the
+   canonical Arc and record the existing coverage link. When UAT is not
+   applicable, record why rather than inventing an acceptance test.
+
+Complete this requirements and UAT reconciliation before continuing work whose
+scope or acceptance depends on the new information. A missing project-local
+UAT execution configuration prevents execution, not maintenance of the
+plain-English UAT contract.
 
 ## A Browsable Markdown Web
 

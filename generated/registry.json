@@ -381,7 +381,7 @@
         "pi",
         "qoder"
       ],
-      "reason": "Linked requirements and issue activation reconciliation"
+      "reason": "Persist requirements from user, issue, or supplied sources and reconcile UAT coverage"
     },
     {
       "kind": "skill",
@@ -466,7 +466,7 @@
         "pi",
         "qoder"
       ],
-      "reason": "Traceable user acceptance and release evidence"
+      "reason": "Reconcile requirement changes with traceable user acceptance and release evidence"
     },
     {
       "kind": "skill",

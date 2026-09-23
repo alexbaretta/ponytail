@@ -2,5 +2,5 @@
 # Licensed under the MIT License. See LICENSE in the project root.
 interface:
   display_name: "Requirements"
-  short_description: "Maintain linked requirements and reconcile issue scope"
-  default_prompt: "Use $requirements to maintain this project's requirements."
+  short_description: "Capture requirement changes and reconcile UAT coverage"
+  default_prompt: "Use $requirements to persist this requirement or clarification and reconcile its UAT coverage."

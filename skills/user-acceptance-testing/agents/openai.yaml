@@ -2,5 +2,5 @@
 # Licensed under the MIT License. See LICENSE in the project root.
 interface:
   display_name: "User Acceptance Testing"
-  short_description: "Derive and record traceable release acceptance"
-  default_prompt: "Use $user-acceptance-testing to maintain this project's UAT."
+  short_description: "Reconcile requirements with traceable UAT coverage"
+  default_prompt: "Use $user-acceptance-testing to reconcile this requirement with the project's UAT coverage."
