@@ -54,6 +54,7 @@
       "pi-extension/**",
       "ponytail-mcp/**",
       "scripts/**",
+      "src/**",
       "tests/**",
       "tsts/src/**",
       "tsts/test/**",

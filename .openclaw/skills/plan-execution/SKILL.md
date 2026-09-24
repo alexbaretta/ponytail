@@ -25,6 +25,8 @@ identify, directly or by reference:
 - the project workspace and management repository;
 - the project-management root and its plan, issue, and requirements directories;
 - the shared issue/plan lifecycle configuration owned by `issue-tracking`;
+- the machine-readable management-root, plan-root, lifecycle-role, and legacy
+  layout configuration used by campaign validation;
 - component repositories and their ownership boundaries;
 - named unit-test families and their focused and full commands;
 - focused, package, integration, browser, milestone, and final validation
@@ -496,6 +498,43 @@ scheduling choice among independent ready plans, prioritize a source-proven
 product repair or bug fix over expansion of test coverage. This priority does
 not create a dependency, pause work already dispatched, or prevent an
 independent coverage plan from proceeding concurrently.
+
+### Campaign Census Contract
+
+Every newly drafted or updated managed plan contains exactly one
+`ponytail-plan-campaign` JSON metadata block. The latest V1 write format has
+exactly `schemaVersion`, `id`, and `parent_plan_id`. A campaign root writes a
+null parent; every descendant writes its one direct parent plan ID. Derive
+children by inventorying these backlinks. Do not author child lists, duplicate
+lifecycle state, or issue IDs in campaign metadata. Lifecycle comes only from
+the host's configured status directory.
+
+Campaign validation concerns only the campaign containing the supplied plan.
+It may inspect other plan records solely to resolve ancestors and discover
+direct backlinks to known members; malformed or contradictory unrelated
+campaigns do not affect the result. The census covers plans, sprints, and
+tasklets. It does not schedule parallel work, assign workers or worktrees,
+determine integration readiness, or estimate throughput or completion time.
+
+Use the canonical command:
+
+```text
+ponytail campaign validate <plan-or-plan.md>
+```
+
+Run it before requesting plan approval, after planning reconciliation and
+before the first implementation edit, after any campaign relationship or plan
+lifecycle change, and before closing a campaign root. Stop work in the
+selected campaign on its first validation failure while continuing unrelated
+approved work when possible. Do not duplicate the validator's canonical
+sprint or tasklet selector logic manually.
+
+A non-root plan may close when its own acceptance is complete. A campaign root
+with descendants may close only after every member is complete and final
+campaign validation succeeds against the closing tree. Whenever a plan's
+parent changes or a lifecycle move changes its locator, update its canonical
+backlink and corresponding human-readable parent link in the same project
+change-set.
 
 Before any sprint planning or implementation edit, the executing agent runs
 the applicable readiness selector. Selector output, rather than subjective

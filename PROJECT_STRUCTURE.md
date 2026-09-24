@@ -46,6 +46,10 @@ while project-wide management records remain under `pm/`.
 - `scripts/setup-project-journal.sh` and `scripts/project-journal.sql` own
   PostgreSQL 18 journal provisioning and its immutable V1 storage contract.
 - `tsts/` owns the canonical TypeScript analyzer and its Node tests. Root npm dependencies and `npm run build:tsts` produce ignored `tsts/dist/`; npm distributes only its compiled runtime. `cli/tsts` is the registered-project launcher installed alongside `ponytail`.
+- `src/` owns non-script runtime implementations dispatched by user-facing
+  CLI entrypoints. `src/campaign-census.js` owns campaign configuration and
+  plan metadata readers, scoped campaign discovery and validation, census
+  normalization, and human/JSON reporting.
 - `ponytail.json` owns the TSTS build-impact target.
 - `cli/` owns user-facing parse-safe Bash tools. `cli/ponytail` owns project
   registration, optional pre-commit integration, and Codex configuration
@@ -66,6 +70,9 @@ while project-wide management records remain under `pm/`.
   `detect-components` maintain its component data; `register-dependency`,
   `unregister-dependency`, and `list-dependencies` maintain explicit project
   dependencies.
+  `project/management.json` owns the versioned project-management root, plan
+  root, lifecycle directories and roles, and supported legacy plan layout used
+  by the campaign census CLI.
   Other projects read this file only from the repository's explicitly blessed
   worktree. `codex-execpolicy.json` owns its Codex command policy proposal. See
   `docs/project-validation.md`.
@@ -87,11 +94,11 @@ while project-wide management records remain under `pm/`.
   architecture web. Its introduction describes the product architecture at a
   30,000-foot level and links to thematic architecture documents. Create it
   with the first architecture content, not as a placeholder.
-- `skills/issue-tracking/SKILL.md` supplies this project's default issue types
-  and shared issue/plan lifecycle. No local overrides are configured. The
-  host configuration in `AGENTS.md` references this owner; do not duplicate
-  the defaults in either `ponytail.json` contract. Create lifecycle directories
-  with their first record, without placeholder files.
+- `skills/issue-tracking/SKILL.md` supplies the issue types and lifecycle
+  semantics. `.agents/config/project/management.json` is the machine-readable
+  source for this project's lifecycle directory names and roles; do not repeat
+  them in either `ponytail.json` contract. Create lifecycle directories with
+  their first record, without placeholder files.
 - `tech_debt.md` is the canonical local technical-debt record.
 - `tmp/` owns ignored local logs, probes, generated previews, and other
   temporary artifacts, including disposable `tmp/project-journal/` process

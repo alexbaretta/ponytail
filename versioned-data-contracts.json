@@ -111,6 +111,42 @@
       "supportedDowngradeVersions": []
     },
     {
+      "id": "campaign-management-config",
+      "implementation": {
+        "workspace": "ponytail",
+        "module": "src/campaign-census.js",
+        "readerRegistryExport": "CampaignManagementConfigReaders"
+      },
+      "currentVersion": "V1",
+      "versions": ["V1"],
+      "supportedReadVersions": ["V1"],
+      "supportedDowngradeVersions": []
+    },
+    {
+      "id": "campaign-plan-metadata",
+      "implementation": {
+        "workspace": "ponytail",
+        "module": "src/campaign-census.js",
+        "readerRegistryExport": "CampaignPlanMetadataReaders"
+      },
+      "currentVersion": "V1",
+      "versions": ["V1"],
+      "supportedReadVersions": ["V1"],
+      "supportedDowngradeVersions": []
+    },
+    {
+      "id": "campaign-census-report",
+      "implementation": {
+        "workspace": "ponytail",
+        "module": "src/campaign-census.js",
+        "readerRegistryExport": "CampaignReportReaders"
+      },
+      "currentVersion": "V1",
+      "versions": ["V1"],
+      "supportedReadVersions": ["V1"],
+      "supportedDowngradeVersions": []
+    },
+    {
       "id": "parallel-sprint-metadata",
       "implementation": {
         "workspace": "ponytail",

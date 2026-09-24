@@ -496,6 +496,8 @@ def print_usage():
   ponytail unregister-dependency <project>
   ponytail list-dependencies
   ponytail detect-components [--language typescript|javascript|auto]
+  ponytail campaign validate <plan-or-plan.md>
+  ponytail campaign report <plan-or-plan.md> [--json]
   ponytail pre-commit
   ponytail validate
   ponytail qa [references]
@@ -590,6 +592,14 @@ def run():
             detect_components(root, arguments)
         return 0
     metadata = validate_project(config, source_root, root, main_root)
+    if operation == "campaign":
+        campaign_cli = source_root / "src/campaign-census.js"
+        if not campaign_cli.is_file():
+            raise ProjectError(f"campaign CLI source is unavailable: {campaign_cli}", 2)
+        try:
+            return subprocess.run(["node", str(campaign_cli), *arguments], cwd=root).returncode
+        except OSError as error:
+            raise ProjectError(f"campaign CLI could not start: {error}", 2) from error
     if operation in {"-h", "--help", "help"}:
         print_usage()
         return 0

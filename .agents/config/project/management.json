@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "managementRoot": "pm",
+  "planRoot": "pm/plans",
+  "lifecycle": {
+    "directories": ["open", "in_progress", "closed", "deferred", "rejected"],
+    "roles": {
+      "initial": "open",
+      "activeWork": "in_progress",
+      "successfulCompletion": "closed",
+      "deferred": "deferred",
+      "rejected": "rejected"
+    }
+  },
+  "legacyPlanLayout": "flat"
+}

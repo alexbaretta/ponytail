@@ -45,6 +45,19 @@ test('serial policy preserves atomic batch and convergence boundaries', () => {
   assert.match(skill, /coordinator verifies the rebased plan evidence and fast-forward\s+merges that branch/);
 });
 
+test('campaign census policy is scoped to one backlink-derived campaign', () => {
+  assert.match(skill, /exactly `schemaVersion`, `id`, and `parent_plan_id`/);
+  assert.match(skill, /Derive\s+children by inventorying these backlinks/);
+  assert.match(skill, /only the campaign containing the supplied plan/);
+  assert.match(skill, /malformed or contradictory unrelated\s+campaigns do not affect the result/);
+  assert.match(skill, /does not schedule parallel work, assign workers or worktrees/);
+  assert.match(skill, /ponytail campaign validate <plan-or-plan\.md>/);
+  assert.match(skill, /before requesting plan approval[\s\S]*before the first implementation edit[\s\S]*before closing a campaign root/);
+  assert.match(skill, /non-root plan may close when its own acceptance is complete/);
+  assert.match(skill, /campaign root\s+with descendants may close only after every member is complete/);
+  assert.match(skill, /backlink and corresponding human-readable parent link in the same project\s+change-set/);
+});
+
 test('sandbox-blocked journaling requires explicit persistent-rule authorization', () => {
   assert.match(skill, /sandbox access blocks `project_journal\.sh`, especially its local\s+PostgreSQL Unix socket/);
   assert.match(skill, /user's literal explicit authorization\s+before adding a persistent allow `prefix_rule` for that exact\s+`project_journal\.sh` executable to `~\/\.codex\/rules\/default\.rules`/);
