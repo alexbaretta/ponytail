@@ -9,7 +9,7 @@ Licensed under the MIT License. See LICENSE in the project root.
 
 ## Status
 
-in_progress
+closed
 
 ## Type, source, and authorization
 
@@ -20,12 +20,11 @@ in_progress
   campaign-census discussion, clarified by explicit stakeholder decisions on
   2026-09-24.
 - **Approval state:** The census behavior, single-source graph model,
-  fail-fast validation, closure rules, and CLI output contract in this record
-  are approved requirements. Remaining decisions are listed below.
-- **Authorization:** This record authorizes feature capture and refinement only.
-  It does not authorize implementation, creation of a long-lived plan,
-  migration of existing project-management records, or publication outside
-  Git.
+  fail-fast validation, closure rules, CLI output contract, and implementation
+  plan are approved.
+- **Authorization:** The user explicitly authorized implementation on
+  2026-09-24. Historical-record migration and publication outside Git remain
+  outside scope.
 - **Intended owner:** The Ponytail repository, because the capability defines
   portable plan-management behavior and must evolve with the reusable
   `plan-execution` skill.
@@ -500,8 +499,8 @@ Approved requirements are recorded in
 Plain-English acceptance coverage is recorded in
 [`../../uat/index.md`](../../uat/index.md#campaign-census-suite).
 
-Implementation remains unapproved. Requirements and UAT documentation do not
-authorize starting a plan or changing executable inputs.
+Implementation was explicitly approved on 2026-09-24; requirements and UAT
+documentation remain descriptive records rather than independent authority.
 
 ## Activation decisions
 
@@ -516,7 +515,7 @@ authorize starting a plan or changing executable inputs.
 ## Implementation and plan links
 
 Implementation is owned by
-  [`2026-09-24-campaign-census`](../../plans/in_progress/2026-09-24-campaign-census/plan.md).
+  [`2026-09-24-campaign-census`](../../plans/closed/2026-09-24-campaign-census/plan.md).
 The user explicitly approved implementation on 2026-09-24.
 
 ## Validation evidence
@@ -528,4 +527,8 @@ the TSTS directory-structure check; zero failures or skips.
 
 ## Resolution or disposition
 
-Implementation explicitly approved and active on 2026-09-24.
+Implemented and accepted on 2026-09-24 in commit `5329514`. Focused campaign,
+policy, packaging, generated-copy, and versioned-contract tests passed, as did
+the build-impact-selected TSTS build and the configured full Ponytail test
+command. The issue and its plan closed together after final campaign
+validation.

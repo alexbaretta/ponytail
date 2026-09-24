@@ -1,9 +1,9 @@
 # Campaign census
 
 - **Plan ID:** `2026-09-24-campaign-census`
-- **Status:** `in_progress`
+- **Status:** `closed`
 - **Issue:**
-  [`2026-09-24-FEAT-campaign_graph_validation_and_reporting`](../../../bugs/in_progress/2026-09-24-FEAT-campaign_graph_validation_and_reporting.md)
+  [`2026-09-24-FEAT-campaign_graph_validation_and_reporting`](../../../bugs/closed/2026-09-24-FEAT-campaign_graph_validation_and_reporting.md)
 - **Approval:** The user explicitly requested implementation on 2026-09-24
   after approving the refined requirements and acceptance contract.
 - **Management and component repository:** Ponytail.
@@ -90,8 +90,7 @@ selected campaign, and report its plan, sprint, and tasklet census.
 
 ## Sprint
 
-1. [S01](sprints/S01.md): implement and accept the campaign census — approved,
-   in progress.
+1. [S01](sprints/S01.md): implement and accept the campaign census — done.
 
 ## Starting checkpoint
 
@@ -103,4 +102,10 @@ failures or skips.
 
 ## Final validation record
 
-Pending.
+Accepted on 2026-09-24. Implementation commit `5329514` passed the focused
+23-test campaign, policy, package, generated-copy, and versioned-contract gate;
+the real `ponytail campaign validate` path; Bash parsing; rule-copy and version
+checks; the build-impact-selected `npm run build:tsts`; and the configured
+`npm test` final command. The final command passed 340 core tests, Codex
+installer checks, 23 Pi tests, 4 MCP tests, 70 TSTS tests, and the
+422-file TSTS directory-structure check with zero failures or skips.

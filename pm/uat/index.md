@@ -8,9 +8,9 @@ Licensed under the MIT License. See LICENSE in the project root.
 # Ponytail User Acceptance Testing
 
 This linked Markdown web records plain-English acceptance behavior. Ponytail
-has no configured UAT operations skill, execution profile, release-evidence
-owner, or release-authorization policy, so these Arcs define the acceptance
-contract but do not authorize or describe an execution environment.
+has no separate UAT operations skill or release-authorization policy. The
+campaign census Arcs are automated at the production module and real CLI
+boundary by `tests/campaign-census.test.js`.
 
 ## Campaign census Suite
 
@@ -24,7 +24,8 @@ approved 2026-09-24.
 - **Prerequisites:** A valid managed campaign fixture containing a root, at
   least two descendant plans, sprints, features, and tasklets, plus an
   unrelated unmarked historical plan and an unrelated malformed campaign.
-- **Profiles:** Automated profile not configured; manual profile not configured.
+- **Profiles:** Automated by `node --test tests/campaign-census.test.js`; no
+  manual profile is required.
 - **External effects:** None; the operation is read-only.
 
 1. Run campaign validation from the root plan.
@@ -52,7 +53,8 @@ approved 2026-09-24.
   respectively, a missing parent, parent cycle, duplicate member plan ID,
   lifecycle-placement error, unsupported version, or invalid sprint or tasklet
   graph.
-- **Profiles:** Automated profile not configured; manual profile not configured.
+- **Profiles:** Automated by `node --test tests/campaign-census.test.js`; no
+  manual profile is required.
 - **External effects:** None; the operation is read-only.
 
 1. Run validation against each invalid fixture.
@@ -72,7 +74,8 @@ approved 2026-09-24.
 - **Actor:** Agent maintaining a managed campaign.
 - **Prerequisites:** A campaign root with at least one incomplete descendant,
   followed by the same campaign with all member acceptance complete.
-- **Profiles:** Automated profile not configured; manual profile not configured.
+- **Profiles:** Automated by `node --test tests/campaign-census.test.js`; no
+  manual profile is required.
 - **External effects:** None during validation.
 
 1. Validate the campaign while a descendant is incomplete and the root claims
@@ -87,10 +90,17 @@ approved 2026-09-24.
 - **Actor:** Ponytail CLI user or agent.
 - **Prerequisites:** A valid campaign containing independent and overlapping
   planned paths across member plans.
-- **Profiles:** Automated profile not configured; manual profile not configured.
+- **Profiles:** Automated by `node --test tests/campaign-census.test.js`; no
+  manual profile is required.
 - **External effects:** None; the operation is read-only.
 
 1. Run the campaign report.
    - It reports the declared paths as census data but emits no runnable lanes,
      worker assignment, worktree comparison, integration queue, throughput,
      ETA, or parallel-safety conclusion.
+
+## Acceptance evidence
+
+All four Arcs passed on 2026-09-24 in the focused campaign test file against
+implementation commit `5329514`. The configured full Ponytail command then
+passed with zero failures or skips.

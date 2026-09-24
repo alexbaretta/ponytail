@@ -17,7 +17,7 @@ behavior independently from implementation plans and architecture.
 **Approval:** Approved by explicit stakeholder decisions on 2026-09-24.
 
 **Source:**
-[`2026-09-24-FEAT-campaign_graph_validation_and_reporting`](../bugs/in_progress/2026-09-24-FEAT-campaign_graph_validation_and_reporting.md)
+[`2026-09-24-FEAT-campaign_graph_validation_and_reporting`](../bugs/closed/2026-09-24-FEAT-campaign_graph_validation_and_reporting.md)
 and the stakeholder's 2026-09-24 clarification of findings 1–7.
 
 Ponytail must provide a read-only CLI that accepts a managed plan directory or
