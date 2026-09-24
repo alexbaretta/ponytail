@@ -37,6 +37,13 @@ approved 2026-09-24.
 3. Run the human census report from the root and from each descendant.
    - Every invocation reports the same root, members, statuses, counts, and
      deterministic ordering.
+   - The report leads with tasklet counts grouped by plan lifecycle and a
+     campaign total, using distinct `DONE`, `PENDING`, and `ERROR` columns plus
+     total and completion percentage.
+   - The plan census repeats those tasklet counts for each plan, and the
+     incomplete sprint census lists only unfinished sprints with their counts.
+     It does not label a merely pending tasklet as blocked or print every
+     tasklet record.
 4. Run the JSON census report from one member.
    - Exit is `0`; stdout is exactly one versioned JSON document plus one
      newline; stderr is empty; its census facts equal the human report.
@@ -109,6 +116,7 @@ approved 2026-09-24.
 
 ## Acceptance evidence
 
-All four Arcs passed on 2026-09-24 in the focused campaign test file against
-implementation commit `5329514`. The configured full Ponytail command then
-passed with zero failures or skips.
+The original four Arcs passed on 2026-09-24 in the focused campaign test file
+against implementation commit `5329514`; the configured full Ponytail command
+then passed with zero failures or skips. The same focused profile owns the
+subsequent bare-name and operator-facing tasklet-census refinements.

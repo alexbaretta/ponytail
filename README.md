@@ -138,6 +138,10 @@ Campaign input may be an exact stable plan name, its directory, or its
 `plan.md`. A bare name is resolved across configured lifecycle directories and
 must identify exactly one plan.
 
+The human campaign report summarizes `DONE`, `PENDING`, `ERROR`, and total
+tasklets by plan lifecycle and by plan, followed by incomplete sprints. Use
+`--json` for the normalized tasklet-level records.
+
 `plan_pdf.sh` requires Pandoc and writes to `tmp/<plan-name>.pdf` unless an
 output path is supplied.
 

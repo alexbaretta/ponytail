@@ -19,7 +19,8 @@ behavior independently from implementation plans and architecture.
 **Source:**
 [`2026-09-24-FEAT-campaign_graph_validation_and_reporting`](../bugs/closed/2026-09-24-FEAT-campaign_graph_validation_and_reporting.md)
 and the stakeholder's 2026-09-24 clarification of findings 1–7 and subsequent
-approval of bare plan-name input.
+approval of bare plan-name input and an operator-facing tasklet census modeled
+on the supplied 2026-09-24 campaign snapshot.
 
 Ponytail must provide a read-only CLI that accepts a managed plan's exact
 stable name, plan directory, or `plan.md`; follows authored direct-parent
@@ -53,6 +54,15 @@ the tool could not determine validity because invocation, repository,
 configuration, I/O, or tool execution failed. Successful output goes to stdout;
 fail-fast diagnostics go to stderr. Successful `--json` reporting emits exactly
 one JSON document and one trailing newline.
+
+The human report must lead with the campaign's tasklet census rather than
+requiring the operator to inspect individual tasklet records. It reports
+`DONE`, `PENDING`, `ERROR`, and total tasklets grouped by plan lifecycle, the
+same campaign-wide totals and completion percentage, and the same counts for
+each plan. It also identifies incomplete sprints with their tasklet counts.
+`PENDING` is not reported as blocked, and the human report does not need to
+print every tasklet record; the JSON report retains normalized tasklet-level
+data for programmatic queries.
 
 A missing bare plan name is an input-resolution failure with exit `2`. A bare
 name present in more than one lifecycle location is invalid project-management

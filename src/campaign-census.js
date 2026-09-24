@@ -591,31 +591,54 @@ function percentage(value) {
   return value === null ? 'unavailable (no tasklets)' : `${Number.isInteger(value) ? value : value.toFixed(2)}%`;
 }
 
-function groupedCounts(record) {
-  return Object.entries(record).map(([key, value]) => `${key}=${value}`).join(', ');
+function taskletCountLine(label, taskletCounts) {
+  const total = taskletCounts.DONE + taskletCounts.PENDING + taskletCounts.ERROR;
+  return `${label}\t${taskletCounts.DONE}\t${taskletCounts.PENDING}\t${taskletCounts.ERROR}\t${total}`;
 }
 
 function humanReport(report, worktree) {
+  const taskletsByPlanLifecycle = Object.fromEntries(
+    Object.keys(report.totals.plansByLifecycle)
+      .map((lifecycle) => [lifecycle, { PENDING: 0, DONE: 0, ERROR: 0 }]),
+  );
+  for (const plan of report.campaign.plans) {
+    for (const status of ['PENDING', 'DONE', 'ERROR']) {
+      taskletsByPlanLifecycle[plan.lifecycle][status] += plan.taskletCounts[status];
+    }
+  }
+  const incompleteSprints = report.campaign.sprints
+    .filter((sprint) => sprint.executionStatus !== 'DONE');
   const lines = [
     `Campaign: ${report.campaign.rootPlanId}`,
     `Worktree: ${worktree}`,
     `Revision: ${report.repository.commit} (${report.repository.branch ?? 'detached'}, ${report.repository.clean ? 'clean' : 'dirty'})`,
-    `Plans: ${report.totals.plans}`,
-    `Plan lifecycles: ${groupedCounts(report.totals.plansByLifecycle)}`,
-    `Sprints: ${report.totals.sprints} (${report.totals.incompleteSprints} incomplete)`,
-    `Sprint planning states: ${groupedCounts(report.totals.sprintsByPlanningStatus)}`,
-    `Sprint execution states: ${groupedCounts(report.totals.sprintsByExecutionStatus)}`,
-    `Tasklets: ${report.totals.doneTasklets} / ${report.totals.tasklets} DONE (${percentage(report.totals.taskletCompletionPercentage)})`,
-    `Tasklet states: ${groupedCounts(report.totals.taskletsByStatus)}`,
+    `Plans: ${report.totals.plans}; Sprints: ${report.totals.sprints} (${report.totals.incompleteSprints} incomplete)`,
+    '',
+    'Tasklet census',
+    'Plan lifecycle\tDONE\tPENDING\tERROR\tTotal',
   ];
+  for (const [lifecycle, taskletCounts] of Object.entries(taskletsByPlanLifecycle)) {
+    lines.push(taskletCountLine(lifecycle, taskletCounts));
+  }
+  lines.push(
+    taskletCountLine('Campaign total', report.totals.taskletsByStatus),
+    `Campaign completion: ${percentage(report.totals.taskletCompletionPercentage)} by tasklet count`,
+    'PENDING and ERROR are distinct formal tasklet states.',
+    '',
+    'Plan census',
+    'Lifecycle\tPlan\tDONE\tPENDING\tERROR\tTotal',
+  );
   for (const plan of report.campaign.plans) {
-    lines.push(`Plan ${plan.id}: ${plan.lifecycle}; ${plan.sprintCount} sprints; ${plan.taskletCounts.DONE}/${plan.totalTasklets} tasklets DONE`);
+    lines.push(`${plan.lifecycle}\t${plan.id}\t${plan.taskletCounts.DONE}\t${plan.taskletCounts.PENDING}\t${plan.taskletCounts.ERROR}\t${plan.totalTasklets}`);
   }
-  for (const sprint of report.campaign.sprints) {
-    lines.push(`Sprint ${sprint.planId}/${sprint.id}: ${sprint.planningStatus}/${sprint.executionStatus ?? 'UNPLANNED'}; ${sprint.taskletCounts.DONE}/${sprint.totalTasklets} tasklets DONE`);
-  }
-  for (const tasklet of report.campaign.tasklets) {
-    lines.push(`Tasklet ${tasklet.planId}/${tasklet.id}: ${tasklet.status}; feature ${tasklet.featureId ?? 'none'}; depends on ${tasklet.dependsOn.join(', ') || 'none'}; paths ${tasklet.plannedPaths.join(', ') || 'none'}`);
+  lines.push('', 'Incomplete sprint census');
+  if (incompleteSprints.length === 0) {
+    lines.push('None');
+  } else {
+    lines.push('Plan/Sprint\tPlanning\tExecution\tDONE\tPENDING\tERROR\tTotal');
+    for (const sprint of incompleteSprints) {
+      lines.push(`${sprint.planId}/${sprint.id}\t${sprint.planningStatus}\t${sprint.executionStatus ?? 'UNPLANNED'}\t${sprint.taskletCounts.DONE}\t${sprint.taskletCounts.PENDING}\t${sprint.taskletCounts.ERROR}\t${sprint.totalTasklets}`);
+    }
   }
   return `${lines.join('\n')}\n`;
 }
