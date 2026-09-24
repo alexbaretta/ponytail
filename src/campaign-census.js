@@ -257,6 +257,12 @@ function scanPlanCandidates(repositoryRoot, config) {
 }
 
 function resolveInputPlan(input, repositoryRoot, config, candidates) {
+  if (input && !['.', '..', 'plan.md'].includes(input) && !input.includes('/') && !input.includes('\\')) {
+    const matches = candidates.filter((candidate) => path.basename(path.dirname(candidate.planFile)) === input);
+    if (matches.length === 0) toolError('CAMPAIGN_INPUT', `plan name does not exist: ${input}`);
+    if (matches.length > 1) dataError('CAMPAIGN_INPUT_AMBIGUOUS', `plan name exists in multiple lifecycle locations: ${input}`, input);
+    return { candidate: matches[0], invocationInput: input };
+  }
   let inputPath;
   try {
     inputPath = fs.realpathSync(path.resolve(input));
@@ -278,7 +284,10 @@ function resolveInputPlan(input, repositoryRoot, config, candidates) {
   }
   const candidate = candidates.find((item) => item.planFile === planFile);
   if (!candidate) dataError('CAMPAIGN_INPUT_LAYOUT', 'input is not in a supported managed plan layout', null, relative);
-  return candidate;
+  return {
+    candidate,
+    invocationInput: path.relative(repositoryRoot, inputPath).split(path.sep).join('/'),
+  };
 }
 
 function validateParentLink(plan, parent) {
@@ -294,7 +303,8 @@ function validateParentLink(plan, parent) {
 
 function discoverCampaign(repositoryRoot, config, input) {
   const candidates = scanPlanCandidates(repositoryRoot, config);
-  const selected = readManagedPlan(resolveInputPlan(input, repositoryRoot, config, candidates));
+  const resolvedInputPlan = resolveInputPlan(input, repositoryRoot, config, candidates);
+  const selected = readManagedPlan(resolvedInputPlan.candidate);
   const membersByPath = new Map([[selected.planFile, selected]]);
   let current = selected;
   const ancestorIds = new Set([current.id]);
@@ -332,7 +342,7 @@ function discoverCampaign(repositoryRoot, config, input) {
     config.lifecycle.directories.indexOf(left.lifecycle) - config.lifecycle.directories.indexOf(right.lifecycle)
     || left.id.localeCompare(right.id)
   ));
-  return { root, plans };
+  return { root, plans, invocationInput: resolvedInputPlan.invocationInput };
 }
 
 function increment(record, key) {
@@ -480,7 +490,7 @@ function buildReport(repositoryRoot, config, input) {
     valid: true,
     invocation: {
       command: 'report',
-      input: path.relative(canonicalRepositoryRoot, fs.realpathSync(path.resolve(input))).split(path.sep).join('/'),
+      input: campaign.invocationInput,
     },
     repository: repositoryIdentity(canonicalRepositoryRoot),
     campaign: {
@@ -617,7 +627,7 @@ function repositoryRoot() {
 }
 
 function usage() {
-  return 'usage: ponytail campaign validate <plan-or-plan.md>\n       ponytail campaign report <plan-or-plan.md> [--json]';
+  return 'usage: ponytail campaign validate <plan-name-or-path>\n       ponytail campaign report <plan-name-or-path> [--json]';
 }
 
 function run(argv = process.argv.slice(2)) {

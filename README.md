@@ -104,8 +104,8 @@ Installed shell tools:
 | Tool | Purpose |
 | --- | --- |
 | `ponytail register\|unregister\|list-projects\|bless[-worktree]\|blessed[-worktree]\|register-component\|unregister-component\|list-components\|register-dependency\|unregister-dependency\|list-dependencies\|detect-components\|pre-commit\|validate\|qa\|update-permissions\|update-skills\|update` | Register, unregister, and list repositories; select worktree configuration; manage components and dependencies; install pre-commit QA; run local QA; and update Codex configuration |
-| `ponytail campaign validate <plan-or-plan.md>` | Fail-fast validation of the campaign containing the supplied managed plan |
-| `ponytail campaign report <plan-or-plan.md> [--json]` | Report that campaign's plan, sprint, and tasklet census |
+| `ponytail campaign validate <plan-name-or-path>` | Fail-fast validation of the campaign containing the supplied managed plan |
+| `ponytail campaign report <plan-name-or-path> [--json]` | Report that campaign's plan, sprint, and tasklet census |
 | `audit_pm.sh [--fix] [--dryrun]` | Audit PM structure and preview or fix missing date prefixes |
 | `plan_pdf.sh [--sprints] <plan-name> [output.pdf]` | Render a plan, optionally with its sprints, as PDF using Pandoc |
 | `plan_stats.sh <plan-name>` | Legacy flat-layout count of open and done task lines in one plan |
@@ -133,6 +133,10 @@ migrate the current layout, or treat that audit, `bug_stats.sh`, or
 `plan_stats.sh` as a complete campaign check. The plan readiness selectors
 accept the current plan/sprint path explicitly and remain usable after a status
 move.
+
+Campaign input may be an exact stable plan name, its directory, or its
+`plan.md`. A bare name is resolved across configured lifecycle directories and
+must identify exactly one plan.
 
 `plan_pdf.sh` requires Pandoc and writes to `tmp/<plan-name>.pdf` unless an
 output path is supplied.

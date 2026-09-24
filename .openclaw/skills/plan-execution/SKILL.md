@@ -519,8 +519,12 @@ determine integration readiness, or estimate throughput or completion time.
 Use the canonical command:
 
 ```text
-ponytail campaign validate <plan-or-plan.md>
+ponytail campaign validate <plan-name-or-path>
 ```
+
+The input may be the exact stable plan name, its directory, or its `plan.md`.
+A bare name must resolve to exactly one plan across configured lifecycle
+locations.
 
 Run it before requesting plan approval, after planning reconciliation and
 before the first implementation edit, after any campaign relationship or plan

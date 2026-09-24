@@ -174,14 +174,33 @@ test('root and leaf report the same campaign while unrelated malformed plans sta
 
   const fromRoot = buildReport(root, config(root), rootPlan);
   const fromChild = buildReport(root, config(root), childPlan);
+  const fromRootName = buildReport(root, config(root), rootId);
   assert.equal(fromRoot.campaign.rootPlanId, rootId);
   assert.deepEqual(fromRoot.campaign, fromChild.campaign);
+  assert.deepEqual(fromRoot.campaign, fromRootName.campaign);
   assert.deepEqual(fromRoot.totals, fromChild.totals);
+  assert.equal(fromRootName.invocation.input, rootId);
   assert.deepEqual(fromRoot.campaign.plans.map(({ id }) => id), [rootId, childId]);
   assert.deepEqual(fromRoot.totals.plansByLifecycle, { open: 0, in_progress: 1, closed: 1, deferred: 0, rejected: 0 });
   assert.equal(fromRoot.totals.plans, 2);
   assert.equal(fromRoot.totals.sprints, 2);
   assert.equal(fromRoot.totals.tasklets, 2);
+});
+
+test('bare plan names fail explicitly when missing or ambiguous', () => {
+  const missingRoot = repository();
+  plan(missingRoot, 'open', '2026-09-24-existing');
+  const missing = captureError(() => buildReport(missingRoot, config(missingRoot), '2026-09-24-missing'));
+  assert.equal(missing.status, 2);
+  assert.equal(missing.code, 'CAMPAIGN_INPUT');
+
+  const ambiguousRoot = repository();
+  const id = '2026-09-24-ambiguous-name';
+  plan(ambiguousRoot, 'open', id);
+  plan(ambiguousRoot, 'closed', id, null, { closed: true });
+  const ambiguous = captureError(() => buildReport(ambiguousRoot, config(ambiguousRoot), id));
+  assert.equal(ambiguous.status, 1);
+  assert.equal(ambiguous.code, 'CAMPAIGN_INPUT_AMBIGUOUS');
 });
 
 test('selected campaign fails on missing, ambiguous, and cyclic parentage', () => {
@@ -312,13 +331,22 @@ test('ponytail dispatches campaign reporting through the production module', () 
     sourceRoot: fs.realpathSync(sourceRoot),
     projects: [{ root: fs.realpathSync(root), blessedWorktree: fs.realpathSync(root) }],
   }, null, 2)}\n`);
-  const result = spawnSync(ponytailCli, ['campaign', 'validate', selected], {
+  const result = spawnSync(ponytailCli, ['campaign', 'validate', '2026-09-24-dispatch'], {
     cwd: root,
     encoding: 'utf8',
     env: { ...process.env, HOME: home, PATH: `${path.dirname(process.execPath)}:/usr/bin:/bin` },
   });
   assert.equal(result.status, 0, result.stderr);
   assert.equal(result.stdout, 'valid: 2026-09-24-dispatch (1 plans, 1 sprints, 1 tasklets)\n');
+
+  const missing = spawnSync(ponytailCli, ['campaign', 'validate', '2026-09-24-missing'], {
+    cwd: root,
+    encoding: 'utf8',
+    env: { ...process.env, HOME: home, PATH: `${path.dirname(process.execPath)}:/usr/bin:/bin` },
+  });
+  assert.equal(missing.status, 2);
+  assert.equal(missing.stdout, '');
+  assert.match(missing.stderr, /^error CAMPAIGN_INPUT:/);
 
   let failure = spawnSync(ponytailCli, ['campaign', 'report'], {
     cwd: root,

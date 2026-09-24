@@ -496,8 +496,8 @@ def print_usage():
   ponytail unregister-dependency <project>
   ponytail list-dependencies
   ponytail detect-components [--language typescript|javascript|auto]
-  ponytail campaign validate <plan-or-plan.md>
-  ponytail campaign report <plan-or-plan.md> [--json]
+  ponytail campaign validate <plan-name-or-path>
+  ponytail campaign report <plan-name-or-path> [--json]
   ponytail pre-commit
   ponytail validate
   ponytail qa [references]

@@ -51,7 +51,8 @@ test('campaign census policy is scoped to one backlink-derived campaign', () => 
   assert.match(skill, /only the campaign containing the supplied plan/);
   assert.match(skill, /malformed or contradictory unrelated\s+campaigns do not affect the result/);
   assert.match(skill, /does not schedule parallel work, assign workers or worktrees/);
-  assert.match(skill, /ponytail campaign validate <plan-or-plan\.md>/);
+  assert.match(skill, /ponytail campaign validate <plan-name-or-path>/);
+  assert.match(skill, /bare name must resolve to exactly one plan across configured lifecycle\s+locations/);
   assert.match(skill, /before requesting plan approval[\s\S]*before the first implementation edit[\s\S]*before closing a campaign root/);
   assert.match(skill, /non-root plan may close when its own acceptance is complete/);
   assert.match(skill, /campaign root\s+with descendants may close only after every member is complete/);

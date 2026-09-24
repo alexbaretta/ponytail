@@ -30,19 +30,23 @@ approved 2026-09-24.
 
 1. Run campaign validation from the root plan.
    - Validation succeeds with exit `0` and one concise stdout confirmation.
-2. Run the human census report from the root and from each descendant.
+2. Run campaign validation again using only the root's stable plan name,
+   without a status directory or `plan.md` path.
+   - Validation resolves the unique plan across configured lifecycle locations
+     and reports the same campaign.
+3. Run the human census report from the root and from each descendant.
    - Every invocation reports the same root, members, statuses, counts, and
      deterministic ordering.
-3. Run the JSON census report from one member.
+4. Run the JSON census report from one member.
    - Exit is `0`; stdout is exactly one versioned JSON document plus one
      newline; stderr is empty; its census facts equal the human report.
-4. Inspect repository and external state.
+5. Inspect repository and external state.
    - No project-management record, Git state, worker, worktree, or external
      system was changed.
-5. Repeat the reports with the unrelated unmarked historical plan present.
+6. Repeat the reports with the unrelated unmarked historical plan present.
    - The managed campaign census is unchanged; selecting or referencing that
      historical plan instead fails validation until it is explicitly migrated.
-6. Repeat the reports with the unrelated malformed campaign present.
+7. Repeat the reports with the unrelated malformed campaign present.
    - The selected campaign still validates and reports successfully; no error
      from the unrelated campaign appears.
 
@@ -66,7 +70,11 @@ approved 2026-09-24.
 3. Invoke the command with an invalid argument or unavailable configuration.
    - Exit is `2`, stdout is empty, and stderr explains why validity could not be
      determined.
-4. Inspect repository and external state.
+4. Invoke the command with a missing bare plan name, then with a bare name that
+   exists in two lifecycle locations.
+   - The missing name exits `2`; the ambiguous name exits `1`; neither
+     invocation selects a plan arbitrarily or emits a partial report.
+5. Inspect repository and external state.
    - No state was changed.
 
 ### Arc: Enforce campaign-root closure
