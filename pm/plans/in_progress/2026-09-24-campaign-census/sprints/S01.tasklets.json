@@ -1,0 +1,119 @@
+{
+  "schemaVersion": 3,
+  "sprint": "S01",
+  "features": {
+    "S01-F01": {
+      "depends_on": [],
+      "validation_tasklet": "S01-F01-T10"
+    }
+  },
+  "tasklets": {
+    "S01-F01-T01": {
+      "depends_on": [],
+      "affinity": ["campaign-census", "contracts"],
+      "risk": "high",
+      "risk_reason": "Defines the portable project-management configuration consumed by every campaign command.",
+      "feature": "S01-F01",
+      "planned_paths": [
+        ".agents/config/project/management.json",
+        "src/campaign-census.js"
+      ]
+    },
+    "S01-F01-T02": {
+      "depends_on": ["S01-F01-T01"],
+      "affinity": ["campaign-census", "graph"],
+      "risk": "high",
+      "risk_reason": "Defines campaign membership and the isolation of unrelated campaigns.",
+      "feature": "S01-F01",
+      "planned_paths": ["src/campaign-census.js"]
+    },
+    "S01-F01-T03": {
+      "depends_on": ["S01-F01-T02"],
+      "affinity": ["campaign-census", "selectors"],
+      "risk": "high",
+      "risk_reason": "Composes canonical sprint and tasklet validators and enforces closure state.",
+      "feature": "S01-F01",
+      "planned_paths": ["src/campaign-census.js"]
+    },
+    "S01-F01-T04": {
+      "depends_on": ["S01-F01-T03"],
+      "affinity": ["campaign-census", "report"],
+      "risk": "normal",
+      "feature": "S01-F01",
+      "planned_paths": ["src/campaign-census.js"]
+    },
+    "S01-F01-T05": {
+      "depends_on": ["S01-F01-T04"],
+      "affinity": ["campaign-census", "cli"],
+      "risk": "normal",
+      "feature": "S01-F01",
+      "planned_paths": ["cli/ponytail"]
+    },
+    "S01-F01-T06": {
+      "depends_on": ["S01-F01-T05"],
+      "affinity": ["campaign-census", "tests"],
+      "risk": "high",
+      "risk_reason": "Owns the regression proof for graph scoping, output contracts, and read-only behavior.",
+      "feature": "S01-F01",
+      "planned_paths": ["tests/campaign-census.test.js"]
+    },
+    "S01-F01-T07": {
+      "depends_on": ["S01-F01-T06"],
+      "affinity": ["campaign-census", "configuration"],
+      "risk": "normal",
+      "feature": "S01-F01",
+      "planned_paths": [
+        ".agents/config/project/directory-structure.json",
+        "PROJECT_STRUCTURE.md",
+        "README.md",
+        "package.json",
+        "tests/distribution.test.js",
+        "versioned-data-contracts.json"
+      ]
+    },
+    "S01-F01-T08": {
+      "depends_on": ["S01-F01-T07"],
+      "affinity": ["campaign-census", "policy"],
+      "risk": "high",
+      "risk_reason": "Changes mandatory plan approval, execution, relationship, and closure gates.",
+      "feature": "S01-F01",
+      "planned_paths": [
+        "skills/plan-execution/SKILL.md",
+        "tests/plan-execution-serial.test.js"
+      ]
+    },
+    "S01-F01-T09": {
+      "depends_on": ["S01-F01-T08"],
+      "affinity": ["campaign-census", "generation"],
+      "risk": "normal",
+      "feature": "S01-F01",
+      "planned_paths": [
+        ".openclaw/skills/plan-execution/SKILL.md"
+      ]
+    },
+    "S01-F01-T10": {
+      "depends_on": [
+        "S01-F01-T01",
+        "S01-F01-T02",
+        "S01-F01-T03",
+        "S01-F01-T04",
+        "S01-F01-T05",
+        "S01-F01-T06",
+        "S01-F01-T07",
+        "S01-F01-T08",
+        "S01-F01-T09"
+      ],
+      "affinity": ["campaign-census", "validation"],
+      "risk": "normal",
+      "feature": "S01-F01",
+      "planned_paths": [
+        "pm/bugs/in_progress/2026-09-24-FEAT-campaign_graph_validation_and_reporting.md",
+        "pm/plans/in_progress/2026-09-24-campaign-census/plan.md",
+        "pm/plans/in_progress/2026-09-24-campaign-census/sprints/S01.md",
+        "pm/plans/in_progress/2026-09-24-campaign-census/sprints/S01.tasklets.json",
+        "pm/requirements/index.md",
+        "pm/uat/index.md"
+      ]
+    }
+  }
+}
