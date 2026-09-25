@@ -190,10 +190,12 @@ test('root and leaf report the same campaign while unrelated malformed plans sta
   assert.equal(fromRoot.totals.sprints, 2);
   assert.equal(fromRoot.totals.tasklets, 2);
   const human = humanReport(fromRoot, root);
-  assert.match(human, /in_progress\t0\t1\t0\t1/);
-  assert.match(human, /closed\t1\t0\t0\t1/);
-  assert.match(human, /Campaign total\t1\t1\t0\t2/);
+  assert.match(human, /Plan lifecycle  DONE  PENDING  ERROR  Total/);
+  assert.match(human, /in_progress        0        1      0      1/);
+  assert.match(human, /closed             1        0      0      1/);
+  assert.match(human, /Campaign total     1        1      0      2/);
   assert.match(human, /Campaign completion: 50% by tasklet count/);
+  assert.doesNotMatch(human, /\t/);
 });
 
 test('bare plan names fail explicitly when missing or ambiguous', () => {
@@ -267,7 +269,7 @@ test('census enforces closure and represents the zero-tasklet percentage exactly
   assert.equal(report.totals.doneTasklets, 0);
   assert.equal(report.totals.taskletCompletionPercentage, null);
   const human = humanReport(report, emptyRoot);
-  assert.match(human, /Campaign total\t0\t0\t0\t0/);
+  assert.match(human, /Campaign total     0        0      0      0/);
   assert.match(human, /Campaign completion: unavailable \(no tasklets\) by tasklet count/);
 });
 
@@ -303,12 +305,12 @@ test('production module uses exact exit and stream contracts without mutation', 
   result = spawnSync(process.execPath, [campaignCli, 'report', selected], { cwd: root, encoding: 'utf8' });
   assert.equal(result.status, 0, result.stderr);
   assert.match(result.stdout, /Plans: 1; Sprints: 1 \(1 incomplete\)/);
-  assert.match(result.stdout, /Tasklet census\nPlan lifecycle\tDONE\tPENDING\tERROR\tTotal/);
-  assert.match(result.stdout, /open\t0\t1\t0\t1/);
-  assert.match(result.stdout, /Campaign total\t0\t1\t0\t1/);
+  assert.match(result.stdout, /Tasklet census\nPlan lifecycle  DONE  PENDING  ERROR  Total/);
+  assert.match(result.stdout, /open               0        1      0      1/);
+  assert.match(result.stdout, /Campaign total     0        1      0      1/);
   assert.match(result.stdout, /Campaign completion: 0% by tasklet count/);
-  assert.match(result.stdout, /open\t2026-09-24-streams\t0\t1\t0\t1/);
-  assert.match(result.stdout, /2026-09-24-streams\/S01\tAPPROVED\tPENDING\t0\t1\t0\t1/);
+  assert.match(result.stdout, /open       2026-09-24-streams     0        1      0      1/);
+  assert.match(result.stdout, /2026-09-24-streams\/S01  APPROVED  PENDING       0        1      0      1/);
   assert.doesNotMatch(result.stdout, /Tasklet 2026-09-24-streams\/S01-F01-T01/);
 
   result = spawnSync(process.execPath, [campaignCli, 'report'], { cwd: root, encoding: 'utf8' });

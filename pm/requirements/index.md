@@ -25,7 +25,7 @@ behavior independently from implementation plans and architecture.
 and the stakeholder's 2026-09-24 clarification of findings 1–7 and subsequent
 approval of lifecycle-independent plan-name input, including
 `<plan-name>/plan.md`, and an operator-facing tasklet census modeled on the
-supplied 2026-09-24 campaign snapshot.
+supplied 2026-09-24 campaign snapshot, including aligned human-report tables.
 
 Ponytail must provide a read-only CLI that accepts a managed plan's exact
 stable name, `<stable-name>/plan.md`, explicit plan directory, or explicit
@@ -65,7 +65,8 @@ The human report must lead with the campaign's tasklet census rather than
 requiring the operator to inspect individual tasklet records. It reports
 `DONE`, `PENDING`, `ERROR`, and total tasklets grouped by plan lifecycle, the
 same campaign-wide totals and completion percentage, and the same counts for
-each plan. It also identifies incomplete sprints with their tasklet counts.
+each plan. Every human-report table aligns its columns for the actual labels
+and values. It also identifies incomplete sprints with their tasklet counts.
 `PENDING` is not reported as blocked, and the human report does not need to
 print every tasklet record; the JSON report retains normalized tasklet-level
 data for programmatic queries.

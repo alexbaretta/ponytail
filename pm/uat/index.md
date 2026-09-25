@@ -44,7 +44,8 @@ approved 2026-09-24.
      deterministic ordering.
    - The report leads with tasklet counts grouped by plan lifecycle and a
      campaign total, using distinct `DONE`, `PENDING`, and `ERROR` columns plus
-     total and completion percentage.
+     total and completion percentage. Every table has aligned columns for its
+     actual labels and values.
    - The plan census repeats those tasklet counts for each plan, and the
      incomplete sprint census lists only unfinished sprints with their counts.
      It does not label a merely pending tasklet as blocked or print every

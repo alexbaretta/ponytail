@@ -597,9 +597,17 @@ function percentage(value) {
   return value === null ? 'unavailable (no tasklets)' : `${Number.isInteger(value) ? value : value.toFixed(2)}%`;
 }
 
-function taskletCountLine(label, taskletCounts) {
+function taskletCountRow(label, taskletCounts) {
   const total = taskletCounts.DONE + taskletCounts.PENDING + taskletCounts.ERROR;
-  return `${label}\t${taskletCounts.DONE}\t${taskletCounts.PENDING}\t${taskletCounts.ERROR}\t${total}`;
+  return [label, taskletCounts.DONE, taskletCounts.PENDING, taskletCounts.ERROR, total];
+}
+
+function formatTable(rows) {
+  const widths = rows[0].map((_, column) => Math.max(...rows.map((row) => String(row[column]).length)));
+  return rows.map((row) => row.map((value, column) => {
+    const text = String(value);
+    return typeof value === 'number' ? text.padStart(widths[column]) : text.padEnd(widths[column]);
+  }).join('  ').trimEnd()).join('\n');
 }
 
 function humanReport(report, worktree) {
@@ -614,6 +622,15 @@ function humanReport(report, worktree) {
   }
   const incompleteSprints = report.campaign.sprints
     .filter((sprint) => sprint.executionStatus !== 'DONE');
+  const taskletRows = [['Plan lifecycle', 'DONE', 'PENDING', 'ERROR', 'Total']];
+  for (const [lifecycle, taskletCounts] of Object.entries(taskletsByPlanLifecycle)) {
+    taskletRows.push(taskletCountRow(lifecycle, taskletCounts));
+  }
+  taskletRows.push(taskletCountRow('Campaign total', report.totals.taskletsByStatus));
+  const planRows = [['Lifecycle', 'Plan', 'DONE', 'PENDING', 'ERROR', 'Total']];
+  for (const plan of report.campaign.plans) {
+    planRows.push([plan.lifecycle, plan.id, plan.taskletCounts.DONE, plan.taskletCounts.PENDING, plan.taskletCounts.ERROR, plan.totalTasklets]);
+  }
   const lines = [
     `Campaign: ${report.campaign.rootPlanId}`,
     `Worktree: ${worktree}`,
@@ -621,30 +638,24 @@ function humanReport(report, worktree) {
     `Plans: ${report.totals.plans}; Sprints: ${report.totals.sprints} (${report.totals.incompleteSprints} incomplete)`,
     '',
     'Tasklet census',
-    'Plan lifecycle\tDONE\tPENDING\tERROR\tTotal',
+    formatTable(taskletRows),
   ];
-  for (const [lifecycle, taskletCounts] of Object.entries(taskletsByPlanLifecycle)) {
-    lines.push(taskletCountLine(lifecycle, taskletCounts));
-  }
   lines.push(
-    taskletCountLine('Campaign total', report.totals.taskletsByStatus),
     `Campaign completion: ${percentage(report.totals.taskletCompletionPercentage)} by tasklet count`,
     'PENDING and ERROR are distinct formal tasklet states.',
     '',
     'Plan census',
-    'Lifecycle\tPlan\tDONE\tPENDING\tERROR\tTotal',
+    formatTable(planRows),
   );
-  for (const plan of report.campaign.plans) {
-    lines.push(`${plan.lifecycle}\t${plan.id}\t${plan.taskletCounts.DONE}\t${plan.taskletCounts.PENDING}\t${plan.taskletCounts.ERROR}\t${plan.totalTasklets}`);
-  }
   lines.push('', 'Incomplete sprint census');
   if (incompleteSprints.length === 0) {
     lines.push('None');
   } else {
-    lines.push('Plan/Sprint\tPlanning\tExecution\tDONE\tPENDING\tERROR\tTotal');
+    const sprintRows = [['Plan/Sprint', 'Planning', 'Execution', 'DONE', 'PENDING', 'ERROR', 'Total']];
     for (const sprint of incompleteSprints) {
-      lines.push(`${sprint.planId}/${sprint.id}\t${sprint.planningStatus}\t${sprint.executionStatus ?? 'UNPLANNED'}\t${sprint.taskletCounts.DONE}\t${sprint.taskletCounts.PENDING}\t${sprint.taskletCounts.ERROR}\t${sprint.totalTasklets}`);
+      sprintRows.push([`${sprint.planId}/${sprint.id}`, sprint.planningStatus, sprint.executionStatus ?? 'UNPLANNED', sprint.taskletCounts.DONE, sprint.taskletCounts.PENDING, sprint.taskletCounts.ERROR, sprint.totalTasklets]);
     }
+    lines.push(formatTable(sprintRows));
   }
   return `${lines.join('\n')}\n`;
 }
