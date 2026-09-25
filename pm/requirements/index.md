@@ -23,15 +23,17 @@ behavior independently from implementation plans and architecture.
 **Source:**
 [`2026-09-24-FEAT-campaign_graph_validation_and_reporting`](../bugs/closed/2026-09-24-FEAT-campaign_graph_validation_and_reporting.md)
 and the stakeholder's 2026-09-24 clarification of findings 1–7 and subsequent
-approval of bare plan-name input and an operator-facing tasklet census modeled
-on the supplied 2026-09-24 campaign snapshot.
+approval of lifecycle-independent plan-name input, including
+`<plan-name>/plan.md`, and an operator-facing tasklet census modeled on the
+supplied 2026-09-24 campaign snapshot.
 
 Ponytail must provide a read-only CLI that accepts a managed plan's exact
-stable name, plan directory, or `plan.md`; follows authored direct-parent
-backlinks to the campaign root; derives descendants by scanning configured
-plan locations; validates only the resulting campaign; and reports an accurate
-census of its plans, sprints, and tasklets. A bare name is resolved across the
-configured lifecycle locations and must identify exactly one physical plan.
+stable name, `<stable-name>/plan.md`, explicit plan directory, or explicit
+`plan.md` path; follows authored direct-parent backlinks to the campaign root;
+derives descendants by scanning configured plan locations; validates only the
+resulting campaign; and reports an accurate census of its plans, sprints, and
+tasklets. The first two forms are resolved across the configured lifecycle
+locations and must identify exactly one physical plan.
 
 A plan participates only when its manifest contains the supported campaign
 metadata block. An unrelated unmarked historical plan does not invalidate a

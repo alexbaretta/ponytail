@@ -35,9 +35,9 @@ approved 2026-09-24.
 
 1. Run campaign validation from the root plan.
    - Validation succeeds with exit `0` and one concise stdout confirmation.
-2. Run campaign validation again using only the root's stable plan name,
-   without a status directory or `plan.md` path.
-   - Validation resolves the unique plan across configured lifecycle locations
+2. Run campaign validation again using the root's stable plan name, then using
+   `<stable-name>/plan.md`, in both cases without a status directory.
+   - Each form resolves the unique plan across configured lifecycle locations
      and reports the same campaign.
 3. Run the human census report from the root and from each descendant.
    - Every invocation reports the same root, members, statuses, counts, and

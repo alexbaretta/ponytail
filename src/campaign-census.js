@@ -257,10 +257,16 @@ function scanPlanCandidates(repositoryRoot, config) {
 }
 
 function resolveInputPlan(input, repositoryRoot, config, candidates) {
-  if (input && !['.', '..', 'plan.md'].includes(input) && !input.includes('/') && !input.includes('\\')) {
-    const matches = candidates.filter((candidate) => path.basename(path.dirname(candidate.planFile)) === input);
-    if (matches.length === 0) toolError('CAMPAIGN_INPUT', `plan name does not exist: ${input}`);
-    if (matches.length > 1) dataError('CAMPAIGN_INPUT_AMBIGUOUS', `plan name exists in multiple lifecycle locations: ${input}`, input);
+  const parts = input && !input.includes('\\') ? input.split('/') : [];
+  const planName = parts.length === 1 && !['.', '..', 'plan.md'].includes(input)
+    ? input
+    : parts.length === 2 && !['.', '..'].includes(parts[0]) && parts[1] === 'plan.md'
+      ? parts[0]
+      : null;
+  if (planName !== null) {
+    const matches = candidates.filter((candidate) => path.basename(path.dirname(candidate.planFile)) === planName);
+    if (matches.length === 0) toolError('CAMPAIGN_INPUT', `plan name does not exist: ${planName}`);
+    if (matches.length > 1) dataError('CAMPAIGN_INPUT_AMBIGUOUS', `plan name exists in multiple lifecycle locations: ${planName}`, planName);
     return { candidate: matches[0], invocationInput: input };
   }
   let inputPath;

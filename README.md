@@ -134,9 +134,10 @@ migrate the current layout, or treat that audit, `bug_stats.sh`, or
 accept the current plan/sprint path explicitly and remain usable after a status
 move.
 
-Campaign input may be an exact stable plan name, its directory, or its
-`plan.md`. A bare name is resolved across configured lifecycle directories and
-must identify exactly one plan.
+Campaign input may be an exact stable plan name, `<plan-name>/plan.md`, an
+explicit plan directory, or an explicit `plan.md` path. The first two forms are
+resolved across configured lifecycle directories and must identify exactly one
+plan.
 
 The human campaign report summarizes `DONE`, `PENDING`, `ERROR`, and total
 tasklets by plan lifecycle and by plan, followed by incomplete sprints. Use

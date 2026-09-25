@@ -176,11 +176,14 @@ test('root and leaf report the same campaign while unrelated malformed plans sta
   const fromRoot = buildReport(root, config(root), rootPlan);
   const fromChild = buildReport(root, config(root), childPlan);
   const fromRootName = buildReport(root, config(root), rootId);
+  const fromRootNameFile = buildReport(root, config(root), `${rootId}/plan.md`);
   assert.equal(fromRoot.campaign.rootPlanId, rootId);
   assert.deepEqual(fromRoot.campaign, fromChild.campaign);
   assert.deepEqual(fromRoot.campaign, fromRootName.campaign);
+  assert.deepEqual(fromRoot.campaign, fromRootNameFile.campaign);
   assert.deepEqual(fromRoot.totals, fromChild.totals);
   assert.equal(fromRootName.invocation.input, rootId);
+  assert.equal(fromRootNameFile.invocation.input, `${rootId}/plan.md`);
   assert.deepEqual(fromRoot.campaign.plans.map(({ id }) => id), [rootId, childId]);
   assert.deepEqual(fromRoot.totals.plansByLifecycle, { open: 0, in_progress: 1, closed: 1, deferred: 0, rejected: 0 });
   assert.equal(fromRoot.totals.plans, 2);
@@ -352,6 +355,14 @@ test('ponytail dispatches campaign reporting through the production module', () 
   });
   assert.equal(result.status, 0, result.stderr);
   assert.equal(result.stdout, 'valid: 2026-09-24-dispatch (1 plans, 1 sprints, 1 tasklets)\n');
+
+  const nameFileResult = spawnSync(ponytailCli, ['campaign', 'validate', '2026-09-24-dispatch/plan.md'], {
+    cwd: root,
+    encoding: 'utf8',
+    env: { ...process.env, HOME: home, PATH: `${path.dirname(process.execPath)}:/usr/bin:/bin` },
+  });
+  assert.equal(nameFileResult.status, 0, nameFileResult.stderr);
+  assert.equal(nameFileResult.stdout, result.stdout);
 
   const missing = spawnSync(ponytailCli, ['campaign', 'validate', '2026-09-24-missing'], {
     cwd: root,
