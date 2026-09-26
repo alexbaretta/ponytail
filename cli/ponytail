@@ -496,6 +496,7 @@ def print_usage():
   ponytail unregister-dependency <project>
   ponytail list-dependencies
   ponytail detect-components [--language typescript|javascript|auto]
+  ponytail pm pdf <collection|all> [--output-dir <path>]
   ponytail campaign validate <plan-name-or-path>
   ponytail campaign report <plan-name-or-path> [--json]
   ponytail pre-commit
@@ -592,6 +593,14 @@ def run():
             detect_components(root, arguments)
         return 0
     metadata = validate_project(config, source_root, root, main_root)
+    if operation == "pm":
+        pm_cli = source_root / "src/pm-pdf.py"
+        if not pm_cli.is_file():
+            raise ProjectError(f"PM CLI source is unavailable: {pm_cli}", 2)
+        try:
+            return subprocess.run(["python3", str(pm_cli), *arguments], cwd=root).returncode
+        except OSError as error:
+            raise ProjectError(f"PM CLI could not start: {error}", 2) from error
     if operation == "campaign":
         campaign_cli = source_root / "src/campaign-census.js"
         if not campaign_cli.is_file():

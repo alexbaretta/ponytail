@@ -47,7 +47,8 @@ while project-wide management records remain under `pm/`.
   PostgreSQL 18 journal provisioning and its immutable V1 storage contract.
 - `tsts/` owns the canonical TypeScript analyzer and its Node tests. Root npm dependencies and `npm run build:tsts` produce ignored `tsts/dist/`; npm distributes only its compiled runtime. `cli/tsts` is the registered-project launcher installed alongside `ponytail`.
 - `src/` owns non-script runtime implementations dispatched by user-facing
-  CLI entrypoints. `src/campaign-census.js` owns campaign configuration and
+  CLI entrypoints. `src/pm-pdf.py` owns configured linked-Markdown PDF
+  rendering. `src/campaign-census.js` owns campaign configuration and
   plan metadata readers, scoped campaign discovery and validation, census
   normalization, and human/JSON reporting.
 - `ponytail.json` owns the TSTS build-impact target.
@@ -73,6 +74,8 @@ while project-wide management records remain under `pm/`.
   `project/management.json` owns the versioned project-management root, plan
   root, lifecycle directories and roles, and supported legacy plan layout used
   by the campaign census CLI.
+  `project/pm-pdf.json`, when present, owns PDF collection roots, titles,
+  exclusions, presentation variables, and the default generated-output path.
   Other projects read this file only from the repository's explicitly blessed
   worktree. `codex-execpolicy.json` owns its Codex command policy proposal. See
   `docs/project-validation.md`.

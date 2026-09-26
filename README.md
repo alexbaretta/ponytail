@@ -106,6 +106,7 @@ Installed shell tools:
 | `ponytail register\|unregister\|list-projects\|bless[-worktree]\|blessed[-worktree]\|register-component\|unregister-component\|list-components\|register-dependency\|unregister-dependency\|list-dependencies\|detect-components\|pre-commit\|validate\|qa\|update-permissions\|update-skills\|update` | Register, unregister, and list repositories; select worktree configuration; manage components and dependencies; install pre-commit QA; run local QA; and update Codex configuration |
 | `ponytail campaign validate <plan-name-or-path>` | Fail-fast validation of the campaign containing the supplied managed plan |
 | `ponytail campaign report <plan-name-or-path> [--json]` | Report that campaign's plan, sprint, and tasklet census |
+| `ponytail pm pdf <collection\|all> [--output-dir <path>]` | Render configured linked Markdown collections as PDFs using Pandoc and XeLaTeX |
 | `audit_pm.sh [--fix] [--dryrun]` | Audit PM structure and preview or fix missing date prefixes |
 | `plan_pdf.sh [--sprints] <plan-name> [output.pdf]` | Render a plan, optionally with its sprints, as PDF using Pandoc |
 | `plan_stats.sh <plan-name>` | Legacy flat-layout count of open and done task lines in one plan |
@@ -145,6 +146,11 @@ tasklets by plan lifecycle and by plan, followed by incomplete sprints. Use
 
 `plan_pdf.sh` requires Pandoc and writes to `tmp/<plan-name>.pdf` unless an
 output path is supplied.
+
+`ponytail pm pdf` reads `.agents/config/project/pm-pdf.json`. The project
+configuration owns each collection's root, title, excluded directories, Pandoc
+presentation variables, and the default output directory. Generated PDFs do
+not replace the Markdown source.
 
 See [managing Codex command policy](docs/condense-codex-rules.md) for project
 proposals, confirmation, accepted state, and single-command recovery.
