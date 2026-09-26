@@ -87,6 +87,36 @@ When a repair crosses layers, prove why each changed layer participates in the
 same causal mechanism. Do not alter product behavior merely to accommodate a
 broken harness or fixture, and do not conceal a product defect in test support.
 
+## Pattern Observations
+
+After the causal mechanism is confirmed and the correction passes its smallest
+durable regression proof, record one bug-pattern observation in the host
+project's configured observation root. The default root is
+`pm/debugging-pattern-observations/`. Read
+[references/pattern-observations.md](references/pattern-observations.md) before
+recording the observation.
+
+One observation represents one independently occurring causal defect. Several
+symptoms, affected files, failing selections, or users caused by that defect do
+not create additional occurrences. A later independent defect caused by the
+same implementation pattern is a separate observation. Do not create another
+observation when the same causal incident already has one; link the existing
+record from the bug, plan, or change instead.
+
+Record the observed and expected behavior, confirmed causal mechanism,
+implementation anti-pattern, proven correct pattern, applicability conditions,
+known non-matches, source references, discriminating evidence, and regression
+proof. Keep secrets and unrelated user or tenant data out of the record. Do not
+record an unconfirmed hypothesis or a correction that has not passed its
+regression proof.
+
+Observations are source evidence for later analysis. Do not assign a proposed
+category, increment a pattern count, or turn one observation into prescriptive
+guidance during collection. A separate mining workflow may deduplicate and
+cluster independent observations by causal mechanism and required invariant,
+then propose a specialized skill only after the configured promotion threshold
+is met and the category has been reviewed.
+
 ## Stateful And Resumable Workflows
 
 Treat retained state as diagnostic evidence, not proof that a workflow can
@@ -145,8 +175,9 @@ artifacts; their quantity is not evidence that the failing behavior improved.
 ## Project Bindings
 
 The host project supplies its reproduction commands, focused tests, retained
-state, logs, traces, environment probes, and acceptance gates. This skill owns
-the diagnosis method; `plan-execution` owns durable bug and plan lifecycle,
+state, logs, traces, environment probes, acceptance gates, and any override of
+the default bug-pattern observation root. This skill owns the diagnosis and
+observation methods; `plan-execution` owns durable bug and plan lifecycle,
 `ux-testing` owns proof through the real interactive path, and
 `production-test-boundaries` owns the separation between product and test
 mechanisms.

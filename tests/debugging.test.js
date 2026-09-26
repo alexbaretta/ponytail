@@ -12,6 +12,15 @@ const debugging = fs.readFileSync(
   path.join(root, 'skills', 'debugging', 'SKILL.md'),
   'utf8',
 );
+const patternObservationSchema = JSON.parse(fs.readFileSync(
+  path.join(
+    root,
+    'skills',
+    'debugging',
+    'references',
+    'pattern-observation.schema.json',
+  ),
+));
 const planExecution = fs.readFileSync(
   path.join(root, 'skills', 'plan-execution', 'SKILL.md'),
   'utf8',
@@ -54,6 +63,33 @@ test('debugging defines safe stateful restart and outcome metrics', () => {
   assert.match(debugging, /checkpoint is incomplete, inconsistent, or owns a busy or poisoned resource/);
   assert.match(debugging, /Measure debugging progress through resolved causal classes/);
   assert.match(debugging, /their quantity is not evidence that the failing behavior improved/);
+});
+
+test('debugging harvests only confirmed independent pattern observations', () => {
+  assert.match(debugging, /correction passes its smallest\ndurable regression proof/);
+  assert.match(debugging, /default root is\n`pm\/debugging-pattern-observations\/`/);
+  assert.match(debugging, /One observation represents one independently occurring causal defect/);
+  assert.match(debugging, /Do not\s+record an unconfirmed hypothesis/);
+  assert.match(debugging, /Do not assign a proposed\ncategory, increment a pattern count/);
+});
+
+test('pattern observations preserve evidence without premature categories', () => {
+  assert.equal(patternObservationSchema.properties.schema_version.const, 1);
+  assert.equal(patternObservationSchema.additionalProperties, false);
+  for (const field of [
+    'source_references',
+    'causal_mechanism',
+    'anti_pattern',
+    'correct_pattern',
+    'applicability_conditions',
+    'known_non_matches',
+    'confirmation_evidence',
+    'regression_proofs',
+  ]) {
+    assert.ok(patternObservationSchema.required.includes(field), `missing ${field}`);
+  }
+  assert.equal(patternObservationSchema.properties.category, undefined);
+  assert.equal(patternObservationSchema.properties.occurrence_count, undefined);
 });
 
 test('specialized workflows delegate diagnosis to debugging', () => {

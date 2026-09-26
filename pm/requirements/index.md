@@ -10,6 +10,10 @@ Licensed under the MIT License. See LICENSE in the project root.
 This linked Markdown web records Ponytail's approved stakeholder-visible
 behavior independently from implementation plans and architecture.
 
+## Requirement sets
+
+- [Debugging pattern observations](debugging-pattern-observations.md)
+
 ## Campaign census CLI
 
 **Identifier:** `REQ-CAMPAIGN-CENSUS-CLI`

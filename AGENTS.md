@@ -20,6 +20,8 @@ policy belongs in `skills/ponytail/SKILL.md`; do not duplicate it here.
 - Issues of all types: `pm/bugs/<status>/`.
 - Requirements: linked Markdown rooted at `pm/requirements/index.md`.
 - Architecture: linked Markdown rooted at `pm/architecture/index.md`.
+- UAT documentation root: `pm/uat`.
+- Debugging pattern observations: `pm/debugging-pattern-observations/`.
 - Issue types and shared issue/plan lifecycle: use `issue-tracking` defaults.
 - Existing records retain their established paths; see `PROJECT_STRUCTURE.md`.
 - Technical debt: `tech_debt.md`.

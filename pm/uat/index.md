@@ -12,6 +12,11 @@ has no separate UAT operations skill or release-authorization policy. The
 campaign census Arcs are automated at the production module and real CLI
 boundary by `tests/campaign-census.test.js`.
 
+## Suite index
+
+- [Campaign census](#campaign-census-suite)
+- [Debugging pattern observations](debugging-pattern-observations.md)
+
 ## Campaign census Suite
 
 **Requirement:**

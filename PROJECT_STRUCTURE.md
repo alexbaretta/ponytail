@@ -94,6 +94,11 @@ while project-wide management records remain under `pm/`.
   architecture web. Its introduction describes the product architecture at a
   30,000-foot level and links to thematic architecture documents. Create it
   with the first architecture content, not as a placeholder.
+- `pm/uat/index.md` is the entry point for the linked user-acceptance web.
+- `pm/debugging-pattern-observations/` owns one structured evidence record per
+  independently occurring confirmed causal defect. Create it with the first
+  observation, without a placeholder; derived categories and promoted skills
+  do not belong there.
 - `skills/issue-tracking/SKILL.md` supplies the issue types and lifecycle
   semantics. `.agents/config/project/management.json` is the machine-readable
   source for this project's lifecycle directory names and roles; do not repeat
