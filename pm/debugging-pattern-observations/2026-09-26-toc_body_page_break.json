@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-09-26-toc_body_page_break",
+  "recorded_at": "2026-09-26T10:56:54-07:00",
+  "source_references": [
+    "src/pm-pdf.py",
+    "tests/pm-pdf.test.js"
+  ],
+  "context": {
+    "languages": ["python"],
+    "frameworks": ["Pandoc", "LaTeX"],
+    "components": ["pm-pdf"],
+    "affected_boundaries": ["table of contents to document body"],
+    "code_references": ["src/pm-pdf.py:211"]
+  },
+  "observed_behavior": "The first chapter began in unused space at the bottom of the final table-of-contents page.",
+  "expected_behavior": "The first chapter and every subsequent top-level chapter begin on fresh pages.",
+  "causal_mechanism": "Pandoc's stock LaTeX template emits the table of contents immediately before the body, and the composed body had no leading page break; LaTeX therefore flowed chapter 1 into remaining table-of-contents space.",
+  "anti_pattern": {
+    "structural_description": "Document pagination relied on incidental source-file boundaries while the template-to-body boundary and top-level heading boundaries had no explicit pagination invariant.",
+    "why_it_fails": "LaTeX continues normal vertical flow after the table of contents and can place a top-level heading wherever space remains; multiple top-level headings in one source file also bypass file-level separators."
+  },
+  "correct_pattern": {
+    "required_invariant": "The generated body begins with a clear page and every top-level heading after the first is preceded by a clear page.",
+    "implementation_description": "The composer emits \\clearpage at the body boundary and before each subsequent level-one Markdown heading, independently of source-file placement."
+  },
+  "applicability_conditions": [
+    "A Pandoc LaTeX document includes a table of contents and expects chapter-level page starts.",
+    "Top-level chapters are represented by level-one Markdown headings."
+  ],
+  "known_non_matches": [
+    "Output formats whose templates already force a page break between the table of contents and body."
+  ],
+  "confirmation_evidence": [
+    "pandoc -D latex showed \\tableofcontents followed directly by $body$ with no page break.",
+    "The corrected UAT PDF ended its table of contents on physical page 3, began chapter 1 on page 4, ended chapter 1 on page 5, and began chapter 2 on page 6."
+  ],
+  "regression_proofs": [
+    "tests/pm-pdf.test.js: ponytail pm pdf renders configured collections in index order"
+  ]
+}

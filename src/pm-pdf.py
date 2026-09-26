@@ -214,6 +214,7 @@ def compose(collection: Collection, repository_root: Path) -> str:
     included = set(pages)
     anchors = {path: heading_anchors(path, root) for path in pages}
     sections: list[str] = []
+    first_chapter = True
     for page in pages:
         heading_number = 0
         fence_marker: str | None = None
@@ -236,6 +237,11 @@ def compose(collection: Collection, repository_root: Path) -> str:
             if heading:
                 fragment = list(anchors[page])[heading_number]
                 heading_number += 1
+                if heading.group(1) == "#":
+                    if first_chapter:
+                        first_chapter = False
+                    else:
+                        lines.append("\\clearpage")
                 line = f"{heading.group(1)} {heading.group(2)} {{#{anchors[page][fragment]}}}"
 
             def replace_link(match: re.Match[str]) -> str:
@@ -265,7 +271,7 @@ def compose(collection: Collection, repository_root: Path) -> str:
 
             lines.append(INLINE_CODE.sub(replace_code, line))
         sections.append("\n".join(lines))
-    return "\\sloppy\n\\setlength{\\emergencystretch}{3em}\n\n" + "\n\n\\newpage\n\n".join(sections) + "\n"
+    return "\\clearpage\n\\sloppy\n\\setlength{\\emergencystretch}{3em}\n\n" + "\n\n".join(sections) + "\n"
 
 
 def render(

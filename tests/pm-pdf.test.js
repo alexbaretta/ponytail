@@ -59,7 +59,7 @@ function fixture() {
     },
   }, null, 2)}\n`);
   write(root, 'pm/requirements/index.md', '# Index\n\n[Second](second.md#details)\n\n[First](first.md)\n');
-  write(root, 'pm/requirements/first.md', '# First\n\nRun `scripts/tool.py` now.\n');
+  write(root, 'pm/requirements/first.md', '# First\n\nRun `scripts/tool.py` now.\n\n# First Appendix\n');
   write(root, 'pm/requirements/second.md', '# Second\n\n```md\n## Fake\n```\n\n## Details\n\n[Back](index.md)\n');
   write(root, 'pm/requirements/releases/evidence.md', '# Release evidence\n');
   write(root, 'pm/uat/index.md', '# UAT\n');
@@ -121,7 +121,11 @@ test('ponytail pm pdf renders configured collections in index order', () => {
   assert.equal(result.status, 0, result.stderr);
   assert.equal(result.stdout, `${path.join(root, 'tmp/pm-pdf/requirements.pdf')}\n`);
   const source = fs.readFileSync(stdin, 'utf8');
+  assert.ok(source.startsWith('\\clearpage\n'));
   assert.ok(source.indexOf('# Second') < source.indexOf('# First'));
+  assert.match(source, /\\clearpage\n# Second \{#doc-second\}/);
+  assert.match(source, /\\clearpage\n# First \{#doc-first\}/);
+  assert.match(source, /\\clearpage\n# First Appendix \{#doc-first--first-appendix\}/);
   assert.match(source, /\[Second\]\(#doc-second--details\)/);
   assert.match(source, /\[Back\]\(#doc-index\)/);
   assert.doesNotMatch(source, /doc-second--fake/);
