@@ -105,7 +105,7 @@ while project-wide management records remain under `pm/`.
   30,000-foot level and links to thematic architecture documents. Create it
   with the first architecture content, not as a placeholder.
 - `pm/uat/index.md` is the entry point for the linked user-acceptance web.
-- `pm/plan-inputs/<status>/` owns immutable raw user input while it moves from
+- `pm/plan-inputs/<campaign-id>/<status>/` owns immutable raw user input while it moves from
   `open` through `in_progress` to `closed`; closed entries link the PM records
   that completed semantic ingestion.
 - `pm/debugging-pattern-observations/` owns one structured evidence record per

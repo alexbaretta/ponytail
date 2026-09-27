@@ -5,10 +5,11 @@
 
 ## Approved target architecture
 
-One repository-scoped queue separates fast human input from the slower plan
-tasklet queue. Queue entries use an immutable V1 JSON identity and move through
+One queue per campaign separates fast human input from the slower plan tasklet
+queue. The canonical campaign census resolves any supplied member plan to its
+root. Queue entries use the campaign-scoped V2 JSON identity and move through
 `open`, `in_progress`, and `closed` lifecycle directories under
-`pm/plan-inputs/`. Creating the open record is the durability boundary; the
+`pm/plan-inputs/<campaign-id>/`. Creating the open record is the durability boundary; the
 record therefore exists before either producer acknowledges it.
 
 `src/plan-input.js` owns the contract, atomic file creation, deterministic FIFO
@@ -17,17 +18,17 @@ dispatcher is a thin adapter. A Codex lifecycle hook is the second thin
 adapter: `UserPromptSubmit` recognizes only `/ponytail-enqueue`, calls the same
 producer, and blocks ordinary prompt delivery after success.
 
-The hook also enforces scheduling at safe host boundaries. `PreToolUse`
-redirects unrelated tool work to the oldest open entry, while allowing the
-queue-management command used to claim it. `Stop` continues a turn while an
-entry is open or in progress. A claimed entry suppresses preemption by newer
-entries until it is acknowledged, providing the critical section that prompt
-steering lacks.
+The campaign has exactly one operational coordinator. Only that coordinator
+calls the campaign-qualified list, claim, and complete operations at safe plan
+boundaries. The hook is producer-only and never inspects or blocks on queued
+work, so unrelated sessions in the checkout are unaffected. A claimed entry
+suppresses consumption of newer entries until it is acknowledged, providing
+the critical section that prompt steering lacks.
 
 Acknowledgement requires at least one existing `pm/` record path. It moves the
 entry to `closed` only after semantic ingestion; failures leave the input in
 `in_progress` for recovery. Once no fast-queue entry remains, the reusable
-plan-execution policy requires the agent to rerun sprint and tasklet selectors
+plan-execution policy requires the campaign coordinator to rerun sprint and tasklet selectors
 instead of relying on interrupted conversational context.
 
 ## Host boundary and viability
@@ -39,3 +40,8 @@ prompt and that an `Interrupt` hook cannot prevent interruption; it does not
 promise which occurs first for a Steer submission. The live UAT profile is
 therefore an architectural viability gate for the composer adapter, not for
 the queue core or CLI producer.
+
+The unreleased repository-scoped V1 physical entry remains an immutable reader
+fixture but is retired from queue consumption because it contains no campaign
+identity and cannot be normalized without inventing one. Ordinary writers emit
+only V2. No V1 production records or installed producer exist.

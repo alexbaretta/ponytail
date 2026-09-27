@@ -309,12 +309,17 @@ that this can override restrictive rules managed by an administrator.
 
 Traceability: supports REQ-PLAN-INPUT-QUEUE
 
-When the host provides `ponytail plan-input`, treat its repository-scoped
-queue as the fast input queue in front of sprint and tasklet selection. At a
-safe tool or turn boundary, drain it before starting or resuming selected plan
-work:
+When the host provides `ponytail plan-input`, treat each campaign-scoped queue
+as the fast input queue in front of that campaign's sprint and tasklet
+selection. Every campaign has exactly one campaign coordinator. Only that
+coordinator may list, claim, complete, or otherwise consume its queue; other
+sessions, including sessions in the same checkout, do not inspect or block on
+it. Input addressed to any member plan resolves to the campaign root.
 
-1. Run `ponytail plan-input claim --json`. An existing `in_progress` entry is
+At a safe tasklet or turn boundary, the campaign coordinator drains its queue
+before starting or resuming selected plan work:
+
+1. Run `ponytail plan-input claim <campaign-root> --json`. An existing `in_progress` entry is
    returned until it is completed; otherwise the oldest open entry is claimed.
 2. Preserve the entry's exact instruction while applying `requirements`,
    `user-acceptance-testing`, `issue-tracking`, `architecture`, and
@@ -323,15 +328,15 @@ work:
 3. Do not claim or act on a newer entry while one is in progress. Do not
    acknowledge receipt as completed semantic ingestion.
 4. After all applicable PM records exist, run `ponytail plan-input complete
-   <id> --record <pm-path>...`. If processing fails, leave the entry in
+   <campaign-root> <id> --record <pm-path>...`. If processing fails, leave the entry in
    progress so it remains recoverable.
-5. Continue until `ponytail plan-input claim --json` reports no entry. Then
+5. Continue until `ponytail plan-input claim <campaign-root> --json` reports no entry. Then
    rerun the canonical sprint and tasklet selectors from the reconciled files;
    never resume from conversational memory of the interrupted selection.
 
 Users may enqueue without interacting with the active turn by running
-`ponytail plan-input <instruction>`. Codex users may also submit
-`/ponytail-enqueue <instruction>` when the installed, trusted hook has passed
+`ponytail plan-input <plan> -- <instruction>`. Codex users may also submit
+`/ponytail-enqueue <plan> -- <instruction>` when the installed, trusted hook has passed
 the host project's live viability Arc.
 
 Direct user requests that add behavior to an active plan must be recorded in

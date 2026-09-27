@@ -6,7 +6,8 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
-const { enqueue, entries } = require('../src/plan-input');
+const { resolveCampaignRoot } = require('../src/campaign-census');
+const { enqueue } = require('../src/plan-input');
 
 let input = '';
 let done = false;
@@ -24,14 +25,6 @@ function write(value) {
   process.stdout.write(JSON.stringify(value));
 }
 
-function pending(repository) {
-  return entries(repository).filter((entry) => entry.status !== 'closed');
-}
-
-function isQueueTool(data) {
-  return JSON.stringify(data.tool_input || {}).includes('plan-input');
-}
-
 function finish() {
   if (done) return;
   done = true;
@@ -39,37 +32,14 @@ function finish() {
     const data = JSON.parse(input.replace(/^\uFEFF/, ''));
     const repository = repositoryRoot(data.cwd || process.cwd());
     if (data.hook_event_name === 'UserPromptSubmit') {
-      const match = /^\/ponytail-enqueue\s+([\s\S]+)$/.exec(data.prompt || '');
+      const match = /^\/ponytail-enqueue\s+(\S+)\s+--\s+([\s\S]+)$/.exec(data.prompt || '');
       if (!match) return;
-      const entry = enqueue(repository, match[1], 'codex-composer', {
+      const { campaignId, submittedPlanId } = resolveCampaignRoot(repository, match[1]);
+      const entry = enqueue(repository, campaignId, submittedPlanId, match[2], 'codex-composer', {
         sessionId: data.session_id,
         turnId: data.turn_id,
       });
-      write({ decision: 'block', reason: `Recorded as plan input ${entry.id}.` });
-      return;
-    }
-    const queued = pending(repository);
-    if (queued.length === 0) return;
-    const inProgress = queued.find((entry) => entry.status === 'in_progress');
-    if (data.hook_event_name === 'PreToolUse') {
-      if (inProgress || isQueueTool(data)) return;
-      write({
-        hookSpecificOutput: {
-          hookEventName: 'PreToolUse',
-          permissionDecision: 'deny',
-          permissionDecisionReason: `Plan input ${queued[0].id} is pending. Run ponytail plan-input claim --json and ingest it completely before resuming plan work.`,
-        },
-      });
-      return;
-    }
-    if (data.hook_event_name === 'Stop') {
-      const entry = inProgress || queued[0];
-      write({
-        decision: 'block',
-        reason: inProgress
-          ? `Finish ingesting plan input ${entry.id}, acknowledge it with its PM record paths, then drain older open inputs before resuming the plan.`
-          : `Claim and completely ingest plan input ${entry.id} before resuming the plan.`,
-      });
+      write({ decision: 'block', reason: `Recorded as plan input ${entry.id} for campaign ${campaignId}.` });
     }
   } catch (error) {
     process.stderr.write(`plan-input hook: ${error.message}\n`);

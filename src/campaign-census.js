@@ -348,7 +348,17 @@ function discoverCampaign(repositoryRoot, config, input) {
     config.lifecycle.directories.indexOf(left.lifecycle) - config.lifecycle.directories.indexOf(right.lifecycle)
     || left.id.localeCompare(right.id)
   ));
-  return { root, plans, invocationInput: resolvedInputPlan.invocationInput };
+  return { root, selected, plans, invocationInput: resolvedInputPlan.invocationInput };
+}
+
+function resolveCampaignRoot(repositoryRoot, input) {
+  const canonicalRepositoryRoot = fs.realpathSync(repositoryRoot);
+  const campaign = discoverCampaign(
+    canonicalRepositoryRoot,
+    readManagementConfig(canonicalRepositoryRoot),
+    input,
+  );
+  return { campaignId: campaign.root.id, submittedPlanId: campaign.selected.id };
 }
 
 function increment(record, key) {
@@ -715,6 +725,7 @@ module.exports = {
   readManagementConfigV1,
   readPlanMetadataV1,
   readCampaignReportV1,
+  resolveCampaignRoot,
   run,
 };
 

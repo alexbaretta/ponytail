@@ -13,16 +13,17 @@ documented, and tested implementations of both the Codex composer and CLI
 input options; a failed live viability test must result in removal of that
 option with the reason recorded.
 
-Ponytail must provide a repository-scoped, durable, first-in-first-out plan
-input queue in front of long-lived plan execution. An input is safe only after
+Ponytail must provide a campaign-scoped, durable, first-in-first-out plan
+input queue in front of long-lived plan execution. Input submitted in relation
+to any campaign member belongs to that campaign's root plan. An input is safe only after
 its original text has been recorded by the queue; an acknowledgement must not
 claim requirement ingestion until the agent has persisted the applicable
 requirement, UAT, issue, architecture, traceability, and plan changes.
 
 The queue must have two first-class producers:
 
-- `/ponytail-enqueue <instruction>` in the Codex prompt composer; and
-- `ponytail plan-input <instruction>` in a terminal.
+- `/ponytail-enqueue <plan> -- <instruction>` in the Codex prompt composer; and
+- `ponytail plan-input <plan> -- <instruction>` in a terminal.
 
 Both producers must create the same queue-entry contract. The composer command
 must be blocked from ordinary prompt delivery after successful enqueue so it
@@ -34,6 +35,11 @@ ordered behind it and must not interrupt it. Before resuming plan tasklets, the
 agent must finish and acknowledge the current entry, drain all older queued
 entries in order, then rerun the canonical plan selectors from durable state.
 Failed ingestion leaves the entry recoverable and visible.
+
+There must be exactly one campaign coordinator for a campaign. Only that
+coordinator may list, claim, complete, or otherwise consume the campaign's
+queue. Sessions working on another campaign, and non-coordinator sessions
+working in the same checkout, must not inspect, block on, or consume it.
 
 Automated tests must prove queue persistence, ordering, producer equivalence,
 single-entry ingestion, acknowledgement gates, and plan-loop prompting. A

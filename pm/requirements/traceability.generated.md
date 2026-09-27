@@ -19,7 +19,7 @@ Requirement: [pm/requirements/requirements-traceability.md](requirements-traceab
 
 Requirement: [pm/requirements/index.md](index.md)
 
-- implementation: implements [src/campaign-census.js:613](../../src/campaign-census.js#L613)
+- implementation: implements [src/campaign-census.js:623](../../src/campaign-census.js#L623)
 - unit-test: verifies [tests/campaign-census-format.test.js:11](../../tests/campaign-census-format.test.js#L11)
 - integration-test: verifies [tests/campaign-census.test.js:293](../../tests/campaign-census.test.js#L293)
 - uat: verifies [pm/uat/index.md:30](../../pm/uat/index.md#L30)

@@ -9,15 +9,17 @@ approved 2026-09-27.
 
 Traceability: verifies REQ-PLAN-INPUT-QUEUE
 
-1. Submit one instruction with `ponytail plan-input <instruction>`.
-   - The command returns a stable receipt only after one open V1 record contains
+1. Submit one instruction with `ponytail plan-input <member-plan> -- <instruction>`.
+   - The command returns a stable receipt only after one open V2 record contains
      the exact instruction and identifies the CLI producer.
-2. Submit another instruction as `/ponytail-enqueue <instruction>` to the
+2. Submit another instruction as `/ponytail-enqueue <member-plan> -- <instruction>` to the
    `UserPromptSubmit` hook.
    - The same queue contract records it with the composer producer, and the
      hook blocks ordinary prompt delivery with the receipt as its reason.
 3. List the queue.
    - Both entries appear once in FIFO order without truncation or rewriting.
+   - Both are stored under the campaign root's identity even when submitted
+     through a non-root member plan.
 
 Profile: automated by `node --test tests/plan-input.test.js` and
 `node --test tests/plan-input-hooks.test.js`.
@@ -37,6 +39,23 @@ Profile: automated by `node --test tests/plan-input.test.js` and
 
 Profile: automated by the same focused tests and the plan-execution policy
 test.
+
+## Arc: Isolate campaign coordination
+
+1. Create two campaigns in one checkout and designate one coordinator for
+   each campaign.
+2. Enqueue an input through a non-root member of the first campaign.
+   - It resolves to the first campaign root and is invisible when listing or
+     claiming the second campaign's queue.
+3. Let a non-coordinator session execute unrelated work in the same checkout.
+   - The producer hook neither reads the queue nor blocks that session's tools
+     or turn completion.
+4. Have the first campaign coordinator drain its queue.
+   - Only that coordinator consumes the entry, then resumes its campaign from
+     fresh selectors.
+
+Profile: automated for campaign resolution and queue isolation; coordinator
+exclusivity is an operational rule inspected in the plan-execution policy.
 
 ## Arc: Determine composer viability in live Codex
 

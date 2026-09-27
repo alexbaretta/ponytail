@@ -3,7 +3,7 @@
 Plan ID: 2026-09-27-plan-input-queue
 Status: in_progress
 
-<!-- ponytail-campaign
+<!-- ponytail-plan-campaign
 {"schemaVersion":1,"id":"2026-09-27-plan-input-queue","parent_plan_id":null}
 -->
 
@@ -17,9 +17,10 @@ their live behavior. Starting branch: `local_rules`. Starting revision:
 ## Scope and architecture
 
 The governing requirement, architecture, UAT, and issue are linked from the
-project indexes. The queue is repository scoped, file-backed under `pm/`, and
-uses one runtime owner with two thin producers. The plan-execution skill owns
-draining and resumption of the slow tasklet queue.
+project indexes. Each queue is campaign scoped, file-backed under `pm/`, and
+uses one runtime owner with two thin producers. Any member-plan input resolves
+to its root. One coordinator per campaign exclusively owns draining and
+resumption of that campaign's slow tasklet queue.
 
 Global installation, package publication, and changes outside this repository
 are excluded. Live host validation may require a later trusted installation;
