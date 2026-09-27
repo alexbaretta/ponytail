@@ -103,6 +103,10 @@ For each new requirement or clarification:
 3. When an existing UAT Arc already proves the exact behavior, preserve the
    canonical Arc and record the existing coverage link. When UAT is not
    applicable, record why rather than inventing an acceptance test.
+4. When the host configures portable traceability, apply
+   `requirements-traceability` and add the approved requirement to its
+   project-owned configuration before implementation or verification claims
+   depend on it.
 
 Complete this requirements and UAT reconciliation before continuing work whose
 scope or acceptance depends on the new information. A missing project-local
@@ -182,3 +186,5 @@ by issue or plan moves. Review the changed requirements against the approved
 scope for contradictions and accidental behavior changes. Use the host's
 configured documentation checks; requirements prose alone does not call for
 product tests unless a configured execution or generation path consumes it.
+Run the configured traceability check when a changed approved requirement is
+in scope for an adopting project.

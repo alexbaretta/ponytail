@@ -50,6 +50,11 @@ existing owning suite or shared double when one represents the required
 contract. Do not invent project-local indexing or auditing infrastructure as
 part of an ordinary unit-test change.
 
+When the host configures `requirements-traceability`, place each
+`verifies` annotation beside the smallest stable test declaration that proves
+the requirement. Classify the test file in the traceability configuration and
+run its configured checker. Do not duplicate the relationship in a test index.
+
 ## Declare Valid Values With Production Types
 
 When a test value represents a valid instance of a named production type,

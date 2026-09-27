@@ -90,6 +90,11 @@ These rules remain active at every compaction level, including `off`:
   and inert reference data that no such path consumes are exempt from product
   tests, but still require applicable syntax, schema, link, generator, or
   comparable structural checks.
+- When a project configures `requirements-traceability`, keep its canonical
+  annotations, artifact classification, generated-source mappings, and
+  generated reverse view synchronized for every affected approved
+  requirement. Apply that skill rather than duplicating its relationship
+  contract here.
 - For QA-relevant changes, add the smallest durable regression proof for
   changed behavior whose failure is not already caught by an existing test,
   static check, or higher-level test. At the tasklet or standalone-change

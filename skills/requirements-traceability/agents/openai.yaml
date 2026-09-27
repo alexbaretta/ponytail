@@ -1,0 +1,6 @@
+# Copyright (c) 2026 Alex Baretta. All rights reserved.
+# Licensed under the MIT License. See LICENSE in the project root.
+interface:
+  display_name: "Requirements Traceability"
+  short_description: "Link requirements to implementation and verification"
+  default_prompt: "Use $requirements-traceability to add or verify durable requirement relationships."

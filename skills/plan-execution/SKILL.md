@@ -319,6 +319,12 @@ or implementation opportunity into current scope. When a necessary outcome is
 absent from the requirements, record it as a proposal and obtain stakeholder
 approval before planning or implementing it.
 
+When the host configures `requirements-traceability`, tasklet planning names
+the approved requirement identifiers it affects. Before completing the
+tasklet, apply that skill to reconcile canonical annotations, artifact
+classification, generated-source mappings, and the generated reverse view.
+The plan links requirements but never becomes a second relationship map.
+
 Work discovered while implementing an approved objective may be added and
 performed without another approval when it remains inside the architectural
 areas and contract boundaries already approved. Extra files, tasklets, tests,

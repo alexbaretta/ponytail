@@ -53,6 +53,9 @@ release preparation or test execution.
   the requirement or clarification creates or changes acceptance behavior.
 - Link the Arc to the exact requirement identifier or stable anchor while
   preserving its approval state.
+- When the host configures `requirements-traceability`, keep that link as the
+  Arc's canonical `verifies` annotation and generate requirement-oriented
+  reverse links instead of maintaining another mapping.
 - When an existing Arc already proves the exact behavior, keep one canonical
   Arc and record that coverage instead of duplicating the test.
 - When the requirement has no meaningful user-acceptance behavior, record why
@@ -141,3 +144,5 @@ identity, and coverage of the selected release requirements. Verify that every
 operational reference resolves to the configured project-local UAT operations
 skill and that reusable UAT prose contains no project-specific command,
 credential, tool, environment, or provider assumption.
+Run the configured traceability check when the project has adopted
+`requirements-traceability`.

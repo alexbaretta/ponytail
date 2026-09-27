@@ -14,6 +14,7 @@ const configuredSkills = new Map([
   ['lossless-json-contracts', ['Lossless JSON standard', 'Lossless JSON boundary inventory']],
   ['ponytail-debt', ['Technical-debt document']],
   ['production-test-boundaries', ['Production compilation and packaging inputs', 'Integration-environment setup', 'Integration execution profiles', 'Build-impact configuration', 'Unit-test command families']],
+  ['requirements-traceability', ['Traceability configuration', 'Traceability check command', 'Traceability reverse-view generation command', 'Traceability TypeScript semantic checker']],
   ['test-credentials', ['Test-credentials policy']],
   ['typescript-unit-testing', ['Unit-test command families', 'TypeScript unit-test indexes and discovery']],
   ['user-acceptance-testing', ['UAT documentation root', 'UAT operations skill', 'UAT execution profiles', 'UAT release-evidence owner', 'UAT release-authorization policy']],

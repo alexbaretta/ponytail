@@ -49,7 +49,8 @@
         "skills/project-structure/SKILL.md",
         "skills/ponytail/SKILL.md",
         "tests/requirements-traceability-policy.test.js",
-        "tests/project-skill-configuration.test.js"
+        "tests/project-skill-configuration.test.js",
+        "pm/plans/in_progress/2026-09-27-requirements-traceability/sprints/S01.md"
       ]
     },
     "S01-F02-T01": {
@@ -60,7 +61,8 @@
       "feature": "S01-F02",
       "planned_paths": [
         "skills/requirements-traceability/scripts/check-traceability.js",
-        "tests/requirements-traceability.test.js"
+        "tests/requirements-traceability.test.js",
+        "pm/plans/in_progress/2026-09-27-requirements-traceability/sprints/S01.md"
       ]
     },
     "S01-F02-T02": {
@@ -71,7 +73,8 @@
       "feature": "S01-F02",
       "planned_paths": [
         "tsts/src/traceability.ts",
-        "tsts/test/traceability.test.ts"
+        "tsts/test/traceability.test.ts",
+        "pm/plans/in_progress/2026-09-27-requirements-traceability/sprints/S01.md"
       ]
     },
     "S01-F02-T03": {
@@ -84,7 +87,8 @@
         "tsts/src/cli.ts",
         "tsts/test/cli.test.ts",
         "tsts/README.md",
-        "tsts/docs/architecture.md"
+        "tsts/docs/architecture.md",
+        "pm/plans/in_progress/2026-09-27-requirements-traceability/sprints/S01.md"
       ]
     },
     "S01-F03-T01": {
@@ -99,7 +103,8 @@
         "PROJECT_STRUCTURE.md",
         "package.json",
         "tests/requirements-traceability-cli.test.js",
-        "pm/requirements/traceability.generated.md"
+        "pm/requirements/traceability.generated.md",
+        "pm/plans/in_progress/2026-09-27-requirements-traceability/sprints/S01.md"
       ]
     },
     "S01-F03-T02": {
@@ -116,7 +121,8 @@
         ".codex-plugin/plugin.json",
         ".qoder-plugin/marketplace.json",
         ".qoder-plugin/plugin.json",
-        "plugin.yaml"
+        "plugin.yaml",
+        "pm/plans/in_progress/2026-09-27-requirements-traceability/sprints/S01.md"
       ]
     },
     "S01-F03-T03": {
