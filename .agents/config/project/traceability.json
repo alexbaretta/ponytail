@@ -5,6 +5,10 @@
     {
       "id": "REQ-REQUIREMENTS-TRACEABILITY",
       "sourcePath": "pm/requirements/requirements-traceability.md"
+    },
+    {
+      "id": "REQ-CAMPAIGN-CENSUS-CLI",
+      "sourcePath": "pm/requirements/index.md"
     }
   ],
   "artifacts": [
@@ -36,6 +40,26 @@
     {
       "class": "uat",
       "path": "pm/uat/requirements-traceability.md",
+      "locator": "text"
+    },
+    {
+      "class": "implementation",
+      "path": "src/campaign-census.js",
+      "locator": "text"
+    },
+    {
+      "class": "unit-test",
+      "path": "tests/campaign-census-format.test.js",
+      "locator": "text"
+    },
+    {
+      "class": "integration-test",
+      "path": "tests/campaign-census.test.js",
+      "locator": "text"
+    },
+    {
+      "class": "uat",
+      "path": "pm/uat/index.md",
       "locator": "text"
     }
   ],

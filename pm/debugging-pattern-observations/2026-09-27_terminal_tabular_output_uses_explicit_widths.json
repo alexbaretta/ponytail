@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-09-27-terminal_tabular_output_uses_explicit_widths",
+  "recorded_at": "2026-09-27T08:43:07-07:00",
+  "source_references": [
+    "pm/requirements/index.md#campaign-census-cli",
+    "src/campaign-census.js"
+  ],
+  "context": {
+    "languages": ["javascript"],
+    "frameworks": ["node.js"],
+    "components": ["campaign census CLI"],
+    "affected_boundaries": ["human terminal report rendering"],
+    "code_references": ["src/campaign-census.js", "tests/campaign-census-format.test.js"]
+  },
+  "observed_behavior": "Campaign census columns shifted between rows when plan or sprint identifiers crossed different terminal tab stops.",
+  "expected_behavior": "Every human-readable census table keeps the same column boundaries for every row, including rows with long identifiers.",
+  "causal_mechanism": "The renderer separated fields with tab characters, whose displayed width depends on the preceding field length and the consumer's tab-stop configuration.",
+  "anti_pattern": {
+    "structural_description": "A tabular text renderer delegates column placement to tab expansion instead of deriving widths from the complete table.",
+    "why_it_fails": "Rows whose fields end in different tab-stop intervals advance to different next columns, so subsequent values no longer share a boundary."
+  },
+  "correct_pattern": {
+    "required_invariant": "Each rendered column begins at one table-derived position for every row.",
+    "implementation_description": "Compute each column's maximum content width, pad text fields to that width, right-align numeric cells, and join columns with fixed spaces."
+  },
+  "applicability_conditions": [
+    "A human-readable terminal table contains variable-length fields.",
+    "The output must remain aligned independently of terminal tab expansion."
+  ],
+  "known_non_matches": [
+    "Machine-readable JSON output, which has no visual column-alignment contract."
+  ],
+  "confirmation_evidence": [
+    "The failing report contained literal tab separators, and rows with longer plan identifiers displayed later counts at different tab stops.",
+    "Replacing tabs with widths derived from all rows aligned the supplied long-identifier shape without changing census values."
+  ],
+  "regression_proofs": [
+    "tests/campaign-census-format.test.js: human report aligns census columns after long identifiers",
+    "tests/campaign-census.test.js: production module uses exact exit and stream contracts without mutation"
+  ]
+}

@@ -26,6 +26,8 @@ approved 2026-09-24.
 
 ### Arc: Report the same valid campaign from any member
 
+Traceability: verifies REQ-CAMPAIGN-CENSUS-CLI
+
 - **Actor:** Ponytail CLI user or agent.
 - **Prerequisites:** A valid managed campaign fixture containing a root, at
   least two descendant plans, sprints, features, and tasklets, plus an
@@ -49,6 +51,8 @@ approved 2026-09-24.
      actual labels and values.
    - The plan census repeats those tasklet counts for each plan, and the
      incomplete sprint census lists only unfinished sprints with their counts.
+     Every table keeps its columns aligned when identifiers have different
+     lengths and the output is displayed without tab expansion.
      It does not label a merely pending tasklet as blocked or print every
      tasklet record.
 4. Run the JSON census report from one member.

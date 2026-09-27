@@ -63,7 +63,9 @@ fail-fast diagnostics go to stderr. Successful `--json` reporting emits exactly
 one JSON document and one trailing newline.
 
 The human report must lead with the campaign's tasklet census rather than
-requiring the operator to inspect individual tasklet records. It reports
+requiring the operator to inspect individual tasklet records. Its tables must
+keep every column aligned when plan and sprint identifiers have different
+lengths, without depending on terminal tab stops. It reports
 `DONE`, `PENDING`, `ERROR`, and total tasklets grouped by plan lifecycle, the
 same campaign-wide totals and completion percentage, and the same counts for
 each plan. Every human-report table aligns its columns for the actual labels

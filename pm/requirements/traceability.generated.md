@@ -14,3 +14,12 @@ Requirement: [pm/requirements/requirements-traceability.md](requirements-traceab
 - unit-test: verifies [tsts/test/traceability.test.ts:61](../../tsts/test/traceability.test.ts#L61)
 - integration-test: verifies [tests/requirements-traceability-cli.test.js:12](../../tests/requirements-traceability-cli.test.js#L12)
 - uat: verifies [pm/uat/requirements-traceability.md:14](../../pm/uat/requirements-traceability.md#L14)
+
+## REQ-CAMPAIGN-CENSUS-CLI
+
+Requirement: [pm/requirements/index.md](index.md)
+
+- implementation: implements [src/campaign-census.js:613](../../src/campaign-census.js#L613)
+- unit-test: verifies [tests/campaign-census-format.test.js:11](../../tests/campaign-census-format.test.js#L11)
+- integration-test: verifies [tests/campaign-census.test.js:293](../../tests/campaign-census.test.js#L293)
+- uat: verifies [pm/uat/index.md:29](../../pm/uat/index.md#L29)

@@ -610,6 +610,7 @@ function formatTable(rows) {
   }).join('  ').trimEnd()).join('\n');
 }
 
+// Traceability: implements REQ-CAMPAIGN-CENSUS-CLI
 function humanReport(report, worktree) {
   const taskletsByPlanLifecycle = Object.fromEntries(
     Object.keys(report.totals.plansByLifecycle)

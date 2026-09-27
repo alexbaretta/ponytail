@@ -290,6 +290,7 @@ test('V1 report reader rejects unknown output fields', () => {
   })).code, 'CAMPAIGN_REPORT_SCHEMA');
 });
 
+// Traceability: verifies REQ-CAMPAIGN-CENSUS-CLI
 test('production module uses exact exit and stream contracts without mutation', () => {
   const root = repository();
   const selected = plan(root, 'open', '2026-09-24-streams');
