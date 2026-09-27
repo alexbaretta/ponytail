@@ -3,8 +3,8 @@
 TSTS is Ponytail's project-agnostic TypeScript static analyzer. Its canonical
 source lives here; consuming projects use the installed CLI instead of editing
 a Git submodule. It checks public union discriminators and exhaustive dispatch,
-with additional configuration-driven no-aliasing, unused-code, type-safe
-serialization, and versioned-data-contract rules.
+with additional configuration-driven no-aliasing, unique-exported-type-name,
+unused-code, type-safe serialization, and versioned-data-contract rules.
 
 ## Installation and use
 
@@ -48,6 +48,7 @@ configuration:
 {
   "schemaVersion": 2,
   "noAliasing": { "severity": "error" },
+  "uniqueExportedTypeNames": { "severity": "error" },
   "unusedCode": { "severity": "error" },
   "workspaces": [{ "projectPath": "tsconfig.json", "entrypoints": ["src/index.ts"] }]
 }

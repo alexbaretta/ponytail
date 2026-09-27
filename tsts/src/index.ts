@@ -41,6 +41,7 @@ export interface TstsConfig {
     readonly noAliasing?: TstsNoAliasingConfig | undefined;
     readonly schemaVersion: 2;
     readonly typeSafeSerdes?: TstsTypeSafeSerdesConfig | undefined;
+    readonly uniqueExportedTypeNames?: TstsUniqueExportedTypeNamesConfig | undefined;
     readonly unusedCode?: TstsUnusedCodeConfig | undefined;
     readonly versionedDataContracts?: TstsVersionedDataContractsConfig | undefined;
     readonly workspaces: readonly TstsWorkspaceConfig[];
@@ -51,6 +52,10 @@ export interface TstsNoAliasingConfig {
 }
 
 export interface TstsUnusedCodeConfig {
+    readonly severity?: TstsDiagnosticSeverity | undefined;
+}
+
+export interface TstsUniqueExportedTypeNamesConfig {
     readonly severity?: TstsDiagnosticSeverity | undefined;
 }
 
@@ -263,6 +268,15 @@ async function checkConfiguredProject(input: {
             );
         }
 
+        if (config.uniqueExportedTypeNames !== undefined) {
+            diagnostics.push(
+                ...checkUniqueExportedTypeNames({
+                    graph,
+                    severity: config.uniqueExportedTypeNames.severity ?? 'error',
+                })
+            );
+        }
+
         if (config.versionedDataContracts !== undefined) {
             diagnostics.push(
                 ...(await checkVersionedDataContracts({
@@ -337,6 +351,63 @@ async function checkConfiguredProject(input: {
             ],
         };
     }
+}
+
+function checkUniqueExportedTypeNames(input: {
+    readonly graph: UnusedCodeGraph;
+    readonly severity: TstsDiagnosticSeverity;
+}): readonly TstsDiagnostic[] {
+    const declarationIdsByName: Map<string, Set<string>> = new Map();
+
+    for (const workspace of input.graph.workspaces) {
+        for (const [name, declarationIds] of workspace.exportedTypeDeclarationIdsByName) {
+            const combinedDeclarationIds: Set<string> = declarationIdsByName.get(name) ?? new Set();
+
+            for (const declarationId of declarationIds) {
+                const declaration: DeclCandidate | undefined =
+                    input.graph.declarationById.get(declarationId);
+
+                if (!declaration?.declaration.getSourceFile().isDeclarationFile) {
+                    combinedDeclarationIds.add(declarationId);
+                }
+            }
+
+            declarationIdsByName.set(name, combinedDeclarationIds);
+        }
+    }
+
+    const diagnostics: TstsDiagnostic[] = [];
+
+    for (const [name, declarationIds] of declarationIdsByName) {
+        if (declarationIds.size < 2) {
+            continue;
+        }
+
+        for (const declarationId of declarationIds) {
+            const declaration: DeclCandidate | undefined =
+                input.graph.declarationById.get(declarationId);
+
+            if (declaration === undefined) {
+                continue;
+            }
+
+            const location: ts.LineAndCharacter = declaration.declaration
+                .getSourceFile()
+                .getLineAndCharacterOfPosition(declaration.declaration.getStart());
+            diagnostics.push({
+                column: location.character + 1,
+                filePath: declaration.filePath,
+                line: location.line + 1,
+                message:
+                    `Exported type name "${name}" identifies ${declarationIds.size} ` +
+                    'independent declarations. Import or re-export one canonical declaration.',
+                ruleId: 'unique-exported-type-name',
+                severity: input.severity,
+            });
+        }
+    }
+
+    return diagnostics;
 }
 
 function checkDiscriminatedUnionDispatch(
@@ -2901,6 +2972,7 @@ const tstsConfigKeys: readonly string[] = [
     'noAliasing',
     'schemaVersion',
     'typeSafeSerdes',
+    'uniqueExportedTypeNames',
     'unusedCode',
     'versionedDataContracts',
     'workspaces',
@@ -2979,6 +3051,14 @@ function parseTstsConfig(value: unknown): TstsConfig | undefined {
         return undefined;
     }
 
+    const uniqueExportedTypeNames: unknown = value.uniqueExportedTypeNames;
+    if (
+        uniqueExportedTypeNames !== undefined &&
+        !isUniqueExportedTypeNamesConfig(uniqueExportedTypeNames)
+    ) {
+        return undefined;
+    }
+
     const versionedDataContracts: unknown = value.versionedDataContracts;
     if (
         versionedDataContracts !== undefined &&
@@ -3007,6 +3087,7 @@ function parseTstsConfig(value: unknown): TstsConfig | undefined {
         workspaces,
         ...(noAliasing === undefined ? {} : { noAliasing }),
         ...(typeSafeSerdes === undefined ? {} : { typeSafeSerdes }),
+        ...(uniqueExportedTypeNames === undefined ? {} : { uniqueExportedTypeNames }),
         ...(unusedCode === undefined ? {} : { unusedCode }),
         ...(versionedDataContracts === undefined ? {} : { versionedDataContracts }),
     };
@@ -3063,7 +3144,7 @@ function findUnknownConfigProperty(
         }
     }
 
-    for (const propertyName of ['noAliasing', 'unusedCode']) {
+    for (const propertyName of ['noAliasing', 'uniqueExportedTypeNames', 'unusedCode']) {
         const config: unknown = value[propertyName];
         if (isObjectRecord(config)) {
             const unknownKey: string | undefined = firstUnknownKey(config, severityConfigKeys);
@@ -3139,6 +3220,14 @@ function isNoAliasingConfig(value: unknown): value is TstsNoAliasingConfig {
 }
 
 function isUnusedCodeConfig(value: unknown): value is TstsUnusedCodeConfig {
+    return isObjectRecord(value) &&
+        hasOnlyKeys(value, severityConfigKeys) &&
+        isOptionalSeverity(value.severity);
+}
+
+function isUniqueExportedTypeNamesConfig(
+    value: unknown
+): value is TstsUniqueExportedTypeNamesConfig {
     return isObjectRecord(value) &&
         hasOnlyKeys(value, severityConfigKeys) &&
         isOptionalSeverity(value.severity);

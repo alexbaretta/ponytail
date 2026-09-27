@@ -76,6 +76,13 @@ describe('TSTS configuration v2', (): void => {
                 propertyPath: '$.noAliasing.unexpected',
             },
             {
+                config: {
+                    ...validConfig,
+                    uniqueExportedTypeNames: { unexpected: true },
+                },
+                propertyPath: '$.uniqueExportedTypeNames.unexpected',
+            },
+            {
                 config: { ...validConfig, unusedCode: { unexpected: true } },
                 propertyPath: '$.unusedCode.unexpected',
             },
@@ -136,6 +143,7 @@ describe('TSTS configuration v2', (): void => {
                 workspaces: [{ projectPath: 'records/tsconfig.json', publicEntrypoints: [1] }],
             },
             { ...validConfig, noAliasing: { severity: 'notice' } },
+            { ...validConfig, uniqueExportedTypeNames: { severity: 'notice' } },
             { ...validConfig, unusedCode: { severity: 'notice' } },
             {
                 ...validConfig,

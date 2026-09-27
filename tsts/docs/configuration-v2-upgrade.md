@@ -35,6 +35,7 @@ The root keys are:
 - `schemaVersion`
 - `workspaces`
 - `noAliasing`
+- `uniqueExportedTypeNames`
 - `unusedCode`
 - `typeSafeSerdes`
 - `versionedDataContracts`
@@ -45,8 +46,12 @@ A workspace accepts:
 - `entrypoints`
 - `name`
 - `packageName`
+- `publicEntrypoints`
 
-The `noAliasing` and `unusedCode` blocks accept only `severity`.
+The `noAliasing`, `uniqueExportedTypeNames`, and `unusedCode` blocks accept only
+`severity`. `uniqueExportedTypeNames` rejects independently declared exported
+types that share a name across configured workspaces; re-exporting the same
+physical declaration remains valid.
 
 The `typeSafeSerdes` block accepts `severity` and `contracts`. Each contract
 accepts `canonicalSchemaName`, `canonicalTypeName`, `contractName`, and
