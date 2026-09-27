@@ -1,0 +1,133 @@
+{
+  "schemaVersion": 3,
+  "sprint": "S01",
+  "features": {
+    "S01-F01": {
+      "depends_on": [],
+      "validation_tasklet": "S01-F01-T02"
+    },
+    "S01-F02": {
+      "depends_on": ["S01-F01"],
+      "validation_tasklet": "S01-F02-T03"
+    },
+    "S01-F03": {
+      "depends_on": ["S01-F02"],
+      "validation_tasklet": "S01-F03-T03"
+    }
+  },
+  "tasklets": {
+    "S01-F01-T01": {
+      "depends_on": [],
+      "affinity": ["traceability", "project-management"],
+      "risk": "normal",
+      "feature": "S01-F01",
+      "planned_paths": [
+        "pm/requirements/index.md",
+        "pm/requirements/requirements-traceability.md",
+        "pm/architecture/index.md",
+        "pm/architecture/requirements-traceability.md",
+        "pm/uat/index.md",
+        "pm/uat/requirements-traceability.md",
+        "pm/plans/in_progress/2026-09-27-requirements-traceability/plan.md",
+        "pm/plans/in_progress/2026-09-27-requirements-traceability/sprints/S01.md",
+        "pm/plans/in_progress/2026-09-27-requirements-traceability/sprints/S01.tasklets.json"
+      ]
+    },
+    "S01-F01-T02": {
+      "depends_on": ["S01-F01-T01"],
+      "affinity": ["traceability", "policy"],
+      "risk": "high",
+      "risk_reason": "Defines the portable relationship and completeness contract used by adopting projects.",
+      "feature": "S01-F01",
+      "planned_paths": [
+        "skills/requirements-traceability/SKILL.md",
+        "skills/requirements-traceability/agents/openai.yaml",
+        "skills/requirements/SKILL.md",
+        "skills/user-acceptance-testing/SKILL.md",
+        "skills/typescript-unit-testing/SKILL.md",
+        "skills/plan-execution/SKILL.md",
+        "skills/project-structure/SKILL.md",
+        "skills/ponytail/SKILL.md",
+        "tests/requirements-traceability-policy.test.js",
+        "tests/project-skill-configuration.test.js"
+      ]
+    },
+    "S01-F02-T01": {
+      "depends_on": ["S01-F01-T02"],
+      "affinity": ["traceability", "structural-checker"],
+      "risk": "high",
+      "risk_reason": "Owns completeness and reverse-view enforcement for every configured artifact class.",
+      "feature": "S01-F02",
+      "planned_paths": [
+        "skills/requirements-traceability/scripts/check-traceability.js",
+        "tests/requirements-traceability.test.js"
+      ]
+    },
+    "S01-F02-T02": {
+      "depends_on": ["S01-F02-T01"],
+      "affinity": ["traceability", "tsts"],
+      "risk": "high",
+      "risk_reason": "Adds compiler-semantic validation of TypeScript relationship locators.",
+      "feature": "S01-F02",
+      "planned_paths": [
+        "tsts/src/traceability.ts",
+        "tsts/test/traceability.test.ts"
+      ]
+    },
+    "S01-F02-T03": {
+      "depends_on": ["S01-F02-T01", "S01-F02-T02"],
+      "affinity": ["traceability", "tsts"],
+      "risk": "normal",
+      "feature": "S01-F02",
+      "planned_paths": [
+        "tsts/src/index.ts",
+        "tsts/src/cli.ts",
+        "tsts/test/cli.test.ts",
+        "tsts/README.md",
+        "tsts/docs/architecture.md"
+      ]
+    },
+    "S01-F03-T01": {
+      "depends_on": ["S01-F02-T03"],
+      "affinity": ["traceability", "adoption"],
+      "risk": "high",
+      "risk_reason": "Makes the new checker part of Ponytail's canonical quality gate.",
+      "feature": "S01-F03",
+      "planned_paths": [
+        ".agents/config/project/traceability.json",
+        "AGENTS.md",
+        "PROJECT_STRUCTURE.md",
+        "package.json",
+        "tests/requirements-traceability-cli.test.js",
+        "pm/requirements/traceability.generated.md"
+      ]
+    },
+    "S01-F03-T02": {
+      "depends_on": ["S01-F03-T01"],
+      "affinity": ["traceability", "generation"],
+      "risk": "normal",
+      "feature": "S01-F03",
+      "planned_paths": [
+        "registry.tsv",
+        "generated/registry.json",
+        ".openclaw/skills/requirements-traceability/SKILL.md",
+        ".openclaw/skills/requirements-traceability/scripts/check-traceability.js",
+        ".claude-plugin/plugin.json",
+        ".codex-plugin/plugin.json",
+        ".qoder-plugin/marketplace.json",
+        ".qoder-plugin/plugin.json",
+        "plugin.yaml"
+      ]
+    },
+    "S01-F03-T03": {
+      "depends_on": ["S01-F03-T01", "S01-F03-T02"],
+      "affinity": ["traceability", "validation"],
+      "risk": "normal",
+      "feature": "S01-F03",
+      "planned_paths": [
+        "pm/plans/in_progress/2026-09-27-requirements-traceability/plan.md",
+        "pm/plans/in_progress/2026-09-27-requirements-traceability/sprints/S01.md"
+      ]
+    }
+  }
+}

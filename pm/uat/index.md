@@ -16,6 +16,7 @@ boundary by `tests/campaign-census.test.js`.
 
 - [Campaign census](#campaign-census-suite)
 - [Debugging pattern observations](debugging-pattern-observations.md)
+- [Requirements traceability](requirements-traceability.md)
 
 ## Campaign census Suite
 

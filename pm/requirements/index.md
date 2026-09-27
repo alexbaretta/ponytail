@@ -13,6 +13,7 @@ behavior independently from implementation plans and architecture.
 ## Requirement sets
 
 - [Debugging pattern observations](debugging-pattern-observations.md)
+- [Requirements traceability](requirements-traceability.md)
 
 ## Campaign census CLI
 
