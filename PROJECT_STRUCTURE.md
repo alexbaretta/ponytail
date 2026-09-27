@@ -48,7 +48,8 @@ while project-wide management records remain under `pm/`.
 - `tsts/` owns the canonical TypeScript analyzer and its Node tests. Root npm dependencies and `npm run build:tsts` produce ignored `tsts/dist/`; npm distributes only its compiled runtime. `cli/tsts` is the registered-project launcher installed alongside `ponytail`.
 - `src/` owns non-script runtime implementations dispatched by user-facing
   CLI entrypoints. `src/pm-pdf.py` owns configured linked-Markdown PDF
-  rendering. `src/campaign-census.js` owns campaign configuration and
+  rendering. `src/plan-input.js` owns the durable plan-input queue contract and
+  lifecycle. `src/campaign-census.js` owns campaign configuration and
   plan metadata readers, scoped campaign discovery and validation, census
   normalization, and human/JSON reporting.
 - `ponytail.json` owns the TSTS build-impact target.
@@ -104,6 +105,9 @@ while project-wide management records remain under `pm/`.
   30,000-foot level and links to thematic architecture documents. Create it
   with the first architecture content, not as a placeholder.
 - `pm/uat/index.md` is the entry point for the linked user-acceptance web.
+- `pm/plan-inputs/<status>/` owns immutable raw user input while it moves from
+  `open` through `in_progress` to `closed`; closed entries link the PM records
+  that completed semantic ingestion.
 - `pm/debugging-pattern-observations/` owns one structured evidence record per
   independently occurring confirmed causal defect. Create it with the first
   observation, without a placeholder; derived categories and promoted skills

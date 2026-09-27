@@ -14,6 +14,7 @@ behavior independently from implementation plans and architecture.
 
 - [Debugging pattern observations](debugging-pattern-observations.md)
 - [Requirements traceability](requirements-traceability.md)
+- [Plan input queue](plan-input-queue.md)
 
 ## Campaign census CLI
 

@@ -111,6 +111,18 @@
       "supportedDowngradeVersions": []
     },
     {
+      "id": "plan-input-entry",
+      "implementation": {
+        "workspace": "ponytail",
+        "module": "src/plan-input.js",
+        "readerRegistryExport": "PlanInputReaders"
+      },
+      "currentVersion": "V1",
+      "versions": ["V1"],
+      "supportedReadVersions": ["V1"],
+      "supportedDowngradeVersions": []
+    },
+    {
       "id": "campaign-management-config",
       "implementation": {
         "workspace": "ponytail",
