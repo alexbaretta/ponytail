@@ -133,6 +133,17 @@
       "risk": "normal",
       "feature": "S01-F03",
       "planned_paths": [
+        ".agents/rules/ponytail.md",
+        ".clinerules/ponytail.md",
+        ".cursor/rules/ponytail.mdc",
+        ".github/copilot-instructions.md",
+        ".kiro/steering/ponytail.md",
+        ".qoder/rules/ponytail.md",
+        ".windsurf/rules/ponytail.md",
+        "config/AGENTS.md",
+        "pm/plans/closed/2026-09-27-requirements-traceability/plan.md",
+        "pm/plans/closed/2026-09-27-requirements-traceability/sprints/S01.md",
+        "pm/plans/closed/2026-09-27-requirements-traceability/sprints/S01.tasklets.json",
         "pm/plans/in_progress/2026-09-27-requirements-traceability/plan.md",
         "pm/plans/in_progress/2026-09-27-requirements-traceability/sprints/S01.md"
       ]

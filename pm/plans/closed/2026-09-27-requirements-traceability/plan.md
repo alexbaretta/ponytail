@@ -1,7 +1,7 @@
 # Portable requirements traceability
 
 Plan ID: 2026-09-27-requirements-traceability
-Status: in_progress
+Status: closed
 
 ## Objective and authority
 
@@ -75,3 +75,24 @@ configured test command passed 343 core tests, installer checks, 23 Pi tests,
 one setup-created untracked nested lockfile; removing that incidental file and
 rerunning the exact check passed across 430 tracked files. The working tree
 was clean before plan edits.
+
+## Final validation
+
+Build impact selected the `tsts` target from the final changed inputs, and
+`npm run build:tsts` passed. The complete configured `npm test` command
+passed 356 core tests, installer checks, 23 Pi tests, 4 MCP tests, 74 TSTS
+tests, and the TSTS placement check across 450 files. The full selection
+includes the real traceability CLI integration Arc.
+
+The traceability checker resolved six canonical relationships with no
+violations. Registry, runtime-registry, command-adapter, repeated-manifest,
+eight rule-copy, seven version-pin, Skill Creator, generated OpenClaw, and
+`git diff --check` validation passed.
+
+`ponytail qa` could not run because its global registered-project scan stops
+on an unrelated uncommitted
+`/Users/alex/git/anchorbase/ipg/.agents/config`. This repository does not own
+that state, it was not modified, and no acceptance claim depends on it.
+
+All approved scope and acceptance criteria are complete. No package was
+published and no global installation was performed.
