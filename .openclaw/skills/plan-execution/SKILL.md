@@ -305,6 +305,35 @@ that this can override restrictive rules managed by an administrator.
 
 ## Approval And Scope Growth
 
+### Fast plan input
+
+Traceability: supports REQ-PLAN-INPUT-QUEUE
+
+When the host provides `ponytail plan-input`, treat its repository-scoped
+queue as the fast input queue in front of sprint and tasklet selection. At a
+safe tool or turn boundary, drain it before starting or resuming selected plan
+work:
+
+1. Run `ponytail plan-input claim --json`. An existing `in_progress` entry is
+   returned until it is completed; otherwise the oldest open entry is claimed.
+2. Preserve the entry's exact instruction while applying `requirements`,
+   `user-acceptance-testing`, `issue-tracking`, `architecture`, and
+   `requirements-traceability` as applicable. Add approved work and exact
+   paths to the active plan before implementation.
+3. Do not claim or act on a newer entry while one is in progress. Do not
+   acknowledge receipt as completed semantic ingestion.
+4. After all applicable PM records exist, run `ponytail plan-input complete
+   <id> --record <pm-path>...`. If processing fails, leave the entry in
+   progress so it remains recoverable.
+5. Continue until `ponytail plan-input claim --json` reports no entry. Then
+   rerun the canonical sprint and tasklet selectors from the reconciled files;
+   never resume from conversational memory of the interrupted selection.
+
+Users may enqueue without interacting with the active turn by running
+`ponytail plan-input <instruction>`. Codex users may also submit
+`/ponytail-enqueue <instruction>` when the installed, trusted hook has passed
+the host project's live viability Arc.
+
 Direct user requests that add behavior to an active plan must be recorded in
 the applicable sprint before implementation and explicitly approved when they
 change approved scope.

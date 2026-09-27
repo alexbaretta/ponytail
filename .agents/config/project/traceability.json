@@ -9,6 +9,10 @@
     {
       "id": "REQ-CAMPAIGN-CENSUS-CLI",
       "sourcePath": "pm/requirements/index.md"
+    },
+    {
+      "id": "REQ-PLAN-INPUT-QUEUE",
+      "sourcePath": "pm/requirements/plan-input-queue.md"
     }
   ],
   "artifacts": [
@@ -60,6 +64,26 @@
     {
       "class": "uat",
       "path": "pm/uat/index.md",
+      "locator": "text"
+    },
+    {
+      "class": "implementation",
+      "path": "src/plan-input.js",
+      "locator": "text"
+    },
+    {
+      "class": "unit-test",
+      "path": "tests/plan-input.test.js",
+      "locator": "text"
+    },
+    {
+      "class": "integration-test",
+      "path": "tests/plan-input-hooks.test.js",
+      "locator": "text"
+    },
+    {
+      "class": "uat",
+      "path": "pm/uat/plan-input-queue.md",
       "locator": "text"
     }
   ],
