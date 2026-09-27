@@ -36,3 +36,15 @@ the plan remains active until that evidence is recorded.
 `npm test` passed 357 core tests, installer checks, 23 Pi tests, 4 MCP tests,
 70 TSTS tests, and the 452-file TSTS structure check. The seven version pins
 also passed. The tree was clean.
+
+## Current validation
+
+Build impact reports no affected build target. The complete `npm test` command
+passes 366 core tests, installer checks, 23 Pi tests, 4 MCP tests, 70 TSTS
+tests, and the 464-file structure check. Traceability resolves 14
+relationships; rule copies and version pins pass. Campaign validation accepts
+this plan and its seven-tasklet V3 graph.
+
+Automated acceptance is complete. The trusted live Codex Arc that determines
+whether `UserPromptSubmit` blocks before an active-turn interruption remains
+unexecuted, so this plan and feature remain in progress.
