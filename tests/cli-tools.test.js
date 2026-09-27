@@ -131,6 +131,8 @@ test('ponytail help publishes the plan-input producer and lifecycle', () => {
   const result = run(ponytail, ['--help'], { cwd: root });
   assert.equal(result.status, 0, result.stderr);
   assert.match(result.stdout, /ponytail plan-input <plan> -- <instruction>/);
+  assert.match(result.stdout, /ponytail plan-input coordinate <plan>/);
+  assert.match(result.stdout, /ponytail plan-input release <plan>/);
   assert.match(result.stdout, /ponytail plan-input complete <plan> <id> --record <pm-path>/);
 });
 

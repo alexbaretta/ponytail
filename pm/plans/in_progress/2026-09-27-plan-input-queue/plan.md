@@ -40,11 +40,12 @@ also passed. The tree was clean.
 ## Current validation
 
 Build impact reports no affected build target. The complete `npm test` command
-passes 366 core tests, installer checks, 23 Pi tests, 4 MCP tests, 70 TSTS
+passes 369 core tests, installer checks, 23 Pi tests, 4 MCP tests, 70 TSTS
 tests, and the 464-file structure check. Traceability resolves 14
 relationships; rule copies and version pins pass. Campaign validation accepts
-this plan and its seven-tasklet V3 graph.
+this plan and its eight-tasklet V3 graph.
 
-Automated acceptance is complete. The trusted live Codex Arc that determines
-whether `UserPromptSubmit` blocks before an active-turn interruption remains
-unexecuted, so this plan and feature remain in progress.
+Automated acceptance includes the coordinator-session binding refinement. The
+trusted live Codex Arc that determines whether `UserPromptSubmit` blocks before
+an active-turn interruption remains unexecuted, so this plan and feature remain
+in progress.

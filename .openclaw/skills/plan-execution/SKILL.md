@@ -316,6 +316,14 @@ coordinator may list, claim, complete, or otherwise consume its queue; other
 sessions, including sessions in the same checkout, do not inspect or block on
 it. Input addressed to any member plan resolves to the campaign root.
 
+After rehydrating or resuming a campaign, run `ponytail plan-input coordinate <campaign-root>`
+through the host tool boundary before running a sprint or tasklet selector.
+The trusted hook binds the current session to the resolved
+campaign root. Repeating the same binding is idempotent; a conflicting session
+must not coordinate the campaign until the current coordinator runs
+`ponytail plan-input release <campaign-root>` for an intentional handoff or final
+completion.
+
 At a safe tasklet or turn boundary, the campaign coordinator drains its queue
 before starting or resuming selected plan work:
 
@@ -336,8 +344,9 @@ before starting or resuming selected plan work:
 
 Users may enqueue without interacting with the active turn by running
 `ponytail plan-input <plan> -- <instruction>`. Codex users may also submit
-`/ponytail-enqueue <plan> -- <instruction>` when the installed, trusted hook has passed
-the host project's live viability Arc.
+`/ponytail-enqueue <instruction>` when the installed, trusted hook has passed
+the host project's live viability Arc. The hook derives the campaign from the
+current session binding and blocks an unbound command without guessing.
 
 Direct user requests that add behavior to an active plan must be recorded in
 the applicable sprint before implementation and explicitly approved when they

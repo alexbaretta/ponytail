@@ -123,6 +123,18 @@
       "supportedDowngradeVersions": []
     },
     {
+      "id": "plan-input-coordinator-bindings",
+      "implementation": {
+        "workspace": "ponytail",
+        "module": "hooks/plan-input.js",
+        "readerRegistryExport": "PlanInputCoordinatorBindingReaders"
+      },
+      "currentVersion": "V1",
+      "versions": ["V1"],
+      "supportedReadVersions": ["V1"],
+      "supportedDowngradeVersions": []
+    },
+    {
       "id": "campaign-management-config",
       "implementation": {
         "workspace": "ponytail",

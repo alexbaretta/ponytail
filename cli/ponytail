@@ -497,6 +497,8 @@ def print_usage():
   ponytail list-dependencies
   ponytail detect-components [--language typescript|javascript|auto]
   ponytail plan-input <plan> -- <instruction>
+  ponytail plan-input coordinate <plan>
+  ponytail plan-input release <plan>
   ponytail plan-input list <plan> [--json]
   ponytail plan-input claim <plan> [--json]
   ponytail plan-input complete <plan> <id> --record <pm-path>...

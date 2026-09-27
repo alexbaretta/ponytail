@@ -50,6 +50,20 @@
           }
         ]
       }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "exec_command|Bash|functions.exec",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/plan-input.js\"",
+            "commandWindows": "if (Get-Command node -ErrorAction SilentlyContinue) { node \"$env:CLAUDE_PLUGIN_ROOT\\hooks\\plan-input.js\" }",
+            "timeout": 5,
+            "statusMessage": "Binding campaign coordinator..."
+          }
+        ]
+      }
     ]
   }
 }

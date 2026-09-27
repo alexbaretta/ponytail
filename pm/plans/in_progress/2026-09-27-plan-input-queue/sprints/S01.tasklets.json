@@ -4,7 +4,7 @@
   "features": {
     "S01-F01": {"depends_on": [], "validation_tasklet": "S01-F01-T01"},
     "S01-F02": {"depends_on": ["S01-F01"], "validation_tasklet": "S01-F02-T02"},
-    "S01-F03": {"depends_on": ["S01-F02"], "validation_tasklet": "S01-F03-T03"},
+    "S01-F03": {"depends_on": ["S01-F02"], "validation_tasklet": "S01-F03-T04"},
     "S01-F04": {"depends_on": ["S01-F03"], "validation_tasklet": "S01-F04-T01"}
   },
   "tasklets": {
@@ -31,6 +31,10 @@
     "S01-F03-T03": {
       "depends_on": ["S01-F03-T01", "S01-F03-T02"], "affinity": ["plan-input", "campaign-coordination"], "risk": "high", "risk_reason": "Defines the isolation boundary and exclusive consumer for each campaign queue.", "feature": "S01-F03",
       "planned_paths": ["src/campaign-census.js", "src/plan-input.js", "cli/ponytail", "hooks/plan-input.js", "hooks/hooks.json", "skills/plan-execution/SKILL.md", ".openclaw/skills/plan-execution/SKILL.md", "tests/campaign-census.test.js", "tests/plan-input.test.js", "tests/plan-input-hooks.test.js", "tests/cli-tools.test.js", "tests/plan-execution-policy.test.js", "PROJECT_STRUCTURE.md", "pm/requirements/plan-input-queue.md", "pm/architecture/plan-input-queue.md", "pm/uat/plan-input-queue.md", "pm/plans/in_progress/2026-09-27-plan-input-queue/plan.md", "pm/plans/in_progress/2026-09-27-plan-input-queue/sprints/S01.md", "pm/plans/in_progress/2026-09-27-plan-input-queue/sprints/S01.tasklets.json"]
+    },
+    "S01-F03-T04": {
+      "depends_on": ["S01-F03-T01", "S01-F03-T02", "S01-F03-T03"], "affinity": ["plan-input", "campaign-coordination", "codex-hooks"], "risk": "high", "risk_reason": "Owns exclusive live-session authority for each campaign queue.", "feature": "S01-F03",
+      "planned_paths": ["src/plan-input.js", "cli/ponytail", "hooks/plan-input.js", "hooks/hooks.json", "skills/plan-execution/SKILL.md", ".openclaw/skills/plan-execution/SKILL.md", "tests/plan-input.test.js", "tests/plan-input-hooks.test.js", "tests/cli-tools.test.js", "tests/plan-execution-policy.test.js", "versioned-data-contracts.json", "pm/requirements/plan-input-queue.md", "pm/architecture/plan-input-queue.md", "pm/uat/plan-input-queue.md", "pm/plans/in_progress/2026-09-27-plan-input-queue/plan.md", "pm/plans/in_progress/2026-09-27-plan-input-queue/sprints/S01.md", "pm/plans/in_progress/2026-09-27-plan-input-queue/sprints/S01.tasklets.json"]
     },
     "S01-F04-T01": {
       "depends_on": ["S01-F03-T02"], "affinity": ["plan-input", "validation"], "risk": "normal", "feature": "S01-F04",

@@ -22,13 +22,20 @@ requirement, UAT, issue, architecture, traceability, and plan changes.
 
 The queue must have two first-class producers:
 
-- `/ponytail-enqueue <plan> -- <instruction>` in the Codex prompt composer; and
+- `/ponytail-enqueue <instruction>` in the Codex prompt composer; and
 - `ponytail plan-input <plan> -- <instruction>` in a terminal.
 
 Both producers must create the same queue-entry contract. The composer command
 must be blocked from ordinary prompt delivery after successful enqueue so it
 cannot become a competing Steer instruction. The terminal command must not
 interact with the active Codex turn.
+
+The campaign coordinator must bind its Codex session to the campaign root
+before executing plan work. Composer enqueue derives the campaign from that
+binding using the hook-provided session identity; it must not require the
+human to repeat a plan, infer a plan from the checkout, or select among active
+plans. An unbound session must receive an actionable blocked-command error.
+Only one session may hold the coordinator binding for a campaign at a time.
 
 Exactly one entry may be in semantic ingestion at a time. New entries remain
 ordered behind it and must not interrupt it. Before resuming plan tasklets, the

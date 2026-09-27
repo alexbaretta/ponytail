@@ -86,11 +86,22 @@ test('one claim is a critical section and completion requires durable PM evidenc
 
 test('CLI grammar preserves multiword prompts and validates lifecycle commands', () => {
   assert.deepEqual(parseCli(['plan', '--', 'a', 'new', 'bug']), { command: 'enqueue', plan: 'plan', prompt: 'a new bug' });
+  assert.deepEqual(parseCli(['coordinate', 'plan']), { command: 'coordinate', plan: 'plan' });
+  assert.deepEqual(parseCli(['release', 'plan']), { command: 'release', plan: 'plan' });
   assert.deepEqual(parseCli(['claim', 'plan', '--json']), { command: 'claim', plan: 'plan', json: true });
   assert.deepEqual(parseCli(['complete', 'plan', 'id', '--record', 'pm/requirements/index.md']), {
     command: 'complete', plan: 'plan', id: 'id', records: ['pm/requirements/index.md'],
   });
   assert.throws(() => parseCli(['complete', 'plan', 'id']), /usage/);
+});
+
+test('coordinator lifecycle commands validate campaign membership', (context) => {
+  const root = campaignRepository();
+  const lines = [];
+  context.mock.method(console, 'log', (line) => lines.push(line));
+  assert.equal(main(['coordinate', 'child'], root), 0);
+  assert.equal(main(['release', 'child'], root), 0);
+  assert.deepEqual(lines, ['Validated coordinator campaign root', 'Validated release for campaign root']);
 });
 
 test('CLI producer resolves a member plan to the campaign root', (context) => {

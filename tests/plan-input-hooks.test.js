@@ -37,13 +37,22 @@ function run(root, event) {
   return spawnSync(process.execPath, [hook], {
     cwd: root,
     input: JSON.stringify({ cwd: root, session_id: 'session', turn_id: 'turn', ...event }),
+    env: { ...process.env, PLUGIN_DATA: path.join(root, '.plugin-data') },
     encoding: 'utf8',
   });
 }
 
-test('composer command durably enqueues then blocks ordinary prompt delivery', () => {
+function tool(root, cmd, sessionId = 'session') {
+  return run(root, { hook_event_name: 'PreToolUse', session_id: sessionId, tool_name: 'exec_command', tool_input: { cmd } });
+}
+
+test('coordinator binding lets composer enqueue derive the campaign', () => {
   const root = repository();
-  const result = run(root, { hook_event_name: 'UserPromptSubmit', prompt: '/ponytail-enqueue child -- preserve this requirement' });
+  const coordinate = tool(root, 'ponytail plan-input coordinate child');
+  assert.equal(coordinate.status, 0, coordinate.stderr);
+  assert.match(JSON.parse(coordinate.stdout).hookSpecificOutput.additionalContext, /session bound to campaign root/);
+
+  const result = run(root, { hook_event_name: 'UserPromptSubmit', prompt: '/ponytail-enqueue preserve this requirement' });
   assert.equal(result.status, 0, result.stderr);
   const output = JSON.parse(result.stdout);
   assert.equal(output.decision, 'block');
@@ -53,10 +62,41 @@ test('composer command durably enqueues then blocks ordinary prompt delivery', (
   ]);
 });
 
-test('producer hook never consumes or blocks on a campaign queue', () => {
+test('coordinator bindings are exclusive, releasable, and fail closed', () => {
   const root = repository();
-  run(root, { hook_event_name: 'UserPromptSubmit', prompt: '/ponytail-enqueue child -- first' });
+  const unbound = run(root, { hook_event_name: 'UserPromptSubmit', session_id: 'other', prompt: '/ponytail-enqueue first' });
+  assert.equal(JSON.parse(unbound.stdout).decision, 'block');
+  assert.match(JSON.parse(unbound.stdout).reason, /not bound to a campaign/);
+  assert.deepEqual(entries(root, 'root'), []);
+
+  assert.equal(tool(root, 'ponytail plan-input coordinate child').status, 0);
+  const conflict = tool(root, 'ponytail plan-input coordinate root', 'other');
+  assert.equal(JSON.parse(conflict.stdout).hookSpecificOutput.permissionDecision, 'deny');
+  assert.match(JSON.parse(conflict.stdout).hookSpecificOutput.permissionDecisionReason, /already coordinated by another session/);
+
+  const release = tool(root, 'ponytail plan-input release child');
+  assert.match(JSON.parse(release.stdout).hookSpecificOutput.additionalContext, /session released campaign root/);
+  assert.equal(tool(root, 'ponytail plan-input coordinate root', 'other').status, 0);
+});
+
+test('producer hook ignores unrelated boundaries and never consumes a queue', () => {
+  const root = repository();
+  tool(root, 'ponytail plan-input coordinate child');
+  run(root, { hook_event_name: 'UserPromptSubmit', prompt: '/ponytail-enqueue first' });
   assert.equal(run(root, { hook_event_name: 'PreToolUse', tool_name: 'exec_command', tool_input: { cmd: 'npm test' } }).stdout, '');
+  assert.equal(run(root, { hook_event_name: 'PreToolUse', tool_name: 'functions.exec', tool_input: { code: 'await tools.exec_command({cmd:"npm test"})' } }).stdout, '');
   assert.equal(run(root, { hook_event_name: 'Stop', stop_hook_active: false }).stdout, '');
   assert.equal(entries(root, 'root')[0].status, 'open');
+});
+
+test('code-mode coordinator command establishes the same binding', () => {
+  const root = repository();
+  const result = run(root, {
+    hook_event_name: 'PreToolUse',
+    tool_name: 'functions.exec',
+    tool_input: { code: 'const r = await tools.exec_command({cmd:"ponytail plan-input coordinate child"}); text(r.output);' },
+  });
+  assert.match(JSON.parse(result.stdout).hookSpecificOutput.additionalContext, /campaign root/);
+  const enqueue = run(root, { hook_event_name: 'UserPromptSubmit', prompt: '/ponytail-enqueue code mode' });
+  assert.equal(JSON.parse(enqueue.stdout).decision, 'block');
 });

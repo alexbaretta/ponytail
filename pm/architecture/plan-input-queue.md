@@ -15,13 +15,24 @@ record therefore exists before either producer acknowledges it.
 `src/plan-input.js` owns the contract, atomic file creation, deterministic FIFO
 selection, lifecycle transitions, and CLI behavior. The main `ponytail`
 dispatcher is a thin adapter. A Codex lifecycle hook is the second thin
-adapter: `UserPromptSubmit` recognizes only `/ponytail-enqueue`, calls the same
-producer, and blocks ordinary prompt delivery after success.
+adapter. It atomically binds a session when the agent executes
+`ponytail plan-input coordinate <plan>`, using `PreToolUse.session_id` and the
+canonical campaign resolver. `UserPromptSubmit` recognizes only
+`/ponytail-enqueue <instruction>`, resolves the campaign through that binding,
+calls the shared producer, and blocks ordinary prompt delivery after success.
+
+Bindings are operational V1 state under Codex `PLUGIN_DATA`, keyed both by
+repository/session and repository/campaign so one session coordinates one
+campaign and one campaign has one coordinator. They are not project records
+and never enter Git. Rebinding the same pair is idempotent; conflicting
+bindings fail closed. `ponytail plan-input release <plan>` relinquishes the
+binding when the coordinator hands off or finishes.
 
 The campaign has exactly one operational coordinator. Only that coordinator
 calls the campaign-qualified list, claim, and complete operations at safe plan
-boundaries. The hook is producer-only and never inspects or blocks on queued
-work, so unrelated sessions in the checkout are unaffected. A claimed entry
+boundaries. The hook observes only explicit coordinate/release tool commands
+and composer enqueue commands; it never inspects or blocks on queued work, so
+unrelated sessions in the checkout are unaffected. A claimed entry
 suppresses consumption of newer entries until it is acknowledged, providing
 the critical section that prompt steering lacks.
 

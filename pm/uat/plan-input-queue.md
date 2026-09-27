@@ -12,10 +12,12 @@ Traceability: verifies REQ-PLAN-INPUT-QUEUE
 1. Submit one instruction with `ponytail plan-input <member-plan> -- <instruction>`.
    - The command returns a stable receipt only after one open V2 record contains
      the exact instruction and identifies the CLI producer.
-2. Submit another instruction as `/ponytail-enqueue <member-plan> -- <instruction>` to the
-   `UserPromptSubmit` hook.
+2. Have the campaign coordinator run `ponytail plan-input coordinate
+   <member-plan>`, then submit another instruction as
+   `/ponytail-enqueue <instruction>` to the `UserPromptSubmit` hook.
    - The same queue contract records it with the composer producer, and the
-     hook blocks ordinary prompt delivery with the receipt as its reason.
+     hook derives the root campaign from the coordinator session binding and
+     blocks ordinary prompt delivery with the receipt as its reason.
 3. List the queue.
    - Both entries appear once in FIFO order without truncation or rewriting.
    - Both are stored under the campaign root's identity even when submitted
@@ -42,7 +44,7 @@ test.
 
 ## Arc: Isolate campaign coordination
 
-1. Create two campaigns in one checkout and designate one coordinator for
+1. Create two campaigns in one checkout and bind one coordinator session for
    each campaign.
 2. Enqueue an input through a non-root member of the first campaign.
    - It resolves to the first campaign root and is invisible when listing or
@@ -50,7 +52,12 @@ test.
 3. Let a non-coordinator session execute unrelated work in the same checkout.
    - The producer hook neither reads the queue nor blocks that session's tools
      or turn completion.
-4. Have the first campaign coordinator drain its queue.
+   - `/ponytail-enqueue` in that unbound session is blocked without writing a
+     queue entry.
+4. Attempt to bind a second session to the first campaign.
+   - The binding fails closed and identifies the existing coordinator; an
+     explicit release is required before handoff.
+5. Have the first campaign coordinator drain its queue and release coordination.
    - Only that coordinator consumes the entry, then resumes its campaign from
      fresh selectors.
 

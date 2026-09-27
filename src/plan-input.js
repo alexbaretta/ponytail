@@ -182,8 +182,12 @@ function complete(repositoryRoot, campaignId, id, records) {
 }
 
 function parseCli(argv) {
-  if (argv.length === 0) fail('usage: ponytail plan-input <plan> -- <instruction> | list <plan> [--json] | claim <plan> [--json] | complete <plan> <id> --record <pm-path>...');
+  if (argv.length === 0) fail('usage: ponytail plan-input <plan> -- <instruction> | coordinate <plan> | release <plan> | list <plan> [--json] | claim <plan> [--json] | complete <plan> <id> --record <pm-path>...');
   const command = argv[0];
+  if (command === 'coordinate' || command === 'release') {
+    if (argv.length !== 2) fail(`usage: ponytail plan-input ${command} <plan>`);
+    return { command, plan: argv[1] };
+  }
   if (command === 'list' || command === 'claim') {
     if (argv.length < 2 || argv.length > 3 || (argv[2] && argv[2] !== '--json')) fail(`usage: ponytail plan-input ${command} <plan> [--json]`);
     return { command, plan: argv[1], json: argv[2] === '--json' };
@@ -221,6 +225,14 @@ function main(argv = process.argv.slice(2), repositoryRoot = process.cwd()) {
     const entry = claim(repositoryRoot, campaignId);
     if (!entry) return 1;
     console.log(request.json ? JSON.stringify(entry) : `${entry.id}\t${entry.prompt}`);
+    return 0;
+  }
+  if (request.command === 'coordinate') {
+    console.log(`Validated coordinator campaign ${campaignId}`);
+    return 0;
+  }
+  if (request.command === 'release') {
+    console.log(`Validated release for campaign ${campaignId}`);
     return 0;
   }
   const entry = complete(repositoryRoot, campaignId, request.id, request.records);
