@@ -67,6 +67,9 @@ should identify, directly or by reference:
 - ancillary cloud services and their ownership; and
 - canonical contract, generated-artifact, credential, and secret owners when
   those conventions affect file placement.
+- the versioned traceability configuration, check command, reverse-view
+  generation command, and TypeScript semantic checker when the project adopts
+  `requirements-traceability`;
 - the tracked directory-structure manifest at
   `.agents/config/project/directory-structure.json`, classifying permitted
   source, compiled, data, environment, configuration, temporary, and other
@@ -199,6 +202,11 @@ Before completing or committing the change:
 4. Include the implementation and its configuration updates in the same
    project change-set, using selective commits in their owning repositories.
 5. Treat a stale configuration owner as an incomplete change.
+
+When a project adopts `requirements-traceability`, keep its configuration
+beside the other project-owned configuration. Generated reverse views belong
+under the configured requirements root; generated host or product outputs map
+to their canonical source rather than carrying copied annotations.
 
 ## Placement Workflow
 

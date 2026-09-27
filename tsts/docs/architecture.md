@@ -12,6 +12,13 @@ selection of workspaces, entrypoints, rules, and versioned contract families.
 The analyzer does not embed repository names, package layouts, business
 identities, or application policy.
 
+For requirements traceability, TSTS owns only the compiler-semantic question:
+does each configured TypeScript annotation attach to a supported named
+declaration in the selected program? The companion project-neutral structural
+checker owns requirements, artifact classes, Markdown, declarative
+integration Arcs, non-TypeScript files, generated-source mappings,
+completeness, and reverse-view generation.
+
 ## Design Principles
 
 - Treat successful TypeScript compilation as a prerequisite, not proof of

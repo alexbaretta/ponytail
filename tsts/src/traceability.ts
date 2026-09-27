@@ -50,6 +50,7 @@ interface TraceabilityMarker {
 const markerPattern: RegExp =
     /[Tt]raceability["']?\s*:\s*["']?(implements|supports|verifies)\s+([A-Z][A-Z0-9-]*)/gu;
 
+// Traceability: supports REQ-REQUIREMENTS-TRACEABILITY
 export async function checkTraceabilityAnnotations(input: {
     readonly configurationPath: string;
     readonly projectPath: string;
@@ -212,21 +213,42 @@ function isTypescriptConfiguration(
 
 function findTraceabilityMarkers(source: string): readonly TraceabilityMarker[] {
     const markers: TraceabilityMarker[] = [];
-    for (const match of source.matchAll(markerPattern)) {
-        const role: string | undefined = match[1];
-        const requirementId: string | undefined = match[2];
+    const scanner: ts.Scanner = ts.createScanner(
+        ts.ScriptTarget.Latest,
+        false,
+        ts.LanguageVariant.Standard,
+        source
+    );
+    for (
+        let token: ts.SyntaxKind = scanner.scan();
+        token !== ts.SyntaxKind.EndOfFileToken;
+        token = scanner.scan()
+    ) {
         if (
-            requirementId === undefined ||
-            (role !== 'implements' && role !== 'supports' && role !== 'verifies')
+            token !== ts.SyntaxKind.SingleLineCommentTrivia &&
+            token !== ts.SyntaxKind.MultiLineCommentTrivia
         ) {
             continue;
         }
-        markers.push({
-            line: source.slice(0, match.index).split('\n').length,
-            position: match.index,
-            requirementId,
-            role,
-        });
+        const commentStart: number = scanner.getTokenPos();
+        const comment: string = scanner.getTokenText();
+        for (const match of comment.matchAll(markerPattern)) {
+            const role: string | undefined = match[1];
+            const requirementId: string | undefined = match[2];
+            if (
+                requirementId === undefined ||
+                (role !== 'implements' && role !== 'supports' && role !== 'verifies')
+            ) {
+                continue;
+            }
+            const position: number = commentStart + match.index;
+            markers.push({
+                line: source.slice(0, position).split('\n').length,
+                position,
+                requirementId,
+                role,
+            });
+        }
     }
     return markers;
 }

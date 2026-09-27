@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "projectRoot": "../../..",
+  "requirements": [
+    {
+      "id": "REQ-REQUIREMENTS-TRACEABILITY",
+      "sourcePath": "pm/requirements/requirements-traceability.md"
+    }
+  ],
+  "artifacts": [
+    {
+      "class": "implementation",
+      "path": "skills/requirements-traceability/scripts/check-traceability.js",
+      "locator": "text"
+    },
+    {
+      "class": "implementation",
+      "path": "tsts/src/traceability.ts",
+      "locator": "typescript"
+    },
+    {
+      "class": "unit-test",
+      "path": "tests/requirements-traceability.test.js",
+      "locator": "text"
+    },
+    {
+      "class": "unit-test",
+      "path": "tsts/test/traceability.test.ts",
+      "locator": "typescript"
+    },
+    {
+      "class": "integration-test",
+      "path": "tests/requirements-traceability-cli.test.js",
+      "locator": "text"
+    },
+    {
+      "class": "uat",
+      "path": "pm/uat/requirements-traceability.md",
+      "locator": "text"
+    }
+  ],
+  "generatedArtifacts": [
+    {
+      "path": ".openclaw/skills/requirements-traceability/SKILL.md",
+      "sourcePath": "skills/requirements-traceability/SKILL.md"
+    },
+    {
+      "path": ".openclaw/skills/requirements-traceability/scripts/check-traceability.js",
+      "sourcePath": "skills/requirements-traceability/scripts/check-traceability.js"
+    },
+    {
+      "path": "generated/registry.json",
+      "sourcePath": "registry.tsv"
+    },
+    {
+      "path": "plugin.yaml",
+      "sourcePath": "registry.tsv"
+    }
+  ],
+  "reverseViewPath": "pm/requirements/traceability.generated.md",
+  "typescript": {
+    "cliPath": "tsts/dist/src/cli.js",
+    "projectPath": "tsts/tsconfig.json"
+  }
+}

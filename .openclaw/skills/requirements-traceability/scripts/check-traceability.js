@@ -205,8 +205,6 @@ function runTypescriptChecker(configuration) {
   const message = (result.stderr || result.stdout || `TSTS exited ${result.status}`).trim();
   return [diagnostic('traceability-typescript', message)];
 }
-
-// Traceability: implements REQ-REQUIREMENTS-TRACEABILITY
 function analyzeTraceability(configurationPath, options = {}) {
   const configuration = loadTraceabilityConfiguration(configurationPath);
   const diagnostics = [];

@@ -9,7 +9,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('fs');
-const { NAMES, render, outPath, sourceBody, DESCRIPTIONS } = require('../scripts/build-openclaw-skills');
+const { NAMES, render, outPath, sourceBody, DESCRIPTIONS, stripTraceabilityAnnotations } = require('../scripts/build-openclaw-skills');
 
 for (const name of NAMES) {
   test(`${name}: committed OpenClaw skill matches the generator`, () => {
@@ -33,3 +33,26 @@ for (const name of NAMES) {
     }
   });
 }
+
+test('generated resources omit canonical relationship annotations', () => {
+  const generated = outPath('requirements-traceability')
+    .replace(/SKILL\.md$/, 'scripts/check-traceability.js');
+  const temporary = `${generated}.test-copy`;
+  fs.copyFileSync(
+    'skills/requirements-traceability/scripts/check-traceability.js',
+    temporary,
+  );
+  try {
+    stripTraceabilityAnnotations(temporary);
+    assert.equal(
+      fs.readFileSync(generated, 'utf8'),
+      fs.readFileSync(temporary, 'utf8'),
+    );
+    assert.doesNotMatch(
+      fs.readFileSync(generated, 'utf8'),
+      /Traceability: implements REQ-REQUIREMENTS-TRACEABILITY/u,
+    );
+  } finally {
+    fs.rmSync(temporary);
+  }
+});

@@ -77,6 +77,23 @@ describe('parseTstsCliArguments', (): void => {
         });
     });
 
+    it('parses semantic traceability with an explicit project', (): void => {
+        const result: TstsCliParseResult = parseTstsCliArguments([
+            '--project',
+            'tsconfig.contracts.json',
+            '--traceability',
+            '.agents/config/project/traceability.json',
+        ]);
+
+        assert.deepEqual(result, {
+            kind: 'run',
+            options: {
+                projectPath: 'tsconfig.contracts.json',
+                traceabilityPath: '.agents/config/project/traceability.json',
+            },
+        });
+    });
+
     it('parses help requests', (): void => {
         const result: TstsCliParseResult = parseTstsCliArguments(['--help']);
 
@@ -100,5 +117,6 @@ describe('usage', (): void => {
         assert.match(usage(), /--project <tsconfig\.json>/u);
         assert.match(usage(), /--config <tsts\.json>/u);
         assert.match(usage(), /--directory-structure <manifest\.json>/u);
+        assert.match(usage(), /--traceability <traceability\.json>/u);
     });
 });

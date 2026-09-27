@@ -21,6 +21,13 @@ policy belongs in `skills/ponytail/SKILL.md`; do not duplicate it here.
 - Requirements: linked Markdown rooted at `pm/requirements/index.md`.
 - Architecture: linked Markdown rooted at `pm/architecture/index.md`.
 - UAT documentation root: `pm/uat`.
+- Traceability configuration:
+  `.agents/config/project/traceability.json`.
+- Traceability check command: `npm run check:traceability`.
+- Traceability reverse-view generation command:
+  `npm run build:traceability`.
+- Traceability TypeScript semantic checker: TSTS through the configured
+  traceability command.
 - Debugging pattern observations: `pm/debugging-pattern-observations/`.
 - Issue types and shared issue/plan lifecycle: use `issue-tracking` defaults.
 - Existing records retain their established paths; see `PROJECT_STRUCTURE.md`.
@@ -56,6 +63,8 @@ services. `PROJECT_STRUCTURE.md` is authoritative for that boundary.
   --write`; omit `--write` to check generated output.
 - Runtime-registry generation: `node scripts/build-registry-data.js
   --write`; omit `--write` to check generated output.
+- Requirements traceability generation: `npm run build:traceability`;
+  validation: `npm run check:traceability`.
 - Version check: `node scripts/check-versions.js`.
 - Manifest generation: `node scripts/build-manifests.js --write`; omit
   `--write` to check repeated metadata.

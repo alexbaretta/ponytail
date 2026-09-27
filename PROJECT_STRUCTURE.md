@@ -76,6 +76,10 @@ while project-wide management records remain under `pm/`.
   by the campaign census CLI.
   `project/pm-pdf.json`, when present, owns PDF collection roots, titles,
   exclusions, presentation variables, and the default generated-output path.
+  `project/traceability.json` owns the approved in-scope requirement set,
+  artifact classifications, generated-source mappings, reverse-view path, and
+  TypeScript semantic-checker binding consumed by the reusable traceability
+  checker.
   Other projects read this file only from the repository's explicitly blessed
   worktree. `codex-execpolicy.json` owns its Codex command policy proposal. See
   `docs/project-validation.md`.
@@ -93,6 +97,8 @@ while project-wide management records remain under `pm/`.
   until an explicitly scoped migration.
 - `pm/requirements/index.md` is the entry point for the linked requirements
   web. Create it with the first requirements content, not as a placeholder.
+  `pm/requirements/traceability.generated.md` is a derived reverse view;
+  canonical relationships remain beside handwritten owned units.
 - `pm/architecture/index.md` is the entry point for the linked product
   architecture web. Its introduction describes the product architecture at a
   30,000-foot level and links to thematic architecture documents. Create it

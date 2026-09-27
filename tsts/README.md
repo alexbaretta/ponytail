@@ -24,12 +24,20 @@ tsts --project tsconfig.json
 tsts --config tsts.json
 # For repository placement rules:
 tsts --directory-structure .agents/config/project/directory-structure.json
+# For semantic attachment of TypeScript requirement annotations:
+tsts --project tsconfig.json --traceability .agents/config/project/traceability.json
 ```
 
 The launcher runs `ponytail validate` first, preserving exit 2 for no worktree
 and 3 for unregistered repositories. The analyzer returns 1 for error-level
 violations and 0 when none occur. `ponytail qa` currently selects reference QA;
 TSTS is an explicitly invoked analyzer, never a whole integration-suite runner.
+
+Traceability analysis is intentionally narrow: TSTS verifies that configured
+TypeScript annotations attach to supported named declarations. The
+project-neutral requirements-traceability checker owns configuration,
+non-TypeScript locators, coverage completeness, generated-source mappings, and
+reverse views.
 
 See [architecture](docs/architecture.md),
 [configuration V2](docs/configuration-v2-upgrade.md), and the

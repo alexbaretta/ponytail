@@ -386,6 +386,23 @@
     {
       "kind": "skill",
       "status": "enabled",
+      "name": "requirements-traceability",
+      "source": "skills/requirements-traceability",
+      "hosts": [
+        "claude",
+        "codex",
+        "copilot",
+        "devin",
+        "hermes",
+        "openclaw",
+        "pi",
+        "qoder"
+      ],
+      "reason": "Link approved requirements to implementation and verification"
+    },
+    {
+      "kind": "skill",
+      "status": "enabled",
       "name": "semantic-rebase",
       "source": "skills/semantic-rebase",
       "hosts": [

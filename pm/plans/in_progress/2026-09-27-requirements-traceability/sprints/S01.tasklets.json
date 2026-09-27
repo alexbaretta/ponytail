@@ -115,6 +115,8 @@
       "planned_paths": [
         "registry.tsv",
         "generated/registry.json",
+        "scripts/build-openclaw-skills.js",
+        "tests/openclaw-skills.test.js",
         ".openclaw/skills/requirements-traceability/SKILL.md",
         ".openclaw/skills/requirements-traceability/scripts/check-traceability.js",
         ".claude-plugin/plugin.json",

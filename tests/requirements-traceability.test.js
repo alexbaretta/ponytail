@@ -15,12 +15,13 @@ const {
 
 function fixture() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ponytail-traceability-'));
+  const marker = role => `Traceability: ${role} REQ-ONE`;
   const files = {
     'requirements.md': '# Requirement\n\n**Identifier:** `REQ-ONE`\n',
-    'src.js': '// Traceability: implements REQ-ONE\nfunction value() {}\n',
-    'unit.test.js': '// Traceability: verifies REQ-ONE\ntest("value", () => {});\n',
-    'integration.json': '{"traceability": "verifies REQ-ONE"}\n',
-    'uat.md': 'Traceability: verifies REQ-ONE\n\n## Arc\n',
+    'src.js': `// ${marker('implements')}\nfunction value() {}\n`,
+    'unit.test.js': `// ${marker('verifies')}\ntest("value", () => {});\n`,
+    'integration.json': `{"traceability": "${marker('verifies').replace('Traceability: ', '')}"}\n`,
+    'uat.md': `${marker('verifies')}\n\n## Arc\n`,
     'generated.txt': 'generated\n',
     'generator.js': 'module.exports = {};\n',
   };
@@ -43,6 +44,7 @@ function fixture() {
   return { configuration, configurationPath, root };
 }
 
+// Traceability: verifies REQ-REQUIREMENTS-TRACEABILITY
 test('generates one reverse view and validates complete structural coverage', () => {
   const traceabilityFixture = fixture();
   const generated = analyzeTraceability(traceabilityFixture.configurationPath, {
@@ -61,7 +63,10 @@ test('generates one reverse view and validates complete structural coverage', ()
 
 test('reports unknown IDs, missing classes, unresolved locators, and stale reverse views', () => {
   const traceabilityFixture = fixture();
-  fs.writeFileSync(path.join(traceabilityFixture.root, 'src.js'), '// Traceability: implements REQ-STALE\n');
+  fs.writeFileSync(
+    path.join(traceabilityFixture.root, 'src.js'),
+    `// Traceability: implements ${'REQ-STALE'}\n`,
+  );
   fs.unlinkSync(path.join(traceabilityFixture.root, 'integration.json'));
 
   const result = analyzeTraceability(traceabilityFixture.configurationPath, {
@@ -95,7 +100,10 @@ test('accepts a justified no-unit-test disposition only for unit coverage', () =
 
 test('rejects generated relationship copies and unsafe or unknown configuration', () => {
   const traceabilityFixture = fixture();
-  fs.writeFileSync(path.join(traceabilityFixture.root, 'generated.txt'), 'Traceability: supports REQ-ONE\n');
+  fs.writeFileSync(
+    path.join(traceabilityFixture.root, 'generated.txt'),
+    `Traceability: supports ${'REQ-ONE'}\n`,
+  );
   const generatedResult = analyzeTraceability(traceabilityFixture.configurationPath, {
     runTypescript: false,
     write: true,

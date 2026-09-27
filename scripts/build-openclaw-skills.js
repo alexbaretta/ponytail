@@ -57,7 +57,24 @@ function copyResources(name) {
       path.join(output, entry.name),
       { recursive: true },
     );
+    stripTraceabilityAnnotations(path.join(output, entry.name));
   }
+}
+
+function stripTraceabilityAnnotations(target) {
+  const stat = fs.statSync(target);
+  if (stat.isDirectory()) {
+    for (const entry of fs.readdirSync(target)) {
+      stripTraceabilityAnnotations(path.join(target, entry));
+    }
+    return;
+  }
+  const source = fs.readFileSync(target, 'utf8');
+  const stripped = source.replace(
+    /^\s*(?:\/\/|#|<!--)?\s*Traceability:\s*(?:implements|supports|verifies)\s+[A-Z][A-Z0-9-]*(?:\s*-->)?\s*\n/gmu,
+    '',
+  );
+  if (stripped !== source) fs.writeFileSync(target, stripped);
 }
 
 function build() {
@@ -76,6 +93,14 @@ function build() {
   }
 }
 
-module.exports = { DESCRIPTIONS, NAMES, copyResources, outPath, render, sourceBody };
+module.exports = {
+  DESCRIPTIONS,
+  NAMES,
+  copyResources,
+  outPath,
+  render,
+  sourceBody,
+  stripTraceabilityAnnotations,
+};
 
 if (require.main === module) build();

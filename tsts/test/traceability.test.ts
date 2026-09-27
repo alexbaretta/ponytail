@@ -58,22 +58,25 @@ async function writeFixture(source: string): Promise<{
     return { configurationPath, projectPath };
 }
 
+// Traceability: verifies REQ-REQUIREMENTS-TRACEABILITY
+async function verifiesTypeScriptTraceability(): Promise<void> {
+    const traceabilityFixture: {
+        readonly configurationPath: string;
+        readonly projectPath: string;
+    } = await writeFixture(
+        '// Traceability: implements REQ-ONE\nexport function traced(): void {}\n'
+    );
+
+    const result: TstsCheckResult = await checkTraceabilityAnnotations(
+        traceabilityFixture
+    );
+
+    assert.deepEqual(result.diagnostics, []);
+    assert.equal(result.checkedFileCount, 1);
+}
+
 describe('TypeScript traceability locators', (): void => {
-    it('accepts a leading annotation on a named declaration', async (): Promise<void> => {
-        const traceabilityFixture: {
-            readonly configurationPath: string;
-            readonly projectPath: string;
-        } = await writeFixture(
-            '// Traceability: implements REQ-ONE\nexport function traced(): void {}\n'
-        );
-
-        const result: TstsCheckResult = await checkTraceabilityAnnotations(
-            traceabilityFixture
-        );
-
-        assert.deepEqual(result.diagnostics, []);
-        assert.equal(result.checkedFileCount, 1);
-    });
+    it('accepts a leading annotation on a named declaration', verifiesTypeScriptTraceability);
 
     it('rejects annotations inside a declaration body', async (): Promise<void> => {
         const traceabilityFixture: {

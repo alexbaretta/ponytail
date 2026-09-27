@@ -10,6 +10,7 @@ export interface TstsCliOptions {
     readonly configPath?: string | undefined;
     readonly directoryStructurePath?: string | undefined;
     readonly projectPath?: string | undefined;
+    readonly traceabilityPath?: string | undefined;
 }
 
 export interface TstsCliHelpRequest {
@@ -40,14 +41,20 @@ export function parseTstsCliArguments(args: readonly string[]): TstsCliParseResu
         directoryStructureFlagIndex >= 0
             ? args[directoryStructureFlagIndex + 1]
             : undefined;
+    const traceabilityFlagIndex: number = args.indexOf('--traceability');
+    const traceabilityPath: string | undefined =
+        traceabilityFlagIndex >= 0 ? args[traceabilityFlagIndex + 1] : undefined;
     const options: TstsCliOptions = {
         projectPath:
             projectPath ??
-            (configPath === undefined && directoryStructurePath === undefined
+            (configPath === undefined &&
+            directoryStructurePath === undefined &&
+            traceabilityPath === undefined
                 ? 'tsconfig.json'
                 : undefined),
         ...(configPath === undefined ? {} : { configPath }),
         ...(directoryStructurePath === undefined ? {} : { directoryStructurePath }),
+        ...(traceabilityPath === undefined ? {} : { traceabilityPath }),
     };
 
     return {
@@ -69,6 +76,7 @@ export async function runTstsCli(args: readonly string[]): Promise<number> {
                 configPath: parseResult.options.configPath,
                 directoryStructurePath: parseResult.options.directoryStructurePath,
                 projectPath: parseResult.options.projectPath,
+                traceabilityPath: parseResult.options.traceabilityPath,
             });
             process.stdout.write(`${formatTextReport(result)}\n`);
             return result.diagnostics.some((diagnostic): boolean => diagnostic.severity === 'error')
@@ -80,7 +88,7 @@ export async function runTstsCli(args: readonly string[]): Promise<number> {
 
 export function usage(): string {
     return [
-        'Usage: tsts [--project <tsconfig.json>] [--config <tsts.json>] [--directory-structure <manifest.json>]',
+        'Usage: tsts [--project <tsconfig.json>] [--config <tsts.json>] [--directory-structure <manifest.json>] [--traceability <traceability.json>]',
         '',
         'TSTS strengthens TypeScript static type-safety checks.',
     ].join('\n');

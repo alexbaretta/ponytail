@@ -9,6 +9,7 @@ import { isLosslessNumber } from 'lossless-json';
 
 import { parseJsonLosslessly } from './lossless-json.js';
 import { checkDirectoryStructure } from './directory-structure.js';
+import { checkTraceabilityAnnotations } from './traceability.js';
 
 export type TstsDiagnosticSeverity = 'error' | 'warning';
 
@@ -25,6 +26,7 @@ export interface TstsCheckProjectInput {
     readonly configPath?: string | undefined;
     readonly directoryStructurePath?: string | undefined;
     readonly projectPath?: string | undefined;
+    readonly traceabilityPath?: string | undefined;
 }
 
 export interface TstsWorkspaceConfig {
@@ -171,6 +173,23 @@ export async function checkProject(input: TstsCheckProjectInput): Promise<TstsCh
         );
         checkedFileCount += directoryStructureResult.checkedFileCount;
         diagnostics.push(...directoryStructureResult.diagnostics);
+    }
+
+    if (input.traceabilityPath !== undefined) {
+        if (input.projectPath === undefined) {
+            diagnostics.push({
+                message: 'traceability analysis requires --project',
+                ruleId: 'traceability-typescript-configuration',
+                severity: 'error',
+            });
+        } else {
+            const traceabilityResult: TstsCheckResult = await checkTraceabilityAnnotations({
+                configurationPath: input.traceabilityPath,
+                projectPath: input.projectPath,
+            });
+            checkedFileCount += traceabilityResult.checkedFileCount;
+            diagnostics.push(...traceabilityResult.diagnostics);
+        }
     }
 
     return {
