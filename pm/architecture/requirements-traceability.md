@@ -19,11 +19,19 @@ validates requirement and artifact coverage, validates Markdown and
 declarative or non-TypeScript locators, checks generated-source mappings, and
 renders the requirement-oriented reverse view.
 
+Requirement-source resolution is deliberately structural: an explicit
+Identifier field, a bold list-ID declaration, or an ATX ID heading is required.
+Artifact registration is also structural and fail-closed: a path is singular
+unless each duplicate registration uses disjoint class-valid role filters.
+The checker assigns relationships through those filters rather than discovering
+files or translating source content.
+
 TSTS remains a TypeScript semantic analyzer. It receives the same manifest and
 checks only that TypeScript annotations attach to supported named declarations
 in the configured TypeScript program. It does not parse requirements
 documents, own integration-Arc structure, render reverse views, or become a
-general repository-document checker.
+general repository-document checker. Its configured TypeScript paths remain a
+set, so a legitimately multi-class path is semantically checked once.
 
 The companion checker invokes the configured TSTS entrypoint without a shell
 when semantic TypeScript locators are present. This preserves one canonical

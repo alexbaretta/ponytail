@@ -98,6 +98,82 @@ test('accepts a justified no-unit-test disposition only for unit coverage', () =
   assert.match(result.reverseView, /unit-test: not possible/u);
 });
 
+test('recognizes only canonical Markdown requirement declarations', () => {
+  const declarations = [
+    '**Identifier:** `REQ-ONE`',
+    '- **REQ-ONE:** List declaration',
+    '## REQ-ONE: Heading declaration',
+  ];
+  for (const declaration of declarations) {
+    const traceabilityFixture = fixture();
+    fs.writeFileSync(path.join(traceabilityFixture.root, 'requirements.md'), `${declaration}\n`);
+    const result = analyzeTraceability(traceabilityFixture.configurationPath, {
+      runTypescript: false,
+      write: true,
+    });
+    assert.deepEqual(result.diagnostics, []);
+  }
+
+  const traceabilityFixture = fixture();
+  fs.writeFileSync(path.join(traceabilityFixture.root, 'requirements.md'), 'A note mentions REQ-ONE without declaring it.\n');
+  const result = analyzeTraceability(traceabilityFixture.configurationPath, {
+    runTypescript: false,
+    write: true,
+  });
+  assert.ok(result.diagnostics.some(item => item.ruleId === 'traceability-requirement-source'));
+});
+
+test('allows one path to carry disjoint class-valid role filters', () => {
+  const traceabilityFixture = fixture();
+  const marker = role => `Traceability: ${role} ${'REQ-ONE'}`;
+  traceabilityFixture.configuration.artifacts = [
+    { class: 'implementation', path: 'src.js', locator: 'text', roles: ['implements', 'supports'] },
+    { class: 'integration-test', path: 'src.js', locator: 'text', roles: ['verifies'] },
+    { class: 'unit-test', path: 'unit.test.js', locator: 'text' },
+    { class: 'uat', path: 'uat.md', locator: 'text' },
+  ];
+  fs.writeFileSync(
+    path.join(traceabilityFixture.root, 'src.js'),
+    `// ${marker('implements')}\n// ${marker('supports')}\n// ${marker('verifies')}\n`,
+  );
+  fs.writeFileSync(
+    traceabilityFixture.configurationPath,
+    `${JSON.stringify(traceabilityFixture.configuration, null, 2)}\n`,
+  );
+
+  const result = analyzeTraceability(traceabilityFixture.configurationPath, {
+    runTypescript: false,
+    write: true,
+  });
+  assert.deepEqual(result.diagnostics, []);
+  assert.deepEqual(
+    result.relationships.filter(relationship => relationship.path === 'src.js').map(relationship => [relationship.artifactClass, relationship.role]),
+    [['implementation', 'implements'], ['implementation', 'supports'], ['integration-test', 'verifies']],
+  );
+
+  traceabilityFixture.configuration.artifacts[1].roles = ['implements'];
+  fs.writeFileSync(traceabilityFixture.configurationPath, JSON.stringify(traceabilityFixture.configuration));
+  assert.throws(
+    () => loadTraceabilityConfiguration(traceabilityFixture.configurationPath),
+    /roles contains a role invalid for integration-test/u,
+  );
+
+  delete traceabilityFixture.configuration.artifacts[1].roles;
+  fs.writeFileSync(traceabilityFixture.configurationPath, JSON.stringify(traceabilityFixture.configuration));
+  assert.throws(
+    () => loadTraceabilityConfiguration(traceabilityFixture.configurationPath),
+    /duplicate artifact path requires explicit role filters/u,
+  );
+
+  traceabilityFixture.configuration.artifacts[1].roles = ['verifies'];
+  traceabilityFixture.configuration.artifacts[0] = { class: 'unit-test', path: 'src.js', locator: 'text', roles: ['verifies'] };
+  fs.writeFileSync(traceabilityFixture.configurationPath, JSON.stringify(traceabilityFixture.configuration));
+  assert.throws(
+    () => loadTraceabilityConfiguration(traceabilityFixture.configurationPath),
+    /duplicate artifact path has overlapping role filters/u,
+  );
+});
+
 test('rejects generated relationship copies and unsafe or unknown configuration', () => {
   const traceabilityFixture = fixture();
   fs.writeFileSync(

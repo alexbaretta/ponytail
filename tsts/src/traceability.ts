@@ -18,7 +18,10 @@ export interface TraceabilityArtifactConfiguration {
     readonly class: 'implementation' | 'unit-test' | 'integration-test' | 'uat';
     readonly locator: 'text' | 'typescript';
     readonly path: string;
+    readonly roles?: readonly TraceabilityRelationshipRole[] | undefined;
 }
+
+export type TraceabilityRelationshipRole = 'implements' | 'supports' | 'verifies';
 
 export interface TraceabilityGeneratedArtifactConfiguration {
     readonly path: string;
@@ -187,7 +190,13 @@ function isArtifactConfiguration(value: unknown): value is TraceabilityArtifactC
             value.class === 'integration-test' ||
             value.class === 'uat') &&
         (value.locator === 'text' || value.locator === 'typescript') &&
-        typeof value.path === 'string'
+        typeof value.path === 'string' &&
+        (value.roles === undefined ||
+            (Array.isArray(value.roles) &&
+                value.roles.every(
+                    (role: unknown): role is TraceabilityRelationshipRole =>
+                        role === 'implements' || role === 'supports' || role === 'verifies'
+                )))
     );
 }
 

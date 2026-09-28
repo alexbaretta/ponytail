@@ -34,11 +34,19 @@ Traceability: verifies REQ-REQUIREMENTS-TRACEABILITY
    - The checked-in reverse view matches the canonical annotations; every
      required relationship class is present; all locators and canonical
      generated sources resolve.
-4. Remove or corrupt, one at a time, a requirement ID, reverse connection,
+4. Use each canonical requirement-source declaration form: explicit Identifier,
+   bold list-ID, and ATX ID heading.
+   - Each declares the configured requirement; an ordinary prose mention does
+     not.
+5. Register one explicitly enumerated file as implementation/support and as
+   integration-test verification with disjoint, class-valid role filters.
+   - The reverse view records each role under its truthful class, while the
+     TypeScript semantic pass checks that path once when it is TypeScript.
+6. Remove or corrupt, one at a time, a requirement ID, reverse connection,
    required relationship class, TypeScript declaration attachment,
    non-TypeScript locator, and generated canonical source.
    - Each defect fails with a deterministic actionable diagnostic identifying
      the affected requirement or locator.
-5. Mark a requirement as having no possible unit test without a reason.
+7. Mark a requirement as having no possible unit test without a reason.
    - The checker rejects it; a non-empty explicit disposition satisfies only
      the unit-test class and does not waive integration or UAT coverage.

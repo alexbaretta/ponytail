@@ -8,10 +8,10 @@ Source: `.agents/config/project/traceability.json`
 
 Requirement: [pm/requirements/requirements-traceability.md](requirements-traceability.md)
 
-- implementation: implements [skills/requirements-traceability/scripts/check-traceability.js:209](../../skills/requirements-traceability/scripts/check-traceability.js#L209)
-- implementation: supports [tsts/src/traceability.ts:53](../../tsts/src/traceability.ts#L53)
+- implementation: implements [skills/requirements-traceability/scripts/check-traceability.js:255](../../skills/requirements-traceability/scripts/check-traceability.js#L255)
+- implementation: supports [tsts/src/traceability.ts:56](../../tsts/src/traceability.ts#L56)
 - unit-test: verifies [tests/requirements-traceability.test.js:47](../../tests/requirements-traceability.test.js#L47)
-- unit-test: verifies [tsts/test/traceability.test.ts:61](../../tsts/test/traceability.test.ts#L61)
+- unit-test: verifies [tsts/test/traceability.test.ts:100](../../tsts/test/traceability.test.ts#L100)
 - integration-test: verifies [tests/requirements-traceability-cli.test.js:12](../../tests/requirements-traceability-cli.test.js#L12)
 - uat: verifies [pm/uat/requirements-traceability.md:14](../../pm/uat/requirements-traceability.md#L14)
 

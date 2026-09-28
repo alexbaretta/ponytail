@@ -9,6 +9,12 @@ const { spawnSync } = require('node:child_process');
 const artifactClasses = new Set(['implementation', 'unit-test', 'integration-test', 'uat']);
 const locatorKinds = new Set(['text', 'typescript']);
 const relationshipRoles = new Set(['implements', 'supports', 'verifies']);
+const artifactClassRoles = new Map([
+  ['implementation', new Set(['implements', 'supports'])],
+  ['unit-test', new Set(['verifies'])],
+  ['integration-test', new Set(['verifies'])],
+  ['uat', new Set(['verifies'])],
+]);
 const markerPattern = /[Tt]raceability["']?\s*:\s*["']?(implements|supports|verifies)\s+([A-Z][A-Z0-9-]*)/gu;
 
 function exactObject(value, keys, label) {
@@ -33,6 +39,18 @@ function relativePath(value, label) {
     throw new Error(`${label} must be a safe project-relative path`);
   }
   return candidate.replace(/\\/gu, '/');
+}
+
+function roles(value, artifactClass, label) {
+  if (!Array.isArray(value) || value.length === 0 || value.some(role => typeof role !== 'string')) {
+    throw new Error(`${label} must be a non-empty array of roles`);
+  }
+  if (new Set(value).size !== value.length) throw new Error(`${label} must not contain duplicates`);
+  const validRoles = artifactClassRoles.get(artifactClass);
+  if (value.some(role => !relationshipRoles.has(role) || !validRoles.has(role))) {
+    throw new Error(`${label} contains a role invalid for ${artifactClass}`);
+  }
+  return value;
 }
 
 function loadTraceabilityConfiguration(configurationPath) {
@@ -71,7 +89,7 @@ function loadTraceabilityConfiguration(configurationPath) {
   }
 
   const artifacts = document.artifacts.map((value, index) => {
-    const artifact = exactObject(value, ['class', 'path', 'locator'], `artifacts[${index}]`);
+    const artifact = exactObject(value, ['class', 'path', 'locator', 'roles'], `artifacts[${index}]`);
     const artifactClass = nonEmptyString(artifact.class, `artifacts[${index}].class`);
     const locator = nonEmptyString(artifact.locator, `artifacts[${index}].locator`);
     if (!artifactClasses.has(artifactClass)) throw new Error(`artifacts[${index}].class is unsupported: ${artifactClass}`);
@@ -83,13 +101,31 @@ function loadTraceabilityConfiguration(configurationPath) {
       class: artifactClass,
       path: relativePath(artifact.path, `artifacts[${index}].path`),
       locator,
+      ...(artifact.roles === undefined ? {} : { roles: roles(artifact.roles, artifactClass, `artifacts[${index}].roles`) }),
     };
   });
 
-  const artifactPaths = new Set();
+  const artifactsByPath = new Map();
   for (const artifact of artifacts) {
-    if (artifactPaths.has(artifact.path)) throw new Error(`duplicate artifact path: ${artifact.path}`);
-    artifactPaths.add(artifact.path);
+    const grouped = artifactsByPath.get(artifact.path) ?? [];
+    grouped.push(artifact);
+    artifactsByPath.set(artifact.path, grouped);
+  }
+  for (const [artifactPath, grouped] of artifactsByPath) {
+    if (grouped.length === 1) continue;
+    if (new Set(grouped.map(artifact => artifact.class)).size !== grouped.length) {
+      throw new Error(`duplicate artifact path has repeated class: ${artifactPath}`);
+    }
+    if (grouped.some(artifact => artifact.roles === undefined)) {
+      throw new Error(`duplicate artifact path requires explicit role filters: ${artifactPath}`);
+    }
+    const filteredRoles = new Set();
+    for (const artifact of grouped) {
+      for (const role of artifact.roles) {
+        if (filteredRoles.has(role)) throw new Error(`duplicate artifact path has overlapping role filters: ${artifactPath}`);
+        filteredRoles.add(role);
+      }
+    }
   }
 
   const generatedArtifacts = document.generatedArtifacts.map((value, index) => {
@@ -123,6 +159,7 @@ function loadTraceabilityConfiguration(configurationPath) {
 function findRelationships(source, artifact) {
   const relationships = [];
   for (const match of source.matchAll(markerPattern)) {
+    if (artifact.roles !== undefined && !artifact.roles.includes(match[1])) continue;
     const lineStart = source.lastIndexOf('\n', match.index) + 1;
     const prefix = source.slice(lineStart, match.index).trimStart();
     if (
@@ -143,6 +180,15 @@ function findRelationships(source, artifact) {
     });
   }
   return relationships;
+}
+
+function requirementSourceDeclares(source, requirementId) {
+  if (source.includes(`**Identifier:** \`${requirementId}\``)) return true;
+  const escapedId = requirementId.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');
+  const declarationEnd = String.raw`(?=\s*(?::|[-–—]|$))`;
+  const boldList = new RegExp(String.raw`^(?: {0,3}[-+*]| {0,3}\d+[.)])\s+(?:\*\*${escapedId}\s*[:–—-]\*\*|\*\*${escapedId}\*\*${declarationEnd})`, 'mu');
+  const atxHeading = new RegExp(String.raw`^ {0,3}#{1,6}\s+${escapedId}${declarationEnd}`, 'mu');
+  return boldList.test(source) || atxHeading.test(source);
 }
 
 function diagnostic(ruleId, message, filePath, line) {
@@ -218,8 +264,7 @@ function analyzeTraceability(configurationPath, options = {}) {
       continue;
     }
     const source = fs.readFileSync(sourcePath, 'utf8');
-    const identifier = `**Identifier:** \`${requirement.id}\``;
-    if (!source.includes(identifier)) {
+    if (!requirementSourceDeclares(source, requirement.id)) {
       diagnostics.push(diagnostic('traceability-requirement-source', `requirement source does not declare ${requirement.id}`, requirement.sourcePath));
     }
   }
@@ -236,12 +281,8 @@ function analyzeTraceability(configurationPath, options = {}) {
         diagnostics.push(diagnostic('traceability-requirement-id', `unknown requirement id ${relationship.requirementId}`, relationship.path, relationship.line));
         continue;
       }
-      if (relationship.artifactClass === 'implementation' && relationship.role === 'verifies') {
-        diagnostics.push(diagnostic('traceability-role', 'implementation artifacts must implement or support requirements', relationship.path, relationship.line));
-        continue;
-      }
-      if (relationship.artifactClass !== 'implementation' && relationship.role !== 'verifies') {
-        diagnostics.push(diagnostic('traceability-role', `${relationship.artifactClass} artifacts must verify requirements`, relationship.path, relationship.line));
+      if (!artifactClassRoles.get(relationship.artifactClass).has(relationship.role)) {
+        diagnostics.push(diagnostic('traceability-role', `${relationship.artifactClass} artifacts cannot ${relationship.role} requirements`, relationship.path, relationship.line));
         continue;
       }
       relationships.push(relationship);

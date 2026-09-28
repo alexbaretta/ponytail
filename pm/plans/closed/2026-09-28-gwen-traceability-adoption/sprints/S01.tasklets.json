@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 3,
+  "sprint": "S01",
+  "features": {
+    "S01-F01": {
+      "depends_on": [],
+      "validation_tasklet": "S01-F01-T01"
+    }
+  },
+  "tasklets": {
+    "S01-F01-T01": {
+      "depends_on": [],
+      "affinity": ["traceability", "gwen-release-acceptance"],
+      "risk": "high",
+      "risk_reason": "The portable checker defines release-acceptance evidence across independently configured repositories.",
+      "feature": "S01-F01",
+      "planned_paths": [
+        "skills/requirements-traceability/scripts/check-traceability.js",
+        "skills/requirements-traceability/SKILL.md",
+        ".openclaw/skills/requirements-traceability/SKILL.md",
+        ".openclaw/skills/requirements-traceability/scripts/check-traceability.js",
+        "tests/requirements-traceability.test.js",
+        "tsts/src/traceability.ts",
+        "tsts/test/traceability.test.ts",
+        "pm/requirements/requirements-traceability.md",
+        "pm/architecture/requirements-traceability.md",
+        "pm/uat/requirements-traceability.md",
+        "pm/requirements/traceability.generated.md",
+        "pm/plans/open/2026-09-28-gwen-traceability-adoption/plan.md",
+        "pm/plans/open/2026-09-28-gwen-traceability-adoption/sprints/S01.md",
+        "pm/plans/open/2026-09-28-gwen-traceability-adoption/sprints/S01.tasklets.json",
+        "pm/plans/in_progress/2026-09-28-gwen-traceability-adoption/plan.md",
+        "pm/plans/in_progress/2026-09-28-gwen-traceability-adoption/sprints/S01.md",
+        "pm/plans/in_progress/2026-09-28-gwen-traceability-adoption/sprints/S01.tasklets.json",
+        "pm/plans/closed/2026-09-28-gwen-traceability-adoption/plan.md",
+        "pm/plans/closed/2026-09-28-gwen-traceability-adoption/sprints/S01.md",
+        "pm/plans/closed/2026-09-28-gwen-traceability-adoption/sprints/S01.tasklets.json"
+      ]
+    }
+  }
+}

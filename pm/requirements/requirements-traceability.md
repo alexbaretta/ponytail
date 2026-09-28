@@ -37,6 +37,17 @@ The checker must be project-agnostic and configuration-driven. It must reject:
   classes required by the adopted configuration; and
 - generated-output mappings whose canonical source no longer resolves.
 
+Canonical Markdown requirement declarations are the explicit `**Identifier:**`
+form, a list item whose bold label is the requirement ID, and an ATX heading
+whose first token is the requirement ID. Incidental requirement-ID mentions do
+not declare a requirement.
+
+An explicitly enumerated artifact path may hold multiple artifact classes only
+when each registration has a non-empty, disjoint role filter and every filtered
+role is valid for that class. This permits a canonical file to implement or
+support a requirement while also verifying it as an integration artifact,
+without duplicating requirement metadata.
+
 Generated outputs map to their canonical generator or source. They do not
 duplicate annotations from that source.
 

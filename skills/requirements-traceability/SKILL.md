@@ -38,6 +38,12 @@ outputs and their canonical sources, any justified no-unit-test dispositions,
 the generated reverse-view path, and the TSTS project and entrypoint used for
 semantic TypeScript locators.
 
+A requirement source declares an ID only with one of these canonical Markdown
+forms: `**Identifier:** \`REQ-STABLE-ID\``, a list item whose bold label is the
+ID (for example, `- **REQ-STABLE-ID:** Description`), or an ATX heading that
+begins with the ID and a declaration delimiter (for example,
+`## REQ-STABLE-ID: Description`). An incidental mention is not a declaration.
+
 ## Canonical Relationships
 
 Use only these roles:
@@ -63,6 +69,14 @@ requirement identifier.
 
 Generated output has no relationship annotations. Configure its canonical
 generator or source and retain the relationships there.
+
+Artifact paths remain explicitly enumerated. A path normally has one artifact
+class. It may have multiple classes only when every registration declares a
+non-empty `roles` filter, the filters are disjoint, and each role is valid for
+its class: `implements` and `supports` for implementation; `verifies` for
+unit-test, integration-test, and UAT. This lets one canonical file carry its
+own implementation/support roles and a distinct verification role without a
+second metadata source.
 
 ## Required Coverage
 
@@ -118,6 +132,10 @@ reverse connection, not documentation drift to ignore.
   resolves.
 - Every relationship uses an approved role and the role is valid for its
   artifact class.
+- Requirement sources use an explicit Identifier field, canonical bold-list
+  declaration, or canonical ATX requirement heading; incidental mentions do
+  not satisfy source resolution.
+- Duplicate artifact paths have explicit, disjoint, class-valid role filters.
 - Every approved requirement has the required implementation, unit or
   disposition, integration, and UAT classes.
 - TypeScript annotations attach to supported named declarations.

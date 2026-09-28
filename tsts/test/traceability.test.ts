@@ -7,10 +7,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { describe, it } from 'node:test';
 
-import {
-    checkTraceabilityAnnotations,
-    type TraceabilityConfiguration,
-} from '../src/traceability.js';
+import { checkTraceabilityAnnotations, type TraceabilityConfiguration } from '../src/traceability.js';
 import type { TstsCheckResult } from '../src/index.js';
 
 async function writeFixture(source: string): Promise<{
@@ -56,6 +53,48 @@ async function writeFixture(source: string): Promise<{
     await writeFile(configurationPath, `${JSON.stringify(configuration)}\n`);
     await writeFile(path.join(root, 'source.ts'), source);
     return { configurationPath, projectPath };
+}
+
+async function writesSharedTypeScriptArtifactFixture(): Promise<{
+    readonly configurationPath: string;
+    readonly projectPath: string;
+}> {
+    const traceabilityFixture: {
+        readonly configurationPath: string;
+        readonly projectPath: string;
+    } = await writeFixture(
+        '// Traceability: implements REQ-ONE\nexport function implementation(): void {}\n// Traceability: verifies REQ-ONE\nexport function verification(): void {}\n'
+    );
+    const configuration: TraceabilityConfiguration = {
+        artifacts: [
+            {
+                class: 'implementation',
+                locator: 'typescript',
+                path: 'source.ts',
+                roles: ['implements'],
+            },
+            {
+                class: 'unit-test',
+                locator: 'typescript',
+                path: 'source.ts',
+                roles: ['verifies'],
+            },
+        ],
+        generatedArtifacts: [],
+        projectRoot: '.',
+        requirements: [{ id: 'REQ-ONE', sourcePath: 'requirements.md' }],
+        reverseViewPath: 'traceability.generated.md',
+        schemaVersion: 1,
+        typescript: {
+            cliPath: 'tsts.js',
+            projectPath: traceabilityFixture.projectPath,
+        },
+    };
+    await writeFile(
+        traceabilityFixture.configurationPath,
+        `${JSON.stringify(configuration)}\n`
+    );
+    return traceabilityFixture;
 }
 
 // Traceability: verifies REQ-REQUIREMENTS-TRACEABILITY
@@ -116,5 +155,19 @@ describe('TypeScript traceability locators', (): void => {
 
         assert.equal(result.diagnostics.length, 1);
         assert.match(result.diagnostics[0]?.message ?? '', /not part of the project/u);
+    });
+
+    it('checks a shared configured TypeScript path once', async (): Promise<void> => {
+        const traceabilityFixture: {
+            readonly configurationPath: string;
+            readonly projectPath: string;
+        } = await writesSharedTypeScriptArtifactFixture();
+
+        const result: TstsCheckResult = await checkTraceabilityAnnotations(
+            traceabilityFixture
+        );
+
+        assert.deepEqual(result.diagnostics, []);
+        assert.equal(result.checkedFileCount, 1);
     });
 });
