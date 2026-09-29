@@ -1,11 +1,11 @@
 # Indexed requirements traceability
 
 - **Plan ID:** `2026-09-29-traceability-index`
-- **Status:** `open`
+- **Status:** `in_progress`
 - **Approval:** The stakeholder approved
   [`REQ-TRACEABILITY-INDEX`](../../../requirements/traceability-index.md) on
-  2026-09-29. Implementation and the proposed architecture remain pending
-  explicit plan approval.
+  2026-09-29. The stakeholder explicitly approved implementation of the
+  complete plan on 2026-09-29 and required incremental testing throughout.
 - **Management and component repository:** Ponytail.
 
 <!-- ponytail-plan-campaign
@@ -89,8 +89,8 @@ census records.
   suite after replacing the per-worktree SQLite architecture with the shared
   PostgreSQL projection. Build impact selected no target.
 
-The requirement and plan creation are approved. Implementation begins only
-after the complete plan and both sprint graphs receive explicit approval.
+The requirement, complete plan, and both sprint graphs are approved for
+implementation.
 
 ## Starting checkpoint
 
