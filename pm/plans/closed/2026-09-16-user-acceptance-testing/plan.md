@@ -1,7 +1,11 @@
 # User acceptance testing policy
 
 Plan ID: 2026-09-16-user-acceptance-testing
-Status: in_progress
+Status: closed
+
+<!-- ponytail-plan-campaign
+{"schemaVersion":1,"id":"2026-09-16-user-acceptance-testing","parent_plan_id":null}
+-->
 
 ## Objective and authority
 
@@ -30,7 +34,7 @@ excluded from this reusable-policy plan.
 ## Sprint and acceptance
 
 1. [S01](sprints/S01.md): define, publish, validate, and install the reusable
-   policy — IN_PROGRESS.
+   policy — DONE.
 
 Acceptance requires exact source ownership, generated publication parity,
 focused policy tests, the configured full Ponytail suite, and successful Codex

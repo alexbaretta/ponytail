@@ -18,6 +18,7 @@ boundary by `tests/campaign-census.test.js`.
 - [Debugging pattern observations](debugging-pattern-observations.md)
 - [Requirements traceability](requirements-traceability.md)
 - [Plan input queue](plan-input-queue.md)
+- [Campaign orchestration](campaign-orchestration.md)
 
 ## Campaign census Suite
 
@@ -60,14 +61,14 @@ Traceability: verifies REQ-CAMPAIGN-CENSUS-CLI
      tasklet record.
 4. Disable the summary table while leaving the plan and sprint tables enabled.
    - The tasklet summary table is absent and the other two tables remain.
-5. Run the human and JSON census reports without a plan input while all active
-   managed plans belong to the same campaign and an unrelated unmarked
-   historical plan is also in the active-work directory.
-   - Both reports resolve that campaign with exit `0` and do not consult a
-     separate current-plan record. The unmarked plan remains outside the census.
-6. Repeat without any active managed plan, then with active managed plans in
-   two campaigns.
-   - Each invocation exits `2` without a partial report or arbitrary choice.
+5. Run the human and JSON census reports with explicit member-plan input while
+   another campaign and an unrelated unmarked historical plan are present.
+   - Both reports resolve only the selected campaign with exit `0`; unrelated
+     records do not affect the selected census.
+6. Run the reports without plan input.
+   - The repository-wide inventory behavior, including zero or multiple active
+     campaigns, is covered by the
+     [Campaign orchestration Suite](campaign-orchestration.md).
 7. Run the JSON census report from one member.
    - Exit is `0`; stdout is exactly one versioned JSON document plus one
      newline; stderr is empty; its census facts equal the human report.

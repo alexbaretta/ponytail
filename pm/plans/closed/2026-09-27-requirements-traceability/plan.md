@@ -3,6 +3,10 @@
 Plan ID: 2026-09-27-requirements-traceability
 Status: closed
 
+<!-- ponytail-plan-campaign
+{"schemaVersion":1,"id":"2026-09-27-requirements-traceability","parent_plan_id":null}
+-->
+
 ## Objective and authority
 
 Implement the stakeholder's 2026-09-27 request for portable bidirectional

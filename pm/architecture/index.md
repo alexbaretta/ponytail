@@ -16,3 +16,4 @@ ownership of project-specific management records and evidence.
 - [Debugging pattern observation collection](debugging-pattern-observations.md)
 - [Requirements traceability](requirements-traceability.md)
 - [Plan input queue](plan-input-queue.md)
+- [Campaign orchestration](campaign-orchestration.md)

@@ -3,6 +3,10 @@
 Plan ID: 2026-09-08-issue-requirements-skills
 Status: closed
 
+<!-- ponytail-plan-campaign
+{"schemaVersion":1,"id":"2026-09-08-issue-requirements-skills","parent_plan_id":null}
+-->
+
 ## Objective and authority
 
 Implement the user's requested `issue-tracking` and `requirements` skills and
