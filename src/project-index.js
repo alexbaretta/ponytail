@@ -54,6 +54,55 @@ const ProjectIndexStorageReaders = Object.freeze({
   writerVariant: 'V1',
 });
 
+const TraceabilityIndexResultReaders = Object.freeze({
+  variants: Object.freeze({ V1: value => {
+    if (!exactKeys(value, [
+      'schemaVersion', 'corpus', 'generationId', 'headCommit', 'stateDigest',
+      'worktree', 'processedFiles', 'parsedFiles', 'reusedFiles', 'rebuild',
+    ]) || value.schemaVersion !== 1 || value.corpus !== 'traceability' ||
+      !['generationId', 'headCommit', 'stateDigest', 'worktree'].every(key =>
+        typeof value[key] === 'string' && value[key] !== '') ||
+      !['processedFiles', 'parsedFiles', 'reusedFiles'].every(key =>
+        Number.isInteger(value[key]) && value[key] >= 0) ||
+      typeof value.rebuild !== 'boolean') {
+      throw new Error('invalid traceability index result V1');
+    }
+    return value;
+  } }),
+  writerVariant: 'V1',
+});
+
+const TraceabilitySearchResultReaders = Object.freeze({
+  variants: Object.freeze({ V1: value => {
+    if (!exactKeys(value, [
+      'schemaVersion', 'corpus', 'query', 'filters', 'generationId', 'results',
+    ]) || value.schemaVersion !== 1 || value.corpus !== 'traceability' ||
+      typeof value.query !== 'string' || typeof value.generationId !== 'string' ||
+      value.generationId === '' || !exactKeys(value.filters, [
+        'kind', 'role', 'requirement', 'path',
+      ]) || !Object.values(value.filters).every(nullableString) ||
+      !Array.isArray(value.results) || value.results.some(item =>
+        !exactKeys(item, [
+          'entityId', 'entityKind', 'role', 'requirementId', 'path', 'line',
+          'unitName', 'annotation', 'description',
+        ]) || typeof item.entityId !== 'string' || item.entityId === '' ||
+        !['entityKind', 'role', 'requirementId', 'path', 'unitName', 'annotation',
+          'description'].every(key => nullableString(item[key])) ||
+        !(item.line === null || Number.isInteger(item.line) && item.line > 0))) {
+      throw new Error('invalid traceability search result V1');
+    }
+    return value;
+  } }),
+  writerVariant: 'V1',
+});
+
+class ProjectIndexError extends Error {
+  constructor(code, message) {
+    super(message);
+    this.code = code;
+  }
+}
+
 function digest(value) {
   return crypto.createHash('sha256').update(value).digest('hex');
 }
@@ -238,6 +287,8 @@ async function publishTraceabilityGeneration(client, projection) {
     ]);
     const allEntities = [];
     const allRelationships = [];
+    let parsedFiles = 0;
+    let reusedFiles = 0;
     for (const file of projection.files) {
       let parseResult = await client.query(`
         SELECT parse_result_id, payload
@@ -251,6 +302,7 @@ async function publishTraceabilityGeneration(client, projection) {
       ]);
       if (parseResult.rows.length > 1) throw new Error('duplicate immutable parse results');
       if (parseResult.rows.length === 0) {
+        parsedFiles += 1;
         const payload = file.parse();
         await client.query(`
         INSERT INTO ponytail_index.parse_result_v1 (
@@ -273,6 +325,8 @@ async function publishTraceabilityGeneration(client, projection) {
           file.contentDigest,
           file.parserIdentity,
         ]);
+      } else {
+        reusedFiles += 1;
       }
       if (parseResult.rows.length !== 1) throw new Error('immutable parse result was not persisted');
       const parsed = {
@@ -368,42 +422,268 @@ async function publishTraceabilityGeneration(client, projection) {
       ]);
     }
     await client.query('COMMIT');
-    return { generationId: generation.generation_id, stateDigest: projection.stateDigest };
+    return {
+      generationId: generation.generation_id,
+      stateDigest: projection.stateDigest,
+      parsedFiles,
+      reusedFiles,
+    };
   } catch (error) {
     await client.query('ROLLBACK');
     throw error;
   }
 }
 
-async function indexTraceability(options = {}) {
-  const configurationPath = options.configurationPath ??
-    path.resolve('.agents/config/project/traceability.json');
-  const projection = collectTraceabilityProjection(configurationPath);
+function databaseOptions(worktreePath) {
   const project = JSON.parse(fs.readFileSync(
-    path.join(projection.worktreePath, 'ponytail-journal.json'), 'utf8'));
+    path.join(worktreePath, 'ponytail-journal.json'), 'utf8'));
   const database = project.database;
-  const pool = options.pool ?? new (require('pg').Pool)({
+  if (database.passwordEnvironment !== undefined &&
+      process.env[database.passwordEnvironment] === undefined) {
+    throw new ProjectIndexError(
+      'PROJECT_INDEX_PASSWORD_MISSING',
+      `password environment variable is missing: ${database.passwordEnvironment}`,
+    );
+  }
+  return {
     database: database.name,
     host: database.host,
     port: database.port,
     user: database.role,
     password: database.passwordEnvironment === undefined
       ? undefined : process.env[database.passwordEnvironment],
-  });
+  };
+}
+
+async function indexTraceability(options = {}) {
+  const configurationPath = options.configurationPath ??
+    path.resolve('.agents/config/project/traceability.json');
+  const projection = collectTraceabilityProjection(configurationPath);
+  const pool = options.pool ?? new (require('pg').Pool)(databaseOptions(projection.worktreePath));
   const client = await pool.connect();
   try {
-    return await publishTraceabilityGeneration(client, projection);
+    const publication = await publishTraceabilityGeneration(client, projection);
+    return TraceabilityIndexResultReaders.variants.V1({
+      schemaVersion: 1,
+      corpus: 'traceability',
+      generationId: publication.generationId,
+      headCommit: projection.headCommit,
+      stateDigest: publication.stateDigest,
+      worktree: projection.worktreePath,
+      processedFiles: projection.files.length,
+      parsedFiles: publication.parsedFiles,
+      reusedFiles: publication.reusedFiles,
+      rebuild: options.rebuild === true,
+    });
   } finally {
     client.release();
     if (options.pool === undefined) await pool.end();
   }
 }
 
+function parseSearchArguments(args) {
+  if (args.length === 0 || args[0].startsWith('--')) {
+    throw new ProjectIndexError(
+      'TRACEABILITY_SEARCH_USAGE',
+      'usage: ponytail traceability search <query> [--kind <kind>] [--role <role>] [--requirement <id>] [--path <path>] [--json]',
+    );
+  }
+  const query = args.shift();
+  if (query.trim() === '') throw new ProjectIndexError('TRACEABILITY_SEARCH_USAGE', 'search query must not be empty');
+  const filters = { kind: null, role: null, requirement: null, path: null };
+  let json = false;
+  while (args.length > 0) {
+    const option = args.shift();
+    if (option === '--json') {
+      json = true;
+      continue;
+    }
+    const key = { '--kind': 'kind', '--role': 'role', '--requirement': 'requirement', '--path': 'path' }[option];
+    if (key === undefined || args.length === 0 || args[0].startsWith('--') || filters[key] !== null) {
+      throw new ProjectIndexError('TRACEABILITY_SEARCH_USAGE', `invalid search option: ${option}`);
+    }
+    filters[key] = args.shift();
+  }
+  return { query, filters, json };
+}
+
+async function currentGeneration(client, projection) {
+  const relation = await client.query(
+    `SELECT to_regclass('ponytail_index.schema_version_v1') AS relation`);
+  if (relation.rows.length !== 1 || relation.rows[0].relation === null) {
+    throw new ProjectIndexError(
+      'PROJECT_INDEX_SCHEMA_MISSING',
+      'project index schema is missing; run scripts/setup-project-journal.sh',
+    );
+  }
+  const schema = await client.query(`
+    SELECT schema_version
+    FROM ponytail_index.schema_version_v1
+    WHERE singleton`);
+  if (schema.rows.length !== 1 || schema.rows[0].schema_version !== 1) {
+    throw new ProjectIndexError(
+      'PROJECT_INDEX_SCHEMA_MISMATCH',
+      'project index schema is missing or incompatible; run scripts/setup-project-journal.sh',
+    );
+  }
+  const result = await client.query(`
+    SELECT generation.generation_id, generation.head_commit,
+      generation.state_digest, generation.configuration_digest,
+      generation.parser_identity
+    FROM ponytail_index.project_v1 project
+    JOIN ponytail_index.repository_v1 repository USING (project_id)
+    JOIN ponytail_index.worktree_v1 worktree USING (repository_id)
+    JOIN ponytail_index.published_generation_v1 published USING (worktree_id)
+    JOIN ponytail_index.generation_v1 generation USING (generation_id)
+    WHERE project.project_id = $1::uuid
+      AND repository.common_directory = $2
+      AND worktree.root_path = $3
+      AND published.corpus = $4`, [
+    projection.projectId,
+    projection.repositoryPath,
+    projection.worktreePath,
+    projection.corpus,
+  ]);
+  if (result.rows.length !== 1) {
+    throw new ProjectIndexError(
+      'PROJECT_INDEX_MISSING',
+      'traceability index is missing for this worktree; run ponytail traceability index',
+    );
+  }
+  const generation = result.rows[0];
+  if (generation.head_commit !== projection.headCommit ||
+      generation.state_digest !== projection.stateDigest ||
+      generation.configuration_digest !== projection.configurationDigest ||
+      generation.parser_identity !== projection.parserIdentity) {
+    throw new ProjectIndexError(
+      'PROJECT_INDEX_STALE',
+      'traceability index is stale for this worktree; run ponytail traceability index',
+    );
+  }
+  return generation;
+}
+
+async function searchTraceability(query, filters, options = {}) {
+  const configurationPath = options.configurationPath ??
+    path.resolve('.agents/config/project/traceability.json');
+  const projection = collectTraceabilityProjection(configurationPath);
+  const pool = options.pool ?? new (require('pg').Pool)(databaseOptions(projection.worktreePath));
+  const client = await pool.connect();
+  try {
+    const generation = await currentGeneration(client, projection);
+    const clauses = [
+      'document.generation_id = $1::uuid',
+      `document.search_vector @@ websearch_to_tsquery('simple', $2)`,
+    ];
+    const values = [generation.generation_id, query];
+    for (const [key, column] of Object.entries({
+      kind: 'entity_kind',
+      role: 'role',
+      requirement: 'requirement_id',
+      path: 'path',
+    })) {
+      if (filters[key] !== null) {
+        values.push(filters[key]);
+        clauses.push(`document.${column} = $${values.length}`);
+      }
+    }
+    const result = await client.query(`
+      SELECT document.entity_id, document.entity_kind, document.role,
+        document.requirement_id, document.path, entity.line,
+        document.unit_name, document.annotation, document.description
+      FROM ponytail_index.search_document_v1 document
+      JOIN ponytail_index.entity_v1 entity
+        USING (generation_id, entity_id)
+      WHERE ${clauses.join(' AND ')}
+      ORDER BY document.path NULLS LAST, entity.line NULLS LAST,
+        document.entity_kind NULLS LAST, document.entity_id`, values);
+    return TraceabilitySearchResultReaders.variants.V1({
+      schemaVersion: 1,
+      corpus: 'traceability',
+      query,
+      filters,
+      generationId: generation.generation_id,
+      results: result.rows.map(row => ({
+        entityId: row.entity_id,
+        entityKind: row.entity_kind,
+        role: row.role,
+        requirementId: row.requirement_id,
+        path: row.path,
+        line: row.line,
+        unitName: row.unit_name,
+        annotation: row.annotation,
+        description: row.description,
+      })),
+    });
+  } finally {
+    client.release();
+    if (options.pool === undefined) await pool.end();
+  }
+}
+
+function printSearchHuman(result) {
+  if (result.results.length === 0) {
+    process.stdout.write('no traceability matches\n');
+    return;
+  }
+  for (const item of result.results) {
+    const location = `${item.path ?? '-'}${item.line === null ? '' : `:${item.line}`}`;
+    process.stdout.write([
+      location,
+      item.entityKind ?? '-',
+      item.role ?? '-',
+      item.requirementId ?? item.entityId,
+    ].join('\t') + '\n');
+  }
+}
+
+async function run(args) {
+  const family = args.shift();
+  const operation = args.shift();
+  if (family !== 'traceability' || !['index', 'search'].includes(operation)) {
+    throw new ProjectIndexError(
+      'PROJECT_INDEX_USAGE',
+      'usage: ponytail traceability <index|search> ...',
+    );
+  }
+  if (operation === 'index') {
+    const allowed = new Set(['--rebuild', '--json']);
+    if (args.some(argument => !allowed.has(argument)) || new Set(args).size !== args.length) {
+      throw new ProjectIndexError(
+        'TRACEABILITY_INDEX_USAGE',
+        'usage: ponytail traceability index [--rebuild] [--json]',
+      );
+    }
+    const result = await indexTraceability({ rebuild: args.includes('--rebuild') });
+    if (args.includes('--json')) process.stdout.write(`${JSON.stringify(result)}\n`);
+    else process.stdout.write(
+      `indexed traceability: ${result.processedFiles} files, ` +
+      `${result.parsedFiles} parsed, ${result.reusedFiles} reused\n`);
+    return;
+  }
+  const search = parseSearchArguments(args);
+  const result = await searchTraceability(search.query, search.filters);
+  if (search.json) process.stdout.write(`${JSON.stringify(result)}\n`);
+  else printSearchHuman(result);
+}
+
+if (require.main === module) {
+  run(process.argv.slice(2)).catch(error => {
+    const code = error instanceof ProjectIndexError ? error.code : 'PROJECT_INDEX_FAILURE';
+    process.stderr.write(`error ${code}: ${error.message}\n`);
+    process.exitCode = 2;
+  });
+}
+
 module.exports = {
   ProjectIndexStorageReaders,
+  TraceabilityIndexResultReaders,
+  TraceabilitySearchResultReaders,
   collectTraceabilityProjection,
   digest,
   parseFile,
   publishTraceabilityGeneration,
   indexTraceability,
+  parseSearchArguments,
+  searchTraceability,
 };

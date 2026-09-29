@@ -105,4 +105,7 @@ required.
 
 ## Final validation record
 
-Not started.
+In progress. S01-F01 and the index/search command work in S01-F02 passed their
+focused unit, semantic, setup, distribution, dispatcher, and real PostgreSQL
+checks on 2026-09-29. The remaining S01 work is reconciliation followed by the
+separate plan-corpus graph and query features.

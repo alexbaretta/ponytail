@@ -22,6 +22,7 @@ const assert = require('node:assert/strict');
 const crypto = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
+const { execFileSync } = require('node:child_process');
 const { Pool } = require('pg');
 const {
   collectTraceabilityProjection,
@@ -186,6 +187,18 @@ async function main() {
     client.release();
     await pool.end();
   }
+  const cli = path.join(root, 'src/project-index.js');
+  const indexed = JSON.parse(execFileSync(process.execPath, [
+    cli, 'traceability', 'index', '--json',
+  ], { cwd: root, encoding: 'utf8' }));
+  assert.equal(indexed.processedFiles, indexed.parsedFiles + indexed.reusedFiles);
+  const searched = JSON.parse(execFileSync(process.execPath, [
+    cli, 'traceability', 'search', 'REQ-TRACEABILITY-INDEX',
+    '--role', 'implements', '--json',
+  ], { cwd: root, encoding: 'utf8' }));
+  assert.ok(searched.results.some(result =>
+    result.requirementId === 'REQ-TRACEABILITY-INDEX' &&
+    result.role === 'implements'));
 }
 
 main().then(

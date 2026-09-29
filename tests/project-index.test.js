@@ -11,7 +11,9 @@ const test = require('node:test');
 
 const {
   collectTraceabilityProjection,
+  parseSearchArguments,
   publishTraceabilityGeneration,
+  searchTraceability,
 } = require('../src/project-index');
 
 // Traceability: verifies REQ-TRACEABILITY-INDEX
@@ -175,4 +177,118 @@ test('rejects malformed durable cache payloads before publication', async () => 
     /invalid project-index storage V1 payload/,
   );
   assert.equal(client.queries.at(-1).text, 'ROLLBACK');
+});
+
+test('parses exact search filters and rejects ambiguous options', () => {
+  assert.deepEqual(parseSearchArguments([
+    'processor', '--kind', 'implementation', '--role', 'implements',
+    '--requirement', 'REQ-VALUE', '--path', 'src/value.js', '--json',
+  ]), {
+    query: 'processor',
+    filters: {
+      kind: 'implementation',
+      role: 'implements',
+      requirement: 'REQ-VALUE',
+      path: 'src/value.js',
+    },
+    json: true,
+  });
+  assert.throws(() => parseSearchArguments([]), /usage:/);
+  assert.throws(
+    () => parseSearchArguments(['processor', '--kind', 'one', '--kind', 'two']),
+    /invalid search option/,
+  );
+  assert.throws(() => parseSearchArguments(['processor', '--unknown']), /invalid search option/);
+});
+
+test('searches only the exact fresh generation with bound filters', async () => {
+  const { configurationPath } = fixture();
+  const projection = collectTraceabilityProjection(configurationPath);
+  const queries = [];
+  let released = false;
+  const client = {
+    async query(text, values = []) {
+      queries.push({ text, values });
+      if (text.includes('to_regclass')) return { rows: [{ relation: 'schema_version_v1' }] };
+      if (text.includes('FROM ponytail_index.schema_version_v1')) {
+        return { rows: [{ schema_version: 1 }] };
+      }
+      if (text.includes('FROM ponytail_index.project_v1')) {
+        return { rows: [{
+          generation_id: 'generation',
+          head_commit: projection.headCommit,
+          state_digest: projection.stateDigest,
+          configuration_digest: projection.configurationDigest,
+          parser_identity: projection.parserIdentity,
+        }] };
+      }
+      return { rows: [{
+        entity_id: 'entity',
+        entity_kind: 'implementation',
+        role: 'implements',
+        requirement_id: 'REQ-VALUE',
+        path: 'src/value.js',
+        line: 1,
+        unit_name: null,
+        annotation: 'implements REQ-VALUE',
+        description: null,
+      }] };
+    },
+    release() { released = true; },
+  };
+  const pool = { async connect() { return client; } };
+  const filters = {
+    kind: 'implementation',
+    role: 'implements',
+    requirement: 'REQ-VALUE',
+    path: 'src/value.js',
+  };
+  const result = await searchTraceability('processor & \' injection', filters, {
+    configurationPath,
+    pool,
+  });
+  assert.equal(result.results.length, 1);
+  assert.equal(released, true);
+  const search = queries.at(-1);
+  assert.deepEqual(search.values, [
+    'generation',
+    'processor & \' injection',
+    'implementation',
+    'implements',
+    'REQ-VALUE',
+    'src/value.js',
+  ]);
+  assert.doesNotMatch(search.text, /processor|REQ-VALUE/);
+  assert.match(search.text, /ORDER BY document\.path/);
+});
+
+test('refuses stale search without rebuilding', async () => {
+  const { configurationPath } = fixture();
+  const projection = collectTraceabilityProjection(configurationPath);
+  const client = {
+    async query(text) {
+      if (text.includes('to_regclass')) return { rows: [{ relation: 'schema_version_v1' }] };
+      if (text.includes('schema_version_v1')) return { rows: [{ schema_version: 1 }] };
+      return { rows: [{
+        generation_id: 'generation',
+        head_commit: projection.headCommit,
+        state_digest: 'stale',
+        configuration_digest: projection.configurationDigest,
+        parser_identity: projection.parserIdentity,
+      }] };
+    },
+    release() {},
+  };
+  await assert.rejects(
+    () => searchTraceability('value', {
+      kind: null,
+      role: null,
+      requirement: null,
+      path: null,
+    }, {
+      configurationPath,
+      pool: { async connect() { return client; } },
+    }),
+    /traceability index is stale/,
+  );
 });

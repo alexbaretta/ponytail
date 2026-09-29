@@ -87,6 +87,30 @@
       "supportedDowngradeVersions": []
     },
     {
+      "id": "traceability-index-command-result",
+      "implementation": {
+        "workspace": "ponytail",
+        "module": "src/project-index.js",
+        "readerRegistryExport": "TraceabilityIndexResultReaders"
+      },
+      "currentVersion": "V1",
+      "versions": ["V1"],
+      "supportedReadVersions": ["V1"],
+      "supportedDowngradeVersions": []
+    },
+    {
+      "id": "traceability-search-command-result",
+      "implementation": {
+        "workspace": "ponytail",
+        "module": "src/project-index.js",
+        "readerRegistryExport": "TraceabilitySearchResultReaders"
+      },
+      "currentVersion": "V1",
+      "versions": ["V1"],
+      "supportedReadVersions": ["V1"],
+      "supportedDowngradeVersions": []
+    },
+    {
       "id": "build-impact-project-config",
       "implementation": {
         "workspace": "ponytail",

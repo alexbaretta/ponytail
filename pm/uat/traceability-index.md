@@ -140,3 +140,20 @@ Traceability: verifies REQ-TRACEABILITY-INDEX
 3. Supply both scope options, an ambiguous plan, or invalid campaign metadata.
    - The command fails without falling back to repository scope or emitting a
      partial gap report.
+
+## Incremental execution evidence
+
+On 2026-09-29, the first two Arcs passed incrementally against the Ponytail
+repository and its configured PostgreSQL database. The real-database contract
+script proved exact dirty-state invalidation, cache-hit parse skipping,
+cross-worktree cache reuse with generation isolation, rename/deletion cleanup,
+transaction rollback, same-worktree contention, independent-worktree
+progress, safe generated `tsvector` search, and public-role exclusion. The
+real `ponytail traceability` dispatcher then indexed the current worktree,
+reported 23 reused files on an unchanged repeat, returned the expected
+role-filtered implementation relationship in versioned JSON, safely treated a
+punctuation-heavy injection probe as search text, and rejected a deliberately
+stale generation with exit status 2 and `PROJECT_INDEX_STALE` without
+rebuilding. Focused unit, setup-stub, versioned-contract, installer, and
+distribution tests cover the same boundaries without requiring a global CLI
+installation.

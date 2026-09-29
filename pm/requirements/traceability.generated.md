@@ -38,7 +38,7 @@ Requirement: [pm/requirements/plan-input-queue.md](plan-input-queue.md)
 Requirement: [pm/requirements/traceability-index.md](traceability-index.md)
 
 - implementation: implements [src/project-index.js:15](../../src/project-index.js#L15)
-- unit-test: verifies [tests/project-index.test.js:17](../../tests/project-index.test.js#L17)
+- unit-test: verifies [tests/project-index.test.js:19](../../tests/project-index.test.js#L19)
 - integration-test: verifies [scripts/test-project-index-postgres.sh:6](../../scripts/test-project-index-postgres.sh#L6)
 - uat: verifies [pm/uat/traceability-index.md:16](../../pm/uat/traceability-index.md#L16)
 - uat: verifies [pm/uat/traceability-index.md:48](../../pm/uat/traceability-index.md#L48)

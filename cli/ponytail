@@ -505,6 +505,8 @@ def print_usage():
   ponytail pm pdf <collection|all> [--output-dir <path>]
   ponytail campaign validate <plan-name-or-path>
   ponytail campaign report [<plan-name-or-path>] [--json] [--[no-]summary-table] [--[no-]plan-table] [--[no-]sprint-table]
+  ponytail traceability index [--rebuild] [--json]
+  ponytail traceability search <query> [--kind <kind>] [--role <role>] [--requirement <id>] [--path <path>] [--json]
   ponytail pre-commit
   ponytail validate
   ponytail qa [references]
@@ -623,6 +625,17 @@ def run():
             return subprocess.run(["node", str(campaign_cli), *arguments], cwd=root).returncode
         except OSError as error:
             raise ProjectError(f"campaign CLI could not start: {error}", 2) from error
+    if operation == "traceability":
+        project_index_cli = source_root / "src/project-index.js"
+        if not project_index_cli.is_file():
+            raise ProjectError(f"traceability CLI source is unavailable: {project_index_cli}", 2)
+        try:
+            return subprocess.run(
+                ["node", str(project_index_cli), "traceability", *arguments],
+                cwd=root,
+            ).returncode
+        except OSError as error:
+            raise ProjectError(f"traceability CLI could not start: {error}", 2) from error
     if operation in {"-h", "--help", "help"}:
         print_usage()
         return 0
