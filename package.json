@@ -56,6 +56,8 @@
     "scripts/install-cli.sh",
     "scripts/setup-project-journal.sh",
     "scripts/project-journal.sql",
+    "scripts/project-index.sql",
+    "scripts/test-project-index-postgres.sh",
     "scripts/uninstall.js",
     "assets/",
     "versioned-data-contracts.json",
@@ -83,6 +85,7 @@
     "access": "public"
   },
   "dependencies": {
+    "pg": "^8.16.3",
     "smol-toml": "^1.8.0",
     "yaml": "^2.9.0",
     "typescript": "6.0.3",

@@ -9,6 +9,17 @@ const { spawnSync } = require('node:child_process');
 const artifactClasses = new Set(['implementation', 'unit-test', 'integration-test', 'uat']);
 const locatorKinds = new Set(['text', 'typescript']);
 const relationshipRoles = new Set(['implements', 'supports', 'verifies']);
+const searchableFields = Object.freeze([
+  'entityId',
+  'entityKind',
+  'role',
+  'requirementId',
+  'path',
+  'unitName',
+  'annotation',
+  'description',
+]);
+const searchableFieldSet = new Set(searchableFields);
 const artifactClassRoles = new Map([
   ['implementation', new Set(['implements', 'supports'])],
   ['unit-test', new Set(['verifies'])],
@@ -53,14 +64,16 @@ function roles(value, artifactClass, label) {
   return value;
 }
 
-function loadTraceabilityConfiguration(configurationPath) {
+function normalizeTraceabilityConfiguration(document, configurationPath, schemaVersion) {
   const root = path.dirname(path.resolve(configurationPath));
-  const document = exactObject(
-    JSON.parse(fs.readFileSync(configurationPath, 'utf8')),
-    ['schemaVersion', 'projectRoot', 'requirements', 'artifacts', 'generatedArtifacts', 'reverseViewPath', 'typescript'],
+  exactObject(
+    document,
+    ['schemaVersion', 'projectRoot', 'requirements', 'artifacts', 'generatedArtifacts', 'reverseViewPath', 'typescript', ...(schemaVersion === 2 ? ['index'] : [])],
     'traceability configuration',
   );
-  if (document.schemaVersion !== 1) throw new Error('traceability configuration schemaVersion must be 1');
+  if (document.schemaVersion !== schemaVersion) {
+    throw new Error(`traceability configuration schemaVersion must be ${schemaVersion}`);
+  }
   const configuredProjectRoot = nonEmptyString(document.projectRoot, 'projectRoot');
   if (path.isAbsolute(configuredProjectRoot)) throw new Error('projectRoot must be relative to the configuration file');
   const projectRoot = path.resolve(root, configuredProjectRoot);
@@ -145,15 +158,59 @@ function loadTraceabilityConfiguration(configurationPath) {
     };
   }
 
+  let configuredSearchableFields = searchableFields;
+  if (schemaVersion === 2) {
+    const indexConfiguration = exactObject(document.index, ['searchableFields'], 'index');
+    if (
+      !Array.isArray(indexConfiguration.searchableFields) ||
+      indexConfiguration.searchableFields.length === 0 ||
+      indexConfiguration.searchableFields.some(value => typeof value !== 'string')
+    ) {
+      throw new Error('index.searchableFields must be a non-empty array of strings');
+    }
+    if (new Set(indexConfiguration.searchableFields).size !== indexConfiguration.searchableFields.length) {
+      throw new Error('index.searchableFields must not contain duplicates');
+    }
+    const unknownSearchableField = indexConfiguration.searchableFields.find(value => !searchableFieldSet.has(value));
+    if (unknownSearchableField !== undefined) {
+      throw new Error(`index.searchableFields contains unsupported field: ${unknownSearchableField}`);
+    }
+    configuredSearchableFields = Object.freeze([...indexConfiguration.searchableFields]);
+  }
+
   return {
+    schemaVersion,
     root: projectRoot,
     configurationPath: path.resolve(configurationPath),
     requirements,
     artifacts,
     generatedArtifacts,
     reverseViewPath: relativePath(document.reverseViewPath, 'reverseViewPath'),
+    index: { searchableFields: configuredSearchableFields },
     ...(typescript === undefined ? {} : { typescript }),
   };
+}
+
+function readTraceabilityConfigurationV1(document, configurationPath) {
+  return normalizeTraceabilityConfiguration(document, configurationPath, 1);
+}
+
+function readTraceabilityConfigurationV2(document, configurationPath) {
+  return normalizeTraceabilityConfiguration(document, configurationPath, 2);
+}
+
+const TraceabilityConfigReaders = Object.freeze({
+  V1: readTraceabilityConfigurationV1,
+  V2: readTraceabilityConfigurationV2,
+});
+
+function loadTraceabilityConfiguration(configurationPath) {
+  const document = JSON.parse(fs.readFileSync(configurationPath, 'utf8'));
+  const reader = TraceabilityConfigReaders[`V${document?.schemaVersion}`];
+  if (reader === undefined) {
+    throw new Error(`unsupported traceability configuration schemaVersion: ${document?.schemaVersion}`);
+  }
+  return reader(document, configurationPath);
 }
 
 function findRelationships(source, artifact) {
@@ -365,6 +422,7 @@ if (require.main === module) {
 }
 
 module.exports = {
+  TraceabilityConfigReaders,
   analyzeTraceability,
   findRelationships,
   loadTraceabilityConfiguration,

@@ -43,8 +43,12 @@ while project-wide management records remain under `pm/`.
   installation; `scripts/install-cli.sh` configures the installed `ponytail`
   symlink with this checkout as its canonical source.
   Codex discovers project-local skills from `.agents/skills/` automatically.
-- `scripts/setup-project-journal.sh` and `scripts/project-journal.sql` own
-  PostgreSQL 18 journal provisioning and its immutable V1 storage contract.
+- `scripts/setup-project-journal.sh`, `scripts/project-journal.sql`, and
+  `scripts/project-index.sql` own PostgreSQL 18 journal and project-index
+  provisioning and their immutable V1 storage contracts.
+- `src/project-index.js` owns Git-aware PostgreSQL projection and transactional
+  generation publication; `scripts/test-project-index-postgres.sh` owns its
+  real-database contract proof.
 - `tsts/` owns the canonical TypeScript analyzer and its Node tests. Root npm dependencies and `npm run build:tsts` produce ignored `tsts/dist/`; npm distributes only its compiled runtime. `cli/tsts` is the registered-project launcher installed alongside `ponytail`.
 - `src/` owns non-script runtime implementations dispatched by user-facing
   CLI entrypoints. `src/pm-pdf.py` owns configured linked-Markdown PDF

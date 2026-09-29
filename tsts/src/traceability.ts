@@ -33,15 +33,41 @@ export interface TraceabilityTypescriptConfiguration {
     readonly projectPath: string;
 }
 
-export interface TraceabilityConfiguration {
+export type TraceabilitySearchableField =
+    | 'entityId'
+    | 'entityKind'
+    | 'role'
+    | 'requirementId'
+    | 'path'
+    | 'unitName'
+    | 'annotation'
+    | 'description';
+
+export interface TraceabilityIndexConfiguration {
+    readonly searchableFields: readonly TraceabilitySearchableField[];
+}
+
+interface TraceabilityConfigurationBase {
     readonly artifacts: readonly TraceabilityArtifactConfiguration[];
     readonly generatedArtifacts: readonly TraceabilityGeneratedArtifactConfiguration[];
     readonly projectRoot: string;
     readonly requirements: readonly TraceabilityRequirementConfiguration[];
     readonly reverseViewPath: string;
-    readonly schemaVersion: 1;
     readonly typescript?: TraceabilityTypescriptConfiguration | undefined;
 }
+
+export interface TraceabilityConfigurationV1 extends TraceabilityConfigurationBase {
+    readonly schemaVersion: 1;
+}
+
+export interface TraceabilityConfigurationV2 extends TraceabilityConfigurationBase {
+    readonly index: TraceabilityIndexConfiguration;
+    readonly schemaVersion: 2;
+}
+
+type TraceabilityConfiguration =
+    | TraceabilityConfigurationV1
+    | TraceabilityConfigurationV2;
 
 interface TraceabilityMarker {
     readonly line: number;
@@ -141,8 +167,12 @@ async function loadTraceabilityConfiguration(
     configurationPath: string
 ): Promise<TraceabilityConfiguration> {
     const parsed: unknown = JSON.parse(await readFile(configurationPath, 'utf8'));
-    if (!isObject(parsed) || parsed.schemaVersion !== 1 || typeof parsed.projectRoot !== 'string') {
-        throw new Error('traceability configuration must be a schemaVersion 1 object');
+    if (
+        !isObject(parsed) ||
+        (parsed.schemaVersion !== 1 && parsed.schemaVersion !== 2) ||
+        typeof parsed.projectRoot !== 'string'
+    ) {
+        throw new Error('traceability configuration must be a supported versioned object');
     }
     if (
         !Array.isArray(parsed.requirements) ||
@@ -156,15 +186,19 @@ async function loadTraceabilityConfiguration(
     ) {
         throw new Error('traceability configuration does not satisfy the semantic checker contract');
     }
-    return {
+    const base: TraceabilityConfigurationBase = {
         artifacts: parsed.artifacts,
         generatedArtifacts: parsed.generatedArtifacts,
         projectRoot: parsed.projectRoot,
         requirements: parsed.requirements,
         reverseViewPath: parsed.reverseViewPath,
-        schemaVersion: 1,
         ...(parsed.typescript === undefined ? {} : { typescript: parsed.typescript }),
     };
+    if (parsed.schemaVersion === 1) return { ...base, schemaVersion: 1 };
+    if (!isIndexConfiguration(parsed.index)) {
+        throw new Error('traceability configuration V2 index is invalid');
+    }
+    return { ...base, index: parsed.index, schemaVersion: 2 };
 }
 
 function isObject(value: unknown): value is Readonly<Record<string, unknown>> {
@@ -217,6 +251,29 @@ function isTypescriptConfiguration(
         isObject(value) &&
         typeof value.cliPath === 'string' &&
         typeof value.projectPath === 'string'
+    );
+}
+
+function isIndexConfiguration(value: unknown): value is TraceabilityIndexConfiguration {
+    const searchableFields: ReadonlySet<string> = new Set([
+        'entityId',
+        'entityKind',
+        'role',
+        'requirementId',
+        'path',
+        'unitName',
+        'annotation',
+        'description',
+    ]);
+    return (
+        isObject(value) &&
+        Array.isArray(value.searchableFields) &&
+        value.searchableFields.length > 0 &&
+        new Set(value.searchableFields).size === value.searchableFields.length &&
+        value.searchableFields.every(
+            (searchableField: unknown): searchableField is TraceabilitySearchableField =>
+                typeof searchableField === 'string' && searchableFields.has(searchableField)
+        )
     );
 }
 

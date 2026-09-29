@@ -8,10 +8,10 @@ Source: `.agents/config/project/traceability.json`
 
 Requirement: [pm/requirements/requirements-traceability.md](requirements-traceability.md)
 
-- implementation: implements [skills/requirements-traceability/scripts/check-traceability.js:255](../../skills/requirements-traceability/scripts/check-traceability.js#L255)
-- implementation: supports [tsts/src/traceability.ts:56](../../tsts/src/traceability.ts#L56)
-- unit-test: verifies [tests/requirements-traceability.test.js:47](../../tests/requirements-traceability.test.js#L47)
-- unit-test: verifies [tsts/test/traceability.test.ts:100](../../tsts/test/traceability.test.ts#L100)
+- implementation: implements [skills/requirements-traceability/scripts/check-traceability.js:312](../../skills/requirements-traceability/scripts/check-traceability.js#L312)
+- implementation: supports [tsts/src/traceability.ts:82](../../tsts/src/traceability.ts#L82)
+- unit-test: verifies [tests/requirements-traceability.test.js:95](../../tests/requirements-traceability.test.js#L95)
+- unit-test: verifies [tsts/test/traceability.test.ts:104](../../tsts/test/traceability.test.ts#L104)
 - integration-test: verifies [tests/requirements-traceability-cli.test.js:12](../../tests/requirements-traceability-cli.test.js#L12)
 - uat: verifies [pm/uat/requirements-traceability.md:14](../../pm/uat/requirements-traceability.md#L14)
 
@@ -32,3 +32,16 @@ Requirement: [pm/requirements/plan-input-queue.md](plan-input-queue.md)
 - unit-test: verifies [tests/plan-input.test.js:2](../../tests/plan-input.test.js#L2)
 - integration-test: verifies [tests/plan-input-hooks.test.js:2](../../tests/plan-input-hooks.test.js#L2)
 - uat: verifies [pm/uat/plan-input-queue.md:10](../../pm/uat/plan-input-queue.md#L10)
+
+## REQ-TRACEABILITY-INDEX
+
+Requirement: [pm/requirements/traceability-index.md](traceability-index.md)
+
+- implementation: implements [src/project-index.js:15](../../src/project-index.js#L15)
+- unit-test: verifies [tests/project-index.test.js:17](../../tests/project-index.test.js#L17)
+- integration-test: verifies [scripts/test-project-index-postgres.sh:6](../../scripts/test-project-index-postgres.sh#L6)
+- uat: verifies [pm/uat/traceability-index.md:16](../../pm/uat/traceability-index.md#L16)
+- uat: verifies [pm/uat/traceability-index.md:48](../../pm/uat/traceability-index.md#L48)
+- uat: verifies [pm/uat/traceability-index.md:71](../../pm/uat/traceability-index.md#L71)
+- uat: verifies [pm/uat/traceability-index.md:102](../../pm/uat/traceability-index.md#L102)
+- uat: verifies [pm/uat/traceability-index.md:126](../../pm/uat/traceability-index.md#L126)

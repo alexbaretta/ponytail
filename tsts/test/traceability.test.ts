@@ -7,7 +7,11 @@ import os from 'node:os';
 import path from 'node:path';
 import { describe, it } from 'node:test';
 
-import { checkTraceabilityAnnotations, type TraceabilityConfiguration } from '../src/traceability.js';
+import {
+    checkTraceabilityAnnotations,
+    type TraceabilityConfigurationV1,
+    type TraceabilityConfigurationV2,
+} from '../src/traceability.js';
 import type { TstsCheckResult } from '../src/index.js';
 
 async function writeFixture(source: string): Promise<{
@@ -17,7 +21,7 @@ async function writeFixture(source: string): Promise<{
     const root: string = await mkdtemp(path.join(os.tmpdir(), 'tsts-traceability-'));
     const projectPath: string = 'tsconfig.json';
     const configurationPath: string = path.join(root, 'traceability.json');
-    const configuration: TraceabilityConfiguration = {
+    const configuration: TraceabilityConfigurationV1 = {
         artifacts: [
             {
                 class: 'implementation',
@@ -65,7 +69,7 @@ async function writesSharedTypeScriptArtifactFixture(): Promise<{
     } = await writeFixture(
         '// Traceability: implements REQ-ONE\nexport function implementation(): void {}\n// Traceability: verifies REQ-ONE\nexport function verification(): void {}\n'
     );
-    const configuration: TraceabilityConfiguration = {
+    const configuration: TraceabilityConfigurationV1 = {
         artifacts: [
             {
                 class: 'implementation',
@@ -162,6 +166,45 @@ describe('TypeScript traceability locators', (): void => {
             readonly configurationPath: string;
             readonly projectPath: string;
         } = await writesSharedTypeScriptArtifactFixture();
+
+        const result: TstsCheckResult = await checkTraceabilityAnnotations(
+            traceabilityFixture
+        );
+
+        assert.deepEqual(result.diagnostics, []);
+        assert.equal(result.checkedFileCount, 1);
+    });
+
+    it('accepts an exact V2 configuration with safe search fields', async (): Promise<void> => {
+        const traceabilityFixture: {
+            readonly configurationPath: string;
+            readonly projectPath: string;
+        } = await writeFixture(
+            '// Traceability: implements REQ-ONE\nexport const traced: number = 1;\n'
+        );
+        const configuration: TraceabilityConfigurationV2 = {
+            artifacts: [
+                {
+                    class: 'implementation',
+                    locator: 'typescript',
+                    path: 'source.ts',
+                },
+            ],
+            generatedArtifacts: [],
+            index: { searchableFields: ['requirementId', 'path'] },
+            projectRoot: '.',
+            requirements: [{ id: 'REQ-ONE', sourcePath: 'requirements.md' }],
+            reverseViewPath: 'traceability.generated.md',
+            schemaVersion: 2,
+            typescript: {
+                cliPath: 'tsts.js',
+                projectPath: traceabilityFixture.projectPath,
+            },
+        };
+        await writeFile(
+            traceabilityFixture.configurationPath,
+            `${JSON.stringify(configuration)}\n`
+        );
 
         const result: TstsCheckResult = await checkTraceabilityAnnotations(
             traceabilityFixture

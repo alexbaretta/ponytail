@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "projectRoot": "../../..",
   "requirements": [
     {
@@ -13,6 +13,10 @@
     {
       "id": "REQ-PLAN-INPUT-QUEUE",
       "sourcePath": "pm/requirements/plan-input-queue.md"
+    },
+    {
+      "id": "REQ-TRACEABILITY-INDEX",
+      "sourcePath": "pm/requirements/traceability-index.md"
     }
   ],
   "artifacts": [
@@ -85,6 +89,26 @@
       "class": "uat",
       "path": "pm/uat/plan-input-queue.md",
       "locator": "text"
+    },
+    {
+      "class": "implementation",
+      "path": "src/project-index.js",
+      "locator": "text"
+    },
+    {
+      "class": "unit-test",
+      "path": "tests/project-index.test.js",
+      "locator": "text"
+    },
+    {
+      "class": "integration-test",
+      "path": "scripts/test-project-index-postgres.sh",
+      "locator": "text"
+    },
+    {
+      "class": "uat",
+      "path": "pm/uat/traceability-index.md",
+      "locator": "text"
     }
   ],
   "generatedArtifacts": [
@@ -109,5 +133,17 @@
   "typescript": {
     "cliPath": "tsts/dist/src/cli.js",
     "projectPath": "tsts/tsconfig.json"
+  },
+  "index": {
+    "searchableFields": [
+      "entityId",
+      "entityKind",
+      "role",
+      "requirementId",
+      "path",
+      "unitName",
+      "annotation",
+      "description"
+    ]
   }
 }

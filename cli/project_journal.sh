@@ -287,6 +287,10 @@ SELECT ponytail_journal.register_project(
   :'project_id'::uuid,
   :'project_name'
 );
+SELECT ponytail_index.register_project(
+  :'project_id'::uuid,
+  :'project_name'
+);
 SQL
 }
 

@@ -8,9 +8,10 @@ print_usage() {
   cat <<'EOF'
 Usage: setup-project-journal.sh [--config <path>]
 
-Creates or reconciles the configured PostgreSQL 18 journal database, roles,
-schema, functions, policies, and project registration. Standard PG* variables
-may provide setup-time administrative connection settings and credentials.
+Creates or reconciles the configured PostgreSQL 18 journal and project-index
+database roles, schemas, functions, policies, and project registration.
+Standard PG* variables may provide setup-time administrative connection
+settings and credentials.
 EOF
 }
 
@@ -99,20 +100,33 @@ SELECT format('CREATE ROLE %I NOLOGIN', 'ponytail_analyst')
 WHERE NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'ponytail_analyst') \gexec
 SELECT format('CREATE ROLE %I NOLOGIN', 'ponytail_reporter')
 WHERE NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'ponytail_reporter') \gexec
+SELECT format('CREATE ROLE %I NOLOGIN', 'ponytail_index_owner')
+WHERE NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'ponytail_index_owner') \gexec
+SELECT format('CREATE ROLE %I NOLOGIN', 'ponytail_index_reader')
+WHERE NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'ponytail_index_reader') \gexec
+SELECT format('CREATE ROLE %I NOLOGIN', 'ponytail_index_writer')
+WHERE NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'ponytail_index_writer') \gexec
 SELECT format('CREATE ROLE %I LOGIN', :'runtime_role')
 WHERE NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = :'runtime_role') \gexec
 SELECT format('GRANT %I TO %I', 'ponytail_reporter', :'runtime_role') \gexec
+SELECT format('GRANT %I TO %I', 'ponytail_index_reader', 'ponytail_index_writer') \gexec
+SELECT format('GRANT %I TO %I', 'ponytail_index_writer', :'runtime_role') \gexec
 SELECT format('CREATE DATABASE %I OWNER %I', :'database_name', 'ponytail_journal_owner')
 WHERE NOT EXISTS (SELECT 1 FROM pg_database WHERE datname = :'database_name') \gexec
+SELECT format('GRANT CREATE ON DATABASE %I TO %I', :'database_name', 'ponytail_index_owner') \gexec
 SQL
 
   psql_connection_args "${database_name}" "${host}" "${port}" "${PGUSER:-}"
   psql "${connection_args[@]}" --file "${script_root}/project-journal.sql"
+  psql "${connection_args[@]}" --file "${script_root}/project-index.sql"
   psql "${connection_args[@]}" \
     --set=project_id="${project_id}" \
     --set=project_name="${project_name}" <<'SQL'
 SET ROLE ponytail_journal_owner;
 SELECT ponytail_journal.register_project(:'project_id'::uuid, :'project_name');
+RESET ROLE;
+SET ROLE ponytail_index_owner;
+SELECT ponytail_index.register_project(:'project_id'::uuid, :'project_name');
 RESET ROLE;
 SQL
   printf '{"ok":true,"database":"%s","project_id":"%s"}\n' \

@@ -21,6 +21,7 @@ const combinedInstaller = path.join(root, 'scripts', 'install.sh');
 const installer = path.join(root, 'scripts', 'install-cli.sh');
 const journalSetup = path.join(root, 'scripts', 'setup-project-journal.sh');
 const journalPostgresTest = path.join(root, 'scripts', 'test-project-journal-postgres.sh');
+const projectIndexPostgresTest = path.join(root, 'scripts', 'test-project-index-postgres.sh');
 
 function run(command, args, options = {}) {
   return spawnSync(command, args, { encoding: 'utf8', ...options });
@@ -119,6 +120,7 @@ test('CLI shell scripts are parse-safe', () => {
     installer,
     journalSetup,
     journalPostgresTest,
+    projectIndexPostgresTest,
   ]) {
     assert.equal(run('bash', ['-n', script]).status, 0, script);
     const contents = fs.readFileSync(script, 'utf8');
@@ -502,7 +504,34 @@ test('project journal initializes a stable V1 project configuration', () => {
       .match(/SELECT ponytail_journal\.register_project/g).length,
     3,
   );
+  assert.equal(
+    fs.readFileSync(env.JOURNAL_PSQL_SQL_LOG, 'utf8')
+      .match(/SELECT ponytail_index\.register_project/g).length,
+    3,
+  );
   assert.match(fs.readFileSync(env.JOURNAL_PSQL_ARGS_LOG, 'utf8'), /--dbname ponytail/);
+});
+
+test('project database setup provisions journal and project-index contracts', () => {
+  const project = fixture();
+  writeJournalConfig(project);
+  const env = journalInitEnvironment(project);
+  const configPath = path.join(project, 'ponytail-journal.json');
+  const result = run(journalSetup, ['--config', configPath], {
+    cwd: project,
+    env,
+  });
+  assert.equal(result.status, 0, result.stderr);
+  const sql = fs.readFileSync(env.JOURNAL_PSQL_SQL_LOG, 'utf8');
+  assert.match(sql, /ponytail_index_owner/);
+  assert.match(sql, /ponytail_index_reader/);
+  assert.match(sql, /ponytail_index_writer/);
+  assert.match(sql, /GRANT CREATE ON DATABASE/);
+  assert.match(sql, /SELECT ponytail_journal\.register_project/);
+  assert.match(sql, /SELECT ponytail_index\.register_project/);
+  const argumentsLog = fs.readFileSync(env.JOURNAL_PSQL_ARGS_LOG, 'utf8');
+  assert.match(argumentsLog, /--file .*scripts\/project-journal\.sql/);
+  assert.match(argumentsLog, /--file .*scripts\/project-index\.sql/);
 });
 
 test('project journal initialization accepts explicit non-secret connection settings', () => {
@@ -609,6 +638,19 @@ test('journal contracts retain a stable relational core and versioned JSON paylo
   assert.match(sql, /SECURITY DEFINER/g);
   assert.match(sql, /GRANT EXECUTE ON FUNCTION register_project\(uuid, text\)/);
   assert.doesNotMatch(sql, /ALTER TABLE action_v1 ADD/);
+});
+
+test('project index contract retains a stable relational and search core', () => {
+  const sql = fs.readFileSync(path.join(root, 'scripts', 'project-index.sql'), 'utf8');
+  assert.match(sql, /CREATE TABLE IF NOT EXISTS schema_version_v1/);
+  assert.match(sql, /CREATE TABLE IF NOT EXISTS parse_result_v1/);
+  assert.match(sql, /CREATE TABLE IF NOT EXISTS published_generation_v1/);
+  assert.match(sql, /payload ->> 'schemaVersion' = '1'/);
+  assert.match(sql, /tsvector GENERATED ALWAYS AS/);
+  assert.match(sql, /USING gin \(search_vector\)/);
+  assert.match(sql, /SECURITY DEFINER/);
+  assert.match(sql, /GRANT EXECUTE ON FUNCTION register_project\(uuid, text\)/);
+  assert.doesNotMatch(sql, /ALTER TABLE \w+_v1 ADD/);
 });
 
 test('CLI installer installs all tools and verifies owned updates', () => {

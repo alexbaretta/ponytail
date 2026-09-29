@@ -63,6 +63,8 @@ test('distribution contains the live-development harness only', () => {
     'scripts/install-cli.sh',
     'scripts/setup-project-journal.sh',
     'scripts/project-journal.sql',
+    'scripts/project-index.sql',
+    'scripts/test-project-index-postgres.sh',
     'skills/build-impact/SKILL.md',
     'skills/build-impact/scripts/build-impact.js',
     'skills/ponytail/SKILL.md',

@@ -3,6 +3,18 @@
   "schemaVersion": 1,
   "families": [
     {
+      "id": "requirements-traceability-project-config",
+      "implementation": {
+        "workspace": "ponytail",
+        "module": "skills/requirements-traceability/scripts/check-traceability.js",
+        "readerRegistryExport": "TraceabilityConfigReaders"
+      },
+      "currentVersion": "V2",
+      "versions": ["V1", "V2"],
+      "supportedReadVersions": ["V1", "V2"],
+      "supportedDowngradeVersions": []
+    },
+    {
       "id": "ponytail-user-config",
       "implementation": {
         "workspace": "ponytail",
@@ -56,6 +68,18 @@
         "workspace": "ponytail",
         "module": "scripts/project-journal.sql",
         "readerRegistryExport": "PonytailJournalActionPayloadReaders"
+      },
+      "currentVersion": "V1",
+      "versions": ["V1"],
+      "supportedReadVersions": ["V1"],
+      "supportedDowngradeVersions": []
+    },
+    {
+      "id": "ponytail-project-index-storage",
+      "implementation": {
+        "workspace": "ponytail",
+        "module": "src/project-index.js",
+        "readerRegistryExport": "ProjectIndexStorageReaders"
       },
       "currentVersion": "V1",
       "versions": ["V1"],

@@ -44,6 +44,54 @@ function fixture() {
   return { configuration, configurationPath, root };
 }
 
+test('retains exact V1 reads and validates latest V2 search policy', () => {
+  const traceabilityFixture = fixture();
+  const v1 = loadTraceabilityConfiguration(traceabilityFixture.configurationPath);
+  assert.equal(v1.schemaVersion, 1);
+  assert.deepEqual(v1.index.searchableFields, [
+    'entityId',
+    'entityKind',
+    'role',
+    'requirementId',
+    'path',
+    'unitName',
+    'annotation',
+    'description',
+  ]);
+
+  traceabilityFixture.configuration.schemaVersion = 2;
+  traceabilityFixture.configuration.index = { searchableFields: ['requirementId', 'path'] };
+  fs.writeFileSync(
+    traceabilityFixture.configurationPath,
+    `${JSON.stringify(traceabilityFixture.configuration, null, 2)}\n`,
+  );
+  const v2 = loadTraceabilityConfiguration(traceabilityFixture.configurationPath);
+  assert.equal(v2.schemaVersion, 2);
+  assert.deepEqual(v2.index.searchableFields, ['requirementId', 'path']);
+
+  for (const searchableFields of [[], ['path', 'path'], ['secret']]) {
+    traceabilityFixture.configuration.index.searchableFields = searchableFields;
+    fs.writeFileSync(
+      traceabilityFixture.configurationPath,
+      `${JSON.stringify(traceabilityFixture.configuration, null, 2)}\n`,
+    );
+    assert.throws(
+      () => loadTraceabilityConfiguration(traceabilityFixture.configurationPath),
+      /searchableFields/u,
+    );
+  }
+
+  traceabilityFixture.configuration.schemaVersion = 3;
+  fs.writeFileSync(
+    traceabilityFixture.configurationPath,
+    `${JSON.stringify(traceabilityFixture.configuration, null, 2)}\n`,
+  );
+  assert.throws(
+    () => loadTraceabilityConfiguration(traceabilityFixture.configurationPath),
+    /unsupported traceability configuration schemaVersion: 3/u,
+  );
+});
+
 // Traceability: verifies REQ-REQUIREMENTS-TRACEABILITY
 test('generates one reverse view and validates complete structural coverage', () => {
   const traceabilityFixture = fixture();
