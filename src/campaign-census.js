@@ -264,6 +264,64 @@ function scanPlanCandidates(repositoryRoot, config) {
   });
 }
 
+function listPlanSourceFiles(repositoryRoot, config) {
+  const planRoot = path.join(repositoryRoot, config.planRoot);
+  const sources = [];
+  for (const lifecycle of config.lifecycle.directories) {
+    const directory = path.join(planRoot, lifecycle);
+    if (!fs.existsSync(directory)) continue;
+    for (const name of sortedDirectories(directory)) {
+      const planFile = path.join(directory, name, 'plan.md');
+      if (fs.existsSync(planFile) && fs.statSync(planFile).isFile() &&
+          !fs.lstatSync(planFile).isSymbolicLink()) {
+        sources.push({
+          lifecycle,
+          relativePlanFile: path.relative(repositoryRoot, planFile).split(path.sep).join('/'),
+        });
+      }
+    }
+  }
+  if (config.legacyPlanLayout === 'flat') {
+    const lifecycleDirectories = new Set(config.lifecycle.directories);
+    for (const name of sortedDirectories(planRoot)) {
+      if (lifecycleDirectories.has(name)) continue;
+      const planFile = path.join(planRoot, name, 'plan.md');
+      if (fs.existsSync(planFile) && fs.statSync(planFile).isFile() &&
+          !fs.lstatSync(planFile).isSymbolicLink()) {
+        sources.push({
+          lifecycle: null,
+          relativePlanFile: path.relative(repositoryRoot, planFile).split(path.sep).join('/'),
+        });
+      }
+    }
+  }
+  return sources.sort((left, right) =>
+    left.relativePlanFile.localeCompare(right.relativePlanFile));
+}
+
+function parsePlanSource(repositoryRoot, relativePlanFile, lifecycle, text) {
+  const planFile = path.join(repositoryRoot, relativePlanFile);
+  const blocks = metadataBlocks(text);
+  let metadata = null;
+  let parseError = null;
+  if (blocks.length === 1) {
+    try {
+      metadata = JSON.parse(blocks[0]);
+    } catch (error) {
+      parseError = error;
+    }
+  }
+  return readManagedPlan({
+    planFile,
+    relativePlanFile,
+    lifecycle,
+    text,
+    blocks,
+    metadata,
+    parseError,
+  });
+}
+
 function resolveInputPlan(input, repositoryRoot, config, candidates) {
   if (input === undefined) {
     const activeCandidates = candidates.filter((candidate) => (
@@ -324,14 +382,18 @@ function resolveInputPlan(input, repositoryRoot, config, candidates) {
   };
 }
 
-function validateParentLink(plan, parent) {
+function linkedPlanFiles(plan) {
   const links = [...plan.text.matchAll(/\[[^\]]+\]\(([^)#]+)(?:#[^)]+)?\)/g)];
-  const parentFile = fs.realpathSync(parent.planFile);
-  const found = links.some((match) => {
+  return links.flatMap((match) => {
     const target = path.resolve(path.dirname(plan.planFile), match[1]);
     const file = path.basename(target) === 'plan.md' ? target : path.join(target, 'plan.md');
-    return fs.existsSync(file) && fs.realpathSync(file) === parentFile;
+    return fs.existsSync(file) ? [fs.realpathSync(file)] : [];
   });
+}
+
+function validateParentLink(plan, parent) {
+  const parentFile = fs.realpathSync(parent.planFile);
+  const found = linkedPlanFiles(plan).includes(parentFile);
   if (!found) dataError('CAMPAIGN_PARENT_LINK', `manifest must link to parent plan ${parent.id}`, plan.id, plan.relativePlanFile);
 }
 
@@ -773,6 +835,9 @@ module.exports = {
   diagnostic,
   discoverCampaign,
   humanReport,
+  linkedPlanFiles,
+  listPlanSourceFiles,
+  parsePlanSource,
   readManagementConfigV1,
   readPlanMetadataV1,
   readCampaignReportV1,

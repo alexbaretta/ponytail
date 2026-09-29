@@ -191,7 +191,11 @@ async function main() {
   const indexed = JSON.parse(execFileSync(process.execPath, [
     cli, 'traceability', 'index', '--json',
   ], { cwd: root, encoding: 'utf8' }));
-  assert.equal(indexed.processedFiles, indexed.parsedFiles + indexed.reusedFiles);
+  assert.equal(indexed.schemaVersion, 2);
+  assert.deepEqual(indexed.corpora.map(corpus => corpus.corpus), ['traceability', 'plans']);
+  for (const corpus of indexed.corpora) {
+    assert.equal(corpus.processedFiles, corpus.parsedFiles + corpus.reusedFiles);
+  }
   const searched = JSON.parse(execFileSync(process.execPath, [
     cli, 'traceability', 'search', 'REQ-TRACEABILITY-INDEX',
     '--role', 'implements', '--json',
@@ -199,6 +203,21 @@ async function main() {
   assert.ok(searched.results.some(result =>
     result.requirementId === 'REQ-TRACEABILITY-INDEX' &&
     result.role === 'implements'));
+  const planSearch = JSON.parse(execFileSync(process.execPath, [
+    cli, 'plan', 'search', 'PostgreSQL', '--json',
+  ], { cwd: root, encoding: 'utf8' }));
+  assert.ok(planSearch.results.some(result =>
+    result.owningPlanId && result.path.startsWith('pm/plans/')));
+  const roots = JSON.parse(execFileSync(process.execPath, [
+    cli, 'plan', 'roots', '--json',
+  ], { cwd: root, encoding: 'utf8' }));
+  assert.ok(roots.results.some(result =>
+    result.planId === '2026-09-29-traceability-index'));
+  const stranded = JSON.parse(execFileSync(process.execPath, [
+    cli, 'plan', 'stranded', '--json',
+  ], { cwd: root, encoding: 'utf8' }));
+  assert.ok(stranded.results.length > 0);
+  assert.ok(stranded.results.every(result => result.reason));
 }
 
 main().then(

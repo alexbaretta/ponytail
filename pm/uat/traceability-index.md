@@ -157,3 +157,12 @@ stale generation with exit status 2 and `PROJECT_INDEX_STALE` without
 rebuilding. Focused unit, setup-stub, versioned-contract, installer, and
 distribution tests cover the same boundaries without requiring a global CLI
 installation.
+
+The plan-corpus Arc then passed focused canonical-census, immutable-cache,
+invalid-parent, missing-backlink, cycle, exact-filter, injection-safe search,
+recursive graph, and versioned-result tests. The real PostgreSQL contract and
+public `ponytail plan` dispatcher published a separate current plan generation,
+searched normalized plan text, listed canonical campaign roots, and returned
+only legacy or invalid stranded records with explicit reasons. Final S01
+reconciliation will repeat the corpus-isolation, stale-generation,
+installation, and distribution checks after the last relevant edit.

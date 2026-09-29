@@ -14,6 +14,8 @@ const {
   CampaignError,
   buildReport,
   humanReport,
+  listPlanSourceFiles,
+  parsePlanSource,
   readCampaignReportV1,
   readManagementConfigV1,
 } = require('../src/campaign-census.js');
@@ -157,6 +159,27 @@ test('management configuration reader requires one exact safe V1 contract', () =
     ...valid,
     lifecycle: { ...valid.lifecycle, roles: { ...valid.lifecycle.roles, rejected: 'deferred' } },
   })).code, 'CAMPAIGN_CONFIG_LIFECYCLE');
+});
+
+test('lists plan sources without parsing and exposes canonical source parsing', () => {
+  const root = repository();
+  const valid = plan(root, 'open', '2026-09-29-valid');
+  write(root, 'pm/plans/legacy/plan.md', '# legacy\n');
+  const sources = listPlanSourceFiles(root, config(root));
+  assert.deepEqual(sources.map(source => source.relativePlanFile), [
+    'pm/plans/legacy/plan.md',
+    'pm/plans/open/2026-09-29-valid/plan.md',
+  ]);
+  const parsed = parsePlanSource(
+    root,
+    'pm/plans/open/2026-09-29-valid/plan.md',
+    'open',
+    fs.readFileSync(valid, 'utf8'),
+  );
+  assert.equal(parsed.id, '2026-09-29-valid');
+  assert.equal(captureError(() => parsePlanSource(
+    root, 'pm/plans/legacy/plan.md', null, '# legacy\n',
+  )).code, 'CAMPAIGN_PLAN_BLOCK');
 });
 
 test('root and leaf report the same campaign while unrelated malformed plans stay out of scope', () => {

@@ -19,9 +19,9 @@ Requirement: [pm/requirements/requirements-traceability.md](requirements-traceab
 
 Requirement: [pm/requirements/index.md](index.md)
 
-- implementation: implements [src/campaign-census.js:655](../../src/campaign-census.js#L655)
+- implementation: implements [src/campaign-census.js:717](../../src/campaign-census.js#L717)
 - unit-test: verifies [tests/campaign-census-format.test.js:11](../../tests/campaign-census-format.test.js#L11)
-- integration-test: verifies [tests/campaign-census.test.js:321](../../tests/campaign-census.test.js#L321)
+- integration-test: verifies [tests/campaign-census.test.js:344](../../tests/campaign-census.test.js#L344)
 - uat: verifies [pm/uat/index.md:32](../../pm/uat/index.md#L32)
 
 ## REQ-PLAN-INPUT-QUEUE
@@ -37,8 +37,8 @@ Requirement: [pm/requirements/plan-input-queue.md](plan-input-queue.md)
 
 Requirement: [pm/requirements/traceability-index.md](traceability-index.md)
 
-- implementation: implements [src/project-index.js:15](../../src/project-index.js#L15)
-- unit-test: verifies [tests/project-index.test.js:19](../../tests/project-index.test.js#L19)
+- implementation: implements [src/project-index.js:30](../../src/project-index.js#L30)
+- unit-test: verifies [tests/project-index.test.js:25](../../tests/project-index.test.js#L25)
 - integration-test: verifies [scripts/test-project-index-postgres.sh:6](../../scripts/test-project-index-postgres.sh#L6)
 - uat: verifies [pm/uat/traceability-index.md:16](../../pm/uat/traceability-index.md#L16)
 - uat: verifies [pm/uat/traceability-index.md:48](../../pm/uat/traceability-index.md#L48)

@@ -507,6 +507,11 @@ def print_usage():
   ponytail campaign report [<plan-name-or-path>] [--json] [--[no-]summary-table] [--[no-]plan-table] [--[no-]sprint-table]
   ponytail traceability index [--rebuild] [--json]
   ponytail traceability search <query> [--kind <kind>] [--role <role>] [--requirement <id>] [--path <path>] [--json]
+  ponytail plan search <query> [--lifecycle <lifecycle>] [--kind <kind>] [--plan <plan>] [--json]
+  ponytail plan descendants <plan> [--direct] [--json]
+  ponytail plan ancestors <plan> [--json]
+  ponytail plan roots [--json]
+  ponytail plan stranded [--json]
   ponytail pre-commit
   ponytail validate
   ponytail qa [references]
@@ -625,17 +630,17 @@ def run():
             return subprocess.run(["node", str(campaign_cli), *arguments], cwd=root).returncode
         except OSError as error:
             raise ProjectError(f"campaign CLI could not start: {error}", 2) from error
-    if operation == "traceability":
+    if operation in {"traceability", "plan"}:
         project_index_cli = source_root / "src/project-index.js"
         if not project_index_cli.is_file():
-            raise ProjectError(f"traceability CLI source is unavailable: {project_index_cli}", 2)
+            raise ProjectError(f"project index CLI source is unavailable: {project_index_cli}", 2)
         try:
             return subprocess.run(
-                ["node", str(project_index_cli), "traceability", *arguments],
+                ["node", str(project_index_cli), operation, *arguments],
                 cwd=root,
             ).returncode
         except OSError as error:
-            raise ProjectError(f"traceability CLI could not start: {error}", 2) from error
+            raise ProjectError(f"project index CLI could not start: {error}", 2) from error
     if operation in {"-h", "--help", "help"}:
         print_usage()
         return 0

@@ -129,7 +129,7 @@ test('CLI shell scripts are parse-safe', () => {
   }
 });
 
-test('ponytail help publishes plan-input and traceability command families', () => {
+test('ponytail help publishes plan-input, traceability, and plan command families', () => {
   const result = run(ponytail, ['--help'], { cwd: root });
   assert.equal(result.status, 0, result.stderr);
   assert.match(result.stdout, /ponytail plan-input <plan> -- <instruction>/);
@@ -138,6 +138,11 @@ test('ponytail help publishes plan-input and traceability command families', () 
   assert.match(result.stdout, /ponytail plan-input complete <plan> <id> --record <pm-path>/);
   assert.match(result.stdout, /ponytail traceability index \[--rebuild\] \[--json\]/);
   assert.match(result.stdout, /ponytail traceability search <query>/);
+  assert.match(result.stdout, /ponytail plan search <query>/);
+  assert.match(result.stdout, /ponytail plan descendants <plan>/);
+  assert.match(result.stdout, /ponytail plan ancestors <plan>/);
+  assert.match(result.stdout, /ponytail plan roots \[--json\]/);
+  assert.match(result.stdout, /ponytail plan stranded \[--json\]/);
 });
 
 test('combined installer installs Codex skills and CLI tools only', () => {

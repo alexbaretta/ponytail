@@ -87,15 +87,27 @@
       "supportedDowngradeVersions": []
     },
     {
+      "id": "ponytail-plan-index-storage",
+      "implementation": {
+        "workspace": "ponytail",
+        "module": "src/project-index.js",
+        "readerRegistryExport": "PlanIndexStorageReaders"
+      },
+      "currentVersion": "V1",
+      "versions": ["V1"],
+      "supportedReadVersions": ["V1"],
+      "supportedDowngradeVersions": []
+    },
+    {
       "id": "traceability-index-command-result",
       "implementation": {
         "workspace": "ponytail",
         "module": "src/project-index.js",
         "readerRegistryExport": "TraceabilityIndexResultReaders"
       },
-      "currentVersion": "V1",
-      "versions": ["V1"],
-      "supportedReadVersions": ["V1"],
+      "currentVersion": "V2",
+      "versions": ["V1", "V2"],
+      "supportedReadVersions": ["V1", "V2"],
       "supportedDowngradeVersions": []
     },
     {
@@ -104,6 +116,30 @@
         "workspace": "ponytail",
         "module": "src/project-index.js",
         "readerRegistryExport": "TraceabilitySearchResultReaders"
+      },
+      "currentVersion": "V1",
+      "versions": ["V1"],
+      "supportedReadVersions": ["V1"],
+      "supportedDowngradeVersions": []
+    },
+    {
+      "id": "plan-search-command-result",
+      "implementation": {
+        "workspace": "ponytail",
+        "module": "src/project-index.js",
+        "readerRegistryExport": "PlanSearchResultReaders"
+      },
+      "currentVersion": "V1",
+      "versions": ["V1"],
+      "supportedReadVersions": ["V1"],
+      "supportedDowngradeVersions": []
+    },
+    {
+      "id": "plan-graph-command-result",
+      "implementation": {
+        "workspace": "ponytail",
+        "module": "src/project-index.js",
+        "readerRegistryExport": "PlanGraphResultReaders"
       },
       "currentVersion": "V1",
       "versions": ["V1"],

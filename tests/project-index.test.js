@@ -10,9 +10,15 @@ const { execFileSync } = require('node:child_process');
 const test = require('node:test');
 
 const {
+  collectPlanProjection,
   collectTraceabilityProjection,
+  normalizePlanPayloads,
+  parsePlanGraphArguments,
+  parsePlanSearchArguments,
   parseSearchArguments,
   publishTraceabilityGeneration,
+  queryPlanGraph,
+  searchPlans,
   searchTraceability,
 } = require('../src/project-index');
 
@@ -51,6 +57,89 @@ function fixture() {
     'commit', '-qm', 'fixture',
   ], { cwd: root });
   return { configurationPath, root };
+}
+
+function planFixture() {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ponytail-plan-index-'));
+  execFileSync('git', ['init', '-q'], { cwd: root });
+  fs.mkdirSync(path.join(root, '.agents/config/project'), { recursive: true });
+  fs.mkdirSync(path.join(root, 'pm/plans/in_progress/root'), { recursive: true });
+  fs.mkdirSync(path.join(root, 'pm/plans/open/child'), { recursive: true });
+  fs.mkdirSync(path.join(root, 'pm/plans/legacy'), { recursive: true });
+  fs.writeFileSync(path.join(root, 'ponytail-journal.json'), JSON.stringify({
+    schemaVersion: 1,
+    projectId: '019c0000-0000-7000-8000-000000000002',
+    projectName: 'plan fixture',
+    database: { name: 'ponytail' },
+  }));
+  fs.writeFileSync(path.join(root, '.agents/config/project/management.json'), JSON.stringify({
+    schemaVersion: 1,
+    managementRoot: 'pm',
+    planRoot: 'pm/plans',
+    lifecycle: {
+      directories: ['open', 'in_progress', 'closed', 'deferred', 'rejected'],
+      roles: {
+        initial: 'open', activeWork: 'in_progress', successfulCompletion: 'closed',
+        deferred: 'deferred', rejected: 'rejected',
+      },
+    },
+    legacyPlanLayout: 'flat',
+  }));
+  fs.writeFileSync(path.join(root, 'pm/plans/in_progress/root/plan.md'), `# Root plan
+
+- **Plan ID:** \`root\`
+- **Status:** \`in_progress\`
+
+<!-- ponytail-plan-campaign
+{"schemaVersion":1,"id":"root","parent_plan_id":null}
+-->
+
+## Processor architecture
+
+Own the payment processor.
+`);
+  fs.writeFileSync(path.join(root, 'pm/plans/open/child/plan.md'), `# Child plan
+
+- **Plan ID:** \`child\`
+- **Status:** \`open\`
+- **Parent:** [root](../../in_progress/root/plan.md)
+
+<!-- ponytail-plan-campaign
+{"schemaVersion":1,"id":"child","parent_plan_id":"root"}
+-->
+
+## Child objective
+
+Extend processor routing.
+`);
+  fs.writeFileSync(path.join(root, 'pm/plans/legacy/plan.md'), '# Legacy note\n\nUnmanaged processor notes.\n');
+  execFileSync('git', ['add', '.'], { cwd: root });
+  execFileSync('git', [
+    '-c', 'user.name=Test', '-c', 'user.email=test@example.com',
+    'commit', '-qm', 'fixture',
+  ], { cwd: root });
+  return root;
+}
+
+function freshPlanClient(projection, rows) {
+  const queries = [];
+  const client = {
+    async query(text, values = []) {
+      queries.push({ text, values });
+      if (text.includes('to_regclass')) return { rows: [{ relation: 'schema_version_v1' }] };
+      if (text.includes('FROM ponytail_index.schema_version_v1')) return { rows: [{ schema_version: 1 }] };
+      if (text.includes('FROM ponytail_index.project_v1')) return { rows: [{
+        generation_id: 'plan-generation',
+        head_commit: projection.headCommit,
+        state_digest: projection.stateDigest,
+        configuration_digest: projection.configurationDigest,
+        parser_identity: projection.parserIdentity,
+      }] };
+      return { rows };
+    },
+    release() {},
+  };
+  return { client, queries, pool: { async connect() { return client; } } };
 }
 
 class BoundaryClient {
@@ -291,4 +380,153 @@ test('refuses stale search without rebuilding', async () => {
     }),
     /traceability index is stale/,
   );
+});
+
+test('indexes canonical plan hierarchy, searchable sections, and stranded plans', () => {
+  const root = planFixture();
+  const projection = collectPlanProjection(root);
+  const normalized = normalizePlanPayloads(projection.files.map(file => file.parse()));
+  assert.equal(projection.corpus, 'plans');
+  assert.equal(normalized.entities.some(entity =>
+    entity.entityId === 'plan:root' && entity.entityKind === 'plan' &&
+    entity.searchRole === 'in_progress'), true);
+  assert.equal(normalized.entities.some(entity =>
+    entity.entityKind === 'plan-section' && entity.annotation === 'Processor architecture' &&
+    entity.description === 'Own the payment processor.'), true);
+  assert.equal(normalized.entities.some(entity =>
+    entity.entityId === 'plan:legacy' && entity.entityKind === 'stranded-plan' &&
+    entity.status === 'CAMPAIGN_PLAN_BLOCK' && entity.searchRole === null), true);
+  assert.equal(normalized.relationships.some(relationship =>
+    relationship.sourceEntityId === 'plan:child' &&
+    relationship.targetEntityId === 'plan:root' &&
+    relationship.role === 'campaign-parent'), true);
+});
+
+test('reuses immutable cached plan parses without opening the source parser', async () => {
+  const projection = collectPlanProjection(planFixture());
+  let parses = 0;
+  for (const file of projection.files) {
+    const parse = file.parse;
+    file.parse = () => {
+      parses += 1;
+      return parse();
+    };
+  }
+  const client = new BoundaryClient({
+    cachedPayload: { schemaVersion: 1, records: [] },
+  });
+  await publishTraceabilityGeneration(client, projection);
+  assert.equal(parses, 0);
+});
+
+test('strands missing-parent and cyclic plan records without inventing membership', () => {
+  const record = (recordId, parentPlanId) => ({
+    recordKind: 'plan', recordId, owningPlanId: recordId,
+    path: `pm/plans/open/${recordId}/plan.md`, line: 1,
+    heading: recordId, excerpt: null, lifecycle: 'open', status: null,
+    parentPlanId, dependsOn: [], plannedPaths: [],
+    linkedPlanPaths: parentPlanId === null ? [] : [`pm/plans/open/${parentPlanId}/plan.md`],
+  });
+  const normalized = normalizePlanPayloads([{ schemaVersion: 1, records: [
+    record('missing', 'absent'),
+    record('cycle-a', 'cycle-b'),
+    record('cycle-b', 'cycle-a'),
+    record('cycle-child', 'cycle-a'),
+  ] }]);
+  assert.deepEqual(normalized.entities.map(entity => [entity.unitName, entity.entityKind, entity.status]), [
+    ['missing', 'stranded-plan', 'CAMPAIGN_PARENT_MISSING'],
+    ['cycle-a', 'stranded-plan', 'CAMPAIGN_PARENT_CYCLE'],
+    ['cycle-b', 'stranded-plan', 'CAMPAIGN_PARENT_CYCLE'],
+    ['cycle-child', 'stranded-plan', 'CAMPAIGN_PARENT_INVALID'],
+  ]);
+  assert.deepEqual(normalized.relationships, []);
+});
+
+test('strands metadata parentage that lacks the canonical human backlink', () => {
+  const base = {
+    line: 1, heading: null, excerpt: null, lifecycle: 'open', status: null,
+    dependsOn: [], plannedPaths: [], linkedPlanPaths: [],
+  };
+  const normalized = normalizePlanPayloads([{ schemaVersion: 1, records: [
+    { ...base, recordKind: 'plan', recordId: 'root', owningPlanId: 'root',
+      path: 'pm/plans/open/root/plan.md', parentPlanId: null },
+    { ...base, recordKind: 'plan', recordId: 'child', owningPlanId: 'child',
+      path: 'pm/plans/open/child/plan.md', parentPlanId: 'root' },
+  ] }]);
+  assert.equal(normalized.entities.find(entity => entity.unitName === 'child').status,
+    'CAMPAIGN_PARENT_LINK');
+  assert.deepEqual(normalized.relationships, []);
+});
+
+test('parses exact plan search and graph query arguments', () => {
+  assert.deepEqual(parsePlanSearchArguments([
+    'processor', '--lifecycle', 'open', '--kind', 'plan-section', '--plan', 'child', '--json',
+  ]), {
+    query: 'processor',
+    filters: { lifecycle: 'open', kind: 'plan-section', plan: 'child' },
+    json: true,
+  });
+  assert.deepEqual(parsePlanGraphArguments('descendants', ['root', '--direct', '--json']), {
+    input: 'root', direct: true, json: true,
+  });
+  assert.deepEqual(parsePlanGraphArguments('roots', ['--json']), {
+    input: null, direct: false, json: true,
+  });
+  assert.throws(() => parsePlanSearchArguments(['processor', '--plan']), /invalid search option/);
+  assert.throws(() => parsePlanGraphArguments('ancestors', ['child', '--direct']), /invalid ancestors option/);
+});
+
+test('searches the exact fresh plan generation with bound filters', async () => {
+  const root = planFixture();
+  const projection = collectPlanProjection(root);
+  const boundary = freshPlanClient(projection, [{
+    entity_id: 'plan-section:child:section-9',
+    entity_kind: 'plan-section',
+    unit_name: 'child',
+    role: 'open',
+    path: 'pm/plans/open/child/plan.md',
+    line: 9,
+    annotation: 'Child objective',
+    description: 'Extend processor routing.',
+  }]);
+  const result = await searchPlans('processor & injection', {
+    lifecycle: 'open', kind: 'plan-section', plan: 'child',
+  }, { root, pool: boundary.pool });
+  assert.equal(result.results[0].owningPlanId, 'child');
+  const search = boundary.queries.at(-1);
+  assert.deepEqual(search.values, [
+    'plan-generation', 'processor & injection', 'open', 'plan-section', 'child',
+  ]);
+  assert.doesNotMatch(search.text, /processor|child/);
+});
+
+test('queries plan descendants, roots, and stranded records from the fresh generation', async () => {
+  const root = planFixture();
+  const projection = collectPlanProjection(root);
+  for (const [operation, input, direct, row] of [
+    ['descendants', 'root', true, {
+      entity_id: 'plan:child', role: 'open', path: 'pm/plans/open/child/plan.md', reason: null,
+    }],
+    ['ancestors', 'child', false, {
+      entity_id: 'plan:root', role: 'in_progress', path: 'pm/plans/in_progress/root/plan.md', reason: null,
+    }],
+    ['roots', null, false, {
+      entity_id: 'plan:root', role: 'in_progress', path: 'pm/plans/in_progress/root/plan.md', reason: null,
+    }],
+    ['stranded', null, false, {
+      entity_id: 'plan:legacy', role: null, path: 'pm/plans/legacy/plan.md', reason: 'missing metadata',
+    }],
+  ]) {
+    const boundary = freshPlanClient(projection, [row]);
+    const result = await queryPlanGraph(operation, input, direct, { root, pool: boundary.pool });
+    assert.equal(result.results[0].planId, row.entity_id.slice(5));
+    assert.equal(boundary.queries.at(-1).values[0], 'plan-generation');
+    if (operation === 'descendants') {
+      assert.deepEqual(boundary.queries.at(-1).values, ['plan-generation', 'plan:root']);
+      assert.match(boundary.queries.at(-1).text, /tree\.depth = 1/);
+    } else if (operation === 'ancestors') {
+      assert.deepEqual(boundary.queries.at(-1).values, ['plan-generation', 'plan:child']);
+      assert.match(boundary.queries.at(-1).text, /relation\.source_entity_id = tree\.entity_id/);
+    }
+  }
 });

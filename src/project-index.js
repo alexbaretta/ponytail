@@ -11,6 +11,21 @@ const {
   findRelationships,
   loadTraceabilityConfiguration,
 } = require('../skills/requirements-traceability/scripts/check-traceability');
+const {
+  CampaignError,
+  linkedPlanFiles,
+  listPlanSourceFiles,
+  parsePlanSource,
+  readManagementConfigV1,
+  resolveCampaignRoot,
+} = require('./campaign-census');
+const {
+  parseSprintFile,
+} = require('../skills/plan-execution/scripts/ready-sprints');
+const {
+  TaskletMetadataReaders,
+  parseTaskletStatuses,
+} = require('../skills/plan-execution/scripts/ready-tasklets');
 
 // Traceability: implements REQ-TRACEABILITY-INDEX
 
@@ -54,6 +69,36 @@ const ProjectIndexStorageReaders = Object.freeze({
   writerVariant: 'V1',
 });
 
+function readPlanIndexStorageV1(payload) {
+  if (!exactKeys(payload, ['schemaVersion', 'records']) ||
+      payload.schemaVersion !== 1 || !Array.isArray(payload.records)) {
+    throw new Error('invalid plan-index storage V1 payload');
+  }
+  const keys = [
+    'recordKind', 'recordId', 'owningPlanId', 'path', 'line', 'heading',
+    'excerpt', 'lifecycle', 'status', 'parentPlanId', 'dependsOn', 'plannedPaths',
+    'linkedPlanPaths',
+  ];
+  for (const record of payload.records) {
+    if (!exactKeys(record, keys) ||
+        !['recordKind', 'recordId', 'owningPlanId', 'path'].every(key =>
+          typeof record[key] === 'string' && record[key] !== '') ||
+        !(record.line === null || Number.isInteger(record.line) && record.line > 0) ||
+        !['heading', 'excerpt', 'lifecycle', 'status', 'parentPlanId']
+          .every(key => nullableString(record[key])) ||
+        ![record.dependsOn, record.plannedPaths, record.linkedPlanPaths].every(items =>
+          Array.isArray(items) && items.every(item => typeof item === 'string'))) {
+      throw new Error('invalid plan-index storage V1 record');
+    }
+  }
+  return payload;
+}
+
+const PlanIndexStorageReaders = Object.freeze({
+  variants: Object.freeze({ V1: readPlanIndexStorageV1 }),
+  writerVariant: 'V1',
+});
+
 const TraceabilityIndexResultReaders = Object.freeze({
   variants: Object.freeze({ V1: value => {
     if (!exactKeys(value, [
@@ -68,8 +113,28 @@ const TraceabilityIndexResultReaders = Object.freeze({
       throw new Error('invalid traceability index result V1');
     }
     return value;
+  }, V2: value => {
+    if (!exactKeys(value, [
+      'schemaVersion', 'headCommit', 'worktree', 'rebuild', 'corpora',
+    ]) || value.schemaVersion !== 2 ||
+      !['headCommit', 'worktree'].every(key =>
+        typeof value[key] === 'string' && value[key] !== '') ||
+      typeof value.rebuild !== 'boolean' || !Array.isArray(value.corpora) ||
+      value.corpora.length !== 2 || value.corpora.some(corpus =>
+        !exactKeys(corpus, [
+          'corpus', 'generationId', 'stateDigest', 'processedFiles',
+          'parsedFiles', 'reusedFiles',
+        ]) || !['traceability', 'plans'].includes(corpus.corpus) ||
+        !['generationId', 'stateDigest'].every(key =>
+          typeof corpus[key] === 'string' && corpus[key] !== '') ||
+        !['processedFiles', 'parsedFiles', 'reusedFiles'].every(key =>
+          Number.isInteger(corpus[key]) && corpus[key] >= 0)) ||
+      new Set(value.corpora.map(corpus => corpus.corpus)).size !== 2) {
+      throw new Error('invalid traceability index result V2');
+    }
+    return value;
   } }),
-  writerVariant: 'V1',
+  writerVariant: 'V2',
 });
 
 const TraceabilitySearchResultReaders = Object.freeze({
@@ -93,6 +158,57 @@ const TraceabilitySearchResultReaders = Object.freeze({
     }
     return value;
   } }),
+  writerVariant: 'V1',
+});
+
+function readPlanSearchResultV1(value) {
+  const resultKeys = [
+    'recordId', 'recordKind', 'owningPlanId', 'lifecycle', 'path', 'line',
+    'heading', 'excerpt',
+  ];
+  if (!exactKeys(value, [
+    'schemaVersion', 'corpus', 'query', 'filters', 'generationId', 'results',
+  ]) || value.schemaVersion !== 1 || value.corpus !== 'plans' ||
+      typeof value.query !== 'string' || typeof value.generationId !== 'string' ||
+      !exactKeys(value.filters, ['lifecycle', 'kind', 'plan']) ||
+      !Object.values(value.filters).every(nullableString) ||
+      !Array.isArray(value.results) || value.results.some(item =>
+        !exactKeys(item, resultKeys) ||
+        !['recordId', 'recordKind', 'owningPlanId', 'path'].every(key =>
+          typeof item[key] === 'string' && item[key] !== '') ||
+        !['lifecycle', 'heading', 'excerpt'].every(key => nullableString(item[key])) ||
+        !(item.line === null || Number.isInteger(item.line) && item.line > 0))) {
+    throw new Error('invalid plan search result V1');
+  }
+  return value;
+}
+
+const PlanSearchResultReaders = Object.freeze({
+  variants: Object.freeze({ V1: readPlanSearchResultV1 }),
+  writerVariant: 'V1',
+});
+
+function readPlanGraphResultV1(value) {
+  if (!exactKeys(value, [
+    'schemaVersion', 'corpus', 'operation', 'input', 'direct', 'generationId',
+    'results',
+  ]) || value.schemaVersion !== 1 || value.corpus !== 'plans' ||
+      !['operation', 'generationId'].every(key =>
+        typeof value[key] === 'string' && value[key] !== '') ||
+      !['descendants', 'ancestors', 'roots', 'stranded'].includes(value.operation) ||
+      !nullableString(value.input) || typeof value.direct !== 'boolean' ||
+      (value.direct && value.operation !== 'descendants') ||
+      !Array.isArray(value.results) || value.results.some(item =>
+        !exactKeys(item, ['planId', 'lifecycle', 'path', 'reason']) ||
+        !['planId', 'path'].every(key => typeof item[key] === 'string' && item[key] !== '') ||
+        !['lifecycle', 'reason'].every(key => nullableString(item[key])))) {
+    throw new Error('invalid plan graph result V1');
+  }
+  return value;
+}
+
+const PlanGraphResultReaders = Object.freeze({
+  variants: Object.freeze({ V1: readPlanGraphResultV1 }),
   writerVariant: 'V1',
 });
 
@@ -136,6 +252,208 @@ function fileState(root, relativePath) {
 function markdownDescription(source) {
   const heading = source.match(/^#{1,6}\s+(.+)$/mu);
   return heading === null ? null : heading[1].trim();
+}
+
+function headingAndExcerpt(source) {
+  const heading = markdownDescription(source);
+  const withoutMetadata = source.replace(/^<!--\s*ponytail-[\s\S]*?^-->\s*$/gmu, '');
+  const excerpt = withoutMetadata.split(/\n\s*\n/u)
+    .map(block => block.replace(/^#{1,6}\s+.*$/gmu, '').trim())
+    .find(block => block !== '' && !/^(?:Status|Plan ID|Questions|Atomicity review):/u.test(block));
+  return {
+    heading,
+    excerpt: excerpt === undefined ? null : excerpt.replace(/\s+/gu, ' ').slice(0, 240),
+  };
+}
+
+function markdownSections(source) {
+  const headings = [...source.matchAll(/^(#{1,6})\s+([^\n]+)$/gmu)];
+  return headings.map((match, index) => {
+    const body = source.slice(match.index + match[0].length, headings[index + 1]?.index);
+    const searchableText = body
+      .replace(/^<!--[\s\S]*?^-->\s*$/gmu, '')
+      .split('\n')
+      .filter(line => !/^(?:Status|Plan ID|Questions|Atomicity review):/u.test(line.trim()))
+      .join(' ')
+      .replace(/\s+/gu, ' ')
+      .trim();
+    return {
+      heading: match[2].trim(),
+      line: source.slice(0, match.index).split('\n').length,
+      excerpt: searchableText === '' ? null : searchableText,
+    };
+  });
+}
+
+function planRecord(overrides) {
+  return {
+    recordKind: overrides.recordKind,
+    recordId: overrides.recordId,
+    owningPlanId: overrides.owningPlanId,
+    path: overrides.path,
+    line: overrides.line ?? 1,
+    heading: overrides.heading ?? null,
+    excerpt: overrides.excerpt ?? null,
+    lifecycle: overrides.lifecycle ?? null,
+    status: overrides.status ?? null,
+    parentPlanId: overrides.parentPlanId ?? null,
+    dependsOn: overrides.dependsOn ?? [],
+    plannedPaths: overrides.plannedPaths ?? [],
+    linkedPlanPaths: overrides.linkedPlanPaths ?? [],
+  };
+}
+
+function parsePlanIndexPlan(root, relativePath, lifecycle, source) {
+  const text = headingAndExcerpt(source);
+  const sections = markdownSections(source).slice(1).map(section => planRecord({
+    recordKind: 'plan-section',
+    recordId: `section-${section.line}`,
+    owningPlanId: path.basename(path.dirname(relativePath)),
+    path: relativePath,
+    line: section.line,
+    heading: section.heading,
+    excerpt: section.excerpt,
+    lifecycle,
+  }));
+  try {
+    const plan = parsePlanSource(root, relativePath, lifecycle, source);
+    for (const section of sections) section.owningPlanId = plan.id;
+    return { schemaVersion: 1, records: [planRecord({
+      recordKind: 'plan',
+      recordId: plan.id,
+      owningPlanId: plan.id,
+      path: relativePath,
+      heading: text.heading,
+      excerpt: text.excerpt,
+      lifecycle: plan.lifecycle,
+      parentPlanId: plan.parentPlanId,
+      linkedPlanPaths: linkedPlanFiles(plan).map(planFile =>
+        path.relative(root, planFile).split(path.sep).join('/')),
+    }), ...sections] };
+  } catch (error) {
+    if (!(error instanceof CampaignError)) throw error;
+    const inferredId = path.basename(path.dirname(relativePath));
+    return { schemaVersion: 1, records: [planRecord({
+      recordKind: 'stranded-plan',
+      recordId: inferredId,
+      owningPlanId: inferredId,
+      path: relativePath,
+      heading: text.heading,
+      excerpt: `${error.code}: ${error.message}`,
+      lifecycle,
+      status: error.code,
+    }), ...sections] };
+  }
+}
+
+function headingLines(source) {
+  const headings = new Map();
+  for (const match of source.matchAll(/^(#{1,6})\s+(?:\[(?:DONE|ERROR| )\]\s*)?([^\n]+)$/gmu)) {
+    headings.set(match[2].match(/S\d+(?:-F\d+(?:-T\d+)?)?/)?.[0] ?? match[2], {
+      heading: match[2].trim(),
+      line: source.slice(0, match.index).split('\n').length,
+    });
+  }
+  return headings;
+}
+
+function parsePlanIndexSprint(relativePath, source) {
+  const planId = path.basename(path.dirname(path.dirname(relativePath)));
+  const text = headingAndExcerpt(source);
+  let sprint;
+  try {
+    sprint = parseSprintFile(relativePath, source);
+  } catch (error) {
+    const sprintId = path.basename(relativePath, '.md');
+    return { schemaVersion: 1, records: [planRecord({
+      recordKind: 'stranded-sprint',
+      recordId: sprintId,
+      owningPlanId: planId,
+      path: relativePath,
+      heading: text.heading,
+      excerpt: error.message,
+      status: 'PLAN_SPRINT_INVALID',
+    })] };
+  }
+  const headings = headingLines(source);
+  const statuses = parseTaskletStatuses(relativePath, source);
+  const records = [planRecord({
+    recordKind: 'sprint',
+    recordId: sprint.id,
+    owningPlanId: planId,
+    path: relativePath,
+    heading: text.heading,
+    excerpt: text.excerpt,
+    status: sprint.execution?.status ?? sprint.planning.status,
+    dependsOn: sprint.execution?.depends_on ?? sprint.planning.depends_on,
+  }), ...markdownSections(source).slice(1).map(section => planRecord({
+    recordKind: 'sprint-section',
+    recordId: `section-${sprint.id}-${section.line}`,
+    owningPlanId: planId,
+    path: relativePath,
+    line: section.line,
+    heading: section.heading,
+    excerpt: section.excerpt,
+    status: sprint.execution?.status ?? sprint.planning.status,
+  }))];
+  for (const [taskletId, status] of statuses) {
+    const taskletHeading = headings.get(taskletId);
+    records.push(planRecord({
+      recordKind: 'tasklet-status',
+      recordId: taskletId,
+      owningPlanId: planId,
+      path: relativePath,
+      line: taskletHeading?.line,
+      heading: taskletHeading?.heading ?? taskletId,
+      status,
+    }));
+  }
+  return { schemaVersion: 1, records };
+}
+
+function parsePlanIndexTasklets(relativePath, source) {
+  const planId = path.basename(path.dirname(path.dirname(relativePath)));
+  const sprintId = path.basename(relativePath, '.tasklets.json');
+  let graph;
+  try {
+    const value = JSON.parse(source);
+    const reader = TaskletMetadataReaders[`V${value.schemaVersion}`];
+    if (reader === undefined) throw new Error(`unsupported tasklet graph schemaVersion: ${value.schemaVersion}`);
+    graph = reader(sprintId, value, relativePath);
+  } catch (error) {
+    return { schemaVersion: 1, records: [planRecord({
+      recordKind: 'stranded-tasklet-graph',
+      recordId: sprintId,
+      owningPlanId: planId,
+      path: relativePath,
+      excerpt: error.message,
+      status: 'PLAN_TASKLET_GRAPH_INVALID',
+    })] };
+  }
+  const records = [];
+  for (const [featureId, feature] of graph.features ?? []) {
+    records.push(planRecord({
+      recordKind: 'feature',
+      recordId: featureId,
+      owningPlanId: planId,
+      path: relativePath,
+      heading: featureId,
+      dependsOn: feature.depends_on,
+    }));
+  }
+  for (const [taskletId, tasklet] of graph.tasklets) {
+    records.push(planRecord({
+      recordKind: 'tasklet',
+      recordId: taskletId,
+      owningPlanId: planId,
+      path: relativePath,
+      heading: taskletId,
+      excerpt: tasklet.planned_paths?.join(', ').slice(0, 240) ?? null,
+      dependsOn: tasklet.depends_on,
+      plannedPaths: tasklet.planned_paths ?? [],
+    }));
+  }
+  return { schemaVersion: 1, records };
 }
 
 function relationshipEntityId(relationship) {
@@ -231,6 +549,233 @@ function collectTraceabilityProjection(configurationPath) {
     parserIdentity,
     stateDigest,
     searchableFields: configuration.index.searchableFields,
+    readPayload: ProjectIndexStorageReaders.variants.V1,
+    files,
+  };
+}
+
+function planEntityId(record) {
+  if (record.recordKind === 'plan' || record.recordKind === 'stranded-plan') {
+    return `plan:${record.recordId}`;
+  }
+  return `${record.recordKind}:${record.owningPlanId}:${record.recordId}`;
+}
+
+function normalizePlanPayloads(payloads) {
+  const records = payloads.flatMap(payload => payload.records).map(record => ({ ...record }));
+  const statusByTasklet = new Map(records
+    .filter(record => record.recordKind === 'tasklet-status')
+    .map(record => [`${record.owningPlanId}\0${record.recordId}`, record]));
+  const plansById = new Map();
+  for (const record of records.filter(candidate =>
+    ['plan', 'stranded-plan'].includes(candidate.recordKind))) {
+    const matches = plansById.get(record.recordId) ?? [];
+    matches.push(record);
+    plansById.set(record.recordId, matches);
+  }
+  for (const matches of plansById.values()) {
+    if (matches.length > 1) for (const record of matches) {
+      const duplicateId = `${record.recordId}:${digest(record.path).slice(0, 16)}`;
+      for (const related of records) {
+        if (related.path === record.path && related.owningPlanId === record.recordId) {
+          related.owningPlanId = duplicateId;
+        }
+      }
+      record.recordKind = 'stranded-plan';
+      record.status = 'CAMPAIGN_PLAN_ID_DUPLICATE';
+      record.excerpt = `CAMPAIGN_PLAN_ID_DUPLICATE: duplicate plan ID ${record.recordId}`;
+      record.recordId = duplicateId;
+    }
+  }
+  const canonicalPlans = new Map(records
+    .filter(record => record.recordKind === 'plan')
+    .map(record => [record.recordId, record]));
+  const canonicalPlanPaths = new Map([...canonicalPlans.values()]
+    .map(record => [record.recordId, record.path]));
+  for (const record of canonicalPlans.values()) {
+    if (record.parentPlanId !== null && !canonicalPlans.has(record.parentPlanId)) {
+      record.recordKind = 'stranded-plan';
+      record.status = 'CAMPAIGN_PARENT_MISSING';
+      record.excerpt = `CAMPAIGN_PARENT_MISSING: missing parent plan ${record.parentPlanId}`;
+    } else if (record.parentPlanId !== null &&
+        !record.linkedPlanPaths.includes(canonicalPlanPaths.get(record.parentPlanId))) {
+      record.recordKind = 'stranded-plan';
+      record.status = 'CAMPAIGN_PARENT_LINK';
+      record.excerpt = `CAMPAIGN_PARENT_LINK: manifest must link to parent plan ${record.parentPlanId}`;
+    }
+  }
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const record of canonicalPlans.values()) {
+      const parent = record.parentPlanId === null
+        ? undefined : canonicalPlans.get(record.parentPlanId);
+      if (record.recordKind === 'plan' && parent !== undefined && parent.recordKind !== 'plan') {
+        record.recordKind = 'stranded-plan';
+        record.status = 'CAMPAIGN_PARENT_INVALID';
+        record.excerpt = `CAMPAIGN_PARENT_INVALID: invalid parent plan ${record.parentPlanId}`;
+        changed = true;
+      }
+    }
+  }
+  const visit = (record, trail = []) => {
+    if (record.recordKind !== 'plan' || record.parentPlanId === null) return;
+    const cycle = trail.indexOf(record.recordId);
+    if (cycle >= 0) {
+      for (const id of trail.slice(cycle)) {
+        const member = canonicalPlans.get(id);
+        member.recordKind = 'stranded-plan';
+        member.status = 'CAMPAIGN_PARENT_CYCLE';
+        member.excerpt = `CAMPAIGN_PARENT_CYCLE: ${[...trail.slice(cycle), id].join(' -> ')}`;
+      }
+      return;
+    }
+    const parent = canonicalPlans.get(record.parentPlanId);
+    if (parent !== undefined) visit(parent, [...trail, record.recordId]);
+  };
+  for (const record of canonicalPlans.values()) visit(record);
+  changed = true;
+  while (changed) {
+    changed = false;
+    for (const record of canonicalPlans.values()) {
+      const parent = record.parentPlanId === null
+        ? undefined : canonicalPlans.get(record.parentPlanId);
+      if (record.recordKind === 'plan' && parent !== undefined && parent.recordKind !== 'plan') {
+        record.recordKind = 'stranded-plan';
+        record.status = 'CAMPAIGN_PARENT_INVALID';
+        record.excerpt = `CAMPAIGN_PARENT_INVALID: invalid parent plan ${record.parentPlanId}`;
+        changed = true;
+      }
+    }
+  }
+
+  const normalizedRecords = records.filter(record => record.recordKind !== 'tasklet-status');
+  for (const record of normalizedRecords.filter(candidate => candidate.recordKind === 'tasklet')) {
+    const status = statusByTasklet.get(`${record.owningPlanId}\0${record.recordId}`);
+    if (status !== undefined) {
+      record.status = status.status;
+      record.heading = status.heading;
+      record.line = status.line;
+    }
+  }
+  const lifecycleByPlan = new Map(records
+    .filter(record => ['plan', 'stranded-plan'].includes(record.recordKind))
+    .map(record => [record.owningPlanId, record.lifecycle]));
+  const entities = normalizedRecords.map(record => ({
+    entityId: planEntityId(record),
+    entityKind: record.recordKind,
+    path: record.path,
+    line: record.line,
+    unitName: record.owningPlanId,
+    annotation: record.heading,
+    description: record.excerpt,
+    searchRole: record.lifecycle ?? lifecycleByPlan.get(record.owningPlanId) ?? null,
+    status: record.status,
+    parentPlanId: record.parentPlanId,
+    dependsOn: record.dependsOn,
+  }));
+  const ids = new Set(entities.map(entity => entity.entityId));
+  const relationships = [];
+  const add = (sourceEntityId, targetEntityId, role) => {
+    if (ids.has(sourceEntityId) && ids.has(targetEntityId)) {
+      relationships.push({ sourceEntityId, targetEntityId, role });
+    }
+  };
+  for (const entity of entities) {
+    if (entity.entityKind === 'plan' && entity.parentPlanId !== null) {
+      add(entity.entityId, `plan:${entity.parentPlanId}`, 'campaign-parent');
+    } else if (entity.entityKind === 'sprint') {
+      add(entity.entityId, `plan:${entity.unitName}`, 'member-of-plan');
+      for (const dependency of entity.dependsOn) {
+        add(entity.entityId, `sprint:${entity.unitName}:${dependency}`, 'depends-on');
+      }
+    } else if (entity.entityKind === 'feature') {
+      add(entity.entityId, `sprint:${entity.unitName}:${entity.entityId.split(':').at(-1).split('-F')[0]}`, 'member-of-sprint');
+      for (const dependency of entity.dependsOn) {
+        add(entity.entityId, `feature:${entity.unitName}:${dependency}`, 'depends-on');
+      }
+    } else if (entity.entityKind === 'tasklet') {
+      const featureId = entity.entityId.split(':').at(-1).replace(/-T\d+$/u, '');
+      add(entity.entityId, `feature:${entity.unitName}:${featureId}`, 'member-of-feature');
+      for (const dependency of entity.dependsOn) {
+        add(entity.entityId, `tasklet:${entity.unitName}:${dependency}`, 'depends-on');
+      }
+    }
+  }
+  return { entities, relationships };
+}
+
+function collectPlanProjection(root = fs.realpathSync(git(process.cwd(), ['rev-parse', '--show-toplevel']))) {
+  root = fs.realpathSync(root);
+  const managementPath = path.join(root, '.agents/config/project/management.json');
+  const managementBytes = fs.readFileSync(managementPath);
+  const management = readManagementConfigV1(JSON.parse(managementBytes));
+  const planSources = listPlanSourceFiles(root, management);
+  const sourceByPath = new Map(planSources.map(source => [source.relativePlanFile, source]));
+  const paths = new Set([path.relative(root, managementPath)]);
+  for (const source of planSources) {
+    paths.add(source.relativePlanFile);
+    const sprintDirectory = path.join(root, path.dirname(source.relativePlanFile), 'sprints');
+    if (!fs.existsSync(sprintDirectory)) continue;
+    for (const name of fs.readdirSync(sprintDirectory).sort()) {
+      if (/^S\d+\.md$/u.test(name) || /^S\d+\.tasklets\.json$/u.test(name)) {
+        const relativePath = path.relative(root, path.join(sprintDirectory, name));
+        if (fs.statSync(path.join(root, relativePath)).isFile()) paths.add(relativePath);
+      }
+    }
+  }
+  const configurationDigest = digest(managementBytes);
+  const parserIdentity = digest(Buffer.concat([
+    Buffer.from('plan-index-v1\0'),
+    fs.readFileSync(__filename),
+    fs.readFileSync(require.resolve('./campaign-census')),
+    fs.readFileSync(require.resolve('../skills/plan-execution/scripts/ready-sprints')),
+    fs.readFileSync(require.resolve('../skills/plan-execution/scripts/ready-tasklets')),
+  ]));
+  const files = [...paths].sort().map(relativePath => {
+    const { content, gitState } = fileState(root, relativePath);
+    return {
+      path: relativePath,
+      contentDigest: digest(content),
+      parserIdentity: digest(`${parserIdentity}\n${configurationDigest}\n${relativePath}`),
+      gitState,
+      parse: () => {
+        if (relativePath.endsWith('/plan.md')) {
+          return parsePlanIndexPlan(
+            root,
+            relativePath,
+            sourceByPath.get(relativePath)?.lifecycle ?? null,
+            content.toString('utf8'),
+          );
+        }
+        if (/S\d+\.md$/u.test(relativePath)) {
+          return parsePlanIndexSprint(relativePath, content.toString('utf8'));
+        }
+        if (/S\d+\.tasklets\.json$/u.test(relativePath)) {
+          return parsePlanIndexTasklets(relativePath, content.toString('utf8'));
+        }
+        return { schemaVersion: 1, records: [] };
+      },
+    };
+  });
+  const stateDigest = digest(files.map(file =>
+    `${file.path}\0${file.gitState}\0${file.contentDigest}\n`).join(''));
+  const project = JSON.parse(fs.readFileSync(path.join(root, 'ponytail-journal.json'), 'utf8'));
+  return {
+    projectId: project.projectId,
+    projectName: project.projectName,
+    repositoryPath: gitPath(root, ['--git-common-dir']),
+    worktreePath: gitPath(root, ['--show-toplevel']),
+    headCommit: git(root, ['rev-parse', 'HEAD']),
+    corpus: 'plans',
+    configurationDigest,
+    parserIdentity,
+    stateDigest,
+    searchableFields: [
+      'entityId', 'entityKind', 'role', 'path', 'unitName', 'annotation', 'description',
+    ],
+    readPayload: PlanIndexStorageReaders.variants.V1,
+    normalizePayloads: normalizePlanPayloads,
     files,
   };
 }
@@ -285,8 +830,7 @@ async function publishTraceabilityGeneration(client, projection) {
       projection.configurationDigest,
       projection.parserIdentity,
     ]);
-    const allEntities = [];
-    const allRelationships = [];
+    const payloads = [];
     let parsedFiles = 0;
     let reusedFiles = 0;
     for (const file of projection.files) {
@@ -331,7 +875,7 @@ async function publishTraceabilityGeneration(client, projection) {
       if (parseResult.rows.length !== 1) throw new Error('immutable parse result was not persisted');
       const parsed = {
         ...parseResult.rows[0],
-        payload: ProjectIndexStorageReaders.variants.V1(parseResult.rows[0].payload),
+        payload: projection.readPayload(parseResult.rows[0].payload),
       };
       await client.query(`
         INSERT INTO ponytail_index.file_v1 (
@@ -343,9 +887,16 @@ async function publishTraceabilityGeneration(client, projection) {
         file.gitState,
         parsed.parse_result_id,
       ]);
-      allEntities.push(...parsed.payload.entities);
-      allRelationships.push(...parsed.payload.relationships);
+      payloads.push(parsed.payload);
     }
+    const normalized = projection.normalizePayloads === undefined
+      ? {
+        entities: payloads.flatMap(payload => payload.entities),
+        relationships: payloads.flatMap(payload => payload.relationships),
+      }
+      : projection.normalizePayloads(payloads);
+    const allEntities = normalized.entities;
+    const allRelationships = normalized.relationships;
     for (const entity of allEntities) {
       await client.query(`
         INSERT INTO ponytail_index.entity_v1 (
@@ -367,12 +918,13 @@ async function publishTraceabilityGeneration(client, projection) {
         unitName: entity.unitName,
         annotation: entity.annotation,
         description: entity.description,
+        role: entity.searchRole ?? null,
       }).map(([field, value]) => [field, projection.searchableFields.includes(field) ? value : null]));
       await client.query(`
         INSERT INTO ponytail_index.search_document_v1 (
           generation_id, entity_id, searchable_entity_id, entity_kind, path,
-          unit_name, annotation, description
-        ) VALUES ($1::uuid, $2, $3, $4, $5, $6, $7, $8)`, [
+          unit_name, annotation, description, role
+        ) VALUES ($1::uuid, $2, $3, $4, $5, $6, $7, $8, $9)`, [
         generation.generation_id,
         entity.entityId,
         searchable.entityId,
@@ -381,6 +933,7 @@ async function publishTraceabilityGeneration(client, projection) {
         searchable.unitName,
         searchable.annotation,
         searchable.description,
+        searchable.role,
       ]);
     }
     for (const relationship of allRelationships) {
@@ -481,6 +1034,39 @@ async function indexTraceability(options = {}) {
   }
 }
 
+async function indexProject(options = {}) {
+  const configurationPath = options.configurationPath ??
+    path.resolve('.agents/config/project/traceability.json');
+  const traceability = collectTraceabilityProjection(configurationPath);
+  const plans = collectPlanProjection(traceability.worktreePath);
+  const pool = options.pool ?? new (require('pg').Pool)(databaseOptions(traceability.worktreePath));
+  const client = await pool.connect();
+  try {
+    const corpora = [];
+    for (const projection of [traceability, plans]) {
+      const publication = await publishTraceabilityGeneration(client, projection);
+      corpora.push({
+        corpus: projection.corpus,
+        generationId: publication.generationId,
+        stateDigest: publication.stateDigest,
+        processedFiles: projection.files.length,
+        parsedFiles: publication.parsedFiles,
+        reusedFiles: publication.reusedFiles,
+      });
+    }
+    return TraceabilityIndexResultReaders.variants.V2({
+      schemaVersion: 2,
+      headCommit: traceability.headCommit,
+      worktree: traceability.worktreePath,
+      rebuild: options.rebuild === true,
+      corpora,
+    });
+  } finally {
+    client.release();
+    if (options.pool === undefined) await pool.end();
+  }
+}
+
 function parseSearchArguments(args) {
   if (args.length === 0 || args[0].startsWith('--')) {
     throw new ProjectIndexError(
@@ -547,7 +1133,7 @@ async function currentGeneration(client, projection) {
   if (result.rows.length !== 1) {
     throw new ProjectIndexError(
       'PROJECT_INDEX_MISSING',
-      'traceability index is missing for this worktree; run ponytail traceability index',
+      `${projection.corpus} index is missing for this worktree; run ponytail traceability index`,
     );
   }
   const generation = result.rows[0];
@@ -557,7 +1143,7 @@ async function currentGeneration(client, projection) {
       generation.parser_identity !== projection.parserIdentity) {
     throw new ProjectIndexError(
       'PROJECT_INDEX_STALE',
-      'traceability index is stale for this worktree; run ponytail traceability index',
+      `${projection.corpus} index is stale for this worktree; run ponytail traceability index`,
     );
   }
   return generation;
@@ -621,6 +1207,191 @@ async function searchTraceability(query, filters, options = {}) {
   }
 }
 
+function parsePlanSearchArguments(args) {
+  if (args.length === 0 || args[0].startsWith('--') || args[0].trim() === '') {
+    throw new ProjectIndexError(
+      'PLAN_SEARCH_USAGE',
+      'usage: ponytail plan search <query> [--lifecycle <lifecycle>] [--kind <kind>] [--plan <plan>] [--json]',
+    );
+  }
+  const query = args.shift();
+  const filters = { lifecycle: null, kind: null, plan: null };
+  let json = false;
+  while (args.length > 0) {
+    const option = args.shift();
+    if (option === '--json') {
+      if (json) throw new ProjectIndexError('PLAN_SEARCH_USAGE', `invalid search option: ${option}`);
+      json = true;
+      continue;
+    }
+    const key = { '--lifecycle': 'lifecycle', '--kind': 'kind', '--plan': 'plan' }[option];
+    if (key === undefined || args.length === 0 || args[0].startsWith('--') || filters[key] !== null) {
+      throw new ProjectIndexError('PLAN_SEARCH_USAGE', `invalid search option: ${option}`);
+    }
+    filters[key] = args.shift();
+  }
+  return { query, filters, json };
+}
+
+async function searchPlans(query, filters, options = {}) {
+  const projection = collectPlanProjection(options.root);
+  const pool = options.pool ?? new (require('pg').Pool)(databaseOptions(projection.worktreePath));
+  const client = await pool.connect();
+  try {
+    const generation = await currentGeneration(client, projection);
+    const clauses = [
+      'document.generation_id = $1::uuid',
+      `document.search_vector @@ websearch_to_tsquery('simple', $2)`,
+    ];
+    const values = [generation.generation_id, query];
+    for (const [key, column] of Object.entries({
+      lifecycle: 'role',
+      kind: 'entity_kind',
+      plan: 'unit_name',
+    })) {
+      if (filters[key] !== null) {
+        values.push(filters[key]);
+        clauses.push(`document.${column} = $${values.length}`);
+      }
+    }
+    const result = await client.query(`
+      SELECT document.entity_id, document.entity_kind, document.unit_name,
+        document.role, document.path, entity.line, document.annotation,
+        left(document.description, 240) AS description
+      FROM ponytail_index.search_document_v1 document
+      JOIN ponytail_index.entity_v1 entity
+        USING (generation_id, entity_id)
+      WHERE ${clauses.join(' AND ')}
+      ORDER BY document.path, entity.line NULLS LAST,
+        document.entity_kind, document.entity_id`, values);
+    return PlanSearchResultReaders.variants.V1({
+      schemaVersion: 1,
+      corpus: 'plans',
+      query,
+      filters,
+      generationId: generation.generation_id,
+      results: result.rows.map(row => ({
+        recordId: row.entity_id,
+        recordKind: row.entity_kind,
+        owningPlanId: row.unit_name,
+        lifecycle: row.role,
+        path: row.path,
+        line: row.line,
+        heading: row.annotation,
+        excerpt: row.description,
+      })),
+    });
+  } finally {
+    client.release();
+    if (options.pool === undefined) await pool.end();
+  }
+}
+
+function parsePlanGraphArguments(operation, args) {
+  const needsInput = ['descendants', 'ancestors'].includes(operation);
+  let input = null;
+  let direct = false;
+  let json = false;
+  if (needsInput) {
+    if (args.length === 0 || args[0].startsWith('--')) {
+      throw new ProjectIndexError('PLAN_QUERY_USAGE', `usage: ponytail plan ${operation} <plan> ${operation === 'descendants' ? '[--direct] ' : ''}[--json]`);
+    }
+    input = args.shift();
+  }
+  for (const option of args) {
+    if (option === '--json' && !json) json = true;
+    else if (option === '--direct' && operation === 'descendants' && !direct) direct = true;
+    else throw new ProjectIndexError('PLAN_QUERY_USAGE', `invalid ${operation} option: ${option}`);
+  }
+  return { input, direct, json };
+}
+
+async function queryPlanGraph(operation, input, direct, options = {}) {
+  const projection = collectPlanProjection(options.root);
+  let submittedPlanId = null;
+  if (input !== null) {
+    submittedPlanId = resolveCampaignRoot(projection.worktreePath, input).submittedPlanId;
+  }
+  const pool = options.pool ?? new (require('pg').Pool)(databaseOptions(projection.worktreePath));
+  const client = await pool.connect();
+  try {
+    const generation = await currentGeneration(client, projection);
+    let result;
+    const values = [generation.generation_id];
+    if (operation === 'descendants' || operation === 'ancestors') {
+      values.push(`plan:${submittedPlanId}`);
+      const joins = operation === 'descendants'
+        ? 'relation.target_entity_id = tree.entity_id'
+        : 'relation.source_entity_id = tree.entity_id';
+      const next = operation === 'descendants'
+        ? 'relation.source_entity_id'
+        : 'relation.target_entity_id';
+      result = await client.query(`
+        WITH RECURSIVE tree(entity_id, depth, trail) AS (
+          SELECT $2::text, 0, ARRAY[$2::text]
+          UNION ALL
+          SELECT ${next}, tree.depth + 1, tree.trail || ${next}
+          FROM tree
+          JOIN ponytail_index.relationship_v1 relation ON ${joins}
+            AND relation.generation_id = $1::uuid
+            AND relation.role = 'campaign-parent'
+          WHERE NOT ${next} = ANY(tree.trail)
+        )
+        SELECT entity.entity_id, document.role, document.path,
+          NULL::text AS reason
+        FROM tree
+        JOIN ponytail_index.entity_v1 entity
+          ON entity.generation_id = $1::uuid AND entity.entity_id = tree.entity_id
+        JOIN ponytail_index.search_document_v1 document
+          USING (generation_id, entity_id)
+        WHERE tree.depth > 0${direct ? ' AND tree.depth = 1' : ''}
+        ORDER BY tree.depth, entity.entity_id`, values);
+    } else if (operation === 'roots') {
+      result = await client.query(`
+        SELECT entity.entity_id, document.role, document.path,
+          NULL::text AS reason
+        FROM ponytail_index.entity_v1 entity
+        JOIN ponytail_index.search_document_v1 document
+          USING (generation_id, entity_id)
+        WHERE entity.generation_id = $1::uuid
+          AND entity.entity_kind = 'plan'
+          AND NOT EXISTS (
+            SELECT 1 FROM ponytail_index.relationship_v1 relation
+            WHERE relation.generation_id = entity.generation_id
+              AND relation.source_entity_id = entity.entity_id
+              AND relation.role = 'campaign-parent')
+        ORDER BY entity.entity_id`, values);
+    } else {
+      result = await client.query(`
+        SELECT entity.entity_id, document.role, document.path,
+          document.description AS reason
+        FROM ponytail_index.entity_v1 entity
+        JOIN ponytail_index.search_document_v1 document
+          USING (generation_id, entity_id)
+        WHERE entity.generation_id = $1::uuid
+          AND entity.entity_kind = 'stranded-plan'
+        ORDER BY entity.entity_id`, values);
+    }
+    return PlanGraphResultReaders.variants.V1({
+      schemaVersion: 1,
+      corpus: 'plans',
+      operation,
+      input: submittedPlanId,
+      direct,
+      generationId: generation.generation_id,
+      results: result.rows.map(row => ({
+        planId: row.entity_id.replace(/^plan:/u, ''),
+        lifecycle: row.role,
+        path: row.path,
+        reason: row.reason,
+      })),
+    });
+  } finally {
+    client.release();
+    if (options.pool === undefined) await pool.end();
+  }
+}
+
 function printSearchHuman(result) {
   if (result.results.length === 0) {
     process.stdout.write('no traceability matches\n');
@@ -637,14 +1408,51 @@ function printSearchHuman(result) {
   }
 }
 
+function printPlanSearchHuman(result) {
+  if (result.results.length === 0) {
+    process.stdout.write('no plan matches\n');
+    return;
+  }
+  for (const item of result.results) {
+    const location = `${item.path}${item.line === null ? '' : `:${item.line}`}`;
+    process.stdout.write([location, item.recordKind, item.owningPlanId, item.heading ?? '-'].join('\t') + '\n');
+  }
+}
+
+function printPlanGraphHuman(result) {
+  if (result.results.length === 0) {
+    process.stdout.write(`no ${result.operation} plans\n`);
+    return;
+  }
+  for (const item of result.results) {
+    process.stdout.write([item.planId, item.lifecycle ?? '-', item.path, item.reason ?? '-'].join('\t') + '\n');
+  }
+}
+
 async function run(args) {
   const family = args.shift();
   const operation = args.shift();
-  if (family !== 'traceability' || !['index', 'search'].includes(operation)) {
+  const valid = family === 'traceability' && ['index', 'search'].includes(operation) ||
+    family === 'plan' && ['search', 'descendants', 'ancestors', 'roots', 'stranded'].includes(operation);
+  if (!valid) {
     throw new ProjectIndexError(
       'PROJECT_INDEX_USAGE',
-      'usage: ponytail traceability <index|search> ...',
+      'usage: ponytail <traceability|plan> <operation> ...',
     );
+  }
+  if (family === 'plan') {
+    if (operation === 'search') {
+      const search = parsePlanSearchArguments(args);
+      const result = await searchPlans(search.query, search.filters);
+      if (search.json) process.stdout.write(`${JSON.stringify(result)}\n`);
+      else printPlanSearchHuman(result);
+      return;
+    }
+    const query = parsePlanGraphArguments(operation, args);
+    const result = await queryPlanGraph(operation, query.input, query.direct);
+    if (query.json) process.stdout.write(`${JSON.stringify(result)}\n`);
+    else printPlanGraphHuman(result);
+    return;
   }
   if (operation === 'index') {
     const allowed = new Set(['--rebuild', '--json']);
@@ -654,11 +1462,11 @@ async function run(args) {
         'usage: ponytail traceability index [--rebuild] [--json]',
       );
     }
-    const result = await indexTraceability({ rebuild: args.includes('--rebuild') });
+    const result = await indexProject({ rebuild: args.includes('--rebuild') });
     if (args.includes('--json')) process.stdout.write(`${JSON.stringify(result)}\n`);
-    else process.stdout.write(
-      `indexed traceability: ${result.processedFiles} files, ` +
-      `${result.parsedFiles} parsed, ${result.reusedFiles} reused\n`);
+    else for (const corpus of result.corpora) process.stdout.write(
+      `indexed ${corpus.corpus}: ${corpus.processedFiles} files, ` +
+      `${corpus.parsedFiles} parsed, ${corpus.reusedFiles} reused\n`);
     return;
   }
   const search = parseSearchArguments(args);
@@ -679,11 +1487,21 @@ module.exports = {
   ProjectIndexStorageReaders,
   TraceabilityIndexResultReaders,
   TraceabilitySearchResultReaders,
+  PlanIndexStorageReaders,
+  PlanSearchResultReaders,
+  PlanGraphResultReaders,
+  collectPlanProjection,
   collectTraceabilityProjection,
   digest,
   parseFile,
   publishTraceabilityGeneration,
   indexTraceability,
+  indexProject,
   parseSearchArguments,
+  parsePlanSearchArguments,
+  parsePlanGraphArguments,
+  normalizePlanPayloads,
+  searchPlans,
+  queryPlanGraph,
   searchTraceability,
 };
