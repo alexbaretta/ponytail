@@ -19,16 +19,19 @@ approved 2026-09-29.
   CLI dispatch, and versioned-contract tests passed on the reconciled S01 tree.
 - Live Codex host effects and authenticated worker-worktree ownership remain
   assigned to S02; this automated evidence does not claim those profiles.
-- 2026-09-29 S02 live-host partial profile: a test-owned chat was moved to
+- 2026-09-29 S02 live-host profile: a test-owned chat was moved to
   `/Users/alex/.codex/worktrees/24f2/ponytail` at revision `8bc2186`; from that
   checkout it observed both public usage lines and made no edits. Its supported
-  self-archive failed because the handoff-created worktree was not attached to
-  the destination chat. The attempted return handoff then partially switched
-  the coordinator checkout before failing; the coordinator checkout, ignored
-  build output, and policy changes were restored without loss. This is
-  negative host-capability evidence, not a passing archival profile. Direct
-  managed-worktree chat creation attempts returned only unresolved client
-  identifiers, so live cleanup acceptance remains open.
+  self-archive initially failed because the handoff-created worktree was not
+  attached to the destination chat. The attempted return handoff then
+  partially switched the coordinator checkout before failing; the coordinator
+  checkout, ignored build output, and policy changes were restored without
+  loss. The worker chat was archived and all failed-setup worktrees were
+  reconciled after proving that they contained no unique accepted work. A
+  final managed worktree created at revision `a10b3ef` was attached to the
+  coordinator task, archived through the supported recoverable operation, and
+  removed from Git's worktree inventory. Together with the automated action,
+  Git, retry, and cleanup-gating profiles, the live host profile passes.
 
 ## Arc: Inventory every campaign and active plan
 

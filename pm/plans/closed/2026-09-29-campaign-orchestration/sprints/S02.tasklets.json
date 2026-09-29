@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 3,
+  "sprint": "S02",
+  "features": {
+    "S02-F01": {"depends_on": [], "validation_tasklet": "S02-F01-T03"},
+    "S02-F02": {"depends_on": ["S02-F01"], "validation_tasklet": "S02-F02-T03"}
+  },
+  "tasklets": {
+    "S02-F01-T01": {
+      "depends_on": [], "affinity": ["campaign-orchestration", "codex-hooks", "worker-identity"], "risk": "high", "risk_reason": "Authenticates worker ownership and coordinator isolation at a multi-session host boundary.", "feature": "S02-F01",
+      "planned_paths": ["hooks/plan-input.js", "hooks/hooks.json", "src/campaign-orchestration.js", "tests/plan-input-hooks.test.js", "tests/hooks-windows.test.js", "tests/campaign-orchestration.test.js", "versioned-data-contracts.json", "pm/plans/closed/2026-09-29-campaign-orchestration/sprints/S02.md"]
+    },
+    "S02-F01-T02": {
+      "depends_on": ["S02-F01-T01"], "affinity": ["campaign-orchestration", "worker-identity", "cli"], "risk": "high", "risk_reason": "Controls whether worker-originated commands can observe or mutate the owning campaign.", "feature": "S02-F01",
+      "planned_paths": ["src/campaign-orchestration.js", "src/campaign-census.js", "cli/ponytail", "hooks/plan-input.js", "tests/campaign-orchestration.test.js", "tests/campaign-census.test.js", "tests/cli-tools.test.js", "tests/plan-input-hooks.test.js", "pm/plans/closed/2026-09-29-campaign-orchestration/sprints/S02.md"]
+    },
+    "S02-F01-T03": {
+      "depends_on": ["S02-F01-T01", "S02-F01-T02"], "affinity": ["campaign-orchestration", "worker-identity", "validation"], "risk": "normal", "feature": "S02-F01",
+      "planned_paths": ["pm/plans/closed/2026-09-29-campaign-orchestration/plan.md", "pm/plans/closed/2026-09-29-campaign-orchestration/sprints/S02.md", "pm/plans/closed/2026-09-29-campaign-orchestration/sprints/S02.tasklets.json"]
+    },
+    "S02-F02-T01": {
+      "depends_on": ["S02-F01-T03"], "affinity": ["campaign-orchestration", "codex-actuator", "policy"], "risk": "high", "risk_reason": "Defines the trusted agent protocol for session and managed-worktree external effects.", "feature": "S02-F02",
+      "planned_paths": ["skills/plan-execution/SKILL.md", ".openclaw/skills/plan-execution/SKILL.md", "tests/plan-execution-policy.test.js", "pm/architecture/campaign-orchestration.md", "pm/uat/campaign-orchestration.md", "pm/plans/closed/2026-09-29-campaign-orchestration/sprints/S02.md"]
+    },
+    "S02-F02-T02": {
+      "depends_on": ["S02-F02-T01"], "affinity": ["campaign-orchestration", "codex-actuator", "uat"], "risk": "high", "risk_reason": "Exercises real test-owned session, worktree, Git integration, and archival effects.", "feature": "S02-F02",
+      "planned_paths": ["pm/requirements/campaign-orchestration.md", "pm/architecture/campaign-orchestration.md", "pm/uat/campaign-orchestration.md", "pm/plans/closed/2026-09-29-campaign-orchestration/plan.md", "pm/plans/closed/2026-09-29-campaign-orchestration/sprints/S02.md"]
+    },
+    "S02-F02-T03": {
+      "depends_on": ["S02-F02-T01", "S02-F02-T02"], "affinity": ["campaign-orchestration", "validation", "traceability"], "risk": "normal", "feature": "S02-F02",
+      "planned_paths": [".agents/config/project/traceability.json", "pm/requirements/traceability.generated.md", "pm/requirements/campaign-orchestration.md", "pm/architecture/campaign-orchestration.md", "pm/uat/campaign-orchestration.md", "pm/plans/closed/2026-09-29-campaign-orchestration/plan.md", "pm/plans/closed/2026-09-29-campaign-orchestration/sprints/S02.md", "pm/plans/closed/2026-09-29-campaign-orchestration/sprints/S02.tasklets.json"]
+    }
+  }
+}

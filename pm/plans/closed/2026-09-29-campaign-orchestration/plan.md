@@ -1,7 +1,7 @@
 # Deterministic campaign orchestration
 
 - **Plan ID:** `2026-09-29-campaign-orchestration`
-- **Status:** `in_progress`
+- **Status:** `closed`
 - **Approval:** The stakeholder approved
   [`REQ-CAMPAIGN-ORCHESTRATION`](../../../requirements/campaign-orchestration.md)
   on 2026-09-29 and requested this plan. The stakeholder explicitly approved
@@ -122,7 +122,7 @@ another coordinator scope.
    graph, assignment ledger, reconciled status, and transition engine —
    APPROVED.
 2. [S02](sprints/S02.md): integrate supported Codex host effects and complete
-   end-to-end campaign acceptance — APPROVED; depends on S01.
+   end-to-end campaign acceptance — DONE; depends on S01.
 
 ## Questions and approval gates
 
@@ -173,9 +173,9 @@ repository-wide campaign validation, selected-campaign validation, and diff
 checks passed. The package dry-run used a temporary cache because the user's
 default npm cache contains pre-existing root-owned files.
 
-Final acceptance remains open. The live host profile proved managed-worktree
-execution and coordinator chat archival, but the handoff-created worktree was
-not attached to the worker and therefore could not be archived through the
-supported recoverable operation. Direct worktree-thread creation returned
-unresolved client identifiers. S02-F02-T02, S02-F02-T03, sprint closure, and
-plan closure must not be marked complete until that host cleanup path passes.
+Live host acceptance also passed. A test-owned worker executed the published
+CLI from an isolated managed worktree and its chat was archived. Failed host
+setup artifacts were reconciled without losing unique work. A final managed
+worktree created from the campaign revision appeared as an attached artifact,
+was archived through the supported recoverable Codex operation, and disappeared
+from the Git worktree inventory. Both sprints and every tasklet are complete.

@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 3,
+  "sprint": "S01",
+  "features": {
+    "S01-F01": {"depends_on": [], "validation_tasklet": "S01-F01-T03"},
+    "S01-F02": {"depends_on": ["S01-F01"], "validation_tasklet": "S01-F02-T03"}
+  },
+  "tasklets": {
+    "S01-F01-T01": {
+      "depends_on": [], "affinity": ["campaign-census", "versioned-contracts"], "risk": "high", "risk_reason": "Changes campaign metadata compatibility and repository-wide lifecycle classification.", "feature": "S01-F01",
+      "planned_paths": ["src/campaign-census.js", "tests/campaign-census.test.js", "tests/campaign-census-format.test.js", "versioned-data-contracts.json", "pm/plans/closed/2026-09-29-campaign-orchestration/sprints/S01.md"]
+    },
+    "S01-F01-T02": {
+      "depends_on": ["S01-F01-T01"], "affinity": ["campaign-census", "cli", "policy"], "risk": "normal", "feature": "S01-F01",
+      "planned_paths": ["src/campaign-census.js", "cli/ponytail", "tests/campaign-census.test.js", "tests/cli-tools.test.js", "tests/distribution.test.js", "skills/plan-execution/SKILL.md", ".openclaw/skills/plan-execution/SKILL.md", "tests/plan-execution-policy.test.js", "tests/plan-execution-serial.test.js", "PROJECT_STRUCTURE.md", "pm/plans/closed/2026-09-29-campaign-orchestration/sprints/S01.md"]
+    },
+    "S01-F01-T03": {
+      "depends_on": ["S01-F01-T01", "S01-F01-T02"], "affinity": ["campaign-census", "validation"], "risk": "normal", "feature": "S01-F01",
+      "planned_paths": ["pm/plans/closed/2026-09-29-campaign-orchestration/plan.md", "pm/plans/closed/2026-09-29-campaign-orchestration/sprints/S01.md", "pm/plans/closed/2026-09-29-campaign-orchestration/sprints/S01.tasklets.json"]
+    },
+    "S01-F02-T01": {
+      "depends_on": ["S01-F01-T03"], "affinity": ["campaign-orchestration", "scheduler", "ledger"], "risk": "high", "risk_reason": "Owns durable assignment uniqueness and transition recovery under concurrent coordinators.", "feature": "S01-F02",
+      "planned_paths": ["src/campaign-orchestration.js", "tests/campaign-orchestration.test.js", "versioned-data-contracts.json", "PROJECT_STRUCTURE.md", "pm/plans/closed/2026-09-29-campaign-orchestration/sprints/S01.md"]
+    },
+    "S01-F02-T02": {
+      "depends_on": ["S01-F02-T01"], "affinity": ["campaign-orchestration", "cli", "git"], "risk": "high", "risk_reason": "Selects side-effecting campaign transitions and controls fast-forward integration eligibility.", "feature": "S01-F02",
+      "planned_paths": ["src/campaign-orchestration.js", "src/campaign-census.js", "cli/ponytail", "tests/campaign-orchestration.test.js", "tests/campaign-census.test.js", "tests/cli-tools.test.js", "tests/distribution.test.js", "pm/plans/closed/2026-09-29-campaign-orchestration/sprints/S01.md"]
+    },
+    "S01-F02-T03": {
+      "depends_on": ["S01-F02-T01", "S01-F02-T02"], "affinity": ["campaign-orchestration", "validation", "traceability"], "risk": "normal", "feature": "S01-F02",
+      "planned_paths": [".agents/config/project/traceability.json", "pm/requirements/traceability.generated.md", "pm/requirements/campaign-orchestration.md", "pm/architecture/campaign-orchestration.md", "pm/uat/campaign-orchestration.md", "pm/plans/closed/2026-09-29-campaign-orchestration/plan.md", "pm/plans/closed/2026-09-29-campaign-orchestration/sprints/S01.md", "pm/plans/closed/2026-09-29-campaign-orchestration/sprints/S01.tasklets.json"]
+    }
+  }
+}
