@@ -1,7 +1,7 @@
 # Indexed requirements traceability
 
 - **Plan ID:** `2026-09-29-traceability-index`
-- **Status:** `open`
+- **Status:** `in_progress`
 - **Approval:** The stakeholder approved
   [`REQ-TRACEABILITY-INDEX`](../../../requirements/traceability-index.md) on
   2026-09-29. The stakeholder explicitly approved implementation of the
