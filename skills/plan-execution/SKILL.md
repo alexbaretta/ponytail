@@ -573,11 +573,23 @@ Use the canonical command:
 
 ```text
 ponytail campaign validate <plan-name-or-path>
+ponytail campaign report [<plan-name-or-path>]
 ```
 
 The input may be the exact stable plan name, its directory, or its `plan.md`.
 A bare name must resolve to exactly one plan across configured lifecycle
-locations.
+locations. When report input is omitted, derive the active campaign from the
+configured whole-plan active-work lifecycle: every active managed plan must
+resolve to the same campaign root. Fail rather than guess when there is no
+active managed campaign or more than one. Unmarked historical plans remain
+outside the managed census. Do not maintain a second current-plan or
+current-campaign record; lifecycle placement and campaign backlinks remain the
+canonical facts.
+
+The human report enables only its summary tasklet table by default. Its
+`--[no-]summary-table`, `--[no-]plan-table`, and `--[no-]sprint-table` options
+control each human table independently. JSON output remains the complete
+normalized census and does not accept human table options.
 
 Run it before requesting plan approval, after planning reconciliation and
 before the first implementation edit, after any campaign relationship or plan

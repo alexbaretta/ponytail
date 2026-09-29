@@ -39,7 +39,7 @@ test('human report aligns census columns after long identifiers', () => {
     },
   };
 
-  const output = humanReport(report, '/repo');
+  const output = humanReport(report, '/repo', { planTable: true, sprintTable: true });
 
   assert.doesNotMatch(output, /\t/u);
   assert.match(output, /Lifecycle    Plan                                                 DONE  PENDING  ERROR  Total\nin_progress  short                                                   1       18      0     19\nin_progress  2026-09-27-approved-product-implementation-campaign    13        0      0     13/u);

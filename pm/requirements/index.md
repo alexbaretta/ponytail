@@ -27,7 +27,9 @@ behavior independently from implementation plans and architecture.
 and the stakeholder's 2026-09-24 clarification of findings 1–7 and subsequent
 approval of lifecycle-independent plan-name input, including
 `<plan-name>/plan.md`, and an operator-facing tasklet census modeled on the
-supplied 2026-09-24 campaign snapshot, including aligned human-report tables.
+supplied 2026-09-24 campaign snapshot, including aligned human-report tables;
+plus the stakeholder's 2026-09-28 clarification of default table selection and
+omitted report input.
 
 Ponytail must provide a read-only CLI that accepts a managed plan's exact
 stable name, `<stable-name>/plan.md`, explicit plan directory, or explicit
@@ -63,14 +65,24 @@ configuration, I/O, or tool execution failed. Successful output goes to stdout;
 fail-fast diagnostics go to stderr. Successful `--json` reporting emits exactly
 one JSON document and one trailing newline.
 
-The human report must lead with the campaign's tasklet census rather than
-requiring the operator to inspect individual tasklet records. Its tables must
+The report's plan input is optional. When it is omitted, the tool must inspect
+the configured active-work lifecycle and proceed only when every active managed
+plan belongs to the same campaign. No active managed campaign or more than one
+is an input-resolution failure; the tool must not guess. Unmarked historical
+plans remain outside the managed campaign census. Lifecycle placement and
+campaign backlinks remain the sources of truth, with no separate current-plan
+or current-campaign record.
+
+The human report must show only the campaign's summary tasklet table by
+default. CLI options independently enable or disable that summary table, the
+per-plan table, and the incomplete-sprint table. Its enabled tables must
 keep every column aligned when plan and sprint identifiers have different
 lengths, without depending on terminal tab stops. It reports
 `DONE`, `PENDING`, `ERROR`, and total tasklets grouped by plan lifecycle, the
-same campaign-wide totals and completion percentage, and the same counts for
-each plan. Every human-report table aligns its columns for the actual labels
-and values. It also identifies incomplete sprints with their tasklet counts.
+same campaign-wide totals and completion percentage. When enabled, the plan
+table reports the same counts for each plan and the sprint table identifies
+incomplete sprints with their tasklet counts. Every human-report table aligns
+its columns for the actual labels and values.
 `PENDING` is not reported as blocked, and the human report does not need to
 print every tasklet record; the JSON report retains normalized tasklet-level
 data for programmatic queries.

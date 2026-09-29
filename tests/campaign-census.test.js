@@ -177,13 +177,16 @@ test('root and leaf report the same campaign while unrelated malformed plans sta
   const fromChild = buildReport(root, config(root), childPlan);
   const fromRootName = buildReport(root, config(root), rootId);
   const fromRootNameFile = buildReport(root, config(root), `${rootId}/plan.md`);
+  const fromActiveCampaign = buildReport(root, config(root));
   assert.equal(fromRoot.campaign.rootPlanId, rootId);
   assert.deepEqual(fromRoot.campaign, fromChild.campaign);
   assert.deepEqual(fromRoot.campaign, fromRootName.campaign);
   assert.deepEqual(fromRoot.campaign, fromRootNameFile.campaign);
+  assert.deepEqual(fromRoot.campaign, fromActiveCampaign.campaign);
   assert.deepEqual(fromRoot.totals, fromChild.totals);
   assert.equal(fromRootName.invocation.input, rootId);
   assert.equal(fromRootNameFile.invocation.input, `${rootId}/plan.md`);
+  assert.equal(fromActiveCampaign.invocation.input, '');
   assert.deepEqual(fromRoot.campaign.plans.map(({ id }) => id), [rootId, childId]);
   assert.deepEqual(fromRoot.totals.plansByLifecycle, { open: 0, in_progress: 1, closed: 1, deferred: 0, rejected: 0 });
   assert.equal(fromRoot.totals.plans, 2);
@@ -195,7 +198,32 @@ test('root and leaf report the same campaign while unrelated malformed plans sta
   assert.match(human, /closed             1        0      0      1/);
   assert.match(human, /Campaign total     1        1      0      2/);
   assert.match(human, /Campaign completion: 50% by tasklet count/);
+  assert.doesNotMatch(human, /Plan census/);
+  assert.doesNotMatch(human, /Incomplete sprint census/);
   assert.doesNotMatch(human, /\t/);
+});
+
+test('omitted report input requires exactly one campaign containing active plans', () => {
+  const missingRoot = repository();
+  plan(missingRoot, 'open', '2026-09-24-not-active');
+  const missing = captureError(() => buildReport(missingRoot, config(missingRoot)));
+  assert.equal(missing.status, 2);
+  assert.equal(missing.code, 'CAMPAIGN_ACTIVE_MISSING');
+
+  const uniqueRoot = repository();
+  const rootId = '2026-09-24-active-root';
+  plan(uniqueRoot, 'in_progress', rootId);
+  plan(uniqueRoot, 'in_progress', '2026-09-24-active-child', rootId);
+  write(uniqueRoot, 'pm/plans/in_progress/2026-09-24-unmarked/plan.md', '# unmarked historical plan\n');
+  commit(uniqueRoot);
+  assert.equal(buildReport(uniqueRoot, config(uniqueRoot)).campaign.rootPlanId, rootId);
+
+  const ambiguousRoot = repository();
+  plan(ambiguousRoot, 'in_progress', '2026-09-24-active-first');
+  plan(ambiguousRoot, 'in_progress', '2026-09-24-active-second');
+  const ambiguous = captureError(() => buildReport(ambiguousRoot, config(ambiguousRoot)));
+  assert.equal(ambiguous.status, 2);
+  assert.equal(ambiguous.code, 'CAMPAIGN_ACTIVE_AMBIGUOUS');
 });
 
 test('bare plan names fail explicitly when missing or ambiguous', () => {
@@ -293,7 +321,7 @@ test('V1 report reader rejects unknown output fields', () => {
 // Traceability: verifies REQ-CAMPAIGN-CENSUS-CLI
 test('production module uses exact exit and stream contracts without mutation', () => {
   const root = repository();
-  const selected = plan(root, 'open', '2026-09-24-streams');
+  const selected = plan(root, 'in_progress', '2026-09-24-streams');
   commit(root);
   const before = spawnSync('git', ['status', '--porcelain'], { cwd: root, encoding: 'utf8' }).stdout;
   let result = spawnSync(process.execPath, [campaignCli, 'report', selected, '--json'], { cwd: root, encoding: 'utf8' });
@@ -307,14 +335,32 @@ test('production module uses exact exit and stream contracts without mutation', 
   assert.equal(result.status, 0, result.stderr);
   assert.match(result.stdout, /Plans: 1; Sprints: 1 \(1 incomplete\)/);
   assert.match(result.stdout, /Tasklet census\nPlan lifecycle  DONE  PENDING  ERROR  Total/);
-  assert.match(result.stdout, /open               0        1      0      1/);
+  assert.match(result.stdout, /in_progress        0        1      0      1/);
   assert.match(result.stdout, /Campaign total     0        1      0      1/);
   assert.match(result.stdout, /Campaign completion: 0% by tasklet count/);
-  assert.match(result.stdout, /open       2026-09-24-streams     0        1      0      1/);
-  assert.match(result.stdout, /2026-09-24-streams\/S01  APPROVED  PENDING       0        1      0      1/);
+  assert.doesNotMatch(result.stdout, /Plan census/);
+  assert.doesNotMatch(result.stdout, /Incomplete sprint census/);
   assert.doesNotMatch(result.stdout, /Tasklet 2026-09-24-streams\/S01-F01-T01/);
 
-  result = spawnSync(process.execPath, [campaignCli, 'report'], { cwd: root, encoding: 'utf8' });
+  result = spawnSync(process.execPath, [campaignCli, 'report', '--no-summary-table', '--plan-table', '--sprint-table'], { cwd: root, encoding: 'utf8' });
+  assert.equal(result.status, 0, result.stderr);
+  assert.doesNotMatch(result.stdout, /Tasklet census/);
+  assert.match(result.stdout, /Plan census\nLifecycle    Plan/);
+  assert.match(result.stdout, /in_progress  2026-09-24-streams/);
+  assert.match(result.stdout, /Incomplete sprint census\nPlan\/Sprint/);
+  assert.match(result.stdout, /2026-09-24-streams\/S01  APPROVED  PENDING/);
+
+  result = spawnSync(process.execPath, [campaignCli, 'report', selected, '--summary-table', '--plan-table', '--no-plan-table', '--sprint-table', '--no-sprint-table'], { cwd: root, encoding: 'utf8' });
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /Tasklet census/);
+  assert.doesNotMatch(result.stdout, /Plan census/);
+  assert.doesNotMatch(result.stdout, /Incomplete sprint census/);
+
+  result = spawnSync(process.execPath, [campaignCli, 'report', '--json'], { cwd: root, encoding: 'utf8' });
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(JSON.parse(result.stdout).campaign.rootPlanId, '2026-09-24-streams');
+
+  result = spawnSync(process.execPath, [campaignCli, 'report', selected, '--json', '--plan-table'], { cwd: root, encoding: 'utf8' });
   assert.equal(result.status, 2);
   assert.equal(result.stdout, '');
   assert.match(result.stderr, /^error CAMPAIGN_USAGE:/);
@@ -331,7 +377,7 @@ test('production module uses exact exit and stream contracts without mutation', 
 
 test('ponytail dispatches campaign reporting through the production module', () => {
   const root = repository();
-  const selected = plan(root, 'open', '2026-09-24-dispatch');
+  const selected = plan(root, 'in_progress', '2026-09-24-dispatch');
   write(root, '.agents/config/codex-execpolicy.json', '{"schemaVersion":1,"safe":[],"unsafe":[]}\n');
   write(root, '.agents/config/ponytail.json', `${JSON.stringify({
     schemaVersion: 2,
@@ -376,17 +422,16 @@ test('ponytail dispatches campaign reporting through the production module', () 
   assert.equal(missing.stdout, '');
   assert.match(missing.stderr, /^error CAMPAIGN_INPUT:/);
 
-  let failure = spawnSync(ponytailCli, ['campaign', 'report'], {
+  const inferred = spawnSync(ponytailCli, ['campaign', 'report'], {
     cwd: root,
     encoding: 'utf8',
     env: { ...process.env, HOME: home, PATH: `${path.dirname(process.execPath)}:/usr/bin:/bin` },
   });
-  assert.equal(failure.status, 2);
-  assert.equal(failure.stdout, '');
-  assert.match(failure.stderr, /^error CAMPAIGN_USAGE:/);
+  assert.equal(inferred.status, 0, inferred.stderr);
+  assert.match(inferred.stdout, /Campaign: 2026-09-24-dispatch/);
 
   fs.writeFileSync(selected, fs.readFileSync(selected, 'utf8').replace('"schemaVersion": 1', '"schemaVersion": 99'));
-  failure = spawnSync(ponytailCli, ['campaign', 'report', selected, '--json'], {
+  const failure = spawnSync(ponytailCli, ['campaign', 'report', selected, '--json'], {
     cwd: root,
     encoding: 'utf8',
     env: { ...process.env, HOME: home, PATH: `${path.dirname(process.execPath)}:/usr/bin:/bin` },

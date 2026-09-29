@@ -28,6 +28,14 @@ const PLAN_METADATA_MARKER = 'ponytail-plan-campaign';
 const PLAN_SCHEMA_VERSION = 1;
 const REPORT_SCHEMA_VERSION = 1;
 const LIFECYCLE_ROLES = ['initial', 'activeWork', 'successfulCompletion', 'deferred', 'rejected'];
+const REPORT_TABLE_FLAGS = Object.freeze({
+  '--summary-table': ['summaryTable', true],
+  '--no-summary-table': ['summaryTable', false],
+  '--plan-table': ['planTable', true],
+  '--no-plan-table': ['planTable', false],
+  '--sprint-table': ['sprintTable', true],
+  '--no-sprint-table': ['sprintTable', false],
+});
 
 class CampaignError extends Error {
   constructor(status, code, message, recordId = null, relativePath = null) {
@@ -257,6 +265,26 @@ function scanPlanCandidates(repositoryRoot, config) {
 }
 
 function resolveInputPlan(input, repositoryRoot, config, candidates) {
+  if (input === undefined) {
+    const activeCandidates = candidates.filter((candidate) => (
+      candidate.lifecycle === config.lifecycle.roles.activeWork && candidate.blocks.length !== 0
+    ));
+    if (activeCandidates.length === 0) toolError('CAMPAIGN_ACTIVE_MISSING', 'no managed plan is in the configured active-work lifecycle');
+    const rootsByPath = new Map();
+    for (const candidate of activeCandidates) {
+      const { root } = readAncestors(candidates, candidate);
+      rootsByPath.set(root.planFile, root);
+    }
+    if (rootsByPath.size !== 1) {
+      const rootIds = [...rootsByPath.values()].map((plan) => plan.id).sort();
+      toolError('CAMPAIGN_ACTIVE_AMBIGUOUS', `multiple campaigns contain active plans: ${rootIds.join(', ')}`);
+    }
+    const [root] = rootsByPath.values();
+    return {
+      candidate: candidates.find((candidate) => candidate.planFile === root.planFile),
+      invocationInput: '',
+    };
+  }
   const parts = input && !input.includes('\\') ? input.split('/') : [];
   const planName = parts.length === 1 && !['.', '..', 'plan.md'].includes(input)
     ? input
@@ -307,15 +335,13 @@ function validateParentLink(plan, parent) {
   if (!found) dataError('CAMPAIGN_PARENT_LINK', `manifest must link to parent plan ${parent.id}`, plan.id, plan.relativePlanFile);
 }
 
-function discoverCampaign(repositoryRoot, config, input) {
-  const candidates = scanPlanCandidates(repositoryRoot, config);
-  const resolvedInputPlan = resolveInputPlan(input, repositoryRoot, config, candidates);
-  const selected = readManagedPlan(resolvedInputPlan.candidate);
+function readAncestors(candidates, candidate) {
+  const selected = readManagedPlan(candidate);
   const membersByPath = new Map([[selected.planFile, selected]]);
   let current = selected;
   const ancestorIds = new Set([current.id]);
   while (current.parentPlanId !== null) {
-    const matches = candidates.filter((candidate) => candidate.metadata?.id === current.parentPlanId);
+    const matches = candidates.filter((item) => item.metadata?.id === current.parentPlanId);
     if (matches.length === 0) dataError('CAMPAIGN_PARENT_MISSING', `missing parent plan: ${current.parentPlanId}`, current.id, current.relativePlanFile);
     if (matches.length > 1) dataError('CAMPAIGN_PARENT_AMBIGUOUS', `ambiguous parent plan: ${current.parentPlanId}`, current.id, current.relativePlanFile);
     const parent = readManagedPlan(matches[0]);
@@ -325,7 +351,13 @@ function discoverCampaign(repositoryRoot, config, input) {
     membersByPath.set(parent.planFile, parent);
     current = parent;
   }
-  const root = current;
+  return { root: current, selected, membersByPath };
+}
+
+function discoverCampaign(repositoryRoot, config, input) {
+  const candidates = scanPlanCandidates(repositoryRoot, config);
+  const resolvedInputPlan = resolveInputPlan(input, repositoryRoot, config, candidates);
+  const { root, selected, membersByPath } = readAncestors(candidates, resolvedInputPlan.candidate);
   const memberIds = new Map([...membersByPath.values()].map((plan) => [plan.id, plan.planFile]));
   let changed = true;
   while (changed) {
@@ -621,7 +653,10 @@ function formatTable(rows) {
 }
 
 // Traceability: implements REQ-CAMPAIGN-CENSUS-CLI
-function humanReport(report, worktree) {
+function humanReport(report, worktree, tableOptions = {}) {
+  const summaryTable = tableOptions.summaryTable ?? true;
+  const planTable = tableOptions.planTable ?? false;
+  const sprintTable = tableOptions.sprintTable ?? false;
   const taskletsByPlanLifecycle = Object.fromEntries(
     Object.keys(report.totals.plansByLifecycle)
       .map((lifecycle) => [lifecycle, { PENDING: 0, DONE: 0, ERROR: 0 }]),
@@ -647,26 +682,28 @@ function humanReport(report, worktree) {
     `Worktree: ${worktree}`,
     `Revision: ${report.repository.commit} (${report.repository.branch ?? 'detached'}, ${report.repository.clean ? 'clean' : 'dirty'})`,
     `Plans: ${report.totals.plans}; Sprints: ${report.totals.sprints} (${report.totals.incompleteSprints} incomplete)`,
-    '',
-    'Tasklet census',
-    formatTable(taskletRows),
   ];
-  lines.push(
-    `Campaign completion: ${percentage(report.totals.taskletCompletionPercentage)} by tasklet count`,
-    'PENDING and ERROR are distinct formal tasklet states.',
-    '',
-    'Plan census',
-    formatTable(planRows),
-  );
-  lines.push('', 'Incomplete sprint census');
-  if (incompleteSprints.length === 0) {
-    lines.push('None');
-  } else {
-    const sprintRows = [['Plan/Sprint', 'Planning', 'Execution', 'DONE', 'PENDING', 'ERROR', 'Total']];
-    for (const sprint of incompleteSprints) {
-      sprintRows.push([`${sprint.planId}/${sprint.id}`, sprint.planningStatus, sprint.executionStatus ?? 'UNPLANNED', sprint.taskletCounts.DONE, sprint.taskletCounts.PENDING, sprint.taskletCounts.ERROR, sprint.totalTasklets]);
+  if (summaryTable) {
+    lines.push(
+      '',
+      'Tasklet census',
+      formatTable(taskletRows),
+      `Campaign completion: ${percentage(report.totals.taskletCompletionPercentage)} by tasklet count`,
+      'PENDING and ERROR are distinct formal tasklet states.',
+    );
+  }
+  if (planTable) lines.push('', 'Plan census', formatTable(planRows));
+  if (sprintTable) {
+    lines.push('', 'Incomplete sprint census');
+    if (incompleteSprints.length === 0) {
+      lines.push('None');
+    } else {
+      const sprintRows = [['Plan/Sprint', 'Planning', 'Execution', 'DONE', 'PENDING', 'ERROR', 'Total']];
+      for (const sprint of incompleteSprints) {
+        sprintRows.push([`${sprint.planId}/${sprint.id}`, sprint.planningStatus, sprint.executionStatus ?? 'UNPLANNED', sprint.taskletCounts.DONE, sprint.taskletCounts.PENDING, sprint.taskletCounts.ERROR, sprint.totalTasklets]);
+      }
+      lines.push(formatTable(sprintRows));
     }
-    lines.push(formatTable(sprintRows));
   }
   return `${lines.join('\n')}\n`;
 }
@@ -678,18 +715,32 @@ function repositoryRoot() {
 }
 
 function usage() {
-  return 'usage: ponytail campaign validate <plan-name-or-path>\n       ponytail campaign report <plan-name-or-path> [--json]';
+  return 'usage: ponytail campaign validate <plan-name-or-path>\n       ponytail campaign report [<plan-name-or-path>] [--json] [--[no-]summary-table] [--[no-]plan-table] [--[no-]sprint-table]';
 }
 
 function run(argv = process.argv.slice(2)) {
   const operation = argv[0];
   let input;
   let json = false;
+  let tableFlagSeen = false;
+  const tableOptions = {};
   if (operation === 'validate' && argv.length === 2) {
     input = argv[1];
-  } else if (operation === 'report' && (argv.length === 2 || (argv.length === 3 && argv[2] === '--json'))) {
-    input = argv[1];
-    json = argv[2] === '--json';
+  } else if (operation === 'report') {
+    for (const argument of argv.slice(1)) {
+      if (argument === '--json') {
+        json = true;
+      } else if (REPORT_TABLE_FLAGS[argument]) {
+        const [name, enabled] = REPORT_TABLE_FLAGS[argument];
+        tableOptions[name] = enabled;
+        tableFlagSeen = true;
+      } else if (argument.startsWith('-') || input !== undefined) {
+        toolError('CAMPAIGN_USAGE', usage());
+      } else {
+        input = argument;
+      }
+    }
+    if (json && tableFlagSeen) toolError('CAMPAIGN_USAGE', 'table options cannot be combined with --json');
   } else {
     toolError('CAMPAIGN_USAGE', usage());
   }
@@ -701,7 +752,7 @@ function run(argv = process.argv.slice(2)) {
   } else if (json) {
     process.stdout.write(`${JSON.stringify(report)}\n`);
   } else {
-    process.stdout.write(humanReport(report, root));
+    process.stdout.write(humanReport(report, root, tableOptions));
   }
   return report;
 }

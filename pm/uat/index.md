@@ -50,22 +50,34 @@ Traceability: verifies REQ-CAMPAIGN-CENSUS-CLI
      campaign total, using distinct `DONE`, `PENDING`, and `ERROR` columns plus
      total and completion percentage. Every table has aligned columns for its
      actual labels and values.
-   - The plan census repeats those tasklet counts for each plan, and the
-     incomplete sprint census lists only unfinished sprints with their counts.
+   - By default, no per-plan or incomplete-sprint table is printed.
+   - Enable the plan and sprint tables. The plan census repeats those tasklet
+     counts for each plan, and the incomplete sprint census lists only
+     unfinished sprints with their counts.
      Every table keeps its columns aligned when identifiers have different
      lengths and the output is displayed without tab expansion.
      It does not label a merely pending tasklet as blocked or print every
      tasklet record.
-4. Run the JSON census report from one member.
+4. Disable the summary table while leaving the plan and sprint tables enabled.
+   - The tasklet summary table is absent and the other two tables remain.
+5. Run the human and JSON census reports without a plan input while all active
+   managed plans belong to the same campaign and an unrelated unmarked
+   historical plan is also in the active-work directory.
+   - Both reports resolve that campaign with exit `0` and do not consult a
+     separate current-plan record. The unmarked plan remains outside the census.
+6. Repeat without any active managed plan, then with active managed plans in
+   two campaigns.
+   - Each invocation exits `2` without a partial report or arbitrary choice.
+7. Run the JSON census report from one member.
    - Exit is `0`; stdout is exactly one versioned JSON document plus one
      newline; stderr is empty; its census facts equal the human report.
-5. Inspect repository and external state.
+8. Inspect repository and external state.
    - No project-management record, Git state, worker, worktree, or external
      system was changed.
-6. Repeat the reports with the unrelated unmarked historical plan present.
+9. Repeat the reports with the unrelated unmarked historical plan present.
    - The managed campaign census is unchanged; selecting or referencing that
      historical plan instead fails validation until it is explicitly migrated.
-7. Repeat the reports with the unrelated malformed campaign present.
+10. Repeat the reports with the unrelated malformed campaign present.
    - The selected campaign still validates and reports successfully; no error
      from the unrelated campaign appears.
 

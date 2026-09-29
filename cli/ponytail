@@ -504,7 +504,7 @@ def print_usage():
   ponytail plan-input complete <plan> <id> --record <pm-path>...
   ponytail pm pdf <collection|all> [--output-dir <path>]
   ponytail campaign validate <plan-name-or-path>
-  ponytail campaign report <plan-name-or-path> [--json]
+  ponytail campaign report [<plan-name-or-path>] [--json] [--[no-]summary-table] [--[no-]plan-table] [--[no-]sprint-table]
   ponytail pre-commit
   ponytail validate
   ponytail qa [references]

@@ -105,7 +105,7 @@ Installed shell tools:
 | --- | --- |
 | `ponytail register\|unregister\|list-projects\|bless[-worktree]\|blessed[-worktree]\|register-component\|unregister-component\|list-components\|register-dependency\|unregister-dependency\|list-dependencies\|detect-components\|pre-commit\|validate\|qa\|update-permissions\|update-skills\|update` | Register, unregister, and list repositories; select worktree configuration; manage components and dependencies; install pre-commit QA; run local QA; and update Codex configuration |
 | `ponytail campaign validate <plan-name-or-path>` | Fail-fast validation of the campaign containing the supplied managed plan |
-| `ponytail campaign report <plan-name-or-path> [--json]` | Report that campaign's plan, sprint, and tasklet census |
+| `ponytail campaign report [<plan-name-or-path>] [--json] [--[no-]summary-table] [--[no-]plan-table] [--[no-]sprint-table]` | Report the selected or uniquely active campaign's census |
 | `ponytail pm pdf <collection\|all> [--output-dir <path>]` | Render configured linked Markdown collections as PDFs using Pandoc and XeLaTeX |
 | `audit_pm.sh [--fix] [--dryrun]` | Audit PM structure and preview or fix missing date prefixes |
 | `plan_pdf.sh [--sprints] <plan-name> [output.pdf]` | Render a plan, optionally with its sprints, as PDF using Pandoc |
@@ -138,11 +138,15 @@ move.
 Campaign input may be an exact stable plan name, `<plan-name>/plan.md`, an
 explicit plan directory, or an explicit `plan.md` path. The first two forms are
 resolved across configured lifecycle directories and must identify exactly one
-plan.
+plan. When `campaign report` omits the input, every managed plan in the
+configured active-work lifecycle must resolve to one campaign root; no active
+managed campaign or more than one is an error. Unmarked historical plans remain
+outside the managed campaign census.
 
-The human campaign report summarizes `DONE`, `PENDING`, `ERROR`, and total
-tasklets by plan lifecycle and by plan, followed by incomplete sprints. Use
-`--json` for the normalized tasklet-level records.
+The human campaign report shows only the summary tasklet table by default.
+Enable or disable the summary, per-plan, and incomplete-sprint tables with
+their corresponding `--[no-]...-table` options. Use `--json` for the normalized
+tasklet-level records; JSON cannot be combined with table options.
 
 `plan_pdf.sh` requires Pandoc and writes to `tmp/<plan-name>.pdf` unless an
 output path is supplied.

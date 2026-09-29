@@ -19,9 +19,9 @@ Requirement: [pm/requirements/requirements-traceability.md](requirements-traceab
 
 Requirement: [pm/requirements/index.md](index.md)
 
-- implementation: implements [src/campaign-census.js:623](../../src/campaign-census.js#L623)
+- implementation: implements [src/campaign-census.js:655](../../src/campaign-census.js#L655)
 - unit-test: verifies [tests/campaign-census-format.test.js:11](../../tests/campaign-census-format.test.js#L11)
-- integration-test: verifies [tests/campaign-census.test.js:293](../../tests/campaign-census.test.js#L293)
+- integration-test: verifies [tests/campaign-census.test.js:321](../../tests/campaign-census.test.js#L321)
 - uat: verifies [pm/uat/index.md:30](../../pm/uat/index.md#L30)
 
 ## REQ-PLAN-INPUT-QUEUE
