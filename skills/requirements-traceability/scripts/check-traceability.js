@@ -80,6 +80,7 @@ function normalizeTraceabilityConfiguration(document, configurationPath, schemaV
       'generatedArtifacts', 'reverseViewPath', 'typescript',
       ...(schemaVersion >= 2 ? ['index'] : []),
       ...(schemaVersion >= 3 ? ['entities'] : []),
+      ...(schemaVersion >= 4 ? ['validationRules'] : []),
     ],
     'traceability configuration',
   );
@@ -98,6 +99,9 @@ function normalizeTraceabilityConfiguration(document, configurationPath, schemaV
   }
   if (schemaVersion >= 3 && !Array.isArray(document.entities)) {
     throw new Error('traceability configuration entities must be an array');
+  }
+  if (schemaVersion >= 4 && !Array.isArray(document.validationRules)) {
+    throw new Error('traceability configuration validationRules must be an array');
   }
 
   const requirements = document.requirements.map((value, index) => {
@@ -201,6 +205,52 @@ function normalizeTraceabilityConfiguration(document, configurationPath, schemaV
     entityKeys.add(key);
   }
 
+  const validationRules = schemaVersion < 4 ? [] : document.validationRules.map((value, index) => {
+    const rule = exactObject(
+      value,
+      ['id', 'sourceKind', 'targetKind', 'roles', 'direction', 'cardinality'],
+      `validationRules[${index}]`,
+    );
+    const id = nonEmptyString(rule.id, `validationRules[${index}].id`);
+    if (!/^[a-z][a-z0-9-]*$/u.test(id)) {
+      throw new Error(`validationRules[${index}].id must be a lowercase token`);
+    }
+    const sourceKind = nonEmptyString(rule.sourceKind, `validationRules[${index}].sourceKind`);
+    const targetKind = nonEmptyString(rule.targetKind, `validationRules[${index}].targetKind`);
+    for (const [label, kind] of [['sourceKind', sourceKind], ['targetKind', targetKind]]) {
+      if (!/^[a-z][a-z0-9-]*$/u.test(kind)) {
+        throw new Error(`validationRules[${index}].${label} must be a lowercase token`);
+      }
+    }
+    if (!Array.isArray(rule.roles) || rule.roles.length === 0 ||
+        rule.roles.some(role => !relationshipRoles.has(role)) ||
+        new Set(rule.roles).size !== rule.roles.length) {
+      throw new Error(`validationRules[${index}].roles must contain unique supported roles`);
+    }
+    if (!['forward', 'reverse'].includes(rule.direction)) {
+      throw new Error(`validationRules[${index}].direction must be forward or reverse`);
+    }
+    const cardinality = exactObject(
+      rule.cardinality,
+      ['minimum'],
+      `validationRules[${index}].cardinality`,
+    );
+    if (!Number.isInteger(cardinality.minimum) || cardinality.minimum < 1) {
+      throw new Error(`validationRules[${index}].cardinality.minimum must be a positive integer`);
+    }
+    return {
+      id,
+      sourceKind,
+      targetKind,
+      roles: [...rule.roles],
+      direction: rule.direction,
+      cardinality: { minimum: cardinality.minimum },
+    };
+  });
+  if (new Set(validationRules.map(rule => rule.id)).size !== validationRules.length) {
+    throw new Error('validationRules must have unique IDs');
+  }
+
   let typescript;
   if (document.typescript !== undefined) {
     const configuredTypescript = exactObject(document.typescript, ['cliPath', 'projectPath'], 'typescript');
@@ -237,6 +287,7 @@ function normalizeTraceabilityConfiguration(document, configurationPath, schemaV
     requirements,
     artifacts,
     entities,
+    validationRules,
     generatedArtifacts,
     reverseViewPath: relativePath(document.reverseViewPath, 'reverseViewPath'),
     index: { searchableFields: configuredSearchableFields },
@@ -256,10 +307,15 @@ function readTraceabilityConfigurationV3(document, configurationPath) {
   return normalizeTraceabilityConfiguration(document, configurationPath, 3);
 }
 
+function readTraceabilityConfigurationV4(document, configurationPath) {
+  return normalizeTraceabilityConfiguration(document, configurationPath, 4);
+}
+
 const TraceabilityConfigReaders = Object.freeze({
   V1: readTraceabilityConfigurationV1,
   V2: readTraceabilityConfigurationV2,
   V3: readTraceabilityConfigurationV3,
+  V4: readTraceabilityConfigurationV4,
 });
 
 function loadTraceabilityConfiguration(configurationPath) {

@@ -81,15 +81,50 @@ test('retains exact V1 reads and validates latest V2 search policy', () => {
     );
   }
 
-  traceabilityFixture.configuration.schemaVersion = 4;
+  traceabilityFixture.configuration.schemaVersion = 5;
   fs.writeFileSync(
     traceabilityFixture.configurationPath,
     `${JSON.stringify(traceabilityFixture.configuration, null, 2)}\n`,
   );
   assert.throws(
     () => loadTraceabilityConfiguration(traceabilityFixture.configurationPath),
-    /unsupported traceability configuration schemaVersion: 4/u,
+    /unsupported traceability configuration schemaVersion: 5/u,
   );
+});
+
+test('reads an exact V4 directional validation matrix', () => {
+  const traceabilityFixture = fixture();
+  traceabilityFixture.configuration.schemaVersion = 4;
+  traceabilityFixture.configuration.index = { searchableFields: ['entityId'] };
+  traceabilityFixture.configuration.entities = [];
+  traceabilityFixture.configuration.validationRules = [{
+    id: 'requirement-implementation',
+    sourceKind: 'requirement',
+    targetKind: 'implementation',
+    roles: ['implements', 'supports'],
+    direction: 'reverse',
+    cardinality: { minimum: 1 },
+  }];
+  fs.writeFileSync(
+    traceabilityFixture.configurationPath,
+    `${JSON.stringify(traceabilityFixture.configuration, null, 2)}\n`,
+  );
+  const loaded = loadTraceabilityConfiguration(traceabilityFixture.configurationPath);
+  assert.equal(loaded.schemaVersion, 4);
+  assert.deepEqual(loaded.validationRules, traceabilityFixture.configuration.validationRules);
+
+  for (const invalidRule of [
+    { ...traceabilityFixture.configuration.validationRules[0], roles: [] },
+    { ...traceabilityFixture.configuration.validationRules[0], direction: 'sideways' },
+    { ...traceabilityFixture.configuration.validationRules[0], cardinality: { minimum: 0 } },
+  ]) {
+    traceabilityFixture.configuration.validationRules = [invalidRule];
+    fs.writeFileSync(traceabilityFixture.configurationPath, JSON.stringify(traceabilityFixture.configuration));
+    assert.throws(
+      () => loadTraceabilityConfiguration(traceabilityFixture.configurationPath),
+      /validationRules/u,
+    );
+  }
 });
 
 test('reads exact V3 entity declarations and prospective planning roles', () => {

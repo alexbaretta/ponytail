@@ -9,9 +9,9 @@
         "module": "skills/requirements-traceability/scripts/check-traceability.js",
         "readerRegistryExport": "TraceabilityConfigReaders"
       },
-      "currentVersion": "V3",
-      "versions": ["V1", "V2", "V3"],
-      "supportedReadVersions": ["V1", "V2", "V3"],
+      "currentVersion": "V4",
+      "versions": ["V1", "V2", "V3", "V4"],
+      "supportedReadVersions": ["V1", "V2", "V3", "V4"],
       "supportedDowngradeVersions": []
     },
     {
@@ -116,6 +116,18 @@
         "workspace": "ponytail",
         "module": "src/project-index.js",
         "readerRegistryExport": "TraceabilitySearchResultReaders"
+      },
+      "currentVersion": "V1",
+      "versions": ["V1"],
+      "supportedReadVersions": ["V1"],
+      "supportedDowngradeVersions": []
+    },
+    {
+      "id": "traceability-validation-command-result",
+      "implementation": {
+        "workspace": "ponytail",
+        "module": "src/project-index.js",
+        "readerRegistryExport": "TraceabilityValidationResultReaders"
       },
       "currentVersion": "V1",
       "versions": ["V1"],

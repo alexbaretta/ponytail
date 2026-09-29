@@ -138,6 +138,7 @@ test('ponytail help publishes plan-input, traceability, and plan command familie
   assert.match(result.stdout, /ponytail plan-input complete <plan> <id> --record <pm-path>/);
   assert.match(result.stdout, /ponytail traceability index \[--rebuild\] \[--json\]/);
   assert.match(result.stdout, /ponytail traceability search <query>/);
+  assert.match(result.stdout, /ponytail traceability validate \[--plan <plan> \| --campaign <plan>\]/);
   assert.match(result.stdout, /ponytail plan search <query>/);
   assert.match(result.stdout, /ponytail plan descendants <plan>/);
   assert.match(result.stdout, /ponytail plan ancestors <plan>/);

@@ -74,6 +74,15 @@ export interface TraceabilityIndexConfiguration {
     readonly searchableFields: readonly TraceabilitySearchableField[];
 }
 
+export interface TraceabilityValidationRuleConfiguration {
+    readonly cardinality: { readonly minimum: number };
+    readonly direction: 'forward' | 'reverse';
+    readonly id: string;
+    readonly roles: readonly TraceabilityRelationshipRole[];
+    readonly sourceKind: string;
+    readonly targetKind: string;
+}
+
 interface TraceabilityConfigurationBase {
     readonly artifacts: readonly TraceabilityArtifactConfiguration[];
     readonly generatedArtifacts: readonly TraceabilityGeneratedArtifactConfiguration[];
@@ -101,10 +110,19 @@ export interface TraceabilityConfigurationV3 extends TraceabilityConfigurationBa
     readonly schemaVersion: 3;
 }
 
+export interface TraceabilityConfigurationV4 extends TraceabilityConfigurationBase {
+    readonly artifacts: readonly TraceabilityArtifactConfiguration[];
+    readonly entities: readonly TraceabilityEntityConfiguration[];
+    readonly index: TraceabilityIndexConfiguration;
+    readonly schemaVersion: 4;
+    readonly validationRules: readonly TraceabilityValidationRuleConfiguration[];
+}
+
 type TraceabilityConfiguration =
     | TraceabilityConfigurationV1
     | TraceabilityConfigurationV2
-    | TraceabilityConfigurationV3;
+    | TraceabilityConfigurationV3
+    | TraceabilityConfigurationV4;
 
 interface TraceabilityMarker {
     readonly line: number;
@@ -206,7 +224,10 @@ async function loadTraceabilityConfiguration(
     const parsed: unknown = JSON.parse(await readFile(configurationPath, 'utf8'));
     if (
         !isObject(parsed) ||
-        (parsed.schemaVersion !== 1 && parsed.schemaVersion !== 2 && parsed.schemaVersion !== 3) ||
+        (parsed.schemaVersion !== 1 &&
+            parsed.schemaVersion !== 2 &&
+            parsed.schemaVersion !== 3 &&
+            parsed.schemaVersion !== 4) ||
         typeof parsed.projectRoot !== 'string'
     ) {
         throw new Error('traceability configuration must be a supported versioned object');
@@ -247,9 +268,22 @@ async function loadTraceabilityConfiguration(
         return { ...base, artifacts: base.artifacts, index: parsed.index, schemaVersion: 2 };
     }
     if (!Array.isArray(parsed.entities) || !parsed.entities.every(isEntityConfiguration)) {
-        throw new Error('traceability configuration V3 entities are invalid');
+        throw new Error(`traceability configuration V${parsed.schemaVersion} entities are invalid`);
     }
-    return { ...base, entities: parsed.entities, index: parsed.index, schemaVersion: 3 };
+    if (parsed.schemaVersion === 3) {
+        return { ...base, entities: parsed.entities, index: parsed.index, schemaVersion: 3 };
+    }
+    if (!Array.isArray(parsed.validationRules) ||
+        !parsed.validationRules.every(isValidationRuleConfiguration)) {
+        throw new Error('traceability configuration V4 validationRules are invalid');
+    }
+    return {
+        ...base,
+        entities: parsed.entities,
+        index: parsed.index,
+        schemaVersion: 4,
+        validationRules: parsed.validationRules,
+    };
 }
 
 function isObject(value: unknown): value is Readonly<Record<string, unknown>> {
@@ -356,6 +390,30 @@ function isIndexConfiguration(value: unknown): value is TraceabilityIndexConfigu
             (searchableField: unknown): searchableField is TraceabilitySearchableField =>
                 typeof searchableField === 'string' && searchableFields.has(searchableField)
         )
+    );
+}
+
+function isValidationRuleConfiguration(
+    value: unknown
+): value is TraceabilityValidationRuleConfiguration {
+    return (
+        isObject(value) &&
+        typeof value.id === 'string' &&
+        typeof value.sourceKind === 'string' &&
+        typeof value.targetKind === 'string' &&
+        (value.direction === 'forward' || value.direction === 'reverse') &&
+        Array.isArray(value.roles) &&
+        value.roles.every(
+            (role: unknown): role is TraceabilityRelationshipRole =>
+                role === 'implements' ||
+                role === 'supports' ||
+                role === 'verifies' ||
+                role === 'plans-implementation' ||
+                role === 'plans-verification' ||
+                role === 'introduces'
+        ) &&
+        isObject(value.cardinality) &&
+        typeof value.cardinality.minimum === 'number'
     );
 }
 

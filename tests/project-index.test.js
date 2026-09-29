@@ -12,14 +12,18 @@ const test = require('node:test');
 const {
   collectPlanProjection,
   collectTraceabilityProjection,
+  evaluateValidationRules,
   normalizePlanPayloads,
   parsePlanGraphArguments,
   parsePlanSearchArguments,
   parseSearchArguments,
+  parseValidationArguments,
   publishTraceabilityGeneration,
   queryPlanGraph,
   searchPlans,
+  scopedTraceabilityEntityIds,
   searchTraceability,
+  validateTraceability,
 } = require('../src/project-index');
 
 // Traceability: verifies REQ-TRACEABILITY-INDEX
@@ -321,6 +325,153 @@ test('parses exact search filters and rejects ambiguous options', () => {
     /invalid search option/,
   );
   assert.throws(() => parseSearchArguments(['processor', '--unknown']), /invalid search option/);
+});
+
+test('parses mutually exclusive validation scopes', () => {
+  assert.deepEqual(parseValidationArguments([]), {
+    json: false, scope: { kind: 'repository', input: null },
+  });
+  assert.deepEqual(parseValidationArguments(['--plan', 'child', '--json']), {
+    json: true, scope: { kind: 'plan', input: 'child' },
+  });
+  assert.throws(
+    () => parseValidationArguments(['--plan', 'one', '--campaign', 'two']),
+    /invalid validate option/,
+  );
+  assert.throws(() => parseValidationArguments(['--campaign']), /invalid validate option/);
+});
+
+test('reports every directional cardinality gap without counting prospective roles', () => {
+  const configuration = {
+    requirements: [
+      { id: 'REQ-ONE', sourcePath: 'one.md' },
+      { id: 'REQ-TWO', sourcePath: 'two.md', noUnitTestReason: 'Not executable.' },
+    ],
+    validationRules: [
+      {
+        id: 'endpoint-requirement', sourceKind: 'endpoint', targetKind: 'requirement',
+        roles: ['implements'], direction: 'forward', cardinality: { minimum: 1 },
+      },
+      {
+        id: 'requirement-endpoint', sourceKind: 'requirement', targetKind: 'endpoint',
+        roles: ['implements'], direction: 'reverse', cardinality: { minimum: 1 },
+      },
+      {
+        id: 'requirement-unit', sourceKind: 'requirement', targetKind: 'unit-test',
+        roles: ['verifies'], direction: 'reverse', cardinality: { minimum: 1 },
+      },
+    ],
+  };
+  const entities = [
+    { entity_id: 'REQ-ONE', entity_kind: 'requirement', path: 'one.md', line: null },
+    { entity_id: 'REQ-TWO', entity_kind: 'requirement', path: 'two.md', line: null },
+    { entity_id: 'trace:endpoint:one', entity_kind: 'endpoint', path: 'api.ts', line: 3 },
+    { entity_id: 'trace:endpoint:orphan', entity_kind: 'endpoint', path: 'api.ts', line: 9 },
+    { entity_id: 'trace:unit:one', entity_kind: 'unit-test', path: 'api.test.ts', line: 4 },
+    { entity_id: 'trace:tasklet:one', entity_kind: 'tasklet', path: 'plan.md', line: 4 },
+  ];
+  const relationships = [
+    { source_entity_id: 'trace:endpoint:one', target_entity_id: 'REQ-ONE', role: 'implements' },
+    { source_entity_id: 'trace:unit:one', target_entity_id: 'REQ-ONE', role: 'verifies' },
+    { source_entity_id: 'trace:tasklet:one', target_entity_id: 'REQ-TWO', role: 'plans-implementation' },
+  ];
+  const gaps = evaluateValidationRules(
+    configuration, entities, relationships, new Set(entities.map(entity => entity.entity_id)),
+  );
+  assert.deepEqual(gaps.map(gap => [gap.ruleId, gap.sourceEntityId]), [
+    ['endpoint-requirement', 'trace:endpoint:orphan'],
+    ['requirement-endpoint', 'REQ-TWO'],
+  ]);
+});
+
+test('validates only the exact fresh indexed graph and emits typed gaps', async () => {
+  const { configurationPath } = fixture();
+  const configuration = JSON.parse(fs.readFileSync(configurationPath, 'utf8'));
+  configuration.schemaVersion = 4;
+  configuration.entities = [];
+  configuration.validationRules = [
+    {
+      id: 'requirement-implementation', sourceKind: 'requirement', targetKind: 'implementation',
+      roles: ['implements'], direction: 'reverse', cardinality: { minimum: 1 },
+    },
+    {
+      id: 'requirement-unit', sourceKind: 'requirement', targetKind: 'unit-test',
+      roles: ['verifies'], direction: 'reverse', cardinality: { minimum: 1 },
+    },
+  ];
+  fs.writeFileSync(configurationPath, JSON.stringify(configuration));
+  const projection = collectTraceabilityProjection(configurationPath);
+  const queries = [];
+  const client = {
+    async query(text, values = []) {
+      queries.push({ text, values });
+      if (text.includes('to_regclass')) return { rows: [{ relation: 'schema_version_v1' }] };
+      if (text.includes('FROM ponytail_index.schema_version_v1')) return { rows: [{ schema_version: 1 }] };
+      if (text.includes('FROM ponytail_index.project_v1')) return { rows: [{
+        generation_id: 'generation', head_commit: projection.headCommit,
+        state_digest: projection.stateDigest,
+        configuration_digest: projection.configurationDigest,
+        parser_identity: projection.parserIdentity,
+      }] };
+      if (text.includes('FROM ponytail_index.entity_v1')) return { rows: [
+        { entity_id: 'REQ-VALUE', entity_kind: 'requirement', path: 'requirements.md', line: null },
+        { entity_id: 'implementation', entity_kind: 'implementation', path: 'src/value.js', line: 1 },
+      ] };
+      return { rows: [{
+        source_entity_id: 'implementation', target_entity_id: 'REQ-VALUE', role: 'implements',
+      }] };
+    },
+    release() {},
+  };
+  const result = await validateTraceability(
+    { kind: 'repository', input: null },
+    { configurationPath, pool: { async connect() { return client; } } },
+  );
+  assert.deepEqual(result.gaps.map(gap => [gap.ruleId, gap.sourceEntityId, gap.actual]), [
+    ['requirement-unit', 'REQ-VALUE', 0],
+  ]);
+  assert.equal(result.scope.kind, 'repository');
+  assert.equal(queries.at(-1).values[0], 'generation');
+});
+
+test('derives exact plan and campaign entity closure through canonical membership and issue links', () => {
+  const root = planFixture();
+  fs.mkdirSync(path.join(root, 'pm/bugs/open'), { recursive: true });
+  fs.writeFileSync(
+    path.join(root, 'pm/bugs/open/issue.md'),
+    '# Issue\n\nPlan: [child](../../plans/open/child/plan.md)\n',
+  );
+  const configuration = {
+    artifacts: [{ class: 'issue', path: 'pm/bugs/open/issue.md' }],
+  };
+  const entities = [
+    { entity_id: 'trace:plan:root', entity_kind: 'plan', path: 'pm/plans/in_progress/root/plan.md' },
+    { entity_id: 'trace:tasklet:child', entity_kind: 'tasklet', path: 'pm/plans/open/child/plan.md' },
+    { entity_id: 'trace:issue:one', entity_kind: 'issue', path: 'pm/bugs/open/issue.md' },
+    { entity_id: 'REQ-ROOT', entity_kind: 'requirement', path: 'requirements.md' },
+    { entity_id: 'REQ-CHILD', entity_kind: 'requirement', path: 'requirements.md' },
+    { entity_id: 'trace:implementation:child', entity_kind: 'implementation', path: 'src/child.js' },
+  ];
+  const relationships = [
+    { source_entity_id: 'trace:plan:root', target_entity_id: 'REQ-ROOT', role: 'plans-implementation' },
+    { source_entity_id: 'trace:tasklet:child', target_entity_id: 'REQ-CHILD', role: 'plans-implementation' },
+    { source_entity_id: 'trace:issue:one', target_entity_id: 'REQ-CHILD', role: 'introduces' },
+    { source_entity_id: 'trace:implementation:child', target_entity_id: 'REQ-CHILD', role: 'implements' },
+  ];
+  const rows = entities.map(entity => ({ ...entity, line: null }));
+  const plan = scopedTraceabilityEntityIds(
+    configuration, { worktreePath: root }, { kind: 'plan', input: 'child' }, rows, relationships,
+  );
+  assert.equal(plan.id, 'child');
+  assert.deepEqual([...plan.entityIds].sort(), [
+    'REQ-CHILD', 'trace:implementation:child', 'trace:issue:one', 'trace:tasklet:child',
+  ]);
+  const campaign = scopedTraceabilityEntityIds(
+    configuration, { worktreePath: root }, { kind: 'campaign', input: 'child' }, rows, relationships,
+  );
+  assert.equal(campaign.id, 'root');
+  assert.equal(campaign.entityIds.has('REQ-ROOT'), true);
+  assert.equal(campaign.entityIds.has('trace:plan:root'), true);
 });
 
 test('searches only the exact fresh generation with bound filters', async () => {

@@ -19,6 +19,7 @@ const {
   parsePlanSource,
   readManagementConfigV1,
   resolveCampaignRoot,
+  resolveCampaignScope,
 } = require('./campaign-census');
 const {
   parseSprintFile,
@@ -159,6 +160,37 @@ const TraceabilitySearchResultReaders = Object.freeze({
     }
     return value;
   } }),
+  writerVariant: 'V1',
+});
+
+function readTraceabilityValidationResultV1(value) {
+  if (!exactKeys(value, [
+    'schemaVersion', 'corpus', 'scope', 'generationId', 'rules', 'gaps',
+  ]) || value.schemaVersion !== 1 || value.corpus !== 'traceability' ||
+      typeof value.generationId !== 'string' || !Number.isInteger(value.rules) ||
+      value.rules < 0 || !exactKeys(value.scope, ['kind', 'id']) ||
+      !['repository', 'plan', 'campaign'].includes(value.scope.kind) ||
+      !nullableString(value.scope.id) || !Array.isArray(value.gaps) ||
+      value.gaps.some(gap =>
+        !exactKeys(gap, [
+          'ruleId', 'sourceEntityId', 'sourceKind', 'sourcePath', 'sourceLine',
+          'targetKind', 'roles', 'direction', 'minimum', 'actual',
+        ]) ||
+        !['ruleId', 'sourceEntityId', 'sourceKind', 'targetKind', 'direction']
+          .every(key => typeof gap[key] === 'string' && gap[key] !== '') ||
+        !nullableString(gap.sourcePath) ||
+        !(gap.sourceLine === null || Number.isInteger(gap.sourceLine) && gap.sourceLine > 0) ||
+        !Array.isArray(gap.roles) || gap.roles.length === 0 ||
+        gap.roles.some(role => typeof role !== 'string' || role === '') ||
+        !Number.isInteger(gap.minimum) || gap.minimum < 1 ||
+        !Number.isInteger(gap.actual) || gap.actual < 0)) {
+    throw new Error('invalid traceability validation result V1');
+  }
+  return value;
+}
+
+const TraceabilityValidationResultReaders = Object.freeze({
+  variants: Object.freeze({ V1: readTraceabilityValidationResultV1 }),
   writerVariant: 'V1',
 });
 
@@ -553,6 +585,15 @@ function collectTraceabilityProjection(configurationPath) {
     ...configuration.artifacts.map(artifact => artifact.path),
     ...configuration.entities.map(entity => entity.path),
   ])].sort();
+  for (const relativePath of paths) {
+    const absolutePath = path.join(root, relativePath);
+    if (!fs.existsSync(absolutePath) || !fs.statSync(absolutePath).isFile()) {
+      throw new ProjectIndexError(
+        'TRACEABILITY_SOURCE_MISSING',
+        `configured traceability source does not resolve: ${relativePath}`,
+      );
+    }
+  }
   const configurationBytes = fs.readFileSync(configurationPath);
   const configurationDigest = digest(configurationBytes);
   const parserIdentity = digest(Buffer.concat([
@@ -1244,6 +1285,168 @@ async function searchTraceability(query, filters, options = {}) {
   }
 }
 
+function parseValidationArguments(args) {
+  let json = false;
+  let scope = { kind: 'repository', input: null };
+  while (args.length > 0) {
+    const option = args.shift();
+    if (option === '--json' && !json) {
+      json = true;
+      continue;
+    }
+    const kind = { '--plan': 'plan', '--campaign': 'campaign' }[option];
+    if (kind === undefined || scope.kind !== 'repository' || args.length === 0 ||
+        args[0].startsWith('--')) {
+      throw new ProjectIndexError(
+        'TRACEABILITY_VALIDATE_USAGE',
+        `invalid validate option: ${option}`,
+      );
+    }
+    scope = { kind, input: args.shift() };
+  }
+  return { json, scope };
+}
+
+function scopedTraceabilityEntityIds(configuration, projection, scope, entities, relationships) {
+  if (scope.kind === 'repository') {
+    return { id: null, entityIds: new Set(entities.map(entity => entity.entity_id)) };
+  }
+  const campaign = resolveCampaignScope(projection.worktreePath, scope.input);
+  const selectedPlans = scope.kind === 'campaign'
+    ? campaign.plans
+    : campaign.plans.filter(plan => plan.id === campaign.submittedPlanId);
+  const selectedPlanFiles = new Set(selectedPlans.map(plan =>
+    fs.realpathSync(path.join(projection.worktreePath, plan.path))));
+  const planDirectories = selectedPlans.map(plan => `${path.posix.dirname(plan.path)}/`);
+  const issuePaths = new Set();
+  for (const artifact of configuration.artifacts.filter(candidate => candidate.class === 'issue')) {
+    const issueFile = path.join(projection.worktreePath, artifact.path);
+    if (!fs.existsSync(issueFile)) continue;
+    const links = linkedPlanFiles({
+      planFile: issueFile,
+      text: fs.readFileSync(issueFile, 'utf8'),
+    });
+    if (links.some(link => selectedPlanFiles.has(link))) issuePaths.add(artifact.path);
+  }
+  const entityById = new Map(entities.map(entity => [entity.entity_id, entity]));
+  const entityIds = new Set(entities.filter(entity =>
+    entity.path !== null && (
+      planDirectories.some(directory => entity.path.startsWith(directory)) ||
+      issuePaths.has(entity.path)
+    ) && ['plan', 'tasklet', 'issue'].includes(entity.entity_kind)
+  ).map(entity => entity.entity_id));
+  const requirementIds = new Set();
+  for (const relationship of relationships) {
+    if (entityIds.has(relationship.source_entity_id) &&
+        entityById.get(relationship.target_entity_id)?.entity_kind === 'requirement') {
+      requirementIds.add(relationship.target_entity_id);
+    }
+  }
+  for (const requirementId of requirementIds) entityIds.add(requirementId);
+  for (const relationship of relationships) {
+    if (requirementIds.has(relationship.target_entity_id)) {
+      entityIds.add(relationship.source_entity_id);
+    }
+  }
+  return {
+    id: scope.kind === 'campaign' ? campaign.campaignId : campaign.submittedPlanId,
+    entityIds,
+  };
+}
+
+function evaluateValidationRules(configuration, entities, relationships, entityIds) {
+  const entityById = new Map(entities.map(entity => [entity.entity_id, entity]));
+  const requirementById = new Map(configuration.requirements.map(requirement =>
+    [requirement.id, requirement]));
+  const gaps = [];
+  for (const rule of configuration.validationRules) {
+    const sources = entities.filter(entity =>
+      entity.entity_kind === rule.sourceKind && entityIds.has(entity.entity_id));
+    for (const source of sources) {
+      if (rule.direction === 'reverse' && rule.sourceKind === 'requirement' &&
+          rule.targetKind === 'unit-test' &&
+          requirementById.get(source.entity_id)?.noUnitTestReason !== undefined) {
+        continue;
+      }
+      const targets = new Set();
+      for (const relationship of relationships) {
+        if (!rule.roles.includes(relationship.role)) continue;
+        const targetId = rule.direction === 'forward'
+          ? relationship.target_entity_id : relationship.source_entity_id;
+        const matchesSource = rule.direction === 'forward'
+          ? relationship.source_entity_id === source.entity_id
+          : relationship.target_entity_id === source.entity_id;
+        if (matchesSource && entityIds.has(targetId) &&
+            entityById.get(targetId)?.entity_kind === rule.targetKind) {
+          targets.add(targetId);
+        }
+      }
+      if (targets.size < rule.cardinality.minimum) gaps.push({
+        ruleId: rule.id,
+        sourceEntityId: source.entity_id,
+        sourceKind: source.entity_kind,
+        sourcePath: source.path,
+        sourceLine: source.line,
+        targetKind: rule.targetKind,
+        roles: [...rule.roles],
+        direction: rule.direction,
+        minimum: rule.cardinality.minimum,
+        actual: targets.size,
+      });
+    }
+  }
+  return gaps.sort((left, right) =>
+    left.ruleId.localeCompare(right.ruleId) ||
+    (left.sourcePath ?? '').localeCompare(right.sourcePath ?? '') ||
+    (left.sourceLine ?? 0) - (right.sourceLine ?? 0) ||
+    left.sourceEntityId.localeCompare(right.sourceEntityId));
+}
+
+async function validateTraceability(scope, options = {}) {
+  const configurationPath = options.configurationPath ??
+    path.resolve('.agents/config/project/traceability.json');
+  const projection = collectTraceabilityProjection(configurationPath);
+  const configuration = loadTraceabilityConfiguration(configurationPath);
+  const pool = options.pool ?? new (require('pg').Pool)(databaseOptions(projection.worktreePath));
+  const client = await pool.connect();
+  try {
+    const generation = await currentGeneration(client, projection);
+    const entityResult = await client.query(`
+      SELECT entity_id, entity_kind, path, line
+      FROM ponytail_index.entity_v1
+      WHERE generation_id = $1::uuid
+      ORDER BY entity_id`, [generation.generation_id]);
+    const relationshipResult = await client.query(`
+      SELECT source_entity_id, target_entity_id, role
+      FROM ponytail_index.relationship_v1
+      WHERE generation_id = $1::uuid
+      ORDER BY source_entity_id, target_entity_id, role`, [generation.generation_id]);
+    const selected = scopedTraceabilityEntityIds(
+      configuration,
+      projection,
+      scope,
+      entityResult.rows,
+      relationshipResult.rows,
+    );
+    return TraceabilityValidationResultReaders.variants.V1({
+      schemaVersion: 1,
+      corpus: 'traceability',
+      scope: { kind: scope.kind, id: selected.id },
+      generationId: generation.generation_id,
+      rules: configuration.validationRules.length,
+      gaps: evaluateValidationRules(
+        configuration,
+        entityResult.rows,
+        relationshipResult.rows,
+        selected.entityIds,
+      ),
+    });
+  } finally {
+    client.release();
+    if (options.pool === undefined) await pool.end();
+  }
+}
+
 function parsePlanSearchArguments(args) {
   if (args.length === 0 || args[0].startsWith('--') || args[0].trim() === '') {
     throw new ProjectIndexError(
@@ -1445,6 +1648,21 @@ function printSearchHuman(result) {
   }
 }
 
+function printValidationHuman(result) {
+  if (result.gaps.length === 0) {
+    process.stdout.write(`traceability valid: ${result.rules} rules\n`);
+    return;
+  }
+  for (const gap of result.gaps) {
+    const location = `${gap.sourcePath ?? '-'}${gap.sourceLine === null ? '' : `:${gap.sourceLine}`}`;
+    process.stdout.write(
+      `${location}\t${gap.ruleId}\t${gap.sourceEntityId}\t` +
+      `missing ${gap.targetKind} ${gap.direction} ${gap.roles.join(',')} ` +
+      `(${gap.actual}/${gap.minimum})\n`,
+    );
+  }
+}
+
 function printPlanSearchHuman(result) {
   if (result.results.length === 0) {
     process.stdout.write('no plan matches\n');
@@ -1469,7 +1687,7 @@ function printPlanGraphHuman(result) {
 async function run(args) {
   const family = args.shift();
   const operation = args.shift();
-  const valid = family === 'traceability' && ['index', 'search'].includes(operation) ||
+  const valid = family === 'traceability' && ['index', 'search', 'validate'].includes(operation) ||
     family === 'plan' && ['search', 'descendants', 'ancestors', 'roots', 'stranded'].includes(operation);
   if (!valid) {
     throw new ProjectIndexError(
@@ -1506,6 +1724,14 @@ async function run(args) {
       `${corpus.parsedFiles} parsed, ${corpus.reusedFiles} reused\n`);
     return;
   }
+  if (operation === 'validate') {
+    const validation = parseValidationArguments(args);
+    const result = await validateTraceability(validation.scope);
+    if (validation.json) process.stdout.write(`${JSON.stringify(result)}\n`);
+    else printValidationHuman(result);
+    if (result.gaps.length > 0) process.exitCode = 1;
+    return;
+  }
   const search = parseSearchArguments(args);
   const result = await searchTraceability(search.query, search.filters);
   if (search.json) process.stdout.write(`${JSON.stringify(result)}\n`);
@@ -1524,6 +1750,7 @@ module.exports = {
   ProjectIndexStorageReaders,
   TraceabilityIndexResultReaders,
   TraceabilitySearchResultReaders,
+  TraceabilityValidationResultReaders,
   PlanIndexStorageReaders,
   PlanSearchResultReaders,
   PlanGraphResultReaders,
@@ -1535,10 +1762,14 @@ module.exports = {
   indexTraceability,
   indexProject,
   parseSearchArguments,
+  parseValidationArguments,
   parsePlanSearchArguments,
   parsePlanGraphArguments,
   normalizePlanPayloads,
   searchPlans,
   queryPlanGraph,
+  evaluateValidationRules,
+  scopedTraceabilityEntityIds,
   searchTraceability,
+  validateTraceability,
 };

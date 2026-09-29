@@ -107,5 +107,7 @@ required.
 
 In progress. S01 passed focused unit, semantic, setup, distribution,
 installation, dispatcher, canonical-census, corpus-isolation, stale-query, and
-real PostgreSQL acceptance on 2026-09-29. S02 is ready to implement the
-relationship graph, prospective planning annotations, and scoped validation.
+real PostgreSQL acceptance on 2026-09-29. S02-F01 and the directional/scoped
+validator in S02-F02 now pass focused
+parser, semantic, policy, index, census, and dispatcher tests; final repository
+migration and plan acceptance remain.

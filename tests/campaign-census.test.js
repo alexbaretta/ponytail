@@ -18,6 +18,7 @@ const {
   parsePlanSource,
   readCampaignReportV1,
   readManagementConfigV1,
+  resolveCampaignScope,
 } = require('../src/campaign-census.js');
 
 const sourceRoot = path.join(__dirname, '..');
@@ -201,6 +202,14 @@ test('root and leaf report the same campaign while unrelated malformed plans sta
   const fromRootName = buildReport(root, config(root), rootId);
   const fromRootNameFile = buildReport(root, config(root), `${rootId}/plan.md`);
   const fromActiveCampaign = buildReport(root, config(root));
+  assert.deepEqual(resolveCampaignScope(root, childId), {
+    campaignId: rootId,
+    submittedPlanId: childId,
+    plans: [
+      { id: rootId, path: `pm/plans/in_progress/${rootId}/plan.md` },
+      { id: childId, path: `pm/plans/closed/${childId}/plan.md` },
+    ],
+  });
   assert.equal(fromRoot.campaign.rootPlanId, rootId);
   assert.deepEqual(fromRoot.campaign, fromChild.campaign);
   assert.deepEqual(fromRoot.campaign, fromRootName.campaign);

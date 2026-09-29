@@ -12,6 +12,7 @@ import {
     type TraceabilityConfigurationV1,
     type TraceabilityConfigurationV2,
     type TraceabilityConfigurationV3,
+    type TraceabilityConfigurationV4,
 } from '../src/traceability.js';
 import type { TstsCheckResult } from '../src/index.js';
 
@@ -262,5 +263,48 @@ describe('TypeScript traceability locators', (): void => {
 
         assert.deepEqual(result.diagnostics, []);
         assert.equal(result.checkedFileCount, 1);
+    });
+
+    it('accepts an exact V4 directional validation matrix', async (): Promise<void> => {
+        const traceabilityFixture: {
+            readonly configurationPath: string;
+            readonly projectPath: string;
+        } = await writeFixture(
+            '// Traceability: implements REQ-ONE\nexport function traced(): void {}\n'
+        );
+        const configuration: TraceabilityConfigurationV4 = {
+            artifacts: [{ class: 'implementation', locator: 'typescript', path: 'source.ts' }],
+            entities: [],
+            generatedArtifacts: [],
+            index: { searchableFields: ['entityId'] },
+            projectRoot: '.',
+            requirements: [{ id: 'REQ-ONE', sourcePath: 'requirements.md' }],
+            reverseViewPath: 'traceability.generated.md',
+            schemaVersion: 4,
+            typescript: {
+                cliPath: 'tsts.js',
+                projectPath: traceabilityFixture.projectPath,
+            },
+            validationRules: [
+                {
+                    cardinality: { minimum: 1 },
+                    direction: 'reverse',
+                    id: 'requirement-implementation',
+                    roles: ['implements', 'supports'],
+                    sourceKind: 'requirement',
+                    targetKind: 'implementation',
+                },
+            ],
+        };
+        await writeFile(
+            traceabilityFixture.configurationPath,
+            `${JSON.stringify(configuration)}\n`
+        );
+
+        const result: TstsCheckResult = await checkTraceabilityAnnotations(
+            traceabilityFixture
+        );
+
+        assert.deepEqual(result.diagnostics, []);
     });
 });

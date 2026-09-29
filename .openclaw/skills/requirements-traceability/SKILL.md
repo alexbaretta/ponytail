@@ -119,6 +119,21 @@ A no-unit-test disposition waives only the unit-test relationship class.
 Integration and UAT remain required. Do not use a disposition merely because a
 test is inconvenient, expensive, or not yet written.
 
+Projects using indexed gap validation configure explicit directional rules.
+Each rule names one stable ID, source and target entity kinds, allowed roles,
+forward or reverse traversal, and a positive minimum cardinality. Forward
+rules count relationships from each source; reverse rules count relationships
+into each source. Configure both directions when both are requirements—for
+example, endpoint-to-requirement and requirement-to-endpoint are independent
+rules. Gap reports identify every unmatched source; prospective roles never
+match completed-coverage rules.
+
+Repository validation covers every indexed entity. `--plan` and `--campaign`
+scopes are mutually exclusive and use canonical plan/campaign membership,
+tasklets, linked issues, named requirements, and the actual artifacts related
+to those requirements. Invalid membership must fail; never fall back to a
+broader scope.
+
 ## Enforcement Boundaries
 
 The project-neutral structural checker owns strict configuration parsing,
@@ -163,6 +178,8 @@ reverse connection, not documentation drift to ignore.
 - Every explicit entity identity is unique, resolves to its canonical source,
   and uses the exact declared kind and ID.
 - Prospective relationships remain distinct from completed coverage.
+- Every configured directional rule reports no unmatched in-scope source
+  entity, or the missing entities are added to the active plan.
 - Requirement sources use an explicit Identifier field, canonical bold-list
   declaration, or canonical ATX requirement heading; incidental mentions do
   not satisfy source resolution.

@@ -455,6 +455,23 @@ function resolveCampaignRoot(repositoryRoot, input) {
   return { campaignId: campaign.root.id, submittedPlanId: campaign.selected.id };
 }
 
+function resolveCampaignScope(repositoryRoot, input) {
+  const canonicalRepositoryRoot = fs.realpathSync(repositoryRoot);
+  const campaign = discoverCampaign(
+    canonicalRepositoryRoot,
+    readManagementConfig(canonicalRepositoryRoot),
+    input,
+  );
+  return {
+    campaignId: campaign.root.id,
+    submittedPlanId: campaign.selected.id,
+    plans: campaign.plans.map(plan => ({
+      id: plan.id,
+      path: plan.relativePlanFile,
+    })),
+  };
+}
+
 function increment(record, key) {
   record[key] = (record[key] ?? 0) + 1;
 }
@@ -842,6 +859,7 @@ module.exports = {
   readPlanMetadataV1,
   readCampaignReportV1,
   resolveCampaignRoot,
+  resolveCampaignScope,
   run,
 };
 
