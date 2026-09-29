@@ -353,6 +353,19 @@ test('selected campaign fails on missing, ambiguous, and cyclic parentage', () =
   assert.equal(captureError(() => buildReport(duplicateRoot, config(duplicateRoot), duplicateRootPlan)).code, 'CAMPAIGN_PLAN_ID_DUPLICATE');
 });
 
+test('selected campaign validates direct dependency membership and cycles', () => {
+  const missingRoot = repository();
+  const missing = plan(missingRoot, 'open', '2026-09-29-missing-dependency', null, { schemaVersion: 2, dependsOn: ['absent'] });
+  assert.equal(captureError(() => buildReport(missingRoot, config(missingRoot), missing)).code, 'CAMPAIGN_DEPENDENCY_MISSING');
+
+  const cycleRoot = repository();
+  const rootId = '2026-09-29-dependency-root';
+  const childId = '2026-09-29-dependency-child';
+  const rootPlan = plan(cycleRoot, 'open', rootId, null, { schemaVersion: 2, dependsOn: [childId] });
+  plan(cycleRoot, 'open', childId, rootId, { schemaVersion: 2, dependsOn: [rootId] });
+  assert.equal(captureError(() => buildReport(cycleRoot, config(cycleRoot), rootPlan)).code, 'CAMPAIGN_DEPENDENCY_CYCLE');
+});
+
 test('selected and linked campaign records require managed metadata and resolving human links', () => {
   const unmarkedRoot = repository();
   const unmarked = write(unmarkedRoot, 'pm/plans/open/2026-09-24-unmarked/plan.md', '# unmarked\n');
@@ -517,6 +530,21 @@ test('ponytail dispatches campaign reporting through the production module', () 
   });
   assert.equal(inferred.status, 0, inferred.stderr);
   assert.match(inferred.stdout, /Active campaigns: 2026-09-24-dispatch \(2026-09-24-dispatch\)/);
+
+  // Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
+  const status = spawnSync(ponytailCli, ['campaign', 'status', '2026-09-24-dispatch', '--json'], {
+    cwd: root,
+    encoding: 'utf8',
+    env: {
+      ...process.env,
+      HOME: home,
+      PATH: `${path.dirname(process.execPath)}:/usr/bin:/bin`,
+      PONYTAIL_CAMPAIGN_STATE_DIR: temporaryDirectory('ponytail-campaign-state'),
+      PONYTAIL_SESSION_ID: 'coordinator',
+    },
+  });
+  assert.equal(status.status, 0, status.stderr);
+  assert.equal(JSON.parse(status.stdout).campaignId, '2026-09-24-dispatch');
 
   fs.writeFileSync(selected, fs.readFileSync(selected, 'utf8').replace('"schemaVersion": 1', '"schemaVersion": 99'));
   const failure = spawnSync(ponytailCli, ['campaign', 'report', selected, '--json'], {

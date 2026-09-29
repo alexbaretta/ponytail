@@ -496,6 +496,48 @@ function resolveCampaignScope(repositoryRoot, input) {
   };
 }
 
+function validateCampaignDependencies(plans) {
+  const plansById = new Map(plans.map((plan) => [plan.id, plan]));
+  for (const plan of plans) {
+    for (const dependencyId of plan.dependsOn) {
+      if (!plansById.has(dependencyId)) {
+        dataError('CAMPAIGN_DEPENDENCY_MISSING', `dependency is not a member of campaign ${plans[0].id}: ${dependencyId}`, plan.id, plan.relativePlanFile);
+      }
+    }
+  }
+  const visiting = new Set();
+  const visited = new Set();
+  const visit = (plan) => {
+    if (visiting.has(plan.id)) dataError('CAMPAIGN_DEPENDENCY_CYCLE', `dependency cycle reaches ${plan.id}`, plan.id, plan.relativePlanFile);
+    if (visited.has(plan.id)) return;
+    visiting.add(plan.id);
+    for (const dependencyId of plan.dependsOn) visit(plansById.get(dependencyId));
+    visiting.delete(plan.id);
+    visited.add(plan.id);
+  };
+  for (const plan of plans) visit(plan);
+}
+
+function campaignGraph(repositoryRoot, input) {
+  const canonicalRepositoryRoot = fs.realpathSync(repositoryRoot);
+  const config = readManagementConfig(canonicalRepositoryRoot);
+  const campaign = discoverCampaign(canonicalRepositoryRoot, config, input);
+  validateCampaignDependencies(campaign.plans);
+  for (const plan of campaign.plans) validatePlanContents(plan, config, canonicalRepositoryRoot);
+  return {
+    campaignId: campaign.root.id,
+    submittedPlanId: campaign.selected.id,
+    plans: campaign.plans.map((plan) => ({
+      id: plan.id,
+      parentPlanId: plan.parentPlanId,
+      dependsOn: [...plan.dependsOn],
+      lifecycle: plan.lifecycle,
+      path: plan.relativePlanFile,
+    })),
+    lifecycle: { ...config.lifecycle.roles },
+  };
+}
+
 function increment(record, key) {
   record[key] = (record[key] ?? 0) + 1;
 }
@@ -593,6 +635,7 @@ function repositoryIdentity(repositoryRoot) {
 function buildReport(repositoryRoot, config, input) {
   const canonicalRepositoryRoot = fs.realpathSync(repositoryRoot);
   const campaign = discoverCampaign(canonicalRepositoryRoot, config, input);
+  validateCampaignDependencies(campaign.plans);
   const planRecords = [];
   const sprintRecords = [];
   const taskletRecords = [];
@@ -1084,11 +1127,14 @@ function repositoryRoot() {
 }
 
 function usage() {
-  return 'usage: ponytail campaign validate <plan-name-or-path>\n       ponytail campaign validate --all [--json]\n       ponytail campaign report [<plan-name-or-path>] [--json] [--[no-]summary-table] [--[no-]plan-table] [--[no-]sprint-table]';
+  return 'usage: ponytail campaign validate <plan-name-or-path>\n       ponytail campaign validate --all [--json]\n       ponytail campaign report [<plan-name-or-path>] [--json] [--[no-]summary-table] [--[no-]plan-table] [--[no-]sprint-table]\n       ponytail campaign status [<campaign>] [--json]\n       ponytail campaign advance [<campaign>] [--json]\n       ponytail campaign action-result <action-id> --result <json>';
 }
 
 function run(argv = process.argv.slice(2)) {
   const operation = argv[0];
+  if (['status', 'advance', 'action-result'].includes(operation)) {
+    return require('./campaign-orchestration').run(argv);
+  }
   let input;
   let json = false;
   let all = false;
@@ -1156,6 +1202,7 @@ module.exports = {
   buildReport,
   diagnostic,
   discoverCampaign,
+  campaignGraph,
   humanReport,
   humanInventory,
   linkedPlanFiles,
@@ -1167,6 +1214,7 @@ module.exports = {
   readPlanMetadataV2,
   readCampaignReportV1,
   readCampaignReportV2,
+  readManagementConfig,
   resolveCampaignRoot,
   resolveCampaignScope,
   run,

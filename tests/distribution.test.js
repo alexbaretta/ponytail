@@ -43,6 +43,7 @@ test('distribution contains the live-development harness only', () => {
     '.agents/config/project/management.json',
     'cli/ponytail',
     'src/campaign-census.js',
+    'src/campaign-orchestration.js',
     'src/plan-input.js',
     'src/pm-pdf.py',
     'cli/tsts',

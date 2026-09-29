@@ -267,6 +267,42 @@
       "supportedDowngradeVersions": []
     },
     {
+      "id": "campaign-assignment-ledger",
+      "implementation": {
+        "workspace": "ponytail",
+        "module": "src/campaign-orchestration.js",
+        "readerRegistryExport": "CampaignLedgerReaders"
+      },
+      "currentVersion": "V1",
+      "versions": ["V1"],
+      "supportedReadVersions": ["V1"],
+      "supportedDowngradeVersions": []
+    },
+    {
+      "id": "campaign-status",
+      "implementation": {
+        "workspace": "ponytail",
+        "module": "src/campaign-orchestration.js",
+        "readerRegistryExport": "CampaignStatusReaders"
+      },
+      "currentVersion": "V1",
+      "versions": ["V1"],
+      "supportedReadVersions": ["V1"],
+      "supportedDowngradeVersions": []
+    },
+    {
+      "id": "campaign-host-action",
+      "implementation": {
+        "workspace": "ponytail",
+        "module": "src/campaign-orchestration.js",
+        "readerRegistryExport": "CampaignActionReaders"
+      },
+      "currentVersion": "V1",
+      "versions": ["V1"],
+      "supportedReadVersions": ["V1"],
+      "supportedDowngradeVersions": []
+    },
+    {
       "id": "parallel-sprint-metadata",
       "implementation": {
         "workspace": "ponytail",

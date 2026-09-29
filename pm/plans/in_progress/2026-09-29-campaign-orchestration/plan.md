@@ -10,13 +10,17 @@
 
 <!-- ponytail-plan-campaign
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "id": "2026-09-29-campaign-orchestration",
-  "parent_plan_id": null
+  "parent_plan_id": null,
+  "depends_on": []
 }
 -->
 
 ## Objective
+
+Traceability: plans-implementation REQ-CAMPAIGN-ORCHESTRATION from plan 2026-09-29-campaign-orchestration
+Traceability: plans-verification REQ-CAMPAIGN-ORCHESTRATION from plan 2026-09-29-campaign-orchestration
 
 Implement durable, deterministic campaign scheduling, integration, and worker
 cleanup so a coordinator cannot forget assignments, dispatch the same plan
