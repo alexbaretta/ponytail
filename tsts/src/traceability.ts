@@ -15,13 +15,40 @@ export interface TraceabilityRequirementConfiguration {
 }
 
 export interface TraceabilityArtifactConfiguration {
-    readonly class: 'implementation' | 'unit-test' | 'integration-test' | 'uat';
+    readonly class:
+        | 'implementation'
+        | 'unit-test'
+        | 'integration-test'
+        | 'uat'
+        | 'plan'
+        | 'tasklet'
+        | 'issue';
     readonly locator: 'text' | 'typescript';
     readonly path: string;
     readonly roles?: readonly TraceabilityRelationshipRole[] | undefined;
 }
 
-export type TraceabilityRelationshipRole = 'implements' | 'supports' | 'verifies';
+export interface TraceabilityCompletedArtifactConfiguration
+    extends Omit<TraceabilityArtifactConfiguration, 'class'> {
+    readonly class: 'implementation' | 'unit-test' | 'integration-test' | 'uat';
+}
+
+export type TraceabilityRelationshipRole =
+    | 'implements'
+    | 'supports'
+    | 'verifies'
+    | 'plans-implementation'
+    | 'plans-verification'
+    | 'introduces';
+
+export interface TraceabilityEntityConfiguration {
+    readonly annotation?: string | undefined;
+    readonly description?: string | undefined;
+    readonly id: string;
+    readonly kind: string;
+    readonly line?: number | undefined;
+    readonly path: string;
+}
 
 export interface TraceabilityGeneratedArtifactConfiguration {
     readonly path: string;
@@ -57,27 +84,37 @@ interface TraceabilityConfigurationBase {
 }
 
 export interface TraceabilityConfigurationV1 extends TraceabilityConfigurationBase {
+    readonly artifacts: readonly TraceabilityCompletedArtifactConfiguration[];
     readonly schemaVersion: 1;
 }
 
 export interface TraceabilityConfigurationV2 extends TraceabilityConfigurationBase {
+    readonly artifacts: readonly TraceabilityCompletedArtifactConfiguration[];
     readonly index: TraceabilityIndexConfiguration;
     readonly schemaVersion: 2;
 }
 
+export interface TraceabilityConfigurationV3 extends TraceabilityConfigurationBase {
+    readonly artifacts: readonly TraceabilityArtifactConfiguration[];
+    readonly entities: readonly TraceabilityEntityConfiguration[];
+    readonly index: TraceabilityIndexConfiguration;
+    readonly schemaVersion: 3;
+}
+
 type TraceabilityConfiguration =
     | TraceabilityConfigurationV1
-    | TraceabilityConfigurationV2;
+    | TraceabilityConfigurationV2
+    | TraceabilityConfigurationV3;
 
 interface TraceabilityMarker {
     readonly line: number;
     readonly position: number;
     readonly requirementId: string;
-    readonly role: 'implements' | 'supports' | 'verifies';
+    readonly role: TraceabilityRelationshipRole;
 }
 
 const markerPattern: RegExp =
-    /[Tt]raceability["']?\s*:\s*["']?(implements|supports|verifies)\s+([A-Z][A-Z0-9-]*)/gu;
+    /[Tt]raceability["']?\s*:\s*["']?(implements|supports|verifies|plans-implementation|plans-verification|introduces)\s+([A-Z][A-Z0-9-]*)(?:\s+from\s+([a-z][a-z0-9-]*)\s+([^\s"'`,;]+))?/gu;
 
 // Traceability: supports REQ-REQUIREMENTS-TRACEABILITY
 export async function checkTraceabilityAnnotations(input: {
@@ -169,7 +206,7 @@ async function loadTraceabilityConfiguration(
     const parsed: unknown = JSON.parse(await readFile(configurationPath, 'utf8'));
     if (
         !isObject(parsed) ||
-        (parsed.schemaVersion !== 1 && parsed.schemaVersion !== 2) ||
+        (parsed.schemaVersion !== 1 && parsed.schemaVersion !== 2 && parsed.schemaVersion !== 3) ||
         typeof parsed.projectRoot !== 'string'
     ) {
         throw new Error('traceability configuration must be a supported versioned object');
@@ -194,11 +231,25 @@ async function loadTraceabilityConfiguration(
         reverseViewPath: parsed.reverseViewPath,
         ...(parsed.typescript === undefined ? {} : { typescript: parsed.typescript }),
     };
-    if (parsed.schemaVersion === 1) return { ...base, schemaVersion: 1 };
-    if (!isIndexConfiguration(parsed.index)) {
-        throw new Error('traceability configuration V2 index is invalid');
+    if (parsed.schemaVersion === 1) {
+        if (!base.artifacts.every(isCompletedArtifactConfiguration)) {
+            throw new Error('traceability configuration V1 artifact class is invalid');
+        }
+        return { ...base, artifacts: base.artifacts, schemaVersion: 1 };
     }
-    return { ...base, index: parsed.index, schemaVersion: 2 };
+    if (!isIndexConfiguration(parsed.index)) {
+        throw new Error(`traceability configuration V${parsed.schemaVersion} index is invalid`);
+    }
+    if (parsed.schemaVersion === 2) {
+        if (!base.artifacts.every(isCompletedArtifactConfiguration)) {
+            throw new Error('traceability configuration V2 artifact class is invalid');
+        }
+        return { ...base, artifacts: base.artifacts, index: parsed.index, schemaVersion: 2 };
+    }
+    if (!Array.isArray(parsed.entities) || !parsed.entities.every(isEntityConfiguration)) {
+        throw new Error('traceability configuration V3 entities are invalid');
+    }
+    return { ...base, entities: parsed.entities, index: parsed.index, schemaVersion: 3 };
 }
 
 function isObject(value: unknown): value is Readonly<Record<string, unknown>> {
@@ -222,15 +273,46 @@ function isArtifactConfiguration(value: unknown): value is TraceabilityArtifactC
         (value.class === 'implementation' ||
             value.class === 'unit-test' ||
             value.class === 'integration-test' ||
-            value.class === 'uat') &&
+            value.class === 'uat' ||
+            value.class === 'plan' ||
+            value.class === 'tasklet' ||
+            value.class === 'issue') &&
         (value.locator === 'text' || value.locator === 'typescript') &&
         typeof value.path === 'string' &&
         (value.roles === undefined ||
             (Array.isArray(value.roles) &&
                 value.roles.every(
                     (role: unknown): role is TraceabilityRelationshipRole =>
-                        role === 'implements' || role === 'supports' || role === 'verifies'
+                        role === 'implements' ||
+                        role === 'supports' ||
+                        role === 'verifies' ||
+                        role === 'plans-implementation' ||
+                        role === 'plans-verification' ||
+                        role === 'introduces'
                 )))
+    );
+}
+
+function isCompletedArtifactConfiguration(
+    value: TraceabilityArtifactConfiguration
+): value is TraceabilityCompletedArtifactConfiguration {
+    return (
+        value.class === 'implementation' ||
+        value.class === 'unit-test' ||
+        value.class === 'integration-test' ||
+        value.class === 'uat'
+    );
+}
+
+function isEntityConfiguration(value: unknown): value is TraceabilityEntityConfiguration {
+    return (
+        isObject(value) &&
+        typeof value.kind === 'string' &&
+        typeof value.id === 'string' &&
+        typeof value.path === 'string' &&
+        (value.line === undefined || typeof value.line === 'number') &&
+        (value.annotation === undefined || typeof value.annotation === 'string') &&
+        (value.description === undefined || typeof value.description === 'string')
     );
 }
 

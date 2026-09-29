@@ -81,15 +81,142 @@ test('retains exact V1 reads and validates latest V2 search policy', () => {
     );
   }
 
-  traceabilityFixture.configuration.schemaVersion = 3;
+  traceabilityFixture.configuration.schemaVersion = 4;
   fs.writeFileSync(
     traceabilityFixture.configurationPath,
     `${JSON.stringify(traceabilityFixture.configuration, null, 2)}\n`,
   );
   assert.throws(
     () => loadTraceabilityConfiguration(traceabilityFixture.configurationPath),
-    /unsupported traceability configuration schemaVersion: 3/u,
+    /unsupported traceability configuration schemaVersion: 4/u,
   );
+});
+
+test('reads exact V3 entity declarations and prospective planning roles', () => {
+  const traceabilityFixture = fixture();
+  const requirementId = 'REQ-' + 'ONE';
+  traceabilityFixture.configuration.schemaVersion = 3;
+  traceabilityFixture.configuration.index = { searchableFields: ['entityId', 'role'] };
+  traceabilityFixture.configuration.entities = [{
+    kind: 'endpoint',
+    id: 'GET-value',
+    path: 'src.js',
+    line: 1,
+    annotation: 'GET /value',
+    description: 'Returns the configured value.',
+  }];
+  traceabilityFixture.configuration.artifacts.push({
+    class: 'plan', path: 'plan.md', locator: 'text',
+  });
+  traceabilityFixture.configuration.artifacts.push({
+    class: 'issue', path: 'issue.md', locator: 'text',
+  });
+  fs.writeFileSync(
+    path.join(traceabilityFixture.root, 'src.js'),
+    `// Traceability: implements ${requirementId} from endpoint GET-value\nfunction value() {}\n`,
+  );
+  fs.writeFileSync(
+    path.join(traceabilityFixture.root, 'plan.md'),
+    `Traceability: plans-implementation ${requirementId} from tasklet S01-F01-T01\n` +
+    `Traceability: plans-verification ${requirementId} from plan PLAN-ONE\n`,
+  );
+  fs.writeFileSync(
+    path.join(traceabilityFixture.root, 'issue.md'),
+    `Traceability: introduces ${requirementId} from issue BUG-ONE\n`,
+  );
+  fs.writeFileSync(
+    traceabilityFixture.configurationPath,
+    `${JSON.stringify(traceabilityFixture.configuration, null, 2)}\n`,
+  );
+
+  const loaded = loadTraceabilityConfiguration(traceabilityFixture.configurationPath);
+  assert.equal(loaded.schemaVersion, 3);
+  assert.deepEqual(loaded.entities, traceabilityFixture.configuration.entities);
+  const result = analyzeTraceability(traceabilityFixture.configurationPath, {
+    runTypescript: false,
+    write: true,
+  });
+  assert.deepEqual(result.diagnostics, []);
+  assert.deepEqual(
+    result.relationships.filter(relationship => relationship.role.includes('plans-'))
+      .map(relationship => [relationship.entityKind, relationship.entityId, relationship.role]),
+    [
+      ['tasklet', 'S01-F01-T01', 'plans-implementation'],
+      ['plan', 'PLAN-ONE', 'plans-verification'],
+    ],
+  );
+  assert.equal(result.relationships.some(relationship =>
+    relationship.entityKind === 'issue' && relationship.role === 'introduces'), true);
+  assert.equal(result.relationships.some(relationship =>
+    relationship.entityKind === 'endpoint' && relationship.entityId === 'GET-value'), true);
+});
+
+test('rejects malformed V3 entities and never counts prospective work as actual coverage', () => {
+  const traceabilityFixture = fixture();
+  const requirementId = 'REQ-' + 'ONE';
+  traceabilityFixture.configuration.schemaVersion = 3;
+  traceabilityFixture.configuration.index = { searchableFields: ['entityId'] };
+  traceabilityFixture.configuration.entities = [];
+  traceabilityFixture.configuration.artifacts.push({
+    class: 'plan', path: 'plan.md', locator: 'text',
+  });
+  fs.writeFileSync(
+    path.join(traceabilityFixture.root, 'plan.md'),
+    `Traceability: plans-implementation ${requirementId} from tasklet S01-F01-T01\n`,
+  );
+  fs.writeFileSync(path.join(traceabilityFixture.root, 'src.js'), '// no completed implementation\n');
+  fs.writeFileSync(
+    traceabilityFixture.configurationPath,
+    `${JSON.stringify(traceabilityFixture.configuration, null, 2)}\n`,
+  );
+  const result = analyzeTraceability(traceabilityFixture.configurationPath, {
+    runTypescript: false,
+    write: true,
+  });
+  assert.ok(result.diagnostics.some(item =>
+    item.ruleId === 'traceability-coverage' && item.message.includes('implementation')));
+
+  traceabilityFixture.configuration.entities = [
+    { kind: 'Endpoint', id: 'one', path: 'src.js' },
+  ];
+  fs.writeFileSync(traceabilityFixture.configurationPath, JSON.stringify(traceabilityFixture.configuration));
+  assert.throws(
+    () => loadTraceabilityConfiguration(traceabilityFixture.configurationPath),
+    /kind must be a lowercase token/u,
+  );
+  traceabilityFixture.configuration.entities = [
+    { kind: 'endpoint', id: 'one', path: 'src.js' },
+    { kind: 'endpoint', id: 'one', path: 'unit.test.js' },
+  ];
+  fs.writeFileSync(traceabilityFixture.configurationPath, JSON.stringify(traceabilityFixture.configuration));
+  assert.throws(
+    () => loadTraceabilityConfiguration(traceabilityFixture.configurationPath),
+    /duplicate entity/u,
+  );
+
+  traceabilityFixture.configuration.entities = [
+    { kind: 'endpoint', id: 'one', path: 'src.js', line: 2 },
+  ];
+  fs.writeFileSync(
+    path.join(traceabilityFixture.root, 'src.js'),
+    `// Traceability: implements ${requirementId} from endpoint one\n`,
+  );
+  fs.writeFileSync(traceabilityFixture.configurationPath, JSON.stringify(traceabilityFixture.configuration));
+  const invalidLocator = analyzeTraceability(traceabilityFixture.configurationPath, {
+    runTypescript: false,
+    write: true,
+  });
+  assert.ok(invalidLocator.diagnostics.some(item =>
+    item.ruleId === 'traceability-entity-locator' && item.line === 1));
+
+  traceabilityFixture.configuration.entities = [];
+  fs.writeFileSync(traceabilityFixture.configurationPath, JSON.stringify(traceabilityFixture.configuration));
+  const undeclared = analyzeTraceability(traceabilityFixture.configurationPath, {
+    runTypescript: false,
+    write: true,
+  });
+  assert.ok(undeclared.diagnostics.some(item =>
+    item.ruleId === 'traceability-entity-id' && item.message.includes('undeclared entity')));
 });
 
 // Traceability: verifies REQ-REQUIREMENTS-TRACEABILITY

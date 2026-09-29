@@ -33,10 +33,13 @@ requirement IDs, artifact classifications, or unit-test dispositions when the
 host has not adopted them.
 
 The versioned project configuration selects approved in-scope requirements,
-their canonical requirement sources, classified artifact files, generated
-outputs and their canonical sources, any justified no-unit-test dispositions,
-the generated reverse-view path, and the TSTS project and entrypoint used for
-semantic TypeScript locators.
+their canonical requirement sources, classified artifact files, explicit
+entity declarations, generated outputs and their canonical sources, any
+justified no-unit-test dispositions, the generated reverse-view path, and the
+TSTS project and entrypoint used for semantic TypeScript locators. An explicit
+entity declaration has one stable kind and ID, source path, optional line, and
+optional safe annotation and description. Use it for inventories such as
+endpoints; never infer an entity from a filename or prose.
 
 A requirement source declares an ID only with one of these canonical Markdown
 forms: `**Identifier:** \`REQ-STABLE-ID\``, a list item whose bold label is the
@@ -53,6 +56,15 @@ Use only these roles:
   independently realize the behavior; and
 - `verifies`: the unit proves required behavior.
 
+Prospective project-management records use only these additional roles:
+
+- `plans-implementation`: a plan or tasklet intends to produce implementation;
+- `plans-verification`: a plan or tasklet intends to produce verification; and
+- `introduces`: an issue introduces or clarifies a requirement.
+
+Prospective roles are provenance and planning evidence. They never satisfy
+completed implementation, unit-test, integration-test, or UAT coverage.
+
 Write one annotation immediately beside the smallest stable owned unit that
 communicates the relationship:
 
@@ -61,6 +73,21 @@ Traceability: implements REQ-STABLE-ID
 Traceability: supports REQ-STABLE-ID
 Traceability: verifies REQ-STABLE-ID
 ```
+
+When the source entity needs its own stable identity, append the exact entity
+kind and ID:
+
+```text
+Traceability: implements REQ-STABLE-ID from endpoint GET-orders
+Traceability: plans-implementation REQ-STABLE-ID from tasklet S01-F02-T03
+Traceability: plans-verification REQ-STABLE-ID from plan 2026-09-29-example
+Traceability: introduces REQ-STABLE-ID from issue 2026-09-29-BUG-example
+```
+
+Every prospective annotation requires an explicit `plan`, `tasklet`, or
+`issue` identity. Other explicit identities must match a configured entity
+declaration at that source path. A plan artifact may own its plan and nested
+tasklet annotations; an issue artifact owns issue annotations.
 
 Use the language's ordinary comment syntax in code, ordinary prose metadata in
 Markdown, and a native metadata field in declarative formats. Do not annotate
@@ -116,13 +143,15 @@ reverse connection, not documentation drift to ignore.
    configured canonical requirement source.
 2. Annotate each affected stable owned implementation and verification unit.
 3. Classify new artifact files in the project traceability configuration.
-4. Record a no-unit-test disposition only when unit testing is genuinely
+4. Declare new non-PM inventory entities explicitly and add prospective plan,
+   tasklet, and issue annotations beside their stable records.
+5. Record a no-unit-test disposition only when unit testing is genuinely
    impossible.
-5. Map generated outputs to their canonical sources without copying
+6. Map generated outputs to their canonical sources without copying
    annotations.
-6. Generate the reverse view.
-7. Run the structural check and configured TypeScript semantic checker.
-8. Reconcile changed requirements, UAT, implementation, tests, configuration,
+7. Generate the reverse view.
+8. Run the structural check and configured TypeScript semantic checker.
+9. Reconcile changed requirements, UAT, implementation, tests, configuration,
    and generated views in the same project change-set.
 
 ## Completion Check
@@ -132,6 +161,9 @@ reverse connection, not documentation drift to ignore.
   resolves.
 - Every relationship uses an approved role and the role is valid for its
   artifact class.
+- Every explicit entity identity is unique, resolves to its canonical source,
+  and uses the exact declared kind and ID.
+- Prospective relationships remain distinct from completed coverage.
 - Requirement sources use an explicit Identifier field, canonical bold-list
   declaration, or canonical ATX requirement heading; incidental mentions do
   not satisfy source resolution.

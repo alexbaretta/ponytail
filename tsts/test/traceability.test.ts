@@ -11,6 +11,7 @@ import {
     checkTraceabilityAnnotations,
     type TraceabilityConfigurationV1,
     type TraceabilityConfigurationV2,
+    type TraceabilityConfigurationV3,
 } from '../src/traceability.js';
 import type { TstsCheckResult } from '../src/index.js';
 
@@ -196,6 +197,55 @@ describe('TypeScript traceability locators', (): void => {
             requirements: [{ id: 'REQ-ONE', sourcePath: 'requirements.md' }],
             reverseViewPath: 'traceability.generated.md',
             schemaVersion: 2,
+            typescript: {
+                cliPath: 'tsts.js',
+                projectPath: traceabilityFixture.projectPath,
+            },
+        };
+        await writeFile(
+            traceabilityFixture.configurationPath,
+            `${JSON.stringify(configuration)}\n`
+        );
+
+        const result: TstsCheckResult = await checkTraceabilityAnnotations(
+            traceabilityFixture
+        );
+
+        assert.deepEqual(result.diagnostics, []);
+        assert.equal(result.checkedFileCount, 1);
+    });
+
+    it('accepts an exact V3 inventory and an attached explicit entity marker', async (): Promise<void> => {
+        const traceabilityFixture: {
+            readonly configurationPath: string;
+            readonly projectPath: string;
+        } = await writeFixture(
+            '// Traceability: implements REQ-ONE from endpoint GET-value\n' +
+            'export function traced(): void {}\n'
+        );
+        const configuration: TraceabilityConfigurationV3 = {
+            artifacts: [
+                {
+                    class: 'implementation',
+                    locator: 'typescript',
+                    path: 'source.ts',
+                },
+            ],
+            entities: [
+                {
+                    annotation: 'GET /value',
+                    id: 'GET-value',
+                    kind: 'endpoint',
+                    line: 1,
+                    path: 'source.ts',
+                },
+            ],
+            generatedArtifacts: [],
+            index: { searchableFields: ['entityId', 'path'] },
+            projectRoot: '.',
+            requirements: [{ id: 'REQ-ONE', sourcePath: 'requirements.md' }],
+            reverseViewPath: 'traceability.generated.md',
+            schemaVersion: 3,
             typescript: {
                 cliPath: 'tsts.js',
                 projectPath: traceabilityFixture.projectPath,

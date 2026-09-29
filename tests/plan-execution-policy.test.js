@@ -20,3 +20,21 @@ test('plan execution serializes fast input before selector-based resumption', ()
   assert.match(policy, /\/ponytail-enqueue <instruction>/);
   assert.match(policy, /plan-input release <campaign-root>/);
 });
+
+test('planning and issue policy records prospective traceability without claiming coverage', () => {
+  const readSkill = name => fs.readFileSync(
+    path.join(__dirname, '..', 'skills', name, 'SKILL.md'), 'utf8',
+  );
+  const traceability = readSkill('requirements-traceability');
+  const planExecution = readSkill('plan-execution');
+  const issueTracking = readSkill('issue-tracking');
+  assert.match(traceability, /plans-implementation/);
+  assert.match(traceability, /plans-verification/);
+  assert.match(traceability, /introduces/);
+  assert.match(traceability, /never satisfy\ncompleted implementation/);
+  assert.match(traceability, /from tasklet S01-F02-T03/);
+  assert.match(planExecution, /canonical\nprospective annotation beside the stable plan or tasklet record/);
+  assert.match(planExecution, /do not claim completed\ncoverage/);
+  assert.match(issueTracking, /canonical\nprospective annotations beside the stable issue record/);
+  assert.match(issueTracking, /never satisfy completed coverage/);
+});

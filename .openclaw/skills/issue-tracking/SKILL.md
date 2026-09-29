@@ -102,6 +102,12 @@ authorization, requirements links and reconciliation result, implementation
 or plan links, validation evidence, and resolution or disposition reason.
 For bugs, distinguish observations, hypotheses, and confirmed root cause.
 Use project-required fields without duplicating canonical requirements text.
+When the host configures `requirements-traceability`, record canonical
+prospective annotations beside the stable issue record: `introduces` for each
+requirement the issue adds or clarifies, `plans-implementation` for intended
+implementation, and `plans-verification` for intended tests or UAT. These
+relationships preserve issue provenance but never satisfy completed coverage;
+the delivered implementation and tests retain their own annotations.
 
 ## Epics
 

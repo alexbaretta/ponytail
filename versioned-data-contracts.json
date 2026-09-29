@@ -9,9 +9,9 @@
         "module": "skills/requirements-traceability/scripts/check-traceability.js",
         "readerRegistryExport": "TraceabilityConfigReaders"
       },
-      "currentVersion": "V2",
-      "versions": ["V1", "V2"],
-      "supportedReadVersions": ["V1", "V2"],
+      "currentVersion": "V3",
+      "versions": ["V1", "V2", "V3"],
+      "supportedReadVersions": ["V1", "V2", "V3"],
       "supportedDowngradeVersions": []
     },
     {

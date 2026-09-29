@@ -8,10 +8,10 @@ Source: `.agents/config/project/traceability.json`
 
 Requirement: [pm/requirements/requirements-traceability.md](requirements-traceability.md)
 
-- implementation: implements [skills/requirements-traceability/scripts/check-traceability.js:312](../../skills/requirements-traceability/scripts/check-traceability.js#L312)
-- implementation: supports [tsts/src/traceability.ts:82](../../tsts/src/traceability.ts#L82)
-- unit-test: verifies [tests/requirements-traceability.test.js:95](../../tests/requirements-traceability.test.js#L95)
-- unit-test: verifies [tsts/test/traceability.test.ts:104](../../tsts/test/traceability.test.ts#L104)
+- implementation: implements [skills/requirements-traceability/scripts/check-traceability.js:443](../../skills/requirements-traceability/scripts/check-traceability.js#L443)
+- implementation: supports [tsts/src/traceability.ts:119](../../tsts/src/traceability.ts#L119)
+- unit-test: verifies [tests/requirements-traceability.test.js:222](../../tests/requirements-traceability.test.js#L222)
+- unit-test: verifies [tsts/test/traceability.test.ts:105](../../tsts/test/traceability.test.ts#L105)
 - integration-test: verifies [tests/requirements-traceability-cli.test.js:12](../../tests/requirements-traceability-cli.test.js#L12)
 - uat: verifies [pm/uat/requirements-traceability.md:14](../../pm/uat/requirements-traceability.md#L14)
 
@@ -37,7 +37,7 @@ Requirement: [pm/requirements/plan-input-queue.md](plan-input-queue.md)
 
 Requirement: [pm/requirements/traceability-index.md](traceability-index.md)
 
-- implementation: implements [src/project-index.js:30](../../src/project-index.js#L30)
+- implementation: implements [src/project-index.js:31](../../src/project-index.js#L31)
 - unit-test: verifies [tests/project-index.test.js:25](../../tests/project-index.test.js#L25)
 - integration-test: verifies [scripts/test-project-index-postgres.sh:6](../../scripts/test-project-index-postgres.sh#L6)
 - uat: verifies [pm/uat/traceability-index.md:16](../../pm/uat/traceability-index.md#L16)

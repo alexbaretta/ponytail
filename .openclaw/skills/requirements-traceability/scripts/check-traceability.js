@@ -6,9 +6,13 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 
-const artifactClasses = new Set(['implementation', 'unit-test', 'integration-test', 'uat']);
+const completedArtifactClasses = Object.freeze(['implementation', 'unit-test', 'integration-test', 'uat']);
+const artifactClasses = new Set([...completedArtifactClasses, 'plan', 'tasklet', 'issue']);
 const locatorKinds = new Set(['text', 'typescript']);
-const relationshipRoles = new Set(['implements', 'supports', 'verifies']);
+const relationshipRoles = new Set([
+  'implements', 'supports', 'verifies',
+  'plans-implementation', 'plans-verification', 'introduces',
+]);
 const searchableFields = Object.freeze([
   'entityId',
   'entityKind',
@@ -25,8 +29,11 @@ const artifactClassRoles = new Map([
   ['unit-test', new Set(['verifies'])],
   ['integration-test', new Set(['verifies'])],
   ['uat', new Set(['verifies'])],
+  ['plan', new Set(['plans-implementation', 'plans-verification'])],
+  ['tasklet', new Set(['plans-implementation', 'plans-verification'])],
+  ['issue', new Set(['introduces', 'plans-implementation', 'plans-verification'])],
 ]);
-const markerPattern = /[Tt]raceability["']?\s*:\s*["']?(implements|supports|verifies)\s+([A-Z][A-Z0-9-]*)/gu;
+const markerPattern = /[Tt]raceability["']?\s*:\s*["']?(implements|supports|verifies|plans-implementation|plans-verification|introduces)\s+([A-Z][A-Z0-9-]*)(?:\s+from\s+([a-z][a-z0-9-]*)\s+([^\s"'`,;]+))?/gu;
 
 function exactObject(value, keys, label) {
   if (value === null || Array.isArray(value) || typeof value !== 'object') {
@@ -68,7 +75,12 @@ function normalizeTraceabilityConfiguration(document, configurationPath, schemaV
   const root = path.dirname(path.resolve(configurationPath));
   exactObject(
     document,
-    ['schemaVersion', 'projectRoot', 'requirements', 'artifacts', 'generatedArtifacts', 'reverseViewPath', 'typescript', ...(schemaVersion === 2 ? ['index'] : [])],
+    [
+      'schemaVersion', 'projectRoot', 'requirements', 'artifacts',
+      'generatedArtifacts', 'reverseViewPath', 'typescript',
+      ...(schemaVersion >= 2 ? ['index'] : []),
+      ...(schemaVersion >= 3 ? ['entities'] : []),
+    ],
     'traceability configuration',
   );
   if (document.schemaVersion !== schemaVersion) {
@@ -83,6 +95,9 @@ function normalizeTraceabilityConfiguration(document, configurationPath, schemaV
   if (!Array.isArray(document.artifacts)) throw new Error('traceability configuration artifacts must be an array');
   if (!Array.isArray(document.generatedArtifacts)) {
     throw new Error('traceability configuration generatedArtifacts must be an array');
+  }
+  if (schemaVersion >= 3 && !Array.isArray(document.entities)) {
+    throw new Error('traceability configuration entities must be an array');
   }
 
   const requirements = document.requirements.map((value, index) => {
@@ -105,9 +120,11 @@ function normalizeTraceabilityConfiguration(document, configurationPath, schemaV
     const artifact = exactObject(value, ['class', 'path', 'locator', 'roles'], `artifacts[${index}]`);
     const artifactClass = nonEmptyString(artifact.class, `artifacts[${index}].class`);
     const locator = nonEmptyString(artifact.locator, `artifacts[${index}].locator`);
-    if (!artifactClasses.has(artifactClass)) throw new Error(`artifacts[${index}].class is unsupported: ${artifactClass}`);
+    const supportedArtifactClasses = schemaVersion >= 3
+      ? artifactClasses : new Set(completedArtifactClasses);
+    if (!supportedArtifactClasses.has(artifactClass)) throw new Error(`artifacts[${index}].class is unsupported: ${artifactClass}`);
     if (!locatorKinds.has(locator)) throw new Error(`artifacts[${index}].locator is unsupported: ${locator}`);
-    if (locator === 'typescript' && artifactClass !== 'implementation' && artifactClass !== 'unit-test') {
+    if (locator === 'typescript' && !['implementation', 'unit-test'].includes(artifactClass)) {
       throw new Error(`artifacts[${index}] uses a TypeScript locator for unsupported class ${artifactClass}`);
     }
     return {
@@ -149,6 +166,41 @@ function normalizeTraceabilityConfiguration(document, configurationPath, schemaV
     };
   });
 
+  const entities = schemaVersion < 3 ? [] : document.entities.map((value, index) => {
+    const entity = exactObject(
+      value,
+      ['kind', 'id', 'path', 'line', 'annotation', 'description'],
+      `entities[${index}]`,
+    );
+    const kind = nonEmptyString(entity.kind, `entities[${index}].kind`);
+    if (!/^[a-z][a-z0-9-]*$/u.test(kind)) {
+      throw new Error(`entities[${index}].kind must be a lowercase token`);
+    }
+    const id = nonEmptyString(entity.id, `entities[${index}].id`);
+    if (/\s/u.test(id)) throw new Error(`entities[${index}].id must not contain whitespace`);
+    if (entity.line !== undefined && (!Number.isInteger(entity.line) || entity.line < 1)) {
+      throw new Error(`entities[${index}].line must be a positive integer`);
+    }
+    return {
+      kind,
+      id,
+      path: relativePath(entity.path, `entities[${index}].path`),
+      ...(entity.line === undefined ? {} : { line: entity.line }),
+      ...(entity.annotation === undefined ? {} : {
+        annotation: nonEmptyString(entity.annotation, `entities[${index}].annotation`),
+      }),
+      ...(entity.description === undefined ? {} : {
+        description: nonEmptyString(entity.description, `entities[${index}].description`),
+      }),
+    };
+  });
+  const entityKeys = new Set();
+  for (const entity of entities) {
+    const key = `${entity.kind}\0${entity.id}`;
+    if (entityKeys.has(key)) throw new Error(`duplicate entity: ${entity.kind} ${entity.id}`);
+    entityKeys.add(key);
+  }
+
   let typescript;
   if (document.typescript !== undefined) {
     const configuredTypescript = exactObject(document.typescript, ['cliPath', 'projectPath'], 'typescript');
@@ -159,7 +211,7 @@ function normalizeTraceabilityConfiguration(document, configurationPath, schemaV
   }
 
   let configuredSearchableFields = searchableFields;
-  if (schemaVersion === 2) {
+  if (schemaVersion >= 2) {
     const indexConfiguration = exactObject(document.index, ['searchableFields'], 'index');
     if (
       !Array.isArray(indexConfiguration.searchableFields) ||
@@ -184,6 +236,7 @@ function normalizeTraceabilityConfiguration(document, configurationPath, schemaV
     configurationPath: path.resolve(configurationPath),
     requirements,
     artifacts,
+    entities,
     generatedArtifacts,
     reverseViewPath: relativePath(document.reverseViewPath, 'reverseViewPath'),
     index: { searchableFields: configuredSearchableFields },
@@ -199,9 +252,14 @@ function readTraceabilityConfigurationV2(document, configurationPath) {
   return normalizeTraceabilityConfiguration(document, configurationPath, 2);
 }
 
+function readTraceabilityConfigurationV3(document, configurationPath) {
+  return normalizeTraceabilityConfiguration(document, configurationPath, 3);
+}
+
 const TraceabilityConfigReaders = Object.freeze({
   V1: readTraceabilityConfigurationV1,
   V2: readTraceabilityConfigurationV2,
+  V3: readTraceabilityConfigurationV3,
 });
 
 function loadTraceabilityConfiguration(configurationPath) {
@@ -227,8 +285,11 @@ function findRelationships(source, artifact) {
     ) {
       continue;
     }
+    const prospective = !['implements', 'supports', 'verifies'].includes(match[1]);
     relationships.push({
-      artifactClass: artifact.class,
+      artifactClass: prospective ? match[3] ?? artifact.class : artifact.class,
+      entityId: match[4] ?? null,
+      entityKind: match[3] ?? artifact.class,
       locator: artifact.locator,
       path: artifact.path,
       line: source.slice(0, match.index).split('\n').length,
@@ -237,6 +298,76 @@ function findRelationships(source, artifact) {
     });
   }
   return relationships;
+}
+
+function validateRelationship(configuration, artifact, relationship) {
+  if (!configuration.requirements.some(requirement =>
+    requirement.id === relationship.requirementId)) {
+    return diagnostic(
+      'traceability-requirement-id',
+      `unknown requirement id ${relationship.requirementId}`,
+      relationship.path,
+      relationship.line,
+    );
+  }
+  const prospective = !['implements', 'supports', 'verifies'].includes(relationship.role);
+  if (prospective && relationship.entityId === null) {
+    return diagnostic(
+      'traceability-entity-id',
+      `${relationship.role} requires an explicit plan, tasklet, or issue identity`,
+      relationship.path,
+      relationship.line,
+    );
+  }
+  const configuredEntity = relationship.entityId === null ? undefined :
+    configuration.entities.find(entity =>
+      entity.kind === relationship.entityKind && entity.id === relationship.entityId);
+  const projectManagementEntity = ['plan', 'tasklet', 'issue'].includes(relationship.entityKind);
+  if (relationship.entityId !== null && !projectManagementEntity && configuredEntity === undefined) {
+    return diagnostic(
+      'traceability-entity-id',
+      `undeclared entity ${relationship.entityKind} ${relationship.entityId}`,
+      relationship.path,
+      relationship.line,
+    );
+  }
+  if (configuredEntity !== undefined && configuredEntity.path !== relationship.path) {
+    return diagnostic(
+      'traceability-entity-locator',
+      `entity ${relationship.entityKind} ${relationship.entityId} is declared in ${configuredEntity.path}`,
+      relationship.path,
+      relationship.line,
+    );
+  }
+  if (configuredEntity?.line !== undefined && configuredEntity.line !== relationship.line) {
+    return diagnostic(
+      'traceability-entity-locator',
+      `entity ${relationship.entityKind} ${relationship.entityId} is declared at line ${configuredEntity.line}`,
+      relationship.path,
+      relationship.line,
+    );
+  }
+  const validRoles = artifactClassRoles.get(relationship.entityKind) ??
+    new Set(['implements', 'supports', 'verifies']);
+  if (!validRoles.has(relationship.role)) {
+    return diagnostic(
+      'traceability-role',
+      `${relationship.artifactClass} artifacts cannot ${relationship.role} requirements`,
+      relationship.path,
+      relationship.line,
+    );
+  }
+  if (projectManagementEntity &&
+      artifact.class !== relationship.entityKind &&
+      !(artifact.class === 'plan' && relationship.entityKind === 'tasklet')) {
+    return diagnostic(
+      'traceability-entity-class',
+      `${artifact.class} artifacts cannot declare ${relationship.entityKind} entities`,
+      relationship.path,
+      relationship.line,
+    );
+  }
+  return null;
 }
 
 function requirementSourceDeclares(source, requirementId) {
@@ -326,6 +457,22 @@ function analyzeTraceability(configurationPath, options = {}) {
     }
   }
 
+  for (const entity of configuration.entities) {
+    const entityPath = path.resolve(configuration.root, entity.path);
+    if (!fs.existsSync(entityPath) || !fs.statSync(entityPath).isFile()) {
+      diagnostics.push(diagnostic(
+        'traceability-entity-locator',
+        `entity locator does not resolve: ${entity.path}`,
+      ));
+    } else if (entity.line !== undefined &&
+        entity.line > fs.readFileSync(entityPath, 'utf8').split('\n').length) {
+      diagnostics.push(diagnostic(
+        'traceability-entity-locator',
+        `entity line does not resolve: ${entity.path}:${entity.line}`,
+      ));
+    }
+  }
+
   for (const artifact of configuration.artifacts) {
     const artifactPath = path.resolve(configuration.root, artifact.path);
     if (!fs.existsSync(artifactPath) || !fs.statSync(artifactPath).isFile()) {
@@ -333,13 +480,9 @@ function analyzeTraceability(configurationPath, options = {}) {
       continue;
     }
     for (const relationship of findRelationships(fs.readFileSync(artifactPath, 'utf8'), artifact)) {
-      if (!relationshipRoles.has(relationship.role)) continue;
-      if (!ids.has(relationship.requirementId)) {
-        diagnostics.push(diagnostic('traceability-requirement-id', `unknown requirement id ${relationship.requirementId}`, relationship.path, relationship.line));
-        continue;
-      }
-      if (!artifactClassRoles.get(relationship.artifactClass).has(relationship.role)) {
-        diagnostics.push(diagnostic('traceability-role', `${relationship.artifactClass} artifacts cannot ${relationship.role} requirements`, relationship.path, relationship.line));
+      const relationshipDiagnostic = validateRelationship(configuration, artifact, relationship);
+      if (relationshipDiagnostic !== null) {
+        diagnostics.push(relationshipDiagnostic);
         continue;
       }
       relationships.push(relationship);
@@ -390,7 +533,7 @@ function analyzeTraceability(configurationPath, options = {}) {
   }
 
   if (options.runTypescript !== false) diagnostics.push(...runTypescriptChecker(configuration));
-  return { configuration, diagnostics, relationships, reverseView };
+  return { configuration, diagnostics, entities: configuration.entities, relationships, reverseView };
 }
 
 function parseArguments(args) {
@@ -423,6 +566,7 @@ module.exports = {
   TraceabilityConfigReaders,
   analyzeTraceability,
   findRelationships,
+  validateRelationship,
   loadTraceabilityConfiguration,
   renderReverseView,
 };

@@ -210,6 +210,39 @@ test('replaces renamed configured paths without retaining deleted inputs', () =>
   assert.equal(renamed.parse().relationships[0].targetEntityId, 'REQ-VALUE');
 });
 
+test('projects explicit inventories and stable prospective planning entities', () => {
+  const { configurationPath, root } = fixture();
+  const requirementId = 'REQ-' + 'VALUE';
+  const configuration = JSON.parse(fs.readFileSync(configurationPath, 'utf8'));
+  configuration.schemaVersion = 3;
+  configuration.entities = [{
+    kind: 'endpoint', id: 'GET-value', path: 'src/value.js', line: 1,
+    annotation: 'GET /value', description: 'Returns a value.',
+  }];
+  configuration.artifacts.push({ class: 'plan', path: 'plan.md', locator: 'text' });
+  fs.writeFileSync(configurationPath, JSON.stringify(configuration));
+  fs.writeFileSync(
+    path.join(root, 'src/value.js'),
+    `// Traceability: implements ${requirementId} from endpoint GET-value\n`,
+  );
+  fs.writeFileSync(
+    path.join(root, 'plan.md'),
+    `Traceability: plans-implementation ${requirementId} from tasklet S01-F01-T01\n` +
+    `Traceability: plans-verification ${requirementId} from tasklet S01-F01-T01\n`,
+  );
+  const projection = collectTraceabilityProjection(configurationPath);
+  const payloads = projection.files.map(file => file.parse());
+  const entities = payloads.flatMap(payload => payload.entities);
+  const relationships = payloads.flatMap(payload => payload.relationships);
+  assert.equal(entities.filter(entity => entity.entityId === 'trace:endpoint:GET-value').length, 1);
+  assert.equal(entities.filter(entity => entity.entityId === 'trace:tasklet:S01-F01-T01').length, 1);
+  assert.deepEqual(relationships.filter(relationship =>
+    relationship.sourceEntityId === 'trace:tasklet:S01-F01-T01')
+    .map(relationship => relationship.role), [
+    'plans-implementation', 'plans-verification',
+  ]);
+});
+
 test('does not parse files already present in the immutable cache', async () => {
   const { configurationPath } = fixture();
   const projection = collectTraceabilityProjection(configurationPath);

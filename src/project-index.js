@@ -10,6 +10,7 @@ const { execFileSync, spawnSync } = require('node:child_process');
 const {
   findRelationships,
   loadTraceabilityConfiguration,
+  validateRelationship,
 } = require('../skills/requirements-traceability/scripts/check-traceability');
 const {
   CampaignError,
@@ -466,13 +467,17 @@ function relationshipEntityId(relationship) {
   ].join('\0'))}`;
 }
 
+function declaredEntityId(kind, id) {
+  return `trace:${kind}:${id}`;
+}
+
 function parseFile(configuration, relativePath, source) {
-  const entities = [];
-  const relationships = [];
+  const entities = new Map();
+  const relationships = new Map();
   for (const requirement of configuration.requirements.filter(
     candidate => candidate.sourcePath === relativePath,
   )) {
-    entities.push({
+    entities.set(requirement.id, {
       entityId: requirement.id,
       entityKind: 'requirement',
       path: relativePath,
@@ -482,28 +487,59 @@ function parseFile(configuration, relativePath, source) {
       description: markdownDescription(source),
     });
   }
+  for (const entity of configuration.entities.filter(
+    candidate => candidate.path === relativePath,
+  )) {
+    const entityId = declaredEntityId(entity.kind, entity.id);
+    entities.set(entityId, {
+      entityId,
+      entityKind: entity.kind,
+      path: entity.path,
+      line: entity.line ?? null,
+      unitName: entity.id,
+      annotation: entity.annotation ?? null,
+      description: entity.description ?? null,
+    });
+  }
   for (const artifact of configuration.artifacts.filter(
     candidate => candidate.path === relativePath,
   )) {
     for (const relationship of findRelationships(source, artifact)) {
-      const entityId = relationshipEntityId(relationship);
-      entities.push({
+      const relationshipDiagnostic = validateRelationship(configuration, artifact, relationship);
+      if (relationshipDiagnostic !== null) {
+        throw new Error(`${relationshipDiagnostic.ruleId}: ${relationshipDiagnostic.message}`);
+      }
+      const entityId = relationship.entityId === null
+        ? relationshipEntityId(relationship)
+        : declaredEntityId(relationship.entityKind, relationship.entityId);
+      const declaration = configuration.entities.find(entity =>
+        entity.kind === relationship.entityKind && entity.id === relationship.entityId);
+      entities.set(entityId, {
         entityId,
-        entityKind: relationship.artifactClass,
-        path: relationship.path,
-        line: relationship.line,
-        unitName: null,
-        annotation: `${relationship.role} ${relationship.requirementId}`,
-        description: null,
+        entityKind: relationship.entityKind,
+        path: declaration?.path ?? relationship.path,
+        line: declaration?.line ?? relationship.line,
+        unitName: relationship.entityId,
+        annotation: declaration?.annotation ?? `${relationship.role} ${relationship.requirementId}`,
+        description: declaration?.description ?? null,
       });
-      relationships.push({
+      const normalizedRelationship = {
         sourceEntityId: entityId,
         targetEntityId: relationship.requirementId,
         role: relationship.role,
-      });
+      };
+      relationships.set([
+        normalizedRelationship.sourceEntityId,
+        normalizedRelationship.targetEntityId,
+        normalizedRelationship.role,
+      ].join('\0'), normalizedRelationship);
     }
   }
-  return { schemaVersion: 1, entities, relationships };
+  return {
+    schemaVersion: 1,
+    entities: [...entities.values()],
+    relationships: [...relationships.values()],
+  };
 }
 
 function collectTraceabilityProjection(configurationPath) {
@@ -515,11 +551,12 @@ function collectTraceabilityProjection(configurationPath) {
     relativeConfigurationPath,
     ...configuration.requirements.map(requirement => requirement.sourcePath),
     ...configuration.artifacts.map(artifact => artifact.path),
+    ...configuration.entities.map(entity => entity.path),
   ])].sort();
   const configurationBytes = fs.readFileSync(configurationPath);
   const configurationDigest = digest(configurationBytes);
   const parserIdentity = digest(Buffer.concat([
-    Buffer.from('traceability-v1\0'),
+    Buffer.from('traceability-v2\0'),
     fs.readFileSync(__filename),
     fs.readFileSync(require.resolve('../skills/requirements-traceability/scripts/check-traceability')),
   ]));
