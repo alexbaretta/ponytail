@@ -556,12 +556,16 @@ independent coverage plan from proceeding concurrently.
 ### Campaign Census Contract
 
 Every newly drafted or updated managed plan contains exactly one
-`ponytail-plan-campaign` JSON metadata block. The latest V1 write format has
-exactly `schemaVersion`, `id`, and `parent_plan_id`. A campaign root writes a
-null parent; every descendant writes its one direct parent plan ID. Derive
-children by inventorying these backlinks. Do not author child lists, duplicate
-lifecycle state, or issue IDs in campaign metadata. Lifecycle comes only from
-the host's configured status directory.
+`ponytail-plan-campaign` JSON metadata block. The V1 write format has been
+superseded by V2. Writers emit exactly `schemaVersion`, `id`,
+`parent_plan_id`, and `depends_on`. A campaign root writes a null parent; every
+descendant writes its one direct parent plan ID. `depends_on` contains only
+authored direct plan dependencies and does not duplicate parentage. Derive
+children and reverse dependencies by inventorying these forward records. Do
+not author child lists, reverse dependencies, duplicate lifecycle state, or
+issue IDs in campaign metadata. Lifecycle comes only from the host's configured
+status directory. Readers continue to accept immutable V1 records, whose
+normalized direct dependencies are empty.
 
 Campaign validation concerns only the campaign containing the supplied plan.
 It may inspect other plan records solely to resolve ancestors and discover
@@ -574,18 +578,22 @@ Use the canonical command:
 
 ```text
 ponytail campaign validate <plan-name-or-path>
+ponytail campaign validate --all [--json]
 ponytail campaign report [<plan-name-or-path>]
 ```
 
 The input may be the exact stable plan name, its directory, or its `plan.md`.
 A bare name must resolve to exactly one plan across configured lifecycle
-locations. When report input is omitted, derive the active campaign from the
-configured whole-plan active-work lifecycle: every active managed plan must
-resolve to the same campaign root. Fail rather than guess when there is no
-active managed campaign or more than one. Unmarked historical plans remain
-outside the managed census. Do not maintain a second current-plan or
-current-campaign record; lifecycle placement and campaign backlinks remain the
-canonical facts.
+locations. When report input is omitted, inventory every configured lifecycle
+plan and permitted flat-layout legacy plan. Report every active campaign and
+active plan instead of choosing among conflicts; multiple active campaign
+roots make the inventory invalid. Classify malformed managed plans as invalid
+with plan-scoped diagnostics and unmarked permitted flat-layout plans as
+unmanaged without inferred membership. `validate --all` applies the same
+repository-wide contract and emits the typed inventory with `--json`. An
+explicit plan input remains isolated from unrelated campaign defects. Do not
+maintain a second current-plan or current-campaign record; lifecycle placement
+and campaign backlinks remain the canonical facts.
 
 The human report enables only its summary tasklet table by default. Its
 `--[no-]summary-table`, `--[no-]plan-table`, and `--[no-]sprint-table` options
@@ -598,6 +606,12 @@ lifecycle change, and before closing a campaign root. Stop work in the
 selected campaign on its first validation failure while continuing unrelated
 approved work when possible. Do not duplicate the validator's canonical
 sprint or tasklet selector logic manually.
+
+Run repository-wide validation when campaign coordination begins or resumes,
+before dispatch, after any campaign relationship or lifecycle change, and
+through the host project's ordinary plan-documentation QA gate. Repair every
+reported managed-plan defect before a coordinator mutation; never select one
+active campaign from an ambiguous inventory.
 
 A non-root plan may close when its own acceptance is complete. A campaign root
 with descendants may close only after every member is complete and final

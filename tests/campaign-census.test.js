@@ -13,11 +13,14 @@ const test = require('node:test');
 const {
   CampaignError,
   buildReport,
+  buildRepositoryInventory,
   humanReport,
   listPlanSourceFiles,
   parsePlanSource,
   readCampaignReportV1,
+  readCampaignReportV2,
   readManagementConfigV1,
+  readPlanMetadataV2,
   resolveCampaignScope,
 } = require('../src/campaign-census.js');
 
@@ -104,7 +107,9 @@ function plan(root, lifecycle, id, parentPlanId = null, options = {}) {
 - **Status:** \`${lifecycle}\`
 ${parentLink}
 <!-- ponytail-plan-campaign
-${JSON.stringify({ schemaVersion: 1, id, parent_plan_id: parentPlanId }, null, 2)}
+${JSON.stringify(options.schemaVersion === 2
+    ? { schemaVersion: 2, id, parent_plan_id: parentPlanId, depends_on: options.dependsOn ?? [] }
+    : { schemaVersion: 1, id, parent_plan_id: parentPlanId }, null, 2)}
 -->
 
 ## Sprint
@@ -181,6 +186,53 @@ test('lists plan sources without parsing and exposes canonical source parsing', 
   assert.equal(captureError(() => parsePlanSource(
     root, 'pm/plans/legacy/plan.md', null, '# legacy\n',
   )).code, 'CAMPAIGN_PLAN_BLOCK');
+});
+
+test('V2 campaign metadata adds exact direct dependencies while V1 remains readable', () => {
+  const root = repository();
+  const first = plan(root, 'open', '2026-09-29-first', null, { schemaVersion: 2 });
+  const second = plan(root, 'open', '2026-09-29-second', null, {
+    schemaVersion: 2,
+    dependsOn: ['2026-09-29-first'],
+  });
+  const parsed = parsePlanSource(root, path.relative(root, second), 'open', fs.readFileSync(second, 'utf8'));
+  assert.equal(parsed.schemaVersion, 2);
+  assert.deepEqual(parsed.dependsOn, ['2026-09-29-first']);
+  assert.equal(readPlanMetadataV2({
+    ...parsed,
+    metadata: { schemaVersion: 2, id: parsed.id, parent_plan_id: null, depends_on: parsed.dependsOn },
+    relativePlanFile: path.relative(root, second),
+    planFile: second,
+    lifecycle: 'open',
+    text: fs.readFileSync(second, 'utf8'),
+  }).schemaVersion, 2);
+  assert.ok(first);
+  fs.writeFileSync(second, fs.readFileSync(second, 'utf8').replace('"depends_on": [', '"depends_on": [\n    "2026-09-29-second",'));
+  assert.equal(captureError(() => parsePlanSource(root, path.relative(root, second), 'open', fs.readFileSync(second, 'utf8'))).code, 'CAMPAIGN_DEPENDENCY');
+});
+
+test('repository inventory reports all campaigns, invalid managed plans, and unmanaged legacy plans', () => {
+  const root = repository();
+  plan(root, 'in_progress', '2026-09-29-active-a', null, { schemaVersion: 2 });
+  plan(root, 'in_progress', '2026-09-29-active-b', null, { schemaVersion: 2 });
+  plan(root, 'open', '2026-09-29-missing-dependency', null, { schemaVersion: 2, dependsOn: ['missing'] });
+  write(root, 'pm/plans/open/2026-09-29-unmarked/plan.md', '# unmarked\n');
+  write(root, 'pm/plans/legacy/plan.md', '# permitted legacy plan\n');
+  commit(root);
+
+  const inventory = buildRepositoryInventory(root, config(root));
+  assert.equal(inventory.valid, false);
+  assert.deepEqual(inventory.activeCampaigns.map(({ rootPlanId }) => rootPlanId), [
+    '2026-09-29-active-a',
+    '2026-09-29-active-b',
+  ]);
+  assert.deepEqual(inventory.invalidPlans.map(({ path }) => path), [
+    'pm/plans/open/2026-09-29-missing-dependency/plan.md',
+    'pm/plans/open/2026-09-29-unmarked/plan.md',
+  ]);
+  assert.deepEqual(inventory.unmanagedPlans, [{ path: 'pm/plans/legacy/plan.md' }]);
+  assert.ok(inventory.diagnostics.some(({ code }) => code === 'CAMPAIGN_ACTIVE_AMBIGUOUS'));
+  assert.equal(readCampaignReportV2(inventory), inventory);
 });
 
 test('root and leaf report the same campaign while unrelated malformed plans stay out of scope', () => {
@@ -374,7 +426,7 @@ test('production module uses exact exit and stream contracts without mutation', 
   assert.doesNotMatch(result.stdout, /Incomplete sprint census/);
   assert.doesNotMatch(result.stdout, /Tasklet 2026-09-24-streams\/S01-F01-T01/);
 
-  result = spawnSync(process.execPath, [campaignCli, 'report', '--no-summary-table', '--plan-table', '--sprint-table'], { cwd: root, encoding: 'utf8' });
+  result = spawnSync(process.execPath, [campaignCli, 'report', selected, '--no-summary-table', '--plan-table', '--sprint-table'], { cwd: root, encoding: 'utf8' });
   assert.equal(result.status, 0, result.stderr);
   assert.doesNotMatch(result.stdout, /Tasklet census/);
   assert.match(result.stdout, /Plan census\nLifecycle    Plan/);
@@ -390,7 +442,11 @@ test('production module uses exact exit and stream contracts without mutation', 
 
   result = spawnSync(process.execPath, [campaignCli, 'report', '--json'], { cwd: root, encoding: 'utf8' });
   assert.equal(result.status, 0, result.stderr);
-  assert.equal(JSON.parse(result.stdout).campaign.rootPlanId, '2026-09-24-streams');
+  assert.deepEqual(JSON.parse(result.stdout).activeCampaigns, [{ rootPlanId: '2026-09-24-streams', activePlanIds: ['2026-09-24-streams'] }]);
+
+  result = spawnSync(process.execPath, [campaignCli, 'validate', '--all', '--json'], { cwd: root, encoding: 'utf8' });
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(JSON.parse(result.stdout).invocation.command, 'validate');
 
   result = spawnSync(process.execPath, [campaignCli, 'report', selected, '--json', '--plan-table'], { cwd: root, encoding: 'utf8' });
   assert.equal(result.status, 2);
@@ -460,7 +516,7 @@ test('ponytail dispatches campaign reporting through the production module', () 
     env: { ...process.env, HOME: home, PATH: `${path.dirname(process.execPath)}:/usr/bin:/bin` },
   });
   assert.equal(inferred.status, 0, inferred.stderr);
-  assert.match(inferred.stdout, /Campaign: 2026-09-24-dispatch/);
+  assert.match(inferred.stdout, /Active campaigns: 2026-09-24-dispatch \(2026-09-24-dispatch\)/);
 
   fs.writeFileSync(selected, fs.readFileSync(selected, 'utf8').replace('"schemaVersion": 1', '"schemaVersion": 99'));
   const failure = spawnSync(ponytailCli, ['campaign', 'report', selected, '--json'], {

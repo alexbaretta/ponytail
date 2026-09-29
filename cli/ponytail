@@ -465,6 +465,13 @@ def qa(source_root, config, root, main_root, metadata, arguments):
     names = [metadata["name"], *(item["name"] for item in projects.values())]
     if len(set(names)) != len(names):
         fail("registered projects must have unique canonical names")
+    if (root / ".agents/config/project/management.json").is_file():
+        campaign = subprocess.run(
+            ["node", str(source_root / "src/campaign-census.js"), "validate", "--all"],
+            cwd=root,
+        )
+        if campaign.returncode:
+            return campaign.returncode
     return subprocess.run(["node", str(source_root / "scripts/project-qa.js")], input=json.dumps({"root": str(root), "project": metadata, "projects": projects}), text=True).returncode
 
 
@@ -504,6 +511,7 @@ def print_usage():
   ponytail plan-input complete <plan> <id> --record <pm-path>...
   ponytail pm pdf <collection|all> [--output-dir <path>]
   ponytail campaign validate <plan-name-or-path>
+  ponytail campaign validate --all [--json]
   ponytail campaign report [<plan-name-or-path>] [--json] [--[no-]summary-table] [--[no-]plan-table] [--[no-]sprint-table]
   ponytail traceability index [--rebuild] [--json]
   ponytail traceability search <query> [--kind <kind>] [--role <role>] [--requirement <id>] [--path <path>] [--json]

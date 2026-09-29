@@ -56,8 +56,9 @@ while project-wide management records remain under `pm/`.
   CLI entrypoints. `src/pm-pdf.py` owns configured linked-Markdown PDF
   rendering. `src/plan-input.js` owns the durable plan-input queue contract and
   lifecycle. `src/campaign-census.js` owns campaign configuration and
-  plan metadata readers, scoped campaign discovery and validation, census
-  normalization, and human/JSON reporting.
+  plan metadata readers, scoped campaign discovery and validation,
+  repository-wide campaign inventory, census normalization, and human/JSON
+  reporting.
 - `ponytail.json` owns the TSTS build-impact target.
 - `cli/` owns user-facing parse-safe Bash tools. `cli/ponytail` owns project
   registration, optional pre-commit integration, and Codex configuration

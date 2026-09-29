@@ -1,11 +1,11 @@
 # Deterministic campaign orchestration
 
 - **Plan ID:** `2026-09-29-campaign-orchestration`
-- **Status:** `open`
+- **Status:** `in_progress`
 - **Approval:** The stakeholder approved
   [`REQ-CAMPAIGN-ORCHESTRATION`](../../../requirements/campaign-orchestration.md)
-  on 2026-09-29 and requested this plan. Implementation approval has not been
-  requested or granted.
+  on 2026-09-29 and requested this plan. The stakeholder explicitly approved
+  implementation on 2026-09-29 with the instruction, “Complete the campaign.”
 - **Management and component repository:** Ponytail.
 
 <!-- ponytail-plan-campaign
@@ -116,9 +116,9 @@ another coordinator scope.
 
 1. [S01](sprints/S01.md): define and implement the deterministic campaign
    graph, assignment ledger, reconciled status, and transition engine —
-   READY_FOR_REVIEW.
+   APPROVED.
 2. [S02](sprints/S02.md): integrate supported Codex host effects and complete
-   end-to-end campaign acceptance — READY_FOR_REVIEW; depends on S01.
+   end-to-end campaign acceptance — APPROVED; depends on S01.
 
 ## Questions and approval gates
 
@@ -144,9 +144,8 @@ another coordinator scope.
   committed evidence, and every existing lifecycle-directory plan now has V1
   campaign metadata. Configured flat-layout history remains unmanaged.
 
-The requirement and creation of this plan are approved. The proposed
-architecture and implementation remain pending explicit plan approval after
-the questions above are resolved.
+The requirement, architecture, both reviewed sprint graphs, and complete plan
+implementation are approved.
 
 ## Starting checkpoint
 

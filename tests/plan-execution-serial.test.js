@@ -45,13 +45,15 @@ test('serial policy preserves atomic batch and convergence boundaries', () => {
   assert.match(skill, /coordinator verifies the rebased plan evidence and fast-forward\s+merges that branch/);
 });
 
-test('campaign census policy is scoped to one backlink-derived campaign', () => {
-  assert.match(skill, /exactly `schemaVersion`, `id`, and `parent_plan_id`/);
-  assert.match(skill, /Derive\s+children by inventorying these backlinks/);
+test('campaign census policy preserves scoped reports and adds repository inventory', () => {
+  assert.match(skill, /Writers emit exactly `schemaVersion`, `id`,\s+`parent_plan_id`, and `depends_on`/);
+  assert.match(skill, /Derive\s+children and reverse dependencies by inventorying these forward records/);
   assert.match(skill, /only the campaign containing the supplied plan/);
   assert.match(skill, /malformed or contradictory unrelated\s+campaigns do not affect the result/);
   assert.match(skill, /does not schedule parallel work, assign workers or worktrees/);
   assert.match(skill, /ponytail campaign validate <plan-name-or-path>/);
+  assert.match(skill, /ponytail campaign validate --all \[--json\]/);
+  assert.match(skill, /When report input is omitted, inventory every configured lifecycle\s+plan/);
   assert.match(skill, /bare name must resolve to exactly one plan across configured lifecycle\s+locations/);
   assert.match(skill, /before requesting plan approval[\s\S]*before the first implementation edit[\s\S]*before closing a campaign root/);
   assert.match(skill, /non-root plan may close when its own acceptance is complete/);

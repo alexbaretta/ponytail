@@ -21,6 +21,17 @@ test('plan execution serializes fast input before selector-based resumption', ()
   assert.match(policy, /plan-input release <campaign-root>/);
 });
 
+test('campaign policy requires repository inventory and V2 direct dependencies', () => {
+  const policy = fs.readFileSync(path.join(__dirname, '..', 'skills', 'plan-execution', 'SKILL.md'), 'utf8');
+  const generated = fs.readFileSync(path.join(__dirname, '..', '.openclaw', 'skills', 'plan-execution', 'SKILL.md'), 'utf8');
+  assert.match(policy, /Writers emit exactly `schemaVersion`, `id`,\n`parent_plan_id`, and `depends_on`/);
+  assert.match(policy, /ponytail campaign validate --all \[--json\]/);
+  assert.match(policy, /inventory every configured lifecycle\nplan/);
+  assert.match(policy, /never select one\nactive campaign from an ambiguous inventory/);
+  assert.match(generated, /ponytail campaign validate --all \[--json\]/);
+  assert.match(generated, /never select one\nactive campaign from an ambiguous inventory/);
+});
+
 test('planning and issue policy records prospective traceability without claiming coverage', () => {
   const readSkill = name => fs.readFileSync(
     path.join(__dirname, '..', 'skills', name, 'SKILL.md'), 'utf8',

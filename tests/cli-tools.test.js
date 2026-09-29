@@ -129,13 +129,15 @@ test('CLI shell scripts are parse-safe', () => {
   }
 });
 
-test('ponytail help publishes plan-input, traceability, and plan command families', () => {
+test('ponytail help publishes campaign, plan-input, traceability, and plan command families', () => {
   const result = run(ponytail, ['--help'], { cwd: root });
   assert.equal(result.status, 0, result.stderr);
   assert.match(result.stdout, /ponytail plan-input <plan> -- <instruction>/);
   assert.match(result.stdout, /ponytail plan-input coordinate <plan>/);
   assert.match(result.stdout, /ponytail plan-input release <plan>/);
   assert.match(result.stdout, /ponytail plan-input complete <plan> <id> --record <pm-path>/);
+  assert.match(result.stdout, /ponytail campaign validate --all \[--json\]/);
+  assert.match(result.stdout, /ponytail campaign report \[<plan-name-or-path>\] \[--json\]/);
   assert.match(result.stdout, /ponytail traceability index \[--rebuild\] \[--json\]/);
   assert.match(result.stdout, /ponytail traceability search <query>/);
   assert.match(result.stdout, /ponytail traceability validate \[--plan <plan> \| --campaign <plan>\]/);
@@ -144,6 +146,11 @@ test('ponytail help publishes plan-input, traceability, and plan command familie
   assert.match(result.stdout, /ponytail plan ancestors <plan>/);
   assert.match(result.stdout, /ponytail plan roots \[--json\]/);
   assert.match(result.stdout, /ponytail plan stranded \[--json\]/);
+});
+
+test('ponytail qa validates the repository-wide campaign inventory when configured', () => {
+  const contents = fs.readFileSync(ponytail, 'utf8');
+  assert.match(contents, /"src\/campaign-census\.js"\), "validate", "--all"/);
 });
 
 test('combined installer installs Codex skills and CLI tools only', () => {
