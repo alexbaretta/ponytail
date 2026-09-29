@@ -574,6 +574,12 @@ issue IDs in campaign metadata. Lifecycle comes only from the host's configured
 status directory. Readers continue to accept immutable V1 records, whose
 normalized direct dependencies are empty.
 
+For each direct membership edge, member plan P names campaign parent C in
+`parent_plan_id`, and C contains a human-readable Markdown reference to P. P is
+stranded exactly when C lacks that reciprocal reference. Missing records,
+malformed metadata, duplicate identities, dependencies, and cycles are invalid
+campaign data, not stranded plans.
+
 Campaign validation concerns only the campaign containing the supplied plan.
 It may inspect other plan records solely to resolve ancestors and discover
 direct backlinks to known members; malformed or contradictory unrelated
@@ -592,12 +598,15 @@ ponytail campaign report [<plan-name-or-path>]
 The input may be the exact stable plan name, its directory, or its `plan.md`.
 A bare name must resolve to exactly one plan across configured lifecycle
 locations. When report input is omitted, inventory every configured lifecycle
-plan and permitted flat-layout legacy plan. Report every active campaign and
-active plan instead of choosing among conflicts; multiple active campaign
-roots make the inventory invalid. Classify malformed managed plans as invalid
-with plan-scoped diagnostics and unmarked permitted flat-layout plans as
-unmanaged without inferred membership. `validate --all` applies the same
-repository-wide contract and emits the typed inventory with `--json`. An
+and permitted flat-layout plan. Report every active campaign and active plan
+instead of choosing among conflicts; multiple active campaign roots make the
+inventory invalid. Classify malformed managed plans as invalid. Classify a
+plan with no campaign block as unmanaged legacy data without inferred
+membership regardless of its location. When a managed plan names an unmarked
+plan as its direct parent or dependency, classify the referenced plan as
+invalid missing-metadata data and the managed reference as unresolved until
+the referenced plan gains supported metadata. `validate --all` applies the
+same repository-wide contract and emits the typed inventory with `--json`. An
 explicit plan input remains isolated from unrelated campaign defects. Do not
 maintain a second current-plan or current-campaign record; lifecycle placement
 and campaign backlinks remain the canonical facts.
@@ -669,8 +678,8 @@ A non-root plan may close when its own acceptance is complete. A campaign root
 with descendants may close only after every member is complete and final
 campaign validation succeeds against the closing tree. Whenever a plan's
 parent changes or a lifecycle move changes its locator, update its canonical
-backlink and corresponding human-readable parent link in the same project
-change-set.
+parent metadata and the parent's reciprocal human-readable member reference in
+the same project change-set.
 
 Before any sprint planning or implementation edit, the executing agent runs
 the applicable readiness selector. Selector output, rather than subjective

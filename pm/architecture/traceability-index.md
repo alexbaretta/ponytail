@@ -95,10 +95,15 @@ plan dependencies to the canonical campaign census. It delegates sprint,
 feature, tasklet, dependency, and readiness records to the plan-execution
 readers. The projection stores those normalized facts and derives children,
 ancestors, descendants, reverse dependents, campaign roots, membership, and
-reasoned stranded-plan results. A permitted flat-layout source with no campaign
-metadata is stored as `legacy-plan`, remains text-searchable, and is excluded
-from canonical roots, membership, and stranded-plan results. Directory names
-and prose never create graph edges.
+reasoned stranded-plan results. An unmarked source not referenced by managed
+campaign metadata is stored as `legacy-plan` regardless of its location,
+remains text-searchable, and is excluded from canonical roots, membership, and
+stranded-plan results. `stranded-plan` is reserved for a plan that names a
+campaign parent which does not contain the reciprocal member reference.
+Malformed metadata, missing referenced records, duplicate identities, and
+invalid or cyclic graph structure are stored as `invalid-plan`; a managed
+reference to an unmarked plan promotes that legacy record to `invalid-plan`.
+Directory names and prose never create graph edges.
 
 The plan full-text projection contains only normalized safe text from plan
 manifests, sprints, and tasklets, linked to owning plan, lifecycle, record kind

@@ -53,12 +53,14 @@ test('campaign census policy preserves scoped reports and adds repository invent
   assert.match(skill, /does not schedule parallel work, assign workers or worktrees/);
   assert.match(skill, /ponytail campaign validate <plan-name-or-path>/);
   assert.match(skill, /ponytail campaign validate --all \[--json\]/);
-  assert.match(skill, /When report input is omitted, inventory every configured lifecycle\s+plan/);
+  assert.match(skill, /no campaign block as unmanaged legacy data without inferred\s+membership regardless of its location/);
+  assert.match(skill, /managed plan names an unmarked\s+plan as its direct parent or dependency/);
+  assert.match(skill, /P is\s+stranded exactly when C lacks that reciprocal reference/);
   assert.match(skill, /bare name must resolve to exactly one plan across configured lifecycle\s+locations/);
   assert.match(skill, /before requesting plan approval[\s\S]*before the first implementation edit[\s\S]*before closing a campaign root/);
   assert.match(skill, /non-root plan may close when its own acceptance is complete/);
   assert.match(skill, /campaign root\s+with descendants may close only after every member is complete/);
-  assert.match(skill, /backlink and corresponding human-readable parent link in the same project\s+change-set/);
+  assert.match(skill, /parent metadata and the parent's reciprocal human-readable member reference in\s+the same project change-set/);
 });
 
 test('sandbox-blocked journaling requires explicit persistent-rule authorization', () => {

@@ -70,6 +70,10 @@ function planFixture() {
   fs.mkdirSync(path.join(root, 'pm/plans/in_progress/root'), { recursive: true });
   fs.mkdirSync(path.join(root, 'pm/plans/open/child'), { recursive: true });
   fs.mkdirSync(path.join(root, 'pm/plans/open/invalid'), { recursive: true });
+  fs.mkdirSync(path.join(root, 'pm/plans/open/dependency'), { recursive: true });
+  fs.mkdirSync(path.join(root, 'pm/plans/open/dependent'), { recursive: true });
+  fs.mkdirSync(path.join(root, 'pm/plans/open/referrer'), { recursive: true });
+  fs.mkdirSync(path.join(root, 'pm/plans/open/referenced'), { recursive: true });
   fs.mkdirSync(path.join(root, 'pm/plans/legacy'), { recursive: true });
   fs.mkdirSync(path.join(root, 'pm/plans/legacy-invalid'), { recursive: true });
   fs.writeFileSync(path.join(root, 'ponytail-journal.json'), JSON.stringify({
@@ -95,6 +99,7 @@ function planFixture() {
 
 - **Plan ID:** \`root\`
 - **Status:** \`in_progress\`
+- **Member plan:** [child](../../open/child/plan.md)
 
 <!-- ponytail-plan-campaign
 {"schemaVersion":1,"id":"root","parent_plan_id":null}
@@ -129,6 +134,27 @@ Extend processor routing.
 -->
 `);
   fs.writeFileSync(path.join(root, 'pm/plans/open/invalid/plan.md'), '# Invalid managed plan\n');
+  fs.writeFileSync(path.join(root, 'pm/plans/open/dependency/plan.md'), '# Unmarked dependency plan\n');
+  fs.writeFileSync(path.join(root, 'pm/plans/open/dependent/plan.md'), `# Dependent plan
+
+- **Plan ID:** \`dependent\`
+- **Status:** \`open\`
+
+<!-- ponytail-plan-campaign
+{"schemaVersion":2,"id":"dependent","parent_plan_id":null,"depends_on":["dependency"]}
+-->
+`);
+  fs.writeFileSync(path.join(root, 'pm/plans/open/referenced/plan.md'), '# Referenced legacy plan\n');
+  fs.writeFileSync(path.join(root, 'pm/plans/open/referrer/plan.md'), `# Referrer plan
+
+- **Plan ID:** \`referrer\`
+- **Status:** \`open\`
+- **Parent:** [referenced](../referenced/plan.md)
+
+<!-- ponytail-plan-campaign
+{"schemaVersion":1,"id":"referrer","parent_plan_id":"referenced"}
+-->
+`);
   execFileSync('git', ['add', '.'], { cwd: root });
   execFileSync('git', [
     '-c', 'user.name=Test', '-c', 'user.email=test@example.com',
@@ -578,7 +604,7 @@ test('refuses stale search without rebuilding', async () => {
   );
 });
 
-test('indexes canonical plan hierarchy and separates unmanaged legacy from stranded plans', () => {
+test('indexes canonical plan hierarchy and separates legacy, invalid, and stranded plans', () => {
   const root = planFixture();
   const projection = collectPlanProjection(root);
   const normalized = normalizePlanPayloads(projection.files.map(file => file.parse()));
@@ -593,10 +619,22 @@ test('indexes canonical plan hierarchy and separates unmanaged legacy from stran
     entity.entityId === 'plan:legacy' && entity.entityKind === 'legacy-plan' &&
     entity.status === 'CAMPAIGN_LEGACY_UNMANAGED' && entity.searchRole === null), true);
   assert.equal(normalized.entities.some(entity =>
-    entity.entityId === 'plan:invalid' && entity.entityKind === 'stranded-plan' &&
+    entity.entityId === 'plan:invalid' && entity.entityKind === 'legacy-plan' &&
+    entity.status === 'CAMPAIGN_LEGACY_UNMANAGED' && entity.searchRole === 'open'), true);
+  assert.equal(normalized.entities.some(entity =>
+    entity.entityId === 'plan:referenced' && entity.entityKind === 'invalid-plan' &&
     entity.status === 'CAMPAIGN_PLAN_BLOCK' && entity.searchRole === 'open'), true);
   assert.equal(normalized.entities.some(entity =>
-    entity.entityId === 'plan:legacy-invalid' && entity.entityKind === 'stranded-plan' &&
+    entity.entityId === 'plan:referrer' && entity.entityKind === 'invalid-plan' &&
+    entity.status === 'CAMPAIGN_PARENT_MISSING' && entity.searchRole === 'open'), true);
+  assert.equal(normalized.entities.some(entity =>
+    entity.entityId === 'plan:dependency' && entity.entityKind === 'invalid-plan' &&
+    entity.status === 'CAMPAIGN_PLAN_BLOCK' && entity.searchRole === 'open'), true);
+  assert.equal(normalized.entities.some(entity =>
+    entity.entityId === 'plan:dependent' && entity.entityKind === 'invalid-plan' &&
+    entity.status === 'CAMPAIGN_DEPENDENCY_MISSING' && entity.searchRole === 'open'), true);
+  assert.equal(normalized.entities.some(entity =>
+    entity.entityId === 'plan:legacy-invalid' && entity.entityKind === 'invalid-plan' &&
     entity.status === 'CAMPAIGN_PLAN_BLOCK' && entity.searchRole === null), true);
   assert.equal(normalized.relationships.some(relationship =>
     relationship.sourceEntityId === 'plan:child' &&
@@ -621,30 +659,35 @@ test('reuses immutable cached plan parses without opening the source parser', as
   assert.equal(parses, 0);
 });
 
-test('strands missing-parent and cyclic plan records without inventing membership', () => {
+test('classifies missing-parent and cyclic plan records as invalid rather than stranded', () => {
   const record = (recordId, parentPlanId) => ({
     recordKind: 'plan', recordId, owningPlanId: recordId,
     path: `pm/plans/open/${recordId}/plan.md`, line: 1,
     heading: recordId, excerpt: null, lifecycle: 'open', status: null,
     parentPlanId, dependsOn: [], plannedPaths: [],
-    linkedPlanPaths: parentPlanId === null ? [] : [`pm/plans/open/${parentPlanId}/plan.md`],
+    linkedPlanPaths: [],
   });
-  const normalized = normalizePlanPayloads([{ schemaVersion: 1, records: [
+  const records = [
     record('missing', 'absent'),
     record('cycle-a', 'cycle-b'),
     record('cycle-b', 'cycle-a'),
     record('cycle-child', 'cycle-a'),
-  ] }]);
+  ];
+  for (const child of records) {
+    const parent = records.find(candidate => candidate.recordId === child.parentPlanId);
+    if (parent !== undefined) parent.linkedPlanPaths.push(child.path);
+  }
+  const normalized = normalizePlanPayloads([{ schemaVersion: 1, records }]);
   assert.deepEqual(normalized.entities.map(entity => [entity.unitName, entity.entityKind, entity.status]), [
-    ['missing', 'stranded-plan', 'CAMPAIGN_PARENT_MISSING'],
-    ['cycle-a', 'stranded-plan', 'CAMPAIGN_PARENT_CYCLE'],
-    ['cycle-b', 'stranded-plan', 'CAMPAIGN_PARENT_CYCLE'],
-    ['cycle-child', 'stranded-plan', 'CAMPAIGN_PARENT_INVALID'],
+    ['missing', 'invalid-plan', 'CAMPAIGN_PARENT_MISSING'],
+    ['cycle-a', 'invalid-plan', 'CAMPAIGN_PARENT_CYCLE'],
+    ['cycle-b', 'invalid-plan', 'CAMPAIGN_PARENT_CYCLE'],
+    ['cycle-child', 'invalid-plan', 'CAMPAIGN_PARENT_INVALID'],
   ]);
   assert.deepEqual(normalized.relationships, []);
 });
 
-test('strands metadata parentage that lacks the canonical human backlink', () => {
+test('strands a member whose campaign does not reference it', () => {
   const base = {
     line: 1, heading: null, excerpt: null, lifecycle: 'open', status: null,
     dependsOn: [], plannedPaths: [], linkedPlanPaths: [],
@@ -656,7 +699,7 @@ test('strands metadata parentage that lacks the canonical human backlink', () =>
       path: 'pm/plans/open/child/plan.md', parentPlanId: 'root' },
   ] }]);
   assert.equal(normalized.entities.find(entity => entity.unitName === 'child').status,
-    'CAMPAIGN_PARENT_LINK');
+    'CAMPAIGN_MEMBER_LINK');
   assert.deepEqual(normalized.relationships, []);
 });
 
@@ -730,7 +773,7 @@ test('queries plan descendants, roots, and stranded records from the fresh gener
       entity_id: 'plan:root', role: 'in_progress', path: 'pm/plans/in_progress/root/plan.md', reason: null,
     }],
     ['stranded', null, false, {
-      entity_id: 'plan:invalid', role: 'open', path: 'pm/plans/open/invalid/plan.md', reason: 'missing metadata',
+      entity_id: 'plan:child', role: 'open', path: 'pm/plans/open/child/plan.md', reason: 'campaign root does not reference child',
     }],
   ]) {
     const boundary = freshPlanClient(projection, [row]);

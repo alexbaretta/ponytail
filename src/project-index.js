@@ -361,22 +361,22 @@ function parsePlanIndexPlan(root, relativePath, lifecycle, source) {
       excerpt: text.excerpt,
       lifecycle: plan.lifecycle,
       parentPlanId: plan.parentPlanId,
+      dependsOn: plan.dependsOn,
       linkedPlanPaths: linkedPlanFiles(plan).map(planFile =>
         path.relative(root, planFile).split(path.sep).join('/')),
     }), ...sections] };
   } catch (error) {
     if (!(error instanceof CampaignError)) throw error;
     const inferredId = path.basename(path.dirname(relativePath));
-    const unmanagedLegacy = lifecycle === null && error.code === 'CAMPAIGN_PLAN_BLOCK' &&
-      metadataBlocks(source).length === 0;
+    const unmanagedLegacy = error.code === 'CAMPAIGN_PLAN_BLOCK' && metadataBlocks(source).length === 0;
     return { schemaVersion: 1, records: [planRecord({
-      recordKind: unmanagedLegacy ? 'legacy-plan' : 'stranded-plan',
+      recordKind: unmanagedLegacy ? 'legacy-plan' : 'invalid-plan',
       recordId: inferredId,
       owningPlanId: inferredId,
       path: relativePath,
       heading: text.heading,
       excerpt: unmanagedLegacy
-        ? 'CAMPAIGN_LEGACY_UNMANAGED: permitted flat-layout plan has no campaign metadata'
+        ? 'CAMPAIGN_LEGACY_UNMANAGED: unmarked plan has no managed campaign membership'
         : `${error.code}: ${error.message}`,
       lifecycle,
       status: unmanagedLegacy ? 'CAMPAIGN_LEGACY_UNMANAGED' : error.code,
@@ -638,7 +638,7 @@ function collectTraceabilityProjection(configurationPath) {
 }
 
 function planEntityId(record) {
-  if (['plan', 'legacy-plan', 'stranded-plan'].includes(record.recordKind)) {
+  if (['plan', 'legacy-plan', 'invalid-plan', 'stranded-plan'].includes(record.recordKind)) {
     return `plan:${record.recordId}`;
   }
   return `${record.recordKind}:${record.owningPlanId}:${record.recordId}`;
@@ -651,7 +651,7 @@ function normalizePlanPayloads(payloads) {
     .map(record => [`${record.owningPlanId}\0${record.recordId}`, record]));
   const plansById = new Map();
   for (const record of records.filter(candidate =>
-    ['plan', 'legacy-plan', 'stranded-plan'].includes(candidate.recordKind))) {
+    ['plan', 'legacy-plan', 'invalid-plan', 'stranded-plan'].includes(candidate.recordKind))) {
     const matches = plansById.get(record.recordId) ?? [];
     matches.push(record);
     plansById.set(record.recordId, matches);
@@ -664,7 +664,7 @@ function normalizePlanPayloads(payloads) {
           related.owningPlanId = duplicateId;
         }
       }
-      record.recordKind = 'stranded-plan';
+      record.recordKind = 'invalid-plan';
       record.status = 'CAMPAIGN_PLAN_ID_DUPLICATE';
       record.excerpt = `CAMPAIGN_PLAN_ID_DUPLICATE: duplicate plan ID ${record.recordId}`;
       record.recordId = duplicateId;
@@ -673,18 +673,32 @@ function normalizePlanPayloads(payloads) {
   const canonicalPlans = new Map(records
     .filter(record => record.recordKind === 'plan')
     .map(record => [record.recordId, record]));
-  const canonicalPlanPaths = new Map([...canonicalPlans.values()]
-    .map(record => [record.recordId, record.path]));
+  const strandReferencedLegacy = (planId) => {
+    for (const record of plansById.get(planId) ?? []) {
+      if (record.recordKind !== 'legacy-plan') continue;
+      record.recordKind = 'invalid-plan';
+      record.status = 'CAMPAIGN_PLAN_BLOCK';
+      record.excerpt = `CAMPAIGN_PLAN_BLOCK: managed campaign metadata references unmarked plan ${planId}`;
+    }
+  };
   for (const record of canonicalPlans.values()) {
     if (record.parentPlanId !== null && !canonicalPlans.has(record.parentPlanId)) {
-      record.recordKind = 'stranded-plan';
+      strandReferencedLegacy(record.parentPlanId);
+      record.recordKind = 'invalid-plan';
       record.status = 'CAMPAIGN_PARENT_MISSING';
       record.excerpt = `CAMPAIGN_PARENT_MISSING: missing parent plan ${record.parentPlanId}`;
     } else if (record.parentPlanId !== null &&
-        !record.linkedPlanPaths.includes(canonicalPlanPaths.get(record.parentPlanId))) {
+        !canonicalPlans.get(record.parentPlanId).linkedPlanPaths.includes(record.path)) {
       record.recordKind = 'stranded-plan';
-      record.status = 'CAMPAIGN_PARENT_LINK';
-      record.excerpt = `CAMPAIGN_PARENT_LINK: manifest must link to parent plan ${record.parentPlanId}`;
+      record.status = 'CAMPAIGN_MEMBER_LINK';
+      record.excerpt = `CAMPAIGN_MEMBER_LINK: campaign plan ${record.parentPlanId} does not reference member plan ${record.recordId}`;
+    }
+    for (const dependencyId of record.dependsOn) {
+      if (canonicalPlans.has(dependencyId)) continue;
+      strandReferencedLegacy(dependencyId);
+      record.recordKind = 'invalid-plan';
+      record.status = 'CAMPAIGN_DEPENDENCY_MISSING';
+      record.excerpt = `CAMPAIGN_DEPENDENCY_MISSING: missing dependency plan ${dependencyId}`;
     }
   }
   let changed = true;
@@ -694,7 +708,7 @@ function normalizePlanPayloads(payloads) {
       const parent = record.parentPlanId === null
         ? undefined : canonicalPlans.get(record.parentPlanId);
       if (record.recordKind === 'plan' && parent !== undefined && parent.recordKind !== 'plan') {
-        record.recordKind = 'stranded-plan';
+        record.recordKind = 'invalid-plan';
         record.status = 'CAMPAIGN_PARENT_INVALID';
         record.excerpt = `CAMPAIGN_PARENT_INVALID: invalid parent plan ${record.parentPlanId}`;
         changed = true;
@@ -707,7 +721,7 @@ function normalizePlanPayloads(payloads) {
     if (cycle >= 0) {
       for (const id of trail.slice(cycle)) {
         const member = canonicalPlans.get(id);
-        member.recordKind = 'stranded-plan';
+        member.recordKind = 'invalid-plan';
         member.status = 'CAMPAIGN_PARENT_CYCLE';
         member.excerpt = `CAMPAIGN_PARENT_CYCLE: ${[...trail.slice(cycle), id].join(' -> ')}`;
       }
@@ -724,7 +738,7 @@ function normalizePlanPayloads(payloads) {
       const parent = record.parentPlanId === null
         ? undefined : canonicalPlans.get(record.parentPlanId);
       if (record.recordKind === 'plan' && parent !== undefined && parent.recordKind !== 'plan') {
-        record.recordKind = 'stranded-plan';
+        record.recordKind = 'invalid-plan';
         record.status = 'CAMPAIGN_PARENT_INVALID';
         record.excerpt = `CAMPAIGN_PARENT_INVALID: invalid parent plan ${record.parentPlanId}`;
         changed = true;
@@ -742,7 +756,7 @@ function normalizePlanPayloads(payloads) {
     }
   }
   const lifecycleByPlan = new Map(records
-    .filter(record => ['plan', 'legacy-plan', 'stranded-plan'].includes(record.recordKind))
+    .filter(record => ['plan', 'legacy-plan', 'invalid-plan', 'stranded-plan'].includes(record.recordKind))
     .map(record => [record.owningPlanId, record.lifecycle]));
   const entities = normalizedRecords.map(record => ({
     entityId: planEntityId(record),
@@ -765,8 +779,9 @@ function normalizePlanPayloads(payloads) {
     }
   };
   for (const entity of entities) {
-    if (entity.entityKind === 'plan' && entity.parentPlanId !== null) {
-      add(entity.entityId, `plan:${entity.parentPlanId}`, 'campaign-parent');
+    if (entity.entityKind === 'plan') {
+      if (entity.parentPlanId !== null) add(entity.entityId, `plan:${entity.parentPlanId}`, 'campaign-parent');
+      for (const dependency of entity.dependsOn) add(entity.entityId, `plan:${dependency}`, 'depends-on');
     } else if (entity.entityKind === 'sprint') {
       add(entity.entityId, `plan:${entity.unitName}`, 'member-of-plan');
       for (const dependency of entity.dependsOn) {

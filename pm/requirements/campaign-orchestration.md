@@ -20,18 +20,35 @@ assignment. The stakeholder required deterministic, programmatic support for
 scheduling, integration, and worker cleanup. Later that day, the stakeholder
 clarified that Ponytail must also validate and inventory the complete configured
 plan root because incomplete campaign metadata makes the no-input campaign
-report ambiguous and prevents an accurate operational view.
+report ambiguous and prevents an accurate operational view. The stakeholder
+further clarified that an unmarked plan remains valid legacy non-campaign data
+unless a managed campaign plan references it and thereby proves that it is an
+intended campaign member. The stakeholder then defined a stranded plan exactly
+as a plan P that references campaign parent C when C does not reference P.
 
 ## Repository-wide campaign inventory
 
 Ponytail must validate and inventory every plan under the configured plan root,
-not only the campaign containing one selected plan. Every plan inside a
-configured lifecycle directory must have supported campaign metadata. A legacy
-flat-layout plan may remain unmanaged when the host explicitly permits the
-legacy layout, but the repository inventory must identify it as unmanaged and
-must not infer an active lifecycle or campaign for it.
+not only the campaign containing one selected plan. A plan with no
+`ponytail-plan-campaign` block is valid unmanaged legacy data regardless of its
+location under that root. The inventory must not infer campaign membership or
+active-campaign state from its directory, prose, or name. A present but
+malformed block is invalid managed data.
 
-Repository-wide validation must detect malformed or missing campaign metadata,
+When a managed plan names an unmarked plan as its `parent_plan_id` or in
+`depends_on`, that authored reference proves that the unmarked plan is intended
+to participate in the campaign. Repository-wide validation must then report
+both the unresolved managed reference and the referenced plan's missing
+campaign metadata. The unmarked plan remains invalid until it receives one
+supported metadata block.
+
+For every managed parent edge, plan P declares campaign parent C and C must
+contain a human-readable reference to P. P is stranded exactly when that
+reciprocal reference is absent. Other malformed or unresolved managed records
+are invalid, but are not stranded.
+
+Repository-wide validation must detect malformed campaign metadata, campaign-
+referenced plans with missing metadata,
 duplicate plan identities, unresolved or cyclic parent and dependency edges,
 invalid lifecycle placement, invalid sprint or tasklet state, and campaign-root
 closure violations. It must return deterministic diagnostics that identify

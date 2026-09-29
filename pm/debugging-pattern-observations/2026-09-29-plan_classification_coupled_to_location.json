@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-09-29-plan_classification_coupled_to_location",
+  "recorded_at": "2026-09-29T16:50:20-07:00",
+  "source_references": [
+    "src/campaign-census.js",
+    "src/project-index.js",
+    "tests/campaign-census.test.js",
+    "tests/project-index.test.js"
+  ],
+  "context": {
+    "languages": ["javascript", "markdown"],
+    "frameworks": ["Node.js test runner"],
+    "components": ["campaign census", "plan index"],
+    "affected_boundaries": ["plan source to campaign classification"],
+    "code_references": ["src/campaign-census.js: buildRepositoryInventory", "src/project-index.js: normalizePlanPayloads"]
+  },
+  "observed_behavior": "An unmarked plan in a configured lifecycle directory was rejected while identical unmarked content in the flat legacy layout was accepted, and unrelated invalid graph states were conflated with stranded membership.",
+  "expected_behavior": "An unreferenced unmarked plan is valid unmanaged legacy data regardless of location; stranded means only that plan P declares campaign parent C while C does not reference P.",
+  "causal_mechanism": "Campaign classification used normalized lifecycle location as an opt-in signal, and the plan index reused one stranded-plan kind for both missing reciprocal membership references and unrelated invalid graph states.",
+  "anti_pattern": {
+    "structural_description": "Storage location and a broad error bucket stand in for explicit campaign participation and one precisely defined graph condition.",
+    "why_it_fails": "Moving unchanged legacy content changes its validity, and stranded queries return records that do not satisfy the stakeholder's reciprocal-reference definition."
+  },
+  "correct_pattern": {
+    "required_invariant": "Campaign participation is established only by supported metadata or a managed reference; stranded-plan is reserved for a missing campaign-to-member reciprocal reference.",
+    "implementation_description": "Classify every unmarked source provisionally as legacy, promote it only when managed metadata references it, and keep invalid-plan separate from stranded-plan in the plan projection."
+  },
+  "applicability_conditions": [
+    "A repository supports both managed records and historical records under one plan root.",
+    "A graph query exposes a named diagnostic category with a stakeholder-defined predicate."
+  ],
+  "known_non_matches": [
+    "A project whose configuration explicitly declares every file under a location to be managed."
+  ],
+  "confirmation_evidence": [
+    "The pre-fix campaign census regression rejected an unmarked lifecycle plan.",
+    "Focused campaign census and plan-index tests pass with location-neutral legacy classification and the exact reciprocal-reference stranded predicate."
+  ],
+  "regression_proofs": [
+    "tests/campaign-census.test.js: repository inventory accepts unmarked legacy plans and rejects referenced unmarked members",
+    "tests/project-index.test.js: indexes canonical plan hierarchy and separates legacy, invalid, and stranded plans",
+    "tests/project-index.test.js: strands a member whose campaign does not reference it"
+  ]
+}

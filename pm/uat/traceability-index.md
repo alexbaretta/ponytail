@@ -88,10 +88,13 @@ Traceability: verifies REQ-TRACEABILITY-INDEX
 3. Query campaign roots and membership from both a root and a member.
    - Both identify the same canonical root and complete member set.
 4. Query stranded plans.
-   - Only unresolved or invalid managed records are returned, each with its
-     derivation reason; explicitly permitted flat-layout legacy plans remain
-     searchable as unmanaged legacy records but are not reported as stranded,
-     and no membership is invented.
+   - Only a plan P that declares campaign parent C while C does not reference P
+     is returned, with P, C, and the missing reciprocal reference in its
+     reason. Other malformed or unresolved managed records remain queryable as
+     invalid plans but are not reported as stranded. Unmarked plans not
+     referenced by managed campaign metadata remain searchable as unmanaged
+     legacy records regardless of their location, and no membership is
+     invented.
 5. Change only one sprint or tasklet file and reindex.
    - Only invalidated plan inputs are reparsed, the plan generation changes,
      and the unchanged traceability corpus remains queryable.
@@ -165,8 +168,9 @@ invalid-parent, missing-backlink, cycle, exact-filter, injection-safe search,
 recursive graph, and versioned-result tests. The real PostgreSQL contract and
 public `ponytail plan` dispatcher published a separate current plan generation,
 searched normalized plan text, listed canonical campaign roots, and returned
-invalid stranded records with explicit reasons while retaining permitted flat
-legacy records under their distinct unmanaged classification. Final S01
+stranded records only for missing reciprocal campaign references while keeping
+other invalid records and unmarked legacy records under their distinct
+classifications. Final S01
 reconciliation proved one-file plan invalidation, unchanged-file parse reuse,
 traceability-corpus isolation, stale-generation rejection, installation, and
 distribution after the last relevant edit.

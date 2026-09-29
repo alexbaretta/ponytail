@@ -415,10 +415,10 @@ function linkedPlanFiles(plan) {
   });
 }
 
-function validateParentLink(plan, parent) {
-  const parentFile = fs.realpathSync(parent.planFile);
-  const found = linkedPlanFiles(plan).includes(parentFile);
-  if (!found) dataError('CAMPAIGN_PARENT_LINK', `manifest must link to parent plan ${parent.id}`, plan.id, plan.relativePlanFile);
+function validateCampaignReference(plan, parent) {
+  const planFile = fs.realpathSync(plan.planFile);
+  const found = linkedPlanFiles(parent).includes(planFile);
+  if (!found) dataError('CAMPAIGN_MEMBER_LINK', `campaign plan ${parent.id} must link to member plan ${plan.id}`, plan.id, plan.relativePlanFile);
 }
 
 function readAncestors(candidates, candidate) {
@@ -432,7 +432,7 @@ function readAncestors(candidates, candidate) {
     if (matches.length > 1) dataError('CAMPAIGN_PARENT_AMBIGUOUS', `ambiguous parent plan: ${current.parentPlanId}`, current.id, current.relativePlanFile);
     const parent = readManagedPlan(matches[0]);
     if (ancestorIds.has(parent.id)) dataError('CAMPAIGN_PARENT_CYCLE', `parent cycle reaches ${parent.id}`, current.id, current.relativePlanFile);
-    validateParentLink(current, parent);
+    validateCampaignReference(current, parent);
     ancestorIds.add(parent.id);
     membersByPath.set(parent.planFile, parent);
     current = parent;
@@ -456,7 +456,7 @@ function discoverCampaign(repositoryRoot, config, input) {
         dataError('CAMPAIGN_PLAN_ID_DUPLICATE', `duplicate campaign member ID: ${child.id}`, child.id, child.relativePlanFile);
       }
       const parent = membersByPath.get(memberIds.get(child.parentPlanId));
-      validateParentLink(child, parent);
+      validateCampaignReference(child, parent);
       membersByPath.set(child.planFile, child);
       memberIds.set(child.id, child.planFile);
       changed = true;
@@ -790,10 +790,11 @@ function campaignDiagnostic(error, fallbackPath = null) {
   };
 }
 
+// Traceability: implements REQ-CAMPAIGN-ORCHESTRATION
 function buildRepositoryInventory(repositoryRoot, config, command = 'report') {
   const canonicalRepositoryRoot = fs.realpathSync(repositoryRoot);
   const candidates = scanPlanCandidates(canonicalRepositoryRoot, config);
-  const unmanagedPlans = [];
+  const unmanagedCandidates = [];
   const parsedPlans = [];
   const invalidByPath = new Map();
   const diagnostics = [];
@@ -811,8 +812,8 @@ function buildRepositoryInventory(repositoryRoot, config, command = 'report') {
     invalidByPath.set(candidate.relativePlanFile, existing);
   };
   for (const candidate of candidates) {
-    if (candidate.lifecycle === null && candidate.blocks.length === 0) {
-      unmanagedPlans.push({ path: candidate.relativePlanFile });
+    if (candidate.blocks.length === 0) {
+      unmanagedCandidates.push(candidate);
       continue;
     }
     try {
@@ -831,6 +832,13 @@ function buildRepositoryInventory(repositoryRoot, config, command = 'report') {
     entries.push(entry);
     plansById.set(entry.plan.id, entries);
   }
+  const unmanagedById = new Map();
+  for (const candidate of unmanagedCandidates) {
+    const id = path.basename(path.dirname(candidate.planFile));
+    const matches = unmanagedById.get(id) ?? [];
+    matches.push(candidate);
+    unmanagedById.set(id, matches);
+  }
   for (const entries of plansById.values()) {
     if (entries.length < 2) continue;
     for (const entry of entries) {
@@ -846,6 +854,17 @@ function buildRepositoryInventory(repositoryRoot, config, command = 'report') {
 
   const entryForReference = (entry, referencedId, relationship) => {
     const matches = plansById.get(referencedId) ?? [];
+    if (matches.length === 0) {
+      for (const candidate of unmanagedById.get(referencedId) ?? []) {
+        addInvalid(candidate, new CampaignError(
+          1,
+          'CAMPAIGN_PLAN_BLOCK',
+          `${candidate.relativePlanFile} requires ${PLAN_METADATA_MARKER} metadata because managed plan ${entry.plan.id} references it`,
+          referencedId,
+          candidate.relativePlanFile,
+        ));
+      }
+    }
     if (matches.length !== 1 || invalidByPath.has(matches[0].plan.relativePlanFile)) {
       addInvalid(entry.candidate, new CampaignError(
         1,
@@ -864,7 +883,7 @@ function buildRepositoryInventory(repositoryRoot, config, command = 'report') {
       const parent = entryForReference(entry, entry.plan.parentPlanId, 'PARENT');
       if (parent) {
         try {
-          validateParentLink(entry.plan, parent.plan);
+          validateCampaignReference(entry.plan, parent.plan);
         } catch (error) {
           addInvalid(entry.candidate, error);
         }
@@ -988,6 +1007,9 @@ function buildRepositoryInventory(repositoryRoot, config, command = 'report') {
   }
   const invalidPlans = [...invalidByPath.values()].sort((left, right) => left.path.localeCompare(right.path));
   for (const plan of invalidPlans) plan.diagnostics.sort((left, right) => left.code.localeCompare(right.code) || left.message.localeCompare(right.message));
+  const unmanagedPlans = unmanagedCandidates
+    .filter((candidate) => !invalidByPath.has(candidate.relativePlanFile))
+    .map((candidate) => ({ path: candidate.relativePlanFile }));
   const inventory = {
     schemaVersion: INVENTORY_SCHEMA_VERSION,
     valid: invalidPlans.length === 0 && diagnostics.length === 0,

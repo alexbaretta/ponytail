@@ -100,12 +100,10 @@ ${empty ? '' : `### [${closed ? 'DONE' : ' '}] Tasklet S01-F01-T01: Validate fix
 function plan(root, lifecycle, id, parentPlanId = null, options = {}) {
   const relative = `pm/plans/${lifecycle}/${id}/plan.md`;
   const parentLifecycle = options.parentLifecycle ?? lifecycle;
-  const parentLink = parentPlanId === null ? '' : `- **Parent plan:** [${parentPlanId}](../../${parentLifecycle}/${parentPlanId}/plan.md)\n`;
   write(root, relative, `# ${id}
 
 - **Plan ID:** \`${id}\`
 - **Status:** \`${lifecycle}\`
-${parentLink}
 <!-- ponytail-plan-campaign
 ${JSON.stringify(options.schemaVersion === 2
     ? { schemaVersion: 2, id, parent_plan_id: parentPlanId, depends_on: options.dependsOn ?? [] }
@@ -116,6 +114,17 @@ ${JSON.stringify(options.schemaVersion === 2
 
 - [S01](sprints/S01.md)
 `);
+  if (parentPlanId !== null) {
+    const parentRelative = `pm/plans/${parentLifecycle}/${parentPlanId}/plan.md`;
+    const parentPath = path.join(root, parentRelative);
+    if (fs.existsSync(parentPath)) {
+      const parentSource = fs.readFileSync(parentPath, 'utf8');
+      fs.writeFileSync(parentPath, parentSource.replace(
+        '<!-- ponytail-plan-campaign',
+        `- **Member plan:** [${id}](../../${lifecycle}/${id}/plan.md)\n\n<!-- ponytail-plan-campaign`,
+      ));
+    }
+  }
   sprint(root, lifecycle, id, options);
   return path.join(root, relative);
 }
@@ -211,12 +220,19 @@ test('V2 campaign metadata adds exact direct dependencies while V1 remains reada
   assert.equal(captureError(() => parsePlanSource(root, path.relative(root, second), 'open', fs.readFileSync(second, 'utf8'))).code, 'CAMPAIGN_DEPENDENCY');
 });
 
-test('repository inventory reports all campaigns, invalid managed plans, and unmanaged legacy plans', () => {
+test('repository inventory accepts unmarked legacy plans and rejects referenced unmarked members', () => {
   const root = repository();
   plan(root, 'in_progress', '2026-09-29-active-a', null, { schemaVersion: 2 });
   plan(root, 'in_progress', '2026-09-29-active-b', null, { schemaVersion: 2 });
   plan(root, 'open', '2026-09-29-missing-dependency', null, { schemaVersion: 2, dependsOn: ['missing'] });
   write(root, 'pm/plans/open/2026-09-29-unmarked/plan.md', '# unmarked\n');
+  write(root, 'pm/plans/open/2026-09-29-referenced/plan.md', '# referenced but unmarked\n');
+  plan(root, 'open', '2026-09-29-referencing-child', '2026-09-29-referenced');
+  write(root, 'pm/plans/open/2026-09-29-dependency/plan.md', '# dependency but unmarked\n');
+  plan(root, 'open', '2026-09-29-dependent', null, {
+    schemaVersion: 2,
+    dependsOn: ['2026-09-29-dependency'],
+  });
   write(root, 'pm/plans/legacy/plan.md', '# permitted legacy plan\n');
   commit(root);
 
@@ -227,10 +243,19 @@ test('repository inventory reports all campaigns, invalid managed plans, and unm
     '2026-09-29-active-b',
   ]);
   assert.deepEqual(inventory.invalidPlans.map(({ path }) => path), [
+    'pm/plans/open/2026-09-29-dependency/plan.md',
+    'pm/plans/open/2026-09-29-dependent/plan.md',
     'pm/plans/open/2026-09-29-missing-dependency/plan.md',
-    'pm/plans/open/2026-09-29-unmarked/plan.md',
+    'pm/plans/open/2026-09-29-referenced/plan.md',
+    'pm/plans/open/2026-09-29-referencing-child/plan.md',
   ]);
-  assert.deepEqual(inventory.unmanagedPlans, [{ path: 'pm/plans/legacy/plan.md' }]);
+  assert.deepEqual(inventory.unmanagedPlans, [
+    { path: 'pm/plans/legacy/plan.md' },
+    { path: 'pm/plans/open/2026-09-29-unmarked/plan.md' },
+  ]);
+  assert.ok(inventory.invalidPlans.find(({ path }) => path.includes('referenced/')).diagnostics.some(
+    ({ code }) => code === 'CAMPAIGN_PLAN_BLOCK',
+  ));
   assert.ok(inventory.diagnostics.some(({ code }) => code === 'CAMPAIGN_ACTIVE_AMBIGUOUS'));
   assert.equal(readCampaignReportV2(inventory), inventory);
 });
@@ -342,7 +367,11 @@ test('selected campaign fails on missing, ambiguous, and cyclic parentage', () =
   const firstId = '2026-09-24-cycle-first';
   const secondId = '2026-09-24-cycle-second';
   const first = plan(cycleRoot, 'open', firstId, secondId);
-  plan(cycleRoot, 'open', secondId, firstId);
+  const second = plan(cycleRoot, 'open', secondId, firstId);
+  fs.writeFileSync(second, fs.readFileSync(second, 'utf8').replace(
+    '<!-- ponytail-plan-campaign',
+    `- **Member plan:** [${firstId}](../${firstId}/plan.md)\n\n<!-- ponytail-plan-campaign`,
+  ));
   assert.equal(captureError(() => buildReport(cycleRoot, config(cycleRoot), first)).code, 'CAMPAIGN_PARENT_CYCLE');
 
   const duplicateRoot = repository();
@@ -366,17 +395,17 @@ test('selected campaign validates direct dependency membership and cycles', () =
   assert.equal(captureError(() => buildReport(cycleRoot, config(cycleRoot), rootPlan)).code, 'CAMPAIGN_DEPENDENCY_CYCLE');
 });
 
-test('selected and linked campaign records require managed metadata and resolving human links', () => {
+test('selected and linked campaign records require managed metadata and reciprocal campaign links', () => {
   const unmarkedRoot = repository();
   const unmarked = write(unmarkedRoot, 'pm/plans/open/2026-09-24-unmarked/plan.md', '# unmarked\n');
   assert.equal(captureError(() => buildReport(unmarkedRoot, config(unmarkedRoot), unmarked)).code, 'CAMPAIGN_PLAN_BLOCK');
 
   const brokenLinkRoot = repository();
   const parentId = '2026-09-24-link-parent';
-  plan(brokenLinkRoot, 'open', parentId);
+  const parent = plan(brokenLinkRoot, 'open', parentId);
   const child = plan(brokenLinkRoot, 'in_progress', '2026-09-24-link-child', parentId, { parentLifecycle: 'open' });
-  fs.writeFileSync(child, fs.readFileSync(child, 'utf8').replace(`../../open/${parentId}/plan.md`, '../../open/missing/plan.md'));
-  assert.equal(captureError(() => buildReport(brokenLinkRoot, config(brokenLinkRoot), child)).code, 'CAMPAIGN_PARENT_LINK');
+  fs.writeFileSync(parent, fs.readFileSync(parent, 'utf8').replace('../../in_progress/2026-09-24-link-child/plan.md', '../../in_progress/missing/plan.md'));
+  assert.equal(captureError(() => buildReport(brokenLinkRoot, config(brokenLinkRoot), child)).code, 'CAMPAIGN_MEMBER_LINK');
 });
 
 test('census enforces closure and represents the zero-tasklet percentage exactly', () => {

@@ -49,8 +49,14 @@ function write(root, relative, contents) {
 
 function managedPlan(root, lifecycle, id, parentPlanId = null) {
   const directory = `pm/plans/${lifecycle}/${id}`;
-  const parent = parentPlanId ? `- **Parent plan:** [${parentPlanId}](../../in_progress/${parentPlanId}/plan.md)\n` : '';
-  write(root, `${directory}/plan.md`, `# ${id}\n\n- **Plan ID:** \`${id}\`\n${parent}\n<!-- ponytail-plan-campaign\n${JSON.stringify({ schemaVersion: 2, id, parent_plan_id: parentPlanId, depends_on: [] }, null, 2)}\n-->\n`);
+  write(root, `${directory}/plan.md`, `# ${id}\n\n- **Plan ID:** \`${id}\`\n\n<!-- ponytail-plan-campaign\n${JSON.stringify({ schemaVersion: 2, id, parent_plan_id: parentPlanId, depends_on: [] }, null, 2)}\n-->\n`);
+  if (parentPlanId !== null) {
+    const parentPath = path.join(root, `pm/plans/in_progress/${parentPlanId}/plan.md`);
+    fs.writeFileSync(parentPath, fs.readFileSync(parentPath, 'utf8').replace(
+      '<!-- ponytail-plan-campaign',
+      `- **Member plan:** [${id}](../../${lifecycle}/${id}/plan.md)\n\n<!-- ponytail-plan-campaign`,
+    ));
+  }
   write(root, `${directory}/sprints/S01.md`, `# S01\n\n<!-- ponytail-plan-sprint\n${JSON.stringify({ schemaVersion: 3, id: 'S01', planning: { status: 'APPROVED', depends_on: [], scope_roots: ['src'] }, execution: { status: 'PENDING', depends_on: [], tasklets_reviewed: true } }, null, 2)}\n-->\n\n### [ ] Tasklet S01-F01-T01: fixture\n`);
   write(root, `${directory}/sprints/S01.tasklets.json`, `${JSON.stringify({ schemaVersion: 3, sprint: 'S01', features: { 'S01-F01': { depends_on: [], validation_tasklet: 'S01-F01-T01' } }, tasklets: { 'S01-F01-T01': { depends_on: [], affinity: ['fixture'], risk: 'normal', feature: 'S01-F01', planned_paths: [] } } }, null, 2)}\n`);
 }

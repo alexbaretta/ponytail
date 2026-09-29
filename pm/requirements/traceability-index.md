@@ -18,7 +18,9 @@ full-text queries, relationship-gap validation, plan and bug traceability, and
 optional campaign- or plan-scoped validation for Ponytail's requirements
 traceability annotations. On 2026-09-29, the stakeholder clarified that the
 index must use the PostgreSQL service already mandated for the project journal
-instead of recreating a SQLite database in every worktree.
+instead of recreating a SQLite database in every worktree. The stakeholder also
+defined a stranded plan exactly as plan P referencing campaign C without the
+reciprocal C-to-P reference.
 
 ## Repository index
 
@@ -77,11 +79,13 @@ names.
 
 Humans and agents must be able to query plan text, descendants, ancestors,
 campaign roots, and stranded plans through explicit deterministic CLI
-commands. A stranded result means a managed plan cannot be assigned to a
-canonical campaign because its campaign metadata is missing or invalid or its
-parent is unresolved; each result must state the reason. An explicitly
-permitted flat-layout legacy plan is classified separately as unmanaged legacy
-data and must not appear in the stranded query. Ponytail must not invent
+commands. A stranded result means exactly that plan P declares campaign parent
+C, but C does not reference P. Each stranded result must identify P, C, and the
+missing reciprocal reference. Malformed metadata, missing parents or
+dependencies, duplicate identities, and cycles are invalid-plan diagnostics,
+not stranded results. An unmarked plan not referenced by managed campaign
+metadata is classified separately as unmanaged legacy data regardless of its
+location and must not appear in the stranded query. Ponytail must not invent
 campaign membership.
 
 Traceability and plan data share the configured PostgreSQL database and refresh

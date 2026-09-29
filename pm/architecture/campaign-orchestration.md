@@ -29,6 +29,19 @@ each physical plan as:
 - invalid, with deterministic plan-level diagnostics; or
 - unmanaged legacy data with no inferred lifecycle or campaign.
 
+Classification is content- and graph-derived rather than location-derived. A
+plan with no campaign block is provisionally unmanaged wherever it appears. A
+managed plan's direct parent or dependency reference promotes a matching
+unmarked plan to invalid missing-metadata data; malformed blocks are invalid
+without requiring a reference.
+
+Campaign membership edges are reciprocal at the documentation boundary. The
+member P owns the structured `parent_plan_id` reference to campaign parent C;
+C owns the human-readable Markdown reference to P. A missing C-to-P reference
+is the sole stranded-plan condition. Malformed metadata, missing targets,
+duplicate identities, dependencies, and cycles use invalid-plan diagnostics
+instead.
+
 The inventory derives a sorted `activeCampaigns` collection from valid plans in
 the configured active-work lifecycle. Zero or one entry is valid for a
 top-level worktree. More than one remains fully represented for diagnosis but
@@ -85,7 +98,7 @@ contracts.
 ### Durable campaign graph
 
 A new campaign metadata physical version adds authored direct plan dependencies
-to each plan's existing identity and direct-parent backlink. Writers emit only
+to each plan's existing identity and direct-parent metadata. Writers emit only
 the new version after adoption; the V1 reader remains immutable. Ponytail
 derives reverse dependencies, ready plans, and blocked paths. Parentage does not
 imply execution order, and lifecycle remains derived from the configured status

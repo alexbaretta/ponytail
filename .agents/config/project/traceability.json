@@ -221,6 +221,11 @@
       "class": "issue",
       "path": "pm/bugs/closed/2026-09-29-BUG-precommit_cross_project_coupling.md",
       "locator": "text"
+    },
+    {
+      "class": "issue",
+      "path": "pm/bugs/closed/2026-09-29-BUG-unmarked_legacy_campaign_validation.md",
+      "locator": "text"
     }
   ],
   "entities": [],

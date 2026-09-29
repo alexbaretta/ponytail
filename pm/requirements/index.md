@@ -39,7 +39,7 @@ only the single-active-campaign assumption for omitted report input.
 
 With explicit plan input, Ponytail must provide a read-only CLI that accepts a
 managed plan's exact stable name, `<stable-name>/plan.md`, explicit plan
-directory, or explicit `plan.md` path; follows authored direct-parent backlinks
+directory, or explicit `plan.md` path; follows authored direct-parent metadata
 to the campaign root; derives descendants by scanning configured plan
 locations; validates only the resulting campaign; and reports an accurate
 census of its plans, sprints, and tasklets. The first two forms are resolved
@@ -55,6 +55,8 @@ must be explicitly migrated before certification.
 The campaign graph must have one authored source for each fact:
 
 - each plan authors only its direct parent, or `null` when it is the root;
+- each declared parent contains a human-readable reference to each direct
+  member that names it;
 - children and descendants are derived;
 - lifecycle is derived from the configured containing directory.
 

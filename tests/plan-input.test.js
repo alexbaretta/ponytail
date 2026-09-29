@@ -31,7 +31,7 @@ function campaignRepository() {
   const plans = path.join(root, 'pm', 'plans', 'in_progress');
   fs.mkdirSync(path.join(plans, 'root'), { recursive: true });
   fs.mkdirSync(path.join(plans, 'child'), { recursive: true });
-  fs.writeFileSync(path.join(plans, 'root', 'plan.md'), '# Root\n\nPlan ID: root\nStatus: in_progress\n\n<!-- ponytail-plan-campaign\n{"schemaVersion":1,"id":"root","parent_plan_id":null}\n-->\n');
+  fs.writeFileSync(path.join(plans, 'root', 'plan.md'), '# Root\n\nPlan ID: root\nStatus: in_progress\n\n[Child](../child/plan.md)\n\n<!-- ponytail-plan-campaign\n{"schemaVersion":1,"id":"root","parent_plan_id":null}\n-->\n');
   fs.writeFileSync(path.join(plans, 'child', 'plan.md'), '# Child\n\nPlan ID: child\nStatus: in_progress\n\n[Parent](../root/plan.md)\n<!-- ponytail-plan-campaign\n{"schemaVersion":1,"id":"child","parent_plan_id":"root"}\n-->\n');
   return root;
 }

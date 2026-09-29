@@ -39,25 +39,29 @@ Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
 
 - **Actor:** Ponytail CLI user or campaign coordinator.
 - **Prerequisites:** One top-level worktree containing plans from two candidate
-  active campaigns, valid inactive campaigns, one active lifecycle plan missing
-  campaign metadata, one malformed managed campaign, and one permitted legacy
-  flat-layout plan.
+  active campaigns, valid inactive campaigns, unmarked plans in both lifecycle
+  and flat-layout locations, one managed plan referencing another unmarked
+  plan, and one malformed managed campaign.
 - **Profiles:** Automated production-module and real CLI profile.
 - **External effects:** None; inventory and validation are read-only.
 
 1. Run the no-input campaign report in human and JSON modes.
    - Both inventories identify both conflicting candidate campaigns and every
-     active plan, the invalid active plan without invented membership, the
-     malformed campaign diagnostics, and the unmanaged legacy plan.
+     active plan, the malformed campaign diagnostics, and both unreferenced
+     unmarked plans as valid unmanaged legacy data without invented membership.
+     The referenced unmarked plan and its managed referrer are invalid.
+     A managed plan P whose declared campaign parent C does not reference P is
+     reported as stranded; no other invalid condition is labeled stranded.
    - The command exits `1` and does not select a current campaign.
 2. Run repository-wide campaign validation.
    - It validates every independently classifiable plan and campaign in stable
-     order, returns nonzero, and reports all deterministic repair diagnostics
-     for the missing and malformed metadata.
+     order, returns nonzero, and reports deterministic diagnostics only for
+     malformed managed data and the campaign-referenced missing metadata.
 3. Repair those records and reconcile the lifecycle so every active plan
    belongs to one campaign, then repeat validation and reporting.
    - Validation succeeds, the active plans resolve to the one active campaign,
-     and the permitted legacy plan remains explicitly unmanaged.
+     and the unreferenced legacy plans remain explicitly unmanaged regardless
+     of their location.
 4. Report one campaign through an explicit member-plan input while the other
    campaign is malformed.
    - The selected valid campaign still reports successfully and contains no
