@@ -24,6 +24,7 @@ const ASSIGNMENT_STATES = [
   'ARCHIVED',
 ];
 const ACTION_TYPES = ['CREATE_WORKER', 'REUSE_WORKER', 'REQUEST_REBASE', 'ARCHIVE_WORKTREE', 'ARCHIVE_SESSION'];
+const WORKER_BINDINGS_FILE = 'campaign-worker-bindings.json';
 
 class CampaignOrchestrationError extends Error {
   constructor(code, message, status = 1) {
@@ -85,6 +86,22 @@ function readCompletedActionV1(value, label = 'completed action') {
   return { ...value, result: { ...value.result } };
 }
 
+function readWorkerBindingsV1(value, file = 'campaign worker bindings') {
+  exactKeys(value, ['schemaVersion', 'bindings'], file);
+  if (value.schemaVersion !== 1 || !Array.isArray(value.bindings)) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', `${file}: expected worker binding schema V1`);
+  const bindings = value.bindings.map((binding, index) => {
+    const label = `${file}.bindings[${index}]`;
+    exactKeys(binding, ['repositoryRoot', 'campaignId', 'assignmentId', 'coordinatorSessionId', 'attachTokenHash', 'sessionId', 'worktree', 'branch', 'revision', 'boundAt'], label);
+    for (const key of Object.keys(binding)) if (typeof binding[key] !== 'string' || !binding[key]) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', `${label}.${key} must be a nonempty string`);
+    return { ...binding };
+  });
+  for (const field of ['assignmentId', 'attachTokenHash', 'sessionId', 'worktree']) {
+    const values = bindings.map((binding) => binding[field]);
+    if (new Set(values).size !== values.length) fail('CAMPAIGN_WORKER_BINDING_CONFLICT', `${file} contains duplicate ${field} bindings`);
+  }
+  return { schemaVersion: 1, bindings };
+}
+
 function readLedgerV1(value, file = 'campaign ledger') {
   exactKeys(value, ['schemaVersion', 'campaignId', 'topLevelWorktree', 'coordinatorSessionId', 'integrationBranch', 'integrationRevision', 'assignments', 'pendingAction', 'completedActions', 'workers'], file);
   if (value.schemaVersion !== 1) fail('CAMPAIGN_ORCHESTRATION_VERSION', `${file}: unsupported schemaVersion`);
@@ -112,6 +129,7 @@ function readLedgerV1(value, file = 'campaign ledger') {
 }
 
 const CampaignLedgerReaders = Object.freeze({ V1: readLedgerV1 });
+const CampaignWorkerBindingReaders = Object.freeze({ V1: readWorkerBindingsV1 });
 
 function readStatusV1(value) {
   exactKeys(value, ['schemaVersion', 'campaignId', 'invocationWorktree', 'effectiveWorktree', 'coordinatorSessionId', 'integrationRevision', 'assignments', 'readyPlans', 'activeWorkers', 'idleWorkers', 'rebaseRequired', 'readyToMerge', 'cleanupPending', 'pendingAction', 'diagnostics'], 'campaign status');
@@ -142,20 +160,141 @@ function coordinatorBinding(pluginData, repositoryRoot, campaignId) {
   if (!fs.existsSync(file)) return null;
   let value;
   try { value = JSON.parse(fs.readFileSync(file, 'utf8')); } catch (error) { fail('CAMPAIGN_COORDINATOR_STATE', `${file}: ${error.message}`, 2); }
-  const matches = (value.bindings ?? []).filter((binding) => binding.repositoryRoot === repositoryRoot && binding.campaignId === campaignId);
-  if (matches.length > 1) fail('CAMPAIGN_COORDINATOR_CONFLICT', `campaign ${campaignId} has multiple coordinator bindings`);
-  return matches[0]?.sessionId ?? null;
+  const repositoryBindings = (value.bindings ?? []).filter((binding) => binding.repositoryRoot === repositoryRoot);
+  if (repositoryBindings.length > 1) fail('CAMPAIGN_COORDINATOR_CONFLICT', `worktree ${repositoryRoot} has multiple coordinator bindings`);
+  if (repositoryBindings[0] && repositoryBindings[0].campaignId !== campaignId) fail('CAMPAIGN_COORDINATOR_CONFLICT', `worktree is coordinated for campaign ${repositoryBindings[0].campaignId}, not ${campaignId}`);
+  return repositoryBindings[0]?.sessionId ?? null;
 }
 
 function stateDirectory(environment = process.env) {
   return environment.PONYTAIL_CAMPAIGN_STATE_DIR
-    || environment.PLUGIN_DATA
     || path.join(environment.HOME || os.homedir(), '.ponytail', 'campaigns');
 }
 
 function ledgerPath(repositoryRoot, campaignId, environment = process.env) {
   const scope = crypto.createHash('sha256').update(repositoryRoot).digest('hex');
   return path.join(stateDirectory(environment), scope, `${campaignId}.json`);
+}
+
+function workerBindingsPath(environment = process.env) {
+  return path.join(stateDirectory(environment), WORKER_BINDINGS_FILE);
+}
+
+function readWorkerBindings(environment = process.env) {
+  const file = workerBindingsPath(environment);
+  if (!fs.existsSync(file)) return { schemaVersion: 1, bindings: [] };
+  let value;
+  try { value = JSON.parse(fs.readFileSync(file, 'utf8')); } catch (error) { fail('CAMPAIGN_WORKER_BINDING_IO', `${file}: ${error.message}`, 2); }
+  return readWorkerBindingsV1(value, file);
+}
+
+function withWorkerBindingsLock(environment, operation) {
+  const file = workerBindingsPath(environment);
+  const lock = `${file}.lock`;
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  for (let attempt = 0; attempt < 100; attempt += 1) {
+    try {
+      const descriptor = fs.openSync(lock, 'wx', 0o600);
+      try {
+        const state = readWorkerBindings(environment);
+        const result = operation(state);
+        const temporary = `${file}.${process.pid}.${crypto.randomUUID()}.tmp`;
+        fs.writeFileSync(temporary, `${JSON.stringify(readWorkerBindingsV1(state, file), null, 2)}\n`, { flag: 'wx', mode: 0o600 });
+        fs.renameSync(temporary, file);
+        return result;
+      } finally {
+        fs.closeSync(descriptor);
+        fs.unlinkSync(lock);
+      }
+    } catch (error) {
+      if (error.code !== 'EEXIST') throw error;
+      if (Date.now() - fs.statSync(lock).mtimeMs > 5000) { fs.unlinkSync(lock); continue; }
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 10);
+    }
+  }
+  fail('CAMPAIGN_WORKER_BINDING_LOCK', 'timed out waiting for campaign worker binding lock', 2);
+}
+
+function ledgerFiles(environment = process.env) {
+  const directory = stateDirectory(environment);
+  if (!fs.existsSync(directory)) return [];
+  return fs.readdirSync(directory, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory() && /^[a-f0-9]{64}$/.test(entry.name))
+    .flatMap((entry) => fs.readdirSync(path.join(directory, entry.name), { withFileTypes: true })
+      .filter((file) => file.isFile() && file.name.endsWith('.json'))
+      .map((file) => path.join(directory, entry.name, file.name)))
+    .sort();
+}
+
+function attachmentForToken(environment, attachToken) {
+  const matches = [];
+  for (const file of ledgerFiles(environment)) {
+    let ledger;
+    try { ledger = readLedgerV1(JSON.parse(fs.readFileSync(file, 'utf8')), file); } catch (error) { continue; }
+    const assignment = ledger.assignments.find((item) => item.attachToken === attachToken && item.state === 'DISPATCH_PENDING');
+    if (assignment && ledger.pendingAction?.assignmentId === assignment.id && ['CREATE_WORKER', 'REUSE_WORKER'].includes(ledger.pendingAction.type)) {
+      matches.push({ ledger, assignment });
+    }
+  }
+  if (matches.length !== 1) fail('CAMPAIGN_ATTACH_TOKEN', matches.length === 0 ? 'attach token is unknown, stale, or already used' : 'attach token is ambiguous');
+  return matches[0];
+}
+
+function bindWorker(environment, invocationWorktree, attachToken, sessionId) {
+  if (typeof attachToken !== 'string' || !attachToken || typeof sessionId !== 'string' || !sessionId) fail('CAMPAIGN_ATTACH_INPUT', 'attach requires a token and host session identity');
+  const canonicalWorktree = fs.realpathSync(invocationWorktree);
+  const { ledger, assignment } = attachmentForToken(environment, attachToken);
+  if (!fs.existsSync(ledger.topLevelWorktree)) fail('CAMPAIGN_WORKER_OWNER_MISSING', `owning worktree is unavailable: ${ledger.topLevelWorktree}`);
+  if (canonicalWorktree === ledger.topLevelWorktree) fail('CAMPAIGN_WORKER_SCOPE', 'a coordinator worktree cannot attach as its own worker');
+  const identity = repositoryIdentity(canonicalWorktree);
+  if (!identity.branch) fail('CAMPAIGN_WORKER_SCOPE', 'worker worktree must have a branch');
+  if (assignment.worktree && assignment.worktree !== canonicalWorktree) fail('CAMPAIGN_WORKER_SCOPE', `assignment is reserved for worker ${assignment.worktree}`);
+  const attachTokenHash = crypto.createHash('sha256').update(attachToken).digest('hex');
+  return withWorkerBindingsLock(environment, (state) => {
+    const replay = state.bindings.find((binding) => binding.attachTokenHash === attachTokenHash);
+    if (replay) {
+      if (replay.sessionId !== sessionId || replay.worktree !== canonicalWorktree) fail('CAMPAIGN_WORKER_BINDING_CONFLICT', 'attach token is already bound to another worker');
+      return replay;
+    }
+    if (state.bindings.some((binding) => binding.sessionId === sessionId || binding.worktree === canonicalWorktree)) fail('CAMPAIGN_WORKER_BINDING_CONFLICT', 'worker session or worktree is already bound');
+    const binding = {
+      repositoryRoot: ledger.topLevelWorktree,
+      campaignId: ledger.campaignId,
+      assignmentId: assignment.id,
+      coordinatorSessionId: ledger.coordinatorSessionId,
+      attachTokenHash,
+      sessionId,
+      worktree: canonicalWorktree,
+      branch: identity.branch,
+      revision: identity.revision,
+      boundAt: new Date().toISOString(),
+    };
+    state.bindings.push(binding);
+    return binding;
+  });
+}
+
+function removeWorkerBinding(environment, assignmentId) {
+  return withWorkerBindingsLock(environment, (state) => {
+    const binding = state.bindings.find((item) => item.assignmentId === assignmentId);
+    if (!binding) return null;
+    state.bindings = state.bindings.filter((item) => item !== binding);
+    return binding;
+  });
+}
+
+function resolveInvocationWorktree(invocationWorktree, environment = process.env, allowWorkerRead = true) {
+  const canonicalInvocationWorktree = fs.realpathSync(invocationWorktree);
+  const matches = readWorkerBindings(environment).bindings.filter((binding) => binding.worktree === canonicalInvocationWorktree);
+  if (matches.length === 0) return { invocationWorktree: canonicalInvocationWorktree, effectiveWorktree: canonicalInvocationWorktree, workerBinding: null };
+  if (matches.length !== 1) fail('CAMPAIGN_WORKER_BINDING_CONFLICT', `worktree ${canonicalInvocationWorktree} has multiple authenticated owners`);
+  const workerBinding = matches[0];
+  if (!allowWorkerRead) fail('CAMPAIGN_WORKER_MUTATION', `worker worktree belongs to campaign ${workerBinding.campaignId} in ${workerBinding.repositoryRoot}; run the mutation from its coordinator worktree`);
+  if (!fs.existsSync(workerBinding.repositoryRoot)) fail('CAMPAIGN_WORKER_OWNER_MISSING', `owning worktree is unavailable: ${workerBinding.repositoryRoot}`);
+  const ledger = readLedger(workerBinding.repositoryRoot, workerBinding.campaignId, environment);
+  const assignment = ledger.assignments.find((item) => item.id === workerBinding.assignmentId);
+  if (!assignment || assignment.state === 'ARCHIVED') fail('CAMPAIGN_WORKER_BINDING_STALE', 'worker ownership binding no longer has an active assignment');
+  return { invocationWorktree: canonicalInvocationWorktree, effectiveWorktree: workerBinding.repositoryRoot, workerBinding };
 }
 
 function newLedger(repositoryRoot, campaignId, coordinatorSessionId) {
@@ -220,6 +359,23 @@ function withLedgerLock(repositoryRoot, campaignId, environment, operation) {
   fail('CAMPAIGN_LEDGER_LOCK', 'timed out waiting for campaign ledger lock', 2);
 }
 
+function setLedgerCoordinator(repositoryRoot, campaignId, sessionId, environment = process.env) {
+  return withLedgerLock(repositoryRoot, campaignId, environment, (ledger) => {
+    if (ledger.coordinatorSessionId && ledger.coordinatorSessionId !== sessionId) fail('CAMPAIGN_COORDINATOR_CONFLICT', `campaign ${campaignId} ledger is owned by coordinator ${ledger.coordinatorSessionId}`);
+    ledger.coordinatorSessionId = sessionId;
+    return ledger;
+  });
+}
+
+function releaseLedgerCoordinator(repositoryRoot, campaignId, sessionId, environment = process.env) {
+  return withLedgerLock(repositoryRoot, campaignId, environment, (ledger) => {
+    if (ledger.coordinatorSessionId !== sessionId) fail('CAMPAIGN_COORDINATOR_CONFLICT', `campaign ${campaignId} ledger is owned by another coordinator`);
+    if (ledger.assignments.some((assignment) => assignment.state !== 'ARCHIVED')) fail('CAMPAIGN_COORDINATOR_ACTIVE', 'coordinator cannot be released while campaign assignments remain active');
+    ledger.coordinatorSessionId = null;
+    return ledger;
+  });
+}
+
 function resolveGraph(repositoryRoot, input) {
   if (input !== undefined) return campaignGraph(repositoryRoot, input);
   const inventory = buildRepositoryInventory(repositoryRoot, require('./campaign-census').readManagementConfig(repositoryRoot));
@@ -228,11 +384,43 @@ function resolveGraph(repositoryRoot, input) {
   return campaignGraph(repositoryRoot, inventory.activeCampaigns[0].rootPlanId);
 }
 
-function workerFor(ledger, assignment) {
-  return ledger.workers.find((worker) => (
+function workerFor(workers, assignment) {
+  return workers.find((worker) => (
     (assignment.sessionId && worker.sessionId === assignment.sessionId)
     || (assignment.worktree && worker.worktree === assignment.worktree)
   )) ?? null;
+}
+
+function observedWorkers(graph, ledger, environment) {
+  if (!environment) return ledger.workers;
+  const plansById = new Map(graph.plans.map((plan) => [plan.id, plan]));
+  const workers = ledger.workers.map((worker) => ({ ...worker }));
+  for (const binding of readWorkerBindings(environment).bindings.filter((item) => item.repositoryRoot === ledger.topLevelWorktree && item.campaignId === ledger.campaignId)) {
+    const assignment = ledger.assignments.find((item) => item.id === binding.assignmentId && item.state !== 'ARCHIVED');
+    if (!assignment) continue;
+    const existing = workers.find((worker) => worker.sessionId === binding.sessionId || worker.worktree === binding.worktree);
+    const plan = plansById.get(assignment.planId);
+    let observation;
+    if (!fs.existsSync(binding.worktree)) {
+      observation = { sessionId: binding.sessionId, worktree: binding.worktree, branch: binding.branch, revision: binding.revision, clean: false, activity: 'missing', evidenceComplete: false, worktreeArchived: existing?.worktreeArchived ?? false, sessionArchived: existing?.sessionArchived ?? false };
+    } else {
+      const identity = repositoryIdentity(binding.worktree);
+      observation = {
+        sessionId: binding.sessionId,
+        worktree: binding.worktree,
+        branch: identity.branch,
+        revision: identity.revision,
+        clean: git(binding.worktree, ['status', '--porcelain']).length === 0,
+        activity: plan?.lifecycle === graph.lifecycle.successfulCompletion ? 'completed' : 'active',
+        evidenceComplete: plan?.lifecycle === graph.lifecycle.successfulCompletion,
+        worktreeArchived: existing?.worktreeArchived ?? false,
+        sessionArchived: existing?.sessionArchived ?? false,
+      };
+    }
+    if (existing) Object.assign(existing, observation);
+    else workers.push(observation);
+  }
+  return workers;
 }
 
 function effectiveAssignmentState(assignment, plan, worker, integrationRevision, repositoryRoot) {
@@ -249,12 +437,13 @@ function effectiveAssignmentState(assignment, plan, worker, integrationRevision,
   return assignment.state;
 }
 
-function reconcile(graph, ledger, invocationWorktree = ledger.topLevelWorktree) {
+function reconcile(graph, ledger, invocationWorktree = ledger.topLevelWorktree, environment = null) {
   const plansById = new Map(graph.plans.map((plan) => [plan.id, plan]));
   const integrationRevision = git(ledger.topLevelWorktree, ['rev-parse', 'HEAD']);
+  const workers = observedWorkers(graph, ledger, environment);
   const assignments = ledger.assignments.map((assignment) => {
     const plan = plansById.get(assignment.planId);
-    const worker = workerFor(ledger, assignment);
+    const worker = workerFor(workers, assignment);
     return {
       ...assignment,
       workerRevision: worker?.revision ?? assignment.workerRevision,
@@ -270,7 +459,7 @@ function reconcile(graph, ledger, invocationWorktree = ledger.topLevelWorktree) 
   )).map((plan) => plan.id).sort();
   const occupiedSessions = new Set(assignments.filter((assignment) => assignment.state !== 'ARCHIVED').map((assignment) => assignment.sessionId).filter(Boolean));
   const occupiedWorktrees = new Set(assignments.filter((assignment) => assignment.state !== 'ARCHIVED').map((assignment) => assignment.worktree).filter(Boolean));
-  const idleWorkers = ledger.workers.filter((worker) => worker.activity === 'idle' && worker.clean && !worker.worktreeArchived && !worker.sessionArchived
+  const idleWorkers = workers.filter((worker) => worker.activity === 'idle' && worker.clean && !worker.worktreeArchived && !worker.sessionArchived
     && !occupiedSessions.has(worker.sessionId) && !occupiedWorktrees.has(worker.worktree)).sort((left, right) => (left.sessionId ?? '').localeCompare(right.sessionId ?? ''));
   const status = {
     schemaVersion: 1,
@@ -291,8 +480,8 @@ function reconcile(graph, ledger, invocationWorktree = ledger.topLevelWorktree) 
   };
   for (const assignment of assignments) {
     if (!plansById.has(assignment.planId)) status.diagnostics.push({ code: 'CAMPAIGN_ASSIGNMENT_PLAN_MISSING', message: `assignment ${assignment.id} references missing plan ${assignment.planId}` });
-    const worker = workerFor(ledger, assignment);
-    if (assignment.state !== 'DISPATCH_PENDING' && assignment.state !== 'ARCHIVED' && (!worker || worker.activity === 'missing')) {
+    const worker = workerFor(workers, assignment);
+    if (assignment.state !== 'DISPATCH_PENDING' && assignment.state !== 'ARCHIVED' && !assignment.worktreeArchived && (!worker || worker.activity === 'missing')) {
       status.diagnostics.push({ code: 'CAMPAIGN_WORKER_MISSING', message: `assignment ${assignment.id} has no live worker observation` });
     }
     if (['MERGED', 'CLEANUP_PENDING'].includes(assignment.state)
@@ -315,10 +504,10 @@ function action(type, assignment, payload = {}) {
   });
 }
 
-function advanceLedger(graph, ledger) {
+function advanceLedger(graph, ledger, environment = null) {
   if (!ledger.coordinatorSessionId) fail('CAMPAIGN_COORDINATOR_REQUIRED', 'campaign advance requires one authenticated coordinator binding');
   if (ledger.pendingAction) return ledger.pendingAction;
-  const status = reconcile(graph, ledger);
+  const status = reconcile(graph, ledger, ledger.topLevelWorktree, environment);
   if (status.diagnostics.length) fail('CAMPAIGN_STATUS_BLOCKED', status.diagnostics.map((item) => item.message).join('; '));
   if (ledger.integrationRevision !== status.integrationRevision) {
     ledger.integrationRevision = status.integrationRevision;
@@ -397,22 +586,47 @@ function recordActionResult(ledger, actionId, result) {
   } else if (pendingAction.type === 'REQUEST_REBASE') {
     if (typeof result.revision !== 'string' || !result.revision) fail('CAMPAIGN_ACTION_RESULT', 'REQUEST_REBASE result requires revision');
     assignment.workerRevision = result.revision;
-    const worker = workerFor(ledger, assignment);
+    const worker = workerFor(ledger.workers, assignment);
     if (worker) { worker.revision = result.revision; worker.clean = true; }
     assignment.state = 'WORK_COMPLETE';
   } else if (pendingAction.type === 'ARCHIVE_WORKTREE') {
     assignment.worktreeArchived = true;
-    const worker = workerFor(ledger, assignment);
+    const worker = workerFor(ledger.workers, assignment);
     if (worker) worker.worktreeArchived = true;
   } else {
     assignment.sessionArchived = true;
     assignment.state = 'ARCHIVED';
-    const worker = workerFor(ledger, assignment);
+    const worker = workerFor(ledger.workers, assignment);
     if (worker) worker.sessionArchived = true;
   }
   ledger.completedActions.push({ actionId, assignmentId: assignment.id, type: pendingAction.type, result: { ...result } });
   ledger.pendingAction = null;
   return assignment;
+}
+
+function validateActionResultBinding(ledger, result, environment) {
+  const pendingAction = ledger.pendingAction;
+  if (!pendingAction) return;
+  const binding = readWorkerBindings(environment).bindings.find((item) => item.assignmentId === pendingAction.assignmentId);
+  if (pendingAction.type === 'ARCHIVE_WORKTREE') {
+    if (!binding) fail('CAMPAIGN_WORKER_BINDING_MISSING', `assignment ${pendingAction.assignmentId} has no authenticated worker binding`);
+    if (fs.existsSync(binding.worktree)) fail('CAMPAIGN_ACTION_RESULT', `worker worktree still exists: ${binding.worktree}`);
+    return;
+  }
+  if (pendingAction.type === 'REQUEST_REBASE') {
+    if (!binding || !fs.existsSync(binding.worktree)) fail('CAMPAIGN_WORKER_BINDING_MISSING', `assignment ${pendingAction.assignmentId} has no available authenticated worker`);
+    const identity = repositoryIdentity(binding.worktree);
+    if (result?.revision !== identity.revision || git(binding.worktree, ['status', '--porcelain']).length !== 0
+      || spawnSync('git', ['-C', ledger.topLevelWorktree, 'merge-base', '--is-ancestor', ledger.integrationRevision, identity.revision]).status !== 0) {
+      fail('CAMPAIGN_ACTION_RESULT', 'rebase result is not a clean worker revision containing the integration revision');
+    }
+    return;
+  }
+  if (!['CREATE_WORKER', 'REUSE_WORKER'].includes(pendingAction.type)) return;
+  if (!binding) fail('CAMPAIGN_WORKER_BINDING_MISSING', `assignment ${ledger.pendingAction.assignmentId} has not completed its authenticated attach handshake`);
+  for (const key of ['sessionId', 'worktree', 'branch', 'revision']) {
+    if (result?.[key] !== binding[key]) fail('CAMPAIGN_WORKER_BINDING_CONFLICT', `action result ${key} does not match the authenticated worker binding`);
+  }
 }
 
 function humanStatus(status) {
@@ -445,30 +659,48 @@ function parseArguments(argv) {
   } else if (operation === 'action-result' && argv.length === 4 && argv[2] === '--result') {
     actionId = argv[1];
     try { result = JSON.parse(argv[3]); } catch (error) { fail('CAMPAIGN_ACTION_RESULT', `result is not valid JSON: ${error.message}`, 2); }
+  } else if (operation === 'attach' && argv.length === 2) {
+    result = argv[1];
   } else fail('CAMPAIGN_ORCHESTRATION_USAGE', usage(), 2);
   return { operation, input, json, actionId, result };
 }
 
 function usage() {
-  return 'usage: ponytail campaign status [<campaign>] [--json]\n       ponytail campaign advance [<campaign>] [--json]\n       ponytail campaign action-result <action-id> --result <json>';
+  return 'usage: ponytail campaign status [<campaign>] [--json]\n       ponytail campaign advance [<campaign>] [--json]\n       ponytail campaign action-result <action-id> --result <json>\n       ponytail campaign attach <token>';
 }
 
 function run(argv = process.argv.slice(2), options = {}) {
   const request = parseArguments(argv);
   const invocationWorktree = fs.realpathSync(options.repositoryRoot ?? process.cwd());
   const environment = options.environment ?? process.env;
-  if (request.operation === 'action-result') {
-    const campaignId = environment.PONYTAIL_CAMPAIGN_ID;
-    if (!campaignId) fail('CAMPAIGN_ACTION_SCOPE', 'PONYTAIL_CAMPAIGN_ID is required for action-result', 2);
-    return withLedgerLock(invocationWorktree, campaignId, environment, (ledger) => recordActionResult(ledger, request.actionId, request.result));
+  if (request.operation === 'attach') {
+    const resolution = resolveInvocationWorktree(invocationWorktree, environment, true);
+    if (!resolution.workerBinding) fail('CAMPAIGN_ATTACH_REQUIRED', 'worker attach was not authenticated by the lifecycle hook');
+    process.stdout.write(`Attached worker ${resolution.workerBinding.sessionId} to campaign ${resolution.workerBinding.campaignId}\n`);
+    return resolution.workerBinding;
   }
-  const graph = resolveGraph(invocationWorktree, request.input);
+  if (request.operation === 'action-result') {
+    const resolution = resolveInvocationWorktree(invocationWorktree, environment, false);
+    const graph = resolveGraph(resolution.effectiveWorktree);
+    let completedAction;
+    withLedgerLock(resolution.effectiveWorktree, graph.campaignId, environment, (ledger) => {
+      validateActionResultBinding(ledger, request.result, environment);
+      completedAction = ledger.pendingAction ?? ledger.completedActions.find((item) => item.actionId === request.actionId);
+      return recordActionResult(ledger, request.actionId, request.result);
+    });
+    if (completedAction?.type === 'ARCHIVE_SESSION') removeWorkerBinding(environment, completedAction.assignmentId);
+    const status = reconcile(graph, readLedger(resolution.effectiveWorktree, graph.campaignId, environment), resolution.invocationWorktree, environment);
+    process.stdout.write(`${JSON.stringify(status)}\n`);
+    return status;
+  }
+  const resolution = resolveInvocationWorktree(invocationWorktree, environment, request.operation === 'status');
+  const graph = resolveGraph(resolution.effectiveWorktree, request.input ?? resolution.workerBinding?.campaignId);
   let status;
   if (request.operation === 'advance') {
-    withLedgerLock(invocationWorktree, graph.campaignId, environment, (ledger) => advanceLedger(graph, ledger));
+    withLedgerLock(resolution.effectiveWorktree, graph.campaignId, environment, (ledger) => advanceLedger(graph, ledger, environment));
   }
-  const ledger = readLedger(invocationWorktree, graph.campaignId, environment);
-  status = reconcile(graph, ledger, invocationWorktree);
+  const ledger = readLedger(resolution.effectiveWorktree, graph.campaignId, environment);
+  status = reconcile(graph, ledger, resolution.invocationWorktree, environment);
   process.stdout.write(request.json ? `${JSON.stringify(status)}\n` : humanStatus(status));
   return status;
 }
@@ -482,7 +714,9 @@ module.exports = {
   CampaignLedgerReaders,
   CampaignOrchestrationError,
   CampaignStatusReaders,
+  CampaignWorkerBindingReaders,
   advanceLedger,
+  bindWorker,
   diagnostic,
   humanStatus,
   ledgerPath,
@@ -492,10 +726,16 @@ module.exports = {
   readAssignmentV1,
   readLedger,
   readLedgerV1,
+  readWorkerBindings,
+  readWorkerBindingsV1,
+  removeWorkerBinding,
+  releaseLedgerCoordinator,
   readStatusV1,
   readWorkerV1,
   reconcile,
   recordActionResult,
+  resolveInvocationWorktree,
+  setLedgerCoordinator,
   run,
   usage,
   withLedgerLock,

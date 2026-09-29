@@ -189,6 +189,11 @@ test('completed work is classified by Git ancestry and fast-forward merged exact
   const cleanup = advanceLedger(campaignGraph, ledger);
   assert.equal(cleanup.type, 'ARCHIVE_WORKTREE');
   assert.equal(advanceLedger(campaignGraph, ledger).id, cleanup.id);
+  recordActionResult(ledger, cleanup.id, { ok: true });
+  const archiveSession = advanceLedger(campaignGraph, ledger);
+  assert.equal(archiveSession.type, 'ARCHIVE_SESSION');
+  recordActionResult(ledger, archiveSession.id, { ok: true });
+  assert.equal(ledger.assignments[0].state, 'ARCHIVED');
 });
 
 test('completed divergent work requires rebase and cannot merge', () => {

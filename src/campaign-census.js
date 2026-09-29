@@ -1127,12 +1127,12 @@ function repositoryRoot() {
 }
 
 function usage() {
-  return 'usage: ponytail campaign validate <plan-name-or-path>\n       ponytail campaign validate --all [--json]\n       ponytail campaign report [<plan-name-or-path>] [--json] [--[no-]summary-table] [--[no-]plan-table] [--[no-]sprint-table]\n       ponytail campaign status [<campaign>] [--json]\n       ponytail campaign advance [<campaign>] [--json]\n       ponytail campaign action-result <action-id> --result <json>';
+  return 'usage: ponytail campaign validate <plan-name-or-path>\n       ponytail campaign validate --all [--json]\n       ponytail campaign report [<plan-name-or-path>] [--json] [--[no-]summary-table] [--[no-]plan-table] [--[no-]sprint-table]\n       ponytail campaign status [<campaign>] [--json]\n       ponytail campaign advance [<campaign>] [--json]\n       ponytail campaign action-result <action-id> --result <json>\n       ponytail campaign attach <token>';
 }
 
 function run(argv = process.argv.slice(2)) {
   const operation = argv[0];
-  if (['status', 'advance', 'action-result'].includes(operation)) {
+  if (['status', 'advance', 'action-result', 'attach'].includes(operation)) {
     return require('./campaign-orchestration').run(argv);
   }
   let input;
@@ -1167,6 +1167,10 @@ function run(argv = process.argv.slice(2)) {
     toolError('CAMPAIGN_USAGE', usage());
   }
   const root = repositoryRoot();
+  const resolution = require('./campaign-orchestration').resolveInvocationWorktree(root, process.env, true);
+  if (resolution.workerBinding) {
+    toolError('CAMPAIGN_WORKER_READ_SCOPE', `campaign ${operation} must run in owning worktree ${resolution.effectiveWorktree}; use campaign status for an authenticated re-rooted worker view`);
+  }
   const config = readManagementConfig(root);
   if (all || (operation === 'report' && input === undefined)) {
     const inventory = buildRepositoryInventory(root, config, operation);
@@ -1225,6 +1229,6 @@ if (require.main === module) {
     run();
   } catch (error) {
     process.stderr.write(`${diagnostic(error)}\n`);
-    process.exitCode = error instanceof CampaignError ? error.status : 2;
+    process.exitCode = Number.isInteger(error.status) ? error.status : 2;
   }
 }

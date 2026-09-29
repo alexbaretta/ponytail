@@ -303,6 +303,18 @@
       "supportedDowngradeVersions": []
     },
     {
+      "id": "campaign-worker-bindings",
+      "implementation": {
+        "workspace": "ponytail",
+        "module": "src/campaign-orchestration.js",
+        "readerRegistryExport": "CampaignWorkerBindingReaders"
+      },
+      "currentVersion": "V1",
+      "versions": ["V1"],
+      "supportedReadVersions": ["V1"],
+      "supportedDowngradeVersions": []
+    },
+    {
       "id": "parallel-sprint-metadata",
       "implementation": {
         "workspace": "ponytail",
