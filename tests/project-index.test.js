@@ -500,6 +500,20 @@ test('searches the exact fresh plan generation with bound filters', async () => 
   assert.doesNotMatch(search.text, /processor|child/);
 });
 
+test('refuses stale plan queries without rebuilding', async () => {
+  const root = planFixture();
+  const projection = collectPlanProjection(root);
+  const boundary = freshPlanClient({ ...projection, stateDigest: 'current' }, []);
+  await assert.rejects(
+    () => searchPlans('processor', {
+      lifecycle: null, kind: null, plan: null,
+    }, { root, pool: boundary.pool }),
+    /plans index is stale for this worktree; run ponytail traceability index/,
+  );
+  assert.equal(boundary.queries.some(query =>
+    query.text.includes('websearch_to_tsquery')), false);
+});
+
 test('queries plan descendants, roots, and stranded records from the fresh generation', async () => {
   const root = planFixture();
   const projection = collectPlanProjection(root);

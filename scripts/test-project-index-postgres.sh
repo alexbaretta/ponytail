@@ -25,6 +25,7 @@ const path = require('node:path');
 const { execFileSync } = require('node:child_process');
 const { Pool } = require('pg');
 const {
+  collectPlanProjection,
   collectTraceabilityProjection,
   publishTraceabilityGeneration,
 } = require(path.join(process.argv[2], 'src/project-index'));
@@ -165,6 +166,52 @@ async function main() {
     } finally {
       locker.release();
     }
+
+    const planBase = collectPlanProjection(root);
+    const planFirst = {
+      ...planBase,
+      projectId,
+      projectName,
+      repositoryPath,
+      worktreePath: first.worktreePath,
+    };
+    const planFirstResult = await publishTraceabilityGeneration(client, planFirst);
+    const traceBeforePlanChange = await client.query(`
+      SELECT published.generation_id
+      FROM ponytail_index.published_generation_v1 published
+      JOIN ponytail_index.worktree_v1 worktree USING (worktree_id)
+      JOIN ponytail_index.repository_v1 repository USING (repository_id)
+      WHERE repository.project_id = $1::uuid
+        AND worktree.root_path = $2 AND published.corpus = 'traceability'`,
+    [projectId, first.worktreePath]);
+    const changedIndex = planFirst.files.findIndex(file => file.path.endsWith('/plan.md'));
+    assert.ok(changedIndex >= 0);
+    const changedFiles = planFirst.files.map((file, index) => index === changedIndex ? {
+      ...file,
+      contentDigest: crypto.createHash('sha256').update(`${file.contentDigest}-changed`).digest('hex'),
+      gitState: 'modified',
+    } : file);
+    const changedPlan = {
+      ...planFirst,
+      stateDigest: crypto.createHash('sha256').update('changed-plan').digest('hex'),
+      files: changedFiles,
+    };
+    const changedPlanResult = await publishTraceabilityGeneration(client, changedPlan);
+    assert.notEqual(changedPlanResult.generationId, planFirstResult.generationId);
+    assert.equal(changedPlanResult.parsedFiles, 1);
+    assert.equal(changedPlanResult.reusedFiles, changedFiles.length - 1);
+    const traceAfterPlanChange = await client.query(`
+      SELECT published.generation_id
+      FROM ponytail_index.published_generation_v1 published
+      JOIN ponytail_index.worktree_v1 worktree USING (worktree_id)
+      JOIN ponytail_index.repository_v1 repository USING (repository_id)
+      WHERE repository.project_id = $1::uuid
+        AND worktree.root_path = $2 AND published.corpus = 'traceability'`,
+    [projectId, first.worktreePath]);
+    assert.equal(
+      traceAfterPlanChange.rows[0].generation_id,
+      traceBeforePlanChange.rows[0].generation_id,
+    );
   } finally {
     await client.query(`
       DELETE FROM ponytail_index.generation_v1

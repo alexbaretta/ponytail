@@ -63,7 +63,7 @@ census records.
 ## Sprints
 
 1. [S01](sprints/S01.md): implement incremental traceability and plan indexing,
-   full-text search, and plan-graph queries — READY_FOR_REVIEW.
+   full-text search, and plan-graph queries — DONE.
 2. [S02](sprints/S02.md): extend the graph to plans/issues and implement scoped
    relationship-gap validation — READY_FOR_REVIEW; depends on S01.
 
@@ -105,7 +105,7 @@ required.
 
 ## Final validation record
 
-In progress. S01-F01, S01-F02, and the plan-corpus implementation and query
-commands in S01-F03 passed focused unit, semantic, setup, distribution,
-dispatcher, and real PostgreSQL checks on 2026-09-29. S01 now requires only
-its final reconciled acceptance tasklet before S02 begins.
+In progress. S01 passed focused unit, semantic, setup, distribution,
+installation, dispatcher, canonical-census, corpus-isolation, stale-query, and
+real PostgreSQL acceptance on 2026-09-29. S02 is ready to implement the
+relationship graph, prospective planning annotations, and scoped validation.

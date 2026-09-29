@@ -164,5 +164,6 @@ recursive graph, and versioned-result tests. The real PostgreSQL contract and
 public `ponytail plan` dispatcher published a separate current plan generation,
 searched normalized plan text, listed canonical campaign roots, and returned
 only legacy or invalid stranded records with explicit reasons. Final S01
-reconciliation will repeat the corpus-isolation, stale-generation,
-installation, and distribution checks after the last relevant edit.
+reconciliation proved one-file plan invalidation, unchanged-file parse reuse,
+traceability-corpus isolation, stale-generation rejection, installation, and
+distribution after the last relevant edit.
