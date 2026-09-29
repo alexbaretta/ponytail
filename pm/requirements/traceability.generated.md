@@ -22,7 +22,7 @@ Requirement: [pm/requirements/index.md](index.md)
 - implementation: implements [src/campaign-census.js:1047](../../src/campaign-census.js#L1047)
 - unit-test: verifies [tests/campaign-census-format.test.js:11](../../tests/campaign-census-format.test.js#L11)
 - integration-test: verifies [tests/campaign-census.test.js:418](../../tests/campaign-census.test.js#L418)
-- uat: verifies [pm/uat/index.md:33](../../pm/uat/index.md#L33)
+- uat: verifies [pm/uat/index.md:34](../../pm/uat/index.md#L34)
 
 ## REQ-PLAN-INPUT-QUEUE
 
@@ -90,3 +90,17 @@ Requirement: [pm/requirements/issue-requirement-activation.md](issue-requirement
 - issue: introduces [pm/bugs/closed/2026-09-29-BUG-premature_requirement_promotion.md:22](../../pm/bugs/closed/2026-09-29-BUG-premature_requirement_promotion.md#L22)
 - issue: plans-implementation [pm/bugs/closed/2026-09-29-BUG-premature_requirement_promotion.md:23](../../pm/bugs/closed/2026-09-29-BUG-premature_requirement_promotion.md#L23)
 - issue: plans-verification [pm/bugs/closed/2026-09-29-BUG-premature_requirement_promotion.md:24](../../pm/bugs/closed/2026-09-29-BUG-premature_requirement_promotion.md#L24)
+
+## REQ-PRECOMMIT-PROJECT-ISOLATION
+
+Requirement: [pm/requirements/precommit-project-isolation.md](precommit-project-isolation.md)
+
+- implementation: implements [cli/ponytail:6](../../cli/ponytail#L6)
+- unit-test: verifies [tests/ponytail-cli.test.js:11](../../tests/ponytail-cli.test.js#L11)
+- integration-test: verifies [tests/project-validation.test.js:10](../../tests/project-validation.test.js#L10)
+- uat: verifies [pm/uat/precommit-project-isolation.md:13](../../pm/uat/precommit-project-isolation.md#L13)
+- uat: verifies [pm/uat/precommit-project-isolation.md:31](../../pm/uat/precommit-project-isolation.md#L31)
+- uat: verifies [pm/uat/precommit-project-isolation.md:48](../../pm/uat/precommit-project-isolation.md#L48)
+- issue: introduces [pm/bugs/closed/2026-09-29-BUG-precommit_cross_project_coupling.md:21](../../pm/bugs/closed/2026-09-29-BUG-precommit_cross_project_coupling.md#L21)
+- issue: plans-implementation [pm/bugs/closed/2026-09-29-BUG-precommit_cross_project_coupling.md:22](../../pm/bugs/closed/2026-09-29-BUG-precommit_cross_project_coupling.md#L22)
+- issue: plans-verification [pm/bugs/closed/2026-09-29-BUG-precommit_cross_project_coupling.md:23](../../pm/bugs/closed/2026-09-29-BUG-precommit_cross_project_coupling.md#L23)

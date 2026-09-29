@@ -5,7 +5,9 @@ Git worktree. It initializes `.agents/config/ponytail.json` in the invoking
 worktree together with its Codex policy proposal. The
 global `~/.ponytail/config.json` records the repository's main root and blesses
 the invoking worktree whenever the repository has no current blessing,
-including when it was already registered. It contains no project identity data.
+including when it was already registered. It also records a validated identity
+snapshot containing only the names, components, repository URLs, and package
+coordinates needed by reference QA.
 Commit local configuration. Linked worktrees inherit repository registration
 through Git but retain the configuration from their checked-out revision.
 Component registration and detection may populate newly initialized
@@ -13,17 +15,18 @@ configuration before its first commit. Validation and QA require the finished
 configuration to be tracked.
 
 Run `ponytail unregister <repository-root>` to remove an exact registration,
-including one whose repository has been deleted or moved. When QA encounters
-such a missing project, its error prints the corresponding command. Run
+including one whose repository has been deleted or moved. `ponytail validate
+--all` reports such a missing project and prints the corresponding command. Run
 `ponytail list-projects` to print every registered repository root without
 loading its worktree.
 
-`ponytail bless` and `ponytail bless-worktree` select the invoking worktree as
-the configuration other projects read. The configuration must be tracked,
+`ponytail bless` and `ponytail bless-worktree` select the invoking worktree and
+refresh the identity snapshot other projects read. The configuration must be tracked,
 committed, valid, and belong to the registered repository. `ponytail blessed`
 and `ponytail blessed-worktree` print only its absolute root. Blessing stores
-the path, not a Git object ID; subsequent committed configuration changes in
-that worktree therefore become visible without reblessing.
+the path and current identity, not a Git object ID. After manually editing and
+committing identity fields, run `ponytail register` from the blessed worktree
+to publish the new snapshot. Ponytail's component commands refresh it directly.
 
 Every `ponytail` invocation, including help, requires a non-bare Git worktree.
 All commands except `register`, `unregister`, and `list-projects` first require
@@ -31,6 +34,9 @@ repository registration; blessing commands perform their own configuration
 checks.
 `ponytail validate` checks registration and local configuration; it does not
 scan project contents, load other projects, run package managers, or run tests.
+`ponytail validate --all` explicitly validates every registered project's live
+blessed worktree and reports unavailable, dirty, invalid, missing-snapshot, or
+stale registrations. It does not update the registry.
 `ponytail qa [references]` separately scans for forbidden references. It does
 not run integrations or arbitrary project commands. Future moderately
 expensive checks belong in this dispatcher, with explicit selectors.
@@ -83,10 +89,10 @@ ponytail unregister-dependency "Example Platform"
 ponytail list-dependencies
 ```
 
-Registration is idempotent. Unregistration fails when the exact component is
-or dependency is absent. Dependency commands accept the exact canonical name
-of another registered project and resolve it from that project's blessed
-worktree. Listing commands print the current worktree's configured values, one
+Registration is idempotent. Unregistration fails when the exact component or
+dependency is absent. Dependency commands accept the exact canonical name of
+another registered project and resolve it from that project's identity
+snapshot. Listing commands print the current worktree's configured values, one
 per line. Component and dependency mutations use a repository-specific lock and
 atomic file replacement. Project synonyms remain explicit metadata because
 package manifests do not identify them reliably.
@@ -107,10 +113,11 @@ name per line in sorted order, so unwanted results can be passed directly to
 
 The invoking worktree's configuration supplies its dependencies and exceptions.
 For every other registered repository except the configured Ponytail source,
-QA reads names and components only from its blessed worktree. Ponytail and its
-components are always permitted because they provide the QA tooling itself. A
-missing, dirty, invalid, removed, or unrelated blessed worktree is a
-configuration error rather than an incomplete successful scan.
+QA reads identity only from the durable user-registry snapshot and never opens
+the foreign worktree. Ponytail and its components are always permitted because
+they provide the QA tooling itself. A legacy registration without a snapshot
+emits an actionable warning and contributes no foreign identity until it is
+refreshed; `ponytail validate --all` treats that condition as an error.
 
 Package coordinates identify what another project's canonical package manager
 must declare to depend on this project. npm and pnpm share npm coordinates;
@@ -181,3 +188,12 @@ QA reports file, line, project, matched name, and registered-project coverage.
 It can detect only the identities in the local registry; it cannot prove that
 unregistered projects do not exist or recognize unnamed copied business logic.
 Ponytail neither provisions nor mandates CI/CD behavior.
+
+## User registry contract
+
+`~/.ponytail/config.json` V2 is the current writer format. Each project entry
+contains `root`, `blessedWorktree`, and `identity`; the identity is either the
+validated snapshot described above or `null`. Exact V1 remains readable and
+normalizes to V2 entries with `identity: null`. A subsequent write emits V2 and
+refreshes only the invoking project's identity, never fabricating data for
+unrelated legacy registrations.

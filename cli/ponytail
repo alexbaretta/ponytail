@@ -3,6 +3,7 @@ set -euo pipefail
 
 # Copyright (c) 2026 Alex Baretta. All rights reserved.
 # Licensed under the MIT License. See LICENSE in the project root.
+# Traceability: implements REQ-PRECOMMIT-PROJECT-ISOLATION
 
 main() {
   local python_source=''
@@ -43,7 +44,7 @@ def valid_source_root(path):
     ))
 
 
-def exact_config(value, config_path):
+def read_user_config_v1(value, config_path):
     if not isinstance(value, dict) or set(value) != {"schemaVersion", "sourceRoot", "projects"}:
         fail(f"invalid V1 Ponytail configuration: {config_path}")
     if value["schemaVersion"] != 1 or not isinstance(value["sourceRoot"], str) or not Path(value["sourceRoot"]).is_absolute():
@@ -57,7 +58,30 @@ def exact_config(value, config_path):
     roots = [project["root"] for project in projects]
     if roots != sorted(set(roots)):
         fail(f"invalid V1 Ponytail configuration: {config_path}")
-    return value
+    return {
+        "schemaVersion": 2,
+        "sourceRoot": value["sourceRoot"],
+        "projects": [{**project, "identity": None} for project in projects],
+    }
+
+
+def read_user_config_v2(value, config_path):
+    if not isinstance(value, dict) or set(value) != {"schemaVersion", "sourceRoot", "projects"}:
+        fail(f"invalid V2 Ponytail configuration: {config_path}")
+    if value["schemaVersion"] != 2 or not isinstance(value["sourceRoot"], str) or not Path(value["sourceRoot"]).is_absolute() or not isinstance(value["projects"], list):
+        fail(f"invalid V2 Ponytail configuration: {config_path}")
+    projects = []
+    for project in value["projects"]:
+        if not isinstance(project, dict) or set(project) != {"root", "blessedWorktree", "identity"} or not isinstance(project["root"], str) or not Path(project["root"]).is_absolute() or (project["blessedWorktree"] is not None and (not isinstance(project["blessedWorktree"], str) or not Path(project["blessedWorktree"]).is_absolute())):
+            fail(f"invalid V2 Ponytail configuration: {config_path}")
+        projects.append({**project, "identity": None if project["identity"] is None else read_project_identity(project["identity"])})
+    roots = [project["root"] for project in projects]
+    if roots != sorted(set(roots)):
+        fail(f"invalid V2 Ponytail configuration: {config_path}")
+    return {**value, "projects": projects}
+
+
+PonytailUserConfigReaders = {1: read_user_config_v1, 2: read_user_config_v2}
 
 
 def read_config(config_path):
@@ -66,7 +90,10 @@ def read_config(config_path):
     if path_has_symlink(config_path) or not config_path.is_file():
         fail(f"Ponytail configuration must be a regular non-symlink file: {config_path}")
     try:
-        return exact_config(json.loads(config_path.read_text(encoding="utf-8")), config_path)
+        value = json.loads(config_path.read_text(encoding="utf-8"))
+        if not isinstance(value, dict) or type(value.get("schemaVersion")) is not int or value["schemaVersion"] not in PonytailUserConfigReaders:
+            fail(f"unsupported Ponytail configuration version: {config_path}")
+        return PonytailUserConfigReaders[value["schemaVersion"]](value, config_path)
     except json.JSONDecodeError as error:
         fail(f"invalid V1 Ponytail configuration {config_path}: {error}")
     except TypeError:
@@ -107,11 +134,13 @@ def source_root_for(script_path, config):
 
 
 def write_config(config_path, source_root, projects):
-    atomic_write(config_path, {
-        "schemaVersion": 1,
+    value = {
+        "schemaVersion": 2,
         "sourceRoot": str(source_root.resolve()),
         "projects": sorted(projects, key=lambda project: project["root"]),
-    })
+    }
+    read_user_config_v2(value, config_path)
+    atomic_write(config_path, value)
 
 
 class ProjectError(ValueError):
@@ -171,6 +200,28 @@ def read_project_v2(value):
 PonytailProjectReaders = {1: read_project_v1, 2: read_project_v2}
 
 
+def read_project_identity(value):
+    keys = {"name", "names", "components", "repositoryUrls", "packages"}
+    if not isinstance(value, dict) or set(value) != keys:
+        fail("invalid project identity snapshot")
+    project = read_project_v2({
+        "schemaVersion": 2,
+        "name": value["name"],
+        "names": value["names"],
+        "components": value["components"],
+        "dependencies": [],
+        "repositoryUrls": value["repositoryUrls"],
+        "packages": value["packages"],
+        "manifests": [],
+        "exceptions": [],
+    })
+    return {key: project[key] for key in sorted(keys)}
+
+
+def project_identity(project):
+    return read_project_identity({key: project[key] for key in ("name", "names", "components", "repositoryUrls", "packages")})
+
+
 def read_project(root):
     target = root / ".agents/config/ponytail.json"
     if path_has_symlink(target) or not target.is_file():
@@ -203,6 +254,22 @@ def registered_project(config, main_root):
     if config is None:
         return None
     return next((project for project in config["projects"] if project["root"] == str(main_root)), None)
+
+
+def refresh_registered_identity(config_path, source_root, root, main_root, metadata):
+    lock_name = hashlib.sha256(str(config_path.parent.parent).encode()).hexdigest()
+    with open(Path(tempfile.gettempdir()) / f"ponytail-{lock_name}.lock", "a+", encoding="utf-8") as lock:
+        fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
+        config = read_config(config_path)
+        project = registered_project(config, main_root)
+        if project is None or project["blessedWorktree"] != str(root):
+            return
+        projects = [
+            {**candidate, "identity": project_identity(metadata)}
+            if candidate["root"] == str(main_root) else candidate
+            for candidate in config["projects"]
+        ]
+        write_config(config_path, source_root, projects)
 
 
 def install_precommit_hook(root, source_root, config_path):
@@ -262,14 +329,16 @@ def register(config_path, source_root, root, main_root):
     if not metadata_path.exists() and not metadata_path.is_symlink():
         write_project(root, {"name": main_root.name, "names": [], "components": [], "dependencies": [], "repositoryUrls": [], "packages": [], "manifests": [], "exceptions": []})
         print(f"initialized: {metadata_path}")
-    read_project(root)
+    identity = project_identity(read_project(root))
     config = read_config(config_path)
     projects = [] if config is None else config["projects"]
     registered = registered_project(config, main_root)
     if registered is None:
-        projects = [*projects, {"root": str(main_root), "blessedWorktree": str(root)}]
+        projects = [*projects, {"root": str(main_root), "blessedWorktree": str(root), "identity": identity}]
     elif registered["blessedWorktree"] is None:
-        projects = [{**project, "blessedWorktree": str(root)} if project["root"] == str(main_root) else project for project in projects]
+        projects = [{**project, "blessedWorktree": str(root), "identity": identity} if project["root"] == str(main_root) else project for project in projects]
+    elif registered["blessedWorktree"] == str(root):
+        projects = [{**project, "identity": identity} if project["root"] == str(main_root) else project for project in projects]
     write_config(config_path, source_root, projects)
     if registered is not None and registered["blessedWorktree"] is None:
         print(f"blessed worktree: {root}")
@@ -304,16 +373,18 @@ def update_project_names(root, field, kind, name, additions, remove):
         else:
             already_registered = name in values
             values.update(additions)
-        write_project(root, {**metadata, field: sorted(values)})
+        metadata = {**metadata, field: sorted(values)}
+        write_project(root, metadata)
     if remove:
         print(f"unregistered {kind}: {name}")
     else:
         print(f"{'already registered' if already_registered else 'registered'} {kind}: {name}")
+    return metadata
 
 
 def update_component(root, name, remove):
     name = checked_component_name(name)
-    update_project_names(root, "components", "component", name, component_identifiers([name]), remove)
+    return update_project_names(root, "components", "component", name, component_identifiers([name]), remove)
 
 
 def registered_dependency_names(config, main_root):
@@ -321,7 +392,9 @@ def registered_dependency_names(config, main_root):
     for project in config["projects"]:
         if project["root"] == str(main_root):
             continue
-        _, metadata = blessed_project(project)
+        metadata = project["identity"]
+        if metadata is None:
+            continue
         if metadata["name"] in names:
             fail("registered projects must have unique canonical names")
         names.add(metadata["name"])
@@ -386,6 +459,7 @@ def detect_components(root, arguments):
         write_project(root, {**metadata, "components": components})
     for name in names:
         print(name)
+    return metadata
 
 
 def tracked_project(root, env=None):
@@ -426,8 +500,12 @@ def bless(config_path, source_root, config, root, main_root):
     project = registered_project(config, main_root)
     if project is None:
         raise ProjectError(f"Git repository is not registered with Ponytail: {main_root}; run ponytail register", 3)
-    tracked_clean_project(root)
-    projects = [{**candidate, "blessedWorktree": str(root)} if candidate["root"] == str(main_root) else candidate for candidate in config["projects"]]
+    metadata = tracked_clean_project(root)
+    projects = [
+        {**candidate, "blessedWorktree": str(root), "identity": project_identity(metadata)}
+        if candidate["root"] == str(main_root) else candidate
+        for candidate in config["projects"]
+    ]
     write_config(config_path, source_root, projects)
     print(f"blessed worktree: {root}")
 
@@ -452,6 +530,21 @@ def validate_project(config, source_root, root, main_root):
     return metadata
 
 
+def validate_all_projects(config):
+    names = set()
+    for project in config["projects"]:
+        _, metadata = blessed_project(project)
+        identity = project_identity(metadata)
+        if project["identity"] is None:
+            fail(f"registered project identity snapshot is missing: {project['root']}; run ponytail register from its blessed worktree")
+        if project["identity"] != identity:
+            fail(f"registered project identity snapshot is stale: {project['root']}; run ponytail register from its blessed worktree")
+        if identity["name"] in names:
+            fail("registered projects must have unique canonical names")
+        names.add(identity["name"])
+    print(f"valid registered projects: {len(config['projects'])}")
+
+
 def qa(source_root, config, root, main_root, metadata, arguments):
     if arguments not in ([], ["references"]):
         fail("usage: ponytail qa [references]")
@@ -460,8 +553,10 @@ def qa(source_root, config, root, main_root, metadata, arguments):
     for project in config["projects"]:
         if project["root"] in {str(main_root), str(source_main_root)}:
             continue
-        _, foreign = blessed_project(project)
-        projects[project["root"]] = foreign
+        if project["identity"] is None:
+            print(f"warning: registered project identity snapshot is missing: {project['root']}; run ponytail register from its blessed worktree", file=sys.stderr)
+            continue
+        projects[project["root"]] = project["identity"]
     names = [metadata["name"], *(item["name"] for item in projects.values())]
     if len(set(names)) != len(names):
         fail("registered projects must have unique canonical names")
@@ -526,7 +621,7 @@ def print_usage():
   ponytail plan roots [--json]
   ponytail plan stranded [--json]
   ponytail pre-commit
-  ponytail validate
+  ponytail validate [--all]
   ponytail qa [references]
   ponytail update-permissions [permission options]
   ponytail update-skills [Codex installer options]
@@ -596,11 +691,13 @@ def run():
         if operation == "register-component":
             if len(arguments) != 1:
                 fail("usage: ponytail register-component <name>")
-            update_component(root, arguments[0], False)
+            metadata = update_component(root, arguments[0], False)
+            refresh_registered_identity(config_path, source_root, root, main_root, metadata)
         elif operation == "unregister-component":
             if len(arguments) != 1:
                 fail("usage: ponytail unregister-component <name>")
-            update_component(root, arguments[0], True)
+            metadata = update_component(root, arguments[0], True)
+            refresh_registered_identity(config_path, source_root, root, main_root, metadata)
         elif operation == "list-components":
             if arguments:
                 fail("list-components accepts no arguments")
@@ -616,7 +713,8 @@ def run():
             for dependency in metadata["dependencies"]:
                 print(dependency)
         else:
-            detect_components(root, arguments)
+            metadata = detect_components(root, arguments)
+            refresh_registered_identity(config_path, source_root, root, main_root, metadata)
         return 0
     metadata = validate_project(config, source_root, root, main_root)
     if operation == "plan-input":
@@ -658,8 +756,11 @@ def run():
         print_usage()
         return 0
     if operation == "validate":
+        if arguments == ["--all"]:
+            validate_all_projects(config)
+            return 0
         if arguments:
-            fail("validate accepts no arguments")
+            fail("usage: ponytail validate [--all]")
         print(f"valid: {root} (registered main checkout: {main_root})")
         return 0
     if operation == "pre-commit":

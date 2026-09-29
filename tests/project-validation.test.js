@@ -7,6 +7,7 @@ const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 const test = require('node:test');
 const { declaredDependencies } = require('../scripts/project-qa');
+// Traceability: verifies REQ-PRECOMMIT-PROJECT-ISOLATION
 const cli = path.resolve(__dirname, '../cli/ponytail');
 
 function fixture(t) {
@@ -35,9 +36,11 @@ function configure(root, changes) {
   write(root, file, `${JSON.stringify(value, null, 2)}\n`);
   return value;
 }
-function commitConfiguration(root) {
+function commitConfiguration(f, root) {
   git(root, 'add', '.agents/config/ponytail.json');
   git(root, '-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.test', 'commit', '-qm', 'update Ponytail configuration');
+  const result = run(f.home, root, 'register');
+  assert.equal(result.status, 0, result.stderr);
 }
 function repository(f, name) {
   const root = path.join(f.directory, name);
@@ -66,7 +69,7 @@ test('every command distinguishes missing Git from absent registration', t => {
   }
 });
 
-test('QA identifies a removed project and its displayed command unregisters it', t => {
+test('local QA ignores a removed project while global validation identifies it', t => {
   const f = fixture(t);
   const current = repository(f, 'current');
   const removedProjectName = ['g', 'w', 'e'].join('');
@@ -74,6 +77,8 @@ test('QA identifies a removed project and its displayed command unregisters it',
   fs.rmSync(removed, { recursive: true, force: true });
 
   let result = run(f.home, current, 'qa');
+  assert.equal(result.status, 0, result.stderr);
+  result = run(f.home, current, 'validate', '--all');
   assert.equal(result.status, 1);
   assert.equal(
     result.stderr,
@@ -123,7 +128,11 @@ test('register resolves linked worktrees to the main checkout and validate check
   let result = run(freshHome, worktree, 'register');
   assert.equal(result.status, 0, result.stderr);
   const config = JSON.parse(fs.readFileSync(path.join(freshHome, '.ponytail/config.json')));
-  assert.deepEqual(config.projects, [{ blessedWorktree: fs.realpathSync(worktree), root: main }]);
+  assert.deepEqual(config.projects, [{
+    blessedWorktree: fs.realpathSync(worktree),
+    identity: { components: [], name: 'main', names: [], packages: [], repositoryUrls: [] },
+    root: main,
+  }]);
   assert.equal(run(freshHome, worktree, 'validate').status, 0);
   fs.unlinkSync(path.join(worktree, '.agents/config/ponytail.json'));
   result = run(freshHome, worktree, 'validate');
@@ -322,6 +331,27 @@ test('pre-commit runs reference QA and blocks findings', t => {
   assert.equal(git(current, 'rev-parse', 'HEAD'), before);
 });
 
+test('pre-commit ignores dirty foreign configuration while global validation reports it', t => {
+  const f = fixture(t);
+  const current = repository(f, 'current');
+  const foreign = repository(f, 'OtherProduct');
+  assert.equal(run(f.home, current, 'pre-commit').status, 0);
+  configure(foreign, { components: ['foreign-draft'] });
+  write(current, 'safe.txt', 'Local change only.');
+  git(current, 'add', 'safe.txt');
+
+  const commit = spawnSync(
+    'git',
+    ['-C', current, '-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.test', 'commit', '-m', 'safe local change'],
+    { encoding: 'utf8', env: { ...process.env, HOME: f.home, CODEX_HOME: path.join(f.home, '.codex') } },
+  );
+  assert.equal(commit.status, 0, commit.stdout + commit.stderr);
+
+  const validation = run(f.home, current, 'validate', '--all');
+  assert.equal(validation.status, 1);
+  assert.match(validation.stderr, /must be committed before blessing/);
+});
+
 test('pre-commit permits sprint metadata markers while scanning sprint content', t => {
   const f = fixture(t);
   const current = repository(f, 'current');
@@ -423,7 +453,7 @@ test('direct npm dependencies grant directional permission by package identity',
   const f = fixture(t);
   const current = repository(f, 'current'); const foreign = repository(f, 'OtherProduct');
   configure(foreign, { packages: [{ manager: 'npm', name: '@example/other' }] });
-  commitConfiguration(foreign);
+  commitConfiguration(f, foreign);
   configure(current, { manifests: [{ manager: 'pnpm', path: 'package.json' }] });
   write(current, 'package.json', JSON.stringify({ dependencies: { '@example/other': '^1.0.0' } }));
   write(current, 'example.txt', 'OtherProduct'); git(current, 'add', '.');
@@ -440,7 +470,7 @@ test('registered project dependencies grant and revoke reference permission', t 
   const current = repository(f, 'current');
   const foreign = repository(f, 'OtherProduct');
   configure(foreign, { components: ['foreign-worker'] });
-  commitConfiguration(foreign);
+  commitConfiguration(f, foreign);
   write(current, 'reference.txt', 'OtherProduct uses foreign-worker.');
   git(current, 'add', 'reference.txt');
   assert.equal(run(f.home, current, 'qa').status, 4);
@@ -477,7 +507,7 @@ test('reference QA treats foreign components as project identities', t => {
   const current = repository(f, 'current');
   const foreign = repository(f, 'OtherProduct');
   configure(foreign, { components: ['foreign-worker'] });
-  commitConfiguration(foreign);
+  commitConfiguration(f, foreign);
   write(current, 'reference.txt', 'The foreign-worker owns this behavior.');
   git(current, 'add', 'reference.txt');
   const result = run(f.home, current, 'qa');
@@ -490,7 +520,7 @@ test('reference QA permits components registered to the invoking project', t => 
   const current = repository(f, 'current');
   const foreign = repository(f, 'OtherProduct');
   configure(foreign, { components: ['foreign-worker'] });
-  commitConfiguration(foreign);
+  commitConfiguration(f, foreign);
   write(current, 'reference.txt', 'The FOREIGN-WORKER owns this behavior.');
   git(current, 'add', 'reference.txt');
   assert.equal(run(f.home, current, 'qa').status, 4);
@@ -510,7 +540,7 @@ test('reference QA always permits Ponytail and its components', t => {
   assert.equal(result.status, 0, result.stderr + result.stdout);
 });
 
-test('reference QA reads foreign identities only from the blessed worktree', t => {
+test('blessing refreshes the foreign identity snapshot used by QA', t => {
   const f = fixture(t);
   const current = repository(f, 'current');
   const foreign = repository(f, 'OtherProduct');
@@ -527,7 +557,40 @@ test('reference QA reads foreign identities only from the blessed worktree', t =
   assert.equal(run(f.home, current, 'qa').status, 0);
 });
 
-test('register blesses an already registered repository when its blessing is absent', t => {
+test('local QA keeps the snapshot until explicit refresh and global validation reports staleness', t => {
+  const f = fixture(t);
+  const current = repository(f, 'current');
+  const foreign = repository(f, 'OtherProduct');
+  configure(foreign, { components: ['new-foreign-component'] });
+  git(foreign, 'add', '.agents/config/ponytail.json');
+  git(foreign, '-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.test', 'commit', '--no-verify', '-qm', 'change identity');
+  write(current, 'reference.txt', 'new-foreign-component');
+  git(current, 'add', 'reference.txt');
+
+  assert.equal(run(f.home, current, 'qa').status, 0);
+  let result = run(f.home, current, 'validate', '--all');
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /identity snapshot is stale/);
+  assert.equal(run(f.home, foreign, 'register').status, 0);
+  assert.equal(run(f.home, current, 'validate', '--all').status, 0);
+  result = run(f.home, current, 'qa');
+  assert.equal(result.status, 4);
+  assert.match(result.stdout, /new-foreign-component/);
+});
+
+test('canonical foreign component mutation refreshes its identity snapshot', t => {
+  const f = fixture(t);
+  const current = repository(f, 'current');
+  const foreign = repository(f, 'OtherProduct');
+  assert.equal(run(f.home, foreign, 'register-component', 'foreign-worker').status, 0);
+  write(current, 'reference.txt', 'foreign-worker');
+  git(current, 'add', 'reference.txt');
+  const result = run(f.home, current, 'qa');
+  assert.equal(result.status, 4);
+  assert.match(result.stdout, /foreign-worker/);
+});
+
+test('local QA uses a snapshot when blessing is absent and global validation fails', t => {
   const f = fixture(t);
   const current = repository(f, 'current');
   const foreign = repository(f, 'OtherProduct');
@@ -537,6 +600,8 @@ test('register blesses an already registered repository when its blessing is abs
   fs.writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`);
 
   let result = run(f.home, current, 'qa');
+  assert.equal(result.status, 0, result.stderr);
+  result = run(f.home, current, 'validate', '--all');
   assert.equal(result.status, 1);
   assert.match(result.stderr, new RegExp(`repository has no blessed worktree: ${foreign}`));
   assert.match(result.stderr, /run ponytail register from that repository or one of its worktrees/);
@@ -547,11 +612,31 @@ test('register blesses an already registered repository when its blessing is abs
   assert.equal(run(f.home, current, 'qa').status, 0);
 });
 
+test('legacy registrations warn locally and fail explicit global validation', t => {
+  const f = fixture(t);
+  const current = repository(f, 'current');
+  const foreign = repository(f, 'OtherProduct');
+  const configPath = path.join(f.home, '.ponytail/config.json');
+  const config = JSON.parse(fs.readFileSync(configPath));
+  fs.writeFileSync(configPath, `${JSON.stringify({
+    schemaVersion: 1,
+    sourceRoot: config.sourceRoot,
+    projects: config.projects.map(({ root, blessedWorktree }) => ({ root, blessedWorktree })),
+  }, null, 2)}\n`);
+
+  let result = run(f.home, current, 'qa');
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stderr, new RegExp(`identity snapshot is missing: ${foreign}`));
+  result = run(f.home, current, 'validate', '--all');
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /identity snapshot is missing/);
+});
+
 test('actual gitlinks permit references but a .gitmodules entry alone does not', t => {
   const f = fixture(t);
   const current = repository(f, 'current'); const foreign = repository(f, 'OtherProduct');
   configure(foreign, { repositoryUrls: [foreign] });
-  commitConfiguration(foreign);
+  commitConfiguration(f, foreign);
   write(current, 'example.txt', 'OtherProduct');
   write(current, '.gitmodules', `[submodule "dependency"]\npath = external/dependency\nurl = ${foreign}\n`);
   git(current, 'add', '.');
@@ -596,6 +681,7 @@ test('reference scope and diagnostic format ignore Git grep user preferences', t
   configure(helper, { repositoryUrls: [helper] });
   write(helper, 'foreign.txt', 'OtherProduct'); git(helper, 'add', '.');
   git(helper, '-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.test', 'commit', '--no-verify', '-qm', 'helper content');
+  assert.equal(run(f.home, helper, 'register').status, 0);
   git(current, '-c', 'protocol.file.allow=always', 'submodule', 'add', '-q', helper, 'external/helper');
   git(current, 'config', 'grep.recurseSubmodules', 'true');
   let result = run(f.home, current, 'qa');

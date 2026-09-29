@@ -21,6 +21,7 @@ boundary by `tests/campaign-census.test.js`.
 - [Campaign orchestration](campaign-orchestration.md)
 - [Traceability index and queries](traceability-index.md)
 - [Issue requirement activation](issue-requirement-activation.md)
+- [Pre-commit project isolation](precommit-project-isolation.md)
 
 ## Campaign census Suite
 

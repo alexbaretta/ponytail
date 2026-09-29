@@ -22,10 +22,11 @@ while project-wide management records remain under `pm/`.
   command policy proposal. Every adopting project uses that same root-relative path;
   accepted user policy is stored outside repositories under
   `~/.ponytail/codex-execpolicy/`.
-- `~/.ponytail/config.json` is the external V1 user configuration written by
+- `~/.ponytail/config.json` is the external V2 user configuration written by
   `ponytail register` and `ponytail unregister`; it owns the canonical
   Ponytail source root and registered repositories with their explicitly
-  blessed worktrees, which `ponytail list-projects` displays.
+  blessed worktrees and validated identity snapshots. Exact V1 remains
+  readable. `ponytail list-projects` displays the registered roots.
 - `registry.tsv` owns enabled and disabled skill and command publication
   across supported hosts. Benchmark entries are prohibited.
 - `versioned-data-contracts.json` inventories Ponytail's durable serialized
@@ -90,8 +91,9 @@ while project-wide management records remain under `pm/`.
   artifact classifications, generated-source mappings, reverse-view path, and
   TypeScript semantic-checker binding consumed by the reusable traceability
   checker.
-  Other projects read this file only from the repository's explicitly blessed
-  worktree. `codex-execpolicy.json` owns its Codex command policy proposal. See
+  Other projects read only the corresponding durable identity snapshot from
+  the external user registry; `ponytail validate --all` explicitly validates
+  every live blessed worktree. `codex-execpolicy.json` owns its Codex command policy proposal. See
   `docs/project-validation.md`.
 - `scripts/project-qa.js` owns local tracked-reference QA and dependency manifest parsing.
 - `generated/` owns runtime data derived from `registry.tsv`.

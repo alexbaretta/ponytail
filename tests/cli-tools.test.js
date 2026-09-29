@@ -150,6 +150,7 @@ test('ponytail help publishes campaign, plan-input, traceability, and plan comma
   assert.match(result.stdout, /ponytail plan ancestors <plan>/);
   assert.match(result.stdout, /ponytail plan roots \[--json\]/);
   assert.match(result.stdout, /ponytail plan stranded \[--json\]/);
+  assert.match(result.stdout, /ponytail validate \[--all\]/);
 });
 
 test('ponytail qa validates the repository-wide campaign inventory when configured', () => {

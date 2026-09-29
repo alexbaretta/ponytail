@@ -25,6 +25,10 @@
     {
       "id": "REQ-ISSUE-REQUIREMENT-ACTIVATION",
       "sourcePath": "pm/requirements/issue-requirement-activation.md"
+    },
+    {
+      "id": "REQ-PRECOMMIT-PROJECT-ISOLATION",
+      "sourcePath": "pm/requirements/precommit-project-isolation.md"
     }
   ],
   "artifacts": [
@@ -191,6 +195,31 @@
     {
       "class": "issue",
       "path": "pm/bugs/closed/2026-09-29-BUG-premature_requirement_promotion.md",
+      "locator": "text"
+    },
+    {
+      "class": "implementation",
+      "path": "cli/ponytail",
+      "locator": "text"
+    },
+    {
+      "class": "unit-test",
+      "path": "tests/ponytail-cli.test.js",
+      "locator": "text"
+    },
+    {
+      "class": "integration-test",
+      "path": "tests/project-validation.test.js",
+      "locator": "text"
+    },
+    {
+      "class": "uat",
+      "path": "pm/uat/precommit-project-isolation.md",
+      "locator": "text"
+    },
+    {
+      "class": "issue",
+      "path": "pm/bugs/closed/2026-09-29-BUG-precommit_cross_project_coupling.md",
       "locator": "text"
     }
   ],

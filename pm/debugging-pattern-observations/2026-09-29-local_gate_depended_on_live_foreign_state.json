@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-09-29-local_gate_depended_on_live_foreign_state",
+  "recorded_at": "2026-09-29T15:19:21-07:00",
+  "source_references": [
+    "cli/ponytail",
+    "tests/project-validation.test.js"
+  ],
+  "context": {
+    "languages": ["bash", "python", "javascript"],
+    "frameworks": ["Git hooks", "Node.js test runner"],
+    "components": ["project registration", "reference QA", "pre-commit"],
+    "affected_boundaries": ["local commit gate to registered foreign worktrees"],
+    "code_references": ["cli/ponytail: qa", "cli/ponytail: validate_all_projects"]
+  },
+  "observed_behavior": "A commit in one registered repository could fail because another registered repository was missing or had dirty or invalid live configuration.",
+  "expected_behavior": "A local commit gate depends only on the invoking repository and durable validated foreign identity inputs; live global registration health is checked only when explicitly requested.",
+  "causal_mechanism": "Reference QA called the strict live blessed-worktree validator for every foreign registration, so an unrelated worktree's availability and cleanliness became inputs to the local pre-commit result.",
+  "anti_pattern": {
+    "structural_description": "A local gate synchronously validates mutable live state owned by independent projects.",
+    "why_it_fails": "The gate couples independent sessions and repositories: unrelated deletion, dirt, checkout movement, or configuration work can deny a valid local operation."
+  },
+  "correct_pattern": {
+    "required_invariant": "Local gates consume durable last-known-good foreign metadata and never inspect live foreign worktrees; an explicit global command owns live health and freshness checks.",
+    "implementation_description": "Store validated foreign identity snapshots in the versioned user registry, use them for local reference QA, and compare them with live blessed-worktree identities only in ponytail validate --all."
+  },
+  "applicability_conditions": [
+    "A local operation needs metadata from independently mutable projects or sessions.",
+    "Foreign live state can be represented by a small validated snapshot with an explicit refresh lifecycle."
+  ],
+  "known_non_matches": [
+    "An explicitly requested global health check whose purpose is to validate every live registration."
+  ],
+  "confirmation_evidence": [
+    "The pre-fix regression test failed because dirty foreign configuration made a valid commit return status 1.",
+    "After the fix, the same commit succeeds while ponytail validate --all reports the dirty foreign registration."
+  ],
+  "regression_proofs": [
+    "tests/project-validation.test.js: pre-commit ignores dirty foreign configuration while global validation reports it",
+    "tests/project-validation.test.js: local QA keeps the snapshot until explicit refresh and global validation reports staleness"
+  ]
+}

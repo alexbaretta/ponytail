@@ -8,6 +8,7 @@ const os = require('node:os');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 const test = require('node:test');
+// Traceability: verifies REQ-PRECOMMIT-PROJECT-ISOLATION
 
 const root = path.join(__dirname, '..');
 const ponytail = path.join(root, 'cli', 'ponytail');
@@ -95,10 +96,17 @@ test('register initializes and registers the enclosing Git root idempotently', (
   assert.equal(fs.statSync(proposalPath).mode & 0o777, 0o644);
   const first = fs.readFileSync(configPath(home), 'utf8');
   assert.deepEqual(JSON.parse(first), {
-    schemaVersion: 1,
+    schemaVersion: 2,
     sourceRoot: fs.realpathSync(root),
     projects: [{
       blessedWorktree: fs.realpathSync(projectRoot),
+      identity: {
+        components: [],
+        name: path.basename(projectRoot),
+        names: [],
+        packages: [],
+        repositoryUrls: [],
+      },
       root: fs.realpathSync(projectRoot),
     }],
   });
@@ -122,6 +130,30 @@ test('register initializes and registers the enclosing Git root idempotently', (
   assert.equal(result.status, 0, result.stderr);
   assert.equal(result.stdout, `blessed worktree: ${fs.realpathSync(projectRoot)}\nalready registered: ${fs.realpathSync(projectRoot)}\n`);
   assert.equal(JSON.parse(fs.readFileSync(configPath(home))).projects[0].blessedWorktree, fs.realpathSync(projectRoot));
+});
+
+test('V1 user configuration remains readable and upgrades through the V2 writer', () => {
+  const home = temporaryDirectory('ponytail-home');
+  const projectRoot = project();
+  const unrelatedRoot = project();
+  assert.equal(run(home, 'register', [], { cwd: projectRoot }).status, 0);
+  assert.equal(run(home, 'register', [], { cwd: unrelatedRoot }).status, 0);
+  const config = JSON.parse(fs.readFileSync(configPath(home), 'utf8'));
+  fs.writeFileSync(configPath(home), `${JSON.stringify({
+    schemaVersion: 1,
+    sourceRoot: config.sourceRoot,
+    projects: config.projects.map(({ root: project, blessedWorktree }) => ({ root: project, blessedWorktree })),
+  }, null, 2)}\n`);
+
+  assert.equal(run(home, 'list-projects', [], { cwd: projectRoot }).stdout, [projectRoot, unrelatedRoot].map(root => fs.realpathSync(root)).sort().join('\n') + '\n');
+  const result = run(home, 'register', [], { cwd: projectRoot });
+  assert.equal(result.status, 0, result.stderr);
+  const upgraded = JSON.parse(fs.readFileSync(configPath(home), 'utf8'));
+  assert.equal(upgraded.schemaVersion, 2);
+  const registeredProject = upgraded.projects.find(({ root: registeredRoot }) => registeredRoot === fs.realpathSync(projectRoot));
+  const unrelatedProject = upgraded.projects.find(({ root: registeredRoot }) => registeredRoot === fs.realpathSync(unrelatedRoot));
+  assert.equal(registeredProject.identity.name, path.basename(projectRoot));
+  assert.equal(unrelatedProject.identity, null);
 });
 
 test('pre-commit composes with an existing shell hook idempotently', () => {
@@ -176,6 +208,13 @@ test('concurrent register calls retain both registrations', () => {
   const config = JSON.parse(fs.readFileSync(configPath(home), 'utf8'));
   assert.deepEqual(config.projects, [fs.realpathSync(first), fs.realpathSync(second)].sort().map(projectRoot => ({
     blessedWorktree: projectRoot,
+    identity: {
+      components: [],
+      name: path.basename(projectRoot),
+      names: [],
+      packages: [],
+      repositoryUrls: [],
+    },
     root: projectRoot,
   })));
   assert.equal(

@@ -18,3 +18,4 @@ ownership of project-specific management records and evidence.
 - [Plan input queue](plan-input-queue.md)
 - [Campaign orchestration](campaign-orchestration.md)
 - [Traceability index](traceability-index.md)
+- [Project validation isolation](project-validation-isolation.md)
