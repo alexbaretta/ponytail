@@ -19,8 +19,8 @@ Traceability: verifies REQ-TRACEABILITY-INDEX
 - **Prerequisites:** A test repository containing configured requirements,
   implementation, tests, UAT, plans, tasklets, bugs, and declared endpoints.
 - **Profiles:** Automated real CLI and isolated Git-repository profile.
-- **External effects:** Writes only the configured ignored worktree-local
-  SQLite projection.
+- **External effects:** Writes only rebuildable rows in the configured
+  PostgreSQL `ponytail_index` schema.
 
 1. Build the index and inspect its JSON result.
    - Every supported entity and annotation is present; the result identifies
@@ -28,16 +28,20 @@ Traceability: verifies REQ-TRACEABILITY-INDEX
      database schema version.
 2. Reindex without changing inputs.
    - No source file is reparsed and the logical query result is unchanged.
-3. Change one tracked file without committing, add one file, rename one,
+3. Create a second worktree at the same revision and index it.
+   - No database is created in that worktree; identical content reuses cached
+     parse results while the worktree receives its own published generations.
+4. Change one tracked file without committing, add one file, rename one,
    delete one, and reindex.
    - The dirty file is detected despite unchanged `HEAD`; only invalidated
      files are processed; removed paths leave no stale rows.
-4. Change parser or configuration identity and reindex.
+5. Change parser or configuration identity and reindex.
    - Every affected file is reparsed.
-5. Interrupt a rebuild and query concurrently.
+6. Interrupt a rebuild and query concurrently.
    - Readers observe the prior complete generation; no partial generation is
-     published. A concurrent writer succeeds serially or returns the bounded
-     retryable diagnostic without corruption.
+     published. A same-worktree writer succeeds serially or returns the bounded
+     retryable diagnostic, while an independent worktree refresh can proceed
+     and neither can replace the other's generation.
 
 ## Arc: Search annotations quickly and safely
 

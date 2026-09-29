@@ -16,7 +16,9 @@ Licensed under the MIT License. See LICENSE in the project root.
 **Source:** The stakeholder required repository-wide incremental indexing,
 full-text queries, relationship-gap validation, plan and bug traceability, and
 optional campaign- or plan-scoped validation for Ponytail's requirements
-traceability annotations.
+traceability annotations. On 2026-09-29, the stakeholder clarified that the
+index must use the PostgreSQL service already mandated for the project journal
+instead of recreating a SQLite database in every worktree.
 
 ## Repository index
 
@@ -36,9 +38,17 @@ relationships.
 
 Index publication must be transactional. Concurrent human and agent readers
 must see either the prior complete generation or the next complete generation,
-never a partial rebuild. Concurrent writers must serialize with a bounded,
-actionable failure instead of corrupting the cache. Distinct worktrees retain
-independent indexes because their working-tree content may differ.
+never a partial rebuild. Concurrent writers for the same worktree and corpus
+must serialize with a bounded, actionable failure instead of corrupting the
+cache. Distinct worktrees retain independently published generations because
+their working-tree content may differ, while identical content and parse
+results may be reused through the long-lived project index.
+
+The index must use the project's existing configured PostgreSQL service and
+stable project identity. It must not require a per-worktree database or a
+second database service. Every indexed generation and query is isolated by
+project, repository, worktree, and corpus so one worktree's dirty state,
+failed refresh, or rebuild cannot replace another worktree's published answer.
 
 ## Search
 
@@ -52,10 +62,10 @@ unclassified machine metadata merely to improve recall.
 
 ## Plan text and structure index
 
-The same worktree-local index must expose `pm/plans` as a distinct logical
-corpus. Full-text search must cover normalized safe text from plan manifests,
-sprints, and tasklets and return the owning plan, lifecycle, record kind and
-identity, path, line, heading, and concise excerpt.
+The same project index must expose each worktree's `pm/plans` state as a
+distinct logical corpus. Full-text search must cover normalized safe text from
+plan manifests, sprints, and tasklets and return the owning plan, lifecycle,
+record kind and identity, path, line, heading, and concise excerpt.
 
 The index must also expose the canonical plan graph: direct parents and
 children, ancestors and descendants, direct dependencies and reverse
@@ -72,10 +82,11 @@ campaign because its campaign metadata is missing or invalid, its parent is
 unresolved, or it is an explicitly permitted unmanaged legacy record; each
 result must state the reason. Ponytail must not invent campaign membership.
 
-Traceability and plan data may share a physical SQLite database and refresh
+Traceability and plan data share the configured PostgreSQL database and refresh
 operation, but they retain independent corpus generations, freshness checks,
-tables, graph semantics, and FTS policies. A failed or stale plan generation
-must not produce partial structural answers or trigger an implicit rebuild.
+tables, graph semantics, and full-text policies. A failed or stale plan
+generation must not produce partial structural answers or trigger an implicit
+rebuild.
 
 ## Relationship-gap validation
 

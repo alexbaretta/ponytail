@@ -22,37 +22,56 @@ replace it.
 
 The same projection component also indexes plan records, but traceability and
 plan data remain separate logical corpora. They share database lifecycle,
-locking, and file-identity machinery without conflating their entity models,
-graph semantics, safe-text policies, or freshness generations.
+and content-addressed file-identity machinery without conflating their entity
+models, graph semantics, safe-text policies, worktree generations, or
+freshness checks.
 
-### SQLite projection
+### PostgreSQL projection
 
-Each worktree stores one ignored SQLite database at a project-configured path,
-defaulting to `tmp/requirements-traceability/index.sqlite`. SQLite FTS5 supplies
-full-text search over explicitly safe normalized fields. This avoids a required
-PostgreSQL service and avoids Python pickle's opaque, language-specific,
-unsafe deserialization while retaining transactional reads, one serialized
-writer, deterministic SQL queries, and portable rebuilds.
+The projection uses the PostgreSQL 18 service, database connection settings,
+and stable project identity already configured by `ponytail-journal.json`.
+The journal and index remain separate components: journal tables stay in
+`ponytail_journal`, while a separately owned `ponytail_index` schema contains
+only rebuildable index state. The existing setup command provisions both
+schemas idempotently. This adds no database service and stores no secret in the
+repository configuration.
 
-The physical database schema is versioned and disposable. Shared tables
-represent index metadata and exact indexed-file identities. Separate
-generation, entity, relationship, diagnostic, and external-content FTS5 tables
-represent the traceability and plan corpora. Foreign keys and unique
-constraints protect stable identities. Rebuild and incremental update write
-new corpus generations in one transaction; readers select published
-generations. The database stores no authoritative approval or completion
-state.
+PostgreSQL `tsvector` columns with GIN indexes provide full-text search over
+explicitly safe normalized fields; B-tree indexes serve exact filters and
+graph joins. The Node projection component uses the `pg` client and PostgreSQL
+parameter binding rather than constructing SQL or `tsquery` text from user
+input. PostgreSQL replaces both a per-worktree SQLite lifecycle and Python
+pickle's opaque, language-specific, unsafe deserialization.
+
+The physical index schema is versioned and disposable. Shared tables represent
+projects, repositories, worktrees, index metadata, exact content identities,
+and reusable parse results. Separate generation, entity, relationship,
+diagnostic, and search-document tables represent the traceability and plan
+corpora. Foreign keys and unique constraints protect stable identities.
+The project key is the configured journal project UUID; the repository-instance
+key is its canonical absolute Git common-directory path, and the worktree key
+is its canonical absolute top-level path. These machine locators are excluded
+from full-text search. Moving or removing a checkout retires that locator
+rather than aliasing it to a different tree.
+Rebuild and incremental update write new worktree corpus generations in one
+transaction; readers select the published generation for their exact project,
+repository, worktree, and corpus. The database stores no authoritative
+approval or completion state. Superseded generation rows are removed without
+invalidating concurrent PostgreSQL snapshots; reusable content and parse rows
+are garbage-collected only after no published worktree generation references
+them.
 
 ### Incremental identity
 
-Each file record retains repository-relative path, exact content object ID or
-digest, observed `HEAD`, Git state, parser/configuration identity, and last
-result. The exact content identity—not merely the last modifying commit—is the
-skip key, because uncommitted edits can change annotations while `HEAD` stays
-constant. Configuration, grammar, schema, or semantic-locator changes
-invalidate every affected file. A current tracked-file inventory detects adds,
-deletes, and renames; one file update replaces all of that file's indexed rows
-atomically.
+Each generation maps a repository-relative path to its exact content object ID
+or digest, observed `HEAD`, Git state, parser/configuration identity, and last
+result. The exact content and parser identity—not merely the last modifying
+commit—is the reusable parse-cache key, because uncommitted edits can change
+annotations while `HEAD` stays constant. A newly created worktree can reuse
+already parsed identical content without recreating a database. Configuration,
+grammar, schema, or semantic-locator changes invalidate every affected parse
+result. A current tracked-file inventory detects adds, deletes, and renames;
+publication replaces the complete worktree corpus generation atomically.
 
 ### Entity and relationship graph
 
@@ -79,12 +98,13 @@ ancestors, descendants, reverse dependents, campaign roots, membership, and
 reasoned stranded-plan results. Directory names and prose never create graph
 edges.
 
-The plan FTS projection contains only normalized safe text from plan manifests,
-sprints, and tasklets, linked to owning plan, lifecycle, record kind and
-identity, source path and line, heading, and excerpt. Plan and traceability
-files share exact content identities where applicable, but each corpus has its
-own parser/configuration identity and published generation so invalidation is
-precise and partial answers are impossible.
+The plan full-text projection contains only normalized safe text from plan
+manifests, sprints, and tasklets, linked to owning plan, lifecycle, record kind
+and identity, source path and line, heading, and excerpt. Plan and traceability
+files share exact content and cached parse identities where applicable,
+including across worktrees, but each corpus has its own parser/configuration
+identity and worktree generation so invalidation is precise and partial answers
+are impossible.
 
 ### CLI boundary
 
@@ -101,11 +121,12 @@ ponytail plan roots [--json]
 ponytail plan stranded [--json]
 ```
 
-`index` is the only mutating operation and changes only the configured ignored
-cache; it refreshes all configured corpora transactionally. Traceability and
-plan queries are read-only, require the relevant current compatible corpus,
-and never rebuild implicitly. All SQL values are bound parameters. Human and
-JSON output use the same normalized query result.
+`index` is the only mutating operation and changes only the rebuildable
+`ponytail_index` schema; it refreshes the current worktree's configured corpora
+transactionally. Traceability and plan queries are read-only, select only the
+calling worktree's current compatible corpus, and never rebuild implicitly.
+All SQL values are bound parameters. Human and JSON output use the same
+normalized query result.
 
 Plan scope resolves one plan through the campaign census locator and includes
 its tasklets, linked issues, directly named requirements, and actual artifacts
@@ -116,10 +137,13 @@ source.
 
 ### Concurrency and failure
 
-SQLite WAL mode permits concurrent snapshot readers. One bounded writer lock
-serializes reindexing inside a worktree; a second writer reports a retryable
-busy diagnostic. The transaction publishes no partial generation. A crash,
-schema mismatch, integrity failure, or projection-policy change requires an
-explicit rebuild. Separate worktrees do not share the database, so one
-worktree's dirty files, indexing failure, or lock cannot alter another's query
-result.
+PostgreSQL MVCC permits concurrent snapshot readers. A transaction-scoped
+advisory lock is keyed by project, repository, worktree, and corpus; it
+serializes competing refreshes of the same answer without globally locking
+other worktrees or corpora. A second same-key writer reports a bounded,
+retryable diagnostic. Immutable content-cache insertion is idempotent and does
+not publish another worktree's generation. A transaction publishes no partial
+generation. A crash leaves the prior generation current; a schema mismatch,
+integrity failure, or projection-policy change requires explicit setup or
+rebuild. One worktree's dirty files, indexing failure, or lock cannot alter
+another worktree's published query result.
