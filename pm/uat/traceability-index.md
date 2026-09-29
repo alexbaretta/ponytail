@@ -62,6 +62,37 @@ Traceability: verifies REQ-TRACEABILITY-INDEX
    - Arbitrary file content, credentials, hashes, and excluded machine metadata
      are absent.
 
+## Arc: Search and traverse the plan corpus
+
+Traceability: verifies REQ-TRACEABILITY-INDEX
+
+- **Actor:** Campaign coordinator, planning agent, or developer.
+- **Prerequisites:** A current index containing nested campaigns, direct plan
+  dependencies, lifecycle states, tasklets, and deliberately invalid or
+  unmanaged plan records.
+- **Profiles:** Automated real CLI and campaign-census integration profile.
+- **External effects:** None.
+
+1. Search plan text for `processor` and combine exact lifecycle, record-kind,
+   and owning-plan filters.
+   - Stable human and JSON results identify the owning plan, record identity,
+     path, line, heading, and excerpt without returning arbitrary file text.
+2. Query a plan's direct children, all descendants, ancestors, dependencies,
+   and reverse dependents.
+   - Results match the canonical census and plan-execution graph without
+     path-name or prose inference.
+3. Query campaign roots and membership from both a root and a member.
+   - Both identify the same canonical root and complete member set.
+4. Query stranded plans.
+   - Only unresolved, invalid, or explicitly permitted unmanaged records are
+     returned, each with its derivation reason; no membership is invented.
+5. Change only one sprint or tasklet file and reindex.
+   - Only invalidated plan inputs are reparsed, the plan generation changes,
+     and the unchanged traceability corpus remains queryable.
+6. Query after plan inputs or the plan schema become stale.
+   - Structural and text commands fail with an actionable diagnostic and do
+     not silently rebuild or return a partial graph.
+
 ## Arc: Report every relationship gap
 
 Traceability: verifies REQ-TRACEABILITY-INDEX

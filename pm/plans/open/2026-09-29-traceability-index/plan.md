@@ -14,9 +14,10 @@
 
 ## Objective
 
-Add a rebuildable incremental traceability index, fast full-text queries,
-bidirectional relationship-gap validation, prospective plan/issue annotations,
-and exact plan/campaign scopes to the installed Ponytail CLI.
+Add rebuildable incremental traceability and plan indexes, fast full-text and
+plan-graph queries, bidirectional relationship-gap validation, prospective
+plan/issue annotations, and exact plan/campaign scopes to the installed
+Ponytail CLI.
 
 ## Scope
 
@@ -25,6 +26,8 @@ and exact plan/campaign scopes to the installed Ponytail CLI.
 - Incrementally index every configured tracked source from exact content and
   parser/configuration identities.
 - Add safe FTS5 search and deterministic exact filters.
+- Add a distinct plan-text corpus and normalized plan graph with explicit
+  search, ancestry, campaign-root, and stranded-plan queries.
 - Add configurable entity inventories and directional coverage rules.
 - Add prospective relationships for plans, tasklets, and issues without
   counting them as completed implementation or test evidence.
@@ -44,19 +47,20 @@ and exact plan/campaign scopes to the installed Ponytail CLI.
 
 ## Architecture decision
 
-Use one ignored worktree-local SQLite/FTS5 projection. It is smaller and more
-portable than provisioning PostgreSQL and is queryable, transactional, and
-safe to rebuild unlike pickle. Store exact content identity in addition to the
-observed repository commit so dirty files invalidate correctly. Preserve one
-canonical parser and normalize prospective relationships separately from
-completed evidence. A versioned validation matrix supplies pair, direction,
+Use one ignored worktree-local SQLite/FTS5 projection with separate logical
+traceability and plan corpora, graph tables, policies, and generations. It is
+smaller and more portable than provisioning PostgreSQL and is queryable,
+transactional, and safe to rebuild unlike pickle. Store exact content identity
+in addition to the observed repository commit so dirty files invalidate
+correctly. Preserve the canonical traceability parser, campaign census, and
+plan-execution readers. A versioned validation matrix supplies pair, direction,
 role, and cardinality rules; plan and campaign scopes derive from canonical PM
 and census records.
 
 ## Sprints
 
-1. [S01](sprints/S01.md): implement incremental indexing and full-text search —
-   READY_FOR_REVIEW.
+1. [S01](sprints/S01.md): implement incremental traceability and plan indexing,
+   full-text search, and plan-graph queries — READY_FOR_REVIEW.
 2. [S02](sprints/S02.md): extend the graph to plans/issues and implement scoped
    relationship-gap validation — READY_FOR_REVIEW; depends on S01.
 
@@ -74,9 +78,13 @@ and census records.
   inference.
 - [RESOLVED] Prospective plan and issue roles remain distinct from actual
   implementation and verification coverage.
+- [RESOLVED] Plan text and structure share the physical database and refresh
+  operation but retain independent corpus generations, graph semantics, and
+  FTS policy. Canonical campaign and plan-execution readers own source facts.
 - [RESOLVED] The complete staged readiness tree based on revision
-  `904e0b1b935305f2139b38e466a763703aefa51e` passed the configured full test
-  suite. Build impact selected no target.
+  `9ec6ffa1de4ab1724757eb96f4faf4e451a830d1` passed the configured full test
+  suite after adding the plan corpus and query tasklets. Build impact selected
+  no target.
 
 The requirement and plan creation are approved. Implementation begins only
 after the complete plan and both sprint graphs receive explicit approval.
@@ -84,13 +92,12 @@ after the complete plan and both sprint graphs receive explicit approval.
 ## Starting checkpoint
 
 On 2026-09-29, the staged readiness tree based on
-`904e0b1b935305f2139b38e466a763703aefa51e` passed `npm test`: 376 core tests,
+`9ec6ffa1de4ab1724757eb96f4faf4e451a830d1` passed `npm test`: 376 core tests,
 the Codex installer checks, 23 Pi tests, 4 MCP tests, 76 TSTS tests, and the
 488-file TSTS structure check. Traceability resolved 14 relationships; the
-new plan validated with two sprints and 12 tasklets; both tasklet selectors,
-all seven version pins, rule-copy/generator/package checks, and `git diff
---check` passed. Build impact returned no affected or indeterminate target for
-every readiness path, so no build was required.
+expanded plan validated with two sprints and 15 tasklets; both tasklet
+selectors and campaign validation passed. Build impact returned no affected or
+indeterminate target for every readiness path, so no build was required.
 
 ## Final validation record
 

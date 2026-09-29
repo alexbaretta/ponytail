@@ -50,6 +50,33 @@ ordering; safe parameter binding; and actionable stale-index diagnostics.
 It must not index arbitrary file contents, secrets, credentials, hashes, or
 unclassified machine metadata merely to improve recall.
 
+## Plan text and structure index
+
+The same worktree-local index must expose `pm/plans` as a distinct logical
+corpus. Full-text search must cover normalized safe text from plan manifests,
+sprints, and tasklets and return the owning plan, lifecycle, record kind and
+identity, path, line, heading, and concise excerpt.
+
+The index must also expose the canonical plan graph: direct parents and
+children, ancestors and descendants, direct dependencies and reverse
+dependents, campaign roots, campaign membership, lifecycle, and stable sprint,
+feature, and tasklet identities, states, dependencies, and planned paths. It
+must consume the existing campaign census and plan-execution readers rather
+than implement another plan parser or infer relationships from directory
+names.
+
+Humans and agents must be able to query plan text, descendants, ancestors,
+campaign roots, and stranded plans through explicit deterministic CLI
+commands. A stranded result means a plan cannot be assigned to a canonical
+campaign because its campaign metadata is missing or invalid, its parent is
+unresolved, or it is an explicitly permitted unmanaged legacy record; each
+result must state the reason. Ponytail must not invent campaign membership.
+
+Traceability and plan data may share a physical SQLite database and refresh
+operation, but they retain independent corpus generations, freshness checks,
+tables, graph semantics, and FTS policies. A failed or stale plan generation
+must not produce partial structural answers or trigger an implicit rebuild.
+
 ## Relationship-gap validation
 
 Ponytail must validate configured relationship rules between indexed entity
