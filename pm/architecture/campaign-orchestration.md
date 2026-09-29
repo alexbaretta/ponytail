@@ -10,7 +10,7 @@ Licensed under the MIT License. See LICENSE in the project root.
 [Back to architecture index](index.md) · Governing requirement:
 [`REQ-CAMPAIGN-ORCHESTRATION`](../requirements/campaign-orchestration.md)
 
-## Proposed target architecture
+## Architecture
 
 Campaign orchestration is a separate component above the read-only campaign
 census. The census continues to own membership, lifecycle validation, and
@@ -123,7 +123,7 @@ dependency-ready unassigned plans, active workers, idle reusable workers,
 workers requiring rebase, workers ready for fast-forward integration, completed
 integrations awaiting cleanup, and deterministic blocking diagnostics.
 
-The proposed CLI exposes that document through:
+The CLI exposes that document through:
 
 ```text
 ponytail campaign status [<plan-name-or-path>] [--json]
@@ -141,7 +141,7 @@ worker's final message as completion evidence.
 
 ### One-step transition engine
 
-The proposed mutating interface is:
+The mutating interface is:
 
 ```text
 ponytail campaign advance [<plan-name-or-path>] [--json]
@@ -166,6 +166,15 @@ at the recorded worker revision, and proof that the current campaign integration
 revision is an ancestor of the worker revision. Integration uses only
 fast-forward merge. A changed integration head moves the assignment back to
 `REBASE_REQUIRED`.
+
+When a transition requires a supported Codex host effect, advance persists and
+returns one V1 host-action envelope. The coordinator records the tool result
+through `ponytail campaign action-result <action-id> --result <json>` before
+advancing again. Repeating advance returns the same pending action, and
+repeating an identical recorded result returns the already applied outcome.
+The V1 ledger is stored under plugin-local data, keyed by canonical top-level
+worktree and campaign, and is replaced atomically under an exclusive scope
+lock.
 
 Cleanup begins only after the integration branch contains the exact worker
 revision. It archives the Codex session, preserves a recoverable managed-

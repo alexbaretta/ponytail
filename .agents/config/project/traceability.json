@@ -17,6 +17,10 @@
     {
       "id": "REQ-TRACEABILITY-INDEX",
       "sourcePath": "pm/requirements/traceability-index.md"
+    },
+    {
+      "id": "REQ-CAMPAIGN-ORCHESTRATION",
+      "sourcePath": "pm/requirements/campaign-orchestration.md"
     }
   ],
   "artifacts": [
@@ -118,6 +122,31 @@
     {
       "class": "plan",
       "path": "pm/plans/closed/2026-09-29-traceability-index/sprints/S02.md",
+      "locator": "text"
+    },
+    {
+      "class": "implementation",
+      "path": "src/campaign-orchestration.js",
+      "locator": "text"
+    },
+    {
+      "class": "unit-test",
+      "path": "tests/campaign-orchestration.test.js",
+      "locator": "text"
+    },
+    {
+      "class": "uat",
+      "path": "pm/uat/campaign-orchestration.md",
+      "locator": "text"
+    },
+    {
+      "class": "plan",
+      "path": "pm/plans/in_progress/2026-09-29-campaign-orchestration/plan.md",
+      "locator": "text"
+    },
+    {
+      "class": "plan",
+      "path": "pm/plans/in_progress/2026-09-29-campaign-orchestration/sprints/S01.md",
       "locator": "text"
     }
   ],

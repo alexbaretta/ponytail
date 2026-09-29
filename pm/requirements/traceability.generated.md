@@ -19,9 +19,9 @@ Requirement: [pm/requirements/requirements-traceability.md](requirements-traceab
 
 Requirement: [pm/requirements/index.md](index.md)
 
-- implementation: implements [src/campaign-census.js:734](../../src/campaign-census.js#L734)
+- implementation: implements [src/campaign-census.js:1047](../../src/campaign-census.js#L1047)
 - unit-test: verifies [tests/campaign-census-format.test.js:11](../../tests/campaign-census-format.test.js#L11)
-- integration-test: verifies [tests/campaign-census.test.js:353](../../tests/campaign-census.test.js#L353)
+- integration-test: verifies [tests/campaign-census.test.js:418](../../tests/campaign-census.test.js#L418)
 - uat: verifies [pm/uat/index.md:32](../../pm/uat/index.md#L32)
 
 ## REQ-PLAN-INPUT-QUEUE
@@ -51,3 +51,21 @@ Requirement: [pm/requirements/traceability-index.md](traceability-index.md)
 - tasklet: plans-verification [pm/plans/closed/2026-09-29-traceability-index/sprints/S02.md:54](../../pm/plans/closed/2026-09-29-traceability-index/sprints/S02.md#L54)
 - tasklet: plans-implementation [pm/plans/closed/2026-09-29-traceability-index/sprints/S02.md:71](../../pm/plans/closed/2026-09-29-traceability-index/sprints/S02.md#L71)
 - tasklet: plans-verification [pm/plans/closed/2026-09-29-traceability-index/sprints/S02.md:99](../../pm/plans/closed/2026-09-29-traceability-index/sprints/S02.md#L99)
+
+## REQ-CAMPAIGN-ORCHESTRATION
+
+Requirement: [pm/requirements/campaign-orchestration.md](campaign-orchestration.md)
+
+- implementation: implements [src/campaign-orchestration.js:7](../../src/campaign-orchestration.js#L7)
+- unit-test: verifies [tests/campaign-orchestration.test.js:7](../../tests/campaign-orchestration.test.js#L7)
+- integration-test: verifies [tests/campaign-census.test.js:534](../../tests/campaign-census.test.js#L534)
+- uat: verifies [pm/uat/campaign-orchestration.md:25](../../pm/uat/campaign-orchestration.md#L25)
+- uat: verifies [pm/uat/campaign-orchestration.md:55](../../pm/uat/campaign-orchestration.md#L55)
+- uat: verifies [pm/uat/campaign-orchestration.md:87](../../pm/uat/campaign-orchestration.md#L87)
+- uat: verifies [pm/uat/campaign-orchestration.md:108](../../pm/uat/campaign-orchestration.md#L108)
+- uat: verifies [pm/uat/campaign-orchestration.md:131](../../pm/uat/campaign-orchestration.md#L131)
+- uat: verifies [pm/uat/campaign-orchestration.md:155](../../pm/uat/campaign-orchestration.md#L155)
+- plan: plans-implementation [pm/plans/in_progress/2026-09-29-campaign-orchestration/plan.md:22](../../pm/plans/in_progress/2026-09-29-campaign-orchestration/plan.md#L22)
+- plan: plans-verification [pm/plans/in_progress/2026-09-29-campaign-orchestration/plan.md:23](../../pm/plans/in_progress/2026-09-29-campaign-orchestration/plan.md#L23)
+- tasklet: plans-implementation [pm/plans/in_progress/2026-09-29-campaign-orchestration/sprints/S01.md:105](../../pm/plans/in_progress/2026-09-29-campaign-orchestration/sprints/S01.md#L105)
+- tasklet: plans-verification [pm/plans/in_progress/2026-09-29-campaign-orchestration/sprints/S01.md:106](../../pm/plans/in_progress/2026-09-29-campaign-orchestration/sprints/S01.md#L106)

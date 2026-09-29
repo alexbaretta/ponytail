@@ -11,6 +11,15 @@ Licensed under the MIT License. See LICENSE in the project root.
 [`REQ-CAMPAIGN-ORCHESTRATION`](../requirements/campaign-orchestration.md),
 approved 2026-09-29.
 
+## Evidence
+
+- 2026-09-29 S01 automated profile: repository inventory, dependency
+  scheduling, assignment uniqueness, retry-stable dispatch, idle-worker reuse,
+  Git ancestry classification, fast-forward-only integration, cleanup gating,
+  CLI dispatch, and versioned-contract tests passed on the reconciled S01 tree.
+- Live Codex host effects and authenticated worker-worktree ownership remain
+  assigned to S02; this automated evidence does not claim those profiles.
+
 ## Arc: Inventory every campaign and active plan
 
 Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
