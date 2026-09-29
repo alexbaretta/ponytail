@@ -148,6 +148,11 @@
       "class": "plan",
       "path": "pm/plans/in_progress/2026-09-29-campaign-orchestration/sprints/S01.md",
       "locator": "text"
+    },
+    {
+      "class": "plan",
+      "path": "pm/plans/in_progress/2026-09-29-campaign-orchestration/sprints/S02.md",
+      "locator": "text"
     }
   ],
   "entities": [],

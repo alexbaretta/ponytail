@@ -58,7 +58,7 @@ while project-wide management records remain under `pm/`.
   lifecycle. `src/campaign-census.js` owns campaign configuration and
   plan metadata readers, scoped campaign discovery and validation,
   repository-wide campaign inventory, census normalization, and human/JSON
-  reporting. `src/campaign-orchestration.js` owns the versioned plugin-local
+  reporting. `src/campaign-orchestration.js` owns the versioned Ponytail-user
   assignment ledger, dependency scheduler, reconciled status, verified
   fast-forward integration, and typed host-action protocol.
 - `ponytail.json` owns the TSTS build-impact target.
