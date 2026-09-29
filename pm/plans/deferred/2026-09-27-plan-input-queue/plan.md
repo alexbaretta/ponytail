@@ -1,7 +1,7 @@
 # Durable plan input queue
 
 Plan ID: 2026-09-27-plan-input-queue
-Status: in_progress
+Status: deferred
 
 <!-- ponytail-plan-campaign
 {"schemaVersion":1,"id":"2026-09-27-plan-input-queue","parent_plan_id":null}
@@ -47,5 +47,6 @@ this plan and its eight-tasklet V3 graph.
 
 Automated acceptance includes the coordinator-session binding refinement. The
 trusted live Codex Arc that determines whether `UserPromptSubmit` blocks before
-an active-turn interruption remains unexecuted, so this plan and feature remain
-in progress.
+an active-turn interruption remains unexecuted. This plan is deferred with that
+acceptance tasklet still pending while the approved traceability-index campaign
+is active.
