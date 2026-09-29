@@ -32,6 +32,19 @@ test('campaign policy requires repository inventory and V2 direct dependencies',
   assert.match(generated, /never select one\nactive campaign from an ambiguous inventory/);
 });
 
+test('campaign policy delegates every worker effect to the durable action loop', () => {
+  const policy = fs.readFileSync(path.join(__dirname, '..', 'skills', 'plan-execution', 'SKILL.md'), 'utf8');
+  assert.match(policy, /campaign\s+status \[<campaign-root>\] --json/);
+  assert.match(policy, /campaign advance \[<campaign-root>\] --json/);
+  assert.match(policy, /If advance returns an existing `pendingAction`, resume that exact action/);
+  assert.match(policy, /`CREATE_WORKER`[\s\S]*campaign attach <attachToken>/);
+  assert.match(policy, /`REQUEST_REBASE`[\s\S]*exact\n+   `ontoRevision`/);
+  assert.match(policy, /transition to `READY_TO_MERGE`[\s\S]*only by another advance/);
+  assert.match(policy, /`ARCHIVE_WORKTREE`[\s\S]*archive its own managed\n+   worktree/);
+  assert.match(policy, /campaign action-result\n+   <action-id> --result <json>/);
+  assert.match(policy, /Mutating campaign commands in\n+a worker fail closed/);
+});
+
 test('planning and issue policy records prospective traceability without claiming coverage', () => {
   const readSkill = name => fs.readFileSync(
     path.join(__dirname, '..', 'skills', name, 'SKILL.md'), 'utf8',

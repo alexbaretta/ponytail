@@ -613,6 +613,51 @@ through the host project's ordinary plan-documentation QA gate. Repair every
 reported managed-plan defect before a coordinator mutation; never select one
 active campaign from an ambiguous inventory.
 
+### Campaign Scheduler Protocol
+
+When the host provides the campaign orchestration commands and coordinated
+multi-session execution is approved, the campaign coordinator must use their
+durable state instead of remembering worker assignments in conversation:
+
+1. Bind the coordinator with `ponytail plan-input coordinate <campaign-root>`,
+   run `ponytail campaign validate --all`, and inspect `ponytail campaign
+   status [<campaign-root>] --json` whenever coordination begins or resumes.
+2. Run `ponytail campaign advance [<campaign-root>] --json` exactly once to
+   request the next deterministic transition. If it returns no `pendingAction`,
+   inspect the returned status and advance again only when another transition
+   is currently warranted.
+3. If advance returns an existing `pendingAction`, resume that exact action.
+   Never allocate a replacement session or worktree, and never assign the plan
+   conversationally.
+4. For `CREATE_WORKER`, create one supported managed-worktree worker and put
+   `ponytail campaign attach <attachToken>` in its first instruction. For
+   `REUSE_WORKER`, message only the named idle session and require the same
+   attach command. Record the exact host session, canonical worktree, branch,
+   and revision only after the attach hook authenticates them.
+5. For `REQUEST_REBASE`, message the named worker to rebase onto the exact
+   `ontoRevision`, wait for completion, and record only the resulting clean
+   revision. The core, not the coordinator, decides whether the worker is then
+   ready for fast-forward integration.
+6. A transition to `READY_TO_MERGE` is acted on only by another advance; do not
+   run an independent merge command. The core proves ancestry and uses
+   fast-forward-only integration.
+7. For `ARCHIVE_WORKTREE`, ask the bound worker to archive its own managed
+   worktree through the supported recoverable host operation and verify the
+   checkout is gone. For `ARCHIVE_SESSION`, archive only the action's named
+   worker chat. Never delete an inferred path or clean up an unintegrated
+   revision.
+8. After each supported host effect, run `ponytail campaign action-result
+   <action-id> --result <json>` from the coordinator worktree. Then return to
+   status and advance. Repeating the same action or identical result is the
+   required interruption-recovery path.
+
+The host adapter executes only the typed action selected by the core. It does
+not choose a ready plan, infer an idle worker, accept conversational completion
+as evidence, decide integration order, or silently repair contradictory state.
+Read-only `campaign status` invoked in an authenticated worker re-roots to its
+owning top-level worktree and reports both paths. Mutating campaign commands in
+a worker fail closed.
+
 A non-root plan may close when its own acceptance is complete. A campaign root
 with descendants may close only after every member is complete and final
 campaign validation succeeds against the closing tree. Whenever a plan's

@@ -74,13 +74,13 @@ coordinator session, and assignment. Git worktree relationships are supporting
 observations, not sufficient ownership evidence: a shared Git common directory
 does not identify which user-selected worktree commissioned a worker.
 
-When a command starts in a verified worker worktree, read-only campaign
-inventory, validation, report, and status operations re-root to the available
-owning top-level worktree and include both worktree identities in structured
-output. Coordinator mutations fail in the worker unless the host provides an
-authenticated proxy that executes under the owning coordinator session and
-returns the recorded idempotent result. Unknown, stale, ambiguous, or
-unavailable ownership fails closed.
+When a command starts in a verified worker worktree, `campaign status` re-roots
+to the available owning top-level worktree and includes both worktree
+identities in structured output. Other campaign reads and every coordinator
+mutation fail with an actionable ownership error. Unknown, stale, ambiguous,
+or unavailable ownership also fails closed. A later physical contract may
+extend re-rooting without changing the immutable V1 report or validation
+contracts.
 
 ### Durable campaign graph
 
@@ -172,7 +172,7 @@ returns one V1 host-action envelope. The coordinator records the tool result
 through `ponytail campaign action-result <action-id> --result <json>` before
 advancing again. Repeating advance returns the same pending action, and
 repeating an identical recorded result returns the already applied outcome.
-The V1 ledger is stored under plugin-local data, keyed by canonical top-level
+The V1 ledger is stored under Ponytail user data, keyed by canonical top-level
 worktree and campaign, and is replaced atomically under an exclusive scope
 lock.
 
