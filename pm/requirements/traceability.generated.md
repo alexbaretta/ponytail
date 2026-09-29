@@ -22,7 +22,7 @@ Requirement: [pm/requirements/index.md](index.md)
 - implementation: implements [src/campaign-census.js:655](../../src/campaign-census.js#L655)
 - unit-test: verifies [tests/campaign-census-format.test.js:11](../../tests/campaign-census-format.test.js#L11)
 - integration-test: verifies [tests/campaign-census.test.js:321](../../tests/campaign-census.test.js#L321)
-- uat: verifies [pm/uat/index.md:31](../../pm/uat/index.md#L31)
+- uat: verifies [pm/uat/index.md:32](../../pm/uat/index.md#L32)
 
 ## REQ-PLAN-INPUT-QUEUE
 

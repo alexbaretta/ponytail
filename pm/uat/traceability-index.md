@@ -1,0 +1,107 @@
+<!--
+Copyright (c) 2026 Alex Baretta. All rights reserved.
+Author: Alex Baretta <alex@baretta.com>.
+
+Licensed under the MIT License. See LICENSE in the project root.
+-->
+
+# Traceability index and queries Suite
+
+[Back to UAT index](index.md) · Requirement:
+[`REQ-TRACEABILITY-INDEX`](../requirements/traceability-index.md), approved
+2026-09-29.
+
+## Arc: Incrementally index the exact repository state
+
+Traceability: verifies REQ-TRACEABILITY-INDEX
+
+- **Actor:** Repository agent or developer.
+- **Prerequisites:** A test repository containing configured requirements,
+  implementation, tests, UAT, plans, tasklets, bugs, and declared endpoints.
+- **Profiles:** Automated real CLI and isolated Git-repository profile.
+- **External effects:** Writes only the configured ignored worktree-local
+  SQLite projection.
+
+1. Build the index and inspect its JSON result.
+   - Every supported entity and annotation is present; the result identifies
+     the repository revision, worktree, generation, processed files, and
+     database schema version.
+2. Reindex without changing inputs.
+   - No source file is reparsed and the logical query result is unchanged.
+3. Change one tracked file without committing, add one file, rename one,
+   delete one, and reindex.
+   - The dirty file is detected despite unchanged `HEAD`; only invalidated
+     files are processed; removed paths leave no stale rows.
+4. Change parser or configuration identity and reindex.
+   - Every affected file is reparsed.
+5. Interrupt a rebuild and query concurrently.
+   - Readers observe the prior complete generation; no partial generation is
+     published. A concurrent writer succeeds serially or returns the bounded
+     retryable diagnostic without corruption.
+
+## Arc: Search annotations quickly and safely
+
+Traceability: verifies REQ-TRACEABILITY-INDEX
+
+- **Actor:** Human or agent.
+- **Prerequisites:** A current index containing overlapping words, identifiers,
+  kinds, roles, paths, and lifecycle states.
+- **Profiles:** Automated real CLI profile.
+- **External effects:** None.
+
+1. Search by words and phrases, then combine exact filters.
+   - Results match normalized safe fields, apply every filter, and retain
+     stable ordering in human and JSON output.
+2. Search using punctuation and SQL/FTS metacharacters.
+   - Input is safely parsed and parameter-bound; it cannot change the query or
+     database.
+3. Search an index whose source state or schema is stale.
+   - The command fails with an actionable freshness diagnostic and does not
+     silently rebuild or return stale results.
+4. Inspect indexed values.
+   - Arbitrary file content, credentials, hashes, and excluded machine metadata
+     are absent.
+
+## Arc: Report every relationship gap
+
+Traceability: verifies REQ-TRACEABILITY-INDEX
+
+- **Actor:** Planning agent or reviewer.
+- **Prerequisites:** Configured bidirectional coverage rules with complete and
+  incomplete requirements, implementations, endpoints, unit tests, integration
+  tests, UAT, tasklets, and issues.
+- **Profiles:** Automated production-module and real CLI profile.
+- **External effects:** None.
+
+1. Validate the repository-wide graph.
+   - The report evaluates every configured source/target/direction rule and
+     identifies each unmatched source entity, missing target kind, role, and
+     cardinality with exit `1`.
+2. Add the missing canonical relationships, reindex, and repeat.
+   - Validation exits `0`; inverse queries return the same relationships.
+3. Leave only a prospective plan or bug relationship for missing actual work.
+   - The plan remains discoverable, but validation still reports missing
+     implementation or verification coverage.
+4. Query endpoint-to-requirement and requirement-to-endpoint rules.
+   - Each direction reports its own unmatched entities without assuming the
+     inverse rule.
+
+## Arc: Restrict gaps to one plan or campaign
+
+Traceability: verifies REQ-TRACEABILITY-INDEX
+
+- **Actor:** Plan or campaign coordinator.
+- **Prerequisites:** Two unrelated plans plus a multi-plan campaign, with
+  distinct and shared requirements and linked bugs.
+- **Profiles:** Automated real CLI and campaign-census integration profile.
+- **External effects:** None.
+
+1. Validate with `--plan` using the plan name and exact path forms.
+   - Only that plan's tasklets, linked issues, named requirements, and actual
+     related artifacts participate.
+2. Validate with `--campaign` from the root and a member.
+   - Both resolve the same canonical campaign and include every member plan's
+     closure exactly once.
+3. Supply both scope options, an ambiguous plan, or invalid campaign metadata.
+   - The command fails without falling back to repository scope or emitting a
+     partial gap report.

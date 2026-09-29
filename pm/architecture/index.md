@@ -17,3 +17,4 @@ ownership of project-specific management records and evidence.
 - [Requirements traceability](requirements-traceability.md)
 - [Plan input queue](plan-input-queue.md)
 - [Campaign orchestration](campaign-orchestration.md)
+- [Traceability index](traceability-index.md)
