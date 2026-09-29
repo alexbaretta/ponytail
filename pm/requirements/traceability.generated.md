@@ -22,14 +22,16 @@ Requirement: [pm/requirements/index.md](index.md)
 - implementation: implements [src/campaign-census.js:1047](../../src/campaign-census.js#L1047)
 - unit-test: verifies [tests/campaign-census-format.test.js:11](../../tests/campaign-census-format.test.js#L11)
 - integration-test: verifies [tests/campaign-census.test.js:418](../../tests/campaign-census.test.js#L418)
-- uat: verifies [pm/uat/index.md:32](../../pm/uat/index.md#L32)
+- uat: verifies [pm/uat/index.md:33](../../pm/uat/index.md#L33)
 
 ## REQ-PLAN-INPUT-QUEUE
 
 Requirement: [pm/requirements/plan-input-queue.md](plan-input-queue.md)
 
+- implementation: supports [skills/plan-execution/SKILL.md:317](../../skills/plan-execution/SKILL.md#L317)
 - implementation: implements [src/plan-input.js:5](../../src/plan-input.js#L5)
 - unit-test: verifies [tests/plan-input.test.js:2](../../tests/plan-input.test.js#L2)
+- integration-test: verifies [tests/plan-execution-policy.test.js:2](../../tests/plan-execution-policy.test.js#L2)
 - integration-test: verifies [tests/plan-input-hooks.test.js:2](../../tests/plan-input-hooks.test.js#L2)
 - uat: verifies [pm/uat/plan-input-queue.md:10](../../pm/uat/plan-input-queue.md#L10)
 
@@ -72,3 +74,19 @@ Requirement: [pm/requirements/campaign-orchestration.md](campaign-orchestration.
 - tasklet: plans-verification [pm/plans/closed/2026-09-29-campaign-orchestration/sprints/S01.md:106](../../pm/plans/closed/2026-09-29-campaign-orchestration/sprints/S01.md#L106)
 - tasklet: plans-implementation [pm/plans/closed/2026-09-29-campaign-orchestration/sprints/S02.md:119](../../pm/plans/closed/2026-09-29-campaign-orchestration/sprints/S02.md#L119)
 - tasklet: plans-verification [pm/plans/closed/2026-09-29-campaign-orchestration/sprints/S02.md:120](../../pm/plans/closed/2026-09-29-campaign-orchestration/sprints/S02.md#L120)
+
+## REQ-ISSUE-REQUIREMENT-ACTIVATION
+
+Requirement: [pm/requirements/issue-requirement-activation.md](issue-requirement-activation.md)
+
+- implementation: implements [skills/issue-tracking/SKILL.md:17](../../skills/issue-tracking/SKILL.md#L17)
+- implementation: supports [skills/plan-execution/SKILL.md:20](../../skills/plan-execution/SKILL.md#L20)
+- implementation: supports [skills/requirements/SKILL.md:17](../../skills/requirements/SKILL.md#L17)
+- unit-test: verifies [tests/issue-requirement-activation-policy.test.js:2](../../tests/issue-requirement-activation-policy.test.js#L2)
+- integration-test: verifies [tests/plan-execution-policy.test.js:3](../../tests/plan-execution-policy.test.js#L3)
+- uat: verifies [pm/uat/issue-requirement-activation.md:13](../../pm/uat/issue-requirement-activation.md#L13)
+- uat: verifies [pm/uat/issue-requirement-activation.md:34](../../pm/uat/issue-requirement-activation.md#L34)
+- uat: verifies [pm/uat/issue-requirement-activation.md:50](../../pm/uat/issue-requirement-activation.md#L50)
+- issue: introduces [pm/bugs/closed/2026-09-29-BUG-premature_requirement_promotion.md:22](../../pm/bugs/closed/2026-09-29-BUG-premature_requirement_promotion.md#L22)
+- issue: plans-implementation [pm/bugs/closed/2026-09-29-BUG-premature_requirement_promotion.md:23](../../pm/bugs/closed/2026-09-29-BUG-premature_requirement_promotion.md#L23)
+- issue: plans-verification [pm/bugs/closed/2026-09-29-BUG-premature_requirement_promotion.md:24](../../pm/bugs/closed/2026-09-29-BUG-premature_requirement_promotion.md#L24)

@@ -3,7 +3,7 @@ name: issue-tracking
 description: >-
   Use when creating, classifying, updating, or transitioning project issues,
   configuring issue types and shared issue/plan statuses, or linking an issue
-  to an epic's long-lived plan. Owns pm/bugs layout and issue identity.
+  to an epic's long-lived plan. Owns configured issue placement and identity.
 ---
 
 <!--
@@ -14,10 +14,14 @@ Licensed under the MIT License. See LICENSE in the project root.
 
 # Issue Tracking
 
-Keep one canonical local record for each issue, regardless of its type.
-`bugs/` is the issue collection's directory name; it contains features and
-tasks as well as bugs. External issue trackers do not replace these records
-unless the host explicitly assigns them that ownership.
+Traceability: implements REQ-ISSUE-REQUIREMENT-ACTIVATION
+
+Keep one canonical local record for each issue. Its collection is selected by
+the issue type and host configuration; a project may keep bugs, feature
+requests, tasks, and custom issue types in different roots. When the host does
+not configure type-specific roots, every type uses the default `bugs/`
+collection. External issue trackers do not replace these records unless the
+host explicitly assigns them that ownership.
 
 ## Project Configuration
 
@@ -26,9 +30,11 @@ directly or through their referenced management document. Use one declared
 owner, for example `.agents/config/project/management.md`, for:
 
 - management repository and root (default `pm/`);
-- issue, plan, and requirements roots (default `bugs/`, `plans/`, and
+- the canonical issue root for each issue type, plus plan and requirements
+  roots (issue roots default to `bugs/`; the others default to `plans/` and
   `requirements/` beneath the management root);
-- allowed issue type tokens, meanings, and requirements effects;
+- allowed issue type tokens, meanings, and requirements effects at
+  implementation activation;
 - one shared set of issue and plan status directory names, their meanings,
   initial, active-work and successful-completion roles, and allowed transitions;
 - any additional required issue fields or transition gates.
@@ -41,7 +47,7 @@ replaces its default set; do not append default values to a custom set.
 
 The default types are:
 
-| Type | Meaning | Requirements effect |
+| Type | Meaning | Requirements effect when implementation activates |
 | --- | --- | --- |
 | `BUG` | Existing behavior violates intended behavior | Clarify missing or ambiguous requirements when necessary |
 | `FEAT` | Add intended capability or behavior | Add the approved requirements |
@@ -78,7 +84,7 @@ Apply `project-structure` when establishing or changing the owning configuration
 
 ## Placement And Identity
 
-Under the configured issue root, use:
+Under the issue root configured for the selected type, use:
 
 ```text
 <status>/YYYY-MM-DD-<type>-<short_description>.md
@@ -97,18 +103,21 @@ Update inbound and outbound relative links in the same change when moving a
 record. Keep existing records at their established paths until an explicit
 migration; do not infer missing legacy types from filenames alone.
 
-An issue records its ID, title, type, report or objective, intended behavior,
+An issue records its ID, title, type, report or objective, proposed or intended behavior,
 scope, acceptance criteria, evidence, unresolved questions and answers,
 authorization, requirements links and reconciliation result, implementation
 or plan links, validation evidence, and resolution or disposition reason.
 For bugs, distinguish observations, hypotheses, and confirmed root cause.
 Use project-required fields without duplicating canonical requirements text.
-When the host configures `requirements-traceability`, record canonical
-prospective annotations beside the stable issue record: `introduces` for each
-requirement the issue adds or clarifies, `plans-implementation` for intended
-implementation, and `plans-verification` for intended tests or UAT. These
-relationships preserve issue provenance but never satisfy completed coverage;
-the delivered implementation and tests retain their own annotations.
+At intake, link only approved requirements that already exist; keep absent
+expected behavior and acceptance ideas issue-local. Do not create requirement
+identifiers, UAT records, or prospective requirement annotations merely
+because the issue was filed, prioritized, approved for future consideration,
+or associated with a plan. When implementation activates and the host
+configures `requirements-traceability`, record the canonical `introduces`,
+`plans-implementation`, and `plans-verification` annotations beside the stable
+issue record as part of the same reconciliation. These prospective
+relationships preserve provenance but never satisfy completed coverage.
 
 ## Epics
 
@@ -128,11 +137,14 @@ shared plan; preserve each issue's own scope and acceptance evidence.
 
 1. Read the canonical issue, configured type/status meanings, transition
    graph, requirements, and any associated plan. Check authority for the work.
-2. Before every transition into the active-work role, including reopening or
-   resuming, apply `requirements`. Reconcile the intended behavior and record
-   linked evidence before completing the move. A configured rename of
-   `in_progress` retains this gate. A simultaneous epic-plan activation must
-   not bypass the issue's gate.
+2. Begin implementation only after one of two gates: the stakeholder
+   authorizes the issue as a standalone development task, or the issue belongs
+   to an implementation plan or campaign whose implementation is beginning.
+   Plan membership or approval without implementation beginning is not a
+   gate. Apply `requirements`, reconcile the activated behavior, and enter the
+   configured active-work role in the same change. Reopening or resuming
+   implementation repeats this review. A configured rename of `in_progress`
+   retains the same semantics.
 3. Move the issue and update links, reconciliation evidence, and any associated
    plan in one coordinated change. If required requirements changes remain
    unresolved, leave the transition pending and continue independent work.

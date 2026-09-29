@@ -17,6 +17,8 @@ Licensed under the MIT License. See LICENSE in the project root.
 
 # Plan Execution
 
+Traceability: supports REQ-ISSUE-REQUIREMENT-ACTIVATION
+
 Manage durable project work without depending on chat history, one Git branch,
 or one repository. The host project's agent configuration supplies paths,
 commands, repository ownership, commit conventions, and additional gates.
@@ -150,7 +152,8 @@ and requirements links, in the same change.
 An associated issue makes that issue an epic under `issue-tracking`; link the
 issue and plan manifest in both directions. Whenever an issue enters active
 work alongside its plan, complete the issue's `requirements` reconciliation
-before completing that transition. Whole-plan placement does not replace the
+as implementation of that plan begins. Merely associating the issue with a
+future plan does not create requirements or UAT. Whole-plan placement does not replace the
 sprint readiness and tasklet selectors below. Pass the current plan directory
 or sprint file explicitly to those selectors after a move.
 
@@ -815,8 +818,9 @@ bug-specific storage convention here.
 
 Diagnosis may proceed while the bug is open. Apply `debugging` to establish the
 root cause. Before implementation, record the confirmed diagnosis and proposed
-resolution, then apply `issue-tracking` to enter the configured active-work
-state, including its requirements gate.
+resolution. Direct authorization to implement the standalone issue activates
+the requirements gate; apply `issue-tracking` to reconcile requirements and
+enter the configured active-work state before the first implementation edit.
 When implementation was not directly requested, obtain explicit
 user approval before changing behavior. Resolve it through the same atomic
 edit, testing, configuration-sync, and selective-commit rules as tasklets.

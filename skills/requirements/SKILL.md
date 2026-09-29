@@ -1,9 +1,9 @@
 ---
 name: requirements
 description: >-
-  Use whenever an agent learns of a requirement or clarification from a user,
-  issue, or supplied source, or when organizing the linked Markdown web under
-  pm/requirements. Persist the requirement and reconcile its UAT coverage.
+  Use when approved behavior enters implementation scope, when clarifying an
+  existing approved requirement, or when organizing the linked Markdown web
+  under pm/requirements. Persist active requirements and reconcile UAT.
 ---
 
 <!--
@@ -13,6 +13,8 @@ Licensed under the MIT License. See LICENSE in the project root.
 -->
 
 # Requirements
+
+Traceability: supports REQ-ISSUE-REQUIREMENT-ACTIVATION
 
 Maintain the human-language description of what the project must do in its
 configured requirements root, by default `pm/requirements`. Aim for complete
@@ -71,26 +73,37 @@ defects, or unexplained limitations. Promote an observation to an approved
 requirement only through an authorized stakeholder decision, retaining the
 observation as provenance rather than presenting it as original authority.
 
-## Continuous Requirements And UAT Reconciliation
+## Implementation-Activation Reconciliation
 
-Whenever an agent learns of a new requirement or receives a clarification to
-an existing requirement, reconcile it into the configured requirements root.
-This obligation applies when the information arrives through interactive user
-conversation, a `pm/bugs` issue, or any document or other artifact the user
-provides as a source of requirements information. It is not deferred until an
-issue enters active work, planning begins, or implementation reaches the
-affected behavior.
+Filing, importing, prioritizing, approving, or associating an issue with a
+future plan does not incorporate its proposed behavior into the configured
+requirements root. The issue remains the canonical proposal or defect record
+in the location configured for its type. It may link an existing approved
+requirement, but behavior absent from the requirements remains issue-local.
+Issue intake alone creates no requirements, UAT, or completed-coverage
+obligation.
 
-Classify the source and approval state before changing the canonical behavior.
-Treat an explicit requirement or clarification from an authorized stakeholder
-in the current conversation as an approved decision unless the stakeholder
-marks it as tentative, proposed, quoted from another source, or unresolved.
-Incorporate claims from issues and supplied sources with their supported
-approved, proposed, observed, or unresolved status; supplying a source does not
-by itself approve every claim it contains. Preserve material conflicts for
-stakeholder resolution rather than choosing one silently.
+Reconcile issue behavior into the requirements root only when implementation
+activates through one of two gates:
 
-For each new requirement or clarification:
+1. a stakeholder authorizes implementation as a standalone development task;
+   or
+2. the issue has been added to an implementation plan or campaign and
+   implementation of that plan or campaign begins.
+
+Both conditions in the second gate are required. Merely adding an issue to a
+plan, approving a future plan, or moving an issue among non-active lifecycle
+states does not activate requirements. Direct stakeholder authorization to
+implement behavior outside a plan is the first gate, not an exception to it.
+
+Classify the source, approval state, and implementation-activation state before
+changing canonical behavior. A stakeholder instruction to implement is an
+approved activation; an instruction only to file, describe, prioritize, defer,
+or plan an issue is not. Supplying a source does not approve or activate every
+claim it contains. Preserve material conflicts for stakeholder resolution
+rather than choosing one silently.
+
+For each activated new requirement or clarification:
 
 1. Add or update its one canonical description and provenance in the
    requirements web. If the behavior is already stated exactly, retain one
@@ -108,10 +121,10 @@ For each new requirement or clarification:
    project-owned configuration before implementation or verification claims
    depend on it.
 
-Complete this requirements and UAT reconciliation before continuing work whose
-scope or acceptance depends on the new information. A missing project-local
-UAT execution configuration prevents execution, not maintenance of the
-plain-English UAT contract.
+Complete this requirements and UAT reconciliation before continuing the
+activated implementation whose scope or acceptance depends on it. A missing
+project-local UAT execution configuration prevents execution, not maintenance
+of the plain-English UAT contract.
 
 ## A Browsable Markdown Web
 
@@ -136,11 +149,12 @@ evidence with their owning plan or issue. Link them when useful for traceability
 Preserve existing document ownership; link authoritative requirements already
 maintained elsewhere instead of duplicating them.
 
-## Issue Activation Gate
+## Issue Implementation Gate
 
-Apply this workflow whenever any issue enters the active-work status defined
-by `issue-tracking`, including entry from deferred or closed states and custom
-status names. The issue's type and epic association do not exempt it.
+Apply this workflow when either implementation-activation gate above is met.
+The issue must enter the active-work status configured by `issue-tracking` as
+part of beginning implementation. Association with an epic, plan, or campaign
+without implementation beginning does not meet the gate.
 
 1. Read the issue's approved scope and the relevant canonical requirements.
    Follow links far enough to find existing definitions and conflicting rules.
@@ -162,16 +176,18 @@ status names. The issue's type and epic association do not exempt it.
    observed defective behavior. Keep the active-state transition pending when
    its required requirements change cannot yet be made.
 4. Update the requirements documents and the issue's requirements links and
-   reconciliation evidence in the same change as the transition. When no
+   reconciliation evidence in the same change as implementation activation.
+   When no
    document edit is needed, the recorded review and exact existing references
    are still required. For work with no relevant product requirement, record
    the reviewed area and the reason instead of inventing a requirement.
 
-An epic's plan links the affected requirements, but a plan link never replaces
-this reconciliation. After deferral, rejection, or a scope change, reassess any
-requirements introduced by that issue: keep their approval and implementation
-state accurate. Do not automatically remove a requirement that remains
-approved or is shared by other issues.
+An epic's plan links the affected requirements after implementation activates;
+the plan association alone neither creates those requirements nor replaces
+this reconciliation. After deferral, rejection, or a scope change, reassess
+requirements already introduced by active implementation: keep their approval
+and implementation state accurate. Do not automatically remove a requirement
+that remains approved or is shared by other issues.
 
 When an issue or plan proposes an outcome absent from the approved
 requirements, reconcile that outcome with the stakeholder before adding it to

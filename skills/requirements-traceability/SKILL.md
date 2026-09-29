@@ -56,11 +56,13 @@ Use only these roles:
   independently realize the behavior; and
 - `verifies`: the unit proves required behavior.
 
-Prospective project-management records use only these additional roles:
+Prospective project-management records use only these additional roles after
+the referenced approved requirement exists:
 
 - `plans-implementation`: a plan or tasklet intends to produce implementation;
 - `plans-verification`: a plan or tasklet intends to produce verification; and
-- `introduces`: an issue introduces or clarifies a requirement.
+- `introduces`: an implementation-activated issue introduces or clarifies a
+  requirement.
 
 Prospective roles are provenance and planning evidence. They never satisfy
 completed implementation, unit-test, integration-test, or UAT coverage.
@@ -83,6 +85,11 @@ Traceability: plans-implementation REQ-STABLE-ID from tasklet S01-F02-T03
 Traceability: plans-verification REQ-STABLE-ID from plan 2026-09-29-example
 Traceability: introduces REQ-STABLE-ID from issue 2026-09-29-BUG-example
 ```
+
+Issue intake alone never creates a requirement ID or an `introduces`
+relationship. Add issue prospective relationships only when standalone
+implementation is authorized, or when the issue belongs to a plan or campaign
+whose implementation begins, as owned by `requirements` and `issue-tracking`.
 
 Every prospective annotation requires an explicit `plan`, `tasklet`, or
 `issue` identity. Other explicit identities must match a configured entity

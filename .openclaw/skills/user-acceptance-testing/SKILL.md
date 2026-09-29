@@ -44,10 +44,12 @@ external services.
 
 ## Requirement Change Reconciliation
 
-Whenever `requirements` incorporates a new requirement or clarification from
-interactive user conversation, a `pm/bugs` issue, or a user-supplied source,
-assess that specific change against the configured UAT root. Do not wait for
-release preparation or test execution.
+Whenever `requirements` incorporates an activated requirement or clarification
+from interactive user direction, a configured issue record, or a user-supplied
+source, assess that specific change against the configured UAT root. Filing,
+prioritizing, deferring, rejecting, or merely planning an issue does not
+incorporate a requirement and must not create UAT coverage. Do not wait for
+release preparation or test execution after implementation activation.
 
 - Add or update the canonical Arc, Steps, and expected observable results when
   the requirement or clarification creates or changes acceptance behavior.
@@ -96,9 +98,10 @@ Each Arc records:
 - external effects, safety constraints, and final inspection points; and
 - implementation and evidence links without duplicating executable test code.
 
-Candidate and observed requirements may support explicitly exploratory Arcs,
-but those Arcs cannot authorize a release until the expected behavior becomes
-an approved requirement.
+Candidate and observed requirements may support explicitly exploratory Arcs
+when that exploration is authorized, but issue filing alone does not authorize
+or require one. Exploratory Arcs cannot authorize a release until the expected
+behavior becomes an approved requirement.
 
 ## Derivation And Automation
 

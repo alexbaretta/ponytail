@@ -20,6 +20,7 @@ boundary by `tests/campaign-census.test.js`.
 - [Plan input queue](plan-input-queue.md)
 - [Campaign orchestration](campaign-orchestration.md)
 - [Traceability index and queries](traceability-index.md)
+- [Issue requirement activation](issue-requirement-activation.md)
 
 ## Campaign census Suite
 

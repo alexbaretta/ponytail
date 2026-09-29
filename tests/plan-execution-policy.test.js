@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 // Traceability: verifies REQ-PLAN-INPUT-QUEUE
+// Traceability: verifies REQ-ISSUE-REQUIREMENT-ACTIVATION
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
@@ -59,6 +60,24 @@ test('planning and issue policy records prospective traceability without claimin
   assert.match(traceability, /from tasklet S01-F02-T03/);
   assert.match(planExecution, /canonical\nprospective annotation beside the stable plan or tasklet record/);
   assert.match(planExecution, /do not claim completed\ncoverage/);
-  assert.match(issueTracking, /canonical\nprospective annotations beside the stable issue record/);
+  assert.match(issueTracking, /When implementation activates[\s\S]*canonical `introduces`/);
   assert.match(issueTracking, /never satisfy completed coverage/);
+});
+
+test('standalone and planned issue execution share the implementation activation gate', () => {
+  const readSkill = name => fs.readFileSync(
+    path.join(__dirname, '..', 'skills', name, 'SKILL.md'), 'utf8',
+  );
+  const planExecution = readSkill('plan-execution');
+  const issueTracking = readSkill('issue-tracking');
+  const requirements = readSkill('requirements');
+  const userAcceptanceTesting = readSkill('user-acceptance-testing');
+  const requirementsTraceability = readSkill('requirements-traceability');
+
+  assert.match(planExecution, /Direct authorization to implement the standalone issue activates\n+the requirements gate/);
+  assert.match(planExecution, /Merely associating the issue with a\nfuture plan does not create requirements or UAT/);
+  assert.match(issueTracking, /stakeholder\n+   authorizes the issue as a standalone development task/);
+  assert.match(requirements, /Both conditions in the second gate are required/);
+  assert.match(userAcceptanceTesting, /merely planning an issue does not\n+incorporate a requirement and must not create UAT coverage/);
+  assert.match(requirementsTraceability, /Issue intake alone never creates a requirement ID or an `introduces`\n+relationship/);
 });

@@ -21,6 +21,10 @@
     {
       "id": "REQ-CAMPAIGN-ORCHESTRATION",
       "sourcePath": "pm/requirements/campaign-orchestration.md"
+    },
+    {
+      "id": "REQ-ISSUE-REQUIREMENT-ACTIVATION",
+      "sourcePath": "pm/requirements/issue-requirement-activation.md"
     }
   ],
   "artifacts": [
@@ -152,6 +156,41 @@
     {
       "class": "plan",
       "path": "pm/plans/closed/2026-09-29-campaign-orchestration/sprints/S02.md",
+      "locator": "text"
+    },
+    {
+      "class": "implementation",
+      "path": "skills/issue-tracking/SKILL.md",
+      "locator": "text"
+    },
+    {
+      "class": "implementation",
+      "path": "skills/requirements/SKILL.md",
+      "locator": "text"
+    },
+    {
+      "class": "implementation",
+      "path": "skills/plan-execution/SKILL.md",
+      "locator": "text"
+    },
+    {
+      "class": "unit-test",
+      "path": "tests/issue-requirement-activation-policy.test.js",
+      "locator": "text"
+    },
+    {
+      "class": "integration-test",
+      "path": "tests/plan-execution-policy.test.js",
+      "locator": "text"
+    },
+    {
+      "class": "uat",
+      "path": "pm/uat/issue-requirement-activation.md",
+      "locator": "text"
+    },
+    {
+      "class": "issue",
+      "path": "pm/bugs/closed/2026-09-29-BUG-premature_requirement_promotion.md",
       "locator": "text"
     }
   ],

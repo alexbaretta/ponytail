@@ -17,6 +17,7 @@ behavior independently from implementation plans and architecture.
 - [Plan input queue](plan-input-queue.md)
 - [Campaign orchestration](campaign-orchestration.md)
 - [Traceability index and queries](traceability-index.md)
+- [Issue requirement activation](issue-requirement-activation.md)
 
 ## Campaign census CLI
 

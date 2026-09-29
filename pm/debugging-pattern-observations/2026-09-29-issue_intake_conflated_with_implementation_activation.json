@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-09-29-issue_intake_conflated_with_implementation_activation",
+  "recorded_at": "2026-09-29T13:20:14-07:00",
+  "source_references": [
+    "pm/bugs/closed/2026-09-29-BUG-premature_requirement_promotion.md",
+    "pm/requirements/issue-requirement-activation.md"
+  ],
+  "context": {
+    "languages": ["markdown"],
+    "frameworks": [],
+    "components": ["reusable issue and requirements policy"],
+    "affected_boundaries": ["issue intake to requirements activation"],
+    "code_references": [
+      "skills/issue-tracking/SKILL.md",
+      "skills/requirements/SKILL.md",
+      "skills/plan-execution/SKILL.md",
+      "skills/requirements-traceability/SKILL.md",
+      "skills/user-acceptance-testing/SKILL.md"
+    ]
+  },
+  "observed_behavior": "Filing an issue immediately created canonical requirements, UAT obligations, and prospective traceability relationships before implementation was authorized or begun.",
+  "expected_behavior": "Issue-local behavior enters requirements, UAT, and traceability only when standalone implementation is authorized or implementation begins for a plan or campaign containing the issue.",
+  "causal_mechanism": "Reusable policy treated issue intake, stakeholder approval, plan association, and implementation activation as one requirements-ingestion event.",
+  "anti_pattern": {
+    "structural_description": "One lifecycle event both records a proposed issue and activates its behavior as a project requirement.",
+    "why_it_fails": "Unimplemented, deferred, or rejected proposals immediately make the project appear to lack required implementation and acceptance coverage."
+  },
+  "correct_pattern": {
+    "required_invariant": "Issue intake does not change canonical requirements; reconciliation occurs only at one of the two explicit implementation-activation gates.",
+    "implementation_description": "Keep absent expected behavior issue-local, permit links to existing approved requirements, and reconcile requirements, UAT, traceability, and active-work state atomically when implementation activates."
+  },
+  "applicability_conditions": [
+    "A project uses issues to record proposed or defective behavior separately from implementation work.",
+    "Requirements coverage validation treats canonical requirements as currently approved implementation obligations."
+  ],
+  "known_non_matches": [
+    "Linking an issue at intake to an approved requirement that already exists does not create or activate a new requirement."
+  ],
+  "confirmation_evidence": [
+    "The former requirements policy said reconciliation was not deferred until an issue entered active work.",
+    "The former issue policy prescribed prospective requirement annotations as part of issue intake."
+  ],
+  "regression_proofs": [
+    "tests/issue-requirement-activation-policy.test.js: issue intake uses configured type ownership without promoting requirements",
+    "tests/issue-requirement-activation-policy.test.js: requirements activate only for standalone authorization or begun planned implementation",
+    "tests/plan-execution-policy.test.js: standalone and planned issue execution share the implementation activation gate"
+  ]
+}
