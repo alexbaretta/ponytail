@@ -77,10 +77,12 @@ names.
 
 Humans and agents must be able to query plan text, descendants, ancestors,
 campaign roots, and stranded plans through explicit deterministic CLI
-commands. A stranded result means a plan cannot be assigned to a canonical
-campaign because its campaign metadata is missing or invalid, its parent is
-unresolved, or it is an explicitly permitted unmanaged legacy record; each
-result must state the reason. Ponytail must not invent campaign membership.
+commands. A stranded result means a managed plan cannot be assigned to a
+canonical campaign because its campaign metadata is missing or invalid or its
+parent is unresolved; each result must state the reason. An explicitly
+permitted flat-layout legacy plan is classified separately as unmanaged legacy
+data and must not appear in the stranded query. Ponytail must not invent
+campaign membership.
 
 Traceability and plan data share the configured PostgreSQL database and refresh
 operation, but they retain independent corpus generations, freshness checks,

@@ -69,7 +69,9 @@ function planFixture() {
   fs.mkdirSync(path.join(root, '.agents/config/project'), { recursive: true });
   fs.mkdirSync(path.join(root, 'pm/plans/in_progress/root'), { recursive: true });
   fs.mkdirSync(path.join(root, 'pm/plans/open/child'), { recursive: true });
+  fs.mkdirSync(path.join(root, 'pm/plans/open/invalid'), { recursive: true });
   fs.mkdirSync(path.join(root, 'pm/plans/legacy'), { recursive: true });
+  fs.mkdirSync(path.join(root, 'pm/plans/legacy-invalid'), { recursive: true });
   fs.writeFileSync(path.join(root, 'ponytail-journal.json'), JSON.stringify({
     schemaVersion: 1,
     projectId: '019c0000-0000-7000-8000-000000000002',
@@ -117,6 +119,16 @@ Own the payment processor.
 Extend processor routing.
 `);
   fs.writeFileSync(path.join(root, 'pm/plans/legacy/plan.md'), '# Legacy note\n\nUnmanaged processor notes.\n');
+  fs.writeFileSync(path.join(root, 'pm/plans/legacy-invalid/plan.md'), `# Invalid legacy plan
+
+<!-- ponytail-plan-campaign
+{"schemaVersion":1,"id":"legacy-invalid","parent_plan_id":null}
+-->
+<!-- ponytail-plan-campaign
+{"schemaVersion":1,"id":"legacy-invalid","parent_plan_id":null}
+-->
+`);
+  fs.writeFileSync(path.join(root, 'pm/plans/open/invalid/plan.md'), '# Invalid managed plan\n');
   execFileSync('git', ['add', '.'], { cwd: root });
   execFileSync('git', [
     '-c', 'user.name=Test', '-c', 'user.email=test@example.com',
@@ -566,7 +578,7 @@ test('refuses stale search without rebuilding', async () => {
   );
 });
 
-test('indexes canonical plan hierarchy, searchable sections, and stranded plans', () => {
+test('indexes canonical plan hierarchy and separates unmanaged legacy from stranded plans', () => {
   const root = planFixture();
   const projection = collectPlanProjection(root);
   const normalized = normalizePlanPayloads(projection.files.map(file => file.parse()));
@@ -578,7 +590,13 @@ test('indexes canonical plan hierarchy, searchable sections, and stranded plans'
     entity.entityKind === 'plan-section' && entity.annotation === 'Processor architecture' &&
     entity.description === 'Own the payment processor.'), true);
   assert.equal(normalized.entities.some(entity =>
-    entity.entityId === 'plan:legacy' && entity.entityKind === 'stranded-plan' &&
+    entity.entityId === 'plan:legacy' && entity.entityKind === 'legacy-plan' &&
+    entity.status === 'CAMPAIGN_LEGACY_UNMANAGED' && entity.searchRole === null), true);
+  assert.equal(normalized.entities.some(entity =>
+    entity.entityId === 'plan:invalid' && entity.entityKind === 'stranded-plan' &&
+    entity.status === 'CAMPAIGN_PLAN_BLOCK' && entity.searchRole === 'open'), true);
+  assert.equal(normalized.entities.some(entity =>
+    entity.entityId === 'plan:legacy-invalid' && entity.entityKind === 'stranded-plan' &&
     entity.status === 'CAMPAIGN_PLAN_BLOCK' && entity.searchRole === null), true);
   assert.equal(normalized.relationships.some(relationship =>
     relationship.sourceEntityId === 'plan:child' &&
@@ -712,7 +730,7 @@ test('queries plan descendants, roots, and stranded records from the fresh gener
       entity_id: 'plan:root', role: 'in_progress', path: 'pm/plans/in_progress/root/plan.md', reason: null,
     }],
     ['stranded', null, false, {
-      entity_id: 'plan:legacy', role: null, path: 'pm/plans/legacy/plan.md', reason: 'missing metadata',
+      entity_id: 'plan:invalid', role: 'open', path: 'pm/plans/open/invalid/plan.md', reason: 'missing metadata',
     }],
   ]) {
     const boundary = freshPlanClient(projection, [row]);

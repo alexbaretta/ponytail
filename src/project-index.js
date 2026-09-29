@@ -16,6 +16,7 @@ const {
   CampaignError,
   linkedPlanFiles,
   listPlanSourceFiles,
+  metadataBlocks,
   parsePlanSource,
   readManagementConfigV1,
   resolveCampaignRoot,
@@ -366,15 +367,19 @@ function parsePlanIndexPlan(root, relativePath, lifecycle, source) {
   } catch (error) {
     if (!(error instanceof CampaignError)) throw error;
     const inferredId = path.basename(path.dirname(relativePath));
+    const unmanagedLegacy = lifecycle === null && error.code === 'CAMPAIGN_PLAN_BLOCK' &&
+      metadataBlocks(source).length === 0;
     return { schemaVersion: 1, records: [planRecord({
-      recordKind: 'stranded-plan',
+      recordKind: unmanagedLegacy ? 'legacy-plan' : 'stranded-plan',
       recordId: inferredId,
       owningPlanId: inferredId,
       path: relativePath,
       heading: text.heading,
-      excerpt: `${error.code}: ${error.message}`,
+      excerpt: unmanagedLegacy
+        ? 'CAMPAIGN_LEGACY_UNMANAGED: permitted flat-layout plan has no campaign metadata'
+        : `${error.code}: ${error.message}`,
       lifecycle,
-      status: error.code,
+      status: unmanagedLegacy ? 'CAMPAIGN_LEGACY_UNMANAGED' : error.code,
     }), ...sections] };
   }
 }
@@ -633,7 +638,7 @@ function collectTraceabilityProjection(configurationPath) {
 }
 
 function planEntityId(record) {
-  if (record.recordKind === 'plan' || record.recordKind === 'stranded-plan') {
+  if (['plan', 'legacy-plan', 'stranded-plan'].includes(record.recordKind)) {
     return `plan:${record.recordId}`;
   }
   return `${record.recordKind}:${record.owningPlanId}:${record.recordId}`;
@@ -646,7 +651,7 @@ function normalizePlanPayloads(payloads) {
     .map(record => [`${record.owningPlanId}\0${record.recordId}`, record]));
   const plansById = new Map();
   for (const record of records.filter(candidate =>
-    ['plan', 'stranded-plan'].includes(candidate.recordKind))) {
+    ['plan', 'legacy-plan', 'stranded-plan'].includes(candidate.recordKind))) {
     const matches = plansById.get(record.recordId) ?? [];
     matches.push(record);
     plansById.set(record.recordId, matches);
@@ -737,7 +742,7 @@ function normalizePlanPayloads(payloads) {
     }
   }
   const lifecycleByPlan = new Map(records
-    .filter(record => ['plan', 'stranded-plan'].includes(record.recordKind))
+    .filter(record => ['plan', 'legacy-plan', 'stranded-plan'].includes(record.recordKind))
     .map(record => [record.owningPlanId, record.lifecycle]));
   const entities = normalizedRecords.map(record => ({
     entityId: planEntityId(record),

@@ -854,6 +854,7 @@ module.exports = {
   humanReport,
   linkedPlanFiles,
   listPlanSourceFiles,
+  metadataBlocks,
   parsePlanSource,
   readManagementConfigV1,
   readPlanMetadataV1,

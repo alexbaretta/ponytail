@@ -324,8 +324,12 @@ async function main() {
   const stranded = JSON.parse(execFileSync(process.execPath, [
     cli, 'plan', 'stranded', '--json',
   ], { cwd: root, encoding: 'utf8' }));
-  assert.ok(stranded.results.length > 0);
-  assert.ok(stranded.results.every(result => result.reason));
+  assert.deepEqual(stranded.results, []);
+  const legacy = JSON.parse(execFileSync(process.execPath, [
+    cli, 'plan', 'search', 'Ponytail', '--kind', 'legacy-plan', '--json',
+  ], { cwd: root, encoding: 'utf8' }));
+  assert.ok(legacy.results.length > 0);
+  assert.ok(legacy.results.every(result => result.recordKind === 'legacy-plan'));
 }
 
 main().then(
