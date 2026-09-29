@@ -1,7 +1,7 @@
 # Indexed requirements traceability
 
 - **Plan ID:** `2026-09-29-traceability-index`
-- **Status:** `in_progress`
+- **Status:** `closed`
 - **Approval:** The stakeholder approved
   [`REQ-TRACEABILITY-INDEX`](../../../requirements/traceability-index.md) on
   2026-09-29. The stakeholder explicitly approved implementation of the
@@ -65,7 +65,7 @@ census records.
 1. [S01](sprints/S01.md): implement incremental traceability and plan indexing,
    full-text search, and plan-graph queries — DONE.
 2. [S02](sprints/S02.md): extend the graph to plans/issues and implement scoped
-   relationship-gap validation — READY_FOR_REVIEW; depends on S01.
+   relationship-gap validation — DONE; depends on S01.
 
 ## Questions and approval gates
 
@@ -92,6 +92,9 @@ census records.
 The requirement, complete plan, and both sprint graphs are approved for
 implementation.
 
+Traceability: plans-implementation REQ-TRACEABILITY-INDEX from plan 2026-09-29-traceability-index
+Traceability: plans-verification REQ-TRACEABILITY-INDEX from plan 2026-09-29-traceability-index
+
 ## Starting checkpoint
 
 On 2026-09-29, the staged readiness tree based on
@@ -105,9 +108,16 @@ required.
 
 ## Final validation record
 
-In progress. S01 passed focused unit, semantic, setup, distribution,
-installation, dispatcher, canonical-census, corpus-isolation, stale-query, and
-real PostgreSQL acceptance on 2026-09-29. S02-F01 and the directional/scoped
-validator in S02-F02 now pass focused
-parser, semantic, policy, index, census, and dispatcher tests; final repository
-migration and plan acceptance remain.
+Completed on 2026-09-29. The final tree passed 406 core Node tests, Codex
+installer checks, 23 Pi tests, four MCP tests, 80 TSTS tests, and the 492-file
+TSTS semantic check. The real PostgreSQL acceptance script passed incremental,
+worktree-isolation, full-text, plan-graph, scoped validation, and incomplete
+fixture checks. Repository, plan, and campaign validation each evaluated four
+rules with no gaps; the incomplete fixture returned its expected typed gap and
+exit status 1. Traceability resolved 28 relationships. Campaign validation
+resolved one plan, two sprints, and 16 tasklets. Registry, generated registry,
+command adapter, manifest, package dry-run, rule-copy, version, and diff checks
+passed. Build impact selected no affected or indeterminate target. `ponytail
+qa` continues to report only four pre-existing forbidden `ipg` references in
+the closed `2026-09-27-requirements-traceability` historical plan; this plan
+does not alter those records.

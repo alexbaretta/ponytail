@@ -21,12 +21,14 @@ main() {
 const assert = require('node:assert/strict');
 const crypto = require('node:crypto');
 const fs = require('node:fs');
+const os = require('node:os');
 const path = require('node:path');
-const { execFileSync } = require('node:child_process');
+const { execFileSync, spawnSync } = require('node:child_process');
 const { Pool } = require('pg');
 const {
   collectPlanProjection,
   collectTraceabilityProjection,
+  indexTraceability,
   publishTraceabilityGeneration,
 } = require(path.join(process.argv[2], 'src/project-index'));
 
@@ -44,6 +46,7 @@ async function main() {
       ? undefined : process.env[database.passwordEnvironment],
   });
   const projectId = crypto.randomUUID();
+  const gapProjectId = crypto.randomUUID();
   const projectName = `project-index-contract-${projectId}`;
   const repositoryPath = `contract://${projectId}`;
   const base = collectTraceabilityProjection(configurationPath);
@@ -56,6 +59,7 @@ async function main() {
   };
   const second = { ...first, worktreePath: `${repositoryPath}/two` };
   const client = await pool.connect();
+  let gapRoot;
   try {
     const firstResult = await publishTraceabilityGeneration(client, first);
     const secondResult = await publishTraceabilityGeneration(client, second);
@@ -212,25 +216,71 @@ async function main() {
       traceAfterPlanChange.rows[0].generation_id,
       traceBeforePlanChange.rows[0].generation_id,
     );
+
+    gapRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ponytail-index-gaps-'));
+    const gapRequirementId = 'REQ-' + 'GAP';
+    execFileSync('git', ['init', '-q'], { cwd: gapRoot });
+    fs.mkdirSync(path.join(gapRoot, '.agents/config/project'), { recursive: true });
+    fs.writeFileSync(path.join(gapRoot, 'ponytail-journal.json'), JSON.stringify({
+      schemaVersion: 1,
+      projectId: gapProjectId,
+      projectName: 'gap fixture',
+      database,
+    }));
+    fs.writeFileSync(path.join(gapRoot, 'requirement.md'),
+      `# Requirement\n\n**Identifier:** \`${gapRequirementId}\`\n`);
+    fs.writeFileSync(path.join(gapRoot, 'implementation.js'),
+      `// Traceability: implements ${gapRequirementId}\nfunction implementation() {}\n`);
+    const gapConfigurationPath = path.join(gapRoot, '.agents/config/project/traceability.json');
+    fs.writeFileSync(gapConfigurationPath, JSON.stringify({
+      schemaVersion: 4,
+      projectRoot: '../../..',
+      requirements: [{ id: gapRequirementId, sourcePath: 'requirement.md' }],
+      artifacts: [{ class: 'implementation', path: 'implementation.js', locator: 'text' }],
+      entities: [],
+      generatedArtifacts: [],
+      reverseViewPath: 'traceability.generated.md',
+      index: { searchableFields: ['entityId', 'entityKind', 'role', 'requirementId', 'path'] },
+      validationRules: [{
+        id: 'requirement-unit-test', sourceKind: 'requirement', targetKind: 'unit-test',
+        roles: ['verifies'], direction: 'reverse', cardinality: { minimum: 1 },
+      }],
+    }));
+    execFileSync('git', ['add', '.'], { cwd: gapRoot });
+    execFileSync('git', [
+      '-c', 'user.name=Test', '-c', 'user.email=test@example.test',
+      'commit', '-qm', 'fixture',
+    ], { cwd: gapRoot });
+    await indexTraceability({ configurationPath: gapConfigurationPath });
+    const gapValidation = spawnSync(process.execPath, [
+      path.join(root, 'src/project-index.js'), 'traceability', 'validate', '--json',
+    ], { cwd: gapRoot, encoding: 'utf8' });
+    assert.equal(gapValidation.status, 1, gapValidation.stderr);
+    assert.equal(gapValidation.stderr, '');
+    assert.ok(gapValidation.stdout.endsWith('\n'));
+    const gapResult = JSON.parse(gapValidation.stdout);
+    assert.deepEqual(gapResult.gaps.map(gap => gap.ruleId), ['requirement-unit-test']);
   } finally {
     await client.query(`
       DELETE FROM ponytail_index.generation_v1
       WHERE worktree_id IN (
         SELECT worktree_id FROM ponytail_index.worktree_v1 worktree
         JOIN ponytail_index.repository_v1 repository USING (repository_id)
-        WHERE repository.project_id = $1::uuid
-      )`, [projectId]);
+        WHERE repository.project_id = ANY($1::uuid[])
+      )`, [[projectId, gapProjectId]]);
     await client.query(`
       DELETE FROM ponytail_index.worktree_v1
       WHERE repository_id IN (
-        SELECT repository_id FROM ponytail_index.repository_v1 WHERE project_id = $1::uuid
-      )`, [projectId]);
+        SELECT repository_id FROM ponytail_index.repository_v1
+        WHERE project_id = ANY($1::uuid[])
+      )`, [[projectId, gapProjectId]]);
     await client.query(
-      'DELETE FROM ponytail_index.parse_result_v1 WHERE project_id = $1::uuid', [projectId]);
+      'DELETE FROM ponytail_index.parse_result_v1 WHERE project_id = ANY($1::uuid[])', [[projectId, gapProjectId]]);
     await client.query(
-      'DELETE FROM ponytail_index.repository_v1 WHERE project_id = $1::uuid', [projectId]);
+      'DELETE FROM ponytail_index.repository_v1 WHERE project_id = ANY($1::uuid[])', [[projectId, gapProjectId]]);
     await client.query(
-      'DELETE FROM ponytail_index.project_v1 WHERE project_id = $1::uuid', [projectId]);
+      'DELETE FROM ponytail_index.project_v1 WHERE project_id = ANY($1::uuid[])', [[projectId, gapProjectId]]);
+    if (gapRoot !== undefined) fs.rmSync(gapRoot, { recursive: true, force: true });
     client.release();
     await pool.end();
   }
@@ -250,6 +300,17 @@ async function main() {
   assert.ok(searched.results.some(result =>
     result.requirementId === 'REQ-TRACEABILITY-INDEX' &&
     result.role === 'implements'));
+  for (const scopeArguments of [
+    [],
+    ['--plan', '2026-09-29-traceability-index'],
+    ['--campaign', '2026-09-29-traceability-index'],
+  ]) {
+    const validation = JSON.parse(execFileSync(process.execPath, [
+      cli, 'traceability', 'validate', ...scopeArguments, '--json',
+    ], { cwd: root, encoding: 'utf8' }));
+    assert.deepEqual(validation.gaps, []);
+    assert.equal(validation.rules, 4);
+  }
   const planSearch = JSON.parse(execFileSync(process.execPath, [
     cli, 'plan', 'search', 'PostgreSQL', '--json',
   ], { cwd: root, encoding: 'utf8' }));

@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 4,
   "projectRoot": "../../..",
   "requirements": [
     {
@@ -109,8 +109,19 @@
       "class": "uat",
       "path": "pm/uat/traceability-index.md",
       "locator": "text"
+    },
+    {
+      "class": "plan",
+      "path": "pm/plans/closed/2026-09-29-traceability-index/plan.md",
+      "locator": "text"
+    },
+    {
+      "class": "plan",
+      "path": "pm/plans/closed/2026-09-29-traceability-index/sprints/S02.md",
+      "locator": "text"
     }
   ],
+  "entities": [],
   "generatedArtifacts": [
     {
       "path": ".openclaw/skills/requirements-traceability/SKILL.md",
@@ -145,5 +156,39 @@
       "annotation",
       "description"
     ]
-  }
+  },
+  "validationRules": [
+    {
+      "id": "requirement-implementation",
+      "sourceKind": "requirement",
+      "targetKind": "implementation",
+      "roles": ["implements", "supports"],
+      "direction": "reverse",
+      "cardinality": {"minimum": 1}
+    },
+    {
+      "id": "requirement-unit-test",
+      "sourceKind": "requirement",
+      "targetKind": "unit-test",
+      "roles": ["verifies"],
+      "direction": "reverse",
+      "cardinality": {"minimum": 1}
+    },
+    {
+      "id": "requirement-integration-test",
+      "sourceKind": "requirement",
+      "targetKind": "integration-test",
+      "roles": ["verifies"],
+      "direction": "reverse",
+      "cardinality": {"minimum": 1}
+    },
+    {
+      "id": "requirement-uat",
+      "sourceKind": "requirement",
+      "targetKind": "uat",
+      "roles": ["verifies"],
+      "direction": "reverse",
+      "cardinality": {"minimum": 1}
+    }
+  ]
 }
