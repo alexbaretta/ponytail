@@ -164,4 +164,18 @@ indeterminate target for every readiness path, so no build was required.
 
 ## Final validation record
 
-Not started.
+Repository-side acceptance passed on 2026-09-29: build impact selected only
+the configured TSTS build, `npm run build:tsts` passed, and `npm test` passed
+420 core tests, the installer checks, 23 Pi tests, 4 MCP tests, 80 TSTS tests,
+and the 494-file TSTS structure check. Traceability checked 44 relationships;
+rule-copy, version, generated adapter, registry, manifest, package dry-run,
+repository-wide campaign validation, selected-campaign validation, and diff
+checks passed. The package dry-run used a temporary cache because the user's
+default npm cache contains pre-existing root-owned files.
+
+Final acceptance remains open. The live host profile proved managed-worktree
+execution and coordinator chat archival, but the handoff-created worktree was
+not attached to the worker and therefore could not be archived through the
+supported recoverable operation. Direct worktree-thread creation returned
+unresolved client identifiers. S02-F02-T02, S02-F02-T03, sprint closure, and
+plan closure must not be marked complete until that host cleanup path passes.
