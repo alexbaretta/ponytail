@@ -6,6 +6,14 @@ const assert = require('node:assert/strict');
 const test = require('node:test');
 const { getPonytailInstructions } = require('../hooks/ponytail-instructions');
 
+test('campaign coordinator harness owns observation and diagnostic priority', () => {
+  // Traceability: verifies REQ-PONYTAIL-CLI-AGENT-HARNESS
+  const policy = require('node:fs').readFileSync(require('node:path').join(__dirname, '..', 'skills', 'plan-execution', 'SKILL.md'), 'utf8');
+  assert.match(policy, /campaign\s+observe <campaign-root> --snapshot <json>/);
+  assert.match(policy, /Campaign diagnostics outrank new dispatch/);
+  assert.match(policy, /waiting for coordinator input from one that\n+   has finished/);
+});
+
 const modes = ['off', 'lite', 'full', 'ultra'];
 const alwaysOnRules = [
   'Do not repeat yourself',

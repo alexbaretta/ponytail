@@ -72,6 +72,11 @@ services. `PROJECT_STRUCTURE.md` is authoritative for that boundary.
 - Complete installation: `./scripts/install.sh`.
 - Local setup validation: `ponytail validate`.
 - Local reference QA: `ponytail qa`; no downstream integration suite.
+- Campaign coordination: `ponytail campaign status [<campaign>] --json`,
+  `ponytail campaign observe <campaign> --snapshot <json>`, `ponytail campaign
+  advance [<campaign>] --json`, and `ponytail campaign action-result <campaign>
+  <action-id> --result <json>`; the canonical coordinator workflow is owned by
+  `skills/plan-execution/SKILL.md`.
 - Project initialization and registration: `ponytail register`; removal:
   `ponytail unregister <repository-root>`; listing: `ponytail list-projects`.
 - Worktree selection: `ponytail bless[-worktree]`; display it with `ponytail

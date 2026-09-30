@@ -27,6 +27,10 @@
       "sourcePath": "pm/requirements/campaign-orchestration.md"
     },
     {
+      "id": "REQ-PONYTAIL-CLI-AGENT-HARNESS",
+      "sourcePath": "pm/requirements/ponytail-cli-agent-harness.md"
+    },
+    {
       "id": "REQ-ISSUE-REQUIREMENT-ACTIVATION",
       "sourcePath": "pm/requirements/issue-requirement-activation.md"
     },
@@ -198,6 +202,21 @@
     {
       "class": "plan",
       "path": "pm/plans/closed/2026-09-29-campaign-orchestration/sprints/S02.md",
+      "locator": "text"
+    },
+    {
+      "class": "uat",
+      "path": "pm/uat/ponytail-cli-agent-harness.md",
+      "locator": "text"
+    },
+    {
+      "class": "plan",
+      "path": "pm/plans/closed/2026-09-30-campaign-session-observability/plan.md",
+      "locator": "text"
+    },
+    {
+      "class": "plan",
+      "path": "pm/plans/closed/2026-09-30-campaign-session-observability/sprints/S01.md",
       "locator": "text"
     },
     {

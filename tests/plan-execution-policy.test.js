@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // Traceability: verifies REQ-PLAN-INPUT-QUEUE
 // Traceability: verifies REQ-ISSUE-REQUIREMENT-ACTIVATION
+// Traceability: verifies REQ-PONYTAIL-CLI-AGENT-HARNESS
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
@@ -41,6 +42,10 @@ test('campaign policy requires repository inventory and V2 direct dependencies',
 test('campaign policy delegates every worker effect to the durable action loop', () => {
   const policy = fs.readFileSync(path.join(__dirname, '..', 'skills', 'plan-execution', 'SKILL.md'), 'utf8');
   assert.match(policy, /campaign\s+status \[<campaign-root>\] --json/);
+  assert.match(policy, /campaign\s+observe <campaign-root> --snapshot <json>/);
+  assert.match(policy, /Refresh observations after any host\n+   result and at every safe coordination boundary/);
+  assert.match(policy, /Resolve\n+   every blocking diagnostic first/);
+  assert.match(policy, /distinguish a worker waiting for coordinator input from one that\n+   has finished/);
   assert.match(policy, /campaign advance \[<campaign-root>\] --json/);
   assert.match(policy, /If advance returns an existing `pendingAction`, resume that exact action/);
   assert.match(policy, /`CREATE_WORKER`[\s\S]*campaign attach <attachToken>/);
@@ -49,6 +54,8 @@ test('campaign policy delegates every worker effect to the durable action loop',
   assert.match(policy, /`ARCHIVE_WORKTREE`[\s\S]*archive its own managed\n+   worktree/);
   assert.match(policy, /campaign action-result\n+   <campaign-root> <action-id> --result <json>/);
   assert.match(policy, /Mutating campaign commands in\n+a worker fail closed/);
+  assert.match(policy, /Campaign diagnostics outrank new dispatch, integration, cleanup/);
+  assert.match(policy, /A `REUSE_WORKER`\n+   action retains the finished session and managed worktree/);
 });
 
 test('planning and issue policy records prospective traceability without claiming coverage', () => {

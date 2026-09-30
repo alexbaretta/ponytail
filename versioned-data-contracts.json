@@ -279,15 +279,27 @@
       "supportedDowngradeVersions": []
     },
     {
+      "id": "campaign-host-observation",
+      "implementation": {
+        "workspace": "ponytail",
+        "module": "src/campaign-orchestration.js",
+        "readerRegistryExport": "CampaignHostObservationReaders"
+      },
+      "currentVersion": "V1",
+      "versions": ["V1"],
+      "supportedReadVersions": ["V1"],
+      "supportedDowngradeVersions": []
+    },
+    {
       "id": "campaign-status",
       "implementation": {
         "workspace": "ponytail",
         "module": "src/campaign-orchestration.js",
         "readerRegistryExport": "CampaignStatusReaders"
       },
-      "currentVersion": "V1",
-      "versions": ["V1"],
-      "supportedReadVersions": ["V1"],
+      "currentVersion": "V2",
+      "versions": ["V1", "V2"],
+      "supportedReadVersions": ["V1", "V2"],
       "supportedDowngradeVersions": []
     },
     {

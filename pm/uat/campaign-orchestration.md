@@ -174,6 +174,16 @@ Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
 2. Remove or contradict one live session or Git observation.
    - Status fails closed for the affected action and identifies the exact stale
      or contradictory evidence; it does not report the worker as idle.
+3. Supply a scope-complete host observation containing working, waiting,
+   finished, archived, and missing sessions, including one surviving worktree
+   whose session is missing.
+   - JSON status reports each deterministic session and worktree subset with
+     its assignment and campaign item, plus separate structured diagnostics
+     for every invalid association.
+4. Supply duplicate active assignments, an unassigned non-root active-work
+   plan, and an assignment/lifecycle contradiction.
+   - Read-only status returns all conflicts in deterministic order; advance
+     fails closed without changing campaign, Git, session, or worktree state.
 
 ## Arc: Dispatch each ready plan exactly once
 

@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 3,
+  "sprint": "S01",
+  "features": {
+    "S01-F01": {"depends_on": [], "validation_tasklet": "S01-F01-T03"},
+    "S01-F02": {"depends_on": ["S01-F01"], "validation_tasklet": "S01-F02-T02"},
+    "S01-F03": {"depends_on": ["S01-F02"], "validation_tasklet": "S01-F03-T01"}
+  },
+  "tasklets": {
+    "S01-F01-T01": {
+      "depends_on": [],
+      "affinity": ["campaign-orchestration", "host-observation"],
+      "risk": "high",
+      "risk_reason": "Defines authenticated live host evidence used across sessions.",
+      "feature": "S01-F01",
+      "planned_paths": ["src/campaign-orchestration.js", "src/campaign-census.js", "hooks/plan-input.js", "tests/campaign-orchestration.test.js", "tests/plan-input-hooks.test.js", "versioned-data-contracts.json", "pm/plans/in_progress/2026-09-30-campaign-session-observability/sprints/S01.md"]
+    },
+    "S01-F01-T02": {
+      "depends_on": ["S01-F01-T01"],
+      "affinity": ["campaign-orchestration", "status", "diagnostics"],
+      "risk": "high",
+      "risk_reason": "Changes the public versioned campaign status and mutation safety gate.",
+      "feature": "S01-F01",
+      "planned_paths": ["src/campaign-orchestration.js", "tests/campaign-orchestration.test.js", "versioned-data-contracts.json", "pm/architecture/campaign-orchestration.md", "pm/requirements/campaign-orchestration.md", "pm/uat/campaign-orchestration.md", "pm/plans/in_progress/2026-09-30-campaign-session-observability/sprints/S01.md"]
+    },
+    "S01-F01-T03": {
+      "depends_on": ["S01-F01-T01", "S01-F01-T02"],
+      "affinity": ["campaign-orchestration", "validation"],
+      "risk": "normal",
+      "feature": "S01-F01",
+      "planned_paths": ["tests/campaign-orchestration.test.js", "tests/plan-input-hooks.test.js", "pm/plans/in_progress/2026-09-30-campaign-session-observability/sprints/S01.md"]
+    },
+    "S01-F02-T01": {
+      "depends_on": ["S01-F01-T03"],
+      "affinity": ["campaign-orchestration", "agent-harness"],
+      "risk": "high",
+      "risk_reason": "Controls coordinator behavior across independent Codex sessions.",
+      "feature": "S01-F02",
+      "planned_paths": ["skills/plan-execution/SKILL.md", ".openclaw/skills/plan-execution/SKILL.md", "AGENTS.md", "cli/ponytail", "tests/plan-execution-policy.test.js", "tests/cli-tools.test.js", "pm/requirements/ponytail-cli-agent-harness.md", "pm/uat/ponytail-cli-agent-harness.md", "pm/plans/in_progress/2026-09-30-campaign-session-observability/sprints/S01.md"]
+    },
+    "S01-F02-T02": {
+      "depends_on": ["S01-F02-T01"],
+      "affinity": ["agent-harness", "traceability", "configuration"],
+      "risk": "normal",
+      "feature": "S01-F02",
+      "planned_paths": [".agents/config/project/traceability.json", "pm/requirements/index.md", "pm/requirements/traceability.generated.md", "pm/uat/index.md", "pm/architecture/campaign-orchestration.md", "PROJECT_STRUCTURE.md", "tests/policy-conformance.test.js", "pm/plans/in_progress/2026-09-30-campaign-session-observability/plan.md", "pm/plans/in_progress/2026-09-30-campaign-session-observability/sprints/S01.md", "pm/plans/in_progress/2026-09-30-campaign-session-observability/sprints/S01.tasklets.json"]
+    },
+    "S01-F03-T01": {
+      "depends_on": ["S01-F02-T02"],
+      "affinity": ["validation", "lifecycle"],
+      "risk": "normal",
+      "feature": "S01-F03",
+      "planned_paths": ["pm/plans/in_progress/2026-09-30-campaign-session-observability/plan.md", "pm/plans/in_progress/2026-09-30-campaign-session-observability/sprints/S01.md", "pm/plans/in_progress/2026-09-30-campaign-session-observability/sprints/S01.tasklets.json", "pm/plans/closed/2026-09-30-campaign-session-observability/plan.md", "pm/plans/closed/2026-09-30-campaign-session-observability/sprints/S01.md", "pm/plans/closed/2026-09-30-campaign-session-observability/sprints/S01.tasklets.json"]
+    }
+  }
+}

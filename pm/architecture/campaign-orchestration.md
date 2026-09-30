@@ -165,6 +165,22 @@ rather than treating the worker as another coordinator root.
 The scheduler never treats missing host state as idle state and never treats a
 worker's final message as completion evidence.
 
+The coordinator-agent adapter persists one immutable V1 host observation per
+campaign worktree scope through `campaign observe`. It contains a collection
+timestamp, the exact session IDs for which collection was complete, and one
+normalized state, reported worktree, and managed-worktree verdict for each of
+those IDs. A session omitted from a partial collection remains unknown; the
+adapter must query ledger-known session IDs directly before declaring them
+missing. Status identifies an observation older than five minutes as stale,
+and the transition engine refuses mutation until the coordinator refreshes it.
+
+Status V2 retains the V1 scheduling projections and adds normalized
+session-to-assignment, worktree-to-assignment, active-work-plan, working,
+waiting, finished, idle, and reusable projections. Diagnostics carry affected
+identities and are sorted deterministically. Physical ledger parsing remains
+structural so contradictory cross-record state can be reported completely;
+the transition engine refuses every mutation while diagnostics remain.
+
 ### One-step transition engine
 
 The mutating interface is:
@@ -209,6 +225,12 @@ Cleanup begins only after the integration branch contains the exact worker
 revision. It archives the Codex session, preserves a recoverable managed-
 worktree snapshot when supported, removes the checkout, and retains
 `CLEANUP_PENDING` until every required effect is confirmed.
+
+When another dependency-ready plan exists, a clean integrated worker observed
+as completed in its host-confirmed managed worktree is retired from its old
+assignment without destroying the session or checkout. The next advance emits
+the ordinary authenticated `REUSE_WORKER` action. Without such ready work, the
+canonical worktree-then-session cleanup path remains unchanged.
 
 ### Codex host adapter
 

@@ -652,6 +652,7 @@ def print_usage():
   ponytail campaign list [--active|--pending|--closed|--deferred|--rejected]
   ponytail campaign activate <plan-name-or-path>
   ponytail campaign status [<campaign>] [--json]
+  ponytail campaign observe <campaign> --snapshot <json>
   ponytail campaign advance [<campaign>] [--json]
   ponytail campaign action-result <campaign> <action-id> --result <json>
   ponytail campaign attach <token>

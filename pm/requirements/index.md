@@ -16,6 +16,7 @@ behavior independently from implementation plans and architecture.
 - [Requirements traceability](requirements-traceability.md)
 - [Plan input queue](plan-input-queue.md)
 - [Campaign orchestration](campaign-orchestration.md)
+- [Ponytail CLI agent harness](ponytail-cli-agent-harness.md)
 - [Traceability index and queries](traceability-index.md)
 - [Issue requirement activation](issue-requirement-activation.md)
 - [Pre-commit project isolation](precommit-project-isolation.md)

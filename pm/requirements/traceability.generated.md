@@ -22,7 +22,7 @@ Requirement: [pm/requirements/index.md](index.md)
 - implementation: implements [src/campaign-census.js:1084](../../src/campaign-census.js#L1084)
 - unit-test: verifies [tests/campaign-census-format.test.js:11](../../tests/campaign-census-format.test.js#L11)
 - integration-test: verifies [tests/campaign-census.test.js:499](../../tests/campaign-census.test.js#L499)
-- uat: verifies [pm/uat/index.md:36](../../pm/uat/index.md#L36)
+- uat: verifies [pm/uat/index.md:37](../../pm/uat/index.md#L37)
 
 ## REQ-PLAN-INPUT-QUEUE
 
@@ -95,17 +95,22 @@ Requirement: [pm/requirements/campaign-orchestration.md](campaign-orchestration.
 - uat: verifies [pm/uat/campaign-orchestration.md:109](../../pm/uat/campaign-orchestration.md#L109)
 - uat: verifies [pm/uat/campaign-orchestration.md:135](../../pm/uat/campaign-orchestration.md#L135)
 - uat: verifies [pm/uat/campaign-orchestration.md:159](../../pm/uat/campaign-orchestration.md#L159)
-- uat: verifies [pm/uat/campaign-orchestration.md:180](../../pm/uat/campaign-orchestration.md#L180)
-- uat: verifies [pm/uat/campaign-orchestration.md:203](../../pm/uat/campaign-orchestration.md#L203)
-- uat: verifies [pm/uat/campaign-orchestration.md:227](../../pm/uat/campaign-orchestration.md#L227)
+- uat: verifies [pm/uat/campaign-orchestration.md:190](../../pm/uat/campaign-orchestration.md#L190)
+- uat: verifies [pm/uat/campaign-orchestration.md:213](../../pm/uat/campaign-orchestration.md#L213)
+- uat: verifies [pm/uat/campaign-orchestration.md:237](../../pm/uat/campaign-orchestration.md#L237)
 - plan: plans-implementation [pm/plans/closed/2026-09-29-campaign-orchestration/plan.md:22](../../pm/plans/closed/2026-09-29-campaign-orchestration/plan.md#L22)
 - plan: plans-verification [pm/plans/closed/2026-09-29-campaign-orchestration/plan.md:23](../../pm/plans/closed/2026-09-29-campaign-orchestration/plan.md#L23)
+- plan: plans-implementation [pm/plans/closed/2026-09-30-campaign-session-observability/plan.md:20](../../pm/plans/closed/2026-09-30-campaign-session-observability/plan.md#L20)
+- plan: plans-verification [pm/plans/closed/2026-09-30-campaign-session-observability/plan.md:21](../../pm/plans/closed/2026-09-30-campaign-session-observability/plan.md#L21)
 - plan: plans-implementation [pm/plans/closed/2026-09-30-explicit-concurrent-campaign-selection/plan.md:28](../../pm/plans/closed/2026-09-30-explicit-concurrent-campaign-selection/plan.md#L28)
 - plan: plans-verification [pm/plans/closed/2026-09-30-explicit-concurrent-campaign-selection/plan.md:29](../../pm/plans/closed/2026-09-30-explicit-concurrent-campaign-selection/plan.md#L29)
 - tasklet: plans-implementation [pm/plans/closed/2026-09-29-campaign-orchestration/sprints/S01.md:105](../../pm/plans/closed/2026-09-29-campaign-orchestration/sprints/S01.md#L105)
 - tasklet: plans-verification [pm/plans/closed/2026-09-29-campaign-orchestration/sprints/S01.md:106](../../pm/plans/closed/2026-09-29-campaign-orchestration/sprints/S01.md#L106)
 - tasklet: plans-implementation [pm/plans/closed/2026-09-29-campaign-orchestration/sprints/S02.md:119](../../pm/plans/closed/2026-09-29-campaign-orchestration/sprints/S02.md#L119)
 - tasklet: plans-verification [pm/plans/closed/2026-09-29-campaign-orchestration/sprints/S02.md:120](../../pm/plans/closed/2026-09-29-campaign-orchestration/sprints/S02.md#L120)
+- tasklet: plans-implementation [pm/plans/closed/2026-09-30-campaign-session-observability/sprints/S01.md:32](../../pm/plans/closed/2026-09-30-campaign-session-observability/sprints/S01.md#L32)
+- tasklet: plans-implementation [pm/plans/closed/2026-09-30-campaign-session-observability/sprints/S01.md:45](../../pm/plans/closed/2026-09-30-campaign-session-observability/sprints/S01.md#L45)
+- tasklet: plans-verification [pm/plans/closed/2026-09-30-campaign-session-observability/sprints/S01.md:60](../../pm/plans/closed/2026-09-30-campaign-session-observability/sprints/S01.md#L60)
 - tasklet: plans-implementation [pm/plans/closed/2026-09-30-explicit-concurrent-campaign-selection/sprints/S01.md:79](../../pm/plans/closed/2026-09-30-explicit-concurrent-campaign-selection/sprints/S01.md#L79)
 - tasklet: plans-verification [pm/plans/closed/2026-09-30-explicit-concurrent-campaign-selection/sprints/S01.md:86](../../pm/plans/closed/2026-09-30-explicit-concurrent-campaign-selection/sprints/S01.md#L86)
 - tasklet: plans-implementation [pm/plans/closed/2026-09-30-explicit-concurrent-campaign-selection/sprints/S01.md:100](../../pm/plans/closed/2026-09-30-explicit-concurrent-campaign-selection/sprints/S01.md#L100)
@@ -122,6 +127,19 @@ Requirement: [pm/requirements/campaign-orchestration.md](campaign-orchestration.
 - issue: plans-implementation [pm/bugs/closed/2026-09-30-BUG-non_campaign_commands_validate_campaigns.md:23](../../pm/bugs/closed/2026-09-30-BUG-non_campaign_commands_validate_campaigns.md#L23)
 - issue: plans-verification [pm/bugs/closed/2026-09-30-BUG-non_campaign_commands_validate_campaigns.md:24](../../pm/bugs/closed/2026-09-30-BUG-non_campaign_commands_validate_campaigns.md#L24)
 - issue: introduces [pm/bugs/closed/2026-09-30-FEAT-explicit_concurrent_campaign_selection.md:93](../../pm/bugs/closed/2026-09-30-FEAT-explicit_concurrent_campaign_selection.md#L93)
+
+## REQ-PONYTAIL-CLI-AGENT-HARNESS
+
+Requirement: [pm/requirements/ponytail-cli-agent-harness.md](ponytail-cli-agent-harness.md)
+
+- implementation: implements [skills/plan-execution/SKILL.md:649](../../skills/plan-execution/SKILL.md#L649)
+- unit-test: verifies [tests/policy-conformance.test.js:10](../../tests/policy-conformance.test.js#L10)
+- integration-test: verifies [tests/plan-execution-policy.test.js:4](../../tests/plan-execution-policy.test.js#L4)
+- uat: verifies [pm/uat/ponytail-cli-agent-harness.md:17](../../pm/uat/ponytail-cli-agent-harness.md#L17)
+- plan: plans-implementation [pm/plans/closed/2026-09-30-campaign-session-observability/plan.md:22](../../pm/plans/closed/2026-09-30-campaign-session-observability/plan.md#L22)
+- plan: plans-verification [pm/plans/closed/2026-09-30-campaign-session-observability/plan.md:23](../../pm/plans/closed/2026-09-30-campaign-session-observability/plan.md#L23)
+- tasklet: plans-implementation [pm/plans/closed/2026-09-30-campaign-session-observability/sprints/S01.md:75](../../pm/plans/closed/2026-09-30-campaign-session-observability/sprints/S01.md#L75)
+- tasklet: plans-verification [pm/plans/closed/2026-09-30-campaign-session-observability/sprints/S01.md:90](../../pm/plans/closed/2026-09-30-campaign-session-observability/sprints/S01.md#L90)
 
 ## REQ-ISSUE-REQUIREMENT-ACTIVATION
 
@@ -159,7 +177,7 @@ Requirement: [pm/requirements/developer-private-agent-instructions.md](developer
 
 - implementation: implements [cli/ponytail:7](../../cli/ponytail#L7)
 - implementation: supports [skills/ponytail/SKILL.md:24](../../skills/ponytail/SKILL.md#L24)
-- unit-test: verifies [tests/policy-conformance.test.js:51](../../tests/policy-conformance.test.js#L51)
+- unit-test: verifies [tests/policy-conformance.test.js:59](../../tests/policy-conformance.test.js#L59)
 - integration-test: verifies [tests/project-validation.test.js:182](../../tests/project-validation.test.js#L182)
 - uat: verifies [pm/uat/developer-private-agent-instructions.md:13](../../pm/uat/developer-private-agent-instructions.md#L13)
 - issue: introduces [pm/bugs/closed/2026-09-30-FEAT-developer_private_agent_instructions.md:20](../../pm/bugs/closed/2026-09-30-FEAT-developer_private_agent_instructions.md#L20)

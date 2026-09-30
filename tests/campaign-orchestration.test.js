@@ -17,9 +17,11 @@ const {
   advanceLedger,
   newLedger,
   parseArguments,
+  readHostObservation,
   readLedgerV1,
   reconcile,
   recordActionResult,
+  writeHostObservation,
   withWorktreeLock,
 } = require('../src/campaign-orchestration');
 const campaignCli = path.join(__dirname, '..', 'src', 'campaign-census.js');
@@ -96,7 +98,7 @@ function captureError(callback) {
   assert.fail('expected CampaignOrchestrationError');
 }
 
-test('ledger reader enforces active plan, session, and worktree uniqueness', () => {
+test('status reports active plan, session, and worktree conflicts while mutations fail closed', () => {
   const root = repository();
   const ledger = newLedger(root, 'campaign', 'coordinator');
   const assignment = {
@@ -105,7 +107,108 @@ test('ledger reader enforces active plan, session, and worktree uniqueness', () 
     state: 'ACTIVE', idempotencyKey: 'key', attachToken: 'token', worktreeArchived: false, sessionArchived: false,
   };
   ledger.assignments = [assignment, { ...assignment, id: 'second', idempotencyKey: 'key-2', attachToken: 'token-2' }];
-  assert.equal(captureError(() => readLedgerV1(ledger)).code, 'CAMPAIGN_ASSIGNMENT_CONFLICT');
+  assert.equal(readLedgerV1(ledger).assignments.length, 2);
+  const status = reconcile(graph([
+    { id: 'campaign', parentPlanId: null, dependsOn: [], lifecycle: 'in_progress', path: 'root' },
+    { id: 'ready', parentPlanId: 'campaign', dependsOn: [], lifecycle: 'in_progress', path: 'ready' },
+  ]), ledger);
+  assert.deepEqual(status.diagnostics.filter(({ code }) => code === 'CAMPAIGN_ASSIGNMENT_CONFLICT').map(({ message }) => message), [
+    'more than one active assignment uses plan ready',
+    'more than one active assignment uses session session',
+    'more than one active assignment uses worktree /worker',
+  ]);
+  assert.equal(captureError(() => advanceLedger(graph([
+    { id: 'campaign', parentPlanId: null, dependsOn: [], lifecycle: 'in_progress', path: 'root' },
+    { id: 'ready', parentPlanId: 'campaign', dependsOn: [], lifecycle: 'in_progress', path: 'ready' },
+  ]), ledger)).code, 'CAMPAIGN_STATUS_BLOCKED');
+});
+
+test('V2 status exposes session, worktree, activity, assignment, and conflict views', () => {
+  const root = repository();
+  const existingWorker = temporaryDirectory('ponytail-existing-worker');
+  const missingWorker = path.join(temporaryDirectory('ponytail-missing-worker-parent'), 'missing');
+  const environment = { ...process.env, PONYTAIL_CAMPAIGN_STATE_DIR: temporaryDirectory('ponytail-observation-state') };
+  const observedAt = new Date().toISOString();
+  const ledger = newLedger(root, 'campaign', 'coordinator');
+  const assignment = (id, planId, sessionId, worktree) => ({
+    id, planId, sessionId, worktree, branch: 'worker', dispatchRevision: ledger.integrationRevision,
+    workerRevision: ledger.integrationRevision, state: 'ACTIVE', idempotencyKey: `${id}-key`, attachToken: `${id}-token`,
+    worktreeArchived: false, sessionArchived: false,
+  });
+  ledger.assignments.push(
+    assignment('working-assignment', 'working-plan', 'working-session', root),
+    assignment('missing-assignment', 'missing-plan', 'missing-session', existingWorker),
+    assignment('waiting-assignment', 'working-plan', 'waiting-session', missingWorker),
+  );
+  ledger.workers.push(
+    { sessionId: 'working-session', worktree: root, branch: 'worker', revision: ledger.integrationRevision, clean: true, activity: 'active', evidenceComplete: false, worktreeArchived: false, sessionArchived: false },
+    { sessionId: 'missing-session', worktree: existingWorker, branch: 'worker', revision: ledger.integrationRevision, clean: false, activity: 'missing', evidenceComplete: false, worktreeArchived: false, sessionArchived: false },
+    { sessionId: 'waiting-session', worktree: missingWorker, branch: 'worker', revision: ledger.integrationRevision, clean: true, activity: 'active', evidenceComplete: false, worktreeArchived: false, sessionArchived: false },
+  );
+  writeHostObservation(root, 'campaign', {
+    schemaVersion: 1,
+    campaignId: 'campaign',
+    observedAt,
+    completeSessionIds: ['waiting-session', 'missing-session', 'working-session'],
+    sessions: [
+      { sessionId: 'working-session', state: 'working', worktree: root, managedWorktree: true },
+      { sessionId: 'missing-session', state: 'missing', worktree: existingWorker, managedWorktree: true },
+      { sessionId: 'waiting-session', state: 'waiting', worktree: missingWorker, managedWorktree: false },
+    ],
+  }, environment);
+  const status = reconcile(graph([
+    { id: 'campaign', parentPlanId: null, dependsOn: [], lifecycle: 'in_progress', path: 'root' },
+    { id: 'working-plan', parentPlanId: 'campaign', dependsOn: [], lifecycle: 'in_progress', path: 'working' },
+    { id: 'missing-plan', parentPlanId: 'campaign', dependsOn: [], lifecycle: 'in_progress', path: 'missing' },
+    { id: 'unassigned-plan', parentPlanId: 'campaign', dependsOn: [], lifecycle: 'in_progress', path: 'unassigned' },
+  ]), ledger, root, environment);
+  assert.equal(status.schemaVersion, 2);
+  assert.equal(status.observedAt, observedAt);
+  assert.deepEqual(status.workingSessions.map(({ planId, sessionId }) => ({ planId, sessionId })), [{ planId: 'working-plan', sessionId: 'working-session' }]);
+  assert.deepEqual(status.waitingSessions.map(({ sessionId }) => sessionId), ['waiting-session']);
+  assert.deepEqual(status.idleSessions.map(({ sessionId }) => sessionId), ['waiting-session']);
+  assert.deepEqual(status.inProgressPlans.find(({ planId }) => planId === 'unassigned-plan'), { planId: 'unassigned-plan', assignmentId: null, sessionId: null, worktree: null });
+  assert.deepEqual(status.worktrees.map(({ sessionId }) => sessionId), ['missing-session', 'waiting-session', 'working-session']);
+  const codes = new Set(status.diagnostics.map(({ code }) => code));
+  for (const code of ['CAMPAIGN_ASSIGNMENT_CONFLICT', 'CAMPAIGN_PLAN_UNASSIGNED', 'CAMPAIGN_SESSION_IN_COORDINATOR_WORKTREE', 'CAMPAIGN_SESSION_MISSING', 'CAMPAIGN_WORKTREE_SESSION_MISSING', 'CAMPAIGN_WORKTREE_MISSING', 'CAMPAIGN_WORKTREE_NOT_MANAGED']) assert.equal(codes.has(code), true, code);
+});
+
+test('stale host observations are diagnosed and block mutation', () => {
+  const root = repository();
+  const environment = { ...process.env, PONYTAIL_CAMPAIGN_STATE_DIR: temporaryDirectory('ponytail-stale-observation-state') };
+  const ledger = newLedger(root, 'campaign', 'coordinator');
+  ledger.assignments.push({
+    id: 'assignment', planId: 'ready', sessionId: 'session', worktree: root, branch: 'main',
+    dispatchRevision: ledger.integrationRevision, workerRevision: ledger.integrationRevision, state: 'ACTIVE',
+    idempotencyKey: 'key', attachToken: 'token', worktreeArchived: false, sessionArchived: false,
+  });
+  ledger.workers.push({
+    sessionId: 'session', worktree: root, branch: 'main', revision: ledger.integrationRevision,
+    clean: true, activity: 'active', evidenceComplete: false, worktreeArchived: false, sessionArchived: false,
+  });
+  writeHostObservation(root, 'campaign', {
+    schemaVersion: 1, campaignId: 'campaign', observedAt: '2000-01-01T00:00:00.000Z', completeSessionIds: ['session'],
+    sessions: [{ sessionId: 'session', state: 'working', worktree: root, managedWorktree: true }],
+  }, environment);
+  const campaignGraph = graph([
+    { id: 'campaign', parentPlanId: null, dependsOn: [], lifecycle: 'in_progress', path: 'root' },
+    { id: 'ready', parentPlanId: 'campaign', dependsOn: [], lifecycle: 'in_progress', path: 'ready' },
+  ]);
+  assert.equal(reconcile(campaignGraph, ledger, root, environment).diagnostics.some(({ code }) => code === 'CAMPAIGN_HOST_OBSERVATION_STALE'), true);
+  assert.equal(captureError(() => advanceLedger(campaignGraph, ledger, environment)).code, 'CAMPAIGN_STATUS_BLOCKED');
+});
+
+test('campaign observe persists a normalized host snapshot and returns V2 status', () => {
+  const root = campaignRepository();
+  const environment = { ...process.env, PONYTAIL_CAMPAIGN_STATE_DIR: temporaryDirectory('ponytail-observe-cli'), PONYTAIL_SESSION_ID: 'coordinator' };
+  const snapshot = { schemaVersion: 1, campaignId: 'campaign', observedAt: '2026-09-30T12:00:00-07:00', completeSessionIds: [], sessions: [] };
+  const result = spawnSync(process.execPath, [campaignCli, 'observe', 'campaign', '--snapshot', JSON.stringify(snapshot)], { cwd: root, encoding: 'utf8', env: environment });
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(JSON.parse(result.stdout).schemaVersion, 2);
+  assert.deepEqual(readHostObservation(fs.realpathSync(root), 'campaign', environment), snapshot);
+  assert.deepEqual(parseArguments(['observe', 'campaign', '--snapshot', JSON.stringify(snapshot)]), {
+    operation: 'observe', input: 'campaign', json: false, actionId: undefined, result: snapshot,
+  });
 });
 
 test('reconciler derives dependency-ready plans and only truly idle workers', () => {
@@ -160,6 +263,39 @@ test('advance reuses a clean idle worker before requesting a new worker', () => 
   ]), ledger);
   assert.equal(selected.type, 'REUSE_WORKER');
   assert.equal(selected.payload.sessionId, 'idle-session');
+});
+
+test('integrated completed workers become reusable when another plan is ready', () => {
+  const root = repository();
+  const worker = path.join(temporaryDirectory('ponytail-reusable-parent'), 'worker');
+  command(root, ['worktree', 'add', '-qb', 'reusable-worker', worker]);
+  const environment = { ...process.env, PONYTAIL_CAMPAIGN_STATE_DIR: temporaryDirectory('ponytail-reusable-state') };
+  const ledger = newLedger(root, 'campaign', 'coordinator');
+  ledger.assignments.push({
+    id: 'completed-assignment', planId: 'completed', sessionId: 'reusable-session', worktree: worker, branch: 'reusable-worker',
+    dispatchRevision: ledger.integrationRevision, workerRevision: ledger.integrationRevision, state: 'CLEANUP_PENDING',
+    idempotencyKey: 'completed-key', attachToken: 'completed-token', worktreeArchived: false, sessionArchived: false,
+  });
+  ledger.workers.push({
+    sessionId: 'reusable-session', worktree: worker, branch: 'reusable-worker', revision: ledger.integrationRevision,
+    clean: true, activity: 'completed', evidenceComplete: true, worktreeArchived: false, sessionArchived: false,
+  });
+  writeHostObservation(root, 'campaign', {
+    schemaVersion: 1, campaignId: 'campaign', observedAt: new Date().toISOString(), completeSessionIds: ['reusable-session'],
+    sessions: [{ sessionId: 'reusable-session', state: 'completed', worktree: worker, managedWorktree: true }],
+  }, environment);
+  const campaignGraph = graph([
+    { id: 'campaign', parentPlanId: null, dependsOn: [], lifecycle: 'in_progress', path: 'root' },
+    { id: 'completed', parentPlanId: 'campaign', dependsOn: [], lifecycle: 'closed', path: 'completed' },
+    { id: 'ready', parentPlanId: 'campaign', dependsOn: ['completed'], lifecycle: 'open', path: 'ready' },
+  ]);
+  assert.equal(advanceLedger(campaignGraph, ledger, environment), null);
+  assert.equal(ledger.assignments[0].state, 'ARCHIVED');
+  assert.equal(ledger.workers[0].activity, 'idle');
+  const pending = advanceLedger(campaignGraph, ledger, environment);
+  assert.equal(pending.type, 'REUSE_WORKER');
+  assert.equal(pending.payload.sessionId, 'reusable-session');
+  assert.equal(pending.payload.worktree, worker);
 });
 
 test('completed work is classified by Git ancestry and fast-forward merged exactly once', () => {

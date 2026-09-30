@@ -24,6 +24,8 @@ const ASSIGNMENT_STATES = [
   'ARCHIVED',
 ];
 const ACTION_TYPES = ['CREATE_WORKER', 'REUSE_WORKER', 'REQUEST_REBASE', 'ARCHIVE_WORKTREE', 'ARCHIVE_SESSION'];
+const HOST_SESSION_STATES = ['working', 'waiting', 'completed', 'archived', 'missing', 'unknown'];
+const HOST_OBSERVATION_MAX_AGE_MS = 5 * 60 * 1000;
 const WORKER_BINDINGS_FILE = 'campaign-worker-bindings.json';
 
 class CampaignOrchestrationError extends Error {
@@ -79,6 +81,29 @@ function readWorkerV1(value, label = 'worker') {
   return { ...value };
 }
 
+function readHostObservationV1(value, file = 'campaign host observation') {
+  exactKeys(value, ['schemaVersion', 'campaignId', 'observedAt', 'completeSessionIds', 'sessions'], file);
+  if (value.schemaVersion !== 1) fail('CAMPAIGN_ORCHESTRATION_VERSION', `${file}: unsupported schemaVersion`);
+  for (const key of ['campaignId', 'observedAt']) if (typeof value[key] !== 'string' || !value[key]) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', `${file}.${key} must be a nonempty string`);
+  if (Number.isNaN(Date.parse(value.observedAt))) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', `${file}.observedAt must be an ISO 8601 timestamp`);
+  if (!Array.isArray(value.completeSessionIds) || !Array.isArray(value.sessions)) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', `${file}.completeSessionIds and sessions must be arrays`);
+  if (value.completeSessionIds.some((sessionId) => typeof sessionId !== 'string' || !sessionId)) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', `${file}.completeSessionIds must contain nonempty strings`);
+  if (new Set(value.completeSessionIds).size !== value.completeSessionIds.length) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', `${file}.completeSessionIds must be unique`);
+  const sessions = value.sessions.map((session, index) => {
+    const label = `${file}.sessions[${index}]`;
+    exactKeys(session, ['sessionId', 'state', 'worktree', 'managedWorktree'], label);
+    if (typeof session.sessionId !== 'string' || !session.sessionId) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', `${label}.sessionId must be a nonempty string`);
+    if (!HOST_SESSION_STATES.includes(session.state)) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', `${label}.state is invalid`);
+    optionalString(session.worktree, `${label}.worktree`);
+    if (typeof session.managedWorktree !== 'boolean') fail('CAMPAIGN_ORCHESTRATION_SCHEMA', `${label}.managedWorktree must be boolean`);
+    if (!value.completeSessionIds.includes(session.sessionId)) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', `${label}.sessionId is not declared complete`);
+    return { ...session };
+  });
+  if (new Set(sessions.map(({ sessionId }) => sessionId)).size !== sessions.length) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', `${file}.sessions contains duplicate session IDs`);
+  if (sessions.length !== value.completeSessionIds.length) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', `${file}.sessions must contain exactly the complete session IDs`);
+  return { ...value, completeSessionIds: [...value.completeSessionIds].sort(), sessions: sessions.sort((left, right) => left.sessionId.localeCompare(right.sessionId)) };
+}
+
 function readCompletedActionV1(value, label = 'completed action') {
   exactKeys(value, ['actionId', 'assignmentId', 'type', 'result'], label);
   for (const key of ['actionId', 'assignmentId']) if (typeof value[key] !== 'string' || !value[key]) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', `${label}.${key} must be a nonempty string`);
@@ -113,12 +138,6 @@ function readLedgerV1(value, file = 'campaign ledger') {
   const completedActions = value.completedActions.map((actionResult, index) => readCompletedActionV1(actionResult, `${file}.completedActions[${index}]`));
   if (new Set(completedActions.map(({ actionId }) => actionId)).size !== completedActions.length) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', `${file} contains duplicate completed action IDs`);
   const workers = value.workers.map((worker, index) => readWorkerV1(worker, `${file}.workers[${index}]`));
-  const active = assignments.filter((assignment) => assignment.state !== 'ARCHIVED');
-  for (const [field, values] of [
-    ['plan', active.map((assignment) => assignment.planId)],
-    ['session', active.map((assignment) => assignment.sessionId).filter(Boolean)],
-    ['worktree', active.map((assignment) => assignment.worktree).filter(Boolean)],
-  ]) if (new Set(values).size !== values.length) fail('CAMPAIGN_ASSIGNMENT_CONFLICT', `more than one active assignment uses the same ${field}`);
   return {
     ...value,
     assignments,
@@ -129,6 +148,7 @@ function readLedgerV1(value, file = 'campaign ledger') {
 }
 
 const CampaignLedgerReaders = Object.freeze({ V1: readLedgerV1 });
+const CampaignHostObservationReaders = Object.freeze({ V1: readHostObservationV1 });
 const CampaignWorkerBindingReaders = Object.freeze({ V1: readWorkerBindingsV1 });
 
 function readStatusV1(value) {
@@ -141,7 +161,17 @@ function readStatusV1(value) {
   return value;
 }
 
-const CampaignStatusReaders = Object.freeze({ V1: readStatusV1 });
+function readStatusV2(value) {
+  exactKeys(value, ['schemaVersion', 'campaignId', 'invocationWorktree', 'effectiveWorktree', 'coordinatorSessionId', 'integrationRevision', 'observedAt', 'assignments', 'sessionAssignments', 'workingSessions', 'idleSessions', 'waitingSessions', 'finishedSessions', 'worktrees', 'inProgressPlans', 'readyPlans', 'activeWorkers', 'idleWorkers', 'reusableWorkers', 'rebaseRequired', 'readyToMerge', 'cleanupPending', 'pendingAction', 'diagnostics'], 'campaign status');
+  if (value.schemaVersion !== 2) fail('CAMPAIGN_ORCHESTRATION_VERSION', 'unsupported campaign status version');
+  for (const key of ['campaignId', 'invocationWorktree', 'effectiveWorktree', 'integrationRevision']) if (typeof value[key] !== 'string' || !value[key]) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', `campaign status ${key} must be a nonempty string`);
+  for (const key of ['coordinatorSessionId', 'observedAt']) optionalString(value[key], `campaign status ${key}`);
+  for (const key of ['assignments', 'sessionAssignments', 'workingSessions', 'idleSessions', 'waitingSessions', 'finishedSessions', 'worktrees', 'inProgressPlans', 'readyPlans', 'activeWorkers', 'idleWorkers', 'reusableWorkers', 'rebaseRequired', 'readyToMerge', 'cleanupPending', 'diagnostics']) if (!Array.isArray(value[key])) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', `campaign status ${key} must be an array`);
+  readActionV1(value.pendingAction, 'campaign status pendingAction');
+  return value;
+}
+
+const CampaignStatusReaders = Object.freeze({ V1: readStatusV1, V2: readStatusV2 });
 
 function git(repositoryRoot, args, accepted = [0]) {
   const result = spawnSync('git', ['-C', repositoryRoot, ...args], { encoding: 'utf8' });
@@ -177,6 +207,32 @@ function stateDirectory(environment = process.env) {
 function ledgerPath(repositoryRoot, campaignId, environment = process.env) {
   const scope = crypto.createHash('sha256').update(repositoryRoot).digest('hex');
   return path.join(stateDirectory(environment), scope, `${campaignId}.json`);
+}
+
+function hostObservationPath(repositoryRoot, campaignId, environment = process.env) {
+  const scope = crypto.createHash('sha256').update(repositoryRoot).digest('hex');
+  return path.join(stateDirectory(environment), scope, `${campaignId}.host-observation.json`);
+}
+
+function readHostObservation(repositoryRoot, campaignId, environment = process.env) {
+  const file = hostObservationPath(repositoryRoot, campaignId, environment);
+  if (!fs.existsSync(file)) return null;
+  let value;
+  try { value = JSON.parse(fs.readFileSync(file, 'utf8')); } catch (error) { fail('CAMPAIGN_HOST_OBSERVATION_IO', `${file}: ${error.message}`, 2); }
+  const observation = readHostObservationV1(value, file);
+  if (observation.campaignId !== campaignId) fail('CAMPAIGN_HOST_OBSERVATION_SCOPE', `${file}: observation scope does not match campaign ${campaignId}`);
+  return observation;
+}
+
+function writeHostObservation(repositoryRoot, campaignId, observation, environment = process.env) {
+  const file = hostObservationPath(repositoryRoot, campaignId, environment);
+  const value = readHostObservationV1(observation, file);
+  if (value.campaignId !== campaignId) fail('CAMPAIGN_HOST_OBSERVATION_SCOPE', `${file}: observation scope does not match campaign ${campaignId}`);
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  const temporary = `${file}.${process.pid}.${crypto.randomUUID()}.tmp`;
+  fs.writeFileSync(temporary, `${JSON.stringify(value, null, 2)}\n`, { flag: 'wx', mode: 0o600 });
+  fs.renameSync(temporary, file);
+  return value;
 }
 
 function workerBindingsPath(environment = process.env) {
@@ -418,15 +474,17 @@ function workerFor(workers, assignment) {
   )) ?? null;
 }
 
-function observedWorkers(graph, ledger, environment) {
+function observedWorkers(graph, ledger, environment, hostObservation) {
   if (!environment) return ledger.workers;
   const plansById = new Map(graph.plans.map((plan) => [plan.id, plan]));
+  const hostSessions = new Map((hostObservation?.sessions ?? []).map((session) => [session.sessionId, session]));
   const workers = ledger.workers.map((worker) => ({ ...worker }));
   for (const binding of readWorkerBindings(environment).bindings.filter((item) => item.repositoryRoot === ledger.topLevelWorktree && item.campaignId === ledger.campaignId)) {
     const assignment = ledger.assignments.find((item) => item.id === binding.assignmentId && item.state !== 'ARCHIVED');
     if (!assignment) continue;
     const existing = workers.find((worker) => worker.sessionId === binding.sessionId || worker.worktree === binding.worktree);
     const plan = plansById.get(assignment.planId);
+    const hostSession = hostSessions.get(binding.sessionId);
     let observation;
     if (!fs.existsSync(binding.worktree)) {
       observation = { sessionId: binding.sessionId, worktree: binding.worktree, branch: binding.branch, revision: binding.revision, clean: false, activity: 'missing', evidenceComplete: false, worktreeArchived: existing?.worktreeArchived ?? false, sessionArchived: existing?.sessionArchived ?? false };
@@ -438,8 +496,10 @@ function observedWorkers(graph, ledger, environment) {
         branch: identity.branch,
         revision: identity.revision,
         clean: git(binding.worktree, ['status', '--porcelain']).length === 0,
-        activity: plan?.lifecycle === graph.lifecycle.successfulCompletion ? 'completed' : 'active',
-        evidenceComplete: plan?.lifecycle === graph.lifecycle.successfulCompletion,
+        activity: hostSession?.state === 'completed' ? 'completed'
+          : ['missing', 'archived', 'unknown'].includes(hostSession?.state) ? 'missing'
+            : plan?.lifecycle === graph.lifecycle.successfulCompletion && !hostObservation ? 'completed' : 'active',
+        evidenceComplete: plan?.lifecycle === graph.lifecycle.successfulCompletion && (hostSession?.state === 'completed' || !hostObservation),
         worktreeArchived: existing?.worktreeArchived ?? false,
         sessionArchived: existing?.sessionArchived ?? false,
       };
@@ -448,6 +508,25 @@ function observedWorkers(graph, ledger, environment) {
     else workers.push(observation);
   }
   return workers;
+}
+
+function diagnosticRecord(code, message, assignment = {}, extra = {}) {
+  return {
+    code,
+    message,
+    planId: assignment.planId ?? null,
+    assignmentId: assignment.id ?? null,
+    sessionId: assignment.sessionId ?? null,
+    worktree: assignment.worktree ?? null,
+    ...extra,
+  };
+}
+
+function lifecycleCompatible(assignmentState, lifecycle, graphLifecycle) {
+  if (assignmentState === 'DISPATCH_PENDING') return [graphLifecycle.initial, graphLifecycle.activeWork].includes(lifecycle);
+  if (assignmentState === 'ACTIVE') return lifecycle === graphLifecycle.activeWork;
+  if (['WORK_COMPLETE', 'REBASE_REQUIRED', 'READY_TO_MERGE', 'MERGED', 'CLEANUP_PENDING', 'ARCHIVED'].includes(assignmentState)) return lifecycle === graphLifecycle.successfulCompletion;
+  return false;
 }
 
 function effectiveAssignmentState(assignment, plan, worker, integrationRevision, repositoryRoot) {
@@ -467,16 +546,27 @@ function effectiveAssignmentState(assignment, plan, worker, integrationRevision,
 function reconcile(graph, ledger, invocationWorktree = ledger.topLevelWorktree, environment = null) {
   const plansById = new Map(graph.plans.map((plan) => [plan.id, plan]));
   const integrationRevision = git(ledger.topLevelWorktree, ['rev-parse', 'HEAD']);
-  const workers = observedWorkers(graph, ledger, environment);
+  const hostObservation = environment ? readHostObservation(ledger.topLevelWorktree, graph.campaignId, environment) : null;
+  const hostSessions = new Map((hostObservation?.sessions ?? []).map((session) => [session.sessionId, session]));
+  const completeSessionIds = new Set(hostObservation?.completeSessionIds ?? []);
+  const hostObservationStale = hostObservation
+    ? Date.now() - Date.parse(hostObservation.observedAt) > HOST_OBSERVATION_MAX_AGE_MS
+    : false;
+  const workers = observedWorkers(graph, ledger, environment, hostObservation);
   const assignments = ledger.assignments.map((assignment) => {
     const plan = plansById.get(assignment.planId);
     const worker = workerFor(workers, assignment);
+    const hostSession = assignment.sessionId ? hostSessions.get(assignment.sessionId) : null;
     return {
       ...assignment,
       workerRevision: worker?.revision ?? assignment.workerRevision,
       state: plan ? effectiveAssignmentState(assignment, plan, worker, integrationRevision, ledger.topLevelWorktree) : assignment.state,
+      planLifecycle: plan?.lifecycle ?? null,
+      hostState: hostSession?.state ?? (assignment.sessionId ? 'unknown' : null),
+      managedWorktree: hostSession?.managedWorktree ?? null,
+      worktreeExists: Boolean(assignment.worktree && fs.existsSync(assignment.worktree)),
     };
-  }).sort((left, right) => left.planId.localeCompare(right.planId));
+  }).sort((left, right) => left.planId.localeCompare(right.planId) || left.id.localeCompare(right.id));
   const assignedPlans = new Set(assignments.filter((assignment) => assignment.state !== 'ARCHIVED').map((assignment) => assignment.planId));
   const completePlans = new Set(graph.plans.filter((plan) => plan.lifecycle === graph.lifecycle.successfulCompletion).map((plan) => plan.id));
   const readyPlans = graph.plans.filter((plan) => (
@@ -488,36 +578,99 @@ function reconcile(graph, ledger, invocationWorktree = ledger.topLevelWorktree, 
   const occupiedWorktrees = new Set(assignments.filter((assignment) => assignment.state !== 'ARCHIVED').map((assignment) => assignment.worktree).filter(Boolean));
   const idleWorkers = workers.filter((worker) => worker.activity === 'idle' && worker.clean && !worker.worktreeArchived && !worker.sessionArchived
     && !occupiedSessions.has(worker.sessionId) && !occupiedWorktrees.has(worker.worktree)).sort((left, right) => (left.sessionId ?? '').localeCompare(right.sessionId ?? ''));
+  const sessionAssignments = assignments.filter(({ sessionId }) => sessionId !== null).sort((left, right) => left.sessionId.localeCompare(right.sessionId) || left.id.localeCompare(right.id));
+  const workingSessions = sessionAssignments.filter(({ hostState }) => hostState === 'working');
+  const waitingSessions = sessionAssignments.filter(({ hostState }) => hostState === 'waiting');
+  const finishedSessions = sessionAssignments.filter(({ hostState }) => hostState === 'completed');
+  const idleSessions = sessionAssignments.filter(({ hostState }) => ['waiting', 'completed'].includes(hostState));
+  const worktrees = sessionAssignments.filter(({ worktree }) => worktree !== null).sort((left, right) => left.worktree.localeCompare(right.worktree) || left.id.localeCompare(right.id));
+  const inProgressPlans = graph.plans.filter(({ lifecycle }) => lifecycle === graph.lifecycle.activeWork).map((plan) => {
+    const assignment = assignments.find((item) => item.state !== 'ARCHIVED' && item.planId === plan.id);
+    return { planId: plan.id, assignmentId: assignment?.id ?? null, sessionId: assignment?.sessionId ?? null, worktree: assignment?.worktree ?? null };
+  }).sort((left, right) => left.planId.localeCompare(right.planId));
+  const reusableWorkers = idleWorkers;
   const status = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     campaignId: graph.campaignId,
     invocationWorktree,
     effectiveWorktree: ledger.topLevelWorktree,
     coordinatorSessionId: ledger.coordinatorSessionId,
     integrationRevision,
+    observedAt: hostObservation?.observedAt ?? null,
     assignments,
+    sessionAssignments,
+    workingSessions,
+    idleSessions,
+    waitingSessions,
+    finishedSessions,
+    worktrees,
+    inProgressPlans,
     readyPlans,
     activeWorkers: assignments.filter((assignment) => ['DISPATCH_PENDING', 'ACTIVE', 'WORK_COMPLETE'].includes(assignment.state)),
     idleWorkers,
+    reusableWorkers,
     rebaseRequired: assignments.filter((assignment) => assignment.state === 'REBASE_REQUIRED'),
     readyToMerge: assignments.filter((assignment) => assignment.state === 'READY_TO_MERGE'),
     cleanupPending: assignments.filter((assignment) => ['MERGED', 'CLEANUP_PENDING'].includes(assignment.state)),
     pendingAction: ledger.pendingAction,
     diagnostics: [],
   };
+  const activeAssignments = assignments.filter(({ state }) => state !== 'ARCHIVED');
+  for (const [field, label] of [['planId', 'plan'], ['sessionId', 'session'], ['worktree', 'worktree']]) {
+    const groups = new Map();
+    for (const assignment of activeAssignments) {
+      const value = assignment[field];
+      if (value === null) continue;
+      if (!groups.has(value)) groups.set(value, []);
+      groups.get(value).push(assignment);
+    }
+    for (const [value, group] of groups) if (group.length > 1) status.diagnostics.push(diagnosticRecord(
+      'CAMPAIGN_ASSIGNMENT_CONFLICT',
+      `more than one active assignment uses ${label} ${value}`,
+      group[0],
+      { assignmentIds: group.map(({ id }) => id).sort() },
+    ));
+  }
+  for (const plan of graph.plans) {
+    if (plan.id !== graph.campaignId && plan.lifecycle === graph.lifecycle.activeWork
+      && !activeAssignments.some(({ planId }) => planId === plan.id)) {
+      status.diagnostics.push(diagnosticRecord('CAMPAIGN_PLAN_UNASSIGNED', `active plan ${plan.id} has no active assignment`, { planId: plan.id }));
+    }
+  }
   for (const assignment of assignments) {
-    if (!plansById.has(assignment.planId)) status.diagnostics.push({ code: 'CAMPAIGN_ASSIGNMENT_PLAN_MISSING', message: `assignment ${assignment.id} references missing plan ${assignment.planId}` });
+    if (!plansById.has(assignment.planId)) status.diagnostics.push(diagnosticRecord('CAMPAIGN_ASSIGNMENT_PLAN_MISSING', `assignment ${assignment.id} references missing plan ${assignment.planId}`, assignment));
+    else if (!lifecycleCompatible(assignment.state, assignment.planLifecycle, graph.lifecycle)) status.diagnostics.push(diagnosticRecord('CAMPAIGN_ASSIGNMENT_LIFECYCLE', `assignment ${assignment.id} state ${assignment.state} is incompatible with plan lifecycle ${assignment.planLifecycle}`, assignment));
     const worker = workerFor(workers, assignment);
     if (assignment.state !== 'DISPATCH_PENDING' && assignment.state !== 'ARCHIVED' && !assignment.worktreeArchived && (!worker || worker.activity === 'missing')) {
-      status.diagnostics.push({ code: 'CAMPAIGN_WORKER_MISSING', message: `assignment ${assignment.id} has no live worker observation` });
+      status.diagnostics.push(diagnosticRecord('CAMPAIGN_WORKER_MISSING', `assignment ${assignment.id} has no live worker observation`, assignment));
+    }
+    if (environment && assignment.state !== 'ARCHIVED' && assignment.sessionId) {
+      const hostSession = hostSessions.get(assignment.sessionId);
+      if (!hostObservation) status.diagnostics.push(diagnosticRecord('CAMPAIGN_HOST_OBSERVATION_MISSING', `assignment ${assignment.id} has no Codex host observation`, assignment));
+      else if (hostObservationStale) status.diagnostics.push(diagnosticRecord('CAMPAIGN_HOST_OBSERVATION_STALE', `host observation for session ${assignment.sessionId} is older than five minutes`, assignment));
+      else if (!completeSessionIds.has(assignment.sessionId)) status.diagnostics.push(diagnosticRecord('CAMPAIGN_HOST_OBSERVATION_INCOMPLETE', `host observation is incomplete for session ${assignment.sessionId}`, assignment));
+      else if (!hostSession || hostSession.state === 'missing') {
+        status.diagnostics.push(diagnosticRecord('CAMPAIGN_SESSION_MISSING', `session ${assignment.sessionId} is missing`, assignment));
+        if (assignment.worktreeExists) status.diagnostics.push(diagnosticRecord('CAMPAIGN_WORKTREE_SESSION_MISSING', `worktree ${assignment.worktree} remains after session ${assignment.sessionId} went missing`, assignment));
+      } else if (hostSession.state === 'archived') status.diagnostics.push(diagnosticRecord('CAMPAIGN_SESSION_ARCHIVED', `session ${assignment.sessionId} is archived while its assignment remains active`, assignment));
+      else if (hostSession.state === 'unknown') status.diagnostics.push(diagnosticRecord('CAMPAIGN_SESSION_UNKNOWN', `session ${assignment.sessionId} could not be observed`, assignment));
+      if (hostSession?.worktree && assignment.worktree && hostSession.worktree !== assignment.worktree) status.diagnostics.push(diagnosticRecord('CAMPAIGN_SESSION_WORKTREE_MISMATCH', `session ${assignment.sessionId} reports worktree ${hostSession.worktree} instead of ${assignment.worktree}`, assignment));
+      if (hostSession?.worktree === ledger.topLevelWorktree) status.diagnostics.push(diagnosticRecord('CAMPAIGN_SESSION_IN_COORDINATOR_WORKTREE', `session ${assignment.sessionId} runs in the coordinator worktree`, assignment));
+      if (hostSession && !hostSession.managedWorktree) status.diagnostics.push(diagnosticRecord('CAMPAIGN_WORKTREE_NOT_MANAGED', `session ${assignment.sessionId} is not in a Codex-managed worktree`, assignment));
+    }
+    if (assignment.state !== 'ARCHIVED' && assignment.worktree && !assignment.worktreeArchived && !assignment.worktreeExists) {
+      status.diagnostics.push(diagnosticRecord('CAMPAIGN_WORKTREE_MISSING', `worker worktree is missing: ${assignment.worktree}`, assignment));
     }
     if (['MERGED', 'CLEANUP_PENDING'].includes(assignment.state)
       && (!assignment.workerRevision
         || spawnSync('git', ['-C', ledger.topLevelWorktree, 'merge-base', '--is-ancestor', assignment.workerRevision, integrationRevision]).status !== 0)) {
-      status.diagnostics.push({ code: 'CAMPAIGN_CLEANUP_UNINTEGRATED', message: `assignment ${assignment.id} worker revision is not integrated` });
+      status.diagnostics.push(diagnosticRecord('CAMPAIGN_CLEANUP_UNINTEGRATED', `assignment ${assignment.id} worker revision is not integrated`, assignment));
     }
   }
-  return readStatusV1(status);
+  status.diagnostics.sort((left, right) => left.code.localeCompare(right.code)
+    || (left.planId ?? '').localeCompare(right.planId ?? '')
+    || (left.assignmentId ?? '').localeCompare(right.assignmentId ?? ''));
+  return readStatusV2(status);
 }
 
 function action(type, assignment, payload = {}) {
@@ -552,6 +705,22 @@ function advanceLedger(graph, ledger, environment = null) {
     git(ledger.topLevelWorktree, ['merge', '--ff-only', merge.workerRevision]);
     ledger.integrationRevision = git(ledger.topLevelWorktree, ['rev-parse', 'HEAD']);
     merge.state = 'MERGED';
+    return null;
+  }
+  const reuse = ledger.assignments.find((item) => {
+    const current = status.assignments.find(({ id }) => id === item.id);
+    const worker = workerFor(ledger.workers, item);
+    return item.state === 'CLEANUP_PENDING' && status.readyPlans.length > 0
+      && !item.worktreeArchived && !item.sessionArchived
+      && current?.hostState === 'completed' && current.managedWorktree && current.worktreeExists
+      && worker?.clean;
+  });
+  if (reuse) {
+    reuse.state = 'ARCHIVED';
+    const worker = workerFor(ledger.workers, reuse);
+    worker.activity = 'idle';
+    worker.evidenceComplete = false;
+    if (environment) removeWorkerBinding(environment, reuse.id);
     return null;
   }
   const cleanup = ledger.assignments.find((item) => ['MERGED', 'CLEANUP_PENDING'].includes(item.state));
@@ -687,6 +856,9 @@ function parseArguments(argv) {
     input = argv[1];
     actionId = argv[2];
     try { result = JSON.parse(argv[4]); } catch (error) { fail('CAMPAIGN_ACTION_RESULT', `result is not valid JSON: ${error.message}`, 2); }
+  } else if (operation === 'observe' && argv.length === 4 && argv[2] === '--snapshot') {
+    input = argv[1];
+    try { result = JSON.parse(argv[3]); } catch (error) { fail('CAMPAIGN_HOST_OBSERVATION', `snapshot is not valid JSON: ${error.message}`, 2); }
   } else if (operation === 'attach' && argv.length === 2) {
     result = argv[1];
   } else fail('CAMPAIGN_ORCHESTRATION_USAGE', usage(), 2);
@@ -694,7 +866,7 @@ function parseArguments(argv) {
 }
 
 function usage() {
-  return 'usage: ponytail campaign status [<campaign>] [--json]\n       ponytail campaign advance [<campaign>] [--json]\n       ponytail campaign action-result <campaign> <action-id> --result <json>\n       ponytail campaign attach <token>';
+  return 'usage: ponytail campaign status [<campaign>] [--json]\n       ponytail campaign observe <campaign> --snapshot <json>\n       ponytail campaign advance [<campaign>] [--json]\n       ponytail campaign action-result <campaign> <action-id> --result <json>\n       ponytail campaign attach <token>';
 }
 
 function run(argv = process.argv.slice(2), options = {}) {
@@ -721,6 +893,21 @@ function run(argv = process.argv.slice(2), options = {}) {
     process.stdout.write(`${JSON.stringify(status)}\n`);
     return status;
   }
+  if (request.operation === 'observe') {
+    const resolution = resolveInvocationWorktree(invocationWorktree, environment, false);
+    const graph = resolveGraph(resolution.effectiveWorktree, request.input);
+    const ledger = readLedger(resolution.effectiveWorktree, graph.campaignId, environment);
+    if (!ledger.coordinatorSessionId) fail('CAMPAIGN_COORDINATOR_REQUIRED', 'campaign observation requires one authenticated coordinator binding');
+    withWorktreeLock(resolution.effectiveWorktree, environment, () => writeHostObservation(
+      resolution.effectiveWorktree,
+      graph.campaignId,
+      request.result,
+      environment,
+    ));
+    const status = reconcile(graph, ledger, resolution.invocationWorktree, environment);
+    process.stdout.write(`${JSON.stringify(status)}\n`);
+    return status;
+  }
   const resolution = resolveInvocationWorktree(invocationWorktree, environment, request.operation === 'status');
   const graph = resolveGraph(resolution.effectiveWorktree, request.input ?? resolution.workerBinding?.campaignId);
   let status;
@@ -741,6 +928,7 @@ function diagnostic(error) {
 
 module.exports = {
   CampaignActionReaders: Object.freeze({ V1: readActionV1 }),
+  CampaignHostObservationReaders,
   CampaignLedgerReaders,
   CampaignOrchestrationError,
   CampaignStatusReaders,
@@ -749,6 +937,7 @@ module.exports = {
   bindWorker,
   diagnostic,
   humanStatus,
+  hostObservationPath,
   ledgerPath,
   newLedger,
   parseArguments,
@@ -756,11 +945,14 @@ module.exports = {
   readAssignmentV1,
   readLedger,
   readLedgerV1,
+  readHostObservation,
+  readHostObservationV1,
   readWorkerBindings,
   readWorkerBindingsV1,
   removeWorkerBinding,
   releaseLedgerCoordinator,
   readStatusV1,
+  readStatusV2,
   readWorkerV1,
   reconcile,
   recordActionResult,
@@ -770,6 +962,7 @@ module.exports = {
   usage,
   withLedgerLock,
   withWorktreeLock,
+  writeHostObservation,
 };
 
 if (require.main === module) {

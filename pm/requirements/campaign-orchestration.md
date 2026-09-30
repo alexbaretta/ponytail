@@ -144,6 +144,42 @@ loss and session resumption. It must fail closed on contradictory, stale, or
 unavailable evidence rather than guess, and it must identify the exact evidence
 that prevents an action.
 
+The versioned programmatic view must expose, in deterministic order:
+
+- every retained campaign assignment with its plan, session, assignment state,
+  plan lifecycle, and worktree;
+- the assigned sessions that are currently working, idle while waiting for
+  coordinator input, finished, archived, missing, or not observable;
+- the assigned campaign item for every such session and the session assigned
+  to every item currently being worked;
+- every associated worktree with its session, item, existence, and
+  host-confirmed Codex-managed-worktree classification; and
+- the subset of workers that is safe to reuse, which is narrower than the set
+  of sessions that merely have no active turn.
+
+Live session observations must enter through a supported authenticated Codex
+host boundary. An observation identifies its collection time and the exact
+session identities for which it is complete. Absence from a partial listing is
+unknown, not missing. A retained observation may support recovery after
+coordinator context loss, but status must identify missing or incomplete live
+evidence. Evidence older than five minutes is stale, must be diagnosed, and
+must block mutation until refreshed.
+
+Status must report structured diagnostics carrying the affected plan,
+assignment, session, and worktree identities whenever available. It must
+separately diagnose a missing worker worktree, a missing or archived session
+whose worktree remains, a worker running in the coordinator worktree, a worker
+not proven to use a Codex-managed worktree, duplicate active use of a plan,
+session, or worktree, a non-root active-work plan without an assignment, and
+an assignment whose state is incompatible with the plan lifecycle. Expected
+dispatch-before-activation and completion/integration/cleanup lifecycle pairs
+are not contradictions.
+
+Contradictory operational records must remain inspectable. Read-only status
+must return their complete diagnostics instead of aborting at the first
+cross-record conflict; every mutating campaign operation must fail closed until
+all blocking diagnostics are resolved.
+
 Ponytail must prevent concurrent or repeated coordinator activity from assigning
 one plan to more than one active worker. Before dispatch, it must durably and
 atomically associate the selected plan, session, worktree, branch, and campaign

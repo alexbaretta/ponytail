@@ -61,8 +61,9 @@ while project-wide management records remain under `pm/`.
   plan metadata readers, scoped campaign discovery and validation,
   repository-wide campaign inventory, census normalization, and human/JSON
   reporting. `src/campaign-orchestration.js` owns the versioned Ponytail-user
-  assignment ledger, dependency scheduler, reconciled status, verified
-  fast-forward integration, and typed host-action protocol.
+  assignment ledger, authenticated host-observation snapshot, dependency
+  scheduler, reconciled status, verified fast-forward integration, and typed
+  host-action protocol.
 - `ponytail.json` owns the TSTS build-impact target.
 - `cli/` owns user-facing parse-safe Bash tools. `cli/ponytail` owns project
   registration, optional pre-commit integration, and Codex configuration
