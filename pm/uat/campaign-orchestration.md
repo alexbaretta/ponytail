@@ -66,6 +66,10 @@ Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
    campaign is malformed.
    - The selected valid campaign still reports successfully and contains no
      records or diagnostics from the unrelated campaign.
+5. Run `ponytail qa references` while managed campaign data is malformed or
+   several campaigns are active.
+   - Reference QA neither emits campaign inventory nor invokes campaign
+     validation. Its result depends only on its own project-reference contract.
 
 ## Arc: Enforce top-level coordinator ownership
 

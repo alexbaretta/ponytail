@@ -38,8 +38,10 @@ scan project contents, load other projects, run package managers, or run tests.
 blessed worktree and reports unavailable, dirty, invalid, missing-snapshot, or
 stale registrations. It does not update the registry.
 `ponytail qa [references]` separately scans for forbidden references. It does
-not run integrations or arbitrary project commands. Future moderately
-expensive checks belong in this dispatcher, with explicit selectors.
+not validate campaigns, run integrations, or run arbitrary project commands.
+Campaign validity and uniqueness are enforced only by commands in the
+`ponytail campaign` subtree. Future moderately expensive non-campaign checks
+belong in the QA dispatcher, with explicit selectors.
 
 Exit codes: 0 success; 1 configuration/tool/usage error; 2 no Git worktree;
 3 repository not registered; 4 reference QA findings. Child update commands

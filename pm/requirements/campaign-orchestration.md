@@ -29,6 +29,8 @@ as a plan P that references campaign parent C when C does not reference P. On
 2026-09-30, the stakeholder approved concurrent active campaigns when a command
 selects one explicitly, repository-wide inventory without selection, campaign
 listing by lifecycle status, and campaign activation from any member plan.
+The stakeholder further clarified on 2026-09-30 that only commands in the
+`ponytail campaign` subtree may enforce campaign validity or uniqueness.
 
 ## Repository-wide campaign inventory
 
@@ -57,6 +59,11 @@ duplicate plan identities, unresolved or cyclic parent and dependency edges,
 invalid lifecycle placement, invalid sprint or tasklet state, and campaign-root
 closure violations. It must return deterministic diagnostics that identify
 every plan whose state cannot be classified safely.
+
+Campaign validity and uniqueness are command-local concerns of the `ponytail
+campaign` subtree. A command outside that subtree must not invoke campaign
+validation, emit campaign inventory as a side effect, or fail because campaign
+data is invalid or ambiguous.
 
 A no-input campaign report must describe the repository-wide inventory rather
 than select one active campaign. It must report every valid active campaign,
@@ -172,9 +179,8 @@ campaign state from chat history. Ponytail must not infer throughput or an
 estimated completion time.
 
 Repository-wide validation must run at campaign coordination and resumption,
-before dispatch, after a campaign relationship or lifecycle change, and through
-the host's ordinary plan-documentation QA gate. When several campaigns are
-active, status and advancement without campaign input must fail with every
+before dispatch, and after a campaign relationship or lifecycle change. When
+several campaigns are active, status and advancement without campaign input must fail with every
 candidate rather than choose one. Explicitly selected operations remain
 available. Action-result recording must name its campaign explicitly; worker
 attach remains uniquely scoped by its authenticated token. Several campaign

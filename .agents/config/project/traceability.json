@@ -246,6 +246,11 @@
       "class": "issue",
       "path": "pm/bugs/closed/2026-09-29-BUG-unmarked_legacy_campaign_validation.md",
       "locator": "text"
+    },
+    {
+      "class": "issue",
+      "path": "pm/bugs/closed/2026-09-30-BUG-non_campaign_commands_validate_campaigns.md",
+      "locator": "text"
     }
   ],
   "entities": [],

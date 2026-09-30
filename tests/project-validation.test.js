@@ -95,6 +95,18 @@ test('local QA ignores a removed project while global validation identifies it',
   );
 });
 
+test('local QA is independent of invalid campaign configuration', t => {
+  // Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
+  const f = fixture(t);
+  const current = repository(f, 'current');
+  write(current, '.agents/config/project/management.json', '{invalid');
+
+  const result = run(f.home, current, 'qa', 'references');
+  assert.equal(result.status, 0, result.stderr);
+  assert.doesNotMatch(result.stdout, /campaign/i);
+  assert.doesNotMatch(result.stderr, /campaign/i);
+});
+
 test('blessing selects one clean tracked worktree and both command spellings report it', t => {
   const f = fixture(t);
   const main = repository(f, 'main');

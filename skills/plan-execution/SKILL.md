@@ -632,8 +632,10 @@ approved work when possible. Do not duplicate the validator's canonical
 sprint or tasklet selector logic manually.
 
 Run repository-wide validation when campaign coordination begins or resumes,
-before dispatch, after any campaign relationship or lifecycle change, and
-through the host project's ordinary plan-documentation QA gate. Repair every
+before dispatch, and after any campaign relationship or lifecycle change.
+Only commands in the `ponytail campaign` subtree enforce campaign validity or
+uniqueness; commands outside that subtree remain independent of campaign
+state. Repair every
 reported managed-plan defect before a coordinator mutation; never select one
 active campaign from an ambiguous inventory. `campaign list` defaults to
 active campaigns and its explicit status flags project the configured initial,

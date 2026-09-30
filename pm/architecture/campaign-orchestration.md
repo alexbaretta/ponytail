@@ -64,8 +64,9 @@ ponytail campaign validate --all [--json]
 It evaluates all independently classifiable plans and campaigns in stable
 order, returns nonzero when any managed record is invalid, and retains all
 deterministic diagnostics in its JSON form so agents can repair the complete
-documentation set in one pass. Ordinary project QA runs this mode for managed
-plan inputs.
+documentation set in one pass. The campaign command subtree is the only CLI
+boundary that instantiates the campaign census; ordinary project QA remains
+independent of campaign state.
 
 A top-level worktree has one exclusive coordinator session, which may own
 several campaign bindings. A distinct user-selected top-level worktree has its

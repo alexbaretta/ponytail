@@ -155,9 +155,11 @@ test('ponytail help publishes campaign, plan-input, traceability, and plan comma
   assert.match(result.stdout, /ponytail validate \[--all\]/);
 });
 
-test('ponytail qa validates the repository-wide campaign inventory when configured', () => {
+test('QA omits campaign census and the CLI dispatches it through campaign', () => {
   const contents = fs.readFileSync(ponytail, 'utf8');
-  assert.match(contents, /"src\/campaign-census\.js"\), "validate", "--all"/);
+  const qaFunction = contents.match(/def qa\([\s\S]+?\n\ndef update_skills/)[0];
+  assert.doesNotMatch(qaFunction, /campaign-census/);
+  assert.equal(contents.match(/src\/campaign-census\.js/g).length, 1);
 });
 
 test('combined installer installs Codex skills and CLI tools only', () => {

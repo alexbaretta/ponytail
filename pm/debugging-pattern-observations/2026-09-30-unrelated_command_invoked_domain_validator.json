@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-09-30-unrelated_command_invoked_domain_validator",
+  "recorded_at": "2026-09-30T12:30:15-07:00",
+  "source_references": [
+    "pm/bugs/closed/2026-09-30-BUG-non_campaign_commands_validate_campaigns.md",
+    "cli/ponytail"
+  ],
+  "context": {
+    "languages": ["bash", "python", "javascript"],
+    "frameworks": ["Node.js test runner"],
+    "components": ["Ponytail CLI", "reference QA", "campaign census"],
+    "affected_boundaries": ["non-campaign command to campaign validation"],
+    "code_references": ["cli/ponytail: qa", "cli/ponytail: campaign dispatch"]
+  },
+  "observed_behavior": "ponytail qa references emitted repository campaign inventory and could fail on invalid campaign data before running reference QA.",
+  "expected_behavior": "A command outside the ponytail campaign subtree neither validates campaigns nor changes its result because campaign data is invalid or ambiguous.",
+  "causal_mechanism": "The shared qa function directly invoked repository-wide campaign validation whenever management configuration existed, coupling an unrelated command to campaign state.",
+  "anti_pattern": {
+    "structural_description": "A command handler invokes a separate domain's strict validator as an unconditional prerequisite.",
+    "why_it_fails": "The caller inherits output, validity rules, and failure modes that are outside its command contract."
+  },
+  "correct_pattern": {
+    "required_invariant": "Strict domain validation is dispatched only through commands that operate on that domain.",
+    "implementation_description": "Dispatch campaign census only from the ponytail campaign subtree and keep reference QA limited to project-reference inputs."
+  },
+  "applicability_conditions": [
+    "A CLI exposes separate command subtrees with independently owned validation contracts.",
+    "One command has directly embedded another domain's validator as a prerequisite."
+  ],
+  "known_non_matches": [
+    "A campaign coordination command explicitly required to validate campaign state before mutation."
+  ],
+  "confirmation_evidence": [
+    "Before the repair, malformed campaign configuration made the focused local QA regression exit 1 with CAMPAIGN_CONFIG_JSON.",
+    "After the repair, the same local QA fixture exits 0 without campaign output."
+  ],
+  "regression_proofs": [
+    "tests/cli-tools.test.js: QA omits campaign census and the CLI dispatches it through campaign",
+    "tests/project-validation.test.js: local QA is independent of invalid campaign configuration"
+  ]
+}
