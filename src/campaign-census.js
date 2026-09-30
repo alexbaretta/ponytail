@@ -27,8 +27,9 @@ const MANAGEMENT_CONFIG_PATH = '.agents/config/project/management.json';
 const PLAN_METADATA_MARKER = 'ponytail-plan-campaign';
 const PLAN_SCHEMA_VERSION = 2;
 const REPORT_SCHEMA_VERSION = 1;
-const INVENTORY_SCHEMA_VERSION = 2;
+const INVENTORY_SCHEMA_VERSION = 3;
 const LIFECYCLE_ROLES = ['initial', 'activeWork', 'successfulCompletion', 'deferred', 'rejected'];
+const CAMPAIGN_STATUSES = ['active', 'pending', 'closed', 'deferred', 'rejected'];
 const REPORT_TABLE_FLAGS = Object.freeze({
   '--summary-table': ['summaryTable', true],
   '--no-summary-table': ['summaryTable', false],
@@ -997,14 +998,6 @@ function buildRepositoryInventory(repositoryRoot, config, command = 'report') {
     const activePlanIds = plans.filter((plan) => plan.rootPlanId === campaign.rootPlanId && plan.lifecycle === config.lifecycle.roles.activeWork).map((plan) => plan.id);
     return activePlanIds.length === 0 ? [] : [{ rootPlanId: campaign.rootPlanId, activePlanIds }];
   });
-  if (activeCampaigns.length > 1) {
-    diagnostics.push({
-      code: 'CAMPAIGN_ACTIVE_AMBIGUOUS',
-      message: `multiple campaigns contain active plans: ${activeCampaigns.map((campaign) => campaign.rootPlanId).join(', ')}`,
-      recordId: null,
-      path: null,
-    });
-  }
   const invalidPlans = [...invalidByPath.values()].sort((left, right) => left.path.localeCompare(right.path));
   for (const plan of invalidPlans) plan.diagnostics.sort((left, right) => left.code.localeCompare(right.code) || left.message.localeCompare(right.message));
   const unmanagedPlans = unmanagedCandidates
@@ -1022,12 +1015,12 @@ function buildRepositoryInventory(repositoryRoot, config, command = 'report') {
     unmanagedPlans: unmanagedPlans.sort((left, right) => left.path.localeCompare(right.path)),
     diagnostics,
   };
-  return readCampaignReportV2(inventory);
+  return readCampaignReportV3(inventory);
 }
 
 function readCampaignReportV2(value) {
   exactKeys(value, ['schemaVersion', 'valid', 'invocation', 'repository', 'activeCampaigns', 'campaigns', 'plans', 'invalidPlans', 'unmanagedPlans', 'diagnostics'], 'campaign inventory');
-  if (value.schemaVersion !== INVENTORY_SCHEMA_VERSION || typeof value.valid !== 'boolean') dataError('CAMPAIGN_REPORT_SCHEMA', 'invalid V2 campaign inventory envelope');
+  if (value.schemaVersion !== 2 || typeof value.valid !== 'boolean') dataError('CAMPAIGN_REPORT_SCHEMA', 'invalid V2 campaign inventory envelope');
   exactKeys(value.invocation, ['command'], 'campaign inventory invocation');
   exactKeys(value.repository, ['root', 'worktree', 'commit', 'branch', 'detached', 'clean'], 'campaign inventory repository');
   if (!['report', 'validate'].includes(value.invocation.command)
@@ -1047,7 +1040,29 @@ function readCampaignReportV2(value) {
   return value;
 }
 
-CampaignReportReaders = Object.freeze({ V1: readCampaignReportV1, V2: readCampaignReportV2 });
+function readCampaignReportV3(value) {
+  exactKeys(value, ['schemaVersion', 'valid', 'invocation', 'repository', 'activeCampaigns', 'campaigns', 'plans', 'invalidPlans', 'unmanagedPlans', 'diagnostics'], 'campaign inventory');
+  if (value.schemaVersion !== INVENTORY_SCHEMA_VERSION || typeof value.valid !== 'boolean') dataError('CAMPAIGN_REPORT_SCHEMA', 'invalid V3 campaign inventory envelope');
+  exactKeys(value.invocation, ['command'], 'campaign inventory invocation');
+  exactKeys(value.repository, ['root', 'worktree', 'commit', 'branch', 'detached', 'clean'], 'campaign inventory repository');
+  if (!['list', 'report', 'validate'].includes(value.invocation.command)
+    || ![value.activeCampaigns, value.campaigns, value.plans, value.invalidPlans, value.unmanagedPlans, value.diagnostics].every(Array.isArray)) {
+    dataError('CAMPAIGN_REPORT_SCHEMA', 'campaign inventory contains invalid values');
+  }
+  for (const record of value.activeCampaigns) exactKeys(record, ['rootPlanId', 'activePlanIds'], 'active campaign');
+  for (const record of value.campaigns) exactKeys(record, ['rootPlanId', 'planIds'], 'campaign');
+  for (const record of value.plans) exactKeys(record, ['id', 'rootPlanId', 'parentPlanId', 'dependsOn', 'lifecycle', 'path'], 'campaign inventory plan');
+  for (const record of value.invalidPlans) {
+    exactKeys(record, ['id', 'lifecycle', 'path', 'diagnostics'], 'invalid campaign plan');
+    if (!Array.isArray(record.diagnostics)) dataError('CAMPAIGN_REPORT_SCHEMA', 'invalid plan diagnostics must be an array');
+    for (const item of record.diagnostics) exactKeys(item, ['code', 'message', 'recordId', 'path'], 'campaign diagnostic');
+  }
+  for (const record of value.unmanagedPlans) exactKeys(record, ['path'], 'unmanaged campaign plan');
+  for (const record of value.diagnostics) exactKeys(record, ['code', 'message', 'recordId', 'path'], 'campaign diagnostic');
+  return value;
+}
+
+CampaignReportReaders = Object.freeze({ V1: readCampaignReportV1, V2: readCampaignReportV2, V3: readCampaignReportV3 });
 
 function percentage(value) {
   return value === null ? 'unavailable (no tasklets)' : `${Number.isInteger(value) ? value : value.toFixed(2)}%`;
@@ -1142,6 +1157,114 @@ function humanInventory(inventory, worktree) {
   return `${lines.join('\n')}\n`;
 }
 
+function campaignStatus(inventory, config, campaign) {
+  if (inventory.activeCampaigns.some(({ rootPlanId }) => rootPlanId === campaign.rootPlanId)) return 'active';
+  const root = inventory.plans.find(({ id }) => id === campaign.rootPlanId);
+  const statuses = {
+    [config.lifecycle.roles.initial]: 'pending',
+    [config.lifecycle.roles.successfulCompletion]: 'closed',
+    [config.lifecycle.roles.deferred]: 'deferred',
+    [config.lifecycle.roles.rejected]: 'rejected',
+  };
+  return statuses[root.lifecycle];
+}
+
+function listCampaigns(repositoryRoot, config, status = 'active') {
+  const inventory = buildRepositoryInventory(repositoryRoot, config, 'list');
+  if (!inventory.valid) dataError('CAMPAIGN_INVENTORY_INVALID', 'repository campaign inventory is invalid');
+  return inventory.campaigns
+    .map((campaign) => ({ rootPlanId: campaign.rootPlanId, status: campaignStatus(inventory, config, campaign) }))
+    .filter((campaign) => campaign.status === status);
+}
+
+function markdownFiles(directory) {
+  const files = [];
+  for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+    const entryPath = path.join(directory, entry.name);
+    if (entry.isSymbolicLink()) continue;
+    if (entry.isDirectory()) files.push(...markdownFiles(entryPath));
+    else if (entry.isFile() && entry.name.endsWith('.md')) files.push(entryPath);
+  }
+  return files;
+}
+
+function pathWithin(filePath, directory) {
+  const relative = path.relative(directory, filePath);
+  return relative === '' || (!relative.startsWith(`..${path.sep}`) && relative !== '..' && !path.isAbsolute(relative));
+}
+
+function movedPath(filePath, sourceDirectory, destinationDirectory) {
+  return pathWithin(filePath, sourceDirectory)
+    ? path.join(destinationDirectory, path.relative(sourceDirectory, filePath))
+    : filePath;
+}
+
+function rewriteMovedLinks(text, sourceFile, destinationFile, sourceDirectory, destinationDirectory) {
+  return text.replace(/\]\(([^)]+)\)/g, (match, destination) => {
+    if (!destination || destination.startsWith('#') || /^[a-z][a-z0-9+.-]*:/i.test(destination) || path.isAbsolute(destination)) return match;
+    const suffixIndex = destination.search(/[?#]/);
+    const linkPath = suffixIndex === -1 ? destination : destination.slice(0, suffixIndex);
+    const suffix = suffixIndex === -1 ? '' : destination.slice(suffixIndex);
+    const target = path.resolve(path.dirname(sourceFile), linkPath);
+    const movedTarget = movedPath(target, sourceDirectory, destinationDirectory);
+    if (sourceFile === destinationFile && target === movedTarget) return match;
+    let relative = path.relative(path.dirname(destinationFile), movedTarget).split(path.sep).join('/');
+    if (!relative.startsWith('.')) relative = `./${relative}`;
+    return `](${relative}${suffix})`;
+  });
+}
+
+function activateCampaign(repositoryRoot, config, input) {
+  const graph = campaignGraph(repositoryRoot, input);
+  const rootPlan = graph.plans.find(({ id }) => id === graph.campaignId);
+  const status = graph.plans.some(({ lifecycle }) => lifecycle === config.lifecycle.roles.activeWork)
+    ? 'active'
+    : ({
+      [config.lifecycle.roles.initial]: 'pending',
+      [config.lifecycle.roles.successfulCompletion]: 'closed',
+      [config.lifecycle.roles.deferred]: 'deferred',
+      [config.lifecycle.roles.rejected]: 'rejected',
+    })[rootPlan.lifecycle];
+  if (status === 'active') return { rootPlanId: graph.campaignId, activated: false };
+  if (status !== 'pending') {
+    dataError('CAMPAIGN_ACTIVATE_STATUS', `campaign ${graph.campaignId} is ${status}; only pending campaigns can be activated`, graph.campaignId, rootPlan.path);
+  }
+
+  const rootPlanFile = path.join(repositoryRoot, rootPlan.path);
+  const sourceDirectory = path.dirname(rootPlanFile);
+  const destinationDirectory = path.join(repositoryRoot, config.planRoot, config.lifecycle.roles.activeWork, graph.campaignId);
+  if (fs.existsSync(destinationDirectory)) toolError('CAMPAIGN_ACTIVATE_DESTINATION', `campaign activation destination already exists: ${path.relative(repositoryRoot, destinationDirectory)}`);
+  const files = markdownFiles(path.join(repositoryRoot, config.managementRoot));
+  const changes = files.map((sourceFile) => {
+    const destinationFile = movedPath(sourceFile, sourceDirectory, destinationDirectory);
+    let text = fs.readFileSync(sourceFile, 'utf8');
+    if (sourceFile === rootPlanFile) {
+      const statusPattern = /^- \*\*Status:\*\* `[^`]+`$/gm;
+      const matches = [...text.matchAll(statusPattern)];
+      if (matches.length !== 1) dataError('CAMPAIGN_PLAN_STATUS', 'campaign root must contain exactly one canonical status field', graph.campaignId, rootPlan.path);
+      text = text.replace(statusPattern, `- **Status:** \`${config.lifecycle.roles.activeWork}\``);
+    }
+    return {
+      sourceFile,
+      destinationFile,
+      original: fs.readFileSync(sourceFile, 'utf8'),
+      text: rewriteMovedLinks(text, sourceFile, destinationFile, sourceDirectory, destinationDirectory),
+    };
+  });
+
+  fs.mkdirSync(path.dirname(destinationDirectory), { recursive: true });
+  fs.renameSync(sourceDirectory, destinationDirectory);
+  try {
+    for (const change of changes) fs.writeFileSync(change.destinationFile, change.text);
+    buildReport(repositoryRoot, config, graph.campaignId);
+  } catch (error) {
+    fs.renameSync(destinationDirectory, sourceDirectory);
+    for (const change of changes) fs.writeFileSync(change.sourceFile, change.original);
+    throw error;
+  }
+  return { rootPlanId: graph.campaignId, activated: true };
+}
+
 function repositoryRoot() {
   const result = spawnSync('git', ['rev-parse', '--show-toplevel'], { encoding: 'utf8' });
   if (result.error || result.status !== 0) toolError('CAMPAIGN_REPOSITORY', 'current directory is not in a Git worktree');
@@ -1149,7 +1272,7 @@ function repositoryRoot() {
 }
 
 function usage() {
-  return 'usage: ponytail campaign validate <plan-name-or-path>\n       ponytail campaign validate --all [--json]\n       ponytail campaign report [<plan-name-or-path>] [--json] [--[no-]summary-table] [--[no-]plan-table] [--[no-]sprint-table]\n       ponytail campaign status [<campaign>] [--json]\n       ponytail campaign advance [<campaign>] [--json]\n       ponytail campaign action-result <action-id> --result <json>\n       ponytail campaign attach <token>';
+  return 'usage: ponytail campaign validate <plan-name-or-path>\n       ponytail campaign validate --all [--json]\n       ponytail campaign report [<plan-name-or-path>] [--json] [--[no-]summary-table] [--[no-]plan-table] [--[no-]sprint-table]\n       ponytail campaign list [--active|--pending|--closed|--deferred|--rejected]\n       ponytail campaign activate <plan-name-or-path>\n       ponytail campaign status [<campaign>] [--json]\n       ponytail campaign advance [<campaign>] [--json]\n       ponytail campaign action-result <campaign> <action-id> --result <json>\n       ponytail campaign attach <token>';
 }
 
 function run(argv = process.argv.slice(2)) {
@@ -1162,7 +1285,17 @@ function run(argv = process.argv.slice(2)) {
   let all = false;
   let tableFlagSeen = false;
   const tableOptions = {};
-  if (operation === 'validate') {
+  let campaignListStatus = 'active';
+  if (operation === 'list') {
+    if (argv.length > 2) toolError('CAMPAIGN_USAGE', usage());
+    if (argv.length === 2) {
+      if (!argv[1].startsWith('--') || !CAMPAIGN_STATUSES.includes(argv[1].slice(2))) toolError('CAMPAIGN_USAGE', usage());
+      campaignListStatus = argv[1].slice(2);
+    }
+  } else if (operation === 'activate') {
+    if (argv.length !== 2 || argv[1].startsWith('-')) toolError('CAMPAIGN_USAGE', usage());
+    input = argv[1];
+  } else if (operation === 'validate') {
     for (const argument of argv.slice(1)) {
       if (argument === '--all' && !all && input === undefined) all = true;
       else if (argument === '--json' && !json && input === undefined) json = true;
@@ -1189,11 +1322,21 @@ function run(argv = process.argv.slice(2)) {
     toolError('CAMPAIGN_USAGE', usage());
   }
   const root = repositoryRoot();
-  const resolution = require('./campaign-orchestration').resolveInvocationWorktree(root, process.env, true);
+  const resolution = require('./campaign-orchestration').resolveInvocationWorktree(root, process.env, operation !== 'activate');
   if (resolution.workerBinding) {
     toolError('CAMPAIGN_WORKER_READ_SCOPE', `campaign ${operation} must run in owning worktree ${resolution.effectiveWorktree}; use campaign status for an authenticated re-rooted worker view`);
   }
   const config = readManagementConfig(root);
+  if (operation === 'list') {
+    const campaigns = listCampaigns(root, config, campaignListStatus);
+    if (campaigns.length > 0) process.stdout.write(`${campaigns.map(({ rootPlanId }) => rootPlanId).join('\n')}\n`);
+    return campaigns;
+  }
+  if (operation === 'activate') {
+    const result = activateCampaign(root, config, input);
+    process.stdout.write(result.activated ? `Activated campaign ${result.rootPlanId}\n` : `Campaign ${result.rootPlanId} is already active\n`);
+    return result;
+  }
   if (all || (operation === 'report' && input === undefined)) {
     const inventory = buildRepositoryInventory(root, config, operation);
     if (json) process.stdout.write(`${JSON.stringify(inventory)}\n`);
@@ -1224,6 +1367,7 @@ module.exports = {
   CampaignManagementConfigReaders,
   CampaignPlanMetadataReaders,
   CampaignReportReaders,
+  activateCampaign,
   buildRepositoryInventory,
   buildReport,
   diagnostic,
@@ -1231,6 +1375,7 @@ module.exports = {
   campaignGraph,
   humanReport,
   humanInventory,
+  listCampaigns,
   linkedPlanFiles,
   listPlanSourceFiles,
   metadataBlocks,
@@ -1240,6 +1385,7 @@ module.exports = {
   readPlanMetadataV2,
   readCampaignReportV1,
   readCampaignReportV2,
+  readCampaignReportV3,
   readManagementConfig,
   resolveCampaignRoot,
   resolveCampaignScope,

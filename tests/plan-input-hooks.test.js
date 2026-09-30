@@ -48,6 +48,14 @@ function repository() {
   return root;
 }
 
+function addRootCampaign(root, id) {
+  const directory = path.join(root, 'pm', 'plans', 'in_progress', id);
+  fs.mkdirSync(path.join(directory, 'sprints'), { recursive: true });
+  fs.writeFileSync(path.join(directory, 'plan.md'), `# ${id}\n\nPlan ID: ${id}\nStatus: in_progress\n\n<!-- ponytail-plan-campaign\n{"schemaVersion":1,"id":"${id}","parent_plan_id":null}\n-->\n`);
+  fs.writeFileSync(path.join(directory, 'sprints', 'S01.md'), `# S01\n\n<!-- ponytail-plan-sprint\n${JSON.stringify({ schemaVersion: 3, id: 'S01', planning: { status: 'APPROVED', depends_on: [], scope_roots: ['src'] }, execution: { status: 'PENDING', depends_on: [], tasklets_reviewed: true } }, null, 2)}\n-->\n\n### [ ] Tasklet S01-F01-T01: fixture\n`);
+  fs.writeFileSync(path.join(directory, 'sprints', 'S01.tasklets.json'), `${JSON.stringify({ schemaVersion: 3, sprint: 'S01', features: { 'S01-F01': { depends_on: [], validation_tasklet: 'S01-F01-T01' } }, tasklets: { 'S01-F01-T01': { depends_on: [], affinity: ['fixture'], risk: 'normal', feature: 'S01-F01', planned_paths: [] } } }, null, 2)}\n`);
+}
+
 function run(root, event, pluginData = path.join(root, '.plugin-data')) {
   return spawnSync(process.execPath, [hook], {
     cwd: root,
@@ -118,9 +126,9 @@ test('worker attach is one-time, status re-roots, and worker mutations fail clos
     branch: workerBinding.branch,
     revision: workerBinding.revision,
   });
-  const actionPermission = run(root, { hook_event_name: 'PreToolUse', tool_name: 'exec_command', tool_input: { cmd: `ponytail campaign action-result ${pending.id} --result '${actionResult}'` } }, pluginData);
+  const actionPermission = run(root, { hook_event_name: 'PreToolUse', tool_name: 'exec_command', tool_input: { cmd: `ponytail campaign action-result root ${pending.id} --result '${actionResult}'` } }, pluginData);
   assert.match(JSON.parse(actionPermission.stdout).hookSpecificOutput.additionalContext, /Coordinator session authenticated/);
-  const actionCli = spawnSync(process.execPath, [path.join(__dirname, '..', 'src', 'campaign-census.js'), 'action-result', pending.id, '--result', actionResult], {
+  const actionCli = spawnSync(process.execPath, [path.join(__dirname, '..', 'src', 'campaign-census.js'), 'action-result', 'root', pending.id, '--result', actionResult], {
     cwd: root,
     env: { ...process.env, PLUGIN_DATA: pluginData, PONYTAIL_CAMPAIGN_STATE_DIR: pluginData },
     encoding: 'utf8',
@@ -173,11 +181,33 @@ test('coordinator bindings are exclusive, releasable, and fail closed', () => {
   assert.equal(tool(root, 'ponytail plan-input coordinate child').status, 0);
   const conflict = tool(root, 'ponytail plan-input coordinate root', 'other');
   assert.equal(JSON.parse(conflict.stdout).hookSpecificOutput.permissionDecision, 'deny');
-  assert.match(JSON.parse(conflict.stdout).hookSpecificOutput.permissionDecisionReason, /already coordinated by another session/);
+  assert.match(JSON.parse(conflict.stdout).hookSpecificOutput.permissionDecisionReason, /worktree already has coordinator session/);
 
   const release = tool(root, 'ponytail plan-input release child');
   assert.match(JSON.parse(release.stdout).hookSpecificOutput.additionalContext, /session released campaign root/);
   assert.equal(tool(root, 'ponytail plan-input coordinate root', 'other').status, 0);
+});
+
+test('one coordinator session binds several campaigns while unscoped enqueue stays unambiguous', () => {
+  const root = repository();
+  addRootCampaign(root, 'second');
+  assert.equal(tool(root, 'ponytail plan-input coordinate root').status, 0);
+  assert.equal(tool(root, 'ponytail plan-input coordinate second').status, 0);
+
+  const state = JSON.parse(fs.readFileSync(path.join(root, '.plugin-data', 'plan-input-coordinators.json'), 'utf8'));
+  assert.deepEqual(state.bindings.map(({ campaignId }) => campaignId).sort(), ['root', 'second']);
+  const enqueue = run(root, { hook_event_name: 'UserPromptSubmit', prompt: '/ponytail-enqueue ambiguous' });
+  assert.match(JSON.parse(enqueue.stdout).reason, /select a campaign explicitly.*root, second/);
+  assert.equal(tool(root, 'ponytail campaign advance second --json').status, 0);
+
+  const conflict = tool(root, 'ponytail plan-input coordinate second', 'other');
+  assert.equal(JSON.parse(conflict.stdout).hookSpecificOutput.permissionDecision, 'deny');
+  assert.match(JSON.parse(conflict.stdout).hookSpecificOutput.permissionDecisionReason, /already has coordinator session/);
+
+  const release = tool(root, 'ponytail plan-input release root');
+  assert.match(JSON.parse(release.stdout).hookSpecificOutput.additionalContext, /released campaign root/);
+  const recorded = run(root, { hook_event_name: 'UserPromptSubmit', prompt: '/ponytail-enqueue second only' });
+  assert.match(JSON.parse(recorded.stdout).reason, /for campaign second/);
 });
 
 test('producer hook ignores unrelated boundaries and never consumes a queue', () => {

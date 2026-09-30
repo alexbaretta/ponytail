@@ -11,7 +11,8 @@ Licensed under the MIT License. See LICENSE in the project root.
 
 **Identifier:** `REQ-CAMPAIGN-ORCHESTRATION`
 
-**Approval:** Approved by explicit stakeholder direction on 2026-09-29.
+**Approval:** Approved by explicit stakeholder direction on 2026-09-29 and
+clarified by explicit stakeholder direction on 2026-09-30.
 
 **Source:** The stakeholder reported on 2026-09-29 that campaign coordinators
 lose track of parallel Codex sessions, fail to merge completed work, and
@@ -24,7 +25,10 @@ report ambiguous and prevents an accurate operational view. The stakeholder
 further clarified that an unmarked plan remains valid legacy non-campaign data
 unless a managed campaign plan references it and thereby proves that it is an
 intended campaign member. The stakeholder then defined a stranded plan exactly
-as a plan P that references campaign parent C when C does not reference P.
+as a plan P that references campaign parent C when C does not reference P. On
+2026-09-30, the stakeholder approved concurrent active campaigns when a command
+selects one explicitly, repository-wide inventory without selection, campaign
+listing by lifecycle status, and campaign activation from any member plan.
 
 ## Repository-wide campaign inventory
 
@@ -55,18 +59,17 @@ closure violations. It must return deterministic diagnostics that identify
 every plan whose state cannot be classified safely.
 
 A no-input campaign report must describe the repository-wide inventory rather
-than stop at an opaque active-campaign ambiguity. It must report zero or one
-valid active campaign, every active plan within it, and every active lifecycle
-plan that cannot be assigned safely. If plans in one top-level worktree resolve
-to more than one active campaign, the inventory must report every conflicting
-campaign and plan with a deterministic diagnostic and exit `1`; it must not
-choose one. An explicit plan input continues to select and report only that
-plan's campaign.
+than select one active campaign. It must report every valid active campaign,
+every active plan within each one, and every active lifecycle plan that cannot
+be assigned safely. Several active campaigns are valid and do not by themselves
+make repository-wide report or validation fail. An explicit plan input
+continues to select and report only that plan's campaign.
 
-Each top-level worktree may have at most one campaign coordinator and one active
-campaign. Several plans within that campaign may be active concurrently.
-Distinct top-level worktrees, including distinct user-owned worktrees of one Git
-repository, have independent coordinator and active-campaign scopes. Activity
+Each top-level worktree may have one campaign coordinator session. That session
+may coordinate several active campaigns when each single-campaign command names
+its campaign explicitly. Several plans within each campaign may be active
+concurrently. Distinct top-level worktrees, including distinct user-owned
+worktrees of one Git repository, have independent coordinator scopes. Activity
 in one top-level worktree must not change another top-level worktree's
 assignments, availability, or integration order.
 
@@ -95,6 +98,25 @@ invalid managed plan must exit `1`; a fully valid inventory must exit `0`; and
 an invocation, configuration, I/O, or tool failure that prevents a complete
 inventory must exit `2`. JSON output for exits `0` and `1` is exactly one typed
 document plus one trailing newline.
+
+## Campaign lifecycle commands
+
+Ponytail must list campaign roots deterministically. `ponytail campaign list`
+lists active campaigns. `--active`, `--pending`, `--closed`, `--deferred`, and
+`--rejected` select that normalized campaign status, with at most one status
+filter per invocation. A campaign is active when any valid member is in the
+configured active-work lifecycle. Otherwise its status follows its root plan:
+the configured initial, successful-completion, deferred, and rejected roles
+normalize respectively to pending, closed, deferred, and rejected.
+
+`ponytail campaign activate <plan-name-or-path>` must resolve the supplied
+member recursively through its parent links to the campaign root. An already
+active campaign succeeds without mutation. A pending campaign moves its root
+plan from the configured initial lifecycle to active work, synchronizes the
+canonical manifest status text and every affected relative Markdown link, and
+must leave the selected campaign valid. Other source states fail without
+mutation. Lifecycle placement and campaign metadata remain the only sources of
+campaign state; activation must not create a second current-campaign record.
 
 ## Operational campaign status
 
@@ -133,6 +155,10 @@ evidence. Integration must preserve the campaign's serialized join order and
 must use a fast-forward merge after proving that the current campaign
 integration revision is an ancestor of the worker revision.
 
+All campaign advancement in one top-level worktree must also use one worktree-
+scoped critical section so two campaign-scoped ledgers cannot race while
+observing or changing their shared integration branch.
+
 After a worker revision has been verified as integrated, the coordinator must
 archive the worker session and remove its managed worktree. Cleanup failure must
 remain visible and retryable; it must not make the worker appear idle or allow
@@ -147,10 +173,16 @@ estimated completion time.
 
 Repository-wide validation must run at campaign coordination and resumption,
 before dispatch, after a campaign relationship or lifecycle change, and through
-the host's ordinary plan-documentation QA gate. Multiple active campaigns or
-coordinator bindings in one top-level worktree block campaign actions there.
-The same condition in one top-level worktree must not block validated actions
-in a distinct top-level worktree.
+the host's ordinary plan-documentation QA gate. When several campaigns are
+active, status and advancement without campaign input must fail with every
+candidate rather than choose one. Explicitly selected operations remain
+available. Action-result recording must name its campaign explicitly; worker
+attach remains uniquely scoped by its authenticated token. Several campaign
+bindings are permitted only when they name the same coordinator session for
+the top-level worktree. Another session is rejected until that coordinator has
+released every binding. A session with several bindings must not use an
+unscoped composer enqueue command. None of these conditions in one top-level
+worktree may block validated actions in a distinct top-level worktree.
 
 Acceptance coverage:
 [Campaign orchestration Suite](../uat/campaign-orchestration.md).

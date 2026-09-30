@@ -43,9 +43,9 @@ duplicate identities, dependencies, and cycles use invalid-plan diagnostics
 instead.
 
 The inventory derives a sorted `activeCampaigns` collection from valid plans in
-the configured active-work lifecycle. Zero or one entry is valid for a
-top-level worktree. More than one remains fully represented for diagnosis but
-makes the inventory invalid and prevents coordinator actions. The existing
+the configured active-work lifecycle. Any number is valid. The latest V3
+repository-inventory writer therefore omits the former ambiguity diagnostic;
+the immutable V2 reader remains available for historical values. The existing
 selected-campaign path remains isolated from unrelated campaign defects when
 the caller supplies a plan.
 
@@ -67,11 +67,25 @@ deterministic diagnostics in its JSON form so agents can repair the complete
 documentation set in one pass. Ordinary project QA runs this mode for managed
 plan inputs.
 
-A top-level worktree has at most one exclusive coordinator binding and one
-active campaign. A distinct user-selected top-level worktree has its own scope,
-even when both worktrees share Git object storage or a remote. Repository status
-can show conflicting candidates for repair, but no mutating action proceeds
-until the worktree has one unambiguous active campaign and coordinator.
+A top-level worktree has one exclusive coordinator session, which may own
+several campaign bindings. A distinct user-selected top-level worktree has its
+own scope, even when both worktrees share Git object storage or a remote.
+Single-campaign commands infer a campaign only when exactly one is active;
+otherwise they require explicit input and report every candidate.
+
+### Campaign lifecycle projection
+
+`campaign list` reads the repository inventory and projects each valid campaign
+to one normalized status. Any active-work member makes the campaign `active`;
+otherwise the root lifecycle maps to `pending`, `closed`, `deferred`, or
+`rejected`. Listing is read-only and never invents membership for invalid data.
+
+`campaign activate` resolves the selected member to its validated root. It is
+idempotent for an active campaign and accepts only a pending-to-active
+transition. Before relocating the root directory, it calculates every relative
+Markdown link whose source or target moves, plus the canonical manifest status
+line. It then applies the relocation and rewrites those known files, retaining
+lifecycle placement as the state owner and validating the relocated campaign.
 
 ### Worktree ownership resolution
 
@@ -142,12 +156,10 @@ The CLI exposes that document through:
 ponytail campaign status [<plan-name-or-path>] [--json]
 ```
 
-Without an explicit plan, status returns the repository-wide operational view:
-the top-level worktree's active campaign, active plans, coordinator,
-assignments, sessions, and worktrees, plus conflicting, invalid, or unmanaged
-plans that cannot participate safely. With a plan, it returns the same contract
-filtered to that plan's campaign. A verified worker invocation returns its
-owner's view rather than treating the worker as another coordinator root.
+Without an explicit plan, status selects the sole active campaign or fails with
+all candidates. With a plan, it returns the same contract filtered to that
+plan's campaign. A verified worker invocation returns its owner's campaign view
+rather than treating the worker as another coordinator root.
 
 The scheduler never treats missing host state as idle state and never treats a
 worker's final message as completion evidence.
@@ -182,12 +194,15 @@ fast-forward merge. A changed integration head moves the assignment back to
 
 When a transition requires a supported Codex host effect, advance persists and
 returns one V1 host-action envelope. The coordinator records the tool result
-through `ponytail campaign action-result <action-id> --result <json>` before
+through `ponytail campaign action-result <campaign> <action-id> --result
+<json>` before
 advancing again. Repeating advance returns the same pending action, and
 repeating an identical recorded result returns the already applied outcome.
 The V1 ledger is stored under Ponytail user data, keyed by canonical top-level
 worktree and campaign, and is replaced atomically under an exclusive scope
-lock.
+lock. A second worktree-scoped lock surrounds every advance operation so two
+campaign-specific ledgers in the same worktree cannot concurrently dispatch,
+integrate, or clean up workers.
 
 Cleanup begins only after the integration branch contains the exact worker
 revision. It archives the Codex session, preserves a recoverable managed-

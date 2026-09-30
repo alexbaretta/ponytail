@@ -321,7 +321,9 @@ as the fast input queue in front of that campaign's sprint and tasklet
 selection. Every campaign has exactly one campaign coordinator. Only that
 coordinator may list, claim, complete, or otherwise consume its queue; other
 sessions, including sessions in the same checkout, do not inspect or block on
-it. Input addressed to any member plan resolves to the campaign root.
+it. One coordinator session may coordinate several campaigns in the same
+top-level worktree, but a second coordinator session may not share that
+worktree. Input addressed to any member plan resolves to the campaign root.
 
 After rehydrating or resuming a campaign, run `ponytail plan-input coordinate <campaign-root>`
 through the host tool boundary before running a sprint or tasklet selector.
@@ -353,7 +355,9 @@ Users may enqueue without interacting with the active turn by running
 `ponytail plan-input <plan> -- <instruction>`. Codex users may also submit
 `/ponytail-enqueue <instruction>` when the installed, trusted hook has passed
 the host project's live viability Arc. The hook derives the campaign from the
-current session binding and blocks an unbound command without guessing.
+current session binding and blocks an unbound or multiply bound command without
+guessing. Use plan-specific enqueue when the session coordinates several
+campaigns.
 
 Direct user requests that add behavior to an active plan must be recorded in
 the applicable sprint before implementation and explicitly approved when they
@@ -593,14 +597,18 @@ Use the canonical command:
 ponytail campaign validate <plan-name-or-path>
 ponytail campaign validate --all [--json]
 ponytail campaign report [<plan-name-or-path>]
+ponytail campaign list [--active|--pending|--closed|--deferred|--rejected]
+ponytail campaign activate <plan-name-or-path>
 ```
 
 The input may be the exact stable plan name, its directory, or its `plan.md`.
 A bare name must resolve to exactly one plan across configured lifecycle
 locations. When report input is omitted, inventory every configured lifecycle
 and permitted flat-layout plan. Report every active campaign and active plan
-instead of choosing among conflicts; multiple active campaign roots make the
-inventory invalid. Classify malformed managed plans as invalid. Classify a
+instead of choosing among conflicts; multiple active campaign roots remain a
+valid inventory. Commands that require one campaign infer it only when exactly
+one campaign is active; otherwise require an explicit campaign and report all
+candidates. Classify malformed managed plans as invalid. Classify a
 plan with no campaign block as unmanaged legacy data without inferred
 membership regardless of its location. When a managed plan names an unmarked
 plan as its direct parent or dependency, classify the referenced plan as
@@ -627,7 +635,12 @@ Run repository-wide validation when campaign coordination begins or resumes,
 before dispatch, after any campaign relationship or lifecycle change, and
 through the host project's ordinary plan-documentation QA gate. Repair every
 reported managed-plan defect before a coordinator mutation; never select one
-active campaign from an ambiguous inventory.
+active campaign from an ambiguous inventory. `campaign list` defaults to
+active campaigns and its explicit status flags project the configured initial,
+successful-completion, deferred, and rejected lifecycles as pending, closed,
+deferred, and rejected. `campaign activate` recursively resolves a selected
+member to its root, activates only pending campaigns, and is idempotent for an
+already active campaign.
 
 ### Campaign Scheduler Protocol
 
@@ -663,7 +676,8 @@ durable state instead of remembering worker assignments in conversation:
    worker chat. Never delete an inferred path or clean up an unintegrated
    revision.
 8. After each supported host effect, run `ponytail campaign action-result
-   <action-id> --result <json>` from the coordinator worktree. Then return to
+   <campaign-root> <action-id> --result <json>` from the coordinator worktree.
+   Then return to
    status and advance. Repeating the same action or identical result is the
    required interruption-recovery path.
 

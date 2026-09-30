@@ -46,7 +46,7 @@ Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
 - **External effects:** None; inventory and validation are read-only.
 
 1. Run the no-input campaign report in human and JSON modes.
-   - Both inventories identify both conflicting candidate campaigns and every
+   - Both inventories identify both active campaigns and every
      active plan, the malformed campaign diagnostics, and both unreferenced
      unmarked plans as valid unmanaged legacy data without invented membership.
      The referenced unmarked plan and its managed referrer are invalid.
@@ -57,11 +57,11 @@ Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
    - It validates every independently classifiable plan and campaign in stable
      order, returns nonzero, and reports deterministic diagnostics only for
      malformed managed data and the campaign-referenced missing metadata.
-3. Repair those records and reconcile the lifecycle so every active plan
-   belongs to one campaign, then repeat validation and reporting.
-   - Validation succeeds, the active plans resolve to the one active campaign,
-     and the unreferenced legacy plans remain explicitly unmanaged regardless
-     of their location.
+3. Repair those records while leaving both campaigns active, then repeat
+   validation and reporting.
+   - Validation succeeds, each active plan resolves to its campaign, and the
+     unreferenced legacy plans remain explicitly unmanaged regardless of their
+     location.
 4. Report one campaign through an explicit member-plan input while the other
    campaign is malformed.
    - The selected valid campaign still reports successfully and contains no
@@ -72,8 +72,8 @@ Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
 Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
 
 - **Actor:** Two campaign coordinators.
-- **Prerequisites:** One top-level worktree with a bound coordinator and active
-  campaign, a second coordinator session in that same worktree, a distinct
+- **Prerequisites:** One top-level worktree with a coordinator bound to two
+  active campaigns, a second coordinator session in that same worktree, a distinct
   user-selected top-level worktree, and a Codex-managed worker worktree with
   authenticated ownership metadata.
 - **Profiles:** Automated multi-session adapter contract profile and live Codex
@@ -81,10 +81,11 @@ Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
 - **External effects:** A coordinator may mutate only its top-level worktree's
   campaign state.
 
-1. Attempt to bind the second coordinator or activate another campaign in the
-   first top-level worktree.
-   - Ponytail rejects the operation with both conflicting identities and
-     performs no external effect.
+1. Bind the first coordinator to both active campaigns, then attempt to bind
+   the second coordinator to either campaign in that top-level worktree.
+   - Both first-session bindings succeed. Ponytail rejects the second-session
+     operation with both conflicting session identities and performs no
+     external effect.
 2. Bind and advance a campaign in the distinct top-level worktree.
    - It succeeds independently and does not alter the first worktree's
      coordinator, campaign, assignments, or integration order.
@@ -98,6 +99,56 @@ Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
 5. Remove or contradict the worker ownership mapping and repeat the commands.
    - Both fail closed; Ponytail does not infer ownership from directory names,
      branches, Git common-directory membership, or chat history.
+
+## Arc: List and activate campaign lifecycles
+
+Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
+
+- **Actor:** Ponytail CLI user.
+- **Prerequisites:** Campaign roots in the configured initial, active-work,
+  successful-completion, deferred, and rejected lifecycles, with a descendant
+  plan selected from the initial campaign.
+- **Profiles:** Automated production-module and real CLI profile.
+- **External effects:** Activation moves one campaign directory and rewrites
+  affected plan metadata and relative Markdown links.
+
+1. Run `ponytail campaign list` and each supported explicit status filter.
+   - The default lists active campaigns. `--active`, `--pending`, `--closed`,
+     `--deferred`, and `--rejected` each list only campaigns in that normalized
+     status in stable campaign-ID order.
+2. Activate the pending campaign by its descendant plan name.
+   - Ponytail recursively follows parent links to the campaign root, moves that
+     root into active work, updates its canonical status metadata and affected
+     relative links, and validates the activated campaign.
+3. Activate the same campaign again.
+   - The command succeeds idempotently without another mutation.
+4. Attempt activation from every non-pending, non-active status or with an
+   unknown plan.
+   - Ponytail rejects the command without changing campaign files.
+
+## Arc: Select among concurrent active campaigns
+
+Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
+
+- **Actor:** Campaign coordinator bound to two campaigns.
+- **Prerequisites:** Two valid active campaigns in one top-level worktree and
+  one coordinator session bound to both.
+- **Profiles:** Automated CLI, orchestration, and hook-adapter profile.
+- **External effects:** Advance may dispatch, integrate, or clean up work for
+  only the explicitly selected campaign.
+
+1. Run status, advance, and an unscoped composer enqueue without a campaign.
+   - Each rejects the ambiguous selection and lists every candidate campaign;
+     no campaign state changes.
+2. Run status and advance with each campaign's root or descendant plan name.
+   - Each command resolves only the selected campaign and its ledger.
+3. Record an action result with an explicit campaign and action ID, then try
+   the same action ID against the other campaign.
+   - The matching campaign records the result idempotently; the mismatched
+     campaign rejects it without altering either ledger.
+4. Attempt simultaneous advances for both campaigns in the same worktree.
+   - One worktree-scoped critical section serializes the operations even though
+     their campaign ledgers are distinct.
 
 ## Arc: Rehydrate one authoritative scheduling view
 

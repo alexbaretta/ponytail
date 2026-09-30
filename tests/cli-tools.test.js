@@ -138,9 +138,11 @@ test('ponytail help publishes campaign, plan-input, traceability, and plan comma
   assert.match(result.stdout, /ponytail plan-input complete <plan> <id> --record <pm-path>/);
   assert.match(result.stdout, /ponytail campaign validate --all \[--json\]/);
   assert.match(result.stdout, /ponytail campaign report \[<plan-name-or-path>\] \[--json\]/);
+  assert.match(result.stdout, /ponytail campaign list \[--active\|--pending\|--closed\|--deferred\|--rejected\]/);
+  assert.match(result.stdout, /ponytail campaign activate <plan-name-or-path>/);
   assert.match(result.stdout, /ponytail campaign status \[<campaign>\] \[--json\]/);
   assert.match(result.stdout, /ponytail campaign advance \[<campaign>\] \[--json\]/);
-  assert.match(result.stdout, /ponytail campaign action-result <action-id> --result <json>/);
+  assert.match(result.stdout, /ponytail campaign action-result <campaign> <action-id> --result <json>/);
   assert.match(result.stdout, /ponytail campaign attach <token>/);
   assert.match(result.stdout, /ponytail traceability index \[--rebuild\] \[--json\]/);
   assert.match(result.stdout, /ponytail traceability search <query>/);

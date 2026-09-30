@@ -12,13 +12,16 @@ const { spawnSync } = require('node:child_process');
 const test = require('node:test');
 const {
   CampaignError,
+  activateCampaign,
   buildReport,
   buildRepositoryInventory,
   humanReport,
+  listCampaigns,
   listPlanSourceFiles,
   parsePlanSource,
   readCampaignReportV1,
   readCampaignReportV2,
+  readCampaignReportV3,
   readManagementConfigV1,
   readPlanMetadataV2,
   resolveCampaignScope,
@@ -256,8 +259,57 @@ test('repository inventory accepts unmarked legacy plans and rejects referenced 
   assert.ok(inventory.invalidPlans.find(({ path }) => path.includes('referenced/')).diagnostics.some(
     ({ code }) => code === 'CAMPAIGN_PLAN_BLOCK',
   ));
-  assert.ok(inventory.diagnostics.some(({ code }) => code === 'CAMPAIGN_ACTIVE_AMBIGUOUS'));
-  assert.equal(readCampaignReportV2(inventory), inventory);
+  assert.deepEqual(inventory.diagnostics, []);
+  assert.equal(inventory.schemaVersion, 3);
+  assert.equal(readCampaignReportV3(inventory), inventory);
+  const legacyInventory = { ...inventory, schemaVersion: 2 };
+  assert.equal(readCampaignReportV2(legacyInventory), legacyInventory);
+});
+
+test('lists normalized campaign statuses and activates a pending campaign through a child', () => {
+  const root = repository();
+  const pendingId = '2026-09-30-pending';
+  const childId = '2026-09-30-child';
+  plan(root, 'open', pendingId);
+  plan(root, 'closed', childId, pendingId, { closed: true, parentLifecycle: 'open' });
+  plan(root, 'in_progress', '2026-09-30-active');
+  plan(root, 'closed', '2026-09-30-closed', null, { closed: true });
+  plan(root, 'deferred', '2026-09-30-deferred');
+  plan(root, 'rejected', '2026-09-30-rejected');
+  write(root, 'pm/uat/campaign.md', `[campaign](../plans/open/${pendingId}/plan.md)\n`);
+  commit(root);
+
+  assert.deepEqual(listCampaigns(root, config(root)), [
+    { rootPlanId: '2026-09-30-active', status: 'active' },
+  ]);
+  assert.deepEqual(listCampaigns(root, config(root), 'pending'), [
+    { rootPlanId: pendingId, status: 'pending' },
+  ]);
+  assert.deepEqual(listCampaigns(root, config(root), 'closed'), [
+    { rootPlanId: '2026-09-30-closed', status: 'closed' },
+  ]);
+  assert.deepEqual(listCampaigns(root, config(root), 'deferred'), [
+    { rootPlanId: '2026-09-30-deferred', status: 'deferred' },
+  ]);
+  assert.deepEqual(listCampaigns(root, config(root), 'rejected'), [
+    { rootPlanId: '2026-09-30-rejected', status: 'rejected' },
+  ]);
+
+  let result = spawnSync(process.execPath, [campaignCli, 'list'], { cwd: root, encoding: 'utf8' });
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.stdout, '2026-09-30-active\n');
+  result = spawnSync(process.execPath, [campaignCli, 'list', '--pending'], { cwd: root, encoding: 'utf8' });
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.stdout, `${pendingId}\n`);
+  result = spawnSync(process.execPath, [campaignCli, 'activate', childId], { cwd: root, encoding: 'utf8' });
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.stdout, `Activated campaign ${pendingId}\n`);
+  const activatedPlan = path.join(root, 'pm/plans/in_progress', pendingId, 'plan.md');
+  assert.equal(fs.existsSync(activatedPlan), true);
+  assert.match(fs.readFileSync(activatedPlan, 'utf8'), /- \*\*Status:\*\* `in_progress`/);
+  assert.equal(fs.readFileSync(path.join(root, 'pm/uat/campaign.md'), 'utf8'), `[campaign](../plans/in_progress/${pendingId}/plan.md)\n`);
+  assert.deepEqual(activateCampaign(root, config(root), pendingId), { rootPlanId: pendingId, activated: false });
+  assert.equal(captureError(() => activateCampaign(root, config(root), '2026-09-30-closed')).code, 'CAMPAIGN_ACTIVATE_STATUS');
 });
 
 test('root and leaf report the same campaign while unrelated malformed plans stay out of scope', () => {

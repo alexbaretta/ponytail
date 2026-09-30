@@ -30,11 +30,12 @@ test('campaign policy requires repository inventory and V2 direct dependencies',
   assert.match(policy, /no campaign block as unmanaged legacy data without inferred\nmembership regardless of its location/);
   assert.match(policy, /managed plan names an unmarked\nplan as its direct parent or dependency/);
   assert.match(policy, /P is\nstranded exactly when C lacks that reciprocal reference/);
-  assert.match(policy, /never select one\nactive campaign from an ambiguous inventory/);
+  assert.match(policy, /multiple active campaign roots remain a\nvalid inventory/);
+  assert.match(policy, /require an explicit campaign and report all\n+candidates/);
   assert.match(generated, /ponytail campaign validate --all \[--json\]/);
   assert.match(generated, /no campaign block as unmanaged legacy data without inferred\nmembership regardless of its location/);
   assert.match(generated, /P is\nstranded exactly when C lacks that reciprocal reference/);
-  assert.match(generated, /never select one\nactive campaign from an ambiguous inventory/);
+  assert.match(generated, /multiple active campaign roots remain a\nvalid inventory/);
 });
 
 test('campaign policy delegates every worker effect to the durable action loop', () => {
@@ -46,7 +47,7 @@ test('campaign policy delegates every worker effect to the durable action loop',
   assert.match(policy, /`REQUEST_REBASE`[\s\S]*exact\n+   `ontoRevision`/);
   assert.match(policy, /transition to `READY_TO_MERGE`[\s\S]*only by another advance/);
   assert.match(policy, /`ARCHIVE_WORKTREE`[\s\S]*archive its own managed\n+   worktree/);
-  assert.match(policy, /campaign action-result\n+   <action-id> --result <json>/);
+  assert.match(policy, /campaign action-result\n+   <campaign-root> <action-id> --result <json>/);
   assert.match(policy, /Mutating campaign commands in\n+a worker fail closed/);
 });
 

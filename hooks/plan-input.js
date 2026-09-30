@@ -3,6 +3,7 @@
 // Licensed under the MIT License. See LICENSE in the project root.
 
 // Traceability: implements REQ-PLAN-INPUT-QUEUE
+// Traceability: supports REQ-CAMPAIGN-ORCHESTRATION
 
 const fs = require('node:fs');
 const path = require('node:path');
@@ -41,6 +42,12 @@ function readBindingsV1(value, file = 'plan input coordinator bindings') {
     for (const key of keys) if (typeof binding[key] !== 'string' || !binding[key]) fail(`${file}: binding ${index} ${key} must be a nonempty string`);
     return { ...binding };
   });
+  const campaignScopes = bindings.map(({ repositoryRoot, campaignId }) => `${repositoryRoot}\0${campaignId}`);
+  if (new Set(campaignScopes).size !== campaignScopes.length) fail(`${file}: duplicate campaign binding`);
+  for (const repositoryRoot of new Set(bindings.map((binding) => binding.repositoryRoot))) {
+    const sessionIds = new Set(bindings.filter((binding) => binding.repositoryRoot === repositoryRoot).map((binding) => binding.sessionId));
+    if (sessionIds.size > 1) fail(`${file}: one worktree cannot have multiple coordinator sessions`);
+  }
   return { schemaVersion: 1, bindings };
 }
 
@@ -89,11 +96,9 @@ function bindCoordinator(pluginData, repository, campaignId, coordinatedPlanId, 
   return withStateLock(pluginData, (file) => {
     const state = readBindings(pluginData);
     const campaign = state.bindings.find((binding) => binding.repositoryRoot === repository && binding.campaignId === campaignId);
-    const session = state.bindings.find((binding) => binding.repositoryRoot === repository && binding.sessionId === sessionId);
-    const repositoryBinding = state.bindings.find((binding) => binding.repositoryRoot === repository);
-    if (repositoryBinding && repositoryBinding.campaignId !== campaignId) fail(`worktree already has coordinator ${repositoryBinding.sessionId} for campaign ${repositoryBinding.campaignId}`);
+    const repositoryBinding = state.bindings.find((binding) => binding.repositoryRoot === repository && binding.sessionId !== sessionId);
+    if (repositoryBinding) fail(`worktree already has coordinator ${repositoryBinding.sessionId} for campaign ${repositoryBinding.campaignId}`);
     if (campaign && campaign.sessionId !== sessionId) fail(`campaign ${campaignId} is already coordinated by another session`);
-    if (session && session.campaignId !== campaignId) fail(`this session already coordinates campaign ${session.campaignId}; release it first`);
     if (campaign) return campaign;
     const binding = { repositoryRoot: repository, campaignId, coordinatedPlanId, sessionId, boundAt: new Date().toISOString() };
     writeBindings(file, { ...state, bindings: [...state.bindings, binding] });
@@ -113,11 +118,17 @@ function releaseCoordinator(pluginData, repository, campaignId, sessionId) {
   });
 }
 
-function bindingForSession(pluginData, repository, sessionId) {
+function bindingForSession(pluginData, repository, sessionId, campaignId = null) {
   if (!sessionId) fail('the hook did not provide a session ID');
-  const binding = readBindings(pluginData).bindings.find((item) => item.repositoryRoot === repository && item.sessionId === sessionId);
-  if (!binding) fail('this Codex session is not bound to a campaign; run ponytail plan-input coordinate <plan> first');
-  return binding;
+  const bindings = readBindings(pluginData).bindings.filter((item) => item.repositoryRoot === repository && item.sessionId === sessionId);
+  if (bindings.length === 0) fail('this Codex session is not bound to a campaign; run ponytail plan-input coordinate <plan> first');
+  if (campaignId !== null) {
+    const binding = bindings.find((item) => item.campaignId === campaignId);
+    if (!binding) fail(`this Codex session is not bound to campaign ${campaignId}`);
+    return binding;
+  }
+  if (bindings.length > 1) fail(`select a campaign explicitly; this session coordinates: ${bindings.map(({ campaignId: id }) => id).sort().join(', ')}`);
+  return bindings[0];
 }
 
 function commandStrings(toolInput) {
@@ -167,7 +178,10 @@ function handle(data, environment = process.env) {
         }
         const resolution = resolveInvocationWorktree(repository, environment, campaign.operation === 'status');
         if (campaign.operation !== 'status') {
-          const coordinator = bindingForSession(environment.PLUGIN_DATA, resolution.effectiveWorktree, data.session_id);
+          const campaignId = campaign.argument
+            ? resolveCampaignRoot(resolution.effectiveWorktree, campaign.argument).campaignId
+            : null;
+          const coordinator = bindingForSession(environment.PLUGIN_DATA, resolution.effectiveWorktree, data.session_id, campaignId);
           return preToolOutput(`Coordinator session authenticated for campaign ${coordinator.campaignId}.`);
         }
         if (resolution.workerBinding) return preToolOutput(`Read-only campaign status will use owning worktree ${resolution.effectiveWorktree}.`);
@@ -190,7 +204,7 @@ function handle(data, environment = process.env) {
         }
         return preToolOutput(`Coordinator session bound to campaign ${campaignId}.`);
       }
-      bindingForSession(environment.PLUGIN_DATA, resolution.effectiveWorktree, data.session_id);
+      bindingForSession(environment.PLUGIN_DATA, resolution.effectiveWorktree, data.session_id, campaignId);
       releaseLedgerCoordinator(resolution.effectiveWorktree, campaignId, data.session_id, environment);
       try {
         releaseCoordinator(environment.PLUGIN_DATA, resolution.effectiveWorktree, campaignId, data.session_id);

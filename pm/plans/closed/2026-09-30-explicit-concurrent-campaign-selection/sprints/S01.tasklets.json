@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 3,
+  "sprint": "S01",
+  "features": {
+    "S01-F01": {"depends_on": [], "validation_tasklet": "S01-F01-T02"},
+    "S01-F02": {"depends_on": ["S01-F01"], "validation_tasklet": "S01-F02-T03"},
+    "S01-F03": {"depends_on": ["S01-F02"], "validation_tasklet": "S01-F03-T03"},
+    "S01-F04": {"depends_on": ["S01-F03"], "validation_tasklet": "S01-F04-T02"}
+  },
+  "tasklets": {
+    "S01-F01-T01": {
+      "depends_on": [], "affinity": ["requirements", "campaign"], "risk": "normal", "feature": "S01-F01",
+      "planned_paths": ["pm/bugs/in_progress/2026-09-30-FEAT-explicit_concurrent_campaign_selection.md", "pm/plans/in_progress/2026-09-30-explicit-concurrent-campaign-selection/plan.md", "pm/plans/in_progress/2026-09-30-explicit-concurrent-campaign-selection/sprints/S01.md", "pm/plans/in_progress/2026-09-30-explicit-concurrent-campaign-selection/sprints/S01.tasklets.json", "pm/requirements/campaign-orchestration.md", "pm/architecture/campaign-orchestration.md", "pm/uat/campaign-orchestration.md", ".agents/config/project/traceability.json", "pm/requirements/traceability.generated.md"]
+    },
+    "S01-F01-T02": {
+      "depends_on": ["S01-F01-T01"], "affinity": ["requirements", "validation"], "risk": "normal", "feature": "S01-F01", "planned_paths": []
+    },
+    "S01-F02-T01": {
+      "depends_on": ["S01-F01-T02"], "affinity": ["campaign", "inventory", "contract"], "risk": "high", "risk_reason": "Changes latest durable repository inventory semantics while preserving V1 and V2 readers.", "feature": "S01-F02",
+      "planned_paths": ["src/campaign-census.js", "tests/campaign-census.test.js", "versioned-data-contracts.json"]
+    },
+    "S01-F02-T02": {
+      "depends_on": ["S01-F02-T01"], "affinity": ["campaign", "lifecycle", "cli"], "risk": "high", "risk_reason": "Moves a plan lifecycle directory and must preserve canonical status text and relative Markdown links.", "feature": "S01-F02",
+      "planned_paths": ["src/campaign-census.js", "tests/campaign-census.test.js", "cli/ponytail", "tests/cli-tools.test.js", "README.md"]
+    },
+    "S01-F02-T03": {
+      "depends_on": ["S01-F02-T01", "S01-F02-T02"], "affinity": ["campaign", "lifecycle", "validation"], "risk": "normal", "feature": "S01-F02", "planned_paths": []
+    },
+    "S01-F03-T01": {
+      "depends_on": ["S01-F02-T03"], "affinity": ["campaign", "coordinator", "hook"], "risk": "high", "risk_reason": "Changes coordinator authorization cardinality while preserving one session owner per top-level worktree.", "feature": "S01-F03",
+      "planned_paths": ["hooks/plan-input.js", "tests/plan-input-hooks.test.js"]
+    },
+    "S01-F03-T02": {
+      "depends_on": ["S01-F03-T01"], "affinity": ["campaign", "orchestration", "locking"], "risk": "high", "risk_reason": "Routes durable action results and serializes Git-mutating advances across campaign ledgers.", "feature": "S01-F03",
+      "planned_paths": ["src/campaign-orchestration.js", "tests/campaign-orchestration.test.js", "hooks/plan-input.js", "tests/plan-input-hooks.test.js", "src/campaign-census.js", "tests/campaign-census.test.js", "cli/ponytail", "tests/cli-tools.test.js"]
+    },
+    "S01-F03-T03": {
+      "depends_on": ["S01-F03-T01", "S01-F03-T02"], "affinity": ["campaign", "orchestration", "validation"], "risk": "normal", "feature": "S01-F03", "planned_paths": []
+    },
+    "S01-F04-T01": {
+      "depends_on": ["S01-F03-T03"], "affinity": ["campaign", "policy", "traceability"], "risk": "normal", "feature": "S01-F04",
+      "planned_paths": ["skills/plan-execution/SKILL.md", ".openclaw/skills/plan-execution/SKILL.md", "tests/plan-execution-policy.test.js", "README.md", "cli/ponytail", "tests/cli-tools.test.js", ".agents/config/project/traceability.json", "pm/requirements/traceability.generated.md", "pm/requirements/campaign-orchestration.md", "pm/architecture/campaign-orchestration.md", "pm/uat/campaign-orchestration.md", "pm/bugs/in_progress/2026-09-30-FEAT-explicit_concurrent_campaign_selection.md", "pm/plans/in_progress/2026-09-30-explicit-concurrent-campaign-selection/plan.md", "pm/plans/in_progress/2026-09-30-explicit-concurrent-campaign-selection/sprints/S01.md", "pm/plans/in_progress/2026-09-30-explicit-concurrent-campaign-selection/sprints/S01.tasklets.json"]
+    },
+    "S01-F04-T02": {
+      "depends_on": ["S01-F04-T01"], "affinity": ["campaign", "acceptance"], "risk": "normal", "feature": "S01-F04", "planned_paths": []
+    }
+  }
+}

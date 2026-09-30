@@ -608,9 +608,11 @@ def print_usage():
   ponytail campaign validate <plan-name-or-path>
   ponytail campaign validate --all [--json]
   ponytail campaign report [<plan-name-or-path>] [--json] [--[no-]summary-table] [--[no-]plan-table] [--[no-]sprint-table]
+  ponytail campaign list [--active|--pending|--closed|--deferred|--rejected]
+  ponytail campaign activate <plan-name-or-path>
   ponytail campaign status [<campaign>] [--json]
   ponytail campaign advance [<campaign>] [--json]
-  ponytail campaign action-result <action-id> --result <json>
+  ponytail campaign action-result <campaign> <action-id> --result <json>
   ponytail campaign attach <token>
   ponytail traceability index [--rebuild] [--json]
   ponytail traceability search <query> [--kind <kind>] [--role <role>] [--requirement <id>] [--path <path>] [--json]

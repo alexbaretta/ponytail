@@ -161,9 +161,12 @@ function coordinatorBinding(pluginData, repositoryRoot, campaignId) {
   let value;
   try { value = JSON.parse(fs.readFileSync(file, 'utf8')); } catch (error) { fail('CAMPAIGN_COORDINATOR_STATE', `${file}: ${error.message}`, 2); }
   const repositoryBindings = (value.bindings ?? []).filter((binding) => binding.repositoryRoot === repositoryRoot);
-  if (repositoryBindings.length > 1) fail('CAMPAIGN_COORDINATOR_CONFLICT', `worktree ${repositoryRoot} has multiple coordinator bindings`);
-  if (repositoryBindings[0] && repositoryBindings[0].campaignId !== campaignId) fail('CAMPAIGN_COORDINATOR_CONFLICT', `worktree is coordinated for campaign ${repositoryBindings[0].campaignId}, not ${campaignId}`);
-  return repositoryBindings[0]?.sessionId ?? null;
+  const sessionIds = [...new Set(repositoryBindings.map(({ sessionId }) => sessionId))];
+  if (sessionIds.length > 1) fail('CAMPAIGN_COORDINATOR_CONFLICT', `worktree ${repositoryRoot} has multiple coordinator sessions: ${sessionIds.join(', ')}`);
+  const matches = repositoryBindings.filter((binding) => binding.campaignId === campaignId);
+  if (matches.length > 1) fail('CAMPAIGN_COORDINATOR_CONFLICT', `campaign ${campaignId} has multiple coordinator bindings`);
+  if (repositoryBindings.length > 0 && matches.length === 0) fail('CAMPAIGN_COORDINATOR_CONFLICT', `coordinator session is not bound to campaign ${campaignId}`);
+  return matches[0]?.sessionId ?? null;
 }
 
 function stateDirectory(environment = process.env) {
@@ -359,6 +362,27 @@ function withLedgerLock(repositoryRoot, campaignId, environment, operation) {
   fail('CAMPAIGN_LEDGER_LOCK', 'timed out waiting for campaign ledger lock', 2);
 }
 
+function withWorktreeLock(repositoryRoot, environment, operation) {
+  const scope = crypto.createHash('sha256').update(repositoryRoot).digest('hex');
+  const lock = path.join(stateDirectory(environment), scope, 'advance.lock');
+  fs.mkdirSync(path.dirname(lock), { recursive: true });
+  for (let attempt = 0; attempt < 100; attempt += 1) {
+    try {
+      const descriptor = fs.openSync(lock, 'wx', 0o600);
+      try { return operation(); }
+      finally {
+        fs.closeSync(descriptor);
+        fs.unlinkSync(lock);
+      }
+    } catch (error) {
+      if (error.code !== 'EEXIST') throw error;
+      if (Date.now() - fs.statSync(lock).mtimeMs > 5000) { fs.unlinkSync(lock); continue; }
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 10);
+    }
+  }
+  fail('CAMPAIGN_WORKTREE_LOCK', 'timed out waiting for campaign worktree lock', 2);
+}
+
 function setLedgerCoordinator(repositoryRoot, campaignId, sessionId, environment = process.env) {
   return withLedgerLock(repositoryRoot, campaignId, environment, (ledger) => {
     if (ledger.coordinatorSessionId && ledger.coordinatorSessionId !== sessionId) fail('CAMPAIGN_COORDINATOR_CONFLICT', `campaign ${campaignId} ledger is owned by coordinator ${ledger.coordinatorSessionId}`);
@@ -380,7 +404,10 @@ function resolveGraph(repositoryRoot, input) {
   if (input !== undefined) return campaignGraph(repositoryRoot, input);
   const inventory = buildRepositoryInventory(repositoryRoot, require('./campaign-census').readManagementConfig(repositoryRoot));
   if (!inventory.valid) fail('CAMPAIGN_INVENTORY_INVALID', 'repository campaign inventory is invalid');
-  if (inventory.activeCampaigns.length !== 1) fail('CAMPAIGN_ACTIVE_REQUIRED', `expected exactly one active campaign, found ${inventory.activeCampaigns.length}`);
+  if (inventory.activeCampaigns.length === 0) fail('CAMPAIGN_ACTIVE_REQUIRED', 'no active campaign found');
+  if (inventory.activeCampaigns.length > 1) {
+    fail('CAMPAIGN_ACTIVE_AMBIGUOUS', `select one active campaign: ${inventory.activeCampaigns.map(({ rootPlanId }) => rootPlanId).join(', ')}`);
+  }
   return campaignGraph(repositoryRoot, inventory.activeCampaigns[0].rootPlanId);
 }
 
@@ -656,9 +683,10 @@ function parseArguments(argv) {
       else if (argument.startsWith('-') || input !== undefined) fail('CAMPAIGN_ORCHESTRATION_USAGE', usage(), 2);
       else input = argument;
     }
-  } else if (operation === 'action-result' && argv.length === 4 && argv[2] === '--result') {
-    actionId = argv[1];
-    try { result = JSON.parse(argv[3]); } catch (error) { fail('CAMPAIGN_ACTION_RESULT', `result is not valid JSON: ${error.message}`, 2); }
+  } else if (operation === 'action-result' && argv.length === 5 && argv[3] === '--result') {
+    input = argv[1];
+    actionId = argv[2];
+    try { result = JSON.parse(argv[4]); } catch (error) { fail('CAMPAIGN_ACTION_RESULT', `result is not valid JSON: ${error.message}`, 2); }
   } else if (operation === 'attach' && argv.length === 2) {
     result = argv[1];
   } else fail('CAMPAIGN_ORCHESTRATION_USAGE', usage(), 2);
@@ -666,7 +694,7 @@ function parseArguments(argv) {
 }
 
 function usage() {
-  return 'usage: ponytail campaign status [<campaign>] [--json]\n       ponytail campaign advance [<campaign>] [--json]\n       ponytail campaign action-result <action-id> --result <json>\n       ponytail campaign attach <token>';
+  return 'usage: ponytail campaign status [<campaign>] [--json]\n       ponytail campaign advance [<campaign>] [--json]\n       ponytail campaign action-result <campaign> <action-id> --result <json>\n       ponytail campaign attach <token>';
 }
 
 function run(argv = process.argv.slice(2), options = {}) {
@@ -681,7 +709,7 @@ function run(argv = process.argv.slice(2), options = {}) {
   }
   if (request.operation === 'action-result') {
     const resolution = resolveInvocationWorktree(invocationWorktree, environment, false);
-    const graph = resolveGraph(resolution.effectiveWorktree);
+    const graph = resolveGraph(resolution.effectiveWorktree, request.input);
     let completedAction;
     withLedgerLock(resolution.effectiveWorktree, graph.campaignId, environment, (ledger) => {
       validateActionResultBinding(ledger, request.result, environment);
@@ -697,7 +725,9 @@ function run(argv = process.argv.slice(2), options = {}) {
   const graph = resolveGraph(resolution.effectiveWorktree, request.input ?? resolution.workerBinding?.campaignId);
   let status;
   if (request.operation === 'advance') {
-    withLedgerLock(resolution.effectiveWorktree, graph.campaignId, environment, (ledger) => advanceLedger(graph, ledger, environment));
+    withWorktreeLock(resolution.effectiveWorktree, environment, () => (
+      withLedgerLock(resolution.effectiveWorktree, graph.campaignId, environment, (ledger) => advanceLedger(graph, ledger, environment))
+    ));
   }
   const ledger = readLedger(resolution.effectiveWorktree, graph.campaignId, environment);
   status = reconcile(graph, ledger, resolution.invocationWorktree, environment);
@@ -739,6 +769,7 @@ module.exports = {
   run,
   usage,
   withLedgerLock,
+  withWorktreeLock,
 };
 
 if (require.main === module) {

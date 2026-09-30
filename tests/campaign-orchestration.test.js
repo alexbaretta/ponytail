@@ -16,9 +16,11 @@ const {
   CampaignOrchestrationError,
   advanceLedger,
   newLedger,
+  parseArguments,
   readLedgerV1,
   reconcile,
   recordActionResult,
+  withWorktreeLock,
 } = require('../src/campaign-orchestration');
 const campaignCli = path.join(__dirname, '..', 'src', 'campaign-census.js');
 
@@ -246,4 +248,32 @@ test('campaign status and advance CLI expose stable JSON and do not duplicate di
   result = spawnSync(process.execPath, [campaignCli, 'advance', 'campaign', '--json'], { cwd: root, encoding: 'utf8', env: environment });
   assert.equal(result.status, 0, result.stderr);
   assert.equal(JSON.parse(result.stdout).pendingAction.id, first.pendingAction.id);
+});
+
+test('implicit campaign selection reports every active candidate while explicit selection succeeds', () => {
+  const root = campaignRepository();
+  managedPlan(root, 'in_progress', 'second');
+  const environment = { ...process.env, PONYTAIL_CAMPAIGN_STATE_DIR: temporaryDirectory('ponytail-campaign-state'), PONYTAIL_SESSION_ID: 'coordinator' };
+  let result = spawnSync(process.execPath, [campaignCli, 'status', '--json'], { cwd: root, encoding: 'utf8', env: environment });
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /CAMPAIGN_ACTIVE_AMBIGUOUS.*campaign, second/);
+  result = spawnSync(process.execPath, [campaignCli, 'status', 'second', '--json'], { cwd: root, encoding: 'utf8', env: environment });
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(JSON.parse(result.stdout).campaignId, 'second');
+});
+
+test('action results require an explicit campaign and advance holds the worktree lock', () => {
+  assert.deepEqual(parseArguments(['action-result', 'campaign', 'action', '--result', '{"ok":true}']), {
+    operation: 'action-result', input: 'campaign', json: false, actionId: 'action', result: { ok: true },
+  });
+  assert.equal(captureError(() => parseArguments(['action-result', 'action', '--result', '{"ok":true}'])).code, 'CAMPAIGN_ORCHESTRATION_USAGE');
+
+  const root = repository();
+  const environment = { ...process.env, PONYTAIL_CAMPAIGN_STATE_DIR: temporaryDirectory('ponytail-worktree-lock') };
+  withWorktreeLock(root, environment, () => {
+    const locks = fs.readdirSync(environment.PONYTAIL_CAMPAIGN_STATE_DIR, { recursive: true }).filter((entry) => entry.endsWith('advance.lock'));
+    assert.equal(locks.length, 1);
+  });
+  const remaining = fs.readdirSync(environment.PONYTAIL_CAMPAIGN_STATE_DIR, { recursive: true }).filter((entry) => entry.endsWith('advance.lock'));
+  assert.deepEqual(remaining, []);
 });
