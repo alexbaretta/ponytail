@@ -47,10 +47,11 @@ while project-wide management records remain under `pm/`.
 - `scripts/setup-project-journal.sh`, `scripts/project-journal.sql`, and
   `scripts/project-index.sql` own PostgreSQL 18 journal and project-index
   provisioning and their immutable V1 storage contracts.
-- `src/project-index.js` owns Git-aware PostgreSQL traceability and plan
-  projections, transactional generation publication, freshness-checked search
-  and plan-graph queries, and the `ponytail traceability` and `ponytail plan`
-  command families; `scripts/test-project-index-postgres.sh` owns their
+- `src/project-index.js` owns Git-aware PostgreSQL traceability, plan, and
+  repository-text projections, transactional generation publication,
+  freshness-checked structured queries, incremental historical and worktree
+  indexing, and the `ponytail traceability`, `ponytail plan`, and `ponytail
+  grep` command families; `scripts/test-project-index-postgres.sh` owns their
   real-database contract proof.
 - `tsts/` owns the canonical TypeScript analyzer and its Node tests. Root npm dependencies and `npm run build:tsts` produce ignored `tsts/dist/`; npm distributes only its compiled runtime. `cli/tsts` is the registered-project launcher installed alongside `ponytail`.
 - `src/` owns non-script runtime implementations dispatched by user-facing
@@ -98,7 +99,8 @@ while project-wide management records remain under `pm/`.
   the external user registry; `ponytail validate --all` explicitly validates
   every live blessed worktree. `codex-execpolicy.json` owns its Codex command policy proposal. See
   `docs/project-validation.md`.
-- `scripts/project-qa.js` owns local tracked-reference QA and dependency manifest parsing.
+- `scripts/project-qa.js` owns indexed current-worktree reference QA and
+  dependency manifest parsing.
 - `generated/` owns runtime data derived from `registry.tsv`.
 - `tests/` owns core live-development tests.
 - `benchmarks/` is an optional isolated subsystem. It owns all benchmark

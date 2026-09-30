@@ -36,12 +36,12 @@ only rebuildable index state. The existing setup command provisions both
 schemas idempotently. This adds no database service and stores no secret in the
 repository configuration.
 
-PostgreSQL `tsvector` columns with GIN indexes provide full-text search over
-explicitly safe normalized fields; B-tree indexes serve exact filters and
-graph joins. The Node projection component uses the `pg` client and PostgreSQL
-parameter binding rather than constructing SQL or `tsquery` text from user
-input. PostgreSQL replaces both a per-worktree SQLite lifecycle and Python
-pickle's opaque, language-specific, unsafe deserialization.
+The shared repository text store and its `pg_trgm` GIN index provide substring
+search over explicitly safe normalized fields; B-tree indexes serve exact
+filters and graph joins. The Node projection component uses the `pg` client
+and PostgreSQL parameter binding rather than constructing SQL from user input.
+PostgreSQL replaces both a per-worktree SQLite lifecycle and Python pickle's
+opaque, language-specific, unsafe deserialization.
 
 The physical index schema is versioned and disposable. Shared tables represent
 projects, repositories, worktrees, index metadata, exact content identities,

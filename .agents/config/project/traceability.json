@@ -19,6 +19,10 @@
       "sourcePath": "pm/requirements/traceability-index.md"
     },
     {
+      "id": "REQ-REPOSITORY-TEXT-INDEX",
+      "sourcePath": "pm/requirements/repository-text-index.md"
+    },
+    {
       "id": "REQ-CAMPAIGN-ORCHESTRATION",
       "sourcePath": "pm/requirements/campaign-orchestration.md"
     },
@@ -112,6 +116,11 @@
       "locator": "text"
     },
     {
+      "class": "implementation",
+      "path": "scripts/project-qa.js",
+      "locator": "text"
+    },
+    {
       "class": "unit-test",
       "path": "tests/project-index.test.js",
       "locator": "text"
@@ -124,6 +133,26 @@
     {
       "class": "uat",
       "path": "pm/uat/traceability-index.md",
+      "locator": "text"
+    },
+    {
+      "class": "uat",
+      "path": "pm/uat/repository-text-index.md",
+      "locator": "text"
+    },
+    {
+      "class": "issue",
+      "path": "pm/bugs/closed/2026-09-30-FEAT-repository_text_index_and_grep.md",
+      "locator": "text"
+    },
+    {
+      "class": "plan",
+      "path": "pm/plans/closed/2026-09-30-repository-text-index-and-grep/plan.md",
+      "locator": "text"
+    },
+    {
+      "class": "plan",
+      "path": "pm/plans/closed/2026-09-30-repository-text-index-and-grep/sprints/S01.md",
       "locator": "text"
     },
     {

@@ -22,7 +22,7 @@ Requirement: [pm/requirements/index.md](index.md)
 - implementation: implements [src/campaign-census.js:1084](../../src/campaign-census.js#L1084)
 - unit-test: verifies [tests/campaign-census-format.test.js:11](../../tests/campaign-census-format.test.js#L11)
 - integration-test: verifies [tests/campaign-census.test.js:499](../../tests/campaign-census.test.js#L499)
-- uat: verifies [pm/uat/index.md:35](../../pm/uat/index.md#L35)
+- uat: verifies [pm/uat/index.md:36](../../pm/uat/index.md#L36)
 
 ## REQ-PLAN-INPUT-QUEUE
 
@@ -41,7 +41,7 @@ Requirement: [pm/requirements/plan-input-queue.md](plan-input-queue.md)
 Requirement: [pm/requirements/traceability-index.md](traceability-index.md)
 
 - implementation: implements [src/project-index.js:33](../../src/project-index.js#L33)
-- unit-test: verifies [tests/project-index.test.js:29](../../tests/project-index.test.js#L29)
+- unit-test: verifies [tests/project-index.test.js:30](../../tests/project-index.test.js#L30)
 - integration-test: verifies [scripts/test-project-index-postgres.sh:6](../../scripts/test-project-index-postgres.sh#L6)
 - uat: verifies [pm/uat/traceability-index.md:16](../../pm/uat/traceability-index.md#L16)
 - uat: verifies [pm/uat/traceability-index.md:48](../../pm/uat/traceability-index.md#L48)
@@ -55,6 +55,30 @@ Requirement: [pm/requirements/traceability-index.md](traceability-index.md)
 - tasklet: plans-implementation [pm/plans/closed/2026-09-29-traceability-index/sprints/S02.md:71](../../pm/plans/closed/2026-09-29-traceability-index/sprints/S02.md#L71)
 - tasklet: plans-verification [pm/plans/closed/2026-09-29-traceability-index/sprints/S02.md:99](../../pm/plans/closed/2026-09-29-traceability-index/sprints/S02.md#L99)
 
+## REQ-REPOSITORY-TEXT-INDEX
+
+Requirement: [pm/requirements/repository-text-index.md](repository-text-index.md)
+
+- implementation: implements [scripts/project-qa.js:16](../../scripts/project-qa.js#L16)
+- implementation: implements [src/project-index.js:34](../../src/project-index.js#L34)
+- unit-test: verifies [tests/project-index.test.js:31](../../tests/project-index.test.js#L31)
+- integration-test: verifies [scripts/test-project-index-postgres.sh:7](../../scripts/test-project-index-postgres.sh#L7)
+- uat: verifies [pm/uat/repository-text-index.md:14](../../pm/uat/repository-text-index.md#L14)
+- plan: plans-implementation [pm/plans/closed/2026-09-30-repository-text-index-and-grep/plan.md:18](../../pm/plans/closed/2026-09-30-repository-text-index-and-grep/plan.md#L18)
+- plan: plans-verification [pm/plans/closed/2026-09-30-repository-text-index-and-grep/plan.md:19](../../pm/plans/closed/2026-09-30-repository-text-index-and-grep/plan.md#L19)
+- tasklet: plans-implementation [pm/plans/closed/2026-09-30-repository-text-index-and-grep/sprints/S01.md:43](../../pm/plans/closed/2026-09-30-repository-text-index-and-grep/sprints/S01.md#L43)
+- tasklet: plans-implementation [pm/plans/closed/2026-09-30-repository-text-index-and-grep/sprints/S01.md:51](../../pm/plans/closed/2026-09-30-repository-text-index-and-grep/sprints/S01.md#L51)
+- tasklet: plans-implementation [pm/plans/closed/2026-09-30-repository-text-index-and-grep/sprints/S01.md:59](../../pm/plans/closed/2026-09-30-repository-text-index-and-grep/sprints/S01.md#L59)
+- tasklet: plans-verification [pm/plans/closed/2026-09-30-repository-text-index-and-grep/sprints/S01.md:68](../../pm/plans/closed/2026-09-30-repository-text-index-and-grep/sprints/S01.md#L68)
+- tasklet: plans-implementation [pm/plans/closed/2026-09-30-repository-text-index-and-grep/sprints/S01.md:81](../../pm/plans/closed/2026-09-30-repository-text-index-and-grep/sprints/S01.md#L81)
+- tasklet: plans-implementation [pm/plans/closed/2026-09-30-repository-text-index-and-grep/sprints/S01.md:88](../../pm/plans/closed/2026-09-30-repository-text-index-and-grep/sprints/S01.md#L88)
+- tasklet: plans-implementation [pm/plans/closed/2026-09-30-repository-text-index-and-grep/sprints/S01.md:96](../../pm/plans/closed/2026-09-30-repository-text-index-and-grep/sprints/S01.md#L96)
+- tasklet: plans-verification [pm/plans/closed/2026-09-30-repository-text-index-and-grep/sprints/S01.md:104](../../pm/plans/closed/2026-09-30-repository-text-index-and-grep/sprints/S01.md#L104)
+- tasklet: plans-verification [pm/plans/closed/2026-09-30-repository-text-index-and-grep/sprints/S01.md:118](../../pm/plans/closed/2026-09-30-repository-text-index-and-grep/sprints/S01.md#L118)
+- issue: introduces [pm/bugs/closed/2026-09-30-FEAT-repository_text_index_and_grep.md:21](../../pm/bugs/closed/2026-09-30-FEAT-repository_text_index_and_grep.md#L21)
+- issue: plans-implementation [pm/bugs/closed/2026-09-30-FEAT-repository_text_index_and_grep.md:22](../../pm/bugs/closed/2026-09-30-FEAT-repository_text_index_and_grep.md#L22)
+- issue: plans-verification [pm/bugs/closed/2026-09-30-FEAT-repository_text_index_and_grep.md:23](../../pm/bugs/closed/2026-09-30-FEAT-repository_text_index_and_grep.md#L23)
+
 ## REQ-CAMPAIGN-ORCHESTRATION
 
 Requirement: [pm/requirements/campaign-orchestration.md](campaign-orchestration.md)
@@ -65,7 +89,7 @@ Requirement: [pm/requirements/campaign-orchestration.md](campaign-orchestration.
 - unit-test: verifies [tests/campaign-orchestration.test.js:7](../../tests/campaign-orchestration.test.js#L7)
 - integration-test: verifies [tests/campaign-census.test.js:615](../../tests/campaign-census.test.js#L615)
 - integration-test: verifies [tests/plan-input-hooks.test.js:88](../../tests/plan-input-hooks.test.js#L88)
-- integration-test: verifies [tests/project-validation.test.js:99](../../tests/project-validation.test.js#L99)
+- integration-test: verifies [tests/project-validation.test.js:125](../../tests/project-validation.test.js#L125)
 - uat: verifies [pm/uat/campaign-orchestration.md:38](../../pm/uat/campaign-orchestration.md#L38)
 - uat: verifies [pm/uat/campaign-orchestration.md:76](../../pm/uat/campaign-orchestration.md#L76)
 - uat: verifies [pm/uat/campaign-orchestration.md:109](../../pm/uat/campaign-orchestration.md#L109)
@@ -120,8 +144,8 @@ Requirement: [pm/requirements/issue-requirement-activation.md](issue-requirement
 Requirement: [pm/requirements/precommit-project-isolation.md](precommit-project-isolation.md)
 
 - implementation: implements [cli/ponytail:6](../../cli/ponytail#L6)
-- unit-test: verifies [tests/ponytail-cli.test.js:11](../../tests/ponytail-cli.test.js#L11)
-- integration-test: verifies [tests/project-validation.test.js:10](../../tests/project-validation.test.js#L10)
+- unit-test: verifies [tests/ponytail-cli.test.js:14](../../tests/ponytail-cli.test.js#L14)
+- integration-test: verifies [tests/project-validation.test.js:13](../../tests/project-validation.test.js#L13)
 - uat: verifies [pm/uat/precommit-project-isolation.md:13](../../pm/uat/precommit-project-isolation.md#L13)
 - uat: verifies [pm/uat/precommit-project-isolation.md:31](../../pm/uat/precommit-project-isolation.md#L31)
 - uat: verifies [pm/uat/precommit-project-isolation.md:48](../../pm/uat/precommit-project-isolation.md#L48)
@@ -136,7 +160,7 @@ Requirement: [pm/requirements/developer-private-agent-instructions.md](developer
 - implementation: implements [cli/ponytail:7](../../cli/ponytail#L7)
 - implementation: supports [skills/ponytail/SKILL.md:24](../../skills/ponytail/SKILL.md#L24)
 - unit-test: verifies [tests/policy-conformance.test.js:51](../../tests/policy-conformance.test.js#L51)
-- integration-test: verifies [tests/project-validation.test.js:156](../../tests/project-validation.test.js#L156)
+- integration-test: verifies [tests/project-validation.test.js:182](../../tests/project-validation.test.js#L182)
 - uat: verifies [pm/uat/developer-private-agent-instructions.md:13](../../pm/uat/developer-private-agent-instructions.md#L13)
 - issue: introduces [pm/bugs/closed/2026-09-30-FEAT-developer_private_agent_instructions.md:20](../../pm/bugs/closed/2026-09-30-FEAT-developer_private_agent_instructions.md#L20)
 - issue: plans-implementation [pm/bugs/closed/2026-09-30-FEAT-developer_private_agent_instructions.md:21](../../pm/bugs/closed/2026-09-30-FEAT-developer_private_agent_instructions.md#L21)

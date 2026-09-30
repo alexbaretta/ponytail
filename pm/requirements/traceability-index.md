@@ -59,8 +59,11 @@ identities, kinds, roles, requirement identifiers, owning paths, stable unit
 names, annotations, and safe descriptive text. Search must support full-text
 terms plus exact kind, role, requirement, path, and lifecycle filters; stable
 ordering; safe parameter binding; and actionable stale-index diagnostics.
-It must not index arbitrary file contents, secrets, credentials, hashes, or
-unclassified machine metadata merely to improve recall.
+This normalized corpus must not add arbitrary file contents, secrets,
+credentials, hashes, or unclassified machine metadata merely to improve its
+semantic fields. Repository text indexing is the distinct approved corpus
+governed by
+[`REQ-REPOSITORY-TEXT-INDEX`](repository-text-index.md).
 
 ## Plan text and structure index
 

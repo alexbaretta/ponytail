@@ -129,7 +129,7 @@ test('CLI shell scripts are parse-safe', () => {
   }
 });
 
-test('ponytail help publishes campaign, plan-input, traceability, and plan command families', () => {
+test('ponytail help publishes campaign, plan-input, index, and plan command families', () => {
   const result = run(ponytail, ['--help'], { cwd: root });
   assert.equal(result.status, 0, result.stderr);
   assert.match(result.stdout, /ponytail plan-input <plan> -- <instruction>/);
@@ -147,6 +147,7 @@ test('ponytail help publishes campaign, plan-input, traceability, and plan comma
   assert.match(result.stdout, /ponytail traceability index \[--rebuild\] \[--json\]/);
   assert.match(result.stdout, /ponytail traceability search <query>/);
   assert.match(result.stdout, /ponytail traceability validate \[--plan <plan> \| --campaign <plan>\]/);
+  assert.match(result.stdout, /ponytail grep <text> \[--ref <ref> \| --commit <commit-id> \| --history <ref-or-commit>\]/);
   assert.match(result.stdout, /ponytail plan search <query>/);
   assert.match(result.stdout, /ponytail plan descendants <plan>/);
   assert.match(result.stdout, /ponytail plan ancestors <plan>/);
@@ -670,8 +671,16 @@ test('project index contract retains a stable relational and search core', () =>
   assert.match(sql, /CREATE TABLE IF NOT EXISTS parse_result_v1/);
   assert.match(sql, /CREATE TABLE IF NOT EXISTS published_generation_v1/);
   assert.match(sql, /payload ->> 'schemaVersion' = '1'/);
-  assert.match(sql, /tsvector GENERATED ALWAYS AS/);
-  assert.match(sql, /USING gin \(search_vector\)/);
+  assert.doesNotMatch(sql, /tsvector GENERATED ALWAYS AS/);
+  assert.doesNotMatch(sql, /USING gin \(search_vector\)/);
+  assert.match(sql, /CREATE EXTENSION IF NOT EXISTS pg_trgm/);
+  assert.match(sql, /CREATE TABLE IF NOT EXISTS text_document_v1/);
+  assert.match(sql, /CREATE TABLE IF NOT EXISTS search_document_v2/);
+  assert.match(sql, /DELETE FROM generation_v1/);
+  assert.match(sql, /USING gin \(content public\.gin_trgm_ops\)/);
+  assert.match(sql, /CREATE TABLE IF NOT EXISTS git_commit_parent_v1/);
+  assert.match(sql, /CREATE TABLE IF NOT EXISTS git_ref_observation_v1/);
+  assert.match(sql, /CREATE TABLE IF NOT EXISTS worktree_text_entry_v1/);
   assert.match(sql, /SECURITY DEFINER/);
   assert.match(sql, /GRANT EXECUTE ON FUNCTION register_project\(uuid, text\)/);
   assert.doesNotMatch(sql, /ALTER TABLE \w+_v1 ADD/);

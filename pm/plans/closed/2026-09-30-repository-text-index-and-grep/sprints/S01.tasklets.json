@@ -1,0 +1,79 @@
+{
+  "schemaVersion": 3,
+  "sprint": "S01",
+  "features": {
+    "S01-F01": {"depends_on": [], "validation_tasklet": "S01-F01-T04"},
+    "S01-F02": {"depends_on": ["S01-F01"], "validation_tasklet": "S01-F02-T04"},
+    "S01-F03": {"depends_on": ["S01-F02"], "validation_tasklet": "S01-F03-T01"}
+  },
+  "tasklets": {
+    "S01-F01-T01": {
+      "depends_on": [],
+      "affinity": ["postgresql", "schema", "trigram"],
+      "risk": "high",
+      "risk_reason": "Adds durable relational contracts and a PostgreSQL extension while preserving existing physical versions.",
+      "feature": "S01-F01",
+      "planned_paths": ["scripts/project-index.sql", "scripts/setup-project-journal.sh", "tests/cli-tools.test.js", "versioned-data-contracts.json", "PROJECT_STRUCTURE.md"]
+    },
+    "S01-F01-T02": {
+      "depends_on": ["S01-F01-T01"],
+      "affinity": ["git", "history", "postgresql"],
+      "risk": "high",
+      "risk_reason": "Traverses arbitrary local Git DAGs and retains every observed object without partial publication.",
+      "feature": "S01-F01",
+      "planned_paths": ["src/project-index.js", "tests/project-index.test.js"]
+    },
+    "S01-F01-T03": {
+      "depends_on": ["S01-F01-T02"],
+      "affinity": ["git", "worktree", "postgresql"],
+      "risk": "high",
+      "risk_reason": "Defines the exact current repository snapshot across tracked, deleted, untracked, ignored, binary, and symlink states.",
+      "feature": "S01-F01",
+      "planned_paths": ["src/project-index.js", "tests/project-index.test.js"]
+    },
+    "S01-F01-T04": {
+      "depends_on": ["S01-F01-T01", "S01-F01-T02", "S01-F01-T03"],
+      "affinity": ["postgresql", "integration", "validation"],
+      "risk": "normal",
+      "feature": "S01-F01",
+      "planned_paths": ["scripts/test-project-index-postgres.sh"]
+    },
+    "S01-F02-T01": {
+      "depends_on": ["S01-F01-T04"],
+      "affinity": ["grep", "query", "postgresql"],
+      "risk": "high",
+      "risk_reason": "Owns selector resolution, path isolation, implicit refresh, literal SQL matching, and complete historical result semantics.",
+      "feature": "S01-F02",
+      "planned_paths": ["src/project-index.js", "tests/project-index.test.js", "versioned-data-contracts.json"]
+    },
+    "S01-F02-T02": {
+      "depends_on": ["S01-F02-T01"],
+      "affinity": ["grep", "cli", "distribution"],
+      "risk": "normal",
+      "feature": "S01-F02",
+      "planned_paths": ["cli/ponytail", "tests/cli-tools.test.js", "tests/distribution.test.js", "README.md", "PROJECT_STRUCTURE.md", "docs/project-validation.md"]
+    },
+    "S01-F02-T03": {
+      "depends_on": ["S01-F02-T02"],
+      "affinity": ["grep", "qa", "references"],
+      "risk": "high",
+      "risk_reason": "Replaces the pre-commit reference search boundary and must preserve every existing permission and exception rule.",
+      "feature": "S01-F02",
+      "planned_paths": ["scripts/project-qa.js", "src/project-index.js", "tests/project-validation.test.js", "tests/project-index.test.js"]
+    },
+    "S01-F02-T04": {
+      "depends_on": ["S01-F02-T01", "S01-F02-T02", "S01-F02-T03"],
+      "affinity": ["grep", "postgresql", "integration", "uat"],
+      "risk": "normal",
+      "feature": "S01-F02",
+      "planned_paths": ["scripts/test-project-index-postgres.sh", "pm/uat/repository-text-index.md"]
+    },
+    "S01-F03-T01": {
+      "depends_on": ["S01-F02-T04"],
+      "affinity": ["traceability", "validation", "plan"],
+      "risk": "normal",
+      "feature": "S01-F03",
+      "planned_paths": [".agents/config/project/traceability.json", "pm/requirements/index.md", "pm/requirements/repository-text-index.md", "pm/requirements/traceability-index.md", "pm/requirements/traceability.generated.md", "pm/architecture/index.md", "pm/architecture/repository-text-index.md", "pm/architecture/traceability-index.md", "pm/uat/index.md", "pm/uat/repository-text-index.md", "pm/bugs/closed/2026-09-30-FEAT-repository_text_index_and_grep.md", "pm/plans/closed/2026-09-30-repository-text-index-and-grep/plan.md", "pm/plans/closed/2026-09-30-repository-text-index-and-grep/sprints/S01.md", "pm/plans/closed/2026-09-30-repository-text-index-and-grep/sprints/S01.tasklets.json"]
+    }
+  }
+}

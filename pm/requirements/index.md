@@ -20,6 +20,7 @@ behavior independently from implementation plans and architecture.
 - [Issue requirement activation](issue-requirement-activation.md)
 - [Pre-commit project isolation](precommit-project-isolation.md)
 - [Developer-private agent instructions](developer-private-agent-instructions.md)
+- [Repository text index and grep](repository-text-index.md)
 
 ## Campaign census CLI
 

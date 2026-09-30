@@ -159,11 +159,12 @@ grants nothing. Relative submodule URLs resolve against the superproject origin.
 
 ## Search and exceptions
 
-Search covers working-tree text of tracked files using `git grep`, including
-unstaged edits. It excludes untracked files, binary content, Git history, and
-submodule contents. It searches file contents, not filenames. All tracked
-prose, tests, and generated text participate. A newly added file participates
-after `git add`. Foreign canonical names, synonyms, component names, package
+Search refreshes the shared PostgreSQL trigram index and covers the effective
+current worktree: committed and modified tracked text plus untracked
+non-ignored text. It excludes deleted and binary content, ignored files,
+Gitlinks, `ponytail-journal.json`, and installed `.agents/skills/` copies. It
+searches file contents, not filenames. Foreign canonical names, synonyms,
+component names, package
 names, repository URLs, and registered paths are searched, except identities
 registered as components of the invoking project. Component ownership matches
 case-insensitively, like the reference scan. No recursion into dependency
@@ -181,6 +182,10 @@ the matching frontmatter name. Those skill names are valid references throughout
 the client project. Longer identifiers and other references on the same line
 remain scanned. An empty directory or a mismatched skill declaration grants
 no permission.
+
+The index connection and stable project identity come from
+`ponytail-journal.json`. A missing or unavailable index is an actionable QA
+failure; QA does not fall back to a filesystem scan.
 
 An exact-file exception requires all four fields below:
 

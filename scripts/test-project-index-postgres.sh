@@ -4,6 +4,7 @@ set -euo pipefail
 # Copyright (c) 2026 Alex Baretta. All rights reserved.
 # Licensed under the MIT License. See LICENSE in the project root.
 # Traceability: verifies REQ-TRACEABILITY-INDEX
+# Traceability: verifies REQ-REPOSITORY-TEXT-INDEX
 
 fail() {
   printf 'error: %s\n' "$1" >&2
@@ -28,8 +29,10 @@ const { Pool } = require('pg');
 const {
   collectPlanProjection,
   collectTraceabilityProjection,
+  grepRepository,
   indexTraceability,
   publishTraceabilityGeneration,
+  refreshRepositoryTextIndex,
 } = require(path.join(process.argv[2], 'src/project-index'));
 
 async function main() {
@@ -47,6 +50,7 @@ async function main() {
   });
   const projectId = crypto.randomUUID();
   const gapProjectId = crypto.randomUUID();
+  const repositoryProjectId = crypto.randomUUID();
   const projectName = `project-index-contract-${projectId}`;
   const repositoryPath = `contract://${projectId}`;
   const base = collectTraceabilityProjection(configurationPath);
@@ -60,6 +64,7 @@ async function main() {
   const second = { ...first, worktreePath: `${repositoryPath}/two` };
   const client = await pool.connect();
   let gapRoot;
+  let repositoryRoot;
   try {
     const firstResult = await publishTraceabilityGeneration(client, first);
     const secondResult = await publishTraceabilityGeneration(client, second);
@@ -79,12 +84,13 @@ async function main() {
     const search = await client.query(`
       SELECT
         count(*) FILTER (
-          WHERE document.search_vector @@ plainto_tsquery('simple', $2)
+          WHERE text.content ILIKE '%' || $2 || '%'
         )::integer AS visible,
         count(*) FILTER (
-          WHERE document.search_vector @@ plainto_tsquery('simple', $3)
+          WHERE text.content ILIKE '%' || $3 || '%'
         )::integer AS excluded
-      FROM ponytail_index.search_document_v1 document
+      FROM ponytail_index.search_document_v2 document
+      JOIN ponytail_index.text_document_v1 text USING (document_id)
       JOIN ponytail_index.generation_v1 generation USING (generation_id)
       JOIN ponytail_index.worktree_v1 worktree USING (worktree_id)
       JOIN ponytail_index.repository_v1 repository USING (repository_id)
@@ -99,7 +105,7 @@ async function main() {
       SELECT
         has_schema_privilege('public', 'ponytail_index', 'USAGE') AS public_schema,
         has_table_privilege(
-          'public', 'ponytail_index.search_document_v1', 'SELECT'
+          'public', 'ponytail_index.search_document_v2', 'SELECT'
         ) AS public_table`);
     assert.deepEqual(privileges.rows[0], { public_schema: false, public_table: false });
 
@@ -260,6 +266,75 @@ async function main() {
     assert.ok(gapValidation.stdout.endsWith('\n'));
     const gapResult = JSON.parse(gapValidation.stdout);
     assert.deepEqual(gapResult.gaps.map(gap => gap.ruleId), ['requirement-unit-test']);
+
+    repositoryRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ponytail-repository-text-'));
+    execFileSync('git', ['init', '-q', '-b', 'main'], { cwd: repositoryRoot });
+    fs.writeFileSync(path.join(repositoryRoot, 'ponytail-journal.json'), JSON.stringify({
+      schemaVersion: 1,
+      projectId: repositoryProjectId,
+      projectName: `repository-text-${repositoryProjectId}`,
+      database,
+    }));
+    fs.writeFileSync(path.join(repositoryRoot, '.gitignore'), 'ignored.txt\n');
+    fs.mkdirSync(path.join(repositoryRoot, 'src'));
+    fs.writeFileSync(path.join(repositoryRoot, 'src/search.txt'), 'historical-only needle\n');
+    execFileSync('git', ['add', '.'], { cwd: repositoryRoot });
+    execFileSync('git', [
+      '-c', 'user.name=Test', '-c', 'user.email=test@example.test',
+      'commit', '-qm', 'historical state',
+    ], { cwd: repositoryRoot });
+    const historicalCommit = execFileSync('git', ['rev-parse', 'HEAD'], {
+      cwd: repositoryRoot, encoding: 'utf8',
+    }).trim();
+    execFileSync('git', ['tag', 'historical'], { cwd: repositoryRoot });
+    fs.writeFileSync(path.join(repositoryRoot, 'src/search.txt'), 'current-only needle\n');
+    execFileSync('git', ['add', 'src/search.txt'], { cwd: repositoryRoot });
+    execFileSync('git', [
+      '-c', 'user.name=Test', '-c', 'user.email=test@example.test',
+      'commit', '-qm', 'current state',
+    ], { cwd: repositoryRoot });
+    execFileSync('git', ['checkout', '-qb', 'side', historicalCommit], { cwd: repositoryRoot });
+    fs.writeFileSync(path.join(repositoryRoot, 'src/side.txt'), 'side-only needle\n');
+    execFileSync('git', ['add', 'src/side.txt'], { cwd: repositoryRoot });
+    execFileSync('git', [
+      '-c', 'user.name=Test', '-c', 'user.email=test@example.test',
+      'commit', '-qm', 'side state',
+    ], { cwd: repositoryRoot });
+    execFileSync('git', ['checkout', '-q', 'main'], { cwd: repositoryRoot });
+    execFileSync('git', [
+      '-c', 'user.name=Test', '-c', 'user.email=test@example.test',
+      'merge', '--no-ff', '-qm', 'merge side', 'side',
+    ], { cwd: repositoryRoot });
+    execFileSync('git', ['branch', 'ambiguous'], { cwd: repositoryRoot });
+    execFileSync('git', ['tag', 'ambiguous'], { cwd: repositoryRoot });
+    fs.writeFileSync(path.join(repositoryRoot, 'src/overlay.txt'), 'overlay-only needle\n');
+    fs.writeFileSync(path.join(repositoryRoot, 'ignored.txt'), 'ignored-only needle\n');
+
+    const firstRefresh = await refreshRepositoryTextIndex({ root: repositoryRoot, pool });
+    const secondRefresh = await refreshRepositoryTextIndex({ root: repositoryRoot, pool });
+    assert.equal(firstRefresh.history.commits, 4);
+    assert.equal(secondRefresh.history.commits, 0);
+    assert.equal(secondRefresh.overlay.reused, true);
+    const searchRepository = (query, selector = 'worktree', selectorValue = null, path = null) =>
+      grepRepository({ query, selector, selectorValue, path, ignoreCase: false }, {
+        root: repositoryRoot, pool,
+      });
+    assert.deepEqual((await searchRepository('overlay-only')).map(match => match.path),
+      ['src/overlay.txt']);
+    assert.deepEqual(await searchRepository('ignored-only'), []);
+    assert.deepEqual((await searchRepository(
+      'historical-only', 'commit', historicalCommit,
+    )).map(match => match.path), ['src/search.txt']);
+    assert.deepEqual((await searchRepository(
+      'historical-only', 'ref', 'historical', 'src',
+    )).map(match => match.path), ['src/search.txt']);
+    const historyMatches = await searchRepository('needle', 'history', 'main');
+    assert.ok(historyMatches.some(match => match.commit === historicalCommit));
+    assert.ok(historyMatches.every(match => match.path.startsWith('src/')));
+    await assert.rejects(() => searchRepository('needle', 'ref', 'ambiguous'),
+      /cannot resolve ref: ambiguous/);
+    fs.writeFileSync(path.join(repositoryRoot, 'src/search.txt'), Buffer.from([0, 1, 2, 3]));
+    assert.deepEqual(await searchRepository('current-only'), []);
   } finally {
     await client.query(`
       DELETE FROM ponytail_index.generation_v1
@@ -267,20 +342,21 @@ async function main() {
         SELECT worktree_id FROM ponytail_index.worktree_v1 worktree
         JOIN ponytail_index.repository_v1 repository USING (repository_id)
         WHERE repository.project_id = ANY($1::uuid[])
-      )`, [[projectId, gapProjectId]]);
+      )`, [[projectId, gapProjectId, repositoryProjectId]]);
     await client.query(`
       DELETE FROM ponytail_index.worktree_v1
       WHERE repository_id IN (
         SELECT repository_id FROM ponytail_index.repository_v1
         WHERE project_id = ANY($1::uuid[])
-      )`, [[projectId, gapProjectId]]);
+      )`, [[projectId, gapProjectId, repositoryProjectId]]);
     await client.query(
-      'DELETE FROM ponytail_index.parse_result_v1 WHERE project_id = ANY($1::uuid[])', [[projectId, gapProjectId]]);
+      'DELETE FROM ponytail_index.parse_result_v1 WHERE project_id = ANY($1::uuid[])', [[projectId, gapProjectId, repositoryProjectId]]);
     await client.query(
-      'DELETE FROM ponytail_index.repository_v1 WHERE project_id = ANY($1::uuid[])', [[projectId, gapProjectId]]);
+      'DELETE FROM ponytail_index.repository_v1 WHERE project_id = ANY($1::uuid[])', [[projectId, gapProjectId, repositoryProjectId]]);
     await client.query(
-      'DELETE FROM ponytail_index.project_v1 WHERE project_id = ANY($1::uuid[])', [[projectId, gapProjectId]]);
+      'DELETE FROM ponytail_index.project_v1 WHERE project_id = ANY($1::uuid[])', [[projectId, gapProjectId, repositoryProjectId]]);
     if (gapRoot !== undefined) fs.rmSync(gapRoot, { recursive: true, force: true });
+    if (repositoryRoot !== undefined) fs.rmSync(repositoryRoot, { recursive: true, force: true });
     client.release();
     await pool.end();
   }

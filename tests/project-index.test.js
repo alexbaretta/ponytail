@@ -14,6 +14,7 @@ const {
   collectTraceabilityProjection,
   evaluateValidationRules,
   normalizePlanPayloads,
+  parseGrepArguments,
   parsePlanGraphArguments,
   parsePlanSearchArguments,
   parseSearchArguments,
@@ -27,6 +28,7 @@ const {
 } = require('../src/project-index');
 
 // Traceability: verifies REQ-TRACEABILITY-INDEX
+// Traceability: verifies REQ-REPOSITORY-TEXT-INDEX
 
 function fixture() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ponytail-project-index-'));
@@ -62,6 +64,22 @@ function fixture() {
   ], { cwd: root });
   return { configurationPath, root };
 }
+
+test('parses exact repository grep selectors and paths', () => {
+  assert.deepEqual(parseGrepArguments(['needle']), {
+    query: 'needle', selector: 'worktree', selectorValue: null, path: null, ignoreCase: false,
+  });
+  assert.deepEqual(parseGrepArguments([
+    'needle', '--history', 'main', '--path', 'src/lib', '--ignore-case',
+  ]), {
+    query: 'needle', selector: 'history', selectorValue: 'main', path: 'src/lib', ignoreCase: true,
+  });
+  assert.throws(() => parseGrepArguments(['needle', '--ref', 'main', '--commit', 'abc123']),
+    /mutually exclusive/);
+  assert.throws(() => parseGrepArguments(['needle', '--path', '../outside']),
+    /invalid repository path/);
+  assert.throws(() => parseGrepArguments(['']), /must not be empty/);
+});
 
 function planFixture() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ponytail-plan-index-'));
@@ -277,9 +295,10 @@ test('projects explicit inventories and stable prospective planning entities', (
   const entities = payloads.flatMap(payload => payload.entities);
   const relationships = payloads.flatMap(payload => payload.relationships);
   assert.equal(entities.filter(entity => entity.entityId === 'trace:endpoint:GET-value').length, 1);
-  assert.equal(entities.filter(entity => entity.entityId === 'trace:tasklet:S01-F01-T01').length, 1);
+  assert.equal(entities.filter(entity =>
+    entity.entityId === 'trace:tasklet:plan.md:S01-F01-T01').length, 1);
   assert.deepEqual(relationships.filter(relationship =>
-    relationship.sourceEntityId === 'trace:tasklet:S01-F01-T01')
+    relationship.sourceEntityId === 'trace:tasklet:plan.md:S01-F01-T01')
     .map(relationship => relationship.role), [
     'plans-implementation', 'plans-verification',
   ]);
@@ -743,6 +762,8 @@ test('searches the exact fresh plan generation with bound filters', async () => 
     'plan-generation', 'processor & injection', 'open', 'plan-section', 'child',
   ]);
   assert.doesNotMatch(search.text, /processor|child/);
+  assert.match(search.text, /search_document_v2/);
+  assert.match(search.text, /text\.content ILIKE/);
 });
 
 test('refuses stale plan queries without rebuilding', async () => {

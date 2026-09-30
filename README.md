@@ -217,6 +217,24 @@ disposable heartbeat state under ignored `tmp/project-journal/`, and emits
 one-line JSON. Journal failures do not stop engineering work and must be
 reported in the agent's reply.
 
+### Repository text search
+
+`ponytail grep` refreshes the PostgreSQL repository-text index and performs a
+literal search. The default searches the current worktree, including modified
+tracked files and untracked non-ignored files. Select one committed state or
+its reachable history, and optionally restrict any query to a file or subtree:
+
+```bash
+ponytail grep 'literal text'
+ponytail grep 'literal text' --ref main --path src
+ponytail grep 'literal text' --commit a1b2c3d --path package.json
+ponytail grep 'literal text' --history v4.8.4
+```
+
+Use `-i` or `--ignore-case` for case-insensitive matching. Ignored files,
+binary bodies, and Gitlink contents are excluded. Index or database failure is
+reported; the command does not fall back to another search implementation.
+
 ## Skills and project configuration
 
 `registry.tsv` is the source of truth for published skills and commands.

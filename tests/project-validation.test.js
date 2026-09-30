@@ -1,21 +1,38 @@
 // Copyright (c) 2026 Alex Baretta <alex@baretta.com>.
 // Licensed under the MIT License. See LICENSE in the project root.
 const assert = require('node:assert/strict');
+const crypto = require('node:crypto');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 const test = require('node:test');
+const { Pool } = require('pg');
 const { declaredDependencies } = require('../scripts/project-qa');
+const { databaseOptions } = require('../src/project-index');
 // Traceability: verifies REQ-PRECOMMIT-PROJECT-ISOLATION
 const cli = path.resolve(__dirname, '../cli/ponytail');
 
 function fixture(t) {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'ponytail-validation-'));
-  t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const projectIds = [];
+  t.after(async () => {
+    const pool = new Pool(databaseOptions(path.resolve(__dirname, '..')));
+    try {
+      await pool.query(`DELETE FROM ponytail_index.worktree_v1
+        WHERE repository_id IN (SELECT repository_id FROM ponytail_index.repository_v1
+          WHERE project_id = ANY($1::uuid[]))`, [projectIds]);
+      await pool.query('DELETE FROM ponytail_index.parse_result_v1 WHERE project_id = ANY($1::uuid[])', [projectIds]);
+      await pool.query('DELETE FROM ponytail_index.repository_v1 WHERE project_id = ANY($1::uuid[])', [projectIds]);
+      await pool.query('DELETE FROM ponytail_index.project_v1 WHERE project_id = ANY($1::uuid[])', [projectIds]);
+    } finally {
+      await pool.end();
+      fs.rmSync(directory, { recursive: true, force: true });
+    }
+  });
   const home = path.join(directory, 'home');
   fs.mkdirSync(home);
-  return { directory, home };
+  return { directory, home, projectIds };
 }
 function git(root, ...args) {
   const result = spawnSync('git', ['-C', root, ...args], { encoding: 'utf8' });
@@ -46,6 +63,15 @@ function repository(f, name) {
   const root = path.join(f.directory, name);
   fs.mkdirSync(root);
   git(root, 'init', '-q');
+  const projectId = crypto.randomUUID();
+  f.projectIds.push(projectId);
+  const database = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../ponytail-journal.json'))).database;
+  write(root, 'ponytail-journal.json', JSON.stringify({
+    schemaVersion: 1,
+    projectId,
+    projectName: `${name}-${projectId}`,
+    database,
+  }));
   const result = run(f.home, root, 'register');
   assert.equal(result.status, 0, result.stderr);
   git(root, 'add', '.');
@@ -339,15 +365,17 @@ test('component detection parses every manifest before changing metadata', t => 
   assert.equal(fs.readFileSync(path.join(root, '.agents/config/ponytail.json'), 'utf8'), before);
 });
 
-test('validate remains cheap while qa scans tracked working-tree text, not untracked files', t => {
+test('validate remains cheap while qa scans tracked and untracked nonignored text', t => {
   const f = fixture(t);
   const current = repository(f, 'current');
   repository(f, 'OtherProduct');
   write(current, 'untracked.txt', 'OtherProduct');
-  assert.equal(run(f.home, current, 'qa').status, 0);
+  let result = run(f.home, current, 'qa');
+  assert.equal(result.status, 4, result.stderr);
+  assert.match(result.stdout, /untracked.txt:1: forbidden reference/);
   git(current, 'add', 'untracked.txt');
   assert.equal(run(f.home, current, 'validate').status, 0);
-  let result = run(f.home, current, 'qa', 'references');
+  result = run(f.home, current, 'qa', 'references');
   assert.equal(result.status, 4, result.stderr);
   assert.match(result.stdout, /untracked.txt:1: forbidden reference/);
   write(current, 'untracked.txt', 'OtherProductSuffix');

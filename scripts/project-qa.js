@@ -11,6 +11,9 @@ const { parseDocument } = require('yaml');
 const { METADATA_MARKER } = require('../skills/plan-execution/scripts/ready-sprints');
 const SPRINT_METADATA_OPENING = new RegExp(`^<!--\\s*${METADATA_MARKER}\\s*$`);
 const { entries } = require('../generated/registry.json');
+const { databaseOptions, grepRepository, refreshRepositoryTextIndex } = require('../src/project-index');
+
+// Traceability: implements REQ-REPOSITORY-TEXT-INDEX
 
 function installedSkillNames(root) {
   const directories = [path.join(root, '.agents/skills'), path.join(process.env.CODEX_HOME || path.join(os.homedir(), '.codex'), 'skills')];
@@ -182,7 +185,7 @@ function submoduleUrls(root) {
   return urls;
 }
 
-function checkReferences(root, project, projects) {
+async function checkReferences(root, project, projects, search) {
   const skillNames = installedSkillNames(root);
   const dependencies = declaredDependencies(root, project);
   const submodules = submoduleUrls(root);
@@ -200,9 +203,9 @@ function checkReferences(root, project, projects) {
     const names = [...new Set([foreign.name, ...foreign.names, ...foreign.components, ...foreign.repositoryUrls, ...foreign.packages.map(item => item.name), foreignRoot])]
       .filter(name => !components.has(name.toLocaleLowerCase()));
     for (const name of names) {
-      const output = git(root, ['grep', '--no-recurse-submodules', '--no-textconv', '--no-color', '--no-column', '--no-heading', '--no-break', '-I', '-n', '-z', '-i', '-F', '-e', name, '--', '.'], [0, 1]);
-      for (const match of output.matchAll(/([^\0]+)\0(\d+)\0([^\n]*)\n/g)) {
-        const [, file, lineNumber, text] = match;
+      for (const match of await search(name)) {
+        const { path: file, line: lineNumber, text } = match;
+        if (file === 'ponytail-journal.json' || file.startsWith('.agents/skills/')) continue;
         // The sprint protocol marker is required tooling metadata, not a project reference.
         if (file.endsWith('.md') && SPRINT_METADATA_OPENING.test(text)) continue;
         const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -229,16 +232,29 @@ function checkReferences(root, project, projects) {
 }
 
 if (require.main === module) {
-  try {
+  (async () => {
     const { root, project, projects } = JSON.parse(fs.readFileSync(0, 'utf8'));
-    const findings = checkReferences(root, project, projects);
+    const pool = new (require('pg').Pool)(databaseOptions(root));
+    let findings;
+    try {
+      const refreshed = await refreshRepositoryTextIndex({ root, pool });
+      findings = await checkReferences(root, project, projects, query => grepRepository({
+        query,
+        selector: 'worktree',
+        selectorValue: null,
+        path: null,
+        ignoreCase: true,
+      }, { root, pool, refreshed }));
+    } finally {
+      await pool.end();
+    }
     for (const finding of findings) process.stdout.write(`${finding.file}:${finding.line}: forbidden reference to ${JSON.stringify(finding.project)}: ${JSON.stringify(finding.name)}\n`);
     process.stdout.write(`references: ${findings.length} findings; ${Object.keys(projects).length} other registered projects checked\n`);
     process.exitCode = findings.length ? 4 : 0;
-  } catch (error) {
+  })().catch(error => {
     process.stderr.write(`error: ${error.message}\n`);
     process.exitCode = 1;
-  }
+  });
 }
 
 module.exports = { declaredDependencies, submoduleUrls, checkReferences };

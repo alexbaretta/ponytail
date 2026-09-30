@@ -3,11 +3,14 @@
 // Licensed under the MIT License. See LICENSE in the project root.
 
 const assert = require('node:assert/strict');
+const crypto = require('node:crypto');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 const test = require('node:test');
+const { Pool } = require('pg');
+const { databaseOptions } = require('../src/project-index');
 // Traceability: verifies REQ-PRECOMMIT-PROJECT-ISOLATION
 
 const root = path.join(__dirname, '..');
@@ -156,9 +159,29 @@ test('V1 user configuration remains readable and upgrades through the V2 writer'
   assert.equal(unrelatedProject.identity, null);
 });
 
-test('pre-commit composes with an existing shell hook idempotently', () => {
+test('pre-commit composes with an existing shell hook idempotently', t => {
   const home = temporaryDirectory('ponytail-home');
   const projectRoot = project();
+  const projectId = crypto.randomUUID();
+  const database = JSON.parse(fs.readFileSync(path.join(root, 'ponytail-journal.json'))).database;
+  fs.writeFileSync(path.join(projectRoot, 'ponytail-journal.json'), JSON.stringify({
+    schemaVersion: 1,
+    projectId,
+    projectName: `pre-commit-${projectId}`,
+    database,
+  }));
+  t.after(async () => {
+    const pool = new Pool(databaseOptions(root));
+    try {
+      await pool.query(`DELETE FROM ponytail_index.worktree_v1
+        WHERE repository_id IN (SELECT repository_id FROM ponytail_index.repository_v1
+          WHERE project_id = $1::uuid)`, [projectId]);
+      await pool.query('DELETE FROM ponytail_index.repository_v1 WHERE project_id = $1::uuid', [projectId]);
+      await pool.query('DELETE FROM ponytail_index.project_v1 WHERE project_id = $1::uuid', [projectId]);
+    } finally {
+      await pool.end();
+    }
+  });
   assert.equal(spawnSync('git', ['config', 'core.hooksPath', '.husky/_'], { cwd: projectRoot }).status, 0);
   const hookPath = path.join(projectRoot, '.husky/_/pre-commit');
   const clientHook = '#!/usr/bin/env sh\n. "$(dirname "$0")/h"';

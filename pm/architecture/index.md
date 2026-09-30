@@ -20,3 +20,4 @@ ownership of project-specific management records and evidence.
 - [Traceability index](traceability-index.md)
 - [Project validation isolation](project-validation-isolation.md)
 - [Developer-private agent instructions](developer-private-agent-instructions.md)
+- [Repository text index](repository-text-index.md)

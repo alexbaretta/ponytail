@@ -5,7 +5,7 @@
 const crypto = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
-const { execFileSync, spawnSync } = require('node:child_process');
+const { execFileSync, spawn, spawnSync } = require('node:child_process');
 
 const {
   findRelationships,
@@ -31,6 +31,7 @@ const {
 } = require('../skills/plan-execution/scripts/ready-tasklets');
 
 // Traceability: implements REQ-TRACEABILITY-INDEX
+// Traceability: implements REQ-REPOSITORY-TEXT-INDEX
 
 function exactKeys(value, keys) {
   return value !== null && typeof value === 'object' && !Array.isArray(value) &&
@@ -504,8 +505,10 @@ function relationshipEntityId(relationship) {
   ].join('\0'))}`;
 }
 
-function declaredEntityId(kind, id) {
-  return `trace:${kind}:${id}`;
+function declaredEntityId(kind, id, relativePath) {
+  return kind === 'tasklet'
+    ? `trace:${kind}:${relativePath}:${id}`
+    : `trace:${kind}:${id}`;
 }
 
 function parseFile(configuration, relativePath, source) {
@@ -527,7 +530,7 @@ function parseFile(configuration, relativePath, source) {
   for (const entity of configuration.entities.filter(
     candidate => candidate.path === relativePath,
   )) {
-    const entityId = declaredEntityId(entity.kind, entity.id);
+    const entityId = declaredEntityId(entity.kind, entity.id, entity.path);
     entities.set(entityId, {
       entityId,
       entityKind: entity.kind,
@@ -548,7 +551,7 @@ function parseFile(configuration, relativePath, source) {
       }
       const entityId = relationship.entityId === null
         ? relationshipEntityId(relationship)
-        : declaredEntityId(relationship.entityKind, relationship.entityId);
+        : declaredEntityId(relationship.entityKind, relationship.entityId, relationship.path);
       const declaration = configuration.entities.find(entity =>
         entity.kind === relationship.entityKind && entity.id === relationship.entityId);
       entities.set(entityId, {
@@ -995,6 +998,7 @@ async function publishTraceabilityGeneration(client, projection) {
       : projection.normalizePayloads(payloads);
     const allEntities = normalized.entities;
     const allRelationships = normalized.relationships;
+    const searchDocuments = new Map();
     for (const entity of allEntities) {
       await client.query(`
         INSERT INTO ponytail_index.entity_v1 (
@@ -1018,21 +1022,7 @@ async function publishTraceabilityGeneration(client, projection) {
         description: entity.description,
         role: entity.searchRole ?? null,
       }).map(([field, value]) => [field, projection.searchableFields.includes(field) ? value : null]));
-      await client.query(`
-        INSERT INTO ponytail_index.search_document_v1 (
-          generation_id, entity_id, searchable_entity_id, entity_kind, path,
-          unit_name, annotation, description, role
-        ) VALUES ($1::uuid, $2, $3, $4, $5, $6, $7, $8, $9)`, [
-        generation.generation_id,
-        entity.entityId,
-        searchable.entityId,
-        searchable.entityKind,
-        searchable.path,
-        searchable.unitName,
-        searchable.annotation,
-        searchable.description,
-        searchable.role,
-      ]);
+      searchDocuments.set(entity.entityId, { ...searchable, requirementId: null });
     }
     for (const relationship of allRelationships) {
       await client.query(`
@@ -1046,17 +1036,32 @@ async function publishTraceabilityGeneration(client, projection) {
       ]);
       if (projection.searchableFields.includes('role') ||
           projection.searchableFields.includes('requirementId')) {
-        await client.query(`
-          UPDATE ponytail_index.search_document_v1
-          SET role = $3, requirement_id = $4
-          WHERE generation_id = $1::uuid AND entity_id = $2`, [
-          generation.generation_id,
-          relationship.sourceEntityId,
-          projection.searchableFields.includes('role') ? relationship.role : null,
-          projection.searchableFields.includes('requirementId')
-            ? relationship.targetEntityId : null,
-        ]);
+        const document = searchDocuments.get(relationship.sourceEntityId);
+        document.role = projection.searchableFields.includes('role') ? relationship.role : null;
+        document.requirementId = projection.searchableFields.includes('requirementId')
+          ? relationship.targetEntityId : null;
       }
+    }
+    for (const [entityId, document] of searchDocuments) {
+      const content = Object.values(document).filter(value => value !== null).join('\n');
+      const documentId = await insertTextDocument(client, Buffer.from(content));
+      await client.query(`
+        INSERT INTO ponytail_index.search_document_v2 (
+          generation_id, entity_id, document_id, searchable_entity_id, entity_kind,
+          path, unit_name, annotation, description, role, requirement_id
+        ) VALUES ($1::uuid, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`, [
+        generation.generation_id,
+        entityId,
+        documentId,
+        document.entityId,
+        document.entityKind,
+        document.path,
+        document.unitName,
+        document.annotation,
+        document.description,
+        document.role,
+        document.requirementId,
+      ]);
     }
     await client.query(`
       INSERT INTO ponytail_index.published_generation_v1 (worktree_id, corpus, generation_id)
@@ -1257,7 +1262,7 @@ async function searchTraceability(query, filters, options = {}) {
     const generation = await currentGeneration(client, projection);
     const clauses = [
       'document.generation_id = $1::uuid',
-      `document.search_vector @@ websearch_to_tsquery('simple', $2)`,
+      `text.content ILIKE '%' || replace(replace(replace($2, '\\', '\\\\'), '%', '\\%'), '_', '\\_') || '%' ESCAPE '\\'`,
     ];
     const values = [generation.generation_id, query];
     for (const [key, column] of Object.entries({
@@ -1275,7 +1280,8 @@ async function searchTraceability(query, filters, options = {}) {
       SELECT document.entity_id, document.entity_kind, document.role,
         document.requirement_id, document.path, entity.line,
         document.unit_name, document.annotation, document.description
-      FROM ponytail_index.search_document_v1 document
+      FROM ponytail_index.search_document_v2 document
+      JOIN ponytail_index.text_document_v1 text USING (document_id)
       JOIN ponytail_index.entity_v1 entity
         USING (generation_id, entity_id)
       WHERE ${clauses.join(' AND ')}
@@ -1501,7 +1507,7 @@ async function searchPlans(query, filters, options = {}) {
     const generation = await currentGeneration(client, projection);
     const clauses = [
       'document.generation_id = $1::uuid',
-      `document.search_vector @@ websearch_to_tsquery('simple', $2)`,
+      `text.content ILIKE '%' || replace(replace(replace($2, '\\', '\\\\'), '%', '\\%'), '_', '\\_') || '%' ESCAPE '\\'`,
     ];
     const values = [generation.generation_id, query];
     for (const [key, column] of Object.entries({
@@ -1518,7 +1524,8 @@ async function searchPlans(query, filters, options = {}) {
       SELECT document.entity_id, document.entity_kind, document.unit_name,
         document.role, document.path, entity.line, document.annotation,
         left(document.description, 240) AS description
-      FROM ponytail_index.search_document_v1 document
+      FROM ponytail_index.search_document_v2 document
+      JOIN ponytail_index.text_document_v1 text USING (document_id)
       JOIN ponytail_index.entity_v1 entity
         USING (generation_id, entity_id)
       WHERE ${clauses.join(' AND ')}
@@ -1602,7 +1609,7 @@ async function queryPlanGraph(operation, input, direct, options = {}) {
         FROM tree
         JOIN ponytail_index.entity_v1 entity
           ON entity.generation_id = $1::uuid AND entity.entity_id = tree.entity_id
-        JOIN ponytail_index.search_document_v1 document
+        JOIN ponytail_index.search_document_v2 document
           USING (generation_id, entity_id)
         WHERE tree.depth > 0${direct ? ' AND tree.depth = 1' : ''}
         ORDER BY tree.depth, entity.entity_id`, values);
@@ -1611,7 +1618,7 @@ async function queryPlanGraph(operation, input, direct, options = {}) {
         SELECT entity.entity_id, document.role, document.path,
           NULL::text AS reason
         FROM ponytail_index.entity_v1 entity
-        JOIN ponytail_index.search_document_v1 document
+        JOIN ponytail_index.search_document_v2 document
           USING (generation_id, entity_id)
         WHERE entity.generation_id = $1::uuid
           AND entity.entity_kind = 'plan'
@@ -1626,7 +1633,7 @@ async function queryPlanGraph(operation, input, direct, options = {}) {
         SELECT entity.entity_id, document.role, document.path,
           document.description AS reason
         FROM ponytail_index.entity_v1 entity
-        JOIN ponytail_index.search_document_v1 document
+        JOIN ponytail_index.search_document_v2 document
           USING (generation_id, entity_id)
         WHERE entity.generation_id = $1::uuid
           AND entity.entity_kind = 'stranded-plan'
@@ -1694,6 +1701,512 @@ function printPlanSearchHuman(result) {
   }
 }
 
+function gitBuffer(root, args) {
+  return new Promise((resolve, reject) => {
+    const child = spawn('git', args, { cwd: root, stdio: ['ignore', 'pipe', 'pipe'] });
+    const stdout = [];
+    const stderr = [];
+    child.stdout.on('data', chunk => stdout.push(chunk));
+    child.stderr.on('data', chunk => stderr.push(chunk));
+    child.on('error', reject);
+    child.on('close', status => {
+      if (status === 0) resolve(Buffer.concat(stdout));
+      else reject(new Error(Buffer.concat(stderr).toString('utf8').trim() ||
+        `git ${args[0]} exited ${status}`));
+    });
+  });
+}
+
+function nulStrings(buffer) {
+  return buffer.toString('utf8').split('\0').filter(Boolean);
+}
+
+function textContent(buffer) {
+  if (buffer.includes(0)) return null;
+  try {
+    return new TextDecoder('utf-8', { fatal: true }).decode(buffer);
+  } catch {
+    return null;
+  }
+}
+
+function repositoryPath(value) {
+  if (value === undefined || value === '.') return null;
+  if (typeof value !== 'string' || value === '' || path.isAbsolute(value) || value.includes('\\')) {
+    throw new ProjectIndexError('REPOSITORY_GREP_USAGE', `invalid repository path: ${value}`);
+  }
+  const normalized = path.posix.normalize(value.replaceAll(path.sep, '/')).replace(/^\.\//u, '').replace(/\/$/u, '');
+  if (normalized === '..' || normalized.startsWith('../') || normalized === '') {
+    throw new ProjectIndexError('REPOSITORY_GREP_USAGE', `invalid repository path: ${value}`);
+  }
+  return normalized;
+}
+
+function parseGrepArguments(args) {
+  if (args.length === 0 || args[0].startsWith('--')) {
+    throw new ProjectIndexError(
+      'REPOSITORY_GREP_USAGE',
+      'usage: ponytail grep <text> [--ref <ref> | --commit <commit-id> | --history <ref-or-commit>] [--path <path>] [-i|--ignore-case]',
+    );
+  }
+  const query = args.shift();
+  if (query === '') throw new ProjectIndexError('REPOSITORY_GREP_USAGE', 'search text must not be empty');
+  let selector = null;
+  let selectorValue = null;
+  let pathFilter = null;
+  let ignoreCase = false;
+  while (args.length > 0) {
+    const option = args.shift();
+    if (option === '-i' || option === '--ignore-case') {
+      if (ignoreCase) throw new ProjectIndexError('REPOSITORY_GREP_USAGE', `duplicate option: ${option}`);
+      ignoreCase = true;
+      continue;
+    }
+    if (!['--ref', '--commit', '--history', '--path'].includes(option) ||
+        args.length === 0 || args[0].startsWith('--')) {
+      throw new ProjectIndexError('REPOSITORY_GREP_USAGE', `invalid grep option: ${option}`);
+    }
+    const value = args.shift();
+    if (option === '--path') {
+      if (pathFilter !== null) throw new ProjectIndexError('REPOSITORY_GREP_USAGE', 'duplicate option: --path');
+      pathFilter = repositoryPath(value);
+      continue;
+    }
+    if (selector !== null) throw new ProjectIndexError('REPOSITORY_GREP_USAGE', 'grep state selectors are mutually exclusive');
+    selector = option.slice(2);
+    selectorValue = value;
+  }
+  return { query, selector: selector ?? 'worktree', selectorValue, path: pathFilter, ignoreCase };
+}
+
+function resolveCommit(root, selector, value) {
+  if (selector === 'commit' && !/^[0-9a-f]{4,64}$/iu.test(value)) {
+    throw new ProjectIndexError('REPOSITORY_GREP_REVISION', `invalid commit id: ${value}`);
+  }
+  try {
+    let revision = value;
+    if (selector === 'ref') {
+      const candidates = value.startsWith('refs/')
+        ? [value]
+        : [`refs/heads/${value}`, `refs/tags/${value}`];
+      const matches = candidates.filter(candidate => spawnSync(
+        'git', ['show-ref', '--verify', '--quiet', candidate], { cwd: root },
+      ).status === 0);
+      if (matches.length !== 1) throw new Error('ref must resolve exactly once');
+      revision = matches[0];
+    }
+    return git(root, ['rev-parse', '--verify', '--end-of-options', `${revision}^{commit}`]);
+  } catch {
+    throw new ProjectIndexError('REPOSITORY_GREP_REVISION', `cannot resolve ${selector}: ${value}`);
+  }
+}
+
+async function repositoryTextContext(client, root) {
+  const project = JSON.parse(fs.readFileSync(path.join(root, 'ponytail-journal.json'), 'utf8'));
+  const repositoryDirectory = gitPath(root, ['--git-common-dir']);
+  const worktreePath = gitPath(root, ['--show-toplevel']);
+  await client.query('SELECT ponytail_index.register_project($1::uuid, $2)', [
+    project.projectId,
+    project.projectName,
+  ]);
+  const repository = await one(client, `
+    INSERT INTO ponytail_index.repository_v1 (project_id, common_directory)
+    VALUES ($1::uuid, $2)
+    ON CONFLICT (project_id, common_directory) DO UPDATE
+    SET common_directory = EXCLUDED.common_directory
+    RETURNING repository_id`, [project.projectId, repositoryDirectory]);
+  const worktree = await one(client, `
+    INSERT INTO ponytail_index.worktree_v1 (repository_id, root_path)
+    VALUES ($1::uuid, $2)
+    ON CONFLICT (repository_id, root_path) DO UPDATE
+    SET root_path = EXCLUDED.root_path
+    RETURNING worktree_id`, [repository.repository_id, worktreePath]);
+  return {
+    project,
+    repositoryId: repository.repository_id,
+    worktreeId: worktree.worktree_id,
+    root: worktreePath,
+  };
+}
+
+async function currentRefs(root) {
+  const names = (await gitBuffer(root, [
+    'for-each-ref', '--format=%(refname)%00', 'refs/heads', 'refs/tags',
+  ])).toString('utf8').split('\0').map(value => value.trim()).filter(Boolean);
+  const refs = new Map();
+  for (const name of names) refs.set(name, resolveCommit(root, 'ref', name));
+  return refs;
+}
+
+async function insertTextDocument(client, buffer) {
+  const content = textContent(buffer);
+  if (content === null) return null;
+  const documentId = digest(buffer);
+  await client.query(`
+    INSERT INTO ponytail_index.text_document_v1 (document_id, content)
+    VALUES ($1, $2)
+    ON CONFLICT (document_id) DO NOTHING`, [documentId, content]);
+  return documentId;
+}
+
+async function ingestGitHistory(client, context, tips) {
+  if (tips.length === 0) return { commits: 0, blobs: 0 };
+  const lines = (await gitBuffer(context.root, [
+    'rev-list', '--reverse', '--topo-order', '--parents', ...tips,
+  ])).toString('utf8').trim().split('\n').filter(Boolean);
+  const knownResult = await client.query(`
+    SELECT commit_oid FROM ponytail_index.git_commit_v1
+    WHERE repository_id = $1::uuid`, [context.repositoryId]);
+  const known = new Set(knownResult.rows.map(row => row.commit_oid));
+  const unseen = lines.map(line => line.split(' ')).filter(([commitOid]) => !known.has(commitOid));
+  const commitRecords = [];
+  for (const [commitOid, ...parents] of unseen) {
+    const [treeOid, committedAt] = (await gitBuffer(context.root, [
+      'show', '-s', '--format=%T%x00%cI', commitOid,
+    ])).toString('utf8').trim().split('\0');
+    commitRecords.push({ commitOid, parents, treeOid, committedAt });
+    await client.query(`
+      INSERT INTO ponytail_index.git_commit_v1 (
+        repository_id, commit_oid, tree_oid, committed_at
+      ) VALUES ($1::uuid, $2, $3, $4::timestamptz)
+      ON CONFLICT (repository_id, commit_oid) DO NOTHING`, [
+      context.repositoryId, commitOid, treeOid, committedAt,
+    ]);
+  }
+  for (const record of commitRecords) {
+    for (const [parentOrder, parentOid] of record.parents.entries()) {
+      await client.query(`
+        INSERT INTO ponytail_index.git_commit_parent_v1 (
+          repository_id, commit_oid, parent_oid, parent_order
+        ) VALUES ($1::uuid, $2, $3, $4)
+        ON CONFLICT DO NOTHING`, [context.repositoryId, record.commitOid, parentOid, parentOrder]);
+    }
+  }
+  let blobs = 0;
+  for (const record of commitRecords) {
+    const entries = nulStrings(await gitBuffer(context.root, [
+      'ls-tree', '-r', '-z', '--full-tree', record.commitOid,
+    ])).map(value => {
+      const match = value.match(/^([0-7]{6}) (blob|commit) ([0-9a-f]{40,64})\t([\s\S]+)$/u);
+      if (match === null) throw new Error(`invalid git tree entry: ${value}`);
+      return { mode: match[1], type: match[2], blobOid: match[3], path: match[4] };
+    }).filter(entry => entry.type === 'blob');
+    for (const entry of entries) {
+      const existing = await client.query(`
+        SELECT 1 FROM ponytail_index.git_blob_v1
+        WHERE repository_id = $1::uuid AND blob_oid = $2`, [context.repositoryId, entry.blobOid]);
+      if (existing.rows.length === 0) {
+        const buffer = await gitBuffer(context.root, ['cat-file', 'blob', entry.blobOid]);
+        const documentId = await insertTextDocument(client, buffer);
+        await client.query(`
+          INSERT INTO ponytail_index.git_blob_v1 (
+            repository_id, blob_oid, byte_length, document_id
+          ) VALUES ($1::uuid, $2, $3, $4)`, [
+          context.repositoryId, entry.blobOid, buffer.length, documentId,
+        ]);
+        blobs += 1;
+      }
+      await client.query(`
+        INSERT INTO ponytail_index.git_tree_entry_v1 (
+          repository_id, commit_oid, path, mode, blob_oid
+        ) VALUES ($1::uuid, $2, $3, $4, $5)
+        ON CONFLICT DO NOTHING`, [
+        context.repositoryId, record.commitOid, entry.path, entry.mode, entry.blobOid,
+      ]);
+    }
+  }
+  return { commits: commitRecords.length, blobs };
+}
+
+function stableFileBuffer(root, relativePath) {
+  const absolutePath = path.join(root, relativePath);
+  const first = fs.lstatSync(absolutePath);
+  const buffer = first.isSymbolicLink()
+    ? Buffer.from(fs.readlinkSync(absolutePath))
+    : first.isFile() ? fs.readFileSync(absolutePath) : null;
+  const second = fs.lstatSync(absolutePath);
+  if (first.dev !== second.dev || first.ino !== second.ino || first.size !== second.size ||
+      first.mtimeMs !== second.mtimeMs) {
+    throw new ProjectIndexError('REPOSITORY_INDEX_UNSTABLE', `file changed while indexing: ${relativePath}`);
+  }
+  return buffer;
+}
+
+async function collectWorktreeOverlay(context) {
+  const modified = new Set(nulStrings(await gitBuffer(context.root, [
+    'diff', '--name-only', '-z', '--no-renames', 'HEAD', '--',
+  ])));
+  const untracked = new Set(nulStrings(await gitBuffer(context.root, [
+    'ls-files', '--others', '--exclude-standard', '-z', '--',
+  ])));
+  const entries = [];
+  for (const relativePath of [...new Set([...modified, ...untracked])].sort()) {
+    let buffer;
+    try {
+      buffer = stableFileBuffer(context.root, relativePath);
+    } catch (error) {
+      if (error.code === 'ENOENT') {
+        entries.push({ path: relativePath, state: 'deleted', documentId: null, content: null });
+        continue;
+      }
+      throw error;
+    }
+    if (buffer === null) {
+      entries.push({ path: relativePath, state: 'deleted', documentId: null, content: null });
+      continue;
+    }
+    const content = textContent(buffer);
+    if (content === null) {
+      entries.push({ path: relativePath, state: 'deleted', documentId: null, content: null });
+      continue;
+    }
+    entries.push({
+      path: relativePath,
+      state: untracked.has(relativePath) ? 'untracked' : 'modified',
+      documentId: digest(buffer),
+      content,
+    });
+  }
+  const headCommit = git(context.root, ['rev-parse', 'HEAD']);
+  const stateDigest = digest(`${headCommit}\n${entries.map(entry =>
+    `${entry.path}\0${entry.state}\0${entry.documentId ?? ''}\n`).join('')}`);
+  return { headCommit, stateDigest, entries };
+}
+
+async function publishWorktreeOverlay(client, context) {
+  const first = await collectWorktreeOverlay(context);
+  const second = await collectWorktreeOverlay(context);
+  if (first.stateDigest !== second.stateDigest) {
+    throw new ProjectIndexError('REPOSITORY_INDEX_UNSTABLE', 'worktree changed while indexing');
+  }
+  const current = await client.query(`
+    SELECT generation.generation_id, generation.state_digest
+    FROM ponytail_index.published_worktree_text_generation_v1 published
+    JOIN ponytail_index.worktree_text_generation_v1 generation USING (generation_id)
+    WHERE published.worktree_id = $1::uuid`, [context.worktreeId]);
+  if (current.rows[0]?.state_digest === second.stateDigest) {
+    return { generationId: current.rows[0].generation_id, indexedDocuments: 0, reused: true };
+  }
+  const generation = await one(client, `
+    INSERT INTO ponytail_index.worktree_text_generation_v1 (
+      worktree_id, head_commit, state_digest
+    ) VALUES ($1::uuid, $2, $3)
+    RETURNING generation_id`, [context.worktreeId, second.headCommit, second.stateDigest]);
+  let indexedDocuments = 0;
+  for (const entry of second.entries) {
+    if (entry.documentId !== null) {
+      const inserted = await client.query(`
+        INSERT INTO ponytail_index.text_document_v1 (document_id, content)
+        VALUES ($1, $2)
+        ON CONFLICT (document_id) DO NOTHING
+        RETURNING document_id`, [entry.documentId, entry.content]);
+      indexedDocuments += inserted.rows.length;
+    }
+    await client.query(`
+      INSERT INTO ponytail_index.worktree_text_entry_v1 (
+        generation_id, path, state, document_id
+      ) VALUES ($1::uuid, $2, $3, $4)`, [
+      generation.generation_id, entry.path, entry.state, entry.documentId,
+    ]);
+  }
+  await client.query(`
+    INSERT INTO ponytail_index.published_worktree_text_generation_v1 (
+      worktree_id, generation_id
+    ) VALUES ($1::uuid, $2::uuid)
+    ON CONFLICT (worktree_id) DO UPDATE
+    SET generation_id = EXCLUDED.generation_id`, [context.worktreeId, generation.generation_id]);
+  if (current.rows.length === 1) {
+    await client.query(`DELETE FROM ponytail_index.worktree_text_generation_v1
+      WHERE generation_id = $1::uuid`, [current.rows[0].generation_id]);
+    await client.query(`DELETE FROM ponytail_index.text_document_v1 document
+      WHERE NOT EXISTS (
+        SELECT 1 FROM ponytail_index.git_blob_v1 blob
+        WHERE blob.document_id = document.document_id
+      ) AND NOT EXISTS (
+        SELECT 1 FROM ponytail_index.worktree_text_entry_v1 entry
+        WHERE entry.document_id = document.document_id
+      ) AND NOT EXISTS (
+        SELECT 1 FROM ponytail_index.search_document_v2 search
+        WHERE search.document_id = document.document_id
+      )`);
+  }
+  return { generationId: generation.generation_id, indexedDocuments, reused: false };
+}
+
+async function refreshRepositoryTextIndex(options = {}) {
+  const root = fs.realpathSync(options.root ?? git(process.cwd(), ['rev-parse', '--show-toplevel']));
+  const pool = options.pool ?? new (require('pg').Pool)(databaseOptions(root));
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const context = await repositoryTextContext(client, root);
+    const lock = await one(client,
+      'SELECT pg_try_advisory_xact_lock(hashtextextended($1, 0)) AS acquired',
+      [JSON.stringify([context.project.projectId, context.repositoryId, context.worktreeId, 'repository-text'])]);
+    if (!lock.acquired) throw new ProjectIndexError('REPOSITORY_INDEX_BUSY', 'repository text index writer is already active');
+    const refs = await currentRefs(root);
+    const priorResult = await client.query(`
+      SELECT ref_name, commit_oid FROM ponytail_index.git_ref_current_v1
+      WHERE repository_id = $1::uuid`, [context.repositoryId]);
+    const prior = new Map(priorResult.rows.map(row => [row.ref_name, row.commit_oid]));
+    const observedAt = (await one(client, 'SELECT clock_timestamp() AS observed_at')).observed_at;
+    for (const [refName, commitOid] of refs) {
+      if (prior.get(refName) === commitOid) continue;
+      await client.query(`
+        INSERT INTO ponytail_index.git_ref_observation_v1 (
+          repository_id, observed_at, ref_name, commit_oid, deleted
+        ) VALUES ($1::uuid, $2::timestamptz, $3, $4, false)`, [
+        context.repositoryId, observedAt, refName, commitOid,
+      ]);
+      await client.query(`
+        INSERT INTO ponytail_index.git_ref_current_v1 (
+          repository_id, ref_name, commit_oid, observed_at
+        ) VALUES ($1::uuid, $2, $3, $4::timestamptz)
+        ON CONFLICT (repository_id, ref_name) DO UPDATE
+        SET commit_oid = EXCLUDED.commit_oid, observed_at = EXCLUDED.observed_at`, [
+        context.repositoryId, refName, commitOid, observedAt,
+      ]);
+    }
+    for (const refName of prior.keys()) {
+      if (refs.has(refName)) continue;
+      await client.query(`
+        INSERT INTO ponytail_index.git_ref_observation_v1 (
+          repository_id, observed_at, ref_name, commit_oid, deleted
+        ) VALUES ($1::uuid, $2::timestamptz, $3, NULL, true)`, [
+        context.repositoryId, observedAt, refName,
+      ]);
+      await client.query(`DELETE FROM ponytail_index.git_ref_current_v1
+        WHERE repository_id = $1::uuid AND ref_name = $2`, [context.repositoryId, refName]);
+    }
+    const headCommit = git(root, ['rev-parse', 'HEAD']);
+    const tips = [...new Set([...refs.values(), headCommit, ...(options.tips ?? [])])];
+    const history = await ingestGitHistory(client, context, tips);
+    const overlay = await publishWorktreeOverlay(client, context);
+    await client.query('COMMIT');
+    return { ...context, headCommit, history, overlay };
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+    if (options.pool === undefined) await pool.end();
+  }
+}
+
+function literalMatches(content, query, ignoreCase) {
+  const needle = ignoreCase ? query.toLocaleLowerCase() : query;
+  const results = [];
+  for (const [index, line] of content.split(/\r?\n/u).entries()) {
+    const candidate = ignoreCase ? line.toLocaleLowerCase() : line;
+    if (candidate.includes(needle)) results.push({ line: index + 1, text: line });
+  }
+  return results;
+}
+
+async function grepRepository(search, options = {}) {
+  const root = fs.realpathSync(options.root ?? git(process.cwd(), ['rev-parse', '--show-toplevel']));
+  let commitOid = null;
+  if (search.selector !== 'worktree') {
+    commitOid = resolveCommit(root, search.selector, search.selectorValue);
+  }
+  const pool = options.pool ?? new (require('pg').Pool)(databaseOptions(root));
+  try {
+    const refreshed = options.refreshed ?? await refreshRepositoryTextIndex({
+      root, pool, tips: commitOid === null ? [] : [commitOid],
+    });
+    const client = await pool.connect();
+    try {
+      const escaped = search.query.replace(/[\\%_]/gu, value => `\\${value}`);
+      const pattern = `%${escaped}%`;
+      const operator = search.ignoreCase ? 'ILIKE' : 'LIKE';
+      const pathCondition = `($3::text IS NULL OR candidate.path = $3 OR
+        left(candidate.path, length($3) + 1) = $3 || '/')`;
+      let sql;
+      if (search.selector === 'worktree') {
+        sql = `
+          WITH published AS (
+            SELECT generation.generation_id, generation.head_commit
+            FROM ponytail_index.published_worktree_text_generation_v1 pointer
+            JOIN ponytail_index.worktree_text_generation_v1 generation USING (generation_id)
+            WHERE pointer.worktree_id = $4::uuid AND $1::text IS NULL
+          ), candidate AS (
+            SELECT tree.path, document.content, NULL::text AS commit_oid
+            FROM published
+            JOIN ponytail_index.git_tree_entry_v1 tree
+              ON tree.repository_id = $5::uuid AND tree.commit_oid = published.head_commit
+            JOIN ponytail_index.git_blob_v1 blob
+              ON blob.repository_id = tree.repository_id AND blob.blob_oid = tree.blob_oid
+            JOIN ponytail_index.text_document_v1 document USING (document_id)
+            WHERE NOT EXISTS (
+              SELECT 1 FROM ponytail_index.worktree_text_entry_v1 overlay
+              WHERE overlay.generation_id = published.generation_id AND overlay.path = tree.path
+            )
+            UNION ALL
+            SELECT overlay.path, document.content, NULL::text
+            FROM published
+            JOIN ponytail_index.worktree_text_entry_v1 overlay USING (generation_id)
+            JOIN ponytail_index.text_document_v1 document USING (document_id)
+            WHERE overlay.state <> 'deleted'
+          )
+          SELECT path, content, commit_oid FROM candidate
+          WHERE content ${operator} $2 ESCAPE '\\' AND ${pathCondition}
+          ORDER BY path`;
+      } else if (search.selector === 'history') {
+        sql = `
+          WITH RECURSIVE commits(commit_oid) AS (
+            VALUES ($1::text)
+            UNION
+            SELECT parent.parent_oid
+            FROM commits
+            JOIN ponytail_index.git_commit_parent_v1 parent
+              ON parent.repository_id = $5::uuid AND parent.commit_oid = commits.commit_oid
+          ), candidate AS (
+            SELECT tree.path, document.content, tree.commit_oid
+            FROM commits
+            JOIN ponytail_index.git_tree_entry_v1 tree
+              ON tree.repository_id = $5::uuid AND tree.commit_oid = commits.commit_oid
+            JOIN ponytail_index.git_blob_v1 blob
+              ON blob.repository_id = tree.repository_id AND blob.blob_oid = tree.blob_oid
+            JOIN ponytail_index.text_document_v1 document USING (document_id)
+          )
+          SELECT path, content, commit_oid FROM candidate
+          WHERE content ${operator} $2 ESCAPE '\\' AND ${pathCondition}
+            AND $4::uuid IS NOT NULL
+          ORDER BY commit_oid, path`;
+      } else {
+        sql = `
+          WITH candidate AS (
+            SELECT tree.path, document.content, tree.commit_oid
+            FROM ponytail_index.git_tree_entry_v1 tree
+            JOIN ponytail_index.git_blob_v1 blob
+              ON blob.repository_id = tree.repository_id AND blob.blob_oid = tree.blob_oid
+            JOIN ponytail_index.text_document_v1 document USING (document_id)
+            WHERE tree.repository_id = $5::uuid AND tree.commit_oid = $1
+          )
+          SELECT path, content, commit_oid FROM candidate
+          WHERE content ${operator} $2 ESCAPE '\\' AND ${pathCondition}
+            AND $4::uuid IS NOT NULL
+          ORDER BY path`;
+      }
+      const result = await client.query(sql, [
+        commitOid, pattern, search.path, refreshed.worktreeId, refreshed.repositoryId,
+      ]);
+      return result.rows.flatMap(row => literalMatches(row.content, search.query, search.ignoreCase)
+        .map(match => ({ commit: row.commit_oid, path: row.path, ...match })));
+    } finally {
+      client.release();
+    }
+  } finally {
+    if (options.pool === undefined) await pool.end();
+  }
+}
+
+function printGrepHuman(matches, history) {
+  for (const match of matches) {
+    process.stdout.write(`${history ? `${match.commit}:` : ''}${match.path}:${match.line}:${match.text}\n`);
+  }
+}
+
 function printPlanGraphHuman(result) {
   if (result.results.length === 0) {
     process.stdout.write(`no ${result.operation} plans\n`);
@@ -1706,6 +2219,13 @@ function printPlanGraphHuman(result) {
 
 async function run(args) {
   const family = args.shift();
+  if (family === 'grep') {
+    const search = parseGrepArguments(args);
+    const matches = await grepRepository(search);
+    printGrepHuman(matches, search.selector === 'history');
+    if (matches.length === 0) process.exitCode = 1;
+    return;
+  }
   const operation = args.shift();
   const valid = family === 'traceability' && ['index', 'search', 'validate'].includes(operation) ||
     family === 'plan' && ['search', 'descendants', 'ancestors', 'roots', 'stranded'].includes(operation);
@@ -1759,6 +2279,10 @@ async function run(args) {
 }
 
 if (require.main === module) {
+  process.stdout.on('error', error => {
+    if (error.code === 'EPIPE') process.exit(0);
+    throw error;
+  });
   run(process.argv.slice(2)).catch(error => {
     const code = error instanceof ProjectIndexError ? error.code : 'PROJECT_INDEX_FAILURE';
     process.stderr.write(`error ${code}: ${error.message}\n`);
@@ -1792,4 +2316,8 @@ module.exports = {
   scopedTraceabilityEntityIds,
   searchTraceability,
   validateTraceability,
+  parseGrepArguments,
+  databaseOptions,
+  refreshRepositoryTextIndex,
+  grepRepository,
 };
