@@ -82,6 +82,9 @@ while project-wide management records remain under `pm/`.
   `detect-components` maintain its component data; `register-dependency`,
   `unregister-dependency`, and `list-dependencies` maintain explicit project
   dependencies.
+  Root `AGENTS.local.md`, when present, owns developer-private additive
+  instructions. It remains untracked under the repository-local
+  `.git/info/exclude`; the tracked root `AGENTS.md` remains authoritative.
   `project/management.json` owns the versioned project-management root, plan
   root, lifecycle directories and roles, and supported legacy plan layout used
   by the campaign census CLI.

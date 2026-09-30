@@ -44,7 +44,18 @@ const alwaysOnRules = [
   'outside path. Never infer that',
   'without it, refuse the outside modification',
   'Whenever returning control to the user, print the current local timestamp',
+  'AGENTS.local.md',
 ];
+
+test('portable policy loads only safe developer-private project instructions', () => {
+  // Traceability: verifies REQ-DEVELOPER-PRIVATE-AGENT-INSTRUCTIONS
+  const instructions = getPonytailInstructions('full');
+  assert.match(instructions, /root-level `AGENTS\.local\.md`/);
+  assert.match(instructions, /regular non-symlink file/);
+  assert.match(instructions, /untracked and ignored by Git/);
+  assert.match(instructions, /must not weaken or contradict/);
+  assert.match(instructions, /Never\s+store secrets/);
+});
 
 function withoutModeSelection(text) {
   return text

@@ -4,6 +4,7 @@ set -euo pipefail
 # Copyright (c) 2026 Alex Baretta. All rights reserved.
 # Licensed under the MIT License. See LICENSE in the project root.
 # Traceability: implements REQ-PRECOMMIT-PROJECT-ISOLATION
+# Traceability: implements REQ-DEVELOPER-PRIVATE-AGENT-INSTRUCTIONS
 
 main() {
   local python_source=''
@@ -241,6 +242,51 @@ def write_project(root, metadata):
     atomic_write(root / ".agents/config/ponytail.json", project_metadata, 0o644)
 
 
+def validate_private_agents(root):
+    target = root / "AGENTS.local.md"
+    if not target.exists() and not target.is_symlink():
+        return
+    if target.is_symlink() or not target.is_file():
+        fail(f"unsafe developer-private agent instructions: {target} must be a regular non-symlink file")
+    tracked = subprocess.run(
+        ["git", "-C", str(root), "ls-files", "--error-unmatch", "--", "AGENTS.local.md"],
+        capture_output=True,
+    )
+    if tracked.returncode == 0:
+        fail(f"AGENTS.local.md must not be tracked: {target}")
+    ignored = subprocess.run(
+        ["git", "-C", str(root), "check-ignore", "--quiet", "--", "AGENTS.local.md"],
+    )
+    if ignored.returncode:
+        fail(f"AGENTS.local.md must be ignored by Git: {target}; run ponytail register")
+
+
+def ensure_private_agents_excluded(root):
+    target = root / "AGENTS.local.md"
+    if target.is_symlink() or (target.exists() and not target.is_file()):
+        fail(f"unsafe developer-private agent instructions: {target} must be a regular non-symlink file")
+    tracked = subprocess.run(
+        ["git", "-C", str(root), "ls-files", "--error-unmatch", "--", "AGENTS.local.md"],
+        capture_output=True,
+    )
+    if tracked.returncode == 0:
+        fail(f"AGENTS.local.md must not be tracked: {target}")
+    result = subprocess.run(
+        ["git", "-C", str(root), "rev-parse", "--path-format=absolute", "--git-path", "info/exclude"],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    exclude = Path(result.stdout.strip())
+    if path_has_symlink(exclude) or (exclude.exists() and not exclude.is_file()):
+        fail(f"unsafe Git exclude file: {exclude}")
+    existing = exclude.read_text(encoding="utf-8") if exclude.exists() else ""
+    if "/AGENTS.local.md" not in existing.splitlines():
+        separator = "" if not existing or existing.endswith("\n") else "\n"
+        mode = 0o644 if not exclude.exists() else exclude.stat().st_mode & 0o777
+        atomic_write_text(exclude, f"{existing}{separator}/AGENTS.local.md\n", mode)
+
+
 def component_identifiers(components):
     identifiers = set()
     for component in components:
@@ -319,6 +365,7 @@ main "$@"
 
 
 def register(config_path, source_root, root, main_root):
+    ensure_private_agents_excluded(root)
     proposal_path = root / ".agents/config/codex-execpolicy.json"
     if path_has_symlink(proposal_path) or (proposal_path.exists() and not proposal_path.is_file()):
         fail(f"project policy must be a regular non-symlink file: {proposal_path}")
@@ -524,6 +571,7 @@ def validate_project(config, source_root, root, main_root):
     if project is None:
         raise ProjectError(f"Git repository is not registered with Ponytail: {main_root}; run ponytail register", 3)
     metadata = tracked_project(root)
+    validate_private_agents(root)
     result = subprocess.run([str(source_root / "cli/condense_codex_rules.sh"), "--validate-project", str(root)], capture_output=True, text=True)
     if result.returncode:
         fail(result.stderr.strip() or "invalid project policy")

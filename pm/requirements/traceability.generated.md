@@ -22,7 +22,7 @@ Requirement: [pm/requirements/index.md](index.md)
 - implementation: implements [src/campaign-census.js:1084](../../src/campaign-census.js#L1084)
 - unit-test: verifies [tests/campaign-census-format.test.js:11](../../tests/campaign-census-format.test.js#L11)
 - integration-test: verifies [tests/campaign-census.test.js:499](../../tests/campaign-census.test.js#L499)
-- uat: verifies [pm/uat/index.md:34](../../pm/uat/index.md#L34)
+- uat: verifies [pm/uat/index.md:35](../../pm/uat/index.md#L35)
 
 ## REQ-PLAN-INPUT-QUEUE
 
@@ -128,3 +128,16 @@ Requirement: [pm/requirements/precommit-project-isolation.md](precommit-project-
 - issue: introduces [pm/bugs/closed/2026-09-29-BUG-precommit_cross_project_coupling.md:21](../../pm/bugs/closed/2026-09-29-BUG-precommit_cross_project_coupling.md#L21)
 - issue: plans-implementation [pm/bugs/closed/2026-09-29-BUG-precommit_cross_project_coupling.md:22](../../pm/bugs/closed/2026-09-29-BUG-precommit_cross_project_coupling.md#L22)
 - issue: plans-verification [pm/bugs/closed/2026-09-29-BUG-precommit_cross_project_coupling.md:23](../../pm/bugs/closed/2026-09-29-BUG-precommit_cross_project_coupling.md#L23)
+
+## REQ-DEVELOPER-PRIVATE-AGENT-INSTRUCTIONS
+
+Requirement: [pm/requirements/developer-private-agent-instructions.md](developer-private-agent-instructions.md)
+
+- implementation: implements [cli/ponytail:7](../../cli/ponytail#L7)
+- implementation: supports [skills/ponytail/SKILL.md:24](../../skills/ponytail/SKILL.md#L24)
+- unit-test: verifies [tests/policy-conformance.test.js:51](../../tests/policy-conformance.test.js#L51)
+- integration-test: verifies [tests/project-validation.test.js:156](../../tests/project-validation.test.js#L156)
+- uat: verifies [pm/uat/developer-private-agent-instructions.md:13](../../pm/uat/developer-private-agent-instructions.md#L13)
+- issue: introduces [pm/bugs/closed/2026-09-30-FEAT-developer_private_agent_instructions.md:20](../../pm/bugs/closed/2026-09-30-FEAT-developer_private_agent_instructions.md#L20)
+- issue: plans-implementation [pm/bugs/closed/2026-09-30-FEAT-developer_private_agent_instructions.md:21](../../pm/bugs/closed/2026-09-30-FEAT-developer_private_agent_instructions.md#L21)
+- issue: plans-verification [pm/bugs/closed/2026-09-30-FEAT-developer_private_agent_instructions.md:22](../../pm/bugs/closed/2026-09-30-FEAT-developer_private_agent_instructions.md#L22)

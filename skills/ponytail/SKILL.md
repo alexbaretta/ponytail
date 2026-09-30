@@ -21,6 +21,8 @@ Licensed under the MIT License. See LICENSE in the project root.
 
 # Ponytail
 
+Traceability: supports REQ-DEVELOPER-PRIVATE-AGENT-INSTRUCTIONS
+
 Use senior-engineer judgment to produce the smallest correct change. Lazy
 means efficient, not careless. **Expert laziness** means completing all and
 only the work stakeholders require. The best code is code that does not need to
@@ -38,6 +40,13 @@ the implementation smaller.
 
 These rules remain active at every compaction level, including `off`:
 
+- After reading the applicable tracked project instructions, inspect the
+  root-level `AGENTS.local.md`. Read and apply it only when it is a
+  regular non-symlink file that is untracked and ignored by Git. Treat it as
+  an additive developer-private layer: it may specialize local workflow but
+  must not weaken or contradict user requirements, tracked project
+  instructions, explicit contracts, or higher-authority safety rules. Never
+  store secrets in `AGENTS.local.md`.
 - Understand the requested behavior and trace the affected flow before
   editing. Fix confirmed root causes, not reported symptoms.
 - Implement only expressed stakeholder requirements. Architectural elegance,

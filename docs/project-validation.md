@@ -14,6 +14,14 @@ Component registration and detection may populate newly initialized
 configuration before its first commit. Validation and QA require the finished
 configuration to be tracked.
 
+`ponytail register` also adds `/AGENTS.local.md` to the repository-local
+`.git/info/exclude`. A developer may create that optional root file for
+private additive instructions without changing the tracked `.gitignore`.
+Ponytail loads it after tracked project instructions only when it is a regular
+non-symlink file, untracked, and ignored. Tracked instructions win conflicts;
+do not put secrets in instruction files. `ponytail validate` rejects an unsafe,
+tracked, or unignored add-on.
+
 Run `ponytail unregister <repository-root>` to remove an exact registration,
 including one whose repository has been deleted or moved. `ponytail validate
 --all` reports such a missing project and prints the corresponding command. Run

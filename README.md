@@ -222,7 +222,10 @@ reported in the agent's reply.
 `registry.tsv` is the source of truth for published skills and commands.
 Reusable skills live in `skills/`. A host project keeps its own configuration
 in `AGENTS.md` and its project-local skills in `.agents/skills/`; Ponytail does
-not install them globally.
+not install them globally. A developer may add private project instructions in
+root-level `AGENTS.local.md`; rerun `ponytail register` to install its
+repository-local Git exclusion. The file must remain untracked and must not
+contain secrets.
 
 ## Development
 

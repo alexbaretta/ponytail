@@ -152,6 +152,35 @@ test('register resolves linked worktrees to the main checkout and validate check
   assert.match(result.stderr, /metadata/);
 });
 
+test('registration and validation protect developer-private agent instructions', t => {
+  // Traceability: verifies REQ-DEVELOPER-PRIVATE-AGENT-INSTRUCTIONS
+  const f = fixture(t);
+  const root = repository(f, 'current');
+  const exclude = git(root, 'rev-parse', '--path-format=absolute', '--git-path', 'info/exclude');
+  const original = fs.readFileSync(exclude, 'utf8');
+
+  assert.match(original, /^\/AGENTS\.local\.md$/m);
+  assert.equal(original.match(/^\/AGENTS\.local\.md$/gm).length, 1);
+  assert.equal(run(f.home, root, 'register').status, 0);
+  assert.equal(fs.readFileSync(exclude, 'utf8'), original);
+
+  write(root, 'AGENTS.local.md', '# Local instructions\n');
+  assert.equal(git(root, 'status', '--short', '--', 'AGENTS.local.md'), '');
+  assert.equal(run(f.home, root, 'validate').status, 0);
+
+  git(root, 'add', '-f', 'AGENTS.local.md');
+  let result = run(f.home, root, 'validate');
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /AGENTS\.local\.md must not be tracked/);
+
+  git(root, 'rm', '--cached', '-q', 'AGENTS.local.md');
+  fs.rmSync(path.join(root, 'AGENTS.local.md'));
+  fs.symlinkSync(path.join(f.directory, 'outside.md'), path.join(root, 'AGENTS.local.md'));
+  result = run(f.home, root, 'validate');
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /unsafe developer-private agent instructions/);
+});
+
 test('project metadata retains exact V1 reads and upgrades through V2 writers', t => {
   const f = fixture(t);
   const root = repository(f, 'current');
@@ -544,8 +573,19 @@ test('reference QA permits components registered to the invoking project', t => 
 test('reference QA always permits Ponytail and its components', t => {
   const f = fixture(t);
   const ponytail = fs.realpathSync(path.resolve(__dirname, '..'));
-  assert.equal(run(f.home, ponytail, 'register').status, 0);
   const current = repository(f, 'current');
+  const configPath = path.join(f.home, '.ponytail/config.json');
+  const config = JSON.parse(fs.readFileSync(configPath));
+  const metadata = JSON.parse(fs.readFileSync(path.join(ponytail, '.agents/config/ponytail.json')));
+  config.projects.push({
+    blessedWorktree: ponytail,
+    identity: Object.fromEntries(
+      ['components', 'name', 'names', 'packages', 'repositoryUrls'].map(key => [key, metadata[key]]),
+    ),
+    root: ponytail,
+  });
+  config.projects.sort((left, right) => left.root < right.root ? -1 : 1);
+  fs.writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`);
   write(current, 'reference.txt', 'Ponytail runs TSTS.');
   git(current, 'add', 'reference.txt');
   const result = run(f.home, current, 'qa');

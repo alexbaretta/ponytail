@@ -29,6 +29,10 @@
     {
       "id": "REQ-PRECOMMIT-PROJECT-ISOLATION",
       "sourcePath": "pm/requirements/precommit-project-isolation.md"
+    },
+    {
+      "id": "REQ-DEVELOPER-PRIVATE-AGENT-INSTRUCTIONS",
+      "sourcePath": "pm/requirements/developer-private-agent-instructions.md"
     }
   ],
   "artifacts": [
@@ -250,6 +254,26 @@
     {
       "class": "issue",
       "path": "pm/bugs/closed/2026-09-30-BUG-non_campaign_commands_validate_campaigns.md",
+      "locator": "text"
+    },
+    {
+      "class": "implementation",
+      "path": "skills/ponytail/SKILL.md",
+      "locator": "text"
+    },
+    {
+      "class": "unit-test",
+      "path": "tests/policy-conformance.test.js",
+      "locator": "text"
+    },
+    {
+      "class": "uat",
+      "path": "pm/uat/developer-private-agent-instructions.md",
+      "locator": "text"
+    },
+    {
+      "class": "issue",
+      "path": "pm/bugs/closed/2026-09-30-FEAT-developer_private_agent_instructions.md",
       "locator": "text"
     }
   ],

@@ -19,6 +19,7 @@ behavior independently from implementation plans and architecture.
 - [Traceability index and queries](traceability-index.md)
 - [Issue requirement activation](issue-requirement-activation.md)
 - [Pre-commit project isolation](precommit-project-isolation.md)
+- [Developer-private agent instructions](developer-private-agent-instructions.md)
 
 ## Campaign census CLI
 
