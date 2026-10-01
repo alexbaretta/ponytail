@@ -253,7 +253,16 @@ function runReclamation(projectRoot, options = {}) {
   const { adapterPath } = loadConfiguration(canonicalProjectRoot);
   const lock = acquireLock(canonicalProjectRoot);
   try {
-    const claims = inventory(canonicalProjectRoot, adapterPath);
+    let claims = inventory(canonicalProjectRoot, adapterPath);
+    if (options.worktreePath !== undefined) {
+      claims = claims.filter(({ worktreePath }) => worktreePath === options.worktreePath);
+      if (claims.length === 0 && fs.lstatSync(options.worktreePath, { throwIfNoEntry: false }) !== undefined) {
+        fail('WORKTREE_RECLAMATION_FENCE', 'authenticated worktree has no project-owned claim');
+      }
+      if (claims.some(({ disposition }) => disposition !== 'reclaim')) {
+        fail('WORKTREE_RECLAMATION_FENCE', 'project adapter has not authorized retirement of the authenticated worktree');
+      }
+    }
     const reclaimable = claims.filter(({ disposition }) => disposition === 'reclaim');
     const results = [];
     if (!dryRun) {

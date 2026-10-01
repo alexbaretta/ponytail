@@ -63,6 +63,14 @@ substantial disk space.
    project-owned resource assigned to it has been released. A missing root
    with a live registration, claim, process, or database is incomplete cleanup.
 
+For campaign cleanup, archive the original owning chat and observe it as
+archived before invoking `ponytail campaign retire-worktree <campaign>
+<action-id>`. This is the canonical project-owned retirement path: its adapter
+must prove abandonment and release the exact worktree's resources. Do not use
+thread handoff for retirement; it can change the ordinary checkout and session
+identity without removing the source worktree. A missing adapter or retained
+claim leaves the original action pending; never substitute raw Git removal.
+
 Failure during setup does not make the partial worktree someone else's cleanup
 problem. Retire all resources that were successfully allocated before moving
 to another attempt. If cleanup itself fails, diagnose and repair the canonical

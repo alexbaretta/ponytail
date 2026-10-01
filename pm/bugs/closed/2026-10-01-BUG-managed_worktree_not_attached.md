@@ -78,3 +78,9 @@ historical cleanup actions acquire it from their assignment during ledger
 normalization. Coordinator policy now treats current-host thread handoff as the
 single supported retirement operation after project-owned resource cleanup,
 instead of asking the worker to use an attachment-scoped archive operation.
+
+**Subsequent correction:** The handoff remedy above was disproved by the next
+coordinator report: handoff changed the ordinary checkout and thread identity
+without retiring the source. See
+[canonical project retirement](2026-10-01-BUG-handoff_is_not_worktree_retirement.md)
+for its replacement. The original V4 action identity remains valid.

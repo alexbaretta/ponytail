@@ -12,6 +12,7 @@ const os = require('node:os');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 const { buildRepositoryInventory, campaignGraph } = require('./campaign-census');
+const { runReclamation } = require('./worktree-reclamation');
 
 const ASSIGNMENT_STATES = [
   'DISPATCH_PENDING',
@@ -1109,6 +1110,7 @@ function reconcile(graph, ledger, invocationWorktree = ledger.topLevelWorktree, 
     else if (!lifecycleCompatible(assignment.state, assignment.planLifecycle, graph.lifecycle)) status.diagnostics.push(diagnosticRecord('CAMPAIGN_ASSIGNMENT_LIFECYCLE', `assignment ${assignment.id} state ${assignment.state} is incompatible with plan lifecycle ${assignment.planLifecycle}`, assignment));
     const worker = workerFor(workers, assignment);
     if (assignment.state !== 'DISPATCH_PENDING' && assignment.state !== 'ARCHIVED' && !assignment.worktreeArchived
+      && !(assignment.state === 'CLEANUP_PENDING' && assignment.hostState === 'archived')
       && !recoveryRevisions.has(assignment.id) && (!worker || worker.activity === 'missing')) {
       status.diagnostics.push(diagnosticRecord('CAMPAIGN_WORKER_MISSING', `assignment ${assignment.id} has no live worker observation`, assignment));
     }
@@ -1120,11 +1122,11 @@ function reconcile(graph, ledger, invocationWorktree = ledger.topLevelWorktree, 
       else if (!hostSession || hostSession.state === 'missing') {
         status.diagnostics.push(diagnosticRecord('CAMPAIGN_SESSION_MISSING', `session ${assignment.sessionId} is missing`, assignment));
         if (assignment.worktreeExists) status.diagnostics.push(diagnosticRecord('CAMPAIGN_WORKTREE_SESSION_MISSING', `worktree ${assignment.worktree} remains after session ${assignment.sessionId} went missing`, assignment));
-      } else if (hostSession.state === 'archived') status.diagnostics.push(diagnosticRecord('CAMPAIGN_SESSION_ARCHIVED', `session ${assignment.sessionId} is archived while its assignment remains active`, assignment));
+      } else if (hostSession.state === 'archived' && assignment.state !== 'CLEANUP_PENDING') status.diagnostics.push(diagnosticRecord('CAMPAIGN_SESSION_ARCHIVED', `session ${assignment.sessionId} is archived while its assignment remains active`, assignment));
       else if (hostSession.state === 'unknown') status.diagnostics.push(diagnosticRecord('CAMPAIGN_SESSION_UNKNOWN', `session ${assignment.sessionId} could not be observed`, assignment));
       if (hostSession?.worktree && assignment.worktree && hostSession.worktree !== assignment.worktree) status.diagnostics.push(diagnosticRecord('CAMPAIGN_SESSION_WORKTREE_MISMATCH', `session ${assignment.sessionId} reports worktree ${hostSession.worktree} instead of ${assignment.worktree}`, assignment));
       if (hostSession?.worktree === ledger.topLevelWorktree) status.diagnostics.push(diagnosticRecord('CAMPAIGN_SESSION_IN_COORDINATOR_WORKTREE', `session ${assignment.sessionId} runs in the coordinator worktree`, assignment));
-      if (hostSession && !hostSession.managedWorktree) status.diagnostics.push(diagnosticRecord('CAMPAIGN_WORKTREE_NOT_MANAGED', `session ${assignment.sessionId} is not in a Codex-managed worktree`, assignment));
+      if (hostSession && !hostSession.managedWorktree && !(assignment.state === 'CLEANUP_PENDING' && assignment.hostState === 'archived')) status.diagnostics.push(diagnosticRecord('CAMPAIGN_WORKTREE_NOT_MANAGED', `session ${assignment.sessionId} is not in a Codex-managed worktree`, assignment));
     }
     if (assignment.state !== 'ARCHIVED' && assignment.worktree && !assignment.worktreeArchived && !assignment.worktreeExists) {
       const delivered = ['READY_TO_MERGE', 'MERGED', 'CLEANUP_PENDING'].includes(assignment.state);
@@ -1428,7 +1430,7 @@ function validateActionResultBinding(ledger, actionId, result, environment) {
   const binding = readWorkerBindings(environment).bindings.find((item) => item.assignmentId === pendingAction.assignmentId);
   if (pendingAction.type === 'ARCHIVE_WORKTREE') {
     if (!binding) fail('CAMPAIGN_WORKER_BINDING_MISSING', `assignment ${pendingAction.assignmentId} has no authenticated worker binding`);
-    if (fs.existsSync(binding.worktree)) fail('CAMPAIGN_ACTION_RESULT', `worker worktree still exists: ${binding.worktree}`);
+    if (fs.lstatSync(binding.worktree, { throwIfNoEntry: false }) !== undefined || registeredWorktree(ledger.topLevelWorktree, binding.worktree)) fail('CAMPAIGN_ACTION_RESULT', `worker worktree still exists or is registered: ${binding.worktree}`);
     return;
   }
   if (pendingAction.type === 'REQUEST_REBASE') {
@@ -1481,6 +1483,45 @@ function validateActionResultBinding(ledger, actionId, result, environment) {
   }
 }
 
+function registeredWorktree(repositoryRoot, worktree) {
+  return git(repositoryRoot, ['worktree', 'list', '--porcelain', '-z']).split('\0').includes(`worktree ${worktree}`);
+}
+
+function retireWorktree(graph, ledger, actionId, environment = process.env) {
+  const completedAction = ledger.completedActions.find((item) => item.actionId === actionId);
+  if (completedAction) {
+    if (completedAction.type !== 'ARCHIVE_WORKTREE') fail('CAMPAIGN_RETIREMENT_UNSAFE', 'action is not a worktree retirement');
+    return recordActionResult(ledger, actionId, completedAction.result, graph);
+  }
+  const status = reconcile(graph, ledger, ledger.topLevelWorktree, environment);
+  const pendingAction = readyActions(status, graph).actions.find(({ id }) => id === actionId);
+  const assignment = ledger.assignments.find(({ id }) => id === pendingAction?.assignmentId);
+  const binding = readWorkerBindings(environment).bindings.find(({ assignmentId }) => assignmentId === assignment?.id);
+  const current = status.assignments.find(({ id }) => id === assignment?.id);
+  if (pendingAction?.type !== 'ARCHIVE_WORKTREE' || current?.state !== 'CLEANUP_PENDING'
+    || current.hostState !== 'archived' || !binding
+    || binding.repositoryRoot !== ledger.topLevelWorktree || binding.campaignId !== ledger.campaignId
+    || binding.sessionId !== pendingAction.payload.sessionId || binding.worktree !== pendingAction.payload.worktree
+    || assignment.sessionId !== binding.sessionId || assignment.worktree !== binding.worktree
+    || binding.worktree === ledger.topLevelWorktree) {
+    fail('CAMPAIGN_RETIREMENT_UNSAFE', 'retirement requires the exact cleanup action, authenticated worktree, closed integrated plan, and archived original session');
+  }
+  if (fs.lstatSync(binding.worktree, { throwIfNoEntry: false }) !== undefined) {
+    const identity = repositoryIdentity(binding.worktree);
+    if (fs.realpathSync(binding.worktree) !== binding.worktree
+      || repositoryCommonDirectory(binding.worktree) !== repositoryCommonDirectory(ledger.topLevelWorktree)
+      || !registeredWorktree(ledger.topLevelWorktree, binding.worktree)
+      || identity.revision !== assignment.workerRevision
+      || git(binding.worktree, ['status', '--porcelain']).length !== 0) {
+      fail('CAMPAIGN_RETIREMENT_UNSAFE', 'worktree is not the exact clean registered integrated checkout');
+    }
+  }
+  const result = runReclamation(ledger.topLevelWorktree, { worktreePath: binding.worktree });
+  if (result.results.some(({ outcome }) => outcome !== 'reclaimed')) fail('CAMPAIGN_RETIREMENT_UNSAFE', 'project worktree retirement is incomplete; retry the same action');
+  validateActionResultBinding(ledger, actionId, { ok: true }, environment);
+  return recordActionResult(ledger, actionId, { ok: true }, graph);
+}
+
 function humanStatus(status) {
   const lines = [
     `Campaign: ${status.campaignId}`,
@@ -1518,6 +1559,10 @@ function parseArguments(argv) {
       else if (argument.startsWith('-') || input !== undefined) fail('CAMPAIGN_ORCHESTRATION_USAGE', usage(), 2);
       else input = argument;
     }
+  } else if (operation === 'retire-worktree' && (argv.length === 3 || (argv.length === 4 && argv[3] === '--json'))) {
+    input = argv[1];
+    actionId = argv[2];
+    json = argv.length === 4;
   } else if (operation === 'action-result' && argv.length === 5 && argv[3] === '--result') {
     input = argv[1];
     actionId = argv[2];
@@ -1536,7 +1581,7 @@ function parseArguments(argv) {
 }
 
 function usage() {
-  return 'usage: ponytail campaign status [<campaign>] [--json]\n       ponytail campaign ready-actions [<campaign>] [--json]\n       ponytail campaign observe <campaign> --snapshot <json>\n       ponytail campaign advance [<campaign>] [--json]\n       ponytail campaign reconcile <campaign> [--json]\n       ponytail campaign action-result <campaign> <action-id> --result <json>\n       ponytail campaign attach <token>\n       ponytail campaign deliver <campaign> --result <json>';
+  return 'usage: ponytail campaign status [<campaign>] [--json]\n       ponytail campaign ready-actions [<campaign>] [--json]\n       ponytail campaign observe <campaign> --snapshot <json>\n       ponytail campaign advance [<campaign>] [--json]\n       ponytail campaign reconcile <campaign> [--json]\n       ponytail campaign action-result <campaign> <action-id> --result <json>\n       ponytail campaign retire-worktree <campaign> <action-id> [--json]\n       ponytail campaign attach <token>\n       ponytail campaign deliver <campaign> --result <json>';
 }
 
 function run(argv = process.argv.slice(2), options = {}) {
@@ -1604,10 +1649,12 @@ function run(argv = process.argv.slice(2), options = {}) {
   const resolution = resolveInvocationWorktree(invocationWorktree, environment, request.operation === 'status');
   const graph = resolveGraph(resolution.effectiveWorktree, request.input ?? resolution.workerBinding?.campaignId);
   let status;
-  if (request.operation === 'advance' || request.operation === 'reconcile') {
+  if (['advance', 'reconcile', 'retire-worktree'].includes(request.operation)) {
     withWorktreeLock(resolution.effectiveWorktree, environment, () => (
       withLedgerLock(resolution.effectiveWorktree, graph.campaignId, environment, (ledger) => (
-        request.operation === 'reconcile' ? reconcileLedger(graph, ledger, environment) : advanceLedger(graph, ledger, environment)
+        request.operation === 'reconcile' ? reconcileLedger(graph, ledger, environment)
+          : request.operation === 'retire-worktree' ? retireWorktree(graph, ledger, request.actionId, environment)
+            : advanceLedger(graph, ledger, environment)
       ))
     ));
   }
@@ -1680,6 +1727,7 @@ module.exports = {
   reconcileLedger,
   readyActions,
   recordActionResult,
+  retireWorktree,
   resolveInvocationWorktree,
   setLedgerCoordinator,
   run,

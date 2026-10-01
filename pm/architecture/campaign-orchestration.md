@@ -366,12 +366,15 @@ that the host does not expose.
 
 For cleanup, `ARCHIVE_WORKTREE` carries both the bound session and exact
 worktree. The worker first performs the invoking project's canonical resource
-cleanup. The coordinator then uses the supported current-host thread handoff
-to move that exact session out of its managed worktree, verifies the old
-checkout is gone, and finally archives the worker chat. This does not rely on
-the attachment-scoped archive operation: Codex may manage a handoff-created
-worktree without attaching an archive artifact to the destination chat. An
-interrupted or unavailable worker remains `CLEANUP_PENDING`; Ponytail never
+cleanup. The coordinator archives the original worker chat and refreshes its
+complete host observation. `campaign retire-worktree` verifies that session is
+archived, the original cleanup action and worker binding match, the plan is
+closed, and the clean worker revision is integrated. It executes the invoking
+project's generation-fenced lifecycle adapter for only that worktree's claim,
+then verifies physical absence and Git unregistration before recording the
+original action result. The ordinary checkout is never switched. Thread handoff
+is not used because it can change thread identity without retiring the source.
+An interrupted or unavailable worker remains `CLEANUP_PENDING`; Ponytail never
 falls back to deleting an inferred path.
 
 ### Failure and recovery

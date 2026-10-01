@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-10-01-handoff_assumed_worktree_retirement",
+  "recorded_at": "2026-10-01T06:22:08-07:00",
+  "source_references": ["pm/bugs/closed/2026-10-01-BUG-handoff_is_not_worktree_retirement.md"],
+  "context": {
+    "languages": ["javascript"],
+    "frameworks": ["Codex managed worktrees"],
+    "components": ["campaign scheduler", "plan-execution"],
+    "affected_boundaries": ["host thread handoff to project resource retirement"],
+    "code_references": ["src/campaign-orchestration.js:retireWorktree", "src/worktree-reclamation.js:runReclamation"]
+  },
+  "observed_behavior": "Successful handoff left the source checkout present and registered, created a destination thread, and switched the ordinary checkout to the worker branch.",
+  "expected_behavior": "Retirement completes the original cleanup action without changing session identity or ordinary checkout state and verifies both path and Git registration are absent.",
+  "causal_mechanism": "Coordinator policy inferred resource deletion and stable thread identity from an operation whose contract only transfers thread Git state.",
+  "anti_pattern": {
+    "structural_description": "An orchestration transition relies on side effects not guaranteed by the selected host capability.",
+    "why_it_fails": "The host can successfully perform the transfer while leaving the required deletion undone and changing unrelated ordinary-checkout state."
+  },
+  "correct_pattern": {
+    "required_invariant": "Only the exact authenticated abandoned worktree may be retired, after its original session is archived and its accepted revision is integrated.",
+    "implementation_description": "Use the project's committed generation-fenced lifecycle adapter for the one authenticated claim; independently verify directory and Git registration absence before completing the original action."
+  },
+  "applicability_conditions": ["Thread movement and resource retirement are distinct lifecycle operations."],
+  "known_non_matches": ["Attachment-scoped archival of a proven task-owned artifact remains a supported host operation."],
+  "confirmation_evidence": ["The coordinator reported successful handoff followed by an intact clean detached source checkout and a changed ordinary checkout."],
+  "regression_proofs": ["tests/campaign-orchestration.test.js: retirement fences the original archived session and reclaims only its authenticated worktree"]
+}

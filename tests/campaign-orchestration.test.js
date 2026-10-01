@@ -37,6 +37,7 @@ const {
   readyActions,
   reconcile,
   recordActionResult,
+  retireWorktree,
   recordWorkerDelivery,
   replaceRecoveredWorkerBinding,
   validateActionResultBinding,
@@ -46,6 +47,91 @@ const {
   withWorktreeLock,
 } = require('../src/campaign-orchestration');
 const campaignCli = path.join(__dirname, '..', 'src', 'campaign-census.js');
+
+test('retirement fences the original archived session and reclaims only its authenticated worktree', () => {
+  const root = repository();
+  const environment = { ...process.env, PONYTAIL_CAMPAIGN_STATE_DIR: temporaryDirectory('ponytail-retirement-state') };
+  const claimsPath = path.join(temporaryDirectory('ponytail-retirement-claims'), 'claims.json');
+  write(root, '.agents/config/project/worktree-lifecycle.json', JSON.stringify({ schemaVersion: 1, adapterPath: 'adapter.js' }));
+  write(root, 'adapter.js', `#!/usr/bin/env node
+const fs = require('node:fs');
+const { spawnSync } = require('node:child_process');
+const request = JSON.parse(fs.readFileSync(0, 'utf8'));
+const claimsPath = ${JSON.stringify(claimsPath)};
+const claims = JSON.parse(fs.readFileSync(claimsPath, 'utf8'));
+if (request.operation === 'inventory') {
+  process.stdout.write(JSON.stringify({ schemaVersion: 1, operation: 'inventory', claims }));
+} else {
+  const claim = claims.find(item => item.claimId === request.claim.claimId && item.generation === request.claim.generation && item.worktreePath === request.claim.worktreePath);
+  if (!claim || claim.disposition !== 'reclaim') throw new Error('unsafe claim');
+  const result = spawnSync('git', ['worktree', 'remove', claim.worktreePath], { encoding: 'utf8' });
+  if (result.status !== 0) throw new Error(result.stderr);
+  fs.writeFileSync(claimsPath, JSON.stringify(claims.filter(item => item !== claim)));
+  process.stdout.write(JSON.stringify({ schemaVersion: 1, operation: 'reclaim', claimId: claim.claimId, generation: claim.generation, outcome: 'reclaimed', reason: 'canonical retirement complete' }));
+}
+`);
+  fs.chmodSync(path.join(root, 'adapter.js'), 0o755);
+  command(root, ['add', '.']);
+  command(root, ['-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.test', 'commit', '-qm', 'lifecycle']);
+  const worktree = path.join(fs.realpathSync(temporaryDirectory('ponytail-retirement-worker')), 'worker');
+  const unrelatedWorktree = path.join(fs.realpathSync(temporaryDirectory('ponytail-retirement-unrelated')), 'worker');
+  command(root, ['worktree', 'add', '--detach', worktree]);
+  command(root, ['worktree', 'add', '--detach', unrelatedWorktree]);
+  const claims = [worktree, unrelatedWorktree].map((worktreePath, index) => ({ claimId: `claim-${index}`, generation: `generation-${index}`, state: 'abandoned', worktreePath, disposition: 'reclaim', reason: 'archived owner' }));
+  fs.writeFileSync(claimsPath, JSON.stringify(claims));
+  const ledger = newLedger(root, 'campaign', 'coordinator');
+  const assignment = { id: 'assignment', planId: 'work', sessionId: 'original-session', worktree, branch: 'worker', dispatchRevision: ledger.integrationRevision, workerRevision: ledger.integrationRevision, state: 'CLEANUP_PENDING', idempotencyKey: 'key', attachToken: 'token', worktreeArchived: false, sessionArchived: false };
+  ledger.assignments.push(assignment);
+  ledger.workers.push({ sessionId: assignment.sessionId, worktree, branch: assignment.branch, revision: assignment.workerRevision, clean: true, activity: 'completed', evidenceComplete: true, worktreeArchived: false, sessionArchived: false });
+  const cleanup = readActionV4({ schemaVersion: 4, id: 'original-action', type: 'ARCHIVE_WORKTREE', assignmentId: assignment.id, idempotencyKey: 'cleanup-key', payload: { sessionId: assignment.sessionId, worktree } });
+  ledger.pendingActions.push(cleanup);
+  fs.writeFileSync(path.join(environment.PONYTAIL_CAMPAIGN_STATE_DIR, 'campaign-worker-bindings.json'), JSON.stringify({ schemaVersion: 1, bindings: [{ repositoryRoot: root, campaignId: 'campaign', assignmentId: assignment.id, coordinatorSessionId: 'coordinator', attachTokenHash: 'hash', sessionId: assignment.sessionId, worktree, branch: assignment.branch, revision: assignment.workerRevision, boundAt: new Date().toISOString() }] }));
+  const campaignGraph = graph([{ id: 'campaign', parentPlanId: null, dependsOn: [], lifecycle: 'in_progress', path: 'root' }, { id: 'work', parentPlanId: 'campaign', dependsOn: [], lifecycle: 'closed', path: 'work' }]);
+  const observe = (state, observedAt = new Date().toISOString()) => writeHostObservation(root, 'campaign', { schemaVersion: 1, campaignId: 'campaign', observedAt, completeSessionIds: [assignment.sessionId], sessions: [{ sessionId: assignment.sessionId, state, worktree, managedWorktree: true }] }, environment);
+  observe('working');
+  assert.equal(captureError(() => retireWorktree(campaignGraph, ledger, cleanup.id, environment)).code, 'CAMPAIGN_RETIREMENT_UNSAFE');
+  assert.equal(fs.existsSync(worktree), true);
+  observe('archived', new Date(Date.now() - 6 * 60 * 1000).toISOString());
+  assert.throws(() => retireWorktree(campaignGraph, ledger, cleanup.id, environment));
+  observe('archived');
+  assert.doesNotThrow(() => readyActions(reconcile(campaignGraph, ledger, root, environment), campaignGraph));
+  const movedWorktree = `${worktree}-temporarily-moved`;
+  fs.renameSync(worktree, movedWorktree);
+  try {
+    assert.equal(captureError(() => validateActionResultBinding(ledger, cleanup.id, { ok: true }, environment)).code, 'CAMPAIGN_ACTION_RESULT');
+  } finally {
+    fs.renameSync(movedWorktree, worktree);
+  }
+  fs.writeFileSync(path.join(worktree, 'uncommitted.txt'), 'keep');
+  assert.equal(captureError(() => retireWorktree(campaignGraph, ledger, cleanup.id, environment)).code, 'CAMPAIGN_RETIREMENT_UNSAFE');
+  fs.unlinkSync(path.join(worktree, 'uncommitted.txt'));
+  campaignGraph.plans[1].lifecycle = 'in_progress';
+  assert.throws(() => retireWorktree(campaignGraph, ledger, cleanup.id, environment));
+  campaignGraph.plans[1].lifecycle = 'closed';
+  fs.writeFileSync(claimsPath, JSON.stringify([{ ...claims[0], disposition: 'retain' }, claims[1]]));
+  assert.throws(() => retireWorktree(campaignGraph, ledger, cleanup.id, environment));
+  assert.equal(ledger.pendingActions[0].id, cleanup.id);
+  fs.writeFileSync(claimsPath, JSON.stringify(claims));
+  retireWorktree(campaignGraph, ledger, cleanup.id, environment);
+  assert.equal(fs.existsSync(worktree), false);
+  assert.equal(command(root, ['worktree', 'list', '--porcelain']).includes(worktree), false);
+  assert.equal(fs.existsSync(unrelatedWorktree), true);
+  assert.deepEqual(JSON.parse(fs.readFileSync(claimsPath, 'utf8')), [claims[1]]);
+  assert.equal(command(root, ['branch', '--show-current']), 'main');
+  assert.equal(command(root, ['rev-parse', 'HEAD']), assignment.workerRevision);
+  assert.equal(assignment.sessionId, 'original-session');
+  assert.equal(assignment.worktreeArchived, true);
+  assert.equal(ledger.completedActions[0].actionId, cleanup.id);
+  assert.doesNotThrow(() => retireWorktree(campaignGraph, ledger, cleanup.id, environment));
+  // Adapter completed, but the process stopped before persisting the action result.
+  ledger.completedActions = [];
+  ledger.pendingActions = [cleanup];
+  assignment.worktreeArchived = false;
+  ledger.workers[0].worktreeArchived = false;
+  assert.doesNotThrow(() => retireWorktree(campaignGraph, ledger, cleanup.id, environment));
+  assert.equal(ledger.completedActions[0].actionId, cleanup.id);
+  assert.equal(advanceLedger(campaignGraph, ledger, environment).type, 'ARCHIVE_SESSION');
+});
 
 function temporaryDirectory(prefix) {
   return fs.mkdtempSync(path.join(os.tmpdir(), `${prefix}-`));
@@ -159,7 +245,7 @@ test('historical ledgers normalize recovery and cleanup actions and the current 
   assert.equal(pendingActions.length, 0);
 });
 
-test('historical cleanup actions gain the bound session required for coordinator handoff', () => {
+test('historical cleanup actions gain the original session required for retirement', () => {
   const root = repository();
   const environment = { ...process.env, PONYTAIL_CAMPAIGN_STATE_DIR: temporaryDirectory('ponytail-cleanup-action-version') };
   const ledger = newLedger(root, 'campaign', 'coordinator');
@@ -1106,6 +1192,10 @@ test('implicit campaign selection reports every active candidate while explicit 
 });
 
 test('action results require an explicit campaign and advance holds the worktree lock', () => {
+  assert.deepEqual(parseArguments(['retire-worktree', 'campaign', 'action', '--json']), {
+    operation: 'retire-worktree', input: 'campaign', json: true, actionId: 'action', result: undefined,
+  });
+  assert.equal(captureError(() => parseArguments(['retire-worktree', 'action'])).code, 'CAMPAIGN_ORCHESTRATION_USAGE');
   assert.deepEqual(parseArguments(['ready-actions', 'campaign', '--json']), {
     operation: 'ready-actions', input: 'campaign', json: true, actionId: undefined, result: undefined,
   });

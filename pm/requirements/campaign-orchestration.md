@@ -308,9 +308,17 @@ remain visible and retryable; it must not make the worker appear idle or allow
 the assignment to disappear. Recoverable archival of the worktree before its
 checkout is removed satisfies this requirement.
 
-The worktree-cleanup action must name both the exact session and worktree. The
-coordinator must retire that managed checkout through the supported current-host
-thread handoff after the worker completes project-owned resource cleanup.
+The worktree-cleanup action must name both the exact session and worktree. After
+the worker completes project-owned resource cleanup, the coordinator archives
+the original worker chat and records fresh host evidence that it is archived.
+`ponytail campaign retire-worktree <campaign> <action-id>` must execute that
+existing action through the invoking project's committed worktree lifecycle
+adapter, reclaiming only its authenticated worktree claim. The adapter must
+prove abandonment and repeat its generation-fenced preflight. Missing lifecycle
+configuration or unproven ownership leaves the same action pending. Retirement
+must preserve the ordinary checkout and session identity; thread handoff is not
+a retirement operation. Both the directory and Git registration must be absent
+before success. Retries must retain the action identity after partial effects.
 Codex-managed-worktree classification must not be treated as proof that the
 worktree is an archive artifact attached to the worker chat.
 

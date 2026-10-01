@@ -748,18 +748,26 @@ durable state instead of remembering worker assignments in conversation:
    plan. For `ARCHIVE_WORKTREE`, message the action's exact `payload.sessionId`
    to run the project's canonical cleanup for resources owned by
    `payload.worktree`, such as databases, containers, listeners, and Docker
-   networks. After that cleanup completes, the coordinator uses the supported
-   current-host thread handoff on that same session to move it out of its Codex
-   worktree, waits for the handoff to finish, and verifies the exact old
-   checkout is gone. This coordinator-owned handoff is the canonical retirement
-   operation: a Codex-managed worktree is not necessarily an archive artifact
-   attached to the worker chat, so do not ask the worker to call the
-   attachment-scoped worktree archive operation. For `ARCHIVE_SESSION`, archive
-   only the action's named worker chat. Never delete an inferred path or clean
+   networks. After cleanup completes, archive that exact original worker chat
+   through the supported host session operation and refresh the complete
+   observation, recording its state as `archived`. Then run `ponytail campaign
+   retire-worktree <campaign-root> <action-id> --json` from the coordinator
+   checkout. This command executes the original action through the invoking
+   project's committed lifecycle adapter, with the authenticated worktree's
+   exact claim generation. It records success only after both the directory
+   and Git registration are absent. If configuration, ownership, or cleanup
+   proof is missing, retain the same pending action and repair the project's
+   canonical lifecycle adapter. Do not use thread handoff for retirement:
+   it may create a destination thread, switch the ordinary checkout, and leave
+   the old checkout registered. A Codex-managed worktree is not necessarily an archive artifact
+   attached to the worker chat. For `ARCHIVE_SESSION`, idempotently archive
+   only the original action's named worker chat. Never delete an inferred path or clean
    up an unintegrated revision. The scheduler retains only the completed workers
    required by current dispatch demand after idle capacity is counted; surplus
    workers are cleanup-ready instead of being retained indefinitely.
-13. After each completed supported host effect, refresh the host observation
+13. `retire-worktree` records its own verified action result; do not record it
+   again with a different result. For other completed supported host effects,
+   refresh the host observation
    first when the action changes a managed checkout path, then run `ponytail campaign action-result
    <campaign-root> <action-id> --result <json>` from the coordinator worktree.
    Recording one result changes only that named action. Then refresh

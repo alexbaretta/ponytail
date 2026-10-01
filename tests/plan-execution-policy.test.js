@@ -59,7 +59,8 @@ test('campaign policy delegates every worker effect to the durable action loop',
   assert.match(policy, /Retry the same attachment token in the same session/);
   assert.match(policy, /`REQUEST_REBASE`[\s\S]*exact\n+   `ontoRevision`/);
   assert.match(policy, /transition to `READY_TO_MERGE`[\s\S]*only by another advance/);
-  assert.match(policy, /`ARCHIVE_WORKTREE`[\s\S]*current-host thread handoff/);
+  assert.match(policy, /`ARCHIVE_WORKTREE`[\s\S]*retire-worktree <campaign-root> <action-id> --json/);
+  assert.match(policy, /Do not use thread handoff for retirement/);
   assert.match(policy, /Codex-managed worktree is not necessarily an archive artifact/);
   assert.match(policy, /campaign action-result\n+   <campaign-root> <action-id> --result <json>/);
   assert.match(policy, /Recording one result changes only that named action/);

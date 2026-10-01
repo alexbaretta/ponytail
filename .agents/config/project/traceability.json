@@ -283,6 +283,11 @@
       "locator": "text"
     },
     {
+      "class": "issue",
+      "path": "pm/bugs/closed/2026-10-01-BUG-handoff_is_not_worktree_retirement.md",
+      "locator": "text"
+    },
+    {
       "class": "implementation",
       "path": "hooks/plan-input.js",
       "locator": "text"

@@ -32,6 +32,12 @@ approved 2026-09-29.
 
 ## Evidence
 
+- 2026-10-01 retirement correction: the earlier live-host profile proves only
+  attachment-scoped archive, not retire-by-session or handoff retirement. The
+  coordinator's subsequent incident disproved the handoff postcondition. The
+  corrected original-session/project-adapter profile has automated evidence;
+  live client-project execution remains unverified.
+
 - 2026-09-29 S01 automated profile: repository inventory, dependency
   scheduling, assignment uniqueness, retry-stable dispatch, idle-worker reuse,
   Git ancestry classification, fast-forward-only integration, cleanup gating,
@@ -439,11 +445,16 @@ Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
    - Ponytail refuses cleanup and retains the assignment.
 2. Advance cleanup for the integrated worker.
    - The cleanup action names the exact session and worktree. The worker cleans
-     project-owned resources, the coordinator retires the managed checkout by
-     handing that session back to its ordinary checkout, and Ponytail archives
-     the chat and marks the assignment archived only after both effects are
-     confirmed. This succeeds even when the worker chat has no attached
-     worktree archive artifact.
+     project-owned resources, and the coordinator archives the original worker
+     chat and observes that exact session as archived. `campaign retire-worktree`
+     invokes the project's configured lifecycle adapter for that one claim.
+     Both the directory and Git registration disappear before action success.
+     No destination thread is created; the ordinary checkout and unrelated
+     claims remain unchanged. No attached worktree artifact is required.
+   - While the worker is working, the observation is stale, the checkout is
+     dirty or unintegrated, or the adapter retains its claim, retirement is
+     refused and the same action remains pending.
 3. Interrupt cleanup after its first external effect and resume it.
-   - Ponytail reports `CLEANUP_PENDING`, retries only the missing effect, and
+   - Ponytail reports `CLEANUP_PENDING`, repeats retirement by the original
+     action ID after a crash between adapter completion and result recording, and
      never exposes the worker as idle while cleanup remains incomplete.
