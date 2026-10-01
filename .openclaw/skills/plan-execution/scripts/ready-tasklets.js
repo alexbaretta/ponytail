@@ -319,7 +319,7 @@ function main(argv = process.argv.slice(2)) {
   return result;
 }
 
-module.exports = { SCHEMA_VERSION, MAX_BATCH_TASKLETS, TaskletMetadataReaders, parseTaskletStatuses, readTaskletGraph, validateTaskletGraph, selectNextTasklet, selectReadyTasklets, selectReadyTaskletBatch, main };
+module.exports = { SCHEMA_VERSION, MAX_BATCH_TASKLETS, TaskletMetadataReaders, parseTaskletStatuses, readTaskletGraph, validateTaskletGraph, rankedReadyTasklets, selectNextTasklet, selectReadyTasklets, selectReadyTaskletBatch, main };
 
 if (require.main === module) {
   try { main(); } catch (error) { process.stderr.write(`${error.message}\n`); process.exitCode = 1; }

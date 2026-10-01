@@ -650,6 +650,8 @@ def print_usage():
   ponytail campaign activate <plan-name-or-path>
   ponytail campaign status [<campaign>] [--json]
   ponytail campaign ready-actions [<campaign>] [--json]
+  ponytail campaign runnable-plans [<campaign>] [--json]
+  ponytail campaign schedule-ready [<campaign>] [--json]
   ponytail campaign observe <campaign> --snapshot <json>
   ponytail campaign advance [<campaign>] [--json]
   ponytail campaign reconcile <campaign> [--json]

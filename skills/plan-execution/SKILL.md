@@ -670,7 +670,24 @@ durable state instead of remembering worker assignments in conversation:
    thread to distinguish a worker waiting for coordinator input from one that
    has finished; respond to required input or record the completed observation
    instead of treating either state as automatically reusable.
-4. Run `ponytail campaign advance [<campaign-root>] --json` exactly once to
+4. Inspect `ponytail campaign runnable-plans [<campaign-root>] --json` for
+   the exact plans whose campaign dependencies are complete and whose approved,
+   reviewed execution sprint has a nonempty set of immediately runnable
+   tasklets. Each record includes the sprint and tasklet IDs on the current
+   integration tree; active assignments are included, so this is not a list of
+   unassigned plans. Planning-only work and final acceptance without tasklets
+   are not tasklet-ready dispatch. Do not substitute `readyPlans`, lifecycle,
+   conversation, or dependency count for this query.
+   Run `ponytail campaign schedule-ready [<campaign-root>] --json` to reserve
+   all eligible unassigned or queued plans deterministically, reusing safe idle
+   pairs first and respecting the per-project capacity. Execute its returned
+   host actions through the same authenticated protocol below. The command
+   does not start Codex sessions: the current supported CLI protocol lacks
+   managed-worktree creation, so native host effects remain adapter-owned.
+   Do not choose or activate plans agentically. Repeating this command resumes
+   existing identities and cannot allocate a duplicate assignment. It does not
+   perform joins; use the serialized join workflow independently.
+   Run `ponytail campaign advance [<campaign-root>] --json` exactly once to
    request the next deterministic transition. One advance may add at most one
    durable host action or perform one core-owned transition.
 5. Immediately run `ponytail campaign ready-actions [<campaign-root>] --json`.
@@ -693,12 +710,17 @@ durable state instead of remembering worker assignments in conversation:
    replacement session or worktree, and never assign a plan conversationally.
    After initiating an asynchronous host effect, record that start, advance
    again, and rerun `ready-actions` before waiting when independent
-   dependency-ready work may exist. This may expose distinct create-or-reuse
+   tasklet-ready work may exist. Use `schedule-ready` to fill all available
+   independent dispatch capacity before waiting. This may expose distinct create-or-reuse
    actions while one rebase remains outstanding, but it must neither execute
    an action twice nor request a second rebase. On resumption, inspect the named
    worker before repeating an unresolved host request. For `CREATE_WORKER` and
    `REUSE_WORKER`, `ready-actions` already proves that
-   `payload.dispatch.ready` is true and its state is `NOT_STARTED`. As soon as
+   `payload.dispatch.ready` is true, its state is `NOT_STARTED`, and the same
+   runnable-plan predicate still holds. Do not wake a retained worker to
+   continue product tasklets unless its plan appears in `runnable-plans`.
+   Delivered rebase/integration work remains independently executable, and
+   workers retain autonomous recovery authority. As soon as
    the supported host operation begins,
    record `{"ok":true,"disposition":"STARTED","hostIdentity":"<id>"}` with
    `campaign action-result`; use the returned session ID or pending client ID

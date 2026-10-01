@@ -16,6 +16,7 @@ const test = require('node:test');
 const {
   CampaignOrchestrationError,
   advanceLedger,
+  scheduleReadyPlans,
   ledgerPath,
   reconcileLedger,
   newLedger,
@@ -35,6 +36,7 @@ const {
   readReadyActionsV1,
   readReadyActionsV2,
   readReadyActionsV4,
+  readRunnablePlansV1,
   readyActions,
   reconcile,
   recordActionResult,
@@ -195,7 +197,7 @@ function graph(plans) {
     campaignId: 'campaign',
     submittedPlanId: 'campaign',
     lifecycle: { initial: 'open', activeWork: 'in_progress', successfulCompletion: 'closed', deferred: 'deferred', rejected: 'rejected' },
-    plans,
+    plans: plans.map((plan) => ({ runnableTasklets: { sprintId: 'S01', taskletIds: ['S01-F01-T01'] }, ...plan })),
   };
 }
 
@@ -494,6 +496,97 @@ test('reconciler derives dependency-ready plans and only truly idle workers', ()
   assert.deepEqual(status.idleWorkers.map(({ sessionId }) => sessionId), ['idle-session']);
 });
 
+test('runnable-plans joins satisfied plan dependencies with nonempty canonical tasklet readiness', () => {
+  const root = campaignRepository();
+  managedPlan(root, 'open', 'blocked', 'campaign');
+  const blockedPath = 'pm/plans/open/blocked/plan.md';
+  write(root, blockedPath, fs.readFileSync(path.join(root, blockedPath), 'utf8').replace('"depends_on": []', '"depends_on": ["ready"]'));
+  managedPlan(root, 'open', 'unreviewed', 'campaign');
+  const unreviewedPath = 'pm/plans/open/unreviewed/sprints/S01.md';
+  write(root, unreviewedPath, fs.readFileSync(path.join(root, unreviewedPath), 'utf8').replace('"tasklets_reviewed": true', '"tasklets_reviewed": false'));
+  managedPlan(root, 'open', 'done-tasklets', 'campaign');
+  const donePath = 'pm/plans/open/done-tasklets/sprints/S01.md';
+  write(root, donePath, fs.readFileSync(path.join(root, donePath), 'utf8').replace('### [ ]', '### [DONE]'));
+  managedPlan(root, 'open', 'planning-only', 'campaign');
+  const planningPath = 'pm/plans/open/planning-only/sprints/S01.md';
+  write(root, planningPath, fs.readFileSync(path.join(root, planningPath), 'utf8').replace(/"execution": \{[^}]+\}/, '"execution": null'));
+  const environment = { ...process.env, PONYTAIL_CAMPAIGN_STATE_DIR: temporaryDirectory('ponytail-runnable-state'), PONYTAIL_SESSION_ID: 'coordinator' };
+  const before = command(root, ['rev-parse', 'HEAD']);
+  const result = spawnSync(process.execPath, [campaignCli, 'runnable-plans', 'campaign', '--json'], { cwd: root, encoding: 'utf8', env: environment });
+  assert.equal(result.status, 0, result.stderr);
+  const report = readRunnablePlansV1(JSON.parse(result.stdout));
+  assert.deepEqual(report.plans, [{ planId: 'ready', path: 'pm/plans/open/ready/plan.md', lifecycle: 'open', sprintId: 'S01', taskletIds: ['S01-F01-T01'] }]);
+  assert.equal(command(root, ['rev-parse', 'HEAD']), before);
+  assert.equal(fs.existsSync(ledgerPath(fs.realpathSync(root), 'campaign', environment)), false);
+  const status = spawnSync(process.execPath, [campaignCli, 'status', 'campaign', '--json'], { cwd: root, encoding: 'utf8', env: environment });
+  assert.equal(status.status, 0, status.stderr);
+  assert.deepEqual(JSON.parse(status.stdout).readyPlans, report.plans.map(({ planId }) => planId));
+  const schedule = spawnSync(process.execPath, [campaignCli, 'schedule-ready', 'campaign', '--json'], { cwd: root, encoding: 'utf8', env: environment });
+  assert.equal(schedule.status, 0, schedule.stderr);
+  assert.deepEqual(JSON.parse(schedule.stdout).actions.map(({ payload }) => payload.planId), ['ready']);
+  const planPath = 'pm/plans/open/ready/plan.md';
+  fs.renameSync(path.join(root, 'pm/plans/open/ready'), path.join(root, 'pm/plans/in_progress/ready'));
+  const rootPath = 'pm/plans/in_progress/campaign/plan.md';
+  write(root, rootPath, fs.readFileSync(path.join(root, rootPath), 'utf8').replace('../../open/ready/plan.md', '../ready/plan.md'));
+  const active = spawnSync(process.execPath, [campaignCli, 'runnable-plans', 'campaign', '--json'], { cwd: root, encoding: 'utf8', env: environment });
+  assert.equal(active.status, 0, active.stderr);
+  assert.deepEqual(JSON.parse(active.stdout).plans, [{ ...report.plans[0], path: planPath.replace('/open/', '/in_progress/'), lifecycle: 'in_progress' }]);
+});
+
+test('tasklet exhaustion suppresses new, queued, and unstarted dispatch without changing started identity', () => {
+  const root = repository();
+  const ledger = newLedger(root, 'campaign', 'coordinator');
+  const campaignGraph = graph([
+    { id: 'campaign', parentPlanId: null, dependsOn: [], lifecycle: 'in_progress', path: 'root' },
+    { id: 'ready', parentPlanId: 'campaign', dependsOn: [], lifecycle: 'open', path: 'ready' },
+    { id: 'empty', parentPlanId: 'campaign', dependsOn: [], lifecycle: 'open', path: 'empty', runnableTasklets: null },
+  ]);
+  const pending = advanceLedger(campaignGraph, ledger);
+  campaignGraph.plans.find(({ id }) => id === 'ready').runnableTasklets = null;
+  assert.deepEqual(scheduleReadyPlans(campaignGraph, ledger).actions, []);
+  recordActionResult(ledger, pending.id, { ok: false, disposition: 'NOT_STARTED' }, campaignGraph);
+  assert.equal(advanceLedger(campaignGraph, ledger), null);
+  assert.equal(ledger.assignments.length, 1);
+  campaignGraph.plans.find(({ id }) => id === 'ready').runnableTasklets = { sprintId: 'S01', taskletIds: ['S01-T02'] };
+  const resumed = scheduleReadyPlans(campaignGraph, ledger).actions[0];
+  assert.equal(resumed.assignmentId, pending.assignmentId);
+  assert.equal(resumed.payload.attachToken, pending.payload.attachToken);
+  recordActionResult(ledger, resumed.id, { ok: true, disposition: 'STARTED', hostIdentity: 'pending-client' }, campaignGraph);
+  campaignGraph.plans.find(({ id }) => id === 'ready').runnableTasklets = null;
+  assert.deepEqual(scheduleReadyPlans(campaignGraph, ledger).actions, []);
+  assert.equal(ledger.pendingActions[0].id, resumed.id);
+  assert.equal(ledger.pendingActions[0].payload.dispatch.hostIdentity, 'pending-client');
+});
+
+test('schedule-ready deterministically reserves every runnable plan once within project capacity', () => {
+  const root = repository();
+  const ledger = newLedger(root, 'campaign', 'coordinator');
+  const campaignGraph = graph([
+    { id: 'campaign', parentPlanId: null, dependsOn: [], lifecycle: 'in_progress', path: 'root' },
+    ...Array.from({ length: 17 }, (_, index) => ({ id: `plan-${String(index).padStart(2, '0')}`, parentPlanId: 'campaign', dependsOn: [], lifecycle: 'open', path: `plan-${index}` })),
+    { id: 'no-tasklets', parentPlanId: 'campaign', dependsOn: [], lifecycle: 'open', path: 'empty', runnableTasklets: null },
+  ]);
+  const first = scheduleReadyPlans(campaignGraph, ledger);
+  assert.equal(first.actions.length, 15);
+  assert.deepEqual(first.actions.map(({ payload }) => payload.planId), Array.from({ length: 15 }, (_, index) => `plan-${String(index).padStart(2, '0')}`));
+  const before = JSON.stringify(ledger);
+  const retry = scheduleReadyPlans(campaignGraph, ledger);
+  assert.deepEqual(retry, first);
+  assert.equal(JSON.stringify(ledger), before);
+  assert.equal(ledger.assignments.length, 15);
+  assert.equal(reconcile(campaignGraph, ledger).diagnostics.some(({ code }) => code === 'CAMPAIGN_WORKER_CAPACITY_REACHED'), true);
+});
+
+test('runnable-plan output rejects empty tasklet sets and unsupported or ambiguous records', () => {
+  const valid = { schemaVersion: 1, campaignId: 'campaign', invocationWorktree: '/project', effectiveWorktree: '/project', integrationRevision: 'revision',
+    plans: [{ planId: 'work', path: 'pm/plans/open/work/plan.md', lifecycle: 'open', sprintId: 'S01', taskletIds: ['S01-T01'] }] };
+  assert.deepEqual(readRunnablePlansV1(valid), valid);
+  for (const value of [{ ...valid, schemaVersion: 2 }, { ...valid, extra: true }, { ...valid, plans: [valid.plans[0], valid.plans[0]] },
+    { ...valid, plans: [{ ...valid.plans[0], taskletIds: [] }] }, { ...valid, plans: [{ ...valid.plans[0], taskletIds: ['S01-T01', 'S01-T01'] }] }]) {
+    assert.throws(() => readRunnablePlansV1(value), CampaignOrchestrationError);
+  }
+});
+
 test('advance durably selects one ready plan and returns the same pending action on retry', () => {
   const root = repository();
   const ledger = newLedger(root, 'campaign', 'coordinator');
@@ -546,6 +639,7 @@ test('independent dispatch continues while the integration lane has one outstand
   assert.equal(ledger.pendingActions.filter(({ type }) => type === 'REQUEST_REBASE').length, 1);
   assert.equal(ledger.pendingActions.length, 3);
   assert.equal(advanceLedger(campaignGraph, ledger).id, rebase.id);
+  assert.deepEqual(scheduleReadyPlans(campaignGraph, ledger).actions.map(({ id }) => id), [rebase.id, firstDispatch.id, secondDispatch.id]);
   assert.equal(ledger.pendingActions.filter(({ type }) => type === 'REQUEST_REBASE').length, 1);
 
   recordActionResult(ledger, firstDispatch.id, {
@@ -768,7 +862,7 @@ test('advance retains every completed pair even without ready dispatch', () => {
   assert.equal(advanceLedger(successorGraph, successor, environment).payload.sessionId, sessions[0]);
   // Persist the reservation so another campaign cannot reserve the same pair.
   withLedgerLock(root, 'successor', environment, saved => Object.assign(saved, successor));
-  campaignGraph.plans.push({ id: 'ready', parentPlanId: 'campaign', dependsOn: [], lifecycle: 'open', path: 'ready' });
+  campaignGraph.plans.push({ id: 'ready', parentPlanId: 'campaign', dependsOn: [], lifecycle: 'open', path: 'ready', runnableTasklets: { sprintId: 'S01', taskletIds: ['S01-F01-T01'] } });
   assert.equal(advanceLedger(campaignGraph, ledger, environment).payload.sessionId, sessions[1]);
 });
 
@@ -1096,12 +1190,21 @@ test('missing undelivered checkout can be re-provisioned in the same session wit
   let status = reconcile(campaignGraph, ledger, root, environment);
   assert.equal(status.diagnostics.some(({ code }) => code === 'CAMPAIGN_WORKTREE_RECOVERY_REQUIRED'), true);
   assert.equal(status.diagnostics.some(({ code }) => code === 'CAMPAIGN_WORKTREE_MISSING'), false);
+  const workPlan = campaignGraph.plans.find(({ id }) => id === 'work');
+  const runnableTasklets = workPlan.runnableTasklets;
+  workPlan.runnableTasklets = null;
+  assert.equal(advanceLedger(campaignGraph, ledger, environment), null);
+  assert.deepEqual(ledger.pendingActions, []);
+  workPlan.runnableTasklets = runnableTasklets;
   const recovery = advanceLedger(campaignGraph, ledger, environment);
   assert.equal(recovery.type, 'RECOVER_WORKTREE');
   assert.deepEqual(recovery.payload, {
     sessionId: assignment.sessionId, previousWorktree: missingWorker, branch: assignment.branch, revision: workerRevision,
   });
   assert.deepEqual(readyActions(reconcile(campaignGraph, ledger, root, environment), campaignGraph).actions.map(({ id }) => id), [recovery.id]);
+  workPlan.runnableTasklets = null;
+  assert.deepEqual(readyActions(reconcile(campaignGraph, ledger, root, environment), campaignGraph).actions, []);
+  workPlan.runnableTasklets = runnableTasklets;
   assert.equal(advanceLedger(campaignGraph, ledger, environment).id, recovery.id);
   assert.equal(ledger.assignments.length, 1);
 

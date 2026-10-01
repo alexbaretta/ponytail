@@ -155,7 +155,7 @@ function coordinatorCommand(toolInput) {
 
 function campaignCommand(toolInput) {
   for (const command of commandStrings(toolInput)) {
-    const match = /(?:^|(?:&&|\|\||;)\s*)ponytail campaign (status|ready-actions|observe|advance|reconcile|action-result|attach)(?:\s+([^\s;&|]+))?/.exec(command);
+    const match = /(?:^|(?:&&|\|\||;)\s*)ponytail campaign (status|runnable-plans|schedule-ready|ready-actions|observe|advance|reconcile|action-result|attach)(?:\s+([^\s;&|]+))?/.exec(command);
     if (match) return { operation: match[1], argument: match[2] ?? null };
   }
   return null;
@@ -205,15 +205,16 @@ function handle(data, environment = process.env) {
           const binding = bindWorker(environment, repository, campaign.argument, data.session_id);
           return preToolOutput(`Worker session authenticated for campaign ${binding.campaignId} owned by ${binding.repositoryRoot}. Main worktree: ${binding.mainWorktree}. Retain the attachment capability. If this checkout disappears, recover it yourself from an existing neutral cwd with ponytail worktree recover <attachment-token>, then run canonical project adoption/setup. No coordinator recovery action is required.`);
         }
-        const resolution = resolveInvocationWorktree(repository, environment, campaign.operation === 'status');
-        if (campaign.operation !== 'status') {
+        const readOnly = ['status', 'runnable-plans'].includes(campaign.operation);
+        const resolution = resolveInvocationWorktree(repository, environment, readOnly);
+        if (!readOnly) {
           const campaignId = campaign.argument
             ? resolveCampaignRoot(resolution.effectiveWorktree, campaign.argument).campaignId
             : null;
           const coordinator = bindingForSession(environment.PLUGIN_DATA, resolution.effectiveWorktree, data.session_id, campaignId);
           return preToolOutput(`Coordinator session authenticated for campaign ${coordinator.campaignId}.`);
         }
-        if (resolution.workerBinding) return preToolOutput(`Read-only campaign status will use owning worktree ${resolution.effectiveWorktree}.`);
+        if (resolution.workerBinding) return preToolOutput(`Read-only campaign ${campaign.operation} will use owning worktree ${resolution.effectiveWorktree}.`);
       } catch (error) {
         return deniedPreToolOutput(error.message);
       }

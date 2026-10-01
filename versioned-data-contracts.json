@@ -339,6 +339,18 @@
       "supportedDowngradeVersions": []
     },
     {
+      "id": "campaign-runnable-plans",
+      "implementation": {
+        "workspace": "ponytail",
+        "module": "src/campaign-orchestration.js",
+        "readerRegistryExport": "CampaignRunnablePlansReaders"
+      },
+      "currentVersion": "V1",
+      "versions": ["V1"],
+      "supportedReadVersions": ["V1"],
+      "supportedDowngradeVersions": []
+    },
+    {
       "id": "campaign-worker-bindings",
       "implementation": {
         "workspace": "ponytail",

@@ -36,7 +36,7 @@ function repository() {
 function graph(campaignId = 'campaign') {
   return { campaignId, lifecycle: { initial: 'open', activeWork: 'in_progress', successfulCompletion: 'closed' }, plans: [
     { id: campaignId, parentPlanId: null, dependsOn: [], lifecycle: 'in_progress', path: 'root' },
-    ...Array.from({ length: 16 }, (_, index) => ({ id: `work-${String(index).padStart(2, '0')}`, parentPlanId: campaignId, dependsOn: [], lifecycle: 'open', path: `work-${index}` })),
+    ...Array.from({ length: 16 }, (_, index) => ({ id: `work-${String(index).padStart(2, '0')}`, parentPlanId: campaignId, dependsOn: [], lifecycle: 'open', path: `work-${index}`, runnableTasklets: { sprintId: 'S01', taskletIds: ['S01-T01'] } })),
   ] };
 }
 

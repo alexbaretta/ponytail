@@ -61,9 +61,10 @@ while project-wide management records remain under `pm/`.
   lifecycle. `src/campaign-census.js` owns campaign configuration and
   plan metadata readers, scoped campaign discovery and validation,
   repository-wide campaign inventory, census normalization, and human/JSON
-  reporting. `src/campaign-orchestration.js` owns the versioned Ponytail-user
+  reporting and canonical immediately-runnable tasklet projection.
+  `src/campaign-orchestration.js` owns the versioned Ponytail-user
   assignment ledger, authenticated host-observation snapshot, dependency
-  scheduler, reconciled status and ready-action projection, verified
+  scheduler, runnable-plan summary and batch reservation, reconciled status and ready-action projection, verified
   fast-forward integration, and typed host-action protocol.
   Its per-top-level-project ledgers own the retained worker pool and capacity
   reservations. `src/worker-worktrees.js` owns exact-path Git reconstruction

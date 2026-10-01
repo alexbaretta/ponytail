@@ -211,11 +211,30 @@ diagnostics fail the projection closed; typed recovery-required and verified
 post-delivery checkout-loss diagnostics remain visible and nonblocking.
 
 The projection never creates an assignment, materializes an action, or performs
-a host effect. `advance` remains the only transition engine. The coordinator
+a host effect. `advance` owns serial transitions; `schedule-ready` owns batch
+dispatch reservations. The coordinator
 advances to persist work, reads ready actions, executes every returned action,
 and records each named result.
 
 ### One-step transition engine
+
+The census derives runnable tasklet IDs from the canonical execution-sprint
+selector and the tasklet selector's immediately-ready ranking, not the longer
+sequential batch that may contain tasks unlocked only by earlier batch tasks.
+The orchestration core joins that nonempty projection with campaign prerequisite
+completion in one predicate. `campaign runnable-plans` exposes its read-only V1
+summary, including active plans; status limits its dispatch view to unassigned
+initial plans. Both dispatch engines and unstarted retry validation consume
+the same predicate. Planning and acceptance-only work are not tasklet dispatch.
+
+`campaign schedule-ready` fills all currently eligible dispatch reservations
+under the existing project and ledger locks, reusing proven idle pairs first.
+It returns current executable V4 action envelopes, never starts host effects
+itself, and never performs rebase or merge. Repeated calls preserve reservations
+and actions. Host observation, ownership, capacity, and integration-target gates
+remain unchanged. The installed Codex app-server protocol exposes `thread/start`
+but no managed-worktree creation operation; it does not replace the supported
+desktop actuator boundary described below.
 
 The mutating interface is:
 
@@ -279,7 +298,10 @@ Before delivery, a missing checkout can instead become
 `CAMPAIGN_WORKTREE_RECOVERY_REQUIRED`. Reconciliation requires a fresh complete
 host observation of the same waiting or completed managed session, an exact
 authenticated binding, and a branch commit that contains the assignment's
-dispatch revision. Advance records one `RECOVER_WORKTREE` V4 action containing
+dispatch revision. For active tasklet work, the plan must also satisfy the
+runnable-plan predicate before a coordinator recovery reminder is exposed.
+Delivered integration recovery does not require further product tasklets.
+Advance records one `RECOVER_WORKTREE` V4 action containing
 the existing session, previous path, branch, and preserved revision. Readers
 normalize historical actions to the current V4 envelope. Worker recovery does
 not require this action or coordinator initiation. V2 authenticated bindings

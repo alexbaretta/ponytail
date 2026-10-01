@@ -7,6 +7,33 @@ Licensed under the MIT License. See LICENSE in the project root.
 
 # Campaign orchestration Suite
 
+## Arc: Query runnable plans and fill independent dispatch capacity
+
+Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
+
+1. Provide plans with unmet plan dependencies, an unreviewed execution sprint,
+   an all-DONE tasklet set, and a reviewed sprint with immediately-ready tasklets.
+   Run `ponytail campaign runnable-plans <campaign> --json`.
+   - Only plans with satisfied campaign prerequisites and nonempty canonical
+     tasklet readiness appear, with exact sprint/tasklet IDs. Active eligible
+     plans are included. The query leaves Git and the ledger unchanged.
+2. With fresh complete host observations, run `campaign schedule-ready` twice.
+   - All eligible unassigned or queued plans receive deterministic, retry-stable
+     reservations, using idle retained pairs before creation. At most fifteen
+     pairs/creation reservations belong to the same top-level project. Existing
+     rebase actions remain serialized and their identities remain unchanged.
+   - Returned host actions are not evidence that a Codex worker has started.
+3. Exhaust tasklets before an unstarted dispatch is executed.
+   - Both dispatch commands and `ready-actions` suppress it; a proven
+     `NOT_STARTED` result preserves the queued assignment for later readiness.
+     Started host effects retain their existing action and host identity.
+4. Execute only the returned native host actions, refresh host observations,
+   and continue the independent serialized join workflow.
+   - No coordinator chooses plan eligibility conversationally. Delivered
+     integration is still executable without remaining product tasklets.
+
+Automated profile: `node --test tests/campaign-orchestration.test.js`.
+
 ## Arc: Reconcile a pre-existing active campaign
 
 Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
@@ -31,6 +58,13 @@ Automated profile: `node --test tests/campaign-orchestration.test.js`.
 approved 2026-09-29.
 
 ## Evidence
+
+- 2026-10-01 exact-readiness profile: 85 focused campaign, hook, and retained
+  worktree tests pass. The full core pipeline passes, including 505 core tests,
+  installer and bundled-subproject suites, 80 TSTS unit tests, and 582-file
+  structural validation. The existing GWEN coordinator is testing the same
+  runnable-plan query and batch reservation against the live campaign; native
+  worker activation remains a supported host-tool effect, not a CLI claim.
 
 - 2026-10-01 retirement correction: the earlier live-host profile proves only
   attachment-scoped archive, not retire-by-session or handoff retirement. The

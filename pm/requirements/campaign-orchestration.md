@@ -236,7 +236,8 @@ integration revision. A retry after interruption must resume or reconcile that
 same assignment rather than create another one.
 
 A pending create-or-reuse dispatch must be re-evaluated against the current
-campaign dependency graph before every retry. The host adapter must record
+campaign dependency graph and canonical tasklet readiness before every retry.
+The host adapter must record
 whether the external worker operation has started. A dispatch proven not to
 have started may be postponed when its plan is no longer dependency-ready so
 unrelated ready work can proceed; the existing assignment and attachment
@@ -249,6 +250,30 @@ For each unassigned dependency-ready plan, the coordinator must schedule it on
 an idle campaign worker when one is safe to reuse, or create a new worker
 session and worktree when none is available. A worker is not idle while it has
 active work, unintegrated work, a dirty worktree, or incomplete cleanup.
+
+The read-only `campaign runnable-plans` summary must return precisely the plans
+whose campaign prerequisites (including unfinished child plans) are met and
+whose canonical execution-ready sprint has a nonempty set of immediately
+runnable tasklets. It identifies each plan, current path, lifecycle, sprint,
+and ready tasklet IDs on the integration checkout. It includes eligible active
+plans as well as unassigned plans; planning-only work, unreviewed tasklets,
+blocked sprints, and all-DONE tasklet sets are excluded. It must not mutate the
+ledger or require a host observation to answer this repository-state query.
+
+The same predicate must govern new and queued dispatch, retries of unstarted
+dispatch, and coordinator recovery reminders for active product work. Recovery
+needed for an authenticated delivered integration remains independently ready.
+Workers retain their own recovery authority.
+
+`campaign schedule-ready` must deterministically reserve all eligible plans
+within the invoking top-level project's capacity in one atomic operation,
+using safe retained pairs before new creation reservations. It must preserve
+existing action identities on retry, retain started effects, enforce the
+ordinary fresh-host and assignment gates, and leave joins serialized. It may
+not report a worker started merely because an assignment was reserved. Native
+session/worktree activation must be programmatic if the supported host exposes
+that capability to the CLI; otherwise only the host actuator may perform those
+effects, without making plan eligibility decisions.
 
 Outstanding host actions are assignment-local rather than a global campaign
 gate. Worker create and reuse actions for distinct dependency-ready plans may

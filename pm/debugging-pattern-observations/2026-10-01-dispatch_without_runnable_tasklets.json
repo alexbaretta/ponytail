@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-10-01-dispatch_without_runnable_tasklets",
+  "recorded_at": "2026-10-01T15:37:25-07:00",
+  "source_references": ["pm/bugs/in_progress/2026-10-01-FEAT-campaign_runnable_plans.md"],
+  "context": {
+    "languages": ["javascript"], "frameworks": [],
+    "components": ["campaign scheduler"],
+    "affected_boundaries": ["campaign prerequisites to worker dispatch"],
+    "code_references": ["src/campaign-orchestration.js:planIsRunnable", "src/campaign-census.js:validatePlanContents"]
+  },
+  "observed_behavior": "A campaign-dependency-ready plan could receive a worker despite having no runnable product tasklets.",
+  "expected_behavior": "Worker dispatch requires satisfied campaign prerequisites and a nonempty canonical immediately-ready tasklet set.",
+  "causal_mechanism": "The scheduler projected only campaign-level prerequisites and never consumed execution-sprint or tasklet readiness.",
+  "anti_pattern": {
+    "structural_description": "A coarse scheduling gate omitted the owned finer-grained readiness contract.",
+    "why_it_fails": "Satisfied plan dependencies do not establish reviewed, executable work inside the plan."
+  },
+  "correct_pattern": {
+    "required_invariant": "One canonical joined readiness predicate governs the summary and all product dispatch decisions.",
+    "implementation_description": "The census reuses canonical sprint and tasklet selectors; both dispatch engines and unstarted retry validation consume the same nonempty projection."
+  },
+  "applicability_conditions": ["Plans contain independently gated sprints and tasklets."],
+  "known_non_matches": ["Delivered rebase and integration remain executable without further product tasklets."],
+  "confirmation_evidence": ["Real-Git CLI proof excludes dependency-blocked, unreviewed, and exhausted plans; batch proof reserves fifteen eligible plans once."],
+  "regression_proofs": ["tests/campaign-orchestration.test.js: runnable-plans joins satisfied plan dependencies with nonempty canonical tasklet readiness", "tests/campaign-orchestration.test.js: tasklet exhaustion suppresses new, queued, and unstarted dispatch without changing started identity"]
+}
