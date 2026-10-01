@@ -1312,6 +1312,12 @@ function reconcile(graph, ledger, invocationWorktree = ledger.topLevelWorktree, 
       status.diagnostics.push(diagnosticRecord('CAMPAIGN_CLEANUP_UNINTEGRATED', `assignment ${assignment.id} worker revision is not integrated`, assignment));
     }
   }
+  const reservedWorkers = projectWorkerCount(projectLedgers(ledger, environment));
+  if (reservedWorkers >= PROJECT_WORKER_LIMIT && idleWorkers.length === 0 && readyPlans.length > 0) {
+    status.diagnostics.push(diagnosticRecord('CAMPAIGN_WORKER_CAPACITY_REACHED',
+      `top-level project retains ${reservedWorkers} worker slots; wait for safe reuse at limit ${PROJECT_WORKER_LIMIT}`,
+      {}, { limit: PROJECT_WORKER_LIMIT, reservedWorkers }));
+  }
   status.diagnostics.sort((left, right) => left.code.localeCompare(right.code)
     || (left.planId ?? '').localeCompare(right.planId ?? '')
     || (left.assignmentId ?? '').localeCompare(right.assignmentId ?? ''));
@@ -1347,6 +1353,7 @@ function blockingDiagnostics(status) {
   const recoverableStates = new Set(['READY_TO_MERGE', 'MERGED', 'CLEANUP_PENDING']);
   return status.diagnostics.filter((diagnostic) => (
     diagnostic.code !== 'CAMPAIGN_WORKTREE_RECOVERY_REQUIRED'
+      && diagnostic.code !== 'CAMPAIGN_WORKER_CAPACITY_REACHED'
       && (diagnostic.code !== 'CAMPAIGN_WORKTREE_MISSING_AFTER_DELIVERY'
         || !recoverableStates.has(status.assignments.find(({ id }) => id === diagnostic.assignmentId)?.state))
   ));

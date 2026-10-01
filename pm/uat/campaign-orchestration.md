@@ -303,9 +303,9 @@ Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
   authenticated delivery at that branch commit and a completed session.
 - **Profiles:** Automated Git and adapter-contract profile plus live Codex
   managed-worktree recovery profile.
-- **External effects:** Restores an archived checkout when available or creates
-  a new managed checkout in the same session; creates no replacement session,
-  assignment, branch, or commit.
+- **External effects:** Reconstructs the original checkout from the recorded
+  main worktree in the same session; creates no replacement session,
+  assignment, branch, or commit. Native snapshots remain preserved.
 
 1. Reconcile the missing checkout with all recovery proofs present.
    - Status reports `CAMPAIGN_WORKTREE_RECOVERY_REQUIRED` instead of the
@@ -313,15 +313,17 @@ Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
 2. Advance and read ready-actions.
    - Ponytail persists and returns exactly one `RECOVER_WORKTREE` action naming
      the existing session, checkout, branch, and preserved branch revision.
-3. With no archived artifact, create a managed checkout from the preserved
-   revision in the same session and refresh the complete host observation.
-   - The host-selected path may differ from the missing path, but the observed
-     session, managed-worktree provenance, branch, and revision remain exact.
+3. With no archived artifact, the worker invokes `ponytail worktree recover
+   <attachment-token>` from a neutral cwd. Also exercise recovery without
+   steps 1–2: coordinator initiation is not a prerequisite.
+   - The original path, session, branch and committed revision remain exact.
+     A matching existing recovery action is acknowledged by the command; the
+     coordinator refreshes observations and verifies live host continuity.
 4. Report an unobserved or unmanaged path, another repository, branch or
    revision, or a dirty checkout.
    - Ponytail rejects the result and retains the same pending action.
-5. Report the exact clean, host-authenticated checkout.
-   - Ponytail replaces the stale assignment and binding path, retains the
+5. Verify the exact clean checkout and refreshed host association.
+   - Ponytail preserves the original assignment and binding path, retains the
      original assignment and session, and clears the recovery condition. An
      undelivered worker still needs its first delivery. A delivered rebasing
      worker retains its original delivery but must rebase and deliver the new
@@ -329,7 +331,8 @@ Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
 6. Repeat without one host, binding, branch, ancestry, or managed-worktree
    proof.
    - Ponytail reports ordinary `CAMPAIGN_WORKTREE_MISSING`, emits no recovery
-     action, and creates no replacement worker.
+     action, and creates no replacement worker. Capability-owned physical
+     recovery remains available to that worker despite coordinator diagnostics.
 7. Keep another plan dependency-ready while a delivered rebasing worker awaits
    recovery.
    - `ready-actions` exposes the exact recovery and independent dispatch
@@ -429,22 +432,30 @@ Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
    - Ponytail moves the assignment to cleanup. A failed gate may instead send
      the same worker through another delivery and integration cycle.
 
-## Arc: Archive only integrated workers
+## Arc: Retain integrated workers; explicit retirement remains separately fenced
 
 Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
 
 - **Actor:** Campaign coordinator.
 - **Prerequisites:** One completed but unmerged worker and one worker whose
   exact revision is present on the campaign integration branch and whose plan
-  has passed final integrated acceptance and closed.
+  has passed final integrated acceptance and closed. For the explicit-retirement
+  profile only, an existing legacy cleanup action and direct human retirement
+  authority are required; the scheduler no longer creates cleanup actions.
 - **Profiles:** Automated adapter contract profile and live Codex host profile.
-- **External effects:** Archives a Codex session and removes its managed
-  worktree after preserving any supported recoverable snapshot.
+- **External effects:** Automatic scheduling retains workers. Only explicit
+  retirement removes the authorized checkout after resource cleanup and
+  preserving any supported recoverable snapshot.
 
 1. Attempt cleanup of the unmerged worker.
    - Ponytail refuses cleanup and retains the assignment.
-2. Advance cleanup for the integrated worker.
-   - The cleanup action names the exact session and worktree. The worker cleans
+2. Advance after the integrated worker's plan closes with no ready work.
+   - Its logical assignment completes; the session/worktree pair remains
+     retained. No archive action is executable. Follow the
+     [retained-worker Suite](worker-worktree-retention.md) for reuse, bounded
+     independent project pools, and worker-owned exact-path recovery.
+3. Separately execute the human-authorized legacy retirement action.
+   - The existing action names the exact session and worktree. The worker cleans
      project-owned resources, and the coordinator archives the original worker
      chat and observes that exact session as archived. `campaign retire-worktree`
      invokes the project's configured lifecycle adapter for that one claim.
@@ -454,7 +465,7 @@ Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
    - While the worker is working, the observation is stale, the checkout is
      dirty or unintegrated, or the adapter retains its claim, retirement is
      refused and the same action remains pending.
-3. Interrupt cleanup after its first external effect and resume it.
+4. Interrupt explicit cleanup after its first external effect and resume it.
    - Ponytail reports `CLEANUP_PENDING`, repeats retirement by the original
      action ID after a crash between adapter completion and result recording, and
      never exposes the worker as idle while cleanup remains incomplete.

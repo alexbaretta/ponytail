@@ -2,6 +2,7 @@
 // Traceability: verifies REQ-PLAN-INPUT-QUEUE
 // Traceability: verifies REQ-ISSUE-REQUIREMENT-ACTIVATION
 // Traceability: verifies REQ-PONYTAIL-CLI-AGENT-HARNESS
+// Traceability: verifies REQ-WORKER-WORKTREE-RETENTION
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
@@ -39,7 +40,7 @@ test('campaign policy requires repository inventory and V2 direct dependencies',
   assert.match(generated, /multiple active campaign roots remain a\nvalid inventory/);
 });
 
-test('campaign policy delegates every worker effect to the durable action loop', () => {
+test('campaign coordinator uses durable actions while worker recovery remains worker-owned', () => {
   const policy = fs.readFileSync(path.join(__dirname, '..', 'skills', 'plan-execution', 'SKILL.md'), 'utf8');
   assert.match(policy, /campaign\s+status \[<campaign-root>\] --json/);
   assert.match(policy, /campaign\s+observe <campaign-root> --snapshot <json>/);
@@ -69,12 +70,20 @@ test('campaign policy delegates every worker effect to the durable action loop',
   assert.match(policy, /`CAMPAIGN_WORKTREE_MISSING_AFTER_DELIVERY` is an informational recovery/);
   assert.match(policy, /ordinary `CAMPAIGN_WORKTREE_MISSING` lacks that proof and remains blocking/);
   assert.match(policy, /For `RECOVER_WORKTREE`, message only the action's existing session/);
-  assert.match(policy, /When no archive identity exists, it uses\n+   the supported host create-worktree operation in that same session/);
-  assert.match(policy, /The host may choose a new managed\n+   path/);
-  assert.match(policy, /Recovery replaces the stale binding path\n+   and resumes the assignment/);
+  assert.match(policy, /recovery does not require coordinator initiation/);
+  assert.match(policy, /preserves the original path and acknowledges a matching/);
+  assert.match(policy, /ponytail worktree recover\s+<attachment-token>/);
+  assert.doesNotMatch(policy, /host may choose a new managed|surplus\s+workers are cleanup-ready/);
   assert.match(policy, /`CAMPAIGN_WORKTREE_RECOVERY_REQUIRED` is also nonblocking/);
   assert.match(policy, /delivered worker in `REBASE_REQUIRED`[\s\S]*ordinary rebase and new authenticated delivery/);
   assert.match(policy, /A `REUSE_WORKER`\n+   action retains the finished session and managed worktree/);
+  assert.match(policy, /Retain every inactive session\/worktree pair indefinitely/);
+  assert.match(policy, /Fifteen retained worker slots, including creation/);
+  assert.match(policy, /At `CAMPAIGN_WORKER_CAPACITY_REACHED`/);
+  const lifecycle = fs.readFileSync(path.join(__dirname, '..', 'skills', 'worktree-lifecycle', 'SKILL.md'), 'utf8');
+  assert.match(lifecycle, /retain the session\/worktree pair indefinitely/);
+  assert.match(lifecycle, /No coordinator-initiated\nrecovery action is required/);
+  assert.match(lifecycle, /Historical scheduler cleanup actions are not retirement authority/);
 });
 
 test('planning and issue policy records prospective traceability without claiming coverage', () => {

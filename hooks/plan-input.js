@@ -171,7 +171,10 @@ function deniedPreToolOutput(reason) {
 function handle(data, environment = process.env) {
   if (data.hook_event_name === 'UserPromptSubmit') {
     const recoveryContext = workerRecoveryContext(environment, data.session_id);
-    if (recoveryContext) return { hookSpecificOutput: { hookEventName: 'UserPromptSubmit', additionalContext: recoveryContext } };
+    if (recoveryContext) {
+      if (/^\/ponytail-enqueue\s+/.test(data.prompt || '')) return { decision: 'block', reason: 'Only the campaign coordinator can enqueue plan input.' };
+      return { hookSpecificOutput: { hookEventName: 'UserPromptSubmit', additionalContext: recoveryContext } };
+    }
     if (!/^\/ponytail-enqueue\s+/.test(data.prompt || '')) return null;
   }
   if (data.hook_event_name === 'PreToolUse') {
@@ -183,6 +186,7 @@ function handle(data, environment = process.env) {
         return preToolOutput(`Worker ${binding.sessionId} may recover only its original checkout ${binding.worktree} from ${binding.mainWorktree || 'its owning project main worktree'}. Run from an existing neutral cwd; preserve session and assignment identity.`);
       } catch (error) { return deniedPreToolOutput(error.message); }
     }
+    if (!campaignCommand(data.tool_input) && !coordinatorCommand(data.tool_input)) return null;
   }
   const repository = repositoryRoot(data.cwd || process.cwd());
   if (data.hook_event_name === 'PreToolUse') {

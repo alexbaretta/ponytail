@@ -66,4 +66,17 @@ fixture's exact-path recovery.
    Record separately whether a native snapshot restored unsaved files; Git
    reconstruction alone is evidence only for committed content.
 
-Acceptance is pending until recorded execution evidence satisfies every Arc.
+## Execution evidence
+
+2026-10-01 automated Git/CLI and policy profiles pass on the final staged tree:
+all 491 root Node tests, installer harness, 23 Pi tests, 4 MCP tests, 80 TSTS
+tests, and the 570-file structure check. Focused scheduler/hook/recovery/policy
+selection passed 61 tests; the subsequently reconciled policy-conformance
+selection passed 10 tests. Logs are repository-ignored:
+`tmp/worker-retention-final.log` and `tmp/worker-retention-final-focused.log`.
+
+These establish retention, scoped bounded capacity, concurrent reservations,
+same-path worker-owned reconstruction, and refusal/idempotency boundaries.
+They do not establish live Codex session continuity. That manual Arc remains
+pending. No client-project checkout/session was mutated, no plugin was installed
+outside this repository, and the host automatic-cleanup setting was not changed.

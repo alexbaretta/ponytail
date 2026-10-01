@@ -204,22 +204,16 @@ must return their complete diagnostics instead of aborting at the first
 cross-record conflict; every mutating campaign operation must fail closed until
 all blocking diagnostics are resolved.
 
-A missing undelivered worker checkout is recoverable only when a fresh complete
-host observation identifies the same non-missing Codex-managed session, its
-authenticated binding still names the assignment, session, path, and branch,
-and that exact branch resolves in the campaign repository to a commit containing
-the assignment's dispatch revision. Status must distinguish this condition
-from an ordinary blocking missing checkout. Advance must persist one typed
-recovery action naming the existing identities and preserved revision; it must
-not allocate a replacement session or assignment. The restored checkout must
-be clean, belong to the same repository, and match the named branch and
-revision before the result is accepted. If no archived artifact exists, the
-same session may create a new managed checkout at a host-selected path. A fresh
-complete host observation must authenticate that path before Ponytail replaces
-the stale assignment and worker binding. Recovery must preserve the session,
-assignment, branch, and commit, but need not preserve an unrecoverable physical
-path. It does not constitute delivery or integration evidence: the same worker
-must still record an authenticated delivery through the ordinary flow.
+Missing-checkout recovery follows the
+[worker-owned recovery requirement](worker-worktree-retention.md). The
+authenticated worker may reconstruct its original path from recorded main
+worktree provenance without coordinator initiation or a usable repository cwd.
+Fresh complete host observations still govern scheduler classification and
+host-continuity evidence; their absence may block the coordinator but must not
+prevent capability-owned physical recovery. Existing recovery actions retain
+their original identity and can be acknowledged by verified same-path worker
+recovery. It is not delivery or integration evidence: the same worker must
+still record authenticated delivery through the ordinary flow.
 
 For pre-existing active campaigns, an authenticated coordinator must have an
 explicit, idempotent reconciliation command that corrects unassigned-plan
@@ -288,9 +282,9 @@ cleanup sequence. Any missing checkout without that durable proof remains
 blocking.
 
 When a delivered worker requires a rebase and its checkout is missing, Ponytail
-must use the existing worker recovery action before requesting that rebase.
-Recovery requires a fresh complete observation of the completed managed
-session, its authenticated binding, the exact delivered commit at the named
+must restore the worker-owned checkout before requesting that rebase.
+Scheduler classification still requires a fresh complete observation of the
+completed managed session, its authenticated binding, the exact delivered commit at the named
 branch, and ancestry from the dispatch revision. It preserves the delivery
 record and worker identity but does not make the divergent commit merge-ready.
 The recovered worker must follow the ordinary rebase and authenticated delivery
@@ -301,14 +295,15 @@ All campaign advancement in one top-level worktree must also use one worktree-
 scoped critical section so two campaign-scoped ledgers cannot race while
 observing or changing their shared integration branch.
 
-After a worker revision has been verified as integrated and the plan has
-successfully closed, the coordinator must archive the worker session and
-remove its managed worktree. Cleanup failure must
-remain visible and retryable; it must not make the worker appear idle or allow
-the assignment to disappear. Recoverable archival of the worktree before its
-checkout is removed satisfies this requirement.
+The 2026-10-01 [retained-worker requirement](worker-worktree-retention.md)
+supersedes automatic cleanup after plan closure and coordinator-initiated
+recovery at a replacement path. After verified integration and successful plan
+closure, release the logical assignment but retain its session/worktree pair
+indefinitely. Reuse is fenced by outstanding obligations, clean Git state,
+complete fresh host observations, and per-top-level-project ownership.
 
-The worktree-cleanup action must name both the exact session and worktree. After
+Only for separate explicit human-requested retirement, an existing
+worktree-cleanup action must name both the exact session and worktree. After
 the worker completes project-owned resource cleanup, the coordinator archives
 the original worker chat and records fresh host evidence that it is archived.
 `ponytail campaign retire-worktree <campaign> <action-id>` must execute that
@@ -331,17 +326,19 @@ estimated completion time.
 `ponytail campaign ready-actions [<campaign>] --json` must return a read-only,
 versioned projection of the durable host actions that are executable now. It
 must preserve each action envelope and identity, fail closed on campaign
-diagnostics, include pending rebase and cleanup actions, and include create or
+diagnostics, include pending rebase actions, exclude superseded automatic
+cleanup actions, and include create or
 reuse actions only while their plan remains dependency-ready and their host
 effect has not started. It must not materialize assignments or actions, retry a
 started dispatch, or invent advisory work absent from the durable ledger.
 
-Before selecting cleanup, the scheduler must reserve only the clean completed
-managed workers needed for dependency-ready dispatch after already-idle worker
-capacity is counted. Any surplus worker must proceed through the canonical
-project-resource, managed-worktree, and session cleanup path. This ensures that
-resources such as per-worktree databases and container networks are released
-instead of being retained without dispatch demand.
+The scheduler retains all worker pairs, including surplus inactive workers and
+their project-resource claims. A fifteen-slot capacity bound includes creation
+reservations and spans campaigns only in the same top-level project. At capacity
+without a safe inactive pair, status reports a nonblocking capacity-wait
+diagnostic; no sixteenth creation or automatic cleanup is permitted. Historical
+automatic cleanup is superseded with an auditable retained disposition rather
+than reported as successful physical deletion.
 
 Repository-wide validation must run at campaign coordination and resumption,
 before dispatch, and after a campaign relationship or lifecycle change. When

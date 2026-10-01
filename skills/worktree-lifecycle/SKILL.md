@@ -14,6 +14,8 @@ Licensed under the MIT License. See LICENSE in the project root.
 
 # Worktree Lifecycle
 
+Traceability: supports REQ-WORKER-WORKTREE-RETENTION
+
 Treat every agent-created worktree as a resource with an explicit owner and
 disposition. Record its repository, physical root, Git registration, task or
 agent owner, creation purpose, and project-local resources when it is created
@@ -37,9 +39,22 @@ whether it is:
 Do not infer abandonment from silence, an observation timeout, a stale status
 message, or an inaccessible task. Poll the owning task or inspect its current
 authoritative state. Do not remove an active or explicitly retained worktree.
-For a Ponytail campaign assignment, an integrated worker is still retained
-while its plan remains active for final acceptance. Treat only the scheduler's
-typed cleanup action after successful plan closure as authority to retire it.
+For a Ponytail campaign, retain the session/worktree pair indefinitely, even
+after integration and successful plan closure. Logical assignment completion
+does not prove the session will never be needed again. Reuse the first safe
+inactive pair; do not archive the chat, delete the checkout, or release its
+resource claim to obtain capacity. The pool limit is fifteen worker slots per
+user-owned top-level Codex project, independently of other projects sharing
+the same main worktree. Wait at capacity rather than creating a sixteenth pair.
+Historical scheduler cleanup actions are not retirement authority.
+
+If a retained worker's checkout disappears, that worker invokes `ponytail
+worktree recover <attachment-token>` from an existing neutral directory and
+runs canonical project adoption/setup from its restored original path. Its
+durable binding records the main worktree as a Git source, not a configuration
+source. Preserve session, branch, assignment, and any native snapshot; committed
+Git state cannot prove restoration of unsaved files. No coordinator-initiated
+recovery action is required. Disable host automatic deletion for retained pools.
 
 ## Cleanup Contract
 
@@ -63,7 +78,7 @@ substantial disk space.
    project-owned resource assigned to it has been released. A missing root
    with a live registration, claim, process, or database is incomplete cleanup.
 
-For campaign cleanup, archive the original owning chat and observe it as
+Only for explicit human-requested campaign retirement, archive the original owning chat and observe it as
 archived before invoking `ponytail campaign retire-worktree <campaign>
 <action-id>`. This is the canonical project-owned retirement path: its adapter
 must prove abandonment and release the exact worktree's resources. Do not use

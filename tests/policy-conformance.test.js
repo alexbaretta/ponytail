@@ -11,7 +11,7 @@ test('campaign coordinator harness owns observation and diagnostic priority', ()
   const policy = require('node:fs').readFileSync(require('node:path').join(__dirname, '..', 'skills', 'plan-execution', 'SKILL.md'), 'utf8');
   assert.match(policy, /campaign\s+observe <campaign-root> --snapshot <json>/);
   assert.match(policy, /Blocking campaign diagnostics outrank new dispatch/);
-  assert.match(policy, /execute only the resulting\n`RECOVER_WORKTREE` action in the named existing session/);
+  assert.match(policy, /worker follows the worker-owned recovery protocol without waiting for\n`advance` or `ready-actions` to initiate it/);
   assert.match(policy, /waiting for coordinator input from one that\n+   has finished/);
 });
 

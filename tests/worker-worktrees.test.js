@@ -10,7 +10,7 @@ const os = require('node:os');
 const path = require('node:path');
 const { spawn, spawnSync } = require('node:child_process');
 const test = require('node:test');
-const { advanceLedger, bindWorker, ledgerPath, newLedger, readLedger, readWorkerBindings, withLedgerLock, withWorktreeLock, workerRecoveryBinding, writeHostObservation } = require('../src/campaign-orchestration');
+const { advanceLedger, bindWorker, ledgerPath, newLedger, readLedger, readWorkerBindings, reconcile, readyActions, withLedgerLock, withWorktreeLock, workerRecoveryBinding, writeHostObservation } = require('../src/campaign-orchestration');
 const { handle } = require('../hooks/plan-input');
 const ponytail = path.join(__dirname, '..', 'cli', 'ponytail');
 
@@ -55,6 +55,9 @@ test('fifteen creation reservations bound one top-level project, not its shared 
   const successor = newLedger(root, 'successor', 'coordinator');
   assert.equal(advanceLedger(graph('successor'), successor, environment), null);
   assert.deepEqual(successor.pendingActions, []);
+  const status = reconcile(graph('successor'), successor, root, environment);
+  assert.equal(status.diagnostics.find(item => item.code === 'CAMPAIGN_WORKER_CAPACITY_REACHED').limit, 15);
+  assert.deepEqual(readyActions(status, graph('successor')).actions, []);
   assert.equal(advance(other).type, 'CREATE_WORKER');
   assert.equal(readLedger(other, 'campaign', environment).pendingActions.length, 1);
 });
@@ -123,6 +126,8 @@ test('original worker recovers its exact checkout from a neutral cwd without coo
   const prompt = handle({ hook_event_name: 'UserPromptSubmit', cwd: worktree, session_id: 'worker-session', prompt: 'Resume the original assignment.' }, environment);
   assert.ok(prompt.hookSpecificOutput.additionalContext.includes(fixture.main));
   assert.ok(prompt.hookSpecificOutput.additionalContext.includes(`ponytail worktree recover ${token}`));
+  assert.equal(handle({ hook_event_name: 'PreToolUse', cwd: worktree, session_id: 'worker-session', tool_input: { cmd: 'pwd' } }, environment), null);
+  assert.equal(handle({ hook_event_name: 'UserPromptSubmit', cwd: worktree, session_id: 'worker-session', prompt: '/ponytail-enqueue change scope' }, environment).decision, 'block');
   const hook = handle({ hook_event_name: 'PreToolUse', cwd: worktree, session_id: 'worker-session', tool_input: { cmd: `ponytail worktree recover ${token}` } }, environment);
   assert.notEqual(hook?.hookSpecificOutput?.permissionDecision, 'deny');
   const recover = () => spawnSync(ponytail, ['worktree', 'recover', token], { cwd: os.tmpdir(), env: environment, encoding: 'utf8' });

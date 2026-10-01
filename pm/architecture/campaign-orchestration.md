@@ -9,6 +9,7 @@ Licensed under the MIT License. See LICENSE in the project root.
 
 [Back to architecture index](index.md) · Governing requirement:
 [`REQ-CAMPAIGN-ORCHESTRATION`](../requirements/campaign-orchestration.md)
+and [retained workers](../requirements/worker-worktree-retention.md).
 
 ## Architecture
 
@@ -236,11 +237,16 @@ The transition engine prioritizes a dependency-ready source-proven repair over
 independent coverage expansion when worker capacity requires a choice, as
 required by `plan-execution`. It otherwise uses stable plan identity ordering.
 
-Cleanup-pending workers are retained for reuse only up to current dispatch
-demand after idle worker capacity is counted. Surplus workers continue to
-`ARCHIVE_WORKTREE` and `ARCHIVE_SESSION`; the worktree lifecycle performs the
-project's canonical resource cleanup, including resources such as databases or
-container networks, before the managed checkout and bounded slot are retired.
+Per-top-level-project ledgers form the retained worker pool across campaigns.
+Integrated, closed assignments release their pair for reuse without deleting
+the session, checkout, or resource claim. Deterministic idle selection uses
+fresh complete host evidence and clean Git state, excluding outstanding
+assignments in any campaign of that project. Fifteen retained pairs plus
+unfulfilled creation reservations is the project limit; the main checkout and
+other user-owned top-level projects do not consume that pool. At capacity the
+core emits `CAMPAIGN_WORKER_CAPACITY_REACHED` and waits for safe reuse.
+Historical automatic cleanup actions are superseded with a retained outcome,
+not executed or reported as deletion success.
 
 `READY_TO_MERGE` requires a clean worker worktree, complete plan-owned evidence
 at the recorded worker revision, and proof that the current campaign integration
@@ -266,25 +272,27 @@ delivered commit. Status emits
 `CAMPAIGN_WORKTREE_MISSING_AFTER_DELIVERY`, which remains visible but is not a
 mutation blocker. The ordinary `CAMPAIGN_WORKTREE_MISSING` diagnostic remains
 blocking when any of those proofs is absent. Integration stays
-fast-forward-only, and cleanup remains action-driven.
+fast-forward-only; worker-owned recovery remains available independently of
+coordinator mutation gates.
 
 Before delivery, a missing checkout can instead become
 `CAMPAIGN_WORKTREE_RECOVERY_REQUIRED`. Reconciliation requires a fresh complete
 host observation of the same waiting or completed managed session, an exact
 authenticated binding, and a branch commit that contains the assignment's
-dispatch revision. Advance records one `RECOVER_WORKTREE` V3 action containing
+dispatch revision. Advance records one `RECOVER_WORKTREE` V4 action containing
 the existing session, previous path, branch, and preserved revision. Readers
-normalize already-persisted immutable V2 actions to V3. The host resumes that same
-session and restores its archived managed-worktree artifact when one exists.
-When no archive identity exists, the same session creates a new managed
-checkout from the preserved revision and uses the host project's canonical
-adoption path to establish the named branch. A fresh complete host observation
-must authenticate the returned managed path before action-result atomically
-replaces the stale assignment and worker binding. Validation proves the new
-checkout is clean, is in the same Git repository, and preserves the session,
-assignment, branch, and revision. The assignment returns to ordinary active
-work and must deliver before it can enter the integration lane. Absent proof
-retains the ordinary blocking diagnostic.
+normalize historical actions to the current V4 envelope. Worker recovery does
+not require this action or coordinator initiation. V2 authenticated bindings
+record the main-worktree path and Git-directory identity; V1 binding readers
+remain immutable and enroll missing provenance explicitly on capability-owned
+recovery. `src/worker-worktrees.js` reconstructs the original exact path from
+the preserved branch through Git, validating source, target, registration, and
+branch ownership. CLI and hook routing recognize recovery before looking up
+the absent cwd. Prompt hooks re-emit durable worker recovery context. A matching
+existing action is acknowledged from clean same-path Git proof without
+fabricating a host observation; live host session continuity remains separately
+verified. Project adoption follows restoration. Native snapshots are preserved
+because branch reconstruction restores committed content only.
 
 A delivered assignment in `REBASE_REQUIRED` follows the same recovery action
 when its checkout is missing. The branch tip must equal its authenticated
@@ -303,7 +311,7 @@ result through `ponytail campaign action-result <campaign> <action-id> --result
 outcome.
 
 Outstanding actions are partitioned by effect. Assignment-local dispatch and
-cleanup actions may coexist for distinct assignments. One integration-lane
+recovery actions may coexist for distinct assignments. One integration-lane
 action may coexist with those actions, but a pending rebase prevents another
 rebase or a fast-forward merge until its result is reconciled. Repeated advance
 therefore fills available independent dispatch work without weakening the
@@ -320,20 +328,17 @@ ready plan.
 The current ledger is stored under Ponytail user data, keyed by canonical top-level
 worktree and campaign, and is replaced atomically under an exclusive scope
 lock. A second worktree-scoped lock surrounds every advance operation so two
-campaign-specific ledgers in the same worktree cannot concurrently dispatch,
-integrate, or clean up workers.
+campaign-specific ledgers in the same worktree cannot concurrently dispatch or
+integrate workers. That project critical section records process ownership;
+elapsed time alone cannot steal a live owner's lock. Dead-owner reaping is
+serialized before another process may claim the scope.
 
-Cleanup begins only after the integration branch contains the exact worker
-revision and final integrated acceptance closes the plan. It archives the Codex
-session, preserves a recoverable managed-
-worktree snapshot when supported, removes the checkout, and retains
-`CLEANUP_PENDING` until every required effect is confirmed.
-
-When another dependency-ready plan exists, a clean integrated worker observed
-as completed in its host-confirmed managed worktree is retired from its old
-assignment without destroying the session or checkout. The next advance emits
-the ordinary authenticated `REUSE_WORKER` action. Without such ready work, the
-canonical worktree-then-session cleanup path remains unchanged.
+Successful integrated acceptance and plan closure release the logical
+assignment to `ARCHIVED` while leaving physical archive flags false and the
+worker idle. Reuse rotates the assignment attachment capability but preserves
+the session and checkout; recovery identity survives idle periods. No ready
+work is not authority to delete the pair. Explicit human-requested retirement
+is separate from automatic scheduling.
 
 ### Codex host adapter
 
@@ -364,7 +369,8 @@ commands may then re-root through it. Mutating campaign commands invoked in a
 worker fail closed; this version does not claim an authenticated command proxy
 that the host does not expose.
 
-For cleanup, `ARCHIVE_WORKTREE` carries both the bound session and exact
+For explicit human-requested retirement of a legacy cleanup action,
+`ARCHIVE_WORKTREE` carries both the bound session and exact
 worktree. The worker first performs the invoking project's canonical resource
 cleanup. The coordinator archives the original worker chat and refreshes its
 complete host observation. `campaign retire-worktree` verifies that session is
@@ -390,5 +396,6 @@ Every external effect has a pending state recorded before execution and a
 confirmed state recorded afterward. Reconciliation classifies a missing
 session, missing worktree, dirty worktree, divergent branch, moved integration
 head, incomplete plan, and partially completed cleanup separately. No failure
-deletes the assignment or releases its uniqueness constraints until the
-integrated revision and cleanup outcome are proven.
+deletes the assignment or releases its uniqueness constraints until its
+integration, acceptance, and outstanding obligations are reconciled. Logical
+release never proves physical retirement is appropriate.

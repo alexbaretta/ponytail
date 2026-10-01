@@ -89,6 +89,9 @@ services. `PROJECT_STRUCTURE.md` is authoritative for that boundary.
 - Worktree reclamation: `ponytail worktree reclaim [--dry-run] [--json]`;
   lifecycle authority is the invoking project's committed
   `.agents/config/project/worktree-lifecycle.json` adapter.
+- Worker-owned recovery: `ponytail worktree recover <attachment-token>` from
+  an existing neutral cwd; restores only the bound original checkout from its
+  main worktree. Campaign worker pairs are retained, not automatically retired.
 - Component registration: `ponytail register-component <name>` and
   `ponytail unregister-component <name>`; listing: `ponytail list-components`.
 - Project dependency registration: `ponytail register-dependency <project>` and

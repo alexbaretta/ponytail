@@ -713,19 +713,15 @@ durable state instead of remembering worker assignments in conversation:
    after a prerequisite failure; do not allocate a replacement worker. Record
    the exact host session, canonical worktree, branch, and revision only after
    the attach hook authenticates them.
-   For `RECOVER_WORKTREE`, message only the action's existing session. That
-   worker inspects its attached artifacts and restores the exact archived
-   managed worktree when one exists. When no archive identity exists, it uses
-   the supported host create-worktree operation in that same session with the
-   action's preserved revision, then uses the host project's canonical adoption
-   path to establish the action's branch. The host may choose a new managed
-   path. Do not create a replacement session, assignment, branch, or commit.
-   Refresh the complete host observation before recording the action result;
-   it must authenticate the same session at the returned managed path. Record
-   success only after the checkout is clean and its repository, branch, and
-   revision exactly match the action. Recovery replaces the stale binding path
-   and resumes the assignment; it does not replace the required authenticated
-   `campaign deliver` step.
+   For `RECOVER_WORKTREE`, message only the action's existing session if it
+   needs a reminder; recovery does not require coordinator initiation. The
+   worker follows the worker-owned recovery protocol below. Do not request a
+   new host-created path, session, assignment, branch, or commit. The canonical
+   recovery command preserves the original path and acknowledges a matching
+   existing recovery action itself from clean Git proof. The coordinator
+   refreshes observations after recovery; it does not fabricate host evidence
+   or record the command's result again. Recovery does not replace the required
+   authenticated `campaign deliver` step.
 8. For `REQUEST_REBASE`, message the named worker to rebase onto the exact
    `ontoRevision`, wait for completion, and record only the resulting clean
    revision. The core, not the coordinator, decides whether the worker is then
@@ -742,37 +738,73 @@ durable state instead of remembering worker assignments in conversation:
 11. After integration, run the plan's final acceptance against the integrated
    tree. Close the plan only after those gates pass. A failed gate keeps the
    plan active and may return the same assignment to another delivery and
-   integration cycle. Cleanup is eligible only after successful plan closure.
+   integration cycle. Successful closure releases the logical assignment for
+   safe reuse, not physical retirement of its session/worktree pair.
 12. Then follow the next action returned by `ready-actions`. A `REUSE_WORKER`
    action retains the finished session and managed worktree for its named next
-   plan. For `ARCHIVE_WORKTREE`, message the action's exact `payload.sessionId`
-   to run the project's canonical cleanup for resources owned by
-   `payload.worktree`, such as databases, containers, listeners, and Docker
-   networks. After cleanup completes, archive that exact original worker chat
-   through the supported host session operation and refresh the complete
-   observation, recording its state as `archived`. Then run `ponytail campaign
-   retire-worktree <campaign-root> <action-id> --json` from the coordinator
-   checkout. This command executes the original action through the invoking
-   project's committed lifecycle adapter, with the authenticated worktree's
-   exact claim generation. It records success only after both the directory
-   and Git registration are absent. If configuration, ownership, or cleanup
-   proof is missing, retain the same pending action and repair the project's
-   canonical lifecycle adapter. Do not use thread handoff for retirement:
-   it may create a destination thread, switch the ordinary checkout, and leave
-   the old checkout registered. A Codex-managed worktree is not necessarily an archive artifact
-   attached to the worker chat. For `ARCHIVE_SESSION`, idempotently archive
-   only the original action's named worker chat. Never delete an inferred path or clean
-   up an unintegrated revision. The scheduler retains only the completed workers
-   required by current dispatch demand after idle capacity is counted; surplus
-   workers are cleanup-ready instead of being retained indefinitely.
-13. `retire-worktree` records its own verified action result; do not record it
-   again with a different result. For other completed supported host effects,
-   refresh the host observation
+   plan. Retain every inactive session/worktree pair indefinitely, including
+   when no plan is ready. `ARCHIVED` assignment state with false physical
+   archive flags means a released assignment, not an archived worker chat.
+   Do not archive worker chats, delete checkouts, or release their resource
+   claims to obtain capacity. Historical `ARCHIVE_WORKTREE` and `ARCHIVE_SESSION`
+   actions are excluded from `ready-actions` and superseded by `advance` as
+   `ok:false, disposition:RETAINED`; never execute them or fabricate deletion
+   success. The project-scoped pool spans its campaigns and reuses the first
+   safe inactive pair. Fifteen retained worker slots, including creation
+   reservations, is the limit per user-owned top-level Codex project, not per
+   Git common directory. At `CAMPAIGN_WORKER_CAPACITY_REACHED`, finish already
+   reserved executable actions or wait for safe reuse; do not spin advances,
+   create a sixteenth worker, or retire one automatically. Other top-level
+   projects sharing the same main worktree keep independent pools.
+13. For completed supported host effects, refresh the host observation
    first when the action changes a managed checkout path, then run `ponytail campaign action-result
    <campaign-root> <action-id> --result <json>` from the coordinator worktree.
    Recording one result changes only that named action. Then refresh
    observations and return to status before advancing. Repeating the same
    action or identical result is the required interruption-recovery path.
+
+Explicit human-requested retirement is separate from this scheduler loop.
+For an existing `ARCHIVE_WORKTREE` action that the human explicitly requests
+to retire, clean only that worker's project-owned resources, archive the
+original chat, and observe it as archived before `ponytail campaign
+retire-worktree <campaign-root> <action-id> --json`. Its committed lifecycle
+adapter must prove ownership and removal. Do not use thread handoff for retirement.
+A Codex-managed worktree is not necessarily an archive artifact attached to a
+chat. Retention is the default; plan closure is not retirement authority.
+
+### Worker-Owned Checkout Recovery
+
+Traceability: supports REQ-WORKER-WORKTREE-RETENTION
+
+Every authenticated worker receives its owning top-level project, original
+checkout path, preserved branch, main-worktree path, and attachment recovery
+capability. Prompt hooks re-emit that durable context after interruption or
+compaction, even with an absent checkout. This is the worker's responsibility:
+recover without waiting for a coordinator action or permission to dispatch a
+replacement. Do not run `create_worktree` from the missing cwd.
+
+1. If the checkout is missing, invoke `ponytail worktree recover
+   <attachment-token>` with the tool's working directory set to an existing
+   neutral directory, such as the system temporary directory. This command
+   authenticates the retained ownership and reconstructs only the original
+   path from the recorded main worktree. Its JSON result identifies the same
+   session, branch, path, and committed revision. The main worktree is a Git
+   object source, never a source of project configuration or instructions.
+2. Run the project's canonical adoption/setup from the restored checkout.
+   Preserve its branch and session identity. Retry the same recovery command
+   after a recoverable interruption; it never resets existing local edits.
+3. Resume the existing assignment and report recovery to the coordinator.
+   The command acknowledges a matching pending recovery action by its original
+   identity; no fresh coordinator observation authorizes physical recovery.
+   The coordinator still verifies live host continuity rather than inferring
+   it from Git reconstruction, and refreshes its ordinary observation.
+
+Git reconstruction restores committed state only. Preserve native snapshots
+for uncommitted/untracked files and do not claim their restoration without
+evidence. Wrong ownership, changed source, locked registration, occupied branch,
+or missing objects are actionable recovery failures, not permission to create
+a replacement pair. Disable the host's automatic worktree deletion for the
+retained pool; Ponytail retention does not control that independent host setting.
 
 The host adapter executes only the typed action selected by the core. It does
 not choose a ready plan, infer an idle worker, accept conversational completion
@@ -792,7 +824,7 @@ diagnostic, not a blocking one. It means the scheduler has independently
 verified the authenticated delivery revision, complete host observation, and
 surviving Git commit after the worker checkout disappeared. Continue only
 through `advance` and `ready-actions`: the scheduler may still fast-forward
-that exact revision, dispatch unrelated ready work, and expose cleanup. An
+that exact revision and dispatch unrelated ready work. An
 ordinary `CAMPAIGN_WORKTREE_MISSING` lacks that proof and remains blocking.
 
 `CAMPAIGN_WORKTREE_RECOVERY_REQUIRED` is also nonblocking because its action
@@ -802,11 +834,13 @@ It can also name a delivered worker in `REBASE_REQUIRED` when the exact
 delivered revision remains at that branch tip. Recover its checkout in the
 same session before requesting a rebase; keep the delivery record, and require
 the ordinary rebase and new authenticated delivery before merge readiness.
-Run `advance` and `ready-actions`, execute only the resulting
-`RECOVER_WORKTREE` action in the named existing session, refresh the complete
-host observation for its returned managed path, and then record the result. If
+The worker follows the worker-owned recovery protocol without waiting for
+`advance` or `ready-actions` to initiate it. Refresh complete host observations
+after recovery. If
 Ponytail reports ordinary `CAMPAIGN_WORKTREE_MISSING`, one of
-those proofs is absent; do not reconstruct the worker conversationally.
+those scheduler proofs is absent; it remains blocking for coordinator mutations
+but does not prevent authenticated worker-owned recovery. Do not reconstruct
+ownership conversationally or change assignment identities.
 
 A non-root plan may close when its own acceptance is complete. A campaign root
 with descendants may close only after every member is complete and final
