@@ -45,9 +45,12 @@ assignment, delivery, and independent pending actions remain intact.
 
 **Evidence:** The focused test reproduced the reported
 `CAMPAIGN_WORKER_BINDING_MISSING` before repair and all 32
-`tests/campaign-orchestration.test.js` tests pass after repair. Live use of the
-new gate after installation remains unverified; the GWEN worker recovered its
-original checkout before the coordinator retried the action result.
+`tests/campaign-orchestration.test.js` tests pass after repair. The full
+`npm test` command also passes, including TSTS over 578 files. The installed
+CLI resolves to this repository. Live use of the missing-checkout gate remains
+unverified; the GWEN worker recovered its original checkout before the
+coordinator retried the exact action result, which succeeded on the normal
+present-checkout path and allowed integration at the delivered revision.
 
 **Pattern observation:**
 [2026-10-01-divergent_delivery_gates](../../debugging-pattern-observations/2026-10-01-divergent_delivery_gates.json).

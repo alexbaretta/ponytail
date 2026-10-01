@@ -37,7 +37,14 @@ the correction, unrelated dispatch remains available while the exact pending
 action and branch proof match; an absent action or changed branch still blocks.
 All 32 campaign-orchestration tests and the full `npm test` suite pass,
 including TSTS over 576 files. Rule-copy, version, and traceability checks
-pass. Live recurrence remains pending.
+pass. In live GWEN coordination, three existing sessions were observed as
+`working` during their original-path recoveries. `campaign observe` and
+`advance` exited successfully with `CAMPAIGN_WORKTREE_RECOVERY_REQUIRED`
+diagnostics, and the latter fast-forwarded a separate verified delivery.
+The retained observations do not prove that every one of those three paths
+was absent at the same atomic instant because recovery could race the host
+snapshot. No unrelated dispatch was ready at that boundary, so live
+independent-dispatch acceptance remains unverified.
 
 **Pattern observation:**
 [2026-10-01-inflight_recovery_state_gap](../../debugging-pattern-observations/2026-10-01-inflight_recovery_state_gap.json).
