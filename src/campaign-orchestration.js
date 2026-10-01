@@ -168,7 +168,34 @@ function readLedgerV1(value, file = 'campaign ledger') {
   };
 }
 
-const CampaignLedgerReaders = Object.freeze({ V1: readLedgerV1 });
+function readLedgerV2(value, file = 'campaign ledger') {
+  exactKeys(value, ['schemaVersion', 'campaignId', 'topLevelWorktree', 'coordinatorSessionId', 'integrationBranch', 'integrationRevision', 'assignments', 'pendingActions', 'completedActions', 'workers'], file);
+  if (value.schemaVersion !== 2) fail('CAMPAIGN_ORCHESTRATION_VERSION', `${file}: unsupported schemaVersion`);
+  for (const key of ['campaignId', 'topLevelWorktree', 'integrationRevision']) if (typeof value[key] !== 'string' || !value[key]) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', `${file}.${key} must be a nonempty string`);
+  optionalString(value.coordinatorSessionId, `${file}.coordinatorSessionId`);
+  optionalString(value.integrationBranch, `${file}.integrationBranch`);
+  if (!Array.isArray(value.assignments) || !Array.isArray(value.pendingActions) || !Array.isArray(value.completedActions) || !Array.isArray(value.workers)) {
+    fail('CAMPAIGN_ORCHESTRATION_SCHEMA', `${file} assignments, pendingActions, completedActions, and workers must be arrays`);
+  }
+  const assignments = value.assignments.map((assignment, index) => readAssignmentV1(assignment, `${file}.assignments[${index}]`));
+  const pendingActions = value.pendingActions.map((pendingAction, index) => readActionV1(pendingAction, `${file}.pendingActions[${index}]`));
+  const completedActions = value.completedActions.map((actionResult, index) => readCompletedActionV1(actionResult, `${file}.completedActions[${index}]`));
+  if (new Set(pendingActions.map(({ id }) => id)).size !== pendingActions.length) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', `${file} contains duplicate pending action IDs`);
+  if (new Set(pendingActions.map(({ assignmentId }) => assignmentId)).size !== pendingActions.length) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', `${file} contains more than one pending action for an assignment`);
+  if (pendingActions.filter(({ type }) => type === 'REQUEST_REBASE').length > 1) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', `${file} contains more than one pending rebase action`);
+  if (new Set(completedActions.map(({ actionId }) => actionId)).size !== completedActions.length) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', `${file} contains duplicate completed action IDs`);
+  const workers = value.workers.map((worker, index) => readWorkerV1(worker, `${file}.workers[${index}]`));
+  return { ...value, assignments, pendingActions, completedActions, workers };
+}
+
+function readCurrentLedger(value, file = 'campaign ledger') {
+  if (value?.schemaVersion === 2) return readLedgerV2(value, file);
+  const ledgerV1 = readLedgerV1(value, file);
+  const { pendingAction, ...ledger } = ledgerV1;
+  return readLedgerV2({ ...ledger, schemaVersion: 2, pendingActions: pendingAction ? [pendingAction] : [] }, file);
+}
+
+const CampaignLedgerReaders = Object.freeze({ V1: readLedgerV1, V2: readLedgerV2 });
 const CampaignHostObservationReaders = Object.freeze({ V1: readHostObservationV1 });
 const CampaignWorkerBindingReaders = Object.freeze({ V1: readWorkerBindingsV1 });
 const CampaignWorkerDeliveryReaders = Object.freeze({ V1: readWorkerDeliveriesV1 });
@@ -193,7 +220,20 @@ function readStatusV2(value) {
   return value;
 }
 
-const CampaignStatusReaders = Object.freeze({ V1: readStatusV1, V2: readStatusV2 });
+function readStatusV3(value) {
+  exactKeys(value, ['schemaVersion', 'campaignId', 'invocationWorktree', 'effectiveWorktree', 'coordinatorSessionId', 'integrationRevision', 'observedAt', 'assignments', 'sessionAssignments', 'workingSessions', 'idleSessions', 'waitingSessions', 'finishedSessions', 'worktrees', 'inProgressPlans', 'readyPlans', 'activeWorkers', 'idleWorkers', 'reusableWorkers', 'rebaseRequired', 'readyToMerge', 'cleanupPending', 'pendingActions', 'diagnostics'], 'campaign status');
+  if (value.schemaVersion !== 3) fail('CAMPAIGN_ORCHESTRATION_VERSION', 'unsupported campaign status version');
+  for (const key of ['campaignId', 'invocationWorktree', 'effectiveWorktree', 'integrationRevision']) if (typeof value[key] !== 'string' || !value[key]) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', `campaign status ${key} must be a nonempty string`);
+  for (const key of ['coordinatorSessionId', 'observedAt']) optionalString(value[key], `campaign status ${key}`);
+  for (const key of ['assignments', 'sessionAssignments', 'workingSessions', 'idleSessions', 'waitingSessions', 'finishedSessions', 'worktrees', 'inProgressPlans', 'readyPlans', 'activeWorkers', 'idleWorkers', 'reusableWorkers', 'rebaseRequired', 'readyToMerge', 'cleanupPending', 'pendingActions', 'diagnostics']) if (!Array.isArray(value[key])) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', `campaign status ${key} must be an array`);
+  const pendingActions = value.pendingActions.map((pendingAction, index) => readActionV1(pendingAction, `campaign status pendingActions[${index}]`));
+  if (new Set(pendingActions.map(({ id }) => id)).size !== pendingActions.length) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', 'campaign status contains duplicate pending action IDs');
+  if (new Set(pendingActions.map(({ assignmentId }) => assignmentId)).size !== pendingActions.length) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', 'campaign status contains more than one pending action for an assignment');
+  if (pendingActions.filter(({ type }) => type === 'REQUEST_REBASE').length > 1) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', 'campaign status contains more than one pending rebase action');
+  return value;
+}
+
+const CampaignStatusReaders = Object.freeze({ V1: readStatusV1, V2: readStatusV2, V3: readStatusV3 });
 
 function git(repositoryRoot, args, accepted = [0]) {
   const result = spawnSync('git', ['-C', repositoryRoot, ...args], { encoding: 'utf8' });
@@ -374,9 +414,9 @@ function attachmentForToken(environment, attachToken) {
   const matches = [];
   for (const file of ledgerFiles(environment)) {
     let ledger;
-    try { ledger = readLedgerV1(JSON.parse(fs.readFileSync(file, 'utf8')), file); } catch (error) { continue; }
+    try { ledger = readCurrentLedger(JSON.parse(fs.readFileSync(file, 'utf8')), file); } catch (error) { continue; }
     const assignment = ledger.assignments.find((item) => item.attachToken === attachToken && item.state === 'DISPATCH_PENDING');
-    if (assignment && ledger.pendingAction?.assignmentId === assignment.id && ['CREATE_WORKER', 'REUSE_WORKER'].includes(ledger.pendingAction.type)) {
+    if (assignment && ledger.pendingActions.some((pendingAction) => pendingAction.assignmentId === assignment.id && ['CREATE_WORKER', 'REUSE_WORKER'].includes(pendingAction.type))) {
       matches.push({ ledger, assignment });
     }
   }
@@ -443,15 +483,15 @@ function resolveInvocationWorktree(invocationWorktree, environment = process.env
 
 function newLedger(repositoryRoot, campaignId, coordinatorSessionId) {
   const identity = repositoryIdentity(repositoryRoot);
-  return readLedgerV1({
-    schemaVersion: 1,
+  return readLedgerV2({
+    schemaVersion: 2,
     campaignId,
     topLevelWorktree: repositoryRoot,
     coordinatorSessionId,
     integrationBranch: identity.branch,
     integrationRevision: identity.revision,
     assignments: [],
-    pendingAction: null,
+    pendingActions: [],
     completedActions: [],
     workers: [],
   });
@@ -463,7 +503,7 @@ function readLedger(repositoryRoot, campaignId, environment = process.env) {
   if (!fs.existsSync(file)) return newLedger(repositoryRoot, campaignId, environment.PONYTAIL_SESSION_ID || boundSession);
   let value;
   try { value = JSON.parse(fs.readFileSync(file, 'utf8')); } catch (error) { fail('CAMPAIGN_LEDGER_IO', `${file}: ${error.message}`, 2); }
-  const ledger = readLedgerV1(value, file);
+  const ledger = readCurrentLedger(value, file);
   if (ledger.campaignId !== campaignId || ledger.topLevelWorktree !== repositoryRoot) fail('CAMPAIGN_LEDGER_SCOPE', `${file}: ledger scope does not match this campaign worktree`);
   if (boundSession && ledger.coordinatorSessionId && boundSession !== ledger.coordinatorSessionId) fail('CAMPAIGN_COORDINATOR_CONFLICT', `ledger coordinator ${ledger.coordinatorSessionId} disagrees with bound coordinator ${boundSession}`);
   if (!ledger.coordinatorSessionId && boundSession) ledger.coordinatorSessionId = boundSession;
@@ -471,7 +511,7 @@ function readLedger(repositoryRoot, campaignId, environment = process.env) {
 }
 
 function writeLedger(file, ledger) {
-  const value = readLedgerV1(ledger, file);
+  const value = readLedgerV2(ledger, file);
   fs.mkdirSync(path.dirname(file), { recursive: true });
   const temporary = `${file}.${process.pid}.${crypto.randomUUID()}.tmp`;
   fs.writeFileSync(temporary, `${JSON.stringify(value, null, 2)}\n`, { flag: 'wx', mode: 0o600 });
@@ -622,7 +662,6 @@ function lifecycleCompatible(assignmentState, lifecycle, graphLifecycle) {
 
 function effectiveAssignmentState(assignment, plan, worker, integrationRevision, repositoryRoot, graphLifecycle) {
   if (assignment.state === 'ARCHIVED') return 'ARCHIVED';
-  if (assignment.state === 'DISPATCH_PENDING' && worker && worker.activity !== 'missing') return 'ACTIVE';
   if (['ACTIVE', 'WORK_COMPLETE', 'REBASE_REQUIRED', 'READY_TO_MERGE', 'MERGED'].includes(assignment.state)
     && plan.lifecycle === graphLifecycle.activeWork && worker?.activity === 'completed' && worker.evidenceComplete) {
     if (!worker.clean || !worker.revision) return 'WORK_COMPLETE';
@@ -684,7 +723,7 @@ function reconcile(graph, ledger, invocationWorktree = ledger.topLevelWorktree, 
   }).sort((left, right) => left.planId.localeCompare(right.planId));
   const reusableWorkers = idleWorkers;
   const status = {
-    schemaVersion: 2,
+    schemaVersion: 3,
     campaignId: graph.campaignId,
     invocationWorktree,
     effectiveWorktree: ledger.topLevelWorktree,
@@ -706,7 +745,7 @@ function reconcile(graph, ledger, invocationWorktree = ledger.topLevelWorktree, 
     rebaseRequired: assignments.filter((assignment) => assignment.state === 'REBASE_REQUIRED'),
     readyToMerge: assignments.filter((assignment) => assignment.state === 'READY_TO_MERGE'),
     cleanupPending: assignments.filter((assignment) => assignment.state === 'CLEANUP_PENDING'),
-    pendingAction: ledger.pendingAction,
+    pendingActions: ledger.pendingActions,
     diagnostics: [],
   };
   const activeAssignments = assignments.filter(({ state }) => state !== 'ARCHIVED');
@@ -764,7 +803,7 @@ function reconcile(graph, ledger, invocationWorktree = ledger.topLevelWorktree, 
   status.diagnostics.sort((left, right) => left.code.localeCompare(right.code)
     || (left.planId ?? '').localeCompare(right.planId ?? '')
     || (left.assignmentId ?? '').localeCompare(right.assignmentId ?? ''));
-  return readStatusV2(status);
+  return readStatusV3(status);
 }
 
 function action(type, assignment, payload = {}) {
@@ -807,7 +846,6 @@ function reserveAssignment(ledger, planId, idle = null) {
 
 function reconcileLedger(graph, ledger, environment = null) {
   if (!ledger.coordinatorSessionId) fail('CAMPAIGN_COORDINATOR_REQUIRED', 'campaign reconciliation requires one authenticated coordinator binding');
-  if (ledger.pendingAction) return ledger.pendingAction;
   const status = reconcile(graph, ledger, ledger.topLevelWorktree, environment);
   const conflicts = status.diagnostics.filter(({ code }) => code !== 'CAMPAIGN_PLAN_UNASSIGNED');
   if (conflicts.length) fail('CAMPAIGN_STATUS_BLOCKED', conflicts.map(({ message }) => message).join('; '));
@@ -818,15 +856,16 @@ function reconcileLedger(graph, ledger, environment = null) {
 
 function advanceLedger(graph, ledger, environment = null) {
   if (!ledger.coordinatorSessionId) fail('CAMPAIGN_COORDINATOR_REQUIRED', 'campaign advance requires one authenticated coordinator binding');
-  if (ledger.pendingAction) {
-    if (['CREATE_WORKER', 'REUSE_WORKER'].includes(ledger.pendingAction.type)) {
-      dispatchRecord(ledger.pendingAction).ready = dispatchPrerequisitesSatisfied(graph, ledger.pendingAction.payload.planId);
+  for (const pendingAction of ledger.pendingActions) {
+    if (['CREATE_WORKER', 'REUSE_WORKER'].includes(pendingAction.type)) {
+      dispatchRecord(pendingAction).ready = dispatchPrerequisitesSatisfied(graph, pendingAction.payload.planId);
     }
-    return ledger.pendingAction;
   }
   const status = reconcile(graph, ledger, ledger.topLevelWorktree, environment);
   if (status.diagnostics.length) fail('CAMPAIGN_STATUS_BLOCKED', status.diagnostics.map((item) => item.message).join('; '));
+  const integrationAction = ledger.pendingActions.find(({ type }) => type === 'REQUEST_REBASE');
   if (ledger.integrationRevision !== status.integrationRevision) {
+    if (integrationAction) fail('CAMPAIGN_INTEGRATION_CHANGED', `integration revision changed while rebase action ${integrationAction.id} targets ${integrationAction.payload.ontoRevision}`);
     ledger.integrationRevision = status.integrationRevision;
     return null;
   }
@@ -837,7 +876,7 @@ function advanceLedger(graph, ledger, environment = null) {
     assignment.workerRevision = reconciled.workerRevision;
     return null;
   }
-  const merge = ledger.assignments.find((item) => item.state === 'READY_TO_MERGE');
+  const merge = integrationAction ? null : ledger.assignments.find((item) => item.state === 'READY_TO_MERGE');
   if (merge) {
     git(ledger.topLevelWorktree, ['merge', '--ff-only', merge.workerRevision]);
     ledger.integrationRevision = git(ledger.topLevelWorktree, ['rev-parse', 'HEAD']);
@@ -848,6 +887,7 @@ function advanceLedger(graph, ledger, environment = null) {
     const current = status.assignments.find(({ id }) => id === item.id);
     const worker = workerFor(ledger.workers, item);
     return item.state === 'CLEANUP_PENDING' && status.readyPlans.length > 0
+      && !ledger.pendingActions.some(({ assignmentId }) => assignmentId === item.id)
       && !item.worktreeArchived && !item.sessionArchived
       && current?.hostState === 'completed' && current.managedWorktree && current.worktreeExists
       && worker?.clean;
@@ -860,26 +900,30 @@ function advanceLedger(graph, ledger, environment = null) {
     if (environment) removeWorkerBinding(environment, reuse.id);
     return null;
   }
-  const cleanup = ledger.assignments.find((item) => item.state === 'CLEANUP_PENDING');
+  const cleanup = ledger.assignments.find((item) => item.state === 'CLEANUP_PENDING'
+    && !ledger.pendingActions.some(({ assignmentId }) => assignmentId === item.id));
   if (cleanup) {
     cleanup.state = 'CLEANUP_PENDING';
     const type = cleanup.worktreeArchived ? 'ARCHIVE_SESSION' : 'ARCHIVE_WORKTREE';
-    ledger.pendingAction = action(type, cleanup, type === 'ARCHIVE_WORKTREE' ? { worktree: cleanup.worktree } : { sessionId: cleanup.sessionId });
-    return ledger.pendingAction;
+    const pendingAction = action(type, cleanup, type === 'ARCHIVE_WORKTREE' ? { worktree: cleanup.worktree } : { sessionId: cleanup.sessionId });
+    ledger.pendingActions.push(pendingAction);
+    return pendingAction;
   }
-  const rebase = ledger.assignments.find((item) => item.state === 'REBASE_REQUIRED');
+  const rebase = integrationAction ? null : ledger.assignments.find((item) => item.state === 'REBASE_REQUIRED');
   if (rebase) {
-    ledger.pendingAction = action('REQUEST_REBASE', rebase, { sessionId: rebase.sessionId, ontoRevision: ledger.integrationRevision });
-    return ledger.pendingAction;
+    const pendingAction = action('REQUEST_REBASE', rebase, { sessionId: rebase.sessionId, ontoRevision: ledger.integrationRevision });
+    ledger.pendingActions.push(pendingAction);
+    return pendingAction;
   }
   const completedPlans = new Set(graph.plans.filter(({ lifecycle }) => lifecycle === graph.lifecycle.successfulCompletion).map(({ id }) => id));
   const queued = ledger.assignments.find((assignment) => {
     if (assignment.state !== 'DISPATCH_PENDING') return false;
+    if (ledger.pendingActions.some(({ assignmentId }) => assignmentId === assignment.id)) return false;
     const plan = graph.plans.find(({ id }) => id === assignment.planId);
     return plan.dependsOn.every((id) => completedPlans.has(id))
       && !graph.plans.some(({ parentPlanId, id }) => parentPlanId === plan.id && !completedPlans.has(id));
   });
-  if (!queued && status.readyPlans.length === 0) return null;
+  if (!queued && status.readyPlans.length === 0) return ledger.pendingActions[0] ?? null;
   const planId = queued?.planId ?? status.readyPlans[0];
   const idle = status.idleWorkers[0] ?? null;
   const assignmentRecord = queued ?? reserveAssignment(ledger, planId, idle);
@@ -891,8 +935,9 @@ function advanceLedger(graph, ledger, environment = null) {
     queued.workerRevision = idle?.revision ?? null;
   }
   const type = idle ? 'REUSE_WORKER' : 'CREATE_WORKER';
-  ledger.pendingAction = action(type, assignmentRecord, { planId, attachToken: assignmentRecord.attachToken, sessionId: idle?.sessionId ?? null, worktree: idle?.worktree ?? null });
-  return ledger.pendingAction;
+  const pendingAction = action(type, assignmentRecord, { planId, attachToken: assignmentRecord.attachToken, sessionId: idle?.sessionId ?? null, worktree: idle?.worktree ?? null });
+  ledger.pendingActions.push(pendingAction);
+  return pendingAction;
 }
 
 function recordActionResult(ledger, actionId, result, graph = null) {
@@ -901,8 +946,8 @@ function recordActionResult(ledger, actionId, result, graph = null) {
     if (JSON.stringify(completed.result) !== JSON.stringify(result)) fail('CAMPAIGN_ACTION_MISMATCH', `completed action ${actionId} received a different result`);
     return ledger.assignments.find((item) => item.id === completed.assignmentId);
   }
-  const pendingAction = ledger.pendingAction;
-  if (!pendingAction || pendingAction.id !== actionId) fail('CAMPAIGN_ACTION_MISMATCH', `pending action does not match ${actionId}`);
+  const pendingAction = ledger.pendingActions.find(({ id }) => id === actionId);
+  if (!pendingAction) fail('CAMPAIGN_ACTION_MISMATCH', `pending action does not match ${actionId}`);
   const assignment = ledger.assignments.find((item) => item.id === pendingAction.assignmentId);
   if (!assignment) fail('CAMPAIGN_ACTION_ASSIGNMENT', `action ${actionId} references a missing assignment`);
   if (result?.disposition === 'STARTED') {
@@ -927,7 +972,7 @@ function recordActionResult(ledger, actionId, result, graph = null) {
       assignment.workerRevision = null;
     }
     ledger.completedActions.push({ actionId, assignmentId: assignment.id, type: pendingAction.type, result: { ...result } });
-    ledger.pendingAction = null;
+    ledger.pendingActions = ledger.pendingActions.filter(({ id }) => id !== actionId);
     return assignment;
   }
   if (!result || typeof result !== 'object' || Array.isArray(result) || result.ok !== true) fail('CAMPAIGN_ACTION_FAILED', `action ${actionId} did not report success`);
@@ -958,12 +1003,12 @@ function recordActionResult(ledger, actionId, result, graph = null) {
     if (worker) worker.sessionArchived = true;
   }
   ledger.completedActions.push({ actionId, assignmentId: assignment.id, type: pendingAction.type, result: { ...result } });
-  ledger.pendingAction = null;
+  ledger.pendingActions = ledger.pendingActions.filter(({ id }) => id !== actionId);
   return assignment;
 }
 
-function validateActionResultBinding(ledger, result, environment) {
-  const pendingAction = ledger.pendingAction;
+function validateActionResultBinding(ledger, actionId, result, environment) {
+  const pendingAction = ledger.pendingActions.find(({ id }) => id === actionId);
   if (!pendingAction) return;
   if (['STARTED', 'NOT_STARTED'].includes(result?.disposition)) return;
   const binding = readWorkerBindings(environment).bindings.find((item) => item.assignmentId === pendingAction.assignmentId);
@@ -976,13 +1021,13 @@ function validateActionResultBinding(ledger, result, environment) {
     if (!binding || !fs.existsSync(binding.worktree)) fail('CAMPAIGN_WORKER_BINDING_MISSING', `assignment ${pendingAction.assignmentId} has no available authenticated worker`);
     const identity = repositoryIdentity(binding.worktree);
     if (result?.revision !== identity.revision || git(binding.worktree, ['status', '--porcelain']).length !== 0
-      || spawnSync('git', ['-C', ledger.topLevelWorktree, 'merge-base', '--is-ancestor', ledger.integrationRevision, identity.revision]).status !== 0) {
-      fail('CAMPAIGN_ACTION_RESULT', 'rebase result is not a clean worker revision containing the integration revision');
+      || spawnSync('git', ['-C', ledger.topLevelWorktree, 'merge-base', '--is-ancestor', pendingAction.payload.ontoRevision, identity.revision]).status !== 0) {
+      fail('CAMPAIGN_ACTION_RESULT', 'rebase result is not a clean worker revision containing the requested integration revision');
     }
     return;
   }
   if (!['CREATE_WORKER', 'REUSE_WORKER'].includes(pendingAction.type)) return;
-  if (!binding) fail('CAMPAIGN_WORKER_BINDING_MISSING', `assignment ${ledger.pendingAction.assignmentId} has not completed its authenticated attach handshake`);
+  if (!binding) fail('CAMPAIGN_WORKER_BINDING_MISSING', `assignment ${pendingAction.assignmentId} has not completed its authenticated attach handshake`);
   for (const key of ['sessionId', 'worktree', 'branch', 'revision']) {
     if (result?.[key] !== binding[key]) fail('CAMPAIGN_WORKER_BINDING_CONFLICT', `action result ${key} does not match the authenticated worker binding`);
   }
@@ -998,7 +1043,7 @@ function humanStatus(status) {
   ];
   for (const assignment of status.assignments) lines.push(`${assignment.state}\t${assignment.planId}\t${assignment.sessionId ?? '-'}\t${assignment.worktree ?? '-'}`);
   for (const planId of status.readyPlans) lines.push(`READY\t${planId}`);
-  if (status.pendingAction) lines.push(`ACTION\t${status.pendingAction.type}\t${status.pendingAction.id}`);
+  for (const pendingAction of status.pendingActions) lines.push(`ACTION\t${pendingAction.type}\t${pendingAction.id}`);
   for (const item of status.diagnostics) lines.push(`BLOCKED\t${item.code}\t${item.message}`);
   return `${lines.join('\n')}\n`;
 }
@@ -1070,8 +1115,9 @@ function run(argv = process.argv.slice(2), options = {}) {
     const graph = resolveGraph(resolution.effectiveWorktree, request.input);
     let completedAction;
     withLedgerLock(resolution.effectiveWorktree, graph.campaignId, environment, (ledger) => {
-      validateActionResultBinding(ledger, request.result, environment);
-      completedAction = ledger.pendingAction ?? ledger.completedActions.find((item) => item.actionId === request.actionId);
+      validateActionResultBinding(ledger, request.actionId, request.result, environment);
+      completedAction = ledger.pendingActions.find(({ id }) => id === request.actionId)
+        ?? ledger.completedActions.find((item) => item.actionId === request.actionId);
       return recordActionResult(ledger, request.actionId, request.result, graph);
     });
     if (completedAction?.type === 'ARCHIVE_SESSION') removeWorkerBinding(environment, completedAction.assignmentId);
@@ -1134,6 +1180,7 @@ module.exports = {
   readAssignmentV1,
   readLedger,
   readLedgerV1,
+  readLedgerV2,
   readHostObservation,
   readHostObservationV1,
   readWorkerBindings,

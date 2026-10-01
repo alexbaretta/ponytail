@@ -47,7 +47,9 @@ test('campaign policy delegates every worker effect to the durable action loop',
   assert.match(policy, /Resolve\n+   every blocking diagnostic first/);
   assert.match(policy, /distinguish a worker waiting for coordinator input from one that\n+   has finished/);
   assert.match(policy, /campaign advance \[<campaign-root>\] --json/);
-  assert.match(policy, /If advance returns an existing `pendingAction`, resume that exact action/);
+  assert.match(policy, /returned `pendingActions`\n+   array is the complete durable set/);
+  assert.match(policy, /create-or-reuse actions while one rebase remains outstanding/);
+  assert.match(policy, /neither execute an action twice nor request a second rebase/);
   assert.match(policy, /`CREATE_WORKER`[\s\S]*campaign attach <attachToken>/);
   assert.match(policy, /Before campaign attachment, the worker verifies its exact assigned checkout/);
   assert.match(policy, /If detached, it uses the host project's canonical worktree tooling/);
@@ -57,6 +59,7 @@ test('campaign policy delegates every worker effect to the durable action loop',
   assert.match(policy, /transition to `READY_TO_MERGE`[\s\S]*only by another advance/);
   assert.match(policy, /`ARCHIVE_WORKTREE`[\s\S]*archive its own managed\n+   worktree/);
   assert.match(policy, /campaign action-result\n+   <campaign-root> <action-id> --result <json>/);
+  assert.match(policy, /Recording one result changes only that named action/);
   assert.match(policy, /Mutating campaign commands in\n+a worker fail closed/);
   assert.match(policy, /Campaign diagnostics outrank new dispatch, integration, cleanup/);
   assert.match(policy, /A `REUSE_WORKER`\n+   action retains the finished session and managed worktree/);

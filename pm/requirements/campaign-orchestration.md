@@ -33,7 +33,9 @@ The stakeholder further clarified on 2026-09-30 that only commands in the
 `ponytail campaign` subtree may enforce campaign validity or uniqueness.
 On 2026-10-01, the stakeholder approved revalidation of stale worker dispatches
 and integration of a verified worker delivery before whole-plan closure, while
-retaining final integrated acceptance as the closure and cleanup gate.
+retaining final integrated acceptance as the closure and cleanup gate. The
+stakeholder further clarified that an outstanding integration action must not
+prevent dispatch of independent dependency-ready plans.
 
 ## Repository-wide campaign inventory
 
@@ -223,6 +225,15 @@ For each unassigned dependency-ready plan, the coordinator must schedule it on
 an idle campaign worker when one is safe to reuse, or create a new worker
 session and worktree when none is available. A worker is not idle while it has
 active work, unintegrated work, a dirty worktree, or incomplete cleanup.
+
+Outstanding host actions are assignment-local rather than a global campaign
+gate. Worker create and reuse actions for distinct dependency-ready plans may
+remain outstanding concurrently and may be selected while one integration
+action is outstanding. The integration lane remains serialized: at most one
+rebase action may be outstanding, and the campaign integration revision must
+not advance until that action is resolved and revalidated. Recording an action
+result must update only the named action and must preserve every other
+outstanding action.
 
 When assigned plan work completes, Ponytail must determine from durable plan
 evidence and Git state whether the worker must rebase or is ready to merge. It

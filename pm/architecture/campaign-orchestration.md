@@ -181,6 +181,11 @@ identities and are sorted deterministically. Physical ledger parsing remains
 structural so contradictory cross-record state can be reported completely;
 the transition engine refuses every mutation while diagnostics remain.
 
+Status V3 replaces the scalar pending-action projection with the complete
+ordered `pendingActions` collection. Ledger V2 owns that same collection and
+normalizes an immutable V1 ledger's optional scalar action into zero or one
+current actions. Current writers emit only ledger V2 and status V3.
+
 ### One-step transition engine
 
 The mutating interface is:
@@ -219,12 +224,21 @@ only then does reconciliation advance `MERGED` to `CLEANUP_PENDING`. A newer
 delivery after a failed integrated gate returns the same assignment to the
 ordinary ancestry and merge flow.
 
-When a transition requires a supported Codex host effect, advance persists and
-returns one V1 host-action envelope. The coordinator records the tool result
-through `ponytail campaign action-result <campaign> <action-id> --result
-<json>` before
-advancing again. Repeating advance returns the same pending action, and
-repeating an identical recorded result returns the already applied outcome.
+When a transition requires a supported Codex host effect, advance persists one
+V1 host-action envelope and returns status containing every outstanding action.
+One invocation adds at most one action. The coordinator records each tool
+result through `ponytail campaign action-result <campaign> <action-id> --result
+<json>`. Repeating an identical recorded result returns the already applied
+outcome.
+
+Outstanding actions are partitioned by effect. Assignment-local dispatch and
+cleanup actions may coexist for distinct assignments. One integration-lane
+action may coexist with those actions, but a pending rebase prevents another
+rebase or a fast-forward merge until its result is reconciled. Repeated advance
+therefore fills available independent dispatch work without weakening the
+serialized join invariant. An externally changed integration revision fails
+closed while a rebase still names its earlier target. Action-result routing
+removes only the named action.
 Create and reuse actions also carry an open-payload dispatch record. The host
 records `STARTED` with its stable host identity as soon as the external effect
 begins. If graph changes make the plan unready, `NOT_STARTED` may retire only a
@@ -232,7 +246,7 @@ dispatch that the host proves never began; a started action remains pending
 with the same action, attachment, host, and idempotency identities. Retiring an
 unstarted action leaves its assignment queued and permits selection of another
 ready plan.
-The V1 ledger is stored under Ponytail user data, keyed by canonical top-level
+The current ledger is stored under Ponytail user data, keyed by canonical top-level
 worktree and campaign, and is replaced atomically under an exclusive scope
 lock. A second worktree-scoped lock surrounds every advance operation so two
 campaign-specific ledgers in the same worktree cannot concurrently dispatch,
@@ -263,10 +277,11 @@ directory, and plugin-local storage, but the installed plugin contract exposes
 no callable desktop chat or managed-worktree lifecycle API. Those supported
 operations are available to the coordinator agent as Codex app tools. The
 accepted adapter therefore uses a narrow trusted coordinator-agent actuator:
-the core persists and returns one typed action envelope, the coordinator
-executes only that action with the supported Codex tool, and the core records
-and reconciles the result before selecting another action. Scheduling remains
-entirely in the deterministic core rather than in conversational memory.
+the core persists typed action envelopes, the coordinator executes only those
+actions with supported Codex tools, and the core records each named result.
+Further advance calls may select compatible assignment-local work while a host
+effect remains outstanding. Scheduling remains entirely in the deterministic
+core rather than in conversational memory.
 
 Worker ownership uses an authenticated attach handshake rather than path
 inference. The scheduler first records a pending assignment and random attach

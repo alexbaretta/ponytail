@@ -258,6 +258,32 @@ Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
    - Ponytail recognizes the already integrated revision and does not create a
      duplicate merge or lose the assignment.
 
+## Arc: Dispatch independent work alongside the serialized join lane
+
+Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
+
+- **Actor:** Campaign coordinator.
+- **Prerequisites:** One outstanding worker rebase and at least two independent
+  dependency-ready unassigned plans.
+- **Profiles:** Automated scheduler and adapter-contract profile.
+- **External effects:** May request independent worker creation or reuse while
+  preserving one serialized integration action.
+
+1. Request a rebase for a completed worker, leave that action outstanding, and
+   advance again.
+   - Ponytail retains the exact rebase action and selects one ready plan for a
+     distinct create-or-reuse action.
+2. Advance again while both actions remain outstanding.
+   - Ponytail selects the next independent ready plan without duplicating an
+     assignment, session, worktree, or action.
+3. Record one dispatch result by action ID.
+   - Only that action changes; the rebase and other dispatch remain durable and
+     retryable.
+4. Attempt another join transition before resolving the rebase.
+   - Ponytail neither requests a second rebase nor advances the integration
+     revision. After the rebase result is recorded, ordinary fast-forward
+     integration resumes.
+
 ## Arc: Revalidate a pending worker dispatch
 
 Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION

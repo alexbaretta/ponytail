@@ -137,7 +137,7 @@ test('worker attach is one-time, status re-roots, and worker mutations fail clos
     encoding: 'utf8',
   });
   assert.equal(actionCli.status, 0, actionCli.stderr);
-  assert.equal(JSON.parse(actionCli.stdout).pendingAction, null);
+  assert.deepEqual(JSON.parse(actionCli.stdout).pendingActions, []);
   assert.equal(JSON.parse(actionCli.stdout).assignments[0].state, 'ACTIVE');
 
   const status = run(worker, { hook_event_name: 'PreToolUse', session_id: 'worker-session', tool_name: 'exec_command', tool_input: { cmd: 'ponytail campaign status --json' } }, pluginData);

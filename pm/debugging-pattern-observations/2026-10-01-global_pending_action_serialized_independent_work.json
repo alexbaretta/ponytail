@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-10-01-global_pending_action_serialized_independent_work",
+  "recorded_at": "2026-10-01T01:06:37-07:00",
+  "source_references": ["pm/bugs/closed/2026-10-01-BUG-global_pending_action_serializes_dispatch.md"],
+  "context": {
+    "languages": ["javascript"],
+    "frameworks": ["Node.js test runner"],
+    "components": ["campaign scheduler"],
+    "affected_boundaries": ["durable host-action scheduling and serialized integration lane"],
+    "code_references": ["src/campaign-orchestration.js: advanceLedger and recordActionResult"]
+  },
+  "observed_behavior": "One pending rebase prevented dispatch of every unrelated dependency-ready campaign item.",
+  "expected_behavior": "Independent assignment-local dispatch proceeds while one durable integration action remains outstanding.",
+  "causal_mechanism": "A campaign-wide scalar pendingAction represented durable retry state and also acted as a global scheduler gate, extending the integration lane's serialization requirement to unrelated host effects.",
+  "anti_pattern": {
+    "structural_description": "A scheduler stores heterogeneous independent effects in one scalar pending slot and returns that slot before selecting other ready work.",
+    "why_it_fails": "The narrowest serialized resource becomes an accidental campaign-wide mutex, so unrelated work cannot make progress."
+  },
+  "correct_pattern": {
+    "required_invariant": "Durable host actions are assignment-local while only the integration lane is serialized.",
+    "implementation_description": "Persist a pending-actions collection, allow at most one action per assignment and one rebase overall, route results by action identifier, and pin the rebase target revision until its named result arrives."
+  },
+  "applicability_conditions": ["A durable scheduler coordinates independent host effects plus a narrower serialized lane."],
+  "known_non_matches": ["Blocking campaign diagnostics intentionally stop every unsafe mutation."],
+  "confirmation_evidence": ["The failing-first regression returned REQUEST_REBASE instead of CREATE_WORKER; the corrected test retains one rebase while adding two independent dispatch actions."],
+  "regression_proofs": ["tests/campaign-orchestration.test.js: independent dispatch continues while the integration lane has one outstanding rebase", "tests/campaign-orchestration.test.js: an outstanding rebase pins the integration revision until its named result"]
+}

@@ -671,12 +671,19 @@ durable state instead of remembering worker assignments in conversation:
    has finished; respond to required input or record the completed observation
    instead of treating either state as automatically reusable.
 4. Run `ponytail campaign advance [<campaign-root>] --json` exactly once to
-   request the next deterministic transition. If it returns no `pendingAction`,
-   inspect the returned status and advance again only when another transition
-   is currently warranted.
-5. If advance returns an existing `pendingAction`, resume that exact action.
-   Never allocate a replacement session or worktree, and never assign the plan
-   conversationally. For `CREATE_WORKER` and `REUSE_WORKER`, inspect
+   request the next deterministic transition. The returned `pendingActions`
+   array is the complete durable set of outstanding host effects. One advance
+   may add at most one action. When it adds none, inspect the returned status
+   and advance again only when another compatible transition is currently
+   warranted.
+5. Resume each existing pending action by its exact action ID; never allocate a
+   replacement session or worktree, and never assign a plan conversationally.
+   After initiating an asynchronous host effect, advance again before waiting
+   when independent dependency-ready work may exist. This may add distinct
+   create-or-reuse actions while one rebase remains outstanding, but it must
+   neither execute an action twice nor request a second rebase. On resumption,
+   inspect the named worker before repeating an unresolved host request. For
+   `CREATE_WORKER` and `REUSE_WORKER`, inspect
    `payload.dispatch.ready`. As soon as the supported host operation begins,
    record `{"ok":true,"disposition":"STARTED","hostIdentity":"<id>"}` with
    `campaign action-result`; use the returned session ID or pending client ID
@@ -723,11 +730,11 @@ durable state instead of remembering worker assignments in conversation:
    checkout is gone. For `ARCHIVE_SESSION`, archive only the action's named
    worker chat. Never delete an inferred path or clean up an unintegrated
    revision.
-12. After each supported host effect, run `ponytail campaign action-result
+12. After each completed supported host effect, run `ponytail campaign action-result
    <campaign-root> <action-id> --result <json>` from the coordinator worktree.
-   Then refresh observations and return to status before advancing. Repeating
-   the same action or identical result is the required interruption-recovery
-   path.
+   Recording one result changes only that named action. Then refresh
+   observations and return to status before advancing. Repeating the same
+   action or identical result is the required interruption-recovery path.
 
 The host adapter executes only the typed action selected by the core. It does
 not choose a ready plan, infer an idle worker, accept conversational completion

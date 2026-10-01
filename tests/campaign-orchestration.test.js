@@ -15,17 +15,21 @@ const test = require('node:test');
 const {
   CampaignOrchestrationError,
   advanceLedger,
+  ledgerPath,
   reconcileLedger,
   newLedger,
   parseArguments,
   readHostObservation,
+  readLedger,
   readLedgerV1,
+  readLedgerV2,
   readWorkerDeliveries,
   reconcile,
   recordActionResult,
   recordWorkerDelivery,
   writeWorkerDeliveries,
   writeHostObservation,
+  withLedgerLock,
   withWorktreeLock,
 } = require('../src/campaign-orchestration');
 const campaignCli = path.join(__dirname, '..', 'src', 'campaign-census.js');
@@ -102,6 +106,23 @@ function captureError(callback) {
   assert.fail('expected CampaignOrchestrationError');
 }
 
+test('V1 ledgers remain readable and the current writer emits V2', () => {
+  const root = repository();
+  const environment = { ...process.env, PONYTAIL_CAMPAIGN_STATE_DIR: temporaryDirectory('ponytail-ledger-version') };
+  const current = newLedger(root, 'campaign', 'coordinator');
+  const { pendingActions, ...ledger } = current;
+  const legacy = readLedgerV1({ ...ledger, schemaVersion: 1, pendingAction: null });
+  const file = ledgerPath(root, 'campaign', environment);
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, `${JSON.stringify(legacy)}\n`);
+
+  assert.equal(readLedger(root, 'campaign', environment).schemaVersion, 2);
+  assert.deepEqual(readLedger(root, 'campaign', environment).pendingActions, []);
+  withLedgerLock(root, 'campaign', environment, () => null);
+  assert.equal(JSON.parse(fs.readFileSync(file, 'utf8')).schemaVersion, 2);
+  assert.equal(pendingActions.length, 0);
+});
+
 test('reconciliation reserves existing active plans without fabricating workers and is idempotent', () => {
   const root = repository();
   const ledger = newLedger(root, 'campaign', 'coordinator');
@@ -112,7 +133,7 @@ test('reconciliation reserves existing active plans without fabricating workers 
   ]);
   assert.equal(captureError(() => advanceLedger(campaignGraph, ledger)).code, 'CAMPAIGN_STATUS_BLOCKED');
   reconcileLedger(campaignGraph, ledger);
-  assert.equal(ledger.pendingAction, null);
+  assert.deepEqual(ledger.pendingActions, []);
   assert.equal(ledger.assignments.length, 2);
   for (const assignment of ledger.assignments) {
     assert.equal(assignment.state, 'DISPATCH_PENDING');
@@ -154,7 +175,8 @@ test('reconciliation retains dependency waits and an existing pending action', (
   assert.equal(ledger.assignments.length, 1);
   campaignGraph.plans[2].lifecycle = 'closed';
   const pending = advanceLedger(campaignGraph, ledger);
-  assert.equal(reconcileLedger(campaignGraph, ledger).id, pending.id);
+  assert.equal(reconcileLedger(campaignGraph, ledger), null);
+  assert.deepEqual(ledger.pendingActions.map(({ id }) => id), [pending.id]);
   assert.equal(ledger.assignments.length, 1);
   assert.equal(captureError(() => parseArguments(['reconcile'])).code, 'CAMPAIGN_ORCHESTRATION_USAGE');
 });
@@ -174,7 +196,7 @@ test('campaign reconcile CLI reserves an active leaf once before normal dispatch
   assert.equal(first.assignments[0].sessionId, null);
   assert.equal(first.diagnostics.length, 0);
   assert.equal(invoke('reconcile').assignments[0].id, first.assignments[0].id);
-  assert.equal(invoke('advance').pendingAction.payload.planId, 'existing');
+  assert.equal(invoke('advance').pendingActions[0].payload.planId, 'existing');
 });
 
 test('status reports active plan, session, and worktree conflicts while mutations fail closed', () => {
@@ -186,7 +208,7 @@ test('status reports active plan, session, and worktree conflicts while mutation
     state: 'ACTIVE', idempotencyKey: 'key', attachToken: 'token', worktreeArchived: false, sessionArchived: false,
   };
   ledger.assignments = [assignment, { ...assignment, id: 'second', idempotencyKey: 'key-2', attachToken: 'token-2' }];
-  assert.equal(readLedgerV1(ledger).assignments.length, 2);
+  assert.equal(readLedgerV2(ledger).assignments.length, 2);
   const status = reconcile(graph([
     { id: 'campaign', parentPlanId: null, dependsOn: [], lifecycle: 'in_progress', path: 'root' },
     { id: 'ready', parentPlanId: 'campaign', dependsOn: [], lifecycle: 'in_progress', path: 'ready' },
@@ -202,7 +224,7 @@ test('status reports active plan, session, and worktree conflicts while mutation
   ]), ledger)).code, 'CAMPAIGN_STATUS_BLOCKED');
 });
 
-test('V2 status exposes session, worktree, activity, assignment, and conflict views', () => {
+test('V3 status exposes session, worktree, activity, assignment, action, and conflict views', () => {
   const root = repository();
   const existingWorker = temporaryDirectory('ponytail-existing-worker');
   const missingWorker = path.join(temporaryDirectory('ponytail-missing-worker-parent'), 'missing');
@@ -241,7 +263,7 @@ test('V2 status exposes session, worktree, activity, assignment, and conflict vi
     { id: 'missing-plan', parentPlanId: 'campaign', dependsOn: [], lifecycle: 'in_progress', path: 'missing' },
     { id: 'unassigned-plan', parentPlanId: 'campaign', dependsOn: [], lifecycle: 'in_progress', path: 'unassigned' },
   ]), ledger, root, environment);
-  assert.equal(status.schemaVersion, 2);
+  assert.equal(status.schemaVersion, 3);
   assert.equal(status.observedAt, observedAt);
   assert.deepEqual(status.workingSessions.map(({ planId, sessionId }) => ({ planId, sessionId })), [{ planId: 'working-plan', sessionId: 'working-session' }]);
   assert.deepEqual(status.waitingSessions.map(({ sessionId }) => sessionId), ['waiting-session']);
@@ -277,13 +299,13 @@ test('stale host observations are diagnosed and block mutation', () => {
   assert.equal(captureError(() => advanceLedger(campaignGraph, ledger, environment)).code, 'CAMPAIGN_STATUS_BLOCKED');
 });
 
-test('campaign observe persists a normalized host snapshot and returns V2 status', () => {
+test('campaign observe persists a normalized host snapshot and returns V3 status', () => {
   const root = campaignRepository();
   const environment = { ...process.env, PONYTAIL_CAMPAIGN_STATE_DIR: temporaryDirectory('ponytail-observe-cli'), PONYTAIL_SESSION_ID: 'coordinator' };
   const snapshot = { schemaVersion: 1, campaignId: 'campaign', observedAt: '2026-09-30T12:00:00-07:00', completeSessionIds: [], sessions: [] };
   const result = spawnSync(process.execPath, [campaignCli, 'observe', 'campaign', '--snapshot', JSON.stringify(snapshot)], { cwd: root, encoding: 'utf8', env: environment });
   assert.equal(result.status, 0, result.stderr);
-  assert.equal(JSON.parse(result.stdout).schemaVersion, 2);
+  assert.equal(JSON.parse(result.stdout).schemaVersion, 3);
   assert.deepEqual(readHostObservation(fs.realpathSync(root), 'campaign', environment), snapshot);
   assert.deepEqual(parseArguments(['observe', 'campaign', '--snapshot', JSON.stringify(snapshot)]), {
     operation: 'observe', input: 'campaign', json: false, actionId: undefined, result: snapshot,
@@ -331,7 +353,6 @@ test('advance durably selects one ready plan and returns the same pending action
   const campaignGraph = graph([
     { id: 'campaign', parentPlanId: null, dependsOn: [], lifecycle: 'in_progress', path: 'root' },
     { id: 'ready-a', parentPlanId: 'campaign', dependsOn: [], lifecycle: 'open', path: 'a' },
-    { id: 'ready-b', parentPlanId: 'campaign', dependsOn: [], lifecycle: 'open', path: 'b' },
   ]);
   const first = advanceLedger(campaignGraph, ledger);
   const retry = advanceLedger(campaignGraph, ledger);
@@ -343,8 +364,73 @@ test('advance durably selects one ready plan and returns the same pending action
   const result = { ok: true, sessionId: 'worker', worktree: '/worker', branch: 'worker', revision: ledger.integrationRevision };
   recordActionResult(ledger, first.id, result);
   assert.equal(ledger.assignments[0].state, 'ACTIVE');
-  assert.equal(ledger.pendingAction, null);
+  assert.deepEqual(ledger.pendingActions, []);
   assert.equal(recordActionResult(ledger, first.id, result).id, ledger.assignments[0].id);
+});
+
+test('independent dispatch continues while the integration lane has one outstanding rebase', () => {
+  const root = repository();
+  const ledger = newLedger(root, 'campaign', 'coordinator');
+  ledger.assignments.push({
+    id: 'join-assignment', planId: 'joining', sessionId: 'join-session', worktree: root, branch: 'join',
+    dispatchRevision: ledger.integrationRevision, workerRevision: 'join-revision', state: 'REBASE_REQUIRED',
+    idempotencyKey: 'join-key', attachToken: 'join-token', worktreeArchived: false, sessionArchived: false,
+  });
+  ledger.workers.push({
+    sessionId: 'join-session', worktree: root, branch: 'join', revision: 'join-revision', clean: true,
+    activity: 'active', evidenceComplete: true, worktreeArchived: false, sessionArchived: false,
+  });
+  const campaignGraph = graph([
+    { id: 'campaign', parentPlanId: null, dependsOn: [], lifecycle: 'in_progress', path: 'root' },
+    { id: 'joining', parentPlanId: 'campaign', dependsOn: [], lifecycle: 'in_progress', path: 'joining' },
+    { id: 'ready-a', parentPlanId: 'campaign', dependsOn: [], lifecycle: 'open', path: 'a' },
+    { id: 'ready-b', parentPlanId: 'campaign', dependsOn: [], lifecycle: 'open', path: 'b' },
+  ]);
+
+  const rebase = advanceLedger(campaignGraph, ledger);
+  const firstDispatch = advanceLedger(campaignGraph, ledger);
+  const secondDispatch = advanceLedger(campaignGraph, ledger);
+
+  assert.equal(rebase.type, 'REQUEST_REBASE');
+  assert.equal(firstDispatch.type, 'CREATE_WORKER');
+  assert.equal(firstDispatch.payload.planId, 'ready-a');
+  assert.equal(secondDispatch.type, 'CREATE_WORKER');
+  assert.equal(secondDispatch.payload.planId, 'ready-b');
+  assert.equal(ledger.pendingActions.filter(({ type }) => type === 'REQUEST_REBASE').length, 1);
+  assert.equal(ledger.pendingActions.length, 3);
+  assert.equal(advanceLedger(campaignGraph, ledger).id, rebase.id);
+  assert.equal(ledger.pendingActions.filter(({ type }) => type === 'REQUEST_REBASE').length, 1);
+
+  recordActionResult(ledger, firstDispatch.id, {
+    ok: true, sessionId: 'worker-a', worktree: '/worker-a', branch: 'worker-a', revision: ledger.integrationRevision,
+  });
+  assert.deepEqual(ledger.pendingActions.map(({ id }) => id).sort(), [rebase.id, secondDispatch.id].sort());
+});
+
+test('an outstanding rebase pins the integration revision until its named result', () => {
+  const root = repository();
+  const ledger = newLedger(root, 'campaign', 'coordinator');
+  ledger.assignments.push({
+    id: 'join-assignment', planId: 'joining', sessionId: 'join-session', worktree: root, branch: 'join',
+    dispatchRevision: ledger.integrationRevision, workerRevision: 'join-revision', state: 'REBASE_REQUIRED',
+    idempotencyKey: 'join-key', attachToken: 'join-token', worktreeArchived: false, sessionArchived: false,
+  });
+  ledger.workers.push({
+    sessionId: 'join-session', worktree: root, branch: 'join', revision: 'join-revision', clean: true,
+    activity: 'active', evidenceComplete: true, worktreeArchived: false, sessionArchived: false,
+  });
+  const campaignGraph = graph([
+    { id: 'campaign', parentPlanId: null, dependsOn: [], lifecycle: 'in_progress', path: 'root' },
+    { id: 'joining', parentPlanId: 'campaign', dependsOn: [], lifecycle: 'in_progress', path: 'joining' },
+  ]);
+  const rebase = advanceLedger(campaignGraph, ledger);
+  fs.appendFileSync(path.join(root, 'fixture.txt'), 'integration change\n');
+  command(root, ['add', '.']);
+  command(root, ['-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.test', 'commit', '-qm', 'integration change']);
+
+  assert.equal(captureError(() => advanceLedger(campaignGraph, ledger)).code, 'CAMPAIGN_INTEGRATION_CHANGED');
+  assert.equal(ledger.pendingActions[0].id, rebase.id);
+  assert.equal(ledger.pendingActions[0].payload.ontoRevision, ledger.integrationRevision);
 });
 
 test('a proven unstarted stale dispatch is postponed while a started dispatch retains its identity', () => {
@@ -356,8 +442,9 @@ test('a proven unstarted stale dispatch is postponed while a started dispatch re
     { id: 'prerequisite', parentPlanId: 'campaign', dependsOn: [], lifecycle: 'open', path: 'prerequisite' },
   ]);
   const postponedLedger = newLedger(root, 'campaign', 'coordinator');
+  const idleWorktree = temporaryDirectory('ponytail-idle-worker');
   postponedLedger.workers.push({
-    sessionId: 'idle-session', worktree: '/idle', branch: 'idle', revision: postponedLedger.integrationRevision,
+    sessionId: 'idle-session', worktree: idleWorktree, branch: 'idle', revision: postponedLedger.integrationRevision,
     clean: true, activity: 'idle', evidenceComplete: false, worktreeArchived: false, sessionArchived: false,
   });
   const pending = advanceLedger(campaignGraph, postponedLedger);
@@ -365,15 +452,19 @@ test('a proven unstarted stale dispatch is postponed while a started dispatch re
   assert.equal(pending.payload.planId, 'blocked');
   delete pending.payload.dispatch;
   campaignGraph.plans.find(({ id }) => id === 'blocked').dependsOn = ['prerequisite'];
-  assert.equal(advanceLedger(campaignGraph, postponedLedger).payload.dispatch.ready, false);
+  const unrelated = advanceLedger(campaignGraph, postponedLedger);
+  assert.equal(pending.payload.dispatch.ready, false);
+  assert.equal(unrelated.payload.planId, 'other');
+  assert.equal(unrelated.type, 'CREATE_WORKER');
+  assert.equal(unrelated.payload.sessionId, null);
   recordActionResult(postponedLedger, pending.id, { ok: false, disposition: 'NOT_STARTED' }, campaignGraph);
-  assert.equal(postponedLedger.pendingAction, null);
+  assert.deepEqual(postponedLedger.pendingActions.map(({ id }) => id), [unrelated.id]);
   assert.equal(postponedLedger.assignments[0].state, 'DISPATCH_PENDING');
   assert.equal(postponedLedger.assignments[0].sessionId, null);
-  const unrelated = advanceLedger(campaignGraph, postponedLedger);
-  assert.equal(unrelated.payload.planId, 'other');
-  assert.equal(unrelated.type, 'REUSE_WORKER');
-  assert.equal(unrelated.payload.sessionId, 'idle-session');
+  const prerequisite = advanceLedger(campaignGraph, postponedLedger);
+  assert.equal(prerequisite.payload.planId, 'prerequisite');
+  assert.equal(prerequisite.type, 'REUSE_WORKER');
+  assert.deepEqual(postponedLedger.pendingActions.map(({ id }) => id), [unrelated.id, prerequisite.id]);
 
   const startedGraph = graph([
     { id: 'campaign', parentPlanId: null, dependsOn: [], lifecycle: 'in_progress', path: 'root' },
@@ -384,8 +475,9 @@ test('a proven unstarted stale dispatch is postponed while a started dispatch re
   const started = advanceLedger(startedGraph, startedLedger);
   recordActionResult(startedLedger, started.id, { ok: true, disposition: 'STARTED', hostIdentity: 'client-123' }, startedGraph);
   startedGraph.plans.find(({ id }) => id === 'blocked').dependsOn = ['prerequisite'];
-  assert.equal(advanceLedger(startedGraph, startedLedger).id, started.id);
-  assert.deepEqual(startedLedger.pendingAction.payload.dispatch, { ready: false, state: 'STARTED', hostIdentity: 'client-123' });
+  const ready = advanceLedger(startedGraph, startedLedger);
+  assert.equal(ready.payload.planId, 'prerequisite');
+  assert.deepEqual(startedLedger.pendingActions.find(({ id }) => id === started.id).payload.dispatch, { ready: false, state: 'STARTED', hostIdentity: 'client-123' });
   assert.equal(captureError(() => recordActionResult(startedLedger, started.id, { ok: false, disposition: 'NOT_STARTED' }, startedGraph)).code, 'CAMPAIGN_ACTION_STARTED');
 });
 
@@ -569,10 +661,10 @@ test('campaign status and advance CLI expose stable JSON and do not duplicate di
   result = spawnSync(process.execPath, [campaignCli, 'advance', 'campaign', '--json'], { cwd: root, encoding: 'utf8', env: environment });
   assert.equal(result.status, 0, result.stderr);
   const first = JSON.parse(result.stdout);
-  assert.equal(first.pendingAction.type, 'CREATE_WORKER');
+  assert.equal(first.pendingActions[0].type, 'CREATE_WORKER');
   result = spawnSync(process.execPath, [campaignCli, 'advance', 'campaign', '--json'], { cwd: root, encoding: 'utf8', env: environment });
   assert.equal(result.status, 0, result.stderr);
-  assert.equal(JSON.parse(result.stdout).pendingAction.id, first.pendingAction.id);
+  assert.equal(JSON.parse(result.stdout).pendingActions[0].id, first.pendingActions[0].id);
 });
 
 test('implicit campaign selection reports every active candidate while explicit selection succeeds', () => {
