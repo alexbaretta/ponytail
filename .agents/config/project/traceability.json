@@ -263,6 +263,11 @@
       "locator": "text"
     },
     {
+      "class": "issue",
+      "path": "pm/bugs/closed/2026-10-01-BUG-missing_worktree_has_no_recovery_action.md",
+      "locator": "text"
+    },
+    {
       "class": "implementation",
       "path": "hooks/plan-input.js",
       "locator": "text"

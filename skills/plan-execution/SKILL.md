@@ -713,6 +713,14 @@ durable state instead of remembering worker assignments in conversation:
    after a prerequisite failure; do not allocate a replacement worker. Record
    the exact host session, canonical worktree, branch, and revision only after
    the attach hook authenticates them.
+   For `RECOVER_WORKTREE`, message only the action's existing session. That
+   worker restores its own archived managed-worktree artifact through the
+   supported host operation, then uses the host project's canonical adoption
+   path to re-establish the action's exact worktree, branch, and revision. Do
+   not create a replacement session, worktree, assignment, branch, or commit.
+   Record success only after the checkout is clean and every returned identity
+   exactly matches the action. Recovery resumes the assignment; it does not
+   replace the required authenticated `campaign deliver` step.
 8. For `REQUEST_REBASE`, message the named worker to rebase onto the exact
    `ontoRevision`, wait for completion, and record only the resulting clean
    revision. The core, not the coordinator, decides whether the worker is then
@@ -767,6 +775,14 @@ surviving Git commit after the worker checkout disappeared. Continue only
 through `advance` and `ready-actions`: the scheduler may still fast-forward
 that exact revision, dispatch unrelated ready work, and expose cleanup. An
 ordinary `CAMPAIGN_WORKTREE_MISSING` lacks that proof and remains blocking.
+
+`CAMPAIGN_WORKTREE_RECOVERY_REQUIRED` is also nonblocking because its action
+payload is already source-proven from the authenticated binding, fresh complete
+host observation, managed-worktree identity, and surviving assignment branch.
+Run `advance` and `ready-actions`, execute only the resulting
+`RECOVER_WORKTREE` action in the named existing session, and then refresh the
+observation. If Ponytail reports ordinary `CAMPAIGN_WORKTREE_MISSING`, one of
+those proofs is absent; do not reconstruct the worker conversationally.
 
 A non-root plan may close when its own acceptance is complete. A campaign root
 with descendants may close only after every member is complete and final

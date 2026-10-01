@@ -285,6 +285,37 @@ Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
    - The ordinary missing-checkout diagnostic remains blocking and no mutation
      occurs.
 
+## Arc: Recover an undelivered worker after checkout loss
+
+Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
+
+- **Actor:** Campaign coordinator and the existing campaign worker.
+- **Prerequisites:** An authenticated assignment whose managed checkout is
+  missing before delivery, a fresh complete observation of the same waiting or
+  completed session, and a preserved assignment branch commit containing the
+  dispatch revision.
+- **Profiles:** Automated Git and adapter-contract profile plus live Codex
+  managed-worktree recovery profile.
+- **External effects:** Restores the same worker's managed checkout; creates no
+  replacement session or assignment.
+
+1. Reconcile the missing checkout with all recovery proofs present.
+   - Status reports `CAMPAIGN_WORKTREE_RECOVERY_REQUIRED` instead of the
+     ordinary blocking missing-checkout diagnostic.
+2. Advance and read ready-actions.
+   - Ponytail persists and returns exactly one `RECOVER_WORKTREE` action naming
+     the existing session, checkout, branch, and preserved branch revision.
+3. Restore a different path, repository, branch, revision, or a dirty checkout
+   and record the result.
+   - Ponytail rejects the result and retains the same pending action.
+4. Restore the exact clean checkout and record the result.
+   - Ponytail retains the original assignment and session, clears the recovery
+     condition, and does not classify the revision as delivered or merge-ready.
+5. Repeat without one host, binding, branch, ancestry, or managed-worktree
+   proof.
+   - Ponytail reports ordinary `CAMPAIGN_WORKTREE_MISSING`, emits no recovery
+     action, and creates no replacement worker.
+
 ## Arc: Rebase and fast-forward completed work
 
 Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION

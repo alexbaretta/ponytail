@@ -181,10 +181,12 @@ identities and are sorted deterministically. Physical ledger parsing remains
 structural so contradictory cross-record state can be reported completely;
 the transition engine refuses every mutation while diagnostics remain.
 
-Status V3 replaces the scalar pending-action projection with the complete
+Status V3 replaced the scalar pending-action projection with the complete
 ordered `pendingActions` collection. Ledger V2 owns that same collection and
 normalizes an immutable V1 ledger's optional scalar action into zero or one
-current actions. Current writers emit only ledger V2 and status V3.
+current actions. Recovery adds immutable action V2, ledger V3, status V4, and
+ready-actions V2 contracts. Current writers emit only those latest physical
+versions while readers retain every earlier version.
 
 ### Ready-action projection
 
@@ -199,8 +201,10 @@ and integration revision, then returns unchanged V1 host-action envelopes in
 `actions`. Rebase and cleanup actions are ready while pending. Create and reuse
 actions are ready only while `payload.dispatch.ready` is true and its state is
 `NOT_STARTED`; dependency-blocked or already-started dispatches remain visible
-in status for recovery but are absent from this executable view. Any status
-diagnostic fails the projection closed.
+in status for recovery but are absent from this executable view. Ready-actions
+V2 retains that shape and accepts action V1 or V2 envelopes. Blocking status
+diagnostics fail the projection closed; typed recovery-required and verified
+post-delivery checkout-loss diagnostics remain visible and nonblocking.
 
 The projection never creates an assignment, materializes an action, or performs
 a host effect. `advance` remains the only transition engine. The coordinator
@@ -260,6 +264,19 @@ delivered commit. Status emits
 mutation blocker. The ordinary `CAMPAIGN_WORKTREE_MISSING` diagnostic remains
 blocking when any of those proofs is absent. Integration stays
 fast-forward-only, and cleanup remains action-driven.
+
+Before delivery, a missing checkout can instead become
+`CAMPAIGN_WORKTREE_RECOVERY_REQUIRED`. Reconciliation requires a fresh complete
+host observation of the same waiting or completed managed session, an exact
+authenticated binding, and a branch commit that contains the assignment's
+dispatch revision. Advance records one `RECOVER_WORKTREE` V2 action containing
+the existing session, path, branch, and preserved revision. The host resumes
+that same session, restores its managed worktree artifact, and uses the host
+project's canonical adoption path to re-establish the named branch at that
+revision. Action-result validation proves the restored checkout is clean, is
+in the same Git repository, and exactly matches every action identity. The
+assignment returns to ordinary active work and must deliver before it can enter
+the integration lane. Absent proof retains the ordinary blocking diagnostic.
 
 When a transition requires a supported Codex host effect, advance persists one
 V1 host-action envelope and returns status containing every outstanding action.

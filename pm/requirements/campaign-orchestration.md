@@ -41,7 +41,10 @@ list of host actions that are executable now and required its use to be
 documented in the plan-execution skill. The stakeholder further clarified that
 a missing worker checkout must not block a campaign when the completed
 session's authenticated delivery already preserves the exact clean commit and
-validation evidence.
+validation evidence. The stakeholder then instructed Ponytail to provide a
+canonical scheduler action that recovers the same authenticated worker when
+its checkout disappears before delivery but its assignment branch commit is
+still preserved.
 
 ## Repository-wide campaign inventory
 
@@ -200,6 +203,19 @@ Contradictory operational records must remain inspectable. Read-only status
 must return their complete diagnostics instead of aborting at the first
 cross-record conflict; every mutating campaign operation must fail closed until
 all blocking diagnostics are resolved.
+
+A missing undelivered worker checkout is recoverable only when a fresh complete
+host observation identifies the same non-missing Codex-managed session, its
+authenticated binding still names the assignment, session, path, and branch,
+and that exact branch resolves in the campaign repository to a commit containing
+the assignment's dispatch revision. Status must distinguish this condition
+from an ordinary blocking missing checkout. Advance must persist one typed
+recovery action naming the existing identities and preserved revision; it must
+not allocate a replacement session or assignment. The restored checkout must
+be clean, belong to the same repository, and match the named path, branch, and
+revision before the result is accepted. Recovery does not constitute delivery
+or integration evidence: the same worker must still record an authenticated
+delivery through the ordinary flow.
 
 For pre-existing active campaigns, an authenticated coordinator must have an
 explicit, idempotent reconciliation command that corrects unassigned-plan
