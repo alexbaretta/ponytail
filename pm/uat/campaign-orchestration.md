@@ -59,6 +59,16 @@ approved 2026-09-29.
 
 ## Evidence
 
+- 2026-10-01 live dependency-unlock/reuse profile at
+  `c725f51078e79fcba9a8b6f10b28a873ed8899bd`: closing monitor-state and
+  state-spawn made audit tasklet S01-F03-T040 runnable. After canonical logical
+  release, batch scheduling returned REUSE_WORKER
+  `92bd02a4-5f03-4fb2-8d7f-11c9b95fb12f` for the retained monitor session
+  and checkout, without physical creation or retirement. Native review rejected
+  capability delivery before host start; NOT_STARTED was preserved. Query and
+  reservation behavior are verified; attachment and tasklet activation remain
+  unverified. No human blanket capability ban was identified.
+
 - 2026-10-01 exact-readiness profile: 85 focused campaign, hook, and retained
   worktree tests pass. The full core pipeline passes, including 505 core tests,
   installer and bundled-subproject suites, 80 TSTS unit tests, and 582-file

@@ -45,6 +45,21 @@ advance also succeeded; no duplicate worker was created. Further live
 parallelization acceptance remains in progress with the existing coordinator;
 no new desktop capability is claimed.
 
+Later live acceptance at integration
+`c725f51078e79fcba9a8b6f10b28a873ed8899bd` verified dependency closure
+unlocked safe-inspection-audit / S01-F03-T040 alongside the already-assigned
+effect-disposition and gate-race tasklets. With the historical pool at capacity,
+the first batch query returned no dispatch while completed assignments awaited
+logical release. Canonical advance released monitor-state without deleting its
+session, checkout, or resource claim. The next batch query returned exactly
+REUSE_WORKER `92bd02a4-5f03-4fb2-8d7f-11c9b95fb12f` for audit assignment
+`a9e4a968-adad-4ae0-9b40-6275babfc319`, retaining session
+`01a0f68d-279a-7183-a778-6bc995849281` and checkout
+`/Users/alex/.codex/worktrees/60d8/gwen`. Native prompt review rejected
+delivery of the new assignment capability before host start; the action remains
+NOT_STARTED. No STARTED receipt, attachment, running tasklet, or activation
+acceptance is claimed. This refusal is not an identified human policy ban.
+
 Pattern observation: [dispatch without runnable tasklets](../../debugging-pattern-observations/2026-10-01-dispatch_without_runnable_tasklets.json).
 
 Traceability: introduces REQ-CAMPAIGN-ORCHESTRATION from issue 2026-10-01-FEAT-campaign_runnable_plans
