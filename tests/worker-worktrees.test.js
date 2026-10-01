@@ -164,9 +164,16 @@ test('legacy replacement recovery returns the branch to the proven native checko
     const recoveryHookContext = recoveryHook?.hookSpecificOutput?.additionalContext;
     if (condition === 'unproven') assert.equal(recoveryHookContext.includes(`reconcile the branch and binding to ${worktree}`), false);
     else assert.ok(recoveryHookContext.includes(`reconcile the branch and binding to ${worktree}`));
+    const neutralDiagnosticHook = handle({ hook_event_name: 'PreToolUse', cwd: os.tmpdir(), session_id: binding.sessionId,
+      tool_input: { cmd: 'command -v ponytail' } }, environment);
+    if (condition === 'unproven') assert.equal(neutralDiagnosticHook, null);
+    else assert.ok(neutralDiagnosticHook?.hookSpecificOutput?.additionalContext.includes(`reconcile the branch and binding to ${worktree}`));
     const wrongWorkerHook = handle({ hook_event_name: 'PreToolUse', cwd: os.tmpdir(), session_id: 'different-session',
       tool_input: { cmd: `ponytail worktree recover ${token}` } }, environment);
     assert.equal(wrongWorkerHook?.hookSpecificOutput?.permissionDecision, 'deny');
+    const blockedCampaignMutation = handle({ hook_event_name: 'PreToolUse', cwd: root, session_id: binding.sessionId,
+      tool_input: { cmd: 'ponytail campaign advance campaign' } }, environment);
+    assert.equal(blockedCampaignMutation?.hookSpecificOutput?.permissionDecision, 'deny');
     if (['interrupted', 'switched'].includes(condition)) git(replacement, ['switch', '--detach']);
     if (condition === 'switched') git(worktree, ['switch', binding.branch]);
     if (condition === 'dirty') fs.appendFileSync(path.join(worktree, 'fixture.txt'), 'private edits\n');

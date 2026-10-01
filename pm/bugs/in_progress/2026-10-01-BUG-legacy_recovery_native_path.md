@@ -49,6 +49,14 @@ Focused worker/scheduler/hook tests pass (64 tests); full configured `npm test`
 and repository structural checks pass. Live PWP reconciliation and campaign
 resumption remain pending.
 
+PWP then confirmed that the old higher-priority instruction prevented even
+invoking recovery, so the recovery-only PreToolUse hook could not refresh it.
+The hook now emits the evidence-checked legacy context on a non-campaign,
+non-coordinator diagnostic tool call as well. Campaign/coordinator permission
+checks remain on their existing path. Regression verifies neutral diagnostic
+refresh, ambiguous-history silence, and that campaign mutation is still denied.
+Focused and full configured acceptance pass; live retry remains pending.
+
 Final `npm test` passes: 499 core tests, installer harness, 23 Pi, 4 MCP, 80
 TSTS, and 572-file structure validation. Traceability (201 relationships),
 rule-copy, version, generated registry/adapter/manifest, and diff checks pass.

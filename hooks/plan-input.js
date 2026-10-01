@@ -16,6 +16,7 @@ const {
   setLedgerCoordinator,
   workerRecoveryBinding,
   workerRecoveryContext,
+  workerRecoveryContextDetails,
 } = require('../src/campaign-orchestration');
 
 const PlanInputCoordinatorBindingReaders = Object.freeze({ V1: readBindingsV1 });
@@ -187,6 +188,10 @@ function handle(data, environment = process.env) {
         if (!recoveryContext) fail('worker recovery context is unavailable for this authenticated session');
         return preToolOutput(recoveryContext);
       } catch (error) { return deniedPreToolOutput(error.message); }
+    }
+    const recoveryContextDetails = workerRecoveryContextDetails(environment, data.session_id);
+    if (recoveryContextDetails?.legacy && !campaignCommand(data.tool_input) && !coordinatorCommand(data.tool_input)) {
+      return preToolOutput(recoveryContextDetails.context);
     }
     if (!campaignCommand(data.tool_input) && !coordinatorCommand(data.tool_input)) return null;
   }

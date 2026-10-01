@@ -862,7 +862,7 @@ function legacyRecoveryTarget(binding, assignment, ledger, environment) {
   return originalWorktree;
 }
 
-function workerRecoveryContext(environment, sessionId) {
+function workerRecoveryContextDetails(environment, sessionId) {
   if (typeof sessionId !== 'string' || !sessionId) return null;
   const binding = readWorkerBindings(environment).bindings.find(item => item.sessionId === sessionId);
   if (!binding) return null;
@@ -872,9 +872,19 @@ function workerRecoveryContext(environment, sessionId) {
   workerRecoveryBinding(environment, assignment.attachToken, sessionId);
   const legacyOriginalWorktree = legacyRecoveryTarget(binding, assignment, ledger, environment);
   if (legacyOriginalWorktree) {
-    return `Retained worker ${sessionId}: owning top-level project ${binding.repositoryRoot}; the native Codex session is authenticated at original checkout ${legacyOriginalWorktree}, while a completed legacy recovery moved this assignment binding to ${binding.worktree}. Fresh complete host evidence and immutable dispatch/recovery history prove both paths. Use your existing attachment capability with ponytail worktree recover ${assignment.attachToken} from an existing neutral directory to reconcile the branch and binding to ${legacyOriginalWorktree}; Ponytail verifies both checkouts and the assignment revision before transfer. Then run canonical project adoption/setup and resume the same assignment. Preserve both checkouts, session, and delivery history.`;
+    return {
+      legacy: true,
+      context: `Retained worker ${sessionId}: owning top-level project ${binding.repositoryRoot}; the native Codex session is authenticated at original checkout ${legacyOriginalWorktree}, while a completed legacy recovery moved this assignment binding to ${binding.worktree}. Fresh complete host evidence and immutable dispatch/recovery history prove both paths. Use your existing attachment capability with ponytail worktree recover ${assignment.attachToken} from an existing neutral directory to reconcile the branch and binding to ${legacyOriginalWorktree}; Ponytail verifies both checkouts and the assignment revision before transfer. Then run canonical project adoption/setup and resume the same assignment. Preserve both checkouts, session, and delivery history.`,
+    };
   }
-  return `Retained worker ${sessionId}: owning top-level project ${binding.repositoryRoot}; original checkout ${binding.worktree}; branch ${binding.branch}; main worktree ${binding.mainWorktree || '(legacy source enrolls on recovery)'}. If the checkout is missing, run ponytail worktree recover ${assignment.attachToken} from an existing neutral directory, then canonical project adoption/setup. Recover yourself without waiting for a coordinator action; never replace this session or overwrite local changes. Git reconstruction restores committed content only; preserve native snapshots for unsaved files.`;
+  return {
+    legacy: false,
+    context: `Retained worker ${sessionId}: owning top-level project ${binding.repositoryRoot}; original checkout ${binding.worktree}; branch ${binding.branch}; main worktree ${binding.mainWorktree || '(legacy source enrolls on recovery)'}. If the checkout is missing, run ponytail worktree recover ${assignment.attachToken} from an existing neutral directory, then canonical project adoption/setup. Recover yourself without waiting for a coordinator action; never replace this session or overwrite local changes. Git reconstruction restores committed content only; preserve native snapshots for unsaved files.`,
+  };
+}
+
+function workerRecoveryContext(environment, sessionId) {
+  return workerRecoveryContextDetails(environment, sessionId)?.context ?? null;
 }
 
 function recoverWorker(environment, token) {
@@ -1917,6 +1927,7 @@ module.exports = {
   recoverWorker,
   workerRecoveryBinding,
   workerRecoveryContext,
+  workerRecoveryContextDetails,
   CampaignActionReaders: Object.freeze({ V1: readActionV1, V2: readActionV2, V3: readActionV3, V4: readActionV4 }),
   CampaignHostObservationReaders,
   CampaignLedgerReaders,

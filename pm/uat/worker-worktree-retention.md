@@ -125,3 +125,12 @@ complete host evidence and matching dispatch/recovery history, and denies a
 different session. This is repository proof only; the same PWP session must
 still retry recovery and the coordinator must refresh observation before live
 acceptance can pass.
+
+The context-refresh regression also invokes an ordinary neutral-cwd diagnostic
+before recovery and verifies the authenticated hook supplies current proven
+legacy guidance. The same test verifies unproven relocation supplies no such
+guidance and campaign mutation still fails closed. Separately, the coordinator
+reported a provider worker's restored checkout disappeared again; the same
+session recovered and re-adopted it, but the native cleanup cause is unknown.
+This demonstrates repeatable reconstruction, not a Ponytail-controlled host
+retention guarantee.

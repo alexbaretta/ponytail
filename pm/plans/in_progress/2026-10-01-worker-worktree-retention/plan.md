@@ -88,3 +88,13 @@ proof covers proven legacy relocation, ambiguous history, and wrong-session
 denial. Focused tests and configured root acceptance pass. This fixes the
 Ponytail-side refusal but does not itself verify PWP's live retry or resume the
 coordinator's campaign; T04 remains open.
+
+The first hook-context correction still required invoking recovery, which the
+worker's stale higher-priority instruction prevented. PreToolUse now refreshes
+proven legacy-recovery guidance on an ordinary non-campaign diagnostic call,
+without bypassing campaign/coordinator authorization. A subsequent provider
+worker also reported that its restored checkout disappeared again; its same
+session successfully reconstructed and immediately re-adopted it, but the
+host cleanup cause is undetermined. This reinforces recovery resilience, not a
+claim that Ponytail controls Codex's native cleanup policy. The PWP retry and
+live campaign resumption remain open.
