@@ -1,32 +1,20 @@
 # Managing Codex command policy
 
-`ponytail update-permissions` is Ponytail's Codex execpolicy updater. It
-combines Ponytail's baseline, existing Codex rules imported during the first
-accepted run, explicitly refreshed imports, the invoking worktree's proposal,
-and previously accepted snapshots from other projects.
-`condense_codex_rules.sh` remains the low-level compiler.
+`ponytail update-permissions` reviews and installs the invoking project's
+Codex execpolicy proposal. `condense_codex_rules.sh` is the low-level compiler.
 
-Repository configuration is never authoritative. A project proposes rules in
-`.agents/config/codex-execpolicy.json`; accepted state is stored in
-`~/.ponytail/codex-execpolicy/state.json`. The generated
-`~/.codex/rules/ponytail.rules` file is a disposable projection.
+Projects propose rules in `.agents/config/codex-execpolicy.json`. Acceptance
+creates two isolated durable records and projections:
 
-The user-owned `~/.ponytail/config.json` contains the Ponytail source root and
-the sorted unique list of registered Git roots. Register an adopting project
-from any directory inside its worktree:
+- `~/.ponytail/codex-execpolicy/state.json` V3 and
+  `~/.codex/rules/ponytail.rules` contain only Ponytail baseline and user-owned
+  rules imported during the first accepted run.
+- `~/.ponytail/codex-execpolicy/projects/<project-root-sha256>.json` V1 and the
+  invoking worktree's ignored `.codex/rules/ponytail.rules` contain only that
+  project's accepted proposal.
 
-```bash
-ponytail register
-```
-
-Registration resolves only the enclosing Git root and requires that root's
-project policy file. It does not scan the filesystem. Permission updates never
-open other registered projects; unavailable or dirty foreign worktrees cannot
-affect the command. Remove a deleted or moved registration explicitly:
-
-```bash
-ponytail unregister /absolute/repository/root
-```
+No project rule is installed in user-global policy or another project. Codex
+loads the project projection through its trusted project configuration layer.
 
 ## Project policy
 
@@ -47,53 +35,30 @@ The V1 project file contains `safe` and `unsafe` arrays:
 }
 ```
 
-Every entry is a proposal, including commands stored inside the project. An
-agent can change repository scripts, so their location does not make them
-trusted. Prefer `prompt` for unsafe project commands. An accepted `forbidden`
-rule blocks every Codex task loading the shared user policy.
+Every entry is an untrusted proposal. Prefer `prompt` for commands with unsafe
+effects. Patterns use Codex literal prefix semantics; each token is a string or
+a list of accepted alternatives, and a prefix governs every suffix.
 
-Patterns use Codex literal prefix semantics. Each token is a string or a list
-of accepted alternatives. A prefix governs every suffix.
-
-## Review and acceptance
-
-Display the effective diff after replacing the invoking project's accepted
-snapshot:
+## Review, verification, and recovery
 
 ```bash
 ponytail update-permissions --dry-run
-```
-
-Without `--dry-run`, the tool displays the proposal and asks for confirmation.
-For automation, accept exactly the displayed digest:
-
-```bash
 ponytail update-permissions --accept <proposal-digest>
-```
-
-A missing or rejected confirmation leaves both policy locations unchanged.
-Accepted state is written before its Codex projection so an interrupted
-installation remains recoverable. Use `--import-codex` when newly approved
-rules outside Ponytail should replace the saved bootstrap import.
-
-## Verification and recovery
-
-```bash
 ponytail update-permissions --check
 ponytail update-permissions --restore
 ```
 
-`--check` verifies the invoking project snapshot and the installed projection.
-`--restore` recreates `ponytail.rules` solely from accepted state, even after
-the entire `~/.codex` directory is lost.
+Without `--dry-run`, a changed proposal requires confirmation. A missing or
+rejected confirmation leaves both global and project state unchanged. `--check`
+verifies both accepted records and installed projections for the invoking
+project. `--restore` reconstructs both projections from accepted state.
 
-Accepted-state V2 stores exact per-project snapshots. Existing V1 state is
-read without opening any recorded project path, then upgraded on the next
-accepted change. A V1 foreign contribution remains intact until that project
-next replaces its own snapshot.
+Existing aggregate V1 and V2 state is read without opening recorded project
+paths. The next accepted update writes V3 global state with every project
+source removed and creates a project state only for the invoking project;
+foreign contributions are never migrated into active policy.
 
 The tool rejects symlinked project policy, accepted-state, and generated-rule
-files and installs files through atomic replacement. Codex execpolicy is still
-a preview interface. Set `PONYTAIL_CODEX_EXECUTABLE` to an absolute trusted
-Codex executable path to validate each candidate with `codex execpolicy check`
-before review or installation.
+files and installs through atomic replacement. Set
+`PONYTAIL_CODEX_EXECUTABLE` to an absolute trusted Codex executable path to
+validate each candidate with `codex execpolicy check` before installation.

@@ -10,35 +10,36 @@
   "context": {
     "languages": ["bash", "python", "javascript"],
     "frameworks": ["Node.js test runner"],
-    "components": ["Ponytail CLI", "Codex execpolicy compiler"],
-    "affected_boundaries": ["local permission update to foreign project configuration"],
-    "code_references": ["cli/ponytail: update_permissions", "cli/condense_codex_rules.sh: accepted state"]
+    "components": ["Ponytail CLI", "Codex execpolicy compiler", "reference QA"],
+    "affected_boundaries": ["ordinary local command to foreign project state"],
+    "code_references": ["cli/ponytail: update_permissions and qa", "cli/condense_codex_rules.sh: accepted state"]
   },
   "observed_behavior": "ponytail update-permissions in one repository failed when an unrelated registered repository had uncommitted project configuration.",
-  "expected_behavior": "A local permission update reads only the invoking worktree's project proposal and preserves foreign accepted contributions without opening foreign worktrees.",
-  "causal_mechanism": "The high-level command enumerated every registered blessed worktree and the V1 compiler reconstructed policy by rereading every listed project path.",
+  "expected_behavior": "An ordinary local command or skill derives project-specific behavior only from the invoking project; project rules never enter user-global or foreign-project policy.",
+  "causal_mechanism": "Permission compilation aggregated project contributions into one global policy, while reference QA assembled its identity catalog from all registered projects.",
   "anti_pattern": {
-    "structural_description": "A local command reconstructs shared accepted output from every producer's current live configuration.",
-    "why_it_fails": "Unrelated availability, dirt, or malformed configuration becomes a prerequisite for an otherwise independent local operation."
+    "structural_description": "A local command consumes or projects configuration derived from multiple independently managed projects.",
+    "why_it_fails": "A foreign project's configuration, registration, or accepted state changes another project's behavior."
   },
   "correct_pattern": {
-    "required_invariant": "A local update opens only its invoking worktree; foreign contributions come exclusively from durable accepted snapshots.",
-    "implementation_description": "Store exact per-project accepted proposals, replace only the invoking project's snapshot, and migrate lossy legacy provenance without dereferencing recorded paths."
+    "required_invariant": "Project-derived inputs remain in project-keyed state and the invoking project's local configuration layer.",
+    "implementation_description": "Separate global user policy from project policy, project each accepted proposal locally, and pass no implicit foreign catalog to ordinary local QA."
   },
   "applicability_conditions": [
-    "A user-level aggregate is assembled from independently managed projects.",
-    "An update should change one producer without requiring the current state of other producers."
+    "A user tool manages multiple independently configured projects.",
+    "An ordinary operation runs inside one project."
   ],
   "known_non_matches": [
     "An explicit repository-inventory validation command whose contract is to validate every registered project."
   ],
   "confirmation_evidence": [
     "Before the repair, the focused regression observed accepted-state V1 aggregation and blessed-worktree selection.",
-    "After the repair, local update and check pass while the foreign project is dirty, and V1 migration passes with a missing foreign path."
+    "After the repair, global policy has no project source, project projections are disjoint, and local QA receives no foreign registry catalog."
   ],
   "regression_proofs": [
-    "tests/ponytail-cli.test.js: update-permissions reads only the invoking project and preserves accepted foreign snapshots",
+    "tests/ponytail-cli.test.js: update-permissions isolates every project policy from every other project",
     "tests/ponytail-cli.test.js: update-permissions reads policy from the invoking worktree instead of the blessed worktree",
-    "tests/condense-codex-rules.test.js: upgrades V1 accepted state without reading foreign project worktrees"
+    "tests/condense-codex-rules.test.js: keeps project policies in separate project-local projections",
+    "tests/project-validation.test.js: reference QA does not derive identities from another registered project"
   ]
 }

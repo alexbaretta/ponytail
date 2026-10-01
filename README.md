@@ -57,8 +57,10 @@ ponytail pre-commit
 
 Registration is stored in `~/.ponytail/config.json`; no filesystem-wide scan
 is performed. `ponytail update-permissions` reads only the invoking worktree's
-`.agents/config/codex-execpolicy.json`. Previously accepted foreign project
-rules are reused from user-owned accepted state without opening those projects.
+`.agents/config/codex-execpolicy.json`. Its accepted project rules are
+project-keyed and installed only in that worktree's ignored
+`.codex/rules/ponytail.rules`; the user-global generated policy contains no
+project rules.
 
 The CLI installer prompts before adding that directory to `~/.bashrc`; pass
 `--update-shell-path` to approve the update non-interactively. Install only
@@ -114,7 +116,7 @@ Installed shell tools:
 | `plan_pdf.sh [--sprints] <plan-name> [output.pdf]` | Render a plan, optionally with its sprints, as PDF using Pandoc |
 | `plan_stats.sh <plan-name>` | Legacy flat-layout count of open and done task lines in one plan |
 | `bug_stats.sh [date]` | Count bugs by lifecycle state on or after a date |
-| `condense_codex_rules.sh [--project root] [--dry-run\|--check\|--restore]` | Legacy low-level Codex command-policy compiler |
+| `condense_codex_rules.sh --project root [--dry-run\|--check\|--restore]` | Low-level isolated Codex command-policy compiler |
 | `project_journal.sh init\|start\|run_command\|over ...` | Initialize or record long-lived-plan telemetry in PostgreSQL |
 
 The `issue-tracking` skill defines configurable issue types and shared

@@ -40,6 +40,12 @@ the implementation smaller.
 
 These rules remain active at every compaction level, including `off`:
 
+- Derive project-specific command and skill behavior only from the invoking
+  project's instruction and configuration layers. Never enumerate, inherit,
+  validate, or aggregate another project's configuration, identity, accepted
+  state, or generated artifacts unless the user invokes a command whose
+  explicit target or documented inventory scope includes that project.
+
 - After reading the applicable tracked project instructions, inspect the
   root-level `AGENTS.local.md`. Read and apply it only when it is a
   regular non-symlink file that is untracked and ignored by Git. Treat it as

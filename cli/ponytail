@@ -5,7 +5,7 @@ set -euo pipefail
 # Licensed under the MIT License. See LICENSE in the project root.
 # Traceability: implements REQ-PRECOMMIT-PROJECT-ISOLATION
 # Traceability: implements REQ-DEVELOPER-PRIVATE-AGENT-INSTRUCTIONS
-# Traceability: implements REQ-CODEX-EXECPOLICY-PROJECT-ISOLATION
+# Traceability: implements REQ-PONYTAIL-PROJECT-ISOLATION
 
 main() {
   local python_source=''
@@ -262,16 +262,16 @@ def validate_private_agents(root):
         fail(f"AGENTS.local.md must be ignored by Git: {target}; run ponytail register")
 
 
-def ensure_private_agents_excluded(root):
-    target = root / "AGENTS.local.md"
+def ensure_private_path_excluded(root, relative_path, description):
+    target = root / relative_path
     if target.is_symlink() or (target.exists() and not target.is_file()):
-        fail(f"unsafe developer-private agent instructions: {target} must be a regular non-symlink file")
+        fail(f"unsafe {description}: {target} must be a regular non-symlink file")
     tracked = subprocess.run(
-        ["git", "-C", str(root), "ls-files", "--error-unmatch", "--", "AGENTS.local.md"],
+        ["git", "-C", str(root), "ls-files", "--error-unmatch", "--", relative_path],
         capture_output=True,
     )
     if tracked.returncode == 0:
-        fail(f"AGENTS.local.md must not be tracked: {target}")
+        fail(f"{relative_path} must not be tracked: {target}")
     result = subprocess.run(
         ["git", "-C", str(root), "rev-parse", "--path-format=absolute", "--git-path", "info/exclude"],
         capture_output=True,
@@ -282,10 +282,16 @@ def ensure_private_agents_excluded(root):
     if path_has_symlink(exclude) or (exclude.exists() and not exclude.is_file()):
         fail(f"unsafe Git exclude file: {exclude}")
     existing = exclude.read_text(encoding="utf-8") if exclude.exists() else ""
-    if "/AGENTS.local.md" not in existing.splitlines():
+    exclusion = f"/{relative_path}"
+    if exclusion not in existing.splitlines():
         separator = "" if not existing or existing.endswith("\n") else "\n"
         mode = 0o644 if not exclude.exists() else exclude.stat().st_mode & 0o777
-        atomic_write_text(exclude, f"{existing}{separator}/AGENTS.local.md\n", mode)
+        atomic_write_text(exclude, f"{existing}{separator}{exclusion}\n", mode)
+
+
+def ensure_private_paths_excluded(root):
+    ensure_private_path_excluded(root, "AGENTS.local.md", "developer-private agent instructions")
+    ensure_private_path_excluded(root, ".codex/rules/ponytail.rules", "project-local generated Codex policy")
 
 
 def component_identifiers(components):
@@ -366,7 +372,7 @@ main "$@"
 
 
 def register(config_path, source_root, root, main_root):
-    ensure_private_agents_excluded(root)
+    ensure_private_paths_excluded(root)
     proposal_path = root / ".agents/config/codex-execpolicy.json"
     if path_has_symlink(proposal_path) or (proposal_path.exists() and not proposal_path.is_file()):
         fail(f"project policy must be a regular non-symlink file: {proposal_path}")
@@ -597,19 +603,7 @@ def validate_all_projects(config):
 def qa(source_root, config, root, main_root, metadata, arguments):
     if arguments not in ([], ["references"]):
         fail("usage: ponytail qa [references]")
-    _, source_main_root = repository_roots(source_root)
-    projects = {}
-    for project in config["projects"]:
-        if project["root"] in {str(main_root), str(source_main_root)}:
-            continue
-        if project["identity"] is None:
-            print(f"warning: registered project identity snapshot is missing: {project['root']}; run ponytail register from its blessed worktree", file=sys.stderr)
-            continue
-        projects[project["root"]] = project["identity"]
-    names = [metadata["name"], *(item["name"] for item in projects.values())]
-    if len(set(names)) != len(names):
-        fail("registered projects must have unique canonical names")
-    return subprocess.run(["node", str(source_root / "scripts/project-qa.js")], input=json.dumps({"root": str(root), "project": metadata, "projects": projects}), text=True).returncode
+    return subprocess.run(["node", str(source_root / "scripts/project-qa.js")], input=json.dumps({"root": str(root), "project": metadata, "projects": {}}), text=True).returncode
 
 
 def update_skills(source_root, arguments):
@@ -619,6 +613,7 @@ def update_skills(source_root, arguments):
 def update_permissions(source_root, root, main_root, arguments):
     if any(option in arguments for option in ("--project", "--project-root")):
         fail("update-permissions gets its project from the invoking worktree")
+    ensure_private_path_excluded(root, ".codex/rules/ponytail.rules", "project-local generated Codex policy")
     command = [
         str(source_root / "cli/condense_codex_rules.sh"),
         "--project", str(root),

@@ -19,5 +19,6 @@ ownership of project-specific management records and evidence.
 - [Campaign orchestration](campaign-orchestration.md)
 - [Traceability index](traceability-index.md)
 - [Project validation isolation](project-validation-isolation.md)
+- [Full project isolation](project-isolation.md)
 - [Developer-private agent instructions](developer-private-agent-instructions.md)
 - [Repository text index](repository-text-index.md)

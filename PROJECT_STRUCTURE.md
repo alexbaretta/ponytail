@@ -21,7 +21,8 @@ while project-wide management records remain under `pm/`.
 - `.agents/config/codex-execpolicy.json` is this project's versioned Codex
   command policy proposal. Every adopting project uses that same root-relative path;
   accepted user policy is stored outside repositories under
-  `~/.ponytail/codex-execpolicy/`.
+  `~/.ponytail/codex-execpolicy/`, while its disposable project-local
+  projection is `.codex/rules/ponytail.rules` and remains Git-ignored.
 - `~/.ponytail/config.json` is the external V2 user configuration written by
   `ponytail register` and `ponytail unregister`; it owns the canonical
   Ponytail source root and registered repositories with their explicitly
@@ -72,9 +73,10 @@ while project-wide management records remain under `pm/`.
   installable by `scripts/install-cli.sh`, which installs all `cli/*.sh` files
   or selected tools into the user's configured executable directory. Add each
   tool to the focused CLI syntax, behavior, installer, and distribution tests.
-  `cli/condense_codex_rules.sh` owns exact V1/V2 accepted-policy readers, the
-  V2 writer, one-time Codex import, isolated project-snapshot replacement,
-  synthesis, restoration, and installation pipeline.
+  `cli/condense_codex_rules.sh` owns exact V1/V2/V3 global accepted-policy
+  readers, the V3 writer, the V1 project-state reader and writer, one-time
+  user-rule import, isolated global and project synthesis, restoration, and
+  installation pipeline.
 - `.agents/config/` owns each worktree's committed Ponytail configuration.
   `project/directory-structure.json` owns the machine-readable content-kind,
   directory, Git-state, and opaque-boundary rules enforced by
@@ -97,9 +99,11 @@ while project-wide management records remain under `pm/`.
   artifact classifications, generated-source mappings, reverse-view path, and
   TypeScript semantic-checker binding consumed by the reusable traceability
   checker.
-  Other projects read only the corresponding durable identity snapshot from
-  the external user registry; `ponytail validate --all` explicitly validates
-  every live blessed worktree. `codex-execpolicy.json` owns its Codex command policy proposal. See
+  Ordinary project-local commands do not read other projects' identity
+  snapshots; explicitly scoped inventory and dependency-management commands
+  may resolve named targets from the external user registry. `ponytail
+  validate --all` explicitly validates every live blessed worktree.
+  `codex-execpolicy.json` owns its Codex command policy proposal. See
   `docs/project-validation.md`.
 - `scripts/project-qa.js` owns indexed current-worktree reference QA and
   dependency manifest parsing.

@@ -39,8 +39,8 @@
       "sourcePath": "pm/requirements/precommit-project-isolation.md"
     },
     {
-      "id": "REQ-CODEX-EXECPOLICY-PROJECT-ISOLATION",
-      "sourcePath": "pm/requirements/codex-execpolicy-project-isolation.md"
+      "id": "REQ-PONYTAIL-PROJECT-ISOLATION",
+      "sourcePath": "pm/requirements/project-isolation.md"
     },
     {
       "id": "REQ-DEVELOPER-PRIVATE-AGENT-INSTRUCTIONS",
@@ -65,7 +65,7 @@
     },
     {
       "class": "uat",
-      "path": "pm/uat/codex-execpolicy-project-isolation.md",
+      "path": "pm/uat/project-isolation.md",
       "locator": "text"
     },
     {

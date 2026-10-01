@@ -11,6 +11,7 @@ const { Pool } = require('pg');
 const { declaredDependencies } = require('../scripts/project-qa');
 const { databaseOptions } = require('../src/project-index');
 // Traceability: verifies REQ-PRECOMMIT-PROJECT-ISOLATION
+// Traceability: verifies REQ-PONYTAIL-PROJECT-ISOLATION
 const cli = path.resolve(__dirname, '../cli/ponytail');
 
 function fixture(t) {
@@ -187,6 +188,8 @@ test('registration and validation protect developer-private agent instructions',
 
   assert.match(original, /^\/AGENTS\.local\.md$/m);
   assert.equal(original.match(/^\/AGENTS\.local\.md$/gm).length, 1);
+  assert.match(original, /^\/\.codex\/rules\/ponytail\.rules$/m);
+  assert.equal(original.match(/^\/\.codex\/rules\/ponytail\.rules$/gm).length, 1);
   assert.equal(run(f.home, root, 'register').status, 0);
   assert.equal(fs.readFileSync(exclude, 'utf8'), original);
 
@@ -365,24 +368,23 @@ test('component detection parses every manifest before changing metadata', t => 
   assert.equal(fs.readFileSync(path.join(root, '.agents/config/ponytail.json'), 'utf8'), before);
 });
 
-test('validate remains cheap while qa scans tracked and untracked nonignored text', t => {
+test('validate and qa ignore identities owned only by another registered project', t => {
   const f = fixture(t);
   const current = repository(f, 'current');
   repository(f, 'OtherProduct');
   write(current, 'untracked.txt', 'OtherProduct');
   let result = run(f.home, current, 'qa');
-  assert.equal(result.status, 4, result.stderr);
-  assert.match(result.stdout, /untracked.txt:1: forbidden reference/);
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /0 project identities checked/);
   git(current, 'add', 'untracked.txt');
   assert.equal(run(f.home, current, 'validate').status, 0);
   result = run(f.home, current, 'qa', 'references');
-  assert.equal(result.status, 4, result.stderr);
-  assert.match(result.stdout, /untracked.txt:1: forbidden reference/);
+  assert.equal(result.status, 0, result.stderr);
   write(current, 'untracked.txt', 'OtherProductSuffix');
   assert.equal(run(f.home, current, 'qa').status, 0);
 });
 
-test('pre-commit runs reference QA and blocks findings', t => {
+test('pre-commit does not acquire foreign identities from registration', t => {
   const f = fixture(t);
   const current = repository(f, 'current');
   repository(f, 'OtherProduct');
@@ -395,9 +397,8 @@ test('pre-commit runs reference QA and blocks findings', t => {
     ['-C', current, '-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.test', 'commit', '-m', 'forbidden reference'],
     { encoding: 'utf8', env: { ...process.env, HOME: f.home, CODEX_HOME: path.join(f.home, '.codex') } },
   );
-  assert.notEqual(result.status, 0);
-  assert.match(result.stdout + result.stderr, /reference\.txt:1: forbidden reference/);
-  assert.equal(git(current, 'rev-parse', 'HEAD'), before);
+  assert.equal(result.status, 0, result.stdout + result.stderr);
+  assert.notEqual(git(current, 'rev-parse', 'HEAD'), before);
 });
 
 test('pre-commit ignores dirty foreign configuration while global validation reports it', t => {
@@ -421,7 +422,7 @@ test('pre-commit ignores dirty foreign configuration while global validation rep
   assert.match(validation.stderr, /must be committed before blessing/);
 });
 
-test('pre-commit permits sprint metadata markers while scanning sprint content', t => {
+test('pre-commit remains independent of a foreign Ponytail registration', t => {
   const f = fixture(t);
   const current = repository(f, 'current');
   repository(f, 'Ponytail');
@@ -444,32 +445,31 @@ test('pre-commit permits sprint metadata markers while scanning sprint content',
   ]) {
     write(current, file, content);
     const qa = run(f.home, current, 'qa');
-    assert.equal(qa.status, 4, qa.stdout + qa.stderr);
-    assert.match(qa.stdout, /forbidden reference to "Ponytail"/);
+    assert.equal(qa.status, 0, qa.stdout + qa.stderr);
   }
 });
 
-test('QA recognizes installed Ponytail skill names across the client project', t => {
+test('installed skill state does not introduce foreign project identities into QA', t => {
   const f = fixture(t);
   const current = repository(f, 'current');
   repository(f, 'Ponytail');
   repository(f, 'OtherProduct');
   write(current, 'usage.md', 'Use ponytail-review.\n');
   git(current, 'add', 'usage.md');
-  assert.equal(run(f.home, current, 'qa').status, 4);
+  assert.equal(run(f.home, current, 'qa').status, 0);
   const skill = 'ponytail-review';
   const source = path.resolve(__dirname, '../skills', skill, 'SKILL.md');
   for (const directory of [path.join(current, '.agents/skills'), path.join(f.home, '.codex/skills')]) {
     const installed = path.join(directory, skill, 'SKILL.md');
     write(directory, `${skill}/SKILL.md`, '---\nname: unrelated\n---\n');
-    assert.equal(run(f.home, current, 'qa').status, 4);
+    assert.equal(run(f.home, current, 'qa').status, 0);
     fs.copyFileSync(source, installed);
     let result = run(f.home, current, 'qa');
     assert.equal(result.status, 0, result.stdout + result.stderr);
     for (const content of ['ponytail-review-extra', 'ponytail-review and Ponytail', 'ponytail-review and OtherProduct']) {
       write(current, 'usage.md', content);
       result = run(f.home, current, 'qa');
-      assert.equal(result.status, 4, result.stdout + result.stderr);
+      assert.equal(result.status, 0, result.stdout + result.stderr);
     }
     write(current, 'usage.md', 'Use ponytail-review.\n');
     fs.unlinkSync(installed);
@@ -503,7 +503,7 @@ test('registration and validation leave pre-commit installation optional', t => 
   assert.equal(fs.existsSync(hookPath), false);
 });
 
-test('exact local exceptions suppress intended matches without exempting other files', t => {
+test('foreign-reference exceptions remain unused when QA has no foreign catalog', t => {
   const f = fixture(t);
   const current = repository(f, 'current'); repository(f, 'OtherProduct');
   write(current, 'example.txt', 'OtherProduct'); git(current, 'add', 'example.txt');
@@ -512,13 +512,13 @@ test('exact local exceptions suppress intended matches without exempting other f
   assert.equal(result.status, 0, result.stderr + result.stdout);
   write(current, 'another.txt', 'otherproduct'); git(current, 'add', 'another.txt');
   result = run(f.home, current, 'qa');
-  assert.equal(result.status, 4, result.stderr);
-  assert.match(result.stdout, /another.txt/);
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stderr, /unused reference exception/);
   write(current, 'example.txt', 'No reference');
   assert.match(run(f.home, current, 'qa').stderr, /unused reference exception/);
 });
 
-test('direct npm dependencies grant directional permission by package identity', t => {
+test('local dependency manifests are validated without loading foreign package identities', t => {
   const f = fixture(t);
   const current = repository(f, 'current'); const foreign = repository(f, 'OtherProduct');
   configure(foreign, { packages: [{ manager: 'npm', name: '@example/other' }] });
@@ -529,12 +529,12 @@ test('direct npm dependencies grant directional permission by package identity',
   let result = run(f.home, current, 'qa');
   assert.equal(result.status, 0, result.stderr + result.stdout);
   write(current, 'package.json', '{}');
-  assert.equal(run(f.home, current, 'qa').status, 4);
+  assert.equal(run(f.home, current, 'qa').status, 0);
   write(current, 'package.json', '{');
   assert.equal(run(f.home, current, 'qa').status, 1);
 });
 
-test('registered project dependencies grant and revoke reference permission', t => {
+test('explicit dependency commands manage local metadata without making QA read the foreign project', t => {
   const f = fixture(t);
   const current = repository(f, 'current');
   const foreign = repository(f, 'OtherProduct');
@@ -542,7 +542,7 @@ test('registered project dependencies grant and revoke reference permission', t 
   commitConfiguration(f, foreign);
   write(current, 'reference.txt', 'OtherProduct uses foreign-worker.');
   git(current, 'add', 'reference.txt');
-  assert.equal(run(f.home, current, 'qa').status, 4);
+  assert.equal(run(f.home, current, 'qa').status, 0);
 
   let result = run(f.home, current, 'register-dependency', 'OtherProduct');
   assert.equal(result.status, 0, result.stderr);
@@ -562,7 +562,7 @@ test('registered project dependencies grant and revoke reference permission', t 
   assert.equal(result.stdout, 'unregistered dependency: OtherProduct\n');
   assert.deepEqual(JSON.parse(fs.readFileSync(path.join(current, '.agents/config/ponytail.json'))).dependencies, []);
   assert.equal(run(f.home, current, 'list-dependencies').stdout, '');
-  assert.equal(run(f.home, current, 'qa').status, 4);
+  assert.equal(run(f.home, current, 'qa').status, 0);
   result = run(f.home, current, 'unregister-dependency', 'OtherProduct');
   assert.equal(result.status, 1);
   assert.match(result.stderr, /dependency is not registered/);
@@ -571,7 +571,7 @@ test('registered project dependencies grant and revoke reference permission', t 
   assert.match(result.stderr, /project is not registered/);
 });
 
-test('reference QA treats foreign components as project identities', t => {
+test('reference QA does not derive identities from another registered project', t => {
   const f = fixture(t);
   const current = repository(f, 'current');
   const foreign = repository(f, 'OtherProduct');
@@ -580,11 +580,10 @@ test('reference QA treats foreign components as project identities', t => {
   write(current, 'reference.txt', 'The foreign-worker owns this behavior.');
   git(current, 'add', 'reference.txt');
   const result = run(f.home, current, 'qa');
-  assert.equal(result.status, 4, result.stderr + result.stdout);
-  assert.match(result.stdout, /reference\.txt:1: forbidden reference to "OtherProduct": "foreign-worker"/);
+  assert.equal(result.status, 0, result.stderr + result.stdout);
 });
 
-test('reference QA permits components registered to the invoking project', t => {
+test('reference QA remains independent of components registered to another project', t => {
   const f = fixture(t);
   const current = repository(f, 'current');
   const foreign = repository(f, 'OtherProduct');
@@ -592,7 +591,7 @@ test('reference QA permits components registered to the invoking project', t => 
   commitConfiguration(f, foreign);
   write(current, 'reference.txt', 'The FOREIGN-WORKER owns this behavior.');
   git(current, 'add', 'reference.txt');
-  assert.equal(run(f.home, current, 'qa').status, 4);
+  assert.equal(run(f.home, current, 'qa').status, 0);
   assert.equal(run(f.home, current, 'register-component', 'foreign-worker').status, 0);
   const result = run(f.home, current, 'qa');
   assert.equal(result.status, 0, result.stderr + result.stdout);
@@ -620,7 +619,7 @@ test('reference QA always permits Ponytail and its components', t => {
   assert.equal(result.status, 0, result.stderr + result.stdout);
 });
 
-test('blessing refreshes the foreign identity snapshot used by QA', t => {
+test('blessing a foreign worktree does not change local QA', t => {
   const f = fixture(t);
   const current = repository(f, 'current');
   const foreign = repository(f, 'OtherProduct');
@@ -632,12 +631,15 @@ test('blessing refreshes the foreign identity snapshot used by QA', t => {
   assert.equal(run(f.home, candidate, 'bless').status, 0);
   write(current, 'reference.txt', 'candidate-only');
   git(current, 'add', 'reference.txt');
-  assert.equal(run(f.home, current, 'qa').status, 4);
+  const before = run(f.home, current, 'qa');
+  assert.equal(before.status, 0, before.stderr + before.stdout);
   assert.equal(run(f.home, foreign, 'bless-worktree').status, 0);
-  assert.equal(run(f.home, current, 'qa').status, 0);
+  const after = run(f.home, current, 'qa');
+  assert.equal(after.status, 0);
+  assert.equal(after.stdout, before.stdout);
 });
 
-test('local QA keeps the snapshot until explicit refresh and global validation reports staleness', t => {
+test('local QA ignores foreign snapshot refresh while explicit global validation reports staleness', t => {
   const f = fixture(t);
   const current = repository(f, 'current');
   const foreign = repository(f, 'OtherProduct');
@@ -654,11 +656,10 @@ test('local QA keeps the snapshot until explicit refresh and global validation r
   assert.equal(run(f.home, foreign, 'register').status, 0);
   assert.equal(run(f.home, current, 'validate', '--all').status, 0);
   result = run(f.home, current, 'qa');
-  assert.equal(result.status, 4);
-  assert.match(result.stdout, /new-foreign-component/);
+  assert.equal(result.status, 0);
 });
 
-test('canonical foreign component mutation refreshes its identity snapshot', t => {
+test('canonical foreign component mutation does not affect local QA', t => {
   const f = fixture(t);
   const current = repository(f, 'current');
   const foreign = repository(f, 'OtherProduct');
@@ -666,8 +667,7 @@ test('canonical foreign component mutation refreshes its identity snapshot', t =
   write(current, 'reference.txt', 'foreign-worker');
   git(current, 'add', 'reference.txt');
   const result = run(f.home, current, 'qa');
-  assert.equal(result.status, 4);
-  assert.match(result.stdout, /foreign-worker/);
+  assert.equal(result.status, 0);
 });
 
 test('local QA uses a snapshot when blessing is absent and global validation fails', t => {
@@ -706,13 +706,13 @@ test('legacy registrations warn locally and fail explicit global validation', t 
 
   let result = run(f.home, current, 'qa');
   assert.equal(result.status, 0, result.stderr);
-  assert.match(result.stderr, new RegExp(`identity snapshot is missing: ${foreign}`));
+  assert.doesNotMatch(result.stderr, new RegExp(`identity snapshot is missing: ${foreign}`));
   result = run(f.home, current, 'validate', '--all');
   assert.equal(result.status, 1);
   assert.match(result.stderr, /identity snapshot is missing/);
 });
 
-test('actual gitlinks permit references but a .gitmodules entry alone does not', t => {
+test('gitlink validation remains local and independent of foreign project identity', t => {
   const f = fixture(t);
   const current = repository(f, 'current'); const foreign = repository(f, 'OtherProduct');
   configure(foreign, { repositoryUrls: [foreign] });
@@ -720,7 +720,7 @@ test('actual gitlinks permit references but a .gitmodules entry alone does not',
   write(current, 'example.txt', 'OtherProduct');
   write(current, '.gitmodules', `[submodule "dependency"]\npath = external/dependency\nurl = ${foreign}\n`);
   git(current, 'add', '.');
-  assert.equal(run(f.home, current, 'qa').status, 4);
+  assert.equal(run(f.home, current, 'qa').status, 0);
   git(current, 'update-index', '--add', '--cacheinfo', `160000,${git(foreign, 'rev-parse', 'HEAD')},external/dependency`);
   const result = run(f.home, current, 'qa');
   assert.equal(result.status, 0, result.stderr + result.stdout);
@@ -770,6 +770,5 @@ test('reference scope and diagnostic format ignore Git grep user preferences', t
   git(current, 'config', 'grep.column', 'true');
   write(current, 'parent.txt', 'OtherProduct'); git(current, 'add', 'parent.txt');
   result = run(f.home, current, 'qa');
-  assert.equal(result.status, 4, result.stderr + result.stdout);
-  assert.match(result.stdout, /parent.txt:1: forbidden reference/);
+  assert.equal(result.status, 0, result.stderr + result.stdout);
 });

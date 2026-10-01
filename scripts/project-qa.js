@@ -14,6 +14,7 @@ const { entries } = require('../generated/registry.json');
 const { databaseOptions, grepRepository, refreshRepositoryTextIndex } = require('../src/project-index');
 
 // Traceability: implements REQ-REPOSITORY-TEXT-INDEX
+// Traceability: implements REQ-PONYTAIL-PROJECT-ISOLATION
 
 function installedSkillNames(root) {
   const directories = [path.join(root, '.agents/skills'), path.join(process.env.CODEX_HOME || path.join(os.homedir(), '.codex'), 'skills')];
@@ -249,7 +250,7 @@ if (require.main === module) {
       await pool.end();
     }
     for (const finding of findings) process.stdout.write(`${finding.file}:${finding.line}: forbidden reference to ${JSON.stringify(finding.project)}: ${JSON.stringify(finding.name)}\n`);
-    process.stdout.write(`references: ${findings.length} findings; ${Object.keys(projects).length} other registered projects checked\n`);
+    process.stdout.write(`references: ${findings.length} findings; ${Object.keys(projects).length} project identities checked\n`);
     process.exitCode = findings.length ? 4 : 0;
   })().catch(error => {
     process.stderr.write(`error: ${error.message}\n`);

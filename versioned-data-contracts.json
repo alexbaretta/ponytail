@@ -21,9 +21,21 @@
         "module": "cli/ponytail",
         "readerRegistryExport": "PonytailUserConfigReaders"
       },
-      "currentVersion": "V2",
-      "versions": ["V1", "V2"],
-      "supportedReadVersions": ["V1", "V2"],
+      "currentVersion": "V3",
+      "versions": ["V1", "V2", "V3"],
+      "supportedReadVersions": ["V1", "V2", "V3"],
+      "supportedDowngradeVersions": []
+    },
+    {
+      "id": "codex-execpolicy-project-accepted-state",
+      "implementation": {
+        "workspace": "ponytail",
+        "module": "cli/condense_codex_rules.sh",
+        "readerRegistryExport": "CodexExecpolicyProjectAcceptedStateReaders"
+      },
+      "currentVersion": "V1",
+      "versions": ["V1"],
+      "supportedReadVersions": ["V1"],
       "supportedDowngradeVersions": []
     },
     {

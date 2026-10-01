@@ -3,7 +3,7 @@ set -euo pipefail
 
 # Copyright (c) 2026 Alex Baretta. All rights reserved.
 # Licensed under the MIT License. See LICENSE in the project root.
-# Traceability: implements REQ-CODEX-EXECPOLICY-PROJECT-ISOLATION
+# Traceability: implements REQ-PONYTAIL-PROJECT-ISOLATION
 
 main() {
   local python_source=''
@@ -242,70 +242,68 @@ def validate_rules(value, label):
             fail(f"{label}[{index}].sources must contain sorted unique strings")
 
 
-def read_state_v1(value, path):
+def selected_legacy_rules(value, project_root, label):
+    if not isinstance(value, list):
+        fail(f"{label} must be an array")
+    source = f"project:{project_root}"
+    selected = []
+    for item in value:
+        if not isinstance(item, dict) or not isinstance(item.get("sources"), list) or source not in item["sources"]:
+            continue
+        candidate = {**item, "sources": [source]}
+        validate_rules([candidate], label)
+        selected.append(candidate)
+    return normalize(selected)
+
+
+def read_state_v1(value, path, project_root):
     exact_keys(value, {"schemaVersion", "projects", "projectDigests", "importedRules", "acceptedRules", "proposalDigest"}, str(path))
     if value["schemaVersion"] != 1:
         fail(f"invalid V1 accepted state: {path}")
-    if not isinstance(value["projects"], list) or any(not isinstance(item, str) or not item for item in value["projects"]) or value["projects"] != sorted(set(value["projects"])):
-        fail("state.projects must be sorted unique absolute paths")
-    if not isinstance(value["projectDigests"], dict) or set(value["projectDigests"]) != set(value["projects"]):
-        fail("state.projectDigests must exactly cover registered projects")
-    validate_digest(value["proposalDigest"], "state.proposalDigest")
-    for project, digest in value["projectDigests"].items():
-        if not Path(project).is_absolute():
-            fail("state.projects must contain absolute paths")
-        validate_digest(digest, f"state.projectDigests[{project}]")
     validate_rules(value["importedRules"], "state.importedRules")
-    validate_rules(value["acceptedRules"], "state.acceptedRules")
-    project_sources = {f"project:{project}" for project in value["projects"]}
-    legacy_rules = []
-    for accepted_rule in value["acceptedRules"]:
-        sources = sorted(set(accepted_rule["sources"]) & project_sources)
-        if sources:
-            legacy_rules.append({**accepted_rule, "sources": sources})
-    return {
-        "schemaVersion": 2,
-        "projectPolicies": {},
-        "legacyProjectDigests": value["projectDigests"],
-        "legacyRules": normalize(legacy_rules),
-        "importedRules": value["importedRules"],
-        "acceptedRules": value["acceptedRules"],
-        "proposalDigest": value["proposalDigest"],
-    }
+    legacy_rules = selected_legacy_rules(value["acceptedRules"], project_root, "state.acceptedRules")
+    return {"schemaVersion": 1, "projectPolicies": {}, "legacyRules": legacy_rules,
+            "importedRules": value["importedRules"], "acceptedRules": value["acceptedRules"]}
 
 
-def read_state_v2(value, path):
+def read_state_v2(value, path, project_root):
     exact_keys(value, {"schemaVersion", "projectPolicies", "legacyProjectDigests", "legacyRules", "importedRules", "acceptedRules", "proposalDigest"}, str(path))
     if value["schemaVersion"] != 2:
         fail(f"invalid V2 accepted state: {path}")
-    validate_digest(value["proposalDigest"], "state.proposalDigest")
     if not isinstance(value["projectPolicies"], dict):
         fail("state.projectPolicies must be an object")
-    for project, policy in value["projectPolicies"].items():
-        if not isinstance(project, str) or not Path(project).is_absolute():
-            fail("state.projectPolicies keys must be absolute paths")
-        exact_keys(policy, {"digest", "rules"}, f"state.projectPolicies[{project}]")
-        validate_digest(policy["digest"], f"state.projectPolicies[{project}].digest")
-        validate_rules(policy["rules"], f"state.projectPolicies[{project}].rules")
-        if any(rule_value["sources"] != [f"project:{project}"] for rule_value in policy["rules"]):
-            fail(f"state.projectPolicies[{project}].rules must have the canonical project source")
-    if not isinstance(value["legacyProjectDigests"], dict):
-        fail("state.legacyProjectDigests must be an object")
-    for project, digest in value["legacyProjectDigests"].items():
-        if not isinstance(project, str) or not Path(project).is_absolute():
-            fail("state.legacyProjectDigests keys must be absolute paths")
-        validate_digest(digest, f"state.legacyProjectDigests[{project}]")
-    if set(value["projectPolicies"]) & set(value["legacyProjectDigests"]):
-        fail("state project snapshots and legacy digests must not overlap")
-    for collection in ("legacyRules", "importedRules", "acceptedRules"):
-        validate_rules(value[collection], f"state.{collection}")
+    selected_policies = {}
+    policy = value["projectPolicies"].get(project_root)
+    if policy is not None:
+        exact_keys(policy, {"digest", "rules"}, f"state.projectPolicies[{project_root}]")
+        validate_digest(policy["digest"], f"state.projectPolicies[{project_root}].digest")
+        validate_rules(policy["rules"], f"state.projectPolicies[{project_root}].rules")
+        if any(rule_value["sources"] != [f"project:{project_root}"] for rule_value in policy["rules"]):
+            fail(f"state.projectPolicies[{project_root}].rules must have the canonical project source")
+        selected_policies[project_root] = policy
+    validate_rules(value["importedRules"], "state.importedRules")
+    legacy_rules = selected_legacy_rules(value["legacyRules"], project_root, "state.legacyRules")
+    return {"schemaVersion": 2, "projectPolicies": selected_policies,
+            "legacyRules": legacy_rules, "importedRules": value["importedRules"],
+            "acceptedRules": value["acceptedRules"]}
+
+
+def read_state_v3(value, path, project_root):
+    exact_keys(value, {"schemaVersion", "importedRules", "acceptedRules", "proposalDigest"}, str(path))
+    if value["schemaVersion"] != 3:
+        fail(f"invalid V3 accepted state: {path}")
+    validate_digest(value["proposalDigest"], "state.proposalDigest")
+    validate_rules(value["importedRules"], "state.importedRules")
+    validate_rules(value["acceptedRules"], "state.acceptedRules")
+    if any(source.startswith("project:") for item in value["acceptedRules"] for source in item["sources"]):
+        fail("V3 accepted state must not contain project rules")
     return value
 
 
-CodexExecpolicyAcceptedStateReaders = {1: read_state_v1, 2: read_state_v2}
+CodexExecpolicyAcceptedStateReaders = {1: read_state_v1, 2: read_state_v2, 3: read_state_v3}
 
 
-def read_state(path):
+def read_state(path, project_root):
     if not path.exists():
         return None
     if path_has_symlink(path) or not path.is_file():
@@ -316,24 +314,76 @@ def read_state(path):
     reader = CodexExecpolicyAcceptedStateReaders.get(value.get("schemaVersion"))
     if reader is None:
         fail(f"unsupported accepted state schemaVersion: {value.get('schemaVersion')}")
-    return reader(value, path)
+    return reader(value, path, project_root)
 
 
-def state_text(project_policies, legacy_project_digests, legacy_rules, imported, accepted, digest):
+def state_text(imported, accepted, digest):
     return json.dumps({
-        "schemaVersion": 2,
-        "projectPolicies": project_policies,
-        "legacyProjectDigests": legacy_project_digests,
-        "legacyRules": legacy_rules,
+        "schemaVersion": 3,
         "importedRules": imported,
         "acceptedRules": accepted,
         "proposalDigest": digest,
     }, indent=2, sort_keys=True) + "\n"
 
 
-def digest_for(project_policies, legacy_project_digests, legacy_rules, imported, accepted):
-    values = [project_policies, legacy_project_digests, legacy_rules, imported, accepted]
+def digest_for(*values):
     return hashlib.sha256(json.dumps(values, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+
+
+def project_state_text(project_root, proposal_digest, accepted_rules):
+    return json.dumps({"schemaVersion": 1, "projectRoot": project_root,
+                       "proposalDigest": proposal_digest, "acceptedRules": accepted_rules},
+                      indent=2, sort_keys=True) + "\n"
+
+
+def read_project_state_v1(value, path):
+    exact_keys(value, {"schemaVersion", "projectRoot", "proposalDigest", "acceptedRules"}, str(path))
+    if value["schemaVersion"] != 1 or not isinstance(value["projectRoot"], str) or not Path(value["projectRoot"]).is_absolute():
+        fail(f"invalid V1 project accepted state: {path}")
+    validate_digest(value["proposalDigest"], "project state.proposalDigest")
+    validate_rules(value["acceptedRules"], "project state.acceptedRules")
+    source = f"project:{value['projectRoot']}"
+    if any(item["sources"] != [source] for item in value["acceptedRules"]):
+        fail("project accepted rules must have only their canonical project source")
+    return value
+
+
+CodexExecpolicyProjectAcceptedStateReaders = {1: read_project_state_v1}
+
+
+def read_project_state(path):
+    if not path.exists():
+        return None
+    if path_has_symlink(path) or not path.is_file():
+        fail(f"project accepted state must be a regular non-symlink file: {path}")
+    value = json.loads(path.read_text(encoding="utf-8"))
+    reader = CodexExecpolicyProjectAcceptedStateReaders.get(value.get("schemaVersion")) if isinstance(value, dict) else None
+    if reader is None:
+        fail(f"unsupported project accepted state schemaVersion: {value.get('schemaVersion') if isinstance(value, dict) else None}")
+    return reader(value, path)
+
+
+def global_rules(rules):
+    values = []
+    for item in rules:
+        sources = [source for source in item["sources"] if not source.startswith("project:")]
+        if sources:
+            values.append({**item, "sources": sources})
+    return normalize(values)
+
+
+def migrated_project_rules(state, project_root):
+    if state is None or state.get("schemaVersion") == 3:
+        return []
+    policy = state.get("projectPolicies", {}).get(project_root)
+    if policy is not None:
+        return policy["rules"]
+    source = f"project:{project_root}"
+    values = []
+    for item in state.get("legacyRules", []):
+        if source in item["sources"]:
+            values.append({**item, "sources": [source]})
+    return normalize(values)
 
 
 def describe(value):
@@ -389,10 +439,9 @@ def run():
     parser.add_argument("--validate-project", metavar="ROOT", help="Validate a project proposal without reading or writing accepted policy")
     parser.add_argument("--home")
     parser.add_argument("--codex-home")
-    parser.add_argument("--project", action="append", default=[])
+    parser.add_argument("--project")
     parser.add_argument("--project-root")
     parser.add_argument("--accept", metavar="DIGEST")
-    parser.add_argument("--import-codex", action="store_true")
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--check", action="store_true")
     parser.add_argument("--restore", action="store_true")
@@ -400,10 +449,8 @@ def run():
     if arguments.validate_project:
         read_project(Path(arguments.validate_project))
         return 0
-    if len(arguments.project) > 1:
-        parser.error("at most one --project may be supplied")
-    if arguments.project_root and not arguments.project:
-        parser.error("--project-root requires --project")
+    if not arguments.project:
+        parser.error("--project is required")
     if sum((arguments.dry_run, arguments.check, arguments.restore)) > 1 or arguments.accept and (arguments.dry_run or arguments.check or arguments.restore):
         parser.error("incompatible mode options")
     home_value = arguments.home or os.environ.get("HOME")
@@ -417,47 +464,46 @@ def run():
         lock_name = hashlib.sha256(str(home).encode()).hexdigest()
         lock = open(Path(tempfile.gettempdir()) / f"ponytail-execpolicy-{lock_name}.lock", "a+", encoding="utf-8")
         fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
-        state = read_state(state_path)
+        project_path = Path(arguments.project).expanduser().resolve()
+        canonical_path = Path(arguments.project_root).expanduser().resolve() if arguments.project_root else project_path
+        project_root, project_digest, project_rules = read_project(project_path, canonical_path)
+        state = read_state(state_path, project_root)
+        project_state_path = home / ".ponytail/codex-execpolicy/projects" / f"{hashlib.sha256(project_root.encode()).hexdigest()}.json"
+        project_generated_path = project_path / ".codex/rules/ponytail.rules"
+        project_state = read_project_state(project_state_path)
         if arguments.restore:
-            if state is None:
-                fail(f"accepted state not found: {state_path}")
+            if state is None or state.get("schemaVersion") != 3:
+                fail("accepted global state requires isolated migration; run update-permissions")
+            if project_state is None or project_state["projectRoot"] != project_root:
+                fail(f"accepted project state not found: {project_state_path}")
             install(generated_path, state["acceptedRules"])
+            install(project_generated_path, project_state["acceptedRules"])
             return 0
 
         imported = state["importedRules"] if state else import_codex(codex_home, generated_path)
-        if arguments.import_codex:
-            imported = import_codex(codex_home, generated_path)
-        project_policies = dict(state["projectPolicies"]) if state else {}
-        legacy_project_digests = dict(state["legacyProjectDigests"]) if state else {}
-        legacy_rules = list(state["legacyRules"]) if state else []
-        if arguments.project:
-            project_path = Path(arguments.project[0])
-            canonical_path = Path(arguments.project_root) if arguments.project_root else project_path
-            project_root, project_digest, local_project_rules = read_project(project_path, canonical_path)
-            project_source = f"project:{project_root}"
-            legacy_project_digests.pop(project_root, None)
-            retained_legacy_rules = []
-            for legacy_rule in legacy_rules:
-                sources = [source for source in legacy_rule["sources"] if source != project_source]
-                if sources:
-                    retained_legacy_rules.append({**legacy_rule, "sources": sources})
-            legacy_rules = normalize(retained_legacy_rules)
-            project_policies[project_root] = {"digest": project_digest, "rules": local_project_rules}
-        project_rules = [rule_value for project in sorted(project_policies) for rule_value in project_policies[project]["rules"]]
-        candidate = normalize(baseline(home) + imported + legacy_rules + project_rules)
+        candidate = normalize(baseline(home) + global_rules(imported))
         validate_codex(candidate)
-        digest = digest_for(project_policies, legacy_project_digests, legacy_rules, imported, candidate)
-        previous = state["acceptedRules"] if state else []
-        changed = state is None or candidate != previous or project_policies != state["projectPolicies"] or legacy_project_digests != state["legacyProjectDigests"] or legacy_rules != state["legacyRules"] or imported != state["importedRules"]
+        validate_codex(project_rules)
+        global_digest = digest_for(imported, candidate)
+        digest = digest_for(global_digest, project_root, project_digest, project_rules)
+        previous_global = (state["acceptedRules"] if state and state.get("schemaVersion") == 3
+                           else normalize(baseline(home) + global_rules(imported)))
+        previous_project = project_state["acceptedRules"] if project_state else migrated_project_rules(state, project_root)
+        changed = (state is None or state.get("schemaVersion") != 3 or candidate != previous_global or
+                   (state.get("proposalDigest") != global_digest if state else True) or
+                   project_state is None or project_state["projectRoot"] != project_root or
+                   project_state["proposalDigest"] != project_digest or project_rules != previous_project)
         if arguments.check:
-            if state is None or changed:
+            if changed:
                 fail("current proposals do not match accepted state")
             if generated_path.is_symlink() or not generated_path.is_file() or generated_path.read_text(encoding="utf-8") != render(state["acceptedRules"]):
                 fail(f"installed Codex policy differs from accepted state: {generated_path}")
-            print("accepted state and installed Codex policy match")
+            if project_generated_path.is_symlink() or not project_generated_path.is_file() or project_generated_path.read_text(encoding="utf-8") != render(project_state["acceptedRules"]):
+                fail(f"installed project Codex policy differs from accepted state: {project_generated_path}")
+            print("accepted state and installed global and project Codex policies match")
             return 0
         if changed:
-            show_diff(previous, candidate, digest)
+            show_diff(normalize(previous_global + previous_project), normalize(candidate + project_rules), digest)
             if arguments.dry_run:
                 return 0
             if arguments.accept != digest:
@@ -467,13 +513,19 @@ def run():
                 if sys.stdin.readline().strip().lower() not in {"y", "yes"}:
                     print("policy unchanged", file=sys.stderr)
                     return 2
-            atomic_write(state_path, state_text(project_policies, legacy_project_digests, legacy_rules, imported, candidate, digest))
-            state = read_state(state_path)
+            global_changed = (state is None or state.get("schemaVersion") != 3 or candidate != previous_global or
+                              imported != state["importedRules"] or state.get("proposalDigest") != global_digest)
+            if global_changed:
+                atomic_write(state_path, state_text(imported, candidate, global_digest))
+            atomic_write(project_state_path, project_state_text(project_root, project_digest, project_rules))
+            state = read_state(state_path, project_root)
+            project_state = read_project_state(project_state_path)
             print(f"accepted policy state: {state_path}")
         elif arguments.dry_run:
             print("no policy changes")
             return 0
         install(generated_path, state["acceptedRules"])
+        install(project_generated_path, project_state["acceptedRules"])
         return 0
     except (OSError, ValueError, json.JSONDecodeError) as error:
         parser.error(str(error))

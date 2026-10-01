@@ -121,13 +121,12 @@ never removes entries. It prints the complete detected set, one bare component
 name per line in sorted order, so unwanted results can be passed directly to
 `ponytail unregister-component`.
 
-The invoking worktree's configuration supplies its dependencies and exceptions.
-For every other registered repository except the configured Ponytail source,
-QA reads identity only from the durable user-registry snapshot and never opens
-the foreign worktree. Ponytail and its components are always permitted because
-they provide the QA tooling itself. A legacy registration without a snapshot
-emits an actionable warning and contributes no foreign identity until it is
-refreshed; `ponytail validate --all` treats that condition as an error.
+The invoking worktree's configuration is the only project configuration read
+by ordinary QA. QA does not enumerate registered repositories or use their
+durable identity snapshots; registering, changing, blessing, removing, or
+breaking another project therefore cannot change local QA. Explicit inventory
+commands such as `ponytail validate --all`, and explicit target commands such
+as `ponytail register-dependency <project>`, may read the named broader scope.
 
 Package coordinates identify what another project's canonical package manager
 must declare to depend on this project. npm and pnpm share npm coordinates;
@@ -148,28 +147,22 @@ Supported declarations:
 | conda | environment YAML | Named dependencies and pip subsections |
 
 Unsupported declaration syntax fails explicitly. No network, installation,
-package-manager execution, lockfile traversal, or global environment lookup
-occurs. A registered project is permitted when its canonical name is listed in
-the invoking project's explicit `dependencies`, it has at least one matching
-direct package coordinate, or its repository URL identifies an actual indexed
-Git submodule. Permissions are directional. An explicit project dependency
-permits references to that project's canonical name, synonyms, components,
-package names, repository URLs, and registered path. A .gitmodules entry alone
-grants nothing. Relative submodule URLs resolve against the superproject origin.
+package-manager execution, lockfile traversal, foreign project lookup, or
+global environment lookup occurs. Dependency manifests and Git submodules are
+validated as local declarations; explicit dependency commands maintain local
+metadata but do not make ordinary QA load another project's identity.
 
 ## Search and exceptions
 
-Search refreshes the shared PostgreSQL trigram index and covers the effective
+Search refreshes the project's PostgreSQL trigram index and covers the effective
 current worktree: committed and modified tracked text plus untracked
 non-ignored text. It excludes deleted and binary content, ignored files,
 Gitlinks, `ponytail-journal.json`, and installed `.agents/skills/` copies. It
 searches file contents, not filenames. Foreign canonical names, synonyms,
 component names, package
-names, repository URLs, and registered paths are searched, except identities
-registered as components of the invoking project. Component ownership matches
-case-insensitively, like the reference scan. No recursion into dependency
-checkouts occurs. A missing registered checkout or its metadata is a
-configuration error, not a successful incomplete scan.
+names, repository URLs, and registered paths are searched only when they are
+declared by the invoking project's own configuration. No recursion into
+dependency checkouts or lookup in the user registry occurs.
 
 The exact `<!-- ponytail-plan-sprint` opening line in Markdown is recognized
 as required sprint protocol metadata. The metadata body and all other lines
@@ -193,15 +186,13 @@ An exact-file exception requires all four fields below:
 {"project":"Example Service","name":"EXS","path":"docs/example.md","reason":"This abbreviation denotes an unrelated standard here"}
 ```
 
-Exceptions grant only the named identifier in the exact file for that foreign
-project. Their own `project` and `name` declaration values are automatically
-recognized as exception metadata; reasons and other metadata remain scanned.
-Unused exceptions emit warnings. Prefer synthetic test identities over
-exceptions naming real downstream projects.
+Exceptions grant only the named identifier in the exact file for the locally
+declared reference identity. Unused exceptions emit warnings. Prefer synthetic
+test identities over exceptions naming real downstream projects.
 
-QA reports file, line, project, matched name, and registered-project coverage.
-It can detect only the identities in the local registry; it cannot prove that
-unregistered projects do not exist or recognize unnamed copied business logic.
+QA reports file, line, project, and matched name. It cannot infer project
+identities from the user registry, prove that undeclared projects do not exist,
+or recognize unnamed copied business logic.
 Ponytail neither provisions nor mandates CI/CD behavior.
 
 ## User registry contract

@@ -91,7 +91,7 @@ Requirement: [pm/requirements/campaign-orchestration.md](campaign-orchestration.
 - unit-test: verifies [tests/campaign-orchestration.test.js:7](../../tests/campaign-orchestration.test.js#L7)
 - integration-test: verifies [tests/campaign-census.test.js:615](../../tests/campaign-census.test.js#L615)
 - integration-test: verifies [tests/plan-input-hooks.test.js:88](../../tests/plan-input-hooks.test.js#L88)
-- integration-test: verifies [tests/project-validation.test.js:125](../../tests/project-validation.test.js#L125)
+- integration-test: verifies [tests/project-validation.test.js:126](../../tests/project-validation.test.js#L126)
 - uat: verifies [pm/uat/campaign-orchestration.md:12](../../pm/uat/campaign-orchestration.md#L12)
 - uat: verifies [pm/uat/campaign-orchestration.md:57](../../pm/uat/campaign-orchestration.md#L57)
 - uat: verifies [pm/uat/campaign-orchestration.md:95](../../pm/uat/campaign-orchestration.md#L95)
@@ -177,16 +177,18 @@ Requirement: [pm/requirements/precommit-project-isolation.md](precommit-project-
 - issue: plans-implementation [pm/bugs/closed/2026-09-29-BUG-precommit_cross_project_coupling.md:22](../../pm/bugs/closed/2026-09-29-BUG-precommit_cross_project_coupling.md#L22)
 - issue: plans-verification [pm/bugs/closed/2026-09-29-BUG-precommit_cross_project_coupling.md:23](../../pm/bugs/closed/2026-09-29-BUG-precommit_cross_project_coupling.md#L23)
 
-## REQ-CODEX-EXECPOLICY-PROJECT-ISOLATION
+## REQ-PONYTAIL-PROJECT-ISOLATION
 
-Requirement: [pm/requirements/codex-execpolicy-project-isolation.md](codex-execpolicy-project-isolation.md)
+Requirement: [pm/requirements/project-isolation.md](project-isolation.md)
 
 - implementation: implements [cli/condense_codex_rules.sh:6](../../cli/condense_codex_rules.sh#L6)
 - implementation: implements [cli/ponytail:8](../../cli/ponytail#L8)
+- implementation: implements [scripts/project-qa.js:17](../../scripts/project-qa.js#L17)
 - unit-test: verifies [tests/ponytail-cli.test.js:15](../../tests/ponytail-cli.test.js#L15)
 - integration-test: verifies [tests/condense-codex-rules.test.js:4](../../tests/condense-codex-rules.test.js#L4)
-- uat: verifies [pm/uat/codex-execpolicy-project-isolation.md:11](../../pm/uat/codex-execpolicy-project-isolation.md#L11)
-- uat: verifies [pm/uat/codex-execpolicy-project-isolation.md:32](../../pm/uat/codex-execpolicy-project-isolation.md#L32)
+- integration-test: verifies [tests/project-validation.test.js:14](../../tests/project-validation.test.js#L14)
+- uat: verifies [pm/uat/project-isolation.md:11](../../pm/uat/project-isolation.md#L11)
+- uat: verifies [pm/uat/project-isolation.md:37](../../pm/uat/project-isolation.md#L37)
 - issue: introduces [pm/bugs/closed/2026-09-30-BUG-execpolicy_cross_project_coupling.md:13](../../pm/bugs/closed/2026-09-30-BUG-execpolicy_cross_project_coupling.md#L13)
 - issue: plans-implementation [pm/bugs/closed/2026-09-30-BUG-execpolicy_cross_project_coupling.md:14](../../pm/bugs/closed/2026-09-30-BUG-execpolicy_cross_project_coupling.md#L14)
 - issue: plans-verification [pm/bugs/closed/2026-09-30-BUG-execpolicy_cross_project_coupling.md:15](../../pm/bugs/closed/2026-09-30-BUG-execpolicy_cross_project_coupling.md#L15)
@@ -198,7 +200,7 @@ Requirement: [pm/requirements/developer-private-agent-instructions.md](developer
 - implementation: implements [cli/ponytail:7](../../cli/ponytail#L7)
 - implementation: supports [skills/ponytail/SKILL.md:24](../../skills/ponytail/SKILL.md#L24)
 - unit-test: verifies [tests/policy-conformance.test.js:59](../../tests/policy-conformance.test.js#L59)
-- integration-test: verifies [tests/project-validation.test.js:182](../../tests/project-validation.test.js#L182)
+- integration-test: verifies [tests/project-validation.test.js:183](../../tests/project-validation.test.js#L183)
 - uat: verifies [pm/uat/developer-private-agent-instructions.md:13](../../pm/uat/developer-private-agent-instructions.md#L13)
 - issue: introduces [pm/bugs/closed/2026-09-30-FEAT-developer_private_agent_instructions.md:20](../../pm/bugs/closed/2026-09-30-FEAT-developer_private_agent_instructions.md#L20)
 - issue: plans-implementation [pm/bugs/closed/2026-09-30-FEAT-developer_private_agent_instructions.md:21](../../pm/bugs/closed/2026-09-30-FEAT-developer_private_agent_instructions.md#L21)

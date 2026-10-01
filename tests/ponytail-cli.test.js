@@ -12,7 +12,7 @@ const test = require('node:test');
 const { Pool } = require('pg');
 const { databaseOptions } = require('../src/project-index');
 // Traceability: verifies REQ-PRECOMMIT-PROJECT-ISOLATION
-// Traceability: verifies REQ-CODEX-EXECPOLICY-PROJECT-ISOLATION
+// Traceability: verifies REQ-PONYTAIL-PROJECT-ISOLATION
 
 const root = path.join(__dirname, '..');
 const ponytail = path.join(root, 'cli', 'ponytail');
@@ -269,7 +269,7 @@ test('register rejects a symlinked policy and malformed user configuration', () 
   assert.match(result.stderr, /invalid V1 Ponytail configuration/);
 });
 
-test('update-permissions reads only the invoking project and preserves accepted foreign snapshots', () => {
+test('update-permissions isolates every project policy from every other project', () => {
   const home = temporaryDirectory('ponytail-home');
   const first = project({
     safe: [{ pattern: ['./scripts/first.sh'], justification: 'Run first project command' }],
@@ -283,17 +283,22 @@ test('update-permissions reads only the invoking project and preserves accepted 
   let result = run(home, 'update-permissions', [], { cwd: second, input: 'yes\n' });
   assert.equal(result.status, 0, result.stderr);
   let state = JSON.parse(fs.readFileSync(path.join(home, '.ponytail/codex-execpolicy/state.json'), 'utf8'));
-  assert.equal(state.schemaVersion, 2);
-  assert.deepEqual(Object.keys(state.projectPolicies), [fs.realpathSync(second)]);
+  assert.equal(state.schemaVersion, 3);
+  assert.ok(state.acceptedRules.every(({ sources }) => sources.every((source) => !source.startsWith('project:'))));
+  const secondRulesPath = path.join(second, '.codex/rules/ponytail.rules');
+  const secondRules = fs.readFileSync(secondRulesPath, 'utf8');
+  assert.match(secondRules, /second\.sh/);
 
   fs.writeFileSync(path.join(second, '.agents/config/ponytail.json'), '{"foreign":"draft"}\n');
   result = run(home, 'update-permissions', [], { cwd: first, input: 'yes\n' });
   assert.equal(result.status, 0, result.stderr);
   assert.doesNotMatch(result.stderr, new RegExp(second.replaceAll('/', '\\/')));
   state = JSON.parse(fs.readFileSync(path.join(home, '.ponytail/codex-execpolicy/state.json'), 'utf8'));
-  assert.deepEqual(Object.keys(state.projectPolicies), [fs.realpathSync(first), fs.realpathSync(second)].sort());
-  assert.ok(state.acceptedRules.some(({ pattern }) => pattern[0] === './scripts/first.sh'));
-  assert.ok(state.acceptedRules.some(({ pattern }) => pattern[0] === './scripts/second.sh'));
+  assert.ok(state.acceptedRules.every(({ pattern }) => !['./scripts/first.sh', './scripts/second.sh'].includes(pattern[0])));
+  const firstRules = fs.readFileSync(path.join(first, '.codex/rules/ponytail.rules'), 'utf8');
+  assert.match(firstRules, /first\.sh/);
+  assert.doesNotMatch(firstRules, /second\.sh/);
+  assert.equal(fs.readFileSync(secondRulesPath, 'utf8'), secondRules);
 
   result = run(home, 'update-permissions', [], { cwd: first });
   assert.equal(result.status, 0, result.stderr);
@@ -317,8 +322,9 @@ test('update-permissions reads policy from the invoking worktree instead of the 
   const result = run(home, 'update-permissions', [], { cwd: candidate, input: 'yes\n' });
   assert.equal(result.status, 0, result.stderr);
   const state = JSON.parse(fs.readFileSync(path.join(home, '.ponytail/codex-execpolicy/state.json')));
-  assert.deepEqual(Object.keys(state.projectPolicies), [fs.realpathSync(main)]);
-  assert.ok(state.acceptedRules.some(({ pattern }) => pattern[0] === './scripts/candidate.sh'));
+  assert.equal(state.schemaVersion, 3);
+  assert.ok(state.acceptedRules.every(({ pattern }) => pattern[0] !== './scripts/candidate.sh'));
+  assert.match(fs.readFileSync(path.join(candidate, '.codex/rules/ponytail.rules'), 'utf8'), /candidate\.sh/);
 });
 
 test('CLI installer links the checkout and the installed command updates skills', () => {
@@ -360,6 +366,7 @@ test('update refreshes Codex skills and permissions without installing the CLI',
   assert.equal(result.status, 0, result.stderr);
   assert.ok(fs.existsSync(path.join(codexHome, 'skills/ponytail/SKILL.md')));
   assert.ok(fs.existsSync(path.join(home, '.codex/rules/ponytail.rules')));
+  assert.ok(fs.existsSync(path.join(registeredProject, '.codex/rules/ponytail.rules')));
   assert.ok(fs.existsSync(path.join(home, '.ponytail/codex-execpolicy/state.json')));
   assert.ok(!fs.existsSync(path.join(home, '.local/bin/ponytail')));
 });
