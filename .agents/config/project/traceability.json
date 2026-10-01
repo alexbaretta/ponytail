@@ -449,6 +449,11 @@
       "locator": "text"
     },
     {
+      "class": "issue",
+      "path": "pm/bugs/in_progress/2026-10-01-BUG-pre_attachment_checkout_recovery.md",
+      "locator": "text"
+    },
+    {
       "class": "implementation",
       "path": "skills/ponytail/SKILL.md",
       "locator": "text"

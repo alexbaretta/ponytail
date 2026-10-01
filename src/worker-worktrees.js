@@ -53,19 +53,19 @@ function recoverCheckout(binding) {
   if (!fs.lstatSync(ancestor).isDirectory() || fs.realpathSync(ancestor) !== ancestor) {
     throw new Error('worker recovery target ancestor is not the recorded canonical directory');
   }
-  const checkpoint = git(mainWorktree, ['rev-parse', '--verify', `refs/heads/${branch}^{commit}`]).trim();
+  const checkpoint = git(mainWorktree, ['rev-parse', '--verify', branch === null ? `${revision}^{commit}` : `refs/heads/${branch}^{commit}`]).trim();
   git(mainWorktree, ['merge-base', '--is-ancestor', revision, checkpoint]);
   const records = worktrees(mainWorktree);
   const record = records.find(item => item.worktree === worktree);
-  if (records.some(item => item.worktree !== worktree && item.branch === `refs/heads/${branch}`)
-    || record?.locked || (record && record.branch !== `refs/heads/${branch}`)) {
+  if ((branch !== null && records.some(item => item.worktree !== worktree && item.branch === `refs/heads/${branch}`))
+    || record?.locked || (record && (branch === null ? !record.detached || record.HEAD !== checkpoint : record.branch !== `refs/heads/${branch}`))) {
     throw new Error('worker recovery branch or registration is owned elsewhere, changed, or locked');
   }
   const existing = fs.lstatSync(worktree, { throwIfNoEntry: false });
   if (existing) {
     if (!existing.isDirectory() || existing.isSymbolicLink() || fs.realpathSync(worktree) !== worktree
       || commonDirectory(worktree) !== mainGitDirectory
-      || git(worktree, ['branch', '--show-current']).trim() !== branch || !record) {
+      || git(worktree, ['branch', '--show-current']).trim() !== (branch ?? '') || !record) {
       throw new Error('worker recovery target already exists with incompatible ownership');
     }
   } else {
@@ -73,14 +73,14 @@ function recoverCheckout(binding) {
     if (fs.realpathSync(path.dirname(worktree)) !== path.dirname(worktree)) throw new Error('worker recovery target parent changed');
     // Git permits reclaiming this exact missing, unlocked registration with one
     // --force. Never prune other registrations or force a branch in use elsewhere.
-    git(mainWorktree, ['worktree', 'add', ...(record ? ['--force'] : []), '--', worktree, branch]);
+    git(mainWorktree, ['worktree', 'add', ...(record ? ['--force'] : []), ...(branch === null ? ['--detach'] : []), '--', worktree, branch ?? checkpoint]);
   }
   if (commonDirectory(worktree) !== mainGitDirectory
-    || git(worktree, ['branch', '--show-current']).trim() !== branch
+    || git(worktree, ['branch', '--show-current']).trim() !== (branch ?? '')
     || git(worktree, ['rev-parse', 'HEAD']).trim() !== checkpoint) {
     throw new Error('worker recovery postcondition failed; preserve the checkout for inspection');
   }
-  return { schemaVersion: 1, sessionId: binding.sessionId, worktree, branch, revision: checkpoint,
+  return { schemaVersion: 2, sessionId: binding.sessionId, worktree, branch, revision: checkpoint,
     mainWorktree, restored: !existing, content: 'COMMITTED_STATE' };
 }
 
@@ -127,7 +127,7 @@ function recoverLegacyCheckout(binding, originalWorktree, originalRevision, sour
     || git(worktree, ['rev-parse', 'HEAD']).trim() !== checkpoint) {
     throw new Error('legacy recovery transfer postcondition failed; preserve both checkouts for inspection');
   }
-  return { schemaVersion: 1, sessionId: binding.sessionId, worktree: originalWorktree, branch,
+  return { schemaVersion: 2, sessionId: binding.sessionId, worktree: originalWorktree, branch,
     revision: checkpoint, mainWorktree, restored: false, content: 'COMMITTED_STATE' };
 }
 
@@ -142,14 +142,24 @@ function readWorkerRecoveryV1(value) {
   return { ...value };
 }
 
-const WorkerRecoveryReaders = Object.freeze({ V1: readWorkerRecoveryV1 });
+function readWorkerRecoveryV2(value) {
+  const keys = ['schemaVersion', 'sessionId', 'worktree', 'branch', 'revision', 'mainWorktree', 'restored', 'content'];
+  if (!value || typeof value !== 'object' || Array.isArray(value)
+    || Object.keys(value).length !== keys.length || keys.some(key => !Object.hasOwn(value, key))
+    || value.schemaVersion !== 2 || value.content !== 'COMMITTED_STATE' || typeof value.restored !== 'boolean'
+    || ['sessionId', 'worktree', 'revision', 'mainWorktree'].some(key => typeof value[key] !== 'string' || !value[key])
+    || (value.branch !== null && (typeof value.branch !== 'string' || !value.branch))) throw new Error('invalid worker recovery V2 result');
+  return { ...value };
+}
+
+const WorkerRecoveryReaders = Object.freeze({ V1: readWorkerRecoveryV1, V2: readWorkerRecoveryV2 });
 module.exports = { recoverySource, recoverCheckout, recoverLegacyCheckout, WorkerRecoveryReaders };
 
 if (require.main === module) {
   try {
     if (process.argv.length !== 3) throw new Error('usage: ponytail worktree recover <attachment-token>');
     const { recoverWorker } = require('./campaign-orchestration');
-    process.stdout.write(`${JSON.stringify(readWorkerRecoveryV1(recoverWorker(process.env, process.argv[2])))}\n`);
+    process.stdout.write(`${JSON.stringify(readWorkerRecoveryV2(recoverWorker(process.env, process.argv[2])))}\n`);
   } catch (error) {
     process.stderr.write(`error: ${error.message}\n`);
     process.exitCode = 1;

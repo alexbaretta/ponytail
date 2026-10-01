@@ -808,6 +808,22 @@ chat. Retention is the default; plan closure is not retirement authority.
 
 Traceability: supports REQ-WORKER-WORKTREE-RETENTION
 
+An original native worker may need recovery before its first adoption and
+authenticated attachment. First correlate its ready session and exact native
+cwd with the original started creation, and include that supported identity
+and managed-worktree provenance in a fresh complete host observation. Record
+`ponytail campaign action-result <campaign> <original-action-id> --result
+'{"ok":true,"disposition":"PROVISIONED","sessionId":"<original-ready-session>","worktree":"<original-cwd>"}'`.
+This enrolls bootstrap recovery authority only: it does not authenticate an
+attachment, complete creation, or replace its client receipt, action,
+assignment, or token. Never infer identity from a partial inventory or start
+another creation. The same worker can then recover its original detached
+dispatch checkpoint from a neutral cwd, immediately adopt it before setup,
+establish its canonical assignment branch, and use the original attach token.
+Record ordinary creation success only after authenticated attachment. Once
+enrolled, capability-owned recovery does not require a fresh observation or a
+coordinator reminder.
+
 Every authenticated worker receives its owning top-level project, original
 checkout path, preserved branch, main-worktree path, and attachment recovery
 capability. Prompt hooks re-emit that durable context after interruption or

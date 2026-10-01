@@ -147,3 +147,31 @@ reported a provider worker's restored checkout disappeared again; the same
 session recovered and re-adopted it, but the native cleanup cause is unknown.
 This demonstrates repeatable reconstruction, not a Ponytail-controlled host
 retention guarantee.
+
+### Pre-attachment recovery Arc
+
+1. Start one native managed-worktree creation and retain its original client
+   receipt, action, assignment, and attach token. Correlate its ready session
+   and exact native cwd through supported host evidence.
+2. Remove the fixture checkout before adoption or authenticated attachment.
+   Record a fresh complete observation and the original action's `PROVISIONED`
+   result. Assignment state remains pending; no attachment is claimed.
+3. Expire the observation. The same worker recovers from a neutral cwd using
+   its original token. Verify the original path is detached at the dispatch
+   checkpoint, with unchanged ledger and client/action identities.
+4. Adopt immediately before setup, establish the canonical assignment branch,
+   and authenticate the original attachment. Only then record creation success.
+5. Reject unknown sessions, coordinator paths, mismatched native paths, stale
+   enrollment evidence, and another worker's recovery capability without
+   mutating persistent ownership.
+
+Automated real-Git regression: `tests/worker-worktrees.test.js`,
+`provisioned original worker recovers before adoption and attachment without
+replacing its started creation`. Live GWEN acceptance remains pending for
+the original effect-disposition and gate-race workers; automated reconstruction
+is not evidence of native chat continuity or product tasklet completion.
+
+The repaired focused scheduler/recovery/hook suite passes 71 tests. Final core
+acceptance passes 506 core tests, installer and bundled suites, 80 TSTS tests,
+584-file structural validation, and 221 traceability relationships. Build-impact
+reports no affected or indeterminate targets.

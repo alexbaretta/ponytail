@@ -749,7 +749,7 @@ function attachmentForToken(environment, attachToken) {
       matches.push({ ledger, assignment });
     }
   }
-  if (matches.length !== 1) fail('CAMPAIGN_ATTACH_TOKEN', matches.length === 0 ? 'attach token is unknown, stale, or already used' : 'attach token is ambiguous');
+  if (matches.length !== 1) fail('CAMPAIGN_ATTACH_TOKEN', matches.length === 0 ? 'attach token is unknown, stale, or already used (attachment capability unavailable)' : 'attach token capability is ambiguous');
   return matches[0];
 }
 
@@ -757,6 +757,8 @@ function bindWorker(environment, invocationWorktree, attachToken, sessionId) {
   if (typeof attachToken !== 'string' || !attachToken || typeof sessionId !== 'string' || !sessionId) fail('CAMPAIGN_ATTACH_INPUT', 'attach requires a token and host session identity');
   const canonicalWorktree = fs.realpathSync(invocationWorktree);
   const { ledger, assignment } = attachmentForToken(environment, attachToken);
+  const bootstrap = ledger.pendingActions.find(item => item.assignmentId === assignment.id)?.payload.bootstrap;
+  if (bootstrap && (readWorkerBootstrapV1(bootstrap).sessionId !== sessionId || bootstrap.worktree !== canonicalWorktree)) fail('CAMPAIGN_WORKER_SCOPE', 'attach must retain the original provisioned session and checkout');
   if (!fs.existsSync(ledger.topLevelWorktree)) fail('CAMPAIGN_WORKER_OWNER_MISSING', `owning worktree is unavailable: ${ledger.topLevelWorktree}`);
   if (canonicalWorktree === ledger.topLevelWorktree) fail('CAMPAIGN_WORKER_SCOPE', 'a coordinator worktree cannot attach as its own worker');
   const identity = repositoryIdentity(canonicalWorktree);
@@ -831,8 +833,29 @@ function workerRecoveryBinding(environment, token, sessionId = null) {
   if (typeof token !== 'string' || !token) fail('CAMPAIGN_WORKER_RECOVERY', 'worker recovery requires its attachment capability');
   const hash = crypto.createHash('sha256').update(token).digest('hex');
   const binding = readWorkerBindings(environment).bindings.find(item => item.attachTokenHash === hash);
+  if (!binding) {
+    const { ledger, assignment } = attachmentForToken(environment, token);
+    const pending = ledger.pendingActions.find(item => item.assignmentId === assignment.id && item.type === 'CREATE_WORKER');
+    const bootstrap = pending?.payload.bootstrap && readWorkerBootstrapV1(pending.payload.bootstrap);
+    if (!bootstrap || pending.payload.dispatch?.state !== 'STARTED' || bootstrap.revision !== assignment.dispatchRevision
+      || (sessionId !== null && bootstrap.sessionId !== sessionId)) fail('CAMPAIGN_WORKER_RECOVERY', 'recovery capability does not belong to this authenticated worker');
+    return { ...bootstrap, repositoryRoot: ledger.topLevelWorktree, campaignId: ledger.campaignId, assignmentId: assignment.id,
+      coordinatorSessionId: ledger.coordinatorSessionId, attachTokenHash: hash, branch: null };
+  }
   if (!binding || (sessionId !== null && binding.sessionId !== sessionId)) fail('CAMPAIGN_WORKER_RECOVERY', 'recovery capability does not belong to this authenticated worker');
   return binding;
+}
+
+function readWorkerBootstrapV1(value) {
+  exactKeys(value, ['schemaVersion', 'sessionId', 'worktree', 'revision', 'mainWorktree', 'mainGitDirectory'], 'worker bootstrap');
+  if (value.schemaVersion !== 1) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', 'unsupported worker bootstrap version');
+  for (const key of ['sessionId', 'worktree', 'revision', 'mainWorktree', 'mainGitDirectory']) {
+    if (typeof value[key] !== 'string' || !value[key]) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', `worker bootstrap ${key} must be nonempty`);
+  }
+  for (const key of ['worktree', 'mainWorktree', 'mainGitDirectory']) {
+    if (!path.isAbsolute(value[key]) || path.resolve(value[key]) !== value[key]) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', `worker bootstrap ${key} must be an absolute normalized path`);
+  }
+  return value;
 }
 
 function legacyRecoveryTarget(binding, assignment, ledger, environment) {
@@ -865,7 +888,25 @@ function legacyRecoveryTarget(binding, assignment, ledger, environment) {
 function workerRecoveryContextDetails(environment, sessionId) {
   if (typeof sessionId !== 'string' || !sessionId) return null;
   const binding = readWorkerBindings(environment).bindings.find(item => item.sessionId === sessionId);
-  if (!binding) return null;
+  if (!binding) {
+    const bootstraps = [];
+    for (const file of ledgerFiles(environment)) {
+      if (file.endsWith('.host-observation.json') || file.endsWith('.worker-deliveries.json')) continue;
+      let value;
+      try { value = JSON.parse(fs.readFileSync(file, 'utf8')); } catch { continue; }
+      if (!Array.isArray(value?.pendingActions) || !value.pendingActions.some(item => item?.payload?.bootstrap?.sessionId === sessionId)) continue;
+      const ledger = readCurrentLedger(value, file);
+      for (const pending of ledger.pendingActions.filter(item => item.type === 'CREATE_WORKER' && item.payload.bootstrap?.sessionId === sessionId)) {
+        const assignment = ledger.assignments.find(item => item.id === pending.assignmentId);
+        if (!assignment) fail('CAMPAIGN_WORKER_RECOVERY', 'bootstrap assignment is unavailable');
+        bootstraps.push({ assignment, binding: workerRecoveryBinding(environment, assignment.attachToken, sessionId) });
+      }
+    }
+    if (bootstraps.length > 1) fail('CAMPAIGN_WORKER_RECOVERY', 'bootstrap worker ownership is ambiguous');
+    if (bootstraps.length === 0) return null;
+    const bootstrap = bootstraps[0];
+    return { legacy: false, context: `Provisioned original worker ${sessionId}: owning project ${bootstrap.binding.repositoryRoot}; original checkout ${bootstrap.binding.worktree}; main worktree ${bootstrap.binding.mainWorktree}; dispatch checkpoint ${bootstrap.binding.revision}. Your original creation is still pending attachment. If the checkout is missing, run ponytail worktree recover ${bootstrap.assignment.attachToken} from an existing neutral cwd. Immediately run canonical project adoption before setup, establish the project-owned branch, then ponytail campaign attach ${bootstrap.assignment.attachToken}. Preserve this session, original creation action, and capability; do not create a replacement. Recovery restores the original detached committed checkpoint only; preserve native snapshots.` };
+  }
   const ledger = readLedger(binding.repositoryRoot, binding.campaignId, environment);
   const assignment = ledger.assignments.find(({ id }) => id === binding.assignmentId);
   if (!assignment) fail('CAMPAIGN_WORKER_RECOVERY', 'worker has no durable assignment recovery capability');
@@ -889,6 +930,11 @@ function workerRecoveryContext(environment, sessionId) {
 
 function recoverWorker(environment, token) {
   let binding = workerRecoveryBinding(environment, token);
+  if (binding.branch === null) {
+    return withWorktreeLock(binding.repositoryRoot, environment, () => withLedgerLock(binding.repositoryRoot, binding.campaignId, environment, () => (
+      recoverCheckout(workerRecoveryBinding(environment, token, binding.sessionId))
+    )));
+  }
   // Legacy bindings explicitly enroll a source at their first capability-owned
   // recovery. Historical readers never invent provenance or mutate old records.
   if (!binding.mainWorktree) {
@@ -1674,6 +1720,16 @@ function recordActionResult(ledger, actionId, result, graph = null) {
   if (!pendingAction) fail('CAMPAIGN_ACTION_MISMATCH', `pending action does not match ${actionId}`);
   const assignment = ledger.assignments.find((item) => item.id === pendingAction.assignmentId);
   if (!assignment) fail('CAMPAIGN_ACTION_ASSIGNMENT', `action ${actionId} references a missing assignment`);
+  if (result?.disposition === 'PROVISIONED') {
+    exactKeys(result, ['ok', 'disposition', 'sessionId', 'worktree'], 'provisioned action result');
+    if (result.ok !== true || pendingAction.type !== 'CREATE_WORKER' || pendingAction.payload.dispatch?.state !== 'STARTED'
+      || assignment.state !== 'DISPATCH_PENDING') fail('CAMPAIGN_ACTION_RESULT', 'PROVISIONED requires the original started creation pending attachment');
+    const bootstrap = readWorkerBootstrapV1({ schemaVersion: 1, sessionId: result.sessionId, worktree: result.worktree,
+      revision: assignment.dispatchRevision, ...recoverySource(ledger.topLevelWorktree) });
+    if (pendingAction.payload.bootstrap && JSON.stringify(readWorkerBootstrapV1(pendingAction.payload.bootstrap)) !== JSON.stringify(bootstrap)) fail('CAMPAIGN_ACTION_MISMATCH', 'original provisioned worker identity changed');
+    pendingAction.payload.bootstrap = bootstrap;
+    return assignment;
+  }
   if (result?.disposition === 'STARTED') {
     exactKeys(result, ['ok', 'disposition', 'hostIdentity'], 'started action result');
     if (result.ok !== true || !['CREATE_WORKER', 'REUSE_WORKER'].includes(pendingAction.type)
@@ -1746,6 +1802,28 @@ function recordActionResult(ledger, actionId, result, graph = null) {
 function validateActionResultBinding(ledger, actionId, result, environment) {
   const pendingAction = ledger.pendingActions.find(({ id }) => id === actionId);
   if (!pendingAction) return;
+  if (result?.disposition === 'PROVISIONED') {
+    exactKeys(result, ['ok', 'disposition', 'sessionId', 'worktree'], 'provisioned action result');
+    const assignment = ledger.assignments.find(item => item.id === pendingAction.assignmentId);
+    const observation = readHostObservation(ledger.topLevelWorktree, ledger.campaignId, environment);
+    const session = observation?.sessions.find(item => item.sessionId === result.sessionId);
+    if (result.ok !== true || pendingAction.type !== 'CREATE_WORKER' || pendingAction.payload.dispatch?.state !== 'STARTED'
+      || assignment?.state !== 'DISPATCH_PENDING' || typeof result.sessionId !== 'string' || !result.sessionId
+      || typeof result.worktree !== 'string' || !path.isAbsolute(result.worktree) || path.resolve(result.worktree) !== result.worktree
+      || result.worktree === ledger.topLevelWorktree || result.worktree === recoverySource(ledger.topLevelWorktree).mainWorktree
+      || !observation || !Number.isFinite(Date.parse(observation.observedAt)) || Date.now() - Date.parse(observation.observedAt) > HOST_OBSERVATION_MAX_AGE_MS
+      || !observation.completeSessionIds.includes(result.sessionId) || !session?.managedWorktree
+      || !['working', 'waiting', 'completed'].includes(session.state) || session.worktree !== result.worktree
+      || readWorkerBindings(environment).bindings.some(item => item.assignmentId !== assignment.id && (item.sessionId === result.sessionId || item.worktree === result.worktree))
+      || projectLedgers(ledger, environment).some(item => item.assignments.some(candidate => candidate.id !== assignment.id && candidate.state !== 'ARCHIVED'
+        && (candidate.sessionId === result.sessionId || candidate.worktree === result.worktree))
+        || item.pendingActions.some(candidate => candidate.assignmentId !== assignment.id && candidate.payload.bootstrap
+          && (candidate.payload.bootstrap.sessionId === result.sessionId || candidate.payload.bootstrap.worktree === result.worktree)))) {
+      fail('CAMPAIGN_WORKER_RECOVERY', 'fresh complete host evidence must identify the original unbound managed bootstrap');
+    }
+    if (pendingAction.payload.bootstrap && (pendingAction.payload.bootstrap.sessionId !== result.sessionId || pendingAction.payload.bootstrap.worktree !== result.worktree)) fail('CAMPAIGN_ACTION_MISMATCH', 'original provisioned worker identity changed');
+    return;
+  }
   if (['STARTED', 'NOT_STARTED'].includes(result?.disposition)) return;
   const binding = readWorkerBindings(environment).bindings.find((item) => item.assignmentId === pendingAction.assignmentId);
   if (pendingAction.type === 'ARCHIVE_WORKTREE') {
@@ -2037,6 +2115,7 @@ module.exports = {
   CampaignStatusReaders,
   CampaignWorkerBindingReaders,
   CampaignWorkerDeliveryReaders,
+  CampaignWorkerBootstrapReaders: Object.freeze({ V1: readWorkerBootstrapV1 }),
   advanceLedger,
   scheduleReadyPlans,
   readRunnablePlansV1,

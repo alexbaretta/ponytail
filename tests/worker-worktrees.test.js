@@ -10,7 +10,7 @@ const os = require('node:os');
 const path = require('node:path');
 const { spawn, spawnSync } = require('node:child_process');
 const test = require('node:test');
-const { advanceLedger, bindWorker, ledgerPath, newLedger, readLedger, readWorkerBindings, reconcile, readyActions, recordActionResult, recoverWorker, replaceRecoveredWorkerBinding, withLedgerLock, withWorktreeLock, workerRecoveryBinding, workerRecoveryContext, writeHostObservation } = require('../src/campaign-orchestration');
+const { advanceLedger, bindWorker, ledgerPath, newLedger, readLedger, readWorkerBindings, reconcile, readyActions, recordActionResult, recoverWorker, replaceRecoveredWorkerBinding, validateActionResultBinding, withLedgerLock, withWorktreeLock, workerRecoveryBinding, workerRecoveryContext, writeHostObservation } = require('../src/campaign-orchestration');
 const { handle } = require('../hooks/plan-input');
 const ponytail = path.join(__dirname, '..', 'cli', 'ponytail');
 
@@ -200,6 +200,73 @@ test('legacy replacement recovery returns the branch to the proven native checko
     assert.equal(readWorkerBindings(environment).bindings[0].worktree, worktree);
     assert.equal(recoverWorker(environment, token).worktree, worktree);
   });
+});
+
+test('provisioned original worker recovers before adoption and attachment without replacing its started creation', () => {
+  const root = repository();
+  const worktree = path.join(directory(), 'original-worker');
+  const environment = { ...process.env, PONYTAIL_CAMPAIGN_STATE_DIR: directory() };
+  const ledger = newLedger(root, 'campaign', 'coordinator');
+  const pending = advanceLedger(graph(), ledger);
+  recordActionResult(ledger, pending.id, { ok: true, disposition: 'STARTED', hostIdentity: 'original-client' }, graph());
+  git(root, ['worktree', 'add', '--detach', worktree, ledger.integrationRevision]);
+  git(root, ['worktree', 'remove', worktree]);
+  writeHostObservation(root, 'campaign', { schemaVersion: 1, campaignId: 'campaign', observedAt: new Date().toISOString(),
+    completeSessionIds: ['original-session'], sessions: [{ sessionId: 'original-session', state: 'waiting', worktree, managedWorktree: true }] }, environment);
+  const result = { ok: true, disposition: 'PROVISIONED', sessionId: 'original-session', worktree };
+  for (const invalid of [{ ...result, sessionId: 'unobserved' }, { ...result, worktree: root }, { ...result, worktree: `${worktree}-other` }]) {
+    assert.throws(() => validateActionResultBinding(ledger, pending.id, invalid, environment), /host evidence/);
+  }
+  const unchanged = JSON.stringify(ledger);
+  writeHostObservation(root, 'campaign', { schemaVersion: 1, campaignId: 'campaign', observedAt: new Date(Date.now() - 6 * 60 * 1000).toISOString(),
+    completeSessionIds: ['original-session'], sessions: [{ sessionId: 'original-session', state: 'waiting', worktree, managedWorktree: true }] }, environment);
+  assert.throws(() => validateActionResultBinding(ledger, pending.id, result, environment), /host evidence/);
+  assert.equal(JSON.stringify(ledger), unchanged);
+  writeHostObservation(root, 'campaign', { schemaVersion: 1, campaignId: 'campaign', observedAt: new Date().toISOString(),
+    completeSessionIds: ['original-session'], sessions: [{ sessionId: 'original-session', state: 'waiting', worktree, managedWorktree: true }] }, environment);
+  validateActionResultBinding(ledger, pending.id, result, environment);
+  recordActionResult(ledger, pending.id, result, graph());
+  const provisioned = JSON.stringify(ledger);
+  recordActionResult(ledger, pending.id, result, graph());
+  assert.equal(JSON.stringify(ledger), provisioned);
+  withLedgerLock(root, 'campaign', environment, saved => Object.assign(saved, ledger));
+  const before = readLedger(root, 'campaign', environment);
+  assert.equal(before.assignments[0].sessionId, null);
+  assert.equal(before.pendingActions[0].payload.dispatch.hostIdentity, 'original-client');
+  assert.throws(() => workerRecoveryBinding(environment, pending.payload.attachToken, 'other-session'), /authenticated worker/);
+  writeHostObservation(root, 'campaign', { schemaVersion: 1, campaignId: 'campaign', observedAt: new Date(Date.now() - 6 * 60 * 1000).toISOString(),
+    completeSessionIds: ['original-session'], sessions: [{ sessionId: 'original-session', state: 'waiting', worktree, managedWorktree: true }] }, environment);
+  const context = workerRecoveryContext(environment, 'original-session');
+  assert.ok(context.includes(root));
+  assert.ok(context.includes('before setup'));
+  const prompt = handle({ hook_event_name: 'UserPromptSubmit', cwd: worktree, session_id: 'original-session', prompt: 'Resume.' }, environment);
+  assert.ok(prompt.hookSpecificOutput.additionalContext.includes(`ponytail worktree recover ${pending.payload.attachToken}`));
+  const recovery = spawnSync(ponytail, ['worktree', 'recover', pending.payload.attachToken], { cwd: os.tmpdir(), env: environment, encoding: 'utf8' });
+  assert.equal(recovery.status, 0, recovery.stderr);
+  const recovered = JSON.parse(recovery.stdout);
+  assert.equal(recovered.schemaVersion, 2);
+  assert.equal(recovered.worktree, worktree);
+  assert.equal(recovered.branch, null);
+  assert.equal(git(worktree, ['branch', '--show-current']), '');
+  assert.equal(git(worktree, ['rev-parse', 'HEAD']), ledger.integrationRevision);
+  assert.deepEqual(readLedger(root, 'campaign', environment), before);
+  assert.equal(readWorkerBindings(environment).bindings.length, 0);
+  fs.writeFileSync(path.join(worktree, 'fixture.txt'), 'retained local edits\n');
+  assert.equal(recoverWorker(environment, pending.payload.attachToken).restored, false);
+  assert.equal(fs.readFileSync(path.join(worktree, 'fixture.txt'), 'utf8'), 'retained local edits\n');
+  git(worktree, ['add', 'fixture.txt']);
+  git(worktree, ['-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.test', 'commit', '-qm', 'local changes']);
+  assert.throws(() => recoverWorker(environment, pending.payload.attachToken), /registration/);
+  git(worktree, ['switch', '--detach', ledger.integrationRevision]);
+  git(worktree, ['switch', '-c', 'original-worker']);
+  const binding = bindWorker(environment, worktree, pending.payload.attachToken, 'original-session');
+  const attached = { ok: true, sessionId: binding.sessionId, worktree: binding.worktree, branch: binding.branch, revision: binding.revision };
+  withLedgerLock(root, 'campaign', environment, saved => {
+    validateActionResultBinding(saved, pending.id, attached, environment);
+    recordActionResult(saved, pending.id, attached, graph());
+  });
+  assert.equal(readLedger(root, 'campaign', environment).assignments[0].state, 'ACTIVE');
+  assert.deepEqual(readLedger(root, 'campaign', environment).pendingActions, []);
 });
 
 test('original worker recovers its exact checkout from a neutral cwd without coordinator action', () => {

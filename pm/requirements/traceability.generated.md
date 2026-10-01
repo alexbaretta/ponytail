@@ -18,6 +18,9 @@ Requirement: [pm/requirements/worker-worktree-retention.md](worker-worktree-rete
 - uat: verifies [pm/uat/worker-worktree-retention.md:5](../../pm/uat/worker-worktree-retention.md#L5)
 - plan: plans-implementation [pm/plans/in_progress/2026-10-01-worker-worktree-retention/plan.md:13](../../pm/plans/in_progress/2026-10-01-worker-worktree-retention/plan.md#L13)
 - plan: plans-verification [pm/plans/in_progress/2026-10-01-worker-worktree-retention/plan.md:14](../../pm/plans/in_progress/2026-10-01-worker-worktree-retention/plan.md#L14)
+- issue: introduces [pm/bugs/in_progress/2026-10-01-BUG-pre_attachment_checkout_recovery.md:41](../../pm/bugs/in_progress/2026-10-01-BUG-pre_attachment_checkout_recovery.md#L41)
+- issue: plans-implementation [pm/bugs/in_progress/2026-10-01-BUG-pre_attachment_checkout_recovery.md:42](../../pm/bugs/in_progress/2026-10-01-BUG-pre_attachment_checkout_recovery.md#L42)
+- issue: plans-verification [pm/bugs/in_progress/2026-10-01-BUG-pre_attachment_checkout_recovery.md:43](../../pm/bugs/in_progress/2026-10-01-BUG-pre_attachment_checkout_recovery.md#L43)
 
 ## REQ-REQUIREMENTS-TRACEABILITY
 

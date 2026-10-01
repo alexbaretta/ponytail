@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-10-01-pre_attachment_checkout_recovery",
+  "recorded_at": "2026-10-01T16:02:00-07:00",
+  "source_references": ["pm/bugs/in_progress/2026-10-01-BUG-pre_attachment_checkout_recovery.md"],
+  "context": {
+    "languages": ["javascript"], "frameworks": [],
+    "components": ["campaign worker bootstrap"],
+    "affected_boundaries": ["native provisioning to authenticated attachment"],
+    "code_references": ["src/campaign-orchestration.js:workerRecoveryBinding", "src/worker-worktrees.js:recoverCheckout"]
+  },
+  "observed_behavior": "Original ready workers lost their checkout before attachment and could not invoke canonical recovery.",
+  "expected_behavior": "The proven original worker can reconstruct its exact checkout and finish adoption and attachment without replacement.",
+  "causal_mechanism": "Recovery ownership was recorded only after attachment, although attachment depended on successful filesystem bootstrap.",
+  "anti_pattern": {
+    "structural_description": "Recovery authority for an interrupted prerequisite depended on completing the later lifecycle transition.",
+    "why_it_fails": "An interrupted bootstrap cannot satisfy the attachment prerequisite needed to authorize its own repair."
+  },
+  "correct_pattern": {
+    "required_invariant": "Durable proven native identity authorizes exact-path bootstrap repair without falsely claiming authenticated attachment.",
+    "implementation_description": "PROVISIONED enrolls immutable original identity and source on the started creation; its original capability uses the shared reconstruction engine at the detached dispatch checkpoint."
+  },
+  "applicability_conditions": ["Native creation succeeds before local adoption and authenticated ownership attachment."],
+  "known_non_matches": ["Already attached workers retain branch-bound recovery authority."],
+  "confirmation_evidence": ["Supported host inspection identified both original ready sessions and absent native checkouts; fail-first real-Git recovery rejected their missing attachment binding."],
+  "regression_proofs": ["tests/worker-worktrees.test.js: provisioned original worker recovers before adoption and attachment without replacing its started creation"]
+}

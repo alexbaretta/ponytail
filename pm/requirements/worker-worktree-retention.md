@@ -41,6 +41,19 @@ canonical recovery from an existing neutral directory; recovery must not first
 require the missing directory to be a Git repository or require the coordinator
 to initiate a recovery action.
 
+This continuity must also cover a native worker created but not yet attached
+to its campaign. Once fresh complete host evidence identifies the original
+ready session and checkout for its existing started creation, the coordinator
+may enroll that bootstrap identity without claiming adoption, attachment, or
+task execution. The original client receipt, action, assignment, and token
+remain unchanged. That same worker may then reconstruct only its original
+detached dispatch checkpoint from enrolled main-worktree provenance, even after
+the enrollment observation expires. It immediately adopts the restored
+checkout before setup, establishes the project-owned branch, and completes the
+original authenticated attachment. No replacement session or checkout is
+created. Contradictory, reused, unobserved, or non-managed identities must be
+rejected before enrollment; attachment must retain the enrolled session/path.
+
 Recovery reconstructs the worker's original checkout from its preserved Git
 branch in the recorded main worktree, without replacing the session, resetting
 the branch, touching another worker's checkout, or importing the main worktree's

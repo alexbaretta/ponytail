@@ -365,6 +365,11 @@
     {
       "id": "worker-worktree-recovery",
       "implementation": {"workspace": "ponytail", "module": "src/worker-worktrees.js", "readerRegistryExport": "WorkerRecoveryReaders"},
+      "currentVersion": "V2", "versions": ["V1", "V2"], "supportedReadVersions": ["V1", "V2"], "supportedDowngradeVersions": []
+    },
+    {
+      "id": "campaign-worker-bootstrap",
+      "implementation": {"workspace": "ponytail", "module": "src/campaign-orchestration.js", "readerRegistryExport": "CampaignWorkerBootstrapReaders"},
       "currentVersion": "V1", "versions": ["V1"], "supportedReadVersions": ["V1"], "supportedDowngradeVersions": []
     },
     {

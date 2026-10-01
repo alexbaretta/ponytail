@@ -400,6 +400,18 @@ commands may then re-root through it. Mutating campaign commands invoked in a
 worker fail closed; this version does not claim an authenticated command proxy
 that the host does not expose.
 
+Before attachment, the original started `CREATE_WORKER` can record
+`PROVISIONED` with the supported ready session and its exact native cwd.
+Fresh complete host evidence must establish managed-worktree provenance and
+exclusive ownership. The V1 bootstrap payload freezes that identity, dispatch
+checkpoint, and canonical main-worktree source without changing assignment
+state or completing the original creation. Its original attachment capability
+then authorizes the shared exact-path recovery engine independently of later
+observation freshness. Recovery V2 permits a null branch for this detached
+bootstrap checkpoint; V1 readers remain unchanged. Adoption precedes setup,
+then canonical branch establishment and authenticated attachment complete the
+original creation. No replacement session or native path is inferred.
+
 For explicit human-requested retirement of a legacy cleanup action,
 `ARCHIVE_WORKTREE` carries both the bound session and exact
 worktree. The worker first performs the invoking project's canonical resource
