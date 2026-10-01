@@ -661,7 +661,7 @@ durable state instead of remembering worker assignments in conversation:
    result and at every safe coordination boundary while assignments remain
    unfinished, including when a wait returns or a worker becomes idle. An
    observation older than five minutes is stale and blocks mutation.
-3. Inspect the returned V3 status before any other campaign action. Resolve
+3. Inspect the returned status before any other campaign action. Resolve
    every blocking diagnostic first. For an idle session, inspect its exact
    thread to distinguish a worker waiting for coordinator input from one that
    has finished; respond to required input or record the completed observation
@@ -677,6 +677,12 @@ durable state instead of remembering worker assignments in conversation:
    action is returned, inspect status and advance again only when another
    compatible transition is currently warranted. `ready-actions` is read-only:
    it never creates assignments, materializes actions, or performs effects.
+   Status is a derived view: reconciling one persisted assignment can leave its
+   returned status unchanged. When no action appears, compare the persisted
+   ledger's assignment states and pending actions before and after `advance`;
+   an unchanged status response alone does not prove a no-op. Continue one
+   advance at a time while a durable transition occurred, refreshing host
+   observation before it becomes stale. Stop at a genuinely unchanged ledger.
 6. Resume each returned action by its exact action ID; never allocate a
    replacement session or worktree, and never assign a plan conversationally.
    After initiating an asynchronous host effect, record that start, advance

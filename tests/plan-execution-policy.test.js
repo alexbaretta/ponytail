@@ -49,6 +49,8 @@ test('campaign coordinator uses durable actions while worker recovery remains wo
   assert.match(policy, /distinguish a worker waiting for coordinator input from one that\n+   has finished/);
   assert.match(policy, /campaign advance \[<campaign-root>\] --json/);
   assert.match(policy, /campaign ready-actions \[<campaign-root>\] --json/);
+  assert.match(policy, /Status is a derived view: reconciling one persisted assignment can leave its\n+   returned status unchanged/);
+  assert.match(policy, /Stop at a genuinely unchanged ledger/);
   assert.match(policy, /`status.pendingActions` remains the\n+   complete durable recovery inventory/);
   assert.match(policy, /Execute only the `actions` returned by `ready-actions`/);
   assert.match(policy, /expose distinct create-or-reuse\n+   actions while one rebase remains outstanding/);
