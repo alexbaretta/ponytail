@@ -870,6 +870,58 @@ test('verified worker delivery integrates before plan closure and cleanup waits 
   assert.equal(ledger.assignments[0].state, 'ARCHIVED');
 });
 
+test('an open merged plan accepts a second delivery from its original assignment', () => {
+  const root = repository();
+  const worker = path.join(temporaryDirectory('ponytail-second-delivery-worker'), 'worker');
+  command(root, ['worktree', 'add', '-qb', 'worker-delivery', worker]);
+  const environment = { ...process.env, PONYTAIL_CAMPAIGN_STATE_DIR: temporaryDirectory('ponytail-second-delivery-state') };
+  const ledger = newLedger(root, 'campaign', 'coordinator');
+  const assignment = {
+    id: 'assignment', planId: 'work', sessionId: 'worker-session', worktree: worker, branch: 'worker-delivery',
+    dispatchRevision: ledger.integrationRevision, workerRevision: ledger.integrationRevision,
+    state: 'ACTIVE', idempotencyKey: 'key', attachToken: 'token', worktreeArchived: false, sessionArchived: false,
+  };
+  ledger.assignments.push(assignment);
+  ledger.workers.push({
+    sessionId: assignment.sessionId, worktree: worker, branch: assignment.branch, revision: assignment.workerRevision,
+    clean: true, activity: 'completed', evidenceComplete: false, worktreeArchived: false, sessionArchived: false,
+  });
+  fs.writeFileSync(path.join(environment.PONYTAIL_CAMPAIGN_STATE_DIR, 'campaign-worker-bindings.json'), `${JSON.stringify({
+    schemaVersion: 1,
+    bindings: [{
+      repositoryRoot: root, campaignId: 'campaign', assignmentId: assignment.id, coordinatorSessionId: 'coordinator',
+      attachTokenHash: 'hash', sessionId: assignment.sessionId, worktree: worker, branch: assignment.branch,
+      revision: ledger.integrationRevision, boundAt: new Date().toISOString(),
+    }],
+  })}\n`);
+  const campaignGraph = graph([
+    { id: 'campaign', parentPlanId: null, dependsOn: [], lifecycle: 'in_progress', path: 'root' },
+    { id: 'work', parentPlanId: 'campaign', dependsOn: [], lifecycle: 'in_progress', path: 'work' },
+  ]);
+  const evidencePath = 'pm/plans/in_progress/work/evidence/result.md';
+  for (const iteration of [1, 2]) {
+    write(worker, evidencePath, `accepted ${iteration}\n`);
+    command(worker, ['add', '.']);
+    command(worker, ['-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.test', 'commit', '-qm', `delivery ${iteration}`]);
+    const revision = command(worker, ['rev-parse', 'HEAD']);
+    recordWorkerDelivery(root, 'campaign', { ...assignment, planPath: 'pm/plans/in_progress/work/plan.md' }, {
+      revision, evidencePaths: [evidencePath],
+    }, environment);
+    writeHostObservation(root, 'campaign', {
+      schemaVersion: 1, campaignId: 'campaign', observedAt: new Date().toISOString(),
+      completeSessionIds: [assignment.sessionId],
+      sessions: [{ sessionId: assignment.sessionId, state: 'completed', worktree: worker, managedWorktree: true }],
+    }, environment);
+    assert.equal(reconcile(campaignGraph, ledger, root, environment).assignments[0].state, 'READY_TO_MERGE');
+    assert.equal(advanceLedger(campaignGraph, ledger, environment), null);
+    assert.equal(ledger.assignments[0].state, 'READY_TO_MERGE');
+    assert.equal(advanceLedger(campaignGraph, ledger, environment), null);
+    assert.equal(ledger.assignments[0].state, 'MERGED');
+    assert.equal(command(root, ['rev-parse', 'HEAD']), revision);
+    assert.equal(ledger.assignments.length, 1);
+  }
+});
+
 test('waiting worker delivery remains integrable before and after its checkout disappears', () => {
   const root = repository();
   const worker = path.join(temporaryDirectory('ponytail-missing-delivered-worker-parent'), 'worker');
