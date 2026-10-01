@@ -110,21 +110,34 @@ migration rehearsal and LocalCloud, then Docker refused its Elastic network:
 `all predefined address pools have been fully subnetted`.
 
 This proves committed reconstruction, adoption, and native session/path
-continuity. The complete live Arc remains open for refreshed coordinator
-observation and resumed assignment after the client setup blocker is resolved.
+continuity. The coordinator subsequently refreshed its observation. The
+complete live Arc remains open for resumed assignment after the client setup
+blocker is resolved.
 No restored unsaved-file content or campaign delivery was claimed.
 
 ### Legacy relocated-checkout recovery regression
 
-The PWP live attempt was rejected by stale `PreToolUse` guidance that named the
-replacement binding checkout, although fresh host state and immutable campaign
-history proved the native session still belonged to the initial checkout. The
-hook now provides the same context as the authenticated worker prompt hook.
-Automated Git tests verify it identifies the initial checkout only with fresh,
-complete host evidence and matching dispatch/recovery history, and denies a
-different session. This is repository proof only; the same PWP session must
-still retry recovery and the coordinator must refresh observation before live
-acceptance can pass.
+The PWP live attempt was initially rejected by stale `PreToolUse` guidance
+that named the replacement binding checkout, although fresh host state and
+immutable campaign history proved the native session still belonged to the
+initial checkout. The hook now provides the same context as the authenticated
+worker prompt hook. Automated Git tests verify it identifies the initial
+checkout only with fresh, complete host evidence and matching dispatch/recovery
+history, and denies a different session.
+
+After the local Ponytail plugin was refreshed, the same PWP session
+`01a0f569-3b81-7472-b302-4782dd25ca27` invoked recovery from a neutral
+directory. Its native cwd and authenticated binding both returned to original
+checkout `/Users/alex/.codex/worktrees/38fe/gwen`, clean on branch
+`codex/pwp-oauth-redirect-lifecycle-38fe` at
+`a0619393f476069ada42385110794db4e1aeda85`. The replacement checkout
+`/Users/alex/.codex/worktrees/pwp-recovery/gwen` remained clean and detached
+at the same revision. Assignment `46bfb45f-a207-40b7-8287-33c40bf90fdd`
+remained `MERGED`; delivery and action identities were preserved. Canonical
+GWEN adoption succeeded as `gwen-1086`. The worker's later full local setup
+was blocked separately by missing credentials for retained Elastic data.
+The coordinator briefly observed no blocking PWP diagnostic, but complete
+campaign resumption remains an independent acceptance gate.
 
 The context-refresh regression also invokes an ordinary neutral-cwd diagnostic
 before recovery and verifies the authenticated hook supplies current proven

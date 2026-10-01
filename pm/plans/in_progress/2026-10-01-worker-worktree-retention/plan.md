@@ -72,22 +72,25 @@ assertion was reconciled and the complete command rerun successfully.
 Evidence: `tmp/worker-retention-final.log`, `tmp/worker-retention-final-focused.log`.
 These logs are ignored, not committed product artifacts.
 
-The plan remains in_progress solely for the manual live Codex continuity Arc.
-Subsequent human-authorized recovery of an already missing GWEN worker proved
+The plan remains in_progress for the full manual live Codex continuity Arc and
+the independent host automatic-retention setting. Subsequent human-authorized
+recovery of an already missing GWEN worker proved
 same-session reconstruction, adoption, and commands from its original checkout;
 the exact worker turn and identities are recorded in the acceptance Suite.
-Docker address-pool exhaustion blocked full client setup, and refreshed
-coordinator observation plus assignment resumption remain unverified. The live
-Arc and T04 therefore stay open. Deployment to client plugin caches and disabling
-host automatic deletion were not performed by this repository change-set.
+Docker address-pool exhaustion blocked full client setup; the coordinator
+subsequently refreshed its observation, but assignment resumption remains
+unverified. The live
+Arc and T04 therefore stay open. The local Ponytail plugin was refreshed later
+under the stakeholder's separate installation authorization; disabling host
+automatic deletion has not been verified.
 
 Follow-up live PWP evidence found stale `PreToolUse` recovery guidance that
 still named the replacement binding path. The canonical recovery hook now
 shares the authenticated, freshness-checked worker recovery context; regression
 proof covers proven legacy relocation, ambiguous history, and wrong-session
 denial. Focused tests and configured root acceptance pass. This fixes the
-Ponytail-side refusal but does not itself verify PWP's live retry or resume the
-coordinator's campaign; T04 remains open.
+Ponytail-side refusal; the subsequent live PWP retry is recorded in the UAT
+Suite. T04 remains open until the full campaign resumption gate passes.
 
 The first hook-context correction still required invoking recovery, which the
 worker's stale higher-priority instruction prevented. PreToolUse now refreshes
@@ -96,5 +99,6 @@ without bypassing campaign/coordinator authorization. A subsequent provider
 worker also reported that its restored checkout disappeared again; its same
 session successfully reconstructed and immediately re-adopted it, but the
 host cleanup cause is undetermined. This reinforces recovery resilience, not a
-claim that Ponytail controls Codex's native cleanup policy. The PWP retry and
-live campaign resumption remain open.
+claim that Ponytail controls Codex's native cleanup policy. The same PWP
+session later returned its branch and binding to the original native checkout
+and adopted it; full client setup and campaign resumption remain open.

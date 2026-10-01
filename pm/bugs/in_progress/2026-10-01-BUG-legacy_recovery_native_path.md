@@ -26,8 +26,8 @@ without resetting merged state or completed actions. It rejects dirty or
 unproven targets and protects ignored files. Interrupted transfer is retryable.
 
 **Evidence:** A real Git regression first failed by returning the replacement
-path. The focused worker/scheduler/hook selection passes 62 tests. Live PWP
-reconciliation and coordinator campaign resumption remain pending.
+path. The focused worker/scheduler/hook selection passed 62 tests. The first
+live PWP retry had not yet completed at that test gate.
 
 The first live transfer attempt exposed one more precondition defect: PWP's
 verified merged branch was rebased after the old recovery checkpoint, so the
@@ -45,9 +45,9 @@ It identifies the initial dispatch path only when fresh complete host evidence,
 the unique successful dispatch, the prior recovery result, the assignment
 revision, and exclusive ownership all agree. The legacy Git regression now
 asserts both prompt and tool-hook guidance plus rejection for another session.
-Focused worker/scheduler/hook tests pass (64 tests); full configured `npm test`
-and repository structural checks pass. Live PWP reconciliation and campaign
-resumption remain pending.
+Focused worker/scheduler/hook tests passed (64 tests); full configured
+`npm test` and repository structural checks passed. Live PWP reconciliation
+was still pending at that stage.
 
 PWP then confirmed that the old higher-priority instruction prevented even
 invoking recovery, so the recovery-only PreToolUse hook could not refresh it.
@@ -55,19 +55,30 @@ The hook now emits the evidence-checked legacy context on a non-campaign,
 non-coordinator diagnostic tool call as well. Campaign/coordinator permission
 checks remain on their existing path. Regression verifies neutral diagnostic
 refresh, ambiguous-history silence, and that campaign mutation is still denied.
-Focused and full configured acceptance pass; live retry remains pending.
+Focused and full configured acceptance passed; live retry was pending at that
+stage.
 
 Final `npm test` passes: 499 core tests, installer harness, 23 Pi, 4 MCP, 80
 TSTS, and 572-file structure validation. Traceability (201 relationships),
 rule-copy, version, generated registry/adapter/manifest, and diff checks pass.
 Build impact selects no targets. Log: ignored
-`tmp/legacy-recovery-final.log`. The live PWP retry remains pending.
+`tmp/legacy-recovery-final.log`.
 
 Final configured `npm test` passes against the staged correction, including
 the local PostgreSQL tests, installer harness, Pi, MCP, TSTS, and 572-file
 structure check. Rule copies, versions, generated registry/adapters/manifests,
 traceability and diff checks pass. Build impact selects no targets.
 Log: ignored `tmp/legacy-recovery-final.log`.
+
+The locally installed Ponytail plugin was refreshed, and the same live PWP
+session `01a0f569-3b81-7472-b302-4782dd25ca27` then reconciled its native
+cwd and authenticated binding at original checkout
+`/Users/alex/.codex/worktrees/38fe/gwen`. The checkout was clean on its
+preserved branch at `a0619393f476069ada42385110794db4e1aeda85`; the
+replacement remained clean and detached at that revision. The assignment
+remained `MERGED`, and canonical adoption succeeded as `gwen-1086`. This
+verifies the specific native-path repair live. Full GWEN setup and campaign
+resumption remain separate pending acceptance.
 
 Traceability: plans-implementation REQ-WORKER-WORKTREE-RETENTION from issue 2026-10-01-BUG-legacy_recovery_native_path
 Traceability: plans-verification REQ-WORKER-WORKTREE-RETENTION from issue 2026-10-01-BUG-legacy_recovery_native_path
