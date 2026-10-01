@@ -276,6 +276,14 @@ coordinator runs the applicable final acceptance against the integrated tree
 and records its outcome. A failed integrated gate may return the same worker
 and assignment to delivery and integration without inventing a replacement.
 
+Plan ownership is identified by its stable plan ID. When a worker's accepted
+closure moves its plan to the configured successful-completion directory,
+delivery must resolve that same ID and campaign in the authenticated worker
+checkout and validate evidence beneath its current canonical plan directory.
+The coordinator's pre-merge lifecycle path must not reject the delivery. The
+closure commit still follows authenticated delivery, rebase when necessary,
+and serialized fast-forward integration before assignment release.
+
 An authenticated delivery remains authoritative if its worker checkout later
 disappears, provided the delivered commit remains available to the campaign
 repository at the exact assignment branch tip and a fresh complete host

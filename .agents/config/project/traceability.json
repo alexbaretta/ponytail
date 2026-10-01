@@ -285,6 +285,11 @@
     },
     {
       "class": "issue",
+      "path": "pm/bugs/in_progress/2026-10-01-BUG-worker_closure_delivery_locator.md",
+      "locator": "text"
+    },
+    {
+      "class": "issue",
       "path": "pm/bugs/closed/2026-10-01-BUG-delivered_rebase_worker_checkout_missing.md",
       "locator": "text"
     },

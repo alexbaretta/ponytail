@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-10-01-worker_closure_delivery_locator",
+  "recorded_at": "2026-10-01T15:23:00-07:00",
+  "source_references": ["pm/bugs/in_progress/2026-10-01-BUG-worker_closure_delivery_locator.md"],
+  "context": {
+    "languages": ["javascript"], "frameworks": ["Git"],
+    "components": ["campaign delivery"],
+    "affected_boundaries": ["worker commit to coordinator delivery"],
+    "code_references": ["src/campaign-orchestration.js:run", "src/campaign-orchestration.js:recordWorkerDelivery"]
+  },
+  "observed_behavior": "An authenticated closure commit's completed-directory evidence was rejected against the coordinator's active-directory locator.",
+  "expected_behavior": "The same stable assigned plan remains deliverable after its lifecycle directory changes in the worker commit.",
+  "causal_mechanism": "Delivery applied the coordinator checkout's mutable path to evidence owned by a different Git tree.",
+  "anti_pattern": {
+    "structural_description": "Stable ownership was validated through an obsolete locator from another revision.",
+    "why_it_fails": "The commit introducing the locator change cannot pass the gate required to integrate that change."
+  },
+  "correct_pattern": {
+    "required_invariant": "Resolve stable ownership in the tree that owns the evidence and verify it remains in the authenticated campaign.",
+    "implementation_description": "Resolve the assigned plan ID in the clean worker checkout before applying the plan-directory evidence boundary."
+  },
+  "applicability_conditions": ["A lifecycle move is committed by an authenticated worker before integration."],
+  "known_non_matches": ["Evidence from another plan remains outside the assigned plan boundary."],
+  "confirmation_evidence": ["The real-Git CLI regression failed with the exact GWEN rejection, then passed delivery and integration after the locator correction."],
+  "regression_proofs": ["tests/campaign-orchestration.test.js: worker delivery resolves a closed plan by stable identity before its lifecycle move is integrated"]
+}

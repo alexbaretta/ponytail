@@ -122,6 +122,7 @@ Requirement: [pm/requirements/campaign-orchestration.md](campaign-orchestration.
 - uat: verifies [pm/uat/campaign-orchestration.md:408](../../pm/uat/campaign-orchestration.md#L408)
 - uat: verifies [pm/uat/campaign-orchestration.md:430](../../pm/uat/campaign-orchestration.md#L430)
 - uat: verifies [pm/uat/campaign-orchestration.md:452](../../pm/uat/campaign-orchestration.md#L452)
+- uat: verifies [pm/uat/campaign-orchestration.md:469](../../pm/uat/campaign-orchestration.md#L469)
 - plan: plans-implementation [pm/plans/closed/2026-09-29-campaign-orchestration/plan.md:22](../../pm/plans/closed/2026-09-29-campaign-orchestration/plan.md#L22)
 - plan: plans-verification [pm/plans/closed/2026-09-29-campaign-orchestration/plan.md:23](../../pm/plans/closed/2026-09-29-campaign-orchestration/plan.md#L23)
 - plan: plans-implementation [pm/plans/closed/2026-09-30-campaign-session-observability/plan.md:20](../../pm/plans/closed/2026-09-30-campaign-session-observability/plan.md#L20)
@@ -193,6 +194,9 @@ Requirement: [pm/requirements/campaign-orchestration.md](campaign-orchestration.
 - issue: introduces [pm/bugs/in_progress/2026-10-01-BUG-waiting_delivery_checkout_loss.md:56](../../pm/bugs/in_progress/2026-10-01-BUG-waiting_delivery_checkout_loss.md#L56)
 - issue: plans-implementation [pm/bugs/in_progress/2026-10-01-BUG-waiting_delivery_checkout_loss.md:57](../../pm/bugs/in_progress/2026-10-01-BUG-waiting_delivery_checkout_loss.md#L57)
 - issue: plans-verification [pm/bugs/in_progress/2026-10-01-BUG-waiting_delivery_checkout_loss.md:58](../../pm/bugs/in_progress/2026-10-01-BUG-waiting_delivery_checkout_loss.md#L58)
+- issue: introduces [pm/bugs/in_progress/2026-10-01-BUG-worker_closure_delivery_locator.md:34](../../pm/bugs/in_progress/2026-10-01-BUG-worker_closure_delivery_locator.md#L34)
+- issue: plans-implementation [pm/bugs/in_progress/2026-10-01-BUG-worker_closure_delivery_locator.md:35](../../pm/bugs/in_progress/2026-10-01-BUG-worker_closure_delivery_locator.md#L35)
+- issue: plans-verification [pm/bugs/in_progress/2026-10-01-BUG-worker_closure_delivery_locator.md:36](../../pm/bugs/in_progress/2026-10-01-BUG-worker_closure_delivery_locator.md#L36)
 
 ## REQ-PONYTAIL-CLI-AGENT-HARNESS
 

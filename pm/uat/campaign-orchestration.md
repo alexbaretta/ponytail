@@ -447,6 +447,23 @@ Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
    - Ponytail moves the assignment to cleanup. A failed gate may instead send
      the same worker through another delivery and integration cycle.
 
+## Arc: Deliver a plan closure before its lifecycle move is integrated
+
+Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
+
+1. Retain an integrated assignment while its plan remains active in the
+   coordinator checkout. In that same worker, finish acceptance and move the
+   same stable plan ID to the configured completed directory, updating links.
+2. Commit the closure and run authenticated `campaign deliver` with the actual
+   completed plan and sprint evidence paths.
+   - Delivery succeeds while the coordinator still has the active path.
+   - Evidence from another plan is rejected without changing delivery state.
+3. Refresh the idle host observation and advance through the ordinary join.
+   - The exact closure commit is integrated and only then becomes eligible for
+     logical assignment release. The session and checkout remain retained.
+
+Automated profile: `node --test --test-name-pattern='worker delivery resolves a closed plan' tests/campaign-orchestration.test.js`.
+
 ## Arc: Retain integrated workers; explicit retirement remains separately fenced
 
 Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION

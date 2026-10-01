@@ -922,6 +922,54 @@ test('an open merged plan accepts a second delivery from its original assignment
   }
 });
 
+test('worker delivery resolves a closed plan by stable identity before its lifecycle move is integrated', () => {
+  const root = fs.realpathSync(campaignRepository());
+  fs.renameSync(path.join(root, 'pm/plans/open/ready'), path.join(root, 'pm/plans/in_progress/ready'));
+  const parentPath = 'pm/plans/in_progress/campaign/plan.md';
+  write(root, parentPath, fs.readFileSync(path.join(root, parentPath), 'utf8').replace('../../open/ready/', '../../in_progress/ready/'));
+  command(root, ['add', '.']);
+  command(root, ['-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.test', 'commit', '-qm', 'active assignment']);
+  const worker = path.join(fs.realpathSync(temporaryDirectory('ponytail-closure-delivery')), 'worker');
+  command(root, ['worktree', 'add', '-qb', 'closure-worker', worker]);
+  const environment = { ...process.env, PONYTAIL_CAMPAIGN_STATE_DIR: temporaryDirectory('ponytail-closure-state'), PONYTAIL_SESSION_ID: 'coordinator' };
+  const assignment = {
+    id: 'assignment', planId: 'ready', sessionId: 'worker-session', worktree: worker, branch: 'closure-worker',
+    dispatchRevision: command(root, ['rev-parse', 'HEAD']), workerRevision: command(root, ['rev-parse', 'HEAD']),
+    state: 'MERGED', idempotencyKey: 'key', attachToken: 'token', worktreeArchived: false, sessionArchived: false,
+  };
+  withLedgerLock(root, 'campaign', environment, (ledger) => { ledger.assignments.push(assignment); });
+  fs.writeFileSync(path.join(environment.PONYTAIL_CAMPAIGN_STATE_DIR, 'campaign-worker-bindings.json'), JSON.stringify({
+    schemaVersion: 1, bindings: [{ repositoryRoot: root, campaignId: 'campaign', assignmentId: assignment.id,
+      coordinatorSessionId: 'coordinator', attachTokenHash: 'hash', sessionId: assignment.sessionId, worktree: worker,
+      branch: assignment.branch, revision: assignment.workerRevision, boundAt: new Date().toISOString() }],
+  }));
+  fs.mkdirSync(path.join(worker, 'pm/plans/closed'));
+  fs.renameSync(path.join(worker, 'pm/plans/in_progress/ready'), path.join(worker, 'pm/plans/closed/ready'));
+  const sprintPath = 'pm/plans/closed/ready/sprints/S01.md';
+  write(worker, sprintPath, fs.readFileSync(path.join(worker, sprintPath), 'utf8').replace('"status": "PENDING"', '"status": "DONE"').replace('### [ ]', '### [DONE]'));
+  write(worker, parentPath, fs.readFileSync(path.join(worker, parentPath), 'utf8').replace('../../in_progress/ready/', '../../closed/ready/'));
+  command(worker, ['add', '.']);
+  command(worker, ['-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.test', 'commit', '-qm', 'accepted plan closure']);
+  const revision = command(worker, ['rev-parse', 'HEAD']);
+  writeHostObservation(root, 'campaign', { schemaVersion: 1, campaignId: 'campaign', observedAt: new Date().toISOString(),
+    completeSessionIds: [assignment.sessionId], sessions: [{ sessionId: assignment.sessionId, state: 'waiting', worktree: worker, managedWorktree: true }] }, environment);
+  const deliver = (evidencePaths) => spawnSync(process.execPath, [campaignCli, 'deliver', 'campaign', '--result', JSON.stringify({ revision, evidencePaths })], { cwd: worker, encoding: 'utf8', env: environment });
+  const outside = deliver([parentPath]);
+  assert.equal(outside.status, 1);
+  assert.match(outside.stderr, /outside assigned plan/);
+  const result = deliver(['pm/plans/closed/ready/plan.md', sprintPath]);
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(JSON.parse(result.stdout).assignments[0].state, 'READY_TO_MERGE');
+  for (let i = 0; i < 2; i += 1) {
+    const advance = spawnSync(process.execPath, [campaignCli, 'advance', 'campaign', '--json'], { cwd: root, encoding: 'utf8', env: environment });
+    assert.equal(advance.status, 0, advance.stderr);
+  }
+  assert.equal(command(root, ['rev-parse', 'HEAD']), revision);
+  assert.equal(readLedger(root, 'campaign', environment).assignments[0].state, 'MERGED');
+  assert.equal(fs.existsSync(path.join(root, 'pm/plans/closed/ready/plan.md')), true);
+  assert.equal(readWorkerDeliveries(root, 'campaign', environment).deliveries[0].revision, revision);
+});
+
 test('waiting worker delivery remains integrable before and after its checkout disappears', () => {
   const root = repository();
   const worker = path.join(temporaryDirectory('ponytail-missing-delivered-worker-parent'), 'worker');

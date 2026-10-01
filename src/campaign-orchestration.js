@@ -1887,10 +1887,12 @@ function run(argv = process.argv.slice(2), options = {}) {
     const ledger = readLedger(resolution.effectiveWorktree, graph.campaignId, environment);
     const assignment = ledger.assignments.find(({ id }) => id === resolution.workerBinding.assignmentId);
     if (!assignment || assignment.state === 'ARCHIVED') fail('CAMPAIGN_WORKER_BINDING_STALE', 'worker assignment is unavailable');
+    const workerGraph = campaignGraph(resolution.invocationWorktree, assignment.planId);
+    if (workerGraph.campaignId !== graph.campaignId) fail('CAMPAIGN_WORKER_DELIVERY_SCOPE', 'assigned worker plan belongs to another campaign');
     withWorktreeLock(resolution.effectiveWorktree, environment, () => recordWorkerDelivery(
       resolution.effectiveWorktree,
       graph.campaignId,
-      { ...assignment, worktree: resolution.workerBinding.worktree, planPath: graph.plans.find(({ id }) => id === assignment.planId)?.path },
+      { ...assignment, worktree: resolution.workerBinding.worktree, planPath: workerGraph.plans.find(({ id }) => id === assignment.planId)?.path },
       request.result,
       environment,
     ));
