@@ -21,18 +21,19 @@ const {
   parseArguments,
   readActionV1,
   readActionV2,
-  readActionV3,
+  readActionV4,
   readHostObservation,
   readLedger,
   readLedgerV1,
   readLedgerV2,
   readLedgerV3,
   readLedgerV4,
+  readLedgerV5,
   readWorkerDeliveries,
   readWorkerBindings,
   readReadyActionsV1,
   readReadyActionsV2,
-  readReadyActionsV3,
+  readReadyActionsV4,
   readyActions,
   reconcile,
   recordActionResult,
@@ -118,7 +119,7 @@ function captureError(callback) {
   assert.fail('expected CampaignOrchestrationError');
 }
 
-test('historical ledgers normalize recovery actions and the current writer emits V4', () => {
+test('historical ledgers normalize recovery and cleanup actions and the current writer emits V5', () => {
   const root = repository();
   const environment = { ...process.env, PONYTAIL_CAMPAIGN_STATE_DIR: temporaryDirectory('ponytail-ledger-version') };
   const current = newLedger(root, 'campaign', 'coordinator');
@@ -128,33 +129,57 @@ test('historical ledgers normalize recovery actions and the current writer emits
   fs.mkdirSync(path.dirname(file), { recursive: true });
   fs.writeFileSync(file, `${JSON.stringify(legacy)}\n`);
 
-  assert.equal(readLedger(root, 'campaign', environment).schemaVersion, 4);
+  assert.equal(readLedger(root, 'campaign', environment).schemaVersion, 5);
   assert.deepEqual(readLedger(root, 'campaign', environment).pendingActions, []);
   assert.equal(readLedgerV2({ ...current, schemaVersion: 2 }).schemaVersion, 2);
   assert.equal(readLedgerV3({ ...current, schemaVersion: 3 }).schemaVersion, 3);
+  assert.equal(readLedgerV4({ ...current, schemaVersion: 4 }).schemaVersion, 4);
   const recovery = {
     schemaVersion: 2, id: 'recovery', type: 'RECOVER_WORKTREE', assignmentId: 'assignment',
     idempotencyKey: 'recovery-key', payload: { sessionId: 'session', worktree: '/worker', branch: 'worker', revision: current.integrationRevision },
   };
   assert.deepEqual(readActionV2(recovery), recovery);
-  const normalizedRecovery = readLedgerV4({ ...current, schemaVersion: 4, pendingActions: [{
+  const normalizedRecovery = readLedgerV5({ ...current, schemaVersion: 5, pendingActions: [{
     ...recovery,
-    schemaVersion: 3,
+    schemaVersion: 4,
     payload: { sessionId: 'session', previousWorktree: '/worker', branch: 'worker', revision: current.integrationRevision },
   }] }).pendingActions[0];
-  assert.deepEqual(readActionV3(normalizedRecovery), normalizedRecovery);
+  assert.deepEqual(readActionV4(normalizedRecovery), normalizedRecovery);
   assert.equal(captureError(() => readActionV1({ ...recovery, schemaVersion: 1 })).code, 'CAMPAIGN_ORCHESTRATION_SCHEMA');
   assert.equal(captureError(() => readLedgerV2({ ...current, schemaVersion: 2, pendingActions: [recovery] })).code, 'CAMPAIGN_ORCHESTRATION_SCHEMA');
   assert.equal(readLedgerV3({ ...current, schemaVersion: 3, pendingActions: [recovery] }).pendingActions[0].type, 'RECOVER_WORKTREE');
-  assert.equal(captureError(() => readLedgerV3({ ...current, schemaVersion: 3, pendingActions: [normalizedRecovery] })).code, 'CAMPAIGN_ORCHESTRATION_SCHEMA');
+  assert.equal(captureError(() => readLedgerV4({ ...current, schemaVersion: 4, pendingActions: [normalizedRecovery] })).code, 'CAMPAIGN_ORCHESTRATION_SCHEMA');
   fs.writeFileSync(file, `${JSON.stringify({ ...current, schemaVersion: 3, pendingActions: [recovery] })}\n`);
   const upgraded = readLedger(root, 'campaign', environment);
-  assert.equal(upgraded.schemaVersion, 4);
+  assert.equal(upgraded.schemaVersion, 5);
   assert.deepEqual(upgraded.pendingActions[0], normalizedRecovery);
   withLedgerLock(root, 'campaign', environment, () => null);
-  assert.equal(JSON.parse(fs.readFileSync(file, 'utf8')).schemaVersion, 4);
-  assert.equal(JSON.parse(fs.readFileSync(file, 'utf8')).pendingActions[0].schemaVersion, 3);
+  assert.equal(JSON.parse(fs.readFileSync(file, 'utf8')).schemaVersion, 5);
+  assert.equal(JSON.parse(fs.readFileSync(file, 'utf8')).pendingActions[0].schemaVersion, 4);
   assert.equal(pendingActions.length, 0);
+});
+
+test('historical cleanup actions gain the bound session required for coordinator handoff', () => {
+  const root = repository();
+  const environment = { ...process.env, PONYTAIL_CAMPAIGN_STATE_DIR: temporaryDirectory('ponytail-cleanup-action-version') };
+  const ledger = newLedger(root, 'campaign', 'coordinator');
+  const assignment = {
+    id: 'assignment', planId: 'work', sessionId: 'worker-session', worktree: '/worker', branch: 'worker',
+    dispatchRevision: ledger.integrationRevision, workerRevision: ledger.integrationRevision, state: 'CLEANUP_PENDING',
+    idempotencyKey: 'assignment-key', attachToken: 'attach-token', worktreeArchived: false, sessionArchived: false,
+  };
+  const historicalAction = {
+    schemaVersion: 3, id: 'cleanup', type: 'ARCHIVE_WORKTREE', assignmentId: assignment.id,
+    idempotencyKey: 'assignment:ARCHIVE_WORKTREE', payload: { worktree: assignment.worktree },
+  };
+  const file = ledgerPath(root, 'campaign', environment);
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, `${JSON.stringify({ ...ledger, schemaVersion: 4, assignments: [assignment], pendingActions: [historicalAction] })}\n`);
+
+  const upgraded = readLedger(root, 'campaign', environment);
+  assert.equal(upgraded.schemaVersion, 5);
+  assert.deepEqual(upgraded.pendingActions[0].payload, { sessionId: assignment.sessionId, worktree: assignment.worktree });
+  assert.equal(upgraded.pendingActions[0].schemaVersion, 4);
 });
 
 test('reconciliation reserves existing active plans without fabricating workers and is idempotent', () => {
@@ -242,7 +267,7 @@ test('status reports active plan, session, and worktree conflicts while mutation
     state: 'ACTIVE', idempotencyKey: 'key', attachToken: 'token', worktreeArchived: false, sessionArchived: false,
   };
   ledger.assignments = [assignment, { ...assignment, id: 'second', idempotencyKey: 'key-2', attachToken: 'token-2' }];
-  assert.equal(readLedgerV4(ledger).assignments.length, 2);
+  assert.equal(readLedgerV5(ledger).assignments.length, 2);
   const status = reconcile(graph([
     { id: 'campaign', parentPlanId: null, dependsOn: [], lifecycle: 'in_progress', path: 'root' },
     { id: 'ready', parentPlanId: 'campaign', dependsOn: [], lifecycle: 'in_progress', path: 'ready' },
@@ -258,7 +283,7 @@ test('status reports active plan, session, and worktree conflicts while mutation
   ]), ledger)).code, 'CAMPAIGN_STATUS_BLOCKED');
 });
 
-test('V5 status exposes session, worktree, activity, assignment, action, and conflict views', () => {
+test('V6 status exposes session, worktree, activity, assignment, action, and conflict views', () => {
   const root = repository();
   const existingWorker = temporaryDirectory('ponytail-existing-worker');
   const missingWorker = path.join(temporaryDirectory('ponytail-missing-worker-parent'), 'missing');
@@ -297,7 +322,7 @@ test('V5 status exposes session, worktree, activity, assignment, action, and con
     { id: 'missing-plan', parentPlanId: 'campaign', dependsOn: [], lifecycle: 'in_progress', path: 'missing' },
     { id: 'unassigned-plan', parentPlanId: 'campaign', dependsOn: [], lifecycle: 'in_progress', path: 'unassigned' },
   ]), ledger, root, environment);
-  assert.equal(status.schemaVersion, 5);
+  assert.equal(status.schemaVersion, 6);
   assert.equal(status.observedAt, observedAt);
   assert.deepEqual(status.workingSessions.map(({ planId, sessionId }) => ({ planId, sessionId })), [{ planId: 'working-plan', sessionId: 'working-session' }]);
   assert.deepEqual(status.waitingSessions.map(({ sessionId }) => sessionId), ['waiting-session']);
@@ -333,13 +358,13 @@ test('stale host observations are diagnosed and block mutation', () => {
   assert.equal(captureError(() => advanceLedger(campaignGraph, ledger, environment)).code, 'CAMPAIGN_STATUS_BLOCKED');
 });
 
-test('campaign observe persists a normalized host snapshot and returns V5 status', () => {
+test('campaign observe persists a normalized host snapshot and returns V6 status', () => {
   const root = campaignRepository();
   const environment = { ...process.env, PONYTAIL_CAMPAIGN_STATE_DIR: temporaryDirectory('ponytail-observe-cli'), PONYTAIL_SESSION_ID: 'coordinator' };
   const snapshot = { schemaVersion: 1, campaignId: 'campaign', observedAt: '2026-09-30T12:00:00-07:00', completeSessionIds: [], sessions: [] };
   const result = spawnSync(process.execPath, [campaignCli, 'observe', 'campaign', '--snapshot', JSON.stringify(snapshot)], { cwd: root, encoding: 'utf8', env: environment });
   assert.equal(result.status, 0, result.stderr);
-  assert.equal(JSON.parse(result.stdout).schemaVersion, 5);
+  assert.equal(JSON.parse(result.stdout).schemaVersion, 6);
   assert.deepEqual(readHostObservation(fs.realpathSync(root), 'campaign', environment), snapshot);
   assert.deepEqual(parseArguments(['observe', 'campaign', '--snapshot', JSON.stringify(snapshot)]), {
     operation: 'observe', input: 'campaign', json: false, actionId: undefined, result: snapshot,
@@ -525,23 +550,23 @@ test('ready actions exclude blocked and started dispatch without mutating durabl
     { id: 'ready', parentPlanId: 'campaign', dependsOn: [], lifecycle: 'open', path: 'ready' },
   ]);
   const blocked = {
-    schemaVersion: 3, id: 'blocked-action', type: 'CREATE_WORKER', assignmentId: 'blocked-assignment',
+    schemaVersion: 4, id: 'blocked-action', type: 'CREATE_WORKER', assignmentId: 'blocked-assignment',
     idempotencyKey: 'blocked-key', payload: { planId: 'blocked', dispatch: { ready: false, state: 'NOT_STARTED', hostIdentity: null } },
   };
   const started = {
-    schemaVersion: 3, id: 'started-action', type: 'CREATE_WORKER', assignmentId: 'started-assignment',
+    schemaVersion: 4, id: 'started-action', type: 'CREATE_WORKER', assignmentId: 'started-assignment',
     idempotencyKey: 'started-key', payload: { planId: 'ready', dispatch: { ready: true, state: 'STARTED', hostIdentity: 'client-1' } },
   };
   const rebase = {
-    schemaVersion: 3, id: 'rebase-action', type: 'REQUEST_REBASE', assignmentId: 'rebase-assignment',
+    schemaVersion: 4, id: 'rebase-action', type: 'REQUEST_REBASE', assignmentId: 'rebase-assignment',
     idempotencyKey: 'rebase-key', payload: { sessionId: 'session', ontoRevision: ledger.integrationRevision },
   };
   const cleanup = {
-    schemaVersion: 3, id: 'cleanup-action', type: 'ARCHIVE_WORKTREE', assignmentId: 'cleanup-assignment',
-    idempotencyKey: 'cleanup-key', payload: { worktree: '/worker' },
+    schemaVersion: 4, id: 'cleanup-action', type: 'ARCHIVE_WORKTREE', assignmentId: 'cleanup-assignment',
+    idempotencyKey: 'cleanup-key', payload: { sessionId: 'cleanup-session', worktree: '/worker' },
   };
   const ready = {
-    schemaVersion: 3, id: 'ready-action', type: 'CREATE_WORKER', assignmentId: 'ready-assignment',
+    schemaVersion: 4, id: 'ready-action', type: 'CREATE_WORKER', assignmentId: 'ready-assignment',
     idempotencyKey: 'ready-key', payload: { planId: 'ready', dispatch: { ready: true, state: 'NOT_STARTED', hostIdentity: null } },
   };
   const status = {
@@ -552,7 +577,7 @@ test('ready actions exclude blocked and started dispatch without mutating durabl
   const result = readyActions(status, campaignGraph);
   assert.deepEqual(result.actions, [rebase, cleanup, ready]);
   assert.equal(JSON.stringify(status), before);
-  assert.deepEqual(readReadyActionsV3(result), result);
+  assert.deepEqual(readReadyActionsV4(result), result);
   assert.equal(captureError(() => readyActions({ ...status, diagnostics: [{ message: 'conflict' }] }, campaignGraph)).code, 'CAMPAIGN_STATUS_BLOCKED');
 });
 
@@ -950,7 +975,7 @@ test('campaign status and advance CLI expose stable JSON and do not duplicate di
   result = spawnSync(process.execPath, [campaignCli, 'ready-actions', 'campaign', '--json'], { cwd: root, encoding: 'utf8', env: environment });
   assert.equal(result.status, 0, result.stderr);
   const ready = JSON.parse(result.stdout);
-  assert.equal(ready.schemaVersion, 3);
+  assert.equal(ready.schemaVersion, 4);
   assert.deepEqual(ready.actions, first.pendingActions);
   assert.equal(fs.readFileSync(ledgerFile, 'utf8'), ledgerBefore);
   assert.equal(command(root, ['rev-parse', 'HEAD']), revisionBefore);

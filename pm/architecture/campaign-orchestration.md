@@ -185,8 +185,10 @@ Status V3 replaced the scalar pending-action projection with the complete
 ordered `pendingActions` collection. Ledger V2 owns that same collection and
 normalizes an immutable V1 ledger's optional scalar action into zero or one
 current actions. Recovery adds immutable action V2, ledger V3, status V4, and
-ready-actions V2 contracts. Current writers emit only those latest physical
-versions while readers retain every earlier version.
+ready-actions V2 contracts. Host-selected recovery paths add action V3, ledger
+V4, status V5, and ready-actions V3. Session-addressed cleanup adds action V4,
+ledger V5, status V6, and ready-actions V4. Current writers emit only those
+latest physical versions while readers retain every earlier version.
 
 ### Ready-action projection
 
@@ -201,8 +203,9 @@ and integration revision, then returns unchanged V1 host-action envelopes in
 `actions`. Rebase and cleanup actions are ready while pending. Create and reuse
 actions are ready only while `payload.dispatch.ready` is true and its state is
 `NOT_STARTED`; dependency-blocked or already-started dispatches remain visible
-in status for recovery but are absent from this executable view. Ready-actions
-V2 retains that shape and accepts action V1 or V2 envelopes. Blocking status
+in status for recovery but are absent from this executable view. Later
+ready-action versions retain that shape while carrying their corresponding
+current action envelopes. Blocking status
 diagnostics fail the projection closed; typed recovery-required and verified
 post-delivery checkout-loss diagnostics remain visible and nonblocking.
 
@@ -284,7 +287,7 @@ work and must deliver before it can enter the integration lane. Absent proof
 retains the ordinary blocking diagnostic.
 
 When a transition requires a supported Codex host effect, advance persists one
-V3 host-action envelope and returns status containing every outstanding action.
+V4 host-action envelope and returns status containing every outstanding action.
 One invocation adds at most one action. The coordinator records each tool
 result through `ponytail campaign action-result <campaign> <action-id> --result
 <json>`. Repeating an identical recorded result returns the already applied
@@ -352,10 +355,14 @@ commands may then re-root through it. Mutating campaign commands invoked in a
 worker fail closed; this version does not claim an authenticated command proxy
 that the host does not expose.
 
-For cleanup, the coordinator requests the bound worker to archive its own
-attached managed worktree through the supported recoverable worktree-archive
-operation, verifies the checkout is gone, and then archives the worker chat.
-An interrupted or unavailable worker remains `CLEANUP_PENDING`; Ponytail never
+For cleanup, `ARCHIVE_WORKTREE` carries both the bound session and exact
+worktree. The worker first performs the invoking project's canonical resource
+cleanup. The coordinator then uses the supported current-host thread handoff
+to move that exact session out of its managed worktree, verifies the old
+checkout is gone, and finally archives the worker chat. This does not rely on
+the attachment-scoped archive operation: Codex may manage a handoff-created
+worktree without attaching an archive artifact to the destination chat. An
+interrupted or unavailable worker remains `CLEANUP_PENDING`; Ponytail never
 falls back to deleting an inferred path.
 
 ### Failure and recovery

@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-10-01-cleanup_assumed_managed_worktree_was_attached",
+  "recorded_at": "2026-10-01T03:54:41-07:00",
+  "source_references": [
+    "pm/bugs/closed/2026-10-01-BUG-managed_worktree_not_attached.md",
+    "src/campaign-orchestration.js",
+    "skills/plan-execution/SKILL.md",
+    "pm/uat/campaign-orchestration.md"
+  ],
+  "context": {
+    "languages": ["javascript"],
+    "frameworks": ["Codex managed worktrees"],
+    "components": ["campaign scheduler", "plan-execution"],
+    "affected_boundaries": ["managed-worktree classification to task-scoped archive capability"],
+    "code_references": [
+      "src/campaign-orchestration.js:readActionV4",
+      "src/campaign-orchestration.js:advanceLedger",
+      "skills/plan-execution/SKILL.md:Campaign Scheduler Protocol"
+    ]
+  },
+  "observed_behavior": "A worker could not complete ARCHIVE_WORKTREE because Codex reported that its host-managed checkout was not attached to that task.",
+  "expected_behavior": "The coordinator retires every eligible managed campaign checkout through a supported operation whose authority follows the worker session rather than an optional task artifact.",
+  "causal_mechanism": "The policy treated managed-worktree provenance as proof that the destination chat owned an archive artifact, but Codex thread handoff can create a managed checkout without attaching such an artifact to that chat.",
+  "anti_pattern": {
+    "structural_description": "A lifecycle action selected a capability from a broad resource classification without proving the narrower ownership precondition required by that capability.",
+    "why_it_fails": "The resource is valid and managed, but the archive API authorizes only artifacts attached to the calling task, so cleanup cannot begin from the worker chat."
+  },
+  "correct_pattern": {
+    "required_invariant": "The retirement operation is authorized by the exact worker session and managed-checkout association represented by the cleanup action.",
+    "implementation_description": "Carry the session in ARCHIVE_WORKTREE, run project cleanup in that worker, then have the coordinator use current-host thread handoff to move the same session out of the managed checkout and verify the old path disappeared."
+  },
+  "applicability_conditions": [
+    "A host distinguishes managed resource provenance from task-local artifact attachment.",
+    "A coordinator must retire a worker checkout created or moved by session handoff."
+  ],
+  "known_non_matches": [
+    "Restore of a proven archived artifact still uses the artifact-specific restore operation.",
+    "A stale abandoned slot with no campaign session uses project-owned fenced worktree reclamation."
+  ],
+  "confirmation_evidence": [
+    "Codex rejected the worker archive request with 'This worktree is not attached to the current task.' while the checkout remained present and clean.",
+    "The existing live-host UAT record documents the same failure for a handoff-created worktree."
+  ],
+  "regression_proofs": [
+    "tests/campaign-orchestration.test.js: historical cleanup actions gain the bound session required for coordinator handoff",
+    "tests/plan-execution-policy.test.js: campaign coordinator skill requires current-host thread handoff"
+  ]
+}

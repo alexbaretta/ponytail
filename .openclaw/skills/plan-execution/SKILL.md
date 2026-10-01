@@ -741,15 +741,20 @@ durable state instead of remembering worker assignments in conversation:
    integration cycle. Cleanup is eligible only after successful plan closure.
 12. Then follow the next action returned by `ready-actions`. A `REUSE_WORKER`
    action retains the finished session and managed worktree for its named next
-   plan. For `ARCHIVE_WORKTREE`, ask the bound worker to archive its own managed
-   worktree through the supported recoverable host operation and verify the
-   checkout is gone. For `ARCHIVE_SESSION`, archive only the action's named
-   worker chat. Worktree retirement must first run the project's canonical
-   cleanup for owned resources such as databases, containers, listeners, and
-   Docker networks. Never delete an inferred path or clean up an unintegrated
-   revision. The scheduler retains only the completed workers required by
-   current dispatch demand after idle capacity is counted; surplus workers are
-   cleanup-ready instead of being retained indefinitely.
+   plan. For `ARCHIVE_WORKTREE`, message the action's exact `payload.sessionId`
+   to run the project's canonical cleanup for resources owned by
+   `payload.worktree`, such as databases, containers, listeners, and Docker
+   networks. After that cleanup completes, the coordinator uses the supported
+   current-host thread handoff on that same session to move it out of its Codex
+   worktree, waits for the handoff to finish, and verifies the exact old
+   checkout is gone. This coordinator-owned handoff is the canonical retirement
+   operation: a Codex-managed worktree is not necessarily an archive artifact
+   attached to the worker chat, so do not ask the worker to call the
+   attachment-scoped worktree archive operation. For `ARCHIVE_SESSION`, archive
+   only the action's named worker chat. Never delete an inferred path or clean
+   up an unintegrated revision. The scheduler retains only the completed workers
+   required by current dispatch demand after idle capacity is counted; surplus
+   workers are cleanup-ready instead of being retained indefinitely.
 13. After each completed supported host effect, refresh the host observation
    first when the action changes a managed checkout path, then run `ponytail campaign action-result
    <campaign-root> <action-id> --result <json>` from the coordinator worktree.

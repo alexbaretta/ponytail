@@ -285,9 +285,9 @@
         "module": "src/campaign-orchestration.js",
         "readerRegistryExport": "CampaignLedgerReaders"
       },
-      "currentVersion": "V4",
-      "versions": ["V1", "V2", "V3", "V4"],
-      "supportedReadVersions": ["V1", "V2", "V3", "V4"],
+      "currentVersion": "V5",
+      "versions": ["V1", "V2", "V3", "V4", "V5"],
+      "supportedReadVersions": ["V1", "V2", "V3", "V4", "V5"],
       "supportedDowngradeVersions": []
     },
     {
@@ -309,9 +309,9 @@
         "module": "src/campaign-orchestration.js",
         "readerRegistryExport": "CampaignStatusReaders"
       },
-      "currentVersion": "V5",
-      "versions": ["V1", "V2", "V3", "V4", "V5"],
-      "supportedReadVersions": ["V1", "V2", "V3", "V4", "V5"],
+      "currentVersion": "V6",
+      "versions": ["V1", "V2", "V3", "V4", "V5", "V6"],
+      "supportedReadVersions": ["V1", "V2", "V3", "V4", "V5", "V6"],
       "supportedDowngradeVersions": []
     },
     {
@@ -321,9 +321,9 @@
         "module": "src/campaign-orchestration.js",
         "readerRegistryExport": "CampaignActionReaders"
       },
-      "currentVersion": "V3",
-      "versions": ["V1", "V2", "V3"],
-      "supportedReadVersions": ["V1", "V2", "V3"],
+      "currentVersion": "V4",
+      "versions": ["V1", "V2", "V3", "V4"],
+      "supportedReadVersions": ["V1", "V2", "V3", "V4"],
       "supportedDowngradeVersions": []
     },
     {
@@ -333,9 +333,9 @@
         "module": "src/campaign-orchestration.js",
         "readerRegistryExport": "CampaignReadyActionsReaders"
       },
-      "currentVersion": "V3",
-      "versions": ["V1", "V2", "V3"],
-      "supportedReadVersions": ["V1", "V2", "V3"],
+      "currentVersion": "V4",
+      "versions": ["V1", "V2", "V3", "V4"],
+      "supportedReadVersions": ["V1", "V2", "V3", "V4"],
       "supportedDowngradeVersions": []
     },
     {

@@ -26,6 +26,7 @@ const ASSIGNMENT_STATES = [
 const ACTION_TYPES_V1 = ['CREATE_WORKER', 'REUSE_WORKER', 'REQUEST_REBASE', 'ARCHIVE_WORKTREE', 'ARCHIVE_SESSION'];
 const ACTION_TYPES_V2 = [...ACTION_TYPES_V1, 'RECOVER_WORKTREE'];
 const ACTION_TYPES_V3 = ['CREATE_WORKER', 'REUSE_WORKER', 'REQUEST_REBASE', 'ARCHIVE_WORKTREE', 'ARCHIVE_SESSION', 'RECOVER_WORKTREE'];
+const ACTION_TYPES_V4 = ACTION_TYPES_V3;
 const HOST_SESSION_STATES = ['working', 'waiting', 'completed', 'archived', 'missing', 'unknown'];
 const HOST_OBSERVATION_MAX_AGE_MS = 5 * 60 * 1000;
 const WORKER_BINDINGS_FILE = 'campaign-worker-bindings.json';
@@ -97,19 +98,38 @@ function readActionV3(value, label = 'action') {
   return { ...value, payload: { ...value.payload } };
 }
 
+function readActionV4(value, label = 'action') {
+  if (value === null) return null;
+  exactKeys(value, ['schemaVersion', 'id', 'type', 'assignmentId', 'idempotencyKey', 'payload'], label);
+  if (value.schemaVersion !== 4 || !ACTION_TYPES_V4.includes(value.type)) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', `${label} has an unsupported type or version`);
+  for (const key of ['id', 'assignmentId', 'idempotencyKey']) if (typeof value[key] !== 'string' || !value[key]) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', `${label}.${key} must be a nonempty string`);
+  if (!value.payload || typeof value.payload !== 'object' || Array.isArray(value.payload)) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', `${label}.payload must be an object`);
+  if (value.type === 'RECOVER_WORKTREE') {
+    exactKeys(value.payload, ['sessionId', 'previousWorktree', 'branch', 'revision'], `${label}.payload`);
+    for (const key of Object.keys(value.payload)) if (typeof value.payload[key] !== 'string' || !value.payload[key]) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', `${label}.payload.${key} must be a nonempty string`);
+  }
+  if (value.type === 'ARCHIVE_WORKTREE') {
+    exactKeys(value.payload, ['sessionId', 'worktree'], `${label}.payload`);
+    for (const key of Object.keys(value.payload)) if (typeof value.payload[key] !== 'string' || !value.payload[key]) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', `${label}.payload.${key} must be a nonempty string`);
+  }
+  return { ...value, payload: { ...value.payload } };
+}
+
 function readActionV1OrV2(value, label = 'action') {
   return value?.schemaVersion === 2 ? readActionV2(value, label) : readActionV1(value, label);
 }
 
-function readCurrentAction(value, label = 'action') {
-  if (value?.schemaVersion === 3) return readActionV3(value, label);
-  const physicalAction = readActionV1OrV2(value, label);
-  return readActionV3({
+function readCurrentAction(value, assignment, label = 'action') {
+  if (value?.schemaVersion === 4) return readActionV4(value, label);
+  const physicalAction = value?.schemaVersion === 3 ? readActionV3(value, label) : readActionV1OrV2(value, label);
+  return readActionV4({
     ...physicalAction,
-    schemaVersion: 3,
+    schemaVersion: 4,
     payload: physicalAction.type === 'RECOVER_WORKTREE'
       ? { sessionId: physicalAction.payload.sessionId, previousWorktree: physicalAction.payload.worktree, branch: physicalAction.payload.branch, revision: physicalAction.payload.revision }
-      : physicalAction.payload,
+      : physicalAction.type === 'ARCHIVE_WORKTREE'
+        ? { sessionId: assignment?.sessionId, worktree: physicalAction.payload.worktree }
+        : physicalAction.payload,
   }, label);
 }
 
@@ -275,23 +295,48 @@ function readLedgerV4(value, file = 'campaign ledger') {
   return { ...value, assignments, pendingActions, completedActions, workers };
 }
 
+function readLedgerV5(value, file = 'campaign ledger') {
+  exactKeys(value, ['schemaVersion', 'campaignId', 'topLevelWorktree', 'coordinatorSessionId', 'integrationBranch', 'integrationRevision', 'assignments', 'pendingActions', 'completedActions', 'workers'], file);
+  if (value.schemaVersion !== 5) fail('CAMPAIGN_ORCHESTRATION_VERSION', `${file}: unsupported schemaVersion`);
+  for (const key of ['campaignId', 'topLevelWorktree', 'integrationRevision']) if (typeof value[key] !== 'string' || !value[key]) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', `${file}.${key} must be a nonempty string`);
+  optionalString(value.coordinatorSessionId, `${file}.coordinatorSessionId`);
+  optionalString(value.integrationBranch, `${file}.integrationBranch`);
+  if (!Array.isArray(value.assignments) || !Array.isArray(value.pendingActions) || !Array.isArray(value.completedActions) || !Array.isArray(value.workers)) {
+    fail('CAMPAIGN_ORCHESTRATION_SCHEMA', `${file} assignments, pendingActions, completedActions, and workers must be arrays`);
+  }
+  const assignments = value.assignments.map((assignment, index) => readAssignmentV1(assignment, `${file}.assignments[${index}]`));
+  const pendingActions = value.pendingActions.map((pendingAction, index) => readActionV4(pendingAction, `${file}.pendingActions[${index}]`));
+  const completedActions = value.completedActions.map((actionResult, index) => readCompletedActionV2(actionResult, `${file}.completedActions[${index}]`));
+  if (new Set(pendingActions.map(({ id }) => id)).size !== pendingActions.length) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', `${file} contains duplicate pending action IDs`);
+  if (new Set(pendingActions.map(({ assignmentId }) => assignmentId)).size !== pendingActions.length) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', `${file} contains more than one pending action for an assignment`);
+  if (pendingActions.filter(({ type }) => type === 'REQUEST_REBASE').length > 1) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', `${file} contains more than one pending rebase action`);
+  if (new Set(completedActions.map(({ actionId }) => actionId)).size !== completedActions.length) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', `${file} contains duplicate completed action IDs`);
+  const workers = value.workers.map((worker, index) => readWorkerV1(worker, `${file}.workers[${index}]`));
+  return { ...value, assignments, pendingActions, completedActions, workers };
+}
+
 function readCurrentLedger(value, file = 'campaign ledger') {
-  if (value?.schemaVersion === 4) return readLedgerV4(value, file);
+  if (value?.schemaVersion === 5) return readLedgerV5(value, file);
   let physicalLedger;
-  if (value?.schemaVersion === 3) physicalLedger = readLedgerV3(value, file);
+  if (value?.schemaVersion === 4) physicalLedger = readLedgerV4(value, file);
+  else if (value?.schemaVersion === 3) physicalLedger = readLedgerV3(value, file);
   else if (value?.schemaVersion === 2) physicalLedger = readLedgerV2(value, file);
   else {
     const { pendingAction, ...legacyLedger } = readLedgerV1(value, file);
     physicalLedger = { ...legacyLedger, pendingActions: pendingAction ? [pendingAction] : [] };
   }
-  return readLedgerV4({
+  return readLedgerV5({
     ...physicalLedger,
-    schemaVersion: 4,
-    pendingActions: physicalLedger.pendingActions.map((pendingAction, index) => readCurrentAction(pendingAction, `${file}.pendingActions[${index}]`)),
+    schemaVersion: 5,
+    pendingActions: physicalLedger.pendingActions.map((pendingAction, index) => readCurrentAction(
+      pendingAction,
+      physicalLedger.assignments.find(({ id }) => id === pendingAction.assignmentId),
+      `${file}.pendingActions[${index}]`,
+    )),
   }, file);
 }
 
-const CampaignLedgerReaders = Object.freeze({ V1: readLedgerV1, V2: readLedgerV2, V3: readLedgerV3, V4: readLedgerV4 });
+const CampaignLedgerReaders = Object.freeze({ V1: readLedgerV1, V2: readLedgerV2, V3: readLedgerV3, V4: readLedgerV4, V5: readLedgerV5 });
 const CampaignHostObservationReaders = Object.freeze({ V1: readHostObservationV1 });
 const CampaignWorkerBindingReaders = Object.freeze({ V1: readWorkerBindingsV1 });
 const CampaignWorkerDeliveryReaders = Object.freeze({ V1: readWorkerDeliveriesV1 });
@@ -365,7 +410,30 @@ function readReadyActionsV3(value) {
   return { ...value, actions };
 }
 
-const CampaignReadyActionsReaders = Object.freeze({ V1: readReadyActionsV1, V2: readReadyActionsV2, V3: readReadyActionsV3 });
+function readReadyActionsV4(value) {
+  exactKeys(value, ['schemaVersion', 'campaignId', 'invocationWorktree', 'effectiveWorktree', 'integrationRevision', 'actions'], 'campaign ready actions');
+  if (value.schemaVersion !== 4) fail('CAMPAIGN_ORCHESTRATION_VERSION', 'unsupported campaign ready-actions version');
+  for (const key of ['campaignId', 'invocationWorktree', 'effectiveWorktree', 'integrationRevision']) {
+    if (typeof value[key] !== 'string' || !value[key]) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', `campaign ready actions ${key} must be a nonempty string`);
+  }
+  if (!Array.isArray(value.actions)) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', 'campaign ready actions actions must be an array');
+  const actions = value.actions.map((pendingAction, index) => readActionV4(pendingAction, `campaign ready actions actions[${index}]`));
+  if (new Set(actions.map(({ id }) => id)).size !== actions.length) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', 'campaign ready actions contains duplicate action IDs');
+  if (new Set(actions.map(({ assignmentId }) => assignmentId)).size !== actions.length) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', 'campaign ready actions contains more than one action for an assignment');
+  if (actions.filter(({ type }) => type === 'REQUEST_REBASE').length > 1) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', 'campaign ready actions contains more than one rebase action');
+  for (const pendingAction of actions) {
+    if (['CREATE_WORKER', 'REUSE_WORKER'].includes(pendingAction.type)) {
+      exactKeys(pendingAction.payload.dispatch, ['ready', 'state', 'hostIdentity'], 'campaign ready dispatch');
+      if (pendingAction.payload.dispatch.ready !== true || pendingAction.payload.dispatch.state !== 'NOT_STARTED'
+        || pendingAction.payload.dispatch.hostIdentity !== null) {
+        fail('CAMPAIGN_ORCHESTRATION_SCHEMA', 'campaign ready actions contains a dispatch that is not ready to start');
+      }
+    }
+  }
+  return { ...value, actions };
+}
+
+const CampaignReadyActionsReaders = Object.freeze({ V1: readReadyActionsV1, V2: readReadyActionsV2, V3: readReadyActionsV3, V4: readReadyActionsV4 });
 
 function readStatusV1(value) {
   exactKeys(value, ['schemaVersion', 'campaignId', 'invocationWorktree', 'effectiveWorktree', 'coordinatorSessionId', 'integrationRevision', 'assignments', 'readyPlans', 'activeWorkers', 'idleWorkers', 'rebaseRequired', 'readyToMerge', 'cleanupPending', 'pendingAction', 'diagnostics'], 'campaign status');
@@ -426,7 +494,20 @@ function readStatusV5(value) {
   return value;
 }
 
-const CampaignStatusReaders = Object.freeze({ V1: readStatusV1, V2: readStatusV2, V3: readStatusV3, V4: readStatusV4, V5: readStatusV5 });
+function readStatusV6(value) {
+  exactKeys(value, ['schemaVersion', 'campaignId', 'invocationWorktree', 'effectiveWorktree', 'coordinatorSessionId', 'integrationRevision', 'observedAt', 'assignments', 'sessionAssignments', 'workingSessions', 'idleSessions', 'waitingSessions', 'finishedSessions', 'worktrees', 'inProgressPlans', 'readyPlans', 'activeWorkers', 'idleWorkers', 'reusableWorkers', 'rebaseRequired', 'readyToMerge', 'cleanupPending', 'pendingActions', 'diagnostics'], 'campaign status');
+  if (value.schemaVersion !== 6) fail('CAMPAIGN_ORCHESTRATION_VERSION', 'unsupported campaign status version');
+  for (const key of ['campaignId', 'invocationWorktree', 'effectiveWorktree', 'integrationRevision']) if (typeof value[key] !== 'string' || !value[key]) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', `campaign status ${key} must be a nonempty string`);
+  for (const key of ['coordinatorSessionId', 'observedAt']) optionalString(value[key], `campaign status ${key}`);
+  for (const key of ['assignments', 'sessionAssignments', 'workingSessions', 'idleSessions', 'waitingSessions', 'finishedSessions', 'worktrees', 'inProgressPlans', 'readyPlans', 'activeWorkers', 'idleWorkers', 'reusableWorkers', 'rebaseRequired', 'readyToMerge', 'cleanupPending', 'pendingActions', 'diagnostics']) if (!Array.isArray(value[key])) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', `campaign status ${key} must be an array`);
+  const pendingActions = value.pendingActions.map((pendingAction, index) => readActionV4(pendingAction, `campaign status pendingActions[${index}]`));
+  if (new Set(pendingActions.map(({ id }) => id)).size !== pendingActions.length) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', 'campaign status contains duplicate pending action IDs');
+  if (new Set(pendingActions.map(({ assignmentId }) => assignmentId)).size !== pendingActions.length) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', 'campaign status contains more than one pending action for an assignment');
+  if (pendingActions.filter(({ type }) => type === 'REQUEST_REBASE').length > 1) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', 'campaign status contains more than one pending rebase action');
+  return value;
+}
+
+const CampaignStatusReaders = Object.freeze({ V1: readStatusV1, V2: readStatusV2, V3: readStatusV3, V4: readStatusV4, V5: readStatusV5, V6: readStatusV6 });
 
 function git(repositoryRoot, args, accepted = [0]) {
   const result = spawnSync('git', ['-C', repositoryRoot, ...args], { encoding: 'utf8' });
@@ -699,8 +780,8 @@ function resolveInvocationWorktree(invocationWorktree, environment = process.env
 
 function newLedger(repositoryRoot, campaignId, coordinatorSessionId) {
   const identity = repositoryIdentity(repositoryRoot);
-  return readLedgerV4({
-    schemaVersion: 4,
+  return readLedgerV5({
+    schemaVersion: 5,
     campaignId,
     topLevelWorktree: repositoryRoot,
     coordinatorSessionId,
@@ -727,7 +808,7 @@ function readLedger(repositoryRoot, campaignId, environment = process.env) {
 }
 
 function writeLedger(file, ledger) {
-  const value = readLedgerV4(ledger, file);
+  const value = readLedgerV5(ledger, file);
   fs.mkdirSync(path.dirname(file), { recursive: true });
   const temporary = `${file}.${process.pid}.${crypto.randomUUID()}.tmp`;
   fs.writeFileSync(temporary, `${JSON.stringify(value, null, 2)}\n`, { flag: 'wx', mode: 0o600 });
@@ -972,7 +1053,7 @@ function reconcile(graph, ledger, invocationWorktree = ledger.topLevelWorktree, 
   }).sort((left, right) => left.planId.localeCompare(right.planId));
   const reusableWorkers = idleWorkers;
   const status = {
-    schemaVersion: 5,
+    schemaVersion: 6,
     campaignId: graph.campaignId,
     invocationWorktree,
     effectiveWorktree: ledger.topLevelWorktree,
@@ -1062,13 +1143,13 @@ function reconcile(graph, ledger, invocationWorktree = ledger.topLevelWorktree, 
   status.diagnostics.sort((left, right) => left.code.localeCompare(right.code)
     || (left.planId ?? '').localeCompare(right.planId ?? '')
     || (left.assignmentId ?? '').localeCompare(right.assignmentId ?? ''));
-  return readStatusV5(status);
+  return readStatusV6(status);
 }
 
 function action(type, assignment, payload = {}) {
   if (['CREATE_WORKER', 'REUSE_WORKER'].includes(type)) payload = { ...payload, dispatch: { ready: true, state: 'NOT_STARTED', hostIdentity: null } };
-  return readActionV3({
-    schemaVersion: 3,
+  return readActionV4({
+    schemaVersion: 4,
     id: crypto.randomUUID(),
     type,
     assignmentId: assignment.id,
@@ -1108,8 +1189,8 @@ function readyActions(status, graph) {
         && pendingAction.payload.dispatch.state === 'NOT_STARTED'
         && dispatchPrerequisitesSatisfied(graph, pendingAction.payload.planId))
   ));
-  return readReadyActionsV3({
-    schemaVersion: 3,
+  return readReadyActionsV4({
+    schemaVersion: 4,
     campaignId: status.campaignId,
     invocationWorktree: status.invocationWorktree,
     effectiveWorktree: status.effectiveWorktree,
@@ -1218,7 +1299,9 @@ function advanceLedger(graph, ledger, environment = null) {
   if (cleanup) {
     cleanup.state = 'CLEANUP_PENDING';
     const type = cleanup.worktreeArchived ? 'ARCHIVE_SESSION' : 'ARCHIVE_WORKTREE';
-    const pendingAction = action(type, cleanup, type === 'ARCHIVE_WORKTREE' ? { worktree: cleanup.worktree } : { sessionId: cleanup.sessionId });
+    const pendingAction = action(type, cleanup, type === 'ARCHIVE_WORKTREE'
+      ? { sessionId: cleanup.sessionId, worktree: cleanup.worktree }
+      : { sessionId: cleanup.sessionId });
     ledger.pendingActions.push(pendingAction);
     return pendingAction;
   }
@@ -1538,7 +1621,7 @@ function diagnostic(error) {
 }
 
 module.exports = {
-  CampaignActionReaders: Object.freeze({ V1: readActionV1, V2: readActionV2, V3: readActionV3 }),
+  CampaignActionReaders: Object.freeze({ V1: readActionV1, V2: readActionV2, V3: readActionV3, V4: readActionV4 }),
   CampaignHostObservationReaders,
   CampaignLedgerReaders,
   CampaignOrchestrationError,
@@ -1558,15 +1641,18 @@ module.exports = {
   readActionV1,
   readActionV2,
   readActionV3,
+  readActionV4,
   readAssignmentV1,
   readLedger,
   readLedgerV1,
   readLedgerV2,
   readLedgerV3,
   readLedgerV4,
+  readLedgerV5,
   readReadyActionsV1,
   readReadyActionsV2,
   readReadyActionsV3,
+  readReadyActionsV4,
   readHostObservation,
   readHostObservationV1,
   readWorkerBindings,
@@ -1582,6 +1668,7 @@ module.exports = {
   readStatusV3,
   readStatusV4,
   readStatusV5,
+  readStatusV6,
   readWorkerV1,
   reconcile,
   reconcileLedger,

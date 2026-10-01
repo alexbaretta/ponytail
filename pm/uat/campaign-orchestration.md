@@ -431,8 +431,12 @@ Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
 1. Attempt cleanup of the unmerged worker.
    - Ponytail refuses cleanup and retains the assignment.
 2. Advance cleanup for the integrated worker.
-   - Ponytail archives the session, archives/removes the managed worktree, and
-     marks the assignment archived only after both effects are confirmed.
+   - The cleanup action names the exact session and worktree. The worker cleans
+     project-owned resources, the coordinator retires the managed checkout by
+     handing that session back to its ordinary checkout, and Ponytail archives
+     the chat and marks the assignment archived only after both effects are
+     confirmed. This succeeds even when the worker chat has no attached
+     worktree archive artifact.
 3. Interrupt cleanup after its first external effect and resume it.
    - Ponytail reports `CLEANUP_PENDING`, retries only the missing effect, and
      never exposes the worker as idle while cleanup remains incomplete.

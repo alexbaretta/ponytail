@@ -298,6 +298,12 @@ remain visible and retryable; it must not make the worker appear idle or allow
 the assignment to disappear. Recoverable archival of the worktree before its
 checkout is removed satisfies this requirement.
 
+The worktree-cleanup action must name both the exact session and worktree. The
+coordinator must retire that managed checkout through the supported current-host
+thread handoff after the worker completes project-owned resource cleanup.
+Codex-managed-worktree classification must not be treated as proof that the
+worktree is an archive artifact attached to the worker chat.
+
 Scheduling, integration, and cleanup actions must be programmatically
 selectable, idempotent, auditable, and safe to resume after partial failure. A
 coordinator must be able to execute the next valid action without reconstructing
