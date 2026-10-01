@@ -2,7 +2,7 @@
   "schema_version": 1,
   "observation_id": "2026-10-01-worker_closure_delivery_locator",
   "recorded_at": "2026-10-01T15:23:00-07:00",
-  "source_references": ["pm/bugs/in_progress/2026-10-01-BUG-worker_closure_delivery_locator.md"],
+  "source_references": ["pm/bugs/closed/2026-10-01-BUG-worker_closure_delivery_locator.md"],
   "context": {
     "languages": ["javascript"], "frameworks": ["Git"],
     "components": ["campaign delivery"],

@@ -2,7 +2,7 @@
 
 - ID: `2026-10-01-BUG-worker_closure_delivery_locator`
 - Type: `BUG`
-- Status: `in_progress`
+- Status: `closed`
 
 GWEN's monitor-state worker committed its accepted plan closure, moving its
 stable plan ID from `in_progress` to `closed`. Authenticated delivery rejected
@@ -28,7 +28,14 @@ rejection before the correction, then passed delivery and fast-forward
 integration afterwards. All 49 campaign census/orchestration tests pass.
 Live GWEN redelivery accepted the same clean closure commit with its actual
 closed evidence paths, cleared the delivery-related guard, and resumed normal
-serialized actions. Its own final join remains pending behind the join lane.
+serialized actions. Live closure acceptance completed on 2026-10-01: the same
+worker's original closure was rebased through action
+`29850fad-a572-42d2-ba50-0c75ab00a47c` and fast-forward integrated at
+`cd7985a11477102da02b0d2b79a7bfe2fedc4079`. The coordinator's current tree
+contains `pm/plans/closed/2026-09-30-traceability-async-monitor-state/plan.md`
+with closed lifecycle and preserved acceptance evidence. Canonical campaign
+validation passed after integration. No replacement session or manual merge
+was used; this resolves this bug, not the remaining campaign acceptance.
 Full core unit suites, installer proofs, traceability, rule-copy, version, and
 TSTS checks pass. The final TSTS check ran after the new records were staged,
 as required by their tracked-file policy; no product build target was affected.

@@ -498,6 +498,13 @@ Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
 
 Automated profile: `node --test --test-name-pattern='worker delivery resolves a closed plan' tests/campaign-orchestration.test.js`.
 
+Live Codex profile passed on 2026-10-01: the original monitor-state worker's
+closure delivery was accepted with its actual closed evidence paths, then
+rebased through action `29850fad-a572-42d2-ba50-0c75ab00a47c` and fast-forward
+integrated at `cd7985a11477102da02b0d2b79a7bfe2fedc4079`. The integrated
+tree contains the closed plan and canonical campaign validation passes.
+This proves the closure delivery/join Arc, not whole-campaign completion.
+
 ## Arc: Retain integrated workers; explicit retirement remains separately fenced
 
 Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
