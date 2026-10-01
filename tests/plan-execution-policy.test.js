@@ -63,7 +63,9 @@ test('campaign policy delegates every worker effect to the durable action loop',
   assert.match(policy, /campaign action-result\n+   <campaign-root> <action-id> --result <json>/);
   assert.match(policy, /Recording one result changes only that named action/);
   assert.match(policy, /Mutating campaign commands in\n+a worker fail closed/);
-  assert.match(policy, /Campaign diagnostics outrank new dispatch, integration, cleanup/);
+  assert.match(policy, /Blocking campaign diagnostics outrank new dispatch, integration, cleanup/);
+  assert.match(policy, /`CAMPAIGN_WORKTREE_MISSING_AFTER_DELIVERY` is an informational recovery/);
+  assert.match(policy, /ordinary `CAMPAIGN_WORKTREE_MISSING` lacks that proof and remains blocking/);
   assert.match(policy, /A `REUSE_WORKER`\n+   action retains the finished session and managed worktree/);
 });
 

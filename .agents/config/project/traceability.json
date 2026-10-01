@@ -258,6 +258,11 @@
       "locator": "text"
     },
     {
+      "class": "issue",
+      "path": "pm/bugs/closed/2026-10-01-BUG-missing_delivered_worktree_blocks_campaign.md",
+      "locator": "text"
+    },
+    {
       "class": "implementation",
       "path": "hooks/plan-input.js",
       "locator": "text"

@@ -251,6 +251,16 @@ only then does reconciliation advance `MERGED` to `CLEANUP_PENDING`. A newer
 delivery after a failed integrated gate returns the same assignment to the
 ordinary ancestry and merge flow.
 
+If the checkout disappears after delivery, reconciliation projects the
+delivery's recorded revision and clean-at-delivery proof instead of replacing
+them with an unverified missing-worker observation. A complete host observation
+must still report the session as completed, and Git must still resolve the
+delivered commit. Status emits
+`CAMPAIGN_WORKTREE_MISSING_AFTER_DELIVERY`, which remains visible but is not a
+mutation blocker. The ordinary `CAMPAIGN_WORKTREE_MISSING` diagnostic remains
+blocking when any of those proofs is absent. Integration stays
+fast-forward-only, and cleanup remains action-driven.
+
 When a transition requires a supported Codex host effect, advance persists one
 V1 host-action envelope and returns status containing every outstanding action.
 One invocation adds at most one action. The coordinator records each tool

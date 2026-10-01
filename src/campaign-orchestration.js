@@ -640,9 +640,13 @@ function observedWorkers(graph, ledger, environment, hostObservation) {
     const existing = workers.find((worker) => worker.sessionId === binding.sessionId || worker.worktree === binding.worktree);
     const plan = plansById.get(assignment.planId);
     const hostSession = hostSessions.get(binding.sessionId);
+    const delivery = deliveries.get(assignment.id);
     let observation;
     if (!fs.existsSync(binding.worktree)) {
-      observation = { sessionId: binding.sessionId, worktree: binding.worktree, branch: binding.branch, revision: binding.revision, clean: false, activity: 'missing', evidenceComplete: false, worktreeArchived: existing?.worktreeArchived ?? false, sessionArchived: existing?.sessionArchived ?? false };
+      const deliveredCommitAvailable = Boolean(delivery)
+        && spawnSync('git', ['-C', ledger.topLevelWorktree, 'cat-file', '-e', `${delivery.revision}^{commit}`]).status === 0;
+      const recoverableDelivery = hostSession?.state === 'completed' && deliveredCommitAvailable;
+      observation = { sessionId: binding.sessionId, worktree: binding.worktree, branch: binding.branch, revision: recoverableDelivery ? delivery.revision : binding.revision, clean: recoverableDelivery, activity: recoverableDelivery ? 'completed' : 'missing', evidenceComplete: recoverableDelivery, worktreeArchived: existing?.worktreeArchived ?? false, sessionArchived: existing?.sessionArchived ?? false };
     } else {
       const identity = repositoryIdentity(binding.worktree);
       observation = {
@@ -817,7 +821,12 @@ function reconcile(graph, ledger, invocationWorktree = ledger.topLevelWorktree, 
       if (hostSession && !hostSession.managedWorktree) status.diagnostics.push(diagnosticRecord('CAMPAIGN_WORKTREE_NOT_MANAGED', `session ${assignment.sessionId} is not in a Codex-managed worktree`, assignment));
     }
     if (assignment.state !== 'ARCHIVED' && assignment.worktree && !assignment.worktreeArchived && !assignment.worktreeExists) {
-      status.diagnostics.push(diagnosticRecord('CAMPAIGN_WORKTREE_MISSING', `worker worktree is missing: ${assignment.worktree}`, assignment));
+      const delivered = ['READY_TO_MERGE', 'MERGED', 'CLEANUP_PENDING'].includes(assignment.state);
+      status.diagnostics.push(diagnosticRecord(
+        delivered ? 'CAMPAIGN_WORKTREE_MISSING_AFTER_DELIVERY' : 'CAMPAIGN_WORKTREE_MISSING',
+        delivered ? `worker worktree is missing after verified delivery: ${assignment.worktree}` : `worker worktree is missing: ${assignment.worktree}`,
+        assignment,
+      ));
     }
     if (['MERGED', 'CLEANUP_PENDING'].includes(assignment.state)
       && (!assignment.workerRevision
@@ -856,8 +865,17 @@ function dispatchPrerequisitesSatisfied(graph, planId) {
     && !graph.plans.some(({ parentPlanId, id }) => parentPlanId === plan.id && !completedPlans.has(id));
 }
 
+function blockingDiagnostics(status) {
+  const recoverableStates = new Set(['READY_TO_MERGE', 'MERGED', 'CLEANUP_PENDING']);
+  return status.diagnostics.filter((diagnostic) => (
+    diagnostic.code !== 'CAMPAIGN_WORKTREE_MISSING_AFTER_DELIVERY'
+      || !recoverableStates.has(status.assignments.find(({ id }) => id === diagnostic.assignmentId)?.state)
+  ));
+}
+
 function readyActions(status, graph) {
-  if (status.diagnostics.length > 0) fail('CAMPAIGN_STATUS_BLOCKED', status.diagnostics.map(({ message }) => message).join('; '));
+  const conflicts = blockingDiagnostics(status);
+  if (conflicts.length > 0) fail('CAMPAIGN_STATUS_BLOCKED', conflicts.map(({ message }) => message).join('; '));
   const actions = status.pendingActions.filter((pendingAction) => (
     !['CREATE_WORKER', 'REUSE_WORKER'].includes(pendingAction.type)
       || (pendingAction.payload.dispatch?.ready === true
@@ -908,10 +926,10 @@ function reserveAssignment(ledger, planId, idle = null) {
 function reconcileLedger(graph, ledger, environment = null) {
   if (!ledger.coordinatorSessionId) fail('CAMPAIGN_COORDINATOR_REQUIRED', 'campaign reconciliation requires one authenticated coordinator binding');
   const status = reconcile(graph, ledger, ledger.topLevelWorktree, environment);
-  const conflicts = status.diagnostics.filter(({ code }) => code !== 'CAMPAIGN_PLAN_UNASSIGNED');
+  const conflicts = blockingDiagnostics(status).filter(({ code }) => code !== 'CAMPAIGN_PLAN_UNASSIGNED');
   if (conflicts.length) fail('CAMPAIGN_STATUS_BLOCKED', conflicts.map(({ message }) => message).join('; '));
   ledger.integrationRevision = status.integrationRevision;
-  for (const diagnostic of status.diagnostics) reserveAssignment(ledger, diagnostic.planId);
+  for (const diagnostic of status.diagnostics.filter(({ code }) => code === 'CAMPAIGN_PLAN_UNASSIGNED')) reserveAssignment(ledger, diagnostic.planId);
   return null;
 }
 
@@ -923,7 +941,8 @@ function advanceLedger(graph, ledger, environment = null) {
     }
   }
   const status = reconcile(graph, ledger, ledger.topLevelWorktree, environment);
-  if (status.diagnostics.length) fail('CAMPAIGN_STATUS_BLOCKED', status.diagnostics.map((item) => item.message).join('; '));
+  const conflicts = blockingDiagnostics(status);
+  if (conflicts.length) fail('CAMPAIGN_STATUS_BLOCKED', conflicts.map((item) => item.message).join('; '));
   const integrationAction = ledger.pendingActions.find(({ type }) => type === 'REQUEST_REBASE');
   if (ledger.integrationRevision !== status.integrationRevision) {
     if (integrationAction) fail('CAMPAIGN_INTEGRATION_CHANGED', `integration revision changed while rebase action ${integrationAction.id} targets ${integrationAction.payload.ontoRevision}`);
@@ -1097,7 +1116,7 @@ function humanStatus(status) {
   for (const assignment of status.assignments) lines.push(`${assignment.state}\t${assignment.planId}\t${assignment.sessionId ?? '-'}\t${assignment.worktree ?? '-'}`);
   for (const planId of status.readyPlans) lines.push(`READY\t${planId}`);
   for (const pendingAction of status.pendingActions) lines.push(`ACTION\t${pendingAction.type}\t${pendingAction.id}`);
-  for (const item of status.diagnostics) lines.push(`BLOCKED\t${item.code}\t${item.message}`);
+  for (const item of status.diagnostics) lines.push(`${item.code === 'CAMPAIGN_WORKTREE_MISSING_AFTER_DELIVERY' ? 'INFO' : 'BLOCKED'}\t${item.code}\t${item.message}`);
   return `${lines.join('\n')}\n`;
 }
 

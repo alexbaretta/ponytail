@@ -750,11 +750,19 @@ Read-only `campaign status` invoked in an authenticated worker re-roots to its
 owning top-level worktree and reports both paths. Mutating campaign commands in
 a worker fail closed.
 
-Campaign diagnostics outrank new dispatch, integration, cleanup, and ordinary
-plan work. The coordinator repairs or reconciles their named evidence before
-continuing the campaign. It never suppresses a diagnostic by deleting an
-assignment, guessing that a session ended, or treating an unverified worktree
-as managed.
+Blocking campaign diagnostics outrank new dispatch, integration, cleanup, and
+ordinary plan work. The coordinator repairs or reconciles their named evidence
+before continuing the campaign. It never suppresses a diagnostic by deleting
+an assignment, guessing that a session ended, or treating an unverified
+worktree as managed.
+
+`CAMPAIGN_WORKTREE_MISSING_AFTER_DELIVERY` is an informational recovery
+diagnostic, not a blocking one. It means the scheduler has independently
+verified the authenticated delivery revision, complete host observation, and
+surviving Git commit after the worker checkout disappeared. Continue only
+through `advance` and `ready-actions`: the scheduler may still fast-forward
+that exact revision, dispatch unrelated ready work, and expose cleanup. An
+ordinary `CAMPAIGN_WORKTREE_MISSING` lacks that proof and remains blocking.
 
 A non-root plan may close when its own acceptance is complete. A campaign root
 with descendants may close only after every member is complete and final

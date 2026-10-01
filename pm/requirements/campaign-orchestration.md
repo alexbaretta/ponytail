@@ -38,7 +38,10 @@ stakeholder further clarified that an outstanding integration action must not
 prevent dispatch of independent dependency-ready plans. The stakeholder then
 selected `ready-actions` as the coordinator-facing name for the deterministic
 list of host actions that are executable now and required its use to be
-documented in the plan-execution skill.
+documented in the plan-execution skill. The stakeholder further clarified that
+a missing worker checkout must not block a campaign when the completed
+session's authenticated delivery already preserves the exact clean commit and
+validation evidence.
 
 ## Repository-wide campaign inventory
 
@@ -253,6 +256,16 @@ delivery while the plan remains in active work. The plan stays open until the
 coordinator runs the applicable final acceptance against the integrated tree
 and records its outcome. A failed integrated gate may return the same worker
 and assignment to delivery and integration without inventing a replacement.
+
+An authenticated delivery remains authoritative if its worker checkout later
+disappears, provided the delivered commit remains available to the campaign
+repository and a complete host observation identifies the session as
+completed. Status must continue to diagnose the missing checkout, but must
+distinguish this recoverable state from a missing checkout without delivery
+proof. The recoverable diagnostic must not block reconciliation,
+fast-forward-only integration, unrelated dispatch, or the later explicit
+cleanup sequence. Any missing checkout without that durable proof remains
+blocking.
 
 All campaign advancement in one top-level worktree must also use one worktree-
 scoped critical section so two campaign-scoped ledgers cannot race while

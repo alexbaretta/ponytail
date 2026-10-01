@@ -257,6 +257,34 @@ Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
    - Project resources such as databases, containers, and Docker networks are
      released before the managed checkout and bounded slot are reclaimed.
 
+## Arc: Integrate a delivered revision after its checkout disappears
+
+Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
+
+- **Actor:** Campaign coordinator.
+- **Prerequisites:** One completed managed worker has recorded an authenticated
+  clean delivery, its commit remains in the campaign repository, its checkout
+  is now missing, and an unrelated plan is dependency-ready.
+- **Profiles:** Automated scheduler and Git integration profile; live Codex
+  host-observation profile.
+- **External effects:** Fast-forwards the delivered revision and dispatches
+  unrelated ready work.
+
+1. Refresh the complete host observation after the delivered worker checkout
+   disappears.
+   - Status reports `CAMPAIGN_WORKTREE_MISSING_AFTER_DELIVERY`, preserves the
+     delivered revision and evidence, and does not classify the completed
+     session as an unverified worker.
+2. Advance the campaign through reconciliation and integration.
+   - Ponytail proves Git ancestry and fast-forwards the exact delivered commit
+     without requiring the vanished checkout.
+3. Advance again while the delivered plan remains open for final acceptance.
+   - Ponytail selects unrelated dependency-ready dispatch despite the visible
+     recoverable diagnostic.
+4. Repeat with no authenticated delivery or with a non-completed session.
+   - The ordinary missing-checkout diagnostic remains blocking and no mutation
+     occurs.
+
 ## Arc: Rebase and fast-forward completed work
 
 Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION

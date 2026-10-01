@@ -704,6 +704,99 @@ test('verified worker delivery integrates before plan closure and cleanup waits 
   assert.equal(advanceLedger(campaignGraph, ledger, environment).type, 'ARCHIVE_WORKTREE');
 });
 
+test('verified delivery remains integrable after its completed worker checkout disappears', () => {
+  const root = repository();
+  const worker = path.join(temporaryDirectory('ponytail-missing-delivered-worker-parent'), 'worker');
+  command(root, ['worktree', 'add', '-qb', 'delivered-worker', worker]);
+  write(worker, 'pm/plans/in_progress/work/evidence/result.md', 'verified\n');
+  command(worker, ['add', '.']);
+  command(worker, ['-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.test', 'commit', '-qm', 'delivered work']);
+  const workerRevision = command(worker, ['rev-parse', 'HEAD']);
+  const environment = { ...process.env, PONYTAIL_CAMPAIGN_STATE_DIR: temporaryDirectory('ponytail-missing-delivered-state') };
+  const ledger = newLedger(root, 'campaign', 'coordinator');
+  const assignment = {
+    id: 'delivered-assignment', planId: 'work', sessionId: 'delivered-session', worktree: worker, branch: 'delivered-worker',
+    dispatchRevision: ledger.integrationRevision, workerRevision, state: 'ACTIVE', idempotencyKey: 'delivered-key',
+    attachToken: 'delivered-token', worktreeArchived: false, sessionArchived: false,
+  };
+  ledger.assignments.push(assignment);
+  recordWorkerDelivery(root, 'campaign', { ...assignment, planPath: 'pm/plans/in_progress/work/plan.md' }, {
+    revision: workerRevision,
+    evidencePaths: ['pm/plans/in_progress/work/evidence/result.md'],
+  }, environment);
+  fs.writeFileSync(path.join(environment.PONYTAIL_CAMPAIGN_STATE_DIR, 'campaign-worker-bindings.json'), `${JSON.stringify({
+    schemaVersion: 1,
+    bindings: [{
+      repositoryRoot: root, campaignId: 'campaign', assignmentId: assignment.id, coordinatorSessionId: 'coordinator',
+      attachTokenHash: 'hash', sessionId: assignment.sessionId, worktree: worker, branch: assignment.branch,
+      revision: ledger.integrationRevision, boundAt: new Date().toISOString(),
+    }],
+  })}\n`);
+  writeHostObservation(root, 'campaign', {
+    schemaVersion: 1, campaignId: 'campaign', observedAt: new Date().toISOString(),
+    completeSessionIds: ['delivered-session'],
+    sessions: [{ sessionId: 'delivered-session', state: 'completed', worktree: worker, managedWorktree: true }],
+  }, environment);
+  command(root, ['worktree', 'remove', worker]);
+  const campaignGraph = graph([
+    { id: 'campaign', parentPlanId: null, dependsOn: [], lifecycle: 'in_progress', path: 'root' },
+    { id: 'work', parentPlanId: 'campaign', dependsOn: [], lifecycle: 'in_progress', path: 'work' },
+    { id: 'independent', parentPlanId: 'campaign', dependsOn: [], lifecycle: 'open', path: 'independent' },
+  ]);
+
+  let status = reconcile(campaignGraph, ledger, root, environment);
+  assert.equal(status.assignments[0].state, 'READY_TO_MERGE');
+  assert.equal(status.diagnostics.some(({ code }) => code === 'CAMPAIGN_WORKTREE_MISSING_AFTER_DELIVERY'), true);
+  assert.equal(status.diagnostics.some(({ code }) => code === 'CAMPAIGN_WORKTREE_MISSING'), false);
+  assert.equal(reconcileLedger(campaignGraph, ledger, environment), null);
+  assert.equal(ledger.assignments.length, 1);
+  assert.equal(advanceLedger(campaignGraph, ledger, environment), null);
+  assert.equal(ledger.assignments[0].state, 'READY_TO_MERGE');
+  assert.equal(advanceLedger(campaignGraph, ledger, environment), null);
+  assert.equal(command(root, ['rev-parse', 'HEAD']), workerRevision);
+  status = reconcile(campaignGraph, ledger, root, environment);
+  assert.equal(status.assignments[0].state, 'MERGED');
+  const dispatch = advanceLedger(campaignGraph, ledger, environment);
+  assert.equal(dispatch.type, 'CREATE_WORKER');
+  assert.equal(dispatch.payload.planId, 'independent');
+  assert.deepEqual(readyActions(reconcile(campaignGraph, ledger, root, environment), campaignGraph).actions.map(({ id }) => id), [dispatch.id]);
+});
+
+test('missing worker checkout without verified delivery remains blocking', () => {
+  const root = repository();
+  const missingWorker = path.join(temporaryDirectory('ponytail-unverified-missing-worker-parent'), 'worker');
+  const environment = { ...process.env, PONYTAIL_CAMPAIGN_STATE_DIR: temporaryDirectory('ponytail-unverified-missing-state') };
+  const ledger = newLedger(root, 'campaign', 'coordinator');
+  const assignment = {
+    id: 'unverified-assignment', planId: 'work', sessionId: 'unverified-session', worktree: missingWorker, branch: 'worker',
+    dispatchRevision: ledger.integrationRevision, workerRevision: ledger.integrationRevision, state: 'ACTIVE', idempotencyKey: 'unverified-key',
+    attachToken: 'unverified-token', worktreeArchived: false, sessionArchived: false,
+  };
+  ledger.assignments.push(assignment);
+  fs.writeFileSync(path.join(environment.PONYTAIL_CAMPAIGN_STATE_DIR, 'campaign-worker-bindings.json'), `${JSON.stringify({
+    schemaVersion: 1,
+    bindings: [{
+      repositoryRoot: root, campaignId: 'campaign', assignmentId: assignment.id, coordinatorSessionId: 'coordinator',
+      attachTokenHash: 'hash', sessionId: assignment.sessionId, worktree: missingWorker, branch: assignment.branch,
+      revision: ledger.integrationRevision, boundAt: new Date().toISOString(),
+    }],
+  })}\n`);
+  writeHostObservation(root, 'campaign', {
+    schemaVersion: 1, campaignId: 'campaign', observedAt: new Date().toISOString(),
+    completeSessionIds: [assignment.sessionId],
+    sessions: [{ sessionId: assignment.sessionId, state: 'completed', worktree: missingWorker, managedWorktree: true }],
+  }, environment);
+  const campaignGraph = graph([
+    { id: 'campaign', parentPlanId: null, dependsOn: [], lifecycle: 'in_progress', path: 'root' },
+    { id: 'work', parentPlanId: 'campaign', dependsOn: [], lifecycle: 'in_progress', path: 'work' },
+  ]);
+
+  const status = reconcile(campaignGraph, ledger, root, environment);
+  assert.equal(status.diagnostics.some(({ code }) => code === 'CAMPAIGN_WORKTREE_MISSING'), true);
+  assert.equal(status.diagnostics.some(({ code }) => code === 'CAMPAIGN_WORKTREE_MISSING_AFTER_DELIVERY'), false);
+  assert.equal(captureError(() => advanceLedger(campaignGraph, ledger, environment)).code, 'CAMPAIGN_STATUS_BLOCKED');
+});
+
 test('completed divergent work requires rebase and cannot merge', () => {
   const root = repository();
   const base = command(root, ['rev-parse', 'HEAD']);
