@@ -51,6 +51,13 @@ function environment(home, additions = {}) {
   return { ...process.env, HOME: home, PATH: '/usr/bin:/bin', ...additions };
 }
 
+function pluginEnvironment(home) {
+  const bin = path.join(home, 'plugin-bin');
+  fs.mkdirSync(bin);
+  fs.writeFileSync(path.join(bin, 'codex'), '#!/bin/sh\nprintf "%s\\n" "$*" >> "$HOME/plugin-commands"\nprintf "{}\\n"\n', { mode: 0o755 });
+  return { PATH: `${bin}:/usr/bin:/bin` };
+}
+
 function run(home, command, arguments = [], options = {}) {
   const { env: additions = {}, ...spawnOptions } = options;
   return spawnSync(ponytail, [command, ...arguments], {
@@ -345,11 +352,12 @@ test('CLI installer links the checkout and the installed command updates skills'
   const codexHome = path.join(home, '.codex-test');
   result = spawnSync(installed, ['update-skills', '--codex-home', codexHome], {
     encoding: 'utf8',
-    env: environment(home),
+    env: environment(home, pluginEnvironment(home)),
     cwd: registeredProject,
   });
   assert.equal(result.status, 0, result.stderr);
   assert.ok(fs.existsSync(path.join(codexHome, 'skills/ponytail/SKILL.md')));
+  assert.match(fs.readFileSync(path.join(home, 'plugin-commands'), 'utf8'), /plugin add ponytail@ponytail --json/);
 });
 
 test('update refreshes Codex skills and permissions without installing the CLI', () => {
@@ -359,11 +367,12 @@ test('update refreshes Codex skills and permissions without installing the CLI',
   assert.equal(run(home, 'register', [], { cwd: registeredProject }).status, 0);
   const result = run(home, 'update', [], {
     cwd: registeredProject,
-    env: { CODEX_HOME: codexHome },
+    env: { ...pluginEnvironment(home), CODEX_HOME: codexHome },
     input: 'yes\n',
   });
 
   assert.equal(result.status, 0, result.stderr);
+  assert.match(fs.readFileSync(path.join(home, 'plugin-commands'), 'utf8'), /plugin add ponytail@ponytail --json/);
   assert.ok(fs.existsSync(path.join(codexHome, 'skills/ponytail/SKILL.md')));
   assert.ok(fs.existsSync(path.join(home, '.codex/rules/ponytail.rules')));
   assert.ok(fs.existsSync(path.join(registeredProject, '.codex/rules/ponytail.rules')));

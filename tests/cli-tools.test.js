@@ -171,11 +171,17 @@ test('QA omits campaign census and the CLI dispatches it through campaign', () =
 test('combined installer installs Codex skills and CLI tools only', () => {
   const home = fixture();
   const codexHome = path.join(home, '.codex');
+  write(home, 'bin/codex', '#!/bin/sh\nprintf "%s\\n" "$*" >> "$HOME/plugin-commands"\nprintf "{}\\n"\n');
+  fs.chmodSync(path.join(home, 'bin/codex'), 0o755);
   const result = run(combinedInstaller, [], {
-    env: { ...cliEnvironment(home), CODEX_HOME: codexHome },
+    env: { ...cliEnvironment(home), PATH: `${home}/bin:/usr/bin:/bin`, CODEX_HOME: codexHome },
     input: 'n\n',
   });
   assert.equal(result.status, 0, result.stderr);
+  assert.deepEqual(fs.readFileSync(path.join(home, 'plugin-commands'), 'utf8').trim().split('\n'), [
+    `plugin marketplace add ${fs.realpathSync(root)} --json`,
+    'plugin add ponytail@ponytail --json',
+  ]);
   assert.ok(fs.existsSync(path.join(codexHome, 'skills/ponytail/SKILL.md')));
   assert.ok(fs.existsSync(path.join(codexHome, 'skills/cross-session-effects/SKILL.md')));
   assert.ok(fs.existsSync(path.join(codexHome, 'skills/codex-execpolicy/SKILL.md')));
