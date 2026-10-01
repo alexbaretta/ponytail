@@ -63,8 +63,9 @@ while project-wide management records remain under `pm/`.
   repository-wide campaign inventory, census normalization, and human/JSON
   reporting. `src/campaign-orchestration.js` owns the versioned Ponytail-user
   assignment ledger, authenticated host-observation snapshot, dependency
-  scheduler, reconciled status, verified fast-forward integration, and typed
-  host-action protocol. `src/worktree-reclamation.js` owns the versioned
+  scheduler, reconciled status and ready-action projection, verified
+  fast-forward integration, and typed host-action protocol.
+  `src/worktree-reclamation.js` owns the versioned
   project lifecycle-adapter contracts, project-scoped reclamation lock,
   deterministic claim selection, generation fencing, and verified cleanup
   result.

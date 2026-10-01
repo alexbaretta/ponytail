@@ -35,7 +35,10 @@ On 2026-10-01, the stakeholder approved revalidation of stale worker dispatches
 and integration of a verified worker delivery before whole-plan closure, while
 retaining final integrated acceptance as the closure and cleanup gate. The
 stakeholder further clarified that an outstanding integration action must not
-prevent dispatch of independent dependency-ready plans.
+prevent dispatch of independent dependency-ready plans. The stakeholder then
+selected `ready-actions` as the coordinator-facing name for the deterministic
+list of host actions that are executable now and required its use to be
+documented in the plan-execution skill.
 
 ## Repository-wide campaign inventory
 
@@ -267,6 +270,21 @@ selectable, idempotent, auditable, and safe to resume after partial failure. A
 coordinator must be able to execute the next valid action without reconstructing
 campaign state from chat history. Ponytail must not infer throughput or an
 estimated completion time.
+
+`ponytail campaign ready-actions [<campaign>] --json` must return a read-only,
+versioned projection of the durable host actions that are executable now. It
+must preserve each action envelope and identity, fail closed on campaign
+diagnostics, include pending rebase and cleanup actions, and include create or
+reuse actions only while their plan remains dependency-ready and their host
+effect has not started. It must not materialize assignments or actions, retry a
+started dispatch, or invent advisory work absent from the durable ledger.
+
+Before selecting cleanup, the scheduler must reserve only the clean completed
+managed workers needed for dependency-ready dispatch after already-idle worker
+capacity is counted. Any surplus worker must proceed through the canonical
+project-resource, managed-worktree, and session cleanup path. This ensures that
+resources such as per-worktree databases and container networks are released
+instead of being retained without dispatch demand.
 
 Repository-wide validation must run at campaign coordination and resumption,
 before dispatch, and after a campaign relationship or lifecycle change. When

@@ -200,6 +200,31 @@ const CampaignHostObservationReaders = Object.freeze({ V1: readHostObservationV1
 const CampaignWorkerBindingReaders = Object.freeze({ V1: readWorkerBindingsV1 });
 const CampaignWorkerDeliveryReaders = Object.freeze({ V1: readWorkerDeliveriesV1 });
 
+function readReadyActionsV1(value) {
+  exactKeys(value, ['schemaVersion', 'campaignId', 'invocationWorktree', 'effectiveWorktree', 'integrationRevision', 'actions'], 'campaign ready actions');
+  if (value.schemaVersion !== 1) fail('CAMPAIGN_ORCHESTRATION_VERSION', 'unsupported campaign ready-actions version');
+  for (const key of ['campaignId', 'invocationWorktree', 'effectiveWorktree', 'integrationRevision']) {
+    if (typeof value[key] !== 'string' || !value[key]) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', `campaign ready actions ${key} must be a nonempty string`);
+  }
+  if (!Array.isArray(value.actions)) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', 'campaign ready actions actions must be an array');
+  const actions = value.actions.map((pendingAction, index) => readActionV1(pendingAction, `campaign ready actions actions[${index}]`));
+  if (new Set(actions.map(({ id }) => id)).size !== actions.length) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', 'campaign ready actions contains duplicate action IDs');
+  if (new Set(actions.map(({ assignmentId }) => assignmentId)).size !== actions.length) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', 'campaign ready actions contains more than one action for an assignment');
+  if (actions.filter(({ type }) => type === 'REQUEST_REBASE').length > 1) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', 'campaign ready actions contains more than one rebase action');
+  for (const pendingAction of actions) {
+    if (['CREATE_WORKER', 'REUSE_WORKER'].includes(pendingAction.type)) {
+      exactKeys(pendingAction.payload.dispatch, ['ready', 'state', 'hostIdentity'], 'campaign ready dispatch');
+      if (pendingAction.payload.dispatch.ready !== true || pendingAction.payload.dispatch.state !== 'NOT_STARTED'
+        || pendingAction.payload.dispatch.hostIdentity !== null) {
+        fail('CAMPAIGN_ORCHESTRATION_SCHEMA', 'campaign ready actions contains a dispatch that is not ready to start');
+      }
+    }
+  }
+  return { ...value, actions };
+}
+
+const CampaignReadyActionsReaders = Object.freeze({ V1: readReadyActionsV1 });
+
 function readStatusV1(value) {
   exactKeys(value, ['schemaVersion', 'campaignId', 'invocationWorktree', 'effectiveWorktree', 'coordinatorSessionId', 'integrationRevision', 'assignments', 'readyPlans', 'activeWorkers', 'idleWorkers', 'rebaseRequired', 'readyToMerge', 'cleanupPending', 'pendingAction', 'diagnostics'], 'campaign status');
   if (value.schemaVersion !== 1) fail('CAMPAIGN_ORCHESTRATION_VERSION', 'unsupported campaign status version');
@@ -831,6 +856,42 @@ function dispatchPrerequisitesSatisfied(graph, planId) {
     && !graph.plans.some(({ parentPlanId, id }) => parentPlanId === plan.id && !completedPlans.has(id));
 }
 
+function readyActions(status, graph) {
+  if (status.diagnostics.length > 0) fail('CAMPAIGN_STATUS_BLOCKED', status.diagnostics.map(({ message }) => message).join('; '));
+  const actions = status.pendingActions.filter((pendingAction) => (
+    !['CREATE_WORKER', 'REUSE_WORKER'].includes(pendingAction.type)
+      || (pendingAction.payload.dispatch?.ready === true
+        && pendingAction.payload.dispatch.state === 'NOT_STARTED'
+        && dispatchPrerequisitesSatisfied(graph, pendingAction.payload.planId))
+  ));
+  return readReadyActionsV1({
+    schemaVersion: 1,
+    campaignId: status.campaignId,
+    invocationWorktree: status.invocationWorktree,
+    effectiveWorktree: status.effectiveWorktree,
+    integrationRevision: status.integrationRevision,
+    actions,
+  });
+}
+
+function reusableCleanupAssignments(graph, ledger, status) {
+  const readyQueuedAssignments = ledger.assignments.filter((assignment) => (
+    assignment.state === 'DISPATCH_PENDING'
+    && !ledger.pendingActions.some(({ assignmentId }) => assignmentId === assignment.id)
+    && dispatchPrerequisitesSatisfied(graph, assignment.planId)
+  ));
+  const required = Math.max(0, status.readyPlans.length + readyQueuedAssignments.length - status.idleWorkers.length);
+  return ledger.assignments.filter((assignment) => {
+    const current = status.assignments.find(({ id }) => id === assignment.id);
+    const worker = workerFor(ledger.workers, assignment);
+    return assignment.state === 'CLEANUP_PENDING'
+      && !ledger.pendingActions.some(({ assignmentId }) => assignmentId === assignment.id)
+      && !assignment.worktreeArchived && !assignment.sessionArchived
+      && current?.hostState === 'completed' && current.managedWorktree && current.worktreeExists
+      && worker?.clean;
+  }).sort((left, right) => left.planId.localeCompare(right.planId) || left.id.localeCompare(right.id)).slice(0, required);
+}
+
 function reserveAssignment(ledger, planId, idle = null) {
   const assignment = readAssignmentV1({
     id: crypto.randomUUID(), planId,
@@ -883,15 +944,7 @@ function advanceLedger(graph, ledger, environment = null) {
     merge.state = 'MERGED';
     return null;
   }
-  const reuse = ledger.assignments.find((item) => {
-    const current = status.assignments.find(({ id }) => id === item.id);
-    const worker = workerFor(ledger.workers, item);
-    return item.state === 'CLEANUP_PENDING' && status.readyPlans.length > 0
-      && !ledger.pendingActions.some(({ assignmentId }) => assignmentId === item.id)
-      && !item.worktreeArchived && !item.sessionArchived
-      && current?.hostState === 'completed' && current.managedWorktree && current.worktreeExists
-      && worker?.clean;
-  });
+  const reuse = reusableCleanupAssignments(graph, ledger, status)[0];
   if (reuse) {
     reuse.state = 'ARCHIVED';
     const worker = workerFor(ledger.workers, reuse);
@@ -1048,13 +1101,23 @@ function humanStatus(status) {
   return `${lines.join('\n')}\n`;
 }
 
+function humanReadyActions(result) {
+  const lines = [
+    `Campaign: ${result.campaignId}`,
+    `Worktree: ${result.effectiveWorktree}`,
+    `Integration revision: ${result.integrationRevision}`,
+  ];
+  for (const pendingAction of result.actions) lines.push(`ACTION\t${pendingAction.type}\t${pendingAction.id}`);
+  return `${lines.join('\n')}\n`;
+}
+
 function parseArguments(argv) {
   const operation = argv[0];
   let input;
   let json = false;
   let actionId;
   let result;
-  if (operation === 'status' || operation === 'advance' || operation === 'reconcile') {
+  if (operation === 'status' || operation === 'ready-actions' || operation === 'advance' || operation === 'reconcile') {
     for (const argument of argv.slice(1)) {
       if (argument === '--json' && !json) json = true;
       else if (argument.startsWith('-') || input !== undefined) fail('CAMPAIGN_ORCHESTRATION_USAGE', usage(), 2);
@@ -1078,7 +1141,7 @@ function parseArguments(argv) {
 }
 
 function usage() {
-  return 'usage: ponytail campaign status [<campaign>] [--json]\n       ponytail campaign observe <campaign> --snapshot <json>\n       ponytail campaign advance [<campaign>] [--json]\n       ponytail campaign reconcile <campaign> [--json]\n       ponytail campaign action-result <campaign> <action-id> --result <json>\n       ponytail campaign attach <token>\n       ponytail campaign deliver <campaign> --result <json>';
+  return 'usage: ponytail campaign status [<campaign>] [--json]\n       ponytail campaign ready-actions [<campaign>] [--json]\n       ponytail campaign observe <campaign> --snapshot <json>\n       ponytail campaign advance [<campaign>] [--json]\n       ponytail campaign reconcile <campaign> [--json]\n       ponytail campaign action-result <campaign> <action-id> --result <json>\n       ponytail campaign attach <token>\n       ponytail campaign deliver <campaign> --result <json>';
 }
 
 function run(argv = process.argv.slice(2), options = {}) {
@@ -1152,6 +1215,11 @@ function run(argv = process.argv.slice(2), options = {}) {
   }
   const ledger = readLedger(resolution.effectiveWorktree, graph.campaignId, environment);
   status = reconcile(graph, ledger, resolution.invocationWorktree, environment);
+  if (request.operation === 'ready-actions') {
+    const result = readyActions(status, graph);
+    process.stdout.write(request.json ? `${JSON.stringify(result)}\n` : humanReadyActions(result));
+    return result;
+  }
   process.stdout.write(request.json ? `${JSON.stringify(status)}\n` : humanStatus(status));
   return status;
 }
@@ -1165,6 +1233,7 @@ module.exports = {
   CampaignHostObservationReaders,
   CampaignLedgerReaders,
   CampaignOrchestrationError,
+  CampaignReadyActionsReaders,
   CampaignStatusReaders,
   CampaignWorkerBindingReaders,
   CampaignWorkerDeliveryReaders,
@@ -1172,6 +1241,7 @@ module.exports = {
   bindWorker,
   diagnostic,
   humanStatus,
+  humanReadyActions,
   hostObservationPath,
   ledgerPath,
   newLedger,
@@ -1181,6 +1251,7 @@ module.exports = {
   readLedger,
   readLedgerV1,
   readLedgerV2,
+  readReadyActionsV1,
   readHostObservation,
   readHostObservationV1,
   readWorkerBindings,
@@ -1195,6 +1266,7 @@ module.exports = {
   readWorkerV1,
   reconcile,
   reconcileLedger,
+  readyActions,
   recordActionResult,
   resolveInvocationWorktree,
   setLedgerCoordinator,

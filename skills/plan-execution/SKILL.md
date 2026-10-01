@@ -665,26 +665,33 @@ durable state instead of remembering worker assignments in conversation:
    result and at every safe coordination boundary while assignments remain
    unfinished, including when a wait returns or a worker becomes idle. An
    observation older than five minutes is stale and blocks mutation.
-3. Inspect the returned V2 status before any other campaign action. Resolve
+3. Inspect the returned V3 status before any other campaign action. Resolve
    every blocking diagnostic first. For an idle session, inspect its exact
    thread to distinguish a worker waiting for coordinator input from one that
    has finished; respond to required input or record the completed observation
    instead of treating either state as automatically reusable.
 4. Run `ponytail campaign advance [<campaign-root>] --json` exactly once to
-   request the next deterministic transition. The returned `pendingActions`
-   array is the complete durable set of outstanding host effects. One advance
-   may add at most one action. When it adds none, inspect the returned status
-   and advance again only when another compatible transition is currently
-   warranted.
-5. Resume each existing pending action by its exact action ID; never allocate a
+   request the next deterministic transition. One advance may add at most one
+   durable host action or perform one core-owned transition.
+5. Immediately run `ponytail campaign ready-actions [<campaign-root>] --json`.
+   Execute only the `actions` returned by `ready-actions`; this is the complete
+   set of host effects executable now. `status.pendingActions` remains the
+   complete durable recovery inventory and may also contain dependency-blocked
+   or already-started dispatches that must not be invoked again. If no ready
+   action is returned, inspect status and advance again only when another
+   compatible transition is currently warranted. `ready-actions` is read-only:
+   it never creates assignments, materializes actions, or performs effects.
+6. Resume each returned action by its exact action ID; never allocate a
    replacement session or worktree, and never assign a plan conversationally.
-   After initiating an asynchronous host effect, advance again before waiting
-   when independent dependency-ready work may exist. This may add distinct
-   create-or-reuse actions while one rebase remains outstanding, but it must
-   neither execute an action twice nor request a second rebase. On resumption,
-   inspect the named worker before repeating an unresolved host request. For
-   `CREATE_WORKER` and `REUSE_WORKER`, inspect
-   `payload.dispatch.ready`. As soon as the supported host operation begins,
+   After initiating an asynchronous host effect, record that start, advance
+   again, and rerun `ready-actions` before waiting when independent
+   dependency-ready work may exist. This may expose distinct create-or-reuse
+   actions while one rebase remains outstanding, but it must neither execute
+   an action twice nor request a second rebase. On resumption, inspect the named
+   worker before repeating an unresolved host request. For `CREATE_WORKER` and
+   `REUSE_WORKER`, `ready-actions` already proves that
+   `payload.dispatch.ready` is true and its state is `NOT_STARTED`. As soon as
+   the supported host operation begins,
    record `{"ok":true,"disposition":"STARTED","hostIdentity":"<id>"}` with
    `campaign action-result`; use the returned session ID or pending client ID
    as the stable host identity. If the plan becomes unready and the host proves
@@ -692,7 +699,7 @@ durable state instead of remembering worker assignments in conversation:
    `{"ok":false,"disposition":"NOT_STARTED"}` so the scheduler can postpone
    that assignment and select unrelated ready work. Never report
    `NOT_STARTED` after a host operation begins.
-6. For `CREATE_WORKER`, create one supported managed-worktree worker and put
+7. For `CREATE_WORKER`, create one supported managed-worktree worker and put
    the bootstrap sequence and `ponytail campaign attach <attachToken>` in its
    first instruction. Before campaign attachment, the worker verifies its exact assigned checkout
    and dispatch revision. If detached, it uses the host project's canonical worktree tooling
@@ -706,31 +713,35 @@ durable state instead of remembering worker assignments in conversation:
    after a prerequisite failure; do not allocate a replacement worker. Record
    the exact host session, canonical worktree, branch, and revision only after
    the attach hook authenticates them.
-7. For `REQUEST_REBASE`, message the named worker to rebase onto the exact
+8. For `REQUEST_REBASE`, message the named worker to rebase onto the exact
    `ontoRevision`, wait for completion, and record only the resulting clean
    revision. The core, not the coordinator, decides whether the worker is then
    ready for fast-forward integration.
-8. When assigned work and its focused validation are complete, the worker
+9. When assigned work and its focused validation are complete, the worker
    commits the plan-owned evidence and runs `ponytail campaign deliver
    <campaign-root> --result <json>` from its authenticated worktree. The result
    names the exact clean `revision` and a nonempty `evidencePaths` array. Keep
    the plan in active work; conversational completion and premature whole-plan
    closure are not delivery evidence.
-9. A transition to `READY_TO_MERGE` is acted on only by another advance; do not
+10. A transition to `READY_TO_MERGE` is acted on only by another advance; do not
    run an independent merge command. The core proves ancestry and uses
    fast-forward-only integration.
-10. After integration, run the plan's final acceptance against the integrated
+11. After integration, run the plan's final acceptance against the integrated
    tree. Close the plan only after those gates pass. A failed gate keeps the
    plan active and may return the same assignment to another delivery and
    integration cycle. Cleanup is eligible only after successful plan closure.
-11. Then follow the next core-selected action. A `REUSE_WORKER`
+12. Then follow the next action returned by `ready-actions`. A `REUSE_WORKER`
    action retains the finished session and managed worktree for its named next
    plan. For `ARCHIVE_WORKTREE`, ask the bound worker to archive its own managed
    worktree through the supported recoverable host operation and verify the
    checkout is gone. For `ARCHIVE_SESSION`, archive only the action's named
-   worker chat. Never delete an inferred path or clean up an unintegrated
-   revision.
-12. After each completed supported host effect, run `ponytail campaign action-result
+   worker chat. Worktree retirement must first run the project's canonical
+   cleanup for owned resources such as databases, containers, listeners, and
+   Docker networks. Never delete an inferred path or clean up an unintegrated
+   revision. The scheduler retains only the completed workers required by
+   current dispatch demand after idle capacity is counted; surplus workers are
+   cleanup-ready instead of being retained indefinitely.
+13. After each completed supported host effect, run `ponytail campaign action-result
    <campaign-root> <action-id> --result <json>` from the coordinator worktree.
    Recording one result changes only that named action. Then refresh
    observations and return to status before advancing. Repeating the same

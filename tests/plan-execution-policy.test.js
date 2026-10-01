@@ -47,9 +47,11 @@ test('campaign policy delegates every worker effect to the durable action loop',
   assert.match(policy, /Resolve\n+   every blocking diagnostic first/);
   assert.match(policy, /distinguish a worker waiting for coordinator input from one that\n+   has finished/);
   assert.match(policy, /campaign advance \[<campaign-root>\] --json/);
-  assert.match(policy, /returned `pendingActions`\n+   array is the complete durable set/);
-  assert.match(policy, /create-or-reuse actions while one rebase remains outstanding/);
-  assert.match(policy, /neither execute an action twice nor request a second rebase/);
+  assert.match(policy, /campaign ready-actions \[<campaign-root>\] --json/);
+  assert.match(policy, /`status.pendingActions` remains the\n+   complete durable recovery inventory/);
+  assert.match(policy, /Execute only the `actions` returned by `ready-actions`/);
+  assert.match(policy, /expose distinct create-or-reuse\n+   actions while one rebase remains outstanding/);
+  assert.match(policy, /neither execute\n+   an action twice nor request a second rebase/);
   assert.match(policy, /`CREATE_WORKER`[\s\S]*campaign attach <attachToken>/);
   assert.match(policy, /Before campaign attachment, the worker verifies its exact assigned checkout/);
   assert.match(policy, /If detached, it uses the host project's canonical worktree tooling/);

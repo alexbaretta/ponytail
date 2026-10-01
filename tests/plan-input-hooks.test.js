@@ -131,6 +131,8 @@ test('worker attach is one-time, status re-roots, and worker mutations fail clos
   const observation = JSON.stringify({ schemaVersion: 1, campaignId: 'root', observedAt: '2026-09-30T12:00:00-07:00', completeSessionIds: ['worker-session'], sessions: [{ sessionId: 'worker-session', state: 'working', worktree: workerBinding.worktree, managedWorktree: true }] });
   const observationPermission = run(root, { hook_event_name: 'PreToolUse', tool_name: 'exec_command', tool_input: { cmd: `ponytail campaign observe root --snapshot '${observation}'` } }, pluginData);
   assert.match(JSON.parse(observationPermission.stdout).hookSpecificOutput.additionalContext, /Coordinator session authenticated/);
+  const readyActionsPermission = run(root, { hook_event_name: 'PreToolUse', tool_name: 'exec_command', tool_input: { cmd: 'ponytail campaign ready-actions root --json' } }, pluginData);
+  assert.match(JSON.parse(readyActionsPermission.stdout).hookSpecificOutput.additionalContext, /Coordinator session authenticated/);
   const actionCli = spawnSync(process.execPath, [path.join(__dirname, '..', 'src', 'campaign-census.js'), 'action-result', 'root', pending.id, '--result', actionResult], {
     cwd: root,
     env: { ...process.env, PLUGIN_DATA: pluginData, PONYTAIL_CAMPAIGN_STATE_DIR: pluginData },

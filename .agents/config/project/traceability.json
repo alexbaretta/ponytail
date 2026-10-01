@@ -253,6 +253,11 @@
       "locator": "text"
     },
     {
+      "class": "issue",
+      "path": "pm/bugs/closed/2026-10-01-FEAT-campaign_ready_actions.md",
+      "locator": "text"
+    },
+    {
       "class": "implementation",
       "path": "hooks/plan-input.js",
       "locator": "text"

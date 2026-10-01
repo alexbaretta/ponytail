@@ -234,6 +234,29 @@ Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
      session and checkout with the same token; no duplicate assignment or
      replacement worker is created. A pre-existing branch is preserved.
 
+## Arc: Select only currently executable coordinator actions
+
+Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
+
+- **Actor:** Campaign coordinator.
+- **Prerequisites:** Durable pending dispatch, rebase, and cleanup actions;
+  one dispatch becomes dependency-blocked, one has already started, and more
+  clean completed workers exist than current dispatch demand can reuse.
+- **Profiles:** Automated scheduler and adapter contract profile.
+- **External effects:** None; the command is read-only.
+
+1. Run `ponytail campaign ready-actions <campaign> --json`.
+   - The V1 result preserves every currently executable action envelope and
+     excludes the blocked and already-started dispatches without changing the
+     ledger or Git revision.
+2. Advance until cleanup is selected.
+   - Only enough clean completed workers are retained to satisfy dispatch
+     demand after idle capacity is counted. Each surplus worker yields the
+     canonical worktree-then-session cleanup actions.
+3. Perform project-aware worktree retirement for a returned cleanup action.
+   - Project resources such as databases, containers, and Docker networks are
+     released before the managed checkout and bounded slot are reclaimed.
+
 ## Arc: Rebase and fast-forward completed work
 
 Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION

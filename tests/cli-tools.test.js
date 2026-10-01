@@ -143,6 +143,7 @@ test('ponytail help publishes campaign, plan-input, index, and plan command fami
   assert.match(result.stdout, /ponytail campaign status \[<campaign>\] \[--json\]/);
   assert.match(result.stdout, /ponytail campaign observe <campaign> --snapshot <json>/);
   assert.match(result.stdout, /ponytail campaign advance \[<campaign>\] \[--json\]/);
+  assert.match(result.stdout, /ponytail campaign ready-actions \[<campaign>\] \[--json\]/);
   assert.match(result.stdout, /ponytail campaign action-result <campaign> <action-id> --result <json>/);
   assert.match(result.stdout, /ponytail campaign attach <token>/);
   assert.match(result.stdout, /ponytail campaign deliver <campaign> --result <json>/);

@@ -186,6 +186,27 @@ ordered `pendingActions` collection. Ledger V2 owns that same collection and
 normalizes an immutable V1 ledger's optional scalar action into zero or one
 current actions. Current writers emit only ledger V2 and status V3.
 
+### Ready-action projection
+
+The read-only executable-action interface is:
+
+```text
+ponytail campaign ready-actions [<plan-name-or-path>] [--json]
+```
+
+Ready-actions V1 identifies the campaign, invocation and effective worktrees,
+and integration revision, then returns unchanged V1 host-action envelopes in
+`actions`. Rebase and cleanup actions are ready while pending. Create and reuse
+actions are ready only while `payload.dispatch.ready` is true and its state is
+`NOT_STARTED`; dependency-blocked or already-started dispatches remain visible
+in status for recovery but are absent from this executable view. Any status
+diagnostic fails the projection closed.
+
+The projection never creates an assignment, materializes an action, or performs
+a host effect. `advance` remains the only transition engine. The coordinator
+advances to persist work, reads ready actions, executes every returned action,
+and records each named result.
+
 ### One-step transition engine
 
 The mutating interface is:
@@ -207,6 +228,12 @@ UNASSIGNED -> DISPATCH_PENDING -> ACTIVE -> WORK_COMPLETE
 The transition engine prioritizes a dependency-ready source-proven repair over
 independent coverage expansion when worker capacity requires a choice, as
 required by `plan-execution`. It otherwise uses stable plan identity ordering.
+
+Cleanup-pending workers are retained for reuse only up to current dispatch
+demand after idle worker capacity is counted. Surplus workers continue to
+`ARCHIVE_WORKTREE` and `ARCHIVE_SESSION`; the worktree lifecycle performs the
+project's canonical resource cleanup, including resources such as databases or
+container networks, before the managed checkout and bounded slot are retired.
 
 `READY_TO_MERGE` requires a clean worker worktree, complete plan-owned evidence
 at the recorded worker revision, and proof that the current campaign integration
