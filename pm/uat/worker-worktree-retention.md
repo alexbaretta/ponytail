@@ -77,6 +77,31 @@ selection passed 10 tests. Logs are repository-ignored:
 
 These establish retention, scoped bounded capacity, concurrent reservations,
 same-path worker-owned reconstruction, and refusal/idempotency boundaries.
-They do not establish live Codex session continuity. That manual Arc remains
-pending. No client-project checkout/session was mutated, no plugin was installed
-outside this repository, and the host automatic-cleanup setting was not changed.
+They do not establish live Codex session continuity. At that repository gate,
+no client-project checkout/session was mutated, no plugin was installed outside
+this repository, and the host automatic-cleanup setting was not changed.
+
+### Live recovery evidence, 2026-10-01
+
+Under subsequent human authorization, the GWEN coordinator used an already
+missing checkout; no fixture deletion was performed. Worker session
+`01a0f67e-68a6-7ed1-a90f-471d554941e4`, completed turn
+`01a0f81c-b0f4-7e90-b294-4dfc9906093c`, ran the new canonical recovery from
+`/private/tmp`. It restored its original
+`/Users/alex/.codex/worktrees/aad5/gwen` checkout, clean on
+`uat-requirements-aad5` at `4f855ec3e5ac23ad012a13a4053436457f66c486`.
+Commands executed successfully in that same native session from the restored
+path, and the app's thread record reports that original cwd. Recovery action
+`43a67f20-6539-46b0-b3a3-b2004e37b1a1` was no longer pending.
+
+GWEN adoption succeeded before local environment setup, preserving slot
+`gwen-1092` and generation `7f26ce62-133e-46e3-9809-7a1d7634f345`. The first
+adoption attempt required dependency installation; a subsequent LocalCloud
+permission failure was resolved before adoption succeeded. Setup passed
+migration rehearsal and LocalCloud, then Docker refused its Elastic network:
+`all predefined address pools have been fully subnetted`.
+
+This proves committed reconstruction, adoption, and native session/path
+continuity. The complete live Arc remains open for refreshed coordinator
+observation and resumed assignment after the client setup blocker is resolved.
+No restored unsaved-file content or campaign delivery was claimed.

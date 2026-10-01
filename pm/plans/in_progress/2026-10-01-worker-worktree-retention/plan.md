@@ -73,7 +73,10 @@ Evidence: `tmp/worker-retention-final.log`, `tmp/worker-retention-final-focused.
 These logs are ignored, not committed product artifacts.
 
 The plan remains in_progress solely for the manual live Codex continuity Arc.
-No test-owned host session with authority to alter its exact managed checkout
-is available within this task's fixed repository boundary. Deployment to client
-plugin caches and disabling host automatic deletion are not performed by this
-change-set. Repository Git proof must not be presented as live host acceptance.
+Subsequent human-authorized recovery of an already missing GWEN worker proved
+same-session reconstruction, adoption, and commands from its original checkout;
+the exact worker turn and identities are recorded in the acceptance Suite.
+Docker address-pool exhaustion blocked full client setup, and refreshed
+coordinator observation plus assignment resumption remain unverified. The live
+Arc and T04 therefore stay open. Deployment to client plugin caches and disabling
+host automatic deletion were not performed by this repository change-set.
