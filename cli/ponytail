@@ -655,6 +655,7 @@ def print_usage():
   ponytail campaign action-result <campaign> <action-id> --result <json>
   ponytail campaign attach <token>
   ponytail campaign deliver <campaign> --result <json>
+  ponytail worktree reclaim [--dry-run] [--json]
   ponytail traceability index [--rebuild] [--json]
   ponytail traceability search <query> [--kind <kind>] [--role <role>] [--requirement <id>] [--path <path>] [--json]
   ponytail traceability validate [--plan <plan> | --campaign <plan>] [--json]
@@ -785,6 +786,14 @@ def run():
             return subprocess.run(["node", str(campaign_cli), *arguments], cwd=root).returncode
         except OSError as error:
             raise ProjectError(f"campaign CLI could not start: {error}", 2) from error
+    if operation == "worktree":
+        worktree_cli = source_root / "src/worktree-reclamation.js"
+        if not worktree_cli.is_file():
+            raise ProjectError(f"worktree CLI source is unavailable: {worktree_cli}", 2)
+        try:
+            return subprocess.run(["node", str(worktree_cli), *arguments], cwd=root).returncode
+        except OSError as error:
+            raise ProjectError(f"worktree CLI could not start: {error}", 2) from error
     if operation in {"traceability", "plan", "grep"}:
         project_index_cli = source_root / "src/project-index.js"
         if not project_index_cli.is_file():

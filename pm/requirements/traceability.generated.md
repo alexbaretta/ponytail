@@ -22,7 +22,7 @@ Requirement: [pm/requirements/index.md](index.md)
 - implementation: implements [src/campaign-census.js:1084](../../src/campaign-census.js#L1084)
 - unit-test: verifies [tests/campaign-census-format.test.js:11](../../tests/campaign-census-format.test.js#L11)
 - integration-test: verifies [tests/campaign-census.test.js:499](../../tests/campaign-census.test.js#L499)
-- uat: verifies [pm/uat/index.md:38](../../pm/uat/index.md#L38)
+- uat: verifies [pm/uat/index.md:39](../../pm/uat/index.md#L39)
 
 ## REQ-PLAN-INPUT-QUEUE
 
@@ -217,3 +217,16 @@ Requirement: [pm/requirements/developer-private-agent-instructions.md](developer
 - issue: introduces [pm/bugs/closed/2026-09-30-FEAT-developer_private_agent_instructions.md:20](../../pm/bugs/closed/2026-09-30-FEAT-developer_private_agent_instructions.md#L20)
 - issue: plans-implementation [pm/bugs/closed/2026-09-30-FEAT-developer_private_agent_instructions.md:21](../../pm/bugs/closed/2026-09-30-FEAT-developer_private_agent_instructions.md#L21)
 - issue: plans-verification [pm/bugs/closed/2026-09-30-FEAT-developer_private_agent_instructions.md:22](../../pm/bugs/closed/2026-09-30-FEAT-developer_private_agent_instructions.md#L22)
+
+## REQ-WORKTREE-RECLAMATION
+
+Requirement: [pm/requirements/worktree-reclamation.md](worktree-reclamation.md)
+
+- implementation: implements [src/worktree-reclamation.js:7](../../src/worktree-reclamation.js#L7)
+- unit-test: verifies [tests/worktree-reclamation.test.js:7](../../tests/worktree-reclamation.test.js#L7)
+- integration-test: verifies [tests/worktree-reclamation-cli.test.js:7](../../tests/worktree-reclamation-cli.test.js#L7)
+- uat: verifies [pm/uat/worktree-reclamation.md:11](../../pm/uat/worktree-reclamation.md#L11)
+- uat: verifies [pm/uat/worktree-reclamation.md:46](../../pm/uat/worktree-reclamation.md#L46)
+- issue: introduces [pm/bugs/closed/2026-10-01-FEAT-stale_worktree_slot_reclamation.md:57](../../pm/bugs/closed/2026-10-01-FEAT-stale_worktree_slot_reclamation.md#L57)
+- issue: plans-implementation [pm/bugs/closed/2026-10-01-FEAT-stale_worktree_slot_reclamation.md:59](../../pm/bugs/closed/2026-10-01-FEAT-stale_worktree_slot_reclamation.md#L59)
+- issue: plans-verification [pm/bugs/closed/2026-10-01-FEAT-stale_worktree_slot_reclamation.md:61](../../pm/bugs/closed/2026-10-01-FEAT-stale_worktree_slot_reclamation.md#L61)

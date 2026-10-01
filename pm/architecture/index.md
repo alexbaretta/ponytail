@@ -22,3 +22,4 @@ ownership of project-specific management records and evidence.
 - [Full project isolation](project-isolation.md)
 - [Developer-private agent instructions](developer-private-agent-instructions.md)
 - [Repository text index](repository-text-index.md)
+- [Worktree reclamation](worktree-reclamation.md)

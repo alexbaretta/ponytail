@@ -83,6 +83,9 @@ services. `PROJECT_STRUCTURE.md` is authoritative for that boundary.
   `ponytail unregister <repository-root>`; listing: `ponytail list-projects`.
 - Worktree selection: `ponytail bless[-worktree]`; display it with `ponytail
   blessed[-worktree]`.
+- Worktree reclamation: `ponytail worktree reclaim [--dry-run] [--json]`;
+  lifecycle authority is the invoking project's committed
+  `.agents/config/project/worktree-lifecycle.json` adapter.
 - Component registration: `ponytail register-component <name>` and
   `ponytail unregister-component <name>`; listing: `ponytail list-components`.
 - Project dependency registration: `ponytail register-dependency <project>` and

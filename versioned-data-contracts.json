@@ -421,6 +421,54 @@
       "versions": ["V1"],
       "supportedReadVersions": ["V1"],
       "supportedDowngradeVersions": []
+    },
+    {
+      "id": "worktree-lifecycle-project-config",
+      "implementation": {
+        "workspace": "ponytail",
+        "module": "src/worktree-reclamation.js",
+        "readerRegistryExport": "WorktreeLifecycleConfigReaders"
+      },
+      "currentVersion": "V1",
+      "versions": ["V1"],
+      "supportedReadVersions": ["V1"],
+      "supportedDowngradeVersions": []
+    },
+    {
+      "id": "worktree-lifecycle-adapter-request",
+      "implementation": {
+        "workspace": "ponytail",
+        "module": "src/worktree-reclamation.js",
+        "readerRegistryExport": "WorktreeLifecycleAdapterRequestReaders"
+      },
+      "currentVersion": "V1",
+      "versions": ["V1"],
+      "supportedReadVersions": ["V1"],
+      "supportedDowngradeVersions": []
+    },
+    {
+      "id": "worktree-lifecycle-adapter-result",
+      "implementation": {
+        "workspace": "ponytail",
+        "module": "src/worktree-reclamation.js",
+        "readerRegistryExport": "WorktreeLifecycleAdapterResultReaders"
+      },
+      "currentVersion": "V1",
+      "versions": ["V1"],
+      "supportedReadVersions": ["V1"],
+      "supportedDowngradeVersions": []
+    },
+    {
+      "id": "worktree-reclamation-command-result",
+      "implementation": {
+        "workspace": "ponytail",
+        "module": "src/worktree-reclamation.js",
+        "readerRegistryExport": "WorktreeReclamationResultReaders"
+      },
+      "currentVersion": "V1",
+      "versions": ["V1"],
+      "supportedReadVersions": ["V1"],
+      "supportedDowngradeVersions": []
     }
   ]
 }

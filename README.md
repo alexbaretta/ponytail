@@ -111,6 +111,7 @@ Installed shell tools:
 | `ponytail campaign report [<plan-name-or-path>] [--json] [--[no-]summary-table] [--[no-]plan-table] [--[no-]sprint-table]` | Report the selected or uniquely active campaign's census |
 | `ponytail campaign list [--active\|--pending\|--closed\|--deferred\|--rejected]` | List campaigns in one normalized lifecycle status; active is the default |
 | `ponytail campaign activate <plan-name-or-path>` | Resolve a campaign root through parent links and activate a pending campaign |
+| `ponytail worktree reclaim [--dry-run] [--json]` | Inventory and reclaim worktree claims that the invoking project's lifecycle adapter proves abandoned |
 | `ponytail pm pdf <collection\|all> [--output-dir <path>]` | Render configured linked Markdown collections as PDFs using Pandoc and XeLaTeX |
 | `audit_pm.sh [--fix] [--dryrun]` | Audit PM structure and preview or fix missing date prefixes |
 | `plan_pdf.sh [--sprints] <plan-name> [output.pdf]` | Render a plan, optionally with its sprints, as PDF using Pandoc |
@@ -152,6 +153,16 @@ The human campaign report shows only the summary tasklet table by default.
 Enable or disable the summary, per-plan, and incomplete-sprint tables with
 their corresponding `--[no-]...-table` options. Use `--json` for the normalized
 tasklet-level records; JSON cannot be combined with table options.
+
+`ponytail worktree reclaim` reads the invoking project's committed
+`.agents/config/project/worktree-lifecycle.json`. Its committed executable
+adapter is the sole authority for claim liveness, project-resource cleanup,
+and physical worktree retirement. Project resources may include PostgreSQL
+databases or other claim-bound state. Use `--dry-run` to inspect stable
+retain-or-reclaim decisions without mutation. Ponytail generation-fences each
+mutation and verifies that both the claim and path are gone before reporting
+reclamation; it never scans another registered project or guesses from a
+missing path. See [worktree reclamation](pm/requirements/worktree-reclamation.md).
 
 `plan_pdf.sh` requires Pandoc and writes to `tmp/<plan-name>.pdf` unless an
 output path is supplied.

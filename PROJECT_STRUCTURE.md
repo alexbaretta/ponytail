@@ -64,7 +64,10 @@ while project-wide management records remain under `pm/`.
   reporting. `src/campaign-orchestration.js` owns the versioned Ponytail-user
   assignment ledger, authenticated host-observation snapshot, dependency
   scheduler, reconciled status, verified fast-forward integration, and typed
-  host-action protocol.
+  host-action protocol. `src/worktree-reclamation.js` owns the versioned
+  project lifecycle-adapter contracts, project-scoped reclamation lock,
+  deterministic claim selection, generation fencing, and verified cleanup
+  result.
 - `ponytail.json` owns the TSTS build-impact target.
 - `cli/` owns user-facing parse-safe Bash tools. `cli/ponytail` owns project
   registration, optional pre-commit integration, and Codex configuration
@@ -95,6 +98,9 @@ while project-wide management records remain under `pm/`.
   by the campaign census CLI.
   `project/pm-pdf.json`, when present, owns PDF collection roots, titles,
   exclusions, presentation variables, and the default generated-output path.
+  `project/worktree-lifecycle.json`, when present, selects the invoking
+  project's committed executable lifecycle adapter for authoritative claim
+  inventory and reclamation.
   `project/traceability.json` owns the approved in-scope requirement set,
   artifact classifications, generated-source mappings, reverse-view path, and
   TypeScript semantic-checker binding consumed by the reusable traceability
