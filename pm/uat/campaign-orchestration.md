@@ -268,26 +268,31 @@ Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
 Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
 
 - **Actor:** Campaign coordinator.
-- **Prerequisites:** One completed managed worker has recorded an authenticated
-  clean delivery, its commit remains in the campaign repository, its checkout
-  is now missing, and an unrelated plan is dependency-ready.
+- **Prerequisites:** One managed worker has recorded an authenticated clean
+  delivery, its session is waiting or completed at the assigned path, its
+  branch still names that exact commit, and an unrelated plan is
+  dependency-ready. Its checkout is initially present, then disappears.
 - **Profiles:** Automated scheduler and Git integration profile; live Codex
   host-observation profile.
 - **External effects:** Fast-forwards the delivered revision and dispatches
   unrelated ready work.
 
-1. Refresh the complete host observation after the delivered worker checkout
-   disappears.
+1. Refresh the complete host observation while the delivered worker checkout
+   is still present and clean.
+   - The waiting session's exact delivery is merge-ready without requiring the
+     whole plan or the session to be closed.
+2. Refresh again after that checkout disappears.
    - Status reports `CAMPAIGN_WORKTREE_MISSING_AFTER_DELIVERY`, preserves the
-     delivered revision and evidence, and does not classify the completed
+     delivered revision and evidence, and does not classify the idle
      session as an unverified worker.
-2. Advance the campaign through reconciliation and integration.
+3. Advance the campaign through reconciliation and integration.
    - Ponytail proves Git ancestry and fast-forwards the exact delivered commit
      without requiring the vanished checkout.
-3. Advance again while the delivered plan remains open for final acceptance.
+4. Advance again while the delivered plan remains open for final acceptance.
    - Ponytail selects unrelated dependency-ready dispatch despite the visible
      recoverable diagnostic.
-4. Repeat with no authenticated delivery or with a non-completed session.
+5. Repeat with no authenticated delivery, an active working session, or a
+   branch tip that no longer matches the delivery.
    - The ordinary missing-checkout diagnostic remains blocking and no mutation
      occurs.
 
@@ -300,7 +305,8 @@ Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
   missing, a fresh complete observation of the same waiting or completed
   session, and a preserved assignment branch commit containing the dispatch
   revision. A delivered worker in `REBASE_REQUIRED` additionally has an exact
-  authenticated delivery at that branch commit and a completed session.
+  authenticated delivery at that branch commit and a waiting or completed
+  session.
 - **Profiles:** Automated Git and adapter-contract profile plus live Codex
   managed-worktree recovery profile.
 - **External effects:** Reconstructs the original checkout from the recorded

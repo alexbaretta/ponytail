@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-10-01-waiting_delivery_not_recognized",
+  "recorded_at": "2026-10-01T10:46:10-07:00",
+  "source_references": [
+    "pm/bugs/in_progress/2026-10-01-BUG-waiting_delivery_checkout_loss.md",
+    "src/campaign-orchestration.js",
+    "tests/campaign-orchestration.test.js"
+  ],
+  "context": {
+    "languages": ["javascript"],
+    "frameworks": ["Git", "Codex managed worktrees"],
+    "components": ["campaign scheduler"],
+    "affected_boundaries": ["host session state to authenticated worker delivery and checkout recovery"],
+    "code_references": [
+      "src/campaign-orchestration.js:observedWorkers",
+      "src/campaign-orchestration.js:recoverableWorkerRevision"
+    ]
+  },
+  "observed_behavior": "Four idle GWEN worker sessions with authenticated deliveries were reported as active and blocking after their checkouts disappeared.",
+  "expected_behavior": "A waiting or completed managed session with an exact authenticated delivery is an idle delivered milestone; checkout loss remains visible but does not block integration or independent dispatch when the branch tip and host identity match.",
+  "causal_mechanism": "The scheduler equated a finished worker turn with the host's completed state, but Codex reports retained idle chats as waiting. Its missing-checkout path also accepted mere commit existence without checking the assigned branch tip.",
+  "anti_pattern": {
+    "structural_description": "A host conversation lifecycle label was reused as delivery-completion evidence instead of combining the authenticated delivery with observed session identity and Git branch state.",
+    "why_it_fails": "The waiting state masks a valid delivery and converts a recoverable checkout loss into a global blocking diagnostic. Commit existence alone would admit a branch that no longer names the delivered revision."
+  },
+  "correct_pattern": {
+    "required_invariant": "A fresh complete host observation of the managed waiting or completed session at its assigned path, authenticated delivery, and exact assignment branch tip jointly prove the finished worker milestone; a changed branch or active worker does not.",
+    "implementation_description": "Classify exact waiting deliveries with and without the checkout, require a matching branch tip after checkout loss, and allow the existing recovery predicate for delivered waiting workers needing rebase."
+  },
+  "applicability_conditions": [
+    "The worker has an authenticated clean delivery and its native Codex session is idle in the waiting state.",
+    "The scheduler has a fresh complete host observation and a surviving assignment branch."
+  ],
+  "known_non_matches": [
+    "A working session has not finished its current turn.",
+    "A changed branch tip or missing authenticated delivery does not prove the delivered revision is current."
+  ],
+  "confirmation_evidence": [
+    "The real-Git regression first classified a waiting delivered worker as ACTIVE both before and after checkout loss.",
+    "The same regression passes after the correction and still blocks a changed branch tip."
+  ],
+  "regression_proofs": [
+    "tests/campaign-orchestration.test.js: waiting worker delivery remains integrable before and after its checkout disappears",
+    "tests/campaign-orchestration.test.js: delivered waiting worker with a missing checkout recovers before rebase and preserves delivery"
+  ]
+}

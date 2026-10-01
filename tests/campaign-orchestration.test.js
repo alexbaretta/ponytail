@@ -870,7 +870,7 @@ test('verified worker delivery integrates before plan closure and cleanup waits 
   assert.equal(ledger.assignments[0].state, 'ARCHIVED');
 });
 
-test('verified delivery remains integrable after its completed worker checkout disappears', () => {
+test('waiting worker delivery remains integrable before and after its checkout disappears', () => {
   const root = repository();
   const worker = path.join(temporaryDirectory('ponytail-missing-delivered-worker-parent'), 'worker');
   command(root, ['worktree', 'add', '-qb', 'delivered-worker', worker]);
@@ -882,7 +882,7 @@ test('verified delivery remains integrable after its completed worker checkout d
   const ledger = newLedger(root, 'campaign', 'coordinator');
   const assignment = {
     id: 'delivered-assignment', planId: 'work', sessionId: 'delivered-session', worktree: worker, branch: 'delivered-worker',
-    dispatchRevision: ledger.integrationRevision, workerRevision, state: 'ACTIVE', idempotencyKey: 'delivered-key',
+    dispatchRevision: ledger.integrationRevision, workerRevision: ledger.integrationRevision, state: 'ACTIVE', idempotencyKey: 'delivered-key',
     attachToken: 'delivered-token', worktreeArchived: false, sessionArchived: false,
   };
   ledger.assignments.push(assignment);
@@ -901,9 +901,8 @@ test('verified delivery remains integrable after its completed worker checkout d
   writeHostObservation(root, 'campaign', {
     schemaVersion: 1, campaignId: 'campaign', observedAt: new Date().toISOString(),
     completeSessionIds: ['delivered-session'],
-    sessions: [{ sessionId: 'delivered-session', state: 'completed', worktree: worker, managedWorktree: true }],
+    sessions: [{ sessionId: 'delivered-session', state: 'waiting', worktree: worker, managedWorktree: true }],
   }, environment);
-  command(root, ['worktree', 'remove', worker]);
   const campaignGraph = graph([
     { id: 'campaign', parentPlanId: null, dependsOn: [], lifecycle: 'in_progress', path: 'root' },
     { id: 'work', parentPlanId: 'campaign', dependsOn: [], lifecycle: 'in_progress', path: 'work' },
@@ -911,6 +910,14 @@ test('verified delivery remains integrable after its completed worker checkout d
   ]);
 
   let status = reconcile(campaignGraph, ledger, root, environment);
+  assert.equal(status.assignments[0].state, 'READY_TO_MERGE');
+  command(root, ['worktree', 'remove', worker]);
+  command(root, ['branch', '-f', 'delivered-worker', ledger.integrationRevision]);
+  status = reconcile(campaignGraph, ledger, root, environment);
+  assert.equal(status.diagnostics.some(({ code }) => code === 'CAMPAIGN_WORKTREE_MISSING'), true);
+  assert.equal(captureError(() => readyActions(status, campaignGraph)).code, 'CAMPAIGN_STATUS_BLOCKED');
+  command(root, ['branch', '-f', 'delivered-worker', workerRevision]);
+  status = reconcile(campaignGraph, ledger, root, environment);
   assert.equal(status.assignments[0].state, 'READY_TO_MERGE');
   assert.equal(status.diagnostics.some(({ code }) => code === 'CAMPAIGN_WORKTREE_MISSING_AFTER_DELIVERY'), true);
   assert.equal(status.diagnostics.some(({ code }) => code === 'CAMPAIGN_WORKTREE_MISSING'), false);
@@ -1002,7 +1009,7 @@ test('missing undelivered checkout can be re-provisioned in the same session wit
   assert.equal(readWorkerDeliveries(root, 'campaign', environment).deliveries.length, 0);
 });
 
-test('delivered rebase worker with a missing checkout recovers before rebase and preserves delivery', () => {
+test('delivered waiting worker with a missing checkout recovers before rebase and preserves delivery', () => {
   const root = repository();
   const worker = path.join(temporaryDirectory('ponytail-missing-rebase-worker-parent'), 'worker');
   command(root, ['worktree', 'add', '-qb', 'rebase-worker', worker]);
@@ -1035,7 +1042,7 @@ test('delivered rebase worker with a missing checkout recovers before rebase and
   writeHostObservation(root, 'campaign', {
     schemaVersion: 1, campaignId: 'campaign', observedAt: new Date().toISOString(),
     completeSessionIds: [assignment.sessionId],
-    sessions: [{ sessionId: assignment.sessionId, state: 'completed', worktree: worker, managedWorktree: true }],
+    sessions: [{ sessionId: assignment.sessionId, state: 'waiting', worktree: worker, managedWorktree: true }],
   }, environment);
   command(root, ['worktree', 'remove', worker]);
   const campaignGraph = graph([
@@ -1052,7 +1059,7 @@ test('delivered rebase worker with a missing checkout recovers before rebase and
   writeHostObservation(root, 'campaign', {
     schemaVersion: 1, campaignId: 'campaign', observedAt: new Date(Date.now() - 6 * 60 * 1000).toISOString(),
     completeSessionIds: [assignment.sessionId],
-    sessions: [{ sessionId: assignment.sessionId, state: 'completed', worktree: worker, managedWorktree: true }],
+    sessions: [{ sessionId: assignment.sessionId, state: 'waiting', worktree: worker, managedWorktree: true }],
   }, environment);
   status = reconcile(campaignGraph, ledger, root, environment);
   assert.equal(status.diagnostics.some(({ code }) => code === 'CAMPAIGN_WORKTREE_MISSING'), true);
@@ -1060,7 +1067,7 @@ test('delivered rebase worker with a missing checkout recovers before rebase and
   writeHostObservation(root, 'campaign', {
     schemaVersion: 1, campaignId: 'campaign', observedAt: new Date().toISOString(),
     completeSessionIds: [assignment.sessionId],
-    sessions: [{ sessionId: assignment.sessionId, state: 'completed', worktree: worker, managedWorktree: true }],
+    sessions: [{ sessionId: assignment.sessionId, state: 'waiting', worktree: worker, managedWorktree: true }],
   }, environment);
   status = reconcile(campaignGraph, ledger, root, environment);
   assert.equal(status.assignments[0].state, 'REBASE_REQUIRED');

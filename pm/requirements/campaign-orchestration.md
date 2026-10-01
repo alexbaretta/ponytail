@@ -45,6 +45,10 @@ validation evidence. The stakeholder then instructed Ponytail to provide a
 canonical scheduler action that recovers the same authenticated worker when
 its checkout disappears before delivery but its assignment branch commit is
 still preserved.
+The 2026-10-01 GWEN incident clarified the host-state boundary: after a
+worker's delivered turn ends, Codex may report the retained session as
+`waiting` while it awaits another prompt. That idle state does not invalidate
+the authenticated delivery.
 
 ## Repository-wide campaign inventory
 
@@ -264,7 +268,8 @@ integration revision is an ancestor of the worker revision.
 
 A worker must record a delivery containing its exact clean commit and at least
 one committed plan-owned validation-evidence path. This delivery, together
-with a complete host observation that the worker finished, is the merge-
+with a fresh complete host observation that the managed session is waiting or
+completed and its branch still names the delivered commit, is the merge-
 readiness evidence; whole-plan closure is not. Ponytail may integrate that
 delivery while the plan remains in active work. The plan stays open until the
 coordinator runs the applicable final acceptance against the integrated tree
@@ -273,7 +278,8 @@ and assignment to delivery and integration without inventing a replacement.
 
 An authenticated delivery remains authoritative if its worker checkout later
 disappears, provided the delivered commit remains available to the campaign
-repository and a complete host observation identifies the session as
+repository at the exact assignment branch tip and a fresh complete host
+observation identifies the managed session at its assigned path as waiting or
 completed. Status must continue to diagnose the missing checkout, but must
 distinguish this recoverable state from a missing checkout without delivery
 proof. The recoverable diagnostic must not block reconciliation,
@@ -284,8 +290,9 @@ blocking.
 When a delivered worker requires a rebase and its checkout is missing, Ponytail
 must restore the worker-owned checkout before requesting that rebase.
 Scheduler classification still requires a fresh complete observation of the
-completed managed session, its authenticated binding, the exact delivered commit at the named
-branch, and ancestry from the dispatch revision. It preserves the delivery
+waiting or completed managed session, its authenticated binding, the exact
+delivered commit at the named branch, and ancestry from the dispatch revision.
+It preserves the delivery
 record and worker identity but does not make the divergent commit merge-ready.
 The recovered worker must follow the ordinary rebase and authenticated delivery
 workflow. A missing or contradictory proof remains blocking, while a proven

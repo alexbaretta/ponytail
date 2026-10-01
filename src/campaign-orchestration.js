@@ -1117,7 +1117,6 @@ function recoverableWorkerRevision(ledger, assignment, hostObservation, hostSess
     || Date.now() - Date.parse(hostObservation.observedAt) > HOST_OBSERVATION_MAX_AGE_MS
     || !hostObservation.completeSessionIds.includes(assignment.sessionId)
     || !['waiting', 'completed'].includes(hostSession?.state) || !hostSession.managedWorktree
-    || (deliveredRebase && hostSession.state !== 'completed')
     || hostSession.worktree !== assignment.worktree || binding.repositoryRoot !== ledger.topLevelWorktree
     || binding.campaignId !== ledger.campaignId || binding.assignmentId !== assignment.id
     || binding.sessionId !== assignment.sessionId || binding.worktree !== assignment.worktree
@@ -1149,19 +1148,24 @@ function observedWorkers(graph, ledger, environment, hostObservation) {
     const delivery = deliveries.get(assignment.id);
     let observation;
     if (!fs.existsSync(binding.worktree)) {
-      const deliveredCommitAvailable = Boolean(delivery)
-        && spawnSync('git', ['-C', ledger.topLevelWorktree, 'cat-file', '-e', `${delivery.revision}^{commit}`]).status === 0;
-      const recoverableDelivery = hostSession?.state === 'completed' && deliveredCommitAvailable;
+      const branchTip = delivery && spawnSync('git', ['-C', ledger.topLevelWorktree, 'rev-parse', '--verify', `refs/heads/${binding.branch}^{commit}`], { encoding: 'utf8' });
+      const recoverableDelivery = ['waiting', 'completed'].includes(hostSession?.state)
+        && hostSession.managedWorktree && hostSession.worktree === binding.worktree
+        && binding.branch === assignment.branch
+        && branchTip?.status === 0 && branchTip.stdout.trim() === delivery.revision;
       observation = { sessionId: binding.sessionId, worktree: binding.worktree, branch: binding.branch, revision: recoverableDelivery ? delivery.revision : binding.revision, clean: recoverableDelivery, activity: recoverableDelivery ? 'completed' : 'missing', evidenceComplete: recoverableDelivery, worktreeArchived: existing?.worktreeArchived ?? false, sessionArchived: existing?.sessionArchived ?? false };
     } else {
       const identity = repositoryIdentity(binding.worktree);
+      const deliveredWaiting = hostSession?.state === 'waiting' && hostSession.managedWorktree
+        && hostSession.worktree === binding.worktree && binding.branch === assignment.branch
+        && identity.branch === binding.branch && delivery?.revision === identity.revision;
       observation = {
         sessionId: binding.sessionId,
         worktree: binding.worktree,
         branch: identity.branch,
         revision: identity.revision,
         clean: git(binding.worktree, ['status', '--porcelain']).length === 0,
-        activity: hostSession?.state === 'completed' ? 'completed'
+        activity: hostSession?.state === 'completed' || deliveredWaiting ? 'completed'
           : ['missing', 'archived', 'unknown'].includes(hostSession?.state) ? 'missing'
             : plan?.lifecycle === graph.lifecycle.successfulCompletion && !hostObservation ? 'completed' : 'active',
         evidenceComplete: deliveries.get(assignment.id)?.revision === identity.revision,

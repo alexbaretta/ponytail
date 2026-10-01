@@ -116,12 +116,12 @@ Requirement: [pm/requirements/campaign-orchestration.md](campaign-orchestration.
 - uat: verifies [pm/uat/campaign-orchestration.md:215](../../pm/uat/campaign-orchestration.md#L215)
 - uat: verifies [pm/uat/campaign-orchestration.md:245](../../pm/uat/campaign-orchestration.md#L245)
 - uat: verifies [pm/uat/campaign-orchestration.md:268](../../pm/uat/campaign-orchestration.md#L268)
-- uat: verifies [pm/uat/campaign-orchestration.md:296](../../pm/uat/campaign-orchestration.md#L296)
-- uat: verifies [pm/uat/campaign-orchestration.md:343](../../pm/uat/campaign-orchestration.md#L343)
-- uat: verifies [pm/uat/campaign-orchestration.md:367](../../pm/uat/campaign-orchestration.md#L367)
-- uat: verifies [pm/uat/campaign-orchestration.md:393](../../pm/uat/campaign-orchestration.md#L393)
-- uat: verifies [pm/uat/campaign-orchestration.md:415](../../pm/uat/campaign-orchestration.md#L415)
-- uat: verifies [pm/uat/campaign-orchestration.md:437](../../pm/uat/campaign-orchestration.md#L437)
+- uat: verifies [pm/uat/campaign-orchestration.md:301](../../pm/uat/campaign-orchestration.md#L301)
+- uat: verifies [pm/uat/campaign-orchestration.md:349](../../pm/uat/campaign-orchestration.md#L349)
+- uat: verifies [pm/uat/campaign-orchestration.md:373](../../pm/uat/campaign-orchestration.md#L373)
+- uat: verifies [pm/uat/campaign-orchestration.md:399](../../pm/uat/campaign-orchestration.md#L399)
+- uat: verifies [pm/uat/campaign-orchestration.md:421](../../pm/uat/campaign-orchestration.md#L421)
+- uat: verifies [pm/uat/campaign-orchestration.md:443](../../pm/uat/campaign-orchestration.md#L443)
 - plan: plans-implementation [pm/plans/closed/2026-09-29-campaign-orchestration/plan.md:22](../../pm/plans/closed/2026-09-29-campaign-orchestration/plan.md#L22)
 - plan: plans-verification [pm/plans/closed/2026-09-29-campaign-orchestration/plan.md:23](../../pm/plans/closed/2026-09-29-campaign-orchestration/plan.md#L23)
 - plan: plans-implementation [pm/plans/closed/2026-09-30-campaign-session-observability/plan.md:20](../../pm/plans/closed/2026-09-30-campaign-session-observability/plan.md#L20)
@@ -184,6 +184,9 @@ Requirement: [pm/requirements/campaign-orchestration.md](campaign-orchestration.
 - issue: introduces [pm/bugs/in_progress/2026-10-01-BUG-stale_campaign_dispatch.md:11](../../pm/bugs/in_progress/2026-10-01-BUG-stale_campaign_dispatch.md#L11)
 - issue: plans-implementation [pm/bugs/in_progress/2026-10-01-BUG-stale_campaign_dispatch.md:12](../../pm/bugs/in_progress/2026-10-01-BUG-stale_campaign_dispatch.md#L12)
 - issue: plans-verification [pm/bugs/in_progress/2026-10-01-BUG-stale_campaign_dispatch.md:13](../../pm/bugs/in_progress/2026-10-01-BUG-stale_campaign_dispatch.md#L13)
+- issue: introduces [pm/bugs/in_progress/2026-10-01-BUG-waiting_delivery_checkout_loss.md:56](../../pm/bugs/in_progress/2026-10-01-BUG-waiting_delivery_checkout_loss.md#L56)
+- issue: plans-implementation [pm/bugs/in_progress/2026-10-01-BUG-waiting_delivery_checkout_loss.md:57](../../pm/bugs/in_progress/2026-10-01-BUG-waiting_delivery_checkout_loss.md#L57)
+- issue: plans-verification [pm/bugs/in_progress/2026-10-01-BUG-waiting_delivery_checkout_loss.md:58](../../pm/bugs/in_progress/2026-10-01-BUG-waiting_delivery_checkout_loss.md#L58)
 
 ## REQ-PONYTAIL-CLI-AGENT-HARNESS
 

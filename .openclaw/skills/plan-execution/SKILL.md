@@ -827,17 +827,22 @@ worktree as managed.
 
 `CAMPAIGN_WORKTREE_MISSING_AFTER_DELIVERY` is an informational recovery
 diagnostic, not a blocking one. It means the scheduler has independently
-verified the authenticated delivery revision, complete host observation, and
-surviving Git commit after the worker checkout disappeared. Continue only
+verified the authenticated delivery revision, fresh complete host observation
+of the waiting or completed managed session, and the exact surviving branch
+tip after the worker checkout disappeared. Continue only
 through `advance` and `ready-actions`: the scheduler may still fast-forward
 that exact revision and dispatch unrelated ready work. An
 ordinary `CAMPAIGN_WORKTREE_MISSING` lacks that proof and remains blocking.
+With the checkout present, the same exact delivery and idle `waiting` session
+are a completed worker milestone, not evidence that the worker is still
+editing; merge readiness still requires a clean checkout.
 
 `CAMPAIGN_WORKTREE_RECOVERY_REQUIRED` is also nonblocking because its action
 payload is already source-proven from the authenticated binding, fresh complete
 host observation, managed-worktree identity, and surviving assignment branch.
 It can also name a delivered worker in `REBASE_REQUIRED` when the exact
-delivered revision remains at that branch tip. Recover its checkout in the
+delivered revision remains at that branch tip and the session is waiting or
+completed. Recover its checkout in the
 same session before requesting a rebase; keep the delivery record, and require
 the ordinary rebase and new authenticated delivery before merge readiness.
 The worker follows the worker-owned recovery protocol without waiting for
