@@ -887,6 +887,7 @@ function recoverWorker(environment, token) {
         || dispatch.result.sessionId !== binding.sessionId || dispatch.result.branch !== binding.branch
         || !recovery || recovery.result.sessionId !== binding.sessionId || recovery.result.branch !== binding.branch
         || recovery.result.worktree === originalWorktree || recovery.result.worktree !== currentAssignment.worktree
+        || currentBinding.revision !== recovery.result.revision
         || repositoryIdentity(recovery.result.worktree).revision !== currentAssignment.workerRevision
         || ![originalWorktree, recovery.result.worktree].includes(currentBinding.worktree)
         || current.pendingActions.some(item => item.assignmentId === binding.assignmentId)

@@ -29,6 +29,20 @@ unproven targets and protects ignored files. Interrupted transfer is retryable.
 path. The focused worker/scheduler/hook selection passes 62 tests. Live PWP
 reconciliation and coordinator campaign resumption remain pending.
 
+The first live transfer attempt exposed one more precondition defect: PWP's
+verified merged branch was rebased after the old recovery checkpoint, so the
+checkpoint was not an ancestor. Legacy reconciliation now authenticates the
+checkpoint through the old recovery result and separately proves the current
+source equals the assignment's recorded worker revision. Ordinary recovery
+still requires the branch ancestry check. Focused regression covers the
+rebased case, interruption, data preservation, and ambiguous histories.
+
+Final `npm test` passes: 499 core tests, installer harness, 23 Pi, 4 MCP, 80
+TSTS, and 572-file structure validation. Traceability (201 relationships),
+rule-copy, version, generated registry/adapter/manifest, and diff checks pass.
+Build impact selects no targets. Log: ignored
+`tmp/legacy-recovery-final.log`. The live PWP retry remains pending.
+
 Final configured `npm test` passes against the staged correction, including
 the local PostgreSQL tests, installer harness, Pi, MCP, TSTS, and 572-file
 structure check. Rule copies, versions, generated registry/adapters/manifests,

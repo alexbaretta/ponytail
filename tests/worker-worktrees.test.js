@@ -115,7 +115,7 @@ function attachedWorker() {
 }
 
 test('legacy replacement recovery returns the branch to the proven native checkout without losing merged state', async context => {
-  for (const condition of ['attached', 'interrupted', 'switched', 'dirty', 'unproven', 'ignored']) await context.test(condition, () => {
+  for (const condition of ['attached', 'interrupted', 'switched', 'rebased', 'dirty', 'unproven', 'ignored']) await context.test(condition, () => {
     const { main, root, worktree, environment, binding, token } = attachedWorker();
     withLedgerLock(root, 'campaign', environment, ledger => {
       recordActionResult(ledger, ledger.pendingActions[0].id, {
@@ -123,8 +123,12 @@ test('legacy replacement recovery returns the branch to the proven native checko
       });
     });
     const replacement = path.join(directory(), 'replacement');
+    fs.appendFileSync(path.join(worktree, 'fixture.txt'), 'recovery checkpoint\n');
+    git(worktree, ['add', '.']);
+    git(worktree, ['-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.test', 'commit', '-qm', 'recovery checkpoint']);
+    const checkpoint = git(worktree, ['rev-parse', 'HEAD']);
     git(root, ['worktree', 'move', worktree, replacement]);
-    git(root, ['worktree', 'add', '--detach', worktree, binding.revision]);
+    git(root, ['worktree', 'add', '--detach', worktree, checkpoint]);
     fs.appendFileSync(path.join(replacement, 'fixture.txt'), 'merged delivery\n');
     if (condition === 'ignored') {
       fs.appendFileSync(path.join(main, '.git/info/exclude'), '\nblocked\n');
@@ -133,11 +137,18 @@ test('legacy replacement recovery returns the branch to the proven native checko
     }
     git(replacement, ['add', '.']);
     git(replacement, ['-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.test', 'commit', '-qm', 'delivery']);
-    const revision = git(replacement, ['rev-parse', 'HEAD']);
-    replaceRecoveredWorkerBinding(environment, binding.assignmentId, { ...binding, worktree: replacement });
+    let revision = git(replacement, ['rev-parse', 'HEAD']);
+    if (condition === 'rebased') {
+      const tree = git(replacement, ['rev-parse', 'HEAD^{tree}']);
+      const parent = git(replacement, ['rev-parse', `${checkpoint}^`]);
+      revision = git(replacement, ['-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.test', 'commit-tree', tree, '-p', parent, '-m', 'rebased delivery']);
+      git(replacement, ['update-ref', `refs/heads/${binding.branch}`, revision]);
+      assert.equal(spawnSync('git', ['-C', replacement, 'merge-base', '--is-ancestor', checkpoint, revision]).status, 1);
+    }
+    replaceRecoveredWorkerBinding(environment, binding.assignmentId, { ...binding, worktree: replacement, revision: checkpoint });
     withLedgerLock(root, 'campaign', environment, ledger => {
       ledger.completedActions.push({ actionId: 'old-recovery', assignmentId: binding.assignmentId, type: 'RECOVER_WORKTREE',
-        result: { ok: true, sessionId: binding.sessionId, worktree: replacement, branch: binding.branch, revision: binding.revision } });
+        result: { ok: true, sessionId: binding.sessionId, worktree: replacement, branch: binding.branch, revision: checkpoint } });
       Object.assign(ledger.assignments[0], { worktree: replacement, workerRevision: revision, state: 'MERGED' });
       ledger.workers[0].worktree = replacement;
       if (condition === 'unproven') ledger.completedActions.shift();

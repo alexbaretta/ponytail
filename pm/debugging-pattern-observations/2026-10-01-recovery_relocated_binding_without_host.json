@@ -23,6 +23,6 @@
   },
   "applicability_conditions": ["A historical recovery relocated an authenticated binding without moving its native session cwd.", "Both owned checkouts and immutable dispatch/recovery history survive."],
   "known_non_matches": ["Normal missing-checkout recovery already restores the binding's original path."],
-  "confirmation_evidence": ["Supported read_thread reported the original 38fe cwd while the binding and merged branch used pwp-recovery; both registered Git checkouts were clean.", "A real Git regression first returned the replacement path instead of reconciling the original native checkout."],
-  "regression_proofs": ["tests/worker-worktrees.test.js: legacy replacement recovery returns the branch to the proven native checkout without losing merged state"]
+  "confirmation_evidence": ["Supported read_thread reported the original 38fe cwd while the binding and merged branch used pwp-recovery; both registered Git checkouts were clean.", "A real Git regression first returned the replacement path instead of reconciling the original native checkout.", "The first live transfer failed because the old recovery checkpoint was not an ancestor of the rebased merged branch; the source HEAD matched the assignment's verified worker revision."],
+  "regression_proofs": ["tests/worker-worktrees.test.js: legacy replacement recovery returns the branch to the proven native checkout without losing merged state (including rebased source)"]
 }

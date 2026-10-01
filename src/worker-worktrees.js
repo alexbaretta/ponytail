@@ -10,7 +10,7 @@ const { spawnSync } = require('node:child_process');
 
 function git(root, args) {
   const result = spawnSync('git', ['-C', root, ...args], { encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 });
-  if (result.error || result.status !== 0) throw new Error(`worker recovery Git operation failed: ${result.error?.message || result.stderr.trim()}`);
+  if (result.error || result.status !== 0) throw new Error(`worker recovery Git operation failed: git ${args.join(' ')}: ${result.error?.message || result.stderr.trim() || `exit ${result.status}`}`);
   return result.stdout;
 }
 
@@ -86,12 +86,11 @@ function recoverCheckout(binding) {
 
 function recoverLegacyCheckout(binding, originalWorktree, originalRevision) {
   validateSource(binding);
-  const { mainWorktree, mainGitDirectory, worktree, branch, revision } = binding;
+  const { mainWorktree, mainGitDirectory, worktree, branch } = binding;
   if (originalWorktree === worktree || originalWorktree === mainWorktree || originalWorktree === binding.repositoryRoot) {
     throw new Error('legacy recovery target is not a distinct original worker checkout');
   }
   const checkpoint = git(mainWorktree, ['rev-parse', '--verify', `refs/heads/${branch}^{commit}`]).trim();
-  git(mainWorktree, ['merge-base', '--is-ancestor', revision, checkpoint]);
   const records = worktrees(mainWorktree);
   for (const target of [worktree, originalWorktree]) {
     const record = records.find(item => item.worktree === target);
@@ -120,7 +119,15 @@ function recoverLegacyCheckout(binding, originalWorktree, originalRevision) {
     if (detached) git(worktree, ['switch', '--no-overwrite-ignore', branch]);
     throw error;
   }
-  return recoverCheckout({ ...binding, worktree: originalWorktree });
+  if (commonDirectory(originalWorktree) !== mainGitDirectory
+    || git(originalWorktree, ['branch', '--show-current']).trim() !== branch
+    || git(originalWorktree, ['rev-parse', 'HEAD']).trim() !== checkpoint
+    || git(worktree, ['branch', '--show-current']).trim()
+    || git(worktree, ['rev-parse', 'HEAD']).trim() !== checkpoint) {
+    throw new Error('legacy recovery transfer postcondition failed; preserve both checkouts for inspection');
+  }
+  return { schemaVersion: 1, sessionId: binding.sessionId, worktree: originalWorktree, branch,
+    revision: checkpoint, mainWorktree, restored: false, content: 'COMMITTED_STATE' };
 }
 
 function readWorkerRecoveryV1(value) {
