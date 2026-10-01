@@ -67,7 +67,9 @@ test('campaign policy delegates every worker effect to the durable action loop',
   assert.match(policy, /`CAMPAIGN_WORKTREE_MISSING_AFTER_DELIVERY` is an informational recovery/);
   assert.match(policy, /ordinary `CAMPAIGN_WORKTREE_MISSING` lacks that proof and remains blocking/);
   assert.match(policy, /For `RECOVER_WORKTREE`, message only the action's existing session/);
-  assert.match(policy, /Recovery resumes the assignment; it does not\n+   replace the required authenticated `campaign deliver` step/);
+  assert.match(policy, /When no archive identity exists, it uses\n+   the supported host create-worktree operation in that same session/);
+  assert.match(policy, /The host may choose a new managed\n+   path/);
+  assert.match(policy, /Recovery replaces the stale binding path\n+   and resumes the assignment/);
   assert.match(policy, /`CAMPAIGN_WORKTREE_RECOVERY_REQUIRED` is also nonblocking/);
   assert.match(policy, /A `REUSE_WORKER`\n+   action retains the finished session and managed worktree/);
 });

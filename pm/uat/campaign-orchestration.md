@@ -296,8 +296,9 @@ Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
   dispatch revision.
 - **Profiles:** Automated Git and adapter-contract profile plus live Codex
   managed-worktree recovery profile.
-- **External effects:** Restores the same worker's managed checkout; creates no
-  replacement session or assignment.
+- **External effects:** Restores an archived checkout when available or creates
+  a new managed checkout in the same session; creates no replacement session,
+  assignment, branch, or commit.
 
 1. Reconcile the missing checkout with all recovery proofs present.
    - Status reports `CAMPAIGN_WORKTREE_RECOVERY_REQUIRED` instead of the
@@ -305,13 +306,18 @@ Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
 2. Advance and read ready-actions.
    - Ponytail persists and returns exactly one `RECOVER_WORKTREE` action naming
      the existing session, checkout, branch, and preserved branch revision.
-3. Restore a different path, repository, branch, revision, or a dirty checkout
-   and record the result.
+3. With no archived artifact, create a managed checkout from the preserved
+   revision in the same session and refresh the complete host observation.
+   - The host-selected path may differ from the missing path, but the observed
+     session, managed-worktree provenance, branch, and revision remain exact.
+4. Report an unobserved or unmanaged path, another repository, branch or
+   revision, or a dirty checkout.
    - Ponytail rejects the result and retains the same pending action.
-4. Restore the exact clean checkout and record the result.
-   - Ponytail retains the original assignment and session, clears the recovery
-     condition, and does not classify the revision as delivered or merge-ready.
-5. Repeat without one host, binding, branch, ancestry, or managed-worktree
+5. Report the exact clean, host-authenticated checkout.
+   - Ponytail replaces the stale assignment and binding path, retains the
+     original assignment and session, clears the recovery condition, and does
+     not classify the revision as delivered or merge-ready.
+6. Repeat without one host, binding, branch, ancestry, or managed-worktree
    proof.
    - Ponytail reports ordinary `CAMPAIGN_WORKTREE_MISSING`, emits no recovery
      action, and creates no replacement worker.

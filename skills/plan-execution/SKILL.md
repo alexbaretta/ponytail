@@ -714,13 +714,18 @@ durable state instead of remembering worker assignments in conversation:
    the exact host session, canonical worktree, branch, and revision only after
    the attach hook authenticates them.
    For `RECOVER_WORKTREE`, message only the action's existing session. That
-   worker restores its own archived managed-worktree artifact through the
-   supported host operation, then uses the host project's canonical adoption
-   path to re-establish the action's exact worktree, branch, and revision. Do
-   not create a replacement session, worktree, assignment, branch, or commit.
-   Record success only after the checkout is clean and every returned identity
-   exactly matches the action. Recovery resumes the assignment; it does not
-   replace the required authenticated `campaign deliver` step.
+   worker inspects its attached artifacts and restores the exact archived
+   managed worktree when one exists. When no archive identity exists, it uses
+   the supported host create-worktree operation in that same session with the
+   action's preserved revision, then uses the host project's canonical adoption
+   path to establish the action's branch. The host may choose a new managed
+   path. Do not create a replacement session, assignment, branch, or commit.
+   Refresh the complete host observation before recording the action result;
+   it must authenticate the same session at the returned managed path. Record
+   success only after the checkout is clean and its repository, branch, and
+   revision exactly match the action. Recovery replaces the stale binding path
+   and resumes the assignment; it does not replace the required authenticated
+   `campaign deliver` step.
 8. For `REQUEST_REBASE`, message the named worker to rebase onto the exact
    `ontoRevision`, wait for completion, and record only the resulting clean
    revision. The core, not the coordinator, decides whether the worker is then
@@ -749,7 +754,8 @@ durable state instead of remembering worker assignments in conversation:
    revision. The scheduler retains only the completed workers required by
    current dispatch demand after idle capacity is counted; surplus workers are
    cleanup-ready instead of being retained indefinitely.
-13. After each completed supported host effect, run `ponytail campaign action-result
+13. After each completed supported host effect, refresh the host observation
+   first when the action changes a managed checkout path, then run `ponytail campaign action-result
    <campaign-root> <action-id> --result <json>` from the coordinator worktree.
    Recording one result changes only that named action. Then refresh
    observations and return to status before advancing. Repeating the same
@@ -780,8 +786,9 @@ ordinary `CAMPAIGN_WORKTREE_MISSING` lacks that proof and remains blocking.
 payload is already source-proven from the authenticated binding, fresh complete
 host observation, managed-worktree identity, and surviving assignment branch.
 Run `advance` and `ready-actions`, execute only the resulting
-`RECOVER_WORKTREE` action in the named existing session, and then refresh the
-observation. If Ponytail reports ordinary `CAMPAIGN_WORKTREE_MISSING`, one of
+`RECOVER_WORKTREE` action in the named existing session, refresh the complete
+host observation for its returned managed path, and then record the result. If
+Ponytail reports ordinary `CAMPAIGN_WORKTREE_MISSING`, one of
 those proofs is absent; do not reconstruct the worker conversationally.
 
 A non-root plan may close when its own acceptance is complete. A campaign root

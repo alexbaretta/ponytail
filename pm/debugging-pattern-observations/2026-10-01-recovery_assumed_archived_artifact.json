@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-10-01-recovery_assumed_archived_artifact",
+  "recorded_at": "2026-10-01T03:33:23-07:00",
+  "source_references": [
+    "pm/bugs/closed/2026-10-01-BUG-recovery_requires_missing_archive.md",
+    "src/campaign-orchestration.js",
+    "skills/plan-execution/SKILL.md"
+  ],
+  "context": {
+    "languages": ["javascript"],
+    "frameworks": ["Codex managed worktrees"],
+    "components": ["campaign scheduler", "plan-execution"],
+    "affected_boundaries": ["durable scheduler action to host-managed worktree lifecycle"],
+    "code_references": [
+      "src/campaign-orchestration.js:readCurrentAction",
+      "src/campaign-orchestration.js:validateActionResultBinding",
+      "skills/plan-execution/SKILL.md:Campaign Scheduler Protocol"
+    ]
+  },
+  "observed_behavior": "RECOVER_WORKTREE could not start when the missing checkout had no archived artifact identity in the worker chat.",
+  "expected_behavior": "The same worker session recovers its preserved branch commit through supported host worktree operations even when no archived checkout exists.",
+  "causal_mechanism": "The host-action contract equated every missing managed checkout with an archived artifact and required restoration at the extinct path, but Codex restore accepts only artifact identities actually attached to the chat.",
+  "anti_pattern": {
+    "structural_description": "A resumable action prescribed one reconstruction mechanism without recording or proving that the required ephemeral artifact identity existed.",
+    "why_it_fails": "Durable Git and scheduler state can survive physical checkout loss while the optional host archive identity does not, leaving the prescribed action impossible despite sufficient state to reconstruct the checkout safely."
+  },
+  "correct_pattern": {
+    "required_invariant": "Recovery preserves logical worker identity and authenticated Git state while selecting a supported reconstruction mechanism from proven host state.",
+    "implementation_description": "Restore the archived artifact when present; otherwise create a new managed checkout in the same session from the preserved revision, authenticate its host-selected path through a fresh observation, and atomically replace the stale binding."
+  },
+  "applicability_conditions": [
+    "A durable workflow retains a live session and recoverable Git revision after its physical managed checkout disappears.",
+    "The host distinguishes archived-artifact restoration from new managed-checkout creation."
+  ],
+  "known_non_matches": [
+    "A missing checkout with no authenticated session, binding, branch, or preserved revision remains unrecoverable.",
+    "A delivered revision can continue through integration without reconstructing its checkout."
+  ],
+  "confirmation_evidence": [
+    "The worker reported an empty artifact inventory and restore_worktree rejected recovery because no archive identity existed.",
+    "The focused regression re-provisioned a different managed path from the preserved branch revision in the same session and retained the assignment."
+  ],
+  "regression_proofs": [
+    "tests/campaign-orchestration.test.js: missing undelivered checkout can be re-provisioned in the same session without an archived artifact",
+    "tests/campaign-orchestration.test.js: historical ledgers normalize recovery actions and the current writer emits V4"
+  ]
+}

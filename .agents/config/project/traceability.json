@@ -268,6 +268,11 @@
       "locator": "text"
     },
     {
+      "class": "issue",
+      "path": "pm/bugs/closed/2026-10-01-BUG-recovery_requires_missing_archive.md",
+      "locator": "text"
+    },
+    {
       "class": "implementation",
       "path": "hooks/plan-input.js",
       "locator": "text"

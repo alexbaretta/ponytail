@@ -212,10 +212,14 @@ the assignment's dispatch revision. Status must distinguish this condition
 from an ordinary blocking missing checkout. Advance must persist one typed
 recovery action naming the existing identities and preserved revision; it must
 not allocate a replacement session or assignment. The restored checkout must
-be clean, belong to the same repository, and match the named path, branch, and
-revision before the result is accepted. Recovery does not constitute delivery
-or integration evidence: the same worker must still record an authenticated
-delivery through the ordinary flow.
+be clean, belong to the same repository, and match the named branch and
+revision before the result is accepted. If no archived artifact exists, the
+same session may create a new managed checkout at a host-selected path. A fresh
+complete host observation must authenticate that path before Ponytail replaces
+the stale assignment and worker binding. Recovery must preserve the session,
+assignment, branch, and commit, but need not preserve an unrecoverable physical
+path. It does not constitute delivery or integration evidence: the same worker
+must still record an authenticated delivery through the ordinary flow.
 
 For pre-existing active campaigns, an authenticated coordinator must have an
 explicit, idempotent reconciliation command that corrects unassigned-plan

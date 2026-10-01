@@ -269,17 +269,22 @@ Before delivery, a missing checkout can instead become
 `CAMPAIGN_WORKTREE_RECOVERY_REQUIRED`. Reconciliation requires a fresh complete
 host observation of the same waiting or completed managed session, an exact
 authenticated binding, and a branch commit that contains the assignment's
-dispatch revision. Advance records one `RECOVER_WORKTREE` V2 action containing
-the existing session, path, branch, and preserved revision. The host resumes
-that same session, restores its managed worktree artifact, and uses the host
-project's canonical adoption path to re-establish the named branch at that
-revision. Action-result validation proves the restored checkout is clean, is
-in the same Git repository, and exactly matches every action identity. The
-assignment returns to ordinary active work and must deliver before it can enter
-the integration lane. Absent proof retains the ordinary blocking diagnostic.
+dispatch revision. Advance records one `RECOVER_WORKTREE` V3 action containing
+the existing session, previous path, branch, and preserved revision. Readers
+normalize already-persisted immutable V2 actions to V3. The host resumes that same
+session and restores its archived managed-worktree artifact when one exists.
+When no archive identity exists, the same session creates a new managed
+checkout from the preserved revision and uses the host project's canonical
+adoption path to establish the named branch. A fresh complete host observation
+must authenticate the returned managed path before action-result atomically
+replaces the stale assignment and worker binding. Validation proves the new
+checkout is clean, is in the same Git repository, and preserves the session,
+assignment, branch, and revision. The assignment returns to ordinary active
+work and must deliver before it can enter the integration lane. Absent proof
+retains the ordinary blocking diagnostic.
 
 When a transition requires a supported Codex host effect, advance persists one
-V1 host-action envelope and returns status containing every outstanding action.
+V3 host-action envelope and returns status containing every outstanding action.
 One invocation adds at most one action. The coordinator records each tool
 result through `ponytail campaign action-result <campaign> <action-id> --result
 <json>`. Repeating an identical recorded result returns the already applied
