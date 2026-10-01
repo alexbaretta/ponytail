@@ -20,8 +20,11 @@ const {
   parseArguments,
   readHostObservation,
   readLedgerV1,
+  readWorkerDeliveries,
   reconcile,
   recordActionResult,
+  recordWorkerDelivery,
+  writeWorkerDeliveries,
   writeHostObservation,
   withWorktreeLock,
 } = require('../src/campaign-orchestration');
@@ -287,6 +290,24 @@ test('campaign observe persists a normalized host snapshot and returns V2 status
   });
 });
 
+test('worker delivery accepts only an exact clean revision with committed evidence', () => {
+  const root = repository();
+  const environment = { ...process.env, PONYTAIL_CAMPAIGN_STATE_DIR: temporaryDirectory('ponytail-worker-delivery') };
+  write(root, 'pm/plans/in_progress/work/evidence/result.md', 'verified\n');
+  command(root, ['add', '.']);
+  command(root, ['-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.test', 'commit', '-qm', 'evidence']);
+  const revision = command(root, ['rev-parse', 'HEAD']);
+  const assignment = { id: 'assignment', worktree: root, planPath: 'pm/plans/in_progress/work/plan.md' };
+  const first = recordWorkerDelivery(root, 'campaign', assignment, { revision, evidencePaths: ['pm/plans/in_progress/work/evidence/result.md'] }, environment);
+  const replay = recordWorkerDelivery(root, 'campaign', assignment, { revision, evidencePaths: ['pm/plans/in_progress/work/evidence/result.md'] }, environment);
+  assert.deepEqual(replay, first);
+  assert.deepEqual(readWorkerDeliveries(root, 'campaign', environment).deliveries, [first]);
+  assert.equal(captureError(() => recordWorkerDelivery(root, 'campaign', assignment, { revision, evidencePaths: ['fixture.txt'] }, environment)).code, 'CAMPAIGN_WORKER_DELIVERY');
+  assert.equal(captureError(() => recordWorkerDelivery(root, 'campaign', assignment, { revision: 'bad', evidencePaths: ['pm/plans/in_progress/work/evidence/result.md'] }, environment)).code, 'CAMPAIGN_WORKER_DELIVERY');
+  fs.appendFileSync(path.join(root, 'fixture.txt'), 'dirty\n');
+  assert.equal(captureError(() => recordWorkerDelivery(root, 'campaign', assignment, { revision, evidencePaths: ['pm/plans/in_progress/work/evidence/result.md'] }, environment)).code, 'CAMPAIGN_WORKER_DELIVERY');
+});
+
 test('reconciler derives dependency-ready plans and only truly idle workers', () => {
   const root = repository();
   const ledger = newLedger(root, 'campaign', 'coordinator');
@@ -324,6 +345,48 @@ test('advance durably selects one ready plan and returns the same pending action
   assert.equal(ledger.assignments[0].state, 'ACTIVE');
   assert.equal(ledger.pendingAction, null);
   assert.equal(recordActionResult(ledger, first.id, result).id, ledger.assignments[0].id);
+});
+
+test('a proven unstarted stale dispatch is postponed while a started dispatch retains its identity', () => {
+  const root = repository();
+  const campaignGraph = graph([
+    { id: 'campaign', parentPlanId: null, dependsOn: [], lifecycle: 'in_progress', path: 'root' },
+    { id: 'blocked', parentPlanId: 'campaign', dependsOn: [], lifecycle: 'open', path: 'blocked' },
+    { id: 'other', parentPlanId: 'campaign', dependsOn: [], lifecycle: 'open', path: 'other' },
+    { id: 'prerequisite', parentPlanId: 'campaign', dependsOn: [], lifecycle: 'open', path: 'prerequisite' },
+  ]);
+  const postponedLedger = newLedger(root, 'campaign', 'coordinator');
+  postponedLedger.workers.push({
+    sessionId: 'idle-session', worktree: '/idle', branch: 'idle', revision: postponedLedger.integrationRevision,
+    clean: true, activity: 'idle', evidenceComplete: false, worktreeArchived: false, sessionArchived: false,
+  });
+  const pending = advanceLedger(campaignGraph, postponedLedger);
+  assert.equal(pending.type, 'REUSE_WORKER');
+  assert.equal(pending.payload.planId, 'blocked');
+  delete pending.payload.dispatch;
+  campaignGraph.plans.find(({ id }) => id === 'blocked').dependsOn = ['prerequisite'];
+  assert.equal(advanceLedger(campaignGraph, postponedLedger).payload.dispatch.ready, false);
+  recordActionResult(postponedLedger, pending.id, { ok: false, disposition: 'NOT_STARTED' }, campaignGraph);
+  assert.equal(postponedLedger.pendingAction, null);
+  assert.equal(postponedLedger.assignments[0].state, 'DISPATCH_PENDING');
+  assert.equal(postponedLedger.assignments[0].sessionId, null);
+  const unrelated = advanceLedger(campaignGraph, postponedLedger);
+  assert.equal(unrelated.payload.planId, 'other');
+  assert.equal(unrelated.type, 'REUSE_WORKER');
+  assert.equal(unrelated.payload.sessionId, 'idle-session');
+
+  const startedGraph = graph([
+    { id: 'campaign', parentPlanId: null, dependsOn: [], lifecycle: 'in_progress', path: 'root' },
+    { id: 'blocked', parentPlanId: 'campaign', dependsOn: [], lifecycle: 'open', path: 'blocked' },
+    { id: 'prerequisite', parentPlanId: 'campaign', dependsOn: [], lifecycle: 'open', path: 'prerequisite' },
+  ]);
+  const startedLedger = newLedger(root, 'campaign', 'coordinator');
+  const started = advanceLedger(startedGraph, startedLedger);
+  recordActionResult(startedLedger, started.id, { ok: true, disposition: 'STARTED', hostIdentity: 'client-123' }, startedGraph);
+  startedGraph.plans.find(({ id }) => id === 'blocked').dependsOn = ['prerequisite'];
+  assert.equal(advanceLedger(startedGraph, startedLedger).id, started.id);
+  assert.deepEqual(startedLedger.pendingAction.payload.dispatch, { ready: false, state: 'STARTED', hostIdentity: 'client-123' });
+  assert.equal(captureError(() => recordActionResult(startedLedger, started.id, { ok: false, disposition: 'NOT_STARTED' }, startedGraph)).code, 'CAMPAIGN_ACTION_STARTED');
 });
 
 test('advance reuses a clean idle worker before requesting a new worker', () => {
@@ -396,7 +459,7 @@ test('completed work is classified by Git ancestry and fast-forward merged exact
   });
   const campaignGraph = graph([
     { id: 'campaign', parentPlanId: null, dependsOn: [], lifecycle: 'in_progress', path: 'root' },
-    { id: 'work', parentPlanId: 'campaign', dependsOn: [], lifecycle: 'closed', path: 'work' },
+    { id: 'work', parentPlanId: 'campaign', dependsOn: [], lifecycle: 'in_progress', path: 'work' },
   ]);
   assert.deepEqual(reconcile(campaignGraph, ledger).readyToMerge.map(({ planId }) => planId), ['work']);
   assert.equal(advanceLedger(campaignGraph, ledger), null);
@@ -404,6 +467,7 @@ test('completed work is classified by Git ancestry and fast-forward merged exact
   assert.equal(advanceLedger(campaignGraph, ledger), null);
   assert.equal(command(root, ['rev-parse', 'HEAD']), workerRevision);
   assert.equal(ledger.assignments[0].state, 'MERGED');
+  campaignGraph.plans.find(({ id }) => id === 'work').lifecycle = 'closed';
   assert.equal(advanceLedger(campaignGraph, ledger), null);
   assert.equal(ledger.assignments[0].state, 'CLEANUP_PENDING');
   const cleanup = advanceLedger(campaignGraph, ledger);
@@ -414,6 +478,55 @@ test('completed work is classified by Git ancestry and fast-forward merged exact
   assert.equal(archiveSession.type, 'ARCHIVE_SESSION');
   recordActionResult(ledger, archiveSession.id, { ok: true });
   assert.equal(ledger.assignments[0].state, 'ARCHIVED');
+});
+
+test('verified worker delivery integrates before plan closure and cleanup waits for closure', () => {
+  const root = repository();
+  const state = temporaryDirectory('ponytail-delivery-state');
+  const environment = { ...process.env, PONYTAIL_CAMPAIGN_STATE_DIR: state };
+  const base = command(root, ['rev-parse', 'HEAD']);
+  command(root, ['checkout', '-qb', 'worker-delivery']);
+  fs.appendFileSync(path.join(root, 'fixture.txt'), 'delivered\n');
+  write(root, 'pm/evidence.md', 'verified\n');
+  command(root, ['add', '.']);
+  command(root, ['-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.test', 'commit', '-qm', 'delivery']);
+  const workerRevision = command(root, ['rev-parse', 'HEAD']);
+  command(root, ['checkout', '-q', 'main']);
+  const ledger = newLedger(root, 'campaign', 'coordinator');
+  ledger.integrationRevision = base;
+  ledger.assignments.push({
+    id: 'assignment', planId: 'work', sessionId: 'worker-session', worktree: root, branch: 'worker-delivery',
+    dispatchRevision: base, workerRevision, state: 'ACTIVE', idempotencyKey: 'key', attachToken: 'token',
+    worktreeArchived: false, sessionArchived: false,
+  });
+  ledger.workers.push({
+    sessionId: 'worker-session', worktree: root, branch: 'worker-delivery', revision: workerRevision,
+    clean: true, activity: 'completed', evidenceComplete: false, worktreeArchived: false, sessionArchived: false,
+  });
+  writeWorkerDeliveries(root, 'campaign', {
+    schemaVersion: 1,
+    campaignId: 'campaign',
+    deliveries: [{ assignmentId: 'assignment', revision: workerRevision, evidencePaths: ['pm/evidence.md'], recordedAt: new Date().toISOString() }],
+  }, environment);
+  writeHostObservation(root, 'campaign', {
+    schemaVersion: 1, campaignId: 'campaign', observedAt: new Date().toISOString(), completeSessionIds: ['worker-session'],
+    sessions: [{ sessionId: 'worker-session', state: 'completed', worktree: null, managedWorktree: true }],
+  }, environment);
+  const campaignGraph = graph([
+    { id: 'campaign', parentPlanId: null, dependsOn: [], lifecycle: 'in_progress', path: 'root' },
+    { id: 'work', parentPlanId: 'campaign', dependsOn: [], lifecycle: 'in_progress', path: 'work' },
+  ]);
+  assert.deepEqual(reconcile(campaignGraph, ledger, root, environment).readyToMerge.map(({ planId }) => planId), ['work']);
+  assert.equal(advanceLedger(campaignGraph, ledger, environment), null);
+  assert.equal(ledger.assignments[0].state, 'READY_TO_MERGE');
+  assert.equal(advanceLedger(campaignGraph, ledger, environment), null);
+  assert.equal(ledger.assignments[0].state, 'MERGED');
+  assert.equal(advanceLedger(campaignGraph, ledger, environment), null);
+  assert.equal(ledger.assignments[0].state, 'MERGED');
+  campaignGraph.plans.find(({ id }) => id === 'work').lifecycle = 'closed';
+  assert.equal(advanceLedger(campaignGraph, ledger, environment), null);
+  assert.equal(ledger.assignments[0].state, 'CLEANUP_PENDING');
+  assert.equal(advanceLedger(campaignGraph, ledger, environment).type, 'ARCHIVE_WORKTREE');
 });
 
 test('completed divergent work requires rebase and cannot merge', () => {
@@ -440,7 +553,7 @@ test('completed divergent work requires rebase and cannot merge', () => {
   });
   const status = reconcile(graph([
     { id: 'campaign', parentPlanId: null, dependsOn: [], lifecycle: 'in_progress', path: 'root' },
-    { id: 'work', parentPlanId: 'campaign', dependsOn: [], lifecycle: 'closed', path: 'work' },
+    { id: 'work', parentPlanId: 'campaign', dependsOn: [], lifecycle: 'in_progress', path: 'work' },
   ]), ledger);
   assert.deepEqual(status.rebaseRequired.map(({ planId }) => planId), ['work']);
   assert.deepEqual(status.readyToMerge, []);
@@ -479,6 +592,10 @@ test('action results require an explicit campaign and advance holds the worktree
     operation: 'action-result', input: 'campaign', json: false, actionId: 'action', result: { ok: true },
   });
   assert.equal(captureError(() => parseArguments(['action-result', 'action', '--result', '{"ok":true}'])).code, 'CAMPAIGN_ORCHESTRATION_USAGE');
+  assert.deepEqual(parseArguments(['deliver', 'campaign', '--result', '{"revision":"abc","evidencePaths":["pm/evidence.md"]}']), {
+    operation: 'deliver', input: 'campaign', json: false, actionId: undefined,
+    result: { revision: 'abc', evidencePaths: ['pm/evidence.md'] },
+  });
 
   const root = repository();
   const environment = { ...process.env, PONYTAIL_CAMPAIGN_STATE_DIR: temporaryDirectory('ponytail-worktree-lock') };

@@ -339,6 +339,18 @@
       "supportedDowngradeVersions": []
     },
     {
+      "id": "campaign-worker-deliveries",
+      "implementation": {
+        "workspace": "ponytail",
+        "module": "src/campaign-orchestration.js",
+        "readerRegistryExport": "CampaignWorkerDeliveryReaders"
+      },
+      "currentVersion": "V1",
+      "versions": ["V1"],
+      "supportedReadVersions": ["V1"],
+      "supportedDowngradeVersions": []
+    },
+    {
       "id": "parallel-sprint-metadata",
       "implementation": {
         "workspace": "ponytail",

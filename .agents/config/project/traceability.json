@@ -209,6 +209,16 @@
       "locator": "text"
     },
     {
+      "class": "issue",
+      "path": "pm/bugs/in_progress/2026-10-01-BUG-stale_campaign_dispatch.md",
+      "locator": "text"
+    },
+    {
+      "class": "issue",
+      "path": "pm/bugs/in_progress/2026-10-01-BUG-premature_campaign_plan_closure.md",
+      "locator": "text"
+    },
+    {
       "class": "implementation",
       "path": "hooks/plan-input.js",
       "locator": "text"

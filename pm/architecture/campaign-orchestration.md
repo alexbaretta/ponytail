@@ -209,12 +209,29 @@ revision is an ancestor of the worker revision. Integration uses only
 fast-forward merge. A changed integration head moves the assignment back to
 `REBASE_REQUIRED`.
 
+Workers persist that evidence through `campaign deliver`: an authenticated
+assignment records its exact clean revision and committed evidence paths in a
+separate immutable V1 delivery store. Host completion plus a delivery matching
+the observed worker revision replaces whole-plan closure as the readiness
+signal. The assignment may therefore reach `MERGED` while its plan remains in
+active work. Closure occurs only after final acceptance on the integrated tree;
+only then does reconciliation advance `MERGED` to `CLEANUP_PENDING`. A newer
+delivery after a failed integrated gate returns the same assignment to the
+ordinary ancestry and merge flow.
+
 When a transition requires a supported Codex host effect, advance persists and
 returns one V1 host-action envelope. The coordinator records the tool result
 through `ponytail campaign action-result <campaign> <action-id> --result
 <json>` before
 advancing again. Repeating advance returns the same pending action, and
 repeating an identical recorded result returns the already applied outcome.
+Create and reuse actions also carry an open-payload dispatch record. The host
+records `STARTED` with its stable host identity as soon as the external effect
+begins. If graph changes make the plan unready, `NOT_STARTED` may retire only a
+dispatch that the host proves never began; a started action remains pending
+with the same action, attachment, host, and idempotency identities. Retiring an
+unstarted action leaves its assignment queued and permits selection of another
+ready plan.
 The V1 ledger is stored under Ponytail user data, keyed by canonical top-level
 worktree and campaign, and is replaced atomically under an exclusive scope
 lock. A second worktree-scoped lock surrounds every advance operation so two
@@ -222,7 +239,8 @@ campaign-specific ledgers in the same worktree cannot concurrently dispatch,
 integrate, or clean up workers.
 
 Cleanup begins only after the integration branch contains the exact worker
-revision. It archives the Codex session, preserves a recoverable managed-
+revision and final integrated acceptance closes the plan. It archives the Codex
+session, preserves a recoverable managed-
 worktree snapshot when supported, removes the checkout, and retains
 `CLEANUP_PENDING` until every required effect is confirmed.
 

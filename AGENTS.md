@@ -76,8 +76,9 @@ services. `PROJECT_STRUCTURE.md` is authoritative for that boundary.
   `ponytail campaign reconcile <campaign> --json` for pre-existing active plans,
   `ponytail campaign observe <campaign> --snapshot <json>`, `ponytail campaign
   advance [<campaign>] --json`, and `ponytail campaign action-result <campaign>
-  <action-id> --result <json>`; the canonical coordinator workflow is owned by
-  `skills/plan-execution/SKILL.md`.
+  <action-id> --result <json>`; authenticated workers record merge-ready
+  revisions with `ponytail campaign deliver <campaign> --result <json>`. The
+  canonical coordinator workflow is owned by `skills/plan-execution/SKILL.md`.
 - Project initialization and registration: `ponytail register`; removal:
   `ponytail unregister <repository-root>`; listing: `ponytail list-projects`.
 - Worktree selection: `ponytail bless[-worktree]`; display it with `ponytail

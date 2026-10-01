@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-10-01-lifecycle_used_as_delivery_evidence",
+  "recorded_at": "2026-10-01T00:26:37-07:00",
+  "source_references": ["pm/bugs/in_progress/2026-10-01-BUG-premature_campaign_plan_closure.md"],
+  "context": {
+    "languages": ["javascript"],
+    "frameworks": ["Git", "Node.js test runner"],
+    "components": ["campaign scheduler"],
+    "affected_boundaries": ["worker delivery evidence to whole-plan lifecycle and integration"],
+    "code_references": ["src/campaign-orchestration.js: observedWorkers and effectiveAssignmentState"]
+  },
+  "observed_behavior": "A completed worker could not become merge-ready until its whole plan was closed, although final acceptance required the worker commit in the integrated tree.",
+  "expected_behavior": "Exact worker delivery evidence permits integration while the plan remains active, and successful final integrated acceptance permits closure and cleanup.",
+  "causal_mechanism": "The worker evidenceComplete flag was derived from the plan's successful-completion lifecycle instead of an independently recorded revision and evidence set.",
+  "anti_pattern": {
+    "structural_description": "A parent lifecycle outcome is reused as proof for an earlier child-delivery transition.",
+    "why_it_fails": "The earlier transition becomes dependent on a later acceptance outcome, producing a lifecycle cycle and encouraging premature closure."
+  },
+  "correct_pattern": {
+    "required_invariant": "Each transition is authorized by its own evidence, and final lifecycle completion follows validation of the integrated result.",
+    "implementation_description": "Persist an authenticated clean revision and committed evidence paths, integrate that delivery, retain MERGED while active, and unlock cleanup only after plan closure."
+  },
+  "applicability_conditions": ["Final acceptance must evaluate a combined or integrated tree after an independently produced delivery."],
+  "known_non_matches": ["A standalone change whose complete acceptance can be established entirely inside its one checkout has no separate integration gate."],
+  "confirmation_evidence": ["The focused regression reaches READY_TO_MERGE and MERGED while active, remains retained, then becomes cleanup-eligible only after closure."],
+  "regression_proofs": ["tests/campaign-orchestration.test.js: verified worker delivery integrates before plan closure and cleanup waits for closure", "tests/campaign-orchestration.test.js: worker delivery accepts only an exact clean revision with committed evidence"]
+}

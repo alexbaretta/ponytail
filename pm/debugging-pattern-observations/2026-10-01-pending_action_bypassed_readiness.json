@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-10-01-pending_action_bypassed_readiness",
+  "recorded_at": "2026-10-01T00:26:37-07:00",
+  "source_references": ["pm/bugs/in_progress/2026-10-01-BUG-stale_campaign_dispatch.md"],
+  "context": {
+    "languages": ["javascript"],
+    "frameworks": ["Node.js test runner"],
+    "components": ["campaign scheduler"],
+    "affected_boundaries": ["durable pending host action to current campaign dependency graph"],
+    "code_references": ["src/campaign-orchestration.js: advanceLedger and recordActionResult"]
+  },
+  "observed_behavior": "A pending worker action remained globally blocking after new prerequisite metadata made its plan unready.",
+  "expected_behavior": "A proven unstarted action can be postponed while an externally started action retains its exact identity.",
+  "causal_mechanism": "advanceLedger returned every pending action before consulting the current campaign graph and retained no authoritative distinction between an unstarted and started host effect.",
+  "anti_pattern": {
+    "structural_description": "A durable intent bypasses current eligibility checks and omits the external effect's start boundary.",
+    "why_it_fails": "The scheduler can neither release a safely cancellable stale intent nor prove that a possibly running effect must be retained."
+  },
+  "correct_pattern": {
+    "required_invariant": "Retry revalidates current eligibility, but cancellation is permitted only with authoritative proof that the external effect never started.",
+    "implementation_description": "Persist STARTED with a host identity in the action payload; accept NOT_STARTED only for a currently unready action without that marker, retaining the queued assignment for later."
+  },
+  "applicability_conditions": ["A durable scheduler action can outlive changes to the graph that originally made it eligible.", "The host effect has a distinct observable start boundary."],
+  "known_non_matches": ["Rebase and cleanup actions already operate on existing authenticated resources and are not safely postponable through this disposition."],
+  "confirmation_evidence": ["The focused regression changed dependencies after dispatch and distinguished NOT_STARTED progress from a retained STARTED host identity."],
+  "regression_proofs": ["tests/campaign-orchestration.test.js: a proven unstarted stale dispatch is postponed while a started dispatch retains its identity"]
+}

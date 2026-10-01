@@ -12,7 +12,7 @@ Licensed under the MIT License. See LICENSE in the project root.
 **Identifier:** `REQ-CAMPAIGN-ORCHESTRATION`
 
 **Approval:** Approved by explicit stakeholder direction on 2026-09-29 and
-clarified by explicit stakeholder direction on 2026-09-30.
+clarified by explicit stakeholder direction on 2026-09-30 and 2026-10-01.
 
 **Source:** The stakeholder reported on 2026-09-29 that campaign coordinators
 lose track of parallel Codex sessions, fail to merge completed work, and
@@ -31,6 +31,9 @@ selects one explicitly, repository-wide inventory without selection, campaign
 listing by lifecycle status, and campaign activation from any member plan.
 The stakeholder further clarified on 2026-09-30 that only commands in the
 `ponytail campaign` subtree may enforce campaign validity or uniqueness.
+On 2026-10-01, the stakeholder approved revalidation of stale worker dispatches
+and integration of a verified worker delivery before whole-plan closure, while
+retaining final integrated acceptance as the closure and cleanup gate.
 
 ## Repository-wide campaign inventory
 
@@ -206,6 +209,16 @@ atomically associate the selected plan, session, worktree, branch, and campaign
 integration revision. A retry after interruption must resume or reconcile that
 same assignment rather than create another one.
 
+A pending create-or-reuse dispatch must be re-evaluated against the current
+campaign dependency graph before every retry. The host adapter must record
+whether the external worker operation has started. A dispatch proven not to
+have started may be postponed when its plan is no longer dependency-ready so
+unrelated ready work can proceed; the existing assignment and attachment
+identity remain durable for later dispatch. Once creation or reuse has started,
+Ponytail must preserve the same action, host identity, session or pending-
+session identity, worktree, attachment token, and retry identity rather than
+postpone it or create a replacement.
+
 For each unassigned dependency-ready plan, the coordinator must schedule it on
 an idle campaign worker when one is safe to reuse, or create a new worker
 session and worktree when none is available. A worker is not idle while it has
@@ -218,12 +231,22 @@ evidence. Integration must preserve the campaign's serialized join order and
 must use a fast-forward merge after proving that the current campaign
 integration revision is an ancestor of the worker revision.
 
+A worker must record a delivery containing its exact clean commit and at least
+one committed plan-owned validation-evidence path. This delivery, together
+with a complete host observation that the worker finished, is the merge-
+readiness evidence; whole-plan closure is not. Ponytail may integrate that
+delivery while the plan remains in active work. The plan stays open until the
+coordinator runs the applicable final acceptance against the integrated tree
+and records its outcome. A failed integrated gate may return the same worker
+and assignment to delivery and integration without inventing a replacement.
+
 All campaign advancement in one top-level worktree must also use one worktree-
 scoped critical section so two campaign-scoped ledgers cannot race while
 observing or changing their shared integration branch.
 
-After a worker revision has been verified as integrated, the coordinator must
-archive the worker session and remove its managed worktree. Cleanup failure must
+After a worker revision has been verified as integrated and the plan has
+successfully closed, the coordinator must archive the worker session and
+remove its managed worktree. Cleanup failure must
 remain visible and retryable; it must not make the worker appear idle or allow
 the assignment to disappear. Recoverable archival of the worktree before its
 checkout is removed satisfies this requirement.

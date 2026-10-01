@@ -1272,12 +1272,12 @@ function repositoryRoot() {
 }
 
 function usage() {
-  return 'usage: ponytail campaign validate <plan-name-or-path>\n       ponytail campaign validate --all [--json]\n       ponytail campaign report [<plan-name-or-path>] [--json] [--[no-]summary-table] [--[no-]plan-table] [--[no-]sprint-table]\n       ponytail campaign list [--active|--pending|--closed|--deferred|--rejected]\n       ponytail campaign activate <plan-name-or-path>\n       ponytail campaign status [<campaign>] [--json]\n       ponytail campaign observe <campaign> --snapshot <json>\n       ponytail campaign advance [<campaign>] [--json]\n       ponytail campaign reconcile <campaign> [--json]\n       ponytail campaign action-result <campaign> <action-id> --result <json>\n       ponytail campaign attach <token>';
+  return 'usage: ponytail campaign validate <plan-name-or-path>\n       ponytail campaign validate --all [--json]\n       ponytail campaign report [<plan-name-or-path>] [--json] [--[no-]summary-table] [--[no-]plan-table] [--[no-]sprint-table]\n       ponytail campaign list [--active|--pending|--closed|--deferred|--rejected]\n       ponytail campaign activate <plan-name-or-path>\n       ponytail campaign status [<campaign>] [--json]\n       ponytail campaign observe <campaign> --snapshot <json>\n       ponytail campaign advance [<campaign>] [--json]\n       ponytail campaign reconcile <campaign> [--json]\n       ponytail campaign action-result <campaign> <action-id> --result <json>\n       ponytail campaign attach <token>\n       ponytail campaign deliver <campaign> --result <json>';
 }
 
 function run(argv = process.argv.slice(2)) {
   const operation = argv[0];
-  if (['status', 'observe', 'advance', 'reconcile', 'action-result', 'attach'].includes(operation)) {
+  if (['status', 'observe', 'advance', 'reconcile', 'action-result', 'attach', 'deliver'].includes(operation)) {
     return require('./campaign-orchestration').run(argv);
   }
   let input;

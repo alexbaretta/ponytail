@@ -36,6 +36,9 @@ whether it is:
 Do not infer abandonment from silence, an observation timeout, a stale status
 message, or an inaccessible task. Poll the owning task or inspect its current
 authoritative state. Do not remove an active or explicitly retained worktree.
+For a Ponytail campaign assignment, an integrated worker is still retained
+while its plan remains active for final acceptance. Treat only the scheduler's
+typed cleanup action after successful plan closure as authority to retire it.
 
 ## Cleanup Contract
 

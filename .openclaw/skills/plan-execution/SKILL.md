@@ -672,7 +672,15 @@ durable state instead of remembering worker assignments in conversation:
    is currently warranted.
 5. If advance returns an existing `pendingAction`, resume that exact action.
    Never allocate a replacement session or worktree, and never assign the plan
-   conversationally.
+   conversationally. For `CREATE_WORKER` and `REUSE_WORKER`, inspect
+   `payload.dispatch.ready`. As soon as the supported host operation begins,
+   record `{"ok":true,"disposition":"STARTED","hostIdentity":"<id>"}` with
+   `campaign action-result`; use the returned session ID or pending client ID
+   as the stable host identity. If the plan becomes unready and the host proves
+   the operation never started, record
+   `{"ok":false,"disposition":"NOT_STARTED"}` so the scheduler can postpone
+   that assignment and select unrelated ready work. Never report
+   `NOT_STARTED` after a host operation begins.
 6. For `CREATE_WORKER`, create one supported managed-worktree worker and put
    the bootstrap sequence and `ponytail campaign attach <attachToken>` in its
    first instruction. Before campaign attachment, the worker verifies its exact assigned checkout
@@ -691,17 +699,27 @@ durable state instead of remembering worker assignments in conversation:
    `ontoRevision`, wait for completion, and record only the resulting clean
    revision. The core, not the coordinator, decides whether the worker is then
    ready for fast-forward integration.
-8. A transition to `READY_TO_MERGE` is acted on only by another advance; do not
+8. When assigned work and its focused validation are complete, the worker
+   commits the plan-owned evidence and runs `ponytail campaign deliver
+   <campaign-root> --result <json>` from its authenticated worktree. The result
+   names the exact clean `revision` and a nonempty `evidencePaths` array. Keep
+   the plan in active work; conversational completion and premature whole-plan
+   closure are not delivery evidence.
+9. A transition to `READY_TO_MERGE` is acted on only by another advance; do not
    run an independent merge command. The core proves ancestry and uses
    fast-forward-only integration.
-9. After integration, follow the next core-selected action. A `REUSE_WORKER`
+10. After integration, run the plan's final acceptance against the integrated
+   tree. Close the plan only after those gates pass. A failed gate keeps the
+   plan active and may return the same assignment to another delivery and
+   integration cycle. Cleanup is eligible only after successful plan closure.
+11. Then follow the next core-selected action. A `REUSE_WORKER`
    action retains the finished session and managed worktree for its named next
    plan. For `ARCHIVE_WORKTREE`, ask the bound worker to archive its own managed
    worktree through the supported recoverable host operation and verify the
    checkout is gone. For `ARCHIVE_SESSION`, archive only the action's named
    worker chat. Never delete an inferred path or clean up an unintegrated
    revision.
-10. After each supported host effect, run `ponytail campaign action-result
+12. After each supported host effect, run `ponytail campaign action-result
    <campaign-root> <action-id> --result <json>` from the coordinator worktree.
    Then refresh observations and return to status before advancing. Repeating
    the same action or identical result is the required interruption-recovery

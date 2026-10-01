@@ -104,6 +104,27 @@ function readHostObservationV1(value, file = 'campaign host observation') {
   return { ...value, completeSessionIds: [...value.completeSessionIds].sort(), sessions: sessions.sort((left, right) => left.sessionId.localeCompare(right.sessionId)) };
 }
 
+function readWorkerDeliveriesV1(value, file = 'campaign worker deliveries') {
+  exactKeys(value, ['schemaVersion', 'campaignId', 'deliveries'], file);
+  if (value.schemaVersion !== 1 || typeof value.campaignId !== 'string' || !value.campaignId || !Array.isArray(value.deliveries)) {
+    fail('CAMPAIGN_ORCHESTRATION_SCHEMA', `${file}: expected worker delivery schema V1`);
+  }
+  const deliveries = value.deliveries.map((delivery, index) => {
+    const label = `${file}.deliveries[${index}]`;
+    exactKeys(delivery, ['assignmentId', 'revision', 'evidencePaths', 'recordedAt'], label);
+    for (const key of ['assignmentId', 'revision', 'recordedAt']) if (typeof delivery[key] !== 'string' || !delivery[key]) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', `${label}.${key} must be a nonempty string`);
+    if (Number.isNaN(Date.parse(delivery.recordedAt))) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', `${label}.recordedAt must be an ISO 8601 timestamp`);
+    if (!Array.isArray(delivery.evidencePaths) || delivery.evidencePaths.length === 0
+      || delivery.evidencePaths.some((evidencePath) => typeof evidencePath !== 'string' || !evidencePath)) {
+      fail('CAMPAIGN_ORCHESTRATION_SCHEMA', `${label}.evidencePaths must contain nonempty strings`);
+    }
+    if (new Set(delivery.evidencePaths).size !== delivery.evidencePaths.length) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', `${label}.evidencePaths must be unique`);
+    return { ...delivery, evidencePaths: [...delivery.evidencePaths].sort() };
+  });
+  if (new Set(deliveries.map(({ assignmentId }) => assignmentId)).size !== deliveries.length) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', `${file} contains duplicate assignment deliveries`);
+  return { schemaVersion: 1, campaignId: value.campaignId, deliveries: deliveries.sort((left, right) => left.assignmentId.localeCompare(right.assignmentId)) };
+}
+
 function readCompletedActionV1(value, label = 'completed action') {
   exactKeys(value, ['actionId', 'assignmentId', 'type', 'result'], label);
   for (const key of ['actionId', 'assignmentId']) if (typeof value[key] !== 'string' || !value[key]) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', `${label}.${key} must be a nonempty string`);
@@ -150,6 +171,7 @@ function readLedgerV1(value, file = 'campaign ledger') {
 const CampaignLedgerReaders = Object.freeze({ V1: readLedgerV1 });
 const CampaignHostObservationReaders = Object.freeze({ V1: readHostObservationV1 });
 const CampaignWorkerBindingReaders = Object.freeze({ V1: readWorkerBindingsV1 });
+const CampaignWorkerDeliveryReaders = Object.freeze({ V1: readWorkerDeliveriesV1 });
 
 function readStatusV1(value) {
   exactKeys(value, ['schemaVersion', 'campaignId', 'invocationWorktree', 'effectiveWorktree', 'coordinatorSessionId', 'integrationRevision', 'assignments', 'readyPlans', 'activeWorkers', 'idleWorkers', 'rebaseRequired', 'readyToMerge', 'cleanupPending', 'pendingAction', 'diagnostics'], 'campaign status');
@@ -212,6 +234,69 @@ function ledgerPath(repositoryRoot, campaignId, environment = process.env) {
 function hostObservationPath(repositoryRoot, campaignId, environment = process.env) {
   const scope = crypto.createHash('sha256').update(repositoryRoot).digest('hex');
   return path.join(stateDirectory(environment), scope, `${campaignId}.host-observation.json`);
+}
+
+function workerDeliveriesPath(repositoryRoot, campaignId, environment = process.env) {
+  const scope = crypto.createHash('sha256').update(repositoryRoot).digest('hex');
+  return path.join(stateDirectory(environment), scope, `${campaignId}.worker-deliveries.json`);
+}
+
+function readWorkerDeliveries(repositoryRoot, campaignId, environment = process.env) {
+  const file = workerDeliveriesPath(repositoryRoot, campaignId, environment);
+  if (!fs.existsSync(file)) return { schemaVersion: 1, campaignId, deliveries: [] };
+  let value;
+  try { value = JSON.parse(fs.readFileSync(file, 'utf8')); } catch (error) { fail('CAMPAIGN_WORKER_DELIVERY_IO', `${file}: ${error.message}`, 2); }
+  const deliveries = readWorkerDeliveriesV1(value, file);
+  if (deliveries.campaignId !== campaignId) fail('CAMPAIGN_WORKER_DELIVERY_SCOPE', `${file}: delivery scope does not match campaign ${campaignId}`);
+  return deliveries;
+}
+
+function writeWorkerDeliveries(repositoryRoot, campaignId, deliveries, environment = process.env) {
+  const file = workerDeliveriesPath(repositoryRoot, campaignId, environment);
+  const value = readWorkerDeliveriesV1(deliveries, file);
+  if (value.campaignId !== campaignId) fail('CAMPAIGN_WORKER_DELIVERY_SCOPE', `${file}: delivery scope does not match campaign ${campaignId}`);
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  const temporary = `${file}.${process.pid}.${crypto.randomUUID()}.tmp`;
+  fs.writeFileSync(temporary, `${JSON.stringify(value, null, 2)}\n`, { flag: 'wx', mode: 0o600 });
+  fs.renameSync(temporary, file);
+  return value;
+}
+
+function recordWorkerDelivery(repositoryRoot, campaignId, assignment, result, environment = process.env) {
+  exactKeys(result, ['revision', 'evidencePaths'], 'worker delivery result');
+  if (typeof result.revision !== 'string' || !result.revision || !Array.isArray(result.evidencePaths) || result.evidencePaths.length === 0) {
+    fail('CAMPAIGN_WORKER_DELIVERY', 'worker delivery requires revision and at least one evidence path');
+  }
+  const identity = repositoryIdentity(assignment.worktree);
+  if (identity.revision !== result.revision || git(assignment.worktree, ['status', '--porcelain']).length !== 0) {
+    fail('CAMPAIGN_WORKER_DELIVERY', 'worker delivery must identify the exact clean worktree revision');
+  }
+  const evidencePaths = [...new Set(result.evidencePaths)].sort();
+  if (evidencePaths.length !== result.evidencePaths.length) fail('CAMPAIGN_WORKER_DELIVERY', 'worker delivery evidence paths must be unique');
+  if (typeof assignment.planPath !== 'string' || !assignment.planPath) fail('CAMPAIGN_WORKER_DELIVERY', 'worker delivery requires the assigned plan path');
+  const planDirectory = path.posix.dirname(assignment.planPath);
+  for (const evidencePath of evidencePaths) {
+    if (typeof evidencePath !== 'string' || !evidencePath || path.isAbsolute(evidencePath)
+      || evidencePath.split('/').some((segment) => !segment || segment === '.' || segment === '..')) {
+      fail('CAMPAIGN_WORKER_DELIVERY', `invalid worker delivery evidence path: ${evidencePath}`);
+    }
+    const relativeEvidencePath = path.posix.relative(planDirectory, evidencePath);
+    if (relativeEvidencePath === '..' || relativeEvidencePath.startsWith('../') || path.posix.isAbsolute(relativeEvidencePath)) {
+      fail('CAMPAIGN_WORKER_DELIVERY', `worker delivery evidence is outside assigned plan ${assignment.planPath}: ${evidencePath}`);
+    }
+    const treeEntry = git(assignment.worktree, ['ls-tree', result.revision, '--', evidencePath]);
+    if (!/^100(?:644|755) blob [0-9a-f]+\t/.test(treeEntry)) {
+      fail('CAMPAIGN_WORKER_DELIVERY', `worker delivery evidence is not committed at ${result.revision}: ${evidencePath}`);
+    }
+  }
+  const value = readWorkerDeliveries(repositoryRoot, campaignId, environment);
+  const existing = value.deliveries.find(({ assignmentId }) => assignmentId === assignment.id);
+  if (existing && existing.revision === result.revision && JSON.stringify(existing.evidencePaths) === JSON.stringify(evidencePaths)) return existing;
+  const delivery = { assignmentId: assignment.id, revision: result.revision, evidencePaths, recordedAt: new Date().toISOString() };
+  value.deliveries = value.deliveries.filter(({ assignmentId }) => assignmentId !== assignment.id);
+  value.deliveries.push(delivery);
+  writeWorkerDeliveries(repositoryRoot, campaignId, value, environment);
+  return delivery;
 }
 
 function readHostObservation(repositoryRoot, campaignId, environment = process.env) {
@@ -477,8 +562,13 @@ function workerFor(workers, assignment) {
 function observedWorkers(graph, ledger, environment, hostObservation) {
   if (!environment) return ledger.workers;
   const plansById = new Map(graph.plans.map((plan) => [plan.id, plan]));
+  const deliveries = new Map(readWorkerDeliveries(ledger.topLevelWorktree, ledger.campaignId, environment).deliveries.map((delivery) => [delivery.assignmentId, delivery]));
   const hostSessions = new Map((hostObservation?.sessions ?? []).map((session) => [session.sessionId, session]));
-  const workers = ledger.workers.map((worker) => ({ ...worker }));
+  const workers = ledger.workers.map((worker) => {
+    const assignment = ledger.assignments.find((item) => workerFor([worker], item));
+    const delivery = assignment ? deliveries.get(assignment.id) : null;
+    return { ...worker, evidenceComplete: Boolean(delivery && delivery.revision === worker.revision) };
+  });
   for (const binding of readWorkerBindings(environment).bindings.filter((item) => item.repositoryRoot === ledger.topLevelWorktree && item.campaignId === ledger.campaignId)) {
     const assignment = ledger.assignments.find((item) => item.id === binding.assignmentId && item.state !== 'ARCHIVED');
     if (!assignment) continue;
@@ -499,7 +589,7 @@ function observedWorkers(graph, ledger, environment, hostObservation) {
         activity: hostSession?.state === 'completed' ? 'completed'
           : ['missing', 'archived', 'unknown'].includes(hostSession?.state) ? 'missing'
             : plan?.lifecycle === graph.lifecycle.successfulCompletion && !hostObservation ? 'completed' : 'active',
-        evidenceComplete: plan?.lifecycle === graph.lifecycle.successfulCompletion && (hostSession?.state === 'completed' || !hostObservation),
+        evidenceComplete: deliveries.get(assignment.id)?.revision === identity.revision,
         worktreeArchived: existing?.worktreeArchived ?? false,
         sessionArchived: existing?.sessionArchived ?? false,
       };
@@ -524,21 +614,24 @@ function diagnosticRecord(code, message, assignment = {}, extra = {}) {
 
 function lifecycleCompatible(assignmentState, lifecycle, graphLifecycle) {
   if (assignmentState === 'DISPATCH_PENDING') return [graphLifecycle.initial, graphLifecycle.activeWork].includes(lifecycle);
-  if (assignmentState === 'ACTIVE') return lifecycle === graphLifecycle.activeWork;
-  if (['WORK_COMPLETE', 'REBASE_REQUIRED', 'READY_TO_MERGE', 'MERGED', 'CLEANUP_PENDING', 'ARCHIVED'].includes(assignmentState)) return lifecycle === graphLifecycle.successfulCompletion;
+  if (['ACTIVE', 'WORK_COMPLETE', 'REBASE_REQUIRED', 'READY_TO_MERGE'].includes(assignmentState)) return lifecycle === graphLifecycle.activeWork;
+  if (assignmentState === 'MERGED') return [graphLifecycle.activeWork, graphLifecycle.successfulCompletion].includes(lifecycle);
+  if (['CLEANUP_PENDING', 'ARCHIVED'].includes(assignmentState)) return lifecycle === graphLifecycle.successfulCompletion;
   return false;
 }
 
-function effectiveAssignmentState(assignment, plan, worker, integrationRevision, repositoryRoot) {
+function effectiveAssignmentState(assignment, plan, worker, integrationRevision, repositoryRoot, graphLifecycle) {
   if (assignment.state === 'ARCHIVED') return 'ARCHIVED';
   if (assignment.state === 'DISPATCH_PENDING' && worker && worker.activity !== 'missing') return 'ACTIVE';
-  if (['ACTIVE', 'WORK_COMPLETE', 'REBASE_REQUIRED', 'READY_TO_MERGE'].includes(assignment.state)
-    && plan.lifecycle === 'closed' && worker?.evidenceComplete) {
+  if (['ACTIVE', 'WORK_COMPLETE', 'REBASE_REQUIRED', 'READY_TO_MERGE', 'MERGED'].includes(assignment.state)
+    && plan.lifecycle === graphLifecycle.activeWork && worker?.activity === 'completed' && worker.evidenceComplete) {
     if (!worker.clean || !worker.revision) return 'WORK_COMPLETE';
     const containsIntegration = spawnSync('git', ['-C', repositoryRoot, 'merge-base', '--is-ancestor', integrationRevision, worker.revision]).status === 0;
+    const alreadyIntegrated = spawnSync('git', ['-C', repositoryRoot, 'merge-base', '--is-ancestor', worker.revision, integrationRevision]).status === 0;
+    if (alreadyIntegrated) return 'MERGED';
     return containsIntegration ? 'READY_TO_MERGE' : 'REBASE_REQUIRED';
   }
-  if (assignment.state === 'MERGED') return 'CLEANUP_PENDING';
+  if (assignment.state === 'MERGED' && plan.lifecycle === graphLifecycle.successfulCompletion) return 'CLEANUP_PENDING';
   if (assignment.state === 'CLEANUP_PENDING' && assignment.worktreeArchived && assignment.sessionArchived) return 'ARCHIVED';
   return assignment.state;
 }
@@ -560,7 +653,7 @@ function reconcile(graph, ledger, invocationWorktree = ledger.topLevelWorktree, 
     return {
       ...assignment,
       workerRevision: worker?.revision ?? assignment.workerRevision,
-      state: plan ? effectiveAssignmentState(assignment, plan, worker, integrationRevision, ledger.topLevelWorktree) : assignment.state,
+      state: plan ? effectiveAssignmentState(assignment, plan, worker, integrationRevision, ledger.topLevelWorktree, graph.lifecycle) : assignment.state,
       planLifecycle: plan?.lifecycle ?? null,
       hostState: hostSession?.state ?? (assignment.sessionId ? 'unknown' : null),
       managedWorktree: hostSession?.managedWorktree ?? null,
@@ -573,6 +666,7 @@ function reconcile(graph, ledger, invocationWorktree = ledger.topLevelWorktree, 
     plan.lifecycle === graph.lifecycle.initial
     && !assignedPlans.has(plan.id)
     && plan.dependsOn.every((id) => completePlans.has(id))
+    && !graph.plans.some(({ parentPlanId, id }) => parentPlanId === plan.id && !completePlans.has(id))
   )).map((plan) => plan.id).sort();
   const occupiedSessions = new Set(assignments.filter((assignment) => assignment.state !== 'ARCHIVED').map((assignment) => assignment.sessionId).filter(Boolean));
   const occupiedWorktrees = new Set(assignments.filter((assignment) => assignment.state !== 'ARCHIVED').map((assignment) => assignment.worktree).filter(Boolean));
@@ -611,7 +705,7 @@ function reconcile(graph, ledger, invocationWorktree = ledger.topLevelWorktree, 
     reusableWorkers,
     rebaseRequired: assignments.filter((assignment) => assignment.state === 'REBASE_REQUIRED'),
     readyToMerge: assignments.filter((assignment) => assignment.state === 'READY_TO_MERGE'),
-    cleanupPending: assignments.filter((assignment) => ['MERGED', 'CLEANUP_PENDING'].includes(assignment.state)),
+    cleanupPending: assignments.filter((assignment) => assignment.state === 'CLEANUP_PENDING'),
     pendingAction: ledger.pendingAction,
     diagnostics: [],
   };
@@ -674,6 +768,7 @@ function reconcile(graph, ledger, invocationWorktree = ledger.topLevelWorktree, 
 }
 
 function action(type, assignment, payload = {}) {
+  if (['CREATE_WORKER', 'REUSE_WORKER'].includes(type)) payload = { ...payload, dispatch: { ready: true, state: 'NOT_STARTED', hostIdentity: null } };
   return readActionV1({
     schemaVersion: 1,
     id: crypto.randomUUID(),
@@ -682,6 +777,19 @@ function action(type, assignment, payload = {}) {
     idempotencyKey: `${assignment.id}:${type}`,
     payload,
   });
+}
+
+function dispatchRecord(pendingAction) {
+  if (!pendingAction.payload.dispatch) pendingAction.payload.dispatch = { ready: true, state: 'NOT_STARTED', hostIdentity: null };
+  return pendingAction.payload.dispatch;
+}
+
+function dispatchPrerequisitesSatisfied(graph, planId) {
+  const completedPlans = new Set(graph.plans.filter(({ lifecycle }) => lifecycle === graph.lifecycle.successfulCompletion).map(({ id }) => id));
+  const plan = graph.plans.find(({ id }) => id === planId);
+  return Boolean(plan)
+    && plan.dependsOn.every((id) => completedPlans.has(id))
+    && !graph.plans.some(({ parentPlanId, id }) => parentPlanId === plan.id && !completedPlans.has(id));
 }
 
 function reserveAssignment(ledger, planId, idle = null) {
@@ -710,7 +818,12 @@ function reconcileLedger(graph, ledger, environment = null) {
 
 function advanceLedger(graph, ledger, environment = null) {
   if (!ledger.coordinatorSessionId) fail('CAMPAIGN_COORDINATOR_REQUIRED', 'campaign advance requires one authenticated coordinator binding');
-  if (ledger.pendingAction) return ledger.pendingAction;
+  if (ledger.pendingAction) {
+    if (['CREATE_WORKER', 'REUSE_WORKER'].includes(ledger.pendingAction.type)) {
+      dispatchRecord(ledger.pendingAction).ready = dispatchPrerequisitesSatisfied(graph, ledger.pendingAction.payload.planId);
+    }
+    return ledger.pendingAction;
+  }
   const status = reconcile(graph, ledger, ledger.topLevelWorktree, environment);
   if (status.diagnostics.length) fail('CAMPAIGN_STATUS_BLOCKED', status.diagnostics.map((item) => item.message).join('; '));
   if (ledger.integrationRevision !== status.integrationRevision) {
@@ -747,7 +860,7 @@ function advanceLedger(graph, ledger, environment = null) {
     if (environment) removeWorkerBinding(environment, reuse.id);
     return null;
   }
-  const cleanup = ledger.assignments.find((item) => ['MERGED', 'CLEANUP_PENDING'].includes(item.state));
+  const cleanup = ledger.assignments.find((item) => item.state === 'CLEANUP_PENDING');
   if (cleanup) {
     cleanup.state = 'CLEANUP_PENDING';
     const type = cleanup.worktreeArchived ? 'ARCHIVE_SESSION' : 'ARCHIVE_WORKTREE';
@@ -782,7 +895,7 @@ function advanceLedger(graph, ledger, environment = null) {
   return ledger.pendingAction;
 }
 
-function recordActionResult(ledger, actionId, result) {
+function recordActionResult(ledger, actionId, result, graph = null) {
   const completed = ledger.completedActions.find((item) => item.actionId === actionId);
   if (completed) {
     if (JSON.stringify(completed.result) !== JSON.stringify(result)) fail('CAMPAIGN_ACTION_MISMATCH', `completed action ${actionId} received a different result`);
@@ -790,9 +903,34 @@ function recordActionResult(ledger, actionId, result) {
   }
   const pendingAction = ledger.pendingAction;
   if (!pendingAction || pendingAction.id !== actionId) fail('CAMPAIGN_ACTION_MISMATCH', `pending action does not match ${actionId}`);
-  if (!result || typeof result !== 'object' || Array.isArray(result) || result.ok !== true) fail('CAMPAIGN_ACTION_FAILED', `action ${actionId} did not report success`);
   const assignment = ledger.assignments.find((item) => item.id === pendingAction.assignmentId);
   if (!assignment) fail('CAMPAIGN_ACTION_ASSIGNMENT', `action ${actionId} references a missing assignment`);
+  if (result?.disposition === 'STARTED') {
+    exactKeys(result, ['ok', 'disposition', 'hostIdentity'], 'started action result');
+    if (result.ok !== true || !['CREATE_WORKER', 'REUSE_WORKER'].includes(pendingAction.type)
+      || typeof result.hostIdentity !== 'string' || !result.hostIdentity) fail('CAMPAIGN_ACTION_RESULT', 'STARTED requires a worker dispatch and nonempty hostIdentity');
+    const dispatch = dispatchRecord(pendingAction);
+    if (dispatch.state === 'STARTED' && dispatch.hostIdentity !== result.hostIdentity) fail('CAMPAIGN_ACTION_MISMATCH', `action ${actionId} started with a different host identity`);
+    pendingAction.payload.dispatch = { ready: graph ? dispatchPrerequisitesSatisfied(graph, assignment.planId) : dispatch.ready, state: 'STARTED', hostIdentity: result.hostIdentity };
+    return assignment;
+  }
+  if (result?.disposition === 'NOT_STARTED') {
+    exactKeys(result, ['ok', 'disposition'], 'not-started action result');
+    if (result.ok !== false || !['CREATE_WORKER', 'REUSE_WORKER'].includes(pendingAction.type)) fail('CAMPAIGN_ACTION_RESULT', 'NOT_STARTED applies only to worker dispatch');
+    const dispatch = dispatchRecord(pendingAction);
+    if (dispatch.state === 'STARTED') fail('CAMPAIGN_ACTION_STARTED', `action ${actionId} has already started as ${dispatch.hostIdentity}`);
+    if (!graph || dispatchPrerequisitesSatisfied(graph, assignment.planId)) fail('CAMPAIGN_ACTION_RESULT', `action ${actionId} cannot be postponed while its plan remains ready`);
+    if (pendingAction.type === 'REUSE_WORKER') {
+      assignment.sessionId = null;
+      assignment.worktree = null;
+      assignment.branch = null;
+      assignment.workerRevision = null;
+    }
+    ledger.completedActions.push({ actionId, assignmentId: assignment.id, type: pendingAction.type, result: { ...result } });
+    ledger.pendingAction = null;
+    return assignment;
+  }
+  if (!result || typeof result !== 'object' || Array.isArray(result) || result.ok !== true) fail('CAMPAIGN_ACTION_FAILED', `action ${actionId} did not report success`);
   if (['CREATE_WORKER', 'REUSE_WORKER'].includes(pendingAction.type)) {
     for (const key of ['sessionId', 'worktree', 'branch', 'revision']) if (typeof result[key] !== 'string' || !result[key]) fail('CAMPAIGN_ACTION_RESULT', `${pendingAction.type} result requires ${key}`);
     assignment.sessionId = result.sessionId;
@@ -827,6 +965,7 @@ function recordActionResult(ledger, actionId, result) {
 function validateActionResultBinding(ledger, result, environment) {
   const pendingAction = ledger.pendingAction;
   if (!pendingAction) return;
+  if (['STARTED', 'NOT_STARTED'].includes(result?.disposition)) return;
   const binding = readWorkerBindings(environment).bindings.find((item) => item.assignmentId === pendingAction.assignmentId);
   if (pendingAction.type === 'ARCHIVE_WORKTREE') {
     if (!binding) fail('CAMPAIGN_WORKER_BINDING_MISSING', `assignment ${pendingAction.assignmentId} has no authenticated worker binding`);
@@ -883,6 +1022,9 @@ function parseArguments(argv) {
   } else if (operation === 'observe' && argv.length === 4 && argv[2] === '--snapshot') {
     input = argv[1];
     try { result = JSON.parse(argv[3]); } catch (error) { fail('CAMPAIGN_HOST_OBSERVATION', `snapshot is not valid JSON: ${error.message}`, 2); }
+  } else if (operation === 'deliver' && argv.length === 4 && argv[2] === '--result') {
+    input = argv[1];
+    try { result = JSON.parse(argv[3]); } catch (error) { fail('CAMPAIGN_WORKER_DELIVERY', `result is not valid JSON: ${error.message}`, 2); }
   } else if (operation === 'attach' && argv.length === 2) {
     result = argv[1];
   } else fail('CAMPAIGN_ORCHESTRATION_USAGE', usage(), 2);
@@ -891,7 +1033,7 @@ function parseArguments(argv) {
 }
 
 function usage() {
-  return 'usage: ponytail campaign status [<campaign>] [--json]\n       ponytail campaign observe <campaign> --snapshot <json>\n       ponytail campaign advance [<campaign>] [--json]\n       ponytail campaign reconcile <campaign> [--json]\n       ponytail campaign action-result <campaign> <action-id> --result <json>\n       ponytail campaign attach <token>';
+  return 'usage: ponytail campaign status [<campaign>] [--json]\n       ponytail campaign observe <campaign> --snapshot <json>\n       ponytail campaign advance [<campaign>] [--json]\n       ponytail campaign reconcile <campaign> [--json]\n       ponytail campaign action-result <campaign> <action-id> --result <json>\n       ponytail campaign attach <token>\n       ponytail campaign deliver <campaign> --result <json>';
 }
 
 function run(argv = process.argv.slice(2), options = {}) {
@@ -904,6 +1046,25 @@ function run(argv = process.argv.slice(2), options = {}) {
     process.stdout.write(`Attached worker ${resolution.workerBinding.sessionId} to campaign ${resolution.workerBinding.campaignId}\n`);
     return resolution.workerBinding;
   }
+  if (request.operation === 'deliver') {
+    const resolution = resolveInvocationWorktree(invocationWorktree, environment, true);
+    if (!resolution.workerBinding) fail('CAMPAIGN_WORKER_DELIVERY', 'campaign deliver must run from an authenticated worker worktree');
+    const graph = resolveGraph(resolution.effectiveWorktree, request.input);
+    if (graph.campaignId !== resolution.workerBinding.campaignId) fail('CAMPAIGN_WORKER_DELIVERY_SCOPE', `worker belongs to campaign ${resolution.workerBinding.campaignId}`);
+    const ledger = readLedger(resolution.effectiveWorktree, graph.campaignId, environment);
+    const assignment = ledger.assignments.find(({ id }) => id === resolution.workerBinding.assignmentId);
+    if (!assignment || assignment.state === 'ARCHIVED') fail('CAMPAIGN_WORKER_BINDING_STALE', 'worker assignment is unavailable');
+    withWorktreeLock(resolution.effectiveWorktree, environment, () => recordWorkerDelivery(
+      resolution.effectiveWorktree,
+      graph.campaignId,
+      { ...assignment, worktree: resolution.workerBinding.worktree, planPath: graph.plans.find(({ id }) => id === assignment.planId)?.path },
+      request.result,
+      environment,
+    ));
+    const status = reconcile(graph, ledger, resolution.invocationWorktree, environment);
+    process.stdout.write(`${JSON.stringify(status)}\n`);
+    return status;
+  }
   if (request.operation === 'action-result') {
     const resolution = resolveInvocationWorktree(invocationWorktree, environment, false);
     const graph = resolveGraph(resolution.effectiveWorktree, request.input);
@@ -911,7 +1072,7 @@ function run(argv = process.argv.slice(2), options = {}) {
     withLedgerLock(resolution.effectiveWorktree, graph.campaignId, environment, (ledger) => {
       validateActionResultBinding(ledger, request.result, environment);
       completedAction = ledger.pendingAction ?? ledger.completedActions.find((item) => item.actionId === request.actionId);
-      return recordActionResult(ledger, request.actionId, request.result);
+      return recordActionResult(ledger, request.actionId, request.result, graph);
     });
     if (completedAction?.type === 'ARCHIVE_SESSION') removeWorkerBinding(environment, completedAction.assignmentId);
     const status = reconcile(graph, readLedger(resolution.effectiveWorktree, graph.campaignId, environment), resolution.invocationWorktree, environment);
@@ -960,6 +1121,7 @@ module.exports = {
   CampaignOrchestrationError,
   CampaignStatusReaders,
   CampaignWorkerBindingReaders,
+  CampaignWorkerDeliveryReaders,
   advanceLedger,
   bindWorker,
   diagnostic,
@@ -976,6 +1138,9 @@ module.exports = {
   readHostObservationV1,
   readWorkerBindings,
   readWorkerBindingsV1,
+  readWorkerDeliveries,
+  readWorkerDeliveriesV1,
+  recordWorkerDelivery,
   removeWorkerBinding,
   releaseLedgerCoordinator,
   readStatusV1,
@@ -991,6 +1156,7 @@ module.exports = {
   withLedgerLock,
   withWorktreeLock,
   writeHostObservation,
+  writeWorkerDeliveries,
 };
 
 if (require.main === module) {

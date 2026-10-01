@@ -258,13 +258,58 @@ Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
    - Ponytail recognizes the already integrated revision and does not create a
      duplicate merge or lose the assignment.
 
+## Arc: Revalidate a pending worker dispatch
+
+Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
+
+- **Actor:** Campaign coordinator and Codex host adapter.
+- **Prerequisites:** A pending create or reuse action whose plan later gains an
+  unmet prerequisite, plus an unrelated dependency-ready plan.
+- **Profiles:** Automated scheduler and adapter-contract profile.
+- **External effects:** May start one host worker operation; never duplicates it.
+
+1. Re-run advance after changing the dependency graph before the host effect
+   starts.
+   - Ponytail marks the existing dispatch unready and returns its same action
+     identity pending an authoritative host disposition.
+2. Record `NOT_STARTED` and advance again.
+   - Ponytail postpones the original assignment and selects the unrelated
+     ready plan without changing the original attachment identity.
+3. Repeat from a new pending action, but record `STARTED` with its host identity
+   before changing the graph.
+   - Ponytail retains that action and host identity. It rejects `NOT_STARTED`
+     and never creates a replacement worker.
+
+## Arc: Integrate delivery before final plan closure
+
+Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
+
+- **Actor:** Campaign worker and coordinator.
+- **Prerequisites:** An active plan, a completed worker at a clean commit, and
+  committed plan-owned validation evidence.
+- **Profiles:** Automated Git, delivery-contract, and scheduler profile.
+- **External effects:** Fast-forward integration, followed later by cleanup.
+
+1. From the authenticated worker, record the exact revision and evidence paths
+   with `ponytail campaign deliver`.
+   - Dirty, mismatched, uncommitted, empty, or escaping evidence is rejected.
+2. Observe the worker as completed and advance while the plan remains active.
+   - Ponytail classifies ancestry and fast-forward integrates the delivery; it
+     does not require or perform premature plan closure.
+3. Run final acceptance on the integrated tree and leave the plan active.
+   - The assignment remains `MERGED`; cleanup is not selected.
+4. Close the plan only after acceptance passes, then advance.
+   - Ponytail moves the assignment to cleanup. A failed gate may instead send
+     the same worker through another delivery and integration cycle.
+
 ## Arc: Archive only integrated workers
 
 Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
 
 - **Actor:** Campaign coordinator.
 - **Prerequisites:** One completed but unmerged worker and one worker whose
-  exact revision is present on the campaign integration branch.
+  exact revision is present on the campaign integration branch and whose plan
+  has passed final integrated acceptance and closed.
 - **Profiles:** Automated adapter contract profile and live Codex host profile.
 - **External effects:** Archives a Codex session and removes its managed
   worktree after preserving any supported recoverable snapshot.

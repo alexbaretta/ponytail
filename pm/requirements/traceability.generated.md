@@ -101,6 +101,8 @@ Requirement: [pm/requirements/campaign-orchestration.md](campaign-orchestration.
 - uat: verifies [pm/uat/campaign-orchestration.md:209](../../pm/uat/campaign-orchestration.md#L209)
 - uat: verifies [pm/uat/campaign-orchestration.md:239](../../pm/uat/campaign-orchestration.md#L239)
 - uat: verifies [pm/uat/campaign-orchestration.md:263](../../pm/uat/campaign-orchestration.md#L263)
+- uat: verifies [pm/uat/campaign-orchestration.md:285](../../pm/uat/campaign-orchestration.md#L285)
+- uat: verifies [pm/uat/campaign-orchestration.md:307](../../pm/uat/campaign-orchestration.md#L307)
 - plan: plans-implementation [pm/plans/closed/2026-09-29-campaign-orchestration/plan.md:22](../../pm/plans/closed/2026-09-29-campaign-orchestration/plan.md#L22)
 - plan: plans-verification [pm/plans/closed/2026-09-29-campaign-orchestration/plan.md:23](../../pm/plans/closed/2026-09-29-campaign-orchestration/plan.md#L23)
 - plan: plans-implementation [pm/plans/closed/2026-09-30-campaign-session-observability/plan.md:20](../../pm/plans/closed/2026-09-30-campaign-session-observability/plan.md#L20)
@@ -133,6 +135,12 @@ Requirement: [pm/requirements/campaign-orchestration.md](campaign-orchestration.
 - issue: plans-implementation [pm/bugs/in_progress/2026-09-30-BUG-active_campaign_adoption.md:13](../../pm/bugs/in_progress/2026-09-30-BUG-active_campaign_adoption.md#L13)
 - issue: plans-verification [pm/bugs/in_progress/2026-09-30-BUG-active_campaign_adoption.md:14](../../pm/bugs/in_progress/2026-09-30-BUG-active_campaign_adoption.md#L14)
 - issue: introduces [pm/bugs/in_progress/2026-09-30-BUG-active_campaign_adoption.md:15](../../pm/bugs/in_progress/2026-09-30-BUG-active_campaign_adoption.md#L15)
+- issue: introduces [pm/bugs/in_progress/2026-10-01-BUG-premature_campaign_plan_closure.md:11](../../pm/bugs/in_progress/2026-10-01-BUG-premature_campaign_plan_closure.md#L11)
+- issue: plans-implementation [pm/bugs/in_progress/2026-10-01-BUG-premature_campaign_plan_closure.md:12](../../pm/bugs/in_progress/2026-10-01-BUG-premature_campaign_plan_closure.md#L12)
+- issue: plans-verification [pm/bugs/in_progress/2026-10-01-BUG-premature_campaign_plan_closure.md:13](../../pm/bugs/in_progress/2026-10-01-BUG-premature_campaign_plan_closure.md#L13)
+- issue: introduces [pm/bugs/in_progress/2026-10-01-BUG-stale_campaign_dispatch.md:11](../../pm/bugs/in_progress/2026-10-01-BUG-stale_campaign_dispatch.md#L11)
+- issue: plans-implementation [pm/bugs/in_progress/2026-10-01-BUG-stale_campaign_dispatch.md:12](../../pm/bugs/in_progress/2026-10-01-BUG-stale_campaign_dispatch.md#L12)
+- issue: plans-verification [pm/bugs/in_progress/2026-10-01-BUG-stale_campaign_dispatch.md:13](../../pm/bugs/in_progress/2026-10-01-BUG-stale_campaign_dispatch.md#L13)
 
 ## REQ-PONYTAIL-CLI-AGENT-HARNESS
 
