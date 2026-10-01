@@ -2,6 +2,7 @@
   "schemaVersion": 4,
   "projectRoot": "../../..",
   "requirements": [
+    {"id": "REQ-WORKER-WORKTREE-RETENTION", "sourcePath": "pm/requirements/worker-worktree-retention.md"},
     {
       "id": "REQ-REQUIREMENTS-TRACEABILITY",
       "sourcePath": "pm/requirements/requirements-traceability.md"
@@ -52,6 +53,9 @@
     }
   ],
   "artifacts": [
+    {"class": "uat", "path": "pm/uat/worker-worktree-retention.md", "locator": "text"},
+    {"class": "plan", "path": "pm/plans/in_progress/2026-10-01-worker-worktree-retention/plan.md", "locator": "text"},
+    {"class": "integration-test", "path": "tests/worker-worktrees.test.js", "locator": "text"},
     {
       "class": "issue",
       "path": "pm/bugs/closed/2026-10-01-FEAT-stale_worktree_slot_reclamation.md",

@@ -4,6 +4,17 @@
 
 Source: `.agents/config/project/traceability.json`
 
+## REQ-WORKER-WORKTREE-RETENTION
+
+Requirement: [pm/requirements/worker-worktree-retention.md](worker-worktree-retention.md)
+
+- implementation: implements [src/campaign-orchestration.js:8](../../src/campaign-orchestration.js#L8)
+- unit-test: verifies [tests/campaign-orchestration.test.js:8](../../tests/campaign-orchestration.test.js#L8)
+- integration-test: verifies [tests/worker-worktrees.test.js:6](../../tests/worker-worktrees.test.js#L6)
+- uat: verifies [pm/uat/worker-worktree-retention.md:5](../../pm/uat/worker-worktree-retention.md#L5)
+- plan: plans-implementation [pm/plans/in_progress/2026-10-01-worker-worktree-retention/plan.md:13](../../pm/plans/in_progress/2026-10-01-worker-worktree-retention/plan.md#L13)
+- plan: plans-verification [pm/plans/in_progress/2026-10-01-worker-worktree-retention/plan.md:14](../../pm/plans/in_progress/2026-10-01-worker-worktree-retention/plan.md#L14)
+
 ## REQ-REQUIREMENTS-TRACEABILITY
 
 Requirement: [pm/requirements/requirements-traceability.md](requirements-traceability.md)
@@ -22,7 +33,7 @@ Requirement: [pm/requirements/index.md](index.md)
 - implementation: implements [src/campaign-census.js:1084](../../src/campaign-census.js#L1084)
 - unit-test: verifies [tests/campaign-census-format.test.js:11](../../tests/campaign-census-format.test.js#L11)
 - integration-test: verifies [tests/campaign-census.test.js:499](../../tests/campaign-census.test.js#L499)
-- uat: verifies [pm/uat/index.md:39](../../pm/uat/index.md#L39)
+- uat: verifies [pm/uat/index.md:40](../../pm/uat/index.md#L40)
 
 ## REQ-PLAN-INPUT-QUEUE
 

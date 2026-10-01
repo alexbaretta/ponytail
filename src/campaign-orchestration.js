@@ -5,6 +5,7 @@
 'use strict';
 
 // Traceability: implements REQ-CAMPAIGN-ORCHESTRATION
+// Traceability: implements REQ-WORKER-WORKTREE-RETENTION
 
 const crypto = require('node:crypto');
 const fs = require('node:fs');
@@ -31,6 +32,7 @@ const ACTION_TYPES_V4 = ACTION_TYPES_V3;
 const HOST_SESSION_STATES = ['working', 'waiting', 'completed', 'archived', 'missing', 'unknown'];
 const HOST_OBSERVATION_MAX_AGE_MS = 5 * 60 * 1000;
 const WORKER_BINDINGS_FILE = 'campaign-worker-bindings.json';
+const PROJECT_WORKER_LIMIT = 15;
 
 class CampaignOrchestrationError extends Error {
   constructor(code, message, status = 1) {
@@ -550,6 +552,35 @@ function ledgerPath(repositoryRoot, campaignId, environment = process.env) {
   return path.join(stateDirectory(environment), scope, `${campaignId}.json`);
 }
 
+function projectLedgers(ledger, environment) {
+  if (!environment) return [ledger];
+  const directory = path.dirname(ledgerPath(ledger.topLevelWorktree, ledger.campaignId, environment));
+  const ledgers = [ledger];
+  for (const file of fs.existsSync(directory) ? fs.readdirSync(directory).sort() : []) {
+    if (!file.endsWith('.json') || file.endsWith('.host-observation.json') || file.endsWith('.worker-deliveries.json')
+      || file === `${ledger.campaignId}.json`) continue;
+    const value = readCurrentLedger(JSON.parse(fs.readFileSync(path.join(directory, file), 'utf8')), file);
+    if (value.topLevelWorktree !== ledger.topLevelWorktree) fail('CAMPAIGN_LEDGER_SCOPE', `ledger ${file} does not belong to this top-level project`);
+    ledgers.push(value);
+  }
+  return ledgers;
+}
+
+function projectWorkerCount(ledgers) {
+  const pairs = new Set();
+  let reservations = 0;
+  for (const ledger of ledgers) {
+    for (const worker of ledger.workers) {
+      if (!worker.worktreeArchived || fs.existsSync(worker.worktree)) pairs.add(worker.worktree);
+    }
+    for (const assignment of ledger.assignments) {
+      if (assignment.worktree && (!assignment.worktreeArchived || fs.existsSync(assignment.worktree))) pairs.add(assignment.worktree);
+    }
+    reservations += ledger.pendingActions.filter(({ type }) => type === 'CREATE_WORKER').length;
+  }
+  return pairs.size + reservations;
+}
+
 function hostObservationPath(repositoryRoot, campaignId, environment = process.env) {
   const scope = crypto.createHash('sha256').update(repositoryRoot).digest('hex');
   return path.join(stateDirectory(environment), scope, `${campaignId}.host-observation.json`);
@@ -959,6 +990,17 @@ function observedWorkers(graph, ledger, environment, hostObservation) {
     if (existing) Object.assign(existing, observation);
     else workers.push(observation);
   }
+  for (const worker of workers) {
+    if (ledger.assignments.some(assignment => assignment.state !== 'ARCHIVED' && workerFor([worker], assignment))) continue;
+    const hostSession = hostSessions.get(worker.sessionId);
+    if (!fs.existsSync(worker.worktree)) { worker.clean = false; worker.activity = 'missing'; continue; }
+    const identity = repositoryIdentity(worker.worktree);
+    worker.branch = identity.branch;
+    worker.revision = identity.revision;
+    worker.clean = git(worker.worktree, ['status', '--porcelain']).length === 0;
+    worker.activity = ['waiting', 'completed'].includes(hostSession?.state) && hostSession.worktree === worker.worktree
+      && hostSession.managedWorktree ? 'idle' : 'active';
+  }
   return workers;
 }
 
@@ -1044,7 +1086,14 @@ function reconcile(graph, ledger, invocationWorktree = ledger.topLevelWorktree, 
   )).map((plan) => plan.id).sort();
   const occupiedSessions = new Set(assignments.filter((assignment) => assignment.state !== 'ARCHIVED').map((assignment) => assignment.sessionId).filter(Boolean));
   const occupiedWorktrees = new Set(assignments.filter((assignment) => assignment.state !== 'ARCHIVED').map((assignment) => assignment.worktree).filter(Boolean));
+  for (const other of projectLedgers(ledger, environment).slice(1)) {
+    for (const assignment of other.assignments.filter(item => item.state !== 'ARCHIVED')) {
+      occupiedSessions.add(assignment.sessionId);
+      occupiedWorktrees.add(assignment.worktree);
+    }
+  }
   const idleWorkers = workers.filter((worker) => worker.activity === 'idle' && worker.clean && !worker.worktreeArchived && !worker.sessionArchived
+    && (!environment || (hostObservation && !hostObservationStale && completeSessionIds.has(worker.sessionId)))
     && !occupiedSessions.has(worker.sessionId) && !occupiedWorktrees.has(worker.worktree)).sort((left, right) => (left.sessionId ?? '').localeCompare(right.sessionId ?? ''));
   const sessionAssignments = assignments.filter(({ sessionId }) => sessionId !== null).sort((left, right) => left.sessionId.localeCompare(right.sessionId) || left.id.localeCompare(right.id));
   const workingSessions = sessionAssignments.filter(({ hostState }) => hostState === 'working');
@@ -1190,7 +1239,7 @@ function readyActions(status, graph) {
   const conflicts = blockingDiagnostics(status);
   if (conflicts.length > 0) fail('CAMPAIGN_STATUS_BLOCKED', conflicts.map(({ message }) => message).join('; '));
   const actions = status.pendingActions.filter((pendingAction) => (
-    !['CREATE_WORKER', 'REUSE_WORKER'].includes(pendingAction.type)
+    (!['CREATE_WORKER', 'REUSE_WORKER', 'ARCHIVE_WORKTREE', 'ARCHIVE_SESSION'].includes(pendingAction.type))
       || (pendingAction.payload.dispatch?.ready === true
         && pendingAction.payload.dispatch.state === 'NOT_STARTED'
         && dispatchPrerequisitesSatisfied(graph, pendingAction.payload.planId))
@@ -1206,21 +1255,16 @@ function readyActions(status, graph) {
 }
 
 function reusableCleanupAssignments(graph, ledger, status) {
-  const readyQueuedAssignments = ledger.assignments.filter((assignment) => (
-    assignment.state === 'DISPATCH_PENDING'
-    && !ledger.pendingActions.some(({ assignmentId }) => assignmentId === assignment.id)
-    && dispatchPrerequisitesSatisfied(graph, assignment.planId)
-  ));
-  const required = Math.max(0, status.readyPlans.length + readyQueuedAssignments.length - status.idleWorkers.length);
   return ledger.assignments.filter((assignment) => {
     const current = status.assignments.find(({ id }) => id === assignment.id);
     const worker = workerFor(ledger.workers, assignment);
     return assignment.state === 'CLEANUP_PENDING'
       && !ledger.pendingActions.some(({ assignmentId }) => assignmentId === assignment.id)
       && !assignment.worktreeArchived && !assignment.sessionArchived
-      && current?.hostState === 'completed' && current.managedWorktree && current.worktreeExists
+      && (current?.hostState === 'completed' || (status.observedAt === null && worker?.activity === 'completed'))
+      && (current.managedWorktree || status.observedAt === null) && current.worktreeExists
       && worker?.clean;
-  }).sort((left, right) => left.planId.localeCompare(right.planId) || left.id.localeCompare(right.id)).slice(0, required);
+  }).sort((left, right) => left.planId.localeCompare(right.planId) || left.id.localeCompare(right.id));
 }
 
 function reserveAssignment(ledger, planId, idle = null) {
@@ -1248,6 +1292,22 @@ function reconcileLedger(graph, ledger, environment = null) {
 
 function advanceLedger(graph, ledger, environment = null) {
   if (!ledger.coordinatorSessionId) fail('CAMPAIGN_COORDINATOR_REQUIRED', 'campaign advance requires one authenticated coordinator binding');
+  const automaticCleanup = ledger.pendingActions.find(({ type }) => ['ARCHIVE_WORKTREE', 'ARCHIVE_SESSION'].includes(type));
+  if (automaticCleanup) {
+    ledger.completedActions.push({ actionId: automaticCleanup.id, assignmentId: automaticCleanup.assignmentId,
+      type: automaticCleanup.type, result: { ok: false, disposition: 'RETAINED' } });
+    ledger.pendingActions = ledger.pendingActions.filter(({ id }) => id !== automaticCleanup.id);
+    return null;
+  }
+  const ledgers = projectLedgers(ledger, environment);
+  for (const other of ledgers.slice(1)) {
+    for (const worker of other.workers) {
+      if (worker.activity !== 'idle' || worker.worktreeArchived || worker.sessionArchived
+        || ledger.workers.some(item => item.sessionId === worker.sessionId || item.worktree === worker.worktree)) continue;
+      if (ledgers.some(item => item.assignments.some(assignment => assignment.state !== 'ARCHIVED' && workerFor([worker], assignment)))) continue;
+      ledger.workers.push({ ...worker, evidenceComplete: false });
+    }
+  }
   for (const pendingAction of ledger.pendingActions) {
     if (['CREATE_WORKER', 'REUSE_WORKER'].includes(pendingAction.type)) {
       dispatchRecord(pendingAction).ready = dispatchPrerequisitesSatisfied(graph, pendingAction.payload.planId);
@@ -1297,19 +1357,17 @@ function advanceLedger(graph, ledger, environment = null) {
     const worker = workerFor(ledger.workers, reuse);
     worker.activity = 'idle';
     worker.evidenceComplete = false;
-    if (environment) removeWorkerBinding(environment, reuse.id);
     return null;
   }
-  const cleanup = ledger.assignments.find((item) => item.state === 'CLEANUP_PENDING'
-    && !ledger.pendingActions.some(({ assignmentId }) => assignmentId === item.id));
-  if (cleanup) {
-    cleanup.state = 'CLEANUP_PENDING';
-    const type = cleanup.worktreeArchived ? 'ARCHIVE_SESSION' : 'ARCHIVE_WORKTREE';
-    const pendingAction = action(type, cleanup, type === 'ARCHIVE_WORKTREE'
-      ? { sessionId: cleanup.sessionId, worktree: cleanup.worktree }
-      : { sessionId: cleanup.sessionId });
-    ledger.pendingActions.push(pendingAction);
-    return pendingAction;
+  const retired = ledger.assignments.find(item => item.state === 'CLEANUP_PENDING' && item.worktreeArchived
+    && status.assignments.some(current => current.id === item.id && current.hostState === 'archived'));
+  if (retired) {
+    retired.sessionArchived = true;
+    retired.state = 'ARCHIVED';
+    const worker = workerFor(ledger.workers, retired);
+    if (worker) worker.sessionArchived = true;
+    if (environment) removeWorkerBinding(environment, retired.id);
+    return null;
   }
   const rebase = integrationAction ? null : ledger.assignments.find((item) => item.state === 'REBASE_REQUIRED'
     && status.assignments.find(({ id }) => id === item.id)?.worktreeExists
@@ -1330,6 +1388,7 @@ function advanceLedger(graph, ledger, environment = null) {
   if (!queued && status.readyPlans.length === 0) return ledger.pendingActions[0] ?? null;
   const planId = queued?.planId ?? status.readyPlans[0];
   const idle = status.idleWorkers[0] ?? null;
+  if (!idle && projectWorkerCount(ledgers) >= PROJECT_WORKER_LIMIT) return ledger.pendingActions[0] ?? null;
   const assignmentRecord = queued ?? reserveAssignment(ledger, planId, idle);
   if (queued) {
     queued.dispatchRevision = ledger.integrationRevision;
@@ -1494,7 +1553,9 @@ function retireWorktree(graph, ledger, actionId, environment = process.env) {
     return recordActionResult(ledger, actionId, completedAction.result, graph);
   }
   const status = reconcile(graph, ledger, ledger.topLevelWorktree, environment);
-  const pendingAction = readyActions(status, graph).actions.find(({ id }) => id === actionId);
+  const conflicts = blockingDiagnostics(status);
+  if (conflicts.length) fail('CAMPAIGN_STATUS_BLOCKED', conflicts.map(item => item.message).join('; '));
+  const pendingAction = ledger.pendingActions.find(({ id }) => id === actionId);
   const assignment = ledger.assignments.find(({ id }) => id === pendingAction?.assignmentId);
   const binding = readWorkerBindings(environment).bindings.find(({ assignmentId }) => assignmentId === assignment?.id);
   const current = status.assignments.find(({ id }) => id === assignment?.id);

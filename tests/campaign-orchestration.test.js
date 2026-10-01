@@ -5,6 +5,7 @@
 'use strict';
 
 // Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
+// Traceability: verifies REQ-WORKER-WORKTREE-RETENTION
 
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -130,7 +131,8 @@ if (request.operation === 'inventory') {
   ledger.workers[0].worktreeArchived = false;
   assert.doesNotThrow(() => retireWorktree(campaignGraph, ledger, cleanup.id, environment));
   assert.equal(ledger.completedActions[0].actionId, cleanup.id);
-  assert.equal(advanceLedger(campaignGraph, ledger, environment).type, 'ARCHIVE_SESSION');
+  assert.equal(advanceLedger(campaignGraph, ledger, environment), null);
+  assert.equal(assignment.state, 'ARCHIVED');
 });
 
 function temporaryDirectory(prefix) {
@@ -661,7 +663,7 @@ test('ready actions exclude blocked and started dispatch without mutating durabl
   };
   const before = JSON.stringify(status);
   const result = readyActions(status, campaignGraph);
-  assert.deepEqual(result.actions, [rebase, cleanup, ready]);
+  assert.deepEqual(result.actions, [rebase, ready]);
   assert.equal(JSON.stringify(status), before);
   assert.deepEqual(readReadyActionsV4(result), result);
   assert.equal(captureError(() => readyActions({ ...status, diagnostics: [{ message: 'conflict' }] }, campaignGraph)).code, 'CAMPAIGN_STATUS_BLOCKED');
@@ -715,7 +717,7 @@ test('integrated completed workers become reusable when another plan is ready', 
   assert.equal(pending.payload.worktree, worker);
 });
 
-test('advance retains only the cleanup worker capacity needed for ready dispatch', () => {
+test('advance retains every completed pair even without ready dispatch', () => {
   const root = repository();
   const environment = { ...process.env, PONYTAIL_CAMPAIGN_STATE_DIR: temporaryDirectory('ponytail-reuse-capacity-state') };
   const ledger = newLedger(root, 'campaign', 'coordinator');
@@ -744,15 +746,40 @@ test('advance retains only the cleanup worker capacity needed for ready dispatch
     { id: 'campaign', parentPlanId: null, dependsOn: [], lifecycle: 'in_progress', path: 'root' },
     { id: 'completed-0', parentPlanId: 'campaign', dependsOn: [], lifecycle: 'closed', path: 'completed-0' },
     { id: 'completed-1', parentPlanId: 'campaign', dependsOn: [], lifecycle: 'closed', path: 'completed-1' },
-    { id: 'ready', parentPlanId: 'campaign', dependsOn: [], lifecycle: 'open', path: 'ready' },
   ]);
 
   assert.equal(advanceLedger(campaignGraph, ledger, environment), null);
-  const cleanup = advanceLedger(campaignGraph, ledger, environment);
-  assert.equal(cleanup.type, 'ARCHIVE_WORKTREE');
-  assert.equal(cleanup.assignmentId, 'assignment-1');
+  assert.equal(advanceLedger(campaignGraph, ledger, environment), null);
   assert.equal(ledger.assignments[0].state, 'ARCHIVED');
-  assert.equal(ledger.assignments[1].state, 'CLEANUP_PENDING');
+  assert.equal(ledger.assignments[1].state, 'ARCHIVED');
+  assert.deepEqual(ledger.pendingActions, []);
+  assert.ok(worktrees.every(worktree => fs.existsSync(worktree)));
+  withLedgerLock(root, 'campaign', environment, saved => Object.assign(saved, ledger));
+  const successor = newLedger(root, 'successor', 'coordinator');
+  const successorGraph = graph([
+    { id: 'successor', parentPlanId: null, dependsOn: [], lifecycle: 'in_progress', path: 'successor' },
+    { id: 'next', parentPlanId: 'successor', dependsOn: [], lifecycle: 'open', path: 'next' },
+  ]);
+  successorGraph.campaignId = 'successor';
+  writeHostObservation(root, 'successor', {
+    schemaVersion: 1, campaignId: 'successor', observedAt: new Date().toISOString(), completeSessionIds: sessions,
+    sessions: sessions.map((sessionId, index) => ({ sessionId, state: 'completed', worktree: worktrees[index], managedWorktree: true })),
+  }, environment);
+  assert.equal(advanceLedger(successorGraph, successor, environment).payload.sessionId, sessions[0]);
+  // Persist the reservation so another campaign cannot reserve the same pair.
+  withLedgerLock(root, 'successor', environment, saved => Object.assign(saved, successor));
+  campaignGraph.plans.push({ id: 'ready', parentPlanId: 'campaign', dependsOn: [], lifecycle: 'open', path: 'ready' });
+  assert.equal(advanceLedger(campaignGraph, ledger, environment).payload.sessionId, sessions[1]);
+});
+
+test('historical automatic cleanup is superseded without deleting or fabricating success', () => {
+  const root = repository();
+  const ledger = newLedger(root, 'campaign', 'coordinator');
+  const cleanup = readActionV4({ schemaVersion: 4, id: 'old-cleanup', type: 'ARCHIVE_WORKTREE', assignmentId: 'old-assignment', idempotencyKey: 'old-key', payload: { sessionId: 'session', worktree: '/old-worker' } });
+  ledger.pendingActions.push(cleanup);
+  assert.equal(advanceLedger(graph([]), ledger), null);
+  assert.deepEqual(ledger.pendingActions, []);
+  assert.deepEqual(ledger.completedActions, [{ actionId: cleanup.id, assignmentId: cleanup.assignmentId, type: cleanup.type, result: { ok: false, disposition: 'RETAINED' } }]);
 });
 
 test('completed work is classified by Git ancestry and fast-forward merged exactly once', () => {
@@ -788,13 +815,8 @@ test('completed work is classified by Git ancestry and fast-forward merged exact
   campaignGraph.plans.find(({ id }) => id === 'work').lifecycle = 'closed';
   assert.equal(advanceLedger(campaignGraph, ledger), null);
   assert.equal(ledger.assignments[0].state, 'CLEANUP_PENDING');
-  const cleanup = advanceLedger(campaignGraph, ledger);
-  assert.equal(cleanup.type, 'ARCHIVE_WORKTREE');
-  assert.equal(advanceLedger(campaignGraph, ledger).id, cleanup.id);
-  recordActionResult(ledger, cleanup.id, { ok: true });
-  const archiveSession = advanceLedger(campaignGraph, ledger);
-  assert.equal(archiveSession.type, 'ARCHIVE_SESSION');
-  recordActionResult(ledger, archiveSession.id, { ok: true });
+  assert.equal(advanceLedger(campaignGraph, ledger), null);
+  assert.deepEqual(ledger.pendingActions, []);
   assert.equal(ledger.assignments[0].state, 'ARCHIVED');
 });
 
@@ -844,7 +866,8 @@ test('verified worker delivery integrates before plan closure and cleanup waits 
   campaignGraph.plans.find(({ id }) => id === 'work').lifecycle = 'closed';
   assert.equal(advanceLedger(campaignGraph, ledger, environment), null);
   assert.equal(ledger.assignments[0].state, 'CLEANUP_PENDING');
-  assert.equal(advanceLedger(campaignGraph, ledger, environment).type, 'ARCHIVE_WORKTREE');
+  assert.equal(advanceLedger(campaignGraph, ledger, environment), null);
+  assert.equal(ledger.assignments[0].state, 'ARCHIVED');
 });
 
 test('verified delivery remains integrable after its completed worker checkout disappears', () => {

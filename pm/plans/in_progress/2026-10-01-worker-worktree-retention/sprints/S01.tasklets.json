@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 3,
+  "sprint": "S01",
+  "features": {"S01-F01": {"depends_on": [], "validation_tasklet": "S01-F01-T04"}},
+  "tasklets": {
+    "S01-F01-T01": {
+      "depends_on": [], "affinity": ["installer", "validation"], "risk": "normal", "feature": "S01-F01",
+      "planned_paths": ["tests/cli-tools.test.js", "tests/ponytail-cli.test.js", "pm/plans/in_progress/2026-10-01-worker-worktree-retention/sprints/S01.md"]
+    },
+    "S01-F01-T02": {
+      "depends_on": ["S01-F01-T01"], "affinity": ["scheduler", "worker-pool"], "risk": "high", "risk_reason": "Changes cross-campaign reservation and session retention authority.", "feature": "S01-F01",
+      "planned_paths": ["src/campaign-orchestration.js", "src/worker-worktrees.js", "tests/campaign-orchestration.test.js", "tests/worker-worktrees.test.js", "versioned-data-contracts.json", "pm/plans/in_progress/2026-10-01-worker-worktree-retention/sprints/S01.md"]
+    },
+    "S01-F01-T03": {
+      "depends_on": ["S01-F01-T02"], "affinity": ["worker-recovery", "cli", "authentication"], "risk": "high", "risk_reason": "Reconstructs a recorded checkout outside the invoking cwd using authenticated authority.", "feature": "S01-F01",
+      "planned_paths": ["src/worker-worktrees.js", "src/campaign-orchestration.js", "hooks/plan-input.js", "cli/ponytail", "tests/worker-worktrees.test.js", "tests/plan-input.test.js", "tests/ponytail-cli.test.js", "versioned-data-contracts.json", "pm/plans/in_progress/2026-10-01-worker-worktree-retention/sprints/S01.md"]
+    },
+    "S01-F01-T04": {
+      "depends_on": ["S01-F01-T01", "S01-F01-T02", "S01-F01-T03"], "affinity": ["policy", "acceptance"], "risk": "normal", "feature": "S01-F01",
+      "planned_paths": ["skills/plan-execution/SKILL.md", "skills/worktree-lifecycle/SKILL.md", ".openclaw/skills/plan-execution/SKILL.md", ".openclaw/skills/worktree-lifecycle/SKILL.md", "tests/plan-execution-policy.test.js", "tests/worktree-lifecycle-policy.test.js", "AGENTS.md", "PROJECT_STRUCTURE.md", ".agents/config/project/traceability.json", "pm/requirements/index.md", "pm/requirements/campaign-orchestration.md", "pm/requirements/worker-worktree-retention.md", "pm/requirements/traceability.generated.md", "pm/uat/index.md", "pm/uat/campaign-orchestration.md", "pm/uat/worker-worktree-retention.md", "pm/plans/in_progress/2026-10-01-worker-worktree-retention/plan.md", "pm/plans/in_progress/2026-10-01-worker-worktree-retention/sprints/S01.md", "pm/plans/in_progress/2026-10-01-worker-worktree-retention/sprints/S01.tasklets.json"]
+    }
+  }
+}

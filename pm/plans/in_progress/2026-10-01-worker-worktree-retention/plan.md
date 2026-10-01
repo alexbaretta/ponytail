@@ -1,7 +1,7 @@
 # Retained worker pools and worker-owned recovery
 
 - Plan ID: `2026-10-01-worker-worktree-retention`
-- Status: open
+- Status: in_progress
 - Approval: stakeholder authorized requirements, UAT, planning, and execution
   on 2026-10-01. No outside-project installation or live resource deletion is
   authorized by this implementation request.
@@ -38,6 +38,10 @@ real installation, as a prerequisite; establish green baseline before product
 implementation. Focused tests run per tasklet; full configured acceptance,
 build-impact, generated adapters, traceability, rule copies, and versions run
 against the final tree.
+
+Baseline at `af2995e` passed the complete configured `npm test` after fixture
+repair: 473 core tests, installer harness, Pi, MCP, TSTS, and 568-file structure
+check. Log: ignored `tmp/worker-retention-baseline.log`.
 
 Live Codex continuity is a separate acceptance gate. A production Git fixture
 does not prove the app can resume a formerly missing cwd. No test owned host
