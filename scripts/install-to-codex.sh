@@ -24,22 +24,36 @@ print_action() {
   printf '%s\n' "$1"
 }
 
-preflight_plugin_tools() {
-  if [[ "${INSTALL_TO_CODEX_DRY_RUN}" == 'true' ]]; then
+select_codex_command() {
+  INSTALL_TO_CODEX_CODEX_COMMAND=(codex)
+  if [[ "${INSTALL_TO_CODEX_DRY_RUN}" == 'true' ]] || \
+    command -v codex >/dev/null; then
     return
   fi
 
-  command -v codex >/dev/null || fail 'codex is required to install the Ponytail plugin'
+  command -v npm >/dev/null || \
+    fail 'codex or npm is required to install the Ponytail plugin'
+  INSTALL_TO_CODEX_CODEX_COMMAND=(
+    npm exec --yes --package=@openai/codex@0.159.2 -- codex
+  )
+}
+
+preflight_plugin_tools() {
+  select_codex_command
   if [[ "${INSTALL_TO_CODEX_CHECK}" == 'true' ]]; then
     command -v node >/dev/null || fail 'node is required to check the Ponytail plugin'
   fi
 }
 
+run_codex() {
+  CODEX_HOME="${INSTALL_TO_CODEX_CODEX_HOME}" \
+    "${INSTALL_TO_CODEX_CODEX_COMMAND[@]}" "$@"
+}
+
 check_ponytail_plugin() {
   local plugin_json
 
-  if ! plugin_json="$(CODEX_HOME="${INSTALL_TO_CODEX_CODEX_HOME}" \
-    codex plugin list --json)"; then
+  if ! plugin_json="$(run_codex plugin list --json)"; then
     fail 'could not inspect installed Codex plugins'
   fi
 
@@ -68,10 +82,8 @@ install_ponytail_plugin() {
     return
   fi
 
-  CODEX_HOME="${INSTALL_TO_CODEX_CODEX_HOME}" \
-    codex plugin marketplace add "${INSTALL_TO_CODEX_PONYTAIL_ROOT}" --json
-  CODEX_HOME="${INSTALL_TO_CODEX_CODEX_HOME}" \
-    codex plugin add ponytail@ponytail --json
+  run_codex plugin marketplace add "${INSTALL_TO_CODEX_PONYTAIL_ROOT}" --json
+  run_codex plugin add ponytail@ponytail --json
 }
 
 registry_status_for_skill() {

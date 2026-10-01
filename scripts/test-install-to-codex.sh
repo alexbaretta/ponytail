@@ -53,6 +53,24 @@ EOF
   chmod +x "${executable_path}"
 }
 
+install_npm_mock() {
+  local executable_path="$1"
+
+  cat > "${executable_path}" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+
+main() {
+  printf '%s\n' "$*" >> "${INSTALL_TO_CODEX_TEST_NPM_LOG}"
+  printf '{}\n'
+  exit 0
+}
+
+main "$@"
+EOF
+  chmod +x "${executable_path}"
+}
+
 cleanup() {
   local temporary_root="$1"
   local temporary_parent="$2"
@@ -238,6 +256,21 @@ main() {
   if grep -q $'^project\t' "${temporary_root}/transition-codex/.ponytail-install.tsv"; then
     fail 'installer retained project entries in its ownership manifest'
   fi
+
+  mkdir -p "${temporary_root}/npm-bin"
+  install_npm_mock "${temporary_root}/npm-bin/npm"
+  export INSTALL_TO_CODEX_TEST_NPM_LOG="${temporary_root}/npm.log"
+  PATH="${temporary_root}/npm-bin:/usr/bin:/bin" \
+    "${ponytail_root}/scripts/install-to-codex.sh" \
+    --codex-home "${temporary_root}/ephemeral-codex" >/dev/null
+  grep -Fxq \
+    "exec --yes --package=@openai/codex@0.159.2 -- codex plugin marketplace add ${ponytail_root} --json" \
+    "${INSTALL_TO_CODEX_TEST_NPM_LOG}" || \
+    fail 'installer did not bootstrap Codex for local marketplace registration'
+  grep -Fxq \
+    'exec --yes --package=@openai/codex@0.159.2 -- codex plugin add ponytail@ponytail --json' \
+    "${INSTALL_TO_CODEX_TEST_NPM_LOG}" || \
+    fail 'installer did not bootstrap Codex for local plugin installation'
 
   printf '%s\n' 'installer tests passed'
   exit 0
