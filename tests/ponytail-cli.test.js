@@ -12,6 +12,7 @@ const test = require('node:test');
 const { Pool } = require('pg');
 const { databaseOptions } = require('../src/project-index');
 // Traceability: verifies REQ-PRECOMMIT-PROJECT-ISOLATION
+// Traceability: verifies REQ-CODEX-EXECPOLICY-PROJECT-ISOLATION
 
 const root = path.join(__dirname, '..');
 const ponytail = path.join(root, 'cli', 'ponytail');
@@ -268,7 +269,7 @@ test('register rejects a symlinked policy and malformed user configuration', () 
   assert.match(result.stderr, /invalid V1 Ponytail configuration/);
 });
 
-test('update-permissions consumes every registered project and is idempotent', () => {
+test('update-permissions reads only the invoking project and preserves accepted foreign snapshots', () => {
   const home = temporaryDirectory('ponytail-home');
   const first = project({
     safe: [{ pattern: ['./scripts/first.sh'], justification: 'Run first project command' }],
@@ -279,28 +280,29 @@ test('update-permissions consumes every registered project and is idempotent', (
   assert.equal(run(home, 'register', [], { cwd: first }).status, 0);
   assert.equal(run(home, 'register', [], { cwd: second }).status, 0);
 
-  let result = run(home, 'update-permissions', [], { cwd: first, input: 'yes\n' });
+  let result = run(home, 'update-permissions', [], { cwd: second, input: 'yes\n' });
   assert.equal(result.status, 0, result.stderr);
-  const state = JSON.parse(fs.readFileSync(path.join(home, '.ponytail/codex-execpolicy/state.json'), 'utf8'));
-  assert.deepEqual(state.projects, [fs.realpathSync(first), fs.realpathSync(second)].sort());
+  let state = JSON.parse(fs.readFileSync(path.join(home, '.ponytail/codex-execpolicy/state.json'), 'utf8'));
+  assert.equal(state.schemaVersion, 2);
+  assert.deepEqual(Object.keys(state.projectPolicies), [fs.realpathSync(second)]);
+
+  fs.writeFileSync(path.join(second, '.agents/config/ponytail.json'), '{"foreign":"draft"}\n');
+  result = run(home, 'update-permissions', [], { cwd: first, input: 'yes\n' });
+  assert.equal(result.status, 0, result.stderr);
+  assert.doesNotMatch(result.stderr, new RegExp(second.replaceAll('/', '\\/')));
+  state = JSON.parse(fs.readFileSync(path.join(home, '.ponytail/codex-execpolicy/state.json'), 'utf8'));
+  assert.deepEqual(Object.keys(state.projectPolicies), [fs.realpathSync(first), fs.realpathSync(second)].sort());
   assert.ok(state.acceptedRules.some(({ pattern }) => pattern[0] === './scripts/first.sh'));
   assert.ok(state.acceptedRules.some(({ pattern }) => pattern[0] === './scripts/second.sh'));
 
-  const config = JSON.parse(fs.readFileSync(configPath(home), 'utf8'));
-  config.projects = config.projects.filter(project => project.root === fs.realpathSync(first));
-  fs.writeFileSync(configPath(home), `${JSON.stringify(config, null, 2)}\n`, { mode: 0o600 });
-  result = run(home, 'update-permissions', [], { cwd: first, input: 'yes\n' });
-  assert.equal(result.status, 0, result.stderr);
-  const reduced = JSON.parse(fs.readFileSync(path.join(home, '.ponytail/codex-execpolicy/state.json'), 'utf8'));
-  assert.deepEqual(reduced.projects, [fs.realpathSync(first)]);
-  assert.ok(reduced.acceptedRules.every(({ pattern }) => pattern[0] !== './scripts/second.sh'));
-
   result = run(home, 'update-permissions', [], { cwd: first });
   assert.equal(result.status, 0, result.stderr);
-  assert.doesNotMatch(result.stderr, /Accept this shared policy change/);
+  assert.doesNotMatch(result.stderr, /Accept this policy change/);
+  result = run(home, 'update-permissions', ['--check'], { cwd: first });
+  assert.equal(result.status, 0, result.stderr);
 });
 
-test('update-permissions reads policy from each blessed worktree', () => {
+test('update-permissions reads policy from the invoking worktree instead of the blessed worktree', () => {
   const home = temporaryDirectory('ponytail-home');
   const main = project();
   assert.equal(run(home, 'register', [], { cwd: main }).status, 0);
@@ -311,14 +313,11 @@ test('update-permissions reads policy from each blessed worktree', () => {
     safe: [{ pattern: ['./scripts/candidate.sh'], justification: 'Run the candidate command' }],
     unsafe: [],
   }, null, 2)}\n`);
-  assert.equal(spawnSync('git', ['-C', candidate, 'add', '.agents/config/codex-execpolicy.json']).status, 0);
-  assert.equal(spawnSync('git', ['-C', candidate, '-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.test', 'commit', '-qm', 'candidate policy']).status, 0);
-  assert.equal(run(home, 'bless', [], { cwd: candidate }).status, 0);
 
-  const result = run(home, 'update-permissions', [], { cwd: main, input: 'yes\n' });
+  const result = run(home, 'update-permissions', [], { cwd: candidate, input: 'yes\n' });
   assert.equal(result.status, 0, result.stderr);
   const state = JSON.parse(fs.readFileSync(path.join(home, '.ponytail/codex-execpolicy/state.json')));
-  assert.deepEqual(state.projects, [fs.realpathSync(candidate)]);
+  assert.deepEqual(Object.keys(state.projectPolicies), [fs.realpathSync(main)]);
   assert.ok(state.acceptedRules.some(({ pattern }) => pattern[0] === './scripts/candidate.sh'));
 });
 

@@ -45,9 +45,9 @@
         "module": "cli/condense_codex_rules.sh",
         "readerRegistryExport": "CodexExecpolicyAcceptedStateReaders"
       },
-      "currentVersion": "V1",
-      "versions": ["V1"],
-      "supportedReadVersions": ["V1"],
+      "currentVersion": "V2",
+      "versions": ["V1", "V2"],
+      "supportedReadVersions": ["V1", "V2"],
       "supportedDowngradeVersions": []
     },
     {

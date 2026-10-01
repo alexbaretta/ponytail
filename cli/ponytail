@@ -5,6 +5,7 @@ set -euo pipefail
 # Licensed under the MIT License. See LICENSE in the project root.
 # Traceability: implements REQ-PRECOMMIT-PROJECT-ISOLATION
 # Traceability: implements REQ-DEVELOPER-PRIVATE-AGENT-INSTRUCTIONS
+# Traceability: implements REQ-CODEX-EXECPOLICY-PROJECT-ISOLATION
 
 main() {
   local python_source=''
@@ -615,13 +616,14 @@ def update_skills(source_root, arguments):
     return subprocess.call([str(source_root / "scripts/install-to-codex.sh"), *arguments])
 
 
-def update_permissions(source_root, config, arguments):
-    if "--project" in arguments or "--replace-projects" in arguments:
-        fail("update-permissions gets projects only from Ponytail registration")
-    command = [str(source_root / "cli/condense_codex_rules.sh"), "--replace-projects"]
-    for project in ([] if config is None else config["projects"]):
-        blessed, _ = blessed_project(project)
-        command.extend(["--project", str(blessed)])
+def update_permissions(source_root, root, main_root, arguments):
+    if any(option in arguments for option in ("--project", "--project-root")):
+        fail("update-permissions gets its project from the invoking worktree")
+    command = [
+        str(source_root / "cli/condense_codex_rules.sh"),
+        "--project", str(root),
+        "--project-root", str(main_root),
+    ]
     return subprocess.call([*command, *arguments])
 
 
@@ -819,14 +821,14 @@ def run():
     if operation == "update-skills":
         return update_skills(source_root, arguments)
     if operation == "update-permissions":
-        return update_permissions(source_root, config, arguments)
+        return update_permissions(source_root, root, main_root, arguments)
     if operation == "update":
         if arguments:
             fail("update accepts no arguments")
         status = update_skills(source_root, [])
         if status != 0:
             return status
-        return update_permissions(source_root, config, [])
+        return update_permissions(source_root, root, main_root, [])
     fail(f"unknown command: {operation}")
 
 

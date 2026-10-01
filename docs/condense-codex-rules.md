@@ -2,8 +2,9 @@
 
 `ponytail update-permissions` is Ponytail's Codex execpolicy updater. It
 combines Ponytail's baseline, existing Codex rules imported during the first
-accepted run, explicitly refreshed imports, and proposals from registered
-projects. `condense_codex_rules.sh` remains the low-level compiler.
+accepted run, explicitly refreshed imports, the invoking worktree's proposal,
+and previously accepted snapshots from other projects.
+`condense_codex_rules.sh` remains the low-level compiler.
 
 Repository configuration is never authoritative. A project proposes rules in
 `.agents/config/codex-execpolicy.json`; accepted state is stored in
@@ -19,9 +20,9 @@ ponytail register
 ```
 
 Registration resolves only the enclosing Git root and requires that root's
-project policy file. It does not scan the filesystem. Missing, moved, or
-malformed registered projects make permission installation fail explicitly.
-Remove a deleted or moved root with the exact command reported by the failure:
+project policy file. It does not scan the filesystem. Permission updates never
+open other registered projects; unavailable or dirty foreign worktrees cannot
+affect the command. Remove a deleted or moved registration explicitly:
 
 ```bash
 ponytail unregister /absolute/repository/root
@@ -56,7 +57,8 @@ of accepted alternatives. A prefix governs every suffix.
 
 ## Review and acceptance
 
-Display the complete effective diff for all registered projects:
+Display the effective diff after replacing the invoking project's accepted
+snapshot:
 
 ```bash
 ponytail update-permissions --dry-run
@@ -81,9 +83,14 @@ ponytail update-permissions --check
 ponytail update-permissions --restore
 ```
 
-`--check` verifies registered project digests and the installed projection.
+`--check` verifies the invoking project snapshot and the installed projection.
 `--restore` recreates `ponytail.rules` solely from accepted state, even after
 the entire `~/.codex` directory is lost.
+
+Accepted-state V2 stores exact per-project snapshots. Existing V1 state is
+read without opening any recorded project path, then upgraded on the next
+accepted change. A V1 foreign contribution remains intact until that project
+next replaces its own snapshot.
 
 The tool rejects symlinked project policy, accepted-state, and generated-rule
 files and installs files through atomic replacement. Codex execpolicy is still

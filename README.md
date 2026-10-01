@@ -56,8 +56,9 @@ ponytail pre-commit
 ```
 
 Registration is stored in `~/.ponytail/config.json`; no filesystem-wide scan
-is performed. `ponytail update-permissions` evaluates every registered
-repository's `.agents/config/codex-execpolicy.json` proposal together.
+is performed. `ponytail update-permissions` reads only the invoking worktree's
+`.agents/config/codex-execpolicy.json`. Previously accepted foreign project
+rules are reused from user-owned accepted state without opening those projects.
 
 The CLI installer prompts before adding that directory to `~/.bashrc`; pass
 `--update-shell-path` to approve the update non-interactively. Install only

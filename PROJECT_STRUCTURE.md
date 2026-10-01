@@ -72,8 +72,9 @@ while project-wide management records remain under `pm/`.
   installable by `scripts/install-cli.sh`, which installs all `cli/*.sh` files
   or selected tools into the user's configured executable directory. Add each
   tool to the focused CLI syntax, behavior, installer, and distribution tests.
-  `cli/condense_codex_rules.sh` owns the V1 accepted-policy reader/writer,
-  one-time Codex import, synthesis, restoration, and installation pipeline.
+  `cli/condense_codex_rules.sh` owns exact V1/V2 accepted-policy readers, the
+  V2 writer, one-time Codex import, isolated project-snapshot replacement,
+  synthesis, restoration, and installation pipeline.
 - `.agents/config/` owns each worktree's committed Ponytail configuration.
   `project/directory-structure.json` owns the machine-readable content-kind,
   directory, Git-state, and opaque-boundary rules enforced by

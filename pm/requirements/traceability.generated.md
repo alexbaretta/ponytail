@@ -22,7 +22,7 @@ Requirement: [pm/requirements/index.md](index.md)
 - implementation: implements [src/campaign-census.js:1084](../../src/campaign-census.js#L1084)
 - unit-test: verifies [tests/campaign-census-format.test.js:11](../../tests/campaign-census-format.test.js#L11)
 - integration-test: verifies [tests/campaign-census.test.js:499](../../tests/campaign-census.test.js#L499)
-- uat: verifies [pm/uat/index.md:37](../../pm/uat/index.md#L37)
+- uat: verifies [pm/uat/index.md:38](../../pm/uat/index.md#L38)
 
 ## REQ-PLAN-INPUT-QUEUE
 
@@ -176,6 +176,20 @@ Requirement: [pm/requirements/precommit-project-isolation.md](precommit-project-
 - issue: introduces [pm/bugs/closed/2026-09-29-BUG-precommit_cross_project_coupling.md:21](../../pm/bugs/closed/2026-09-29-BUG-precommit_cross_project_coupling.md#L21)
 - issue: plans-implementation [pm/bugs/closed/2026-09-29-BUG-precommit_cross_project_coupling.md:22](../../pm/bugs/closed/2026-09-29-BUG-precommit_cross_project_coupling.md#L22)
 - issue: plans-verification [pm/bugs/closed/2026-09-29-BUG-precommit_cross_project_coupling.md:23](../../pm/bugs/closed/2026-09-29-BUG-precommit_cross_project_coupling.md#L23)
+
+## REQ-CODEX-EXECPOLICY-PROJECT-ISOLATION
+
+Requirement: [pm/requirements/codex-execpolicy-project-isolation.md](codex-execpolicy-project-isolation.md)
+
+- implementation: implements [cli/condense_codex_rules.sh:6](../../cli/condense_codex_rules.sh#L6)
+- implementation: implements [cli/ponytail:8](../../cli/ponytail#L8)
+- unit-test: verifies [tests/ponytail-cli.test.js:15](../../tests/ponytail-cli.test.js#L15)
+- integration-test: verifies [tests/condense-codex-rules.test.js:4](../../tests/condense-codex-rules.test.js#L4)
+- uat: verifies [pm/uat/codex-execpolicy-project-isolation.md:11](../../pm/uat/codex-execpolicy-project-isolation.md#L11)
+- uat: verifies [pm/uat/codex-execpolicy-project-isolation.md:32](../../pm/uat/codex-execpolicy-project-isolation.md#L32)
+- issue: introduces [pm/bugs/closed/2026-09-30-BUG-execpolicy_cross_project_coupling.md:13](../../pm/bugs/closed/2026-09-30-BUG-execpolicy_cross_project_coupling.md#L13)
+- issue: plans-implementation [pm/bugs/closed/2026-09-30-BUG-execpolicy_cross_project_coupling.md:14](../../pm/bugs/closed/2026-09-30-BUG-execpolicy_cross_project_coupling.md#L14)
+- issue: plans-verification [pm/bugs/closed/2026-09-30-BUG-execpolicy_cross_project_coupling.md:15](../../pm/bugs/closed/2026-09-30-BUG-execpolicy_cross_project_coupling.md#L15)
 
 ## REQ-DEVELOPER-PRIVATE-AGENT-INSTRUCTIONS
 

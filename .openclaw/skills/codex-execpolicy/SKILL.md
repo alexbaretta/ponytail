@@ -26,9 +26,11 @@ using the shared policy.
 Run `ponytail register` inside each adopting Git worktree to initialize its V1
 project proposal and register its root in user-owned
 `~/.ponytail/config.json`. Registration resolves only the enclosing Git root;
-never scan the filesystem for projects. Run
-`ponytail update-permissions` to compute the complete registered policy
-proposal. Review the displayed additions, removals, and decision changes.
+never scan the filesystem for projects. Run `ponytail update-permissions` in
+the project whose proposal is changing. The command must read only that
+worktree's proposal; it combines the result with other projects' durable
+accepted snapshots without opening their worktrees. Review the displayed
+additions, removals, and decision changes.
 Accept interactively or rerun with the exact displayed `--accept <digest>`.
 Never accept a digest on the user's behalf.
 

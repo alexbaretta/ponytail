@@ -23,6 +23,7 @@ boundary by `tests/campaign-census.test.js`.
 - [Traceability index and queries](traceability-index.md)
 - [Issue requirement activation](issue-requirement-activation.md)
 - [Pre-commit project isolation](precommit-project-isolation.md)
+- [Codex execpolicy project isolation](codex-execpolicy-project-isolation.md)
 - [Developer-private agent instructions](developer-private-agent-instructions.md)
 - [Repository text index and grep](repository-text-index.md)
 
