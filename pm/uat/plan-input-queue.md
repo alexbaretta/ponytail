@@ -18,6 +18,10 @@ Traceability: verifies REQ-PLAN-INPUT-QUEUE
    - The same queue contract records it with the composer producer, and the
      hook derives the root campaign from the coordinator session binding and
      blocks ordinary prompt delivery with the receipt as its reason.
+   - Exercise coordinator binding with object-shaped `code` input and the
+     same JavaScript in a free-form tool-input string. Both establish the
+     hook-provided owner's binding; a different session cannot take ownership
+     or mutate that campaign. Unrelated commands remain unaffected.
 3. List the queue.
    - Both entries appear once in FIFO order without truncation or rewriting.
    - Both are stored under the campaign root's identity even when submitted

@@ -45,6 +45,11 @@
   ],
   "artifacts": [
     {
+      "class": "issue",
+      "path": "pm/bugs/in_progress/2026-09-30-BUG-freeform_coordinator_binding.md",
+      "locator": "text"
+    },
+    {
       "class": "implementation",
       "path": "skills/requirements-traceability/scripts/check-traceability.js",
       "locator": "text"

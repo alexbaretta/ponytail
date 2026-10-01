@@ -133,6 +133,7 @@ function bindingForSession(pluginData, repository, sessionId, campaignId = null)
 
 function commandStrings(toolInput) {
   const commands = [];
+  if (typeof toolInput === 'string') toolInput = { code: toolInput };
   if (!toolInput || typeof toolInput !== 'object') return commands;
   for (const key of ['cmd', 'command']) if (typeof toolInput[key] === 'string') commands.push(toolInput[key]);
   if (typeof toolInput.code === 'string') {

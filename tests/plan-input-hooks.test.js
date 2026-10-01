@@ -234,3 +234,17 @@ test('code-mode coordinator command establishes the same binding', () => {
   const enqueue = run(root, { hook_event_name: 'UserPromptSubmit', prompt: '/ponytail-enqueue code mode' });
   assert.equal(JSON.parse(enqueue.stdout).decision, 'block');
 });
+
+test('free-form code-mode input binds and releases only the authenticated coordinator', () => {
+  const root = repository();
+  const invoke = (code, sessionId = 'session') => run(root, {
+    hook_event_name: 'PreToolUse', tool_name: 'functions.exec',
+    session_id: sessionId, tool_input: code,
+  });
+  const coordinate = 'text(await tools.exec_command({cmd:"ponytail plan-input coordinate child"}));';
+  assert.match(JSON.parse(invoke(coordinate).stdout).hookSpecificOutput.additionalContext, /bound to campaign root/);
+  assert.equal(JSON.parse(invoke(coordinate, 'other-session').stdout).hookSpecificOutput.permissionDecision, 'deny');
+  assert.equal(JSON.parse(invoke('await tools.exec_command({cmd:"ponytail campaign advance root --json"});', 'other-session').stdout).hookSpecificOutput.permissionDecision, 'deny');
+  assert.equal(invoke('await tools.exec_command({cmd:"npm test"});').stdout, '');
+  assert.match(JSON.parse(invoke('await tools.exec_command({cmd:"ponytail plan-input release root"});').stdout).hookSpecificOutput.additionalContext, /released campaign root/);
+});

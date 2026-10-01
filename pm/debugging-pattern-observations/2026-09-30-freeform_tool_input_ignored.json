@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-09-30-freeform_tool_input_ignored",
+  "recorded_at": "2026-09-30T18:47:17-07:00",
+  "source_references": ["pm/bugs/in_progress/2026-09-30-BUG-freeform_coordinator_binding.md"],
+  "context": {
+    "languages": ["javascript"],
+    "frameworks": ["Node.js test runner"],
+    "components": ["coordinator binding hook"],
+    "affected_boundaries": ["free-form host tool input to command extraction"],
+    "code_references": ["hooks/plan-input.js: commandStrings"]
+  },
+  "observed_behavior": "The same coordinator JavaScript is recognized as object-shaped code but ignored as a free-form string.",
+  "expected_behavior": "Both supported input forms use the same command extraction and authenticated binding checks.",
+  "causal_mechanism": "An object-only input guard returns before free-form JavaScript can reach the existing code extractor.",
+  "anti_pattern": {
+    "structural_description": "Boundary extraction assumes one physical representation of semantically identical host input.",
+    "why_it_fails": "A supported representation bypasses all downstream recognition and produces no binding result."
+  },
+  "correct_pattern": {
+    "required_invariant": "Equivalent supported representations reach one canonical reader and identical ownership checks.",
+    "implementation_description": "Normalize free-form JavaScript into the existing code input shape before extracting commands."
+  },
+  "applicability_conditions": ["A host provides both object code and free-form JavaScript input."],
+  "known_non_matches": ["Actual live host-hook delivery is not established by invoking the hook in a fixture."],
+  "confirmation_evidence": ["The focused free-form regression failed before the edit and passed afterward; the existing object-code test also passes."],
+  "regression_proofs": ["tests/plan-input-hooks.test.js: free-form code-mode input binds and releases only the authenticated coordinator"]
+}

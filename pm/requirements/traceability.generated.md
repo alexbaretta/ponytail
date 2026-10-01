@@ -35,6 +35,8 @@ Requirement: [pm/requirements/plan-input-queue.md](plan-input-queue.md)
 - integration-test: verifies [tests/plan-execution-policy.test.js:2](../../tests/plan-execution-policy.test.js#L2)
 - integration-test: verifies [tests/plan-input-hooks.test.js:2](../../tests/plan-input-hooks.test.js#L2)
 - uat: verifies [pm/uat/plan-input-queue.md:10](../../pm/uat/plan-input-queue.md#L10)
+- issue: plans-implementation [pm/bugs/in_progress/2026-09-30-BUG-freeform_coordinator_binding.md:12](../../pm/bugs/in_progress/2026-09-30-BUG-freeform_coordinator_binding.md#L12)
+- issue: plans-verification [pm/bugs/in_progress/2026-09-30-BUG-freeform_coordinator_binding.md:13](../../pm/bugs/in_progress/2026-09-30-BUG-freeform_coordinator_binding.md#L13)
 
 ## REQ-TRACEABILITY-INDEX
 
