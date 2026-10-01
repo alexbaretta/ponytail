@@ -855,6 +855,10 @@ delivered revision remains at that branch tip and the session is waiting or
 completed. Recover its checkout in the
 same session before requesting a rebase; keep the delivery record, and require
 the ordinary rebase and new authenticated delivery before merge readiness.
+While that exact action is pending, the worker may be `working` before its
+checkout reappears; with fresh matching host and branch evidence this remains
+a nonblocking in-flight recovery, not a new missing-worker fault. An absent
+action or changed proof still blocks unrelated campaign mutation.
 The worker follows the worker-owned recovery protocol without waiting for
 `advance` or `ready-actions` to initiate it. Refresh complete host observations
 after recovery. If

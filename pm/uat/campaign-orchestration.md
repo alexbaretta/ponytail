@@ -319,27 +319,32 @@ Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
 2. Advance and read ready-actions.
    - Ponytail persists and returns exactly one `RECOVER_WORKTREE` action naming
      the existing session, checkout, branch, and preserved branch revision.
-3. With no archived artifact, the worker invokes `ponytail worktree recover
+3. Observe the exact managed session as `working` while that action is pending
+   and its original checkout is still absent.
+   - The recovery diagnostic remains nonblocking, so `ready-actions` can
+     expose an independent dispatch. Without the action, or after changing the
+     assignment branch tip, the ordinary missing-checkout diagnostic blocks.
+4. With no archived artifact, the worker invokes `ponytail worktree recover
    <attachment-token>` from a neutral cwd. Also exercise recovery without
    steps 1–2: coordinator initiation is not a prerequisite.
    - The original path, session, branch and committed revision remain exact.
      A matching existing recovery action is acknowledged by the command; the
      coordinator refreshes observations and verifies live host continuity.
-4. Report an unobserved or unmanaged path, another repository, branch or
+5. Report an unobserved or unmanaged path, another repository, branch or
    revision, or a dirty checkout.
    - Ponytail rejects the result and retains the same pending action.
-5. Verify the exact clean checkout and refreshed host association.
+6. Verify the exact clean checkout and refreshed host association.
    - Ponytail preserves the original assignment and binding path, retains the
      original assignment and session, and clears the recovery condition. An
      undelivered worker still needs its first delivery. A delivered rebasing
      worker retains its original delivery but must rebase and deliver the new
      revision before it becomes merge-ready.
-6. Repeat without one host, binding, branch, ancestry, or managed-worktree
+7. Repeat without one host, binding, branch, ancestry, or managed-worktree
    proof.
    - Ponytail reports ordinary `CAMPAIGN_WORKTREE_MISSING`, emits no recovery
      action, and creates no replacement worker. Capability-owned physical
      recovery remains available to that worker despite coordinator diagnostics.
-7. Keep another plan dependency-ready while a delivered rebasing worker awaits
+8. Keep another plan dependency-ready while a delivered rebasing worker awaits
    recovery.
    - `ready-actions` exposes the exact recovery and independent dispatch
      actions without issuing a rebase for the missing checkout.

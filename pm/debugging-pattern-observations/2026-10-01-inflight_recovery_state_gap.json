@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-10-01-inflight_recovery_state_gap",
+  "recorded_at": "2026-10-01T11:35:10-07:00",
+  "source_references": [
+    "pm/bugs/in_progress/2026-10-01-BUG-inflight_recovery_blocks_campaign.md",
+    "src/campaign-orchestration.js",
+    "tests/campaign-orchestration.test.js"
+  ],
+  "context": {
+    "languages": ["javascript"],
+    "frameworks": ["Git", "Codex managed worktrees"],
+    "components": ["campaign scheduler"],
+    "affected_boundaries": ["pending recovery action to live host observation and independent action selection"],
+    "code_references": ["src/campaign-orchestration.js:recoverableWorkerRevision", "src/campaign-orchestration.js:observedWorkers"]
+  },
+  "observed_behavior": "After an exact recovery action was dispatched, its worker became working while the checkout remained absent; the scheduler blocked all campaign actions as though no recovery was underway.",
+  "expected_behavior": "The exact in-flight recovery remains diagnosed but nonblocking for unrelated actions while fresh host, binding, action, and branch proof still match.",
+  "causal_mechanism": "Recovery eligibility admitted only waiting or completed host states. A working state caused the missing-checkout observation to replace the delivered revision with the old binding revision and removed the recovery exception.",
+  "anti_pattern": {
+    "structural_description": "A state predicate validated pre-dispatch recovery readiness but was reused unchanged for the post-dispatch, pre-restoration interval.",
+    "why_it_fails": "Dispatching recovery itself changes the host state to working before physical reconstruction, so a source-proven action becomes an ordinary global missing-worker fault."
+  },
+  "correct_pattern": {
+    "required_invariant": "A working worker with a missing checkout is nonblocking only when the exact pending recovery action and fresh managed host identity match the authenticated assignment, binding, and unchanged branch revision.",
+    "implementation_description": "Extend the existing recovery predicate to the working state only under its matching pending action, and use the durable delivered revision rather than the missing checkout's old binding revision for that interval."
+  },
+  "applicability_conditions": ["The coordinator has dispatched a source-proven RECOVER_WORKTREE action to the original session.", "Host observation occurs after the worker starts but before its checkout reappears."],
+  "known_non_matches": ["A working session without a pending recovery action remains blocking.", "A changed assignment branch tip invalidates the pending recovery proof."],
+  "confirmation_evidence": ["The focused real-Git regression failed on missing CAMPAIGN_WORKTREE_RECOVERY_REQUIRED before the correction and passed after it.", "The same regression preserves blocking behavior for no action and changed branch tip."],
+  "regression_proofs": ["tests/campaign-orchestration.test.js: delivered waiting worker with a missing checkout recovers before rebase and preserves delivery"]
+}

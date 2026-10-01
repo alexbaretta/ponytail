@@ -1112,11 +1112,15 @@ function workerFor(workers, assignment) {
 
 function recoverableWorkerRevision(ledger, assignment, hostObservation, hostSession, binding, delivery) {
   const deliveredRebase = assignment.state === 'REBASE_REQUIRED' && Boolean(delivery);
+  const pendingRecovery = ledger.pendingActions.find(({ assignmentId, type }) => assignmentId === assignment.id && type === 'RECOVER_WORKTREE');
+  const workingRecovery = hostSession?.state === 'working' && pendingRecovery?.payload.sessionId === assignment.sessionId
+    && pendingRecovery.payload.previousWorktree === assignment.worktree
+    && pendingRecovery.payload.branch === assignment.branch;
   if (!((assignment.state === 'ACTIVE' && !delivery) || deliveredRebase)
     || assignment.worktreeExists || !hostObservation || !binding
     || Date.now() - Date.parse(hostObservation.observedAt) > HOST_OBSERVATION_MAX_AGE_MS
     || !hostObservation.completeSessionIds.includes(assignment.sessionId)
-    || !['waiting', 'completed'].includes(hostSession?.state) || !hostSession.managedWorktree
+    || !(['waiting', 'completed'].includes(hostSession?.state) || workingRecovery) || !hostSession.managedWorktree
     || hostSession.worktree !== assignment.worktree || binding.repositoryRoot !== ledger.topLevelWorktree
     || binding.campaignId !== ledger.campaignId || binding.assignmentId !== assignment.id
     || binding.sessionId !== assignment.sessionId || binding.worktree !== assignment.worktree
@@ -1124,7 +1128,10 @@ function recoverableWorkerRevision(ledger, assignment, hostObservation, hostSess
   const result = spawnSync('git', ['-C', ledger.topLevelWorktree, 'rev-parse', '--verify', `refs/heads/${assignment.branch}^{commit}`], { encoding: 'utf8' });
   if (result.status !== 0) return null;
   const revision = result.stdout.trim();
-  if (deliveredRebase && (delivery.revision !== revision || assignment.workerRevision !== revision)) return null;
+  if (workingRecovery && pendingRecovery.payload.revision !== revision) return null;
+  const workerRevision = workingRecovery
+    ? ledger.assignments.find(({ id }) => id === assignment.id)?.workerRevision : assignment.workerRevision;
+  if (deliveredRebase && (delivery.revision !== revision || workerRevision !== revision)) return null;
   return spawnSync('git', ['-C', ledger.topLevelWorktree, 'merge-base', '--is-ancestor', assignment.dispatchRevision, revision]).status === 0
     ? revision : null;
 }

@@ -298,6 +298,15 @@ The recovered worker must follow the ordinary rebase and authenticated delivery
 workflow. A missing or contradictory proof remains blocking, while a proven
 recovery must not block unrelated ready dispatch.
 
+After a source-proven `RECOVER_WORKTREE` action is pending, the same managed
+session may become `working` before its original checkout has been restored.
+That in-flight interval must retain the nonblocking recovery diagnostic when
+the fresh complete host observation, action payload, binding, assignment, and
+current branch tip still agree on the exact session, path, branch, and revision.
+It must not be interpreted as a new missing worker or block unrelated work.
+Without the pending action or with changed proof, a working session and missing
+checkout remain blocking.
+
 All campaign advancement in one top-level worktree must also use one worktree-
 scoped critical section so two campaign-scoped ledgers cannot race while
 observing or changing their shared integration branch.

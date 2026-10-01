@@ -77,6 +77,7 @@ test('campaign coordinator uses durable actions while worker recovery remains wo
   assert.match(policy, /ponytail worktree recover\s+<attachment-token>/);
   assert.doesNotMatch(policy, /host may choose a new managed|surplus\s+workers are cleanup-ready/);
   assert.match(policy, /`CAMPAIGN_WORKTREE_RECOVERY_REQUIRED` is also nonblocking/);
+  assert.match(policy, /worker may be `working` before its\ncheckout reappears/);
   assert.match(policy, /delivered worker in `REBASE_REQUIRED`[\s\S]*ordinary rebase and new authenticated delivery/);
   assert.match(policy, /A `REUSE_WORKER`\n+   action retains the finished session and managed worktree/);
   assert.match(policy, /Retain every inactive session\/worktree pair indefinitely/);

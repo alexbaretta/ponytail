@@ -1074,9 +1074,36 @@ test('delivered waiting worker with a missing checkout recovers before rebase an
   assert.equal(status.diagnostics.some(({ code }) => code === 'CAMPAIGN_WORKTREE_RECOVERY_REQUIRED'), true);
   assert.equal(status.diagnostics.some(({ code }) => code === 'CAMPAIGN_WORKTREE_MISSING'), false);
   assert.doesNotThrow(() => readyActions(status, campaignGraph));
+  writeHostObservation(root, 'campaign', {
+    schemaVersion: 1, campaignId: 'campaign', observedAt: new Date().toISOString(),
+    completeSessionIds: [assignment.sessionId],
+    sessions: [{ sessionId: assignment.sessionId, state: 'working', worktree: worker, managedWorktree: true }],
+  }, environment);
+  status = reconcile(campaignGraph, ledger, root, environment);
+  assert.equal(status.diagnostics.some(({ code }) => code === 'CAMPAIGN_WORKTREE_MISSING'), true);
+  assert.equal(captureError(() => readyActions(status, campaignGraph)).code, 'CAMPAIGN_STATUS_BLOCKED');
+  writeHostObservation(root, 'campaign', {
+    schemaVersion: 1, campaignId: 'campaign', observedAt: new Date().toISOString(),
+    completeSessionIds: [assignment.sessionId],
+    sessions: [{ sessionId: assignment.sessionId, state: 'waiting', worktree: worker, managedWorktree: true }],
+  }, environment);
   const recovery = advanceLedger(campaignGraph, ledger, environment);
   assert.equal(recovery.type, 'RECOVER_WORKTREE');
   assert.equal(recovery.payload.revision, workerRevision);
+  writeHostObservation(root, 'campaign', {
+    schemaVersion: 1, campaignId: 'campaign', observedAt: new Date().toISOString(),
+    completeSessionIds: [assignment.sessionId],
+    sessions: [{ sessionId: assignment.sessionId, state: 'working', worktree: worker, managedWorktree: true }],
+  }, environment);
+  status = reconcile(campaignGraph, ledger, root, environment);
+  assert.equal(status.diagnostics.some(({ code }) => code === 'CAMPAIGN_WORKTREE_RECOVERY_REQUIRED'), true);
+  assert.equal(status.diagnostics.some(({ code }) => code === 'CAMPAIGN_WORKER_MISSING'), false);
+  assert.doesNotThrow(() => readyActions(status, campaignGraph));
+  command(root, ['branch', '-f', assignment.branch, 'HEAD']);
+  status = reconcile(campaignGraph, ledger, root, environment);
+  assert.equal(status.diagnostics.some(({ code }) => code === 'CAMPAIGN_WORKTREE_MISSING'), true);
+  assert.equal(captureError(() => readyActions(status, campaignGraph)).code, 'CAMPAIGN_STATUS_BLOCKED');
+  command(root, ['branch', '-f', assignment.branch, workerRevision]);
   const independentDispatch = advanceLedger(campaignGraph, ledger, environment);
   assert.equal(independentDispatch.type, 'CREATE_WORKER');
   assert.equal(independentDispatch.payload.planId, 'independent');
