@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-10-01-divergent_delivery_gates",
+  "recorded_at": "2026-10-01T12:34:01-07:00",
+  "source_references": [
+    "pm/bugs/in_progress/2026-10-01-BUG-missing_checkout_rebase_result.md",
+    "src/campaign-orchestration.js",
+    "tests/campaign-orchestration.test.js"
+  ],
+  "context": {
+    "languages": ["javascript"],
+    "frameworks": ["Git", "Codex managed worktrees"],
+    "components": ["campaign scheduler"],
+    "affected_boundaries": ["authenticated worker delivery to coordinator action result"],
+    "code_references": [
+      "src/campaign-orchestration.js:observedWorkers",
+      "src/campaign-orchestration.js:validateActionResultBinding"
+    ]
+  },
+  "observed_behavior": "A verified delivery was READY_TO_MERGE after checkout loss, but the original rebase action result failed because the checkout was absent.",
+  "expected_behavior": "The exact authenticated delivery and requested Git ancestry suffice for both scheduler readiness and recording the original action result when fresh complete host and branch-tip proof survive.",
+  "causal_mechanism": "The action-result validator required a physical checkout while scheduler reconciliation independently accepted durable delivery proof after checkout loss.",
+  "anti_pattern": {
+    "structural_description": "Two transitions of one lifecycle used inconsistent definitions of verified worker completion.",
+    "why_it_fails": "The earlier transition advertises a safe integration path that the later transition cannot complete when the ephemeral checkout disappears."
+  },
+  "correct_pattern": {
+    "required_invariant": "A missing-checkout delivery is usable only when its authenticated assignment, fresh complete idle host observation, exact branch tip, and requested integration ancestry all agree.",
+    "implementation_description": "Use one missing-delivery proof for scheduler observation and rebase-result validation, with the action-specific ancestry check at result recording."
+  },
+  "applicability_conditions": [
+    "A worker recorded an authenticated delivery and its original managed checkout later disappeared.",
+    "The coordinator retains the original REQUEST_REBASE action for that assignment."
+  ],
+  "known_non_matches": [
+    "A changed branch tip or stale host observation cannot establish the delivered revision.",
+    "A worker with no authenticated delivery still requires its original checkout recovery."
+  ],
+  "confirmation_evidence": [
+    "The original focused test failed at the same CAMPAIGN_WORKER_BINDING_MISSING gate after checkout removal.",
+    "The corrected test passes with an exact branch tip and fresh host observation while retaining the negative cases."
+  ],
+  "regression_proofs": [
+    "tests/campaign-orchestration.test.js: waiting worker delivery remains integrable before and after its checkout disappears"
+  ]
+}

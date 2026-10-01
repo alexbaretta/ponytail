@@ -285,16 +285,20 @@ Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
    - Status reports `CAMPAIGN_WORKTREE_MISSING_AFTER_DELIVERY`, preserves the
      delivered revision and evidence, and does not classify the idle
      session as an unverified worker.
-3. Advance the campaign through reconciliation and integration.
-   - Ponytail proves Git ancestry and fast-forwards the exact delivered commit
-     without requiring the vanished checkout.
+3. With the original rebase action still pending, record its exact delivered
+   revision after checkout loss, then advance through reconciliation and
+   integration.
+   - The action result accepts the same fresh authenticated delivery and
+     branch-tip proof without requiring the vanished checkout. Ponytail proves
+     Git ancestry and fast-forwards only that delivered commit.
 4. Advance again while the delivered plan remains open for final acceptance.
    - Ponytail selects unrelated dependency-ready dispatch despite the visible
      recoverable diagnostic.
 5. Repeat with no authenticated delivery, an active working session, or a
-   branch tip that no longer matches the delivery.
-   - The ordinary missing-checkout diagnostic remains blocking and no mutation
-     occurs.
+   branch tip that no longer matches the delivery, and with a stale host
+   observation while recording the rebase result.
+   - The ordinary missing-checkout diagnostic or action-result guard blocks
+     the mutation; no unverified revision is accepted.
 
 ## Arc: Recover a worker before rebase after checkout loss
 

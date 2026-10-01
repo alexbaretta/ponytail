@@ -275,6 +275,11 @@
     },
     {
       "class": "issue",
+      "path": "pm/bugs/in_progress/2026-10-01-BUG-missing_checkout_rebase_result.md",
+      "locator": "text"
+    },
+    {
+      "class": "issue",
       "path": "pm/bugs/in_progress/2026-10-01-BUG-inflight_recovery_blocks_campaign.md",
       "locator": "text"
     },

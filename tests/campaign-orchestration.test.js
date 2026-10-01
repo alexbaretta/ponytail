@@ -921,8 +921,30 @@ test('waiting worker delivery remains integrable before and after its checkout d
   assert.equal(status.assignments[0].state, 'READY_TO_MERGE');
   assert.equal(status.diagnostics.some(({ code }) => code === 'CAMPAIGN_WORKTREE_MISSING_AFTER_DELIVERY'), true);
   assert.equal(status.diagnostics.some(({ code }) => code === 'CAMPAIGN_WORKTREE_MISSING'), false);
+  const rebase = readActionV4({ schemaVersion: 4, id: 'delivered-rebase', type: 'REQUEST_REBASE', assignmentId: assignment.id,
+    idempotencyKey: 'delivered-rebase-key', payload: { sessionId: assignment.sessionId, ontoRevision: ledger.integrationRevision } });
+  ledger.pendingActions.push(rebase);
+  const result = { ok: true, revision: workerRevision };
+  command(root, ['branch', '-f', 'delivered-worker', ledger.integrationRevision]);
+  assert.equal(captureError(() => validateActionResultBinding(ledger, rebase.id, result, environment)).code, 'CAMPAIGN_WORKER_BINDING_MISSING');
+  command(root, ['branch', '-f', 'delivered-worker', workerRevision]);
+  writeHostObservation(root, 'campaign', {
+    schemaVersion: 1, campaignId: 'campaign', observedAt: new Date(Date.now() - 6 * 60 * 1000).toISOString(),
+    completeSessionIds: [assignment.sessionId],
+    sessions: [{ sessionId: assignment.sessionId, state: 'waiting', worktree: worker, managedWorktree: true }],
+  }, environment);
+  assert.equal(captureError(() => validateActionResultBinding(ledger, rebase.id, result, environment)).code, 'CAMPAIGN_WORKER_BINDING_MISSING');
+  writeHostObservation(root, 'campaign', {
+    schemaVersion: 1, campaignId: 'campaign', observedAt: new Date().toISOString(),
+    completeSessionIds: [assignment.sessionId],
+    sessions: [{ sessionId: assignment.sessionId, state: 'waiting', worktree: worker, managedWorktree: true }],
+  }, environment);
   assert.equal(reconcileLedger(campaignGraph, ledger, environment), null);
   assert.equal(ledger.assignments.length, 1);
+  assert.equal(advanceLedger(campaignGraph, ledger, environment), null);
+  assert.equal(ledger.assignments[0].state, 'READY_TO_MERGE');
+  assert.doesNotThrow(() => validateActionResultBinding(ledger, rebase.id, result, environment));
+  recordActionResult(ledger, rebase.id, result);
   assert.equal(advanceLedger(campaignGraph, ledger, environment), null);
   assert.equal(ledger.assignments[0].state, 'READY_TO_MERGE');
   assert.equal(advanceLedger(campaignGraph, ledger, environment), null);

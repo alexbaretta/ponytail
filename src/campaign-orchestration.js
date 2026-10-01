@@ -1136,6 +1136,21 @@ function recoverableWorkerRevision(ledger, assignment, hostObservation, hostSess
     ? revision : null;
 }
 
+function verifiedMissingDeliveryRevision(ledger, assignment, binding, delivery, hostObservation) {
+  if (!binding || !delivery || !hostObservation || fs.existsSync(binding.worktree)
+    || Date.now() - Date.parse(hostObservation.observedAt) > HOST_OBSERVATION_MAX_AGE_MS
+    || !hostObservation.completeSessionIds.includes(assignment.sessionId)
+    || binding.repositoryRoot !== ledger.topLevelWorktree || binding.campaignId !== ledger.campaignId
+    || binding.assignmentId !== assignment.id || binding.sessionId !== assignment.sessionId
+    || binding.worktree !== assignment.worktree || binding.branch !== assignment.branch
+    || delivery.assignmentId !== assignment.id || !assignment.branch) return null;
+  const hostSession = hostObservation.sessions.find(({ sessionId }) => sessionId === assignment.sessionId);
+  if (!['waiting', 'completed'].includes(hostSession?.state) || !hostSession.managedWorktree
+    || hostSession.worktree !== assignment.worktree) return null;
+  const branchTip = spawnSync('git', ['-C', ledger.topLevelWorktree, 'rev-parse', '--verify', `refs/heads/${assignment.branch}^{commit}`], { encoding: 'utf8' });
+  return branchTip.status === 0 && branchTip.stdout.trim() === delivery.revision ? delivery.revision : null;
+}
+
 function observedWorkers(graph, ledger, environment, hostObservation) {
   if (!environment) return ledger.workers;
   const plansById = new Map(graph.plans.map((plan) => [plan.id, plan]));
@@ -1155,12 +1170,8 @@ function observedWorkers(graph, ledger, environment, hostObservation) {
     const delivery = deliveries.get(assignment.id);
     let observation;
     if (!fs.existsSync(binding.worktree)) {
-      const branchTip = delivery && spawnSync('git', ['-C', ledger.topLevelWorktree, 'rev-parse', '--verify', `refs/heads/${binding.branch}^{commit}`], { encoding: 'utf8' });
-      const recoverableDelivery = ['waiting', 'completed'].includes(hostSession?.state)
-        && hostSession.managedWorktree && hostSession.worktree === binding.worktree
-        && binding.branch === assignment.branch
-        && branchTip?.status === 0 && branchTip.stdout.trim() === delivery.revision;
-      observation = { sessionId: binding.sessionId, worktree: binding.worktree, branch: binding.branch, revision: recoverableDelivery ? delivery.revision : binding.revision, clean: recoverableDelivery, activity: recoverableDelivery ? 'completed' : 'missing', evidenceComplete: recoverableDelivery, worktreeArchived: existing?.worktreeArchived ?? false, sessionArchived: existing?.sessionArchived ?? false };
+      const revision = verifiedMissingDeliveryRevision(ledger, assignment, binding, delivery, hostObservation);
+      observation = { sessionId: binding.sessionId, worktree: binding.worktree, branch: binding.branch, revision: revision ?? binding.revision, clean: Boolean(revision), activity: revision ? 'completed' : 'missing', evidenceComplete: Boolean(revision), worktreeArchived: existing?.worktreeArchived ?? false, sessionArchived: existing?.sessionArchived ?? false };
     } else {
       const identity = repositoryIdentity(binding.worktree);
       const deliveredWaiting = hostSession?.state === 'waiting' && hostSession.managedWorktree
@@ -1693,7 +1704,20 @@ function validateActionResultBinding(ledger, actionId, result, environment) {
     return;
   }
   if (pendingAction.type === 'REQUEST_REBASE') {
-    if (!binding || !fs.existsSync(binding.worktree)) fail('CAMPAIGN_WORKER_BINDING_MISSING', `assignment ${pendingAction.assignmentId} has no available authenticated worker`);
+    if (!binding) fail('CAMPAIGN_WORKER_BINDING_MISSING', `assignment ${pendingAction.assignmentId} has no available authenticated worker`);
+    if (!fs.existsSync(binding.worktree)) {
+      const assignment = ledger.assignments.find(({ id }) => id === pendingAction.assignmentId);
+      const delivery = readWorkerDeliveries(ledger.topLevelWorktree, ledger.campaignId, environment).deliveries.find(({ assignmentId }) => assignmentId === pendingAction.assignmentId);
+      const observation = readHostObservation(ledger.topLevelWorktree, ledger.campaignId, environment);
+      if (!assignment || typeof result?.revision !== 'string' || !result.revision
+        || verifiedMissingDeliveryRevision(ledger, assignment, binding, delivery, observation) !== result.revision) {
+        fail('CAMPAIGN_WORKER_BINDING_MISSING', `assignment ${pendingAction.assignmentId} has no available authenticated worker`);
+      }
+      if (spawnSync('git', ['-C', ledger.topLevelWorktree, 'merge-base', '--is-ancestor', pendingAction.payload.ontoRevision, result.revision]).status !== 0) {
+        fail('CAMPAIGN_ACTION_RESULT', 'rebase result does not contain the requested integration revision');
+      }
+      return;
+    }
     const identity = repositoryIdentity(binding.worktree);
     if (result?.revision !== identity.revision || git(binding.worktree, ['status', '--porcelain']).length !== 0
       || spawnSync('git', ['-C', ledger.topLevelWorktree, 'merge-base', '--is-ancestor', pendingAction.payload.ontoRevision, identity.revision]).status !== 0) {
