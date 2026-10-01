@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-10-01-recovery_relocated_binding_without_host",
+  "recorded_at": "2026-10-01T08:59:26-07:00",
+  "source_references": ["pm/bugs/in_progress/2026-10-01-BUG-legacy_recovery_native_path.md"],
+  "context": {
+    "languages": ["javascript"],
+    "frameworks": ["Codex managed worktrees"],
+    "components": ["worker recovery", "campaign scheduler"],
+    "affected_boundaries": ["physical Git checkout, native session cwd, and authenticated campaign binding"],
+    "code_references": ["src/campaign-orchestration.js:recoverWorker", "src/worker-worktrees.js:recoverLegacyCheckout"]
+  },
+  "observed_behavior": "A recovered branch and authenticated binding used a replacement checkout while the native worker chat still used its original checkout, blocking scheduling with CAMPAIGN_SESSION_WORKTREE_MISMATCH.",
+  "expected_behavior": "Canonical recovery reconciles proven original native checkout ownership and preserves the assignment and delivered branch.",
+  "causal_mechanism": "Earlier recovery treated creation of a checkout in the same chat as proof that the native chat cwd moved; changing the durable binding alone did not establish that host effect. Exact-path recovery then treated the relocated binding as the original path.",
+  "anti_pattern": {
+    "structural_description": "A durable identity projection was updated without proving that its independent host identity changed.",
+    "why_it_fails": "Later truthful observations expose the two identities as contradictory, and replaying recovery against the new projection cannot repair the host's original association."
+  },
+  "correct_pattern": {
+    "required_invariant": "A recovery path must agree with the native session's proven original identity and preserve the branch and completed delivery state across retries.",
+    "implementation_description": "Fresh host observation and authenticated initial dispatch plus historical recovery prove both owned paths. Recovery transfers the branch to the clean original detached checkpoint, retains the replacement, then reconciles binding and ledger without reopening merged work."
+  },
+  "applicability_conditions": ["A historical recovery relocated an authenticated binding without moving its native session cwd.", "Both owned checkouts and immutable dispatch/recovery history survive."],
+  "known_non_matches": ["Normal missing-checkout recovery already restores the binding's original path."],
+  "confirmation_evidence": ["Supported read_thread reported the original 38fe cwd while the binding and merged branch used pwp-recovery; both registered Git checkouts were clean.", "A real Git regression first returned the replacement path instead of reconciling the original native checkout."],
+  "regression_proofs": ["tests/worker-worktrees.test.js: legacy replacement recovery returns the branch to the proven native checkout without losing merged state"]
+}

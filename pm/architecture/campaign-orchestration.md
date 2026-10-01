@@ -340,6 +340,15 @@ the session and checkout; recovery identity survives idle periods. No ready
 work is not authority to delete the pair. Explicit human-requested retirement
 is separate from automatic scheduling.
 
+Worker-owned recovery also reconciles historical replacement-path bindings
+with the native session's original cwd. Fresh complete host evidence and the
+initial authenticated dispatch plus completed recovery result establish the
+two owned paths. With both checkouts clean, registered, and at their proven
+checkpoints, recovery detaches the replacement and attaches the preserved branch
+in the original checkout, then updates binding and ledger under project locks.
+The replacement remains present; merged/delivery state and completed actions
+remain intact. Git state proves the completed prefix on an interrupted retry.
+
 ### Codex host adapter
 
 The deterministic core does not reach into undocumented Codex application

@@ -806,6 +806,16 @@ or missing objects are actionable recovery failures, not permission to create
 a replacement pair. Disable the host's automatic worktree deletion for the
 retained pool; Ponytail retention does not control that independent host setting.
 
+For a historical recovery that moved the binding to a replacement checkout
+while the native chat retained its original cwd, first refresh the coordinator's
+complete host observation. The same worker then invokes the same recovery
+command from a neutral cwd. It requires the authenticated initial dispatch and
+completed recovery history to prove both paths, clean registered checkouts, and
+the original detached checkpoint. It returns the branch and binding to that
+original checkout, retains the replacement as a detached checkout, and preserves
+assignment and delivery state. Interrupted transfers are retryable. Do not
+invent a matching host observation or manually edit the ledger.
+
 The host adapter executes only the typed action selected by the core. It does
 not choose a ready plan, infer an idle worker, accept conversational completion
 as evidence, decide integration order, or silently repair contradictory state.

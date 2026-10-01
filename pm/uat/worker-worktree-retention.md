@@ -48,6 +48,14 @@ previously assigned checkout; preserve all other repository state.
    branch reset, foreign-project configuration lookup, or destructive cleanup.
 6. Run canonical project adoption/setup and resume the assignment. Existing
    recovery bookkeeping reconciles without replacing action identity.
+7. For an older replacement-path recovery with a native chat still associated
+   with its original clean detached checkout, refresh host evidence and invoke
+   the same command. The authenticated dispatch/recovery history proves both
+   paths. Return the branch and binding to the original path, retain the
+   replacement detached, preserve merged state and completed action history,
+   and retry successfully after interruption between branch and binding steps.
+   Dirty checkouts, missing provenance, and ignored-file collisions cannot lose
+   data or authorize a transfer.
 
 ## Arc: Live Codex session continuity
 

@@ -14,7 +14,7 @@ const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 const { buildRepositoryInventory, campaignGraph } = require('./campaign-census');
 const { runReclamation } = require('./worktree-reclamation');
-const { recoverySource, recoverCheckout } = require('./worker-worktrees');
+const { recoverySource, recoverCheckout, recoverLegacyCheckout } = require('./worker-worktrees');
 
 const ASSIGNMENT_STATES = [
   'DISPATCH_PENDING',
@@ -863,6 +863,43 @@ function recoverWorker(environment, token) {
   const assignment = ledger.assignments.find(item => item.id === binding.assignmentId);
   if (!assignment || crypto.createHash('sha256').update(assignment.attachToken).digest('hex') !== binding.attachTokenHash) {
     fail('CAMPAIGN_WORKER_RECOVERY', 'durable assignment no longer authorizes this worker recovery');
+  }
+  const observation = readHostObservation(binding.repositoryRoot, binding.campaignId, environment);
+  const hostSession = observation?.sessions.find(item => item.sessionId === binding.sessionId);
+  if (hostSession?.worktree && hostSession.worktree !== assignment.worktree) {
+    return withWorktreeLock(binding.repositoryRoot, environment, () => withLedgerLock(binding.repositoryRoot, binding.campaignId, environment, current => {
+      const currentBinding = workerRecoveryBinding(environment, token, binding.sessionId);
+      const currentAssignment = current.assignments.find(item => item.id === binding.assignmentId);
+      const currentObservation = readHostObservation(binding.repositoryRoot, binding.campaignId, environment);
+      const currentHostSession = currentObservation?.sessions.find(item => item.sessionId === binding.sessionId);
+      if (currentAssignment?.worktree === currentBinding.worktree && currentHostSession?.worktree === currentBinding.worktree) {
+        return recoverCheckout(currentBinding);
+      }
+      const dispatch = current.completedActions.find(item => item.assignmentId === binding.assignmentId
+        && ['CREATE_WORKER', 'REUSE_WORKER'].includes(item.type) && item.result.ok === true);
+      const recovery = current.completedActions.filter(item => item.assignmentId === binding.assignmentId
+        && item.type === 'RECOVER_WORKTREE' && item.result.ok === true).at(-1);
+      const originalWorktree = dispatch?.result.worktree;
+      if (!currentAssignment || !currentObservation || Date.now() - Date.parse(currentObservation.observedAt) > HOST_OBSERVATION_MAX_AGE_MS
+        || !currentObservation.completeSessionIds.includes(binding.sessionId)
+        || !currentHostSession?.managedWorktree || !['working', 'waiting', 'completed'].includes(currentHostSession.state)
+        || !originalWorktree || currentHostSession.worktree !== originalWorktree
+        || dispatch.result.sessionId !== binding.sessionId || dispatch.result.branch !== binding.branch
+        || !recovery || recovery.result.sessionId !== binding.sessionId || recovery.result.branch !== binding.branch
+        || recovery.result.worktree === originalWorktree || recovery.result.worktree !== currentAssignment.worktree
+        || repositoryIdentity(recovery.result.worktree).revision !== currentAssignment.workerRevision
+        || ![originalWorktree, recovery.result.worktree].includes(currentBinding.worktree)
+        || current.pendingActions.some(item => item.assignmentId === binding.assignmentId)
+        || readWorkerBindings(environment).bindings.some(item => item.assignmentId !== binding.assignmentId && item.worktree === originalWorktree)) {
+        fail('CAMPAIGN_WORKER_RECOVERY', 'legacy recovery requires fresh native host evidence and the original authenticated dispatch/recovery history');
+      }
+      const result = recoverLegacyCheckout({ ...currentBinding, worktree: recovery.result.worktree }, originalWorktree, recovery.result.revision);
+      replaceRecoveredWorkerBinding(environment, binding.assignmentId, { ...currentBinding, worktree: originalWorktree, revision: result.revision });
+      currentAssignment.worktree = originalWorktree;
+      const worker = workerFor(current.workers, currentAssignment);
+      if (worker) { worker.worktree = originalWorktree; worker.revision = result.revision; }
+      return result;
+    }));
   }
   const pending = ledger.pendingActions.find(item => item.assignmentId === binding.assignmentId && item.type === 'RECOVER_WORKTREE');
   if (pending && (pending.payload.previousWorktree !== binding.worktree || pending.payload.branch !== binding.branch

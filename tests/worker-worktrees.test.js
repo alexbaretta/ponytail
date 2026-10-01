@@ -10,7 +10,7 @@ const os = require('node:os');
 const path = require('node:path');
 const { spawn, spawnSync } = require('node:child_process');
 const test = require('node:test');
-const { advanceLedger, bindWorker, ledgerPath, newLedger, readLedger, readWorkerBindings, reconcile, readyActions, withLedgerLock, withWorktreeLock, workerRecoveryBinding, writeHostObservation } = require('../src/campaign-orchestration');
+const { advanceLedger, bindWorker, ledgerPath, newLedger, readLedger, readWorkerBindings, reconcile, readyActions, recordActionResult, recoverWorker, replaceRecoveredWorkerBinding, withLedgerLock, withWorktreeLock, workerRecoveryBinding, writeHostObservation } = require('../src/campaign-orchestration');
 const { handle } = require('../hooks/plan-input');
 const ponytail = path.join(__dirname, '..', 'cli', 'ponytail');
 
@@ -113,6 +113,64 @@ function attachedWorker() {
   assert.equal(binding.mainGitDirectory, path.join(main, '.git'));
   return { main, root, worktree, environment, binding, token: action.payload.attachToken };
 }
+
+test('legacy replacement recovery returns the branch to the proven native checkout without losing merged state', async context => {
+  for (const condition of ['attached', 'interrupted', 'switched', 'dirty', 'unproven', 'ignored']) await context.test(condition, () => {
+    const { main, root, worktree, environment, binding, token } = attachedWorker();
+    withLedgerLock(root, 'campaign', environment, ledger => {
+      recordActionResult(ledger, ledger.pendingActions[0].id, {
+        ok: true, sessionId: binding.sessionId, worktree, branch: binding.branch, revision: binding.revision,
+      });
+    });
+    const replacement = path.join(directory(), 'replacement');
+    git(root, ['worktree', 'move', worktree, replacement]);
+    git(root, ['worktree', 'add', '--detach', worktree, binding.revision]);
+    fs.appendFileSync(path.join(replacement, 'fixture.txt'), 'merged delivery\n');
+    if (condition === 'ignored') {
+      fs.appendFileSync(path.join(main, '.git/info/exclude'), '\nblocked\n');
+      fs.writeFileSync(path.join(replacement, 'blocked'), 'committed\n');
+      git(replacement, ['add', '-f', 'blocked']);
+    }
+    git(replacement, ['add', '.']);
+    git(replacement, ['-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.test', 'commit', '-qm', 'delivery']);
+    const revision = git(replacement, ['rev-parse', 'HEAD']);
+    replaceRecoveredWorkerBinding(environment, binding.assignmentId, { ...binding, worktree: replacement });
+    withLedgerLock(root, 'campaign', environment, ledger => {
+      ledger.completedActions.push({ actionId: 'old-recovery', assignmentId: binding.assignmentId, type: 'RECOVER_WORKTREE',
+        result: { ok: true, sessionId: binding.sessionId, worktree: replacement, branch: binding.branch, revision: binding.revision } });
+      Object.assign(ledger.assignments[0], { worktree: replacement, workerRevision: revision, state: 'MERGED' });
+      ledger.workers[0].worktree = replacement;
+      if (condition === 'unproven') ledger.completedActions.shift();
+    });
+    writeHostObservation(root, 'campaign', { schemaVersion: 1, campaignId: 'campaign', observedAt: new Date().toISOString(),
+      completeSessionIds: [binding.sessionId], sessions: [{ sessionId: binding.sessionId, state: 'working', worktree, managedWorktree: true }] }, environment);
+    if (['interrupted', 'switched'].includes(condition)) git(replacement, ['switch', '--detach']);
+    if (condition === 'switched') git(worktree, ['switch', binding.branch]);
+    if (condition === 'dirty') fs.appendFileSync(path.join(worktree, 'fixture.txt'), 'private edits\n');
+    if (condition === 'ignored') fs.writeFileSync(path.join(worktree, 'blocked'), 'private ignored data\n');
+    const before = readLedger(root, 'campaign', environment);
+    if (['dirty', 'unproven', 'ignored'].includes(condition)) {
+      assert.throws(() => recoverWorker(environment, token), /legacy|original|clean|overwritten/);
+      assert.equal(readWorkerBindings(environment).bindings[0].worktree, replacement);
+      assert.equal(git(replacement, ['branch', '--show-current']), binding.branch);
+      assert.deepEqual(readLedger(root, 'campaign', environment), before);
+      if (condition === 'ignored') assert.equal(fs.readFileSync(path.join(worktree, 'blocked'), 'utf8'), 'private ignored data\n');
+      return;
+    }
+    const result = recoverWorker(environment, token);
+    assert.equal(result.worktree, worktree);
+    assert.equal(result.revision, revision);
+    assert.equal(git(worktree, ['branch', '--show-current']), binding.branch);
+    assert.equal(git(replacement, ['branch', '--show-current']), '');
+    assert.equal(git(replacement, ['rev-parse', 'HEAD']), revision);
+    const after = readLedger(root, 'campaign', environment);
+    assert.equal(after.assignments[0].state, 'MERGED');
+    assert.equal(after.assignments[0].workerRevision, revision);
+    assert.deepEqual(after.completedActions, before.completedActions);
+    assert.equal(readWorkerBindings(environment).bindings[0].worktree, worktree);
+    assert.equal(recoverWorker(environment, token).worktree, worktree);
+  });
+});
 
 test('original worker recovers its exact checkout from a neutral cwd without coordinator action', () => {
   const fixture = attachedWorker();

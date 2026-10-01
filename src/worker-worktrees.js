@@ -35,14 +35,19 @@ function commonDirectory(root) {
   return fs.realpathSync(path.resolve(root, git(root, ['rev-parse', '--git-common-dir']).trim()));
 }
 
-function recoverCheckout(binding) {
-  const { mainWorktree, mainGitDirectory, worktree, branch, revision } = binding;
+function validateSource(binding) {
+  const { mainWorktree, mainGitDirectory, worktree } = binding;
   if (!mainWorktree || !mainGitDirectory || fs.realpathSync(mainWorktree) !== mainWorktree
     || fs.realpathSync(git(mainWorktree, ['rev-parse', '--absolute-git-dir']).trim()) !== mainGitDirectory
     || worktree === mainWorktree || worktree === binding.repositoryRoot
     || !path.isAbsolute(worktree) || path.resolve(worktree) !== worktree) {
     throw new Error('worker recovery source or target identity changed; no checkout was reconstructed');
   }
+}
+
+function recoverCheckout(binding) {
+  validateSource(binding);
+  const { mainWorktree, mainGitDirectory, worktree, branch, revision } = binding;
   let ancestor = path.dirname(worktree);
   while (fs.lstatSync(ancestor, { throwIfNoEntry: false }) === undefined) ancestor = path.dirname(ancestor);
   if (!fs.lstatSync(ancestor).isDirectory() || fs.realpathSync(ancestor) !== ancestor) {
@@ -79,6 +84,45 @@ function recoverCheckout(binding) {
     mainWorktree, restored: !existing, content: 'COMMITTED_STATE' };
 }
 
+function recoverLegacyCheckout(binding, originalWorktree, originalRevision) {
+  validateSource(binding);
+  const { mainWorktree, mainGitDirectory, worktree, branch, revision } = binding;
+  if (originalWorktree === worktree || originalWorktree === mainWorktree || originalWorktree === binding.repositoryRoot) {
+    throw new Error('legacy recovery target is not a distinct original worker checkout');
+  }
+  const checkpoint = git(mainWorktree, ['rev-parse', '--verify', `refs/heads/${branch}^{commit}`]).trim();
+  git(mainWorktree, ['merge-base', '--is-ancestor', revision, checkpoint]);
+  const records = worktrees(mainWorktree);
+  for (const target of [worktree, originalWorktree]) {
+    const record = records.find(item => item.worktree === target);
+    const entry = fs.lstatSync(target, { throwIfNoEntry: false });
+    if (!entry?.isDirectory() || entry.isSymbolicLink() || fs.realpathSync(target) !== target
+      || commonDirectory(target) !== mainGitDirectory || !record || record.locked
+      || git(target, ['status', '--porcelain']).trim()) {
+      throw new Error('legacy recovery requires both proven checkouts to be canonical, clean, registered, and unlocked');
+    }
+    const currentBranch = git(target, ['branch', '--show-current']).trim();
+    const currentRevision = git(target, ['rev-parse', 'HEAD']).trim();
+    if ((currentBranch && currentBranch !== branch)
+      || (target === worktree && currentRevision !== checkpoint)
+      || (target === originalWorktree && currentRevision !== (currentBranch ? checkpoint : originalRevision))) {
+      throw new Error('legacy recovery checkout no longer matches its preserved branch and original checkpoint');
+    }
+  }
+  if (records.some(item => item.worktree !== worktree && item.worktree !== originalWorktree && item.branch === `refs/heads/${branch}`)) {
+    throw new Error('legacy recovery branch is owned by another checkout');
+  }
+  const detached = Boolean(git(worktree, ['branch', '--show-current']).trim());
+  if (detached) git(worktree, ['switch', '--no-overwrite-ignore', '--detach']);
+  try {
+    if (!git(originalWorktree, ['branch', '--show-current']).trim()) git(originalWorktree, ['switch', '--no-overwrite-ignore', branch]);
+  } catch (error) {
+    if (detached) git(worktree, ['switch', '--no-overwrite-ignore', branch]);
+    throw error;
+  }
+  return recoverCheckout({ ...binding, worktree: originalWorktree });
+}
+
 function readWorkerRecoveryV1(value) {
   const keys = ['schemaVersion', 'sessionId', 'worktree', 'branch', 'revision', 'mainWorktree', 'restored', 'content'];
   if (!value || typeof value !== 'object' || Array.isArray(value)
@@ -91,7 +135,7 @@ function readWorkerRecoveryV1(value) {
 }
 
 const WorkerRecoveryReaders = Object.freeze({ V1: readWorkerRecoveryV1 });
-module.exports = { recoverySource, recoverCheckout, WorkerRecoveryReaders };
+module.exports = { recoverySource, recoverCheckout, recoverLegacyCheckout, WorkerRecoveryReaders };
 
 if (require.main === module) {
   try {

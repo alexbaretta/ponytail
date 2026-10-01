@@ -43,10 +43,18 @@ to initiate a recovery action.
 
 Recovery reconstructs the worker's original checkout from its preserved Git
 branch in the recorded main worktree, without replacing the session, resetting
-the branch, touching another checkout, or importing the main worktree's
+the branch, touching another worker's checkout, or importing the main worktree's
 project configuration. The worker runs its project's canonical adoption/setup
 before resuming normal work. The coordinator observes the outcome and retains
 existing action, assignment, and delivery identities.
+
+Historical recovery may have relocated a binding while the native session
+kept its original checkout. Canonical recovery must reconcile that case using
+fresh supported host evidence and the authenticated original dispatch/recovery
+history. It may return the worker's branch to its proven original clean detached
+checkout while retaining its own replacement checkout, without deleting either
+path or changing assignment, merged state, or delivery evidence. Ambiguous or
+changed checkpoints must fail before transfer; interrupted transfers must retry.
 
 Recovery rejects ambiguous ownership, incorrect session authority, changed
 source identity, symlink substitution, a branch owned by another checkout, or
