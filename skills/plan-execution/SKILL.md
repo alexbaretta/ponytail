@@ -790,6 +790,10 @@ ordinary `CAMPAIGN_WORKTREE_MISSING` lacks that proof and remains blocking.
 `CAMPAIGN_WORKTREE_RECOVERY_REQUIRED` is also nonblocking because its action
 payload is already source-proven from the authenticated binding, fresh complete
 host observation, managed-worktree identity, and surviving assignment branch.
+It can also name a delivered worker in `REBASE_REQUIRED` when the exact
+delivered revision remains at that branch tip. Recover its checkout in the
+same session before requesting a rebase; keep the delivery record, and require
+the ordinary rebase and new authenticated delivery before merge readiness.
 Run `advance` and `ready-actions`, execute only the resulting
 `RECOVER_WORKTREE` action in the named existing session, refresh the complete
 host observation for its returned managed path, and then record the result. If

@@ -285,15 +285,16 @@ Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
    - The ordinary missing-checkout diagnostic remains blocking and no mutation
      occurs.
 
-## Arc: Recover an undelivered worker after checkout loss
+## Arc: Recover a worker before rebase after checkout loss
 
 Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
 
 - **Actor:** Campaign coordinator and the existing campaign worker.
 - **Prerequisites:** An authenticated assignment whose managed checkout is
-  missing before delivery, a fresh complete observation of the same waiting or
-  completed session, and a preserved assignment branch commit containing the
-  dispatch revision.
+  missing, a fresh complete observation of the same waiting or completed
+  session, and a preserved assignment branch commit containing the dispatch
+  revision. A delivered worker in `REBASE_REQUIRED` additionally has an exact
+  authenticated delivery at that branch commit and a completed session.
 - **Profiles:** Automated Git and adapter-contract profile plus live Codex
   managed-worktree recovery profile.
 - **External effects:** Restores an archived checkout when available or creates
@@ -315,12 +316,18 @@ Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
    - Ponytail rejects the result and retains the same pending action.
 5. Report the exact clean, host-authenticated checkout.
    - Ponytail replaces the stale assignment and binding path, retains the
-     original assignment and session, clears the recovery condition, and does
-     not classify the revision as delivered or merge-ready.
+     original assignment and session, and clears the recovery condition. An
+     undelivered worker still needs its first delivery. A delivered rebasing
+     worker retains its original delivery but must rebase and deliver the new
+     revision before it becomes merge-ready.
 6. Repeat without one host, binding, branch, ancestry, or managed-worktree
    proof.
    - Ponytail reports ordinary `CAMPAIGN_WORKTREE_MISSING`, emits no recovery
      action, and creates no replacement worker.
+7. Keep another plan dependency-ready while a delivered rebasing worker awaits
+   recovery.
+   - `ready-actions` exposes the exact recovery and independent dispatch
+     actions without issuing a rebase for the missing checkout.
 
 ## Arc: Rebase and fast-forward completed work
 

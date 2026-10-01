@@ -286,6 +286,15 @@ assignment, branch, and revision. The assignment returns to ordinary active
 work and must deliver before it can enter the integration lane. Absent proof
 retains the ordinary blocking diagnostic.
 
+A delivered assignment in `REBASE_REQUIRED` follows the same recovery action
+when its checkout is missing. The branch tip must equal its authenticated
+delivery revision, the completed managed session and binding must still match,
+and that revision must contain the dispatch revision. Recovery keeps the
+delivery record, restores the checkout in the same session, and returns the
+assignment to active work. Reconciliation then requires the ordinary rebase
+and a new delivery at the rebased revision before integration. Rebase actions
+are never selected while that assignment's checkout remains missing.
+
 When a transition requires a supported Codex host effect, advance persists one
 V4 host-action envelope and returns status containing every outstanding action.
 One invocation adds at most one action. The coordinator records each tool

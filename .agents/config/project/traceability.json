@@ -264,6 +264,11 @@
     },
     {
       "class": "issue",
+      "path": "pm/bugs/closed/2026-10-01-BUG-delivered_rebase_worker_checkout_missing.md",
+      "locator": "text"
+    },
+    {
+      "class": "issue",
       "path": "pm/bugs/closed/2026-10-01-BUG-missing_worktree_has_no_recovery_action.md",
       "locator": "text"
     },

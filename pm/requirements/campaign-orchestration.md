@@ -287,6 +287,16 @@ fast-forward-only integration, unrelated dispatch, or the later explicit
 cleanup sequence. Any missing checkout without that durable proof remains
 blocking.
 
+When a delivered worker requires a rebase and its checkout is missing, Ponytail
+must use the existing worker recovery action before requesting that rebase.
+Recovery requires a fresh complete observation of the completed managed
+session, its authenticated binding, the exact delivered commit at the named
+branch, and ancestry from the dispatch revision. It preserves the delivery
+record and worker identity but does not make the divergent commit merge-ready.
+The recovered worker must follow the ordinary rebase and authenticated delivery
+workflow. A missing or contradictory proof remains blocking, while a proven
+recovery must not block unrelated ready dispatch.
+
 All campaign advancement in one top-level worktree must also use one worktree-
 scoped critical section so two campaign-scoped ledgers cannot race while
 observing or changing their shared integration branch.

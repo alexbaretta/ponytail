@@ -893,6 +893,115 @@ test('missing undelivered checkout can be re-provisioned in the same session wit
   assert.equal(readWorkerDeliveries(root, 'campaign', environment).deliveries.length, 0);
 });
 
+test('delivered rebase worker with a missing checkout recovers before rebase and preserves delivery', () => {
+  const root = repository();
+  const worker = path.join(temporaryDirectory('ponytail-missing-rebase-worker-parent'), 'worker');
+  command(root, ['worktree', 'add', '-qb', 'rebase-worker', worker]);
+  write(worker, 'pm/plans/in_progress/work/evidence/result.md', 'verified\n');
+  command(worker, ['add', '.']);
+  command(worker, ['-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.test', 'commit', '-qm', 'delivered work']);
+  const workerRevision = command(worker, ['rev-parse', 'HEAD']);
+  write(root, 'integration.txt', 'new integration\n');
+  command(root, ['add', '.']);
+  command(root, ['-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.test', 'commit', '-qm', 'advance integration']);
+  const environment = { ...process.env, PONYTAIL_CAMPAIGN_STATE_DIR: temporaryDirectory('ponytail-missing-rebase-state') };
+  const ledger = newLedger(root, 'campaign', 'coordinator');
+  const assignment = {
+    id: 'rebase-assignment', planId: 'work', sessionId: 'rebase-session', worktree: worker, branch: 'rebase-worker',
+    dispatchRevision: command(root, ['merge-base', 'HEAD', workerRevision]), workerRevision,
+    state: 'REBASE_REQUIRED', idempotencyKey: 'rebase-key', attachToken: 'rebase-token',
+    worktreeArchived: false, sessionArchived: false,
+  };
+  ledger.assignments.push(assignment);
+  recordWorkerDelivery(root, 'campaign', { ...assignment, planPath: 'pm/plans/in_progress/work/plan.md' }, {
+    revision: workerRevision, evidencePaths: ['pm/plans/in_progress/work/evidence/result.md'],
+  }, environment);
+  fs.writeFileSync(path.join(environment.PONYTAIL_CAMPAIGN_STATE_DIR, 'campaign-worker-bindings.json'), `${JSON.stringify({
+    schemaVersion: 1, bindings: [{
+      repositoryRoot: root, campaignId: 'campaign', assignmentId: assignment.id, coordinatorSessionId: 'coordinator',
+      attachTokenHash: 'hash', sessionId: assignment.sessionId, worktree: worker, branch: assignment.branch,
+      revision: assignment.dispatchRevision, boundAt: new Date().toISOString(),
+    }],
+  })}\n`);
+  writeHostObservation(root, 'campaign', {
+    schemaVersion: 1, campaignId: 'campaign', observedAt: new Date().toISOString(),
+    completeSessionIds: [assignment.sessionId],
+    sessions: [{ sessionId: assignment.sessionId, state: 'completed', worktree: worker, managedWorktree: true }],
+  }, environment);
+  command(root, ['worktree', 'remove', worker]);
+  const campaignGraph = graph([
+    { id: 'campaign', parentPlanId: null, dependsOn: [], lifecycle: 'in_progress', path: 'root' },
+    { id: 'work', parentPlanId: 'campaign', dependsOn: [], lifecycle: 'in_progress', path: 'work' },
+    { id: 'independent', parentPlanId: 'campaign', dependsOn: [], lifecycle: 'open', path: 'independent' },
+  ]);
+
+  command(root, ['branch', '-f', assignment.branch, 'HEAD']);
+  let status = reconcile(campaignGraph, ledger, root, environment);
+  assert.equal(status.diagnostics.some(({ code }) => code === 'CAMPAIGN_WORKTREE_MISSING'), true);
+  assert.equal(captureError(() => readyActions(status, campaignGraph)).code, 'CAMPAIGN_STATUS_BLOCKED');
+  command(root, ['branch', '-f', assignment.branch, workerRevision]);
+  writeHostObservation(root, 'campaign', {
+    schemaVersion: 1, campaignId: 'campaign', observedAt: new Date(Date.now() - 6 * 60 * 1000).toISOString(),
+    completeSessionIds: [assignment.sessionId],
+    sessions: [{ sessionId: assignment.sessionId, state: 'completed', worktree: worker, managedWorktree: true }],
+  }, environment);
+  status = reconcile(campaignGraph, ledger, root, environment);
+  assert.equal(status.diagnostics.some(({ code }) => code === 'CAMPAIGN_WORKTREE_MISSING'), true);
+  assert.equal(captureError(() => readyActions(status, campaignGraph)).code, 'CAMPAIGN_STATUS_BLOCKED');
+  writeHostObservation(root, 'campaign', {
+    schemaVersion: 1, campaignId: 'campaign', observedAt: new Date().toISOString(),
+    completeSessionIds: [assignment.sessionId],
+    sessions: [{ sessionId: assignment.sessionId, state: 'completed', worktree: worker, managedWorktree: true }],
+  }, environment);
+  status = reconcile(campaignGraph, ledger, root, environment);
+  assert.equal(status.assignments[0].state, 'REBASE_REQUIRED');
+  assert.equal(status.diagnostics.some(({ code }) => code === 'CAMPAIGN_WORKTREE_RECOVERY_REQUIRED'), true);
+  assert.equal(status.diagnostics.some(({ code }) => code === 'CAMPAIGN_WORKTREE_MISSING'), false);
+  assert.doesNotThrow(() => readyActions(status, campaignGraph));
+  const recovery = advanceLedger(campaignGraph, ledger, environment);
+  assert.equal(recovery.type, 'RECOVER_WORKTREE');
+  assert.equal(recovery.payload.revision, workerRevision);
+  const independentDispatch = advanceLedger(campaignGraph, ledger, environment);
+  assert.equal(independentDispatch.type, 'CREATE_WORKER');
+  assert.equal(independentDispatch.payload.planId, 'independent');
+  assert.deepEqual(readyActions(reconcile(campaignGraph, ledger, root, environment), campaignGraph).actions.map(({ id }) => id), [recovery.id, independentDispatch.id]);
+
+  const recoveredWorker = path.join(fs.realpathSync(temporaryDirectory('ponytail-recovered-rebase-worker-parent')), 'worker');
+  command(root, ['worktree', 'add', '-q', recoveredWorker, 'rebase-worker']);
+  const result = { ok: true, sessionId: assignment.sessionId, worktree: recoveredWorker, branch: assignment.branch, revision: workerRevision };
+  assert.equal(captureError(() => validateActionResultBinding(ledger, recovery.id, result, environment)).code, 'CAMPAIGN_WORKER_BINDING_MISSING');
+  writeHostObservation(root, 'campaign', {
+    schemaVersion: 1, campaignId: 'campaign', observedAt: new Date().toISOString(),
+    completeSessionIds: [assignment.sessionId],
+    sessions: [{ sessionId: assignment.sessionId, state: 'completed', worktree: recoveredWorker, managedWorktree: true }],
+  }, environment);
+  assert.equal(captureError(() => validateActionResultBinding(ledger, recovery.id, { ...result, revision: command(root, ['rev-parse', 'HEAD']) }, environment)).code, 'CAMPAIGN_ACTION_RESULT');
+  const replacement = validateActionResultBinding(ledger, recovery.id, result, environment);
+  replaceRecoveredWorkerBinding(environment, assignment.id, replacement);
+  recordActionResult(ledger, recovery.id, result);
+  assert.deepEqual(recordActionResult(ledger, recovery.id, result), ledger.assignments[0]);
+  assert.equal(readWorkerDeliveries(root, 'campaign', environment).deliveries[0].revision, workerRevision);
+  status = reconcile(campaignGraph, ledger, root, environment);
+  assert.equal(status.assignments.find(({ id }) => id === assignment.id).state, 'REBASE_REQUIRED');
+  assert.equal(status.readyToMerge.length, 0);
+  assert.equal(advanceLedger(campaignGraph, ledger, environment), null);
+  const rebase = advanceLedger(campaignGraph, ledger, environment);
+  assert.equal(rebase.type, 'REQUEST_REBASE');
+  assert.equal(rebase.assignmentId, assignment.id);
+  command(recoveredWorker, ['rebase', 'main']);
+  const rebasedRevision = command(recoveredWorker, ['rev-parse', 'HEAD']);
+  validateActionResultBinding(ledger, rebase.id, { ok: true, revision: rebasedRevision }, environment);
+  recordActionResult(ledger, rebase.id, { ok: true, revision: rebasedRevision });
+  status = reconcile(campaignGraph, ledger, root, environment);
+  assert.equal(status.readyToMerge.length, 0);
+  assert.equal(readWorkerDeliveries(root, 'campaign', environment).deliveries[0].revision, workerRevision);
+  recordWorkerDelivery(root, 'campaign', { ...ledger.assignments[0], planPath: 'pm/plans/in_progress/work/plan.md' }, {
+    revision: rebasedRevision, evidencePaths: ['pm/plans/in_progress/work/evidence/result.md'],
+  }, environment);
+  status = reconcile(campaignGraph, ledger, root, environment);
+  assert.equal(status.readyToMerge[0].id, assignment.id);
+});
+
 test('missing worker checkout without verified delivery remains blocking', () => {
   const root = repository();
   const missingWorker = path.join(temporaryDirectory('ponytail-unverified-missing-worker-parent'), 'worker');

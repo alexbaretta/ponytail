@@ -72,6 +72,7 @@ test('campaign policy delegates every worker effect to the durable action loop',
   assert.match(policy, /The host may choose a new managed\n+   path/);
   assert.match(policy, /Recovery replaces the stale binding path\n+   and resumes the assignment/);
   assert.match(policy, /`CAMPAIGN_WORKTREE_RECOVERY_REQUIRED` is also nonblocking/);
+  assert.match(policy, /delivered worker in `REBASE_REQUIRED`[\s\S]*ordinary rebase and new authenticated delivery/);
   assert.match(policy, /A `REUSE_WORKER`\n+   action retains the finished session and managed worktree/);
 });
 

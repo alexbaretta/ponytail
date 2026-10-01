@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-10-01-delivered_rebase_recovery_state_gap",
+  "recorded_at": "2026-10-01T04:34:47-07:00",
+  "source_references": [
+    "pm/bugs/closed/2026-10-01-BUG-delivered_rebase_worker_checkout_missing.md",
+    "src/campaign-orchestration.js",
+    "tests/campaign-orchestration.test.js"
+  ],
+  "context": {
+    "languages": ["javascript"],
+    "frameworks": ["Git", "Codex managed worktrees"],
+    "components": ["campaign scheduler"],
+    "affected_boundaries": ["durable delivery to missing-checkout recovery and rebase action selection"],
+    "code_references": [
+      "src/campaign-orchestration.js:recoverableWorkerRevision",
+      "src/campaign-orchestration.js:advanceLedger"
+    ]
+  },
+  "observed_behavior": "A delivered worker needing rebase lost its checkout, and the scheduler classified it as an ordinary blocking missing worktree despite a completed managed session and surviving authenticated delivery.",
+  "expected_behavior": "The scheduler recovers the same delivered worker before rebase while allowing unrelated ready dispatch; integration still requires a new delivery at the rebased revision.",
+  "causal_mechanism": "The recovery predicate excluded every delivery and every assignment outside ACTIVE, while the informational delivered-checkout diagnostic applied only to merge-ready or later states.",
+  "anti_pattern": {
+    "structural_description": "Adjacent lifecycle paths partitioned missing-checkout handling by states that omitted a valid delivered and divergent assignment.",
+    "why_it_fails": "The omitted state receives a global blocking diagnostic, so no recovery or independent action can be selected."
+  },
+  "correct_pattern": {
+    "required_invariant": "A missing delivered checkout that still needs rebase must enter recovery only with exact host, binding, branch, delivery, and ancestry proof; rebase requires an available checkout.",
+    "implementation_description": "Extend the existing recovery predicate to authenticated delivered REBASE_REQUIRED assignments, then skip rebase selection until the checkout exists. Preserve the delivery through recovery and require a new one after rebase."
+  },
+  "applicability_conditions": [
+    "The worker has an authenticated delivery but its revision does not contain the current integration revision.",
+    "The managed checkout disappears while the worker session, branch tip, and delivered commit remain verifiable."
+  ],
+  "known_non_matches": [
+    "A merge-ready delivered revision can be integrated without restoring its checkout.",
+    "An undelivered active worker uses the existing recovery path."
+  ],
+  "confirmation_evidence": [
+    "The focused regression failed on absent CAMPAIGN_WORKTREE_RECOVERY_REQUIRED before the fix and passed after it.",
+    "The recovered worker remained REBASE_REQUIRED, and its rebased revision stayed outside readyToMerge until a new authenticated delivery."
+  ],
+  "regression_proofs": [
+    "tests/campaign-orchestration.test.js: delivered rebase worker with a missing checkout recovers before rebase and preserves delivery"
+  ]
+}

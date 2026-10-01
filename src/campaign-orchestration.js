@@ -897,10 +897,13 @@ function workerFor(workers, assignment) {
 }
 
 function recoverableWorkerRevision(ledger, assignment, hostObservation, hostSession, binding, delivery) {
-  if (assignment.state !== 'ACTIVE' || assignment.worktreeExists || delivery || !hostObservation || !binding
+  const deliveredRebase = assignment.state === 'REBASE_REQUIRED' && Boolean(delivery);
+  if (!((assignment.state === 'ACTIVE' && !delivery) || deliveredRebase)
+    || assignment.worktreeExists || !hostObservation || !binding
     || Date.now() - Date.parse(hostObservation.observedAt) > HOST_OBSERVATION_MAX_AGE_MS
     || !hostObservation.completeSessionIds.includes(assignment.sessionId)
     || !['waiting', 'completed'].includes(hostSession?.state) || !hostSession.managedWorktree
+    || (deliveredRebase && hostSession.state !== 'completed')
     || hostSession.worktree !== assignment.worktree || binding.repositoryRoot !== ledger.topLevelWorktree
     || binding.campaignId !== ledger.campaignId || binding.assignmentId !== assignment.id
     || binding.sessionId !== assignment.sessionId || binding.worktree !== assignment.worktree
@@ -908,6 +911,7 @@ function recoverableWorkerRevision(ledger, assignment, hostObservation, hostSess
   const result = spawnSync('git', ['-C', ledger.topLevelWorktree, 'rev-parse', '--verify', `refs/heads/${assignment.branch}^{commit}`], { encoding: 'utf8' });
   if (result.status !== 0) return null;
   const revision = result.stdout.trim();
+  if (deliveredRebase && (delivery.revision !== revision || assignment.workerRevision !== revision)) return null;
   return spawnSync('git', ['-C', ledger.topLevelWorktree, 'merge-base', '--is-ancestor', assignment.dispatchRevision, revision]).status === 0
     ? revision : null;
 }
@@ -1305,7 +1309,9 @@ function advanceLedger(graph, ledger, environment = null) {
     ledger.pendingActions.push(pendingAction);
     return pendingAction;
   }
-  const rebase = integrationAction ? null : ledger.assignments.find((item) => item.state === 'REBASE_REQUIRED');
+  const rebase = integrationAction ? null : ledger.assignments.find((item) => item.state === 'REBASE_REQUIRED'
+    && status.assignments.find(({ id }) => id === item.id)?.worktreeExists
+    && !ledger.pendingActions.some(({ assignmentId }) => assignmentId === item.id));
   if (rebase) {
     const pendingAction = action('REQUEST_REBASE', rebase, { sessionId: rebase.sessionId, ontoRevision: ledger.integrationRevision });
     ledger.pendingActions.push(pendingAction);
