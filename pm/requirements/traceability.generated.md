@@ -8,7 +8,7 @@ Source: `.agents/config/project/traceability.json`
 
 Requirement: [pm/requirements/worker-worktree-retention.md](worker-worktree-retention.md)
 
-- implementation: supports [skills/plan-execution/SKILL.md:783](../../skills/plan-execution/SKILL.md#L783)
+- implementation: supports [skills/plan-execution/SKILL.md:791](../../skills/plan-execution/SKILL.md#L791)
 - implementation: supports [skills/worktree-lifecycle/SKILL.md:17](../../skills/worktree-lifecycle/SKILL.md#L17)
 - implementation: implements [src/campaign-orchestration.js:8](../../src/campaign-orchestration.js#L8)
 - implementation: implements [src/worker-worktrees.js:6](../../src/worker-worktrees.js#L6)

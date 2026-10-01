@@ -674,8 +674,10 @@ durable state instead of remembering worker assignments in conversation:
    request the next deterministic transition. One advance may add at most one
    durable host action or perform one core-owned transition.
 5. Immediately run `ponytail campaign ready-actions [<campaign-root>] --json`.
-   Execute only the `actions` returned by `ready-actions`; this is the complete
-   set of host effects executable now. `status.pendingActions` remains the
+   Execute only the `actions` returned by `ready-actions` for coordinator-initiated
+   scheduler effects. This does not suspend plan-owned work in an existing
+   authenticated assignment or the worker-owned recovery described below.
+   `status.pendingActions` remains the
    complete durable recovery inventory and may also contain dependency-blocked
    or already-started dispatches that must not be invoked again. If no ready
    action is returned, inspect status and advance again only when another
@@ -742,10 +744,16 @@ durable state instead of remembering worker assignments in conversation:
    run an independent merge command. The core proves ancestry and uses
    fast-forward-only integration.
 11. After integration, run the plan's final acceptance against the integrated
-   tree. Close the plan only after those gates pass. A failed gate keeps the
-   plan active and may return the same assignment to another delivery and
-   integration cycle. Successful closure releases the logical assignment for
-   safe reuse, not physical retirement of its session/worktree pair.
+   tree. For remaining plan-owned acceptance work, continue only that plan's
+   existing authenticated worker session; this is not a new dispatch and needs
+   no new scheduler action. Inspect its current host state before messaging it,
+   and use worker-owned recovery if its checkout is missing. If it makes a new
+   commit, require another authenticated delivery and serialized integration
+   under steps 9 and 10. Close the plan only after its gates pass. A failed
+   gate keeps the plan active and may return the same assignment to another
+   delivery and integration cycle. Successful closure releases the logical
+   assignment for safe reuse, not physical retirement of its session/worktree
+   pair.
 12. Then follow the next action returned by `ready-actions`. A `REUSE_WORKER`
    action retains the finished session and managed worktree for its named next
    plan. Retain every inactive session/worktree pair indefinitely, including
