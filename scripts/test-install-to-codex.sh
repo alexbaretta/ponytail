@@ -30,6 +30,29 @@ assert_copy() {
     fail "copied directory differs from source: ${copy_path}"
 }
 
+install_codex_mock() {
+  local executable_path="$1"
+
+  cat > "${executable_path}" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+
+main() {
+  printf '%s\t%s\n' "${CODEX_HOME}" "$*" >> "${INSTALL_TO_CODEX_TEST_CODEX_LOG}"
+  if [[ "$*" == 'plugin list --json' ]]; then
+    printf '{"installed":[{"pluginId":"ponytail@ponytail","installed":true,"enabled":true,"source":{"source":"local","path":"%s"}}]}\n' \
+      "${INSTALL_TO_CODEX_TEST_PONYTAIL_ROOT}"
+  else
+    printf '{}\n'
+  fi
+  exit 0
+}
+
+main "$@"
+EOF
+  chmod +x "${executable_path}"
+}
+
 cleanup() {
   local temporary_root="$1"
   local temporary_parent="$2"
@@ -51,6 +74,11 @@ main() {
   temporary_root="$(mktemp -d "${temporary_parent}/ponytail-install.XXXXXX")"
   trap 'cleanup "${temporary_root}" "${temporary_parent}"' EXIT
   export HOME="${temporary_root}/home"
+  export INSTALL_TO_CODEX_TEST_CODEX_LOG="${temporary_root}/codex.log"
+  export INSTALL_TO_CODEX_TEST_PONYTAIL_ROOT="${ponytail_root}"
+  mkdir -p "${temporary_root}/bin"
+  install_codex_mock "${temporary_root}/bin/codex"
+  export PATH="${temporary_root}/bin:${PATH}"
   mkdir -p "${temporary_root}/codex/skills" "${temporary_root}/codex/rules"
   printf '%s\n' \
     'prefix_rule(pattern=["existing"], decision="allow")' > \
@@ -70,12 +98,24 @@ main() {
     fail 'dry-run changed the empty global instructions file'
   [[ "$(wc -l < "${temporary_root}/codex/rules/default.rules")" -eq 1 ]] || \
     fail 'dry-run changed the existing rules file'
+  [[ ! -e "${INSTALL_TO_CODEX_TEST_CODEX_LOG}" ]] || \
+    fail 'dry-run invoked Codex plugin installation'
 
   "${ponytail_root}/scripts/install-to-codex.sh" \
     --codex-home "${temporary_root}/codex"
   "${ponytail_root}/scripts/install-to-codex.sh" \
     --check \
     --codex-home "${temporary_root}/codex"
+
+  grep -Fxq "${temporary_root}/codex"$'\t'"plugin marketplace add ${ponytail_root} --json" \
+    "${INSTALL_TO_CODEX_TEST_CODEX_LOG}" || \
+    fail 'installer did not register the local Ponytail marketplace'
+  grep -Fxq "${temporary_root}/codex"$'\t''plugin add ponytail@ponytail --json' \
+    "${INSTALL_TO_CODEX_TEST_CODEX_LOG}" || \
+    fail 'installer did not install the local Ponytail plugin'
+  grep -Fxq "${temporary_root}/codex"$'\t''plugin list --json' \
+    "${INSTALL_TO_CODEX_TEST_CODEX_LOG}" || \
+    fail 'installer check did not inspect the Ponytail plugin'
 
   assert_link \
     "${temporary_root}/codex/AGENTS.md" \

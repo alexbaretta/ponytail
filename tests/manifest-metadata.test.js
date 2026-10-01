@@ -21,6 +21,13 @@ test('JSON manifests match canonical repeated metadata', () => {
   }
 });
 
+test('Codex marketplace installs Ponytail from this checkout', () => {
+  const marketplace = JSON.parse(
+    fs.readFileSync(path.join(root, '.agents/plugins/marketplace.json'), 'utf8'),
+  );
+  assert.deepEqual(marketplace.plugins[0].source, { source: 'local', path: './' });
+});
+
 test('Hermes manifest is generated from package and registry metadata', () => {
   assert.equal(fs.readFileSync(path.join(root, 'plugin.yaml'), 'utf8'), expectedHermesManifest());
 });

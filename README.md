@@ -20,10 +20,10 @@ Install Ponytail's Codex skills and user-facing CLI tools from a checkout:
 ./scripts/install.sh
 ```
 
-This installs the `ponytail` executable into `~/.local/bin` and installs the
-enabled Codex skills. The executable links to this checkout so it can find
-Ponytail's canonical scripts and assets. Use it for subsequent configuration
-updates:
+This installs the `ponytail` executable into `~/.local/bin`, the Ponytail
+plugin from this checkout, and the enabled Codex skills. The executable links
+to this checkout so it can find Ponytail's canonical scripts and assets. Use
+it for subsequent configuration updates:
 
 ```bash
 ponytail update-skills

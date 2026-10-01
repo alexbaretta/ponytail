@@ -40,9 +40,9 @@ while project-wide management records remain under `pm/`.
   `.opencode/`, `.qoder/`, and `.openclaw/` own host adapters. Generated
   adapters identify their canonical source in their validation tests.
 - `scripts/` owns local generation, validation, installation, cleanup, and
-  publication tooling. `scripts/install.sh` combines CLI and Codex skill
-  installation; `scripts/install-cli.sh` configures the installed `ponytail`
-  symlink with this checkout as its canonical source.
+  publication tooling. `scripts/install.sh` combines CLI, local Codex plugin,
+  and Codex skill installation; `scripts/install-cli.sh` configures the
+  installed `ponytail` symlink with this checkout as its canonical source.
   Codex discovers project-local skills from `.agents/skills/` automatically.
 - `scripts/setup-project-journal.sh`, `scripts/project-journal.sql`, and
   `scripts/project-index.sql` own PostgreSQL 18 journal and project-index
