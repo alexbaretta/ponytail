@@ -24,6 +24,7 @@ behavior independently from implementation plans and architecture.
 - [Developer-private agent instructions](developer-private-agent-instructions.md)
 - [Repository text index and grep](repository-text-index.md)
 - [Worktree reclamation](worktree-reclamation.md)
+- [Retained workers and worker-owned recovery](worker-worktree-retention.md)
 
 ## Campaign census CLI
 
