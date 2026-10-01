@@ -226,6 +226,13 @@ Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
 3. Advance after no safe idle worker remains.
    - Ponytail records one assignment and creates one new session and managed
      worktree for the next deterministically selected ready plan.
+4. When that managed worktree is detached, verify its exact checkout and
+   dispatch revision, adopt it and establish its assignment branch using the
+   host project's canonical tooling, then run authenticated campaign attach.
+   - Attachment succeeds only after the branch prerequisite exists. No plan
+     execution precedes authentication. If bootstrap fails, retry in the same
+     session and checkout with the same token; no duplicate assignment or
+     replacement worker is created. A pre-existing branch is preserved.
 
 ## Arc: Rebase and fast-forward completed work
 

@@ -49,6 +49,10 @@ test('campaign policy delegates every worker effect to the durable action loop',
   assert.match(policy, /campaign advance \[<campaign-root>\] --json/);
   assert.match(policy, /If advance returns an existing `pendingAction`, resume that exact action/);
   assert.match(policy, /`CREATE_WORKER`[\s\S]*campaign attach <attachToken>/);
+  assert.match(policy, /Before campaign attachment, the worker verifies its exact assigned checkout/);
+  assert.match(policy, /If detached, it uses the host project's canonical worktree tooling/);
+  assert.match(policy, /adopt the checkout and establish its assignment branch at the exact/);
+  assert.match(policy, /Retry the same attachment token in the same session/);
   assert.match(policy, /`REQUEST_REBASE`[\s\S]*exact\n+   `ontoRevision`/);
   assert.match(policy, /transition to `READY_TO_MERGE`[\s\S]*only by another advance/);
   assert.match(policy, /`ARCHIVE_WORKTREE`[\s\S]*archive its own managed\n+   worktree/);

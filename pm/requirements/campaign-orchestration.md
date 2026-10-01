@@ -96,6 +96,16 @@ actionable diagnostic. If ownership is missing, stale, ambiguous, or points to
 an unavailable top-level worktree, Ponytail must fail rather than infer an owner
 from path shape, branch names, Git common-directory membership, or chat history.
 
+A newly created managed checkout may be detached. Before authenticated worker
+attachment, the worker must verify the assigned checkout and dispatch revision,
+then use the host project's canonical tooling to adopt it and establish its
+assignment branch at that revision. This prerequisite bootstrap does not
+authorize plan execution before authentication. A prerequisite failure retains
+the same session, checkout, assignment, and attachment token for retry; it must
+not cause replacement-worker creation or weakening of the branch check.
+This clarifies the stakeholder's detached-worktree recovery instruction on
+2026-09-30; it adds no product capability or alternative ownership mechanism.
+
 The repository-wide human and versioned JSON reports must distinguish valid,
 invalid, and unmanaged plans without presenting uncertain membership as fact.
 The JSON contract must retain enough plan-level diagnostics for an agent to

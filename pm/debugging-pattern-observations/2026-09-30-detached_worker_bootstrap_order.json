@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-09-30-detached_worker_bootstrap_order",
+  "recorded_at": "2026-09-30T22:05:23-07:00",
+  "source_references": ["skills/plan-execution/SKILL.md", "pm/requirements/campaign-orchestration.md", "pm/uat/campaign-orchestration.md"],
+  "context": {
+    "languages": ["markdown", "javascript"],
+    "frameworks": ["Node.js test runner"],
+    "components": ["campaign worker bootstrap"],
+    "affected_boundaries": ["host-managed detached checkout to authenticated assignment"],
+    "code_references": ["src/campaign-orchestration.js: bindWorker", "tests/plan-execution-policy.test.js"]
+  },
+  "observed_behavior": "The new worker exited after campaign attachment rejected its detached checkout with worker worktree must have a branch.",
+  "expected_behavior": "The existing worker establishes the canonical local branch prerequisite before retrying the same authenticated attachment.",
+  "causal_mechanism": "The first-run instruction invoked attachment before canonical worktree adoption and branch creation, although bindWorker requires an attached branch.",
+  "anti_pattern": {
+    "structural_description": "An authentication handshake is ordered before the local lifecycle prerequisite that its invariant requires.",
+    "why_it_fails": "The host's valid initial detached state cannot pass the handshake, and incomplete session inventory can misclassify this completed creation as unfinished."
+  },
+  "correct_pattern": {
+    "required_invariant": "Verify and establish local branch prerequisites before authentication while retaining the original assignment and host identity.",
+    "implementation_description": "The worker's initial instruction specifies canonical adoption and branch establishment at the exact dispatch revision, followed by the unchanged authenticated attachment token; no plan execution occurs before attachment."
+  },
+  "applicability_conditions": ["The host creates managed checkouts detached and campaign attachment requires a branch."],
+  "known_non_matches": ["An already attached checkout needs no replacement branch.", "Missing package dependencies are a separate bootstrap prerequisite failure."],
+  "confirmation_evidence": ["The exact host session's completed turn reports the branch invariant rejection, while its assigned checkout exists at the dispatch revision.", "The focused policy regression fails before the corrected prerequisite sequence and passes afterward."],
+  "regression_proofs": ["tests/plan-execution-policy.test.js: campaign policy delegates every worker effect to the durable action loop", "tests/plan-input-hooks.test.js: worker attach is one-time, status re-roots, and worker mutations fail closed"]
+}

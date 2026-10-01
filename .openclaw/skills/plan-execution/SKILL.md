@@ -674,10 +674,19 @@ durable state instead of remembering worker assignments in conversation:
    Never allocate a replacement session or worktree, and never assign the plan
    conversationally.
 6. For `CREATE_WORKER`, create one supported managed-worktree worker and put
-   `ponytail campaign attach <attachToken>` in its first instruction. For
-   `REUSE_WORKER`, message only the named idle session and require the same
-   attach command. Record the exact host session, canonical worktree, branch,
-   and revision only after the attach hook authenticates them.
+   the bootstrap sequence and `ponytail campaign attach <attachToken>` in its
+   first instruction. Before campaign attachment, the worker verifies its exact assigned checkout
+   and dispatch revision. If detached, it uses the host project's canonical worktree tooling
+   to adopt the checkout and establish its assignment branch at the exact
+   dispatch revision; it does not create another checkout or alter an existing
+   branch. Only then does it run the authenticated campaign attach command.
+   Bootstrap establishes local worktree prerequisites only: no plan edits or
+   execution precede authenticated attachment. For `REUSE_WORKER`, message
+   only the named idle session and require the same verified prerequisites and
+   attach command. Retry the same attachment token in the same session
+   after a prerequisite failure; do not allocate a replacement worker. Record
+   the exact host session, canonical worktree, branch, and revision only after
+   the attach hook authenticates them.
 7. For `REQUEST_REBASE`, message the named worker to rebase onto the exact
    `ontoRevision`, wait for completion, and record only the resulting clean
    revision. The core, not the coordinator, decides whether the worker is then
