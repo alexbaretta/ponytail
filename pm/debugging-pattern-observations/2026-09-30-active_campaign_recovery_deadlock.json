@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-09-30-active_campaign_recovery_deadlock",
+  "recorded_at": "2026-09-30T18:57:39-07:00",
+  "source_references": ["pm/bugs/in_progress/2026-09-30-BUG-active_campaign_adoption.md"],
+  "context": {
+    "languages": ["javascript"], "frameworks": ["Node.js test runner"],
+    "components": ["campaign scheduler"],
+    "affected_boundaries": ["existing active plans to empty durable assignment ledger"],
+    "code_references": ["src/campaign-orchestration.js: reconcile and advanceLedger"]
+  },
+  "observed_behavior": "Ordinary advance rejects unassigned active plans before it can establish their assignments.",
+  "expected_behavior": "Authenticated reconciliation can reserve existing plans without bypassing ordinary advancement checks or fabricating host identities.",
+  "causal_mechanism": "The only assignment writer occurs after a diagnostic gate that rejects the state requiring adoption, with no recovery operation.",
+  "anti_pattern": {
+    "structural_description": "A recovery-required condition blocks the only normal transition that could repair it.",
+    "why_it_fails": "An existing campaign cannot enter the operational scheduler even when its plan records are valid."
+  },
+  "correct_pattern": {
+    "required_invariant": "Explicit authenticated recovery corrects only its named defect and retains every other safety gate.",
+    "implementation_description": "Reserve queued V1 assignments under canonical locks; attach host identities only through the ordinary worker handshake."
+  },
+  "applicability_conditions": ["Existing active plan lifecycle records predate their operational assignment ledger."],
+  "known_non_matches": ["Conflicting assignments, missing host observations, and absent coordinator authority remain blocking."],
+  "confirmation_evidence": ["Focused tests reproduce ordinary advance rejection and prove idempotent reservations, conflict refusal, and dependency waits."],
+  "regression_proofs": ["tests/campaign-orchestration.test.js: reconciliation reserves existing active plans without fabricating workers and is idempotent", "tests/campaign-orchestration.test.js: campaign reconcile CLI reserves an active leaf once before normal dispatch"]
+}

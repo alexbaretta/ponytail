@@ -654,6 +654,7 @@ def print_usage():
   ponytail campaign status [<campaign>] [--json]
   ponytail campaign observe <campaign> --snapshot <json>
   ponytail campaign advance [<campaign>] [--json]
+  ponytail campaign reconcile <campaign> [--json]
   ponytail campaign action-result <campaign> <action-id> --result <json>
   ponytail campaign attach <token>
   ponytail traceability index [--rebuild] [--json]

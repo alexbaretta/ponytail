@@ -180,6 +180,16 @@ must return their complete diagnostics instead of aborting at the first
 cross-record conflict; every mutating campaign operation must fail closed until
 all blocking diagnostics are resolved.
 
+For pre-existing active campaigns, an authenticated coordinator must have an
+explicit, idempotent reconciliation command that corrects unassigned-plan
+diagnostics by reserving queued work without inventing worker observations.
+`ponytail campaign reconcile <campaign> --json` may repair only these named
+diagnostics; any other conflict still prevents mutation. Reservations retain
+null host identities until the ordinary authenticated attach handshake. They
+do not change plan lifecycle, approval, completion, or acceptance. Parents
+remain queued while their child plans are unfinished. This clarification
+implements the stakeholder-authorized scheduler recovery of 2026-09-30.
+
 Ponytail must prevent concurrent or repeated coordinator activity from assigning
 one plan to more than one active worker. Before dispatch, it must durably and
 atomically associate the selected plan, session, worktree, branch, and campaign

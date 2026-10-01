@@ -7,6 +7,25 @@ Licensed under the MIT License. See LICENSE in the project root.
 
 # Campaign orchestration Suite
 
+## Arc: Reconcile a pre-existing active campaign
+
+Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
+
+1. Bind the coordinator to a valid active campaign with no prior assignments.
+2. Confirm ordinary advance refuses unassigned active-plan diagnostics.
+3. Run `ponytail campaign reconcile <campaign> --json` twice.
+   - Each active non-root plan has exactly one queued reservation; both runs
+     retain identical IDs. No session, worktree, branch, or worker revision is
+     invented. Lifecycle and tasklet records remain unchanged.
+4. Advance and verify the selected queued leaf's normal typed worker action.
+   - Its parent remains queued while children are unfinished, and dispatch
+     still requires the canonical authenticated worker attach handshake.
+5. Attempt reconciliation without coordinator authentication or with a
+   conflicting retained assignment.
+   - The command fails without partially reserving plans or deleting evidence.
+
+Automated profile: `node --test tests/campaign-orchestration.test.js`.
+
 [Back to UAT index](index.md) · Requirement:
 [`REQ-CAMPAIGN-ORCHESTRATION`](../requirements/campaign-orchestration.md),
 approved 2026-09-29.

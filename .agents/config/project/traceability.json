@@ -46,6 +46,11 @@
   "artifacts": [
     {
       "class": "issue",
+      "path": "pm/bugs/in_progress/2026-09-30-BUG-active_campaign_adoption.md",
+      "locator": "text"
+    },
+    {
+      "class": "issue",
       "path": "pm/bugs/in_progress/2026-09-30-BUG-freeform_coordinator_binding.md",
       "locator": "text"
     },

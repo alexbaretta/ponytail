@@ -684,6 +684,30 @@ function action(type, assignment, payload = {}) {
   });
 }
 
+function reserveAssignment(ledger, planId, idle = null) {
+  const assignment = readAssignmentV1({
+    id: crypto.randomUUID(), planId,
+    sessionId: idle?.sessionId ?? null, worktree: idle?.worktree ?? null,
+    branch: idle?.branch ?? null, dispatchRevision: ledger.integrationRevision,
+    workerRevision: idle?.revision ?? null, state: 'DISPATCH_PENDING',
+    idempotencyKey: crypto.randomUUID(), attachToken: crypto.randomBytes(32).toString('base64url'),
+    worktreeArchived: false, sessionArchived: false,
+  });
+  ledger.assignments.push(assignment);
+  return assignment;
+}
+
+function reconcileLedger(graph, ledger, environment = null) {
+  if (!ledger.coordinatorSessionId) fail('CAMPAIGN_COORDINATOR_REQUIRED', 'campaign reconciliation requires one authenticated coordinator binding');
+  if (ledger.pendingAction) return ledger.pendingAction;
+  const status = reconcile(graph, ledger, ledger.topLevelWorktree, environment);
+  const conflicts = status.diagnostics.filter(({ code }) => code !== 'CAMPAIGN_PLAN_UNASSIGNED');
+  if (conflicts.length) fail('CAMPAIGN_STATUS_BLOCKED', conflicts.map(({ message }) => message).join('; '));
+  ledger.integrationRevision = status.integrationRevision;
+  for (const diagnostic of status.diagnostics) reserveAssignment(ledger, diagnostic.planId);
+  return null;
+}
+
 function advanceLedger(graph, ledger, environment = null) {
   if (!ledger.coordinatorSessionId) fail('CAMPAIGN_COORDINATOR_REQUIRED', 'campaign advance requires one authenticated coordinator binding');
   if (ledger.pendingAction) return ledger.pendingAction;
@@ -735,24 +759,24 @@ function advanceLedger(graph, ledger, environment = null) {
     ledger.pendingAction = action('REQUEST_REBASE', rebase, { sessionId: rebase.sessionId, ontoRevision: ledger.integrationRevision });
     return ledger.pendingAction;
   }
-  if (status.readyPlans.length === 0) return null;
-  const planId = status.readyPlans[0];
-  const idle = status.idleWorkers[0] ?? null;
-  const assignmentRecord = readAssignmentV1({
-    id: crypto.randomUUID(),
-    planId,
-    sessionId: idle?.sessionId ?? null,
-    worktree: idle?.worktree ?? null,
-    branch: idle?.branch ?? null,
-    dispatchRevision: ledger.integrationRevision,
-    workerRevision: idle?.revision ?? null,
-    state: 'DISPATCH_PENDING',
-    idempotencyKey: crypto.randomUUID(),
-    attachToken: crypto.randomBytes(32).toString('base64url'),
-    worktreeArchived: false,
-    sessionArchived: false,
+  const completedPlans = new Set(graph.plans.filter(({ lifecycle }) => lifecycle === graph.lifecycle.successfulCompletion).map(({ id }) => id));
+  const queued = ledger.assignments.find((assignment) => {
+    if (assignment.state !== 'DISPATCH_PENDING') return false;
+    const plan = graph.plans.find(({ id }) => id === assignment.planId);
+    return plan.dependsOn.every((id) => completedPlans.has(id))
+      && !graph.plans.some(({ parentPlanId, id }) => parentPlanId === plan.id && !completedPlans.has(id));
   });
-  ledger.assignments.push(assignmentRecord);
+  if (!queued && status.readyPlans.length === 0) return null;
+  const planId = queued?.planId ?? status.readyPlans[0];
+  const idle = status.idleWorkers[0] ?? null;
+  const assignmentRecord = queued ?? reserveAssignment(ledger, planId, idle);
+  if (queued) {
+    queued.dispatchRevision = ledger.integrationRevision;
+    queued.sessionId = idle?.sessionId ?? null;
+    queued.worktree = idle?.worktree ?? null;
+    queued.branch = idle?.branch ?? null;
+    queued.workerRevision = idle?.revision ?? null;
+  }
   const type = idle ? 'REUSE_WORKER' : 'CREATE_WORKER';
   ledger.pendingAction = action(type, assignmentRecord, { planId, attachToken: assignmentRecord.attachToken, sessionId: idle?.sessionId ?? null, worktree: idle?.worktree ?? null });
   return ledger.pendingAction;
@@ -846,7 +870,7 @@ function parseArguments(argv) {
   let json = false;
   let actionId;
   let result;
-  if (operation === 'status' || operation === 'advance') {
+  if (operation === 'status' || operation === 'advance' || operation === 'reconcile') {
     for (const argument of argv.slice(1)) {
       if (argument === '--json' && !json) json = true;
       else if (argument.startsWith('-') || input !== undefined) fail('CAMPAIGN_ORCHESTRATION_USAGE', usage(), 2);
@@ -862,11 +886,12 @@ function parseArguments(argv) {
   } else if (operation === 'attach' && argv.length === 2) {
     result = argv[1];
   } else fail('CAMPAIGN_ORCHESTRATION_USAGE', usage(), 2);
+  if (operation === 'reconcile' && input === undefined) fail('CAMPAIGN_ORCHESTRATION_USAGE', usage(), 2);
   return { operation, input, json, actionId, result };
 }
 
 function usage() {
-  return 'usage: ponytail campaign status [<campaign>] [--json]\n       ponytail campaign observe <campaign> --snapshot <json>\n       ponytail campaign advance [<campaign>] [--json]\n       ponytail campaign action-result <campaign> <action-id> --result <json>\n       ponytail campaign attach <token>';
+  return 'usage: ponytail campaign status [<campaign>] [--json]\n       ponytail campaign observe <campaign> --snapshot <json>\n       ponytail campaign advance [<campaign>] [--json]\n       ponytail campaign reconcile <campaign> [--json]\n       ponytail campaign action-result <campaign> <action-id> --result <json>\n       ponytail campaign attach <token>';
 }
 
 function run(argv = process.argv.slice(2), options = {}) {
@@ -911,9 +936,11 @@ function run(argv = process.argv.slice(2), options = {}) {
   const resolution = resolveInvocationWorktree(invocationWorktree, environment, request.operation === 'status');
   const graph = resolveGraph(resolution.effectiveWorktree, request.input ?? resolution.workerBinding?.campaignId);
   let status;
-  if (request.operation === 'advance') {
+  if (request.operation === 'advance' || request.operation === 'reconcile') {
     withWorktreeLock(resolution.effectiveWorktree, environment, () => (
-      withLedgerLock(resolution.effectiveWorktree, graph.campaignId, environment, (ledger) => advanceLedger(graph, ledger, environment))
+      withLedgerLock(resolution.effectiveWorktree, graph.campaignId, environment, (ledger) => (
+        request.operation === 'reconcile' ? reconcileLedger(graph, ledger, environment) : advanceLedger(graph, ledger, environment)
+      ))
     ));
   }
   const ledger = readLedger(resolution.effectiveWorktree, graph.campaignId, environment);
@@ -955,6 +982,7 @@ module.exports = {
   readStatusV2,
   readWorkerV1,
   reconcile,
+  reconcileLedger,
   recordActionResult,
   resolveInvocationWorktree,
   setLedgerCoordinator,

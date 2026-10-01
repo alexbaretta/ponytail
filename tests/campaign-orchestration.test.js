@@ -15,6 +15,7 @@ const test = require('node:test');
 const {
   CampaignOrchestrationError,
   advanceLedger,
+  reconcileLedger,
   newLedger,
   parseArguments,
   readHostObservation,
@@ -97,6 +98,81 @@ function captureError(callback) {
   }
   assert.fail('expected CampaignOrchestrationError');
 }
+
+test('reconciliation reserves existing active plans without fabricating workers and is idempotent', () => {
+  const root = repository();
+  const ledger = newLedger(root, 'campaign', 'coordinator');
+  const campaignGraph = graph([
+    { id: 'campaign', parentPlanId: null, dependsOn: [], lifecycle: 'in_progress', path: 'root' },
+    { id: 'parent', parentPlanId: 'campaign', dependsOn: [], lifecycle: 'in_progress', path: 'parent' },
+    { id: 'child', parentPlanId: 'parent', dependsOn: [], lifecycle: 'in_progress', path: 'child' },
+  ]);
+  assert.equal(captureError(() => advanceLedger(campaignGraph, ledger)).code, 'CAMPAIGN_STATUS_BLOCKED');
+  reconcileLedger(campaignGraph, ledger);
+  assert.equal(ledger.pendingAction, null);
+  assert.equal(ledger.assignments.length, 2);
+  for (const assignment of ledger.assignments) {
+    assert.equal(assignment.state, 'DISPATCH_PENDING');
+    for (const key of ['sessionId', 'worktree', 'branch', 'workerRevision']) assert.equal(assignment[key], null);
+  }
+  const retained = JSON.stringify(ledger);
+  reconcileLedger(campaignGraph, ledger);
+  assert.equal(JSON.stringify(ledger), retained);
+  assert.equal(reconcile(campaignGraph, ledger).diagnostics.length, 0);
+  const selected = advanceLedger(campaignGraph, ledger);
+  assert.equal(selected.type, 'CREATE_WORKER');
+  assert.equal(selected.payload.planId, 'child');
+  assert.equal(advanceLedger(campaignGraph, ledger).id, selected.id);
+});
+
+test('reconciliation refuses unauthenticated and contradictory ledgers without partial adoption', () => {
+  const root = repository();
+  const ledger = newLedger(root, 'campaign', null);
+  const campaignGraph = graph([{ id: 'child', parentPlanId: 'campaign', dependsOn: [], lifecycle: 'in_progress', path: 'child' }]);
+  assert.equal(captureError(() => reconcileLedger(campaignGraph, ledger)).code, 'CAMPAIGN_COORDINATOR_REQUIRED');
+  ledger.coordinatorSessionId = 'coordinator';
+  reconcileLedger(campaignGraph, ledger);
+  ledger.assignments.push({ ...ledger.assignments[0], id: 'duplicate' });
+  const retained = JSON.stringify(ledger);
+  assert.equal(captureError(() => reconcileLedger(campaignGraph, ledger)).code, 'CAMPAIGN_STATUS_BLOCKED');
+  assert.equal(JSON.stringify(ledger), retained);
+});
+
+test('reconciliation retains dependency waits and an existing pending action', () => {
+  const root = repository();
+  const ledger = newLedger(root, 'campaign', 'coordinator');
+  const campaignGraph = graph([
+    { id: 'campaign', parentPlanId: null, dependsOn: [], lifecycle: 'in_progress', path: 'root' },
+    { id: 'blocked', parentPlanId: 'campaign', dependsOn: ['deferred'], lifecycle: 'in_progress', path: 'blocked' },
+    { id: 'deferred', parentPlanId: 'campaign', dependsOn: [], lifecycle: 'deferred', path: 'deferred' },
+  ]);
+  reconcileLedger(campaignGraph, ledger);
+  assert.equal(advanceLedger(campaignGraph, ledger), null);
+  assert.equal(ledger.assignments.length, 1);
+  campaignGraph.plans[2].lifecycle = 'closed';
+  const pending = advanceLedger(campaignGraph, ledger);
+  assert.equal(reconcileLedger(campaignGraph, ledger).id, pending.id);
+  assert.equal(ledger.assignments.length, 1);
+  assert.equal(captureError(() => parseArguments(['reconcile'])).code, 'CAMPAIGN_ORCHESTRATION_USAGE');
+});
+
+test('campaign reconcile CLI reserves an active leaf once before normal dispatch', () => {
+  const root = campaignRepository();
+  managedPlan(root, 'in_progress', 'existing', 'campaign');
+  const environment = { ...process.env, PONYTAIL_SESSION_ID: 'coordinator', PONYTAIL_CAMPAIGN_STATE_DIR: temporaryDirectory('ponytail-adoption-state') };
+  const invoke = (operation) => {
+    const result = spawnSync(process.execPath, [campaignCli, operation, 'campaign', '--json'], { cwd: root, encoding: 'utf8', env: environment });
+    assert.equal(result.status, 0, result.stderr);
+    return JSON.parse(result.stdout);
+  };
+  const first = invoke('reconcile');
+  assert.equal(first.assignments.length, 1);
+  assert.equal(first.assignments[0].planId, 'existing');
+  assert.equal(first.assignments[0].sessionId, null);
+  assert.equal(first.diagnostics.length, 0);
+  assert.equal(invoke('reconcile').assignments[0].id, first.assignments[0].id);
+  assert.equal(invoke('advance').pendingAction.payload.planId, 'existing');
+});
 
 test('status reports active plan, session, and worktree conflicts while mutations fail closed', () => {
   const root = repository();

@@ -268,6 +268,13 @@ falls back to deleting an inferred path.
 
 ### Failure and recovery
 
+Explicit `campaign reconcile` reserves pre-existing unassigned active plans
+as V1 DISPATCH_PENDING records under the canonical locks. It corrects only
+unassigned-plan diagnostics and leaves host identities null; it cannot adopt
+an inferred session or suppress another conflict. Ordinary advancement selects
+a queued dependency-ready leaf and emits its usual attach-protected action.
+Reservations for unfinished parents remain queued until children close.
+
 Every external effect has a pending state recorded before execution and a
 confirmed state recorded afterward. Reconciliation classifies a missing
 session, missing worktree, dirty worktree, divergent branch, moved integration
