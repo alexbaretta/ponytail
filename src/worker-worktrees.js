@@ -84,13 +84,14 @@ function recoverCheckout(binding) {
     mainWorktree, restored: !existing, content: 'COMMITTED_STATE' };
 }
 
-function recoverLegacyCheckout(binding, originalWorktree, originalRevision) {
+function recoverLegacyCheckout(binding, originalWorktree, originalRevision, sourceRevision) {
   validateSource(binding);
   const { mainWorktree, mainGitDirectory, worktree, branch } = binding;
   if (originalWorktree === worktree || originalWorktree === mainWorktree || originalWorktree === binding.repositoryRoot) {
     throw new Error('legacy recovery target is not a distinct original worker checkout');
   }
   const checkpoint = git(mainWorktree, ['rev-parse', '--verify', `refs/heads/${branch}^{commit}`]).trim();
+  if (checkpoint !== sourceRevision) throw new Error('legacy recovery branch no longer matches the assignment revision');
   const records = worktrees(mainWorktree);
   for (const target of [worktree, originalWorktree]) {
     const record = records.find(item => item.worktree === target);

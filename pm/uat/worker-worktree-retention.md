@@ -113,3 +113,15 @@ This proves committed reconstruction, adoption, and native session/path
 continuity. The complete live Arc remains open for refreshed coordinator
 observation and resumed assignment after the client setup blocker is resolved.
 No restored unsaved-file content or campaign delivery was claimed.
+
+### Legacy relocated-checkout recovery regression
+
+The PWP live attempt was rejected by stale `PreToolUse` guidance that named the
+replacement binding checkout, although fresh host state and immutable campaign
+history proved the native session still belonged to the initial checkout. The
+hook now provides the same context as the authenticated worker prompt hook.
+Automated Git tests verify it identifies the initial checkout only with fresh,
+complete host evidence and matching dispatch/recovery history, and denies a
+different session. This is repository proof only; the same PWP session must
+still retry recovery and the coordinator must refresh observation before live
+acceptance can pass.

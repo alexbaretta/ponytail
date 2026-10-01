@@ -80,3 +80,11 @@ Docker address-pool exhaustion blocked full client setup, and refreshed
 coordinator observation plus assignment resumption remain unverified. The live
 Arc and T04 therefore stay open. Deployment to client plugin caches and disabling
 host automatic deletion were not performed by this repository change-set.
+
+Follow-up live PWP evidence found stale `PreToolUse` recovery guidance that
+still named the replacement binding path. The canonical recovery hook now
+shares the authenticated, freshness-checked worker recovery context; regression
+proof covers proven legacy relocation, ambiguous history, and wrong-session
+denial. Focused tests and configured root acceptance pass. This fixes the
+Ponytail-side refusal but does not itself verify PWP's live retry or resume the
+coordinator's campaign; T04 remains open.

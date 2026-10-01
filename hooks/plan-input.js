@@ -182,8 +182,10 @@ function handle(data, environment = process.env) {
     if (recovery) {
       try {
         if (typeof data.session_id !== 'string' || !data.session_id) fail('worker recovery requires a host-authenticated session identity');
-        const binding = workerRecoveryBinding(environment, recovery[1], data.session_id);
-        return preToolOutput(`Worker ${binding.sessionId} may recover only its original checkout ${binding.worktree} from ${binding.mainWorktree || 'its owning project main worktree'}. Run from an existing neutral cwd; preserve session and assignment identity.`);
+        workerRecoveryBinding(environment, recovery[1], data.session_id);
+        const recoveryContext = workerRecoveryContext(environment, data.session_id);
+        if (!recoveryContext) fail('worker recovery context is unavailable for this authenticated session');
+        return preToolOutput(recoveryContext);
       } catch (error) { return deniedPreToolOutput(error.message); }
     }
     if (!campaignCommand(data.tool_input) && !coordinatorCommand(data.tool_input)) return null;

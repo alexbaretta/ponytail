@@ -10,7 +10,7 @@ const os = require('node:os');
 const path = require('node:path');
 const { spawn, spawnSync } = require('node:child_process');
 const test = require('node:test');
-const { advanceLedger, bindWorker, ledgerPath, newLedger, readLedger, readWorkerBindings, reconcile, readyActions, recordActionResult, recoverWorker, replaceRecoveredWorkerBinding, withLedgerLock, withWorktreeLock, workerRecoveryBinding, writeHostObservation } = require('../src/campaign-orchestration');
+const { advanceLedger, bindWorker, ledgerPath, newLedger, readLedger, readWorkerBindings, reconcile, readyActions, recordActionResult, recoverWorker, replaceRecoveredWorkerBinding, withLedgerLock, withWorktreeLock, workerRecoveryBinding, workerRecoveryContext, writeHostObservation } = require('../src/campaign-orchestration');
 const { handle } = require('../hooks/plan-input');
 const ponytail = path.join(__dirname, '..', 'cli', 'ponytail');
 
@@ -155,6 +155,18 @@ test('legacy replacement recovery returns the branch to the proven native checko
     });
     writeHostObservation(root, 'campaign', { schemaVersion: 1, campaignId: 'campaign', observedAt: new Date().toISOString(),
       completeSessionIds: [binding.sessionId], sessions: [{ sessionId: binding.sessionId, state: 'working', worktree, managedWorktree: true }] }, environment);
+    const recoveryContext = workerRecoveryContext(environment, binding.sessionId);
+    if (condition === 'unproven') assert.equal(recoveryContext.includes(`reconcile the branch and binding to ${worktree}`), false);
+    else assert.ok(recoveryContext.includes(`reconcile the branch and binding to ${worktree}`));
+    const recoveryHook = handle({ hook_event_name: 'PreToolUse', cwd: os.tmpdir(), session_id: binding.sessionId,
+      tool_input: { cmd: `ponytail worktree recover ${token}` } }, environment);
+    assert.notEqual(recoveryHook?.hookSpecificOutput?.permissionDecision, 'deny');
+    const recoveryHookContext = recoveryHook?.hookSpecificOutput?.additionalContext;
+    if (condition === 'unproven') assert.equal(recoveryHookContext.includes(`reconcile the branch and binding to ${worktree}`), false);
+    else assert.ok(recoveryHookContext.includes(`reconcile the branch and binding to ${worktree}`));
+    const wrongWorkerHook = handle({ hook_event_name: 'PreToolUse', cwd: os.tmpdir(), session_id: 'different-session',
+      tool_input: { cmd: `ponytail worktree recover ${token}` } }, environment);
+    assert.equal(wrongWorkerHook?.hookSpecificOutput?.permissionDecision, 'deny');
     if (['interrupted', 'switched'].includes(condition)) git(replacement, ['switch', '--detach']);
     if (condition === 'switched') git(worktree, ['switch', binding.branch]);
     if (condition === 'dirty') fs.appendFileSync(path.join(worktree, 'fixture.txt'), 'private edits\n');

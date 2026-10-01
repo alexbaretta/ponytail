@@ -835,6 +835,33 @@ function workerRecoveryBinding(environment, token, sessionId = null) {
   return binding;
 }
 
+function legacyRecoveryTarget(binding, assignment, ledger, environment) {
+  const observation = readHostObservation(binding.repositoryRoot, binding.campaignId, environment);
+  const hostSession = observation?.sessions.find(item => item.sessionId === binding.sessionId);
+  const dispatches = ledger.completedActions.filter(item => item.assignmentId === assignment.id
+    && ['CREATE_WORKER', 'REUSE_WORKER'].includes(item.type) && item.result.ok === true);
+  const dispatch = dispatches[0];
+  const recovery = ledger.completedActions.filter(item => item.assignmentId === assignment.id
+    && item.type === 'RECOVER_WORKTREE' && item.result.ok === true
+    && item.result.worktree === assignment.worktree).at(-1);
+  const originalWorktree = dispatch?.result.worktree;
+  if (!observation || !Number.isFinite(Date.parse(observation.observedAt))
+    || Date.now() - Date.parse(observation.observedAt) > HOST_OBSERVATION_MAX_AGE_MS
+    || !observation.completeSessionIds.includes(binding.sessionId)
+    || !hostSession?.managedWorktree || !['working', 'waiting', 'completed'].includes(hostSession.state)
+    || dispatches.length !== 1 || !originalWorktree || hostSession.worktree !== originalWorktree
+    || dispatch.result.sessionId !== binding.sessionId || dispatch.result.branch !== binding.branch
+    || originalWorktree === assignment.worktree || !recovery
+    || recovery.result.sessionId !== binding.sessionId || recovery.result.branch !== binding.branch
+    || binding.revision !== recovery.result.revision
+    || ![originalWorktree, assignment.worktree].includes(binding.worktree)
+    || ledger.pendingActions.some(item => item.assignmentId === assignment.id)
+    || readWorkerBindings(environment).bindings.some(item => item.assignmentId !== assignment.id && item.worktree === originalWorktree)) {
+    return null;
+  }
+  return originalWorktree;
+}
+
 function workerRecoveryContext(environment, sessionId) {
   if (typeof sessionId !== 'string' || !sessionId) return null;
   const binding = readWorkerBindings(environment).bindings.find(item => item.sessionId === sessionId);
@@ -843,6 +870,10 @@ function workerRecoveryContext(environment, sessionId) {
   const assignment = ledger.assignments.find(({ id }) => id === binding.assignmentId);
   if (!assignment) fail('CAMPAIGN_WORKER_RECOVERY', 'worker has no durable assignment recovery capability');
   workerRecoveryBinding(environment, assignment.attachToken, sessionId);
+  const legacyOriginalWorktree = legacyRecoveryTarget(binding, assignment, ledger, environment);
+  if (legacyOriginalWorktree) {
+    return `Retained worker ${sessionId}: owning top-level project ${binding.repositoryRoot}; the native Codex session is authenticated at original checkout ${legacyOriginalWorktree}, while a completed legacy recovery moved this assignment binding to ${binding.worktree}. Fresh complete host evidence and immutable dispatch/recovery history prove both paths. Use your existing attachment capability with ponytail worktree recover ${assignment.attachToken} from an existing neutral directory to reconcile the branch and binding to ${legacyOriginalWorktree}; Ponytail verifies both checkouts and the assignment revision before transfer. Then run canonical project adoption/setup and resume the same assignment. Preserve both checkouts, session, and delivery history.`;
+  }
   return `Retained worker ${sessionId}: owning top-level project ${binding.repositoryRoot}; original checkout ${binding.worktree}; branch ${binding.branch}; main worktree ${binding.mainWorktree || '(legacy source enrolls on recovery)'}. If the checkout is missing, run ponytail worktree recover ${assignment.attachToken} from an existing neutral directory, then canonical project adoption/setup. Recover yourself without waiting for a coordinator action; never replace this session or overwrite local changes. Git reconstruction restores committed content only; preserve native snapshots for unsaved files.`;
 }
 
@@ -875,26 +906,12 @@ function recoverWorker(environment, token) {
       if (currentAssignment?.worktree === currentBinding.worktree && currentHostSession?.worktree === currentBinding.worktree) {
         return recoverCheckout(currentBinding);
       }
-      const dispatch = current.completedActions.find(item => item.assignmentId === binding.assignmentId
-        && ['CREATE_WORKER', 'REUSE_WORKER'].includes(item.type) && item.result.ok === true);
-      const recovery = current.completedActions.filter(item => item.assignmentId === binding.assignmentId
-        && item.type === 'RECOVER_WORKTREE' && item.result.ok === true).at(-1);
-      const originalWorktree = dispatch?.result.worktree;
-      if (!currentAssignment || !currentObservation || Date.now() - Date.parse(currentObservation.observedAt) > HOST_OBSERVATION_MAX_AGE_MS
-        || !currentObservation.completeSessionIds.includes(binding.sessionId)
-        || !currentHostSession?.managedWorktree || !['working', 'waiting', 'completed'].includes(currentHostSession.state)
-        || !originalWorktree || currentHostSession.worktree !== originalWorktree
-        || dispatch.result.sessionId !== binding.sessionId || dispatch.result.branch !== binding.branch
-        || !recovery || recovery.result.sessionId !== binding.sessionId || recovery.result.branch !== binding.branch
-        || recovery.result.worktree === originalWorktree || recovery.result.worktree !== currentAssignment.worktree
-        || currentBinding.revision !== recovery.result.revision
-        || repositoryIdentity(recovery.result.worktree).revision !== currentAssignment.workerRevision
-        || ![originalWorktree, recovery.result.worktree].includes(currentBinding.worktree)
-        || current.pendingActions.some(item => item.assignmentId === binding.assignmentId)
-        || readWorkerBindings(environment).bindings.some(item => item.assignmentId !== binding.assignmentId && item.worktree === originalWorktree)) {
+      const originalWorktree = currentAssignment && legacyRecoveryTarget(currentBinding, currentAssignment, current, environment);
+      if (!originalWorktree) {
         fail('CAMPAIGN_WORKER_RECOVERY', 'legacy recovery requires fresh native host evidence and the original authenticated dispatch/recovery history');
       }
-      const result = recoverLegacyCheckout({ ...currentBinding, worktree: recovery.result.worktree }, originalWorktree, recovery.result.revision);
+      const result = recoverLegacyCheckout({ ...currentBinding, worktree: currentAssignment.worktree }, originalWorktree,
+        currentBinding.revision, currentAssignment.workerRevision);
       replaceRecoveredWorkerBinding(environment, binding.assignmentId, { ...currentBinding, worktree: originalWorktree, revision: result.revision });
       currentAssignment.worktree = originalWorktree;
       const worker = workerFor(current.workers, currentAssignment);

@@ -37,6 +37,18 @@ source equals the assignment's recorded worker revision. Ordinary recovery
 still requires the branch ancestry check. Focused regression covers the
 rebased case, interruption, data preservation, and ambiguous histories.
 
+The next live retry exposed stale trusted hook instructions: `PreToolUse`
+authenticated the worker correctly but told it to recover only the replacement
+binding path, contradicting the freshly observed native Codex checkout. The
+hook now uses the same evidence-checked recovery context as `UserPromptSubmit`.
+It identifies the initial dispatch path only when fresh complete host evidence,
+the unique successful dispatch, the prior recovery result, the assignment
+revision, and exclusive ownership all agree. The legacy Git regression now
+asserts both prompt and tool-hook guidance plus rejection for another session.
+Focused worker/scheduler/hook tests pass (64 tests); full configured `npm test`
+and repository structural checks pass. Live PWP reconciliation and campaign
+resumption remain pending.
+
 Final `npm test` passes: 499 core tests, installer harness, 23 Pi, 4 MCP, 80
 TSTS, and 572-file structure validation. Traceability (201 relationships),
 rule-copy, version, generated registry/adapter/manifest, and diff checks pass.
