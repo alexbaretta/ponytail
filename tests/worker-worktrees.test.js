@@ -8,9 +8,11 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const { spawnSync } = require('node:child_process');
+const { spawn, spawnSync } = require('node:child_process');
 const test = require('node:test');
-const { advanceLedger, newLedger, readLedger, withLedgerLock, withWorktreeLock } = require('../src/campaign-orchestration');
+const { advanceLedger, bindWorker, ledgerPath, newLedger, readLedger, readWorkerBindings, withLedgerLock, withWorktreeLock, workerRecoveryBinding, writeHostObservation } = require('../src/campaign-orchestration');
+const { handle } = require('../hooks/plan-input');
+const ponytail = path.join(__dirname, '..', 'cli', 'ponytail');
 
 function directory() {
   return fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'ponytail-worker-pool-')));
@@ -55,4 +57,192 @@ test('fifteen creation reservations bound one top-level project, not its shared 
   assert.deepEqual(successor.pendingActions, []);
   assert.equal(advance(other).type, 'CREATE_WORKER');
   assert.equal(readLedger(other, 'campaign', environment).pendingActions.length, 1);
+});
+
+test('independent coordinator processes cannot both reserve the fifteenth slot', async () => {
+  const root = repository();
+  const environment = { ...process.env, PONYTAIL_CAMPAIGN_STATE_DIR: directory() };
+  for (let index = 0; index < 14; index += 1) withLedgerLock(root, 'campaign', environment, ledger => {
+    ledger.coordinatorSessionId = 'coordinator';
+    advanceLedger(graph(), ledger, environment);
+  });
+  const program = `const core = require(${JSON.stringify(path.join(__dirname, '..', 'src/campaign-orchestration'))});
+    core.withWorktreeLock(process.argv[1], process.env, () => core.withLedgerLock(process.argv[1], 'campaign', process.env,
+      ledger => core.advanceLedger(${JSON.stringify(graph())}, ledger, process.env)));`;
+  const advance = () => new Promise((resolve, reject) => {
+    const child = spawn(process.execPath, ['-e', program, root], { env: environment });
+    let stderr = '';
+    child.stderr.on('data', data => { stderr += data; });
+    child.on('error', reject);
+    child.on('exit', code => code === 0 ? resolve() : reject(new Error(stderr)));
+  });
+  await Promise.all([advance(), advance()]);
+  assert.equal(readLedger(root, 'campaign', environment).pendingActions.length, 15);
+});
+
+test('an old but live project critical section cannot be stolen to overbook the pool', () => {
+  const root = repository();
+  const environment = { ...process.env, PONYTAIL_CAMPAIGN_STATE_DIR: directory() };
+  const lock = path.join(path.dirname(ledgerPath(root, 'campaign', environment)), 'advance.lock');
+  fs.mkdirSync(path.dirname(lock), { recursive: true });
+  fs.writeFileSync(lock, String(process.pid));
+  const old = new Date(Date.now() - 60_000);
+  fs.utimesSync(lock, old, old);
+  assert.throws(() => withWorktreeLock(root, environment, () => assert.fail('live lock was stolen')), /timed out/);
+  assert.equal(fs.readFileSync(lock, 'utf8'), String(process.pid));
+});
+
+function attachedWorker() {
+  const main = repository();
+  const root = path.join(directory(), 'top-level-project');
+  git(main, ['worktree', 'add', '-qb', 'top-level-project', root]);
+  const home = directory();
+  const environment = { ...process.env, HOME: home, PONYTAIL_CAMPAIGN_STATE_DIR: directory() };
+  const worktree = path.join(directory(), 'worker');
+  git(root, ['worktree', 'add', '-qb', 'worker', worktree]);
+  let action;
+  withLedgerLock(root, 'campaign', environment, ledger => {
+    ledger.coordinatorSessionId = 'coordinator';
+    action = advanceLedger(graph(), ledger, environment);
+  });
+  const binding = bindWorker(environment, worktree, action.payload.attachToken, 'worker-session');
+  assert.equal(binding.mainWorktree, main);
+  assert.equal(binding.mainGitDirectory, path.join(main, '.git'));
+  return { main, root, worktree, environment, binding, token: action.payload.attachToken };
+}
+
+test('original worker recovers its exact checkout from a neutral cwd without coordinator action', () => {
+  const fixture = attachedWorker();
+  const { root, worktree, environment, token } = fixture;
+  const mainRevision = git(root, ['rev-parse', 'HEAD']);
+  fs.appendFileSync(path.join(worktree, 'fixture.txt'), 'delivery\n');
+  git(worktree, ['add', '.']);
+  git(worktree, ['-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.test', 'commit', '-qm', 'worker']);
+  const workerRevision = git(worktree, ['rev-parse', 'HEAD']);
+  fs.rmSync(worktree, { recursive: true });
+  const prompt = handle({ hook_event_name: 'UserPromptSubmit', cwd: worktree, session_id: 'worker-session', prompt: 'Resume the original assignment.' }, environment);
+  assert.ok(prompt.hookSpecificOutput.additionalContext.includes(fixture.main));
+  assert.ok(prompt.hookSpecificOutput.additionalContext.includes(`ponytail worktree recover ${token}`));
+  const hook = handle({ hook_event_name: 'PreToolUse', cwd: worktree, session_id: 'worker-session', tool_input: { cmd: `ponytail worktree recover ${token}` } }, environment);
+  assert.notEqual(hook?.hookSpecificOutput?.permissionDecision, 'deny');
+  const recover = () => spawnSync(ponytail, ['worktree', 'recover', token], { cwd: os.tmpdir(), env: environment, encoding: 'utf8' });
+  const result = recover();
+  assert.equal(result.status, 0, result.stderr);
+  const recovery = JSON.parse(result.stdout);
+  assert.equal(recovery.sessionId, fixture.binding.sessionId);
+  assert.equal(recovery.worktree, worktree);
+  assert.equal(recovery.revision, workerRevision);
+  assert.equal(git(root, ['rev-parse', 'HEAD']), mainRevision);
+  assert.equal(git(worktree, ['branch', '--show-current']), 'worker');
+  fs.appendFileSync(path.join(worktree, 'fixture.txt'), 'unsaved\n');
+  assert.equal(recover().status, 0);
+  assert.match(fs.readFileSync(path.join(worktree, 'fixture.txt'), 'utf8'), /unsaved/);
+  assert.equal(readWorkerBindings(environment).bindings[0].sessionId, 'worker-session');
+});
+
+test('recovery hook authenticates the exact worker before consulting its absent cwd', () => {
+  const { worktree, environment, token } = attachedWorker();
+  fs.rmSync(worktree, { recursive: true });
+  for (const sessionId of ['other-session', undefined]) {
+    const output = handle({ hook_event_name: 'PreToolUse', cwd: worktree, session_id: sessionId, tool_input: { cmd: `ponytail worktree recover ${token}` } }, environment);
+    assert.equal(output.hookSpecificOutput.permissionDecision, 'deny');
+    assert.equal(fs.existsSync(worktree), false);
+  }
+  const result = spawnSync(ponytail, ['worktree', 'recover', 'wrong-token'], { cwd: os.tmpdir(), env: environment, encoding: 'utf8' });
+  assert.equal(result.status, 1, result.stderr);
+  assert.match(result.stderr, /capability/);
+  assert.equal(fs.existsSync(worktree), false);
+});
+
+test('recovery refuses a symlink, occupied branch, locked registration, or unavailable source', async context => {
+  for (const condition of ['symlink', 'occupied', 'locked', 'source', 'branch']) {
+    await context.test(condition, () => {
+      const { main, root, worktree, environment, token } = attachedWorker();
+      let other;
+      if (condition === 'occupied') {
+        git(root, ['worktree', 'remove', worktree]);
+        other = path.join(directory(), 'other');
+        git(root, ['worktree', 'add', other, 'worker']);
+      } else {
+        if (condition === 'locked') git(root, ['worktree', 'lock', worktree]);
+        fs.rmSync(worktree, { recursive: true });
+      }
+      if (condition === 'symlink') {
+        other = directory();
+        fs.writeFileSync(path.join(other, 'keep'), 'private');
+        fs.symlinkSync(other, worktree);
+      }
+      if (condition === 'source') fs.renameSync(main, `${main}-moved`);
+      if (condition === 'branch') git(root, ['update-ref', '-d', 'refs/heads/worker']);
+      const result = spawnSync(ponytail, ['worktree', 'recover', token], { cwd: os.tmpdir(), env: environment, encoding: 'utf8' });
+      assert.equal(result.status, 1, result.stderr);
+      if (condition === 'symlink') assert.equal(fs.readFileSync(path.join(other, 'keep'), 'utf8'), 'private');
+      else assert.equal(fs.existsSync(worktree), false);
+      if (condition === 'occupied') assert.equal(git(other, ['branch', '--show-current']), 'worker');
+    });
+  }
+});
+
+test('legacy bindings explicitly enroll recovery provenance without changing the V1 reader', () => {
+  const { main, worktree, environment, token } = attachedWorker();
+  const file = path.join(environment.PONYTAIL_CAMPAIGN_STATE_DIR, 'campaign-worker-bindings.json');
+  const current = JSON.parse(fs.readFileSync(file, 'utf8'));
+  fs.writeFileSync(file, JSON.stringify({ schemaVersion: 1, bindings: current.bindings.map(({ mainWorktree, mainGitDirectory, ...binding }) => binding) }));
+  assert.equal(readWorkerBindings(environment).bindings[0].mainWorktree, null);
+  fs.rmSync(worktree, { recursive: true });
+  const result = spawnSync(ponytail, ['worktree', 'recover', token], { cwd: os.tmpdir(), env: environment, encoding: 'utf8' });
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(readWorkerBindings(environment).bindings[0].mainWorktree, main);
+  assert.equal(JSON.parse(fs.readFileSync(file, 'utf8')).schemaVersion, 2);
+});
+
+test('retained pair reattachment rotates its capability without replacing session or checkout', () => {
+  const { root, worktree, environment, binding, token } = attachedWorker();
+  const campaignGraph = graph();
+  campaignGraph.plans.find(plan => plan.id === 'work-00').lifecycle = 'closed';
+  withLedgerLock(root, 'campaign', environment, ledger => {
+    Object.assign(ledger.assignments[0], { sessionId: binding.sessionId, worktree, branch: binding.branch, workerRevision: binding.revision, state: 'ARCHIVED' });
+    ledger.pendingActions = [];
+    ledger.workers.push({ sessionId: binding.sessionId, worktree, branch: binding.branch, revision: binding.revision, activity: 'idle', clean: true, evidenceComplete: false, worktreeArchived: false, sessionArchived: false });
+  });
+  writeHostObservation(root, 'campaign', { schemaVersion: 1, campaignId: 'campaign', observedAt: new Date().toISOString(), completeSessionIds: [binding.sessionId], sessions: [{ sessionId: binding.sessionId, state: 'completed', worktree, managedWorktree: true }] }, environment);
+  const action = withLedgerLock(root, 'campaign', environment, ledger => advanceLedger(campaignGraph, ledger, environment));
+  assert.equal(action.type, 'REUSE_WORKER');
+  const replacement = bindWorker(environment, worktree, action.payload.attachToken, binding.sessionId);
+  assert.equal(replacement.sessionId, binding.sessionId);
+  assert.equal(replacement.worktree, worktree);
+  assert.notEqual(replacement.assignmentId, binding.assignmentId);
+  assert.equal(readWorkerBindings(environment).bindings.length, 1);
+  assert.throws(() => workerRecoveryBinding(environment, token), /capability/);
+  assert.equal(workerRecoveryBinding(environment, action.payload.attachToken).sessionId, binding.sessionId);
+});
+
+test('recovery rebuilds a removed slot directory with or without a surviving Git registration', async context => {
+  for (const registered of [true, false]) await context.test(`registered=${registered}`, () => {
+    const { root, worktree, environment, token } = attachedWorker();
+    if (!registered) git(root, ['worktree', 'remove', worktree]);
+    fs.rmSync(path.dirname(worktree), { recursive: true });
+    const result = spawnSync(ponytail, ['worktree', 'recover', token], { cwd: os.tmpdir(), env: environment, encoding: 'utf8' });
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(git(worktree, ['branch', '--show-current']), 'worker');
+  });
+});
+
+test('worker-owned recovery acknowledges the original pending action without a new coordinator observation', () => {
+  const { root, worktree, environment, binding, token } = attachedWorker();
+  withLedgerLock(root, 'campaign', environment, ledger => {
+    const assignment = ledger.assignments.find(item => item.id === binding.assignmentId);
+    Object.assign(assignment, { sessionId: binding.sessionId, worktree, branch: binding.branch, workerRevision: binding.revision, state: 'ACTIVE' });
+    ledger.pendingActions = [{ schemaVersion: 4, id: 'original-recovery', type: 'RECOVER_WORKTREE', assignmentId: binding.assignmentId,
+      idempotencyKey: 'original-recovery-key', payload: { sessionId: binding.sessionId, previousWorktree: worktree, branch: binding.branch, revision: binding.revision } }];
+  });
+  fs.rmSync(worktree, { recursive: true });
+  const result = spawnSync(ponytail, ['worktree', 'recover', token], { cwd: os.tmpdir(), env: environment, encoding: 'utf8' });
+  assert.equal(result.status, 0, result.stderr);
+  const ledger = readLedger(root, 'campaign', environment);
+  assert.deepEqual(ledger.pendingActions, []);
+  assert.equal(ledger.completedActions[0].actionId, 'original-recovery');
+  assert.equal(ledger.completedActions[0].result.ok, true);
+  assert.equal(ledger.assignments[0].id, binding.assignmentId);
+  assert.equal(ledger.assignments[0].sessionId, binding.sessionId);
 });

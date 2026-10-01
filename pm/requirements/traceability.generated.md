@@ -9,6 +9,7 @@ Source: `.agents/config/project/traceability.json`
 Requirement: [pm/requirements/worker-worktree-retention.md](worker-worktree-retention.md)
 
 - implementation: implements [src/campaign-orchestration.js:8](../../src/campaign-orchestration.js#L8)
+- implementation: implements [src/worker-worktrees.js:6](../../src/worker-worktrees.js#L6)
 - unit-test: verifies [tests/campaign-orchestration.test.js:8](../../tests/campaign-orchestration.test.js#L8)
 - integration-test: verifies [tests/worker-worktrees.test.js:6](../../tests/worker-worktrees.test.js#L6)
 - uat: verifies [pm/uat/worker-worktree-retention.md:5](../../pm/uat/worker-worktree-retention.md#L5)

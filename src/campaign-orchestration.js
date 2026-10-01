@@ -14,6 +14,7 @@ const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 const { buildRepositoryInventory, campaignGraph } = require('./campaign-census');
 const { runReclamation } = require('./worktree-reclamation');
+const { recoverySource, recoverCheckout } = require('./worker-worktrees');
 
 const ASSIGNMENT_STATES = [
   'DISPATCH_PENDING',
@@ -218,6 +219,22 @@ function readWorkerBindingsV1(value, file = 'campaign worker bindings') {
   return { schemaVersion: 1, bindings };
 }
 
+function readWorkerBindingsV2(value, file = 'campaign worker bindings') {
+  exactKeys(value, ['schemaVersion', 'bindings'], file);
+  if (value.schemaVersion !== 2 || !Array.isArray(value.bindings)) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', `${file}: expected worker binding schema V2`);
+  const bindings = value.bindings.map((binding, index) => {
+    const { mainWorktree, mainGitDirectory, ...legacy } = binding;
+    exactKeys(binding, ['repositoryRoot', 'campaignId', 'assignmentId', 'coordinatorSessionId', 'attachTokenHash', 'sessionId', 'worktree', 'branch', 'revision', 'boundAt', 'mainWorktree', 'mainGitDirectory'], `${file}.bindings[${index}]`);
+    optionalString(mainWorktree, 'mainWorktree');
+    optionalString(mainGitDirectory, 'mainGitDirectory');
+    if ((mainWorktree === null) !== (mainGitDirectory === null)) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', 'worker recovery source fields must both be present or both unknown');
+    readWorkerBindingsV1({ schemaVersion: 1, bindings: [legacy] }, file);
+    return { ...binding };
+  });
+  readWorkerBindingsV1({ schemaVersion: 1, bindings: bindings.map(({ mainWorktree, mainGitDirectory, ...legacy }) => legacy) }, file);
+  return { schemaVersion: 2, bindings };
+}
+
 function readLedgerV1(value, file = 'campaign ledger') {
   exactKeys(value, ['schemaVersion', 'campaignId', 'topLevelWorktree', 'coordinatorSessionId', 'integrationBranch', 'integrationRevision', 'assignments', 'pendingAction', 'completedActions', 'workers'], file);
   if (value.schemaVersion !== 1) fail('CAMPAIGN_ORCHESTRATION_VERSION', `${file}: unsupported schemaVersion`);
@@ -341,7 +358,7 @@ function readCurrentLedger(value, file = 'campaign ledger') {
 
 const CampaignLedgerReaders = Object.freeze({ V1: readLedgerV1, V2: readLedgerV2, V3: readLedgerV3, V4: readLedgerV4, V5: readLedgerV5 });
 const CampaignHostObservationReaders = Object.freeze({ V1: readHostObservationV1 });
-const CampaignWorkerBindingReaders = Object.freeze({ V1: readWorkerBindingsV1 });
+const CampaignWorkerBindingReaders = Object.freeze({ V1: readWorkerBindingsV1, V2: readWorkerBindingsV2 });
 const CampaignWorkerDeliveryReaders = Object.freeze({ V1: readWorkerDeliveriesV1 });
 
 function readReadyActionsV1(value) {
@@ -676,10 +693,12 @@ function workerBindingsPath(environment = process.env) {
 
 function readWorkerBindings(environment = process.env) {
   const file = workerBindingsPath(environment);
-  if (!fs.existsSync(file)) return { schemaVersion: 1, bindings: [] };
+  if (!fs.existsSync(file)) return { schemaVersion: 2, bindings: [] };
   let value;
   try { value = JSON.parse(fs.readFileSync(file, 'utf8')); } catch (error) { fail('CAMPAIGN_WORKER_BINDING_IO', `${file}: ${error.message}`, 2); }
-  return readWorkerBindingsV1(value, file);
+  if (value.schemaVersion === 2) return readWorkerBindingsV2(value, file);
+  const legacy = readWorkerBindingsV1(value, file);
+  return { schemaVersion: 2, bindings: legacy.bindings.map(binding => ({ ...binding, mainWorktree: null, mainGitDirectory: null })) };
 }
 
 function withWorkerBindingsLock(environment, operation) {
@@ -693,7 +712,7 @@ function withWorkerBindingsLock(environment, operation) {
         const state = readWorkerBindings(environment);
         const result = operation(state);
         const temporary = `${file}.${process.pid}.${crypto.randomUUID()}.tmp`;
-        fs.writeFileSync(temporary, `${JSON.stringify(readWorkerBindingsV1(state, file), null, 2)}\n`, { flag: 'wx', mode: 0o600 });
+        fs.writeFileSync(temporary, `${JSON.stringify(readWorkerBindingsV2(state, file), null, 2)}\n`, { flag: 'wx', mode: 0o600 });
         fs.renameSync(temporary, file);
         return result;
       } finally {
@@ -741,6 +760,8 @@ function bindWorker(environment, invocationWorktree, attachToken, sessionId) {
   if (!fs.existsSync(ledger.topLevelWorktree)) fail('CAMPAIGN_WORKER_OWNER_MISSING', `owning worktree is unavailable: ${ledger.topLevelWorktree}`);
   if (canonicalWorktree === ledger.topLevelWorktree) fail('CAMPAIGN_WORKER_SCOPE', 'a coordinator worktree cannot attach as its own worker');
   const identity = repositoryIdentity(canonicalWorktree);
+  const source = recoverySource(ledger.topLevelWorktree);
+  if (repositoryCommonDirectory(canonicalWorktree) !== source.mainGitDirectory) fail('CAMPAIGN_WORKER_SCOPE', 'worker does not belong to the owning project Git repository');
   if (!identity.branch) fail('CAMPAIGN_WORKER_SCOPE', 'worker worktree must have a branch');
   if (assignment.worktree && assignment.worktree !== canonicalWorktree) fail('CAMPAIGN_WORKER_SCOPE', `assignment is reserved for worker ${assignment.worktree}`);
   const attachTokenHash = crypto.createHash('sha256').update(attachToken).digest('hex');
@@ -750,7 +771,16 @@ function bindWorker(environment, invocationWorktree, attachToken, sessionId) {
       if (replay.sessionId !== sessionId || replay.worktree !== canonicalWorktree) fail('CAMPAIGN_WORKER_BINDING_CONFLICT', 'attach token is already bound to another worker');
       return replay;
     }
-    if (state.bindings.some((binding) => binding.sessionId === sessionId || binding.worktree === canonicalWorktree)) fail('CAMPAIGN_WORKER_BINDING_CONFLICT', 'worker session or worktree is already bound');
+    const previous = state.bindings.find(binding => binding.sessionId === sessionId || binding.worktree === canonicalWorktree);
+    if (previous) {
+      const previousLedger = readLedger(previous.repositoryRoot, previous.campaignId, environment);
+      const previousAssignment = previousLedger.assignments.find(({ id }) => id === previous.assignmentId);
+      if (previous.repositoryRoot !== ledger.topLevelWorktree || previous.sessionId !== sessionId || previous.worktree !== canonicalWorktree
+        || previousAssignment?.state !== 'ARCHIVED' || previousLedger.pendingActions.some(({ assignmentId }) => assignmentId === previous.assignmentId)) {
+        fail('CAMPAIGN_WORKER_BINDING_CONFLICT', 'worker session or worktree is already bound');
+      }
+      state.bindings = state.bindings.filter(binding => binding !== previous);
+    }
     const binding = {
       repositoryRoot: ledger.topLevelWorktree,
       campaignId: ledger.campaignId,
@@ -762,6 +792,7 @@ function bindWorker(environment, invocationWorktree, attachToken, sessionId) {
       branch: identity.branch,
       revision: identity.revision,
       boundAt: new Date().toISOString(),
+      ...source,
     };
     state.bindings.push(binding);
     return binding;
@@ -791,9 +822,69 @@ function replaceRecoveredWorkerBinding(environment, assignmentId, recoveredBindi
     if (state.bindings.some((item, index) => index !== bindingIndex && item.worktree === recoveredBinding.worktree)) {
       fail('CAMPAIGN_WORKER_BINDING_CONFLICT', `recovered worktree ${recoveredBinding.worktree} is already bound`);
     }
-    state.bindings[bindingIndex] = readWorkerBindingsV1({ schemaVersion: 1, bindings: [recoveredBinding] }).bindings[0];
+    state.bindings[bindingIndex] = readWorkerBindingsV2({ schemaVersion: 2, bindings: [recoveredBinding] }).bindings[0];
     return state.bindings[bindingIndex];
   });
+}
+
+function workerRecoveryBinding(environment, token, sessionId = null) {
+  if (typeof token !== 'string' || !token) fail('CAMPAIGN_WORKER_RECOVERY', 'worker recovery requires its attachment capability');
+  const hash = crypto.createHash('sha256').update(token).digest('hex');
+  const binding = readWorkerBindings(environment).bindings.find(item => item.attachTokenHash === hash);
+  if (!binding || (sessionId !== null && binding.sessionId !== sessionId)) fail('CAMPAIGN_WORKER_RECOVERY', 'recovery capability does not belong to this authenticated worker');
+  return binding;
+}
+
+function workerRecoveryContext(environment, sessionId) {
+  if (typeof sessionId !== 'string' || !sessionId) return null;
+  const binding = readWorkerBindings(environment).bindings.find(item => item.sessionId === sessionId);
+  if (!binding) return null;
+  const ledger = readLedger(binding.repositoryRoot, binding.campaignId, environment);
+  const assignment = ledger.assignments.find(({ id }) => id === binding.assignmentId);
+  if (!assignment) fail('CAMPAIGN_WORKER_RECOVERY', 'worker has no durable assignment recovery capability');
+  workerRecoveryBinding(environment, assignment.attachToken, sessionId);
+  return `Retained worker ${sessionId}: owning top-level project ${binding.repositoryRoot}; original checkout ${binding.worktree}; branch ${binding.branch}; main worktree ${binding.mainWorktree || '(legacy source enrolls on recovery)'}. If the checkout is missing, run ponytail worktree recover ${assignment.attachToken} from an existing neutral directory, then canonical project adoption/setup. Recover yourself without waiting for a coordinator action; never replace this session or overwrite local changes. Git reconstruction restores committed content only; preserve native snapshots for unsaved files.`;
+}
+
+function recoverWorker(environment, token) {
+  let binding = workerRecoveryBinding(environment, token);
+  // Legacy bindings explicitly enroll a source at their first capability-owned
+  // recovery. Historical readers never invent provenance or mutate old records.
+  if (!binding.mainWorktree) {
+    const source = recoverySource(binding.repositoryRoot);
+    binding = withWorkerBindingsLock(environment, state => {
+      const current = state.bindings.find(item => item.attachTokenHash === binding.attachTokenHash);
+      if (!current) fail('CAMPAIGN_WORKER_RECOVERY', 'worker binding changed during recovery');
+      Object.assign(current, source);
+      return current;
+    });
+  }
+  const ledger = readLedger(binding.repositoryRoot, binding.campaignId, environment);
+  const assignment = ledger.assignments.find(item => item.id === binding.assignmentId);
+  if (!assignment || crypto.createHash('sha256').update(assignment.attachToken).digest('hex') !== binding.attachTokenHash) {
+    fail('CAMPAIGN_WORKER_RECOVERY', 'durable assignment no longer authorizes this worker recovery');
+  }
+  const pending = ledger.pendingActions.find(item => item.assignmentId === binding.assignmentId && item.type === 'RECOVER_WORKTREE');
+  if (pending && (pending.payload.previousWorktree !== binding.worktree || pending.payload.branch !== binding.branch
+    || git(binding.mainWorktree, ['rev-parse', '--verify', `refs/heads/${binding.branch}^{commit}`]) !== pending.payload.revision)) {
+    fail('CAMPAIGN_WORKER_RECOVERY', 'preserved branch does not match the existing recovery action; no checkout was reconstructed');
+  }
+  const recovery = recoverCheckout(binding);
+  if (pending) {
+    withWorktreeLock(binding.repositoryRoot, environment, () => withLedgerLock(binding.repositoryRoot, binding.campaignId, environment, current => {
+      workerRecoveryBinding(environment, token, binding.sessionId);
+      const action = current.pendingActions.find(item => item.id === pending.id);
+      const result = { ok: true, sessionId: binding.sessionId, worktree: binding.worktree, branch: binding.branch, revision: recovery.revision };
+      if (action && (action.payload.previousWorktree !== recovery.worktree || action.payload.revision !== recovery.revision
+        || git(recovery.worktree, ['status', '--porcelain']).length !== 0)) {
+        fail('CAMPAIGN_WORKER_RECOVERY', 'original recovery action cannot be acknowledged from changed or dirty state');
+      }
+      // The authenticated worker restores the same path, not a new host
+      // association. Record physical Git proof without inventing host evidence.
+      recordActionResult(current, pending.id, result);
+    }));
+  }
+  return recovery;
 }
 
 function resolveInvocationWorktree(invocationWorktree, environment = process.env, allowWorkerRead = true) {
@@ -879,18 +970,44 @@ function withWorktreeLock(repositoryRoot, environment, operation) {
   for (let attempt = 0; attempt < 100; attempt += 1) {
     try {
       const descriptor = fs.openSync(lock, 'wx', 0o600);
-      try { return operation(); }
+      try {
+        fs.writeSync(descriptor, String(process.pid));
+        return operation();
+      }
       finally {
         fs.closeSync(descriptor);
         fs.unlinkSync(lock);
       }
     } catch (error) {
       if (error.code !== 'EEXIST') throw error;
-      if (Date.now() - fs.statSync(lock).mtimeMs > 5000) { fs.unlinkSync(lock); continue; }
+      let owner;
+      try { owner = fs.readFileSync(lock, 'utf8'); }
+      catch (readError) { if (readError.code === 'ENOENT') continue; throw readError; }
+      if (/^[1-9][0-9]*$/.test(owner) && Number.isSafeInteger(Number(owner))) {
+        try { process.kill(Number(owner), 0); }
+        catch (ownerError) {
+          if (ownerError.code === 'ESRCH') {
+            // Serialize contenders reaping this dead owner so a second reaper
+            // cannot unlink a fresh owner's lock after the first removes it.
+            const reaper = `${lock}.${owner}.reap`;
+            let descriptor;
+            try {
+              descriptor = fs.openSync(reaper, 'wx', 0o600);
+              if (fs.readFileSync(lock, 'utf8') === owner) fs.unlinkSync(lock);
+            } catch (readError) {
+              if (!['ENOENT', 'EEXIST'].includes(readError.code)) throw readError;
+            } finally {
+              if (descriptor !== undefined) { fs.closeSync(descriptor); fs.unlinkSync(reaper); }
+            }
+            continue;
+          }
+          if (ownerError.code !== 'EPERM') throw ownerError;
+        }
+      }
       Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 10);
     }
   }
-  fail('CAMPAIGN_WORKTREE_LOCK', 'timed out waiting for campaign worktree lock', 2);
+  fail('CAMPAIGN_WORKTREE_LOCK', `timed out waiting for campaign worktree lock: ${lock}`, 2);
 }
 
 function setLedgerCoordinator(repositoryRoot, campaignId, sessionId, environment = process.env) {
@@ -1735,6 +1852,9 @@ function diagnostic(error) {
 }
 
 module.exports = {
+  recoverWorker,
+  workerRecoveryBinding,
+  workerRecoveryContext,
   CampaignActionReaders: Object.freeze({ V1: readActionV1, V2: readActionV2, V3: readActionV3, V4: readActionV4 }),
   CampaignHostObservationReaders,
   CampaignLedgerReaders,

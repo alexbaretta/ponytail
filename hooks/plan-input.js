@@ -14,6 +14,8 @@ const {
   releaseLedgerCoordinator,
   resolveInvocationWorktree,
   setLedgerCoordinator,
+  workerRecoveryBinding,
+  workerRecoveryContext,
 } = require('../src/campaign-orchestration');
 
 const PlanInputCoordinatorBindingReaders = Object.freeze({ V1: readBindingsV1 });
@@ -167,6 +169,21 @@ function deniedPreToolOutput(reason) {
 }
 
 function handle(data, environment = process.env) {
+  if (data.hook_event_name === 'UserPromptSubmit') {
+    const recoveryContext = workerRecoveryContext(environment, data.session_id);
+    if (recoveryContext) return { hookSpecificOutput: { hookEventName: 'UserPromptSubmit', additionalContext: recoveryContext } };
+    if (!/^\/ponytail-enqueue\s+/.test(data.prompt || '')) return null;
+  }
+  if (data.hook_event_name === 'PreToolUse') {
+    const recovery = commandStrings(data.tool_input).map(command => /(?:^|(?:&&|\|\||;)\s*)ponytail worktree recover ([A-Za-z0-9_-]+)(?=\s*(?:$|&&|\|\||;))/.exec(command)).find(Boolean);
+    if (recovery) {
+      try {
+        if (typeof data.session_id !== 'string' || !data.session_id) fail('worker recovery requires a host-authenticated session identity');
+        const binding = workerRecoveryBinding(environment, recovery[1], data.session_id);
+        return preToolOutput(`Worker ${binding.sessionId} may recover only its original checkout ${binding.worktree} from ${binding.mainWorktree || 'its owning project main worktree'}. Run from an existing neutral cwd; preserve session and assignment identity.`);
+      } catch (error) { return deniedPreToolOutput(error.message); }
+    }
+  }
   const repository = repositoryRoot(data.cwd || process.cwd());
   if (data.hook_event_name === 'PreToolUse') {
     const campaign = campaignCommand(data.tool_input);
@@ -175,7 +192,7 @@ function handle(data, environment = process.env) {
         if (campaign.operation === 'attach') {
           if (!campaign.argument) fail('campaign attach requires a token');
           const binding = bindWorker(environment, repository, campaign.argument, data.session_id);
-          return preToolOutput(`Worker session authenticated for campaign ${binding.campaignId} owned by ${binding.repositoryRoot}.`);
+          return preToolOutput(`Worker session authenticated for campaign ${binding.campaignId} owned by ${binding.repositoryRoot}. Main worktree: ${binding.mainWorktree}. Retain the attachment capability. If this checkout disappears, recover it yourself from an existing neutral cwd with ponytail worktree recover <attachment-token>, then run canonical project adoption/setup. No coordinator recovery action is required.`);
         }
         const resolution = resolveInvocationWorktree(repository, environment, campaign.operation === 'status');
         if (campaign.operation !== 'status') {

@@ -345,10 +345,15 @@
         "module": "src/campaign-orchestration.js",
         "readerRegistryExport": "CampaignWorkerBindingReaders"
       },
-      "currentVersion": "V1",
-      "versions": ["V1"],
-      "supportedReadVersions": ["V1"],
+      "currentVersion": "V2",
+      "versions": ["V1", "V2"],
+      "supportedReadVersions": ["V1", "V2"],
       "supportedDowngradeVersions": []
+    },
+    {
+      "id": "worker-worktree-recovery",
+      "implementation": {"workspace": "ponytail", "module": "src/worker-worktrees.js", "readerRegistryExport": "WorkerRecoveryReaders"},
+      "currentVersion": "V1", "versions": ["V1"], "supportedReadVersions": ["V1"], "supportedDowngradeVersions": []
     },
     {
       "id": "campaign-worker-deliveries",

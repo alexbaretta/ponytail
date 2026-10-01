@@ -53,6 +53,7 @@
     }
   ],
   "artifacts": [
+    {"class": "implementation", "path": "src/worker-worktrees.js", "locator": "text"},
     {"class": "uat", "path": "pm/uat/worker-worktree-retention.md", "locator": "text"},
     {"class": "plan", "path": "pm/plans/in_progress/2026-10-01-worker-worktree-retention/plan.md", "locator": "text"},
     {"class": "integration-test", "path": "tests/worker-worktrees.test.js", "locator": "text"},

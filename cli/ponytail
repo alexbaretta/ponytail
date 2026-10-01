@@ -682,6 +682,11 @@ Exit statuses: 1 invalid setup/command, 2 no Git worktree, 3 unregistered, 4 QA 
 def run():
     script_path = Path(sys.argv[1])
     arguments = sys.argv[2:]
+    if arguments[:2] == ["worktree", "recover"]:
+        if len(arguments) != 3:
+            fail("usage: ponytail worktree recover <attachment-token>")
+        source_root = source_root_for(script_path, None)
+        return subprocess.run(["node", str(source_root / "src/worker-worktrees.js"), arguments[2]]).returncode
     root, main_root = repository_roots(Path.cwd())
     operation = arguments.pop(0) if arguments else "help"
     home_value = os.environ.get("HOME")
