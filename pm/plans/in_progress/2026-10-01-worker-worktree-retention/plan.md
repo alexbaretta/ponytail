@@ -108,3 +108,13 @@ host cleanup cause is undetermined. This reinforces recovery resilience, not a
 claim that Ponytail controls Codex's native cleanup policy. The same PWP
 session later returned its branch and binding to the original native checkout
 and adopted it; full client setup and campaign resumption remain open.
+
+Subsequent original-session PWP browser acceptance now corroborates resumed
+work after recovery: canonical tasklet prerequisites passed, owning-Project
+login and sibling-Project denial were observed, and sanitized partial evidence
+was preserved before the human password-reset handoff. The exact native turn
+and the separately documented host cleanup policy are recorded in the
+[acceptance Suite](../../../uat/worker-worktree-retention.md). This supersedes
+the earlier setup blocker only for that tasklet's required prerequisites; it
+does not establish full client setup, completed product acceptance, or a
+disabled host automatic-deletion setting. T04 and this plan remain open.

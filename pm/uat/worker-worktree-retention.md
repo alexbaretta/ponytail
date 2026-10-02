@@ -207,3 +207,26 @@ is recorded by the [repair plan](../plans/closed/2026-10-01-bootstrap-adoption-u
 Live effect-disposition/gate-race adoption remains pending the GWEN capacity
 repair and its own human index publication; fixture proof does not establish
 live tasklet execution or host continuity.
+
+### Further live continuity evidence and host boundary, 2026-10-01
+
+The original PWP session `01a0f569-3b81-7472-b302-4782dd25ca27`, completed
+native turn `01a0fb31-bdbd-74f1-a969-ba50cf48647d`, reported real browser
+acceptance from its restored original checkout. Canonical TLS, prerequisite
+builds, and the disposable browser control plane succeeded without resetting
+retained Elastic data. The browser showed login in the owning Project and
+denied access to a sibling Project. The worker recorded sanitized partial
+evidence, then became idle at the required human password-reset handoff;
+replacement-password login and tasklet completion remain unverified. This
+corroborates recovery followed by actual work in the original native session,
+not completion of the full manual host Arc or product acceptance.
+
+The current [official worktree documentation](https://learn.chatgpt.com/docs/environments/git-worktrees)
+states that the host defaults to retaining the most recent fifteen managed
+worktrees and permits automatic deletion to be disabled in settings. It also
+documents protection for pinned/in-progress chats and permanent worktrees,
+plus cleanup on chat archival or to meet the configured limit. This host
+policy is distinct from Ponytail's per-top-level-project worker capacity.
+Ponytail emits no automatic retirement, but that alone does not disable host
+cleanup. The installed host's automatic-deletion setting has not been
+verified or changed; the live Arc's retention prerequisite remains open.
