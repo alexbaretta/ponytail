@@ -1874,7 +1874,7 @@ async function insertTextDocument(client, buffer) {
   return documentId;
 }
 
-async function prepareGitCommitBatch(context, commits, signal) {
+async function prepareGitCommitBatch(client, context, commits, signal) {
   const prepared = [];
   const blobOids = new Set();
   for (const [commitOid, ...parents] of commits) {
@@ -1893,6 +1893,11 @@ async function prepareGitCommitBatch(context, commits, signal) {
     prepared.push({ commitOid, parents, treeOid, committedAt, entries });
   }
   const blobs = new Map();
+  const indexed = await client.query(`
+    SELECT blob_oid FROM ponytail_index.git_blob_v1
+    WHERE repository_id = $1::uuid AND blob_oid = ANY($2::text[])`,
+  [context.repositoryId, [...blobOids]]);
+  for (const { blob_oid } of indexed.rows) blobOids.delete(blob_oid);
   for (const blobOid of [...blobOids].sort()) {
     signal?.throwIfAborted();
     blobs.set(blobOid, await gitBuffer(context.root, ['cat-file', 'blob', blobOid]));
@@ -1901,7 +1906,7 @@ async function prepareGitCommitBatch(context, commits, signal) {
 }
 
 async function ingestGitCommitBatch(client, context, commits, signal) {
-  const prepared = await prepareGitCommitBatch(context, commits, signal);
+  const prepared = await prepareGitCommitBatch(client, context, commits, signal);
   let blobs = 0;
   await client.query('BEGIN');
   try {
@@ -2682,6 +2687,7 @@ module.exports = {
   parseRepositoryIndexUpdateArguments,
   databaseOptions,
   refreshRepositoryTextIndex,
+  prepareGitCommitBatch,
   repositoryIndexProgress,
   grepRepository,
 };

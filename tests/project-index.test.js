@@ -21,6 +21,7 @@ const {
   parseSearchArguments,
   parseValidationArguments,
   publishTraceabilityGeneration,
+  prepareGitCommitBatch,
   repositoryIndexProgress,
   queryPlanGraph,
   searchPlans,
@@ -66,6 +67,35 @@ function fixture() {
   ], { cwd: root });
   return { configurationPath, root };
 }
+
+test('incremental commit preparation never rereads already indexed Git blobs', async () => {
+  const { root } = fixture();
+  const known = execFileSync('git', ['ls-tree', '-r', '--format=%(objectname)', 'HEAD'],
+    { cwd: root, encoding: 'utf8' }).trim().split('\n');
+  fs.writeFileSync(path.join(root, 'src/value.js'), 'const updated = true;\n');
+  execFileSync('git', ['add', 'src/value.js'], { cwd: root });
+  execFileSync('git', ['-c', 'user.name=Test', '-c', 'user.email=test@example.com',
+    'commit', '-qm', 'update one blob'], { cwd: root });
+  const commit = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim();
+  const changed = execFileSync('git', ['rev-parse', 'HEAD:src/value.js'],
+    { cwd: root, encoding: 'utf8' }).trim();
+  const unchanged = execFileSync('git', ['ls-tree', '-r', '--format=%(objectname)', 'HEAD'],
+    { cwd: root, encoding: 'utf8' }).trim().split('\n').filter(oid => known.includes(oid));
+  // Persisted immutable blobs need not be available for another content read.
+  for (const oid of unchanged) fs.unlinkSync(path.join(root, '.git/objects', oid.slice(0, 2), oid.slice(2)));
+  const queries = [];
+  const client = { query: async (sql, values) => {
+    queries.push({ sql, values });
+    return { rows: unchanged.map(blob_oid => ({ blob_oid })) };
+  } };
+  const prepared = await prepareGitCommitBatch(client,
+    { root, repositoryId: '019c0000-0000-7000-8000-000000000003' }, [[commit]]);
+  assert.deepEqual([...prepared.blobs.keys()], [changed]);
+  assert.equal(prepared.commits[0].entries.length, unchanged.length + 1);
+  assert.equal(queries.length, 1);
+  assert.match(queries[0].sql, /repository_id = \$1::uuid/);
+  assert.deepEqual(new Set(queries[0].values[1]), new Set([...unchanged, changed]));
+});
 
 test('parses exact repository grep selectors and paths', () => {
   assert.deepEqual(parseGrepArguments(['needle']), {

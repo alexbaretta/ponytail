@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-10-02-index_blob_reads_before_deduplication",
+  "recorded_at": "2026-10-02T10:36:16-07:00",
+  "source_references": ["pm/bugs/closed/2026-10-02-BUG-index_rereads_committed_blobs.md"],
+  "context": {
+    "languages": ["javascript"],
+    "frameworks": ["postgresql"],
+    "components": ["repository-text-index"],
+    "affected_boundaries": ["Git object reads", "immutable blob checkpoints"],
+    "code_references": ["src/project-index.js:1877", "tests/project-index.test.js:71"]
+  },
+  "observed_behavior": "New commits reread every unchanged blob body before database deduplication; the live QA hook repeatedly spawned Git children for minutes.",
+  "expected_behavior": "Only unindexed immutable blob bodies are read while every new commit retains its full tree mapping.",
+  "causal_mechanism": "Full tree expansion supplied all blob IDs to body reads before persisted identities were checked.",
+  "anti_pattern": {
+    "structural_description": "Deduplication follows the expensive immutable-content acquisition boundary.",
+    "why_it_fails": "Database conflict handling avoids duplicate rows but cannot undo repeated Git reads and process startup."
+  },
+  "correct_pattern": {
+    "required_invariant": "A committed repository-scoped immutable blob identity excludes another body read without excluding its tree mapping.",
+    "implementation_description": "Query persisted identities before fetching bodies, remove them from the body-read set, and keep all prepared tree entries."
+  },
+  "applicability_conditions": ["Immutable indexed objects are retained without historical garbage collection", "New trees contain previously indexed blob identities"],
+  "known_non_matches": ["An unseen blob still needs its body read", "Idle database connection alone does not establish a deadlock"],
+  "confirmation_evidence": ["Old preparation failed on a deliberately unavailable already-indexed fixture blob", "Corrected preparation reads only the changed blob and preserves every tree entry"],
+  "regression_proofs": ["tests/project-index.test.js: incremental commit preparation never rereads already indexed Git blobs"]
+}
