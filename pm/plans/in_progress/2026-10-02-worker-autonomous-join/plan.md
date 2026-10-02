@@ -42,3 +42,11 @@ including core, installer, bundled subprojects, TSTS unit tests, and the
 registry, traceability, campaign inventory, and diff checks also pass.
 Live Codex worker continuity and semantic-review behavior are separate host
 gates; the plan stays in progress until they are proven.
+
+The live GWEN authentication worker has now completed one worker-owned
+semantic rebase and authenticated redelivery, followed by the coordinator's
+canonical fast-forward join of `d980c2cad9ab90f7ede1561958fc1da0418ee6e2`.
+The original session continued integrated acceptance. See the
+[partial live UAT evidence](../../../uat/campaign-orchestration.md#partial-live-codex-proof-2026-10-02).
+The two-concurrent-worker live contention and complete post-merge acceptance
+remain unverified; do not close this plan on the single-worker proof.

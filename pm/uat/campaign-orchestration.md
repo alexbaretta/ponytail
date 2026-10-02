@@ -497,6 +497,28 @@ Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
 Automated profile: `node --test --test-name-pattern='working workers retry optimistic' tests/campaign-orchestration.test.js`.
 Live Codex worker-continuity and semantic-review evidence remain a separate gate.
 
+### Partial live Codex proof, 2026-10-02
+
+The original GWEN authentication worker session
+`01a0f688-2e16-7c53-b3bb-72a5bb72dc30` retained its authenticated
+assignment and clean branch while the campaign integration revision advanced
+to `1da6513daff4a9646d16ed653f8b0941f2bfc923`. Its earlier delivery at
+`7af49b4ae002c66947a5008005d2145fde8000be` became `REBASE_REQUIRED`.
+Under the refreshed installed skill, the same worker independently rebased,
+validated, and redelivered clean commit
+`d980c2cad9ab90f7ede1561958fc1da0418ee6e2`, which the scheduler classified
+`READY_TO_MERGE` without a new `REQUEST_REBASE` action. The coordinator
+refreshed the complete nineteen-session host observation and used canonical
+`campaign advance` to fast-forward exactly that commit. The integration
+revision and assignment state then matched `d980c2c` and `MERGED`; the same
+worker continued integrated acceptance on that revision.
+
+This proves one live worker-owned rebase/redelivery/join cycle and native
+session continuity. It does not prove simultaneous two-worker contention, a
+second retry, or completed integrated acceptance. The worker's remaining
+browser Arcs include unproved fixture cases and a human password handoff;
+they are not marked passed.
+
 ## Arc: Dispatch independent work alongside the serialized join lane
 
 Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
