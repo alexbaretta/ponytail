@@ -37,6 +37,10 @@ const {
   readReadyActionsV2,
   readReadyActionsV4,
   readRunnablePlansV1,
+  readRunnablePlansV2,
+  CampaignRunnablePlansReaders,
+  runnablePlanDiagnostics,
+  recordExecutionBlocker,
   readyActions,
   reconcile,
   recordActionResult,
@@ -514,8 +518,10 @@ test('runnable-plans joins satisfied plan dependencies with nonempty canonical t
   const before = command(root, ['rev-parse', 'HEAD']);
   const result = spawnSync(process.execPath, [campaignCli, 'runnable-plans', 'campaign', '--json'], { cwd: root, encoding: 'utf8', env: environment });
   assert.equal(result.status, 0, result.stderr);
-  const report = readRunnablePlansV1(JSON.parse(result.stdout));
-  assert.deepEqual(report.plans, [{ planId: 'ready', path: 'pm/plans/open/ready/plan.md', lifecycle: 'open', sprintId: 'S01', taskletIds: ['S01-F01-T01'] }]);
+  const report = readRunnablePlansV2(JSON.parse(result.stdout));
+  assert.deepEqual(report.plans.map(({ execution, ...plan }) => plan), [{ planId: 'ready', path: 'pm/plans/open/ready/plan.md', lifecycle: 'open', sprintId: 'S01', taskletIds: ['S01-F01-T01'] }]);
+  assert.equal(report.parallelism.theoreticalWorkers, 1);
+  assert.equal(report.parallelism.observedWorkingWorkers, null);
   assert.equal(command(root, ['rev-parse', 'HEAD']), before);
   assert.equal(fs.existsSync(ledgerPath(fs.realpathSync(root), 'campaign', environment)), false);
   const status = spawnSync(process.execPath, [campaignCli, 'status', 'campaign', '--json'], { cwd: root, encoding: 'utf8', env: environment });
@@ -524,13 +530,67 @@ test('runnable-plans joins satisfied plan dependencies with nonempty canonical t
   const schedule = spawnSync(process.execPath, [campaignCli, 'schedule-ready', 'campaign', '--json'], { cwd: root, encoding: 'utf8', env: environment });
   assert.equal(schedule.status, 0, schedule.stderr);
   assert.deepEqual(JSON.parse(schedule.stdout).actions.map(({ payload }) => payload.planId), ['ready']);
+  const action = JSON.parse(schedule.stdout).actions[0];
+  const blocker = { schemaVersion: 1, assignmentId: action.assignmentId, actionId: action.id, phase: 'DISPATCH', state: 'BLOCKED', code: 'HOST_REVIEW_REJECTED', summary: 'Original native dispatch was rejected.', requiredAction: 'Request scoped human authorization; preserve this action.' };
+  const recorded = spawnSync(process.execPath, [campaignCli, 'report-blocker', 'campaign', '--result', JSON.stringify(blocker)], { cwd: root, encoding: 'utf8', env: environment });
+  assert.equal(recorded.status, 0, recorded.stderr);
+  assert.equal(readRunnablePlansV2(JSON.parse(recorded.stdout)).plans[0].execution.anomalies.some(item => item.code === blocker.code), true);
+  const restarted = spawnSync(process.execPath, [campaignCli, 'runnable-plans', 'campaign', '--json'], { cwd: root, encoding: 'utf8', env: environment });
+  assert.equal(restarted.status, 0, restarted.stderr);
+  assert.equal(JSON.parse(restarted.stdout).plans[0].execution.actionId, action.id);
+  assert.equal(JSON.parse(restarted.stdout).plans[0].execution.anomalies.some(item => item.code === blocker.code), true);
   const planPath = 'pm/plans/open/ready/plan.md';
   fs.renameSync(path.join(root, 'pm/plans/open/ready'), path.join(root, 'pm/plans/in_progress/ready'));
   const rootPath = 'pm/plans/in_progress/campaign/plan.md';
   write(root, rootPath, fs.readFileSync(path.join(root, rootPath), 'utf8').replace('../../open/ready/plan.md', '../ready/plan.md'));
   const active = spawnSync(process.execPath, [campaignCli, 'runnable-plans', 'campaign', '--json'], { cwd: root, encoding: 'utf8', env: environment });
   assert.equal(active.status, 0, active.stderr);
-  assert.deepEqual(JSON.parse(active.stdout).plans, [{ ...report.plans[0], path: planPath.replace('/open/', '/in_progress/'), lifecycle: 'in_progress' }]);
+  assert.deepEqual(JSON.parse(active.stdout).plans.map(({ execution, ...plan }) => plan), [{ ...(({ execution, ...plan }) => plan)(report.plans[0]), path: planPath.replace('/open/', '/in_progress/'), lifecycle: 'in_progress' }]);
+});
+
+test('runnable execution diagnostics persist scoped host refusals without changing action identity', () => {
+  const root = repository();
+  const environment = { ...process.env, PONYTAIL_CAMPAIGN_STATE_DIR: temporaryDirectory('ponytail-blocker-state'), PONYTAIL_SESSION_ID: 'coordinator' };
+  const ledger = newLedger(root, 'campaign', 'coordinator');
+  const campaignGraph = graph([
+    { id: 'campaign', parentPlanId: null, dependsOn: [], lifecycle: 'in_progress', path: 'root' },
+    { id: 'ready', parentPlanId: 'campaign', dependsOn: [], lifecycle: 'open', path: 'ready' },
+  ]);
+  const pending = advanceLedger(campaignGraph, ledger, environment);
+  const report = { schemaVersion: 1, assignmentId: pending.assignmentId, actionId: pending.id, phase: 'DISPATCH', state: 'BLOCKED', code: 'HOST_REVIEW_REJECTED', summary: 'Native dispatch rejected before execution.', requiredAction: 'Request narrowly scoped human authorization for this original worker.' };
+  const identities = JSON.stringify(ledger);
+  assert.equal(recordExecutionBlocker(ledger, report, environment).reports.length, 1);
+  assert.equal(recordExecutionBlocker(ledger, report, environment).reports.length, 1);
+  const result = runnablePlanDiagnostics(campaignGraph, ledger, root, environment);
+  assert.equal(result.plans[0].execution.actionId, pending.id);
+  assert.equal(result.plans[0].execution.anomalies.find(item => item.code === report.code).requiredAction, report.requiredAction);
+  assert.equal(result.parallelism.theoreticalWorkers, 1);
+  assert.equal(result.parallelism.shortfall, null);
+  assert.equal(JSON.stringify(ledger), identities);
+  pending.payload.bootstrap = { schemaVersion: 1, sessionId: 'original-worker', worktree: path.join(root, 'missing-checkout'), revision: ledger.integrationRevision, mainWorktree: root, mainGitDirectory: path.join(root, '.git') };
+  writeHostObservation(root, 'campaign', { schemaVersion: 1, campaignId: 'campaign', observedAt: new Date().toISOString(), completeSessionIds: ['original-worker'], sessions: [{ sessionId: 'original-worker', state: 'waiting', worktree: pending.payload.bootstrap.worktree, managedWorktree: true }] }, environment);
+  const missing = runnablePlanDiagnostics(campaignGraph, ledger, root, environment);
+  assert.equal(missing.plans[0].execution.sessionId, 'original-worker');
+  assert.equal(missing.plans[0].execution.worktree, pending.payload.bootstrap.worktree);
+  assert.equal(missing.plans[0].execution.anomalies.some(item => item.code === 'CAMPAIGN_WORKTREE_MISSING'), true);
+  assert.equal(missing.parallelism.observedRunnableWorkers, 0);
+  assert.equal(missing.parallelism.shortfall, 1);
+  writeHostObservation(root, 'campaign', { schemaVersion: 1, campaignId: 'campaign', observedAt: new Date(Date.now() - 360000).toISOString(), completeSessionIds: ['original-worker'], sessions: [{ sessionId: 'original-worker', state: 'working', worktree: pending.payload.bootstrap.worktree, managedWorktree: true }] }, environment);
+  assert.equal(runnablePlanDiagnostics(campaignGraph, ledger, root, environment).parallelism.shortfall, null);
+  assert.throws(() => recordExecutionBlocker(ledger, report, { ...environment, PONYTAIL_SESSION_ID: 'other' }), /bound coordinator/);
+  assert.throws(() => recordExecutionBlocker(ledger, { ...report, assignmentId: 'other' }, environment), /current assignment/);
+  assert.throws(() => recordExecutionBlocker(ledger, { ...report, summary: ledger.assignments[0].attachToken }, environment), /capabilities/);
+  recordExecutionBlocker(ledger, { ...report, state: 'RESOLVED', summary: 'Human authority obtained; refresh host evidence before retry.' }, environment);
+  assert.equal(runnablePlanDiagnostics(campaignGraph, ledger, root, environment).plans[0].execution.anomalies.some(item => item.code === report.code), false);
+});
+
+test('historical runnable summaries normalize unknown execution evidence without inventing counts', () => {
+  const legacy = { schemaVersion: 1, campaignId: 'campaign', invocationWorktree: '/repo', effectiveWorktree: '/repo', integrationRevision: 'revision', plans: [{ planId: 'plan', path: 'pm/plan.md', lifecycle: 'open', sprintId: 'S01', taskletIds: ['T01'] }] };
+  const result = CampaignRunnablePlansReaders.V1(legacy);
+  assert.equal(result.schemaVersion, 2);
+  assert.equal(result.parallelism, null);
+  assert.equal(result.plans[0].execution, null);
+  assert.throws(() => readRunnablePlansV2({ ...result, unexpected: true }), CampaignOrchestrationError);
 });
 
 test('tasklet exhaustion suppresses new, queued, and unstarted dispatch without changing started identity', () => {

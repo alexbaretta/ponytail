@@ -64,7 +64,7 @@ while project-wide management records remain under `pm/`.
   reporting and canonical immediately-runnable tasklet projection.
   `src/campaign-orchestration.js` owns the versioned Ponytail-user
   assignment ledger, authenticated host-observation snapshot, dependency
-  scheduler, runnable-plan summary and batch reservation, reconciled status and ready-action projection, verified
+  scheduler, runnable-plan execution/anomaly summary, scoped blocker reports and batch reservation, reconciled status and ready-action projection, verified
   fast-forward integration, and typed host-action protocol.
   Its per-top-level-project ledgers own the retained worker pool and capacity
   reservations. `src/worker-worktrees.js` owns exact-path Git reconstruction

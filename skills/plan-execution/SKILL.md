@@ -678,6 +678,30 @@ durable state instead of remembering worker assignments in conversation:
    unassigned plans. Planning-only work and final acceptance without tasklets
    are not tasklet-ready dispatch. Do not substitute `readyPlans`, lifecycle,
    conversation, or dependency count for this query.
+   Its V2 `execution` records identify the original assignment, session,
+   checkout, pending action, dispatch state, and observed/reported anomalies.
+   Compare `parallelism.theoreticalWorkers` with `observedRunnableWorkers`
+   and `shortfall` at every safe coordination boundary. A null observed count
+   means incomplete or stale evidence, not zero workers. Native `working`
+   activity is not proof that a tasklet is executing: inspect the exact worker
+   when it may instead be recovering, preparing, or closing earlier work.
+   Work with each anomalously blocked original worker to resolve its exact
+   prerequisite. Continue independent runnable work meanwhile. Request narrow
+   user help when authorization, credentials, or a manual host operation is
+   genuinely required; never bypass host review, duplicate a pending request,
+   replace a started worker, or waive acceptance gates to increase the count.
+   Record a sanitized host refusal with `ponytail campaign report-blocker
+   <campaign-root> --result <json>` from the bound coordinator. The V1 object
+   contains `schemaVersion: 1`, the exact `assignmentId`, nullable `actionId`,
+   `phase` (`DISPATCH`, `RECOVERY`, `ATTACH`, or `EXECUTION`), `state: "BLOCKED"`,
+   `code` (`HOST_REVIEW_REJECTED`, `AUTHORIZATION_REQUIRED`,
+   `MANUAL_ACTION_REQUIRED`, or `ENVIRONMENT_BLOCKED`), nonempty `summary`,
+   and `requiredAction`. Do not include attachment capabilities, credentials,
+   or raw logs. Reports survive coordinator restarts but confer no authority
+   and do not transition assignments. After the prerequisite is demonstrably
+   repaired, report `state: "RESOLVED"` with the evidence in `summary`, refresh
+   complete host observation, and resume the same action only when its normal
+   gates permit it. Do not classify a failed recovery as successful dispatch.
    Run `ponytail campaign schedule-ready [<campaign-root>] --json` to reserve
    all eligible unassigned or queued plans deterministically, reusing safe idle
    pairs first and respecting the per-project capacity. Execute its returned

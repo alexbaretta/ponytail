@@ -345,10 +345,20 @@
         "module": "src/campaign-orchestration.js",
         "readerRegistryExport": "CampaignRunnablePlansReaders"
       },
-      "currentVersion": "V1",
-      "versions": ["V1"],
-      "supportedReadVersions": ["V1"],
+      "currentVersion": "V2",
+      "versions": ["V1", "V2"],
+      "supportedReadVersions": ["V1", "V2"],
       "supportedDowngradeVersions": []
+    },
+    {
+      "id": "campaign-blocker-report",
+      "implementation": { "workspace": "ponytail", "module": "src/campaign-orchestration.js", "readerRegistryExport": "CampaignBlockerReportReaders" },
+      "currentVersion": "V1", "versions": ["V1"], "supportedReadVersions": ["V1"], "supportedDowngradeVersions": []
+    },
+    {
+      "id": "campaign-execution-blockers",
+      "implementation": { "workspace": "ponytail", "module": "src/campaign-orchestration.js", "readerRegistryExport": "CampaignExecutionBlockersReaders" },
+      "currentVersion": "V1", "versions": ["V1"], "supportedReadVersions": ["V1"], "supportedDowngradeVersions": []
     },
     {
       "id": "campaign-worker-bindings",

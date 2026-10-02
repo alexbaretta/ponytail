@@ -122,6 +122,16 @@ directory.
 
 ### Operational assignment ledger
 
+The read-only runnable-plan V2 projection joins canonical tasklet eligibility
+to original assignment/action identities, checkout existence, fresh complete
+host observations, and project-pool capacity. Unavailable activity remains
+unknown. A separate campaign-scoped V1 execution-blocker record, under the
+ledger directory's `execution-blockers/`, stores sanitized coordinator reports
+of host refusals and their explicit resolution. Only the bound coordinator may
+append reports for an existing assignment/action. These records are diagnostic
+evidence, not authorization or assignment transitions. Historical runnable V1
+summaries normalize to unknown execution and parallelism, not invented facts.
+
 A versioned campaign-scoped ledger outside Git records each active or retained
 assignment. Every record contains the campaign and plan identities, Codex
 session identity, managed worktree, branch, dispatch revision, observed worker

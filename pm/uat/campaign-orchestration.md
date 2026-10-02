@@ -59,6 +59,18 @@ approved 2026-09-29.
 
 ## Evidence
 
+- 2026-10-01 live V2 diagnostic profile on integrated GWEN `9d414b35`:
+  before observation refresh, activity counts were null; after exact native
+  session checks and complete observation, the summary reported three
+  theoretically runnable plans, zero observed runnable workers, one worker
+  doing earlier closure, and shortfall three. Both pre-attach original missing
+  checkouts retained their exact session/action identities and recovery advice.
+  Reserved slots 35 reconcile to sixteen retained paths plus nineteen pending
+  creation reservations, not thirty-five running sessions. Historical started
+  reservations must not be silently canceled. Durable refusal recording and
+  successful repair/activation remain pending; query success is not acceptance
+  of the still-blocked product tasklets.
+
 - 2026-10-01 live dependency-unlock/reuse profile at
   `c725f51078e79fcba9a8b6f10b28a873ed8899bd`: closing monitor-state and
   state-spawn made audit tasklet S01-F03-T040 runnable. After canonical logical
@@ -514,6 +526,45 @@ rebased through action `29850fad-a572-42d2-ba50-0c75ab00a47c` and fast-forward
 integrated at `cd7985a11477102da02b0d2b79a7bfe2fedc4079`. The integrated
 tree contains the closed plan and canonical campaign validation passes.
 This proves the closure delivery/join Arc, not whole-campaign completion.
+
+## Arc: Explain and resolve runnable-plan concurrency shortfalls
+
+Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
+
+- **Actor:** Campaign coordinator and the existing affected worker.
+- **Prerequisites:** Three dependency/tasklet-ready plans; one original started
+  creation whose provisioned checkout is absent, one reuse refused by host
+  review before activation, and one independent eligible plan. Retained pool
+  and reservation evidence is available in the same top-level project.
+- **Profiles:** Automated CLI/adapter proof and live Codex host observation.
+- **External effects:** Diagnostic queries are read-only. Blocker reports modify
+  only scoped diagnostic records, not assignments or host state. Repair and
+  activation require the ordinary authority and authentication gates.
+
+1. Query runnable plans with fresh complete observations.
+   - All three eligible plans remain listed. The report identifies the absent
+     original checkout automatically, preserves original action/session IDs,
+     and compares observed runnable workers with achievable pool capacity.
+     Closure activity is reported separately from runnable-plan activity.
+2. Record the exact host-review rejection and required human action for the
+   failed reuse or recovery; repeat the diagnostic query after process restart.
+   - The unresolved report survives, identifies its failed phase and action,
+     and carries no attachment capability or credentials. It is not success,
+     cancellation, a duplicate assignment, or authorization to retry.
+3. Work with the named worker; request the narrow human authorization or manual
+   operation only when required, without duplicating an outstanding request.
+   - Independent executable work proceeds. No replacement, bypass, or unready
+     plan is activated to inflate concurrency.
+4. Resolve the report after verified repair and refresh host evidence.
+   - The query reflects the current checkout/activity and report disposition;
+     the original action can resume through the normal protocol. Resolution
+     alone cannot claim native activation or authenticated attachment.
+5. Repeat with missing, incomplete, and stale host evidence, and with a full
+   pool lacking a safe reusable pair.
+   - Observed concurrency is unknown when unproved. Capacity wait is distinct
+     from anomalous execution failure; no sixteenth reservation is made.
+     Historical runnable-output readers remain supported and malformed blocker
+     records, cross-assignment actions, and unauthorized reporters fail.
 
 ## Arc: Retain integrated workers; explicit retirement remains separately fenced
 

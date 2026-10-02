@@ -265,6 +265,36 @@ dispatch, and coordinator recovery reminders for active product work. Recovery
 needed for an authenticated delivered integration remains independently ready.
 Workers retain their own recovery authority.
 
+The stakeholder clarified on 2026-10-01 that runnable eligibility alone is
+insufficient operational diagnosis. The runnable-plan summary must also report
+each eligible plan's assignment, original session/checkout, pending host action,
+fresh observed activity, and anomalies preventing execution. Derive missing
+checkouts and unavailable/stale host evidence from authoritative state. Host
+review refusals and required human actions must be recorded durably through a
+coordinator-owned reporting operation; do not infer them from inactivity.
+Reports identify the exact assignment/action, failed phase, non-secret reason,
+required next action, and whether the blocker remains unresolved. Reporting or
+resolving a blocker does not grant authority, start a worker, cancel a started
+effect, complete an action, or allocate a replacement.
+
+The same summary must compare observed working sessions with theoretically
+achievable runnable-plan concurrency, accounting for existing assignments,
+creation reservations, safe reusable pairs, and available slots in this
+top-level project's fifteen-pair pool. Distinguish all observed active workers
+from workers assigned to runnable plans; closure/rebase activity is not proof
+that runnable product tasklets execute. Missing, incomplete, or stale host
+evidence makes observed concurrency unknown rather than zero. A shortfall must
+remain visible alongside its per-plan blockers and capacity evidence.
+
+The coordinator must monitor this comparison and work with the exact affected
+worker to resolve anomalies. When the next step genuinely requires the human,
+request the necessary information, narrowly scoped authorization, or manual
+operation with the exact targets and retained identities. Preserve existing
+requests rather than repeatedly asking the same question. Continue independent
+ready work, refresh evidence after repair, and resume the same action only
+after its preconditions and authority are established. Never bypass a refusal,
+treat a report as approval, or fill capacity with unready plans.
+
 `campaign schedule-ready` must deterministically reserve all eligible plans
 within the invoking top-level project's capacity in one atomic operation,
 using safe retained pairs before new creation reservations. It must preserve

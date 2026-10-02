@@ -652,6 +652,7 @@ def print_usage():
   ponytail campaign ready-actions [<campaign>] [--json]
   ponytail campaign runnable-plans [<campaign>] [--json]
   ponytail campaign schedule-ready [<campaign>] [--json]
+  ponytail campaign report-blocker <campaign> --result <json>
   ponytail campaign observe <campaign> --snapshot <json>
   ponytail campaign advance [<campaign>] [--json]
   ponytail campaign reconcile <campaign> [--json]

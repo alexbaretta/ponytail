@@ -73,6 +73,8 @@ services. `PROJECT_STRUCTURE.md` is authoritative for that boundary.
 - Local setup validation: `ponytail validate`.
 - Local reference QA: `ponytail qa`; no downstream integration suite.
 - Campaign coordination: `ponytail campaign status [<campaign>] --json`,
+  `ponytail campaign report-blocker <campaign> --result <json>` for scoped
+  coordinator-reported host refusals and their resolution,
   `ponytail campaign ready-actions [<campaign>] --json`,
   `ponytail campaign runnable-plans [<campaign>] --json` for the exact
   dependency-and-tasklet-ready summary, `ponytail campaign schedule-ready

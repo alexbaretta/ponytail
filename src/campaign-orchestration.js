@@ -1507,6 +1507,140 @@ function readRunnablePlansV1(value) {
   return value;
 }
 
+function readBlockerReportV1(value) {
+  exactKeys(value, ['schemaVersion', 'assignmentId', 'actionId', 'phase', 'state', 'code', 'summary', 'requiredAction'], 'execution blocker report');
+  if (value.schemaVersion !== 1) fail('CAMPAIGN_ORCHESTRATION_VERSION', 'unsupported execution blocker report version');
+  for (const key of ['assignmentId', 'summary', 'requiredAction']) {
+    if (typeof value[key] !== 'string' || !value[key].trim()) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', `execution blocker ${key} must be nonempty`);
+  }
+  optionalString(value.actionId, 'execution blocker actionId');
+  if (!['DISPATCH', 'RECOVERY', 'ATTACH', 'EXECUTION'].includes(value.phase)
+    || !['BLOCKED', 'RESOLVED'].includes(value.state)
+    || !['HOST_REVIEW_REJECTED', 'AUTHORIZATION_REQUIRED', 'MANUAL_ACTION_REQUIRED', 'ENVIRONMENT_BLOCKED'].includes(value.code)) {
+    fail('CAMPAIGN_ORCHESTRATION_SCHEMA', 'invalid execution blocker phase, state, or code');
+  }
+  return value;
+}
+
+function readExecutionBlockersV1(value) {
+  exactKeys(value, ['schemaVersion', 'campaignId', 'reports'], 'execution blockers');
+  if (value.schemaVersion !== 1 || typeof value.campaignId !== 'string' || !value.campaignId || !Array.isArray(value.reports)) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', 'expected execution blockers V1');
+  for (const report of value.reports) {
+    exactKeys(report, ['report', 'recordedAt'], 'recorded execution blocker');
+    readBlockerReportV1(report.report);
+    if (typeof report.recordedAt !== 'string' || !Number.isFinite(Date.parse(report.recordedAt))) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', 'invalid blocker timestamp');
+  }
+  return value;
+}
+
+function executionBlockersPath(repositoryRoot, campaignId, environment) {
+  return path.join(path.dirname(ledgerPath(repositoryRoot, campaignId, environment)), 'execution-blockers', `${campaignId}.json`);
+}
+
+function readExecutionBlockers(repositoryRoot, campaignId, environment) {
+  const file = executionBlockersPath(repositoryRoot, campaignId, environment);
+  const value = fs.existsSync(file) ? readExecutionBlockersV1(JSON.parse(fs.readFileSync(file, 'utf8')))
+    : { schemaVersion: 1, campaignId, reports: [] };
+  if (value.campaignId !== campaignId) fail('CAMPAIGN_LEDGER_SCOPE', 'execution blockers belong to another campaign');
+  return value;
+}
+
+function recordExecutionBlocker(ledger, input, environment) {
+  const report = readBlockerReportV1(input);
+  if (!ledger.coordinatorSessionId || environment.PONYTAIL_SESSION_ID !== ledger.coordinatorSessionId) fail('CAMPAIGN_COORDINATOR_REQUIRED', 'only the bound coordinator may report execution blockers');
+  const assignment = ledger.assignments.find(({ id }) => id === report.assignmentId);
+  if (!assignment || assignment.state === 'ARCHIVED') fail('CAMPAIGN_ACTION_ASSIGNMENT', 'blocker requires a current assignment');
+  if (report.actionId !== null && !ledger.pendingActions.some(({ id, assignmentId }) => id === report.actionId && assignmentId === assignment.id)
+    && !(report.state === 'RESOLVED' && ledger.completedActions.some(({ actionId, assignmentId }) => actionId === report.actionId && assignmentId === assignment.id))) fail('CAMPAIGN_ACTION_MISMATCH', 'blocker action must belong to this assignment and remain pending, or be completed when resolving its report');
+  if (ledger.assignments.some(({ attachToken }) => report.summary.includes(attachToken) || report.requiredAction.includes(attachToken))) fail('CAMPAIGN_BLOCKER_SECRET', 'blocker reports must not contain attachment capabilities');
+  const value = readExecutionBlockers(ledger.topLevelWorktree, ledger.campaignId, environment);
+  const previous = value.reports.filter(({ report: item }) => item.assignmentId === report.assignmentId && item.phase === report.phase).at(-1);
+  if (previous && JSON.stringify(previous.report) === JSON.stringify(report)) return value;
+  value.reports.push({ report: { ...report }, recordedAt: new Date().toISOString() });
+  const file = executionBlockersPath(ledger.topLevelWorktree, ledger.campaignId, environment);
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  const temporary = `${file}.${process.pid}.${crypto.randomUUID()}.tmp`;
+  fs.writeFileSync(temporary, `${JSON.stringify(readExecutionBlockersV1(value), null, 2)}\n`, { flag: 'wx', mode: 0o600 });
+  fs.renameSync(temporary, file);
+  return value;
+}
+
+function readRunnablePlansV2(value) {
+  exactKeys(value, ['schemaVersion', 'campaignId', 'invocationWorktree', 'effectiveWorktree', 'integrationRevision', 'plans', 'parallelism'], 'runnable plans');
+  if (value.schemaVersion !== 2) fail('CAMPAIGN_ORCHESTRATION_VERSION', 'unsupported runnable plans version');
+  const { parallelism, ...legacy } = value;
+  readRunnablePlansV1({ ...legacy, schemaVersion: 1, plans: value.plans?.map(({ execution, ...plan }) => plan) });
+  if (value.parallelism !== null) {
+    exactKeys(value.parallelism, ['limit', 'reservedSlots', 'availableSlots', 'reusablePairs', 'theoreticalWorkers', 'observedWorkingWorkers', 'observedRunnableWorkers', 'shortfall'], 'parallelism');
+    for (const key of ['limit', 'reservedSlots', 'availableSlots', 'reusablePairs', 'theoreticalWorkers']) {
+      if (!Number.isInteger(value.parallelism[key]) || value.parallelism[key] < 0) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', `invalid parallelism ${key}`);
+    }
+    for (const key of ['observedWorkingWorkers', 'observedRunnableWorkers', 'shortfall']) {
+      if (value.parallelism[key] !== null && (!Number.isInteger(value.parallelism[key]) || value.parallelism[key] < 0)) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', `invalid parallelism ${key}`);
+    }
+  }
+  for (const plan of value.plans) {
+    if (plan.execution === null) continue;
+    exactKeys(plan.execution, ['assignmentId', 'sessionId', 'worktree', 'actionId', 'dispatchState', 'hostState', 'anomalies'], 'runnable execution');
+    for (const key of ['assignmentId', 'sessionId', 'worktree', 'actionId', 'dispatchState', 'hostState']) optionalString(plan.execution[key], `execution ${key}`);
+    if (plan.execution.dispatchState !== null && !['STARTED', 'NOT_STARTED'].includes(plan.execution.dispatchState)) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', 'invalid execution dispatch state');
+    if (plan.execution.hostState !== null && !HOST_SESSION_STATES.includes(plan.execution.hostState)) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', 'invalid execution host state');
+    if (!Array.isArray(plan.execution.anomalies)) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', 'execution anomalies must be an array');
+    for (const anomaly of plan.execution.anomalies) {
+      exactKeys(anomaly, ['code', 'message', 'requiredAction', 'source', 'recordedAt'], 'execution anomaly');
+      for (const key of ['code', 'message', 'requiredAction']) if (typeof anomaly[key] !== 'string' || !anomaly[key]) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', `invalid anomaly ${key}`);
+      if (!['OBSERVED', 'REPORTED'].includes(anomaly.source)) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', 'invalid anomaly source');
+      optionalString(anomaly.recordedAt, 'anomaly recordedAt');
+      if (anomaly.recordedAt !== null && !Number.isFinite(Date.parse(anomaly.recordedAt))) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', 'invalid anomaly timestamp');
+    }
+  }
+  return value;
+}
+
+// Traceability: implements REQ-CAMPAIGN-ORCHESTRATION
+function runnablePlanDiagnostics(graph, ledger, invocationWorktree, environment) {
+  const ledgers = prepareDispatches(graph, ledger, environment);
+  const status = reconcile(graph, ledger, invocationWorktree, environment);
+  const observation = readHostObservation(ledger.topLevelWorktree, ledger.campaignId, environment);
+  const fresh = Boolean(observation && Date.now() - Date.parse(observation.observedAt) <= HOST_OBSERVATION_MAX_AGE_MS);
+  const reports = readExecutionBlockers(ledger.topLevelWorktree, ledger.campaignId, environment);
+  const latest = new Map();
+  for (const item of reports.reports) latest.set(JSON.stringify([item.report.assignmentId, item.report.phase]), item);
+  const plans = runnablePlans(graph).map(plan => {
+    const assignment = status.assignments.find(item => item.planId === plan.id && item.state !== 'ARCHIVED');
+    const pendingAction = ledger.pendingActions.find(item => item.assignmentId === assignment?.id);
+    const sessionId = assignment?.sessionId ?? pendingAction?.payload.bootstrap?.sessionId ?? null;
+    const worktree = assignment?.worktree ?? pendingAction?.payload.bootstrap?.worktree ?? null;
+    const hostState = fresh && observation.completeSessionIds.includes(sessionId)
+      ? observation.sessions.find(item => item.sessionId === sessionId)?.state ?? 'unknown' : null;
+    const anomalies = status.diagnostics.filter(item => item.planId === plan.id || (assignment && item.assignmentId === assignment.id))
+      .map(item => ({ code: item.code, message: item.message, requiredAction: 'Inspect the exact worker and canonical status diagnostic; repair its prerequisite before resuming the original action.', source: 'OBSERVED', recordedAt: observation?.observedAt ?? null }));
+    if (worktree && !fs.existsSync(worktree) && !anomalies.some(item => item.code.includes('WORKTREE_MISSING') || item.code === 'CAMPAIGN_WORKTREE_RECOVERY_REQUIRED')) anomalies.push({ code: 'CAMPAIGN_WORKTREE_MISSING', message: `original worker checkout is missing: ${worktree}`, requiredAction: 'Work with this original worker to run canonical exact-path recovery and immediate adoption; obtain narrowly scoped human authority if required.', source: 'OBSERVED', recordedAt: null });
+    if (sessionId && hostState === null && !anomalies.some(item => item.code.startsWith('CAMPAIGN_HOST_OBSERVATION'))) anomalies.push({ code: 'CAMPAIGN_HOST_OBSERVATION_UNAVAILABLE', message: 'Fresh complete host evidence is unavailable for the original session.', requiredAction: 'Inspect the exact native session and refresh campaign observation; do not infer that it is idle or missing.', source: 'OBSERVED', recordedAt: observation?.observedAt ?? null });
+    for (const { report, recordedAt } of latest.values()) {
+      if (report.assignmentId !== assignment?.id || report.state !== 'BLOCKED') continue;
+      if (report.actionId !== null && !ledger.pendingActions.some(item => item.id === report.actionId)) continue;
+      anomalies.push({ code: report.code, message: `${report.phase}: ${report.summary}`, requiredAction: report.requiredAction, source: 'REPORTED', recordedAt });
+    }
+    anomalies.sort((a, b) => a.code.localeCompare(b.code) || a.message.localeCompare(b.message));
+    return { planId: plan.id, path: plan.path, lifecycle: plan.lifecycle, ...plan.runnableTasklets,
+      execution: { assignmentId: assignment?.id ?? null, sessionId, worktree, actionId: pendingAction?.id ?? null, dispatchState: pendingAction?.payload.dispatch?.state ?? null, hostState, anomalies } };
+  });
+  const sessionIds = new Set([...ledger.workers.map(item => item.sessionId), ...ledger.assignments.filter(item => item.state !== 'ARCHIVED').map(item => item.sessionId), ...ledger.pendingActions.map(item => item.payload.bootstrap?.sessionId)].filter(Boolean));
+  const complete = fresh && [...sessionIds].every(id => observation.completeSessionIds.includes(id)
+    && !['unknown', 'missing'].includes(observation.sessions.find(item => item.sessionId === id)?.state));
+  const reservedSlots = projectWorkerCount(ledgers);
+  const availableSlots = Math.max(0, PROJECT_WORKER_LIMIT - reservedSlots);
+  const reservedPlans = plans.filter(({ execution }) => execution.sessionId || ledger.pendingActions.some(item => item.id === execution.actionId && item.type === 'CREATE_WORKER')).length;
+  const theoreticalWorkers = Math.min(plans.length, reservedPlans + status.idleWorkers.length + availableSlots);
+  const observedWorkingWorkers = complete ? observation.sessions.filter(item => sessionIds.has(item.sessionId) && item.state === 'working').length : null;
+  const observedRunnableWorkers = complete ? plans.filter(({ execution }) => execution.hostState === 'working').length : null;
+  return readRunnablePlansV2({ schemaVersion: 2, campaignId: graph.campaignId, invocationWorktree,
+    effectiveWorktree: ledger.topLevelWorktree, integrationRevision: status.integrationRevision, plans,
+    parallelism: { limit: PROJECT_WORKER_LIMIT, reservedSlots, availableSlots, reusablePairs: status.idleWorkers.length, theoreticalWorkers,
+      observedWorkingWorkers, observedRunnableWorkers, shortfall: observedRunnableWorkers === null ? null : Math.max(0, theoreticalWorkers - observedRunnableWorkers) } });
+}
+
 function blockingDiagnostics(status) {
   const recoverableStates = new Set(['READY_TO_MERGE', 'MERGED', 'CLEANUP_PENDING']);
   return status.diagnostics.filter((diagnostic) => (
@@ -1983,7 +2117,7 @@ function parseArguments(argv) {
   } else if (operation === 'observe' && argv.length === 4 && argv[2] === '--snapshot') {
     input = argv[1];
     try { result = JSON.parse(argv[3]); } catch (error) { fail('CAMPAIGN_HOST_OBSERVATION', `snapshot is not valid JSON: ${error.message}`, 2); }
-  } else if (operation === 'deliver' && argv.length === 4 && argv[2] === '--result') {
+  } else if (['deliver', 'report-blocker'].includes(operation) && argv.length === 4 && argv[2] === '--result') {
     input = argv[1];
     try { result = JSON.parse(argv[3]); } catch (error) { fail('CAMPAIGN_WORKER_DELIVERY', `result is not valid JSON: ${error.message}`, 2); }
   } else if (operation === 'attach' && argv.length === 2) {
@@ -1994,7 +2128,7 @@ function parseArguments(argv) {
 }
 
 function usage() {
-  return 'usage: ponytail campaign status [<campaign>] [--json]\n       ponytail campaign runnable-plans [<campaign>] [--json]\n       ponytail campaign schedule-ready [<campaign>] [--json]\n       ponytail campaign ready-actions [<campaign>] [--json]\n       ponytail campaign observe <campaign> --snapshot <json>\n       ponytail campaign advance [<campaign>] [--json]\n       ponytail campaign reconcile <campaign> [--json]\n       ponytail campaign action-result <campaign> <action-id> --result <json>\n       ponytail campaign retire-worktree <campaign> <action-id> [--json]\n       ponytail campaign attach <token>\n       ponytail campaign deliver <campaign> --result <json>';
+  return 'usage: ponytail campaign status [<campaign>] [--json]\n       ponytail campaign runnable-plans [<campaign>] [--json]\n       ponytail campaign schedule-ready [<campaign>] [--json]\n       ponytail campaign ready-actions [<campaign>] [--json]\n       ponytail campaign report-blocker <campaign> --result <json>\n       ponytail campaign observe <campaign> --snapshot <json>\n       ponytail campaign advance [<campaign>] [--json]\n       ponytail campaign reconcile <campaign> [--json]\n       ponytail campaign action-result <campaign> <action-id> --result <json>\n       ponytail campaign retire-worktree <campaign> <action-id> [--json]\n       ponytail campaign attach <token>\n       ponytail campaign deliver <campaign> --result <json>';
 }
 
 function run(argv = process.argv.slice(2), options = {}) {
@@ -2063,12 +2197,15 @@ function run(argv = process.argv.slice(2), options = {}) {
   }
   const resolution = resolveInvocationWorktree(invocationWorktree, environment, ['status', 'runnable-plans'].includes(request.operation));
   const graph = resolveGraph(resolution.effectiveWorktree, request.input ?? resolution.workerBinding?.campaignId);
+  if (request.operation === 'report-blocker') {
+    withWorktreeLock(resolution.effectiveWorktree, environment, () => recordExecutionBlocker(readLedger(resolution.effectiveWorktree, graph.campaignId, environment), request.result, environment));
+    const result = runnablePlanDiagnostics(graph, readLedger(resolution.effectiveWorktree, graph.campaignId, environment), resolution.invocationWorktree, environment);
+    process.stdout.write(`${JSON.stringify(result)}\n`);
+    return result;
+  }
   if (request.operation === 'runnable-plans') {
-    const result = readRunnablePlansV1({ schemaVersion: 1, campaignId: graph.campaignId,
-      invocationWorktree: resolution.invocationWorktree, effectiveWorktree: resolution.effectiveWorktree,
-      integrationRevision: git(resolution.effectiveWorktree, ['rev-parse', 'HEAD']),
-      plans: runnablePlans(graph).map((plan) => ({ planId: plan.id, path: plan.path, lifecycle: plan.lifecycle, ...plan.runnableTasklets })) });
-    process.stdout.write(request.json ? `${JSON.stringify(result)}\n` : `${result.plans.map((plan) => `${plan.planId}\t${plan.sprintId}\t${plan.taskletIds.join(', ')}`).join('\n')}${result.plans.length ? '\n' : ''}`);
+    const result = runnablePlanDiagnostics(graph, readLedger(resolution.effectiveWorktree, graph.campaignId, environment), resolution.invocationWorktree, environment);
+    process.stdout.write(request.json ? `${JSON.stringify(result)}\n` : `${result.plans.map((plan) => `${plan.planId}\t${plan.sprintId}\t${plan.taskletIds.join(', ')}\t${plan.execution.anomalies.map(item => item.code).join(', ')}`).join('\n')}${result.plans.length ? '\n' : ''}`);
     return result;
   }
   if (request.operation === 'schedule-ready') {
@@ -2111,7 +2248,12 @@ module.exports = {
   CampaignLedgerReaders,
   CampaignOrchestrationError,
   CampaignReadyActionsReaders,
-  CampaignRunnablePlansReaders: Object.freeze({ V1: readRunnablePlansV1 }),
+  CampaignRunnablePlansReaders: Object.freeze({ V1: value => {
+    readRunnablePlansV1(value);
+    return readRunnablePlansV2({ ...value, schemaVersion: 2, parallelism: null, plans: value.plans.map(plan => ({ ...plan, execution: null })) });
+  }, V2: readRunnablePlansV2 }),
+  CampaignBlockerReportReaders: Object.freeze({ V1: readBlockerReportV1 }),
+  CampaignExecutionBlockersReaders: Object.freeze({ V1: readExecutionBlockersV1 }),
   CampaignStatusReaders,
   CampaignWorkerBindingReaders,
   CampaignWorkerDeliveryReaders,
@@ -2119,6 +2261,9 @@ module.exports = {
   advanceLedger,
   scheduleReadyPlans,
   readRunnablePlansV1,
+  readRunnablePlansV2,
+  runnablePlanDiagnostics,
+  recordExecutionBlocker,
   bindWorker,
   diagnostic,
   humanStatus,
