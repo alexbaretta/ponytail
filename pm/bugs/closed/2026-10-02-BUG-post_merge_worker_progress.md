@@ -64,3 +64,9 @@ records the phase/evidence invariant. Resumed active-plan work now transitions
 to `ACTIVE`; closed-plan cleanup and authenticated merge gates are retained.
 Core repair acceptance is complete; live consumer installation and recovery
 remain separately verified outcomes, not campaign completion.
+
+After canonical installation of `a72e3cc`, complete live host observation and
+canonical advancement persisted the original GWEN assignment as `ACTIVE`.
+Independent inspection confirmed the cleanup diagnostic disappeared while the
+same worker continued T041. The [milestone UAT Arc](../../uat/campaign-orchestration.md)
+records exact timestamps, original identity and remaining parallelism limits.

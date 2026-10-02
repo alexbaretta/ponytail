@@ -543,6 +543,17 @@ Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
    - Ponytail moves the assignment to cleanup. A failed gate may instead send
      the same worker through another delivery and integration cycle.
 
+Live consumer evidence, 2026-10-02: after installing `a72e3cc`, the GWEN
+coordinator refreshed all 18 original sessions at `2026-10-02T08:31:17.502Z`
+and ran canonical advancement. Independent read-only inspection at
+`2026-10-02T01:32:41-07:00` confirmed original assignment
+`a9e4a968-adad-4ae0-9b40-6275babfc319` persisted as `ACTIVE` at worker commit
+`f527c6ee0548a4a87260a26c5b94d74d7ac0da4a`, with no assignment diagnostic.
+`ready-actions` was accessible and returned no actions. Fresh parallelism was
+10 theoretical, one working runnable worker, nine shortfall, and two reusable
+pairs; remaining external prerequisites still constrained dispatch. This proves
+the resumed-work transition, not T041 acceptance or campaign completion.
+
 ## Arc: Deliver a plan closure before its lifecycle move is integrated
 
 Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
