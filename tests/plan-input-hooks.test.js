@@ -86,12 +86,13 @@ test('coordinator binding lets composer enqueue derive the campaign', () => {
 });
 
 // Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
-test('blocker reporting authenticates the native coordinator through the hook and scoped plugin binding', () => {
+test('blocker reporting authenticates the native coordinator across separate hook and command environments', () => {
   const root = repository();
   const pluginData = path.join(root, '.plugin-data');
   assert.equal(tool(root, 'ponytail plan-input coordinate root').status, 0);
   const environment = { ...process.env, PLUGIN_DATA: pluginData, PONYTAIL_CAMPAIGN_STATE_DIR: pluginData };
   delete environment.PONYTAIL_SESSION_ID;
+  environment.CODEX_SESSION_ID = 'session';
   const campaignGraph = { campaignId: 'root', submittedPlanId: 'root', lifecycle: { initial: 'open', activeWork: 'in_progress', successfulCompletion: 'closed', deferred: 'deferred', rejected: 'rejected' }, plans: [
     { id: 'root', parentPlanId: null, dependsOn: [], lifecycle: 'in_progress', path: 'root' },
     { id: 'child', parentPlanId: 'root', dependsOn: [], lifecycle: 'open', path: 'child', runnableTasklets: { sprintId: 'S01', taskletIds: ['S01-F01-T01'] } },
@@ -105,11 +106,16 @@ test('blocker reporting authenticates the native coordinator through the hook an
   assert.match(JSON.parse(permission.stdout).hookSpecificOutput.additionalContext, /Coordinator session authenticated/);
   const denied = tool(root, command, 'other-session');
   assert.equal(JSON.parse(denied.stdout).hookSpecificOutput.permissionDecision, 'deny');
-  const result = spawnSync(process.execPath, [path.join(__dirname, '..', 'src', 'campaign-census.js'), 'report-blocker', 'root', '--result', JSON.stringify(report)], { cwd: root, env: environment, encoding: 'utf8' });
+  const commandEnvironment = { ...environment };
+  delete commandEnvironment.PLUGIN_DATA;
+  const result = spawnSync(process.execPath, [path.join(__dirname, '..', 'src', 'campaign-census.js'), 'report-blocker', 'root', '--result', JSON.stringify(report)], { cwd: root, env: commandEnvironment, encoding: 'utf8' });
   assert.equal(result.status, 0, result.stderr);
   const execution = JSON.parse(result.stdout).plans.find(item => item.planId === 'child').execution;
   assert.equal(execution.actionId, pending.id);
   assert.equal(execution.anomalies.some(item => item.code === report.code), true);
+  const wrongSession = spawnSync(process.execPath, [path.join(__dirname, '..', 'src', 'campaign-census.js'), 'report-blocker', 'root', '--result', JSON.stringify(report)], { cwd: root, env: { ...commandEnvironment, CODEX_SESSION_ID: 'other-session' }, encoding: 'utf8' });
+  assert.equal(wrongSession.status, 1);
+  assert.match(wrongSession.stderr, /CAMPAIGN_COORDINATOR_REQUIRED/);
 });
 
 // Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION

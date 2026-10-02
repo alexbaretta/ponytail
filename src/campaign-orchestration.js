@@ -1547,9 +1547,7 @@ function readExecutionBlockers(repositoryRoot, campaignId, environment) {
 
 function recordExecutionBlocker(ledger, input, environment) {
   const report = readBlockerReportV1(input);
-  const sessionId = environment.PLUGIN_DATA
-    ? coordinatorBinding(environment.PLUGIN_DATA, ledger.topLevelWorktree, ledger.campaignId)
-    : environment.PONYTAIL_SESSION_ID;
+  const sessionId = environment.PONYTAIL_SESSION_ID ?? environment.CODEX_SESSION_ID;
   if (!ledger.coordinatorSessionId || sessionId !== ledger.coordinatorSessionId) fail('CAMPAIGN_COORDINATOR_REQUIRED', 'only the bound coordinator may report execution blockers');
   const assignment = ledger.assignments.find(({ id }) => id === report.assignmentId);
   if (!assignment || assignment.state === 'ARCHIVED') fail('CAMPAIGN_ACTION_ASSIGNMENT', 'blocker requires a current assignment');

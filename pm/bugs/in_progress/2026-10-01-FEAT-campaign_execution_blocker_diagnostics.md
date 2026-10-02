@@ -74,6 +74,22 @@ installer and bundled subprojects, eighty TSTS tests, and structural checks;
 traceability now validates 227 relationships. Live retry remains pending the
 corrected installed hook/runtime.
 
+The live retry of `ea5536a` disproved its command-environment assumption:
+the trusted hook authenticated successfully, but both ordinary and elevated
+exec commands have `CODEX_SESSION_ID` and no `PLUGIN_DATA` or
+`PONYTAIL_SESSION_ID`. Hook identity storage is not exported into the command
+process. The writer now compares the actual command-side native session ID
+with the existing ledger coordinator (the standalone adapter retains its
+explicit `PONYTAIL_SESSION_ID` contract). The native regression separates hook
+and CLI environments, removes `PLUGIN_DATA` before spawning the command, and
+checks native wrong-session denial. It reproduced the same coordinator error
+before this correction. No identity is supplied manually during live retry.
+The corrected separated-environment regression and all 48 focused tests pass;
+the full core pipeline also passes again (509 core, installer, bundled
+subprojects, eighty TSTS tests, and structural validation). This supersedes the
+earlier passing shared-environment test as evidence of command identity
+transport. Live retry is still required before claiming native reporting works.
+
 - Forty focused orchestration tests pass, including real-Git CLI report
   persistence across process restart, original bootstrap/checkouts, scoped
   coordinator ownership, capability exclusion, explicit resolution, stale

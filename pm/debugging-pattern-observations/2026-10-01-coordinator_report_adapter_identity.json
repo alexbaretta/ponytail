@@ -12,17 +12,17 @@
   },
   "observed_behavior": "The native bound GWEN coordinator's three sanitized reports failed with CAMPAIGN_COORDINATOR_REQUIRED while coordinate and observe succeeded.",
   "expected_behavior": "The native coordinator can record its existing assignment's blocker through authenticated host tooling; unrelated sessions and workers remain denied.",
-  "causal_mechanism": "The hook command matcher omitted the new reporting operation, and its writer required a standalone session environment variable which native commands do not receive. Earlier CLI tests populated that variable and bypassed the failing native boundary.",
+  "causal_mechanism": "The hook command matcher omitted the new reporting operation, and its writer required a standalone session environment variable which native commands do not receive. Native hook and CLI environments are separate: PLUGIN_DATA exists in the hook, but the actual command exposes CODEX_SESSION_ID. Earlier tests populated the standalone variable or shared the hook environment with the command, bypassing the failing boundary.",
   "anti_pattern": {
     "structural_description": "A new host-integrated operation uses a different identity representation than the owning adapter, while tests establish that identity directly below the adapter boundary.",
     "why_it_fails": "The canonical host invocation cannot satisfy the writer's identity prerequisite even though the coordinator already has a valid scoped binding. Missing hook routing also omits other-session rejection."
   },
   "correct_pattern": {
-    "required_invariant": "Native coordinator mutations traverse the trusted hook and use its canonical scoped binding; standalone invocations use their explicit identity contract.",
-    "implementation_description": "Recognize report-blocker in the existing campaign hook and resolve plugin-mode identity through the existing coordinatorBinding function. Prove hook-to-CLI reporting without PONYTAIL_SESSION_ID and deny unrelated sessions and workers."
+    "required_invariant": "Native coordinator mutations traverse the trusted hook, and command-side native session identity matches the bound ledger coordinator; standalone invocations use their explicit identity contract.",
+    "implementation_description": "Recognize report-blocker in the existing campaign hook and compare command-side CODEX_SESSION_ID with the ledger coordinator. Prove hook-to-CLI reporting with separate environments, without PLUGIN_DATA or PONYTAIL_SESSION_ID in the command, and deny unrelated sessions and workers."
   },
   "applicability_conditions": ["The native adapter owns a scoped coordinator binding.", "A new mutation is routed separately from the trusted host command matcher."],
   "known_non_matches": ["Standalone reporting with explicit matching identity passed.", "Existing coordinate and observe commands succeeded in the same native coordinator."],
-  "confirmation_evidence": ["Live coordinator refresh preserved exact coordinator identity but reporting still failed.", "The native hook-to-CLI regression failed before correction because the hook returned no authentication output.", "All forty-eight focused hook and orchestration tests passed after correction without supplying standalone identity in the native regression."],
-  "regression_proofs": ["tests/plan-input-hooks.test.js: blocker reporting authenticates the native coordinator through the hook and scoped plugin binding", "tests/plan-input-hooks.test.js: worker attach is one-time, status re-roots, and worker mutations fail closed"]
+  "confirmation_evidence": ["Live coordinator refresh preserved exact coordinator identity but reporting still failed.", "The initial hook regression failed because the hook returned no authentication output.", "Presence-only ordinary and elevated probes verified native session identity is available but hook storage variables are absent.", "The separated-environment hook-to-CLI regression reproduced CAMPAIGN_COORDINATOR_REQUIRED before correcting command-side identity."],
+  "regression_proofs": ["tests/plan-input-hooks.test.js: blocker reporting authenticates the native coordinator across separate hook and command environments", "tests/plan-input-hooks.test.js: worker attach is one-time, status re-roots, and worker mutations fail closed"]
 }
