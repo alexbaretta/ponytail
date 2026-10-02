@@ -54,6 +54,7 @@
     }
   ],
   "artifacts": [
+    {"class": "issue", "path": "pm/bugs/closed/2026-10-02-BUG-post_merge_worker_progress.md", "locator": "text"},
     {"class": "issue", "path": "pm/bugs/closed/2026-10-01-BUG-bootstrap_adoption_upgrade_deadlock.md", "locator": "text"},
     {"class": "plan", "path": "pm/plans/closed/2026-10-01-bootstrap-adoption-upgrade/plan.md", "locator": "text"},
     {"class": "plan", "path": "pm/plans/closed/2026-10-01-bootstrap-adoption-upgrade/sprints/S01.md", "locator": "text"},

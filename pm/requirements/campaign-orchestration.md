@@ -344,6 +344,11 @@ delivery while the plan remains in active work. The plan stays open until the
 coordinator runs the applicable final acceptance against the integrated tree
 and records its outcome. A failed integrated gate may return the same worker
 and assignment to delivery and integration without inventing a replacement.
+When that same worker resumes an active plan after an integrated milestone,
+new dirty or unintegrated work returns its assignment to active execution.
+That ordinary interval must not be classified as unsafe cleanup or block
+independent campaign actions. New work still requires authenticated delivery
+before another integration, and closed unintegrated work remains protected.
 
 Plan ownership is identified by its stable plan ID. When a worker's accepted
 closure moves its plan to the configured successful-completion directory,

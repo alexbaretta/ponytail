@@ -1061,9 +1061,31 @@ test('an open merged plan accepts a second delivery from its original assignment
   const evidencePath = 'pm/plans/in_progress/work/evidence/result.md';
   for (const iteration of [1, 2]) {
     write(worker, evidencePath, `accepted ${iteration}\n`);
+    if (iteration === 2) {
+      writeHostObservation(root, 'campaign', {
+        schemaVersion: 1, campaignId: 'campaign', observedAt: new Date().toISOString(),
+        completeSessionIds: [assignment.sessionId],
+        sessions: [{ sessionId: assignment.sessionId, state: 'working', worktree: worker, managedWorktree: true }],
+      }, environment);
+      assert.equal(reconcile(campaignGraph, ledger, root, environment).assignments[0].state, 'ACTIVE');
+    }
     command(worker, ['add', '.']);
     command(worker, ['-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.test', 'commit', '-qm', `delivery ${iteration}`]);
     const revision = command(worker, ['rev-parse', 'HEAD']);
+    if (iteration === 2) {
+      const status = reconcile(campaignGraph, ledger, root, environment);
+      assert.equal(status.assignments[0].state, 'ACTIVE');
+      assert.doesNotThrow(() => readyActions(status, campaignGraph));
+      campaignGraph.plans[1].lifecycle = 'closed';
+      const closedStatus = reconcile(campaignGraph, ledger, root, environment);
+      assert.ok(closedStatus.diagnostics.some(({ code }) => code === 'CAMPAIGN_CLEANUP_UNINTEGRATED'));
+      assert.equal(captureError(() => readyActions(closedStatus, campaignGraph)).code, 'CAMPAIGN_STATUS_BLOCKED');
+      campaignGraph.plans[1].lifecycle = 'in_progress';
+      assert.equal(advanceLedger(campaignGraph, ledger, environment), null);
+      assert.equal(assignment.state, 'ACTIVE');
+      assert.equal(ledger.assignments.length, 1);
+      assert.equal(command(root, ['rev-parse', 'HEAD']), ledger.integrationRevision);
+    }
     recordWorkerDelivery(root, 'campaign', { ...assignment, planPath: 'pm/plans/in_progress/work/plan.md' }, {
       revision, evidencePaths: [evidencePath],
     }, environment);

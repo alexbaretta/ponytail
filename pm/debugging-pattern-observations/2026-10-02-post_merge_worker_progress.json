@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-10-02-post_merge_worker_progress",
+  "recorded_at": "2026-10-02T01:24:33-07:00",
+  "source_references": ["pm/bugs/closed/2026-10-02-BUG-post_merge_worker_progress.md"],
+  "context": {
+    "languages": ["javascript"],
+    "frameworks": [],
+    "components": ["campaign scheduler"],
+    "affected_boundaries": ["post-merge worker progress to campaign action readiness"],
+    "code_references": ["src/campaign-orchestration.js:effectiveAssignmentState", "src/campaign-orchestration.js:reconcile"]
+  },
+  "observed_behavior": "An open-plan worker's next undelivered tasklet commit leaves its assignment MERGED and blocks campaign actions with a cleanup ancestry diagnostic.",
+  "expected_behavior": "The original assignment resumes ACTIVE work without blocking independent actions, while new integration still requires authenticated delivery.",
+  "causal_mechanism": "Reconciliation replaces the integrated milestone revision with current worker HEAD but does not leave MERGED before the next delivery, so cleanup validation consumes a revision from a different execution phase.",
+  "anti_pattern": {
+    "structural_description": "A lifecycle projection updates its evidence identity without transitioning the state whose invariant governs that evidence.",
+    "why_it_fails": "Ordinary in-progress evidence is judged by an integrated-cleanup invariant and becomes a campaign-wide failure."
+  },
+  "correct_pattern": {
+    "required_invariant": "An integrated milestone followed by new unfinished work in an active plan returns to active execution before cleanup invariants are evaluated.",
+    "implementation_description": "The effective assignment state returns surviving active-plan workers to ACTIVE when dirty or unintegrated, retaining the authenticated delivery and closed-plan cleanup gates."
+  },
+  "applicability_conditions": ["MERGED assignment", "Plan remains in active work", "Surviving worker resumes dirty or unintegrated work before its next authenticated delivery"],
+  "known_non_matches": ["Closed plan with unintegrated work", "Missing checkout after authenticated delivery", "New authenticated delivery awaiting rebase or integration"],
+  "confirmation_evidence": ["Real-Git differential changed only worker revision: integrated passed, undelivered descendant blocked ready-actions.", "Extended second-delivery regression failed before repair, then passed dirty work, committed work, and closed-plan negative control; all 42 scheduler tests passed."],
+  "regression_proofs": ["tests/campaign-orchestration.test.js: an open merged plan accepts a second delivery from its original assignment"]
+}

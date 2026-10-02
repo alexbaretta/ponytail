@@ -535,6 +535,10 @@ Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
      does not require or perform premature plan closure.
 3. Run final acceptance on the integrated tree and leave the plan active.
    - The assignment remains `MERGED`; cleanup is not selected.
+   - If the same worker resumes edits or commits another undelivered tasklet,
+     the assignment returns to `ACTIVE`, retaining its identity. Independent
+     ready actions remain accessible; no new work is merged before delivery.
+   - Closing a plan with unintegrated work still blocks unsafe cleanup.
 4. Close the plan only after acceptance passes, then advance.
    - Ponytail moves the assignment to cleanup. A failed gate may instead send
      the same worker through another delivery and integration cycle.

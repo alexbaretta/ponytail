@@ -1338,6 +1338,10 @@ function effectiveAssignmentState(assignment, plan, worker, integrationRevision,
     if (alreadyIntegrated) return 'MERGED';
     return containsIntegration ? 'READY_TO_MERGE' : 'REBASE_REQUIRED';
   }
+  if (assignment.state === 'MERGED' && plan.lifecycle === graphLifecycle.activeWork
+    && worker && worker.activity !== 'missing'
+    && (!worker.clean || (worker.revision
+      && spawnSync('git', ['-C', repositoryRoot, 'merge-base', '--is-ancestor', worker.revision, integrationRevision]).status !== 0))) return 'ACTIVE';
   if (assignment.state === 'MERGED' && plan.lifecycle === graphLifecycle.successfulCompletion) return 'CLEANUP_PENDING';
   if (assignment.state === 'CLEANUP_PENDING' && assignment.worktreeArchived && assignment.sessionArchived) return 'ARCHIVED';
   return assignment.state;
