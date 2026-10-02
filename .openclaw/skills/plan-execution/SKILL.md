@@ -753,6 +753,15 @@ durable state instead of remembering worker assignments in conversation:
    an unchanged status response alone does not prove a no-op. Continue one
    advance at a time while a durable transition occurred, refreshing host
    observation before it becomes stale. Stop at a genuinely unchanged ledger.
+   When worker capacity looks inflated or cleanup is proposed, run `ponytail
+   campaign reservation-audit [<campaign-root>] --json` before any release.
+   It reconciles each counted slot with fresh host activity and Git integration
+   evidence. A started creation with only a client identity is an unresolved
+   outcome, not a stale reservation; do not release it because it is old or
+   absent from a partial thread listing. A never-started, unprovisioned action
+   for a no-longer-runnable plan may be released through its original
+   `NOT_STARTED` action result. Keep confirmed worker pairs for reuse even when
+   their work is integrated; missing checkouts need recovery, not deletion.
 6. Resume each returned action by its exact action ID; never allocate a
    replacement session or worktree, and never assign a plan conversationally.
    After initiating an asynchronous host effect, record that start, advance

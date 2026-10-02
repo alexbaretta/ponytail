@@ -44,6 +44,7 @@ const {
   runnablePlanDiagnostics,
   recordExecutionBlocker,
   readyActions,
+  reservationAudit,
   reconcile,
   recordActionResult,
   retryDispatch,
@@ -57,6 +58,73 @@ const {
   withWorktreeLock,
 } = require('../src/campaign-orchestration');
 const campaignCli = path.join(__dirname, '..', 'src', 'campaign-census.js');
+
+test('reservation audit distinguishes retained workers, provisioned sessions, and unresolved starts', () => {
+  const root = repository();
+  const environment = { ...process.env, PONYTAIL_CAMPAIGN_STATE_DIR: temporaryDirectory('ponytail-reservation-audit') };
+  const ledger = newLedger(root, 'campaign', 'coordinator');
+  command(root, ['branch', 'worker']);
+  const revision = command(root, ['rev-parse', 'HEAD']);
+  const assignment = { id: 'created-assignment', planId: 'done', sessionId: 'created-session', worktree: root,
+    branch: 'worker', dispatchRevision: revision, workerRevision: revision, state: 'ARCHIVED',
+    idempotencyKey: 'created-key', attachToken: 'created-token', worktreeArchived: false, sessionArchived: false };
+  ledger.assignments.push(assignment);
+  ledger.workers.push({ sessionId: assignment.sessionId, worktree: root, branch: 'worker', revision,
+    clean: true, activity: 'idle', evidenceComplete: true, worktreeArchived: false, sessionArchived: false });
+  recordCreatedWorker(ledger, ledger.workers[0], assignment.id);
+  const pending = (id, planId, state, bootstrap = null) => {
+    ledger.assignments.push({ ...assignment, id: `${id}-assignment`, planId, sessionId: null, worktree: null,
+      branch: null, workerRevision: null, state: 'DISPATCH_PENDING', idempotencyKey: id, attachToken: `${id}-token` });
+    return readActionV4({ schemaVersion: 4, id, type: 'CREATE_WORKER', assignmentId: `${id}-assignment`,
+      idempotencyKey: id, payload: { planId, dispatch: { ready: true, state, hostIdentity: state === 'STARTED' ? `client-new-thread:${id}` : null }, bootstrap } });
+  };
+  ledger.pendingActions.push(pending('unstarted', 'done', 'NOT_STARTED'));
+  ledger.pendingActions.push(pending('started', 'done', 'STARTED'));
+  ledger.pendingActions.push(pending('provisioned', 'ready', 'STARTED', { sessionId: 'provisioned-session', worktree: root }));
+  ledger.dispatchRetries.push({ originalAction: pending('superseded', 'done', 'STARTED'), successorActionId: 'started', authorization: 'authorization', recordedAt: new Date().toISOString(), outcome: 'UNKNOWN_OUTCOME_SUPERSEDED' });
+  writeHostObservation(root, 'campaign', { schemaVersion: 1, campaignId: 'campaign', observedAt: new Date().toISOString(),
+    completeSessionIds: ['created-session', 'provisioned-session'], sessions: [
+      { sessionId: 'created-session', state: 'waiting', worktree: root, managedWorktree: true },
+      { sessionId: 'provisioned-session', state: 'working', worktree: root, managedWorktree: true },
+    ] }, environment);
+  const campaignGraph = graph([{ id: 'done', lifecycle: 'closed' }, { id: 'ready', lifecycle: 'open' }]);
+  assert.deepEqual(parseArguments(['reservation-audit', 'campaign', '--json']), { operation: 'reservation-audit', input: 'campaign', json: true, actionId: undefined, result: undefined });
+  const result = reservationAudit(campaignGraph, ledger, environment);
+  assert.equal(result.reservationCount, 5);
+  assert.deepEqual(result.reservations.map(item => [item.kind, item.creationState, item.canRelease]), [
+    ['CREATED_SESSION', 'CREATED', false], ['PENDING_CREATION', 'NOT_STARTED', true],
+    ['PENDING_CREATION', 'STARTED_OUTCOME_UNKNOWN', false], ['PENDING_CREATION', 'PROVISIONED', false],
+    ['SUPERSEDED_CREATION', 'STARTED_OUTCOME_UNKNOWN', false],
+  ]);
+  assert.equal(result.reservations[0].hostState, 'waiting');
+  assert.equal(result.reservations[0].unmergedCommits, false);
+  assert.ok(result.reservations[0].objections.includes('RETAINED_CAMPAIGN_PAIR'));
+  assert.equal(result.reservations[3].hostState, 'working');
+  assert.ok(result.reservations[2].objections.includes('CREATION_OUTCOME_UNKNOWN'));
+  writeHostObservation(root, 'campaign', { schemaVersion: 1, campaignId: 'campaign', observedAt: new Date(Date.now() - 6 * 60 * 1000).toISOString(),
+    completeSessionIds: ['created-session', 'provisioned-session'], sessions: [
+      { sessionId: 'created-session', state: 'waiting', worktree: root, managedWorktree: true },
+      { sessionId: 'provisioned-session', state: 'working', worktree: root, managedWorktree: true },
+    ] }, environment);
+  assert.equal(reservationAudit(campaignGraph, ledger, environment).reservations[0].hostState, 'unknown');
+  command(root, ['switch', 'worker']);
+  fs.writeFileSync(path.join(root, 'worker.txt'), 'unmerged\n');
+  command(root, ['add', 'worker.txt']);
+  command(root, ['-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.test', 'commit', '-qm', 'worker']);
+  command(root, ['switch', 'main']);
+  assert.equal(reservationAudit(campaignGraph, ledger, environment).reservations[0].unmergedCommits, true);
+});
+
+test('reservation audit CLI reports a scoped versioned inventory without mutating the ledger', () => {
+  const root = campaignRepository();
+  const environment = { ...process.env, PONYTAIL_CAMPAIGN_STATE_DIR: temporaryDirectory('ponytail-reservation-cli') };
+  const result = spawnSync(process.execPath, [campaignCli, 'reservation-audit', 'campaign', '--json'], { cwd: root, env: environment, encoding: 'utf8' });
+  assert.equal(result.status, 0, result.stderr);
+  const audit = JSON.parse(result.stdout);
+  assert.equal(audit.schemaVersion, 1);
+  assert.equal(audit.reservationCount, 0);
+  assert.equal(fs.existsSync(ledgerPath(root, 'campaign', environment)), false);
+});
 
 test('retirement fences the original archived session and reclaims only its authenticated worktree', () => {
   const root = repository();

@@ -708,6 +708,38 @@ Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
      first two phases as non-tasklet activity and claims product execution
      only after verifying the exact tasklet phase separately.
 
+## Arc: Audit every campaign worker reservation before cleanup
+
+Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
+
+- **Actor:** Campaign coordinator.
+- **Prerequisites:** A campaign with a retained created worker, an unstarted
+  dispatch for a now-unrunnable plan, a started creation with only a client
+  identity, a provisioned session awaiting attachment, and a superseded start.
+- **Profiles:** Automated CLI and live read-only host/Git inspection.
+- **External effects:** The audit reads campaign, host, worktree, and Git state;
+  it does not release a reservation or delete a session or checkout.
+
+1. Run `ponytail campaign reservation-audit <campaign> --json`.
+   - It emits one versioned record per counted capacity slot, distinguishing
+     confirmed sessions, provisioned sessions, started-unknown creations, and
+     never-started reservations; its count equals campaign capacity accounting.
+2. Observe the retained worker waiting on a clean checkout with all known
+   revisions integrated; then add a worker-only commit and repeat.
+   - The first audit reports no unmerged commit but still forbids release of
+     the retained pair. The second reports unmerged work and forbids release.
+3. Refresh complete host observations, then let them expire.
+   - Fresh observations report each confirmed session's actual activity;
+     expired or incomplete observations report `unknown`, never inferred idle.
+4. Inspect the pending and superseded starts without a confirmed session ID.
+   - Their creation outcome remains unknown and release is forbidden regardless
+     of age, missing thread-list entry, or plan closure. A provisioned session
+     is reported as such, not as a reservation without a chat.
+5. Inspect the never-started, unprovisioned reservation after its plan becomes
+   unrunnable.
+   - The audit identifies it as releasable through the existing `NOT_STARTED`
+     action-result protocol. A still-runnable plan is not releasable.
+
 ## Arc: Retain integrated workers; explicit retirement remains separately fenced
 
 Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION

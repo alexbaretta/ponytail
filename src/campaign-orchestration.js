@@ -636,6 +636,115 @@ function campaignWorkerCount(ledger) {
   return sessions.size + reservations;
 }
 
+function readReservationAuditV1(value) {
+  exactKeys(value, ['schemaVersion', 'campaignId', 'integrationRevision', 'observedAt', 'observationFresh', 'reservationCount', 'reservations'], 'reservation audit');
+  if (value.schemaVersion !== 1) fail('CAMPAIGN_ORCHESTRATION_VERSION', 'unsupported reservation audit version');
+  for (const key of ['campaignId', 'integrationRevision']) if (typeof value[key] !== 'string' || !value[key]) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', `reservation audit ${key} is invalid`);
+  optionalString(value.observedAt, 'reservation audit observedAt');
+  if (typeof value.observationFresh !== 'boolean' || !Number.isInteger(value.reservationCount) || !Array.isArray(value.reservations)
+    || value.reservationCount !== value.reservations.length) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', 'reservation audit count is invalid');
+  for (const item of value.reservations) {
+    exactKeys(item, ['kind', 'sessionId', 'actionId', 'assignmentId', 'planId', 'hostIdentity', 'creationState', 'hostState', 'worktree', 'worktreeExists', 'unmergedCommits', 'canRelease', 'objections'], 'reservation audit item');
+    if (!['CREATED_SESSION', 'PENDING_CREATION', 'SUPERSEDED_CREATION'].includes(item.kind)
+      || !['CREATED', 'PROVISIONED', 'STARTED_OUTCOME_UNKNOWN', 'NOT_STARTED'].includes(item.creationState)
+      || ![...HOST_SESSION_STATES].includes(item.hostState)) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', 'reservation audit item state is invalid');
+    for (const key of ['sessionId', 'actionId', 'assignmentId', 'planId', 'hostIdentity', 'worktree']) optionalString(item[key], `reservation audit item ${key}`);
+    if (typeof item.worktreeExists !== 'boolean' || ![true, false, null].includes(item.unmergedCommits)
+      || typeof item.canRelease !== 'boolean' || !Array.isArray(item.objections)
+      || item.objections.some(objection => typeof objection !== 'string' || !objection)) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', 'reservation audit item evidence is invalid');
+  }
+  return value;
+}
+
+// Traceability: implements REQ-CAMPAIGN-ORCHESTRATION
+function reservationAudit(graph, ledger, environment = process.env) {
+  const repositoryRoot = ledger.topLevelWorktree;
+  const integrationRevision = git(repositoryRoot, ['rev-parse', 'HEAD']);
+  const observation = readHostObservation(repositoryRoot, ledger.campaignId, environment);
+  const observationFresh = Boolean(observation && Date.now() - Date.parse(observation.observedAt) <= HOST_OBSERVATION_MAX_AGE_MS);
+  const hostSessions = new Map((observationFresh ? observation.sessions : []).map(session => [session.sessionId, session]));
+  const deliveries = new Map(readWorkerDeliveries(repositoryRoot, ledger.campaignId, environment).deliveries.map(delivery => [delivery.assignmentId, delivery]));
+  const assignmentsById = new Map(ledger.assignments.map(assignment => [assignment.id, assignment]));
+  const createdSessionIds = campaignCreatedSessionIds(ledger);
+  const reservations = [];
+  for (const sessionId of [...createdSessionIds].sort()) {
+    const assignments = ledger.assignments.filter(assignment => assignment.sessionId === sessionId);
+    const worker = ledger.workers.find(item => item.sessionId === sessionId);
+    if (!assignments.some(assignment => !assignment.sessionArchived) && worker?.sessionArchived !== false) continue;
+    const current = assignments.find(assignment => assignment.state !== 'ARCHIVED') ?? assignments.at(-1);
+    const worktree = current?.worktree ?? worker?.worktree ?? null;
+    const host = hostSessions.get(sessionId);
+    const hostState = host && observation.completeSessionIds.includes(sessionId) ? host.state : 'unknown';
+    const revisions = new Set();
+    let gitEvidenceComplete = true;
+    for (const assignment of assignments) {
+      if (assignment.workerRevision) revisions.add(assignment.workerRevision);
+      const delivery = deliveries.get(assignment.id);
+      if (delivery) revisions.add(delivery.revision);
+      if (assignment.branch) {
+        const branch = spawnSync('git', ['-C', repositoryRoot, 'rev-parse', '--verify', `refs/heads/${assignment.branch}^{commit}`], { encoding: 'utf8' });
+        if (branch.status === 0) revisions.add(branch.stdout.trim());
+        else gitEvidenceComplete = false;
+      }
+    }
+    if (worker?.revision) revisions.add(worker.revision);
+    let unmergedCommits = false;
+    for (const revision of revisions) {
+      const exists = spawnSync('git', ['-C', repositoryRoot, 'cat-file', '-e', `${revision}^{commit}`], { encoding: 'utf8' });
+      if (exists.status !== 0) { gitEvidenceComplete = false; continue; }
+      const merged = spawnSync('git', ['-C', repositoryRoot, 'merge-base', '--is-ancestor', revision, integrationRevision], { encoding: 'utf8' });
+      if (merged.status === 1) unmergedCommits = true;
+      else if (merged.status !== 0) gitEvidenceComplete = false;
+    }
+    if (revisions.size === 0) gitEvidenceComplete = false;
+    const objections = [];
+    if (hostState === 'working') objections.push('HOST_SESSION_WORKING');
+    if (hostState === 'unknown' || hostState === 'missing') objections.push('HOST_SESSION_NOT_PROVEN_INACTIVE');
+    if (host && (!host.managedWorktree || host.worktree !== worktree)) objections.push('HOST_WORKTREE_IDENTITY_MISMATCH');
+    if (unmergedCommits) objections.push('UNMERGED_COMMITS');
+    if (!gitEvidenceComplete) objections.push('INCOMPLETE_GIT_EVIDENCE');
+    if (assignments.some(assignment => assignment.state !== 'ARCHIVED')) objections.push('UNFINISHED_ASSIGNMENT');
+    if (worktree && !fs.existsSync(worktree)) objections.push('MISSING_RETAINED_WORKTREE');
+    if (worktree && fs.existsSync(worktree)) {
+      const status = spawnSync('git', ['-C', worktree, 'status', '--porcelain'], { encoding: 'utf8' });
+      if (status.status !== 0) objections.push('WORKTREE_STATUS_UNKNOWN');
+      else if (status.stdout.trim()) objections.push('UNCOMMITTED_WORKTREE_CHANGES');
+    }
+    objections.push('RETAINED_CAMPAIGN_PAIR');
+    reservations.push({ kind: 'CREATED_SESSION', sessionId, actionId: null, assignmentId: current?.id ?? null,
+      planId: current?.planId ?? null, hostIdentity: null, creationState: 'CREATED', hostState,
+      worktree, worktreeExists: Boolean(worktree && fs.existsSync(worktree)), unmergedCommits: unmergedCommits || (gitEvidenceComplete ? false : null),
+      canRelease: false, objections });
+  }
+  for (const [action, kind] of [
+    ...ledger.pendingActions.filter(item => item.type === 'CREATE_WORKER').map(item => [item, 'PENDING_CREATION']),
+    ...ledger.dispatchRetries.map(item => [item.originalAction, 'SUPERSEDED_CREATION']),
+  ]) {
+    const assignment = assignmentsById.get(action.assignmentId);
+    if (!assignment) fail('CAMPAIGN_RESERVATION_AUDIT', `creation action ${action.id} has no assignment`);
+    const bootstrap = action.payload.bootstrap;
+    const dispatch = action.payload.dispatch;
+    const sessionId = bootstrap?.sessionId ?? null;
+    const host = sessionId ? hostSessions.get(sessionId) : null;
+    const hostState = host && observation.completeSessionIds.includes(sessionId) ? host.state : 'unknown';
+    const creationState = bootstrap ? 'PROVISIONED' : dispatch?.state === 'STARTED' ? 'STARTED_OUTCOME_UNKNOWN' : 'NOT_STARTED';
+    const canRelease = kind === 'PENDING_CREATION' && creationState === 'NOT_STARTED' && !planIsRunnable(graph, assignment.planId);
+    const objections = [];
+    if (creationState === 'STARTED_OUTCOME_UNKNOWN') objections.push('CREATION_OUTCOME_UNKNOWN');
+    if (creationState === 'PROVISIONED') objections.push('PROVISIONED_SESSION');
+    if (host && (!host.managedWorktree || host.worktree !== bootstrap?.worktree)) objections.push('HOST_WORKTREE_IDENTITY_MISMATCH');
+    if (kind === 'SUPERSEDED_CREATION') objections.push('SUPERSEDED_ORIGINAL_OUTCOME_UNKNOWN');
+    if (creationState === 'NOT_STARTED' && !canRelease) objections.push('PLAN_STILL_RUNNABLE');
+    reservations.push({ kind, sessionId, actionId: action.id, assignmentId: action.assignmentId,
+      planId: assignment?.planId ?? null, hostIdentity: dispatch?.hostIdentity ?? null, creationState, hostState,
+      worktree: bootstrap?.worktree ?? null, worktreeExists: Boolean(bootstrap?.worktree && fs.existsSync(bootstrap.worktree)),
+      unmergedCommits: creationState === 'NOT_STARTED' ? false : null, canRelease, objections });
+  }
+  if (reservations.length !== campaignWorkerCount(ledger)) fail('CAMPAIGN_RESERVATION_AUDIT', 'reservation audit does not match campaign capacity count');
+  return readReservationAuditV1({ schemaVersion: 1, campaignId: ledger.campaignId, integrationRevision, observedAt: observation?.observedAt ?? null,
+    observationFresh, reservationCount: reservations.length, reservations });
+}
+
 function hostObservationPath(repositoryRoot, campaignId, environment = process.env) {
   const scope = crypto.createHash('sha256').update(repositoryRoot).digest('hex');
   return path.join(stateDirectory(environment), scope, `${campaignId}.host-observation.json`);
@@ -2264,7 +2373,7 @@ function parseArguments(argv) {
   let json = false;
   let actionId;
   let result;
-  if (['status', 'runnable-plans', 'schedule-ready', 'ready-actions', 'advance', 'reconcile'].includes(operation)) {
+  if (['status', 'reservation-audit', 'runnable-plans', 'schedule-ready', 'ready-actions', 'advance', 'reconcile'].includes(operation)) {
     for (const argument of argv.slice(1)) {
       if (argument === '--json' && !json) json = true;
       else if (argument.startsWith('-') || input !== undefined) fail('CAMPAIGN_ORCHESTRATION_USAGE', usage(), 2);
@@ -2297,7 +2406,7 @@ function parseArguments(argv) {
 }
 
 function usage() {
-  return 'usage: ponytail campaign status [<campaign>] [--json]\n       ponytail campaign runnable-plans [<campaign>] [--json]\n       ponytail campaign schedule-ready [<campaign>] [--json]\n       ponytail campaign ready-actions [<campaign>] [--json]\n       ponytail campaign report-blocker <campaign> --result <json>\n       ponytail campaign observe <campaign> --snapshot <json>\n       ponytail campaign advance [<campaign>] [--json]\n       ponytail campaign reconcile <campaign> [--json]\n       ponytail campaign retry-dispatch <campaign> <original-action-id> --authorization <non-secret-reference> [--json]\n       ponytail campaign action-result <campaign> <action-id> --result <json>\n       ponytail campaign retire-worktree <campaign> <action-id> [--json]\n       ponytail campaign attach <token>\n       ponytail campaign deliver <campaign> --result <json>';
+  return 'usage: ponytail campaign status [<campaign>] [--json]\n       ponytail campaign reservation-audit [<campaign>] [--json]\n       ponytail campaign runnable-plans [<campaign>] [--json]\n       ponytail campaign schedule-ready [<campaign>] [--json]\n       ponytail campaign ready-actions [<campaign>] [--json]\n       ponytail campaign report-blocker <campaign> --result <json>\n       ponytail campaign observe <campaign> --snapshot <json>\n       ponytail campaign advance [<campaign>] [--json]\n       ponytail campaign reconcile <campaign> [--json]\n       ponytail campaign retry-dispatch <campaign> <original-action-id> --authorization <non-secret-reference> [--json]\n       ponytail campaign action-result <campaign> <action-id> --result <json>\n       ponytail campaign retire-worktree <campaign> <action-id> [--json]\n       ponytail campaign attach <token>\n       ponytail campaign deliver <campaign> --result <json>';
 }
 
 function run(argv = process.argv.slice(2), options = {}) {
@@ -2380,8 +2489,13 @@ function run(argv = process.argv.slice(2), options = {}) {
     process.stdout.write(`${JSON.stringify(status)}\n`);
     return status;
   }
-  const resolution = resolveInvocationWorktree(invocationWorktree, environment, ['status', 'runnable-plans'].includes(request.operation));
+  const resolution = resolveInvocationWorktree(invocationWorktree, environment, ['status', 'reservation-audit', 'runnable-plans'].includes(request.operation));
   const graph = resolveGraph(resolution.effectiveWorktree, request.input ?? resolution.workerBinding?.campaignId);
+  if (request.operation === 'reservation-audit') {
+    const result = reservationAudit(graph, readLedger(resolution.effectiveWorktree, graph.campaignId, environment), environment);
+    process.stdout.write(request.json ? `${JSON.stringify(result)}\n` : `${result.reservations.map(item => `${item.kind}\t${item.sessionId ?? item.hostIdentity ?? '-'}\t${item.creationState}\t${item.hostState}\t${item.unmergedCommits === null ? 'unknown' : item.unmergedCommits ? 'unmerged' : 'integrated'}\t${item.canRelease ? 'releasable' : item.objections.join(',')}`).join('\n')}${result.reservations.length ? '\n' : ''}`);
+    return result;
+  }
   if (request.operation === 'report-blocker') {
     withWorktreeLock(resolution.effectiveWorktree, environment, () => recordExecutionBlocker(readLedger(resolution.effectiveWorktree, graph.campaignId, environment), request.result, environment));
     const result = runnablePlanDiagnostics(graph, readLedger(resolution.effectiveWorktree, graph.campaignId, environment), resolution.invocationWorktree, environment);
@@ -2433,6 +2547,7 @@ module.exports = {
   CampaignLedgerReaders,
   CampaignOrchestrationError,
   CampaignReadyActionsReaders,
+  CampaignReservationAuditReaders: Object.freeze({ V1: readReservationAuditV1 }),
   CampaignRunnablePlansReaders: Object.freeze({ V1: value => {
     readRunnablePlansV1(value);
     return readRunnablePlansV2({ ...value, schemaVersion: 2, parallelism: null, plans: value.plans.map(plan => ({ ...plan, execution: null })) });
@@ -2493,6 +2608,8 @@ module.exports = {
   reconcile,
   reconcileLedger,
   readyActions,
+  reservationAudit,
+  readReservationAuditV1,
   recordActionResult,
   retryDispatch,
   retireWorktree,

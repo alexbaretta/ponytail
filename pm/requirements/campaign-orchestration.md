@@ -471,6 +471,17 @@ started dispatch, or invent advisory work absent from the durable ledger.
 The scheduler retains all worker pairs, including surplus inactive workers and
 their project-resource claims. Each campaign's fifteen-slot capacity bound
 includes its own creation reservations, not sessions from another campaign.
+The coordinator can request a read-only, per-slot reservation audit. It must
+distinguish confirmed campaign sessions from pending and superseded creation
+requests, show fresh observed activity when available, compare every known
+worker and delivered revision with the current integration commit, and state
+all objections to releasing each slot. A started creation with no confirmed
+session identity has an unknown outcome; elapsed time or absence from a partial
+host listing cannot establish that no chat exists. Only a never-started,
+unprovisioned reservation for a plan that is no longer runnable may be marked
+releasable through the existing `NOT_STARTED` action result. Confirmed worker
+pairs remain retained for reuse, even when their assignment is closed; the
+audit never archives or removes a session, worktree, or resource claim.
 Grandfathered reservations above fifteen remain valid: the bound prevents new
 creation, but `schedule-ready` must still assign every safe, idle pair to a
 dependency-ready plan in deterministic order. At capacity without a safe
