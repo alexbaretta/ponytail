@@ -3,7 +3,7 @@ Copyright (c) 2026 Alex Baretta. All rights reserved.
 Licensed under the MIT License. See LICENSE in the project root.
 -->
 
-# Repository text index and grep
+# Repository text index and search
 
 [Back to requirements index](index.md)
 
@@ -11,6 +11,9 @@ Licensed under the MIT License. See LICENSE in the project root.
 
 **Approval:** Approved and authorized for implementation by explicit
 stakeholder direction on 2026-09-30.
+
+**Clarification:** Explicit stakeholder implementation request on 2026-10-01
+requires the `search` command family, progress/ETA, and resumable ingestion.
 
 **Source:**
 [`2026-09-30-FEAT-repository_text_index_and_grep`](../bugs/closed/2026-09-30-FEAT-repository_text_index_and_grep.md).
@@ -34,18 +37,23 @@ Every command that consumes this index must refresh it before querying. A
 refresh compares the current refs and worktree with the last complete
 checkpoint, ingests only unseen Git objects, and reindexes only dirty or
 untracked content whose digest changed. Publication is transactional. A
-failed or unstable refresh leaves the prior complete checkpoint intact and
+failed or unstable refresh leaves the prior published checkpoint intact and
 must not fall back to `grep` or return a knowingly incomplete result.
+Completed commits are durable incremental checkpoints: interruption rolls back
+only an incomplete commit, and the next refresh skips completed commits exactly
+as it does when new commits have been added. Ref and worktree publication remain
+atomic after all required history has been ingested.
 
-## `ponytail grep`
+## `ponytail search`
 
 Ponytail must provide this literal-text query surface:
 
 ```text
-ponytail grep <text> [--path <path>]
-ponytail grep <text> --ref <ref> [--path <path>]
-ponytail grep <text> --commit <commit-id> [--path <path>]
-ponytail grep <text> --history <ref-or-commit> [--path <path>]
+ponytail search query <text> [--path <path>]
+ponytail search query <text> --ref <ref> [--path <path>]
+ponytail search query <text> --commit <commit-id> [--path <path>]
+ponytail search query <text> --history <ref-or-commit> [--path <path>]
+ponytail search update-index
 ```
 
 The selectors are mutually exclusive. With no selector, the command searches
@@ -61,9 +69,18 @@ stable, and duplicate-free for the selected state. Search values are bound SQL
 parameters. The command fails actionably when PostgreSQL or a complete index
 refresh is unavailable.
 
+`update-index` creates or incrementally updates the same index, without running
+reference-policy QA. It reports the number of unseen commits to process. For a
+TTY, an open-source progress bar shows percent completion and an explicit ETA.
+For a non-TTY, each completed commit emits `.`, every tenth also emits `+`, and
+every fiftieth also emits `|` followed by percent completion, ETA, and newline.
+Completion and interruption end the current progress line. ETA is an estimate
+for remaining commit ingestion based on observed throughput, initially unknown;
+overlay/ref publication is a separately identified final phase.
+
 Repository reference QA must consume the same refreshed current-worktree index
 rather than spawning repository-wide `git grep` processes or maintaining a
 second text-search path.
 
 Acceptance coverage:
-[Repository text index and grep Suite](../uat/repository-text-index.md).
+[Repository text index and search Suite](../uat/repository-text-index.md).

@@ -22,7 +22,7 @@ behavior independently from implementation plans and architecture.
 - [Pre-commit project isolation](precommit-project-isolation.md)
 - [Ponytail project isolation](project-isolation.md)
 - [Developer-private agent instructions](developer-private-agent-instructions.md)
-- [Repository text index and grep](repository-text-index.md)
+- [Repository text index and search](repository-text-index.md)
 - [Worktree reclamation](worktree-reclamation.md)
 - [Retained workers and worker-owned recovery](worker-worktree-retention.md)
 

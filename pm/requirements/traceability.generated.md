@@ -61,7 +61,7 @@ Requirement: [pm/requirements/plan-input-queue.md](plan-input-queue.md)
 Requirement: [pm/requirements/traceability-index.md](traceability-index.md)
 
 - implementation: implements [src/project-index.js:33](../../src/project-index.js#L33)
-- unit-test: verifies [tests/project-index.test.js:30](../../tests/project-index.test.js#L30)
+- unit-test: verifies [tests/project-index.test.js:31](../../tests/project-index.test.js#L31)
 - integration-test: verifies [scripts/test-project-index-postgres.sh:6](../../scripts/test-project-index-postgres.sh#L6)
 - uat: verifies [pm/uat/traceability-index.md:16](../../pm/uat/traceability-index.md#L16)
 - uat: verifies [pm/uat/traceability-index.md:48](../../pm/uat/traceability-index.md#L48)
@@ -81,9 +81,10 @@ Requirement: [pm/requirements/repository-text-index.md](repository-text-index.md
 
 - implementation: implements [scripts/project-qa.js:16](../../scripts/project-qa.js#L16)
 - implementation: implements [src/project-index.js:34](../../src/project-index.js#L34)
-- unit-test: verifies [tests/project-index.test.js:31](../../tests/project-index.test.js#L31)
+- unit-test: verifies [tests/project-index.test.js:32](../../tests/project-index.test.js#L32)
 - integration-test: verifies [scripts/test-project-index-postgres.sh:7](../../scripts/test-project-index-postgres.sh#L7)
 - uat: verifies [pm/uat/repository-text-index.md:14](../../pm/uat/repository-text-index.md#L14)
+- uat: verifies [pm/uat/repository-text-index.md:76](../../pm/uat/repository-text-index.md#L76)
 - plan: plans-implementation [pm/plans/closed/2026-09-30-repository-text-index-and-grep/plan.md:18](../../pm/plans/closed/2026-09-30-repository-text-index-and-grep/plan.md#L18)
 - plan: plans-verification [pm/plans/closed/2026-09-30-repository-text-index-and-grep/plan.md:19](../../pm/plans/closed/2026-09-30-repository-text-index-and-grep/plan.md#L19)
 - tasklet: plans-implementation [pm/plans/closed/2026-09-30-repository-text-index-and-grep/sprints/S01.md:43](../../pm/plans/closed/2026-09-30-repository-text-index-and-grep/sprints/S01.md#L43)
@@ -98,6 +99,7 @@ Requirement: [pm/requirements/repository-text-index.md](repository-text-index.md
 - issue: introduces [pm/bugs/closed/2026-09-30-FEAT-repository_text_index_and_grep.md:21](../../pm/bugs/closed/2026-09-30-FEAT-repository_text_index_and_grep.md#L21)
 - issue: plans-implementation [pm/bugs/closed/2026-09-30-FEAT-repository_text_index_and_grep.md:22](../../pm/bugs/closed/2026-09-30-FEAT-repository_text_index_and_grep.md#L22)
 - issue: plans-verification [pm/bugs/closed/2026-09-30-FEAT-repository_text_index_and_grep.md:23](../../pm/bugs/closed/2026-09-30-FEAT-repository_text_index_and_grep.md#L23)
+- issue: introduces [pm/bugs/closed/2026-10-01-FEAT-search_index_progress_resume.md:15](../../pm/bugs/closed/2026-10-01-FEAT-search_index_progress_resume.md#L15)
 
 ## REQ-CAMPAIGN-ORCHESTRATION
 

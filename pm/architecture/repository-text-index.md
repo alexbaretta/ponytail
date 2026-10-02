@@ -38,13 +38,26 @@ observations and reached Git objects are retained indefinitely; superseded
 worktree generations are deleted after PostgreSQL snapshots no longer need
 them.
 
-`ponytail grep` resolves one mutually exclusive state selector and one optional
+Each complete commit (metadata, parent edges, blobs, and all tree entries) is
+committed as one durable ingestion checkpoint. A visible commit row therefore
+means its tree is complete; interrupted commits roll back and are retried.
+Only the final transaction publishes refs and the current-worktree overlay.
+The existing project/repository/worktree writer key is held as a PostgreSQL
+session lock across these transactions, released before returning its pooled
+connection; disconnecting a killed process releases it as well.
+
+`ponytail search query` resolves one mutually exclusive state selector and one optional
 path boundary, refreshes the needed index state, obtains trigram candidates
 with bound SQL values, and verifies literal line matches before formatting.
 Current-tree queries use the overlay; ref and commit queries join tree entries;
 history queries traverse commit parents from the selected tip. Reference QA
 uses this same current-tree query boundary and applies its project-identity,
 dependency, exception, and Unicode-boundary policy to the returned matches.
+
+`ponytail search update-index` invokes the same refresh boundary without QA.
+Its progress observer is called only after a commit checkpoint becomes durable.
+cli-progress renders TTY bars; redirected output emits commit markers and
+throughput-based ETA. The final ref/overlay publication is reported separately.
 
 Database or refresh failure is a command failure. There is no filesystem
 search fallback because a second operational path could silently return a

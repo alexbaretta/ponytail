@@ -3,7 +3,7 @@ Copyright (c) 2026 Alex Baretta. All rights reserved.
 Licensed under the MIT License. See LICENSE in the project root.
 -->
 
-# Repository text index and grep Suite
+# Repository text index and search Suite
 
 [Back to UAT index](index.md) · Requirement:
 [`REQ-REPOSITORY-TEXT-INDEX`](../requirements/repository-text-index.md),
@@ -20,7 +20,7 @@ Traceability: verifies REQ-REPOSITORY-TEXT-INDEX
 - **Profiles:** Automated production CLI and real PostgreSQL profile.
 - **External effects:** Publishes only rebuildable current-worktree index rows.
 
-1. Run `ponytail grep <text>` without a state or path selector.
+1. Run `ponytail search query <text>` without a state or path selector.
    - Results identify every matching line in the effective current worktree,
      including modified and untracked non-ignored text and excluding deleted,
      ignored, and binary content.
@@ -62,7 +62,7 @@ Traceability: verifies REQ-REPOSITORY-TEXT-INDEX
 - **External effects:** Refreshes the current-worktree index only.
 
 1. Run `ponytail qa references`.
-   - QA refreshes and queries the same index as `ponytail grep`; it does not
+   - QA refreshes and queries the same index as `ponytail search query`; it does not
      spawn `git grep` and does not fail with `ENOBUFS`.
 2. Exercise permitted dependencies, components, installed skills, and exact
    exceptions.
@@ -70,3 +70,27 @@ Traceability: verifies REQ-REPOSITORY-TEXT-INDEX
 3. Make the database or refresh unavailable.
    - QA fails actionably instead of falling back to another search path or
      declaring the repository valid.
+
+## Arc: Update with progress and resume after interruption
+
+Traceability: verifies REQ-REPOSITORY-TEXT-INDEX
+
+- **Actor:** Developer maintaining the index.
+- **Prerequisites:** Registered test repository, configured PostgreSQL, and
+  at least 51 unseen commits. Previously published refs/overlay are preserved.
+- **Profiles:** Real PostgreSQL and production CLI; TTY and redirected output.
+- **External effects:** Appends complete commit checkpoints, then publishes
+  refs and the current worktree. No Git state is modified.
+
+1. Run `ponytail search update-index` in a TTY.
+   - A progress bar displays commit percent and explicit ETA; no fabricated
+     estimate appears before throughput exists.
+2. Repeat against unseen history with output redirected to a file.
+   - Each completed commit adds `.`, each tenth adds `+`, and each fiftieth
+     adds `|`, percent, ETA, and newline. Final publication is distinguished.
+3. Interrupt after some commits complete, including during the next commit.
+   - Complete commits remain durable; the incomplete commit is rolled back;
+     prior published refs/overlay remain intact.
+4. Add another Git commit and run the same update command again.
+   - Only unfinished/new commits are processed, and the complete refs/overlay
+     publish atomically. Repeating an unchanged update processes zero commits.

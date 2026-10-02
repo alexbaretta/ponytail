@@ -24,7 +24,7 @@ const crypto = require('node:crypto');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const { execFileSync, spawnSync } = require('node:child_process');
+const { execFileSync, spawn, spawnSync } = require('node:child_process');
 const { Pool } = require('pg');
 const {
   collectPlanProjection,
@@ -310,11 +310,130 @@ async function main() {
     fs.writeFileSync(path.join(repositoryRoot, 'src/overlay.txt'), 'overlay-only needle\n');
     fs.writeFileSync(path.join(repositoryRoot, 'ignored.txt'), 'ignored-only needle\n');
 
-    const firstRefresh = await refreshRepositoryTextIndex({ root: repositoryRoot, pool });
+    let durableCommit;
+    await assert.rejects(() => refreshRepositoryTextIndex({
+      root: repositoryRoot, pool,
+      onProgress: async (completed, total) => {
+        assert.equal(total, 4);
+        if (completed === 1) {
+          const checkpoint = await client.query(`
+            SELECT commit_oid FROM ponytail_index.git_commit_v1 commit
+            JOIN ponytail_index.repository_v1 repository USING (repository_id)
+            WHERE repository.project_id = $1::uuid`, [repositoryProjectId]);
+          assert.equal(checkpoint.rows.length, 1);
+          durableCommit = checkpoint.rows[0].commit_oid;
+          throw new Error('interrupted after durable checkpoint');
+        }
+      },
+    }), /interrupted after durable checkpoint/);
+    const unpublished = await client.query(`
+      SELECT count(*)::integer AS count FROM ponytail_index.git_ref_current_v1 ref
+      JOIN ponytail_index.repository_v1 repository USING (repository_id)
+      WHERE repository.project_id = $1::uuid`, [repositoryProjectId]);
+    assert.equal(unpublished.rows[0].count, 0);
+    assert.equal(durableCommit, historicalCommit);
+    const resumedProgress = [];
+    const firstRefresh = await refreshRepositoryTextIndex({
+      root: repositoryRoot, pool,
+      onProgress: (completed, total) => resumedProgress.push([completed, total]),
+    });
+    assert.deepEqual(resumedProgress, [[0, 3], [1, 3], [2, 3], [3, 3]]);
     const secondRefresh = await refreshRepositoryTextIndex({ root: repositoryRoot, pool });
-    assert.equal(firstRefresh.history.commits, 4);
+    assert.equal(firstRefresh.history.commits, 3);
     assert.equal(secondRefresh.history.commits, 0);
     assert.equal(secondRefresh.overlay.reused, true);
+    const updateCli = spawnSync(process.execPath, [
+      path.join(root, 'src/project-index.js'), 'search', 'update-index',
+    ], { cwd: repositoryRoot, encoding: 'utf8' });
+    assert.equal(updateCli.status, 0, updateCli.stderr);
+    assert.match(updateCli.stdout, /Indexing 0 unseen commits \(ETA 0s\)/);
+    assert.match(updateCli.stdout, /Index updated: 0 commits/);
+    fs.writeFileSync(path.join(repositoryRoot, 'src/new.txt'), 'new-commit needle\n');
+    execFileSync('git', ['add', 'src/new.txt'], { cwd: repositoryRoot });
+    execFileSync('git', [
+      '-c', 'user.name=Test', '-c', 'user.email=test@example.test',
+      'commit', '-qm', 'new after interruption',
+    ], { cwd: repositoryRoot });
+    const newCommit = execFileSync('git', ['rev-parse', 'HEAD'], {
+      cwd: repositoryRoot, encoding: 'utf8',
+    }).trim();
+    const abortController = new AbortController();
+    const commitProgress = [];
+    await assert.rejects(() => refreshRepositoryTextIndex({
+      root: repositoryRoot, pool, signal: abortController.signal,
+      onProgress: (completed, total) => {
+        commitProgress.push([completed, total]);
+        if (completed === 0) abortController.abort(new Error('interrupted before commit'));
+      },
+    }), /interrupted before commit/);
+    const absent = await client.query(`SELECT 1 FROM ponytail_index.git_commit_v1
+      WHERE repository_id = $1::uuid AND commit_oid = $2`, [firstRefresh.repositoryId, newCommit]);
+    assert.equal(absent.rows.length, 0);
+    const added = await refreshRepositoryTextIndex({ root: repositoryRoot, pool });
+    assert.equal(added.history.commits, 1);
+    const queryCli = spawnSync(process.execPath, [
+      path.join(root, 'src/project-index.js'), 'search', 'query', 'new-commit',
+    ], { cwd: repositoryRoot, encoding: 'utf8' });
+    assert.equal(queryCli.status, 0, queryCli.stderr);
+    assert.match(queryCli.stdout, /src\/new.txt:1:new-commit needle/);
+    for (let index = 0; index < 55; index += 1) {
+      execFileSync('git', [
+        '-c', 'user.name=Test', '-c', 'user.email=test@example.test',
+        'commit', '--allow-empty', '-qm', `interruption fixture ${index}`,
+      ], { cwd: repositoryRoot });
+    }
+    const oldPublication = await client.query(`
+      SELECT generation_id FROM ponytail_index.published_worktree_text_generation_v1
+      WHERE worktree_id = $1::uuid`, [firstRefresh.worktreeId]);
+    await new Promise((resolve, reject) => {
+      const child = spawn(process.execPath, [
+        path.join(root, 'src/project-index.js'), 'search', 'update-index',
+      ], { cwd: repositoryRoot, stdio: ['ignore', 'pipe', 'pipe'] });
+      let output = '';
+      let killed = false;
+      child.stdout.on('data', chunk => {
+        output += chunk.toString();
+        if (!killed && output.includes('\n.')) {
+          killed = true;
+          child.kill('SIGKILL');
+        }
+      });
+      child.stderr.on('data', () => {});
+      child.on('error', reject);
+      child.on('close', (code, signal) => {
+        try {
+          assert.equal(killed, true, output);
+          assert.equal(code, null);
+          assert.equal(signal, 'SIGKILL');
+          resolve();
+        } catch (error) { reject(error); }
+      });
+    });
+    const afterKill = await client.query(`
+      SELECT count(*)::integer AS count FROM ponytail_index.git_commit_v1
+      WHERE repository_id = $1::uuid`, [firstRefresh.repositoryId]);
+    assert.ok(afterKill.rows[0].count > 5 && afterKill.rows[0].count < 60);
+    const priorPointer = await client.query(`
+      SELECT generation_id FROM ponytail_index.published_worktree_text_generation_v1
+      WHERE worktree_id = $1::uuid`, [firstRefresh.worktreeId]);
+    assert.deepEqual(priorPointer.rows, oldPublication.rows);
+    const priorRef = await client.query(`SELECT commit_oid FROM ponytail_index.git_ref_current_v1
+      WHERE repository_id = $1::uuid AND ref_name = 'refs/heads/main'`, [firstRefresh.repositoryId]);
+    assert.equal(priorRef.rows[0].commit_oid, newCommit);
+    execFileSync('git', [
+      '-c', 'user.name=Test', '-c', 'user.email=test@example.test',
+      'commit', '--allow-empty', '-qm', 'new commit after process killed',
+    ], { cwd: repositoryRoot });
+    const remaining = 61 - afterKill.rows[0].count;
+    const resumedCli = spawnSync(process.execPath, [
+      path.join(root, 'src/project-index.js'), 'search', 'update-index',
+    ], { cwd: repositoryRoot, encoding: 'utf8' });
+    assert.equal(resumedCli.status, 0, resumedCli.stderr);
+    assert.match(resumedCli.stdout, new RegExp(`Indexing ${remaining} unseen commits`));
+    assert.equal((resumedCli.stdout.match(/\./gu) ?? []).length, remaining);
+    assert.equal((resumedCli.stdout.match(/\+/gu) ?? []).length, Math.floor(remaining / 10));
+    assert.match(resumedCli.stdout, /\| \d+% ETA \d+s\n/);
+    assert.equal((await refreshRepositoryTextIndex({ root: repositoryRoot, pool })).history.commits, 0);
     const searchRepository = (query, selector = 'worktree', selectorValue = null, path = null) =>
       grepRepository({ query, selector, selectorValue, path, ignoreCase: false }, {
         root: repositoryRoot, pool,

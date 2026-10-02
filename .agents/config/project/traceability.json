@@ -53,6 +53,7 @@
     }
   ],
   "artifacts": [
+    {"class": "issue", "path": "pm/bugs/closed/2026-10-01-FEAT-search_index_progress_resume.md", "locator": "text"},
     {"class": "issue", "path": "pm/bugs/in_progress/2026-10-01-FEAT-campaign_execution_blocker_diagnostics.md", "locator": "text"},
     {"class": "implementation", "path": "skills/worktree-lifecycle/SKILL.md", "locator": "text"},
     {"class": "implementation", "path": "src/worker-worktrees.js", "locator": "text"},

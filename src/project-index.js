@@ -1746,7 +1746,7 @@ function parseGrepArguments(args) {
   if (args.length === 0 || args[0].startsWith('--')) {
     throw new ProjectIndexError(
       'REPOSITORY_GREP_USAGE',
-      'usage: ponytail grep <text> [--ref <ref> | --commit <commit-id> | --history <ref-or-commit>] [--path <path>] [-i|--ignore-case]',
+      'usage: ponytail search query <text> [--ref <ref> | --commit <commit-id> | --history <ref-or-commit>] [--path <path>] [-i|--ignore-case]',
     );
   }
   const query = args.shift();
@@ -1849,7 +1849,7 @@ async function insertTextDocument(client, buffer) {
   return documentId;
 }
 
-async function ingestGitHistory(client, context, tips) {
+async function ingestGitHistory(client, context, tips, options) {
   if (tips.length === 0) return { commits: 0, blobs: 0 };
   const lines = (await gitBuffer(context.root, [
     'rev-list', '--reverse', '--topo-order', '--parents', ...tips,
@@ -1859,12 +1859,15 @@ async function ingestGitHistory(client, context, tips) {
     WHERE repository_id = $1::uuid`, [context.repositoryId]);
   const known = new Set(knownResult.rows.map(row => row.commit_oid));
   const unseen = lines.map(line => line.split(' ')).filter(([commitOid]) => !known.has(commitOid));
-  const commitRecords = [];
+  let commits = 0;
+  let blobs = 0;
+  await options.onProgress?.(commits, unseen.length);
   for (const [commitOid, ...parents] of unseen) {
+    options.signal?.throwIfAborted();
     const [treeOid, committedAt] = (await gitBuffer(context.root, [
       'show', '-s', '--format=%T%x00%cI', commitOid,
     ])).toString('utf8').trim().split('\0');
-    commitRecords.push({ commitOid, parents, treeOid, committedAt });
+    await client.query('BEGIN');
     await client.query(`
       INSERT INTO ponytail_index.git_commit_v1 (
         repository_id, commit_oid, tree_oid, committed_at
@@ -1872,26 +1875,22 @@ async function ingestGitHistory(client, context, tips) {
       ON CONFLICT (repository_id, commit_oid) DO NOTHING`, [
       context.repositoryId, commitOid, treeOid, committedAt,
     ]);
-  }
-  for (const record of commitRecords) {
-    for (const [parentOrder, parentOid] of record.parents.entries()) {
+    for (const [parentOrder, parentOid] of parents.entries()) {
       await client.query(`
         INSERT INTO ponytail_index.git_commit_parent_v1 (
           repository_id, commit_oid, parent_oid, parent_order
         ) VALUES ($1::uuid, $2, $3, $4)
-        ON CONFLICT DO NOTHING`, [context.repositoryId, record.commitOid, parentOid, parentOrder]);
+        ON CONFLICT DO NOTHING`, [context.repositoryId, commitOid, parentOid, parentOrder]);
     }
-  }
-  let blobs = 0;
-  for (const record of commitRecords) {
     const entries = nulStrings(await gitBuffer(context.root, [
-      'ls-tree', '-r', '-z', '--full-tree', record.commitOid,
+      'ls-tree', '-r', '-z', '--full-tree', commitOid,
     ])).map(value => {
       const match = value.match(/^([0-7]{6}) (blob|commit) ([0-9a-f]{40,64})\t([\s\S]+)$/u);
       if (match === null) throw new Error(`invalid git tree entry: ${value}`);
       return { mode: match[1], type: match[2], blobOid: match[3], path: match[4] };
     }).filter(entry => entry.type === 'blob');
     for (const entry of entries) {
+      options.signal?.throwIfAborted();
       const existing = await client.query(`
         SELECT 1 FROM ponytail_index.git_blob_v1
         WHERE repository_id = $1::uuid AND blob_oid = $2`, [context.repositoryId, entry.blobOid]);
@@ -1901,7 +1900,8 @@ async function ingestGitHistory(client, context, tips) {
         await client.query(`
           INSERT INTO ponytail_index.git_blob_v1 (
             repository_id, blob_oid, byte_length, document_id
-          ) VALUES ($1::uuid, $2, $3, $4)`, [
+          ) VALUES ($1::uuid, $2, $3, $4)
+          ON CONFLICT (repository_id, blob_oid) DO NOTHING`, [
           context.repositoryId, entry.blobOid, buffer.length, documentId,
         ]);
         blobs += 1;
@@ -1911,11 +1911,15 @@ async function ingestGitHistory(client, context, tips) {
           repository_id, commit_oid, path, mode, blob_oid
         ) VALUES ($1::uuid, $2, $3, $4, $5)
         ON CONFLICT DO NOTHING`, [
-        context.repositoryId, record.commitOid, entry.path, entry.mode, entry.blobOid,
+        context.repositoryId, commitOid, entry.path, entry.mode, entry.blobOid,
       ]);
     }
+    options.signal?.throwIfAborted();
+    await client.query('COMMIT');
+    commits += 1;
+    await options.onProgress?.(commits, unseen.length);
   }
-  return { commits: commitRecords.length, blobs };
+  return { commits, blobs };
 }
 
 function stableFileBuffer(root, relativePath) {
@@ -2037,14 +2041,25 @@ async function refreshRepositoryTextIndex(options = {}) {
   const root = fs.realpathSync(options.root ?? git(process.cwd(), ['rev-parse', '--show-toplevel']));
   const pool = options.pool ?? new (require('pg').Pool)(databaseOptions(root));
   const client = await pool.connect();
+  let lockKey;
   try {
     await client.query('BEGIN');
     const context = await repositoryTextContext(client, root);
+    const writerKey = JSON.stringify([
+      context.project.projectId, context.repositoryId, context.worktreeId, 'repository-text',
+    ]);
     const lock = await one(client,
-      'SELECT pg_try_advisory_xact_lock(hashtextextended($1, 0)) AS acquired',
-      [JSON.stringify([context.project.projectId, context.repositoryId, context.worktreeId, 'repository-text'])]);
+      'SELECT pg_try_advisory_lock(hashtextextended($1, 0)) AS acquired', [writerKey]);
     if (!lock.acquired) throw new ProjectIndexError('REPOSITORY_INDEX_BUSY', 'repository text index writer is already active');
+    lockKey = writerKey;
+    await client.query('COMMIT');
     const refs = await currentRefs(root);
+    const headCommit = git(root, ['rev-parse', 'HEAD']);
+    const tips = [...new Set([...refs.values(), headCommit, ...(options.tips ?? [])])];
+    const history = await ingestGitHistory(client, context, tips, options);
+    options.signal?.throwIfAborted();
+    await options.onPublish?.();
+    await client.query('BEGIN');
     const priorResult = await client.query(`
       SELECT ref_name, commit_oid FROM ponytail_index.git_ref_current_v1
       WHERE repository_id = $1::uuid`, [context.repositoryId]);
@@ -2078,19 +2093,76 @@ async function refreshRepositoryTextIndex(options = {}) {
       await client.query(`DELETE FROM ponytail_index.git_ref_current_v1
         WHERE repository_id = $1::uuid AND ref_name = $2`, [context.repositoryId, refName]);
     }
-    const headCommit = git(root, ['rev-parse', 'HEAD']);
-    const tips = [...new Set([...refs.values(), headCommit, ...(options.tips ?? [])])];
-    const history = await ingestGitHistory(client, context, tips);
     const overlay = await publishWorktreeOverlay(client, context);
+    if (git(root, ['rev-parse', 'HEAD']) !== headCommit ||
+        JSON.stringify([...await currentRefs(root)]) !== JSON.stringify([...refs])) {
+      throw new ProjectIndexError('REPOSITORY_INDEX_UNSTABLE', 'repository refs changed while indexing');
+    }
+    options.signal?.throwIfAborted();
     await client.query('COMMIT');
     return { ...context, headCommit, history, overlay };
   } catch (error) {
     await client.query('ROLLBACK');
     throw error;
   } finally {
-    client.release();
-    if (options.pool === undefined) await pool.end();
+    try {
+      if (lockKey !== undefined) await client.query(
+        'SELECT pg_advisory_unlock(hashtextextended($1, 0))', [lockKey]);
+    } finally {
+      client.release();
+      if (options.pool === undefined) await pool.end();
+    }
   }
+}
+
+function repositoryIndexProgress(stream = process.stdout, now = Date.now) {
+  const startedAt = now();
+  let bar;
+  let completed = 0;
+  let total = 0;
+  let lineOpen = false;
+  const status = () => {
+    const percentage = total === 0 ? 100 : Math.floor(completed * 100 / total);
+    const eta = completed === 0 && total > 0 ? 'unknown' :
+      `${Math.ceil((now() - startedAt) / 1000 * (total - completed) / Math.max(completed, 1))}s`;
+    return { percentage, eta };
+  };
+  const stop = () => {
+    bar?.stop();
+    if (lineOpen) stream.write('\n');
+    lineOpen = false;
+  };
+  return {
+    update(value, maximum) {
+      completed = value;
+      total = maximum;
+      const payload = status();
+      if (value === 0) {
+        stream.write(`Indexing ${total} unseen commits (ETA ${payload.eta})\n`);
+        if (stream.isTTY) {
+          bar = new (require('cli-progress').SingleBar)({
+            stream, format: 'History [{bar}] {percentage}% {value}/{total} commits | ETA {remaining}',
+          });
+          bar.start(total, 0, { remaining: payload.eta });
+        }
+      } else if (stream.isTTY) {
+        bar.update(completed, { remaining: payload.eta });
+      } else {
+        stream.write('.');
+        if (completed % 10 === 0) stream.write('+');
+        lineOpen = true;
+        if (completed % 50 === 0) {
+          stream.write(`| ${payload.percentage}% ETA ${payload.eta}\n`);
+          lineOpen = false;
+        }
+      }
+    },
+    publish() {
+      stop();
+      stream.write('History complete; publishing refs and worktree overlay\n');
+    },
+    stop,
+  };
 }
 
 function literalMatches(content, query, ignoreCase) {
@@ -2219,20 +2291,41 @@ function printPlanGraphHuman(result) {
 
 async function run(args) {
   const family = args.shift();
-  if (family === 'grep') {
+  const operation = args.shift();
+  if (family === 'search' && operation === 'update-index') {
+    if (args.length > 0) throw new ProjectIndexError(
+      'REPOSITORY_INDEX_USAGE', 'usage: ponytail search update-index');
+    const progress = repositoryIndexProgress();
+    const abortController = new AbortController();
+    const interrupt = () => abortController.abort(new ProjectIndexError(
+      'REPOSITORY_INDEX_INTERRUPTED', 'index update interrupted; rerun to resume completed checkpoints'));
+    process.once('SIGINT', interrupt);
+    process.once('SIGTERM', interrupt);
+    try {
+      const result = await refreshRepositoryTextIndex({
+        onProgress: progress.update, onPublish: progress.publish, signal: abortController.signal,
+      });
+      process.stdout.write(`Index updated: ${result.history.commits} commits, ${result.history.blobs} new blobs\n`);
+    } finally {
+      progress.stop();
+      process.removeListener('SIGINT', interrupt);
+      process.removeListener('SIGTERM', interrupt);
+    }
+    return;
+  }
+  if (family === 'search' && operation === 'query') {
     const search = parseGrepArguments(args);
     const matches = await grepRepository(search);
     printGrepHuman(matches, search.selector === 'history');
     if (matches.length === 0) process.exitCode = 1;
     return;
   }
-  const operation = args.shift();
   const valid = family === 'traceability' && ['index', 'search', 'validate'].includes(operation) ||
     family === 'plan' && ['search', 'descendants', 'ancestors', 'roots', 'stranded'].includes(operation);
   if (!valid) {
     throw new ProjectIndexError(
       'PROJECT_INDEX_USAGE',
-      'usage: ponytail <traceability|plan> <operation> ...',
+      'usage: ponytail <search|traceability|plan> <operation> ...',
     );
   }
   if (family === 'plan') {
@@ -2319,5 +2412,6 @@ module.exports = {
   parseGrepArguments,
   databaseOptions,
   refreshRepositoryTextIndex,
+  repositoryIndexProgress,
   grepRepository,
 };

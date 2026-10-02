@@ -52,7 +52,7 @@ while project-wide management records remain under `pm/`.
   repository-text projections, transactional generation publication,
   freshness-checked structured queries, incremental historical and worktree
   indexing, and the `ponytail traceability`, `ponytail plan`, and `ponytail
-  grep` command families; `scripts/test-project-index-postgres.sh` owns their
+  search` command families; `scripts/test-project-index-postgres.sh` owns their
   real-database contract proof.
 - `tsts/` owns the canonical TypeScript analyzer and its Node tests. Root npm dependencies and `npm run build:tsts` produce ignored `tsts/dist/`; npm distributes only its compiled runtime. `cli/tsts` is the registered-project launcher installed alongside `ponytail`.
 - `src/` owns non-script runtime implementations dispatched by user-facing

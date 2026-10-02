@@ -152,7 +152,8 @@ test('ponytail help publishes campaign, plan-input, index, and plan command fami
   assert.match(result.stdout, /ponytail traceability index \[--rebuild\] \[--json\]/);
   assert.match(result.stdout, /ponytail traceability search <query>/);
   assert.match(result.stdout, /ponytail traceability validate \[--plan <plan> \| --campaign <plan>\]/);
-  assert.match(result.stdout, /ponytail grep <text> \[--ref <ref> \| --commit <commit-id> \| --history <ref-or-commit>\]/);
+  assert.match(result.stdout, /ponytail search query <text> \[--ref <ref> \| --commit <commit-id> \| --history <ref-or-commit>\]/);
+  assert.match(result.stdout, /ponytail search update-index/);
   assert.match(result.stdout, /ponytail plan search <query>/);
   assert.match(result.stdout, /ponytail plan descendants <plan>/);
   assert.match(result.stdout, /ponytail plan ancestors <plan>/);

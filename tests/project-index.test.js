@@ -20,6 +20,7 @@ const {
   parseSearchArguments,
   parseValidationArguments,
   publishTraceabilityGeneration,
+  repositoryIndexProgress,
   queryPlanGraph,
   searchPlans,
   scopedTraceabilityEntityIds,
@@ -79,6 +80,55 @@ test('parses exact repository grep selectors and paths', () => {
   assert.throws(() => parseGrepArguments(['needle', '--path', '../outside']),
     /invalid repository path/);
   assert.throws(() => parseGrepArguments(['']), /must not be empty/);
+});
+
+test('index progress emits cumulative markers, throughput ETA, and final publication phase', () => {
+  let output = '';
+  let milliseconds = 0;
+  const progress = repositoryIndexProgress({ write: text => { output += text; } }, () => milliseconds);
+  progress.update(0, 51);
+  assert.match(output, /51 unseen commits \(ETA unknown\)/);
+  for (let count = 1; count <= 50; count += 1) {
+    milliseconds += 1000;
+    progress.update(count, 51);
+  }
+  assert.equal((output.match(/\./gu) ?? []).length, 50);
+  assert.equal((output.match(/\+/gu) ?? []).length, 5);
+  assert.match(output, /\| 98% ETA 1s\n$/);
+  progress.update(51, 51);
+  progress.publish();
+  assert.match(output, /\.\nHistory complete; publishing refs and worktree overlay\n$/);
+  progress.stop();
+});
+
+test('index progress ends interrupted lines and handles a zero-commit update', () => {
+  let output = '';
+  const progress = repositoryIndexProgress({ write: text => { output += text; } }, () => 0);
+  progress.update(0, 2);
+  progress.update(1, 2);
+  progress.stop();
+  assert.match(output, /\.\n$/);
+  const empty = repositoryIndexProgress({ write: text => { output += text; } }, () => 0);
+  empty.update(0, 0);
+  empty.publish();
+  assert.match(output, /0 unseen commits \(ETA 0s\)/);
+});
+
+test('TTY index progress renders the installed open-source bar with percent and explicit ETA', () => {
+  let output = '';
+  let milliseconds = 0;
+  const progress = repositoryIndexProgress({
+    isTTY: true, columns: 120, write: text => { output += text; },
+  }, () => milliseconds);
+  try {
+    progress.update(0, 2);
+    assert.match(output, /History \[.*\] 0% 0\/2 commits \| ETA unknown/);
+    milliseconds = 1000;
+    progress.update(1, 2);
+  } finally {
+    progress.stop();
+  }
+  assert.match(output, /50% 1\/2 commits \| ETA 1s/);
 });
 
 function planFixture() {
