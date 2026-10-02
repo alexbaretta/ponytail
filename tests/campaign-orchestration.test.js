@@ -816,7 +816,10 @@ test('independent dispatch continues while the integration lane has one outstand
     { id: 'ready-b', parentPlanId: 'campaign', dependsOn: [], lifecycle: 'open', path: 'b' },
   ]);
 
-  const rebase = advanceLedger(campaignGraph, ledger);
+  const rebase = readActionV4({ schemaVersion: 4, id: 'historical-rebase', type: 'REQUEST_REBASE',
+    assignmentId: 'join-assignment', idempotencyKey: 'join-key:REQUEST_REBASE',
+    payload: { sessionId: 'join-session', ontoRevision: ledger.integrationRevision } });
+  ledger.pendingActions.push(rebase);
   const firstDispatch = advanceLedger(campaignGraph, ledger);
   const secondDispatch = advanceLedger(campaignGraph, ledger);
 
@@ -853,7 +856,10 @@ test('an outstanding rebase pins the integration revision until its named result
     { id: 'campaign', parentPlanId: null, dependsOn: [], lifecycle: 'in_progress', path: 'root' },
     { id: 'joining', parentPlanId: 'campaign', dependsOn: [], lifecycle: 'in_progress', path: 'joining' },
   ]);
-  const rebase = advanceLedger(campaignGraph, ledger);
+  const rebase = readActionV4({ schemaVersion: 4, id: 'historical-rebase', type: 'REQUEST_REBASE',
+    assignmentId: 'join-assignment', idempotencyKey: 'join-key:REQUEST_REBASE',
+    payload: { sessionId: 'join-session', ontoRevision: ledger.integrationRevision } });
+  ledger.pendingActions.push(rebase);
   fs.appendFileSync(path.join(root, 'fixture.txt'), 'integration change\n');
   command(root, ['add', '.']);
   command(root, ['-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.test', 'commit', '-qm', 'integration change']);
@@ -1386,6 +1392,63 @@ test('authenticated dispatch stays valid while its worker activates an open plan
   }
 });
 
+test('working workers retry optimistic deliveries after a competing fast-forward join', () => {
+  const root = repository();
+  const environment = { ...process.env, PONYTAIL_CAMPAIGN_STATE_DIR: temporaryDirectory('ponytail-optimistic-join-state') };
+  const ledger = newLedger(root, 'campaign', 'coordinator');
+  const assignments = ['a', 'b'].map((id) => {
+    const worktree = path.join(temporaryDirectory(`ponytail-optimistic-${id}`), 'worker');
+    command(root, ['worktree', 'add', '-qb', `worker-${id}`, worktree]);
+    const evidencePath = `pm/plans/in_progress/${id}/evidence/result.md`;
+    write(worktree, evidencePath, `worker ${id}\n`);
+    command(worktree, ['add', '.']);
+    command(worktree, ['-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.test', 'commit', '-qm', `worker ${id}`]);
+    const revision = command(worktree, ['rev-parse', 'HEAD']);
+    const assignment = { id, planId: id, sessionId: `session-${id}`, worktree, branch: `worker-${id}`,
+      dispatchRevision: ledger.integrationRevision, workerRevision: ledger.integrationRevision,
+      state: 'ACTIVE', idempotencyKey: `key-${id}`, attachToken: `token-${id}`,
+      worktreeArchived: false, sessionArchived: false };
+    ledger.assignments.push(assignment);
+    recordWorkerDelivery(root, 'campaign', { ...assignment, planPath: `pm/plans/in_progress/${id}/plan.md` },
+      { revision, evidencePaths: [evidencePath] }, environment);
+    return assignment;
+  });
+  fs.writeFileSync(path.join(environment.PONYTAIL_CAMPAIGN_STATE_DIR, 'campaign-worker-bindings.json'), JSON.stringify({
+    schemaVersion: 1, bindings: assignments.map((assignment) => ({
+      repositoryRoot: root, campaignId: 'campaign', assignmentId: assignment.id, coordinatorSessionId: 'coordinator',
+      attachTokenHash: `hash-${assignment.id}`, sessionId: assignment.sessionId, worktree: assignment.worktree,
+      branch: assignment.branch, revision: assignment.dispatchRevision, boundAt: new Date().toISOString(),
+    })),
+  }));
+  writeHostObservation(root, 'campaign', { schemaVersion: 1, campaignId: 'campaign', observedAt: new Date().toISOString(),
+    completeSessionIds: assignments.map(({ sessionId }) => sessionId),
+    sessions: assignments.map(({ sessionId, worktree }) => ({ sessionId, state: 'working', worktree, managedWorktree: true })) }, environment);
+  const campaignGraph = graph([
+    { id: 'campaign', parentPlanId: null, dependsOn: [], lifecycle: 'in_progress', path: 'root' },
+    ...assignments.map(({ planId }) => ({ id: planId, parentPlanId: 'campaign', dependsOn: [], lifecycle: 'in_progress', path: planId })),
+  ]);
+  write(assignments[0].worktree, 'uncommitted.txt', 'not delivered\n');
+  assert.equal(reconcile(campaignGraph, ledger, root, environment).assignments[0].state, 'ACTIVE');
+  fs.unlinkSync(path.join(assignments[0].worktree, 'uncommitted.txt'));
+  assert.deepEqual(reconcile(campaignGraph, ledger, root, environment).readyToMerge.map(({ id }) => id), ['a', 'b']);
+  advanceLedger(campaignGraph, ledger, environment);
+  advanceLedger(campaignGraph, ledger, environment);
+  advanceLedger(campaignGraph, ledger, environment);
+  const firstRevision = command(root, ['rev-parse', 'HEAD']);
+  assert.equal(firstRevision, command(assignments[0].worktree, ['rev-parse', 'HEAD']));
+  assert.equal(reconcile(campaignGraph, ledger, root, environment).rebaseRequired[0].id, 'b');
+  assert.equal(advanceLedger(campaignGraph, ledger, environment), null);
+  assert.equal(ledger.pendingActions.some(({ type }) => type === 'REQUEST_REBASE'), false);
+  command(assignments[1].worktree, ['rebase', firstRevision]);
+  const rebasedRevision = command(assignments[1].worktree, ['rev-parse', 'HEAD']);
+  recordWorkerDelivery(root, 'campaign', { ...assignments[1], planPath: 'pm/plans/in_progress/b/plan.md' },
+    { revision: rebasedRevision, evidencePaths: ['pm/plans/in_progress/b/evidence/result.md'] }, environment);
+  assert.equal(reconcile(campaignGraph, ledger, root, environment).readyToMerge[0].id, 'b');
+  advanceLedger(campaignGraph, ledger, environment);
+  advanceLedger(campaignGraph, ledger, environment);
+  assert.equal(command(root, ['rev-parse', 'HEAD']), rebasedRevision);
+});
+
 test('waiting worker delivery remains integrable before and after its checkout disappears', () => {
   const root = repository();
   const worker = path.join(temporaryDirectory('ponytail-missing-delivered-worker-parent'), 'worker');
@@ -1675,13 +1738,11 @@ test('delivered waiting worker with a missing checkout recovers before rebase an
   assert.equal(status.assignments.find(({ id }) => id === assignment.id).state, 'REBASE_REQUIRED');
   assert.equal(status.readyToMerge.length, 0);
   assert.equal(advanceLedger(campaignGraph, ledger, environment), null);
-  const rebase = advanceLedger(campaignGraph, ledger, environment);
-  assert.equal(rebase.type, 'REQUEST_REBASE');
-  assert.equal(rebase.assignmentId, assignment.id);
+  const dispatch = advanceLedger(campaignGraph, ledger, environment);
+  assert.equal(dispatch.type, 'CREATE_WORKER');
+  assert.equal(ledger.pendingActions.some(({ type }) => type === 'REQUEST_REBASE'), false);
   command(recoveredWorker, ['rebase', 'main']);
   const rebasedRevision = command(recoveredWorker, ['rev-parse', 'HEAD']);
-  validateActionResultBinding(ledger, rebase.id, { ok: true, revision: rebasedRevision }, environment);
-  recordActionResult(ledger, rebase.id, { ok: true, revision: rebasedRevision });
   status = reconcile(campaignGraph, ledger, root, environment);
   assert.equal(status.readyToMerge.length, 0);
   assert.equal(readWorkerDeliveries(root, 'campaign', environment).deliveries[0].revision, workerRevision);

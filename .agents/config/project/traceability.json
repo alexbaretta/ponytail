@@ -327,6 +327,16 @@
     },
     {
       "class": "issue",
+      "path": "pm/bugs/in_progress/2026-10-02-FEAT-worker_autonomous_optimistic_join.md",
+      "locator": "text"
+    },
+    {
+      "class": "plan",
+      "path": "pm/plans/in_progress/2026-10-02-worker-autonomous-join/plan.md",
+      "locator": "text"
+    },
+    {
+      "class": "issue",
       "path": "pm/bugs/closed/2026-10-01-BUG-delivered_rebase_worker_checkout_missing.md",
       "locator": "text"
     },

@@ -285,13 +285,27 @@ fast-forward merge. A changed integration head moves the assignment back to
 
 Workers persist that evidence through `campaign deliver`: an authenticated
 assignment records its exact clean revision and committed evidence paths in a
-separate immutable V1 delivery store. Host completion plus a delivery matching
-the observed worker revision replaces whole-plan closure as the readiness
-signal. The assignment may therefore reach `MERGED` while its plan remains in
-active work. Closure occurs only after final acceptance on the integrated tree;
-only then does reconciliation advance `MERGED` to `CLEANUP_PENDING`. A newer
-delivery after a failed integrated gate returns the same assignment to the
-ordinary ancestry and merge flow.
+separate immutable V1 delivery store. A fresh complete host observation of the
+bound managed session, exact branch/revision and clean delivery replace
+whole-plan closure as the readiness signal; the worker turn may remain active.
+An active but dirty checkout is not completed evidence. The assignment may
+therefore reach `MERGED` while its plan remains in active work. The worker
+continues final acceptance against the integrated tree without a new
+coordinator request. Closure occurs only after that acceptance; only then
+does reconciliation advance `MERGED` to `CLEANUP_PENDING`. A newer delivery
+after a failed integrated gate returns the same assignment to the ordinary
+ancestry and merge flow.
+
+New deliveries use an optimistic worker-owned rebase loop. A worker reads the
+current `integrationRevision` from its authenticated status, semantically
+replays its commits onto that exact revision when required, reruns focused
+proof, and redelivers. If a competing fast-forward join advances the revision,
+the worker repeats. The coordinator's existing short worktree lock protects
+one verified fast-forward join and ledger update, not the worker's rebase.
+There is no new long-lived global lock and no new `REQUEST_REBASE` action.
+Historical pending rebase actions retain their existing compatibility path.
+For a finite set of competing deliveries, contention implies another join
+made progress; no fairness ordering or wall-clock bound is asserted.
 
 If the checkout disappears after delivery, reconciliation projects the
 delivery's recorded revision and clean-at-delivery proof instead of replacing
@@ -343,13 +357,14 @@ result through `ponytail campaign action-result <campaign> <action-id> --result
 outcome.
 
 Outstanding actions are partitioned by effect. Assignment-local dispatch and
-recovery actions may coexist for distinct assignments. One integration-lane
-action may coexist with those actions, but a pending rebase prevents another
-rebase or a fast-forward merge until its result is reconciled. Repeated advance
-therefore fills available independent dispatch work without weakening the
-serialized join invariant. An externally changed integration revision fails
-closed while a rebase still names its earlier target. Action-result routing
-removes only the named action.
+recovery actions may coexist for distinct assignments. A historical pending
+rebase action may coexist with them; until its result is reconciled it still
+pins the integration lane. New worker-owned rebases are not ledger actions and
+may proceed concurrently. Each fast-forward join remains serialized by the
+short worktree critical section. Repeated advance fills independent dispatch
+work without weakening this join invariant. An externally changed integration
+revision fails closed while a historical rebase still names its earlier
+target. Action-result routing removes only the named action.
 Create and reuse actions also carry an open-payload dispatch record. The host
 records `STARTED` with its stable host identity as soon as the external effect
 begins. If graph changes make the plan unready, `NOT_STARTED` may retire only a

@@ -49,6 +49,12 @@ The 2026-10-01 GWEN incident clarified the host-state boundary: after a
 worker's delivered turn ends, Codex may report the retained session as
 `waiting` while it awaits another prompt. That idle state does not invalidate
 the authenticated delivery.
+On 2026-10-02 the stakeholder approved worker-autonomous optimistic semantic
+rebasing in place of coordinator-issued rebase requests. A finite set of
+competing deliveries needs no round-robin ordering: each retry caused by
+contention follows another successful join. Completion still requires the
+coordinator and remaining workers to keep making progress; no wall-clock bound
+is implied.
 
 ## Repository-wide campaign inventory
 
@@ -338,12 +344,12 @@ effects, without making plan eligibility decisions.
 
 Outstanding host actions are assignment-local rather than a global campaign
 gate. Worker create and reuse actions for distinct dependency-ready plans may
-remain outstanding concurrently and may be selected while one integration
-action is outstanding. The integration lane remains serialized: at most one
-rebase action may be outstanding, and the campaign integration revision must
-not advance until that action is resolved and revalidated. Recording an action
-result must update only the named action and must preserve every other
-outstanding action.
+remain outstanding concurrently. New worker deliveries do not create a
+coordinator rebase action; the worker prepares its own rebased delivery while
+other workers and dispatches proceed. Historical pending rebase actions retain
+their identity and serialized result path until resolved. Recording an action
+result must update only the named action and preserve every other outstanding
+action.
 
 When assigned plan work completes, Ponytail must determine from durable plan
 evidence and Git state whether the worker must rebase or is ready to merge. It
@@ -354,13 +360,28 @@ integration revision is an ancestor of the worker revision.
 
 A worker must record a delivery containing its exact clean commit and at least
 one committed plan-owned validation-evidence path. This delivery, together
-with a fresh complete host observation that the managed session is waiting or
-completed and its branch still names the delivered commit, is the merge-
-readiness evidence; whole-plan closure is not. Ponytail may integrate that
-delivery while the plan remains in active work. The plan stays open until the
-coordinator runs the applicable final acceptance against the integrated tree
-and records its outcome. A failed integrated gate may return the same worker
-and assignment to delivery and integration without inventing a replacement.
+with a fresh complete host observation that the managed session is working,
+waiting, or completed in its authenticated worktree and its branch still names
+the delivered commit, is the merge-readiness evidence; whole-plan closure is
+not. Ponytail may integrate that delivery while the plan remains in active
+work. A working session must not be classified as completed merely because it
+has a dirty checkout or an obsolete delivery. The plan stays open until the
+worker runs the applicable final acceptance against the integrated tree and
+records its outcome. A failed integrated gate may return the same worker and
+assignment to delivery and integration without inventing a replacement.
+
+After delivery, the worker checks the current campaign integration revision.
+If the delivered commit is not based on it, the worker semantically rebases its
+own commits onto that revision, reruns applicable focused proof, and records a
+new authenticated exact-clean delivery. If another successful join changes the
+integration revision before its merge, the worker repeats. The coordinator
+only performs the verified fast-forward join under the existing short
+worktree-scoped critical section and gives ready merges immediate priority;
+neither side holds a lock while a worker rebases. The worker retains its
+session and continues plan-owned acceptance after integration without a new
+coordinator request. It delivers and joins any further acceptance or closure
+commit in the same manner. The worker may report a genuine external gate but
+must not require the coordinator to trigger ordinary rebase or acceptance work.
 When that same worker resumes an active plan after an integrated milestone,
 new dirty or unintegrated work returns its assignment to active execution.
 That ordinary interval must not be classified as unsafe cleanup or block
@@ -387,7 +408,7 @@ cleanup sequence. Any missing checkout without that durable proof remains
 blocking.
 
 When a delivered worker requires a rebase and its checkout is missing, Ponytail
-must restore the worker-owned checkout before requesting that rebase.
+must restore the worker-owned checkout before that worker rebases.
 Scheduler classification still requires a fresh complete observation of the
 waiting or completed managed session, its authenticated binding, the exact
 delivered commit at the named branch, and ancestry from the dispatch revision.
@@ -441,7 +462,7 @@ estimated completion time.
 `ponytail campaign ready-actions [<campaign>] --json` must return a read-only,
 versioned projection of the durable host actions that are executable now. It
 must preserve each action envelope and identity, fail closed on campaign
-diagnostics, include pending rebase actions, exclude superseded automatic
+diagnostics, include historical pending rebase actions, exclude superseded automatic
 cleanup actions, and include create or
 reuse actions only while their plan remains dependency-ready and their host
 effect has not started. It must not materialize assignments or actions, retry a

@@ -466,42 +466,49 @@ Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
    - `ready-actions` exposes the exact recovery and independent dispatch
      actions without issuing a rebase for the missing checkout.
 
-## Arc: Rebase and fast-forward completed work
+## Arc: Workers optimistically rebase and coordinator joins
 
 Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
 
-- **Actor:** Campaign coordinator.
-- **Prerequisites:** A worker reports completion with durable plan evidence and
-  a clean branch; another integration may advance the campaign branch.
+- **Actor:** Two authenticated campaign workers and their coordinator.
+- **Prerequisites:** Both workers have plan-owned evidence and clean branches
+  based on the same integration revision; their managed sessions are working.
 - **Profiles:** Automated Git integration profile and live Codex worker profile.
-- **External effects:** Requests worker rebases and fast-forward merges verified
-  worker revisions into the campaign integration branch.
+- **External effects:** Workers rewrite only their own branches; the coordinator
+  fast-forward merges verified deliveries into the campaign integration branch.
 
-1. Reconcile the completed worker while its branch does not contain the current
-   campaign integration revision.
-   - Ponytail reports `REBASE_REQUIRED` and does not merge.
-2. Rebase the worker and reconcile again.
-   - Ponytail proves the current integration revision is an ancestor of the
-     worker revision and reports `READY_TO_MERGE`.
-3. Advance the campaign.
-   - Ponytail performs only a fast-forward merge and records the exact merged
-     worker revision.
-4. Repeat the merge action after interruption.
-   - Ponytail recognizes the already integrated revision and does not create a
-     duplicate merge or lose the assignment.
+1. Both still-working workers deliver their exact clean commits with committed
+   plan-owned evidence and fresh complete managed-session observations.
+   - Both become `READY_TO_MERGE`; neither needs a coordinator rebase request.
+   A dirty checkout, mismatched branch or delivery, or incomplete host proof
+   cannot become ready merely because its session is working.
+2. The coordinator advances one join. The second worker checks status again.
+   - The first commit fast-forwards exactly once; the second becomes
+     `REBASE_REQUIRED`. No new `REQUEST_REBASE` action is created.
+3. Without a coordinator message, the second worker semantically rebases onto
+   the new integration revision, runs focused validation and redelivers.
+   - Ponytail reports `READY_TO_MERGE`; coordinator advance fast-forwards it.
+   An additional competing merge requires another worker retry, not a lock.
+4. Repeat advance after interruption, then continue plan-owned acceptance in
+   the same worker session.
+   - No duplicate merge or replacement assignment occurs. The worker may
+     deliver further acceptance and closure commits without a new dispatch.
+
+Automated profile: `node --test --test-name-pattern='working workers retry optimistic' tests/campaign-orchestration.test.js`.
+Live Codex worker-continuity and semantic-review evidence remain a separate gate.
 
 ## Arc: Dispatch independent work alongside the serialized join lane
 
 Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
 
 - **Actor:** Campaign coordinator.
-- **Prerequisites:** One outstanding worker rebase and at least two independent
+- **Prerequisites:** One historical outstanding worker rebase action and at least two independent
   dependency-ready unassigned plans.
 - **Profiles:** Automated scheduler and adapter-contract profile.
 - **External effects:** May request independent worker creation or reuse while
   preserving one serialized integration action.
 
-1. Request a rebase for a completed worker, leave that action outstanding, and
+1. Retain a pre-existing rebase action for a completed worker, and
    advance again.
    - Ponytail retains the exact rebase action and selects one ready plan for a
      distinct create-or-reuse action.

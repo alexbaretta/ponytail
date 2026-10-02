@@ -560,9 +560,9 @@ valid parallel structure. Separate sessions, agents, branches, and worktrees
 are optional. Use coordinated multi-agent execution only when the developer
 requests it. In that mode, assign each concurrent plan to one worker, maximize
 safe parallelism, and serialize integration where dependency branches join.
-Each worker rebases its completed branch onto the campaign's main feature
-branch. The coordinator verifies the rebased plan evidence and fast-forward
-merges that branch. Failure of a sequential prerequisite blocks its dependent
+Each worker optimistically rebases its delivered branch onto the campaign's
+current integration revision. Ponytail verifies the delivered evidence, and
+the coordinator fast-forward merges that branch. Failure of a sequential prerequisite blocks its dependent
 campaign path. Examples used to explain possible campaign decomposition do not
 authorize those plans.
 
@@ -677,7 +677,11 @@ durable state instead of remembering worker assignments in conversation:
    every blocking diagnostic first. For an idle session, inspect its exact
    thread to distinguish a worker waiting for coordinator input from one that
    has finished; respond to required input or record the completed observation
-   instead of treating either state as automatically reusable.
+   instead of treating either state as automatically reusable. If
+   `readyToMerge` is nonempty, give the verified join priority: run `advance`
+   and refresh status until its merge is recorded before reserving more
+   dispatches. A `REBASE_REQUIRED` delivery is worker-owned; do not synthesize
+   a coordinator rebase action for it.
 4. Inspect `ponytail campaign runnable-plans [<campaign-root>] --json` for
    the exact plans whose campaign dependencies are complete and whose approved,
    reviewed execution sprint has a nonempty set of immediately runnable
@@ -757,8 +761,10 @@ durable state instead of remembering worker assignments in conversation:
    again, and rerun `ready-actions` before waiting when independent
    tasklet-ready work may exist. Use `schedule-ready` to fill all available
    independent dispatch capacity before waiting. This may expose distinct create-or-reuse
-   actions while one rebase remains outstanding, but it must neither execute
-   an action twice nor request a second rebase. On resumption, inspect the named
+   actions while a historical rebase action remains outstanding, but it must
+   neither execute an action twice nor request a second rebase. New deliveries
+   use worker-owned optimistic rebasing and create no `REQUEST_REBASE` action.
+   On resumption, inspect the named
    worker before repeating an unresolved host request. For `CREATE_WORKER` and
    `REUSE_WORKER`, `ready-actions` already proves that
    `payload.dispatch.ready` is true, its state is `NOT_STARTED`, and the same
@@ -808,30 +814,44 @@ durable state instead of remembering worker assignments in conversation:
    refreshes observations after recovery; it does not fabricate host evidence
    or record the command's result again. Recovery does not replace the required
    authenticated `campaign deliver` step.
-8. For `REQUEST_REBASE`, message the named worker to rebase onto the exact
-   `ontoRevision`, wait for completion, and record only the resulting clean
-   revision. The core, not the coordinator, decides whether the worker is then
-   ready for fast-forward integration.
+8. Only for an already pending historical `REQUEST_REBASE`, message the named
+   worker to rebase onto the exact `ontoRevision`, wait for completion, and
+   record only the resulting clean revision. Do not create a new rebase request.
 9. When assigned work and its focused validation are complete, the worker
    commits the plan-owned evidence and runs `ponytail campaign deliver
    <campaign-root> --result <json>` from its authenticated worktree. The result
    names the exact clean `revision` and a nonempty `evidencePaths` array. Keep
    the plan in active work; conversational completion and premature whole-plan
    closure are not delivery evidence.
-10. A transition to `READY_TO_MERGE` is acted on only by another advance; do not
-   run an independent merge command. The core proves ancestry and uses
-   fast-forward-only integration.
-11. After integration, run the plan's final acceptance against the integrated
-   tree. For remaining plan-owned acceptance work, continue only that plan's
-   existing authenticated worker session; this is not a new dispatch and needs
-   no new scheduler action. Inspect its current host state before messaging it,
-   and use worker-owned recovery if its checkout is missing. If it makes a new
-   commit, require another authenticated delivery and serialized integration
-   under steps 9 and 10. Close the plan only after its gates pass. A failed
-   gate keeps the plan active and may return the same assignment to another
-   delivery and integration cycle. Successful closure releases the logical
-   assignment for safe reuse, not physical retirement of its session/worktree
-   pair.
+10. The authenticated worker owns the optimistic join loop after delivery;
+   do not wait for a coordinator `REQUEST_REBASE` instruction. Read `campaign
+   status <campaign-root> --json` from that worker to obtain the current
+   `integrationRevision` and its exact assignment. If its delivered branch
+   does not contain that revision, use `semantic-rebase` to replay each owned
+   commit onto that exact revision, run the focused proof, and deliver the new
+   clean commit with its plan-owned evidence paths. Check status again. If
+   another worker was merged meanwhile, repeat against the new revision.
+   Once `READY_TO_MERGE`, tell the coordinator the exact assignment and
+   delivered revision, then continue checking status in bounded intervals;
+   do not edit or rewrite the delivered branch while it is merge-ready. The
+   coordinator gives this join immediate priority and runs `advance`, which
+   alone proves current-head ancestry and fast-forwards under the existing
+   short worktree critical section. Do not run an independent merge command.
+   If the coordinator branch advances first, the worker repeats the semantic
+   rebase/delivery loop. No round-robin ordering is needed: for a finite set
+   of competing deliveries, every contention requires another successful
+   join; progress still requires the coordinator and remaining workers to
+   keep acting. Do not claim a wall-clock deadline.
+11. After `MERGED`, the same worker resumes its plan-owned acceptance against
+   the integrated tree, without a new dispatch or coordinator prompt. Rebase
+   its checkout to a newer integration revision first when acceptance depends
+   on that newer tree. If acceptance creates another commit, deliver it and
+   repeat step 10. Close the plan only after all applicable gates pass, then
+   deliver and join the closure commit as another milestone. A failed gate
+   keeps the plan active. If an external authorization or resource genuinely
+   blocks the worker, report the exact gate; do not treat the coordinator as
+   the routine trigger for the next step. Successful closure releases the
+   logical assignment for safe reuse, not its session/worktree pair.
 12. Then follow the next action returned by `ready-actions`. A `REUSE_WORKER`
    action retains the finished session and managed worktree for its named next
    plan. Retain every inactive session/worktree pair indefinitely, including
@@ -968,7 +988,7 @@ host observation, managed-worktree identity, and surviving assignment branch.
 It can also name a delivered worker in `REBASE_REQUIRED` when the exact
 delivered revision remains at that branch tip and the session is waiting or
 completed. Recover its checkout in the
-same session before requesting a rebase; keep the delivery record, and require
+same session before rebasing; keep the delivery record, and require
 the ordinary rebase and new authenticated delivery before merge readiness.
 While that exact action is pending, the worker may be `working` before its
 checkout reappears; with fresh matching host and branch evidence this remains

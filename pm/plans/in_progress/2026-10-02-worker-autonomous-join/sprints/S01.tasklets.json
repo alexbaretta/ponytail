@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 3,
+  "sprint": "S01",
+  "features": {"S01-F01": {"depends_on": [], "validation_tasklet": "S01-F01-T04"}},
+  "tasklets": {
+    "S01-F01-T01": {"depends_on": [], "affinity": ["git", "regression"], "risk": "normal", "feature": "S01-F01", "planned_paths": ["tests/campaign-orchestration.test.js", "pm/plans/in_progress/2026-10-02-worker-autonomous-join/sprints/S01.md"]},
+    "S01-F01-T02": {"depends_on": ["S01-F01-T01"], "affinity": ["scheduler", "worker"], "risk": "high", "risk_reason": "Changes authenticated merge-readiness classification while a worker turn is active.", "feature": "S01-F01", "planned_paths": ["src/campaign-orchestration.js", "tests/campaign-orchestration.test.js", "pm/plans/in_progress/2026-10-02-worker-autonomous-join/sprints/S01.md"]},
+    "S01-F01-T03": {"depends_on": ["S01-F01-T02"], "affinity": ["scheduler", "join"], "risk": "high", "risk_reason": "Removes coordinator-owned rebase action creation without changing historical action interpretation.", "feature": "S01-F01", "planned_paths": ["src/campaign-orchestration.js", "tests/campaign-orchestration.test.js", "pm/plans/in_progress/2026-10-02-worker-autonomous-join/sprints/S01.md"]},
+    "S01-F01-T04": {"depends_on": ["S01-F01-T01", "S01-F01-T02", "S01-F01-T03"], "affinity": ["policy", "acceptance"], "risk": "normal", "feature": "S01-F01", "planned_paths": ["skills/plan-execution/SKILL.md", ".openclaw/skills/plan-execution/SKILL.md", "tests/plan-execution-policy.test.js", "pm/requirements/campaign-orchestration.md", "pm/architecture/campaign-orchestration.md", "pm/uat/campaign-orchestration.md", ".agents/config/project/traceability.json", "pm/requirements/traceability.generated.md", "pm/plans/in_progress/2026-10-02-worker-autonomous-join/plan.md", "pm/plans/in_progress/2026-10-02-worker-autonomous-join/sprints/S01.md", "pm/plans/in_progress/2026-10-02-worker-autonomous-join/sprints/S01.tasklets.json"]}
+  }
+}

@@ -41,8 +41,8 @@ test('serial policy preserves atomic batch and convergence boundaries', () => {
   );
   assert.doesNotMatch(serialPlanPolicy, /parallel|wave|packet|dispatch|subagent|secondary task|worktree|path-disjoint|runtime capacity|capable writer|orchestrator|handoff/i);
   assert.match(skill, /Use coordinated multi-agent execution only when the developer\s+requests it/);
-  assert.match(skill, /Each worker rebases its completed branch onto the campaign's main feature\s+branch/);
-  assert.match(skill, /coordinator verifies the rebased plan evidence and fast-forward\s+merges that branch/);
+  assert.match(skill, /Each worker optimistically rebases its delivered branch onto the campaign's\s+current integration revision/);
+  assert.match(skill, /Ponytail verifies the delivered evidence, and\s+the coordinator fast-forward merges that branch/);
 });
 
 test('campaign census policy preserves scoped reports and adds repository inventory', () => {

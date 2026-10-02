@@ -1308,16 +1308,19 @@ function observedWorkers(graph, ledger, environment, hostObservation) {
       observation = { sessionId: binding.sessionId, worktree: binding.worktree, branch: binding.branch, revision: revision ?? binding.revision, clean: Boolean(revision), activity: revision ? 'completed' : 'missing', evidenceComplete: Boolean(revision), worktreeArchived: existing?.worktreeArchived ?? false, sessionArchived: existing?.sessionArchived ?? false };
     } else {
       const identity = repositoryIdentity(binding.worktree);
-      const deliveredWaiting = hostSession?.state === 'waiting' && hostSession.managedWorktree
+      const clean = git(binding.worktree, ['status', '--porcelain']).length === 0;
+      const deliveredActive = ['waiting', 'working'].includes(hostSession?.state)
+        && hostObservation && Date.now() - Date.parse(hostObservation.observedAt) <= HOST_OBSERVATION_MAX_AGE_MS
+        && hostObservation.completeSessionIds.includes(binding.sessionId) && hostSession.managedWorktree
         && hostSession.worktree === binding.worktree && binding.branch === assignment.branch
-        && identity.branch === binding.branch && delivery?.revision === identity.revision;
+        && identity.branch === binding.branch && clean && delivery?.revision === identity.revision;
       observation = {
         sessionId: binding.sessionId,
         worktree: binding.worktree,
         branch: identity.branch,
         revision: identity.revision,
-        clean: git(binding.worktree, ['status', '--porcelain']).length === 0,
-        activity: hostSession?.state === 'completed' || deliveredWaiting ? 'completed'
+        clean,
+        activity: hostSession?.state === 'completed' || deliveredActive ? 'completed'
           : ['missing', 'archived', 'unknown'].includes(hostSession?.state) ? 'missing'
             : plan?.lifecycle === graph.lifecycle.successfulCompletion && !hostObservation ? 'completed' : 'active',
         evidenceComplete: deliveries.get(assignment.id)?.revision === identity.revision,
@@ -1903,14 +1906,6 @@ function advanceLedger(graph, ledger, environment = null) {
     if (worker) worker.sessionArchived = true;
     if (environment) removeWorkerBinding(environment, retired.id);
     return null;
-  }
-  const rebase = integrationAction ? null : ledger.assignments.find((item) => item.state === 'REBASE_REQUIRED'
-    && status.assignments.find(({ id }) => id === item.id)?.worktreeExists
-    && !ledger.pendingActions.some(({ assignmentId }) => assignmentId === item.id));
-  if (rebase) {
-    const pendingAction = action('REQUEST_REBASE', rebase, { sessionId: rebase.sessionId, ontoRevision: ledger.integrationRevision });
-    ledger.pendingActions.push(pendingAction);
-    return pendingAction;
   }
   return scheduleWorker(graph, ledger, status, ledgers) ?? ledger.pendingActions[0] ?? null;
 }

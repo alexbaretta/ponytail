@@ -1,0 +1,44 @@
+# Worker-autonomous optimistic campaign joins
+
+- Plan ID: `2026-10-02-worker-autonomous-join`
+- Status: in_progress
+- Approval: stakeholder authorized the feature and implementation on 2026-10-02.
+
+<!-- ponytail-plan-campaign
+{"schemaVersion":2,"id":"2026-10-02-worker-autonomous-join","parent_plan_id":null,"depends_on":[]}
+-->
+
+Traceability: plans-implementation REQ-CAMPAIGN-ORCHESTRATION from plan 2026-10-02-worker-autonomous-join
+Traceability: plans-verification REQ-CAMPAIGN-ORCHESTRATION from plan 2026-10-02-worker-autonomous-join
+
+## Objective
+
+Implement the [approved optimistic join requirement](../../../requirements/campaign-orchestration.md)
+and prove the [acceptance Arc](../../../uat/campaign-orchestration.md). Workers
+prepare and retry their own semantic rebases; only the coordinator joins them.
+
+## Boundaries
+
+One existing top-level worktree and its existing worker worktrees. No new
+global long-lived lock, host API, cloud resource, worker session, automatic
+worktree retirement, or change to the historical serialized-action reader.
+The short existing coordinator worktree lock remains the atomic merge boundary.
+
+## Execution
+
+[S01](sprints/S01.md) is approved by the explicit stakeholder request to begin.
+Record the baseline and implement the focused scheduler and worker protocol
+changes first, then update the canonical skill and generated copy. Historical
+pending `REQUEST_REBASE` actions remain executable; no new such actions are
+created. If live host acceptance cannot be performed in this checkout, keep
+the plan in progress and report that gate separately from automated proof.
+
+The working-worker Git regression, scheduler compatibility tests, canonical
+skill, generated host copy, requirement, architecture, UAT, and traceability
+are implemented in this checkout. Build impact reports no affected or
+indeterminate targets. The complete configured `npm test` pipeline passes,
+including core, installer, bundled subprojects, TSTS unit tests, and the
+620-file structural check. Rule copies, versions, command adapters, manifests,
+registry, traceability, campaign inventory, and diff checks also pass.
+Live Codex worker continuity and semantic-review behavior are separate host
+gates; the plan stays in progress until they are proven.
