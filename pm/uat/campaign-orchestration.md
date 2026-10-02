@@ -511,7 +511,11 @@ validated, and redelivered clean commit
 refreshed the complete nineteen-session host observation and used canonical
 `campaign advance` to fast-forward exactly that commit. The integration
 revision and assignment state then matched `d980c2c` and `MERGED`; the same
-worker continued integrated acceptance on that revision.
+worker continued integrated acceptance on that revision. It subsequently
+committed the remaining acceptance-gate record at
+`386d972600e2c8f1f9a444e4aedb63f83ac07f28`, delivered it, and the
+coordinator used the same canonical advance path to fast-forward that second
+milestone. No new worker assignment or independent Git merge was used.
 
 This proves one live worker-owned rebase/redelivery/join cycle and native
 session continuity. It does not prove simultaneous two-worker contention, a
@@ -680,18 +684,21 @@ Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
 7. Clear one gate using its supported authority, refresh the complete host
    observation, and resume that exact worker through authenticated attachment
    or existing-assignment execution as appropriate.
-   - Only observed tasklet work reduces the shortfall. A resolved blocker
-     report, accepted message, reservation, or merge-ready delivery alone is
-     not counted as a running product worker. Independent runnable work stays
-     eligible while a proved missing-after-delivery checkout awaits recovery.
+   - A resolved blocker report, accepted message, reservation, or merge-ready
+     delivery alone does not change observed native worker activity. A worker
+     may become `working` while performing recovery or rebase, so the
+     coordinator inspects its exact phase before claiming tasklet execution.
+     Independent runnable work stays eligible while a proved
+     missing-after-delivery checkout awaits recovery.
 8. Keep one plan tasklet-ready but observe its original worker as `working`
    solely because it is semantically rebasing a previous delivery. Repeat
    while that worker runs checkout recovery, then while it actually executes
    the exact ready tasklet.
-   - Native `working` alone never proves tasklet execution. The first two
-     observations do not reduce a tasklet-execution shortfall; if no reliable
-     tasklet-activity evidence exists, report that count as unknown. Only the
-     verified tasklet-execution phase can count as running product work.
+   - `observedRunnableWorkers` counts the working session in all three
+     observations because its plan is runnable; it is a session-concurrency
+     measure, not a tasklet-execution count. The coordinator reports the
+     first two phases as non-tasklet activity and claims product execution
+     only after verifying the exact tasklet phase separately.
 
 ## Arc: Retain integrated workers; explicit retirement remains separately fenced
 

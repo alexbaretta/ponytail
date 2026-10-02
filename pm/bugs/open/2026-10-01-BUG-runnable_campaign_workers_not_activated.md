@@ -182,8 +182,8 @@ Keep each original action, session, assignment, and delivery intact. The
 [concurrency-shortfall UAT Arc](../../uat/campaign-orchestration.md#arc-explain-and-resolve-runnable-plan-concurrency-shortfalls)
 must demonstrate actual authenticated tasklet execution after each gate is
 cleared, rather than treating a resolved report or a rebase-only worker as
-parallel product progress. The separate
-[working-state counting bug](2026-10-02-BUG-runnable_worker_count_includes_non_tasklet_activity.md)
-shows why native turn activity alone cannot establish that outcome. The
+parallel product progress. `observedRunnableWorkers` counts native working
+sessions assigned to runnable plans, not proved tasklet execution; the
+coordinator must inspect each active worker's actual phase. The
 [host-checkout loss bug](2026-10-02-BUG-retained_worker_checkout_removed_by_host.md)
 tracks the unresolved physical-retention boundary.

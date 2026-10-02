@@ -48,5 +48,7 @@ semantic rebase and authenticated redelivery, followed by the coordinator's
 canonical fast-forward join of `d980c2cad9ab90f7ede1561958fc1da0418ee6e2`.
 The original session continued integrated acceptance. See the
 [partial live UAT evidence](../../../uat/campaign-orchestration.md#partial-live-codex-proof-2026-10-02).
+Its subsequent acceptance-gate record was also delivered and joined as
+`386d972600e2c8f1f9a444e4aedb63f83ac07f28` without a new assignment.
 The two-concurrent-worker live contention and complete post-merge acceptance
 remain unverified; do not close this plan on the single-worker proof.
