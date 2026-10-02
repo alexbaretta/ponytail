@@ -247,10 +247,10 @@ function selectExecutionReadySprintsV2(sprints, sprintById) {
   return sprint.execution.depends_on.every((id) => sprintById.get(id).execution?.status === 'DONE') ? [sprint.id] : [];
 }
 
-function selectExecutionReadySprintsV3(sprints, sprintById) {
+function selectExecutionSprintsV3(sprints, sprintById, status) {
   validateDependencyExecutionOrder(sprints, sprintById);
   const sprint = sprints.find((candidate) => candidate.planning.status === 'APPROVED'
-    && candidate.execution?.status === 'PENDING'
+    && candidate.execution?.status === status
     && candidate.execution.tasklets_reviewed
     && candidate.execution.depends_on.every((id) => sprintById.get(id).execution?.status === 'DONE'));
   return sprint ? [sprint.id] : [];
@@ -259,7 +259,12 @@ function selectExecutionReadySprintsV3(sprints, sprintById) {
 function selectExecutionReadySprints(sprints, sprintById) {
   if (sprints[0]?.schemaVersion === 1) return selectExecutionReadySprintsV1(sprints, sprintById);
   if (sprints[0]?.schemaVersion === 2) return selectExecutionReadySprintsV2(sprints, sprintById);
-  return selectExecutionReadySprintsV3(sprints, sprintById);
+  return selectExecutionSprintsV3(sprints, sprintById, 'PENDING');
+}
+function selectExecutionRunnableSprints(sprints, sprintById) {
+  if (sprints[0]?.schemaVersion !== 3) return selectExecutionReadySprints(sprints, sprintById);
+  const status = sprints.some(({ execution }) => execution?.status === 'IN_PROGRESS') ? 'IN_PROGRESS' : 'PENDING';
+  return selectExecutionSprintsV3(sprints, sprintById, status);
 }
 
 function main(argv = process.argv.slice(2)) {
@@ -274,7 +279,7 @@ function main(argv = process.argv.slice(2)) {
   return result;
 }
 
-module.exports = { METADATA_MARKER, SCHEMA_VERSION, SprintMetadataReaders, parseSprintFile, readSprints, validateDependencies, validatePathOwnership, validateV3PathOwnership, validateCheckpointOrder, validateDependencyExecutionOrder, selectPlanningReadySprints, selectExecutionReadySprints, main };
+module.exports = { METADATA_MARKER, SCHEMA_VERSION, SprintMetadataReaders, parseSprintFile, readSprints, validateDependencies, validatePathOwnership, validateV3PathOwnership, validateCheckpointOrder, validateDependencyExecutionOrder, selectPlanningReadySprints, selectExecutionReadySprints, selectExecutionRunnableSprints, main };
 
 if (require.main === module) {
   try { main(); } catch (error) { process.stderr.write(`${error.message}\n`); process.exitCode = 1; }
