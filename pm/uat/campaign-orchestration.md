@@ -36,6 +36,11 @@ Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
    - Only plans with satisfied campaign prerequisites and nonempty canonical
      tasklet readiness appear, with exact sprint/tasklet IDs. Active eligible
      plans are included. The query leaves Git and the ledger unchanged.
+   - Change the eligible V3 sprint to `IN_PROGRESS`: it remains runnable with
+     the same tasklet IDs, while the ordinary sprint-start query excludes it.
+     An existing started sprint takes precedence over a pending sprint in its
+     plan; missing approval, review, or completed dependencies cannot be
+     bypassed to resume it.
 2. With fresh complete host observations, run `campaign schedule-ready` twice.
    - All eligible unassigned or queued plans receive deterministic, retry-stable
      reservations, using idle retained pairs before creation. At most fifteen

@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-10-01-sprint_start_selector_excluded_resume",
+  "recorded_at": "2026-10-01T21:07:45-07:00",
+  "source_references": ["pm/requirements/campaign-orchestration.md", "pm/uat/campaign-orchestration.md"],
+  "context": {
+    "languages": ["javascript"],
+    "frameworks": ["node:test"],
+    "components": ["campaign-census", "ready-sprints"],
+    "affected_boundaries": ["sprint execution state to campaign runnable projection"],
+    "code_references": ["src/campaign-census.js:validatePlanContents", "skills/plan-execution/scripts/ready-sprints.js:selectExecutionRunnableSprints"]
+  },
+  "observed_behavior": "Reviewed, approved IN_PROGRESS V3 sprints with pending ready tasklets disappeared from campaign runnable-plans, suppressing continuation of retained workers.",
+  "expected_behavior": "Existing started sprints remain eligible for continuation under the same approval, review, dependency and tasklet-readiness gates.",
+  "causal_mechanism": "The census projected tasklets only from the PENDING-only sprint-start selector, using readiness to start as readiness to execute.",
+  "anti_pattern": {
+    "structural_description": "A lifecycle-transition predicate is reused as a current-state work-eligibility predicate.",
+    "why_it_fails": "The successful start transition removes the work from the eligibility set before its remaining tasklets are completed."
+  },
+  "correct_pattern": {
+    "required_invariant": "A started sprint with eligible remaining work must remain runnable without being reset or bypassing its gates.",
+    "implementation_description": "Campaign selection uses a canonical runnable selector prioritizing IN_PROGRESS V3 sprints; both start and resume share one approval, review and dependency predicate. The start selector and historical V1/V2 behavior remain unchanged."
+  },
+  "applicability_conditions": ["V3 sprint execution is IN_PROGRESS", "The approved reviewed sprint has immediately runnable pending tasklets", "Campaign prerequisites are satisfied"],
+  "known_non_matches": ["Planning-only, unreviewed and all-DONE tasklet sets remain excluded", "An unfinished execution dependency remains an invalid advanced sprint"],
+  "confirmation_evidence": ["The real CLI regression failed with an empty runnable list after changing only the sprint execution state to IN_PROGRESS", "All 53 focused selector and orchestration tests passed after the repair", "The IPG campaign query returned all six reconciliation plans with their original T177 tasklets after the repair"],
+  "regression_proofs": ["tests/campaign-orchestration.test.js: runnable-plans joins satisfied plan dependencies with nonempty canonical tasklet readiness", "tests/ready-sprints.test.js: V3 runnable selection resumes the started sprint without relaxing start or review gates"]
+}

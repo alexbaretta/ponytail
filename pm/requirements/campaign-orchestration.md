@@ -263,12 +263,16 @@ active work, unintegrated work, a dirty worktree, or incomplete cleanup.
 
 The read-only `campaign runnable-plans` summary must return precisely the plans
 whose campaign prerequisites (including unfinished child plans) are met and
-whose canonical execution-ready sprint has a nonempty set of immediately
+whose canonical execution-runnable sprint has a nonempty set of immediately
 runnable tasklets. It identifies each plan, current path, lifecycle, sprint,
 and ready tasklet IDs on the integration checkout. It includes eligible active
 plans as well as unassigned plans; planning-only work, unreviewed tasklets,
 blocked sprints, and all-DONE tasklet sets are excluded. It must not mutate the
 ledger or require a host observation to answer this repository-state query.
+For V3 sprint metadata, runnable selection resumes an existing `IN_PROGRESS`
+sprint before selecting a `PENDING` sprint, with approval, tasklet review, and
+completed execution dependencies still required. The ordinary sprint-start
+selector remains `PENDING`-only; historical V1/V2 selection is unchanged.
 
 The same predicate must govern new and queued dispatch, retries of unstarted
 dispatch, and coordinator recovery reminders for active product work. Recovery

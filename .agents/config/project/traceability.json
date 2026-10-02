@@ -332,6 +332,16 @@
       "locator": "text"
     },
     {
+      "class": "implementation",
+      "path": "skills/plan-execution/scripts/ready-sprints.js",
+      "locator": "text"
+    },
+    {
+      "class": "unit-test",
+      "path": "tests/ready-sprints.test.js",
+      "locator": "text"
+    },
+    {
       "class": "uat",
       "path": "pm/uat/campaign-orchestration.md",
       "locator": "text"

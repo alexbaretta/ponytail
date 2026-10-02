@@ -6,7 +6,7 @@ const path = require('node:path');
 const { execFileSync } = require('node:child_process');
 
 const tool = path.join(__dirname, '..', 'skills', 'plan-execution', 'scripts', 'ready-sprints.js');
-const { SprintMetadataReaders, parseSprintFile, readSprints, validateDependencies, validatePathOwnership, validateCheckpointOrder, selectPlanningReadySprints, selectExecutionReadySprints } = require(tool);
+const { SprintMetadataReaders, parseSprintFile, readSprints, validateDependencies, validatePathOwnership, validateCheckpointOrder, selectPlanningReadySprints, selectExecutionReadySprints, selectExecutionRunnableSprints } = require(tool);
 
 function metadata(id, version = 2, overrides = {}) {
   const execution = {
@@ -40,6 +40,30 @@ function writePlan(sprints, plannedPaths = {}) {
   }
   return root;
 }
+
+// Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
+test('V3 runnable selection resumes the started sprint without relaxing start or review gates', () => {
+  const sprints = readSprints(writePlan([
+    metadata('S01', 3),
+    metadata('S02', 3, { execution: { status: 'IN_PROGRESS', depends_on: [], tasklets_reviewed: true } }),
+  ]));
+  const sprintById = validateDependencies(sprints);
+  assert.deepEqual(selectExecutionReadySprints(sprints, sprintById), ['S01']);
+  assert.deepEqual(selectExecutionRunnableSprints(sprints, sprintById), ['S02']);
+  sprints[1].execution.tasklets_reviewed = false;
+  assert.deepEqual(selectExecutionRunnableSprints(sprints, sprintById), []);
+  sprints[1].execution.tasklets_reviewed = true;
+  sprints[1].planning.status = 'IN_PROGRESS';
+  assert.deepEqual(selectExecutionRunnableSprints(sprints, sprintById), []);
+  sprints[1].planning.status = 'APPROVED';
+  sprints[1].execution.depends_on = ['S01'];
+  assert.throws(() => selectExecutionRunnableSprints(sprints, sprintById), /advanced before unfinished dependency S01/);
+  sprints[0].execution.status = 'DONE';
+  assert.deepEqual(selectExecutionReadySprints(sprints, sprintById), []);
+  assert.deepEqual(selectExecutionRunnableSprints(sprints, sprintById), ['S02']);
+  sprints[1].execution.status = 'DONE';
+  assert.deepEqual(selectExecutionRunnableSprints(sprints, sprintById), []);
+});
 
 test('retains strict physical V1, V2, and V3 sprint readers', () => {
   assert.deepEqual(Object.keys(SprintMetadataReaders), ['V1', 'V2', 'V3']);

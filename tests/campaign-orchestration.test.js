@@ -544,6 +544,8 @@ test('runnable-plans joins satisfied plan dependencies with nonempty canonical t
   fs.renameSync(path.join(root, 'pm/plans/open/ready'), path.join(root, 'pm/plans/in_progress/ready'));
   const rootPath = 'pm/plans/in_progress/campaign/plan.md';
   write(root, rootPath, fs.readFileSync(path.join(root, rootPath), 'utf8').replace('../../open/ready/plan.md', '../ready/plan.md'));
+  const activeSprintPath = 'pm/plans/in_progress/ready/sprints/S01.md';
+  write(root, activeSprintPath, fs.readFileSync(path.join(root, activeSprintPath), 'utf8').replace('"status": "PENDING"', '"status": "IN_PROGRESS"'));
   const active = spawnSync(process.execPath, [campaignCli, 'runnable-plans', 'campaign', '--json'], { cwd: root, encoding: 'utf8', env: environment });
   assert.equal(active.status, 0, active.stderr);
   assert.deepEqual(JSON.parse(active.stdout).plans.map(({ execution, ...plan }) => plan), [{ ...(({ execution, ...plan }) => plan)(report.plans[0]), path: planPath.replace('/open/', '/in_progress/'), lifecycle: 'in_progress' }]);

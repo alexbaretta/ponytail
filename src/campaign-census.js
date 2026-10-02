@@ -11,7 +11,7 @@ const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 const {
   readSprints,
-  selectExecutionReadySprints,
+  selectExecutionRunnableSprints,
   selectPlanningReadySprints,
   validateDependencies,
   validatePathOwnership,
@@ -555,7 +555,7 @@ function validatePlanContents(plan, config, repositoryRoot) {
     if (sprints[0].schemaVersion === 1) validatePathOwnership(sprints, sprintById);
     if (sprints[0].schemaVersion === 3) validateV3PathOwnership(sprints, sprintById);
     selectPlanningReadySprints(sprints, sprintById);
-    executionReady = selectExecutionReadySprints(sprints, sprintById);
+    executionReady = selectExecutionRunnableSprints(sprints, sprintById);
   } catch (error) {
     dataError('CAMPAIGN_SPRINT_INVALID', error.message, plan.id, plan.relativePlanFile);
   }
