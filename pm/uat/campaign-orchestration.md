@@ -64,10 +64,14 @@ Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
      bypassed to resume it.
 2. With fresh complete host observations, run `campaign schedule-ready` twice.
    - All eligible unassigned or queued plans receive deterministic, retry-stable
-     reservations, using idle retained pairs before creation. At most fifteen
-     pairs/creation reservations belong to the same top-level project. Existing
+     reservations, using idle retained pairs before creation. The fifteen-pair
+     new-creation limit applies to this campaign alone. Existing
      rebase actions remain serialized and their identities remain unchanged.
    - Returned host actions are not evidence that a Codex worker has started.
+   - With thirty-five grandfathered reservations, two safe idle campaign pairs,
+     and three eligible unassigned plans, two ordered `REUSE_WORKER` actions
+     appear; no new `CREATE_WORKER` action appears. A second call preserves
+     both action identities.
 3. Exhaust tasklets before an unstarted dispatch is executed.
    - Both dispatch commands and `ready-actions` suppress it; a proven
      `NOT_STARTED` result preserves the queued assignment for later readiness.

@@ -648,6 +648,44 @@ test('schedule-ready deterministically reserves every runnable plan once within 
   assert.equal(reconcile(campaignGraph, ledger).diagnostics.some(({ code }) => code === 'CAMPAIGN_WORKER_CAPACITY_REACHED'), true);
 });
 
+test('schedule-ready reuses every safe idle pair despite grandfathered excess reservations', () => {
+  const root = repository();
+  const environment = { ...process.env, PONYTAIL_CAMPAIGN_STATE_DIR: temporaryDirectory('ponytail-grandfathered-capacity') };
+  const ledger = newLedger(root, 'campaign', 'coordinator');
+  for (let index = 0; index < 33; index += 1) {
+    const sessionId = `retained-${index}`;
+    const worker = { sessionId, worktree: `/absent/${sessionId}`, branch: sessionId,
+      revision: ledger.integrationRevision, clean: false, activity: 'missing', evidenceComplete: false,
+      worktreeArchived: false, sessionArchived: false };
+    ledger.workers.push(worker);
+    recordCreatedWorker(ledger, worker);
+  }
+  const idleSessions = ['idle-a', 'idle-b'];
+  for (const sessionId of idleSessions) {
+    const worktree = path.join(temporaryDirectory(`ponytail-${sessionId}`), 'worker');
+    command(root, ['worktree', 'add', '-qb', sessionId, worktree]);
+    const worker = { sessionId, worktree, branch: sessionId, revision: ledger.integrationRevision,
+      clean: true, activity: 'idle', evidenceComplete: false, worktreeArchived: false, sessionArchived: false };
+    ledger.workers.push(worker);
+    recordCreatedWorker(ledger, worker);
+  }
+  writeHostObservation(root, 'campaign', { schemaVersion: 1, campaignId: 'campaign',
+    observedAt: new Date().toISOString(), completeSessionIds: idleSessions,
+    sessions: idleSessions.map(sessionId => ({ sessionId, state: 'waiting',
+      worktree: ledger.workers.find(worker => worker.sessionId === sessionId).worktree, managedWorktree: true })) }, environment);
+  const campaignGraph = graph([
+    { id: 'campaign', parentPlanId: null, dependsOn: [], lifecycle: 'in_progress', path: 'root' },
+    ...['ready-a', 'ready-b', 'ready-c'].map(id => ({ id, parentPlanId: 'campaign', dependsOn: [], lifecycle: 'open', path: id })),
+  ]);
+  const first = scheduleReadyPlans(campaignGraph, ledger, environment);
+  assert.deepEqual(first.actions.map(({ type, payload }) => ({ type, sessionId: payload.sessionId, planId: payload.planId })), [
+    { type: 'REUSE_WORKER', sessionId: 'idle-a', planId: 'ready-a' },
+    { type: 'REUSE_WORKER', sessionId: 'idle-b', planId: 'ready-b' },
+  ]);
+  assert.deepEqual(scheduleReadyPlans(campaignGraph, ledger, environment), first);
+  assert.equal(ledger.pendingActions.filter(({ type }) => type === 'CREATE_WORKER').length, 0);
+});
+
 test('retry-dispatch persists one fenced successor across CLI restarts and retains unknown capacity', () => {
   const root = fs.realpathSync(campaignRepository());
   const environment = { ...process.env, PONYTAIL_CAMPAIGN_STATE_DIR: temporaryDirectory('ponytail-retry-state'), PONYTAIL_SESSION_ID: 'coordinator' };

@@ -729,7 +729,9 @@ durable state instead of remembering worker assignments in conversation:
    gates permit it. Do not classify a failed recovery as successful dispatch.
    Run `ponytail campaign schedule-ready [<campaign-root>] --json` to reserve
    all eligible unassigned or queued plans deterministically, reusing safe idle
-   pairs first and respecting the per-project capacity. Execute its returned
+   pairs first and respecting this campaign's new-creation limit. Existing
+   safe idle pairs remain reusable even when grandfathered reservations exceed
+   that limit. Execute its returned
    host actions through the same authenticated protocol below. The command
    does not start Codex sessions: the current supported CLI protocol lacks
    managed-worktree creation, so native host effects remain adapter-owned.

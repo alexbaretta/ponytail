@@ -317,7 +317,7 @@ effect, complete an action, or allocate a replacement.
 The same summary must compare observed working sessions with theoretically
 achievable runnable-plan concurrency, accounting for existing assignments,
 creation reservations, safe reusable pairs, and available slots in this
-top-level project's fifteen-pair pool. Distinguish all observed active workers
+campaign's fifteen-pair pool. Distinguish all observed active workers
 from workers assigned to runnable plans; closure/rebase activity is not proof
 that runnable product tasklets execute. Missing, incomplete, or stale host
 evidence makes observed concurrency unknown rather than zero. A shortfall must
@@ -333,7 +333,7 @@ after its preconditions and authority are established. Never bypass a refusal,
 treat a report as approval, or fill capacity with unready plans.
 
 `campaign schedule-ready` must deterministically reserve all eligible plans
-within the invoking top-level project's capacity in one atomic operation,
+within the selected campaign's capacity in one atomic operation,
 using safe retained pairs before new creation reservations. It must preserve
 existing action identities on retry, retain started effects, enforce the
 ordinary fresh-host and assignment gates, and leave joins serialized. It may
@@ -469,10 +469,13 @@ effect has not started. It must not materialize assignments or actions, retry a
 started dispatch, or invent advisory work absent from the durable ledger.
 
 The scheduler retains all worker pairs, including surplus inactive workers and
-their project-resource claims. A fifteen-slot capacity bound includes creation
-reservations and spans campaigns only in the same top-level project. At capacity
-without a safe inactive pair, status reports a nonblocking capacity-wait
-diagnostic; no sixteenth creation or automatic cleanup is permitted. Historical
+their project-resource claims. Each campaign's fifteen-slot capacity bound
+includes its own creation reservations, not sessions from another campaign.
+Grandfathered reservations above fifteen remain valid: the bound prevents new
+creation, but `schedule-ready` must still assign every safe, idle pair to a
+dependency-ready plan in deterministic order. At capacity without a safe
+inactive pair, status reports a nonblocking capacity-wait diagnostic; no new
+creation or automatic cleanup is permitted. Historical
 automatic cleanup is superseded with an auditable retained disposition rather
 than reported as successful physical deletion.
 
