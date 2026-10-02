@@ -18,10 +18,29 @@ import json
 import os
 import re
 import shlex
+import signal
 import subprocess
 import sys
 import tempfile
 from pathlib import Path
+
+
+# Traceability: implements REQ-CLI-INTERRUPTION
+def run_cli(command, **options):
+    interrupted = False
+
+    def interrupt(signum, frame):
+        nonlocal interrupted
+        interrupted = True
+
+    # Terminal SIGINT reaches the whole foreground group. Let the child finish
+    # its cleanup instead of Python's interrupted subprocess wait abandoning it.
+    previous = signal.signal(signal.SIGINT, interrupt)
+    try:
+        status = subprocess.run(command, **options).returncode
+    finally:
+        signal.signal(signal.SIGINT, previous)
+    return 130 if interrupted else (128 - status if status < 0 else status)
 
 
 def fail(message):
@@ -603,11 +622,11 @@ def validate_all_projects(config):
 def qa(source_root, config, root, main_root, metadata, arguments):
     if arguments not in ([], ["references"]):
         fail("usage: ponytail qa [references]")
-    return subprocess.run(["node", str(source_root / "scripts/project-qa.js")], input=json.dumps({"root": str(root), "project": metadata, "projects": {}}), text=True).returncode
+    return run_cli(["node", str(source_root / "scripts/project-qa.js")], input=json.dumps({"root": str(root), "project": metadata, "projects": {}}), text=True)
 
 
 def update_skills(source_root, arguments):
-    return subprocess.call([str(source_root / "scripts/install-to-codex.sh"), *arguments])
+    return run_cli([str(source_root / "scripts/install-to-codex.sh"), *arguments])
 
 
 def update_permissions(source_root, root, main_root, arguments):
@@ -619,7 +638,7 @@ def update_permissions(source_root, root, main_root, arguments):
         "--project", str(root),
         "--project-root", str(main_root),
     ]
-    return subprocess.call([*command, *arguments])
+    return run_cli([*command, *arguments])
 
 
 def print_usage():
@@ -681,7 +700,7 @@ def print_usage():
 
 All commands require a Git worktree. Register and unregister may run before registration.
 validate checks setup only; qa runs local checks, never integration suites.
-Exit statuses: 1 invalid setup/command, 2 no Git worktree, 3 unregistered, 4 QA findings.""")
+Exit statuses: 1 invalid setup/command, 2 no Git worktree, 3 unregistered, 4 QA findings, 130 interrupted.""")
 
 
 def run():
@@ -691,7 +710,7 @@ def run():
         if len(arguments) != 3:
             fail("usage: ponytail worktree recover <attachment-token>")
         source_root = source_root_for(script_path, None)
-        return subprocess.run(["node", str(source_root / "src/worker-worktrees.js"), arguments[2]]).returncode
+        return run_cli(["node", str(source_root / "src/worker-worktrees.js"), arguments[2]])
     root, main_root = repository_roots(Path.cwd())
     operation = arguments.pop(0) if arguments else "help"
     home_value = os.environ.get("HOME")
@@ -779,7 +798,7 @@ def run():
         if not plan_input_cli.is_file():
             raise ProjectError(f"plan-input CLI source is unavailable: {plan_input_cli}", 2)
         try:
-            return subprocess.run(["node", str(plan_input_cli), *arguments], cwd=root).returncode
+            return run_cli(["node", str(plan_input_cli), *arguments], cwd=root)
         except OSError as error:
             raise ProjectError(f"plan-input CLI could not start: {error}", 2) from error
     if operation == "pm":
@@ -787,7 +806,7 @@ def run():
         if not pm_cli.is_file():
             raise ProjectError(f"PM CLI source is unavailable: {pm_cli}", 2)
         try:
-            return subprocess.run(["python3", str(pm_cli), *arguments], cwd=root).returncode
+            return run_cli(["python3", str(pm_cli), *arguments], cwd=root)
         except OSError as error:
             raise ProjectError(f"PM CLI could not start: {error}", 2) from error
     if operation == "campaign":
@@ -795,7 +814,7 @@ def run():
         if not campaign_cli.is_file():
             raise ProjectError(f"campaign CLI source is unavailable: {campaign_cli}", 2)
         try:
-            return subprocess.run(["node", str(campaign_cli), *arguments], cwd=root).returncode
+            return run_cli(["node", str(campaign_cli), *arguments], cwd=root)
         except OSError as error:
             raise ProjectError(f"campaign CLI could not start: {error}", 2) from error
     if operation == "worktree":
@@ -803,7 +822,7 @@ def run():
         if not worktree_cli.is_file():
             raise ProjectError(f"worktree CLI source is unavailable: {worktree_cli}", 2)
         try:
-            return subprocess.run(["node", str(worktree_cli), *arguments], cwd=root).returncode
+            return run_cli(["node", str(worktree_cli), *arguments], cwd=root)
         except OSError as error:
             raise ProjectError(f"worktree CLI could not start: {error}", 2) from error
     if operation in {"traceability", "plan", "search"}:
@@ -811,10 +830,10 @@ def run():
         if not project_index_cli.is_file():
             raise ProjectError(f"project index CLI source is unavailable: {project_index_cli}", 2)
         try:
-            return subprocess.run(
+            return run_cli(
                 ["node", str(project_index_cli), operation, *arguments],
                 cwd=root,
-            ).returncode
+            )
         except OSError as error:
             raise ProjectError(f"project index CLI could not start: {error}", 2) from error
     if operation in {"-h", "--help", "help"}:
@@ -851,6 +870,8 @@ def run():
 
 try:
     sys.exit(run())
+except KeyboardInterrupt:
+    sys.exit(130)
 except ProjectError as error:
     print(f"error: {error}", file=sys.stderr)
     sys.exit(error.status)
@@ -859,6 +880,7 @@ except (OSError, ValueError, subprocess.CalledProcessError) as error:
     sys.exit(1)
 PYTHON
 
+  trap ':' INT
   python3 -c "${python_source}" "${BASH_SOURCE[0]}" "$@" || status="$?"
   exit "${status}"
 }

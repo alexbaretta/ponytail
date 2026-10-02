@@ -14,6 +14,8 @@ boundary by `tests/campaign-census.test.js`.
 
 ## Suite index
 
+- [CLI interruption](cli-interruption.md)
+
 - [Campaign census](#campaign-census-suite)
 - [Debugging pattern observations](debugging-pattern-observations.md)
 - [Requirements traceability](requirements-traceability.md)

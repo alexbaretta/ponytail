@@ -12,6 +12,8 @@ behavior independently from implementation plans and architecture.
 
 ## Requirement sets
 
+- [CLI interruption](cli-interruption.md)
+
 - [Debugging pattern observations](debugging-pattern-observations.md)
 - [Requirements traceability](requirements-traceability.md)
 - [Plan input queue](plan-input-queue.md)

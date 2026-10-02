@@ -7,7 +7,7 @@ const crypto = require('node:crypto');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const { spawnSync } = require('node:child_process');
+const { spawn, spawnSync } = require('node:child_process');
 const test = require('node:test');
 const { Pool } = require('pg');
 const { databaseOptions } = require('../src/project-index');
@@ -70,6 +70,56 @@ function run(home, command, arguments = [], options = {}) {
 function configPath(home) {
   return path.join(home, '.ponytail/config.json');
 }
+
+// Traceability: verifies REQ-CLI-INTERRUPTION
+test('Ctrl-C is quiet in the wrapper and waits for delegated cleanup', async () => {
+  const home = temporaryDirectory('ponytail-interruption');
+  const bin = path.join(home, 'bin');
+  fs.mkdirSync(bin);
+  for (const delegated of [false, true]) {
+    const ready = path.join(home, 'ready');
+    const executable = path.join(bin, delegated ? 'node' : 'git');
+    fs.writeFileSync(executable, delegated
+      ? `#!${process.execPath}\nprocess.once('SIGINT', () => setTimeout(() => { console.log('cleanup complete'); process.exit(130); }, 700));\nconsole.log('ready');\nsetInterval(() => {}, 1000);\n`
+      : `#!/usr/bin/env python3\nimport time\nfrom pathlib import Path\nPath(${JSON.stringify(ready)}).touch()\ntry:\n    time.sleep(60)\nexcept KeyboardInterrupt:\n    pass\n`, { mode: 0o755 });
+    const child = spawn(ponytail, delegated ? ['worktree', 'recover', 'fixture-token'] : ['validate'], {
+      cwd: home, env: environment(home, { PATH: `${bin}:${process.env.PATH}` }),
+      detached: true, stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    let stdout = '';
+    let stderr = '';
+    let stdoutAtExit = '';
+    let interrupted = false;
+    const timeout = setTimeout(() => process.kill(-child.pid, 'SIGKILL'), 10000);
+    const readiness = setInterval(() => {
+      if (!interrupted && (stdout.includes('ready') || fs.existsSync(ready))) {
+        interrupted = true;
+        process.kill(-child.pid, 'SIGINT');
+      }
+    }, 10);
+    child.stdout.on('data', chunk => {
+      stdout += chunk;
+    });
+    child.stderr.on('data', chunk => { stderr += chunk; });
+    child.on('exit', () => { stdoutAtExit = stdout; });
+    try {
+      const result = await new Promise((resolve, reject) => {
+        child.on('error', reject);
+        child.on('close', (code, signal) => resolve({ code, signal }));
+      });
+      assert.equal(interrupted, true);
+      assert.equal(result.code, 130, stderr);
+      assert.equal(result.signal, null);
+      assert.doesNotMatch(stderr, /Traceback|KeyboardInterrupt|\n\s+at /);
+      if (delegated) assert.match(stdoutAtExit, /cleanup complete/);
+    } finally {
+      clearTimeout(timeout);
+      clearInterval(readiness);
+      fs.unlinkSync(executable);
+      fs.rmSync(ready, { force: true });
+    }
+  }
+});
 
 test('register initializes and registers the enclosing Git root idempotently', () => {
   const home = temporaryDirectory('ponytail-home');

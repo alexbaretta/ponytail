@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-10-01-cli_cancellation_boundary",
+  "recorded_at": "2026-10-01T21:06:16-07:00",
+  "source_references": ["pm/bugs/closed/2026-10-01-FEAT-cli_graceful_interruption.md"],
+  "context": {
+    "languages": ["python", "bash", "javascript"],
+    "frameworks": [],
+    "components": ["CLI dispatcher"],
+    "affected_boundaries": ["terminal cancellation", "delegated process cleanup"],
+    "code_references": ["cli/ponytail", "src/pm-pdf.py", "cli/condense_codex_rules.sh"]
+  },
+  "observed_behavior": "Terminal SIGINT printed a Python KeyboardInterrupt traceback from the CLI wrapper while waiting on a subprocess.",
+  "expected_behavior": "Cancellation exits quietly with status 130 after delegated cleanup.",
+  "causal_mechanism": "The parent treated SIGINT as an uncaught Python exception independently of the child cancellation lifecycle; Python's interrupted subprocess wait could return before child cleanup finished.",
+  "anti_pattern": {
+    "structural_description": "A process dispatcher lacks a cancellation boundary and abandons ownership of delegated cleanup on parent interruption.",
+    "why_it_fails": "Foreground-group SIGINT reaches parent and child together, so the parent's exception can leak a traceback and terminate its wait while the child is still finalizing."
+  },
+  "correct_pattern": {
+    "required_invariant": "The dispatcher remains responsible for waiting on the selected child's cancellation cleanup and classifies cancellation separately from ordinary failure.",
+    "implementation_description": "A scoped SIGINT handler records delegated cancellation without throwing through subprocess.run; built-in Python entry boundaries catch KeyboardInterrupt, shell traps preserve status 130, and ordinary errors remain visible."
+  },
+  "applicability_conditions": ["Foreground terminal SIGINT reaches a Python dispatcher and its selected child."],
+  "known_non_matches": ["The index's existing commit checkpoint protocol already preserves completed transactions; it was not the cause of the wrapper traceback."],
+  "confirmation_evidence": ["Before repair, process-group SIGINT during Git discovery printed a subprocess/selectors traceback before a Node command ran.", "After repair, delegated cleanup lasting 700ms completed before wrapper exit."],
+  "regression_proofs": ["tests/ponytail-cli.test.js: Ctrl-C is quiet in the wrapper and waits for delegated cleanup", "tests/pm-pdf.test.js: ponytail pm pdf handles Ctrl-C without a Python traceback", "scripts/test-project-index-postgres.sh: registered CLI SIGINT preserves checkpoints and resumes"]
+}

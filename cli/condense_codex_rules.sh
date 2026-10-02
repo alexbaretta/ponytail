@@ -531,9 +531,14 @@ def run():
         parser.error(str(error))
 
 
-sys.exit(run())
+# Traceability: supports REQ-CLI-INTERRUPTION
+try:
+    sys.exit(run())
+except KeyboardInterrupt:
+    sys.exit(130)
 PYTHON
 
+  trap ':' INT
   python3 -c "${python_source}" "$@" || status="$?"
   exit "${status}"
 }

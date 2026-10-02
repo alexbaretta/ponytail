@@ -5,6 +5,7 @@ set -euo pipefail
 # Licensed under the MIT License. See LICENSE in the project root.
 # Traceability: verifies REQ-TRACEABILITY-INDEX
 # Traceability: verifies REQ-REPOSITORY-TEXT-INDEX
+# Traceability: verifies REQ-CLI-INTERRUPTION
 
 fail() {
   printf 'error: %s\n' "$1" >&2
@@ -65,6 +66,7 @@ async function main() {
   const client = await pool.connect();
   let gapRoot;
   let repositoryRoot;
+  let interruptionHome;
   try {
     const firstResult = await publishTraceabilityGeneration(client, first);
     const secondResult = await publishTraceabilityGeneration(client, second);
@@ -385,26 +387,47 @@ async function main() {
     const oldPublication = await client.query(`
       SELECT generation_id FROM ponytail_index.published_worktree_text_generation_v1
       WHERE worktree_id = $1::uuid`, [firstRefresh.worktreeId]);
-    await new Promise((resolve, reject) => {
-      const child = spawn(process.execPath, [
-        path.join(root, 'src/project-index.js'), 'search', 'update-index',
-      ], { cwd: repositoryRoot, stdio: ['ignore', 'pipe', 'pipe'] });
+    interruptionHome = fs.mkdtempSync(path.join(os.tmpdir(), 'ponytail-interruption-home-'));
+    const interruptionEnvironment = { ...process.env, HOME: interruptionHome };
+    const registration = spawnSync(path.join(root, 'cli/ponytail'), ['register'], {
+      cwd: repositoryRoot, env: interruptionEnvironment, encoding: 'utf8',
+    });
+    assert.equal(registration.status, 0, registration.stderr);
+    execFileSync('git', ['add', '.agents'], { cwd: repositoryRoot });
+    execFileSync('git', [
+      '-c', 'user.name=Test', '-c', 'user.email=test@example.test',
+      'commit', '-qm', 'registered CLI interruption fixture',
+    ], { cwd: repositoryRoot });
+    for (const interruptionSignal of ['SIGKILL', 'SIGINT']) await new Promise((resolve, reject) => {
+      const child = spawn(path.join(root, 'cli/ponytail'), ['search', 'update-index'], {
+        cwd: repositoryRoot, env: interruptionEnvironment, detached: true,
+        stdio: ['ignore', 'pipe', 'pipe'],
+      });
       let output = '';
+      let stderr = '';
       let killed = false;
       child.stdout.on('data', chunk => {
         output += chunk.toString();
         if (!killed && output.includes('\n.')) {
           killed = true;
-          child.kill('SIGKILL');
+          process.kill(-child.pid, interruptionSignal);
         }
       });
-      child.stderr.on('data', () => {});
+      child.stderr.on('data', chunk => { stderr += chunk; });
       child.on('error', reject);
       child.on('close', (code, signal) => {
         try {
-          assert.equal(killed, true, output);
-          assert.equal(code, null);
-          assert.equal(signal, 'SIGKILL');
+          assert.equal(killed, true, output + stderr);
+          if (interruptionSignal === 'SIGKILL') {
+            assert.equal(code, null);
+            assert.equal(signal, 'SIGKILL');
+          } else {
+            assert.equal(code, 130, stderr);
+            assert.equal(signal, null);
+            assert.doesNotMatch(stderr, /Traceback|KeyboardInterrupt|\n\s+at /);
+            assert.match(stderr, /REPOSITORY_INDEX_INTERRUPTED/);
+            assert.ok(output.endsWith('\n'));
+          }
           resolve();
         } catch (error) { reject(error); }
       });
@@ -412,7 +435,7 @@ async function main() {
     const afterKill = await client.query(`
       SELECT count(*)::integer AS count FROM ponytail_index.git_commit_v1
       WHERE repository_id = $1::uuid`, [firstRefresh.repositoryId]);
-    assert.ok(afterKill.rows[0].count > 5 && afterKill.rows[0].count < 60);
+    assert.ok(afterKill.rows[0].count > 5 && afterKill.rows[0].count < 61);
     const priorPointer = await client.query(`
       SELECT generation_id FROM ponytail_index.published_worktree_text_generation_v1
       WHERE worktree_id = $1::uuid`, [firstRefresh.worktreeId]);
@@ -424,7 +447,7 @@ async function main() {
       '-c', 'user.name=Test', '-c', 'user.email=test@example.test',
       'commit', '--allow-empty', '-qm', 'new commit after process killed',
     ], { cwd: repositoryRoot });
-    const remaining = 61 - afterKill.rows[0].count;
+    const remaining = 62 - afterKill.rows[0].count;
     const resumedCli = spawnSync(process.execPath, [
       path.join(root, 'src/project-index.js'), 'search', 'update-index',
     ], { cwd: repositoryRoot, encoding: 'utf8' });
@@ -476,6 +499,7 @@ async function main() {
       'DELETE FROM ponytail_index.project_v1 WHERE project_id = ANY($1::uuid[])', [[projectId, gapProjectId, repositoryProjectId]]);
     if (gapRoot !== undefined) fs.rmSync(gapRoot, { recursive: true, force: true });
     if (repositoryRoot !== undefined) fs.rmSync(repositoryRoot, { recursive: true, force: true });
+    if (interruptionHome !== undefined) fs.rmSync(interruptionHome, { recursive: true, force: true });
     client.release();
     await pool.end();
   }

@@ -8,7 +8,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const { spawnSync } = require('node:child_process');
+const { spawn, spawnSync } = require('node:child_process');
 const test = require('node:test');
 
 const sourceRoot = path.join(__dirname, '..');
@@ -109,6 +109,40 @@ done
     stdin,
   };
 }
+
+test('ponytail pm pdf handles Ctrl-C without a Python traceback', async () => {
+  const root = fixture();
+  const { env } = environment(root);
+  const ready = path.join(root, 'ready');
+  write(root, 'bin/pandoc', '#!/bin/sh\ntouch "$PM_PDF_READY"\nexec sleep 60\n');
+  const child = spawn(ponytail, ['pm', 'pdf', 'requirements'], {
+    cwd: root, env: { ...env, PM_PDF_READY: ready }, detached: true,
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  let stderr = '';
+  let interrupted = false;
+  const timeout = setTimeout(() => process.kill(-child.pid, 'SIGKILL'), 10000);
+  const readiness = setInterval(() => {
+    if (!interrupted && fs.existsSync(ready)) {
+      interrupted = true;
+      process.kill(-child.pid, 'SIGINT');
+    }
+  }, 10);
+  child.stdout.resume();
+  child.stderr.on('data', chunk => { stderr += chunk; });
+  try {
+    const result = await new Promise((resolve, reject) => {
+      child.on('error', reject);
+      child.on('close', (code, signal) => resolve({ code, signal }));
+    });
+    assert.equal(interrupted, true, stderr);
+    assert.deepEqual(result, { code: 130, signal: null });
+    assert.doesNotMatch(stderr, /Traceback|KeyboardInterrupt/);
+  } finally {
+    clearTimeout(timeout);
+    clearInterval(readiness);
+  }
+});
 
 test('ponytail pm pdf renders configured collections in index order', () => {
   const root = fixture();

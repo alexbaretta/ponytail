@@ -2379,7 +2379,7 @@ if (require.main === module) {
   run(process.argv.slice(2)).catch(error => {
     const code = error instanceof ProjectIndexError ? error.code : 'PROJECT_INDEX_FAILURE';
     process.stderr.write(`error ${code}: ${error.message}\n`);
-    process.exitCode = 2;
+    process.exitCode = code === 'REPOSITORY_INDEX_INTERRUPTED' ? 130 : 2;
   });
 }
 

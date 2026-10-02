@@ -91,6 +91,8 @@ Traceability: verifies REQ-REPOSITORY-TEXT-INDEX
 3. Interrupt after some commits complete, including during the next commit.
    - Complete commits remain durable; the incomplete commit is rolled back;
      prior published refs/overlay remain intact.
+   - Ctrl-C exits with status 130 without a stack trace after cleanup, as
+     specified by the [CLI interruption Arc](cli-interruption.md).
 4. Add another Git commit and run the same update command again.
    - Only unfinished/new commits are processed, and the complete refs/overlay
      publish atomically. Repeating an unchanged update processes zero commits.

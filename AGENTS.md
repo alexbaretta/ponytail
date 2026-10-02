@@ -41,6 +41,10 @@ services. `PROJECT_STRUCTURE.md` is authoritative for that boundary.
 
 ## Commands
 
+- CLI cancellation: Ctrl-C exits with status 130 without a stack trace and
+  waits for delegated cancellation cleanup; interrupted index updates resume
+  completed commit checkpoints on the next invocation.
+
 - Initial setup: `npm install` and `npm install --prefix ponytail-mcp`.
 - Dependency update: use the same two install commands after dependency or
   lockfile changes.

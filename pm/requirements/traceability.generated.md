@@ -4,6 +4,20 @@
 
 Source: `.agents/config/project/traceability.json`
 
+## REQ-CLI-INTERRUPTION
+
+Requirement: [pm/requirements/cli-interruption.md](cli-interruption.md)
+
+- implementation: supports [cli/condense_codex_rules.sh:534](../../cli/condense_codex_rules.sh#L534)
+- implementation: implements [cli/ponytail:28](../../cli/ponytail#L28)
+- implementation: implements [src/pm-pdf.py:342](../../src/pm-pdf.py#L342)
+- unit-test: verifies [tests/ponytail-cli.test.js:74](../../tests/ponytail-cli.test.js#L74)
+- integration-test: verifies [scripts/test-project-index-postgres.sh:8](../../scripts/test-project-index-postgres.sh#L8)
+- uat: verifies [pm/uat/cli-interruption.md:9](../../pm/uat/cli-interruption.md#L9)
+- issue: introduces [pm/bugs/closed/2026-10-01-FEAT-cli_graceful_interruption.md:28](../../pm/bugs/closed/2026-10-01-FEAT-cli_graceful_interruption.md#L28)
+- issue: plans-implementation [pm/bugs/closed/2026-10-01-FEAT-cli_graceful_interruption.md:29](../../pm/bugs/closed/2026-10-01-FEAT-cli_graceful_interruption.md#L29)
+- issue: plans-verification [pm/bugs/closed/2026-10-01-FEAT-cli_graceful_interruption.md:30](../../pm/bugs/closed/2026-10-01-FEAT-cli_graceful_interruption.md#L30)
+
 ## REQ-WORKER-WORKTREE-RETENTION
 
 Requirement: [pm/requirements/worker-worktree-retention.md](worker-worktree-retention.md)
@@ -40,7 +54,7 @@ Requirement: [pm/requirements/index.md](index.md)
 - implementation: implements [src/campaign-census.js:1092](../../src/campaign-census.js#L1092)
 - unit-test: verifies [tests/campaign-census-format.test.js:11](../../tests/campaign-census-format.test.js#L11)
 - integration-test: verifies [tests/campaign-census.test.js:499](../../tests/campaign-census.test.js#L499)
-- uat: verifies [pm/uat/index.md:40](../../pm/uat/index.md#L40)
+- uat: verifies [pm/uat/index.md:42](../../pm/uat/index.md#L42)
 
 ## REQ-PLAN-INPUT-QUEUE
 
