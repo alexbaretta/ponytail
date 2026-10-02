@@ -26,7 +26,7 @@ around final transactional ref and worktree-overlay publication.
 This is a standalone follow-up to the immutable closed
 `2026-10-01-parallel-repository-index-ingestion` plan. It is not a campaign
 child because managed child membership requires a reciprocal edit to the
-closed parent, which the stakeholder explicitly prohibited.
+closed parent, which the root delegation excludes.
 
 ## Scope
 

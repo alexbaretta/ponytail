@@ -354,13 +354,27 @@ async function main() {
     }
     const workerPids = [];
     const parallelProgress = [];
+    let lateParallelCommit;
     const [parallelRefresh, parallelPeerRefresh] = await Promise.all([
       refreshRepositoryTextIndex({
         root: parallelRoot,
         workers: 3,
         commitsPerTransaction: 2,
         onWorkerStart: processId => workerPids.push(processId),
-        onProgress: (completed, total) => parallelProgress.push([completed, total]),
+        onProgress: (completed, total) => {
+          parallelProgress.push([completed, total]);
+          if (completed === 0 || lateParallelCommit !== undefined) return;
+          assert.equal(new Set(workerPids).size, 3);
+          fs.writeFileSync(path.join(parallelRoot, 'late.txt'), 'late snapshot\n');
+          execFileSync('git', ['add', 'late.txt'], { cwd: parallelRoot });
+          execFileSync('git', [
+            '-c', 'user.name=Test', '-c', 'user.email=test@example.test',
+            'commit', '-qm', 'advance branch during initial ingestion',
+          ], { cwd: parallelRoot });
+          lateParallelCommit = execFileSync('git', ['rev-parse', 'HEAD'], {
+            cwd: parallelRoot, encoding: 'utf8',
+          }).trim();
+        },
       }),
       refreshRepositoryTextIndex({
         root: parallelPeerRoot,
@@ -368,18 +382,132 @@ async function main() {
         commitsPerTransaction: 2,
       }),
     ]);
-    assert.equal(new Set(workerPids).size, 3);
-    assert.equal(parallelRefresh.history.commits, 9);
+    assert.ok(new Set(workerPids).size >= 3);
+    assert.equal(parallelRefresh.history.commits, 10);
     assert.equal(parallelPeerRefresh.history.commits, 9);
     assert.deepEqual(parallelProgress[0], [0, 9]);
-    assert.deepEqual(parallelProgress.at(-1), [9, 9]);
-    assert.ok(parallelProgress.slice(1).every(([completed], index, values) =>
-      index === 0 || completed > values[index - 1][0]));
+    assert.deepEqual(parallelProgress.at(-1), [10, 10]);
+    assert.ok(parallelProgress.slice(1).every(([completed, total], index) =>
+      completed >= parallelProgress[index][0] && total >= parallelProgress[index][1] &&
+      (completed > parallelProgress[index][0] || total > parallelProgress[index][1])));
     const parallelCommits = await client.query(`
       SELECT count(*)::integer AS count FROM ponytail_index.git_commit_v1 commit
       JOIN ponytail_index.repository_v1 repository USING (repository_id)
       WHERE repository.project_id = $1::uuid`, [parallelProjectId]);
-    assert.equal(parallelCommits.rows[0].count, 9);
+    assert.equal(parallelCommits.rows[0].count, 10);
+    const parallelRef = await client.query(`
+      SELECT commit_oid FROM ponytail_index.git_ref_current_v1
+      WHERE repository_id = $1::uuid AND ref_name = 'refs/heads/main'`, [
+      parallelRefresh.repositoryId,
+    ]);
+    assert.equal(parallelRef.rows[0].commit_oid, lateParallelCommit);
+    const parallelPointer = await client.query(`
+      SELECT published.generation_id, generation.head_commit
+      FROM ponytail_index.published_worktree_text_generation_v1 published
+      JOIN ponytail_index.worktree_text_generation_v1 generation USING (generation_id)
+      WHERE published.worktree_id = $1::uuid`, [parallelRefresh.worktreeId]);
+    assert.equal(parallelPointer.rows[0].head_commit, lateParallelCommit);
+    let finalMutationCommit;
+    await assert.rejects(() => refreshRepositoryTextIndex({
+      root: parallelRoot,
+      workers: 3,
+      commitsPerTransaction: 2,
+      onPublish: () => {
+        execFileSync('git', [
+          '-c', 'user.name=Test', '-c', 'user.email=test@example.test',
+          'commit', '--allow-empty', '-qm', 'advance branch during final publication',
+        ], { cwd: parallelRoot });
+        finalMutationCommit = execFileSync('git', ['rev-parse', 'HEAD'], {
+          cwd: parallelRoot, encoding: 'utf8',
+        }).trim();
+      },
+    }), /repository refs changed while indexing/);
+    const rejectedParallelRef = await client.query(`
+      SELECT commit_oid FROM ponytail_index.git_ref_current_v1
+      WHERE repository_id = $1::uuid AND ref_name = 'refs/heads/main'`, [
+      parallelRefresh.repositoryId,
+    ]);
+    assert.deepEqual(rejectedParallelRef.rows, parallelRef.rows);
+    const rejectedParallelPointer = await client.query(`
+      SELECT published.generation_id, generation.head_commit
+      FROM ponytail_index.published_worktree_text_generation_v1 published
+      JOIN ponytail_index.worktree_text_generation_v1 generation USING (generation_id)
+      WHERE published.worktree_id = $1::uuid`, [parallelRefresh.worktreeId]);
+    assert.deepEqual(rejectedParallelPointer.rows, parallelPointer.rows);
+    const finalMutationHistory = await client.query(`
+      SELECT 1 FROM ponytail_index.git_commit_v1
+      WHERE repository_id = $1::uuid AND commit_oid = $2`, [
+      parallelRefresh.repositoryId, finalMutationCommit,
+    ]);
+    assert.equal(finalMutationHistory.rows.length, 0);
+    for (let index = 0; index < 5; index += 1) {
+      execFileSync('git', [
+        '-c', 'user.name=Test', '-c', 'user.email=test@example.test',
+        'commit', '--allow-empty', '-qm', `late abort initial ${index}`,
+      ], { cwd: parallelRoot });
+    }
+    const lateAbortController = new AbortController();
+    const lateAbortWorkerPids = [];
+    let initialPhaseTotal;
+    let lateAbortHead;
+    await assert.rejects(() => refreshRepositoryTextIndex({
+      root: parallelRoot,
+      workers: 3,
+      commitsPerTransaction: 1,
+      signal: lateAbortController.signal,
+      onWorkerStart: processId => lateAbortWorkerPids.push(processId),
+      onProgress: (completed, total) => {
+        initialPhaseTotal ??= total;
+        if (lateAbortHead === undefined && completed > 0 && total === initialPhaseTotal) {
+          for (let index = 0; index < 12; index += 1) {
+            execFileSync('git', [
+              '-c', 'user.name=Test', '-c', 'user.email=test@example.test',
+              'commit', '--allow-empty', '-qm', `late abort delta ${index}`,
+            ], { cwd: parallelRoot });
+          }
+          lateAbortHead = execFileSync('git', ['rev-parse', 'HEAD'], {
+            cwd: parallelRoot, encoding: 'utf8',
+          }).trim();
+        } else if (total > initialPhaseTotal && completed > initialPhaseTotal) {
+          lateAbortController.abort(new Error('interrupted during late delta'));
+        }
+      },
+    }), /interrupted during late delta/);
+    assert.equal(initialPhaseTotal, 6);
+    const afterLateAbort = await client.query(`
+      SELECT count(*)::integer AS count FROM ponytail_index.git_commit_v1
+      WHERE repository_id = $1::uuid`, [parallelRefresh.repositoryId]);
+    assert.ok(afterLateAbort.rows[0].count >= 17 && afterLateAbort.rows[0].count < 28);
+    const lateAbortRef = await client.query(`
+      SELECT commit_oid FROM ponytail_index.git_ref_current_v1
+      WHERE repository_id = $1::uuid AND ref_name = 'refs/heads/main'`, [
+      parallelRefresh.repositoryId,
+    ]);
+    assert.deepEqual(lateAbortRef.rows, parallelRef.rows);
+    const lateAbortPointer = await client.query(`
+      SELECT published.generation_id, generation.head_commit
+      FROM ponytail_index.published_worktree_text_generation_v1 published
+      JOIN ponytail_index.worktree_text_generation_v1 generation USING (generation_id)
+      WHERE published.worktree_id = $1::uuid`, [parallelRefresh.worktreeId]);
+    assert.deepEqual(lateAbortPointer.rows, parallelPointer.rows);
+    for (const processId of lateAbortWorkerPids) assert.throws(
+      () => process.kill(processId, 0), error => error.code === 'ESRCH');
+    const resumedLateWorkerPids = [];
+    const resumedLate = await refreshRepositoryTextIndex({
+      root: parallelRoot,
+      workers: 3,
+      commitsPerTransaction: 1,
+      onWorkerStart: processId => resumedLateWorkerPids.push(processId),
+    });
+    assert.equal(resumedLate.history.commits, 28 - afterLateAbort.rows[0].count);
+    const resumedLateRef = await client.query(`
+      SELECT commit_oid FROM ponytail_index.git_ref_current_v1
+      WHERE repository_id = $1::uuid AND ref_name = 'refs/heads/main'`, [
+      parallelRefresh.repositoryId,
+    ]);
+    assert.equal(resumedLateRef.rows[0].commit_oid, lateAbortHead);
+    for (const processId of resumedLateWorkerPids) assert.throws(
+      () => process.kill(processId, 0), error => error.code === 'ESRCH');
     for (const processId of workerPids) assert.throws(
       () => process.kill(processId, 0), error => error.code === 'ESRCH');
 

@@ -31,12 +31,15 @@ replaced, removed, or added. Git's own ignore rules determine untracked
 participation; symlink targets are represented without following them.
 
 Before a query, the indexer observes refs and uses the prior checkpoint to
-ingest only unseen commits, trees, and blobs. It inventories tracked changes
-and untracked non-ignored paths, hashes that bounded set, and reuses unchanged
-documents. It verifies inputs again before transactional publication. Ref
-observations and reached Git objects are retained indefinitely; superseded
-worktree generations are deleted after PostgreSQL snapshots no longer need
-them.
+ingest only unseen commits, trees, and blobs. After that immutable backfill it
+captures refs and HEAD once more and sends only the late snapshot's unseen
+delta through the same ingestion path. That late snapshot is the sole
+publication candidate and must remain unchanged through the final transaction;
+movement after the late capture fails without retry. It inventories tracked
+changes and untracked non-ignored paths, hashes that bounded set, and reuses
+unchanged documents. Ref observations and reached Git objects are retained
+indefinitely; superseded worktree generations are deleted after PostgreSQL
+snapshots no longer need them.
 
 Each complete commit (metadata, parent edges, blobs, and all tree entries) is
 committed as one durable ingestion checkpoint. A visible commit row therefore
@@ -47,14 +50,15 @@ session lock across these transactions, released before returning its pooled
 connection; disconnecting a killed process releases it as well.
 
 For explicit `search update-index`, the lock-owning coordinator computes unseen
-commits once and owns one in-memory assignment queue. Actual child processes
-pull batches from that queue and use the same canonical batch-ingestion
-function as serial refresh. Each worker prepares complete Git commit data,
-then inserts commit rows, parent edges, unique blobs/documents, and tree entries
-in deterministic key order inside one transaction. Deterministic shared-row
-ordering and idempotent constraints make shared blobs safe without a second
-ingestion path; historical commit completion may occur out of topological order
-because parent edges reference their owning commit, not a required parent row.
+commits independently for the initial and late snapshots. Each nonempty phase
+owns one in-memory assignment queue. Actual child processes pull batches from
+that queue and use the same canonical batch-ingestion function as serial
+refresh. Each worker prepares complete Git commit data, then inserts commit
+rows, parent edges, unique blobs/documents, and tree entries in deterministic
+key order inside one transaction. Deterministic shared-row ordering and
+idempotent constraints make shared blobs safe without a second ingestion path;
+historical commit completion may occur out of topological order because parent
+edges reference their owning commit, not a required parent row.
 
 The coordinator retains the advisory writer lock and is the only process that
 publishes refs and the worktree overlay. Cancellation closes queue assignment,
@@ -73,10 +77,12 @@ dependency, exception, and Unicode-boundary policy to the returned matches.
 
 `ponytail search update-index` invokes the same refresh boundary without QA.
 Its progress observer is called only after a commit checkpoint becomes durable.
-cli-progress renders TTY bars; redirected output emits commit markers and
-throughput-based ETA. The public `-j` worker count defaults to half the available
-CPU count, floored with a minimum of one; `-n` defaults to one commit per
-transaction. The final ref/overlay publication is reported separately.
+One aggregate completed count spans both bounded snapshots; its total grows if
+the late snapshot adds unseen commits. cli-progress renders TTY bars;
+redirected output emits commit markers, reports a discovered late delta, and
+retains throughput-based ETA. The public `-j` worker count defaults to half the
+available CPU count, floored with a minimum of one; `-n` defaults to one commit
+per transaction. The final ref/overlay publication is reported separately.
 
 Database or refresh failure is a command failure. There is no filesystem
 search fallback because a second operational path could silently return a

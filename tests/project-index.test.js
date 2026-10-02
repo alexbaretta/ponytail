@@ -117,6 +117,23 @@ test('index progress emits cumulative markers, throughput ETA, and final publica
   progress.stop();
 });
 
+test('index progress extends one durable total for a late history snapshot', () => {
+  let output = '';
+  let milliseconds = 0;
+  const progress = repositoryIndexProgress({ write: text => { output += text; } }, () => milliseconds);
+  progress.update(0, 2);
+  milliseconds = 1000;
+  progress.update(1, 2);
+  milliseconds = 2000;
+  progress.update(2, 2);
+  progress.update(2, 3);
+  milliseconds = 3000;
+  progress.update(3, 3);
+  progress.publish();
+  assert.equal((output.match(/\./gu) ?? []).length, 3);
+  assert.match(output, /\.\.\nDiscovered 1 additional unseen commits \(ETA 1s\)\n\.\nHistory complete/);
+});
+
 test('index progress ends interrupted lines and handles a zero-commit update', () => {
   let output = '';
   const progress = repositoryIndexProgress({ write: text => { output += text; } }, () => 0);

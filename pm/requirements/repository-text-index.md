@@ -19,6 +19,11 @@ requires the `search` command family, progress/ETA, and resumable ingestion.
 requires real worker-process history ingestion, configurable worker count and
 commit transaction size, and interruption-safe worker cleanup.
 
+**Clarification:** A source-confirmed repair within the stakeholder-authorized
+maximum-parallelism goal requires branch advances during immutable history
+backfill not to invalidate that whole pass. Publication must use a fully
+indexed, stable latest snapshot and preserve the prior publication on failure.
+
 **Source:**
 [`2026-09-30-FEAT-repository_text_index_and_grep`](../bugs/closed/2026-09-30-FEAT-repository_text_index_and_grep.md).
 
@@ -40,7 +45,10 @@ or another current overlay are removed.
 Every command that consumes this index must refresh it before querying. A
 refresh compares the current refs and worktree with the last complete
 checkpoint, ingests only unseen Git objects, and reindexes only dirty or
-untracked content whose digest changed. Publication is transactional. A
+untracked content whose digest changed. It may ingest immutable history while
+branches advance, but before publication it must select current refs and HEAD,
+ingest every unseen commit reachable from that state, and keep that fully
+indexed snapshot stable through transactional ref and worktree publication. A
 failed or unstable refresh leaves the prior published checkpoint intact and
 must not fall back to `grep` or return a knowingly incomplete result.
 Completed commits are durable incremental checkpoints: interruption rolls back
@@ -92,11 +100,14 @@ batches out of historical order, but the resulting index is complete and
 equivalent to serial ingestion.
 
 Progress counts only commits in durable transactions and may therefore advance
-by a completed batch. On SIGINT or SIGTERM, the coordinator stops assigning
-work, every actual worker exits after committing a complete batch or rolling
-back its unfinished transaction, and the command leaves no worker processes
-behind. The command exits `130` quietly for SIGINT, preserves the prior
-ref/worktree publication, and resumes by skipping every durable commit.
+by a completed batch. Its aggregate total may increase once when the late
+snapshot discovers additional unseen commits; completed progress never
+decreases or counts an uncommitted batch. On SIGINT or SIGTERM, the coordinator
+stops assigning work, every actual worker exits after committing a complete
+batch or rolling back its unfinished transaction, and the command leaves no
+worker processes behind. This applies to both initial and late-delta workers.
+The command exits `130` quietly for SIGINT, preserves the prior ref/worktree
+publication, and resumes by skipping every durable commit.
 
 Repository reference QA must consume the same refreshed current-worktree index
 rather than spawning repository-wide `git grep` processes or maintaining a

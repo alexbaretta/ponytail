@@ -97,6 +97,35 @@ Traceability: verifies REQ-REPOSITORY-TEXT-INDEX
    - Only unfinished/new commits are processed, and the complete refs/overlay
      publish atomically. Repeating an unchanged update processes zero commits.
 
+## Arc: Publish one complete late repository snapshot
+
+Traceability: verifies REQ-REPOSITORY-TEXT-INDEX
+
+- **Actor:** Developer indexing a repository while another session commits.
+- **Prerequisites:** An isolated registered Git fixture with prior published
+  refs/overlay, enough unseen commits for worker ingestion, and test-owned rows
+  in the configured PostgreSQL schema.
+- **Profiles:** Real Git processes, PostgreSQL, and production worker processes.
+- **External effects:** Appends only fixture-owned immutable checkpoints and
+  atomically replaces only fixture-owned publication pointers.
+
+1. Run `ponytail search update-index -j 3 -n 2`; after a durable initial batch,
+   advance the checked-out branch from another Git process.
+   - The same command recaptures refs and HEAD once, increases the aggregate
+     total without decreasing completed progress, ingests the complete delta,
+     and publishes the advanced ref and overlay. Every worker exits.
+2. Repeat with enough late commits for several batches and interrupt after a
+   late-delta batch becomes durable.
+   - Initial and completed late batches remain durable, unfinished late work
+     rolls back, prior refs/overlay remain published, and both phase worker
+     pools exit. Rerunning skips durable commits and publishes the complete
+     latest snapshot.
+3. Advance the branch after the late snapshot is captured but before final
+   publication completes.
+   - The refresh fails with `REPOSITORY_INDEX_UNSTABLE`; its prior ref and
+     overlay pointers remain unchanged, and the newly referenced commit is not
+     published without history.
+
 ## Arc: Ingest complete batches with real worker processes
 
 Traceability: verifies REQ-REPOSITORY-TEXT-INDEX

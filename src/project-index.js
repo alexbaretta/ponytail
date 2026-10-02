@@ -2272,10 +2272,42 @@ async function refreshRepositoryTextIndex(options = {}) {
     if (!lock.acquired) throw new ProjectIndexError('REPOSITORY_INDEX_BUSY', 'repository text index writer is already active');
     lockKey = writerKey;
     await client.query('COMMIT');
-    const refs = await currentRefs(root);
-    const headCommit = git(root, ['rev-parse', 'HEAD']);
-    const tips = [...new Set([...refs.values(), headCommit, ...(options.tips ?? [])])];
-    const history = await ingestGitHistory(client, context, tips, options);
+    const initialRefs = await currentRefs(root);
+    const initialHeadCommit = git(root, ['rev-parse', 'HEAD']);
+    let history = { commits: 0, blobs: 0 };
+    let total = 0;
+    let reportedCompleted;
+    let reportedTotal;
+    const ingestSnapshot = async tips => {
+      let snapshotTotal;
+      const snapshot = await ingestGitHistory(client, context, tips, {
+        ...options,
+        onProgress: async (completed, maximum) => {
+          if (snapshotTotal === undefined) {
+            snapshotTotal = maximum;
+            total += maximum;
+          }
+          const aggregateCompleted = history.commits + completed;
+          if (aggregateCompleted === reportedCompleted && total === reportedTotal) return;
+          await options.onProgress?.(aggregateCompleted, total);
+          reportedCompleted = aggregateCompleted;
+          reportedTotal = total;
+        },
+      });
+      history = {
+        commits: history.commits + snapshot.commits,
+        blobs: history.blobs + snapshot.blobs,
+      };
+    };
+    await ingestSnapshot([
+      ...new Set([...initialRefs.values(), initialHeadCommit, ...(options.tips ?? [])]),
+    ]);
+    options.signal?.throwIfAborted();
+    const lateRefs = await currentRefs(root);
+    const lateHeadCommit = git(root, ['rev-parse', 'HEAD']);
+    await ingestSnapshot([
+      ...new Set([...lateRefs.values(), lateHeadCommit, ...(options.tips ?? [])]),
+    ]);
     options.signal?.throwIfAborted();
     await options.onPublish?.();
     await client.query('BEGIN');
@@ -2284,7 +2316,7 @@ async function refreshRepositoryTextIndex(options = {}) {
       WHERE repository_id = $1::uuid`, [context.repositoryId]);
     const prior = new Map(priorResult.rows.map(row => [row.ref_name, row.commit_oid]));
     const observedAt = (await one(client, 'SELECT clock_timestamp() AS observed_at')).observed_at;
-    for (const [refName, commitOid] of refs) {
+    for (const [refName, commitOid] of lateRefs) {
       if (prior.get(refName) === commitOid) continue;
       await client.query(`
         INSERT INTO ponytail_index.git_ref_observation_v1 (
@@ -2302,7 +2334,7 @@ async function refreshRepositoryTextIndex(options = {}) {
       ]);
     }
     for (const refName of prior.keys()) {
-      if (refs.has(refName)) continue;
+      if (lateRefs.has(refName)) continue;
       await client.query(`
         INSERT INTO ponytail_index.git_ref_observation_v1 (
           repository_id, observed_at, ref_name, commit_oid, deleted
@@ -2313,13 +2345,13 @@ async function refreshRepositoryTextIndex(options = {}) {
         WHERE repository_id = $1::uuid AND ref_name = $2`, [context.repositoryId, refName]);
     }
     const overlay = await publishWorktreeOverlay(client, context);
-    if (git(root, ['rev-parse', 'HEAD']) !== headCommit ||
-        JSON.stringify([...await currentRefs(root)]) !== JSON.stringify([...refs])) {
+    if (git(root, ['rev-parse', 'HEAD']) !== lateHeadCommit ||
+        JSON.stringify([...await currentRefs(root)]) !== JSON.stringify([...lateRefs])) {
       throw new ProjectIndexError('REPOSITORY_INDEX_UNSTABLE', 'repository refs changed while indexing');
     }
     options.signal?.throwIfAborted();
     await client.query('COMMIT');
-    return { ...context, headCommit, history, overlay };
+    return { ...context, headCommit: lateHeadCommit, history, overlay };
   } catch (error) {
     await client.query('ROLLBACK');
     throw error;
@@ -2339,6 +2371,7 @@ function repositoryIndexProgress(stream = process.stdout, now = Date.now) {
   let bar;
   let completed = 0;
   let total = 0;
+  let started = false;
   let lineOpen = false;
   const status = () => {
     const percentage = total === 0 ? 100 : Math.floor(completed * 100 / total);
@@ -2354,10 +2387,12 @@ function repositoryIndexProgress(stream = process.stdout, now = Date.now) {
   return {
     update(value, maximum) {
       const prior = completed;
+      const priorTotal = total;
       completed = value;
       total = maximum;
       const payload = status();
-      if (value === 0) {
+      if (!started) {
+        started = true;
         stream.write(`Indexing ${total} unseen commits (ETA ${payload.eta})\n`);
         if (stream.isTTY) {
           bar = new (require('cli-progress').SingleBar)({
@@ -2365,9 +2400,17 @@ function repositoryIndexProgress(stream = process.stdout, now = Date.now) {
           });
           bar.start(total, 0, { remaining: payload.eta });
         }
-      } else if (stream.isTTY) {
+      } else if (total !== priorTotal) {
+        if (stream.isTTY) bar.setTotal(total);
+        else {
+          if (lineOpen) stream.write('\n');
+          stream.write(`Discovered ${total - priorTotal} additional unseen commits (ETA ${payload.eta})\n`);
+          lineOpen = false;
+        }
+      }
+      if (value > 0 && stream.isTTY) {
         bar.update(completed, { remaining: payload.eta });
-      } else {
+      } else if (value > 0) {
         for (let durable = prior + 1; durable <= completed; durable += 1) {
           stream.write('.');
           if (durable % 10 === 0) stream.write('+');
