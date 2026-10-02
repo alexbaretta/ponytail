@@ -791,7 +791,8 @@ function bindWorker(environment, invocationWorktree, attachToken, sessionId) {
   if (typeof attachToken !== 'string' || !attachToken || typeof sessionId !== 'string' || !sessionId) fail('CAMPAIGN_ATTACH_INPUT', 'attach requires a token and host session identity');
   const canonicalWorktree = fs.realpathSync(invocationWorktree);
   const { ledger, assignment } = attachmentForToken(environment, attachToken);
-  const bootstrapValue = ledger.pendingActions.find(item => item.assignmentId === assignment.id)?.payload.bootstrap;
+  const pendingAction = ledger.pendingActions.find(item => item.assignmentId === assignment.id);
+  const bootstrapValue = pendingAction?.payload.bootstrap;
   const bootstrap = bootstrapValue && readCurrentWorkerBootstrap(bootstrapValue);
   if (bootstrap && (bootstrap.sessionId !== sessionId || bootstrap.worktree !== canonicalWorktree || bootstrap.pendingRevision !== null)) fail('CAMPAIGN_WORKER_SCOPE', 'attach must retain the original provisioned session and checkout with completed bootstrap upgrade');
   if (!fs.existsSync(ledger.topLevelWorktree)) fail('CAMPAIGN_WORKER_OWNER_MISSING', `owning worktree is unavailable: ${ledger.topLevelWorktree}`);
@@ -801,6 +802,7 @@ function bindWorker(environment, invocationWorktree, attachToken, sessionId) {
   const source = recoverySource(ledger.topLevelWorktree);
   if (repositoryCommonDirectory(canonicalWorktree) !== source.mainGitDirectory) fail('CAMPAIGN_WORKER_SCOPE', 'worker does not belong to the owning project Git repository');
   if (!identity.branch) fail('CAMPAIGN_WORKER_SCOPE', 'worker worktree must have a branch');
+  if (pendingAction?.type === 'REUSE_WORKER' && assignment.sessionId !== sessionId) fail('CAMPAIGN_WORKER_SCOPE', `assignment is reserved for session ${assignment.sessionId}`);
   if (assignment.worktree && assignment.worktree !== canonicalWorktree) fail('CAMPAIGN_WORKER_SCOPE', `assignment is reserved for worker ${assignment.worktree}`);
   const attachTokenHash = crypto.createHash('sha256').update(attachToken).digest('hex');
   return withWorkerBindingsLock(environment, (state) => {

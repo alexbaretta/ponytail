@@ -12,11 +12,22 @@ and authenticated host observations at the production scheduler boundary.
 1. Integrate a worker delivery and close its plan with no other ready plans.
    The assignment completes logically; no session or worktree archive action
    is emitted and its checkout and project-owned resources remain present.
-2. Make another plan ready, including in a successor campaign of that same
-   top-level project. The first safe inactive pair is reused with a fresh
-   assignment attachment. Busy or dirty pairs are not selected.
-3. Retry a historical pending automatic archive action after upgrading.
+2. Make another plan ready in the same campaign. The first safe inactive pair
+   created for that campaign is reused with a fresh assignment attachment.
+   Busy or dirty pairs are not selected. An idle chat unrelated to that
+   campaign, including one in the same checkout or another campaign, is not
+   eligible even when the project has no spare creation capacity.
+3. Attempt the reuse attachment from a different session in the reserved
+   checkout. It fails without binding or consuming the action; the exact
+   selected session then attaches with the original token.
+4. Retry a historical pending automatic archive action after upgrading.
    It is superseded as retention, never reported as physical deletion success.
+
+The exact-session and unrelated-idle-chat steps passed in disposable real-Git
+scheduler tests on 2026-10-02. In live GWEN, the coordinator reported that the
+original selected worker authenticated, its original reuse action completed,
+and its assignment became `ACTIVE`; its tasklet work remains in progress. This
+is not yet a campaign-wide or release-acceptance pass.
 
 ## Arc: Bound capacity without cross-project interference
 

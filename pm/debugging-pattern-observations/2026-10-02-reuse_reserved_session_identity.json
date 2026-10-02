@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-10-02-reuse_reserved_session_identity",
+  "recorded_at": "2026-10-02T15:10:52-07:00",
+  "source_references": ["pm/bugs/closed/2026-10-02-BUG-reuse_reserved_session_identity.md"],
+  "context": {
+    "languages": ["javascript"],
+    "frameworks": [],
+    "components": ["campaign scheduler"],
+    "affected_boundaries": ["reserved reuse action to authenticated worker attachment"],
+    "code_references": ["src/campaign-orchestration.js:bindWorker"]
+  },
+  "observed_behavior": "A different session in the reserved worktree could attach a REUSE_WORKER capability intended for the original campaign worker.",
+  "expected_behavior": "Only the exact session and worktree selected by the campaign reuse action can attach; unrelated idle chats are not worker candidates.",
+  "causal_mechanism": "Attachment enforced the reserved worktree but omitted the reserved session identity from its ownership check.",
+  "anti_pattern": {
+    "structural_description": "A two-part resource identity was partially validated at the attachment trust boundary.",
+    "why_it_fails": "A token holder in the right checkout but a different native session can change the assignment owner."
+  },
+  "correct_pattern": {
+    "required_invariant": "The attached session and checkout both match the action's reserved campaign worker pair.",
+    "implementation_description": "bindWorker rejects a nonmatching reserved session before writing any worker binding, while the scheduler selects only workers retained in the selected campaign ledger."
+  },
+  "applicability_conditions": ["REUSE_WORKER action reserving an existing session and checkout", "Another native session can invoke attachment from that checkout"],
+  "known_non_matches": ["A newly created worker with no reserved session before its authenticated bootstrap", "An unrelated idle host chat that is not in the campaign ledger"],
+  "confirmation_evidence": ["A real-Git focused test accepted the wrong session before the guard and rejected it after the guard; the original session then attached with the same action and token."],
+  "regression_proofs": ["tests/campaign-orchestration.test.js: reuse attachment rejects a different session in the reserved worktree", "tests/campaign-orchestration.test.js: schedule-ready does not enroll an unrelated idle host chat for reuse"]
+}

@@ -4,7 +4,8 @@
 
 **Approval:** Explicit stakeholder approval on 2026-10-01 to document, plan,
 and implement retained worker pairs, a fifteen-worktree project limit, and
-worker-owned recovery from the main worktree.
+worker-owned recovery from the main worktree. Clarified on 2026-10-02 that
+campaign reuse is limited to workers created for that campaign.
 
 Traceability: specifies REQ-WORKER-WORKTREE-RETENTION
 
@@ -16,16 +17,21 @@ ready. It retains the session/worktree pair indefinitely. Logical completion
 of an assignment is not physical retirement of its worker.
 
 Scheduling must select the first deterministically ordered, safe inactive pair
-before creating a worker. Reuse requires a surviving clean checkout and no
-outstanding assignment or action for that pair. Outstanding acceptance,
-delivery, recovery, or integration obligations are not inactivity.
+created for the selected campaign before creating a worker. A session merely
+idle in the same project, or created for another campaign, is not in that
+campaign's reuse pool. A `REUSE_WORKER` reservation binds the exact session
+and checkout; attachment from a different session must fail. Reuse requires a
+surviving clean checkout and no outstanding assignment or action for that pair.
+Outstanding acceptance, delivery, recovery, or integration obligations are
+not inactivity.
 Both observed idle host states, `waiting` and `completed`, qualify once the
 assignment's completion obligations are satisfied; neither implies retirement.
 
 Each user-owned top-level Codex project has a limit of fifteen worker
 worktrees. Reserved creations consume capacity. Campaigns in that project
-share the pool. Other top-level projects have independent pools even when
-their checkouts share one main worktree and Git object database. The main and
+share the capacity limit, not reusable session ownership. Other top-level
+projects have independent pools even when their checkouts share one main
+worktree and Git object database. The main and
 user-owned top-level checkouts are not worker slots. At capacity without a safe
 inactive pair, scheduling waits rather than deleting or creating a sixteenth
 worker. Pre-existing excess capacity must not cause destructive normalization.

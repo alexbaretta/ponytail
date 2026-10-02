@@ -790,7 +790,9 @@ durable state instead of remembering worker assignments in conversation:
    the authenticated campaign attach command.
    Bootstrap establishes local worktree prerequisites only: no plan edits or
    execution precede authenticated attachment. For `REUSE_WORKER`, message
-   only the named idle session and require the same verified prerequisites and
+   only the exact session named by the action, previously created for this
+   campaign. An unrelated idle chat is never a substitute, even if it shares
+   the project or checkout. Require the same verified prerequisites and
    attach command. Retry the same attachment token in the same session
    after a prerequisite failure; do not allocate a replacement worker. Record
    the exact host session, canonical worktree, branch, and revision only after

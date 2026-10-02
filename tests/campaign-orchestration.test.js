@@ -1022,6 +1022,48 @@ test('advance reuses a clean idle worker before requesting a new worker', () => 
   assert.equal(selected.payload.sessionId, 'idle-session');
 });
 
+test('reuse attachment rejects a different session in the reserved worktree', () => {
+  const root = repository();
+  const worktree = path.join(fs.realpathSync(temporaryDirectory('ponytail-reuse-identity')), 'worker');
+  command(root, ['worktree', 'add', '-qb', 'reusable-worker', worktree]);
+  const environment = { ...process.env, PONYTAIL_CAMPAIGN_STATE_DIR: temporaryDirectory('ponytail-reuse-identity-state') };
+  const ledger = newLedger(root, 'campaign', 'coordinator');
+  ledger.workers.push({
+    sessionId: 'original-session', worktree, branch: 'reusable-worker', revision: ledger.integrationRevision,
+    clean: true, activity: 'idle', evidenceComplete: false, worktreeArchived: false, sessionArchived: false,
+  });
+  const selected = advanceLedger(graph([
+    { id: 'campaign', parentPlanId: null, dependsOn: [], lifecycle: 'in_progress', path: 'root' },
+    { id: 'ready', parentPlanId: 'campaign', dependsOn: [], lifecycle: 'open', path: 'ready' },
+  ]), ledger);
+  assert.equal(selected.type, 'REUSE_WORKER');
+  const file = ledgerPath(root, 'campaign', environment);
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, `${JSON.stringify(ledger)}\n`);
+  assert.equal(captureError(() => bindWorker(environment, worktree, selected.payload.attachToken, 'other-session')).code, 'CAMPAIGN_WORKER_SCOPE');
+  assert.equal(readWorkerBindings(environment).bindings.length, 0);
+  assert.equal(bindWorker(environment, worktree, selected.payload.attachToken, 'original-session').sessionId, 'original-session');
+});
+
+test('schedule-ready does not enroll an unrelated idle host chat for reuse', () => {
+  const root = repository();
+  const worktree = path.join(fs.realpathSync(temporaryDirectory('ponytail-unrelated-chat')), 'worker');
+  command(root, ['worktree', 'add', '-qb', 'unrelated-worker', worktree]);
+  const environment = { ...process.env, PONYTAIL_CAMPAIGN_STATE_DIR: temporaryDirectory('ponytail-unrelated-chat-state') };
+  writeHostObservation(root, 'campaign', {
+    schemaVersion: 1, campaignId: 'campaign', observedAt: new Date().toISOString(), completeSessionIds: ['unrelated-session'],
+    sessions: [{ sessionId: 'unrelated-session', state: 'waiting', worktree, managedWorktree: true }],
+  }, environment);
+  const ledger = newLedger(root, 'campaign', 'coordinator');
+  const actions = scheduleReadyPlans(graph([
+    { id: 'campaign', parentPlanId: null, dependsOn: [], lifecycle: 'in_progress', path: 'root' },
+    { id: 'ready', parentPlanId: 'campaign', dependsOn: [], lifecycle: 'open', path: 'ready' },
+  ]), ledger, environment).actions;
+  assert.equal(actions.length, 1);
+  assert.equal(actions[0].type, 'CREATE_WORKER');
+  assert.equal(actions[0].payload.sessionId, null);
+});
+
 for (const hostState of ['completed', 'waiting']) {
   test(`integrated ${hostState} workers become reusable when another plan is ready`, () => {
     const root = repository();
