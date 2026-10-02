@@ -16,6 +16,7 @@ const test = require('node:test');
 const {
   CampaignOrchestrationError,
   advanceLedger,
+  bindWorker,
   scheduleReadyPlans,
   ledgerPath,
   reconcileLedger,
@@ -1122,6 +1123,65 @@ test('worker delivery resolves a closed plan by stable identity before its lifec
   assert.equal(readLedger(root, 'campaign', environment).assignments[0].state, 'MERGED');
   assert.equal(fs.existsSync(path.join(root, 'pm/plans/closed/ready/plan.md')), true);
   assert.equal(readWorkerDeliveries(root, 'campaign', environment).deliveries[0].revision, revision);
+});
+
+test('authenticated dispatch stays valid while its worker activates an open plan and integrates activation', () => {
+  const root = fs.realpathSync(campaignRepository());
+  const worker = path.join(fs.realpathSync(temporaryDirectory('ponytail-activation-worker')), 'worker');
+  command(root, ['worktree', 'add', '-qb', 'activation-worker', worker]);
+  const environment = { ...process.env, PONYTAIL_CAMPAIGN_STATE_DIR: temporaryDirectory('ponytail-activation-state'), PONYTAIL_SESSION_ID: 'coordinator' };
+  const ledger = newLedger(root, 'campaign', 'coordinator');
+  ledger.workers.push({ sessionId: 'activation-session', worktree: worker, branch: 'activation-worker',
+    revision: ledger.integrationRevision, clean: true, activity: 'idle', evidenceComplete: false,
+    worktreeArchived: false, sessionArchived: false });
+  const observe = () => writeHostObservation(root, 'campaign', { schemaVersion: 1, campaignId: 'campaign',
+    observedAt: new Date().toISOString(), completeSessionIds: ['activation-session'],
+    sessions: [{ sessionId: 'activation-session', state: 'waiting', worktree: worker, managedWorktree: true }] }, environment);
+  observe();
+  let campaignGraph = require('../src/campaign-census').campaignGraph(root, 'campaign');
+  const action = advanceLedger(campaignGraph, ledger, environment);
+  assert.equal(action.type, 'REUSE_WORKER');
+  const assignment = ledger.assignments[0];
+  withLedgerLock(root, 'campaign', environment, current => Object.assign(current, ledger));
+  bindWorker(environment, worker, assignment.attachToken, 'activation-session');
+  const result = { ok: true, sessionId: 'activation-session', worktree: worker,
+    branch: 'activation-worker', revision: ledger.integrationRevision };
+  validateActionResultBinding(ledger, action.id, result, environment);
+  recordActionResult(ledger, action.id, result, campaignGraph);
+  withLedgerLock(root, 'campaign', environment, current => Object.assign(current, ledger));
+  assert.deepEqual(reconcile(campaignGraph, ledger, root, environment).diagnostics, []);
+  assert.doesNotThrow(() => readyActions(reconcile(campaignGraph, ledger, root, environment), campaignGraph));
+  const deliver = evidencePaths => spawnSync(process.execPath, [campaignCli, 'deliver', 'campaign', '--result',
+    JSON.stringify({ revision: command(worker, ['rev-parse', 'HEAD']), evidencePaths })],
+  { cwd: worker, encoding: 'utf8', env: environment });
+  const premature = deliver(['pm/plans/open/ready/plan.md']);
+  assert.equal(premature.status, 1);
+  assert.match(premature.stderr, /activate the assigned plan/);
+  const parentPath = 'pm/plans/in_progress/campaign/plan.md';
+  fs.mkdirSync(path.join(worker, 'pm/plans/in_progress'), { recursive: true });
+  fs.renameSync(path.join(worker, 'pm/plans/open/ready'), path.join(worker, 'pm/plans/in_progress/ready'));
+  write(worker, parentPath, fs.readFileSync(path.join(worker, parentPath), 'utf8').replace('../../open/ready/', '../../in_progress/ready/'));
+  command(worker, ['add', '.']);
+  command(worker, ['-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.test', 'commit', '-qm', 'activate assigned plan']);
+  const delivered = deliver(['pm/plans/in_progress/ready/plan.md']);
+  assert.equal(delivered.status, 0, delivered.stderr);
+  assert.equal(JSON.parse(delivered.stdout).assignments[0].state, 'READY_TO_MERGE');
+  for (let index = 0; index < 2; index += 1) {
+    const advanced = spawnSync(process.execPath, [campaignCli, 'advance', 'campaign', '--json'],
+      { cwd: root, encoding: 'utf8', env: environment });
+    assert.equal(advanced.status, 0, advanced.stderr);
+  }
+  campaignGraph = require('../src/campaign-census').campaignGraph(root, 'campaign');
+  assert.equal(campaignGraph.plans.find(plan => plan.id === 'ready').lifecycle, 'in_progress');
+  assert.equal(readLedger(root, 'campaign', environment).assignments[0].state, 'MERGED');
+  const unprovenLedger = newLedger(root, 'campaign', 'coordinator');
+  unprovenLedger.assignments.push({ ...assignment, state: 'ACTIVE' });
+  campaignGraph.plans.find(plan => plan.id === 'ready').lifecycle = 'open';
+  assert.ok(reconcile(campaignGraph, unprovenLedger, root, environment).diagnostics.some(item => item.code === 'CAMPAIGN_ASSIGNMENT_LIFECYCLE'));
+  for (const lifecycle of ['deferred', 'rejected']) {
+    campaignGraph.plans.find(plan => plan.id === 'ready').lifecycle = lifecycle;
+    assert.ok(reconcile(campaignGraph, ledger, root, environment).diagnostics.some(item => item.code === 'CAMPAIGN_ASSIGNMENT_LIFECYCLE'));
+  }
 });
 
 test('waiting worker delivery remains integrable before and after its checkout disappears', () => {

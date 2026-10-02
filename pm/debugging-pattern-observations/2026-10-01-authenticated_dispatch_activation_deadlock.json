@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-10-01-authenticated_dispatch_activation_deadlock",
+  "recorded_at": "2026-10-01T19:37:04-07:00",
+  "source_references": ["pm/bugs/closed/2026-10-01-BUG-authenticated_dispatch_activation_deadlock.md"],
+  "context": {
+    "languages": ["javascript"], "frameworks": [],
+    "components": ["campaign scheduler"],
+    "affected_boundaries": ["authenticated dispatch completion", "plan lifecycle activation", "delivery integration"],
+    "code_references": ["src/campaign-orchestration.js"]
+  },
+  "observed_behavior": "Authenticated reuse produced ACTIVE/OPEN, which reconciliation rejected and could not integrate after worker activation.",
+  "expected_behavior": "The original authenticated worker can activate its plan and deliver that transition through the ordinary serialized join.",
+  "causal_mechanism": "Dispatch completion and lifecycle reconciliation described different legitimate intermediate states; merge readiness repeated the latter assumption.",
+  "anti_pattern": {
+    "structural_description": "A producer emits a state rejected by its consumer until a downstream operation finishes.",
+    "why_it_fails": "The downstream activation/integration operation is blocked by that very intermediate-state diagnostic."
+  },
+  "correct_pattern": {
+    "required_invariant": "Proven intermediate states remain valid through the operation that completes their transition, without permitting unproven states.",
+    "implementation_description": "Matching dispatch and binding proof permits initial lifecycle reconciliation/integration; delivery still requires worker activation and exact clean evidence."
+  },
+  "applicability_conditions": ["Dispatch authenticates before worker-owned lifecycle changes are permitted.", "Lifecycle changes reach the coordinator only through integration."],
+  "known_non_matches": ["Unproven ACTIVE/OPEN assignments remain invalid.", "Rejected and deferred plans do not become valid through dispatch proof."],
+  "confirmation_evidence": ["Live original audit assignment, successful dispatch, matching binding, and both OPEN plan locators were independently inspected.", "The real Git/authenticated binding regression failed before the fix on CAMPAIGN_ASSIGNMENT_LIFECYCLE."],
+  "regression_proofs": ["tests/campaign-orchestration.test.js: authenticated dispatch stays valid while its worker activates an open plan and integrates activation"]
+}

@@ -7,6 +7,25 @@ Licensed under the MIT License. See LICENSE in the project root.
 
 # Campaign orchestration Suite
 
+## Arc: Authenticate, activate, and integrate an initially open plan
+
+Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
+
+1. Dispatch a runnable OPEN plan to its original retained worker, authenticate
+   attachment, and record the matching successful REUSE result.
+   - ACTIVE/OPEN is a valid proven bootstrap interval. No duplicate is created.
+2. Try to deliver before activating the worker's plan.
+   - Delivery fails actionably without publishing milestone evidence.
+3. Acquire the exact lifecycle/backlink leases, activate in that worker,
+   commit clean proof, and deliver through the normal command.
+   - The activation milestone becomes merge-ready despite the coordinator's
+     still-OPEN plan; normal advancement integrates it with identity retained.
+4. Supply ACTIVE/OPEN without matching authenticated successful dispatch, or
+   change the plan to a rejected/deferred lifecycle.
+   - Lifecycle diagnostics still block inconsistent state.
+
+Automated profile: `node --test tests/campaign-orchestration.test.js`.
+
 ## Arc: Query runnable plans and fill independent dispatch capacity
 
 Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION

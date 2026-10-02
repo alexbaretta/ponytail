@@ -1266,7 +1266,9 @@ function diagnosticRecord(code, message, assignment = {}, extra = {}) {
   };
 }
 
-function lifecycleCompatible(assignmentState, lifecycle, graphLifecycle) {
+function lifecycleCompatible(assignmentState, lifecycle, graphLifecycle, activationPending = false) {
+  if (activationPending && lifecycle === graphLifecycle.initial
+    && ['ACTIVE', 'WORK_COMPLETE', 'REBASE_REQUIRED', 'READY_TO_MERGE', 'MERGED'].includes(assignmentState)) return true;
   if (assignmentState === 'DISPATCH_PENDING') return [graphLifecycle.initial, graphLifecycle.activeWork].includes(lifecycle);
   if (['ACTIVE', 'WORK_COMPLETE', 'REBASE_REQUIRED', 'READY_TO_MERGE'].includes(assignmentState)) return lifecycle === graphLifecycle.activeWork;
   if (assignmentState === 'MERGED') return [graphLifecycle.activeWork, graphLifecycle.successfulCompletion].includes(lifecycle);
@@ -1274,10 +1276,11 @@ function lifecycleCompatible(assignmentState, lifecycle, graphLifecycle) {
   return false;
 }
 
-function effectiveAssignmentState(assignment, plan, worker, integrationRevision, repositoryRoot, graphLifecycle) {
+function effectiveAssignmentState(assignment, plan, worker, integrationRevision, repositoryRoot, graphLifecycle, activationPending = false) {
   if (assignment.state === 'ARCHIVED') return 'ARCHIVED';
   if (['ACTIVE', 'WORK_COMPLETE', 'REBASE_REQUIRED', 'READY_TO_MERGE', 'MERGED'].includes(assignment.state)
-    && plan.lifecycle === graphLifecycle.activeWork && worker?.activity === 'completed' && worker.evidenceComplete) {
+    && (plan.lifecycle === graphLifecycle.activeWork || activationPending)
+    && worker?.activity === 'completed' && worker.evidenceComplete) {
     if (!worker.clean || !worker.revision) return 'WORK_COMPLETE';
     const containsIntegration = spawnSync('git', ['-C', repositoryRoot, 'merge-base', '--is-ancestor', integrationRevision, worker.revision]).status === 0;
     const alreadyIntegrated = spawnSync('git', ['-C', repositoryRoot, 'merge-base', '--is-ancestor', worker.revision, integrationRevision]).status === 0;
@@ -1299,6 +1302,20 @@ function reconcile(graph, ledger, invocationWorktree = ledger.topLevelWorktree, 
     ? Date.now() - Date.parse(hostObservation.observedAt) > HOST_OBSERVATION_MAX_AGE_MS
     : false;
   const workers = observedWorkers(graph, ledger, environment, hostObservation);
+  const bindingsByAssignment = new Map((environment ? readWorkerBindings(environment).bindings : [])
+    .filter(({ repositoryRoot, campaignId }) => repositoryRoot === ledger.topLevelWorktree && campaignId === ledger.campaignId)
+    .map((binding) => [binding.assignmentId, binding]));
+  const activationAssignments = new Set(ledger.assignments.filter(assignment => {
+    if (plansById.get(assignment.planId)?.lifecycle !== graph.lifecycle.initial) return false;
+    const binding = bindingsByAssignment.get(assignment.id);
+    return binding && binding.sessionId === assignment.sessionId && binding.worktree === assignment.worktree
+      && binding.branch === assignment.branch && binding.coordinatorSessionId === ledger.coordinatorSessionId
+      && binding.attachTokenHash === crypto.createHash('sha256').update(assignment.attachToken).digest('hex')
+      && ledger.completedActions.some(item => item.assignmentId === assignment.id
+        && ['CREATE_WORKER', 'REUSE_WORKER'].includes(item.type) && item.result.ok === true
+        && item.result.sessionId === assignment.sessionId && item.result.worktree === assignment.worktree
+        && item.result.branch === assignment.branch);
+  }).map(assignment => assignment.id));
   const assignments = ledger.assignments.map((assignment) => {
     const plan = plansById.get(assignment.planId);
     const worker = workerFor(workers, assignment);
@@ -1306,16 +1323,13 @@ function reconcile(graph, ledger, invocationWorktree = ledger.topLevelWorktree, 
     return {
       ...assignment,
       workerRevision: worker?.revision ?? assignment.workerRevision,
-      state: plan ? effectiveAssignmentState(assignment, plan, worker, integrationRevision, ledger.topLevelWorktree, graph.lifecycle) : assignment.state,
+      state: plan ? effectiveAssignmentState(assignment, plan, worker, integrationRevision, ledger.topLevelWorktree, graph.lifecycle, activationAssignments.has(assignment.id)) : assignment.state,
       planLifecycle: plan?.lifecycle ?? null,
       hostState: hostSession?.state ?? (assignment.sessionId ? 'unknown' : null),
       managedWorktree: hostSession?.managedWorktree ?? null,
       worktreeExists: Boolean(assignment.worktree && fs.existsSync(assignment.worktree)),
     };
   }).sort((left, right) => left.planId.localeCompare(right.planId) || left.id.localeCompare(right.id));
-  const bindingsByAssignment = new Map((environment ? readWorkerBindings(environment).bindings : [])
-    .filter(({ repositoryRoot, campaignId }) => repositoryRoot === ledger.topLevelWorktree && campaignId === ledger.campaignId)
-    .map((binding) => [binding.assignmentId, binding]));
   const deliveriesByAssignment = new Map((environment ? readWorkerDeliveries(ledger.topLevelWorktree, ledger.campaignId, environment).deliveries : [])
     .map((delivery) => [delivery.assignmentId, delivery]));
   const recoveryRevisions = new Map(assignments.map((assignment) => [assignment.id, recoverableWorkerRevision(
@@ -1403,7 +1417,7 @@ function reconcile(graph, ledger, invocationWorktree = ledger.topLevelWorktree, 
   }
   for (const assignment of assignments) {
     if (!plansById.has(assignment.planId)) status.diagnostics.push(diagnosticRecord('CAMPAIGN_ASSIGNMENT_PLAN_MISSING', `assignment ${assignment.id} references missing plan ${assignment.planId}`, assignment));
-    else if (!lifecycleCompatible(assignment.state, assignment.planLifecycle, graph.lifecycle)) status.diagnostics.push(diagnosticRecord('CAMPAIGN_ASSIGNMENT_LIFECYCLE', `assignment ${assignment.id} state ${assignment.state} is incompatible with plan lifecycle ${assignment.planLifecycle}`, assignment));
+    else if (!lifecycleCompatible(assignment.state, assignment.planLifecycle, graph.lifecycle, activationAssignments.has(assignment.id))) status.diagnostics.push(diagnosticRecord('CAMPAIGN_ASSIGNMENT_LIFECYCLE', `assignment ${assignment.id} state ${assignment.state} is incompatible with plan lifecycle ${assignment.planLifecycle}`, assignment));
     const worker = workerFor(workers, assignment);
     if (assignment.state !== 'DISPATCH_PENDING' && assignment.state !== 'ARCHIVED' && !assignment.worktreeArchived
       && !(assignment.state === 'CLEANUP_PENDING' && assignment.hostState === 'archived')
@@ -2152,10 +2166,14 @@ function run(argv = process.argv.slice(2), options = {}) {
     if (!assignment || assignment.state === 'ARCHIVED') fail('CAMPAIGN_WORKER_BINDING_STALE', 'worker assignment is unavailable');
     const workerGraph = campaignGraph(resolution.invocationWorktree, assignment.planId);
     if (workerGraph.campaignId !== graph.campaignId) fail('CAMPAIGN_WORKER_DELIVERY_SCOPE', 'assigned worker plan belongs to another campaign');
+    const workerPlan = workerGraph.plans.find(({ id }) => id === assignment.planId);
+    if (![workerGraph.lifecycle.activeWork, workerGraph.lifecycle.successfulCompletion].includes(workerPlan?.lifecycle)) {
+      fail('CAMPAIGN_WORKER_DELIVERY', 'activate the assigned plan in the worker before delivering a milestone');
+    }
     withWorktreeLock(resolution.effectiveWorktree, environment, () => recordWorkerDelivery(
       resolution.effectiveWorktree,
       graph.campaignId,
-      { ...assignment, worktree: resolution.workerBinding.worktree, planPath: workerGraph.plans.find(({ id }) => id === assignment.planId)?.path },
+      { ...assignment, worktree: resolution.workerBinding.worktree, planPath: workerPlan.path },
       request.result,
       environment,
     ));

@@ -155,6 +155,16 @@ campaign state; activation must not create a second current-campaign record.
 
 ## Operational campaign status
 
+Authenticated create/reuse completion assigns the original worker; it does not
+itself move the tracked plan. While that worker activates its assigned plan,
+the coordinator checkout may still show the initial lifecycle. Matching
+successful dispatch and authenticated binding make this bootstrap interval
+valid without hiding unproven assignment/lifecycle mismatches. A worker must
+activate its own plan before delivering a milestone; its clean activation
+delivery can enter the ordinary serialized rebase/fast-forward join before the
+coordinator contains that lifecycle move. Activation still requires existing
+exact path leases and readiness gates. Attachment is not product execution.
+
 Ponytail must provide a campaign coordinator with one current, deterministic
 view of:
 

@@ -767,6 +767,16 @@ durable state instead of remembering worker assignments in conversation:
    after a prerequisite failure; do not allocate a replacement worker. Record
    the exact host session, canonical worktree, branch, and revision only after
    the attach hook authenticates them.
+   Successful attachment records an ACTIVE assignment, not plan activation or
+   product tasklet execution. The coordinator's plan may remain OPEN while the
+   original authenticated worker awaits its exact lifecycle/backlink leases.
+   Preserve that proven bootstrap interval; do not repeat dispatch, manually
+   rewrite assignments, or activate in the coordinator to conceal it. After
+   acquiring those leases, the worker activates its assigned plan in its own
+   checkout before delivering any milestone. A clean activation delivery uses
+   the normal serialized rebase/fast-forward join even while the coordinator
+   still has the OPEN locator. Refresh lifecycle and host observation after
+   integration; activation alone never establishes tasklet execution.
    For `RECOVER_WORKTREE`, message only the action's existing session if it
    needs a reminder; recovery does not require coordinator initiation. The
    worker follows the worker-owned recovery protocol below. Do not request a
