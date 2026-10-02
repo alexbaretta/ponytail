@@ -644,6 +644,32 @@ Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
      from anomalous execution failure; no sixteenth reservation is made.
      Historical runnable-output readers remain supported and malformed blocker
      records, cross-assignment actions, and unauthorized reporters fail.
+6. Repeat with four already-assigned, tasklet-ready plans: a manual handoff
+   gate, a delivered worker with a missing checkout and separate environment
+   prerequisites, and two original STARTED creations awaiting project-owned
+   capacity/adoption repair. Give the project two safe idle pairs but no new
+   creation slots.
+   - The query reports all four theoretical workers and zero workers actually
+     executing their runnable tasklets. It distinguishes reported manual and
+     environment gates from observed checkout loss, retains every original
+     identity, and does not reassign any of the four plans merely because two
+     unrelated pairs are reusable. A worker performing rebase or closure alone
+     does not reduce the product-tasklet shortfall.
+7. Clear one gate using its supported authority, refresh the complete host
+   observation, and resume that exact worker through authenticated attachment
+   or existing-assignment execution as appropriate.
+   - Only observed tasklet work reduces the shortfall. A resolved blocker
+     report, accepted message, reservation, or merge-ready delivery alone is
+     not counted as a running product worker. Independent runnable work stays
+     eligible while a proved missing-after-delivery checkout awaits recovery.
+8. Keep one plan tasklet-ready but observe its original worker as `working`
+   solely because it is semantically rebasing a previous delivery. Repeat
+   while that worker runs checkout recovery, then while it actually executes
+   the exact ready tasklet.
+   - Native `working` alone never proves tasklet execution. The first two
+     observations do not reduce a tasklet-execution shortfall; if no reliable
+     tasklet-activity evidence exists, report that count as unknown. Only the
+     verified tasklet-execution phase can count as running product work.
 
 ## Arc: Retain integrated workers; explicit retirement remains separately fenced
 

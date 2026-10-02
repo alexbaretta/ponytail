@@ -74,6 +74,37 @@ fixture's exact-path recovery.
    Record separately whether a native snapshot restored unsaved files; Git
    reconstruction alone is evidence only for committed content.
 
+## Arc: Live Codex retained pair survives idle and capacity pressure
+
+Traceability: verifies REQ-WORKER-WORKTREE-RETENTION
+
+Actor: campaign coordinator and one existing authenticated Codex worker.
+Manual native-host profile; disposable test-owned assignment and checkout.
+Prerequisites: inspect and record the actual host automatic-worktree-cleanup
+setting, then disable automatic deletion for the retained pool through the
+supported host control. Do not delete a user-owned or active checkout to set
+up this Arc.
+
+1. Deliver and integrate the worker's clean committed milestone, complete its
+   assignment obligations, and observe logical release. Verify no Ponytail
+   physical archive action was emitted and record the native session/path.
+2. Leave the chat idle while other supported worktrees are created or reused
+   up to the project's approved capacity. Refresh native artifact and Git
+   observations. The original checkout remains present and registered, and
+   the same session still owns it; a merely waiting chat is not retired.
+3. Send a new in-scope task to that same retained session through the supported
+   host operation. It accepts the prompt and operates from its original
+   checkout without a human Restore worktree click or a replacement session.
+4. If the path disappears, stop the successful profile. Preserve the exact
+   branch, commit, assignment, and native snapshot; record the host cleanup
+   setting and removal trigger. Test separately whether the original chat can
+   receive a recovery prompt. If it cannot, record a host-continuity failure
+   rather than claiming that worker-owned recovery is autonomous.
+
+This Arc remains unverified on the live Codex host. The real-Git retention and
+recovery regressions do not establish host cleanup configuration or native
+prompt delivery.
+
 ## Execution evidence
 
 2026-10-01 automated Git/CLI and policy profiles pass on the final staged tree:

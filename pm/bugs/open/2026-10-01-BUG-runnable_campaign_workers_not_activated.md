@@ -149,3 +149,41 @@ campaign is fully blocked or maximum parallelism is achieved.
 Validation: exact owning-project ledger, authenticated binding/delivery
 records, fresh supported host observation, canonical runnable-plan query,
 and source-level count/reuse analysis. No capability values are recorded.
+
+## Current shortfall and distinct gates — 2026-10-02
+
+At integrated GWEN revision `1da6513daff4a9646d16ed653f8b0941f2bfc923`,
+the canonical V2 `runnable-plans` query still lists four plans with nonempty
+tasklet sets but reports `observedRunnableWorkers: 0`,
+`theoreticalWorkers: 4`, and `shortfall: 4`. It reports one working worker,
+but that worker is not executing any of the four listed tasklets. The pool has
+fifteen configured slots, thirty-five retained or reserved slots, zero new
+slots, and two potentially reusable pairs. All four listed plans already have
+assignments, so the two reusable pairs alone do not make a replacement
+dispatch valid.
+
+The four blockers are not one scheduler cause:
+
+- PWP redirect acceptance is awaiting a fresh, test-owned password-reset
+  handoff and human credential action after its previous link expired.
+- Standalone Arc binding retains a verified delivery and a missing checkout;
+  separate unintegrated binding/scaffolding and external provider prerequisites
+  prevent its next tasklet.
+- Async effect-disposition and gate-race retain their original STARTED worker
+  creations. Both await an integrated, project-owned two-slot capacity repair
+  before their same original sessions can upgrade, adopt, and attach.
+
+The current query therefore proves a persistent execution shortfall, not that
+all four plans can be dispatched again or that a safe idle pair may replace an
+assigned worker. It does not prove the thirty-five reservations are erroneous;
+the earlier identity audit found no duplicate attachment behind the pending
+creations. The source of the repeated missing checkout is still unknown.
+Keep each original action, session, assignment, and delivery intact. The
+[concurrency-shortfall UAT Arc](../../uat/campaign-orchestration.md#arc-explain-and-resolve-runnable-plan-concurrency-shortfalls)
+must demonstrate actual authenticated tasklet execution after each gate is
+cleared, rather than treating a resolved report or a rebase-only worker as
+parallel product progress. The separate
+[working-state counting bug](2026-10-02-BUG-runnable_worker_count_includes_non_tasklet_activity.md)
+shows why native turn activity alone cannot establish that outcome. The
+[host-checkout loss bug](2026-10-02-BUG-retained_worker_checkout_removed_by_host.md)
+tracks the unresolved physical-retention boundary.
