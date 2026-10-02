@@ -96,3 +96,37 @@ Traceability: verifies REQ-REPOSITORY-TEXT-INDEX
 4. Add another Git commit and run the same update command again.
    - Only unfinished/new commits are processed, and the complete refs/overlay
      publish atomically. Repeating an unchanged update processes zero commits.
+
+## Arc: Ingest complete batches with real worker processes
+
+Traceability: verifies REQ-REPOSITORY-TEXT-INDEX
+
+- **Actor:** Developer maintaining a repository index.
+- **Prerequisites:** An isolated registered Git fixture with merge history,
+  shared blobs, enough unseen commits for concurrent work, and test-owned rows
+  in the configured PostgreSQL schema.
+- **Profiles:** Real PostgreSQL and production Node/CLI process boundaries.
+- **External effects:** Appends only fixture-owned complete commit checkpoints;
+  final publication remains fixture-owned. No external Git state is changed.
+
+1. Run `ponytail search update-index -j 3 -n 2` and observe its child-process
+   lifecycle.
+   - Three actual worker processes pull disjoint batches from one queue; shared
+     blobs and merge parentage produce one complete index without deadlock,
+     duplicate tree state, or a second ingestion implementation.
+2. Inspect every indexed fixture commit after completion.
+   - Each visible commit has its complete metadata, ordered parent edges, and
+     exact tree entries. Final refs and the overlay publish only after history
+     completion.
+3. Start another update with several unseen commits and interrupt it while a
+   batch is active.
+   - Queue assignment stops, unfinished transactions roll back, every worker
+     process exits, the CLI exits `130` quietly, and the prior publication is
+     unchanged. Durable progress counts only whole committed batches.
+4. Rerun the interrupted update with the same options.
+   - Durable commits are skipped, unfinished commits are retried, final
+     publication succeeds, and no worker from either invocation remains.
+5. Omit both options, then supply zero, negative, missing, duplicated, and
+   non-integer values.
+   - The default worker count is half the available CPU count with a minimum of
+     one, the default batch size is one, and invalid input fails before indexing.

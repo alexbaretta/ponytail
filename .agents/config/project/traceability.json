@@ -237,6 +237,16 @@
     },
     {
       "class": "plan",
+      "path": "pm/plans/in_progress/2026-10-01-parallel-repository-index-ingestion/plan.md",
+      "locator": "text"
+    },
+    {
+      "class": "plan",
+      "path": "pm/plans/in_progress/2026-10-01-parallel-repository-index-ingestion/sprints/S01.md",
+      "locator": "text"
+    },
+    {
+      "class": "plan",
       "path": "pm/plans/closed/2026-09-29-traceability-index/plan.md",
       "locator": "text"
     },

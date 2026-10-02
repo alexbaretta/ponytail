@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 3,
+  "sprint": "S01",
+  "features": {
+    "S01-F01": {"depends_on": [], "validation_tasklet": "S01-F01-T05"}
+  },
+  "tasklets": {
+    "S01-F01-T01": {
+      "depends_on": [],
+      "affinity": ["postgresql", "processes", "test-first"],
+      "risk": "high",
+      "risk_reason": "The approved cross-process effect requires failing-first proof at the real process and database boundary.",
+      "feature": "S01-F01",
+      "planned_paths": ["tests/project-index.test.js", "scripts/test-project-index-postgres.sh"]
+    },
+    "S01-F01-T02": {
+      "depends_on": ["S01-F01-T01"],
+      "affinity": ["postgresql", "transactions", "git-history"],
+      "risk": "high",
+      "risk_reason": "Changes the durable checkpoint unit and concurrent ordering of shared document and blob rows.",
+      "feature": "S01-F01",
+      "planned_paths": ["src/project-index.js", "tests/project-index.test.js", "scripts/test-project-index-postgres.sh"]
+    },
+    "S01-F01-T03": {
+      "depends_on": ["S01-F01-T02"],
+      "affinity": ["processes", "queue", "cancellation"],
+      "risk": "high",
+      "risk_reason": "Owns child-process lifecycle, failure propagation, advisory-lock duration, and interruption cleanup.",
+      "feature": "S01-F01",
+      "planned_paths": ["src/project-index.js", "tests/project-index.test.js", "scripts/test-project-index-postgres.sh"]
+    },
+    "S01-F01-T04": {
+      "depends_on": ["S01-F01-T03"],
+      "affinity": ["cli", "processes", "documentation"],
+      "risk": "normal",
+      "feature": "S01-F01",
+      "planned_paths": ["src/project-index.js", "cli/ponytail", "tests/project-index.test.js", "tests/cli-tools.test.js", "README.md", "AGENTS.md"]
+    },
+    "S01-F01-T05": {
+      "depends_on": ["S01-F01-T01", "S01-F01-T02", "S01-F01-T03", "S01-F01-T04"],
+      "affinity": ["postgresql", "traceability", "acceptance"],
+      "risk": "normal",
+      "feature": "S01-F01",
+      "planned_paths": ["src/project-index.js", "cli/ponytail", "tests/project-index.test.js", "tests/cli-tools.test.js", "scripts/test-project-index-postgres.sh", "README.md", "AGENTS.md", ".agents/config/project/traceability.json", "pm/requirements/repository-text-index.md", "pm/requirements/traceability.generated.md", "pm/architecture/repository-text-index.md", "pm/uat/repository-text-index.md", "pm/plans/in_progress/2026-10-01-parallel-repository-index-ingestion/plan.md", "pm/plans/in_progress/2026-10-01-parallel-repository-index-ingestion/sprints/S01.md", "pm/plans/in_progress/2026-10-01-parallel-repository-index-ingestion/sprints/S01.tasklets.json", "pm/plans/closed/2026-10-01-parallel-repository-index-ingestion/plan.md", "pm/plans/closed/2026-10-01-parallel-repository-index-ingestion/sprints/S01.md", "pm/plans/closed/2026-10-01-parallel-repository-index-ingestion/sprints/S01.tasklets.json"]
+    }
+  }
+}

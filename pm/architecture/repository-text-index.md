@@ -46,6 +46,23 @@ The existing project/repository/worktree writer key is held as a PostgreSQL
 session lock across these transactions, released before returning its pooled
 connection; disconnecting a killed process releases it as well.
 
+For explicit `search update-index`, the lock-owning coordinator computes unseen
+commits once and owns one in-memory assignment queue. Actual child processes
+pull batches from that queue and use the same canonical batch-ingestion
+function as serial refresh. Each worker prepares complete Git commit data,
+then inserts commit rows, parent edges, unique blobs/documents, and tree entries
+in deterministic key order inside one transaction. Deterministic shared-row
+ordering and idempotent constraints make shared blobs safe without a second
+ingestion path; historical commit completion may occur out of topological order
+because parent edges reference their owning commit, not a required parent row.
+
+The coordinator retains the advisory writer lock and is the only process that
+publishes refs and the worktree overlay. Cancellation closes queue assignment,
+notifies every child, waits for their transaction cleanup and exit, and only
+then releases the writer connection. A durable batch may finish during that
+drain; progress observes it only after commit. An unfinished batch rolls back,
+so restart continues from durable commit rows and publication remains atomic.
+
 `ponytail search query` resolves one mutually exclusive state selector and one optional
 path boundary, refreshes the needed index state, obtains trigram candidates
 with bound SQL values, and verifies literal line matches before formatting.
@@ -57,7 +74,9 @@ dependency, exception, and Unicode-boundary policy to the returned matches.
 `ponytail search update-index` invokes the same refresh boundary without QA.
 Its progress observer is called only after a commit checkpoint becomes durable.
 cli-progress renders TTY bars; redirected output emits commit markers and
-throughput-based ETA. The final ref/overlay publication is reported separately.
+throughput-based ETA. The public `-j` worker count defaults to half the available
+CPU count, floored with a minimum of one; `-n` defaults to one commit per
+transaction. The final ref/overlay publication is reported separately.
 
 Database or refresh failure is a command failure. There is no filesystem
 search fallback because a second operational path could silently return a

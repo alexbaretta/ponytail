@@ -15,6 +15,10 @@ stakeholder direction on 2026-09-30.
 **Clarification:** Explicit stakeholder implementation request on 2026-10-01
 requires the `search` command family, progress/ETA, and resumable ingestion.
 
+**Clarification:** Explicit stakeholder implementation request on 2026-10-01
+requires real worker-process history ingestion, configurable worker count and
+commit transaction size, and interruption-safe worker cleanup.
+
 **Source:**
 [`2026-09-30-FEAT-repository_text_index_and_grep`](../bugs/closed/2026-09-30-FEAT-repository_text_index_and_grep.md).
 
@@ -53,7 +57,7 @@ ponytail search query <text> [--path <path>]
 ponytail search query <text> --ref <ref> [--path <path>]
 ponytail search query <text> --commit <commit-id> [--path <path>]
 ponytail search query <text> --history <ref-or-commit> [--path <path>]
-ponytail search update-index
+ponytail search update-index [-j <n_workers>] [-n <commits_per_db_transaction>]
 ```
 
 The selectors are mutually exclusive. With no selector, the command searches
@@ -77,6 +81,22 @@ every fiftieth also emits `|` followed by percent completion, ETA, and newline.
 Completion and interruption end the current progress line. ETA is an estimate
 for remaining commit ingestion based on observed throughput, initially unknown;
 overlay/ref publication is a separately identified final phase.
+
+`-j` selects the positive number of actual worker processes that pull commit
+batches from one shared queue. Its default is
+`max(1, floor(number_of_cpus / 2))`. `-n` selects the positive maximum number
+of complete commits in one database transaction and defaults to `1` for
+compatibility. A batch becomes visible only when all of its commits, parent
+edges, blobs, and tree entries are complete. Parallel workers may finish
+batches out of historical order, but the resulting index is complete and
+equivalent to serial ingestion.
+
+Progress counts only commits in durable transactions and may therefore advance
+by a completed batch. On SIGINT or SIGTERM, the coordinator stops assigning
+work, every actual worker exits after committing a complete batch or rolling
+back its unfinished transaction, and the command leaves no worker processes
+behind. The command exits `130` quietly for SIGINT, preserves the prior
+ref/worktree publication, and resumes by skipping every durable commit.
 
 Repository reference QA must consume the same refreshed current-worktree index
 rather than spawning repository-wide `git grep` processes or maintaining a
