@@ -250,12 +250,12 @@
     },
     {
       "class": "plan",
-      "path": "pm/plans/in_progress/2026-10-01-late-repository-ref-snapshot/plan.md",
+      "path": "pm/plans/closed/2026-10-01-late-repository-ref-snapshot/plan.md",
       "locator": "text"
     },
     {
       "class": "plan",
-      "path": "pm/plans/in_progress/2026-10-01-late-repository-ref-snapshot/sprints/S01.md",
+      "path": "pm/plans/closed/2026-10-01-late-repository-ref-snapshot/sprints/S01.md",
       "locator": "text"
     },
     {

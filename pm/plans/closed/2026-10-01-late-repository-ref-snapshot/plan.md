@@ -1,7 +1,7 @@
 # Late repository ref snapshot
 
 - **Plan ID:** `2026-10-01-late-repository-ref-snapshot`
-- **Status:** `in_progress`
+- **Status:** `closed`
 - **Approval:** The stakeholder authorized source-confirmed Ponytail bug fixes
   within the ongoing maximum-parallelism goal. The root coordinator delegated
   this confirmed repository-index repair on 2026-10-01 with the behavior and
@@ -59,7 +59,7 @@ closed parent, which the root delegation excludes.
 ## Sprint
 
 1. [S01](sprints/S01.md): implement and accept late-snapshot publication —
-   PENDING.
+   DONE.
 
 ## Questions and approvals
 
@@ -83,4 +83,14 @@ writer or Git checkout.
 
 ## Final validation record
 
-Pending.
+Implementation commit `700b9dd` passes four focused progress tests and the
+real Git/PostgreSQL contract Suite, including initial branch advance, complete
+late publication, final-window rejection, late-delta interruption and resume,
+durable progress, exact worker count, and cleanup. Build impact reported no
+affected or indeterminate targets, so no build was required. Configured
+`npm test` passed the full core suite, installer harness, 23 Pi extension, four
+MCP, and 80 TSTS tests; TSTS checked 607 files without violations. Registry,
+generated registry/command/manifest metadata, eight rule copies, seven version
+files, 264 traceability relationships, campaign validation, tasklet exhaustion,
+and diff hygiene passed. No GWEN Git state was changed, and no GWEN process was
+signaled, restarted, or modified.
