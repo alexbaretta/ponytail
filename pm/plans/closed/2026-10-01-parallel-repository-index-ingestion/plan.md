@@ -1,7 +1,7 @@
 # Parallel repository index ingestion
 
 - **Plan ID:** `2026-10-01-parallel-repository-index-ingestion`
-- **Status:** `in_progress`
+- **Status:** `closed`
 - **Approval:** Explicit stakeholder implementation authorization on 2026-10-01
   for real worker-process commit ingestion, configurable worker count and
   transaction batching, isolated PostgreSQL acceptance, and thematic commits.
@@ -56,7 +56,7 @@ semantics, and atomic final publication.
 ## Sprint
 
 1. [S01](sprints/S01.md): implement and accept parallel batched history
-   ingestion — PENDING.
+   ingestion — DONE.
 
 ## Questions and approvals
 
@@ -81,4 +81,12 @@ local PostgreSQL connections were denied; the database-enabled rerun passed.
 
 ## Final validation record
 
-Pending.
+Implementation commit `631b29d` passed the focused parser/progress and CLI help
+tests, Bash syntax, isolated PostgreSQL acceptance, JSON and diff checks. Build
+impact reported no affected or indeterminate targets, so no build was required.
+Generated command adapters, registry data, manifests, rule copies, version
+pins, and 250 traceability relationships validated. Before lifecycle
+reconciliation, full `npm test` passed 517 core, 23 Pi extension, four MCP, and
+80 TSTS tests; TSTS checked 599 files without violations. The same full command
+passed again against the staged closed-plan tree, and the closed campaign and
+tasklet selectors report a valid exhausted plan.
