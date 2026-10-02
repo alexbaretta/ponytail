@@ -1951,6 +1951,14 @@ function recordActionResult(ledger, actionId, result, graph = null) {
     const dispatch = dispatchRecord(pendingAction);
     if (dispatch.state === 'STARTED') fail('CAMPAIGN_ACTION_STARTED', `action ${actionId} has already started as ${dispatch.hostIdentity}`);
     if (!graph || planIsRunnable(graph, assignment.planId)) fail('CAMPAIGN_ACTION_RESULT', `action ${actionId} cannot be postponed while its plan remains ready`);
+    if (graph.plans.find(plan => plan.id === assignment.planId)?.lifecycle === graph.lifecycle.successfulCompletion) {
+      if (pendingAction.type !== 'CREATE_WORKER' || pendingAction.payload.bootstrap
+        || assignment.state !== 'DISPATCH_PENDING'
+        || ['sessionId', 'worktree', 'branch', 'workerRevision'].some(key => assignment[key] !== null)) {
+        fail('CAMPAIGN_ACTION_RESULT', `action ${actionId} cannot release a closed plan's provisioned worker`);
+      }
+      assignment.state = 'ARCHIVED';
+    }
     if (pendingAction.type === 'REUSE_WORKER') {
       assignment.sessionId = null;
       assignment.worktree = null;

@@ -785,6 +785,55 @@ test('a proven unstarted stale dispatch is postponed while a started dispatch re
   assert.equal(captureError(() => recordActionResult(startedLedger, started.id, { ok: false, disposition: 'NOT_STARTED' }, startedGraph)).code, 'CAMPAIGN_ACTION_STARTED');
 });
 
+test('never-started reservation releases after coordinator closure without claiming worker retirement', () => {
+  const root = repository();
+  const ledger = newLedger(root, 'campaign', 'coordinator');
+  const campaignGraph = graph([
+    { id: 'campaign', parentPlanId: null, dependsOn: [], lifecycle: 'in_progress', path: 'root' },
+    { id: 'work', parentPlanId: 'campaign', dependsOn: [], lifecycle: 'in_progress', path: 'work' },
+    { id: 'next', parentPlanId: 'campaign', dependsOn: ['work'], lifecycle: 'open', path: 'next' },
+  ]);
+  reconcileLedger(campaignGraph, ledger);
+  const dispatch = advanceLedger(campaignGraph, ledger);
+  const assignment = ledger.assignments.find(item => item.id === dispatch.assignmentId);
+  const original = { ...assignment };
+  campaignGraph.plans.find(plan => plan.id === 'work').lifecycle = 'closed';
+  assert.equal(reconcile(campaignGraph, ledger).diagnostics[0].code, 'CAMPAIGN_ASSIGNMENT_LIFECYCLE');
+
+  const result = { ok: false, disposition: 'NOT_STARTED' };
+  recordActionResult(ledger, dispatch.id, result, campaignGraph);
+  assert.deepEqual(assignment, { ...original, state: 'ARCHIVED' });
+  assert.deepEqual(ledger.completedActions, [{ actionId: dispatch.id, assignmentId: assignment.id, type: 'CREATE_WORKER', result }]);
+  assert.deepEqual(ledger.pendingActions, []);
+  assert.deepEqual(reconcile(campaignGraph, ledger).diagnostics, []);
+  const accepted = JSON.stringify(ledger);
+  recordActionResult(ledger, dispatch.id, result, campaignGraph);
+  assert.equal(JSON.stringify(ledger), accepted);
+  assert.equal(advanceLedger(campaignGraph, ledger).payload.planId, 'next');
+  assert.equal(ledger.assignments.filter(item => item.planId === 'work').length, 1);
+});
+
+test('closed reservation release refuses started or provisioned worker identities without mutation', () => {
+  for (const identity of ['STARTED', 'bootstrap', 'sessionId', 'worktree', 'branch', 'workerRevision', 'ACTIVE']) {
+    const root = repository();
+    const ledger = newLedger(root, 'campaign', 'coordinator');
+    const campaignGraph = graph([
+      { id: 'campaign', parentPlanId: null, dependsOn: [], lifecycle: 'in_progress', path: 'root' },
+      { id: 'work', parentPlanId: 'campaign', dependsOn: [], lifecycle: 'open', path: 'work' },
+    ]);
+    const dispatch = advanceLedger(campaignGraph, ledger);
+    const assignment = ledger.assignments[0];
+    campaignGraph.plans[1].lifecycle = 'closed';
+    if (identity === 'STARTED') dispatch.payload.dispatch = { ready: false, state: 'STARTED', hostIdentity: 'original-client' };
+    else if (identity === 'bootstrap') dispatch.payload.bootstrap = { sessionId: 'original-session' };
+    else if (identity === 'ACTIVE') assignment.state = 'ACTIVE';
+    else assignment[identity] = 'original-identity';
+    const before = JSON.stringify(ledger);
+    assert.throws(() => recordActionResult(ledger, dispatch.id, { ok: false, disposition: 'NOT_STARTED' }, campaignGraph), CampaignOrchestrationError, identity);
+    assert.equal(JSON.stringify(ledger), before, identity);
+  }
+});
+
 test('ready actions exclude blocked and started dispatch without mutating durable state', () => {
   const root = repository();
   const ledger = newLedger(root, 'campaign', 'coordinator');
