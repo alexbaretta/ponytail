@@ -243,3 +243,16 @@ only for `waiting`, selecting `CREATE_WORKER` instead. Both cases and the full
 See the [bug record](../bugs/closed/2026-10-02-BUG-waiting_worker_reuse.md)
 for passing full core acceptance and structural evidence.
 This fixture proof does not establish live reuse or disable host deletion.
+
+Live consumer verification after installing `c8f4203`: the GWEN coordinator's
+complete eighteen-session observation at `2026-10-02T07:38:38.024Z` reported
+the original observe-success session `01a0f68d-27a1-7ce0-b9da-24043cacaf19`
+as `waiting`. Canonical `advance` released assignment
+`33e5eb5b-890c-4733-a0b6-360d3e6da0a5` from `CLEANUP_PENDING` to logical
+`ARCHIVED`, without setting either physical archival flag. The next advance
+reached an unchanged fixed point; reusable pairs increased from one to two.
+An independent scoped read at `2026-10-02T00:39:56-07:00` confirmed both flags
+false, the original checkout present, and that exact session in the reusable
+pool. No replacement or retirement occurred. This proves live pool release,
+not assignment of a new plan to that pair or campaign acceptance. The host's
+automatic-deletion setting remains unverified.

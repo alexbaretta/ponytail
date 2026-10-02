@@ -57,5 +57,10 @@ records the proved classification invariant.
 ## Resolution
 
 Cleanup release now uses canonical `idleSessions`, retaining its other gates.
-Standalone repair acceptance is complete. Live GWEN reuse and host retention
-are not claimed by fixture acceptance and remain part of campaign verification.
+Standalone repair acceptance is complete. After installation of `c8f4203`,
+canonical GWEN advancement released the original closed waiting assignment
+while preserving its checkout/session, increasing reusable pairs from one to
+two. The [UAT record](../../uat/worker-worktree-retention.md) records exact
+observation and independent read evidence. A new assignment to that pair and
+the host automatic-deletion setting remain unverified; this does not establish
+campaign acceptance.
