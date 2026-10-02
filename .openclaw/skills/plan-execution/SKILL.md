@@ -859,13 +859,14 @@ durable state instead of remembering worker assignments in conversation:
    claims to obtain capacity. Historical `ARCHIVE_WORKTREE` and `ARCHIVE_SESSION`
    actions are excluded from `ready-actions` and superseded by `advance` as
    `ok:false, disposition:RETAINED`; never execute them or fabricate deletion
-   success. The project-scoped pool spans its campaigns and reuses the first
-   safe inactive pair. Fifteen retained worker slots, including creation
-   reservations, is the limit per user-owned top-level Codex project, not per
-   Git common directory. At `CAMPAIGN_WORKER_CAPACITY_REACHED`, finish already
+   success. Reuse only the first safe inactive pair with successful creation
+   recorded in this campaign's ledger. Do not import idle workers from another
+   campaign, even in the same top-level project. Fifteen retained worker
+   sessions, including this campaign's creation reservations, is the limit per
+   campaign. At `CAMPAIGN_WORKER_CAPACITY_REACHED`, finish already
    reserved executable actions or wait for safe reuse; do not spin advances,
-   create a sixteenth worker, or retire one automatically. Other top-level
-   projects sharing the same main worktree keep independent pools.
+   create a sixteenth worker, or retire one automatically. Other campaigns
+   and top-level projects keep independent capacity and reuse pools.
 13. For completed supported host effects, refresh the host observation
    first when the action changes a managed checkout path, then run `ponytail campaign action-result
    <campaign-root> <action-id> --result <json>` from the coordinator worktree.

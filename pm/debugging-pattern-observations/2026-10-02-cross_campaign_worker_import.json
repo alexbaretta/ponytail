@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-10-02-cross_campaign_worker_import",
+  "recorded_at": "2026-10-02T15:25:39-07:00",
+  "source_references": ["pm/bugs/closed/2026-10-02-BUG-cross_campaign_worker_import.md"],
+  "context": {
+    "languages": ["javascript"],
+    "frameworks": [],
+    "components": ["campaign scheduler"],
+    "affected_boundaries": ["campaign session provenance", "worker reuse", "campaign capacity"],
+    "code_references": ["src/campaign-orchestration.js:prepareDispatches", "src/campaign-orchestration.js:campaignWorkerCount"]
+  },
+  "observed_behavior": "An idle worker from one campaign became a reuse candidate in another campaign, and foreign sessions exhausted the latter's creation capacity.",
+  "expected_behavior": "Only sessions with successful creation recorded in the selected campaign may be reused or counted against its session limit.",
+  "causal_mechanism": "Dispatch preparation copied worker rows from sibling ledgers, while capacity summed all project ledgers without checking creation provenance.",
+  "anti_pattern": {
+    "structural_description": "A shared-project ledger inventory was treated as a transferable worker ownership registry.",
+    "why_it_fails": "Physical project co-location does not prove campaign origin, and copied rows persist beyond the decision that imported them."
+  },
+  "correct_pattern": {
+    "required_invariant": "Campaign creation history proves session ownership; another campaign's history never supplies reuse or capacity members.",
+    "implementation_description": "Use successful CREATE_WORKER results as the existing durable registry, filter idle reuse by session origin, and count only current-campaign sessions and creation reservations."
+  },
+  "applicability_conditions": ["More than one campaign ledger exists for one top-level project", "At least one ledger retains a worker or creation reservation"],
+  "known_non_matches": ["A new worker created by the selected campaign and recorded in its completed creation history", "A bootstrap whose creation remains pending and consumes a current-campaign reservation"],
+  "confirmation_evidence": ["Before the correction, a successor campaign selected another campaign's idle session.", "Fifteen foreign workers prevented a new current-campaign creation; the focused test failed before repair and passed after."],
+  "regression_proofs": ["tests/campaign-orchestration.test.js: advance retains every completed pair even without ready dispatch", "tests/campaign-orchestration.test.js: foreign campaign sessions do not consume the current campaign capacity", "tests/campaign-orchestration.test.js: a historical imported worker without current-campaign creation cannot be reused or counted", "tests/campaign-orchestration.test.js: one working campaign session leaves independent ready plans dispatchable", "tests/worker-worktrees.test.js: fifteen creation reservations bound one campaign, not another campaign or top-level project"]
+}

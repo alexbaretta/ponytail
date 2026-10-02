@@ -124,7 +124,7 @@ directory.
 
 The read-only runnable-plan V2 projection joins canonical tasklet eligibility
 to original assignment/action identities, checkout existence, fresh complete
-host observations, and project-pool capacity. Unavailable activity remains
+host observations, and campaign-pool capacity. Unavailable activity remains
 unknown. A separate campaign-scoped V1 execution-blocker record, under the
 ledger directory's `execution-blockers/`, stores sanitized coordinator reports
 of host refusals and their explicit resolution. Only the bound coordinator may
@@ -266,14 +266,17 @@ The transition engine prioritizes a dependency-ready source-proven repair over
 independent coverage expansion when worker capacity requires a choice, as
 required by `plan-execution`. It otherwise uses stable plan identity ordering.
 
-Per-top-level-project ledgers form the retained worker pool across campaigns.
-Integrated, closed assignments release their pair for reuse without deleting
+Each campaign ledger owns its retained worker pool. Its successful
+`CREATE_WORKER` results are the creation-provenance registry; worker entries
+and host idle observations alone cannot enroll a session. Integrated, closed
+assignments release their pair for reuse within that campaign without deleting
 the session, checkout, or resource claim. Deterministic idle selection uses
-fresh complete host evidence and clean Git state, excluding outstanding
-assignments in any campaign of that project. Fifteen retained pairs plus
-unfulfilled creation reservations is the project limit; the main checkout and
-other user-owned top-level projects do not consume that pool. At capacity the
-core emits `CAMPAIGN_WORKER_CAPACITY_REACHED` and waits for safe reuse.
+fresh complete host evidence, clean Git state, and creation provenance.
+Fifteen retained sessions plus that campaign's unfulfilled creation
+reservations is the campaign limit; another campaign's sessions do not consume
+capacity or enter its pool. A recovered session counts once even if its path
+changed. At capacity the core emits `CAMPAIGN_WORKER_CAPACITY_REACHED` and
+waits for safe reuse.
 Historical automatic cleanup actions are superseded with a retained outcome,
 not executed or reported as deletion success.
 

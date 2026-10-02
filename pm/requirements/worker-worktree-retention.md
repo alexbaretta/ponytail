@@ -5,7 +5,8 @@
 **Approval:** Explicit stakeholder approval on 2026-10-01 to document, plan,
 and implement retained worker pairs, a fifteen-worktree project limit, and
 worker-owned recovery from the main worktree. Clarified on 2026-10-02 that
-campaign reuse is limited to workers created for that campaign.
+campaign reuse and capacity are limited to sessions provably created for that
+campaign; other campaign ledgers cannot seed its worker registry.
 
 Traceability: specifies REQ-WORKER-WORKTREE-RETENTION
 
@@ -17,9 +18,11 @@ ready. It retains the session/worktree pair indefinitely. Logical completion
 of an assignment is not physical retirement of its worker.
 
 Scheduling must select the first deterministically ordered, safe inactive pair
-created for the selected campaign before creating a worker. A session merely
-idle in the same project, or created for another campaign, is not in that
-campaign's reuse pool. A `REUSE_WORKER` reservation binds the exact session
+created for the selected campaign before creating a worker. Its successful
+`CREATE_WORKER` history is the durable creation registry; an idle observation
+or worker entry without that provenance does not prove membership. A session
+merely idle in the same project, or created for another campaign, is not in
+that campaign's reuse pool. A `REUSE_WORKER` reservation binds the exact session
 and checkout; attachment from a different session must fail. Reuse requires a
 surviving clean checkout and no outstanding assignment or action for that pair.
 Outstanding acceptance, delivery, recovery, or integration obligations are
@@ -27,14 +30,15 @@ not inactivity.
 Both observed idle host states, `waiting` and `completed`, qualify once the
 assignment's completion obligations are satisfied; neither implies retirement.
 
-Each user-owned top-level Codex project has a limit of fifteen worker
-worktrees. Reserved creations consume capacity. Campaigns in that project
-share the capacity limit, not reusable session ownership. Other top-level
-projects have independent pools even when their checkouts share one main
-worktree and Git object database. The main and
-user-owned top-level checkouts are not worker slots. At capacity without a safe
-inactive pair, scheduling waits rather than deleting or creating a sixteenth
-worker. Pre-existing excess capacity must not cause destructive normalization.
+Each campaign has a limit of fifteen retained worker sessions. Only sessions
+provably created for that campaign and its own outstanding creation
+reservations consume its capacity; a recovered session with multiple historical
+checkout paths counts once. Neither other campaigns' sessions nor unrelated
+idle chats reduce its capacity, even in the same top-level project. The main
+and user-owned top-level checkouts are not worker slots. At capacity without a
+safe inactive pair, scheduling waits rather than deleting or creating a
+sixteenth worker. Pre-existing excess capacity must not cause destructive
+normalization.
 
 Explicit human-authorized retirement remains a separate operation, with
 preservation and project-resource cleanup prerequisites. It is not the

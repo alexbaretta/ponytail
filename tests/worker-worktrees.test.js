@@ -40,7 +40,7 @@ function graph(campaignId = 'campaign') {
   ] };
 }
 
-test('fifteen creation reservations bound one top-level project, not its shared main worktree', () => {
+test('fifteen creation reservations bound one campaign, not another campaign or top-level project', () => {
   const root = repository();
   const other = path.join(directory(), 'other-project');
   git(root, ['worktree', 'add', '-qb', 'other-project', other]);
@@ -53,11 +53,11 @@ test('fifteen creation reservations bound one top-level project, not its shared 
   advance(root);
   assert.equal(readLedger(root, 'campaign', environment).pendingActions.length, 15);
   const successor = newLedger(root, 'successor', 'coordinator');
-  assert.equal(advanceLedger(graph('successor'), successor, environment), null);
-  assert.deepEqual(successor.pendingActions, []);
+  assert.equal(advanceLedger(graph('successor'), successor, environment).type, 'CREATE_WORKER');
+  assert.equal(successor.pendingActions.length, 1);
   const status = reconcile(graph('successor'), successor, root, environment);
-  assert.equal(status.diagnostics.find(item => item.code === 'CAMPAIGN_WORKER_CAPACITY_REACHED').limit, 15);
-  assert.deepEqual(readyActions(status, graph('successor')).actions, []);
+  assert.equal(status.diagnostics.find(item => item.code === 'CAMPAIGN_WORKER_CAPACITY_REACHED'), undefined);
+  assert.equal(readyActions(status, graph('successor')).actions.length, 1);
   assert.equal(advance(other).type, 'CREATE_WORKER');
   assert.equal(readLedger(other, 'campaign', environment).pendingActions.length, 1);
 });
@@ -518,9 +518,11 @@ test('retained pair reattachment rotates its capability without replacing sessio
   const campaignGraph = graph();
   campaignGraph.plans.find(plan => plan.id === 'work-00').lifecycle = 'closed';
   withLedgerLock(root, 'campaign', environment, ledger => {
+    recordActionResult(ledger, ledger.pendingActions[0].id, {
+      ok: true, sessionId: binding.sessionId, worktree, branch: binding.branch, revision: binding.revision,
+    });
     Object.assign(ledger.assignments[0], { sessionId: binding.sessionId, worktree, branch: binding.branch, workerRevision: binding.revision, state: 'ARCHIVED' });
-    ledger.pendingActions = [];
-    ledger.workers.push({ sessionId: binding.sessionId, worktree, branch: binding.branch, revision: binding.revision, activity: 'idle', clean: true, evidenceComplete: false, worktreeArchived: false, sessionArchived: false });
+    ledger.workers[0].activity = 'idle';
   });
   writeHostObservation(root, 'campaign', { schemaVersion: 1, campaignId: 'campaign', observedAt: new Date().toISOString(), completeSessionIds: [binding.sessionId], sessions: [{ sessionId: binding.sessionId, state: 'completed', worktree, managedWorktree: true }] }, environment);
   const action = withLedgerLock(root, 'campaign', environment, ledger => advanceLedger(campaignGraph, ledger, environment));

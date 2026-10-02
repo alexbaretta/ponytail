@@ -33,7 +33,7 @@ const ACTION_TYPES_V4 = ACTION_TYPES_V3;
 const HOST_SESSION_STATES = ['working', 'waiting', 'completed', 'archived', 'missing', 'unknown'];
 const HOST_OBSERVATION_MAX_AGE_MS = 5 * 60 * 1000;
 const WORKER_BINDINGS_FILE = 'campaign-worker-bindings.json';
-const PROJECT_WORKER_LIMIT = 15;
+const CAMPAIGN_WORKER_LIMIT = 15;
 
 class CampaignOrchestrationError extends Error {
   constructor(code, message, status = 1) {
@@ -616,20 +616,24 @@ function projectLedgers(ledger, environment) {
   return ledgers;
 }
 
-function projectWorkerCount(ledgers) {
-  const pairs = new Set();
+function campaignCreatedSessionIds(ledger) {
+  return new Set(ledger.completedActions.filter(item => item.type === 'CREATE_WORKER' && item.result.ok === true)
+    .map(item => item.result.sessionId).filter(Boolean));
+}
+
+function campaignWorkerCount(ledger) {
+  const sessions = new Set();
   let reservations = 0;
-  for (const ledger of ledgers) {
-    for (const worker of ledger.workers) {
-      if (!worker.worktreeArchived || fs.existsSync(worker.worktree)) pairs.add(worker.worktree);
-    }
-    for (const assignment of ledger.assignments) {
-      if (assignment.worktree && (!assignment.worktreeArchived || fs.existsSync(assignment.worktree))) pairs.add(assignment.worktree);
-    }
-    reservations += ledger.pendingActions.filter(({ type }) => type === 'CREATE_WORKER').length;
-    reservations += ledger.dispatchRetries.length;
+  const createdSessionIds = campaignCreatedSessionIds(ledger);
+  for (const worker of ledger.workers) {
+    if (createdSessionIds.has(worker.sessionId) && !worker.sessionArchived) sessions.add(worker.sessionId);
   }
-  return pairs.size + reservations;
+  for (const assignment of ledger.assignments) {
+    if (createdSessionIds.has(assignment.sessionId) && !assignment.sessionArchived) sessions.add(assignment.sessionId);
+  }
+  reservations += ledger.pendingActions.filter(({ type }) => type === 'CREATE_WORKER').length;
+  reservations += ledger.dispatchRetries.length;
+  return sessions.size + reservations;
 }
 
 function hostObservationPath(repositoryRoot, campaignId, environment = process.env) {
@@ -803,6 +807,7 @@ function bindWorker(environment, invocationWorktree, attachToken, sessionId) {
   if (repositoryCommonDirectory(canonicalWorktree) !== source.mainGitDirectory) fail('CAMPAIGN_WORKER_SCOPE', 'worker does not belong to the owning project Git repository');
   if (!identity.branch) fail('CAMPAIGN_WORKER_SCOPE', 'worker worktree must have a branch');
   if (pendingAction?.type === 'REUSE_WORKER' && assignment.sessionId !== sessionId) fail('CAMPAIGN_WORKER_SCOPE', `assignment is reserved for session ${assignment.sessionId}`);
+  if (pendingAction?.type === 'REUSE_WORKER' && !campaignCreatedSessionIds(ledger).has(sessionId)) fail('CAMPAIGN_WORKER_SCOPE', `session ${sessionId} was not created for campaign ${ledger.campaignId}`);
   if (assignment.worktree && assignment.worktree !== canonicalWorktree) fail('CAMPAIGN_WORKER_SCOPE', `assignment is reserved for worker ${assignment.worktree}`);
   const attachTokenHash = crypto.createHash('sha256').update(attachToken).digest('hex');
   return withWorkerBindingsLock(environment, (state) => {
@@ -817,7 +822,8 @@ function bindWorker(environment, invocationWorktree, attachToken, sessionId) {
     if (previous) {
       const previousLedger = readLedger(previous.repositoryRoot, previous.campaignId, environment);
       const previousAssignment = previousLedger.assignments.find(({ id }) => id === previous.assignmentId);
-      if (previous.repositoryRoot !== ledger.topLevelWorktree || previous.sessionId !== sessionId || previous.worktree !== canonicalWorktree
+      if (previous.repositoryRoot !== ledger.topLevelWorktree || previous.campaignId !== ledger.campaignId
+        || previous.sessionId !== sessionId || previous.worktree !== canonicalWorktree
         || previousAssignment?.state !== 'ARCHIVED' || previousLedger.pendingActions.some(({ assignmentId }) => assignmentId === previous.assignmentId)) {
         fail('CAMPAIGN_WORKER_BINDING_CONFLICT', 'worker session or worktree is already bound');
       }
@@ -1444,13 +1450,9 @@ function reconcile(graph, ledger, invocationWorktree = ledger.topLevelWorktree, 
   )).map((plan) => plan.id).sort();
   const occupiedSessions = new Set(assignments.filter((assignment) => assignment.state !== 'ARCHIVED').map((assignment) => assignment.sessionId).filter(Boolean));
   const occupiedWorktrees = new Set(assignments.filter((assignment) => assignment.state !== 'ARCHIVED').map((assignment) => assignment.worktree).filter(Boolean));
-  for (const other of projectLedgers(ledger, environment).slice(1)) {
-    for (const assignment of other.assignments.filter(item => item.state !== 'ARCHIVED')) {
-      occupiedSessions.add(assignment.sessionId);
-      occupiedWorktrees.add(assignment.worktree);
-    }
-  }
+  const createdSessionIds = campaignCreatedSessionIds(ledger);
   const idleWorkers = workers.filter((worker) => worker.activity === 'idle' && worker.clean && !worker.worktreeArchived && !worker.sessionArchived
+    && createdSessionIds.has(worker.sessionId)
     && (!environment || (hostObservation && !hostObservationStale && completeSessionIds.has(worker.sessionId)))
     && !occupiedSessions.has(worker.sessionId) && !occupiedWorktrees.has(worker.worktree)).sort((left, right) => (left.sessionId ?? '').localeCompare(right.sessionId ?? ''));
   const sessionAssignments = assignments.filter(({ sessionId }) => sessionId !== null).sort((left, right) => left.sessionId.localeCompare(right.sessionId) || left.id.localeCompare(right.id));
@@ -1553,11 +1555,11 @@ function reconcile(graph, ledger, invocationWorktree = ledger.topLevelWorktree, 
       status.diagnostics.push(diagnosticRecord('CAMPAIGN_CLEANUP_UNINTEGRATED', `assignment ${assignment.id} worker revision is not integrated`, assignment));
     }
   }
-  const reservedWorkers = projectWorkerCount(projectLedgers(ledger, environment));
-  if (reservedWorkers >= PROJECT_WORKER_LIMIT && idleWorkers.length === 0 && readyPlans.length > 0) {
+  const reservedWorkers = campaignWorkerCount(ledger);
+  if (reservedWorkers >= CAMPAIGN_WORKER_LIMIT && idleWorkers.length === 0 && readyPlans.length > 0) {
     status.diagnostics.push(diagnosticRecord('CAMPAIGN_WORKER_CAPACITY_REACHED',
-      `top-level project retains ${reservedWorkers} worker slots; wait for safe reuse at limit ${PROJECT_WORKER_LIMIT}`,
-      {}, { limit: PROJECT_WORKER_LIMIT, reservedWorkers }));
+      `campaign retains ${reservedWorkers} worker slots; wait for safe reuse at limit ${CAMPAIGN_WORKER_LIMIT}`,
+      {}, { limit: CAMPAIGN_WORKER_LIMIT, reservedWorkers }));
   }
   status.diagnostics.sort((left, right) => left.code.localeCompare(right.code)
     || (left.planId ?? '').localeCompare(right.planId ?? '')
@@ -1711,7 +1713,7 @@ function readRunnablePlansV2(value) {
 
 // Traceability: implements REQ-CAMPAIGN-ORCHESTRATION
 function runnablePlanDiagnostics(graph, ledger, invocationWorktree, environment) {
-  const ledgers = prepareDispatches(graph, ledger, environment);
+  prepareDispatches(graph, ledger);
   const status = reconcile(graph, ledger, invocationWorktree, environment);
   const observation = readHostObservation(ledger.topLevelWorktree, ledger.campaignId, environment);
   const fresh = Boolean(observation && Date.now() - Date.parse(observation.observedAt) <= HOST_OBSERVATION_MAX_AGE_MS);
@@ -1738,18 +1740,21 @@ function runnablePlanDiagnostics(graph, ledger, invocationWorktree, environment)
     return { planId: plan.id, path: plan.path, lifecycle: plan.lifecycle, ...plan.runnableTasklets,
       execution: { assignmentId: assignment?.id ?? null, sessionId, worktree, actionId: pendingAction?.id ?? null, dispatchState: pendingAction?.payload.dispatch?.state ?? null, hostState, anomalies } };
   });
-  const sessionIds = new Set([...ledger.workers.map(item => item.sessionId), ...ledger.assignments.filter(item => item.state !== 'ARCHIVED').map(item => item.sessionId), ...ledger.pendingActions.map(item => item.payload.bootstrap?.sessionId)].filter(Boolean));
+  const createdSessionIds = campaignCreatedSessionIds(ledger);
+  const sessionIds = new Set([...ledger.workers.filter(item => createdSessionIds.has(item.sessionId)).map(item => item.sessionId),
+    ...ledger.assignments.filter(item => item.state !== 'ARCHIVED').map(item => item.sessionId),
+    ...ledger.pendingActions.map(item => item.payload.bootstrap?.sessionId)].filter(Boolean));
   const complete = fresh && [...sessionIds].every(id => observation.completeSessionIds.includes(id)
     && !['unknown', 'missing'].includes(observation.sessions.find(item => item.sessionId === id)?.state));
-  const reservedSlots = projectWorkerCount(ledgers);
-  const availableSlots = Math.max(0, PROJECT_WORKER_LIMIT - reservedSlots);
+  const reservedSlots = campaignWorkerCount(ledger);
+  const availableSlots = Math.max(0, CAMPAIGN_WORKER_LIMIT - reservedSlots);
   const reservedPlans = plans.filter(({ execution }) => execution.sessionId || ledger.pendingActions.some(item => item.id === execution.actionId && item.type === 'CREATE_WORKER')).length;
   const theoreticalWorkers = Math.min(plans.length, reservedPlans + status.idleWorkers.length + availableSlots);
   const observedWorkingWorkers = complete ? observation.sessions.filter(item => sessionIds.has(item.sessionId) && item.state === 'working').length : null;
   const observedRunnableWorkers = complete ? plans.filter(({ execution }) => execution.hostState === 'working').length : null;
   return readRunnablePlansV2({ schemaVersion: 2, campaignId: graph.campaignId, invocationWorktree,
     effectiveWorktree: ledger.topLevelWorktree, integrationRevision: status.integrationRevision, plans,
-    parallelism: { limit: PROJECT_WORKER_LIMIT, reservedSlots, availableSlots, reusablePairs: status.idleWorkers.length, theoreticalWorkers,
+    parallelism: { limit: CAMPAIGN_WORKER_LIMIT, reservedSlots, availableSlots, reusablePairs: status.idleWorkers.length, theoreticalWorkers,
       observedWorkingWorkers, observedRunnableWorkers, shortfall: observedRunnableWorkers === null ? null : Math.max(0, theoreticalWorkers - observedRunnableWorkers) } });
 }
 
@@ -1826,20 +1831,12 @@ function reconcileLedger(graph, ledger, environment = null) {
   return null;
 }
 
-function prepareDispatches(graph, ledger, environment) {
-  const ledgers = projectLedgers(ledger, environment);
-  for (const other of ledgers.slice(1)) {
-    for (const worker of other.workers) {
-      if (worker.activity !== 'idle' || worker.worktreeArchived || worker.sessionArchived
-        || ledger.workers.some(item => item.sessionId === worker.sessionId || item.worktree === worker.worktree)) continue;
-      if (ledgers.some(item => item.assignments.some(assignment => assignment.state !== 'ARCHIVED' && workerFor([worker], assignment)))) continue;
-      ledger.workers.push({ ...worker, evidenceComplete: false });
-    }
-  }
+function prepareDispatches(graph, ledger) {
+  const createdSessionIds = campaignCreatedSessionIds(ledger);
   for (const pendingAction of ledger.pendingActions) {
-    if (['CREATE_WORKER', 'REUSE_WORKER'].includes(pendingAction.type)) dispatchRecord(pendingAction).ready = planIsRunnable(graph, pendingAction.payload.planId);
+    if (['CREATE_WORKER', 'REUSE_WORKER'].includes(pendingAction.type)) dispatchRecord(pendingAction).ready = planIsRunnable(graph, pendingAction.payload.planId)
+      && (pendingAction.type !== 'REUSE_WORKER' || createdSessionIds.has(pendingAction.payload.sessionId));
   }
-  return ledgers;
 }
 
 function advanceLedger(graph, ledger, environment = null) {
@@ -1851,7 +1848,7 @@ function advanceLedger(graph, ledger, environment = null) {
     ledger.pendingActions = ledger.pendingActions.filter(({ id }) => id !== automaticCleanup.id);
     return null;
   }
-  const ledgers = prepareDispatches(graph, ledger, environment);
+  prepareDispatches(graph, ledger);
   const status = reconcile(graph, ledger, ledger.topLevelWorktree, environment);
   const conflicts = blockingDiagnostics(status);
   if (conflicts.length) fail('CAMPAIGN_STATUS_BLOCKED', conflicts.map((item) => item.message).join('; '));
@@ -1909,10 +1906,12 @@ function advanceLedger(graph, ledger, environment = null) {
     if (environment) removeWorkerBinding(environment, retired.id);
     return null;
   }
-  return scheduleWorker(graph, ledger, status, ledgers) ?? ledger.pendingActions[0] ?? null;
+  return scheduleWorker(graph, ledger, status)
+    ?? ledger.pendingActions.find(item => item.type !== 'REUSE_WORKER' || campaignCreatedSessionIds(ledger).has(item.payload.sessionId))
+    ?? null;
 }
 
-function scheduleWorker(graph, ledger, status, ledgers) {
+function scheduleWorker(graph, ledger, status) {
   const queued = ledger.assignments.filter((assignment) => {
     if (assignment.state !== 'DISPATCH_PENDING') return false;
     if (ledger.pendingActions.some(({ assignmentId }) => assignmentId === assignment.id)) return false;
@@ -1921,7 +1920,7 @@ function scheduleWorker(graph, ledger, status, ledgers) {
   if (!queued && status.readyPlans.length === 0) return null;
   const planId = queued?.planId ?? status.readyPlans[0];
   const idle = status.idleWorkers[0] ?? null;
-  if (!idle && projectWorkerCount(ledgers) >= PROJECT_WORKER_LIMIT) return null;
+  if (!idle && campaignWorkerCount(ledger) >= CAMPAIGN_WORKER_LIMIT) return null;
   const assignmentRecord = queued ?? reserveAssignment(ledger, planId, idle);
   if (queued) {
     queued.dispatchRevision = ledger.integrationRevision;
@@ -1938,14 +1937,14 @@ function scheduleWorker(graph, ledger, status, ledgers) {
 
 function scheduleReadyPlans(graph, ledger, environment = null) {
   if (!ledger.coordinatorSessionId) fail('CAMPAIGN_COORDINATOR_REQUIRED', 'campaign scheduling requires one authenticated coordinator binding');
-  const ledgers = prepareDispatches(graph, ledger, environment);
+  prepareDispatches(graph, ledger);
   let status = reconcile(graph, ledger, ledger.topLevelWorktree, environment);
   const conflicts = blockingDiagnostics(status);
   if (conflicts.length) fail('CAMPAIGN_STATUS_BLOCKED', conflicts.map(({ message }) => message).join('; '));
   const integrationAction = ledger.pendingActions.find(({ type }) => type === 'REQUEST_REBASE');
   if (ledger.integrationRevision !== status.integrationRevision && integrationAction) fail('CAMPAIGN_INTEGRATION_CHANGED', `integration revision changed while rebase action ${integrationAction.id} targets ${integrationAction.payload.ontoRevision}`);
   ledger.integrationRevision = status.integrationRevision;
-  while (scheduleWorker(graph, ledger, status, ledgers)) status = reconcile(graph, ledger, ledger.topLevelWorktree, environment);
+  while (scheduleWorker(graph, ledger, status)) status = reconcile(graph, ledger, ledger.topLevelWorktree, environment);
   return readyActions(status, graph);
 }
 
@@ -2007,6 +2006,7 @@ function recordActionResult(ledger, actionId, result, graph = null) {
   if (!result || typeof result !== 'object' || Array.isArray(result) || result.ok !== true) fail('CAMPAIGN_ACTION_FAILED', `action ${actionId} did not report success`);
   if (['CREATE_WORKER', 'REUSE_WORKER'].includes(pendingAction.type)) {
     for (const key of ['sessionId', 'worktree', 'branch', 'revision']) if (typeof result[key] !== 'string' || !result[key]) fail('CAMPAIGN_ACTION_RESULT', `${pendingAction.type} result requires ${key}`);
+    if (pendingAction.type === 'REUSE_WORKER' && !campaignCreatedSessionIds(ledger).has(result.sessionId)) fail('CAMPAIGN_WORKER_SCOPE', 'reuse session was not created for this campaign');
     assignment.sessionId = result.sessionId;
     assignment.worktree = result.worktree;
     assignment.branch = result.branch;
@@ -2164,13 +2164,14 @@ function retryDispatch(graph, ledger, actionId, authorization, environment, bind
   if (!planIsRunnable(graph, assignment.planId)) fail('CAMPAIGN_DISPATCH_NOT_READY', 'retry plan has no immediately runnable tasklets');
   const observation = readHostObservation(ledger.topLevelWorktree, ledger.campaignId, environment);
   if (!observation || Date.now() - Date.parse(observation.observedAt) > HOST_OBSERVATION_MAX_AGE_MS) fail('CAMPAIGN_HOST_OBSERVATION_STALE', 'retry requires a fresh complete retained-session observation');
-  const ledgers = prepareDispatches(graph, ledger, environment);
+  prepareDispatches(graph, ledger);
   const status = reconcile(graph, ledger, ledger.topLevelWorktree, environment);
   const conflicts = blockingDiagnostics(status);
   if (conflicts.length) fail('CAMPAIGN_STATUS_BLOCKED', conflicts.map(({ message }) => message).join('; '));
-  if (ledger.workers.some(worker => !worker.sessionArchived && !observation.completeSessionIds.includes(worker.sessionId))) fail('CAMPAIGN_HOST_OBSERVATION_INCOMPLETE', 'retry observation must include every retained worker');
+  if (ledger.workers.some(worker => campaignCreatedSessionIds(ledger).has(worker.sessionId) && !worker.sessionArchived
+    && !observation.completeSessionIds.includes(worker.sessionId))) fail('CAMPAIGN_HOST_OBSERVATION_INCOMPLETE', 'retry observation must include every retained campaign worker');
   const idle = status.idleWorkers[0] ?? null;
-  if (!idle && projectWorkerCount(ledgers) >= PROJECT_WORKER_LIMIT) fail('CAMPAIGN_WORKER_CAPACITY_REACHED', 'unresolved original retains its slot; no capacity or safe idle pair is available');
+  if (!idle && campaignWorkerCount(ledger) >= CAMPAIGN_WORKER_LIMIT) fail('CAMPAIGN_WORKER_CAPACITY_REACHED', 'unresolved original retains its slot; no capacity or safe idle pair is available');
   if (ledger.integrationRevision !== status.integrationRevision) fail('CAMPAIGN_INTEGRATION_CHANGED', 'refresh scheduling at the current integration revision before retry');
   const token = crypto.randomBytes(32).toString('base64url');
   const successor = action(idle ? 'REUSE_WORKER' : 'CREATE_WORKER', assignment, {

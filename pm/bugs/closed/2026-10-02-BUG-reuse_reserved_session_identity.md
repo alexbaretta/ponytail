@@ -57,6 +57,10 @@ coordinator reported successful authentication and action completion for an
 original campaign worker selected by `REUSE_WORKER`; the fixture tasklets and
 campaign acceptance remain separate.
 
+Subsequent inspection identified an independent cross-campaign import path in
+`prepareDispatches`; the [separate bug](2026-10-02-BUG-cross_campaign_worker_import.md)
+tracks its correction. This issue covers the attachment identity check only.
+
 The [causal observation](../../debugging-pattern-observations/2026-10-02-reuse_reserved_session_identity.json)
 records the confirmed identity gap. The reserved-session guard, requirements,
 UAT, and coordinator skill are reconciled. No worker or checkout was retired.

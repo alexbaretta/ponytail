@@ -85,7 +85,7 @@ test('campaign coordinator uses durable actions while worker recovery remains wo
   assert.match(policy, /delivered worker in `REBASE_REQUIRED`[\s\S]*ordinary rebase and new authenticated delivery/);
   assert.match(policy, /A `REUSE_WORKER`\n+   action retains the finished session and managed worktree/);
   assert.match(policy, /Retain every inactive session\/worktree pair indefinitely/);
-  assert.match(policy, /Fifteen retained worker slots, including creation/);
+  assert.match(policy, /Fifteen retained worker\s+sessions, including this campaign's creation reservations/);
   assert.match(policy, /At `CAMPAIGN_WORKER_CAPACITY_REACHED`/);
   const lifecycle = fs.readFileSync(path.join(__dirname, '..', 'skills', 'worktree-lifecycle', 'SKILL.md'), 'utf8');
   assert.match(lifecycle, /retain the session\/worktree pair indefinitely/);

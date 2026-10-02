@@ -16,7 +16,8 @@ and authenticated host observations at the production scheduler boundary.
    created for that campaign is reused with a fresh assignment attachment.
    Busy or dirty pairs are not selected. An idle chat unrelated to that
    campaign, including one in the same checkout or another campaign, is not
-   eligible even when the project has no spare creation capacity.
+   eligible even when the campaign has no spare creation capacity. A historical
+   worker entry without a successful creation record also remains ineligible.
 3. Attempt the reuse attachment from a different session in the reserved
    checkout. It fails without binding or consuming the action; the exact
    selected session then attaches with the original token.
@@ -32,14 +33,24 @@ is not yet a campaign-wide or release-acceptance pass.
 ## Arc: Bound capacity without cross-project interference
 
 Actor: independent coordinators. Automated profile: production scheduler with
-two user-owned top-level projects sharing a real Git main worktree.
+two campaigns in one top-level project and another user-owned top-level project
+sharing the same Git main worktree.
 
-1. Fill project A with fifteen workers, counting outstanding creation
-   reservations. Another ready task waits; no sixteenth creation is emitted.
-2. Schedule project B. Its own unused capacity remains available.
-3. Complete an eligible assignment in A. Reuse that pair without deleting it.
+1. Fill campaign A with fifteen provenance-verified workers, counting its
+   outstanding creation reservations. Another ready task waits; no sixteenth
+   creation is emitted.
+2. Schedule campaign B in the same project. Its own unused capacity remains
+   available, and no idle worker is imported from A. Project B remains
+   independent as well.
+3. Complete an eligible assignment in A. Reuse that pair only in A without
+   deleting it. A session recovered to a new checkout path counts once.
 4. Repeat scheduling concurrently and after restart. Capacity reservations
    remain unique and deterministic; existing excess workers are retained.
+5. Observe one worker actively executing in campaign A while three other
+   independent plans have satisfied dependencies and runnable tasklets. The
+   scheduler reports one working session and reserves all three ready plans
+   through the campaign's available capacity. Plans with unmet dependencies
+   remain blocked regardless of spare worker sessions.
 
 ## Arc: Recover without a usable worker cwd
 
@@ -115,6 +126,14 @@ up this Arc.
 This Arc remains unverified on the live Codex host. The real-Git retention and
 recovery regressions do not establish host cleanup configuration or native
 prompt delivery.
+
+The 2026-10-02 focused scheduler/worktree/policy selection passed 89 tests
+after campaign-scoped provenance and capacity repair. A further focused real-Git
+test passed with one observed working session and three independent ready
+plans, all three of which received creation reservations. This does not prove
+that every incomplete live GWEN plan is dependency-ready. The live coordinator
+reported one working worker and four other tasklet-ready streams still gated
+by specific prerequisites; session capacity alone cannot waive those gates.
 
 ## Execution evidence
 
