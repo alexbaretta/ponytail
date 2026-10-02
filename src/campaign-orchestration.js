@@ -370,7 +370,7 @@ function readLedgerV6(value, file = 'campaign ledger') {
   for (const retry of dispatchRetries) {
     exactKeys(retry, ['originalAction', 'successorActionId', 'authorization', 'recordedAt', 'outcome'], 'dispatch retry');
     const original = readActionV4(retry.originalAction);
-    if (retry.outcome !== 'UNKNOWN_OUTCOME_SUPERSEDED' || original.type !== 'CREATE_WORKER' || original.payload.dispatch?.state !== 'STARTED'
+    if (!original || retry.outcome !== 'UNKNOWN_OUTCOME_SUPERSEDED' || original.type !== 'CREATE_WORKER' || original.payload.dispatch?.state !== 'STARTED'
       || typeof original.payload.dispatch.hostIdentity !== 'string' || !original.payload.dispatch.hostIdentity
       || original.payload.bootstrap || !ledger.assignments.some(({ id }) => id === original.assignmentId)) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', 'retry history requires an original unprovisioned started creation');
     for (const key of ['successorActionId', 'authorization', 'recordedAt']) {

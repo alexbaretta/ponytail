@@ -100,8 +100,12 @@
       "risk": "normal",
       "feature": "S01-F01",
       "planned_paths": [
+        "src/campaign-orchestration.js",
         "tests/campaign-orchestration.test.js",
         ".agents/config/project/traceability.json",
+        "pm/plans/closed/2026-10-02-unknown-dispatch-retry/plan.md",
+        "pm/plans/closed/2026-10-02-unknown-dispatch-retry/sprints/S01.md",
+        "pm/plans/closed/2026-10-02-unknown-dispatch-retry/sprints/S01.tasklets.json",
         "pm/requirements/traceability.generated.md",
         "pm/plans/in_progress/2026-10-02-unknown-dispatch-retry/plan.md",
         "pm/plans/in_progress/2026-10-02-unknown-dispatch-retry/sprints/S01.md",

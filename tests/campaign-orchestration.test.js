@@ -665,7 +665,7 @@ test('retry-dispatch persists one fenced successor across CLI restarts and retai
   assert.equal(persisted.dispatchRetries[0].successorActionId, successor.id);
   assert.deepEqual(readLedgerV6(persisted), persisted);
   assert.equal(persisted.dispatchRetries[0].outcome, 'UNKNOWN_OUTCOME_SUPERSEDED');
-  for (const edit of [{ outcome: 'NOT_STARTED' }, { successorActionId: 'missing-successor' }, { authorization: '' }]) {
+  for (const edit of [{ originalAction: null }, { outcome: 'NOT_STARTED' }, { successorActionId: 'missing-successor' }, { authorization: '' }]) {
     assert.throws(() => readLedgerV6({ ...persisted, dispatchRetries: [{ ...persisted.dispatchRetries[0], ...edit }] }), CampaignOrchestrationError);
   }
   const replay = invoke('retry-dispatch', 'campaign', original.id, '--authorization', 'human-message-2026-10-02', '--json');
