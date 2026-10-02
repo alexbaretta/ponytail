@@ -7,6 +7,27 @@ Licensed under the MIT License. See LICENSE in the project root.
 
 # Campaign orchestration Suite
 
+## Arc: Explicit unknown-outcome creation retry
+
+Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
+
+Actor: bound coordinator with direct human authorization for the exact original
+creation. Prerequisite: unknown STARTED outcome, no provisioned/attached identity,
+fresh complete retained-session observation and immediately runnable tasklets.
+
+1. Run `ponytail campaign retry-dispatch <campaign> <original-action-id>
+   --authorization <non-secret-reference> --json`. Expect one successor with
+   the same assignment and new capability; original action/client receipt remain.
+2. Repeat after CLI restart. Expect the same successor, no extra reservation.
+3. Try old capability and late original result. Expect rejection without changing
+   successor ownership. Execute successor only through normal ready-actions.
+4. Try provisioned/attached original, stale observation, blocked tasklets or full
+   capacity without reuse. Expect refusal without mutation. With safe idle reuse,
+   expect REUSE even at capacity; original reservation remains counted.
+
+Automated proof uses real-Git Node fixtures in campaign-orchestration.test.js;
+native creation remains host-owned and is not claimed by repository acceptance.
+
 ## Arc: Authenticate, activate, and integrate an initially open plan
 
 Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION

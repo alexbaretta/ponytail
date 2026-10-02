@@ -1,0 +1,112 @@
+{
+  "schemaVersion": 3,
+  "sprint": "S01",
+  "features": {
+    "S01-F01": {
+      "depends_on": [],
+      "validation_tasklet": "S01-F01-T06"
+    }
+  },
+  "tasklets": {
+    "S01-F01-T01": {
+      "depends_on": [],
+      "affinity": [
+        "dispatch",
+        "ownership"
+      ],
+      "risk": "normal",
+      "feature": "S01-F01",
+      "planned_paths": [
+        "src/campaign-orchestration.js",
+        "versioned-data-contracts.json",
+        "tests/campaign-orchestration.test.js"
+      ]
+    },
+    "S01-F01-T02": {
+      "depends_on": [
+        "S01-F01-T01"
+      ],
+      "affinity": [
+        "dispatch",
+        "ownership"
+      ],
+      "risk": "normal",
+      "feature": "S01-F01",
+      "planned_paths": [
+        "src/campaign-orchestration.js"
+      ]
+    },
+    "S01-F01-T03": {
+      "depends_on": [
+        "S01-F01-T02"
+      ],
+      "affinity": [
+        "dispatch",
+        "ownership"
+      ],
+      "risk": "normal",
+      "feature": "S01-F01",
+      "planned_paths": [
+        "src/campaign-orchestration.js"
+      ]
+    },
+    "S01-F01-T04": {
+      "depends_on": [
+        "S01-F01-T03"
+      ],
+      "affinity": [
+        "dispatch",
+        "ownership"
+      ],
+      "risk": "normal",
+      "feature": "S01-F01",
+      "planned_paths": [
+        "src/campaign-orchestration.js",
+        "src/campaign-census.js",
+        "hooks/plan-input.js",
+        "tests/campaign-orchestration.test.js"
+      ]
+    },
+    "S01-F01-T05": {
+      "depends_on": [
+        "S01-F01-T04"
+      ],
+      "affinity": [
+        "dispatch",
+        "ownership"
+      ],
+      "risk": "normal",
+      "feature": "S01-F01",
+      "planned_paths": [
+        "skills/plan-execution/SKILL.md",
+        ".openclaw/skills/plan-execution/SKILL.md",
+        "AGENTS.md",
+        "pm/requirements/campaign-orchestration.md",
+        "pm/uat/campaign-orchestration.md"
+      ]
+    },
+    "S01-F01-T06": {
+      "depends_on": [
+        "S01-F01-T01",
+        "S01-F01-T02",
+        "S01-F01-T03",
+        "S01-F01-T04",
+        "S01-F01-T05"
+      ],
+      "affinity": [
+        "dispatch",
+        "ownership"
+      ],
+      "risk": "normal",
+      "feature": "S01-F01",
+      "planned_paths": [
+        "tests/campaign-orchestration.test.js",
+        ".agents/config/project/traceability.json",
+        "pm/requirements/traceability.generated.md",
+        "pm/plans/in_progress/2026-10-02-unknown-dispatch-retry/plan.md",
+        "pm/plans/in_progress/2026-10-02-unknown-dispatch-retry/sprints/S01.md",
+        "pm/plans/in_progress/2026-10-02-unknown-dispatch-retry/sprints/S01.tasklets.json"
+      ]
+    }
+  }
+}

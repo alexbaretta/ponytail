@@ -155,6 +155,23 @@ campaign state; activation must not create a second current-campaign record.
 
 ## Operational campaign status
 
+### Explicit retry of unknown creation outcomes
+
+Approved by direct stakeholder direction on 2026-10-02. A bound coordinator
+may retry an exact original CREATE_WORKER recorded as STARTED with unknown
+outcome, supplying a non-secret reference to direct human retry authorization.
+Absence from a partial native inventory is not proof that creation never began.
+Preserve the complete original action and receipt as unknown and superseded;
+atomically revoke its capability before exposing one idempotent successor.
+Reject late original attachment/results. Provisioned identities, authenticated
+bindings, deliveries and assigned sessions/checkouts are ineligible.
+
+Require fresh complete retained-session observation, ordinary campaign validity
+and runnable tasklets. Prefer safe idle reuse. Every unresolved original keeps
+its capacity reservation independently of its successor; fresh creation still
+obeys the fifteen-worker limit. Without capacity or safe reuse, reject without
+supersession. No deletion, missing-checkout replacement or planning dispatch.
+
 Authenticated create/reuse completion assigns the original worker; it does not
 itself move the tracked plan. While that worker activates its assigned plan,
 the coordinator checkout may still show the initial lifecycle. Matching

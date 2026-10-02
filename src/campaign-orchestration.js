@@ -336,6 +336,11 @@ function readLedgerV5(value, file = 'campaign ledger') {
 }
 
 function readCurrentLedger(value, file = 'campaign ledger') {
+  if (value?.schemaVersion === 6) return readLedgerV6(value, file);
+  return readLedgerV6({ ...readHistoricalLedger(value, file), schemaVersion: 6, dispatchRetries: [] }, file);
+}
+
+function readHistoricalLedger(value, file) {
   if (value?.schemaVersion === 5) return readLedgerV5(value, file);
   let physicalLedger;
   if (value?.schemaVersion === 4) physicalLedger = readLedgerV4(value, file);
@@ -356,7 +361,35 @@ function readCurrentLedger(value, file = 'campaign ledger') {
   }, file);
 }
 
-const CampaignLedgerReaders = Object.freeze({ V1: readLedgerV1, V2: readLedgerV2, V3: readLedgerV3, V4: readLedgerV4, V5: readLedgerV5 });
+function readLedgerV6(value, file = 'campaign ledger') {
+  const { dispatchRetries, ...physicalLedger } = value;
+  if (value.schemaVersion !== 6 || !Array.isArray(dispatchRetries)) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', `${file}: expected ledger V6 retry history`);
+  const ledger = readLedgerV5({ ...physicalLedger, schemaVersion: 5 }, file);
+  const originals = new Set();
+  const successors = new Set();
+  for (const retry of dispatchRetries) {
+    exactKeys(retry, ['originalAction', 'successorActionId', 'authorization', 'recordedAt', 'outcome'], 'dispatch retry');
+    const original = readActionV4(retry.originalAction);
+    if (retry.outcome !== 'UNKNOWN_OUTCOME_SUPERSEDED' || original.type !== 'CREATE_WORKER' || original.payload.dispatch?.state !== 'STARTED'
+      || typeof original.payload.dispatch.hostIdentity !== 'string' || !original.payload.dispatch.hostIdentity
+      || original.payload.bootstrap || !ledger.assignments.some(({ id }) => id === original.assignmentId)) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', 'retry history requires an original unprovisioned started creation');
+    for (const key of ['successorActionId', 'authorization', 'recordedAt']) {
+      if (typeof retry[key] !== 'string' || !retry[key].trim()) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', `dispatch retry ${key} must be nonempty`);
+    }
+    if (!Number.isFinite(Date.parse(retry.recordedAt)) || originals.has(original.id) || successors.has(retry.successorActionId)
+      || original.id === retry.successorActionId || ledger.pendingActions.some(({ id }) => id === original.id)) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', 'invalid or duplicate dispatch retry identity');
+    originals.add(original.id);
+    successors.add(retry.successorActionId);
+  }
+  for (const retry of dispatchRetries) {
+    if (!ledger.pendingActions.some(item => item.id === retry.successorActionId && item.assignmentId === retry.originalAction.assignmentId)
+      && !ledger.completedActions.some(item => item.actionId === retry.successorActionId && item.assignmentId === retry.originalAction.assignmentId)
+      && !dispatchRetries.some(item => item.originalAction.id === retry.successorActionId && item.originalAction.assignmentId === retry.originalAction.assignmentId)) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', 'retry successor is missing or belongs to another assignment');
+  }
+  return { ...ledger, schemaVersion: 6, dispatchRetries };
+}
+
+const CampaignLedgerReaders = Object.freeze({ V1: readLedgerV1, V2: readLedgerV2, V3: readLedgerV3, V4: readLedgerV4, V5: readLedgerV5, V6: readLedgerV6 });
 const CampaignHostObservationReaders = Object.freeze({ V1: readHostObservationV1 });
 const CampaignWorkerBindingReaders = Object.freeze({ V1: readWorkerBindingsV1, V2: readWorkerBindingsV2 });
 const CampaignWorkerDeliveryReaders = Object.freeze({ V1: readWorkerDeliveriesV1 });
@@ -594,6 +627,7 @@ function projectWorkerCount(ledgers) {
       if (assignment.worktree && (!assignment.worktreeArchived || fs.existsSync(assignment.worktree))) pairs.add(assignment.worktree);
     }
     reservations += ledger.pendingActions.filter(({ type }) => type === 'CREATE_WORKER').length;
+    reservations += ledger.dispatchRetries.length;
   }
   return pairs.size + reservations;
 }
@@ -770,6 +804,8 @@ function bindWorker(environment, invocationWorktree, attachToken, sessionId) {
   if (assignment.worktree && assignment.worktree !== canonicalWorktree) fail('CAMPAIGN_WORKER_SCOPE', `assignment is reserved for worker ${assignment.worktree}`);
   const attachTokenHash = crypto.createHash('sha256').update(attachToken).digest('hex');
   return withWorkerBindingsLock(environment, (state) => {
+    // A retry can revoke the capability while this caller waits for the lock.
+    attachmentForToken(environment, attachToken);
     const replay = state.bindings.find((binding) => binding.attachTokenHash === attachTokenHash);
     if (replay) {
       if (replay.sessionId !== sessionId || replay.worktree !== canonicalWorktree) fail('CAMPAIGN_WORKER_BINDING_CONFLICT', 'attach token is already bound to another worker');
@@ -1065,8 +1101,8 @@ function resolveInvocationWorktree(invocationWorktree, environment = process.env
 
 function newLedger(repositoryRoot, campaignId, coordinatorSessionId) {
   const identity = repositoryIdentity(repositoryRoot);
-  return readLedgerV5({
-    schemaVersion: 5,
+  return readLedgerV6({
+    schemaVersion: 6,
     campaignId,
     topLevelWorktree: repositoryRoot,
     coordinatorSessionId,
@@ -1076,6 +1112,7 @@ function newLedger(repositoryRoot, campaignId, coordinatorSessionId) {
     pendingActions: [],
     completedActions: [],
     workers: [],
+    dispatchRetries: [],
   });
 }
 
@@ -1093,7 +1130,7 @@ function readLedger(repositoryRoot, campaignId, environment = process.env) {
 }
 
 function writeLedger(file, ledger) {
-  const value = readLedgerV5(ledger, file);
+  const value = readLedgerV6(ledger, file);
   fs.mkdirSync(path.dirname(file), { recursive: true });
   const temporary = `${file}.${process.pid}.${crypto.randomUUID()}.tmp`;
   fs.writeFileSync(temporary, `${JSON.stringify(value, null, 2)}\n`, { flag: 'wx', mode: 0o600 });
@@ -1916,6 +1953,7 @@ function scheduleReadyPlans(graph, ledger, environment = null) {
 }
 
 function recordActionResult(ledger, actionId, result, graph = null) {
+  if (ledger.dispatchRetries.some(({ originalAction }) => originalAction.id === actionId)) fail('CAMPAIGN_DISPATCH_SUPERSEDED', `action ${actionId} has an unknown superseded outcome; use its recorded successor`);
   const completed = ledger.completedActions.find((item) => item.actionId === actionId);
   if (completed) {
     if (JSON.stringify(completed.result) !== JSON.stringify(result)) fail('CAMPAIGN_ACTION_MISMATCH', `completed action ${actionId} received a different result`);
@@ -2108,6 +2146,48 @@ function validateActionResultBinding(ledger, actionId, result, environment) {
   }
 }
 
+// Traceability: implements REQ-CAMPAIGN-ORCHESTRATION
+function retryDispatch(graph, ledger, actionId, authorization, environment, bindings) {
+  const sessionId = environment.PONYTAIL_SESSION_ID ?? environment.CODEX_SESSION_ID;
+  if (!ledger.coordinatorSessionId || sessionId !== ledger.coordinatorSessionId) fail('CAMPAIGN_COORDINATOR_REQUIRED', 'retry requires the bound coordinator');
+  if (typeof authorization !== 'string' || !authorization.trim()) fail('CAMPAIGN_RETRY_AUTHORIZATION', 'retry requires a non-secret direct human authorization reference');
+  const previous = ledger.dispatchRetries.find(({ originalAction }) => originalAction.id === actionId);
+  if (previous) {
+    if (previous.authorization !== authorization) fail('CAMPAIGN_ACTION_MISMATCH', 'retry authorization differs from the recorded attempt');
+    return previous.successorActionId;
+  }
+  const original = ledger.pendingActions.find(({ id }) => id === actionId);
+  const assignment = ledger.assignments.find(({ id }) => id === original?.assignmentId);
+  if (!original || original.type !== 'CREATE_WORKER' || original.payload.dispatch?.state !== 'STARTED'
+    || original.payload.bootstrap || assignment?.state !== 'DISPATCH_PENDING' || original.payload.attachToken !== assignment.attachToken
+    || ['sessionId', 'worktree', 'branch', 'workerRevision'].some(key => assignment[key] !== null)
+    || bindings.bindings.some(binding => binding.repositoryRoot === ledger.topLevelWorktree && binding.campaignId === ledger.campaignId && binding.assignmentId === assignment.id)
+    || readWorkerDeliveries(ledger.topLevelWorktree, ledger.campaignId, environment).deliveries.some(delivery => delivery.assignmentId === assignment.id)) fail('CAMPAIGN_RETRY_INELIGIBLE', 'only an original unprovisioned, unattached STARTED creation can be retried');
+  if (authorization.includes(assignment.attachToken)) fail('CAMPAIGN_RETRY_AUTHORIZATION', 'authorization reference must not contain attachment capabilities');
+  if (!planIsRunnable(graph, assignment.planId)) fail('CAMPAIGN_DISPATCH_NOT_READY', 'retry plan has no immediately runnable tasklets');
+  const observation = readHostObservation(ledger.topLevelWorktree, ledger.campaignId, environment);
+  if (!observation || Date.now() - Date.parse(observation.observedAt) > HOST_OBSERVATION_MAX_AGE_MS) fail('CAMPAIGN_HOST_OBSERVATION_STALE', 'retry requires a fresh complete retained-session observation');
+  const ledgers = prepareDispatches(graph, ledger, environment);
+  const status = reconcile(graph, ledger, ledger.topLevelWorktree, environment);
+  const conflicts = blockingDiagnostics(status);
+  if (conflicts.length) fail('CAMPAIGN_STATUS_BLOCKED', conflicts.map(({ message }) => message).join('; '));
+  if (ledger.workers.some(worker => !worker.sessionArchived && !observation.completeSessionIds.includes(worker.sessionId))) fail('CAMPAIGN_HOST_OBSERVATION_INCOMPLETE', 'retry observation must include every retained worker');
+  const idle = status.idleWorkers[0] ?? null;
+  if (!idle && projectWorkerCount(ledgers) >= PROJECT_WORKER_LIMIT) fail('CAMPAIGN_WORKER_CAPACITY_REACHED', 'unresolved original retains its slot; no capacity or safe idle pair is available');
+  if (ledger.integrationRevision !== status.integrationRevision) fail('CAMPAIGN_INTEGRATION_CHANGED', 'refresh scheduling at the current integration revision before retry');
+  const token = crypto.randomBytes(32).toString('base64url');
+  const successor = action(idle ? 'REUSE_WORKER' : 'CREATE_WORKER', assignment, {
+    planId: assignment.planId, attachToken: token, sessionId: idle?.sessionId ?? null, worktree: idle?.worktree ?? null,
+  });
+  successor.idempotencyKey = `${assignment.id}:retry:${successor.id}`;
+  ledger.dispatchRetries.push({ originalAction: structuredClone(original), successorActionId: successor.id, authorization, recordedAt: new Date().toISOString(), outcome: 'UNKNOWN_OUTCOME_SUPERSEDED' });
+  Object.assign(assignment, { attachToken: token, idempotencyKey: successor.idempotencyKey, dispatchRevision: ledger.integrationRevision,
+    sessionId: idle?.sessionId ?? null, worktree: idle?.worktree ?? null, branch: idle?.branch ?? null, workerRevision: idle?.revision ?? null });
+  ledger.pendingActions = ledger.pendingActions.filter(({ id }) => id !== original.id);
+  ledger.pendingActions.push(successor);
+  return successor.id;
+}
+
 function registeredWorktree(repositoryRoot, worktree) {
   return git(repositoryRoot, ['worktree', 'list', '--porcelain', '-z']).split('\0').includes(`worktree ${worktree}`);
 }
@@ -2190,6 +2270,11 @@ function parseArguments(argv) {
     input = argv[1];
     actionId = argv[2];
     json = argv.length === 4;
+  } else if (operation === 'retry-dispatch' && (argv.length === 5 || (argv.length === 6 && argv[5] === '--json')) && argv[3] === '--authorization') {
+    input = argv[1];
+    actionId = argv[2];
+    result = argv[4];
+    json = argv.length === 6;
   } else if (operation === 'action-result' && argv.length === 5 && argv[3] === '--result') {
     input = argv[1];
     actionId = argv[2];
@@ -2208,13 +2293,25 @@ function parseArguments(argv) {
 }
 
 function usage() {
-  return 'usage: ponytail campaign status [<campaign>] [--json]\n       ponytail campaign runnable-plans [<campaign>] [--json]\n       ponytail campaign schedule-ready [<campaign>] [--json]\n       ponytail campaign ready-actions [<campaign>] [--json]\n       ponytail campaign report-blocker <campaign> --result <json>\n       ponytail campaign observe <campaign> --snapshot <json>\n       ponytail campaign advance [<campaign>] [--json]\n       ponytail campaign reconcile <campaign> [--json]\n       ponytail campaign action-result <campaign> <action-id> --result <json>\n       ponytail campaign retire-worktree <campaign> <action-id> [--json]\n       ponytail campaign attach <token>\n       ponytail campaign deliver <campaign> --result <json>';
+  return 'usage: ponytail campaign status [<campaign>] [--json]\n       ponytail campaign runnable-plans [<campaign>] [--json]\n       ponytail campaign schedule-ready [<campaign>] [--json]\n       ponytail campaign ready-actions [<campaign>] [--json]\n       ponytail campaign report-blocker <campaign> --result <json>\n       ponytail campaign observe <campaign> --snapshot <json>\n       ponytail campaign advance [<campaign>] [--json]\n       ponytail campaign reconcile <campaign> [--json]\n       ponytail campaign retry-dispatch <campaign> <original-action-id> --authorization <non-secret-reference> [--json]\n       ponytail campaign action-result <campaign> <action-id> --result <json>\n       ponytail campaign retire-worktree <campaign> <action-id> [--json]\n       ponytail campaign attach <token>\n       ponytail campaign deliver <campaign> --result <json>';
 }
 
 function run(argv = process.argv.slice(2), options = {}) {
   const request = parseArguments(argv);
   const invocationWorktree = fs.realpathSync(options.repositoryRoot ?? process.cwd());
   const environment = options.environment ?? process.env;
+  if (request.operation === 'retry-dispatch') {
+    const resolution = resolveInvocationWorktree(invocationWorktree, environment, false);
+    const graph = resolveGraph(resolution.effectiveWorktree, request.input);
+    const successorActionId = withWorktreeLock(resolution.effectiveWorktree, environment, () => withWorkerBindingsLock(environment, bindings => (
+      withLedgerLock(resolution.effectiveWorktree, graph.campaignId, environment, ledger => retryDispatch(graph, ledger, request.actionId, request.result, environment, bindings))
+    )));
+    const status = reconcile(graph, readLedger(resolution.effectiveWorktree, graph.campaignId, environment), invocationWorktree, environment);
+    const result = readyActions(status, graph);
+    result.actions = result.actions.filter(({ id }) => id === successorActionId);
+    process.stdout.write(request.json ? `${JSON.stringify(result)}\n` : humanReadyActions(result));
+    return result;
+  }
   if (request.operation === 'attach') {
     const resolution = resolveInvocationWorktree(invocationWorktree, environment, true);
     if (!resolution.workerBinding) fail('CAMPAIGN_ATTACH_REQUIRED', 'worker attach was not authenticated by the lifecycle hook');
@@ -2367,6 +2464,7 @@ module.exports = {
   readLedgerV3,
   readLedgerV4,
   readLedgerV5,
+  readLedgerV6,
   readReadyActionsV1,
   readReadyActionsV2,
   readReadyActionsV3,
@@ -2392,6 +2490,7 @@ module.exports = {
   reconcileLedger,
   readyActions,
   recordActionResult,
+  retryDispatch,
   retireWorktree,
   upgradeWorker,
   resolveInvocationWorktree,

@@ -32,6 +32,7 @@ const {
   readLedgerV3,
   readLedgerV4,
   readLedgerV5,
+  readLedgerV6,
   readWorkerDeliveries,
   readWorkerBindings,
   readReadyActionsV1,
@@ -45,6 +46,7 @@ const {
   readyActions,
   reconcile,
   recordActionResult,
+  retryDispatch,
   retireWorktree,
   recordWorkerDelivery,
   replaceRecoveredWorkerBinding,
@@ -214,17 +216,17 @@ function captureError(callback) {
   assert.fail('expected CampaignOrchestrationError');
 }
 
-test('historical ledgers normalize recovery and cleanup actions and the current writer emits V5', () => {
+test('historical ledgers normalize recovery and cleanup actions and the current writer emits V6', () => {
   const root = repository();
   const environment = { ...process.env, PONYTAIL_CAMPAIGN_STATE_DIR: temporaryDirectory('ponytail-ledger-version') };
-  const current = newLedger(root, 'campaign', 'coordinator');
+  const { dispatchRetries, ...current } = newLedger(root, 'campaign', 'coordinator');
   const { pendingActions, ...ledger } = current;
   const legacy = readLedgerV1({ ...ledger, schemaVersion: 1, pendingAction: null });
   const file = ledgerPath(root, 'campaign', environment);
   fs.mkdirSync(path.dirname(file), { recursive: true });
   fs.writeFileSync(file, `${JSON.stringify(legacy)}\n`);
 
-  assert.equal(readLedger(root, 'campaign', environment).schemaVersion, 5);
+  assert.equal(readLedger(root, 'campaign', environment).schemaVersion, 6);
   assert.deepEqual(readLedger(root, 'campaign', environment).pendingActions, []);
   assert.equal(readLedgerV2({ ...current, schemaVersion: 2 }).schemaVersion, 2);
   assert.equal(readLedgerV3({ ...current, schemaVersion: 3 }).schemaVersion, 3);
@@ -246,10 +248,10 @@ test('historical ledgers normalize recovery and cleanup actions and the current 
   assert.equal(captureError(() => readLedgerV4({ ...current, schemaVersion: 4, pendingActions: [normalizedRecovery] })).code, 'CAMPAIGN_ORCHESTRATION_SCHEMA');
   fs.writeFileSync(file, `${JSON.stringify({ ...current, schemaVersion: 3, pendingActions: [recovery] })}\n`);
   const upgraded = readLedger(root, 'campaign', environment);
-  assert.equal(upgraded.schemaVersion, 5);
+  assert.equal(upgraded.schemaVersion, 6);
   assert.deepEqual(upgraded.pendingActions[0], normalizedRecovery);
   withLedgerLock(root, 'campaign', environment, () => null);
-  assert.equal(JSON.parse(fs.readFileSync(file, 'utf8')).schemaVersion, 5);
+  assert.equal(JSON.parse(fs.readFileSync(file, 'utf8')).schemaVersion, 6);
   assert.equal(JSON.parse(fs.readFileSync(file, 'utf8')).pendingActions[0].schemaVersion, 4);
   assert.equal(pendingActions.length, 0);
 });
@@ -257,7 +259,7 @@ test('historical ledgers normalize recovery and cleanup actions and the current 
 test('historical cleanup actions gain the original session required for retirement', () => {
   const root = repository();
   const environment = { ...process.env, PONYTAIL_CAMPAIGN_STATE_DIR: temporaryDirectory('ponytail-cleanup-action-version') };
-  const ledger = newLedger(root, 'campaign', 'coordinator');
+  const { dispatchRetries, ...ledger } = newLedger(root, 'campaign', 'coordinator');
   const assignment = {
     id: 'assignment', planId: 'work', sessionId: 'worker-session', worktree: '/worker', branch: 'worker',
     dispatchRevision: ledger.integrationRevision, workerRevision: ledger.integrationRevision, state: 'CLEANUP_PENDING',
@@ -272,7 +274,7 @@ test('historical cleanup actions gain the original session required for retireme
   fs.writeFileSync(file, `${JSON.stringify({ ...ledger, schemaVersion: 4, assignments: [assignment], pendingActions: [historicalAction] })}\n`);
 
   const upgraded = readLedger(root, 'campaign', environment);
-  assert.equal(upgraded.schemaVersion, 5);
+  assert.equal(upgraded.schemaVersion, 6);
   assert.deepEqual(upgraded.pendingActions[0].payload, { sessionId: assignment.sessionId, worktree: assignment.worktree });
   assert.equal(upgraded.pendingActions[0].schemaVersion, 4);
 });
@@ -362,7 +364,7 @@ test('status reports active plan, session, and worktree conflicts while mutation
     state: 'ACTIVE', idempotencyKey: 'key', attachToken: 'token', worktreeArchived: false, sessionArchived: false,
   };
   ledger.assignments = [assignment, { ...assignment, id: 'second', idempotencyKey: 'key-2', attachToken: 'token-2' }];
-  assert.equal(readLedgerV5(ledger).assignments.length, 2);
+  assert.equal(readLedgerV6(ledger).assignments.length, 2);
   const status = reconcile(graph([
     { id: 'campaign', parentPlanId: null, dependsOn: [], lifecycle: 'in_progress', path: 'root' },
     { id: 'ready', parentPlanId: 'campaign', dependsOn: [], lifecycle: 'in_progress', path: 'ready' },
@@ -638,6 +640,130 @@ test('schedule-ready deterministically reserves every runnable plan once within 
   assert.equal(JSON.stringify(ledger), before);
   assert.equal(ledger.assignments.length, 15);
   assert.equal(reconcile(campaignGraph, ledger).diagnostics.some(({ code }) => code === 'CAMPAIGN_WORKER_CAPACITY_REACHED'), true);
+});
+
+test('retry-dispatch persists one fenced successor across CLI restarts and retains unknown capacity', () => {
+  const root = fs.realpathSync(campaignRepository());
+  const environment = { ...process.env, PONYTAIL_CAMPAIGN_STATE_DIR: temporaryDirectory('ponytail-retry-state'), PONYTAIL_SESSION_ID: 'coordinator' };
+  const invoke = (...arguments_) => spawnSync(process.execPath, [campaignCli, ...arguments_], { cwd: root, encoding: 'utf8', env: environment });
+  const scheduled = invoke('schedule-ready', 'campaign', '--json');
+  assert.equal(scheduled.status, 0, scheduled.stderr);
+  const original = JSON.parse(scheduled.stdout).actions[0];
+  const started = invoke('action-result', 'campaign', original.id, '--result', JSON.stringify({ ok: true, disposition: 'STARTED', hostIdentity: 'original-client' }));
+  assert.equal(started.status, 0, started.stderr);
+  const originalStarted = structuredClone(readLedger(root, 'campaign', environment).pendingActions[0]);
+  writeHostObservation(root, 'campaign', { schemaVersion: 1, campaignId: 'campaign', observedAt: new Date().toISOString(), completeSessionIds: [], sessions: [] }, environment);
+  const first = invoke('retry-dispatch', 'campaign', original.id, '--authorization', 'human-message-2026-10-02', '--json');
+  assert.equal(first.status, 0, first.stderr);
+  const successor = JSON.parse(first.stdout).actions[0];
+  assert.equal(successor.assignmentId, original.assignmentId);
+  assert.notEqual(successor.id, original.id);
+  assert.notEqual(successor.idempotencyKey, original.idempotencyKey);
+  assert.notEqual(successor.payload.attachToken, original.payload.attachToken);
+  const persisted = readLedger(root, 'campaign', environment);
+  assert.deepEqual(persisted.dispatchRetries[0].originalAction, originalStarted);
+  assert.equal(persisted.dispatchRetries[0].successorActionId, successor.id);
+  assert.deepEqual(readLedgerV6(persisted), persisted);
+  assert.equal(persisted.dispatchRetries[0].outcome, 'UNKNOWN_OUTCOME_SUPERSEDED');
+  for (const edit of [{ outcome: 'NOT_STARTED' }, { successorActionId: 'missing-successor' }, { authorization: '' }]) {
+    assert.throws(() => readLedgerV6({ ...persisted, dispatchRetries: [{ ...persisted.dispatchRetries[0], ...edit }] }), CampaignOrchestrationError);
+  }
+  const replay = invoke('retry-dispatch', 'campaign', original.id, '--authorization', 'human-message-2026-10-02', '--json');
+  assert.equal(replay.status, 0, replay.stderr);
+  assert.deepEqual(JSON.parse(replay.stdout), JSON.parse(first.stdout));
+  assert.deepEqual(readLedger(root, 'campaign', environment), persisted);
+  const lateResult = invoke('action-result', 'campaign', original.id, '--result', JSON.stringify({ ok: true, disposition: 'STARTED', hostIdentity: 'original-client' }));
+  assert.notEqual(lateResult.status, 0);
+  assert.match(lateResult.stderr, /superseded/);
+  const worker = path.join(temporaryDirectory('ponytail-retry-worker'), 'worker');
+  command(root, ['worktree', 'add', '-qb', 'retry-worker', worker]);
+  assert.equal(captureError(() => bindWorker(environment, worker, original.payload.attachToken, 'late-original')).code, 'CAMPAIGN_ATTACH_TOKEN');
+  const binding = bindWorker(environment, worker, successor.payload.attachToken, 'successor-session');
+  assert.equal(binding.assignmentId, original.assignmentId);
+  const completion = invoke('action-result', 'campaign', successor.id, '--result', JSON.stringify({ ok: true, sessionId: binding.sessionId, worktree: binding.worktree, branch: binding.branch, revision: binding.revision }));
+  assert.equal(completion.status, 0, completion.stderr);
+  assert.equal(readLedger(root, 'campaign', environment).assignments[0].state, 'ACTIVE');
+
+  const capacityRoot = repository();
+  const capacity = newLedger(capacityRoot, 'campaign', 'coordinator');
+  const capacityGraph = graph([{ id: 'campaign', parentPlanId: null, dependsOn: [], lifecycle: 'in_progress', path: 'root' },
+    ...Array.from({ length: 17 }, (_, i) => ({ id: `p${i}`, parentPlanId: 'campaign', dependsOn: [], lifecycle: 'open', path: `p${i}` }))]);
+  scheduleReadyPlans(capacityGraph, capacity);
+  recordActionResult(capacity, capacity.pendingActions[0].id, { ok: true, disposition: 'STARTED', hostIdentity: 'unknown-client' });
+  const capacityEnvironment = { ...environment, PONYTAIL_CAMPAIGN_STATE_DIR: temporaryDirectory('ponytail-retry-capacity') };
+  writeHostObservation(capacityRoot, 'campaign', { schemaVersion: 1, campaignId: 'campaign', observedAt: new Date().toISOString(), completeSessionIds: [], sessions: [] }, capacityEnvironment);
+  const before = structuredClone(capacity);
+  assert.equal(captureError(() => retryDispatch(capacityGraph, capacity, capacity.pendingActions[0].id, 'human', capacityEnvironment, { bindings: [] })).code, 'CAMPAIGN_WORKER_CAPACITY_REACHED');
+  assert.deepEqual(capacity, before);
+
+  // A safe retained pair can be reused without releasing the unknown original.
+  const idleWorktree = path.join(temporaryDirectory('ponytail-retry-idle'), 'worker');
+  command(capacityRoot, ['worktree', 'add', '-qb', 'idle-retry', idleWorktree]);
+  capacity.workers.push({ sessionId: 'idle-session', worktree: idleWorktree, branch: 'idle-retry', revision: capacity.integrationRevision, clean: true, activity: 'idle', evidenceComplete: false, worktreeArchived: false, sessionArchived: false });
+  writeHostObservation(capacityRoot, 'campaign', { schemaVersion: 1, campaignId: 'campaign', observedAt: new Date().toISOString(), completeSessionIds: ['idle-session'], sessions: [{ sessionId: 'idle-session', state: 'waiting', worktree: idleWorktree, managedWorktree: true }] }, capacityEnvironment);
+  const reuseId = retryDispatch(capacityGraph, capacity, capacity.pendingActions[0].id, 'human', capacityEnvironment, { bindings: [] });
+  const reuse = capacity.pendingActions.find(({ id }) => id === reuseId);
+  assert.equal(reuse.type, 'REUSE_WORKER');
+  assert.equal(reuse.payload.sessionId, 'idle-session');
+  assert.equal(capacity.dispatchRetries.length, 1);
+
+  // Free two *known unstarted* fixture reservations, retaining the unknown one.
+  capacity.pendingActions.splice(0, 2);
+  capacity.assignments = capacity.assignments.filter(assignment => capacity.pendingActions.some(item => item.assignmentId === assignment.id));
+  const remaining = scheduleReadyPlans(capacityGraph, capacity, capacityEnvironment);
+  assert.equal(capacity.pendingActions.filter(({ type }) => type === 'CREATE_WORKER').length, 13);
+  assert.equal(remaining.actions.some(({ id }) => id === reuseId), true);
+});
+
+test('retry-dispatch rejects unavailable authority, observation, readiness and owned identities', () => {
+  for (const condition of ['coordinator', 'authorization', 'observation', 'readiness', 'bootstrap', 'binding', 'sessionId', 'worktree', 'branch', 'workerRevision', 'not-started']) {
+    const root = repository();
+    const environment = { ...process.env, PONYTAIL_CAMPAIGN_STATE_DIR: temporaryDirectory('ponytail-retry-refusal'), PONYTAIL_SESSION_ID: 'coordinator' };
+    const ledger = newLedger(root, 'campaign', 'coordinator');
+    const campaignGraph = graph([{ id: 'campaign', parentPlanId: null, dependsOn: [], lifecycle: 'in_progress', path: 'root' }, { id: 'ready', parentPlanId: 'campaign', dependsOn: [], lifecycle: 'open', path: 'ready' }]);
+    const original = advanceLedger(campaignGraph, ledger);
+    recordActionResult(ledger, original.id, { ok: true, disposition: 'STARTED', hostIdentity: 'client' });
+    writeHostObservation(root, 'campaign', { schemaVersion: 1, campaignId: 'campaign', observedAt: condition === 'observation' ? '2020-01-01T00:00:00Z' : new Date().toISOString(), completeSessionIds: [], sessions: [] }, environment);
+    const bindings = { bindings: condition === 'binding' ? [{ repositoryRoot: root, campaignId: 'campaign', assignmentId: original.assignmentId }] : [] };
+    if (condition === 'coordinator') environment.PONYTAIL_SESSION_ID = 'other';
+    if (condition === 'readiness') campaignGraph.plans[1].runnableTasklets = null;
+    if (condition === 'bootstrap') original.payload.bootstrap = { sessionId: 'provisioned' };
+    if (condition === 'not-started') original.payload.dispatch.state = 'NOT_STARTED';
+    if (['sessionId', 'worktree', 'branch', 'workerRevision'].includes(condition)) ledger.assignments[0][condition] = 'owned';
+    const before = structuredClone(ledger);
+    assert.throws(() => retryDispatch(campaignGraph, ledger, original.id, condition === 'authorization' ? '' : 'human', environment, bindings), CampaignOrchestrationError, condition);
+    assert.deepEqual(ledger, before, condition);
+  }
+});
+
+test('retry revocation fences an attachment that resolved its capability before acquiring the binding lock', () => {
+  const root = repository();
+  const environment = { ...process.env, PONYTAIL_CAMPAIGN_STATE_DIR: temporaryDirectory('ponytail-retry-race'), PONYTAIL_SESSION_ID: 'coordinator' };
+  const campaignGraph = graph([{ id: 'campaign', parentPlanId: null, dependsOn: [], lifecycle: 'in_progress', path: 'root' }, { id: 'ready', parentPlanId: 'campaign', dependsOn: [], lifecycle: 'open', path: 'ready' }]);
+  let original;
+  withLedgerLock(root, 'campaign', environment, ledger => {
+    original = advanceLedger(campaignGraph, ledger);
+    recordActionResult(ledger, original.id, { ok: true, disposition: 'STARTED', hostIdentity: 'client' });
+  });
+  writeHostObservation(root, 'campaign', { schemaVersion: 1, campaignId: 'campaign', observedAt: new Date().toISOString(), completeSessionIds: [], sessions: [] }, environment);
+  const worker = path.join(temporaryDirectory('ponytail-retry-race-worker'), 'worker');
+  command(root, ['worktree', 'add', '-qb', 'race-worker', worker]);
+  const fsOpenSyncPropertyDescriptor = Object.getOwnPropertyDescriptor(fs, 'openSync');
+  let interleaved = false;
+  // Deterministically interleave the real durable retry at the lock boundary.
+  fs.openSync = (file, ...arguments_) => {
+    if (!interleaved && file === path.join(environment.PONYTAIL_CAMPAIGN_STATE_DIR, 'campaign-worker-bindings.json.lock')) {
+      interleaved = true;
+      withLedgerLock(root, 'campaign', environment, ledger => retryDispatch(campaignGraph, ledger, original.id, 'human', environment, { bindings: [] }));
+    }
+    return fsOpenSyncPropertyDescriptor.value(file, ...arguments_);
+  };
+  try {
+    assert.equal(captureError(() => bindWorker(environment, worker, original.payload.attachToken, 'late-worker')).code, 'CAMPAIGN_ATTACH_TOKEN');
+  } finally { Object.defineProperty(fs, 'openSync', fsOpenSyncPropertyDescriptor); }
+  assert.equal(interleaved, true);
+  assert.deepEqual(readWorkerBindings(environment).bindings, []);
+  assert.equal(readLedger(root, 'campaign', environment).dispatchRetries.length, 1);
 });
 
 test('runnable-plan output rejects empty tasklet sets and unsupported or ambiguous records', () => {

@@ -690,6 +690,19 @@ durable state instead of remembering worker assignments in conversation:
    user help when authorization, credentials, or a manual host operation is
    genuinely required; never bypass host review, duplicate a pending request,
    replace a started worker, or waive acceptance gates to increase the count.
+   Exception: when the human explicitly authorizes retry of an exact unresolved
+   STARTED creation, use `ponytail campaign retry-dispatch <campaign>
+   <original-action-id> --authorization <non-secret-human-authorization-reference>
+   --json`. Preserve the inventory evidence and its completeness limitation;
+   never call absence from a partial listing proof of NOT_STARTED. This operation
+   accepts only unprovisioned, unattached creations, preserves the unknown
+   original receipt and its capacity reservation, revokes its capability, and
+   returns one idempotent successor. Refresh `ready-actions` and execute that
+   successor through ordinary authenticated dispatch. Do not retry an original
+   native creation, send its old token, manually edit state, replace a missing-
+   checkout worker, or release capacity. A capacity refusal requires safe reuse
+   or actual capacity, not repeated retry. Superseded late originals must not
+   attach; inspect them separately without granting assignment ownership.
    Record a sanitized host refusal with `ponytail campaign report-blocker
    <campaign-root> --result <json>` from the bound coordinator. The V1 object
    contains `schemaVersion: 1`, the exact `assignmentId`, nullable `actionId`,

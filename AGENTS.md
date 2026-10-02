@@ -80,6 +80,9 @@ services. `PROJECT_STRUCTURE.md` is authoritative for that boundary.
   [-n <commits_per_db_transaction>]`; query:
   `ponytail search query <text>` with optional ref, commit, history, and path selectors.
 - Campaign coordination: `ponytail campaign status [<campaign>] --json`,
+  `ponytail campaign retry-dispatch <campaign> <original-action-id>
+  --authorization <non-secret-human-authorization-reference> --json` for explicit
+  fenced retry of an unprovisioned STARTED creation with unknown outcome,
   `ponytail campaign report-blocker <campaign> --result <json>` for scoped
   coordinator-reported host refusals and their resolution,
   `ponytail campaign ready-actions [<campaign>] --json`,

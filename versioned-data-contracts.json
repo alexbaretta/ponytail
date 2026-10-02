@@ -285,9 +285,9 @@
         "module": "src/campaign-orchestration.js",
         "readerRegistryExport": "CampaignLedgerReaders"
       },
-      "currentVersion": "V5",
-      "versions": ["V1", "V2", "V3", "V4", "V5"],
-      "supportedReadVersions": ["V1", "V2", "V3", "V4", "V5"],
+      "currentVersion": "V6",
+      "versions": ["V1", "V2", "V3", "V4", "V5", "V6"],
+      "supportedReadVersions": ["V1", "V2", "V3", "V4", "V5", "V6"],
       "supportedDowngradeVersions": []
     },
     {
