@@ -86,6 +86,33 @@ test('coordinator binding lets composer enqueue derive the campaign', () => {
 });
 
 // Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
+test('blocker reporting authenticates the native coordinator through the hook and scoped plugin binding', () => {
+  const root = repository();
+  const pluginData = path.join(root, '.plugin-data');
+  assert.equal(tool(root, 'ponytail plan-input coordinate root').status, 0);
+  const environment = { ...process.env, PLUGIN_DATA: pluginData, PONYTAIL_CAMPAIGN_STATE_DIR: pluginData };
+  delete environment.PONYTAIL_SESSION_ID;
+  const campaignGraph = { campaignId: 'root', submittedPlanId: 'root', lifecycle: { initial: 'open', activeWork: 'in_progress', successfulCompletion: 'closed', deferred: 'deferred', rejected: 'rejected' }, plans: [
+    { id: 'root', parentPlanId: null, dependsOn: [], lifecycle: 'in_progress', path: 'root' },
+    { id: 'child', parentPlanId: 'root', dependsOn: [], lifecycle: 'open', path: 'child', runnableTasklets: { sprintId: 'S01', taskletIds: ['S01-F01-T01'] } },
+  ] };
+  let pending;
+  withLedgerLock(root, 'root', environment, ledger => { pending = advanceLedger(campaignGraph, ledger); });
+  const report = { schemaVersion: 1, assignmentId: pending.assignmentId, actionId: pending.id, phase: 'DISPATCH', state: 'BLOCKED', code: 'HOST_REVIEW_REJECTED', summary: 'Native dispatch rejected before start.', requiredAction: 'Obtain exact pending human authority.' };
+  const command = `ponytail campaign report-blocker root --result '${JSON.stringify(report)}'`;
+  const permission = tool(root, command);
+  assert.equal(permission.status, 0, permission.stderr);
+  assert.match(JSON.parse(permission.stdout).hookSpecificOutput.additionalContext, /Coordinator session authenticated/);
+  const denied = tool(root, command, 'other-session');
+  assert.equal(JSON.parse(denied.stdout).hookSpecificOutput.permissionDecision, 'deny');
+  const result = spawnSync(process.execPath, [path.join(__dirname, '..', 'src', 'campaign-census.js'), 'report-blocker', 'root', '--result', JSON.stringify(report)], { cwd: root, env: environment, encoding: 'utf8' });
+  assert.equal(result.status, 0, result.stderr);
+  const execution = JSON.parse(result.stdout).plans.find(item => item.planId === 'child').execution;
+  assert.equal(execution.actionId, pending.id);
+  assert.equal(execution.anomalies.some(item => item.code === report.code), true);
+});
+
+// Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
 test('worker attach is one-time, status re-roots, and worker mutations fail closed', () => {
   const root = repository();
   const pluginData = path.join(root, '.plugin-data');
@@ -150,6 +177,8 @@ test('worker attach is one-time, status re-roots, and worker mutations fail clos
   assert.match(JSON.parse(runnable.stdout).hookSpecificOutput.additionalContext, /Read-only campaign runnable-plans/);
   const schedule = run(worker, { hook_event_name: 'PreToolUse', session_id: 'worker-session', tool_name: 'exec_command', tool_input: { cmd: 'ponytail campaign schedule-ready --json' } }, pluginData);
   assert.equal(JSON.parse(schedule.stdout).hookSpecificOutput.permissionDecision, 'deny');
+  const reportPermission = run(worker, { hook_event_name: 'PreToolUse', session_id: 'worker-session', tool_name: 'exec_command', tool_input: { cmd: 'ponytail campaign report-blocker root --result {}' } }, pluginData);
+  assert.equal(JSON.parse(reportPermission.stdout).hookSpecificOutput.permissionDecision, 'deny');
   const statusCli = spawnSync(process.execPath, [path.join(__dirname, '..', 'src', 'campaign-census.js'), 'status', 'root', '--json'], {
     cwd: worker,
     env: { ...process.env, PLUGIN_DATA: pluginData, PONYTAIL_CAMPAIGN_STATE_DIR: pluginData },

@@ -155,7 +155,7 @@ function coordinatorCommand(toolInput) {
 
 function campaignCommand(toolInput) {
   for (const command of commandStrings(toolInput)) {
-    const match = /(?:^|(?:&&|\|\||;)\s*)ponytail campaign (status|runnable-plans|schedule-ready|ready-actions|observe|advance|reconcile|action-result|attach)(?:\s+([^\s;&|]+))?/.exec(command);
+    const match = /(?:^|(?:&&|\|\||;)\s*)ponytail campaign (status|runnable-plans|schedule-ready|ready-actions|observe|advance|reconcile|action-result|report-blocker|attach)(?:\s+([^\s;&|]+))?/.exec(command);
     if (match) return { operation: match[1], argument: match[2] ?? null };
   }
   return null;

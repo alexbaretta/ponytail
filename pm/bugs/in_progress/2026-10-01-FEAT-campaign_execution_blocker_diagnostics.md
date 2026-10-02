@@ -46,6 +46,34 @@ feature merely because documentation or reservations exist.
 
 ## Verification
 
+### Live authentication defect and correction
+
+The installed GWEN coordinator's three exact reports failed with
+`CAMPAIGN_COORDINATOR_REQUIRED`, although canonical coordinate and observe
+authenticated the same session. Source inspection proves two gaps: the trusted
+PreToolUse campaign matcher omitted `report-blocker`, and reporting required
+the standalone `PONYTAIL_SESSION_ID` environment variable instead of the native
+adapter's existing scoped `PLUGIN_DATA` coordinator binding. Direct CLI tests
+had supplied that variable and did not exercise the native boundary.
+
+Repair both participating layers: route the new command through the existing
+coordinator hook, and use the existing scoped coordinator binding in plugin
+mode (explicit session identity in standalone mode). Preserve denial of other
+sessions, worker mutations, unrelated campaign scopes, and unbound callers.
+Add one real hook-to-CLI regression without the standalone identity variable,
+then rerun focused and core acceptance before refreshing the approved install.
+This is a repair of the already-approved coordinator reporting capability, not
+new authority or a weakened host-review gate. The existing requirement and
+concurrency-shortfall UAT Arc already require bound coordinator ownership.
+
+The new regression failed before correction and all 48 focused hook and
+orchestration tests pass afterward. The confirmed occurrence is recorded in
+[adapter identity observation](../../debugging-pattern-observations/2026-10-01-coordinator_report_adapter_identity.json).
+The corrected full `npm test` pipeline passes, including 509 core tests,
+installer and bundled subprojects, eighty TSTS tests, and structural checks;
+traceability now validates 227 relationships. Live retry remains pending the
+corrected installed hook/runtime.
+
 - Forty focused orchestration tests pass, including real-Git CLI report
   persistence across process restart, original bootstrap/checkouts, scoped
   coordinator ownership, capability exclusion, explicit resolution, stale
