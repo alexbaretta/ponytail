@@ -14,9 +14,9 @@ Requirement: [pm/requirements/cli-interruption.md](cli-interruption.md)
 - unit-test: verifies [tests/ponytail-cli.test.js:74](../../tests/ponytail-cli.test.js#L74)
 - integration-test: verifies [scripts/test-project-index-postgres.sh:8](../../scripts/test-project-index-postgres.sh#L8)
 - uat: verifies [pm/uat/cli-interruption.md:9](../../pm/uat/cli-interruption.md#L9)
-- issue: introduces [pm/bugs/closed/2026-10-01-FEAT-cli_graceful_interruption.md:28](../../pm/bugs/closed/2026-10-01-FEAT-cli_graceful_interruption.md#L28)
-- issue: plans-implementation [pm/bugs/closed/2026-10-01-FEAT-cli_graceful_interruption.md:29](../../pm/bugs/closed/2026-10-01-FEAT-cli_graceful_interruption.md#L29)
-- issue: plans-verification [pm/bugs/closed/2026-10-01-FEAT-cli_graceful_interruption.md:30](../../pm/bugs/closed/2026-10-01-FEAT-cli_graceful_interruption.md#L30)
+- issue: introduces [pm/bugs/closed/2026-10-01-FEAT-cli_graceful_interruption.md:30](../../pm/bugs/closed/2026-10-01-FEAT-cli_graceful_interruption.md#L30)
+- issue: plans-implementation [pm/bugs/closed/2026-10-01-FEAT-cli_graceful_interruption.md:31](../../pm/bugs/closed/2026-10-01-FEAT-cli_graceful_interruption.md#L31)
+- issue: plans-verification [pm/bugs/closed/2026-10-01-FEAT-cli_graceful_interruption.md:32](../../pm/bugs/closed/2026-10-01-FEAT-cli_graceful_interruption.md#L32)
 
 ## REQ-WORKER-WORKTREE-RETENTION
 
