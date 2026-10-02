@@ -2,7 +2,7 @@
 
 - ID: `2026-10-01-BUG-bootstrap_adoption_upgrade_deadlock`
 - Type: BUG
-- Status: in_progress
+- Status: closed
 - Authority: the stakeholder authorized fixing confirmed Ponytail blockers
   while exercising the live GWEN campaign at maximum safe parallelism.
 
@@ -38,12 +38,21 @@ Wrong session, unrelated commit, changed source, occupied/locked registration,
 dirty checkout, or ignored-file overwrite must fail without replacing workers
 or discarding content. No main-worktree configuration is imported.
 
-The [subordinate plan](../../plans/in_progress/2026-10-01-bootstrap-adoption-upgrade/plan.md)
+The [subordinate plan](../../plans/closed/2026-10-01-bootstrap-adoption-upgrade/plan.md)
 owns implementation and acceptance. Requirements reconciliation begins with
 this implementation activation. Fixture proof is separate from live adoption
 of the two GWEN workers, which also needs the approved client capacity repair.
 
 ## Resolution
 
-Pending focused reproduction and implementation. No live checkout, slot,
-session, campaign action, or client-project configuration was modified.
+Implemented in `bde2674`: canonical capability-owned upgrade, V2 durable intent,
+unchanged historical V1, exact owning integration target, restart/recovery and
+original attachment. Focused 111-test production-boundary selection and all
+523 core/installer/bundled product tests pass; the structural gate passes
+604 files after staging, with 256 valid traceability relationships. See the
+plan for exact commands, logs, first-run failures and corrected gates.
+
+The [causal observation](../../debugging-pattern-observations/2026-10-01-bootstrap_checkpoint_upgrade.json)
+records the proven invariant. Live GWEN adoption remains dependent on its own
+capacity repair and index publication; no live checkout, slot, session,
+campaign action, or client-project configuration was modified by this repair.

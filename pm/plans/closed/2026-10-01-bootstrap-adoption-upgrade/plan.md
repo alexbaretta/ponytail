@@ -1,7 +1,7 @@
 # Original-worker bootstrap adoption upgrade
 
 - Plan ID: `2026-10-01-bootstrap-adoption-upgrade`
-- Status: in_progress
+- Status: closed
 - Management and component repository: Ponytail, this fixed checkout.
 - Approval: the active stakeholder instruction authorizes diagnosis and repair
   of confirmed Ponytail blockers in the live campaign. This bounded correction
@@ -17,7 +17,7 @@ Traceability: plans-verification REQ-WORKER-WORKTREE-RETENTION from plan 2026-10
 
 ## Objective and boundary
 
-Resolve the [confirmed bootstrap deadlock](../../../bugs/in_progress/2026-10-01-BUG-bootstrap_adoption_upgrade_deadlock.md)
+Resolve the [confirmed bootstrap deadlock](../../../bugs/closed/2026-10-01-BUG-bootstrap_adoption_upgrade_deadlock.md)
 under the [worker-continuity requirement](../../../requirements/worker-worktree-retention.md).
 An original provisioned, still-unattached worker must be able to receive an
 integrated adoption repair without losing exact-path recovery. Retain original
@@ -61,4 +61,27 @@ Questions: [RESOLVED] No policy or resource-topology choice is introduced.
 Only the exact integrated descendant can receive the repair; failures preserve
 existing ownership and user content.
 
-Final validation: pending.
+## Final validation
+
+Implementation commit: `bde2674`. The focused combined selection passes 111
+tests; the reconciled policy selection passes five. Configured full acceptance
+passes all product families: 523 core, installer harness, 23 Pi, four MCP, and
+80 TSTS tests. The tracked-file gate passes 604 files after staging the new
+observation. Traceability resolves 256 relationships without violations; rule
+copies, versions, generated adapters/registry/manifests, skill validation, Bash
+syntax, observation schema and diff checks pass. Build impact has no affected
+or indeterminate targets. Evidence: ignored `tmp/bootstrap-upgrade-focused.log`
+and `tmp/bootstrap-upgrade-final-permitted.log`.
+
+The first final attempt encountered sandbox PostgreSQL EPERM and an obsolete
+policy assertion; permitted database access and the canonical checkpoint
+expectation resolved those failures. The next run passed all product tests but
+found the new observation untracked; staging it and rerunning the structural
+gate passed. No failure was suppressed or replaced with broader permissions
+for live campaign mutation.
+
+This bounded Ponytail repair is accepted. The parent plan remains in_progress
+for its independent live host continuity and host-retention gates. Live
+effect-disposition/gate-race adoption still depends on the GWEN capacity repair
+and human index publication; no native session, client checkout, slot, or
+client-project configuration was changed by this plan.

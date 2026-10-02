@@ -54,9 +54,9 @@
     }
   ],
   "artifacts": [
-    {"class": "issue", "path": "pm/bugs/in_progress/2026-10-01-BUG-bootstrap_adoption_upgrade_deadlock.md", "locator": "text"},
-    {"class": "plan", "path": "pm/plans/in_progress/2026-10-01-bootstrap-adoption-upgrade/plan.md", "locator": "text"},
-    {"class": "plan", "path": "pm/plans/in_progress/2026-10-01-bootstrap-adoption-upgrade/sprints/S01.md", "locator": "text"},
+    {"class": "issue", "path": "pm/bugs/closed/2026-10-01-BUG-bootstrap_adoption_upgrade_deadlock.md", "locator": "text"},
+    {"class": "plan", "path": "pm/plans/closed/2026-10-01-bootstrap-adoption-upgrade/plan.md", "locator": "text"},
+    {"class": "plan", "path": "pm/plans/closed/2026-10-01-bootstrap-adoption-upgrade/sprints/S01.md", "locator": "text"},
     {"class": "issue", "path": "pm/bugs/closed/2026-10-01-FEAT-cli_graceful_interruption.md", "locator": "text"},
     {"class": "implementation", "path": "src/pm-pdf.py", "locator": "text"},
     {"class": "uat", "path": "pm/uat/cli-interruption.md", "locator": "text"},

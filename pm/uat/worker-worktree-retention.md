@@ -175,3 +175,35 @@ The repaired focused scheduler/recovery/hook suite passes 71 tests. Final core
 acceptance passes 506 core tests, installer and bundled suites, 80 TSTS tests,
 584-file structural validation, and 221 traceability relationships. Build-impact
 reports no affected or indeterminate targets.
+
+### Pre-attachment adoption upgrade Arc
+
+Actor: the original provisioned worker, still pending authenticated attachment.
+Automated profile: production CLI/hook/ledger boundaries and disposable real
+Git repositories; no live slots or resource provisioning.
+
+1. Preserve the original started creation and enroll its exact session/path.
+   Integrate an adoption-tooling repair in its owning top-level checkout.
+2. Invoke `ponytail worktree upgrade <original-token> --revision <integration-commit>`
+   from an existing neutral cwd. Verify clean detached switching, immutable
+   dispatch provenance, original action/client/token, and latest bootstrap V2.
+3. Resume persisted intent before/after switching, with checkout disappearance
+   both with and without retained registration. A later integration commit
+   does not change the pinned target. Repeated success is idempotent.
+4. Immediately adopt, establish the branch at the completed checkpoint and
+   authenticate the original attachment. Ordinary creation completion becomes
+   ACTIVE without a replacement or a new assignment.
+5. Reject wrong sessions, unintegrated targets, pending attachment, locked or
+   attached registration, tracked/untracked edits and ignored-file overwrite.
+   Preserve content and intent after a switch failure. Historical V1 records
+   normalize without invented upgrade history; enrollment replay preserves V2
+   checkpoints. Another top-level project's commits/configuration are not the
+   owning project's integration target even with shared Git objects.
+
+Implementation: `bde2674`. The combined focused production-boundary selection
+passes 111 tests. The six upgrade-specific real-Git tests include the exact
+original creation completion and negative controls. Full final core acceptance
+is recorded by the [repair plan](../plans/closed/2026-10-01-bootstrap-adoption-upgrade/plan.md).
+Live effect-disposition/gate-race adoption remains pending the GWEN capacity
+repair and its own human index publication; fixture proof does not establish
+live tasklet execution or host continuity.

@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-10-01-bootstrap_checkpoint_upgrade",
+  "recorded_at": "2026-10-01T22:32:56-07:00",
+  "source_references": ["pm/bugs/closed/2026-10-01-BUG-bootstrap_adoption_upgrade_deadlock.md", "commit:bde2674"],
+  "context": {
+    "languages": ["javascript", "python"],
+    "frameworks": [],
+    "components": ["campaign orchestration", "worker recovery"],
+    "affected_boundaries": ["dispatch enrollment", "Git checkpoint", "authenticated attachment"],
+    "code_references": ["src/campaign-orchestration.js:workerRecoveryBinding", "src/campaign-orchestration.js:upgradeWorker", "src/worker-worktrees.js:upgradeCheckout"]
+  },
+  "observed_behavior": "A pending worker needs integrated adoption tooling, but bootstrap requires the old dispatch scripts; an informal detached update breaks exact-path recovery.",
+  "expected_behavior": "The original worker can receive an integrated adoption repair while preserving its dispatch identity and a resumable exact-path checkpoint.",
+  "causal_mechanism": "One immutable dispatch revision was also the mutable recovery checkpoint, with no durable transition for receiving an integrated bootstrap repair before attachment.",
+  "anti_pattern": {
+    "structural_description": "Provenance and progress share one frozen value while the required prerequisite can change outside that checkpoint.",
+    "why_it_fails": "The prerequisite repair cannot reach the worker through the protocol; manually applying it invalidates recovery ownership."
+  },
+  "correct_pattern": {
+    "required_invariant": "Immutable dispatch provenance and original worker/action identity remain fixed while each Git transition has durable intent and completion.",
+    "implementation_description": "V2 bootstrap separates dispatch, completed and pending revisions; capability-owned upgrade pins the owning integration target before clean detached switching and resumes it through recovery."
+  },
+  "applicability_conditions": ["The original worker is provisioned but not attached", "Adoption requires tooling already integrated after dispatch", "Exact-path recovery validates a committed checkpoint"],
+  "known_non_matches": ["Authenticated worker rebase", "Unresolved native creation receipt", "Host authorization refusal or missing Git objects"],
+  "confirmation_evidence": ["The new real CLI fixture initially failed at neutral-cwd routing with exit 2", "Original creation now upgrades, reconstructs and completes authenticated attachment", "Actual ignored-file collision retains content and persisted intent", "Six before/after-switch and missing/unregistered prefixes resume the same checkpoint"],
+  "regression_proofs": ["tests/worker-worktrees.test.js: provisioned original worker upgrades integrated adoption tooling and retains exact-path recovery", "tests/worker-worktrees.test.js: bootstrap upgrade resumes every durable prefix without changing dispatch identity", "tests/worker-worktrees.test.js: bootstrap upgrade preserves an ignored collision and resumes the recorded intent after its removal"]
+}

@@ -422,6 +422,19 @@ bootstrap checkpoint; V1 readers remain unchanged. Adoption precedes setup,
 then canonical branch establishment and authenticated attachment complete the
 original creation. No replacement session or native path is inferred.
 
+Current bootstrap writers emit V2, while the exact V1 reader remains immutable.
+Normalization records V1's revision as both dispatch and completed checkpoint,
+with no pending upgrade. V2 separates immutable `dispatchRevision`, completed
+`revision`, and nullable `pendingRevision`. `worktree upgrade` lets only that
+original pending worker advance to the exact owning project's integrated
+descendant to receive an adoption repair. Existing project/ledger locks protect
+durable intent before detached Git movement and completion afterward. Recovery
+reconstructs the proven old/target checkpoint and finishes the pinned transition;
+it never treats an informal revision switch as ownership. Dirty and ignored
+content cannot be overwritten, pending intent blocks attachment, and replayed
+enrollment cannot erase checkpoints. Main-worktree objects are not project
+configuration. Adoption immediately follows upgrade, before full setup.
+
 For explicit human-requested retirement of a legacy cleanup action,
 `ARCHIVE_WORKTREE` carries both the bound session and exact
 worktree. The worker first performs the invoking project's canonical resource
