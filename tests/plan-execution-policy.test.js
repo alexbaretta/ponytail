@@ -103,6 +103,13 @@ test('planning and issue policy records prospective traceability without claimin
   assert.match(traceability, /from tasklet S01-F02-T03/);
   assert.match(planExecution, /canonical\nprospective annotation beside the stable plan or tasklet record/);
   assert.match(planExecution, /do not claim completed\ncoverage/);
+  assert.match(planExecution, /This checkpoint proves existing behavior and plan structure, not completion/);
+  assert.match(planExecution, /approved new behavior exists is a final gate, not an applicable starting/);
+  assert.match(planExecution, /Run configured structural traceability once; record exact forward gaps/);
+  assert.match(planExecution, /owning tasklets without claiming it passed/);
+  assert.match(planExecution, /Those gaps remain required\s+final-acceptance work/);
+  assert.match(planExecution, /resolve new, unplanned failures before starting/);
+  assert.match(planExecution, /Never describe\s+the whole repository as green while that check is red/);
   assert.match(issueTracking, /When implementation activates[\s\S]*canonical `introduces`/);
   assert.match(issueTracking, /never satisfy completed coverage/);
 });

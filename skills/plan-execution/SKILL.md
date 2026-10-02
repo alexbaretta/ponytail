@@ -209,11 +209,19 @@ Before requesting approval to start a plan:
    relying on chat history.
 6. Establish a green starting checkpoint by running every applicable test that
    does not require a human participant against the exact recorded Git state.
+   This checkpoint proves existing behavior and plan structure, not completion
+   of work the plan has yet to implement. A check that cannot pass until the
+   approved new behavior exists is a final gate, not an applicable starting
+   test. Run configured structural traceability once; record exact forward gaps
+   and owning tasklets without claiming it passed. Those gaps remain required
+   final-acceptance work. Compare other results with the recorded pre-plan
+   state and resolve new, unplanned failures before starting. Never describe
+   the whole repository as green while that check is red.
 
 A plan may not start while a known question is open. Approval is explicit; do
 not infer it from discussion, urgency, or approval of a different plan. A
-failing or unavailable required automated test also prevents the plan from
-starting. Record tests that inherently require a human participant as manual
+failing or unavailable required starting-checkpoint test also prevents the
+plan from starting. Record tests that inherently require a human participant as manual
 acceptance; do not put them on the automatic development critical path or
 represent them as automated evidence.
 

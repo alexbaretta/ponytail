@@ -22,7 +22,7 @@ Requirement: [pm/requirements/cli-interruption.md](cli-interruption.md)
 
 Requirement: [pm/requirements/worker-worktree-retention.md](worker-worktree-retention.md)
 
-- implementation: supports [skills/plan-execution/SKILL.md:861](../../skills/plan-execution/SKILL.md#L861)
+- implementation: supports [skills/plan-execution/SKILL.md:869](../../skills/plan-execution/SKILL.md#L869)
 - implementation: supports [skills/worktree-lifecycle/SKILL.md:17](../../skills/worktree-lifecycle/SKILL.md#L17)
 - implementation: implements [src/campaign-orchestration.js:8](../../src/campaign-orchestration.js#L8)
 - implementation: implements [src/worker-worktrees.js:6](../../src/worker-worktrees.js#L6)
@@ -67,7 +67,7 @@ Requirement: [pm/requirements/index.md](index.md)
 Requirement: [pm/requirements/plan-input-queue.md](plan-input-queue.md)
 
 - implementation: implements [hooks/plan-input.js:5](../../hooks/plan-input.js#L5)
-- implementation: supports [skills/plan-execution/SKILL.md:317](../../skills/plan-execution/SKILL.md#L317)
+- implementation: supports [skills/plan-execution/SKILL.md:325](../../skills/plan-execution/SKILL.md#L325)
 - implementation: implements [src/plan-input.js:5](../../src/plan-input.js#L5)
 - unit-test: verifies [tests/plan-input.test.js:2](../../tests/plan-input.test.js#L2)
 - integration-test: verifies [tests/plan-execution-policy.test.js:2](../../tests/plan-execution-policy.test.js#L2)
@@ -263,7 +263,7 @@ Requirement: [pm/requirements/campaign-orchestration.md](campaign-orchestration.
 
 Requirement: [pm/requirements/ponytail-cli-agent-harness.md](ponytail-cli-agent-harness.md)
 
-- implementation: implements [skills/plan-execution/SKILL.md:649](../../skills/plan-execution/SKILL.md#L649)
+- implementation: implements [skills/plan-execution/SKILL.md:657](../../skills/plan-execution/SKILL.md#L657)
 - unit-test: verifies [tests/policy-conformance.test.js:10](../../tests/policy-conformance.test.js#L10)
 - integration-test: verifies [tests/plan-execution-policy.test.js:4](../../tests/plan-execution-policy.test.js#L4)
 - uat: verifies [pm/uat/ponytail-cli-agent-harness.md:17](../../pm/uat/ponytail-cli-agent-harness.md#L17)
