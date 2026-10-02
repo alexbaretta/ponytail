@@ -179,11 +179,11 @@ function handle(data, environment = process.env) {
     if (!/^\/ponytail-enqueue\s+/.test(data.prompt || '')) return null;
   }
   if (data.hook_event_name === 'PreToolUse') {
-    const recovery = commandStrings(data.tool_input).map(command => /(?:^|(?:&&|\|\||;)\s*)ponytail worktree recover ([A-Za-z0-9_-]+)(?=\s*(?:$|&&|\|\||;))/.exec(command)).find(Boolean);
+    const recovery = commandStrings(data.tool_input).map(command => /(?:^|(?:&&|\|\||;)\s*)ponytail worktree (?:recover ([A-Za-z0-9_-]+)|upgrade ([A-Za-z0-9_-]+) --revision [a-f0-9]{40})(?=\s*(?:$|&&|\|\||;))/.exec(command)).find(Boolean);
     if (recovery) {
       try {
         if (typeof data.session_id !== 'string' || !data.session_id) fail('worker recovery requires a host-authenticated session identity');
-        workerRecoveryBinding(environment, recovery[1], data.session_id);
+        workerRecoveryBinding(environment, recovery[1] ?? recovery[2], data.session_id);
         const recoveryContext = workerRecoveryContext(environment, data.session_id);
         if (!recoveryContext) fail('worker recovery context is unavailable for this authenticated session');
         return preToolOutput(recoveryContext);

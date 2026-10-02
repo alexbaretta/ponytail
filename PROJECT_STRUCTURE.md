@@ -68,7 +68,8 @@ while project-wide management records remain under `pm/`.
   fast-forward integration, and typed host-action protocol.
   Its per-top-level-project ledgers own the retained worker pool and capacity
   reservations. `src/worker-worktrees.js` owns exact-path Git reconstruction
-  from authenticated main-worktree provenance, independently of host tools.
+  and checkpointed pre-attachment upgrades from authenticated main-worktree
+  provenance, independently of host tools.
   `src/worktree-reclamation.js` owns the versioned
   project lifecycle-adapter contracts, project-scoped reclamation lock,
   deterministic claim selection, generation fencing, and verified cleanup

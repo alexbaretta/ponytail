@@ -757,9 +757,10 @@ durable state instead of remembering worker assignments in conversation:
    the bootstrap sequence and `ponytail campaign attach <attachToken>` in its
    first instruction. Before campaign attachment, the worker verifies its exact assigned checkout
    and dispatch revision. If detached, it uses the host project's canonical worktree tooling
-   to adopt the checkout and establish its assignment branch at the exact
-   dispatch revision; it does not create another checkout or alter an existing
-   branch. Only then does it run the authenticated campaign attach command.
+   to adopt the checkout and establish its assignment branch at the completed
+   bootstrap checkpoint (initially the exact dispatch revision); it does not
+   create another checkout or alter an existing branch. Only then does it run
+   the authenticated campaign attach command.
    Bootstrap establishes local worktree prerequisites only: no plan edits or
    execution precede authenticated attachment. For `REUSE_WORKER`, message
    only the named idle session and require the same verified prerequisites and
@@ -861,6 +862,19 @@ establish its canonical assignment branch, and use the original attach token.
 Record ordinary creation success only after authenticated attachment. Once
 enrolled, capability-owned recovery does not require a fresh observation or a
 coordinator reminder.
+
+If adoption itself needs a tooling repair already integrated in the owning
+top-level project, the original provisioned worker may run `ponytail worktree
+upgrade <attachment-token> --revision <exact-integration-commit>` from an
+existing neutral cwd. This canonical operation advances only its clean detached
+checkout to that descendant, preserving original dispatch provenance and
+creation identity. Do not manually switch revisions before attachment: an
+unrecorded switch breaks recovery ownership. Upgrade checkpoints intent before
+moving Git; retry the same target or run `worktree recover` to finish a pending
+transition. Then immediately adopt, establish the branch at the completed
+checkpoint, and attach with the original token. Full environment setup follows
+adoption; bootstrap never authorizes plan edits or product tasklets. This path
+does not rebase an authenticated worker or permit arbitrary revisions.
 
 Every authenticated worker receives its owning top-level project, original
 checkout path, preserved branch, main-worktree path, and attachment recovery

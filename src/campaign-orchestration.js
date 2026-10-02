@@ -14,7 +14,7 @@ const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 const { buildRepositoryInventory, campaignGraph } = require('./campaign-census');
 const { runReclamation } = require('./worktree-reclamation');
-const { recoverySource, recoverCheckout, recoverLegacyCheckout } = require('./worker-worktrees');
+const { recoverySource, recoverCheckout, recoverLegacyCheckout, upgradeCheckout } = require('./worker-worktrees');
 
 const ASSIGNMENT_STATES = [
   'DISPATCH_PENDING',
@@ -757,11 +757,13 @@ function bindWorker(environment, invocationWorktree, attachToken, sessionId) {
   if (typeof attachToken !== 'string' || !attachToken || typeof sessionId !== 'string' || !sessionId) fail('CAMPAIGN_ATTACH_INPUT', 'attach requires a token and host session identity');
   const canonicalWorktree = fs.realpathSync(invocationWorktree);
   const { ledger, assignment } = attachmentForToken(environment, attachToken);
-  const bootstrap = ledger.pendingActions.find(item => item.assignmentId === assignment.id)?.payload.bootstrap;
-  if (bootstrap && (readWorkerBootstrapV1(bootstrap).sessionId !== sessionId || bootstrap.worktree !== canonicalWorktree)) fail('CAMPAIGN_WORKER_SCOPE', 'attach must retain the original provisioned session and checkout');
+  const bootstrapValue = ledger.pendingActions.find(item => item.assignmentId === assignment.id)?.payload.bootstrap;
+  const bootstrap = bootstrapValue && readCurrentWorkerBootstrap(bootstrapValue);
+  if (bootstrap && (bootstrap.sessionId !== sessionId || bootstrap.worktree !== canonicalWorktree || bootstrap.pendingRevision !== null)) fail('CAMPAIGN_WORKER_SCOPE', 'attach must retain the original provisioned session and checkout with completed bootstrap upgrade');
   if (!fs.existsSync(ledger.topLevelWorktree)) fail('CAMPAIGN_WORKER_OWNER_MISSING', `owning worktree is unavailable: ${ledger.topLevelWorktree}`);
   if (canonicalWorktree === ledger.topLevelWorktree) fail('CAMPAIGN_WORKER_SCOPE', 'a coordinator worktree cannot attach as its own worker');
   const identity = repositoryIdentity(canonicalWorktree);
+  if (bootstrap && identity.revision !== bootstrap.revision) fail('CAMPAIGN_WORKER_SCOPE', 'attach requires the completed bootstrap checkpoint');
   const source = recoverySource(ledger.topLevelWorktree);
   if (repositoryCommonDirectory(canonicalWorktree) !== source.mainGitDirectory) fail('CAMPAIGN_WORKER_SCOPE', 'worker does not belong to the owning project Git repository');
   if (!identity.branch) fail('CAMPAIGN_WORKER_SCOPE', 'worker worktree must have a branch');
@@ -836,8 +838,8 @@ function workerRecoveryBinding(environment, token, sessionId = null) {
   if (!binding) {
     const { ledger, assignment } = attachmentForToken(environment, token);
     const pending = ledger.pendingActions.find(item => item.assignmentId === assignment.id && item.type === 'CREATE_WORKER');
-    const bootstrap = pending?.payload.bootstrap && readWorkerBootstrapV1(pending.payload.bootstrap);
-    if (!bootstrap || pending.payload.dispatch?.state !== 'STARTED' || bootstrap.revision !== assignment.dispatchRevision
+    const bootstrap = pending?.payload.bootstrap && readCurrentWorkerBootstrap(pending.payload.bootstrap);
+    if (!bootstrap || pending.payload.dispatch?.state !== 'STARTED' || bootstrap.dispatchRevision !== assignment.dispatchRevision
       || (sessionId !== null && bootstrap.sessionId !== sessionId)) fail('CAMPAIGN_WORKER_RECOVERY', 'recovery capability does not belong to this authenticated worker');
     return { ...bootstrap, repositoryRoot: ledger.topLevelWorktree, campaignId: ledger.campaignId, assignmentId: assignment.id,
       coordinatorSessionId: ledger.coordinatorSessionId, attachTokenHash: hash, branch: null };
@@ -856,6 +858,54 @@ function readWorkerBootstrapV1(value) {
     if (!path.isAbsolute(value[key]) || path.resolve(value[key]) !== value[key]) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', `worker bootstrap ${key} must be an absolute normalized path`);
   }
   return value;
+}
+
+function readWorkerBootstrapV2(value) {
+  exactKeys(value, ['schemaVersion', 'sessionId', 'worktree', 'revision', 'mainWorktree', 'mainGitDirectory', 'dispatchRevision', 'pendingRevision'], 'worker bootstrap V2');
+  if (value.schemaVersion !== 2) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', 'unsupported worker bootstrap V2 version');
+  for (const key of ['sessionId', 'worktree', 'revision', 'mainWorktree', 'mainGitDirectory', 'dispatchRevision']) {
+    if (typeof value[key] !== 'string' || !value[key]) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', `worker bootstrap ${key} must be nonempty`);
+  }
+  optionalString(value.pendingRevision, 'worker bootstrap pendingRevision');
+  for (const key of ['worktree', 'mainWorktree', 'mainGitDirectory']) {
+    if (!path.isAbsolute(value[key]) || path.resolve(value[key]) !== value[key]) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', `worker bootstrap ${key} must be an absolute normalized path`);
+  }
+  return { ...value };
+}
+
+function readCurrentWorkerBootstrap(value) {
+  if (value?.schemaVersion === 2) return readWorkerBootstrapV2(value);
+  const physical = readWorkerBootstrapV1(value);
+  return readWorkerBootstrapV2({ ...physical, schemaVersion: 2, dispatchRevision: physical.revision, pendingRevision: null });
+}
+
+function upgradeWorker(environment, token, revision) {
+  if (typeof revision !== 'string' || !/^[a-f0-9]{40}$/.test(revision)) fail('CAMPAIGN_WORKER_UPGRADE', 'bootstrap upgrade requires an exact 40-hex commit');
+  const binding = workerRecoveryBinding(environment, token);
+  if (binding.branch !== null) fail('CAMPAIGN_WORKER_UPGRADE', 'bootstrap upgrade is only available before original attachment');
+  return withWorktreeLock(binding.repositoryRoot, environment, () => withLedgerLock(binding.repositoryRoot, binding.campaignId, environment, ledger => {
+    const currentBinding = workerRecoveryBinding(environment, token, binding.sessionId);
+    if (currentBinding.branch !== null) fail('CAMPAIGN_WORKER_UPGRADE', 'bootstrap upgrade is only available before original attachment');
+    const pending = ledger.pendingActions.find(item => item.assignmentId === binding.assignmentId && item.type === 'CREATE_WORKER');
+    const bootstrap = readCurrentWorkerBootstrap(pending.payload.bootstrap);
+    if (bootstrap.pendingRevision !== null && bootstrap.pendingRevision !== revision) fail('CAMPAIGN_WORKER_UPGRADE', 'finish the existing bootstrap upgrade target before selecting another');
+    if (repositoryCommonDirectory(binding.repositoryRoot) !== bootstrap.mainGitDirectory) fail('CAMPAIGN_WORKER_UPGRADE', 'owning project Git source changed');
+    const integrationRevision = git(binding.repositoryRoot, ['rev-parse', 'HEAD']);
+    if (bootstrap.pendingRevision === null && revision !== integrationRevision && revision !== bootstrap.revision) fail('CAMPAIGN_WORKER_UPGRADE', 'new bootstrap target must be the exact owning project integration HEAD');
+    git(bootstrap.mainWorktree, ['merge-base', '--is-ancestor', bootstrap.dispatchRevision, bootstrap.revision]);
+    git(bootstrap.mainWorktree, ['merge-base', '--is-ancestor', revision, integrationRevision]);
+    const result = upgradeCheckout(currentBinding, revision, checkpoint => {
+      bootstrap.pendingRevision = checkpoint;
+      pending.payload.bootstrap = readWorkerBootstrapV2(bootstrap);
+      // Persist the intent before Git moves. A failure retains it for the
+      // same capability-owned recovery; the outer lock writes completion.
+      writeLedger(ledgerPath(binding.repositoryRoot, binding.campaignId, environment), ledger);
+    });
+    bootstrap.revision = result.revision;
+    bootstrap.pendingRevision = null;
+    pending.payload.bootstrap = readWorkerBootstrapV2(bootstrap);
+    return result;
+  }));
 }
 
 function legacyRecoveryTarget(binding, assignment, ledger, environment) {
@@ -905,7 +955,7 @@ function workerRecoveryContextDetails(environment, sessionId) {
     if (bootstraps.length > 1) fail('CAMPAIGN_WORKER_RECOVERY', 'bootstrap worker ownership is ambiguous');
     if (bootstraps.length === 0) return null;
     const bootstrap = bootstraps[0];
-    return { legacy: false, context: `Provisioned original worker ${sessionId}: owning project ${bootstrap.binding.repositoryRoot}; original checkout ${bootstrap.binding.worktree}; main worktree ${bootstrap.binding.mainWorktree}; dispatch checkpoint ${bootstrap.binding.revision}. Your original creation is still pending attachment. If the checkout is missing, run ponytail worktree recover ${bootstrap.assignment.attachToken} from an existing neutral cwd. Immediately run canonical project adoption before setup, establish the project-owned branch, then ponytail campaign attach ${bootstrap.assignment.attachToken}. Preserve this session, original creation action, and capability; do not create a replacement. Recovery restores the original detached committed checkpoint only; preserve native snapshots.` };
+    return { legacy: false, context: `Provisioned original worker ${sessionId}: owning project ${bootstrap.binding.repositoryRoot}; original checkout ${bootstrap.binding.worktree}; main worktree ${bootstrap.binding.mainWorktree}; original dispatch ${bootstrap.binding.dispatchRevision}; completed bootstrap checkpoint ${bootstrap.binding.revision}; pending upgrade ${bootstrap.binding.pendingRevision ?? '(none)'}. Your original creation is still pending attachment. If the checkout is missing or an upgrade is pending, run ponytail worktree recover ${bootstrap.assignment.attachToken} from an existing neutral cwd. If adoption needs an integrated tooling repair, use ponytail worktree upgrade ${bootstrap.assignment.attachToken} --revision <exact-owning-project-integration-commit>. Immediately run canonical project adoption before setup, establish the project-owned branch at the completed checkpoint, then ponytail campaign attach ${bootstrap.assignment.attachToken}. Preserve this session, original creation action, dispatch provenance, and capability; do not create a replacement. Recovery restores the original detached committed checkpoint and finishes its persisted upgrade only; preserve native snapshots.` };
   }
   const ledger = readLedger(binding.repositoryRoot, binding.campaignId, environment);
   const assignment = ledger.assignments.find(({ id }) => id === binding.assignmentId);
@@ -931,6 +981,7 @@ function workerRecoveryContext(environment, sessionId) {
 function recoverWorker(environment, token) {
   let binding = workerRecoveryBinding(environment, token);
   if (binding.branch === null) {
+    if (binding.pendingRevision !== null) return upgradeWorker(environment, token, binding.pendingRevision);
     return withWorktreeLock(binding.repositoryRoot, environment, () => withLedgerLock(binding.repositoryRoot, binding.campaignId, environment, () => (
       recoverCheckout(workerRecoveryBinding(environment, token, binding.sessionId))
     )));
@@ -1873,10 +1924,11 @@ function recordActionResult(ledger, actionId, result, graph = null) {
     exactKeys(result, ['ok', 'disposition', 'sessionId', 'worktree'], 'provisioned action result');
     if (result.ok !== true || pendingAction.type !== 'CREATE_WORKER' || pendingAction.payload.dispatch?.state !== 'STARTED'
       || assignment.state !== 'DISPATCH_PENDING') fail('CAMPAIGN_ACTION_RESULT', 'PROVISIONED requires the original started creation pending attachment');
-    const bootstrap = readWorkerBootstrapV1({ schemaVersion: 1, sessionId: result.sessionId, worktree: result.worktree,
-      revision: assignment.dispatchRevision, ...recoverySource(ledger.topLevelWorktree) });
-    if (pendingAction.payload.bootstrap && JSON.stringify(readWorkerBootstrapV1(pendingAction.payload.bootstrap)) !== JSON.stringify(bootstrap)) fail('CAMPAIGN_ACTION_MISMATCH', 'original provisioned worker identity changed');
-    pendingAction.payload.bootstrap = bootstrap;
+    const bootstrap = readWorkerBootstrapV2({ schemaVersion: 2, sessionId: result.sessionId, worktree: result.worktree,
+      revision: assignment.dispatchRevision, dispatchRevision: assignment.dispatchRevision, pendingRevision: null, ...recoverySource(ledger.topLevelWorktree) });
+    const previous = pendingAction.payload.bootstrap && readCurrentWorkerBootstrap(pendingAction.payload.bootstrap);
+    if (previous && ['sessionId', 'worktree', 'dispatchRevision', 'mainWorktree', 'mainGitDirectory'].some(key => previous[key] !== bootstrap[key])) fail('CAMPAIGN_ACTION_MISMATCH', 'original provisioned worker identity changed');
+    pendingAction.payload.bootstrap = previous ?? bootstrap;
     return assignment;
   }
   if (result?.disposition === 'STARTED') {
@@ -2276,7 +2328,7 @@ module.exports = {
   CampaignStatusReaders,
   CampaignWorkerBindingReaders,
   CampaignWorkerDeliveryReaders,
-  CampaignWorkerBootstrapReaders: Object.freeze({ V1: readWorkerBootstrapV1 }),
+  CampaignWorkerBootstrapReaders: Object.freeze({ V1: readWorkerBootstrapV1, V2: readWorkerBootstrapV2 }),
   advanceLedger,
   scheduleReadyPlans,
   readRunnablePlansV1,
@@ -2328,6 +2380,7 @@ module.exports = {
   readyActions,
   recordActionResult,
   retireWorktree,
+  upgradeWorker,
   resolveInvocationWorktree,
   setLedgerCoordinator,
   run,

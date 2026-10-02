@@ -10,7 +10,7 @@ const os = require('node:os');
 const path = require('node:path');
 const { spawn, spawnSync } = require('node:child_process');
 const test = require('node:test');
-const { advanceLedger, bindWorker, ledgerPath, newLedger, readLedger, readWorkerBindings, reconcile, readyActions, recordActionResult, recoverWorker, replaceRecoveredWorkerBinding, validateActionResultBinding, withLedgerLock, withWorktreeLock, workerRecoveryBinding, workerRecoveryContext, writeHostObservation } = require('../src/campaign-orchestration');
+const { advanceLedger, bindWorker, CampaignWorkerBootstrapReaders, ledgerPath, newLedger, readLedger, readWorkerBindings, reconcile, readyActions, recordActionResult, recoverWorker, replaceRecoveredWorkerBinding, upgradeWorker, validateActionResultBinding, withLedgerLock, withWorktreeLock, workerRecoveryBinding, workerRecoveryContext, writeHostObservation } = require('../src/campaign-orchestration');
 const { handle } = require('../hooks/plan-input');
 const ponytail = path.join(__dirname, '..', 'cli', 'ponytail');
 
@@ -200,6 +200,163 @@ test('legacy replacement recovery returns the branch to the proven native checko
     assert.equal(readWorkerBindings(environment).bindings[0].worktree, worktree);
     assert.equal(recoverWorker(environment, token).worktree, worktree);
   });
+});
+
+function upgradableWorker(userOwned = false) {
+  const main = repository();
+  const root = userOwned ? path.join(directory(), 'owning-project') : main;
+  if (userOwned) git(main, ['worktree', 'add', '-b', 'owning-project', root]);
+  const worktree = path.join(directory(), 'original-worker');
+  const environment = { ...process.env, PONYTAIL_CAMPAIGN_STATE_DIR: directory() };
+  const ledger = newLedger(root, 'campaign', 'coordinator');
+  const pending = advanceLedger(graph(), ledger);
+  recordActionResult(ledger, pending.id, { ok: true, disposition: 'STARTED', hostIdentity: 'original-client' }, graph());
+  git(root, ['worktree', 'add', '--detach', worktree, ledger.integrationRevision]);
+  recordActionResult(ledger, pending.id, { ok: true, disposition: 'PROVISIONED', sessionId: 'original-session', worktree }, graph());
+  withLedgerLock(root, 'campaign', environment, saved => Object.assign(saved, ledger));
+  fs.writeFileSync(path.join(root, 'adoption-repair.txt'), 'integrated canonical adoption repair\n');
+  git(root, ['add', '.']);
+  git(root, ['-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.test', 'commit', '-qm', 'adoption repair']);
+  const revision = git(root, ['rev-parse', 'HEAD']);
+  return { main, root, worktree, environment, ledger, pending, revision };
+}
+
+test('provisioned original worker upgrades integrated adoption tooling and retains exact-path recovery', () => {
+  const { root, worktree, environment, ledger, pending, revision } = upgradableWorker();
+  const upgraded = spawnSync(ponytail, ['worktree', 'upgrade', pending.payload.attachToken, '--revision', revision], { cwd: os.tmpdir(), env: environment, encoding: 'utf8' });
+  assert.equal(upgraded.status, 0, upgraded.stderr);
+  assert.equal(JSON.parse(upgraded.stdout).revision, revision);
+  assert.equal(git(worktree, ['rev-parse', 'HEAD']), revision);
+  git(root, ['worktree', 'remove', worktree]);
+  assert.equal(recoverWorker(environment, pending.payload.attachToken).revision, revision);
+  const saved = readLedger(root, 'campaign', environment);
+  assert.equal(saved.assignments[0].dispatchRevision, ledger.integrationRevision);
+  assert.equal(saved.pendingActions[0].id, pending.id);
+  assert.equal(saved.pendingActions[0].payload.dispatch.hostIdentity, 'original-client');
+  recordActionResult(saved, pending.id, { ok: true, disposition: 'PROVISIONED', sessionId: 'original-session', worktree }, graph());
+  assert.equal(saved.pendingActions[0].payload.bootstrap.revision, revision);
+  git(worktree, ['switch', '-c', 'original-worker']);
+  const binding = bindWorker(environment, worktree, pending.payload.attachToken, 'original-session');
+  assert.equal(binding.revision, revision);
+  assert.throws(() => upgradeWorker(environment, pending.payload.attachToken, revision), /before original attachment/);
+  withLedgerLock(root, 'campaign', environment, completed => {
+    const result = { ok: true, sessionId: binding.sessionId, worktree, branch: binding.branch, revision };
+    validateActionResultBinding(completed, pending.id, result, environment);
+    recordActionResult(completed, pending.id, result, graph());
+  });
+  assert.equal(readLedger(root, 'campaign', environment).assignments[0].state, 'ACTIVE');
+  assert.deepEqual(readLedger(root, 'campaign', environment).pendingActions, []);
+});
+
+test('bootstrap upgrade resumes every durable prefix without changing dispatch identity', () => {
+  for (const prefix of ['before-switch', 'after-switch', 'missing-before-switch', 'missing-after-switch', 'unregistered-before-switch', 'unregistered-after-switch']) {
+    const { root, worktree, environment, ledger, pending, revision } = upgradableWorker();
+    withLedgerLock(root, 'campaign', environment, saved => { saved.pendingActions[0].payload.bootstrap.pendingRevision = revision; });
+    if (prefix.endsWith('after-switch')) git(worktree, ['switch', '--detach', revision]);
+    fs.writeFileSync(path.join(root, 'later.txt'), 'later integrated commit\n');
+    git(root, ['add', '.']);
+    git(root, ['-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.test', 'commit', '-qm', 'later integration']);
+    if (prefix.startsWith('missing')) {
+      // Model host deletion without removing the retained Git registration.
+      fs.rmSync(worktree, { recursive: true });
+    }
+    if (prefix.startsWith('unregistered')) git(root, ['worktree', 'remove', worktree]);
+    const preserved = readLedger(root, 'campaign', environment);
+    assert.throws(() => upgradeWorker(environment, pending.payload.attachToken, ledger.integrationRevision), /existing bootstrap upgrade target/);
+    if (fs.existsSync(worktree)) {
+      git(worktree, ['switch', '-c', `pending-${prefix}`]);
+      assert.throws(() => bindWorker(environment, worktree, pending.payload.attachToken, 'original-session'), /completed bootstrap upgrade/);
+      git(worktree, ['switch', '--detach']);
+    }
+    assert.deepEqual(readLedger(root, 'campaign', environment), preserved);
+    const result = recoverWorker(environment, pending.payload.attachToken);
+    assert.equal(result.revision, revision, prefix);
+    const completed = readLedger(root, 'campaign', environment);
+    assert.deepEqual(completed.assignments, preserved.assignments);
+    assert.equal(completed.pendingActions[0].id, pending.id);
+    assert.equal(completed.pendingActions[0].payload.bootstrap.dispatchRevision, ledger.integrationRevision);
+    assert.equal(completed.pendingActions[0].payload.bootstrap.pendingRevision, null);
+    assert.equal(completed.pendingActions[0].payload.bootstrap.revision, revision);
+    const replay = upgradeWorker(environment, pending.payload.attachToken, revision);
+    assert.equal(replay.restored, false);
+    assert.deepEqual(readLedger(root, 'campaign', environment), completed);
+  }
+});
+
+test('bootstrap upgrade uses its owning top-level integration rather than another project sharing Git objects', () => {
+  const { main, root, worktree, environment, pending, revision } = upgradableWorker(true);
+  fs.mkdirSync(path.join(main, '.agents', 'config', 'project'), { recursive: true });
+  fs.writeFileSync(path.join(main, '.agents', 'config', 'project', 'management.json'), 'not a project configuration to import\n');
+  git(main, ['add', '.']);
+  git(main, ['-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.test', 'commit', '-qm', 'different top-level project']);
+  assert.throws(() => upgradeWorker(environment, pending.payload.attachToken, git(main, ['rev-parse', 'HEAD'])), /exact owning project integration HEAD/);
+  assert.equal(upgradeWorker(environment, pending.payload.attachToken, revision).revision, revision);
+  assert.equal(git(worktree, ['rev-parse', 'HEAD']), git(root, ['rev-parse', 'HEAD']));
+  assert.equal(fs.existsSync(path.join(worktree, '.agents', 'config', 'project', 'management.json')), false);
+});
+
+test('bootstrap upgrade rejects dirty content and unintegrated targets and authenticates the original host session', () => {
+  const { root, worktree, environment, pending, revision } = upgradableWorker();
+  const original = readLedger(root, 'campaign', environment);
+  const command = `ponytail worktree upgrade ${pending.payload.attachToken} --revision ${revision}`;
+  const invocation = { hook_event_name: 'PreToolUse', cwd: os.tmpdir(), session_id: 'original-session', tool_input: { command } };
+  assert.ok(handle(invocation, environment).hookSpecificOutput.additionalContext.includes('original dispatch'));
+  assert.equal(handle({ ...invocation, session_id: 'wrong-session' }, environment).hookSpecificOutput.permissionDecision, 'deny');
+  for (const file of ['fixture.txt', 'untracked.txt']) {
+    fs.writeFileSync(path.join(worktree, file), 'preserve me\n');
+    assert.throws(() => upgradeWorker(environment, pending.payload.attachToken, revision), /clean checkout/);
+    assert.equal(fs.readFileSync(path.join(worktree, file), 'utf8'), 'preserve me\n');
+    assert.deepEqual(readLedger(root, 'campaign', environment), original);
+    if (file === 'fixture.txt') fs.writeFileSync(path.join(worktree, file), 'checkpoint\n');
+    else fs.unlinkSync(path.join(worktree, file));
+  }
+  git(root, ['worktree', 'lock', worktree]);
+  assert.throws(() => upgradeWorker(environment, pending.payload.attachToken, revision), /locked/);
+  git(root, ['worktree', 'unlock', worktree]);
+  git(worktree, ['switch', '-c', 'not-detached']);
+  assert.throws(() => upgradeWorker(environment, pending.payload.attachToken, revision), /registration/);
+  git(worktree, ['switch', '--detach']);
+  git(root, ['switch', '-c', 'other-integration']);
+  fs.writeFileSync(path.join(root, 'other.txt'), 'not integrated\n');
+  git(root, ['add', '.']);
+  git(root, ['-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.test', 'commit', '-qm', 'unintegrated']);
+  const other = git(root, ['rev-parse', 'HEAD']);
+  git(root, ['switch', 'main']);
+  assert.throws(() => upgradeWorker(environment, pending.payload.attachToken, other), /exact owning project integration HEAD/);
+  assert.deepEqual(readLedger(root, 'campaign', environment), original);
+});
+
+test('bootstrap upgrade preserves an ignored collision and resumes the recorded intent after its removal', () => {
+  const { root, worktree, environment, pending } = upgradableWorker();
+  fs.writeFileSync(path.join(root, 'ignored.txt'), 'integrated file\n');
+  git(root, ['add', '.']);
+  git(root, ['-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.test', 'commit', '-qm', 'integrated path']);
+  const revision = git(root, ['rev-parse', 'HEAD']);
+  const exclude = git(root, ['rev-parse', '--git-path', 'info/exclude']);
+  fs.appendFileSync(path.isAbsolute(exclude) ? exclude : path.join(root, exclude), '\nignored.txt\n');
+  fs.writeFileSync(path.join(worktree, 'ignored.txt'), 'preserved private data\n');
+  assert.throws(() => upgradeWorker(environment, pending.payload.attachToken, revision), /overwritten/);
+  assert.equal(fs.readFileSync(path.join(worktree, 'ignored.txt'), 'utf8'), 'preserved private data\n');
+  assert.equal(readLedger(root, 'campaign', environment).pendingActions[0].payload.bootstrap.pendingRevision, revision);
+  fs.renameSync(path.join(worktree, 'ignored.txt'), path.join(directory(), 'preserved.txt'));
+  assert.equal(recoverWorker(environment, pending.payload.attachToken).revision, revision);
+});
+
+test('bootstrap V1 is immutable and normalizes without inventing upgrade intent', () => {
+  const { root, worktree, environment, ledger, pending, revision } = upgradableWorker();
+  const current = readLedger(root, 'campaign', environment).pendingActions[0].payload.bootstrap;
+  assert.equal(current.schemaVersion, 2);
+  const physical = { schemaVersion: 1, sessionId: current.sessionId, worktree: current.worktree, revision: current.dispatchRevision,
+    mainWorktree: current.mainWorktree, mainGitDirectory: current.mainGitDirectory };
+  assert.deepEqual(CampaignWorkerBootstrapReaders.V1(physical), physical);
+  assert.throws(() => CampaignWorkerBootstrapReaders.V1({ ...physical, pendingRevision: null }), /exactly/);
+  assert.throws(() => CampaignWorkerBootstrapReaders.V2({ ...current, pendingRevision: 3 }), /pendingRevision/);
+  withLedgerLock(root, 'campaign', environment, saved => { saved.pendingActions[0].payload.bootstrap = physical; });
+  const binding = workerRecoveryBinding(environment, pending.payload.attachToken, 'original-session');
+  assert.equal(binding.dispatchRevision, ledger.integrationRevision);
+  assert.equal(binding.pendingRevision, null);
+  assert.equal(upgradeWorker(environment, pending.payload.attachToken, revision).revision, revision);
+  assert.equal(git(worktree, ['rev-parse', 'HEAD']), revision);
 });
 
 test('provisioned original worker recovers before adoption and attachment without replacing its started creation', () => {

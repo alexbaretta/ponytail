@@ -681,6 +681,7 @@ def print_usage():
   ponytail campaign deliver <campaign> --result <json>
   ponytail worktree reclaim [--dry-run] [--json]
   ponytail worktree recover <attachment-token>
+  ponytail worktree upgrade <attachment-token> --revision <commit>
   ponytail traceability index [--rebuild] [--json]
   ponytail traceability search <query> [--kind <kind>] [--role <role>] [--requirement <id>] [--path <path>] [--json]
   ponytail traceability validate [--plan <plan> | --campaign <plan>] [--json]
@@ -711,6 +712,11 @@ def run():
             fail("usage: ponytail worktree recover <attachment-token>")
         source_root = source_root_for(script_path, None)
         return run_cli(["node", str(source_root / "src/worker-worktrees.js"), arguments[2]])
+    if arguments[:2] == ["worktree", "upgrade"]:
+        if len(arguments) != 5 or arguments[3] != "--revision":
+            fail("usage: ponytail worktree upgrade <attachment-token> --revision <commit>")
+        source_root = source_root_for(script_path, None)
+        return run_cli(["node", str(source_root / "src/worker-worktrees.js"), *arguments[1:]])
     root, main_root = repository_roots(Path.cwd())
     operation = arguments.pop(0) if arguments else "help"
     home_value = os.environ.get("HOME")

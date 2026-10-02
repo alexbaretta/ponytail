@@ -131,6 +131,25 @@ function recoverLegacyCheckout(binding, originalWorktree, originalRevision, sour
     revision: checkpoint, mainWorktree, restored: false, content: 'COMMITTED_STATE' };
 }
 
+function upgradeCheckout(binding, revision, commitIntent) {
+  validateSource(binding);
+  if (binding.branch !== null) throw new Error('bootstrap upgrade requires the original detached worker');
+  const checkpoint = git(binding.mainWorktree, ['rev-parse', '--verify', `${revision}^{commit}`]).trim();
+  git(binding.mainWorktree, ['merge-base', '--is-ancestor', binding.revision, checkpoint]);
+  const record = worktrees(binding.mainWorktree).find(item => item.worktree === binding.worktree);
+  // A persisted intent proves either side of the switch. Without it, only
+  // the completed checkpoint authorizes reconstruction or an existing target.
+  const recovered = recoverCheckout({ ...binding, revision: binding.pendingRevision === checkpoint && record?.HEAD === checkpoint ? checkpoint : binding.revision });
+  if (git(binding.worktree, ['status', '--porcelain']).trim()) throw new Error('bootstrap upgrade requires a clean checkout; preserve local changes');
+  if (recovered.revision !== checkpoint) {
+    commitIntent(checkpoint);
+    git(binding.worktree, ['switch', '--no-overwrite-ignore', '--detach', checkpoint]);
+  }
+  if (git(binding.worktree, ['rev-parse', 'HEAD']).trim() !== checkpoint
+    || git(binding.worktree, ['branch', '--show-current']).trim()) throw new Error('bootstrap upgrade postcondition failed; preserve the checkout');
+  return { ...recovered, revision: checkpoint };
+}
+
 function readWorkerRecoveryV1(value) {
   const keys = ['schemaVersion', 'sessionId', 'worktree', 'branch', 'revision', 'mainWorktree', 'restored', 'content'];
   if (!value || typeof value !== 'object' || Array.isArray(value)
@@ -153,13 +172,16 @@ function readWorkerRecoveryV2(value) {
 }
 
 const WorkerRecoveryReaders = Object.freeze({ V1: readWorkerRecoveryV1, V2: readWorkerRecoveryV2 });
-module.exports = { recoverySource, recoverCheckout, recoverLegacyCheckout, WorkerRecoveryReaders };
+module.exports = { recoverySource, recoverCheckout, recoverLegacyCheckout, upgradeCheckout, WorkerRecoveryReaders };
 
 if (require.main === module) {
   try {
-    if (process.argv.length !== 3) throw new Error('usage: ponytail worktree recover <attachment-token>');
-    const { recoverWorker } = require('./campaign-orchestration');
-    process.stdout.write(`${JSON.stringify(readWorkerRecoveryV2(recoverWorker(process.env, process.argv[2])))}\n`);
+    const { recoverWorker, upgradeWorker } = require('./campaign-orchestration');
+    let result;
+    if (process.argv.length === 3) result = recoverWorker(process.env, process.argv[2]);
+    else if (process.argv.length === 6 && process.argv[2] === 'upgrade' && process.argv[4] === '--revision') result = upgradeWorker(process.env, process.argv[3], process.argv[5]);
+    else throw new Error('usage: ponytail worktree recover <attachment-token> | ponytail worktree upgrade <attachment-token> --revision <commit>');
+    process.stdout.write(`${JSON.stringify(readWorkerRecoveryV2(result))}\n`);
   } catch (error) {
     process.stderr.write(`error: ${error.message}\n`);
     process.exitCode = 1;

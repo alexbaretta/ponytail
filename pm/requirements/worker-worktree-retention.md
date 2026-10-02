@@ -54,6 +54,17 @@ original authenticated attachment. No replacement session or checkout is
 created. Contradictory, reused, unobserved, or non-managed identities must be
 rejected before enrollment; attachment must retain the enrolled session/path.
 
+When adoption is blocked by tooling at the original dispatch revision, the
+same provisioned worker must be able to receive the exact owning project's
+integrated descendant through a canonical capability-owned bootstrap upgrade.
+This is not permission to reset an authenticated worker or use an arbitrary
+commit. Preserve immutable dispatch provenance and original creation identity;
+checkpoint the pending target before moving a clean detached checkout, then
+checkpoint completion. Recovery and identical retries finish that transition
+without overwriting tracked, untracked, or ignored local content. Attachment
+must wait for completion, then adoption is immediate, before environment setup.
+Main-worktree Git objects remain a source, never its configuration or policy.
+
 Recovery reconstructs the worker's original checkout from its preserved Git
 branch in the recorded main worktree, without replacing the session, resetting
 the branch, touching another worker's checkout, or importing the main worktree's

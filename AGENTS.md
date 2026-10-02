@@ -104,6 +104,9 @@ services. `PROJECT_STRUCTURE.md` is authoritative for that boundary.
 - Worker-owned recovery: `ponytail worktree recover <attachment-token>` from
   an existing neutral cwd; restores only the bound original checkout from its
   main worktree. Campaign worker pairs are retained, not automatically retired.
+  An original provisioned worker may receive integrated adoption tooling with
+  `ponytail worktree upgrade <attachment-token> --revision <commit>` before
+  immediate adoption and attachment; pending upgrades resume through recovery.
 - Component registration: `ponytail register-component <name>` and
   `ponytail unregister-component <name>`; listing: `ponytail list-components`.
 - Project dependency registration: `ponytail register-dependency <project>` and

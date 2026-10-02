@@ -56,6 +56,14 @@ source. Preserve session, branch, assignment, and any native snapshot; committed
 Git state cannot prove restoration of unsaved files. No coordinator-initiated
 recovery action is required. Disable host automatic deletion for retained pools.
 
+Before its first attachment, an enrolled original worker may need an integrated
+adoption-tooling repair. Use `ponytail worktree upgrade <attachment-token>
+--revision <exact-owning-project-integration-commit>` rather than an informal
+detached switch. It checkpoints the same worker's descendant transition for
+recovery; pending intent must finish before immediate adoption, branch
+establishment, and original attachment. It does not replace the pair or allocate
+resources. Authenticated workers use their ordinary plan/rebase protocol.
+
 ## Cleanup Contract
 
 Garbage-collect an abandoned agent-owned worktree promptly, and always before

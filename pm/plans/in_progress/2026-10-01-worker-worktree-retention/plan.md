@@ -23,6 +23,10 @@ checkout from its recorded main worktree without coordinator initiation.
 
 ## Execution
 
+The bounded [bootstrap adoption upgrade repair](../2026-10-01-bootstrap-adoption-upgrade/plan.md)
+preserves original worker continuity when an integrated adoption repair must
+reach a provisioned worker before its first attachment.
+
 [S01](sprints/S01.md) is approved. Its ordered tasklets cover baseline repair,
 test-first retention/capacity, worker recovery, and policy/acceptance. Existing
 physical serialized readers remain immutable; new persistent contracts have
