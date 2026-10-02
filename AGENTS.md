@@ -76,7 +76,8 @@ services. `PROJECT_STRUCTURE.md` is authoritative for that boundary.
 - Complete installation: `./scripts/install.sh`.
 - Local setup validation: `ponytail validate`.
 - Local reference QA: `ponytail qa`; no downstream integration suite.
-- Full-text index maintenance: `ponytail search update-index`; query:
+- Full-text index maintenance: `ponytail search update-index [-j <n_workers>]
+  [-n <commits_per_db_transaction>]`; query:
   `ponytail search query <text>` with optional ref, commit, history, and path selectors.
 - Campaign coordination: `ponytail campaign status [<campaign>] --json`,
   `ponytail campaign report-blocker <campaign> --result <json>` for scoped

@@ -15,6 +15,7 @@ const {
   evaluateValidationRules,
   normalizePlanPayloads,
   parseGrepArguments,
+  parseRepositoryIndexUpdateArguments,
   parsePlanGraphArguments,
   parsePlanSearchArguments,
   parseSearchArguments,
@@ -80,6 +81,21 @@ test('parses exact repository grep selectors and paths', () => {
   assert.throws(() => parseGrepArguments(['needle', '--path', '../outside']),
     /invalid repository path/);
   assert.throws(() => parseGrepArguments(['']), /must not be empty/);
+});
+
+test('parses exact repository index worker and transaction options', () => {
+  assert.deepEqual(parseRepositoryIndexUpdateArguments([], 8), {
+    workers: 4,
+    commitsPerTransaction: 1,
+  });
+  assert.deepEqual(parseRepositoryIndexUpdateArguments(['-n', '5', '-j', '3'], 8), {
+    workers: 3,
+    commitsPerTransaction: 5,
+  });
+  for (const arguments of [
+    ['-j'], ['-n'], ['-j', '0'], ['-n', '-1'], ['-j', '1.5'], ['-n', 'value'],
+    ['-j', '2', '-j', '3'], ['-n', '2', '-n', '3'], ['--workers', '2'],
+  ]) assert.throws(() => parseRepositoryIndexUpdateArguments(arguments, 8), /usage:/);
 });
 
 test('index progress emits cumulative markers, throughput ETA, and final publication phase', () => {

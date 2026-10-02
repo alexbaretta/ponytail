@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-10-01-shared_schema_setup_deadlock",
+  "recorded_at": "2026-10-01T21:51:49-07:00",
+  "source_references": [
+    "scripts/test-project-index-postgres.sh",
+    "pm/plans/in_progress/2026-10-01-parallel-repository-index-ingestion/sprints/S01.md"
+  ],
+  "context": {
+    "languages": ["bash", "javascript", "sql"],
+    "frameworks": ["PostgreSQL"],
+    "components": ["project-index PostgreSQL acceptance harness"],
+    "affected_boundaries": ["shared schema provisioning versus fixture-owned data execution"],
+    "code_references": [
+      "scripts/test-project-index-postgres.sh:database_ready",
+      "scripts/setup-project-journal.sh",
+      "scripts/project-index.sql"
+    ]
+  },
+  "observed_behavior": "An isolated project-index acceptance run deadlocked during unconditional shared-schema setup while an unrelated repository index writer was active; PostgreSQL selected the fixture setup backend as the deadlock victim before fixture assertions ran.",
+  "expected_behavior": "A fixture run against an already current versioned schema performs only fixture-owned data work and does not acquire shared DDL locks that can interfere with an unrelated live writer.",
+  "causal_mechanism": "The harness replayed idempotent schema DDL on every invocation even when both required versioned schema families were already present and current. PostgreSQL still acquires relation locks for idempotent DDL, which formed a lock cycle with the independent writer transaction.",
+  "anti_pattern": {
+    "structural_description": "A data-isolated integration harness coupled every run to global idempotent schema provisioning without checking the schema's durable version contract first.",
+    "why_it_fails": "Idempotent DDL avoids duplicate objects but not relation locks, so an unrelated live transaction can be delayed or deadlocked even though all fixture rows use distinct project identities."
+  },
+  "correct_pattern": {
+    "required_invariant": "Run canonical schema provisioning when required versioned schema objects are absent or stale; otherwise execute only fixture-owned data operations.",
+    "implementation_description": "The harness performs a read-only readiness probe for the journal action table and both exact V1 project-index version tables. It invokes the canonical setup script only when that complete versioned boundary is unavailable, while connection, missing-object, and version mismatch failures remain actionable through normal setup."
+  },
+  "applicability_conditions": [
+    "An integration harness shares a PostgreSQL schema with independently running processes.",
+    "Schema readiness is represented by explicit versioned objects and the test's mutable rows have separate proven ownership."
+  ],
+  "known_non_matches": [
+    "A missing or stale schema still requires canonical setup and its DDL locks.",
+    "Concurrent fixture rows with overlapping ownership require their own isolation contract; schema readiness does not make shared data mutation safe."
+  ],
+  "confirmation_evidence": [
+    "The failure occurred in psql project-index schema setup before the Node fixture began and named the unrelated writer backend in PostgreSQL's deadlock detail.",
+    "The unrelated writer process remained alive after PostgreSQL aborted the fixture setup backend.",
+    "After the readiness gate, the same acceptance command skipped DDL, reached the intended missing-worker failing-first assertion, and later passed the complete real-process PostgreSQL suite."
+  ],
+  "regression_proofs": [
+    "scripts/test-project-index-postgres.sh: database_ready skips current shared schema setup and completes the isolated PostgreSQL contract suite"
+  ]
+}

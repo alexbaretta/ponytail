@@ -4,8 +4,9 @@
 
 const crypto = require('node:crypto');
 const fs = require('node:fs');
+const os = require('node:os');
 const path = require('node:path');
-const { execFileSync, spawn, spawnSync } = require('node:child_process');
+const { execFileSync, fork, spawn, spawnSync } = require('node:child_process');
 
 const {
   findRelationships,
@@ -1779,6 +1780,30 @@ function parseGrepArguments(args) {
   return { query, selector: selector ?? 'worktree', selectorValue, path: pathFilter, ignoreCase };
 }
 
+function parseRepositoryIndexUpdateArguments(args, cpuCount = os.availableParallelism()) {
+  const values = [...args];
+  const result = {
+    workers: Math.max(1, Math.floor(cpuCount / 2)),
+    commitsPerTransaction: 1,
+  };
+  const seen = new Set();
+  while (values.length > 0) {
+    const option = values.shift();
+    if (!['-j', '-n'].includes(option) || seen.has(option) || values.length === 0 ||
+        !/^[1-9][0-9]*$/u.test(values[0])) {
+      throw new ProjectIndexError('REPOSITORY_INDEX_USAGE',
+        'usage: ponytail search update-index [-j <n_workers>] [-n <commits_per_db_transaction>]');
+    }
+    seen.add(option);
+    const value = Number(values.shift());
+    if (!Number.isSafeInteger(value)) throw new ProjectIndexError('REPOSITORY_INDEX_USAGE',
+      'usage: ponytail search update-index [-j <n_workers>] [-n <commits_per_db_transaction>]');
+    if (option === '-j') result.workers = value;
+    else result.commitsPerTransaction = value;
+  }
+  return result;
+}
+
 function resolveCommit(root, selector, value) {
   if (selector === 'commit' && !/^[0-9a-f]{4,64}$/iu.test(value)) {
     throw new ProjectIndexError('REPOSITORY_GREP_REVISION', `invalid commit id: ${value}`);
@@ -1849,6 +1874,191 @@ async function insertTextDocument(client, buffer) {
   return documentId;
 }
 
+async function prepareGitCommitBatch(context, commits, signal) {
+  const prepared = [];
+  const blobOids = new Set();
+  for (const [commitOid, ...parents] of commits) {
+    signal?.throwIfAborted();
+    const [treeOid, committedAt] = (await gitBuffer(context.root, [
+      'show', '-s', '--format=%T%x00%cI', commitOid,
+    ])).toString('utf8').trim().split('\0');
+    const entries = nulStrings(await gitBuffer(context.root, [
+      'ls-tree', '-r', '-z', '--full-tree', commitOid,
+    ])).map(value => {
+      const match = value.match(/^([0-7]{6}) (blob|commit) ([0-9a-f]{40,64})\t([\s\S]+)$/u);
+      if (match === null) throw new Error(`invalid git tree entry: ${value}`);
+      return { mode: match[1], type: match[2], blobOid: match[3], path: match[4] };
+    }).filter(entry => entry.type === 'blob');
+    for (const entry of entries) blobOids.add(entry.blobOid);
+    prepared.push({ commitOid, parents, treeOid, committedAt, entries });
+  }
+  const blobs = new Map();
+  for (const blobOid of [...blobOids].sort()) {
+    signal?.throwIfAborted();
+    blobs.set(blobOid, await gitBuffer(context.root, ['cat-file', 'blob', blobOid]));
+  }
+  return { commits: prepared, blobs };
+}
+
+async function ingestGitCommitBatch(client, context, commits, signal) {
+  const prepared = await prepareGitCommitBatch(context, commits, signal);
+  let blobs = 0;
+  await client.query('BEGIN');
+  try {
+    const orderedCommits = [...prepared.commits].sort((left, right) =>
+      left.commitOid.localeCompare(right.commitOid));
+    for (const commit of orderedCommits) {
+      signal?.throwIfAborted();
+      await client.query(`
+        INSERT INTO ponytail_index.git_commit_v1 (
+          repository_id, commit_oid, tree_oid, committed_at
+        ) VALUES ($1::uuid, $2, $3, $4::timestamptz)
+        ON CONFLICT (repository_id, commit_oid) DO NOTHING`, [
+        context.repositoryId, commit.commitOid, commit.treeOid, commit.committedAt,
+      ]);
+    }
+    for (const commit of orderedCommits) {
+      for (const [parentOrder, parentOid] of commit.parents.entries()) {
+        signal?.throwIfAborted();
+        await client.query(`
+          INSERT INTO ponytail_index.git_commit_parent_v1 (
+            repository_id, commit_oid, parent_oid, parent_order
+          ) VALUES ($1::uuid, $2, $3, $4)
+          ON CONFLICT DO NOTHING`, [
+          context.repositoryId, commit.commitOid, parentOid, parentOrder,
+        ]);
+      }
+    }
+    const documents = new Map([...prepared.blobs.values()].map(buffer => [digest(buffer), buffer]));
+    for (const [documentId, buffer] of [...documents].sort(([left], [right]) =>
+      left.localeCompare(right))) {
+      signal?.throwIfAborted();
+      const content = textContent(buffer);
+      if (content !== null) await client.query(`
+        INSERT INTO ponytail_index.text_document_v1 (document_id, content)
+        VALUES ($1, $2)
+        ON CONFLICT (document_id) DO NOTHING`, [documentId, content]);
+    }
+    for (const [blobOid, buffer] of [...prepared.blobs].sort(([left], [right]) =>
+      left.localeCompare(right))) {
+      signal?.throwIfAborted();
+      const documentId = textContent(buffer) === null ? null : digest(buffer);
+      const inserted = await client.query(`
+        INSERT INTO ponytail_index.git_blob_v1 (
+          repository_id, blob_oid, byte_length, document_id
+        ) VALUES ($1::uuid, $2, $3, $4)
+        ON CONFLICT (repository_id, blob_oid) DO NOTHING
+        RETURNING blob_oid`, [context.repositoryId, blobOid, buffer.length, documentId]);
+      blobs += inserted.rows.length;
+    }
+    const entries = prepared.commits.flatMap(commit => commit.entries.map(entry => ({
+      ...entry, commitOid: commit.commitOid,
+    }))).sort((left, right) => left.commitOid.localeCompare(right.commitOid) ||
+      left.path.localeCompare(right.path));
+    for (const entry of entries) {
+      signal?.throwIfAborted();
+      await client.query(`
+        INSERT INTO ponytail_index.git_tree_entry_v1 (
+          repository_id, commit_oid, path, mode, blob_oid
+        ) VALUES ($1::uuid, $2, $3, $4, $5)
+        ON CONFLICT DO NOTHING`, [
+        context.repositoryId, entry.commitOid, entry.path, entry.mode, entry.blobOid,
+      ]);
+    }
+    signal?.throwIfAborted();
+    await client.query('COMMIT');
+    return { commits: prepared.commits.length, blobs };
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  }
+}
+
+function workerFailure(message) {
+  const error = new ProjectIndexError(message.code ?? 'PROJECT_INDEX_FAILURE', message.message);
+  if (message.stack !== undefined) error.stack = message.stack;
+  return error;
+}
+
+async function ingestGitHistoryWithWorkers(context, unseen, options) {
+  const batches = [];
+  for (let index = 0; index < unseen.length; index += options.commitsPerTransaction) {
+    batches.push(unseen.slice(index, index + options.commitsPerTransaction));
+  }
+  const workerCount = options.workers;
+  const children = [];
+  const exits = [];
+  let nextBatch = 0;
+  let completed = 0;
+  let blobs = 0;
+  let failure;
+  let progress = Promise.resolve();
+  const send = (child, message) => {
+    if (child.connected) child.send(message);
+  };
+  const stop = error => {
+    if (failure === undefined) failure = error;
+    for (const child of children) send(child, { type: 'abort' });
+  };
+  const assign = child => {
+    if (failure !== undefined || options.signal?.aborted) send(child, { type: 'abort' });
+    else if (nextBatch < batches.length) {
+      send(child, { type: 'batch', commits: batches[nextBatch] });
+      nextBatch += 1;
+    } else send(child, { type: 'stop' });
+  };
+  const abort = () => stop(options.signal.reason ?? new ProjectIndexError(
+    'REPOSITORY_INDEX_INTERRUPTED', 'index update interrupted'));
+  options.signal?.addEventListener('abort', abort, { once: true });
+  try {
+    options.signal?.throwIfAborted();
+    try {
+      for (let index = 0; index < workerCount; index += 1) {
+        const child = fork(__filename, ['--repository-index-worker'], {
+          cwd: context.root,
+          stdio: ['ignore', 'ignore', 'ignore', 'ipc'],
+        });
+        children.push(child);
+        let expectedExit = false;
+        exits.push(new Promise(resolve => {
+          child.on('message', message => {
+            if (message.type === 'ready') assign(child);
+            else if (message.type === 'complete') {
+              progress = progress.then(async () => {
+                completed += message.commits;
+                blobs += message.blobs;
+                await options.onProgress?.(completed, unseen.length);
+                assign(child);
+              }).catch(stop);
+            } else if (message.type === 'error') {
+              expectedExit = true;
+              stop(workerFailure(message));
+            } else if (message.type === 'stopped') expectedExit = true;
+          });
+          child.on('error', stop);
+          child.on('exit', (code, signal) => {
+            if (!expectedExit && failure === undefined) stop(new ProjectIndexError(
+              'REPOSITORY_INDEX_WORKER_EXIT',
+              `repository index worker exited unexpectedly (${signal ?? code})`));
+            resolve();
+          });
+        }));
+        options.onWorkerStart?.(child.pid);
+        send(child, { type: 'initialize', context });
+      }
+    } catch (error) {
+      stop(error);
+    }
+    await Promise.all(exits);
+    await progress;
+    if (failure !== undefined) throw failure;
+    options.signal?.throwIfAborted();
+    return { commits: completed, blobs };
+  } finally {
+    options.signal?.removeEventListener('abort', abort);
+  }
+}
+
 async function ingestGitHistory(client, context, tips, options) {
   if (tips.length === 0) return { commits: 0, blobs: 0 };
   const lines = (await gitBuffer(context.root, [
@@ -1862,64 +2072,73 @@ async function ingestGitHistory(client, context, tips, options) {
   let commits = 0;
   let blobs = 0;
   await options.onProgress?.(commits, unseen.length);
-  for (const [commitOid, ...parents] of unseen) {
-    options.signal?.throwIfAborted();
-    const [treeOid, committedAt] = (await gitBuffer(context.root, [
-      'show', '-s', '--format=%T%x00%cI', commitOid,
-    ])).toString('utf8').trim().split('\0');
-    await client.query('BEGIN');
-    await client.query(`
-      INSERT INTO ponytail_index.git_commit_v1 (
-        repository_id, commit_oid, tree_oid, committed_at
-      ) VALUES ($1::uuid, $2, $3, $4::timestamptz)
-      ON CONFLICT (repository_id, commit_oid) DO NOTHING`, [
-      context.repositoryId, commitOid, treeOid, committedAt,
-    ]);
-    for (const [parentOrder, parentOid] of parents.entries()) {
-      await client.query(`
-        INSERT INTO ponytail_index.git_commit_parent_v1 (
-          repository_id, commit_oid, parent_oid, parent_order
-        ) VALUES ($1::uuid, $2, $3, $4)
-        ON CONFLICT DO NOTHING`, [context.repositoryId, commitOid, parentOid, parentOrder]);
-    }
-    const entries = nulStrings(await gitBuffer(context.root, [
-      'ls-tree', '-r', '-z', '--full-tree', commitOid,
-    ])).map(value => {
-      const match = value.match(/^([0-7]{6}) (blob|commit) ([0-9a-f]{40,64})\t([\s\S]+)$/u);
-      if (match === null) throw new Error(`invalid git tree entry: ${value}`);
-      return { mode: match[1], type: match[2], blobOid: match[3], path: match[4] };
-    }).filter(entry => entry.type === 'blob');
-    for (const entry of entries) {
-      options.signal?.throwIfAborted();
-      const existing = await client.query(`
-        SELECT 1 FROM ponytail_index.git_blob_v1
-        WHERE repository_id = $1::uuid AND blob_oid = $2`, [context.repositoryId, entry.blobOid]);
-      if (existing.rows.length === 0) {
-        const buffer = await gitBuffer(context.root, ['cat-file', 'blob', entry.blobOid]);
-        const documentId = await insertTextDocument(client, buffer);
-        await client.query(`
-          INSERT INTO ponytail_index.git_blob_v1 (
-            repository_id, blob_oid, byte_length, document_id
-          ) VALUES ($1::uuid, $2, $3, $4)
-          ON CONFLICT (repository_id, blob_oid) DO NOTHING`, [
-          context.repositoryId, entry.blobOid, buffer.length, documentId,
-        ]);
-        blobs += 1;
-      }
-      await client.query(`
-        INSERT INTO ponytail_index.git_tree_entry_v1 (
-          repository_id, commit_oid, path, mode, blob_oid
-        ) VALUES ($1::uuid, $2, $3, $4, $5)
-        ON CONFLICT DO NOTHING`, [
-        context.repositoryId, commitOid, entry.path, entry.mode, entry.blobOid,
-      ]);
-    }
-    options.signal?.throwIfAborted();
-    await client.query('COMMIT');
-    commits += 1;
+  if (unseen.length === 0) return { commits, blobs };
+  if (options.workers !== undefined) return ingestGitHistoryWithWorkers(context, unseen, options);
+  const commitsPerTransaction = options.commitsPerTransaction ?? 1;
+  for (let index = 0; index < unseen.length; index += commitsPerTransaction) {
+    const result = await ingestGitCommitBatch(
+      client, context, unseen.slice(index, index + commitsPerTransaction), options.signal,
+    );
+    commits += result.commits;
+    blobs += result.blobs;
     await options.onProgress?.(commits, unseen.length);
   }
   return { commits, blobs };
+}
+
+async function runRepositoryIndexWorker() {
+  const abortController = new AbortController();
+  let busy = false;
+  let client;
+  let context;
+  let pool;
+  let stopped = false;
+  const send = message => new Promise(resolve => {
+    if (process.connected) process.send(message, resolve);
+    else resolve();
+  });
+  const finish = async message => {
+    if (stopped) return;
+    stopped = true;
+    await send(message);
+    client?.release();
+    await pool?.end();
+    process.disconnect();
+  };
+  const abort = () => {
+    if (!abortController.signal.aborted) abortController.abort(new ProjectIndexError(
+      'REPOSITORY_INDEX_INTERRUPTED', 'repository index worker interrupted'));
+    if (!busy) void finish({ type: 'stopped' });
+  };
+  process.once('SIGINT', abort);
+  process.once('SIGTERM', abort);
+  process.on('message', async message => {
+    try {
+      if (message.type === 'initialize') {
+        context = message.context;
+        pool = new (require('pg').Pool)(databaseOptions(context.root));
+        client = await pool.connect();
+        await send({ type: 'ready' });
+      } else if (message.type === 'batch') {
+        busy = true;
+        const result = await ingestGitCommitBatch(
+          client, context, message.commits, abortController.signal,
+        );
+        busy = false;
+        await send({ type: 'complete', ...result });
+        if (abortController.signal.aborted) await finish({ type: 'stopped' });
+      } else if (message.type === 'abort') abort();
+      else if (message.type === 'stop') await finish({ type: 'stopped' });
+    } catch (error) {
+      busy = false;
+      await finish({
+        type: abortController.signal.aborted ? 'stopped' : 'error',
+        code: error.code,
+        message: error.message,
+        stack: error.stack,
+      });
+    }
+  });
 }
 
 function stableFileBuffer(root, relativePath) {
@@ -2134,6 +2353,7 @@ function repositoryIndexProgress(stream = process.stdout, now = Date.now) {
   };
   return {
     update(value, maximum) {
+      const prior = completed;
       completed = value;
       total = maximum;
       const payload = status();
@@ -2148,12 +2368,15 @@ function repositoryIndexProgress(stream = process.stdout, now = Date.now) {
       } else if (stream.isTTY) {
         bar.update(completed, { remaining: payload.eta });
       } else {
-        stream.write('.');
-        if (completed % 10 === 0) stream.write('+');
-        lineOpen = true;
-        if (completed % 50 === 0) {
-          stream.write(`| ${payload.percentage}% ETA ${payload.eta}\n`);
-          lineOpen = false;
+        for (let durable = prior + 1; durable <= completed; durable += 1) {
+          stream.write('.');
+          if (durable % 10 === 0) stream.write('+');
+          lineOpen = true;
+          if (durable % 50 === 0) {
+            const percentage = total === 0 ? 100 : Math.floor(durable * 100 / total);
+            stream.write(`| ${percentage}% ETA ${payload.eta}\n`);
+            lineOpen = false;
+          }
         }
       }
     },
@@ -2293,8 +2516,7 @@ async function run(args) {
   const family = args.shift();
   const operation = args.shift();
   if (family === 'search' && operation === 'update-index') {
-    if (args.length > 0) throw new ProjectIndexError(
-      'REPOSITORY_INDEX_USAGE', 'usage: ponytail search update-index');
+    const update = parseRepositoryIndexUpdateArguments(args);
     const progress = repositoryIndexProgress();
     const abortController = new AbortController();
     const interrupt = () => abortController.abort(new ProjectIndexError(
@@ -2303,6 +2525,8 @@ async function run(args) {
     process.once('SIGTERM', interrupt);
     try {
       const result = await refreshRepositoryTextIndex({
+        workers: update.workers,
+        commitsPerTransaction: update.commitsPerTransaction,
         onProgress: progress.update, onPublish: progress.publish, signal: abortController.signal,
       });
       process.stdout.write(`Index updated: ${result.history.commits} commits, ${result.history.blobs} new blobs\n`);
@@ -2371,7 +2595,9 @@ async function run(args) {
   else printSearchHuman(result);
 }
 
-if (require.main === module) {
+if (require.main === module && process.argv[2] === '--repository-index-worker') {
+  runRepositoryIndexWorker();
+} else if (require.main === module) {
   process.stdout.on('error', error => {
     if (error.code === 'EPIPE') process.exit(0);
     throw error;
@@ -2410,6 +2636,7 @@ module.exports = {
   searchTraceability,
   validateTraceability,
   parseGrepArguments,
+  parseRepositoryIndexUpdateArguments,
   databaseOptions,
   refreshRepositoryTextIndex,
   repositoryIndexProgress,

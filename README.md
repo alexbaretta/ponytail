@@ -246,7 +246,7 @@ tracked files and untracked non-ignored files. Select one committed state or
 its reachable history, and optionally restrict any query to a file or subtree:
 
 ```bash
-ponytail search update-index
+ponytail search update-index -j 4 -n 8
 ponytail search query 'literal text'
 ponytail search query 'literal text' --ref main --path src
 ponytail search query 'literal text' --commit a1b2c3d --path package.json
@@ -258,11 +258,15 @@ binary bodies, and Gitlink contents are excluded. Index or database failure is
 reported; the command does not fall back to another search implementation.
 
 `search update-index` maintains the index without running reference-policy QA.
-It displays a TTY progress bar with commit percent and ETA, or cumulative
-`.`/tenth-commit `+`/fiftieth-commit `| percent ETA` markers when redirected.
-The ETA estimates remaining history ingestion; ref/overlay publication follows.
-Interrupt and rerun the same command to resume: each completed commit is a
-durable checkpoint, while incomplete commits and final publication roll back.
+`-j` selects the number of worker processes; it defaults to half the
+available CPUs, rounded down with a minimum of one. `-n` selects the number of
+commits in each database transaction and defaults to one. It displays a TTY
+progress bar with commit percent and ETA, or cumulative `.`/tenth-commit
+`+`/fiftieth-commit `| percent ETA` markers when redirected. Progress advances
+only after a batch commits durably. The ETA estimates remaining history
+ingestion; ref/overlay publication follows. Interrupt and rerun the same
+command to resume: completed batches remain durable, while each unfinished
+batch and final publication roll back after workers drain.
 
 ## Skills and project configuration
 

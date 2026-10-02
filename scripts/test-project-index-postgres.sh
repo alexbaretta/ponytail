@@ -12,13 +12,48 @@ fail() {
   exit 1
 }
 
+database_ready() {
+  node - "$1" <<'NODE'
+const path = require('node:path');
+const { Client } = require('pg');
+const { databaseOptions } = require(path.join(process.argv[2], 'src/project-index'));
+
+async function databaseReady() {
+  const client = new Client(databaseOptions(process.argv[2]));
+  try {
+    await client.connect();
+    const relations = await client.query(`
+      SELECT
+        to_regclass('ponytail_journal.action_v1') IS NOT NULL AS journal,
+        to_regclass('ponytail_index.schema_version_v1') IS NOT NULL AS project_index,
+        to_regclass('ponytail_index.repository_text_schema_version_v1') IS NOT NULL AS repository_text`);
+    if (!Object.values(relations.rows[0]).every(Boolean)) return false;
+    const versions = await client.query(`
+      SELECT
+        (SELECT schema_version FROM ponytail_index.schema_version_v1) AS project_index,
+        (SELECT schema_version FROM ponytail_index.repository_text_schema_version_v1) AS repository_text`);
+    return versions.rows[0].project_index === 1 && versions.rows[0].repository_text === 1;
+  } finally {
+    await client.end();
+  }
+}
+
+databaseReady().then(
+  ready => { process.exitCode = ready ? 0 : 1; },
+  () => { process.exitCode = 1; },
+);
+NODE
+}
+
 main() {
   local project_root
   command -v node >/dev/null || fail 'node is required'
   command -v psql >/dev/null || fail 'psql is required'
   project_root="$(git rev-parse --show-toplevel 2>/dev/null)" || \
     fail 'not inside a Git worktree'
-  "${project_root}/scripts/setup-project-journal.sh" >/dev/null
+  if ! database_ready "${project_root}"; then
+    "${project_root}/scripts/setup-project-journal.sh" >/dev/null
+  fi
   node - "${project_root}" <<'NODE'
 const assert = require('node:assert/strict');
 const crypto = require('node:crypto');
@@ -52,6 +87,8 @@ async function main() {
   const projectId = crypto.randomUUID();
   const gapProjectId = crypto.randomUUID();
   const repositoryProjectId = crypto.randomUUID();
+  const parallelProjectId = crypto.randomUUID();
+  const parallelPeerProjectId = crypto.randomUUID();
   const projectName = `project-index-contract-${projectId}`;
   const repositoryPath = `contract://${projectId}`;
   const base = collectTraceabilityProjection(configurationPath);
@@ -65,6 +102,8 @@ async function main() {
   const second = { ...first, worktreePath: `${repositoryPath}/two` };
   const client = await pool.connect();
   let gapRoot;
+  let parallelRoot;
+  let parallelPeerRoot;
   let repositoryRoot;
   let interruptionHome;
   try {
@@ -269,6 +308,81 @@ async function main() {
     const gapResult = JSON.parse(gapValidation.stdout);
     assert.deepEqual(gapResult.gaps.map(gap => gap.ruleId), ['requirement-unit-test']);
 
+    parallelRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ponytail-parallel-index-'));
+    execFileSync('git', ['init', '-q', '-b', 'main'], { cwd: parallelRoot });
+    fs.writeFileSync(path.join(parallelRoot, 'ponytail-journal.json'), JSON.stringify({
+      schemaVersion: 1,
+      projectId: parallelProjectId,
+      projectName: `parallel-index-${parallelProjectId}`,
+      database,
+    }));
+    fs.writeFileSync(path.join(parallelRoot, 'shared.txt'), 'shared blob\n');
+    execFileSync('git', ['add', '.'], { cwd: parallelRoot });
+    execFileSync('git', [
+      '-c', 'user.name=Test', '-c', 'user.email=test@example.test',
+      'commit', '-qm', 'parallel base',
+    ], { cwd: parallelRoot });
+    for (let index = 0; index < 8; index += 1) {
+      fs.writeFileSync(path.join(parallelRoot, `value-${index}.txt`), `${index}\n`);
+      execFileSync('git', ['add', '.'], { cwd: parallelRoot });
+      execFileSync('git', [
+        '-c', 'user.name=Test', '-c', 'user.email=test@example.test',
+        'commit', '-qm', `parallel ${index}`,
+      ], { cwd: parallelRoot });
+    }
+    parallelPeerRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ponytail-parallel-index-peer-'));
+    execFileSync('git', ['init', '-q', '-b', 'main'], { cwd: parallelPeerRoot });
+    fs.writeFileSync(path.join(parallelPeerRoot, 'ponytail-journal.json'), JSON.stringify({
+      schemaVersion: 1,
+      projectId: parallelPeerProjectId,
+      projectName: `parallel-index-peer-${parallelPeerProjectId}`,
+      database,
+    }));
+    fs.writeFileSync(path.join(parallelPeerRoot, 'shared.txt'), 'shared blob\n');
+    execFileSync('git', ['add', '.'], { cwd: parallelPeerRoot });
+    execFileSync('git', [
+      '-c', 'user.name=Test', '-c', 'user.email=test@example.test',
+      'commit', '-qm', 'parallel peer base',
+    ], { cwd: parallelPeerRoot });
+    for (let index = 7; index >= 0; index -= 1) {
+      fs.writeFileSync(path.join(parallelPeerRoot, `value-${index}.txt`), `${index}\n`);
+      execFileSync('git', ['add', '.'], { cwd: parallelPeerRoot });
+      execFileSync('git', [
+        '-c', 'user.name=Test', '-c', 'user.email=test@example.test',
+        'commit', '-qm', `parallel peer ${index}`,
+      ], { cwd: parallelPeerRoot });
+    }
+    const workerPids = [];
+    const parallelProgress = [];
+    const [parallelRefresh, parallelPeerRefresh] = await Promise.all([
+      refreshRepositoryTextIndex({
+        root: parallelRoot,
+        workers: 3,
+        commitsPerTransaction: 2,
+        onWorkerStart: processId => workerPids.push(processId),
+        onProgress: (completed, total) => parallelProgress.push([completed, total]),
+      }),
+      refreshRepositoryTextIndex({
+        root: parallelPeerRoot,
+        workers: 2,
+        commitsPerTransaction: 2,
+      }),
+    ]);
+    assert.equal(new Set(workerPids).size, 3);
+    assert.equal(parallelRefresh.history.commits, 9);
+    assert.equal(parallelPeerRefresh.history.commits, 9);
+    assert.deepEqual(parallelProgress[0], [0, 9]);
+    assert.deepEqual(parallelProgress.at(-1), [9, 9]);
+    assert.ok(parallelProgress.slice(1).every(([completed], index, values) =>
+      index === 0 || completed > values[index - 1][0]));
+    const parallelCommits = await client.query(`
+      SELECT count(*)::integer AS count FROM ponytail_index.git_commit_v1 commit
+      JOIN ponytail_index.repository_v1 repository USING (repository_id)
+      WHERE repository.project_id = $1::uuid`, [parallelProjectId]);
+    assert.equal(parallelCommits.rows[0].count, 9);
+    for (const processId of workerPids) assert.throws(
+      () => process.kill(processId, 0), error => error.code === 'ESRCH');
+
     repositoryRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ponytail-repository-text-'));
     execFileSync('git', ['init', '-q', '-b', 'main'], { cwd: repositoryRoot });
     fs.writeFileSync(path.join(repositoryRoot, 'ponytail-journal.json'), JSON.stringify({
@@ -399,7 +513,9 @@ async function main() {
       'commit', '-qm', 'registered CLI interruption fixture',
     ], { cwd: repositoryRoot });
     for (const interruptionSignal of ['SIGKILL', 'SIGINT']) await new Promise((resolve, reject) => {
-      const child = spawn(path.join(root, 'cli/ponytail'), ['search', 'update-index'], {
+      const child = spawn(path.join(root, 'cli/ponytail'), [
+        'search', 'update-index', '-j', '3', '-n', '2',
+      ], {
         cwd: repositoryRoot, env: interruptionEnvironment, detached: true,
         stdio: ['ignore', 'pipe', 'pipe'],
       });
@@ -428,6 +544,10 @@ async function main() {
             assert.match(stderr, /REPOSITORY_INDEX_INTERRUPTED/);
             assert.ok(output.endsWith('\n'));
           }
+          const processGroups = spawnSync('ps', ['-axo', 'pgid='], { encoding: 'utf8' });
+          assert.equal(processGroups.status, 0, processGroups.stderr);
+          assert.equal(processGroups.stdout.split(/\s+/u).filter(Boolean)
+            .includes(String(child.pid)), false);
           resolve();
         } catch (error) { reject(error); }
       });
@@ -455,7 +575,8 @@ async function main() {
     assert.match(resumedCli.stdout, new RegExp(`Indexing ${remaining} unseen commits`));
     assert.equal((resumedCli.stdout.match(/\./gu) ?? []).length, remaining);
     assert.equal((resumedCli.stdout.match(/\+/gu) ?? []).length, Math.floor(remaining / 10));
-    assert.match(resumedCli.stdout, /\| \d+% ETA \d+s\n/);
+    if (remaining >= 50) assert.match(resumedCli.stdout, /\| \d+% ETA \d+s\n/);
+    else assert.doesNotMatch(resumedCli.stdout, /\| \d+% ETA \d+s\n/);
     assert.equal((await refreshRepositoryTextIndex({ root: repositoryRoot, pool })).history.commits, 0);
     const searchRepository = (query, selector = 'worktree', selectorValue = null, path = null) =>
       grepRepository({ query, selector, selectorValue, path, ignoreCase: false }, {
@@ -484,20 +605,22 @@ async function main() {
         SELECT worktree_id FROM ponytail_index.worktree_v1 worktree
         JOIN ponytail_index.repository_v1 repository USING (repository_id)
         WHERE repository.project_id = ANY($1::uuid[])
-      )`, [[projectId, gapProjectId, repositoryProjectId]]);
+      )`, [[projectId, gapProjectId, repositoryProjectId, parallelProjectId, parallelPeerProjectId]]);
     await client.query(`
       DELETE FROM ponytail_index.worktree_v1
       WHERE repository_id IN (
         SELECT repository_id FROM ponytail_index.repository_v1
         WHERE project_id = ANY($1::uuid[])
-      )`, [[projectId, gapProjectId, repositoryProjectId]]);
+      )`, [[projectId, gapProjectId, repositoryProjectId, parallelProjectId, parallelPeerProjectId]]);
     await client.query(
-      'DELETE FROM ponytail_index.parse_result_v1 WHERE project_id = ANY($1::uuid[])', [[projectId, gapProjectId, repositoryProjectId]]);
+      'DELETE FROM ponytail_index.parse_result_v1 WHERE project_id = ANY($1::uuid[])', [[projectId, gapProjectId, repositoryProjectId, parallelProjectId, parallelPeerProjectId]]);
     await client.query(
-      'DELETE FROM ponytail_index.repository_v1 WHERE project_id = ANY($1::uuid[])', [[projectId, gapProjectId, repositoryProjectId]]);
+      'DELETE FROM ponytail_index.repository_v1 WHERE project_id = ANY($1::uuid[])', [[projectId, gapProjectId, repositoryProjectId, parallelProjectId, parallelPeerProjectId]]);
     await client.query(
-      'DELETE FROM ponytail_index.project_v1 WHERE project_id = ANY($1::uuid[])', [[projectId, gapProjectId, repositoryProjectId]]);
+      'DELETE FROM ponytail_index.project_v1 WHERE project_id = ANY($1::uuid[])', [[projectId, gapProjectId, repositoryProjectId, parallelProjectId, parallelPeerProjectId]]);
     if (gapRoot !== undefined) fs.rmSync(gapRoot, { recursive: true, force: true });
+    if (parallelRoot !== undefined) fs.rmSync(parallelRoot, { recursive: true, force: true });
+    if (parallelPeerRoot !== undefined) fs.rmSync(parallelPeerRoot, { recursive: true, force: true });
     if (repositoryRoot !== undefined) fs.rmSync(repositoryRoot, { recursive: true, force: true });
     if (interruptionHome !== undefined) fs.rmSync(interruptionHome, { recursive: true, force: true });
     client.release();

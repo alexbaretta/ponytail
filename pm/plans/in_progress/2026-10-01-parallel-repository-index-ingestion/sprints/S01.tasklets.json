@@ -11,7 +11,7 @@
       "risk": "high",
       "risk_reason": "The approved cross-process effect requires failing-first proof at the real process and database boundary.",
       "feature": "S01-F01",
-      "planned_paths": ["tests/project-index.test.js", "scripts/test-project-index-postgres.sh"]
+      "planned_paths": ["tests/project-index.test.js", "scripts/test-project-index-postgres.sh", "pm/debugging-pattern-observations/2026-10-01-shared_schema_setup_deadlock.json", "pm/plans/in_progress/2026-10-01-parallel-repository-index-ingestion/sprints/S01.md", "pm/plans/in_progress/2026-10-01-parallel-repository-index-ingestion/sprints/S01.tasklets.json"]
     },
     "S01-F01-T02": {
       "depends_on": ["S01-F01-T01"],
