@@ -34,6 +34,16 @@ yet proven whether the host removed the path through automatic cleanup,
 manual action, or another mechanism. Do not label this as a Ponytail deletion
 or silently allocate a replacement session.
 
+The [official Codex worktree documentation](https://learn.chatgpt.com/docs/environments/git-worktrees#worktree-cleanup)
+states that the desktop app defaults to retaining only the most recent 15
+Codex-managed worktrees and may automatically delete older ones to enforce
+that limit. The setting can be changed or automatic deletion disabled under
+Settings > Worktrees. This is a concrete host-level hypothesis for a campaign
+that has created more than 15 sessions, not proof that this installation still
+uses the default or that a particular missing checkout was deleted by it.
+Ponytail's logical 15-pair campaign limit does not configure the host's
+independent worktree-retention setting.
+
 ## Acceptance and evidence to collect
 
 1. Verify the actual Codex host worktree-retention setting for the owning
