@@ -59,6 +59,18 @@ approved 2026-09-29.
 
 ## Evidence
 
+- 2026-10-01 native reporting profile with installed `93d5d75`: all three
+  sanitized coordinator reports succeeded through ordinary supported exec
+  without manually supplying identity. The durable V1 record and refreshed
+  V2 query preserve all original assignment/action/session identities and
+  show three REPORTED `HOST_REVIEW_REJECTED` blockers; the two enrolled
+  original creations also retain OBSERVED missing-checkout diagnostics.
+  Fresh complete eighteen-session observation reports theoretical three,
+  observed runnable zero, observed working one (closure), and shortfall three.
+  The initial native failure exposed separate hook/CLI environments and was
+  reproduced before correction. Reporting and persistence are live-proven;
+  pending human authority, blocker resolution, and product activation are not.
+
 - 2026-10-01 live V2 diagnostic profile on integrated GWEN `9d414b35`:
   before observation refresh, activity counts were null; after exact native
   session checks and complete observation, the summary reported three

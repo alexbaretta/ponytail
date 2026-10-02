@@ -90,6 +90,14 @@ subprojects, eighty TSTS tests, and structural validation). This supersedes the
 earlier passing shared-environment test as evidence of command identity
 transport. Live retry is still required before claiming native reporting works.
 
+Live retry with installed `93d5d75` now passes all three original reports
+without identity injection. Read-only inspection independently verifies their
+durable V1 records; the coordinator's fresh V2 query exposes all three reported
+host-review refusals, both observed missing checkouts, unchanged original
+identities, and shortfall three. Reporting is no longer the blocker. The
+pending human approvals and subsequent resolved-report/worker activation
+profile remain unverified, so this feature's end-to-end Arc stays in progress.
+
 - Forty focused orchestration tests pass, including real-Git CLI report
   persistence across process restart, original bootstrap/checkouts, scoped
   coordinator ownership, capability exclusion, explicit resolution, stale
