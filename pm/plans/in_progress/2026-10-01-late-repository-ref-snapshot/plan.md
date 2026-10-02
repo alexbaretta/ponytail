@@ -2,9 +2,10 @@
 
 - **Plan ID:** `2026-10-01-late-repository-ref-snapshot`
 - **Status:** `in_progress`
-- **Approval:** Explicit stakeholder implementation authorization on 2026-10-01
-  to shorten the Git-ref stability window without weakening complete-history or
-  atomic-publication guarantees.
+- **Approval:** The stakeholder authorized source-confirmed Ponytail bug fixes
+  within the ongoing maximum-parallelism goal. The root coordinator delegated
+  this confirmed repository-index repair on 2026-10-01 with the behavior and
+  operational constraints recorded below.
 - **Management and component repository:** Ponytail.
 
 <!-- ponytail-plan-campaign
@@ -64,12 +65,14 @@ closed parent, which the stakeholder explicitly prohibited.
 
 - [RESOLVED] The approved requirement demands complete latest referenced
   history and stable atomic publication, not frozen refs throughout immutable
-  history ingestion.
-- [RESOLVED] Exactly one late recapture and delta phase is authorized; a moving
-  repository after that point fails closed without retry.
-- [RESOLVED] “Subordinate plan” is represented by this standalone follow-up
-  reference because a managed child would require the forbidden historical
-  parent edit.
+  history ingestion. The root coordinator supplied that source-confirmed bug
+  boundary.
+- [RESOLVED] Exactly one late recapture and delta phase is the smallest
+  source-proven design inside the delegated behavior; a moving repository
+  after that point fails closed without retry.
+- [RESOLVED] This standalone follow-up is the canonical plan model under the
+  delegation's no-predecessor-edit constraint because managed child membership
+  would require a reciprocal historical-parent edit.
 
 ## Starting checkpoint
 
