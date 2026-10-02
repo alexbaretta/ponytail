@@ -1456,10 +1456,16 @@ function reconcile(graph, ledger, invocationWorktree = ledger.topLevelWorktree, 
     && (!environment || (hostObservation && !hostObservationStale && completeSessionIds.has(worker.sessionId)))
     && !occupiedSessions.has(worker.sessionId) && !occupiedWorktrees.has(worker.worktree)).sort((left, right) => (left.sessionId ?? '').localeCompare(right.sessionId ?? ''));
   const sessionAssignments = assignments.filter(({ sessionId }) => sessionId !== null).sort((left, right) => left.sessionId.localeCompare(right.sessionId) || left.id.localeCompare(right.id));
-  const workingSessions = sessionAssignments.filter(({ hostState }) => hostState === 'working');
-  const waitingSessions = sessionAssignments.filter(({ hostState }) => hostState === 'waiting');
-  const finishedSessions = sessionAssignments.filter(({ hostState }) => hostState === 'completed');
-  const idleSessions = sessionAssignments.filter(({ hostState }) => ['waiting', 'completed'].includes(hostState));
+  const currentSessionAssignments = new Map();
+  for (const assignment of sessionAssignments) {
+    const current = currentSessionAssignments.get(assignment.sessionId);
+    if (!current || (current.state === 'ARCHIVED' && assignment.state !== 'ARCHIVED')) currentSessionAssignments.set(assignment.sessionId, assignment);
+  }
+  const currentSessions = [...currentSessionAssignments.values()];
+  const workingSessions = currentSessions.filter(({ hostState }) => hostState === 'working');
+  const waitingSessions = currentSessions.filter(({ hostState }) => hostState === 'waiting');
+  const finishedSessions = currentSessions.filter(({ hostState }) => hostState === 'completed');
+  const idleSessions = currentSessions.filter(({ hostState }) => ['waiting', 'completed'].includes(hostState));
   const worktrees = sessionAssignments.filter(({ worktree }) => worktree !== null).sort((left, right) => left.worktree.localeCompare(right.worktree) || left.id.localeCompare(right.id));
   const inProgressPlans = graph.plans.filter(({ lifecycle }) => lifecycle === graph.lifecycle.activeWork).map((plan) => {
     const assignment = assignments.find((item) => item.state !== 'ARCHIVED' && item.planId === plan.id);

@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-10-02-historical_assignments_duplicate_live_session",
+  "recorded_at": "2026-10-02T15:50:31-07:00",
+  "source_references": [
+    "src/campaign-orchestration.js",
+    "tests/campaign-orchestration.test.js"
+  ],
+  "context": {
+    "languages": ["javascript"],
+    "frameworks": [],
+    "components": ["campaign scheduler"],
+    "affected_boundaries": ["campaign status session activity projection"],
+    "code_references": ["src/campaign-orchestration.js:1458"]
+  },
+  "observed_behavior": "One working Codex session appeared three times in workingSessions after its worktree had served two released assignments and one current assignment.",
+  "expected_behavior": "The association history retains all three assignments, while the live working-session view identifies the one session and its current assignment once.",
+  "causal_mechanism": "The activity subsets filtered the assignment history directly, inheriting its many-to-one relationship to host sessions.",
+  "anti_pattern": {
+    "structural_description": "A session-level projection was derived from assignment-level rows without selecting the current association per session.",
+    "why_it_fails": "Every historical assignment repeats the same live host state, inflating session counts and associating current activity with completed plans."
+  },
+  "correct_pattern": {
+    "required_invariant": "Each live session appears at most once in activity subsets, preferring its non-released assignment while preserving the complete assignment history separately.",
+    "implementation_description": "Select one current assignment for each session before projecting working, waiting, finished, and idle activity subsets."
+  },
+  "applicability_conditions": ["A retained session is reused for multiple campaign assignments."],
+  "known_non_matches": ["Concurrent distinct sessions each owning one assignment are correctly represented by the prior projection."],
+  "confirmation_evidence": ["The GWEN observation listed one native working session but three workingSessions rows with the same session ID; a focused regression failed with three rows before the correction and passed afterward."],
+  "regression_proofs": ["tests/campaign-orchestration.test.js: one working campaign session leaves independent ready plans dispatchable"]
+}

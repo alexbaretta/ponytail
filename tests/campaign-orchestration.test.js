@@ -1204,6 +1204,12 @@ test('one working campaign session leaves independent ready plans dispatchable',
     branch: 'working', dispatchRevision: ledger.integrationRevision, workerRevision: ledger.integrationRevision,
     state: 'ACTIVE', idempotencyKey: 'working-key', attachToken: 'working-token',
     worktreeArchived: false, sessionArchived: false });
+  for (const planId of ['completed-a', 'completed-b']) ledger.assignments.push({
+    id: `${planId}-assignment`, planId, sessionId: 'working-session', worktree,
+    branch: 'working', dispatchRevision: ledger.integrationRevision, workerRevision: ledger.integrationRevision,
+    state: 'ARCHIVED', idempotencyKey: `${planId}-key`, attachToken: `${planId}-token`,
+    worktreeArchived: false, sessionArchived: false,
+  });
   ledger.workers.push({ sessionId: 'working-session', worktree, branch: 'working', revision: ledger.integrationRevision,
     clean: true, activity: 'active', evidenceComplete: false, worktreeArchived: false, sessionArchived: false });
   recordCreatedWorker(ledger, ledger.workers[0], 'working-assignment');
@@ -1213,10 +1219,13 @@ test('one working campaign session leaves independent ready plans dispatchable',
   const campaignGraph = graph([
     { id: 'campaign', parentPlanId: null, dependsOn: [], lifecycle: 'in_progress', path: 'root' },
     { id: 'working', parentPlanId: 'campaign', dependsOn: [], lifecycle: 'in_progress', path: 'working' },
+    ...['completed-a', 'completed-b'].map(id => ({ id, parentPlanId: 'campaign', dependsOn: [], lifecycle: 'closed', path: id })),
     ...['ready-a', 'ready-b', 'ready-c'].map(id => ({ id, parentPlanId: 'campaign', dependsOn: [], lifecycle: 'open', path: id })),
   ]);
   const before = reconcile(campaignGraph, ledger, root, environment);
+  assert.equal(before.sessionAssignments.length, 3);
   assert.deepEqual(before.workingSessions.map(item => item.sessionId), ['working-session']);
+  assert.deepEqual(before.workingSessions.map(item => item.planId), ['working']);
   assert.deepEqual(before.readyPlans, ['ready-a', 'ready-b', 'ready-c']);
   const summary = runnablePlanDiagnostics(campaignGraph, ledger, root, environment);
   assert.equal(summary.parallelism.observedWorkingWorkers, 1);

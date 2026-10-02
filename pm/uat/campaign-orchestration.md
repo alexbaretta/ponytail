@@ -318,6 +318,10 @@ Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
    - JSON status reports each deterministic session and worktree subset with
      its assignment and campaign item, plus separate structured diagnostics
      for every invalid association.
+   - When one working session has two earlier released assignments and one
+     current assignment, `sessionAssignments` retains all three associations,
+     but `workingSessions` contains that session exactly once with its current
+     campaign item.
 4. Supply duplicate active assignments, an unassigned non-root active-work
    plan, and an assignment/lifecycle contradiction.
    - Read-only status returns all conflicts in deterministic order; advance
