@@ -94,3 +94,58 @@ and [pre-attachment checkout recovery](../in_progress/2026-10-01-BUG-pre_attachm
 Validation: live canonical runnable-plan query and supported native snapshots;
 report structural validation is recorded in the change's commit. Resolution
 remains open; successful maximum-parallelism activation has not been proved.
+
+## Capacity-starvation follow-up — 2026-10-02
+
+The human lifted the implementation hold for the two authenticated reused
+workers in the owning coordinator chat, message
+`01a0fd9f-6e60-7f03-9bbf-e9ce5a887dc0`, and explicitly requested filing and
+diagnosing the capacity refusal despite zero running sessions. This is the
+same unresolved parallel-execution incident, not a second issue.
+
+Read-only inspection of the owning GWEN campaign at `46d710fa8742684967b793f4a2dc06f0c8511a3e`
+established nine theoretically runnable plans, zero observed executors,
+fifteen configured slots, thirty-five reservations, and zero reusable pairs.
+The reservation arithmetic is seventeen distinct retained worker paths plus
+sixteen pending CREATE actions plus two superseded unknown-outcome creations.
+Only six of the seventeen recorded worker checkouts currently exist. Two
+additional provisioned original checkouts remain gated on project resource
+adoption; they are represented by their pending CREATE reservations.
+
+The source mechanism is `projectWorkerCount` in
+`src/campaign-orchestration.js`: retained missing paths remain counted until
+explicitly retired, and unknown creations retain reservations. `reconcile`
+excludes every pair with a non-ARCHIVED assignment from idle reuse; a waiting
+native session alone does not establish completion of its delivery,
+integration, or acceptance obligations. An unassigned pair with a missing
+checkout also cannot be reused. The two clean released pairs have already
+been reused for harness and admin lifecycle, so neither remains available.
+
+Scope-limited reconciliation found no additional authenticated bindings or
+deliveries behind the remaining null-session DISPATCH_PENDING assignments.
+The standalone original was the exception: its existing authenticated
+creation was acknowledged at its original attachment checkpoint, its separate
+delivery retained, and its original session recovered/re-adopted at the
+delivered commit. It now owns the ordinary serialized REQUEST_REBASE action.
+No consumer state was changed by this diagnostic audit.
+
+Confirmed causal class: retained-pool/reservation starvation, not a global
+join serialization requirement or an active-thread counter. The current
+algorithm follows the existing fifteen-retained-worktree requirement; zero
+running sessions does not prove that fifteen additional creations are safe.
+This evidence does not yet establish that any individual reservation is
+spurious. Removing unknown reservations, releasing open-plan assignments, or
+changing the limit to concurrent executors is not a demonstrated safe fix.
+
+Next proof obligations: verify the two newly authorized workers actually
+execute concurrently; finish the preserved standalone integration; identify
+any completed assignment whose canonical release/recovery can yield a safe
+retained pair; distinguish genuine outstanding obligations from stale
+accounting before changing code. Any deliberate change from retained-pool
+capacity to execution capacity needs explicit reconciliation of the approved
+retention contract. Continue independent work rather than claiming the
+campaign is fully blocked or maximum parallelism is achieved.
+
+Validation: exact owning-project ledger, authenticated binding/delivery
+records, fresh supported host observation, canonical runnable-plan query,
+and source-level count/reuse analysis. No capability values are recorded.
