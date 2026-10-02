@@ -230,3 +230,16 @@ policy is distinct from Ponytail's per-top-level-project worker capacity.
 Ponytail emits no automatic retirement, but that alone does not disable host
 cleanup. The installed host's automatic-deletion setting has not been
 verified or changed; the live Arc's retention prerequisite remains open.
+
+### Idle host-state reuse regression, 2026-10-02
+
+Use disposable real Git checkouts with an integrated closed assignment and a
+dependency-ready successor. Vary only the observed idle state between
+`completed` and `waiting`. In both cases, advancing logically releases the
+old assignment and then selects `REUSE_WORKER` with the same session/path;
+the checkout remains present. The focused differential test initially failed
+only for `waiting`, selecting `CREATE_WORKER` instead. Both cases and the full
+42-test scheduler file pass after cleanup release uses canonical `idleSessions`.
+See the [bug record](../bugs/closed/2026-10-02-BUG-waiting_worker_reuse.md)
+for passing full core acceptance and structural evidence.
+This fixture proof does not establish live reuse or disable host deletion.

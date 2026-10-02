@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-10-02-waiting_worker_reuse",
+  "recorded_at": "2026-10-02T00:33:37-07:00",
+  "source_references": ["pm/bugs/closed/2026-10-02-BUG-waiting_worker_reuse.md"],
+  "context": {
+    "languages": ["javascript"],
+    "frameworks": [],
+    "components": ["campaign scheduler"],
+    "affected_boundaries": ["host observation to logical assignment release"],
+    "code_references": ["src/campaign-orchestration.js:reusableCleanupAssignments"]
+  },
+  "observed_behavior": "An integrated closed assignment with an idle waiting session remains occupied and a ready plan reserves a new worker instead of reusing its retained pair.",
+  "expected_behavior": "A safe inactive pair is released logically and reused before creating a worker, without physically retiring its session or checkout.",
+  "causal_mechanism": "Cleanup release independently recognizes only completed host sessions while reconciliation's canonical idle classification includes waiting and completed.",
+  "anti_pattern": {
+    "structural_description": "A downstream lifecycle transition duplicates an upstream state classification with a narrower predicate.",
+    "why_it_fails": "An equivalent idle state is excluded, leaving a completed assignment occupying a reusable resource."
+  },
+  "correct_pattern": {
+    "required_invariant": "Logical release uses the canonical idle classification while preserving assignment completion and resource safety gates.",
+    "implementation_description": "Cleanup release selects the assignment from reconciled idleSessions rather than independently testing one host state."
+  },
+  "applicability_conditions": ["Closed integrated CLEANUP_PENDING assignment", "Clean surviving managed worker checkout", "No pending action for the pair", "Observed waiting session"],
+  "known_non_matches": ["Missing native creation receipt", "Unfinished acceptance or integration obligations", "Working, dirty, or missing worker"],
+  "confirmation_evidence": ["Real-Git differential test changed only host state: completed passed, waiting returned CREATE_WORKER instead of logical release.", "Both cases passed after selecting canonical idleSessions; the entire 42-test scheduler file passed."],
+  "regression_proofs": ["tests/campaign-orchestration.test.js: integrated completed workers become reusable when another plan is ready", "tests/campaign-orchestration.test.js: integrated waiting workers become reusable when another plan is ready"]
+}

@@ -1750,7 +1750,8 @@ function reusableCleanupAssignments(graph, ledger, status) {
     return assignment.state === 'CLEANUP_PENDING'
       && !ledger.pendingActions.some(({ assignmentId }) => assignmentId === assignment.id)
       && !assignment.worktreeArchived && !assignment.sessionArchived
-      && (current?.hostState === 'completed' || (status.observedAt === null && worker?.activity === 'completed'))
+      && (status.idleSessions.some(({ id }) => id === assignment.id)
+        || (status.observedAt === null && worker?.activity === 'completed'))
       && (current.managedWorktree || status.observedAt === null) && current.worktreeExists
       && worker?.clean;
   }).sort((left, right) => left.planId.localeCompare(right.planId) || left.id.localeCompare(right.id));

@@ -19,6 +19,8 @@ Scheduling must select the first deterministically ordered, safe inactive pair
 before creating a worker. Reuse requires a surviving clean checkout and no
 outstanding assignment or action for that pair. Outstanding acceptance,
 delivery, recovery, or integration obligations are not inactivity.
+Both observed idle host states, `waiting` and `completed`, qualify once the
+assignment's completion obligations are satisfied; neither implies retirement.
 
 Each user-owned top-level Codex project has a limit of fifteen worker
 worktrees. Reserved creations consume capacity. Campaigns in that project

@@ -841,38 +841,41 @@ test('advance reuses a clean idle worker before requesting a new worker', () => 
   assert.equal(selected.payload.sessionId, 'idle-session');
 });
 
-test('integrated completed workers become reusable when another plan is ready', () => {
-  const root = repository();
-  const worker = path.join(temporaryDirectory('ponytail-reusable-parent'), 'worker');
-  command(root, ['worktree', 'add', '-qb', 'reusable-worker', worker]);
-  const environment = { ...process.env, PONYTAIL_CAMPAIGN_STATE_DIR: temporaryDirectory('ponytail-reusable-state') };
-  const ledger = newLedger(root, 'campaign', 'coordinator');
-  ledger.assignments.push({
-    id: 'completed-assignment', planId: 'completed', sessionId: 'reusable-session', worktree: worker, branch: 'reusable-worker',
-    dispatchRevision: ledger.integrationRevision, workerRevision: ledger.integrationRevision, state: 'CLEANUP_PENDING',
-    idempotencyKey: 'completed-key', attachToken: 'completed-token', worktreeArchived: false, sessionArchived: false,
+for (const hostState of ['completed', 'waiting']) {
+  test(`integrated ${hostState} workers become reusable when another plan is ready`, () => {
+    const root = repository();
+    const worker = path.join(temporaryDirectory('ponytail-reusable-parent'), 'worker');
+    command(root, ['worktree', 'add', '-qb', 'reusable-worker', worker]);
+    const environment = { ...process.env, PONYTAIL_CAMPAIGN_STATE_DIR: temporaryDirectory('ponytail-reusable-state') };
+    const ledger = newLedger(root, 'campaign', 'coordinator');
+    ledger.assignments.push({
+      id: 'completed-assignment', planId: 'completed', sessionId: 'reusable-session', worktree: worker, branch: 'reusable-worker',
+      dispatchRevision: ledger.integrationRevision, workerRevision: ledger.integrationRevision, state: 'CLEANUP_PENDING',
+      idempotencyKey: 'completed-key', attachToken: 'completed-token', worktreeArchived: false, sessionArchived: false,
+    });
+    ledger.workers.push({
+      sessionId: 'reusable-session', worktree: worker, branch: 'reusable-worker', revision: ledger.integrationRevision,
+      clean: true, activity: 'completed', evidenceComplete: true, worktreeArchived: false, sessionArchived: false,
+    });
+    writeHostObservation(root, 'campaign', {
+      schemaVersion: 1, campaignId: 'campaign', observedAt: new Date().toISOString(), completeSessionIds: ['reusable-session'],
+      sessions: [{ sessionId: 'reusable-session', state: hostState, worktree: worker, managedWorktree: true }],
+    }, environment);
+    const campaignGraph = graph([
+      { id: 'campaign', parentPlanId: null, dependsOn: [], lifecycle: 'in_progress', path: 'root' },
+      { id: 'completed', parentPlanId: 'campaign', dependsOn: [], lifecycle: 'closed', path: 'completed' },
+      { id: 'ready', parentPlanId: 'campaign', dependsOn: ['completed'], lifecycle: 'open', path: 'ready' },
+    ]);
+    assert.equal(advanceLedger(campaignGraph, ledger, environment), null);
+    assert.equal(ledger.assignments[0].state, 'ARCHIVED');
+    assert.equal(ledger.workers[0].activity, 'idle');
+    const pending = advanceLedger(campaignGraph, ledger, environment);
+    assert.equal(pending.type, 'REUSE_WORKER');
+    assert.equal(pending.payload.sessionId, 'reusable-session');
+    assert.equal(pending.payload.worktree, worker);
+    assert.ok(fs.existsSync(worker));
   });
-  ledger.workers.push({
-    sessionId: 'reusable-session', worktree: worker, branch: 'reusable-worker', revision: ledger.integrationRevision,
-    clean: true, activity: 'completed', evidenceComplete: true, worktreeArchived: false, sessionArchived: false,
-  });
-  writeHostObservation(root, 'campaign', {
-    schemaVersion: 1, campaignId: 'campaign', observedAt: new Date().toISOString(), completeSessionIds: ['reusable-session'],
-    sessions: [{ sessionId: 'reusable-session', state: 'completed', worktree: worker, managedWorktree: true }],
-  }, environment);
-  const campaignGraph = graph([
-    { id: 'campaign', parentPlanId: null, dependsOn: [], lifecycle: 'in_progress', path: 'root' },
-    { id: 'completed', parentPlanId: 'campaign', dependsOn: [], lifecycle: 'closed', path: 'completed' },
-    { id: 'ready', parentPlanId: 'campaign', dependsOn: ['completed'], lifecycle: 'open', path: 'ready' },
-  ]);
-  assert.equal(advanceLedger(campaignGraph, ledger, environment), null);
-  assert.equal(ledger.assignments[0].state, 'ARCHIVED');
-  assert.equal(ledger.workers[0].activity, 'idle');
-  const pending = advanceLedger(campaignGraph, ledger, environment);
-  assert.equal(pending.type, 'REUSE_WORKER');
-  assert.equal(pending.payload.sessionId, 'reusable-session');
-  assert.equal(pending.payload.worktree, worker);
-});
+}
 
 test('advance retains every completed pair even without ready dispatch', () => {
   const root = repository();
