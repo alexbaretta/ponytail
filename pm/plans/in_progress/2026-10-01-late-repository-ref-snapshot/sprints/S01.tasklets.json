@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 3,
+  "sprint": "S01",
+  "features": {
+    "S01-F01": {"depends_on": [], "validation_tasklet": "S01-F01-T04"}
+  },
+  "tasklets": {
+    "S01-F01-T01": {
+      "depends_on": [],
+      "affinity": ["postgresql", "git", "cross-session", "test-first"],
+      "risk": "high",
+      "risk_reason": "The regression must distinguish safe branch movement during immutable ingestion from unsafe movement during publication.",
+      "feature": "S01-F01",
+      "planned_paths": ["scripts/test-project-index-postgres.sh", "pm/plans/in_progress/2026-10-01-late-repository-ref-snapshot/sprints/S01.md", "pm/plans/in_progress/2026-10-01-late-repository-ref-snapshot/sprints/S01.tasklets.json"]
+    },
+    "S01-F01-T02": {
+      "depends_on": ["S01-F01-T01"],
+      "affinity": ["postgresql", "git", "workers", "progress"],
+      "risk": "high",
+      "risk_reason": "Changes the shared writer snapshot cutoff, progress aggregation, and final publication candidate.",
+      "feature": "S01-F01",
+      "planned_paths": ["src/project-index.js", "tests/project-index.test.js", "scripts/test-project-index-postgres.sh"]
+    },
+    "S01-F01-T03": {
+      "depends_on": ["S01-F01-T02"],
+      "affinity": ["requirements", "architecture", "uat", "traceability"],
+      "risk": "normal",
+      "feature": "S01-F01",
+      "planned_paths": ["pm/requirements/repository-text-index.md", "pm/architecture/repository-text-index.md", "pm/uat/repository-text-index.md", ".agents/config/project/traceability.json", "pm/requirements/traceability.generated.md", "pm/plans/in_progress/2026-10-01-late-repository-ref-snapshot/plan.md", "pm/plans/in_progress/2026-10-01-late-repository-ref-snapshot/sprints/S01.md", "pm/plans/in_progress/2026-10-01-late-repository-ref-snapshot/sprints/S01.tasklets.json"]
+    },
+    "S01-F01-T04": {
+      "depends_on": ["S01-F01-T01", "S01-F01-T02", "S01-F01-T03"],
+      "affinity": ["acceptance", "traceability", "lifecycle"],
+      "risk": "normal",
+      "feature": "S01-F01",
+      "planned_paths": ["src/project-index.js", "tests/project-index.test.js", "scripts/test-project-index-postgres.sh", "pm/requirements/repository-text-index.md", "pm/architecture/repository-text-index.md", "pm/uat/repository-text-index.md", ".agents/config/project/traceability.json", "pm/requirements/traceability.generated.md", "pm/plans/in_progress/2026-10-01-late-repository-ref-snapshot/plan.md", "pm/plans/in_progress/2026-10-01-late-repository-ref-snapshot/sprints/S01.md", "pm/plans/in_progress/2026-10-01-late-repository-ref-snapshot/sprints/S01.tasklets.json", "pm/plans/closed/2026-10-01-late-repository-ref-snapshot/plan.md", "pm/plans/closed/2026-10-01-late-repository-ref-snapshot/sprints/S01.md", "pm/plans/closed/2026-10-01-late-repository-ref-snapshot/sprints/S01.tasklets.json"]
+    }
+  }
+}
