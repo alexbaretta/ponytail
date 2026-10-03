@@ -678,6 +678,16 @@ durable state instead of remembering worker assignments in conversation:
    thread to distinguish a worker waiting for coordinator input from one that
    has finished; respond to required input or record the completed observation
    instead of treating either state as automatically reusable. If
+   `status.continuations` marks an existing assignment `ready: true`, wake
+   exactly its named original session to finish that assignment. It may need
+   runnable tasklets, tasklet review, worker-owned integration, or remaining
+   plan acceptance; `phase` identifies which, without granting product-edit
+   authority. Send ready continuations for distinct plans concurrently, then
+   re-observe the exact sessions before sending another prompt. Do not send
+   a duplicate prompt while the first host delivery or worker turn is
+   unresolved. A `ready: false` continuation carries the exact objections:
+   repair those first, and never replace a missing worker from this signal.
+   Closed-plan cleanup is not a continuation. If
    `readyToMerge` is nonempty, give the verified join priority: run `advance`
    and refresh status until its merge is recorded before reserving more
    dispatches. A `REBASE_REQUIRED` delivery is worker-owned; do not synthesize
@@ -786,9 +796,12 @@ durable state instead of remembering worker assignments in conversation:
    worker before repeating an unresolved host request. For `CREATE_WORKER`,
    `REUSE_WORKER`, and `REVIEW_WORKER`, `ready-actions` already proves that
    `payload.dispatch.ready` is true, its state is `NOT_STARTED`, and the same
-   applicable implementation or review predicate still holds. Do not wake a
-   retained worker to continue product tasklets unless its plan appears in
-   `runnable-plans`. A `REVIEW_WORKER` action authorizes only the exact
+   applicable implementation or review predicate still holds. For an
+   existing assignment, use the separate `status.continuations` readiness
+   and the same original session; do not wake it for product tasklets unless
+   its plan appears in `runnable-plans`. `TASKLET_REVIEW` and
+   `PLAN_CONTINUATION` permit only their respective plan-owned work until
+   the ordinary execution selector passes. A `REVIEW_WORKER` action authorizes only the exact
    `payload.sprintId` tasklet review and plan metadata reconciliation.
    Delivered rebase/integration work remains independently executable, and
    workers retain autonomous recovery authority. As soon as

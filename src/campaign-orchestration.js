@@ -663,7 +663,23 @@ function readStatusV7(value) {
   return value;
 }
 
-const CampaignStatusReaders = Object.freeze({ V1: readStatusV1, V2: readStatusV2, V3: readStatusV3, V4: readStatusV4, V5: readStatusV5, V6: readStatusV6, V7: readStatusV7 });
+function readStatusV8(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', 'campaign status must be an object');
+  const { continuations, ...previous } = value;
+  readStatusV7({ ...previous, schemaVersion: 7 });
+  if (value.schemaVersion !== 8 || !Array.isArray(continuations)) fail('CAMPAIGN_ORCHESTRATION_VERSION', 'unsupported campaign status version');
+  for (const continuation of value.continuations) {
+    exactKeys(continuation, ['assignmentId', 'planId', 'sessionId', 'worktree', 'phase', 'ready', 'objections'], 'campaign continuation');
+    for (const key of ['assignmentId', 'planId', 'sessionId', 'worktree']) if (typeof continuation[key] !== 'string' || !continuation[key]) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', `campaign continuation ${key} must be a nonempty string`);
+    if (!['TASKLETS', 'TASKLET_REVIEW', 'INTEGRATION', 'PLAN_CONTINUATION'].includes(continuation.phase)
+      || typeof continuation.ready !== 'boolean' || !Array.isArray(continuation.objections)
+      || continuation.objections.some(item => typeof item !== 'string' || !item)
+      || continuation.ready !== (continuation.objections.length === 0)) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', 'campaign continuation has invalid readiness');
+  }
+  return value;
+}
+
+const CampaignStatusReaders = Object.freeze({ V1: readStatusV1, V2: readStatusV2, V3: readStatusV3, V4: readStatusV4, V5: readStatusV5, V6: readStatusV6, V7: readStatusV7, V8: readStatusV8 });
 
 function git(repositoryRoot, args, accepted = [0]) {
   const result = spawnSync('git', ['-C', repositoryRoot, ...args], { encoding: 'utf8' });
@@ -1685,7 +1701,7 @@ function reconcile(graph, ledger, invocationWorktree = ledger.topLevelWorktree, 
   }).sort((left, right) => left.planId.localeCompare(right.planId));
   const reusableWorkers = idleWorkers;
   const status = {
-    schemaVersion: 7,
+    schemaVersion: 8,
     campaignId: graph.campaignId,
     invocationWorktree,
     effectiveWorktree: ledger.topLevelWorktree,
@@ -1707,6 +1723,7 @@ function reconcile(graph, ledger, invocationWorktree = ledger.topLevelWorktree, 
     rebaseRequired: assignments.filter((assignment) => assignment.state === 'REBASE_REQUIRED'),
     readyToMerge: assignments.filter((assignment) => assignment.state === 'READY_TO_MERGE'),
     cleanupPending: assignments.filter((assignment) => assignment.state === 'CLEANUP_PENDING'),
+    continuations: [],
     pendingActions: ledger.pendingActions,
     diagnostics: [],
   };
@@ -1782,7 +1799,21 @@ function reconcile(graph, ledger, invocationWorktree = ledger.topLevelWorktree, 
   status.diagnostics.sort((left, right) => left.code.localeCompare(right.code)
     || (left.planId ?? '').localeCompare(right.planId ?? '')
     || (left.assignmentId ?? '').localeCompare(right.assignmentId ?? ''));
-  return readStatusV7(status);
+  status.continuations = assignments.filter((assignment) => assignment.sessionId && assignment.worktree
+    && assignment.planLifecycle === graph.lifecycle.activeWork
+    && ['ACTIVE', 'WORK_COMPLETE', 'REBASE_REQUIRED', 'MERGED'].includes(assignment.state)).map((assignment) => {
+    const objections = status.diagnostics.filter((item) => item.assignmentId === assignment.id
+      || item.assignmentIds?.includes(assignment.id)).map((item) => item.code);
+    if (assignment.hostState === 'working') objections.push('HOST_SESSION_WORKING');
+    else if (!['waiting', 'completed'].includes(assignment.hostState)) objections.push('HOST_SESSION_NOT_IDLE');
+    if (ledger.pendingActions.some((item) => item.assignmentId === assignment.id)) objections.push('PENDING_ACTION');
+    const phase = ['WORK_COMPLETE', 'REBASE_REQUIRED'].includes(assignment.state) ? 'INTEGRATION'
+      : planIsRunnable(graph, assignment.planId) ? 'TASKLETS'
+        : planIsReviewable(graph, assignment.planId) ? 'TASKLET_REVIEW' : 'PLAN_CONTINUATION';
+    return { assignmentId: assignment.id, planId: assignment.planId, sessionId: assignment.sessionId,
+      worktree: assignment.worktree, phase, ready: objections.length === 0, objections: [...new Set(objections)].sort() };
+  });
+  return readStatusV8(status);
 }
 
 function action(type, assignment, payload = {}) {
@@ -2764,6 +2795,7 @@ module.exports = {
   readStatusV5,
   readStatusV6,
   readStatusV7,
+  readStatusV8,
   readWorkerV1,
   reconcile,
   reconcileLedger,

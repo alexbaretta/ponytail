@@ -318,6 +318,21 @@ edits require the ordinary reviewed execution selector to pass. Repeating the
 operation preserves the assignment and action identities, and a competing
 implementation assignment cannot own the same plan or pair.
 
+The scheduler must also report continuation of an existing unfinished
+assignment independently of new-plan dispatch. For each assigned plan still in
+active work, status identifies its original session and checkout, the next
+kind of work (currently runnable tasklets, tasklet review, worker-owned
+integration, or remaining plan work), whether that exact session can be woken,
+and the evidence blocking a wakeup. It may mark the assignment ready to resume
+only after a fresh, complete host observation proves the original session is
+waiting or completed, its matching managed checkout exists, no host action is
+pending for that assignment, and no other live assignment owns the same plan,
+session, or checkout. A working session is already active, not a resume
+candidate. Missing checkouts and unknown sessions remain blocked, not replaced.
+Closure cleanup is not worker continuation. Waking the original worker does not
+waive the normal planning, review, tasklet, delivery, or acceptance gates and
+does not create a new reservation or session.
+
 The stakeholder clarified on 2026-10-01 that runnable eligibility alone is
 insufficient operational diagnosis. The runnable-plan summary must also report
 each eligible plan's assignment, original session/checkout, pending host action,

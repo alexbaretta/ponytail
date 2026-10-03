@@ -42,6 +42,8 @@ const {
   readReadyActionsV2,
   readReadyActionsV4,
   readReadyActionsV5,
+  readStatusV7,
+  readStatusV8,
   readRunnablePlansV1,
   readRunnablePlansV2,
   CampaignRunnablePlansReaders,
@@ -128,6 +130,60 @@ test('reservation audit CLI reports a scoped versioned inventory without mutatin
   assert.equal(audit.schemaVersion, 1);
   assert.equal(audit.reservationCount, 0);
   assert.equal(fs.existsSync(ledgerPath(root, 'campaign', environment)), false);
+});
+
+test('unfinished assignment continuation requires the original idle session and live checkout', () => {
+  const root = repository();
+  const environment = { ...process.env, PONYTAIL_CAMPAIGN_STATE_DIR: temporaryDirectory('ponytail-continuation') };
+  const worktree = path.join(temporaryDirectory('ponytail-continuation-worker'), 'worker');
+  command(root, ['worktree', 'add', '-b', 'worker', worktree]);
+  const ledger = newLedger(root, 'campaign', 'coordinator');
+  const revision = ledger.integrationRevision;
+  const assignment = { id: 'unfinished', planId: 'work', sessionId: 'original-session', worktree,
+    branch: 'worker', dispatchRevision: revision, workerRevision: revision, state: 'MERGED',
+    idempotencyKey: 'unfinished-key', attachToken: 'unfinished-token', worktreeArchived: false, sessionArchived: false };
+  ledger.assignments.push(assignment);
+  ledger.workers.push({ sessionId: assignment.sessionId, worktree, branch: 'worker', revision,
+    clean: true, activity: 'completed', evidenceComplete: true, worktreeArchived: false, sessionArchived: false });
+  recordCreatedWorker(ledger, ledger.workers[0], assignment.id);
+  const campaignGraph = graph([{ id: 'work', parentPlanId: null, dependsOn: [], lifecycle: 'in_progress', runnableTasklets: null }]);
+  const observe = (state) => writeHostObservation(root, 'campaign', {
+    schemaVersion: 1, campaignId: 'campaign', observedAt: new Date().toISOString(),
+    completeSessionIds: ['original-session'], sessions: [{ sessionId: 'original-session', state, worktree, managedWorktree: true }],
+  }, environment);
+  observe('waiting');
+  const [ready] = reconcile(campaignGraph, ledger, root, environment).continuations;
+  assert.deepEqual(ready, { assignmentId: 'unfinished', planId: 'work', sessionId: 'original-session',
+    worktree, phase: 'PLAN_CONTINUATION', ready: true, objections: [] });
+  campaignGraph.plans[0].runnableTasklets = { sprintId: 'S01', taskletIds: ['S01-F01-T01'] };
+  assert.equal(reconcile(campaignGraph, ledger, root, environment).continuations[0].phase, 'TASKLETS');
+  campaignGraph.plans[0].runnableTasklets = null;
+  campaignGraph.plans[0].reviewableSprint = { sprintId: 'S01', taskletIds: ['S01-F01-T01'] };
+  assert.equal(reconcile(campaignGraph, ledger, root, environment).continuations[0].phase, 'TASKLET_REVIEW');
+  campaignGraph.plans[0].reviewableSprint = null;
+  observe('working');
+  assert.deepEqual(reconcile(campaignGraph, ledger, root, environment).continuations[0].objections, ['HOST_SESSION_WORKING']);
+  observe('waiting');
+  ledger.pendingActions.push(readActionV5({ schemaVersion: 5, id: 'recovery', type: 'RECOVER_WORKTREE',
+    assignmentId: assignment.id, idempotencyKey: 'recovery-key', payload: { sessionId: assignment.sessionId,
+      previousWorktree: worktree, branch: 'worker', revision } }));
+  assert.ok(reconcile(campaignGraph, ledger, root, environment).continuations[0].objections.includes('PENDING_ACTION'));
+  ledger.pendingActions = [];
+  ledger.assignments.push({ ...assignment, id: 'duplicate', idempotencyKey: 'duplicate-key', attachToken: 'duplicate-token' });
+  assert.ok(reconcile(campaignGraph, ledger, root, environment).continuations[0].objections.includes('CAMPAIGN_ASSIGNMENT_CONFLICT'));
+  ledger.assignments.pop();
+  writeHostObservation(root, 'campaign', { schemaVersion: 1, campaignId: 'campaign',
+    observedAt: new Date(Date.now() - 6 * 60 * 1000).toISOString(), completeSessionIds: ['original-session'],
+    sessions: [{ sessionId: 'original-session', state: 'waiting', worktree, managedWorktree: true }] }, environment);
+  assert.ok(reconcile(campaignGraph, ledger, root, environment).continuations[0].objections.includes('CAMPAIGN_HOST_OBSERVATION_STALE'));
+  writeHostObservation(root, 'campaign', { schemaVersion: 1, campaignId: 'campaign',
+    observedAt: new Date().toISOString(), completeSessionIds: [], sessions: [] }, environment);
+  assert.ok(reconcile(campaignGraph, ledger, root, environment).continuations[0].objections.includes('CAMPAIGN_HOST_OBSERVATION_INCOMPLETE'));
+  observe('waiting');
+  fs.rmSync(worktree, { recursive: true });
+  assert.ok(reconcile(campaignGraph, ledger, root, environment).continuations[0].objections.includes('CAMPAIGN_WORKTREE_MISSING_AFTER_DELIVERY'));
+  campaignGraph.plans[0].lifecycle = 'closed';
+  assert.deepEqual(reconcile(campaignGraph, ledger, root, environment).continuations, []);
 });
 
 test('retirement fences the original archived session and reclaims only its authenticated worktree', () => {
@@ -457,7 +513,7 @@ test('status reports active plan, session, and worktree conflicts while mutation
   ]), ledger)).code, 'CAMPAIGN_STATUS_BLOCKED');
 });
 
-test('V7 status exposes session, worktree, activity, assignment, action, and conflict views', () => {
+test('V8 status exposes session, worktree, activity, assignment, action, and conflict views', () => {
   const root = repository();
   const existingWorker = temporaryDirectory('ponytail-existing-worker');
   const missingWorker = path.join(temporaryDirectory('ponytail-missing-worker-parent'), 'missing');
@@ -496,7 +552,11 @@ test('V7 status exposes session, worktree, activity, assignment, action, and con
     { id: 'missing-plan', parentPlanId: 'campaign', dependsOn: [], lifecycle: 'in_progress', path: 'missing' },
     { id: 'unassigned-plan', parentPlanId: 'campaign', dependsOn: [], lifecycle: 'in_progress', path: 'unassigned' },
   ]), ledger, root, environment);
-  assert.equal(status.schemaVersion, 7);
+  assert.equal(status.schemaVersion, 8);
+  assert.deepEqual(readStatusV8(status), status);
+  const { continuations, ...historicalStatus } = status;
+  assert.deepEqual(readStatusV7({ ...historicalStatus, schemaVersion: 7 }).schemaVersion, 7);
+  assert.throws(() => readStatusV7({ ...status, schemaVersion: 7 }), /exactly/);
   assert.equal(status.observedAt, observedAt);
   assert.deepEqual(status.workingSessions.map(({ planId, sessionId }) => ({ planId, sessionId })), [{ planId: 'working-plan', sessionId: 'working-session' }]);
   assert.deepEqual(status.waitingSessions.map(({ sessionId }) => sessionId), ['waiting-session']);
@@ -532,13 +592,13 @@ test('stale host observations are diagnosed and block mutation', () => {
   assert.equal(captureError(() => advanceLedger(campaignGraph, ledger, environment)).code, 'CAMPAIGN_STATUS_BLOCKED');
 });
 
-test('campaign observe persists a normalized host snapshot and returns V7 status', () => {
+test('campaign observe persists a normalized host snapshot and returns V8 status', () => {
   const root = campaignRepository();
   const environment = { ...process.env, PONYTAIL_CAMPAIGN_STATE_DIR: temporaryDirectory('ponytail-observe-cli'), PONYTAIL_SESSION_ID: 'coordinator' };
   const snapshot = { schemaVersion: 1, campaignId: 'campaign', observedAt: '2026-09-30T12:00:00-07:00', completeSessionIds: [], sessions: [] };
   const result = spawnSync(process.execPath, [campaignCli, 'observe', 'campaign', '--snapshot', JSON.stringify(snapshot)], { cwd: root, encoding: 'utf8', env: environment });
   assert.equal(result.status, 0, result.stderr);
-  assert.equal(JSON.parse(result.stdout).schemaVersion, 7);
+  assert.equal(JSON.parse(result.stdout).schemaVersion, 8);
   assert.deepEqual(readHostObservation(fs.realpathSync(root), 'campaign', environment), snapshot);
   assert.deepEqual(parseArguments(['observe', 'campaign', '--snapshot', JSON.stringify(snapshot)]), {
     operation: 'observe', input: 'campaign', json: false, actionId: undefined, result: snapshot,

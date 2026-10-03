@@ -741,6 +741,31 @@ Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
    branch, or no original safe pair.
    - No review dispatch occurs, and the exact objection remains visible.
 
+## Arc: Resume an unfinished assignment only through its original idle session
+
+Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
+
+- **Actor:** Bound campaign coordinator and the originally assigned worker.
+- **Prerequisites:** An unfinished assigned plan, one observed waiting original
+  session with its managed checkout, and independent control cases with a
+  working session, missing checkout, pending action, conflicting assignment,
+  and closed plan.
+- **Profiles:** Automated CLI and live Codex host observation.
+- **External effects:** Read-only status followed by an authorized message to
+  the exact original session; no new session or checkout.
+
+1. Refresh a complete host observation and inspect campaign status.
+   - The idle original assignment is marked resumable with its plan, session,
+     checkout, and kind of remaining work; already working and closed cases
+     are not marked ready.
+2. Wake only the exact ready session and have it use its canonical selectors.
+   - It continues permitted tasklet, review, integration, or final acceptance
+     work without replacing its assignment or bypassing an execution gate.
+3. Remove the checkout, make host evidence stale, add a pending action, or
+   assign the same plan, session, or checkout to a second live assignment.
+   - Status retains the unfinished assignment but marks the wakeup blocked
+     with the exact reason; no replacement worker is inferred.
+
 ## Arc: Audit every campaign worker reservation before cleanup
 
 Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
