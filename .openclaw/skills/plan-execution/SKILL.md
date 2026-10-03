@@ -676,7 +676,10 @@ durable state instead of remembering worker assignments in conversation:
    has finished; respond to required input or record the completed observation
    instead of treating either state as automatically reusable. If
    `status.continuations` marks an existing assignment `ready: true`, wake
-   exactly its named original session to finish that assignment. It may need
+   exactly its named original session to finish that assignment. On Codex,
+   require that worker to run the step 7 Goal handshake before continuation;
+   keep its matching active Goal and do not restart with a standalone prompt.
+   It may need
    runnable tasklets, tasklet review, worker-owned integration, or remaining
    plan acceptance; `phase` identifies which, without granting product-edit
    authority. Send ready continuations for distinct plans concurrently, then
@@ -798,6 +801,12 @@ durable state instead of remembering worker assignments in conversation:
    their work is integrated; missing checkouts need recovery, not deletion.
 6. Resume each returned action by its exact action ID; never allocate a
    replacement session or worktree, and never assign a plan conversationally.
+   On Codex hosts, every new or resumed worker must have an active native
+   Goal for its exact campaign assignment before it executes the action.
+   A host message is only the bootstrap transport; do not treat its delivery
+   or a completed turn as proof of a Goal. Use the worker Goal handshake in
+   step 7 for dispatch and in step 3 for continuations. Do not fall back to a
+   one-turn prompt when Goals are unavailable or cannot be verified.
    After initiating an asynchronous host effect, record that start, advance
    again, and rerun `ready-actions` before waiting when independent
    tasklet-ready work may exist. Use `schedule-ready` to fill all available
@@ -833,8 +842,28 @@ durable state instead of remembering worker assignments in conversation:
    that assignment and select unrelated ready work. Never report
    `NOT_STARTED` after a host operation begins.
 7. For `CREATE_WORKER`, create one supported managed-worktree worker and put
-   the bootstrap sequence and `ponytail campaign attach <attachToken>` in its
-   first instruction. Before campaign attachment, the worker verifies its exact assigned checkout
+   the Goal handshake, bootstrap sequence, and `ponytail campaign attach <attachToken>`
+   in its first instruction. The coordinator gives the worker
+   its exact campaign and assignment IDs, plan ID, typed action and current
+   authority, integrated completion condition, and verification commands.
+   The human explicitly requested Goal-backed campaign workers; in the worker
+   thread, call `get_goal` first. Keep a matching active Goal for this same
+   assignment; if none exists and no unfinished conflicting Goal exists, call
+   `create_goal` with an objective that names the exact campaign ID, plan ID,
+   and assignment ID: complete that plan through verified integrated DONE,
+   while obeying the current typed action and every later canonical readiness,
+   validation, delivery, and join gate. Do not set
+   a token budget unless the human explicitly supplies one. Call `get_goal`
+   again and report the active objective to the coordinator. A mismatched,
+   paused, or budget-limited Goal requires resolution through its native
+   lifecycle; never overwrite it or claim that a one-turn message is enough.
+   If native Goals are unavailable, report a host-capability blocker before
+   attachment or plan work. The Goal persists across turns and typed
+   continuations; it does not authorize work on another plan or product edits
+   during a planning/review-only phase. Mark it complete only after the
+   integrated plan is DONE with required evidence; a temporary wait for a
+   coordinator join or next typed action is not completion.
+   Before campaign attachment, the worker verifies its exact assigned checkout
    and dispatch revision. If detached, it uses the host project's canonical worktree tooling
    to adopt the checkout and establish its assignment branch at the completed
    bootstrap checkpoint (initially the exact dispatch revision); it does not

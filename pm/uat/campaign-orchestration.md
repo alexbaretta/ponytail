@@ -7,6 +7,35 @@ Licensed under the MIT License. See LICENSE in the project root.
 
 # Campaign orchestration Suite
 
+## Arc: Codex worker dispatch establishes a persistent assignment Goal
+
+Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
+
+Actor: bound coordinator and original Codex worker. Prerequisite: a typed
+create, reuse, review, planning, or ready continuation for one campaign
+assignment, with native Codex Goals available.
+
+1. Start the exact worker using the typed action. Before attachment or plan
+   work, inspect the worker thread's native Goal state. Expect an active Goal
+   naming the same campaign, assignment, and plan, with verified integrated
+   DONE as its finish line and the current typed action's authority retained.
+   The bootstrap message or a completed turn alone is not a pass.
+2. Let the worker finish one turn short of plan completion. Expect the Goal to
+   remain active and the worker to continue or be resumable without losing the
+   objective. Send a typed continuation to the same session; expect reuse of
+   the same Goal rather than creation of a second one.
+3. Present a conflicting unfinished, paused, or budget-limited Goal, then a
+   host without Goal support. Expect the worker to report the exact condition
+   without replacing the Goal, attaching for new work, or claiming one-turn
+   execution as a successful dispatch. Restore the native capability or resolve
+   the Goal state and retry the same action/session.
+4. Integrate the plan's final DONE evidence and inspect the worker Goal.
+   Expect completion only after the worker verifies the integrated plan and
+   required gates; review-only or planning-only delivery is not completion.
+
+Automated skill-contract proof guards the Goal handshake instruction. Native
+Goal persistence and continuation require the live Codex host Arc.
+
 ## Arc: Explicit unknown-outcome creation retry
 
 Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION

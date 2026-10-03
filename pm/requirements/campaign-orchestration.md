@@ -288,6 +288,30 @@ an idle campaign worker when one is safe to reuse, or create a new worker
 session and worktree when none is available. A worker is not idle while it has
 active work, unintegrated work, a dirty worktree, or incomplete cleanup.
 
+### Persistent Codex worker goals
+
+Approved by direct stakeholder direction on 2026-10-02. When a Codex
+coordinator creates, reuses, or restarts a campaign worker for an assignment,
+the worker must establish an active, native thread Goal for that exact campaign,
+plan, and assignment before executing the assigned work. A one-turn message is
+only the bootstrap transport; it is not a substitute for an active Goal. The
+Goal's finish line is verified completion of the assignment's plan on the
+integrated campaign tree, subject to the typed action's current authority,
+canonical tasklet and validation gates, and coordinator-owned integration.
+The Goal does not grant work on another plan or authorize product edits during
+planning or review-only phases. It persists across worker turns and subsequent
+typed continuations for the same assignment.
+
+The worker checks its current Goal before creating one. It retains a matching
+active Goal, creates a new one only when no unfinished Goal conflicts, and
+reports a mismatched, paused, or budget-limited Goal rather than silently
+replacing or bypassing it. It verifies and reports the active Goal to the
+coordinator before attachment or continuation. When the host lacks native
+Goals or cannot establish one, dispatch remains unresolved; ordinary prompts
+must not be counted as goal-backed execution. A worker may mark the Goal
+complete only after the plan's integrated DONE state and all required evidence
+are verified; a blocked phase is not completion.
+
 The read-only `campaign runnable-plans` summary must return precisely the plans
 whose campaign prerequisites (including unfinished child plans) are met and
 whose canonical execution-runnable sprint has a nonempty set of immediately
