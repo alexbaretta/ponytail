@@ -1588,7 +1588,7 @@ function workerFor(workers, assignment) {
 }
 
 function recoverableWorkerRevision(ledger, assignment, hostObservation, hostSession, binding, delivery) {
-  const deliveredRebase = assignment.state === 'REBASE_REQUIRED' && Boolean(delivery);
+  const deliveredRebase = ['REBASE_REQUIRED', 'MERGED'].includes(assignment.state) && Boolean(delivery);
   const pendingRecovery = ledger.pendingActions.find(({ assignmentId, type }) => assignmentId === assignment.id && type === 'RECOVER_WORKTREE');
   const workingRecovery = hostSession?.state === 'working' && pendingRecovery?.payload.sessionId === assignment.sessionId
     && pendingRecovery.payload.previousWorktree === assignment.worktree
@@ -2291,10 +2291,14 @@ function advanceLedger(graph, ledger, environment = null) {
     assignment.workerRevision = reconciled.workerRevision;
     return null;
   }
-  const recoveryDiagnostic = status.diagnostics.find(({ code, assignmentId }) => (
-    code === 'CAMPAIGN_WORKTREE_RECOVERY_REQUIRED'
+  const recoveryDiagnostic = status.diagnostics.find(({ code, assignmentId, revision }) => (
+    (code === 'CAMPAIGN_WORKTREE_RECOVERY_REQUIRED'
+      || (code === 'CAMPAIGN_WORKTREE_MISSING_AFTER_DELIVERY'
+        && status.assignments.some(({ id, state, planLifecycle }) => id === assignmentId
+          && state === 'MERGED' && planLifecycle === graph.lifecycle.activeWork)))
       && recoveryIsRunnable(status, graph, assignmentId)
       && !ledger.pendingActions.some((pendingAction) => pendingAction.assignmentId === assignmentId)
+      && revision
   ));
   if (recoveryDiagnostic) {
     const recoveryAssignment = ledger.assignments.find(({ id }) => id === recoveryDiagnostic.assignmentId);

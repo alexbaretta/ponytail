@@ -452,11 +452,17 @@ Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
 4. Advance again while the delivered plan remains open for final acceptance.
    - Ponytail selects unrelated dependency-ready dispatch despite the visible
      recoverable diagnostic.
+   - For the exact integrated `MERGED` assignment, a further advance persists
+     one `RECOVER_WORKTREE` action with its original session, path, branch,
+     and delivered revision. `ready-actions` exposes both that recovery and
+     the independent dispatch. Repeating advance preserves the recovery ID.
 5. Repeat with no authenticated delivery, an active working session, or a
    branch tip that no longer matches the delivery, and with a stale host
    observation while recording the rebase result.
    - The ordinary missing-checkout diagnostic or action-result guard blocks
      the mutation; no unverified revision is accepted.
+   - A closed plan does not acquire an automatic recovery action solely to
+     make its retained pair reusable.
 
 ## Arc: Recover a worker before rebase after checkout loss
 

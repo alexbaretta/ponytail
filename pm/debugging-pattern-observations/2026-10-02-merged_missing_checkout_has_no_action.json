@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-10-02-merged_missing_checkout_has_no_action",
+  "recorded_at": "2026-10-02T21:46:18-07:00",
+  "source_references": ["pm/bugs/closed/2026-10-02-BUG-merged_worker_checkout_has_no_recovery_action.md"],
+  "context": {
+    "languages": ["javascript"],
+    "frameworks": [],
+    "components": ["campaign scheduler"],
+    "affected_boundaries": ["post-delivery checkout diagnostic to typed recovery action"],
+    "code_references": ["src/campaign-orchestration.js:recoverableWorkerRevision", "src/campaign-orchestration.js:advanceLedger"]
+  },
+  "observed_behavior": "An open integrated assignment whose checkout disappeared had a nonblocking diagnostic and blocked continuation, but advance exposed no recovery action.",
+  "expected_behavior": "The same preserved assignment yields a typed idempotent recovery action while unrelated dispatch remains available.",
+  "causal_mechanism": "The scheduler recognized only the undelivered/rebase recovery diagnostic as an action trigger, excluding the delivered-and-merged diagnostic even when its binding, host identity and branch tip were verified.",
+  "anti_pattern": {
+    "structural_description": "A later lifecycle phase shared a physical repair need with earlier phases but was omitted from the action eligibility projection.",
+    "why_it_fails": "The worker could physically recover by capability, but the coordinator's durable action inventory could not schedule or track that recovery."
+  },
+  "correct_pattern": {
+    "required_invariant": "An open merged assignment with a verified missing checkout exposes recovery for its original worker without replacing its delivery or blocking other plans.",
+    "implementation_description": "Extend exact branch-tip recovery proof to merged deliveries and select that diagnostic only for still-open merged assignments."
+  },
+  "applicability_conditions": ["Open plan", "MERGED authenticated assignment", "Missing managed checkout", "Fresh complete idle host observation", "Exact surviving delivered branch tip"],
+  "known_non_matches": ["Closed plan", "Absent or stale host proof", "Changed branch tip", "Worker already has a pending action"],
+  "confirmation_evidence": ["Eight live GWEN merged assignments had missing checkout diagnostics and no ready recovery actions.", "The focused real-Git test returned CREATE_WORKER before the repair where recovery was expected; all 63 scheduler tests passed after repair."],
+  "regression_proofs": ["tests/campaign-orchestration.test.js: waiting worker delivery remains integrable before and after its checkout disappears"]
+}

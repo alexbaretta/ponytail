@@ -2074,10 +2074,21 @@ test('waiting worker delivery remains integrable before and after its checkout d
   assert.equal(command(root, ['rev-parse', 'HEAD']), workerRevision);
   status = reconcile(campaignGraph, ledger, root, environment);
   assert.equal(status.assignments[0].state, 'MERGED');
+  const recovery = advanceLedger(campaignGraph, ledger, environment);
+  assert.equal(recovery.type, 'RECOVER_WORKTREE');
+  assert.deepEqual(recovery.payload, {
+    sessionId: assignment.sessionId, previousWorktree: worker, branch: assignment.branch, revision: workerRevision,
+  });
+  assert.deepEqual(readyActions(reconcile(campaignGraph, ledger, root, environment), campaignGraph).actions.map(({ id }) => id), [recovery.id]);
   const dispatch = advanceLedger(campaignGraph, ledger, environment);
   assert.equal(dispatch.type, 'CREATE_WORKER');
   assert.equal(dispatch.payload.planId, 'independent');
-  assert.deepEqual(readyActions(reconcile(campaignGraph, ledger, root, environment), campaignGraph).actions.map(({ id }) => id), [dispatch.id]);
+  assert.deepEqual(readyActions(reconcile(campaignGraph, ledger, root, environment), campaignGraph).actions.map(({ id }) => id), [recovery.id, dispatch.id]);
+  ledger.pendingActions = ledger.pendingActions.filter(({ id }) => id !== recovery.id);
+  campaignGraph.plans.find(({ id }) => id === 'work').lifecycle = 'closed';
+  assert.equal(advanceLedger(campaignGraph, ledger, environment), null);
+  assert.equal(ledger.assignments[0].state, 'CLEANUP_PENDING');
+  assert.equal(ledger.pendingActions.some(({ type }) => type === 'RECOVER_WORKTREE'), false);
 });
 
 test('missing undelivered checkout can be re-provisioned in the same session without an archived artifact', () => {

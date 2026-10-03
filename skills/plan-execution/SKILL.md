@@ -1095,6 +1095,13 @@ of the waiting or completed managed session, and the exact surviving branch
 tip after the worker checkout disappeared. Continue only
 through `advance` and `ready-actions`: the scheduler may still fast-forward
 that exact revision and dispatch unrelated ready work. An
+open `MERGED` assignment with the same verified missing checkout also produces
+one typed `RECOVER_WORKTREE` action for its original session so it can finish
+review or acceptance; execute that action without replacing the worker, while
+independent dispatch remains available. Before a broad live recovery fanout,
+verify Codex's separate automatic worktree-deletion setting will retain the
+restored pool; otherwise restoring many idle checkouts can evict one another.
+An
 ordinary `CAMPAIGN_WORKTREE_MISSING` lacks that proof and remains blocking.
 With the checkout present, the same exact delivery and idle `waiting` session
 are a completed worker milestone, not evidence that the worker is still

@@ -517,6 +517,15 @@ fast-forward-only integration, unrelated dispatch, or the later explicit
 cleanup sequence. Any missing checkout without that durable proof remains
 blocking.
 
+If that delivered revision has already been integrated but the plan remains
+open, the coordinator's scheduler must also expose a typed, idempotent recovery
+action for the original assigned session and checkout before further plan
+review or acceptance. The action requires the same fresh host, binding,
+delivery, branch-tip, and dispatch-ancestry proof. It does not prevent another
+independent plan from dispatching and is not a prerequisite for the worker's
+capability-owned physical recovery. Closed plans do not require automatic
+recovery merely to retain a worker slot.
+
 When a delivered worker requires a rebase and its checkout is missing, Ponytail
 must restore the worker-owned checkout before that worker rebases.
 Scheduler classification still requires a fresh complete observation of the
