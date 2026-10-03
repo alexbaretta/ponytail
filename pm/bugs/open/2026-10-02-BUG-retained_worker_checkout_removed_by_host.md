@@ -34,6 +34,17 @@ yet proven whether the host removed the path through automatic cleanup,
 manual action, or another mechanism. Do not label this as a Ponytail deletion
 or silently allocate a replacement session.
 
+The QA closure worker provides a tighter timing bound. Its completed Codex
+turn executed Git commands, rebased, and authenticated delivery from managed
+checkout `/Users/alex/.codex/worktrees/f6d4/gwen` at
+2026-10-02T20:00:59-07:00. At the 20:05 read-only campaign snapshot, that
+checkout and its Git worktree registration were absent, while the session,
+branch, and delivered commit `d5bed7bccafd52e0c1d3bbe419b34e33b76a721c`
+remained. The assignment then reported `REBASE_REQUIRED` plus
+`CAMPAIGN_WORKTREE_RECOVERY_REQUIRED`. This proves post-delivery checkout
+loss, but not which host policy or action removed it. The session's observed
+`waiting` state does not prove it can accept a new prompt without restoration.
+
 The [official Codex worktree documentation](https://learn.chatgpt.com/docs/environments/git-worktrees#worktree-cleanup)
 states that the desktop app defaults to retaining only the most recent 15
 Codex-managed worktrees and may automatically delete older ones to enforce
