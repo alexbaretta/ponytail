@@ -244,6 +244,23 @@ test('campaign report and graph accept an initial planning-only sprint', () => {
   assert.deepEqual(campaignGraph(root, 'planning').plans[0].planningSprint, { sprintId: 'S01', planningStatus: 'STUB' });
 });
 
+test('intent-only STUB with empty tasklet metadata is valid, but detailed sprints require tasklet headings', () => {
+  const root = repository();
+  plan(root, 'deferred', 'intent', null, { schemaVersion: 2, empty: true });
+  const sprintFile = path.join(root, 'pm/plans/deferred/intent/sprints/S01.md');
+  write(root, 'pm/plans/deferred/intent/sprints/S01.tasklets.json', `${JSON.stringify({
+    schemaVersion: 3, sprint: 'S01', features: {}, tasklets: {},
+  })}\n`);
+  commit(root);
+  assert.equal(campaignGraph(root, 'intent').plans[0].runnableTasklets, null);
+  assert.equal(buildRepositoryInventory(root, config(root), 'validate').valid, true);
+  fs.writeFileSync(sprintFile, fs.readFileSync(sprintFile, 'utf8').replace('"status": "STUB"', '"status": "READY_FOR_REVIEW"'));
+  assert.equal(captureError(() => campaignGraph(root, 'intent')).code, 'CAMPAIGN_TASKLET_INVALID');
+  assert.equal(buildRepositoryInventory(root, config(root), 'validate').valid, false);
+  fs.writeFileSync(sprintFile, fs.readFileSync(sprintFile, 'utf8').replace('"status": "READY_FOR_REVIEW"', '"status": "STUB"').replace('"execution": null', '"execution": {"status":"PENDING","depends_on":[],"tasklets_reviewed":false}'));
+  assert.equal(captureError(() => campaignGraph(root, 'intent')).code, 'CAMPAIGN_TASKLET_INVALID');
+});
+
 test('management configuration reader requires one exact safe V1 contract', () => {
   const valid = {
     schemaVersion: 1,

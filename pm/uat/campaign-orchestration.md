@@ -749,15 +749,18 @@ Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
 
 - **Actor:** Bound campaign coordinator and original idle campaign workers.
 - **Prerequisites:** One approved member plan with a dependency-ready `STUB`
-  sprint and no tasklets; a separate reviewed implementation-ready plan; two
-  safe idle pairs created for this campaign. Include aggregate zero-tasklet
+  sprint and no tasklets (including an empty tasklet metadata file); a separate
+  reviewed implementation-ready plan; two safe idle pairs created for this
+  campaign. Include aggregate zero-tasklet
   plans and unmet campaign dependencies as controls.
 - **Profiles:** Automated CLI and live Codex host attachment.
 - **External effects:** One durable planning reuse assignment; no new session,
   checkout, product edit, or inferred approval.
 
-1. Run `campaign schedule-ready --json`, then
+1. Validate the campaign repository, then run `campaign schedule-ready --json`, then
    `campaign schedule-planning-ready --json` twice.
+   - Validation accepts the intent-only `STUB` without tasklet headings;
+     changing it to a detailed or executable sprint without headings fails.
    - Implementation and planning reserve distinct original pairs. The second
      planning call returns the same action and assignment identities; only the
      selector-ready `STUB` receives a `PLAN_WORKER` action.

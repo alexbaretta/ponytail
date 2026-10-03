@@ -636,7 +636,7 @@ function validatePlanContents(plan, config, repositoryRoot) {
     let statuses;
     if (sprint.execution !== null || fs.existsSync(sprint.filePath.replace(/\.md$/, '.tasklets.json'))) {
       try {
-        statuses = parseTaskletStatuses(sprint.filePath);
+        statuses = parseTaskletStatuses(sprint.filePath, undefined, sprint.execution === null && sprint.planning.status === 'STUB');
         graph = readTaskletGraph(sprint.filePath);
         const derived = validateTaskletGraph(graph, statuses);
         if (executionReady.includes(sprint.id)) {

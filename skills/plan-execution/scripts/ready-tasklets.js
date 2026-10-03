@@ -37,7 +37,7 @@ function relativePaths(value, label) {
   return value;
 }
 
-function parseTaskletStatuses(sprintFile, text = fs.readFileSync(sprintFile, 'utf8')) {
+function parseTaskletStatuses(sprintFile, text = fs.readFileSync(sprintFile, 'utf8'), allowEmpty = false) {
   const statuses = new Map();
   const heading = /^### \[( |DONE|ERROR)\] Tasklet (S\d+-F\d+-T\d+): .+$/;
   for (const line of text.split(/\r?\n/)) {
@@ -49,7 +49,7 @@ function parseTaskletStatuses(sprintFile, text = fs.readFileSync(sprintFile, 'ut
     if (!TASKLET_STATUSES.has(match[1])) fail(`invalid tasklet status: ${id}`);
     statuses.set(id, match[1] === ' ' ? 'PENDING' : match[1]);
   }
-  if (statuses.size === 0) fail(`${sprintFile} contains no tasklet headings`);
+  if (statuses.size === 0 && !allowEmpty) fail(`${sprintFile} contains no tasklet headings`);
   return statuses;
 }
 
