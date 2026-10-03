@@ -583,6 +583,12 @@ issue IDs in campaign metadata. Lifecycle comes only from the host's configured
 status directory. Readers continue to accept immutable V1 records, whose
 normalized direct dependencies are empty.
 
+Encode every hard whole-plan dispatch prerequisite in `depends_on`, including
+one described in a sprint's dispatch gate. For V2 plans, a `Dispatch only after`
+line under `## Dependencies` that links to another plan manifest must name
+that plan in `depends_on`; campaign validation rejects a missing edge. Prose
+alone never establishes scheduling readiness or blocks a dispatch.
+
 For each direct membership edge, member plan P names campaign parent C in
 `parent_plan_id`, and C contains a human-readable Markdown reference to P. P is
 stranded exactly when C lacks that reciprocal reference. Missing records,

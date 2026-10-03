@@ -334,6 +334,22 @@ test('V2 campaign metadata adds exact direct dependencies while V1 remains reada
   assert.equal(captureError(() => parsePlanSource(root, path.relative(root, second), 'open', fs.readFileSync(second, 'utf8'))).code, 'CAMPAIGN_DEPENDENCY');
 });
 
+test('linked dispatch prerequisites must appear in V2 campaign dependencies', () => {
+  const root = repository();
+  const prerequisite = plan(root, 'closed', '2026-09-29-prerequisite', null, { schemaVersion: 2 });
+  const dependent = plan(root, 'open', '2026-09-29-dependent', null, { schemaVersion: 2 });
+  const reference = path.relative(path.dirname(dependent), prerequisite).split(path.sep).join('/');
+  fs.appendFileSync(dependent, `\n## Dependencies\n\n- Dispatch only after\n  [prerequisite](${reference}) is complete and integrated.\n`);
+  const source = () => parsePlanSource(root, path.relative(root, dependent), 'open', fs.readFileSync(dependent, 'utf8'));
+  assert.equal(captureError(source).code, 'CAMPAIGN_DEPENDENCY');
+  fs.writeFileSync(dependent, fs.readFileSync(dependent, 'utf8').replace('"depends_on": []', '"depends_on": ["2026-09-29-prerequisite"]'));
+  assert.deepEqual(source().dependsOn, ['2026-09-29-prerequisite']);
+  fs.writeFileSync(dependent, fs.readFileSync(dependent, 'utf8')
+    .replace('"depends_on": ["2026-09-29-prerequisite"]', '"depends_on": []')
+    .replace('## Dependencies', '## Context'));
+  assert.deepEqual(source().dependsOn, []);
+});
+
 test('repository inventory accepts unmarked legacy plans and rejects referenced unmarked members', () => {
   const root = repository();
   plan(root, 'in_progress', '2026-09-29-active-a', null, { schemaVersion: 2 });

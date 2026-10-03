@@ -7,6 +7,25 @@ Licensed under the MIT License. See LICENSE in the project root.
 
 # Campaign orchestration Suite
 
+## Arc: Reject prose-only linked plan dispatch prerequisites
+
+Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
+
+Actor: campaign plan author and coordinator. Prerequisite: a V2 managed plan
+whose `## Dependencies` section says `Dispatch only after` and links directly
+to another managed plan's manifest.
+
+1. Omit that linked plan from `depends_on` and validate the campaign. Expect a
+   `CAMPAIGN_DEPENDENCY` diagnostic naming the omitted plan, with no dispatch.
+2. Add the exact direct dependency to `depends_on` and validate again. Expect
+   the graph to accept the plan and withhold dispatch until the prerequisite
+   plan is complete.
+3. Keep an unrelated prose reference outside that explicit dispatch line.
+   Expect no inferred scheduler edge from prose alone.
+
+Automated campaign-census proof covers the metadata mismatch and corrected
+edge; live coordinator validation covers the dependent dispatch gate.
+
 ## Arc: Codex worker dispatch establishes a persistent assignment Goal
 
 Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION

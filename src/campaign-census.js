@@ -219,6 +219,22 @@ function readPlanMetadataV2(candidate) {
       parent_plan_id: metadata.parent_plan_id,
     },
   });
+  const lines = candidate.text.split(/\r?\n/);
+  const dependenciesHeading = lines.indexOf('## Dependencies');
+  if (dependenciesHeading !== -1) {
+    let dispatchPrerequisite = false;
+    for (let index = dependenciesHeading + 1; index < lines.length && !lines[index].startsWith('## '); index += 1) {
+      const line = lines[index].trim();
+      if (line.startsWith('- ')) dispatchPrerequisite = line.startsWith('- Dispatch only after');
+      if (!dispatchPrerequisite) continue;
+      for (const [, reference] of lines[index].matchAll(/\[[^\]]+\]\((\.\.?\/[^)]+\/plan\.md)\)/g)) {
+        const prerequisiteId = path.posix.basename(path.posix.dirname(reference));
+        if (!metadata.depends_on.includes(prerequisiteId)) {
+          dataError('CAMPAIGN_DEPENDENCY', `dispatch prerequisite ${prerequisiteId} must appear in depends_on`, metadata.id, candidate.relativePlanFile);
+        }
+      }
+    }
+  }
   return { ...plan, schemaVersion: PLAN_SCHEMA_VERSION, dependsOn: [...metadata.depends_on].sort() };
 }
 

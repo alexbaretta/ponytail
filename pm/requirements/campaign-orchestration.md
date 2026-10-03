@@ -84,6 +84,11 @@ invalid lifecycle placement, invalid sprint or tasklet state, and campaign-root
 closure violations. It must return deterministic diagnostics that identify
 every plan whose state cannot be classified safely.
 
+When a V2 managed plan explicitly says `Dispatch only after` and links to a
+plan manifest in its `## Dependencies` section, that linked plan must also
+appear in the managed plan's `depends_on`. The prose does not itself create a
+scheduler edge; validation rejects the omitted machine-readable dependency.
+
 Campaign validity and uniqueness are command-local concerns of the `ponytail
 campaign` subtree. A command outside that subtree must not invoke campaign
 validation, emit campaign inventory as a side effect, or fail because campaign
