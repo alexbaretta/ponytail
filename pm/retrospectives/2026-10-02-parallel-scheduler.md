@@ -169,6 +169,72 @@ sessions doing runnable GWEN tasklets—remained below the requested level.
 That is an assessment of the process and outcome, not a claim that every
 individual change was defective.
 
+## Plan and session state-transition model
+
+The attempted scheduler was not one linear FSM. Its effective state was the
+product of three independently changing records, plus Git evidence. Conflating
+them was a recurring source of false readiness and premature cleanup:
+
+| Dimension | States and source of truth | Meaning for execution |
+| --- | --- | --- |
+| Whole plan | The host-configured lifecycle directories, normally `open`, `in_progress`, `closed`, `deferred`, or `rejected`; the manifest must agree. | `open` can be dependency-ready for planning, review, or dispatch; `in_progress` is not proof that a worker is running; `closed` requires final integrated acceptance. Deferred/rejected plans are not successful completions. Sprint planning/execution and tasklet markers are finer-grained, separate state. |
+| Assignment | Ledger states `DISPATCH_PENDING`, `ACTIVE`, `WORK_COMPLETE`, `REBASE_REQUIRED`, `READY_TO_MERGE`, `MERGED`, `CLEANUP_PENDING`, `ARCHIVED`. | These describe a plan-to-session lease and its integration progress, **not** native Codex activity. `ARCHIVED` became a logical released assignment; it does not imply deletion of the session or checkout. `CLEANUP_PENDING` and physical archive flags remain historical schema states, not permission for automatic retirement. |
+| Native session | Fresh, complete host observation reports `working`, `waiting`, `completed`, `archived`, `missing`, or `unknown`, with session ID, cwd, and managed-worktree provenance. | `waiting` and `completed` can mean a worker is awaiting the next prompt or join, not that its plan is done. `working` does not prove tasklet execution. `missing` requires a complete inventory; `unknown` or a stale observation must not be converted into `missing` or `idle`. No session exists before native creation, even when an assignment is reserved. |
+
+The principal transitions, and the evidence that drives them, were:
+
+| Transition | Driver and guard |
+| --- | --- |
+| Plan `open` → `in_progress` | Approved work and a valid readiness selection, followed by the worker's committed lifecycle move and integration into the coordinator tree. A reserved assignment or authenticated attachment alone does not activate the plan. |
+| Unassigned → `DISPATCH_PENDING` | A scheduler reservation for a dependency-ready, tasklet-ready plan, or an eligible planning/review phase. Its typed `CREATE_WORKER`, `REUSE_WORKER`, `PLAN_WORKER`, or `REVIEW_WORKER` action may be `NOT_STARTED`, `STARTED` with an uncertain native outcome, or provisioned but not yet attached. Only a proven `NOT_STARTED` action may be postponed; an uncertain start retains its identity. |
+| `DISPATCH_PENDING` → `ACTIVE` | The exact native session and managed checkout are established, the worker adopts and branches the checkout, authenticated attachment binds session, path, branch, and assignment, and the original action succeeds. This is not evidence that tasklets have begun. |
+| `ACTIVE` → `WORK_COMPLETE` → `REBASE_REQUIRED` or `READY_TO_MERGE` | The worker commits an exact clean milestone and authenticates `deliver` with evidence paths. Reconciliation verifies that delivery against the worker branch and current integration head. A dirty/missing proof remains incomplete; a delivered revision behind the head needs semantic rebase and redelivery; one containing the current head can be merge-ready. These states can recur for planning, review, implementation, and final acceptance milestones. |
+| `READY_TO_MERGE` → `MERGED` | The coordinator's serialized `advance` checks current-head ancestry and performs `git merge --ff-only` of that exact revision. If another join advanced the head first, the worker returns to rebase/redelivery rather than treating the earlier merge-readiness as durable. |
+| `MERGED` → `ACTIVE` or plan `in_progress` → `closed` | If integrated work leaves plan gates open, the **same** session continues review, tasklets, or acceptance and may deliver another milestone. Only final validated acceptance and a joined closure commit establish `closed`. A merge by itself never means plan completion. |
+| `closed` with integrated delivery → `CLEANUP_PENDING` → `ARCHIVED` | Historically, reconciliation entered cleanup and archive actions could remove the pair. The later retention rule instead releases the logical assignment for same-campaign reuse while preserving the session and checkout. Physical retirement requires separate explicit authority and proof. A safe idle pair may then receive a new assignment, repeating the dispatch/attach cycle without creating a new session. |
+
+Checkout loss, host review rejection, absent credentials, and stale observations
+are **faults or guards**, not additional successful FSM transitions. Recovery
+of a missing checkout preserves the original session, path, assignment, and
+branch when their ownership and commit evidence can be proved. A session whose
+checkout vanished might be unable to receive any prompt; neither the ledger
+nor a surviving Git branch proves native continuity.
+
+If scheduler memory is lost, reconstruct only what independent authorities can
+actually prove, in this order:
+
+1. Inventory the configured plan directories, manifests, sprint metadata, and
+   tasklet markers on the **integrated** tree. Validate campaign parent and
+   prerequisite edges. This recovers plan lifecycle and potential work, but
+   not session ownership or whether a native operation started.
+2. Obtain a fresh, complete Codex inventory for every candidate session and
+   inspect its actual cwd, managed-worktree provenance, and activity. Compare
+   Git worktree registration, branch, clean status, revision, and ancestry
+   against the coordinator head. A partial inventory or missing path is not
+   proof that a creation failed or a session ended.
+3. Correlate surviving authenticated worker bindings, creation/action receipts,
+   delivery records and evidence paths by campaign, assignment ID, session ID,
+   worktree, branch, and commit. A clean branch whose delivered commit is an
+   ancestor of the integration head supports `MERGED`; one containing the
+   current head may support `READY_TO_MERGE`; a divergent delivered branch
+   supports `REBASE_REQUIRED`. The exact delivery and host proofs still govern
+   each classification. Unmerged Git commits without an authenticated owner
+   are preserved work, not a license to assign or merge them.
+4. Reconcile contradictions explicitly. A plan can be `in_progress` with no
+   working session; a session can be `waiting` while its plan still has work;
+   a missing checkout can coexist with a valid delivery. Preserve the most
+   conservative state and stop only the affected unsafe transition until its
+   original identity and authority are established.
+
+The plan tree and Git history cannot recreate an erased action ID, idempotency
+key, attachment capability, authenticated session binding, unknown native
+creation outcome, or uncommitted checkout contents. If those records are gone
+and no independent authenticated receipt survives, the exact assignment state
+is **unknown**, not implicitly `NOT_STARTED`, `ARCHIVED`, or safe to reuse.
+This is the irreducible recovery limit behind several of the 35-reservation
+and missing-checkout incidents; a replacement session would be a new,
+explicitly authorized operation, not deterministic recovery of the old FSM.
+
 ## State left for a clean reconsideration
 
 1. Separate repository readiness, safe assignment/reservation, native
