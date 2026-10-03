@@ -155,7 +155,7 @@ function coordinatorCommand(toolInput) {
 
 function campaignCommand(toolInput) {
   for (const command of commandStrings(toolInput)) {
-    const match = /(?:^|(?:&&|\|\||;)\s*)ponytail campaign (status|runnable-plans|schedule-ready|ready-actions|observe|advance|reconcile|retry-dispatch|action-result|report-blocker|attach)(?:\s+([^\s;&|]+))?/.exec(command);
+    const match = /(?:^|(?:&&|\|\||;)\s*)ponytail campaign (status|reservation-audit|runnable-plans|schedule-ready|schedule-review-ready|ready-actions|observe|advance|reconcile|retry-dispatch|action-result|report-blocker|attach)(?:\s+([^\s;&|]+))?/.exec(command);
     if (match) return { operation: match[1], argument: match[2] ?? null };
   }
   return null;
@@ -205,7 +205,7 @@ function handle(data, environment = process.env) {
           const binding = bindWorker(environment, repository, campaign.argument, data.session_id);
           return preToolOutput(`Worker session authenticated for campaign ${binding.campaignId} owned by ${binding.repositoryRoot}. Main worktree: ${binding.mainWorktree}. Retain the attachment capability. If this checkout disappears, recover it yourself from an existing neutral cwd with ponytail worktree recover <attachment-token>, then run canonical project adoption/setup. No coordinator recovery action is required.`);
         }
-        const readOnly = ['status', 'runnable-plans'].includes(campaign.operation);
+        const readOnly = ['status', 'reservation-audit', 'runnable-plans'].includes(campaign.operation);
         const resolution = resolveInvocationWorktree(repository, environment, readOnly);
         if (!readOnly) {
           const campaignId = campaign.argument

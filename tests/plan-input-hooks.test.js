@@ -168,6 +168,8 @@ test('worker attach is one-time, status re-roots, and worker mutations fail clos
   assert.match(JSON.parse(readyActionsPermission.stdout).hookSpecificOutput.additionalContext, /Coordinator session authenticated/);
   const schedulePermission = run(root, { hook_event_name: 'PreToolUse', tool_name: 'exec_command', tool_input: { cmd: 'ponytail campaign schedule-ready root --json' } }, pluginData);
   assert.match(JSON.parse(schedulePermission.stdout).hookSpecificOutput.additionalContext, /Coordinator session authenticated/);
+  const reviewPermission = run(root, { hook_event_name: 'PreToolUse', tool_name: 'exec_command', tool_input: { cmd: 'ponytail campaign schedule-review-ready root --json' } }, pluginData);
+  assert.match(JSON.parse(reviewPermission.stdout).hookSpecificOutput.additionalContext, /Coordinator session authenticated/);
   const actionCli = spawnSync(process.execPath, [path.join(__dirname, '..', 'src', 'campaign-census.js'), 'action-result', 'root', pending.id, '--result', actionResult], {
     cwd: root,
     env: { ...process.env, PLUGIN_DATA: pluginData, PONYTAIL_CAMPAIGN_STATE_DIR: pluginData },
@@ -183,6 +185,8 @@ test('worker attach is one-time, status re-roots, and worker mutations fail clos
   assert.match(JSON.parse(runnable.stdout).hookSpecificOutput.additionalContext, /Read-only campaign runnable-plans/);
   const schedule = run(worker, { hook_event_name: 'PreToolUse', session_id: 'worker-session', tool_name: 'exec_command', tool_input: { cmd: 'ponytail campaign schedule-ready --json' } }, pluginData);
   assert.equal(JSON.parse(schedule.stdout).hookSpecificOutput.permissionDecision, 'deny');
+  const review = run(worker, { hook_event_name: 'PreToolUse', session_id: 'worker-session', tool_name: 'exec_command', tool_input: { cmd: 'ponytail campaign schedule-review-ready --json' } }, pluginData);
+  assert.equal(JSON.parse(review.stdout).hookSpecificOutput.permissionDecision, 'deny');
   const reportPermission = run(worker, { hook_event_name: 'PreToolUse', session_id: 'worker-session', tool_name: 'exec_command', tool_input: { cmd: 'ponytail campaign report-blocker root --result {}' } }, pluginData);
   assert.equal(JSON.parse(reportPermission.stdout).hookSpecificOutput.permissionDecision, 'deny');
   const statusCli = spawnSync(process.execPath, [path.join(__dirname, '..', 'src', 'campaign-census.js'), 'status', 'root', '--json'], {
