@@ -14,6 +14,7 @@ const {
   selectExecutionReviewableSprints,
   selectExecutionRunnableSprints,
   selectPlanningReadySprints,
+  selectPlanningReviewableSprints,
   validateDependencies,
   validatePathOwnership,
   validateV3PathOwnership,
@@ -614,12 +615,14 @@ function validatePlanContents(plan, config, repositoryRoot) {
   let executionReady;
   let reviewReady;
   let planningReady;
+  let planningReviewReady;
   try {
     sprints = readSprints(plan.planDirectory);
     sprintById = validateDependencies(sprints);
     if (sprints[0].schemaVersion === 1) validatePathOwnership(sprints, sprintById);
     if (sprints[0].schemaVersion === 3) validateV3PathOwnership(sprints, sprintById);
     planningReady = selectPlanningReadySprints(sprints, sprintById);
+    planningReviewReady = selectPlanningReviewableSprints(sprints, sprintById);
     executionReady = selectExecutionRunnableSprints(sprints, sprintById);
     reviewReady = selectExecutionReviewableSprints(sprints, sprintById);
   } catch (error) {
@@ -643,7 +646,7 @@ function validatePlanContents(plan, config, repositoryRoot) {
           const taskletIds = rankedReadyTasklets(graph, statuses, derived, null).map(([id]) => id);
           if (taskletIds.length > 0) runnableTasklets = { sprintId: sprint.id, taskletIds };
         }
-        if (reviewReady.includes(sprint.id) && graph.tasklets.size > 0) {
+        if ((reviewReady.includes(sprint.id) || planningReviewReady.includes(sprint.id)) && graph.tasklets.size > 0 && !reviewableSprint) {
           reviewableSprint = { sprintId: sprint.id, taskletIds: [...graph.tasklets.keys()].sort() };
         }
       } catch (error) {

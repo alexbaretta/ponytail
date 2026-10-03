@@ -216,6 +216,13 @@ function selectPlanningReadySprints(sprints, sprintById) {
   return sprint ? [sprint.id] : [];
 }
 
+function selectPlanningReviewableSprints(sprints, sprintById) {
+  const sprint = sprints.find((candidate) => candidate.planning.status === 'READY_FOR_REVIEW'
+    && candidate.execution === null
+    && candidate.planning.depends_on.every((id) => sprintById.get(id).planning.status === 'APPROVED'));
+  return sprint ? [sprint.id] : [];
+}
+
 function selectExecutionReadySprintsV1(sprints, sprintById) {
   const sprint = sprints.find((candidate) => candidate.planning.status === 'APPROVED'
     && candidate.execution?.status === 'PENDING'
@@ -290,7 +297,7 @@ function main(argv = process.argv.slice(2)) {
   return result;
 }
 
-module.exports = { METADATA_MARKER, SCHEMA_VERSION, SprintMetadataReaders, parseSprintFile, readSprints, validateDependencies, validatePathOwnership, validateV3PathOwnership, validateCheckpointOrder, validateDependencyExecutionOrder, selectPlanningReadySprints, selectExecutionReadySprints, selectExecutionRunnableSprints, selectExecutionReviewableSprints, main };
+module.exports = { METADATA_MARKER, SCHEMA_VERSION, SprintMetadataReaders, parseSprintFile, readSprints, validateDependencies, validatePathOwnership, validateV3PathOwnership, validateCheckpointOrder, validateDependencyExecutionOrder, selectPlanningReadySprints, selectPlanningReviewableSprints, selectExecutionReadySprints, selectExecutionRunnableSprints, selectExecutionReviewableSprints, main };
 
 if (require.main === module) {
   try { main(); } catch (error) { process.stderr.write(`${error.message}\n`); process.exitCode = 1; }

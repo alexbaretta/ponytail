@@ -743,6 +743,37 @@ Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
    branch, or no original safe pair.
    - No review dispatch occurs, and the exact objection remains visible.
 
+## Arc: Assign detailed planning for independent review before approval
+
+Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
+
+- **Actor:** Bound campaign coordinator and an original idle campaign worker.
+- **Prerequisites:** A V3 sprint with `planning.status: READY_FOR_REVIEW`,
+  `execution: null`, a validated nonempty tasklet graph, and approved planning
+  dependencies. Include a second detailed sprint with an unapproved planning
+  dependency, an intent-only `STUB`, and a distinct campaign's idle pair as
+  controls.
+- **Profiles:** Automated CLI and live Codex host attachment.
+- **External effects:** One durable review-only reuse assignment; no new
+  session, checkout, product edit, or inferred planning approval.
+
+1. Run `campaign runnable-plans --json` and `campaign schedule-ready --json`.
+   - The detailed sprint is absent from implementation-ready plans and is not
+     dispatched as product work.
+2. Run `campaign schedule-review-ready --json` twice.
+   - Only the detailed sprint whose planning dependencies are approved receives
+     one retry-stable `REVIEW_WORKER` action on the original safe idle pair.
+     The blocked sprint and other campaign's pair are untouched.
+3. Attach the named worker and review the complete detailed plan and tasklet
+   graph. Record an actual approval decision and deliver the clean plan-owned
+   milestone through the ordinary join.
+   - Attachment alone does not approve planning, create an execution lease,
+     set `tasklets_reviewed`, or authorize product-path edits. A rejected
+     review leaves the sprint unapproved with actionable findings.
+4. Integrate the approved review, refresh the campaign graph, and repeat.
+   - The dependent detailed sprint becomes eligible for review on the same
+     authenticated assignment; implementation remains gated separately.
+
 ## Arc: Assign an initial planning sprint without inventing runnable tasklets
 
 Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION

@@ -170,6 +170,15 @@ test('campaign graph exposes a validated review scope without runnable implement
   assert.deepEqual(review.reviewableSprint, { sprintId: 'S01', taskletIds: ['S01-F01-T01'] });
 });
 
+test('campaign graph exposes detailed planning review without an execution lease', () => {
+  const root = repository();
+  plan(root, 'in_progress', 'campaign', null, { schemaVersion: 2 });
+  plan(root, 'open', 'review', 'campaign', { schemaVersion: 2, parentLifecycle: 'in_progress', frozen: true });
+  const review = campaignGraph(root, 'campaign').plans.find(({ id }) => id === 'review');
+  assert.equal(review.runnableTasklets, null);
+  assert.deepEqual(review.reviewableSprint, { sprintId: 'S01', taskletIds: ['S01-F01-T01'] });
+});
+
 test('cross-plan tasklet prerequisites block review and execution until integrated DONE and reject invalid edges', () => {
   const root = repository();
   plan(root, 'in_progress', 'campaign', null, { schemaVersion: 2 });

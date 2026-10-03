@@ -6,7 +6,7 @@ const path = require('node:path');
 const { execFileSync } = require('node:child_process');
 
 const tool = path.join(__dirname, '..', 'skills', 'plan-execution', 'scripts', 'ready-sprints.js');
-const { SprintMetadataReaders, parseSprintFile, readSprints, validateDependencies, validatePathOwnership, validateCheckpointOrder, selectPlanningReadySprints, selectExecutionReadySprints, selectExecutionRunnableSprints, selectExecutionReviewableSprints } = require(tool);
+const { SprintMetadataReaders, parseSprintFile, readSprints, validateDependencies, validatePathOwnership, validateCheckpointOrder, selectPlanningReadySprints, selectPlanningReviewableSprints, selectExecutionReadySprints, selectExecutionRunnableSprints, selectExecutionReviewableSprints } = require(tool);
 
 function metadata(id, version = 2, overrides = {}) {
   const execution = {
@@ -135,6 +135,20 @@ test('selects one dependency-ready planning sprint', () => {
     metadata('S02', 2, { planning: { status: 'STUB', depends_on: [], scope_roots: ['y'] }, execution: null }),
   ]));
   assert.deepEqual(selectPlanningReadySprints(sprints, validateDependencies(sprints)), ['S01']);
+});
+
+test('planning review selects only detailed unapproved sprints with approved planning dependencies', () => {
+  const sprints = readSprints(writePlan([
+    metadata('S01', 3, { planning: { status: 'READY_FOR_REVIEW', depends_on: [], scope_roots: ['x'] }, execution: null }),
+    metadata('S02', 3, { planning: { status: 'READY_FOR_REVIEW', depends_on: ['S01'], scope_roots: ['y'] }, execution: null }),
+  ]));
+  const sprintById = validateDependencies(sprints);
+  assert.deepEqual(selectPlanningReadySprints(sprints, sprintById), []);
+  assert.deepEqual(selectPlanningReviewableSprints(sprints, sprintById), ['S01']);
+  sprints[0].planning.status = 'APPROVED';
+  assert.deepEqual(selectPlanningReviewableSprints(sprints, sprintById), ['S02']);
+  sprints[1].execution = { status: 'PENDING', depends_on: [], tasklets_reviewed: false };
+  assert.deepEqual(selectPlanningReviewableSprints(sprints, sprintById), []);
 });
 
 test('selects at most the earliest reviewed V2 execution checkpoint', () => {

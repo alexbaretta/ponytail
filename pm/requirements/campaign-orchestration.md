@@ -318,6 +318,16 @@ edits require the ordinary reviewed execution selector to pass. Repeating the
 operation preserves the assignment and action identities, and a competing
 implementation assignment cannot own the same plan or pair.
 
+Detailed planning awaiting review is also review-only work. When a V3 sprint
+has `planning.status: READY_FOR_REVIEW`, `execution: null`, a validated nonempty
+tasklet graph, and approved planning dependencies, the same
+`campaign schedule-review-ready` operation may reserve one original safe idle
+campaign pair for that exact sprint. This does not approve planning, set
+`tasklets_reviewed`, or grant product-path edits. The authenticated worker
+reviews the authored graph and delivers any approved planning change through
+the ordinary join; later execution still requires its separate approval and
+review gates.
+
 The same maximum-parallelism request covers an approved campaign member whose
 first dependency-ready sprint is still a planning `STUB` and therefore has no
 tasklets. `campaign schedule-planning-ready` selects that exact sprint through

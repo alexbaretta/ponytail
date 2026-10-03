@@ -754,7 +754,9 @@ durable state instead of remembering worker assignments in conversation:
    Then run `ponytail campaign schedule-review-ready [<campaign-root>] --json`
    when a safe original campaign pair remains idle. This separate operation
    reserves approved, dependency-ready V3 sprints whose validated tasklets
-   still require executing-agent review. It never creates or imports a
+   still require executing-agent review, or detailed `READY_FOR_REVIEW` V3
+   planning with `execution: null`, a validated nonempty tasklet graph, and
+   approved planning dependencies. It never creates or imports a
    session, consumes a new slot, or makes those tasklets implementation-ready.
    Repeating it preserves the action and assignment identities. Give
    implementation-ready work priority when the same idle pair is needed.
@@ -808,7 +810,10 @@ durable state instead of remembering worker assignments in conversation:
    its plan appears in `runnable-plans`. `TASKLET_REVIEW` and
    `PLAN_CONTINUATION` permit only their respective plan-owned work until
    the ordinary execution selector passes. A `REVIEW_WORKER` action authorizes only the exact
-   `payload.sprintId` tasklet review and plan metadata reconciliation.
+   `payload.sprintId` review and plan metadata reconciliation. If planning is
+   `READY_FOR_REVIEW` with `execution: null`, it authorizes detailed planning
+   review and a real approval decision, not product edits or an automatic
+   `tasklets_reviewed` flag.
    A `PLAN_WORKER` action authorizes only initial planning of the exact
    `payload.sprintId`; product edits still require approved planning, tasklet
    review, and a nonempty ordinary execution selection.
@@ -840,14 +845,18 @@ durable state instead of remembering worker assignments in conversation:
    after a prerequisite failure; do not allocate a replacement worker. Record
    the exact host session, canonical worktree, branch, and revision only after
    the attach hook authenticates them. For `REVIEW_WORKER`, the original worker
-   activates its assigned plan in its checkout, reviews the entire named V3
-   sprint and its atomic tasklet graph, and commits the reviewed plan metadata
-   without product-path edits. It delivers that clean review milestone through
-   the ordinary worker-owned rebase and coordinator fast-forward join. Only
-   after the reviewed metadata is integrated and the ordinary execution
-   selector returns nonempty runnable tasklets may that same assignment edit
-   product paths. Attachment or a coordinator message never substitutes for
-   the worker's actual review or marks tasklets reviewed automatically.
+   activates its assigned plan in its checkout and reviews the entire named V3
+   sprint and its atomic tasklet graph. If planning is `READY_FOR_REVIEW` with
+   `execution: null`, it decides whether to approve that planning based on the
+   actual review; it does not manufacture execution or tasklet-review status.
+   Otherwise it records the reviewed execution-tasklet metadata. It commits
+   the plan-owned review without product-path edits and delivers the clean
+   milestone through the ordinary worker-owned rebase and coordinator
+   fast-forward join. Only after the reviewed metadata is integrated and the
+   ordinary execution selector returns nonempty runnable tasklets may that
+   same assignment edit product paths. Attachment or a coordinator message
+   never substitutes for the worker's actual review or marks tasklets reviewed
+   automatically.
    For `PLAN_WORKER`, the same worker runs the canonical planning selector,
    authors and reviews the exact selected `STUB` sprint and its atomic graph,
    then delivers the clean planning milestone through the ordinary worker-owned
