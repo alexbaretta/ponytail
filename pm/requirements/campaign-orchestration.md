@@ -350,6 +350,10 @@ implementation dispatch for the affected sprint, not unrelated sprints or
 plans. Prose references do not create scheduler edges; authors must encode
 them in the versioned graph. A worker's local selector alone cannot prove an
 external prerequisite has joined the integrated tree.
+Target existence includes a tasklet in a frozen sprint with an authored graph
+but `execution: null`. That sprint remains non-executable and contributes zero
+execution tasklets to the campaign census; its target cannot satisfy the edge
+until it has an execution lease and the DONE record is integrated.
 An authenticated worker can query the exact cross-plan edges and target
 statuses from the coordinator's integrated tree without changing checkouts.
 

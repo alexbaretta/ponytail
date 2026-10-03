@@ -62,9 +62,9 @@ function managementConfig(root) {
   }, null, 2)}\n`);
 }
 
-function sprint(root, lifecycle, planId, { closed = false, empty = false, unreviewed = false } = {}) {
+function sprint(root, lifecycle, planId, { closed = false, empty = false, frozen = false, unreviewed = false } = {}) {
   const directory = `pm/plans/${lifecycle}/${planId}/sprints`;
-  const execution = empty ? null : {
+  const execution = empty || frozen ? null : {
     status: closed ? 'DONE' : 'PENDING',
     depends_on: [],
     tasklets_reviewed: !unreviewed,
@@ -75,7 +75,7 @@ function sprint(root, lifecycle, planId, { closed = false, empty = false, unrevi
 ${JSON.stringify({
     schemaVersion: 3,
     id: 'S01',
-    planning: { status: empty ? 'STUB' : 'APPROVED', depends_on: [], scope_roots: ['src'] },
+    planning: { status: empty ? 'STUB' : frozen ? 'READY_FOR_REVIEW' : 'APPROVED', depends_on: [], scope_roots: ['src'] },
     execution,
   }, null, 2)}
 -->
@@ -205,6 +205,33 @@ test('cross-plan tasklet prerequisites block review and execution until integrat
   const targetMetadata = JSON.parse(fs.readFileSync(prerequisiteMetadata, 'utf8'));
   fs.writeFileSync(prerequisiteMetadata, `${JSON.stringify({ ...targetMetadata, schemaVersion: 4, external_depends_on: { 'S01-F01-T01': [{ plan_id: 'source', tasklet_id: 'S01-F01-T01' }] } }, null, 2)}\n`);
   assert.equal(captureError(() => campaignGraph(root, 'campaign')).code, 'CAMPAIGN_TASKLET_DEPENDENCY_CYCLE');
+});
+
+test('external prerequisite resolves a frozen non-executable tasklet without dispatching or counting it', () => {
+  const root = repository();
+  plan(root, 'in_progress', 'campaign', null, { schemaVersion: 2 });
+  plan(root, 'open', 'source', 'campaign', { schemaVersion: 2, parentLifecycle: 'in_progress', unreviewed: true });
+  plan(root, 'open', 'prerequisite', 'campaign', { schemaVersion: 2, parentLifecycle: 'in_progress', frozen: true });
+  const sourceMetadata = path.join(root, 'pm/plans/open/source/sprints/S01.tasklets.json');
+  const metadata = JSON.parse(fs.readFileSync(sourceMetadata, 'utf8'));
+  fs.writeFileSync(sourceMetadata, `${JSON.stringify({ ...metadata, schemaVersion: 4, external_depends_on: {
+    'S01-F01-T01': [{ plan_id: 'prerequisite', tasklet_id: 'S01-F01-T01' }],
+  } }, null, 2)}\n`);
+  commit(root);
+  const graph = campaignGraph(root, 'campaign');
+  const source = graph.plans.find(({ id }) => id === 'source');
+  const prerequisite = graph.plans.find(({ id }) => id === 'prerequisite');
+  assert.equal(source.reviewableSprint, null);
+  assert.equal(source.runnableTasklets, null);
+  assert.equal(prerequisite.runnableTasklets, null);
+  assert.deepEqual(graph.externalPrerequisites, [{ planId: 'source', sprintId: 'S01', taskletId: 'S01-F01-T01',
+    requiredPlanId: 'prerequisite', requiredTaskletId: 'S01-F01-T01', status: 'PENDING' }]);
+  assert.equal(buildReport(root, config(root), 'campaign').campaign.plans.find(({ id }) => id === 'prerequisite').totalTasklets, 0);
+  const targetSprint = path.join(root, 'pm/plans/open/prerequisite/sprints/S01.md');
+  fs.writeFileSync(targetSprint, fs.readFileSync(targetSprint, 'utf8').replace('### [ ] Tasklet', '### [DONE] Tasklet'));
+  commit(root);
+  assert.equal(campaignGraph(root, 'campaign').externalPrerequisites[0].status, 'PENDING');
+  assert.equal(campaignGraph(root, 'campaign').plans.find(({ id }) => id === 'source').reviewableSprint, null);
 });
 
 test('campaign report and graph accept an initial planning-only sprint', () => {

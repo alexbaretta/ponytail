@@ -632,38 +632,31 @@ function validatePlanContents(plan, config, repositoryRoot) {
   let reviewableSprint = null;
   const planningSprint = planningReady.length ? { sprintId: planningReady[0], planningStatus: 'STUB' } : null;
   for (const sprint of sprints) {
-    if (sprint.execution === null) {
-      normalizedSprints.push({
-        id: sprint.id,
-        planId: plan.id,
-        planningStatus: sprint.planning.status,
-        executionStatus: null,
-        taskletCounts: { PENDING: 0, DONE: 0, ERROR: 0 },
-        totalTasklets: 0,
-      });
-      continue;
-    }
     let graph;
     let statuses;
-    try {
-      statuses = parseTaskletStatuses(sprint.filePath);
-      graph = readTaskletGraph(sprint.filePath);
-      const derived = validateTaskletGraph(graph, statuses);
-      if (executionReady.includes(sprint.id)) {
-        const taskletIds = rankedReadyTasklets(graph, statuses, derived, null).map(([id]) => id);
-        if (taskletIds.length > 0) runnableTasklets = { sprintId: sprint.id, taskletIds };
+    if (sprint.execution !== null || fs.existsSync(sprint.filePath.replace(/\.md$/, '.tasklets.json'))) {
+      try {
+        statuses = parseTaskletStatuses(sprint.filePath);
+        graph = readTaskletGraph(sprint.filePath);
+        const derived = validateTaskletGraph(graph, statuses);
+        if (executionReady.includes(sprint.id)) {
+          const taskletIds = rankedReadyTasklets(graph, statuses, derived, null).map(([id]) => id);
+          if (taskletIds.length > 0) runnableTasklets = { sprintId: sprint.id, taskletIds };
+        }
+        if (reviewReady.includes(sprint.id) && graph.tasklets.size > 0) {
+          reviewableSprint = { sprintId: sprint.id, taskletIds: [...graph.tasklets.keys()].sort() };
+        }
+      } catch (error) {
+        dataError('CAMPAIGN_TASKLET_INVALID', error.message, plan.id, path.relative(repositoryRoot, sprint.filePath).split(path.sep).join('/'));
       }
-      if (reviewReady.includes(sprint.id) && graph.tasklets.size > 0) {
-        reviewableSprint = { sprintId: sprint.id, taskletIds: [...graph.tasklets.keys()].sort() };
-      }
-    } catch (error) {
-      dataError('CAMPAIGN_TASKLET_INVALID', error.message, plan.id, path.relative(repositoryRoot, sprint.filePath).split(path.sep).join('/'));
     }
     const taskletCounts = { PENDING: 0, DONE: 0, ERROR: 0 };
-    for (const [id, tasklet] of [...graph.tasklets].sort(([left], [right]) => left.localeCompare(right))) {
+    for (const [id, tasklet] of [...(graph?.tasklets ?? [])].sort(([left], [right]) => left.localeCompare(right))) {
       const status = statuses.get(id);
+      taskletDependencies.push({ id, sprintId: sprint.id, status: sprint.execution === null ? 'PENDING' : status,
+        dependsOn: effectiveDependencies(graph, id), externalDependsOn: graph.externalDependsOn?.get(id) ?? [] });
+      if (sprint.execution === null) continue;
       increment(taskletCounts, status);
-      taskletDependencies.push({ id, sprintId: sprint.id, status, dependsOn: effectiveDependencies(graph, id), externalDependsOn: graph.externalDependsOn?.get(id) ?? [] });
       normalizedTasklets.push({
         id,
         planId: plan.id,
@@ -680,7 +673,7 @@ function validatePlanContents(plan, config, repositoryRoot) {
       planningStatus: sprint.planning.status,
       executionStatus: sprint.execution?.status ?? null,
       taskletCounts,
-      totalTasklets: statuses.size,
+      totalTasklets: sprint.execution === null ? 0 : statuses.size,
     });
   }
   if (plan.lifecycle === config.lifecycle.roles.successfulCompletion) {

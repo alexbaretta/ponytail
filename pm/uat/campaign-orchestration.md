@@ -801,6 +801,11 @@ Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
 3. Name a missing target, a target outside the campaign, then a cycle.
    - Each invalid graph fails validation with an actionable dependency error;
      Ponytail never infers an edge from prose.
+4. Keep the target tasklet in an authored graph whose sprint has
+   `execution: null`.
+   - The edge resolves and reports `PENDING`; the frozen sprint has zero
+     executable tasklets, and neither sprint is dispatched. Even an integrated
+     DONE marker without an execution lease does not satisfy the edge.
 
 ## Arc: Resume an unfinished assignment only through its original idle session
 

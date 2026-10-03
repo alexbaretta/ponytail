@@ -29,3 +29,13 @@ and independent sprint/plan work. An uncommitted DONE marker does not satisfy
 the prerequisite. The affected GWEN S06 metadata must be
 upgraded in its owning project; Ponytail must not infer the edge from prose
 or modify that checkout from this repository task.
+
+## Follow-up regression: frozen target omitted from validation
+
+The first live GWEN S06 V4 delivery was rejected with
+`CAMPAIGN_TASKLET_DEPENDENCY` even though cloud-governance `S05-F01-T02`
+exists in its authored graph. The target sprint has `execution: null`, and
+Ponytail excluded all its tasklets from both the execution census and the
+dependency-target index. Keep the former exclusion, but include a validated
+frozen graph in the latter. Its tasklets remain `PENDING` until an execution
+lease exists, including when a DONE marker appears without that lease.
