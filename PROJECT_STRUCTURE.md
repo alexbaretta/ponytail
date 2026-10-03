@@ -146,6 +146,9 @@ while project-wide management records remain under `pm/`.
   independently occurring confirmed causal defect. Create it with the first
   observation, without a placeholder; derived categories and promoted skills
   do not belong there.
+- `pm/retrospectives/` owns evidence-backed accounts of completed or paused
+  project efforts. They record outcomes and unresolved questions, not new
+  requirements or acceptance claims.
 - `skills/issue-tracking/SKILL.md` supplies the issue types and lifecycle
   semantics. `.agents/config/project/management.json` is the machine-readable
   source for this project's lifecycle directory names and roles; do not repeat
