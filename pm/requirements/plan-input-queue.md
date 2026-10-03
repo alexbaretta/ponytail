@@ -42,6 +42,9 @@ ordered behind it and must not interrupt it. Before resuming plan tasklets, the
 agent must finish and acknowledge the current entry, drain all older queued
 entries in order, then rerun the canonical plan selectors from durable state.
 Failed ingestion leaves the entry recoverable and visible.
+An empty claim is successful queue exhaustion, not a command failure:
+`ponytail plan-input claim <campaign-root> --json` returns `null` with exit
+status zero when no entry remains. It creates no entry or lifecycle change.
 
 There must be exactly one campaign coordinator for a campaign. Only that
 coordinator may list, claim, complete, or otherwise consume the campaign's

@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-10-02-empty_plan_input_claim_failure",
+  "recorded_at": "2026-10-02T18:27:18-07:00",
+  "source_references": ["pm/bugs/in_progress/2026-10-02-BUG-empty_plan_input_claim_failure.md"],
+  "context": {
+    "languages": ["javascript"],
+    "frameworks": [],
+    "components": ["plan-input CLI", "campaign coordinator skill"],
+    "affected_boundaries": ["empty FIFO queue to coordinator control flow"],
+    "code_references": ["src/plan-input.js:main", "skills/plan-execution/SKILL.md:Fast plan input"]
+  },
+  "observed_behavior": "A coordinator claiming an empty campaign queue received exit status 1 and no output.",
+  "expected_behavior": "An empty claim reports explicit exhaustion and succeeds so the coordinator can run the canonical selectors.",
+  "causal_mechanism": "The CLI represented ordinary queue exhaustion with the same nonzero process status used for operational failures, despite the skill requiring empty-queue termination.",
+  "anti_pattern": {
+    "structural_description": "A normal sentinel result shared the error channel and omitted a machine-readable value.",
+    "why_it_fails": "The coordinator cannot distinguish completed draining from a failed claim and may stop the campaign loop."
+  },
+  "correct_pattern": {
+    "required_invariant": "Normal empty-queue results and true failures have distinct observable CLI outcomes.",
+    "implementation_description": "The claim command emits JSON null or a human-readable empty message with status zero; exceptional errors remain nonzero."
+  },
+  "applicability_conditions": ["No in-progress or open entry in the selected campaign queue", "Coordinator invokes plan-input claim"],
+  "known_non_matches": ["A claim returning an existing in-progress entry", "A malformed or unreadable queue entry"],
+  "confirmation_evidence": ["The exact empty-queue focused test failed with status 1 before repair and passed after repair.", "Source inspection located the unconditional no-entry return 1; no hook branch participates."],
+  "regression_proofs": ["tests/plan-input.test.js: empty campaign claim returns successful explicit JSON exhaustion"]
+}

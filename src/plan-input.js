@@ -223,8 +223,7 @@ function main(argv = process.argv.slice(2), repositoryRoot = process.cwd()) {
   }
   if (request.command === 'claim') {
     const entry = claim(repositoryRoot, campaignId);
-    if (!entry) return 1;
-    console.log(request.json ? JSON.stringify(entry) : `${entry.id}\t${entry.prompt}`);
+    console.log(request.json ? JSON.stringify(entry) : entry ? `${entry.id}\t${entry.prompt}` : 'No pending plan input');
     return 0;
   }
   if (request.command === 'coordinate') {

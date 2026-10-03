@@ -22,7 +22,7 @@ Requirement: [pm/requirements/cli-interruption.md](cli-interruption.md)
 
 Requirement: [pm/requirements/worker-worktree-retention.md](worker-worktree-retention.md)
 
-- implementation: supports [skills/plan-execution/SKILL.md:952](../../skills/plan-execution/SKILL.md#L952)
+- implementation: supports [skills/plan-execution/SKILL.md:953](../../skills/plan-execution/SKILL.md#L953)
 - implementation: supports [skills/worktree-lifecycle/SKILL.md:17](../../skills/worktree-lifecycle/SKILL.md#L17)
 - implementation: implements [src/campaign-orchestration.js:8](../../src/campaign-orchestration.js#L8)
 - implementation: implements [src/worker-worktrees.js:6](../../src/worker-worktrees.js#L6)
@@ -79,6 +79,9 @@ Requirement: [pm/requirements/plan-input-queue.md](plan-input-queue.md)
 - uat: verifies [pm/uat/plan-input-queue.md:10](../../pm/uat/plan-input-queue.md#L10)
 - issue: plans-implementation [pm/bugs/in_progress/2026-09-30-BUG-freeform_coordinator_binding.md:12](../../pm/bugs/in_progress/2026-09-30-BUG-freeform_coordinator_binding.md#L12)
 - issue: plans-verification [pm/bugs/in_progress/2026-09-30-BUG-freeform_coordinator_binding.md:13](../../pm/bugs/in_progress/2026-09-30-BUG-freeform_coordinator_binding.md#L13)
+- issue: introduces [pm/bugs/in_progress/2026-10-02-BUG-empty_plan_input_claim_failure.md:12](../../pm/bugs/in_progress/2026-10-02-BUG-empty_plan_input_claim_failure.md#L12)
+- issue: plans-implementation [pm/bugs/in_progress/2026-10-02-BUG-empty_plan_input_claim_failure.md:13](../../pm/bugs/in_progress/2026-10-02-BUG-empty_plan_input_claim_failure.md#L13)
+- issue: plans-verification [pm/bugs/in_progress/2026-10-02-BUG-empty_plan_input_claim_failure.md:14](../../pm/bugs/in_progress/2026-10-02-BUG-empty_plan_input_claim_failure.md#L14)
 
 ## REQ-TRACEABILITY-INDEX
 
@@ -278,7 +281,7 @@ Requirement: [pm/requirements/campaign-orchestration.md](campaign-orchestration.
 
 Requirement: [pm/requirements/ponytail-cli-agent-harness.md](ponytail-cli-agent-harness.md)
 
-- implementation: implements [skills/plan-execution/SKILL.md:657](../../skills/plan-execution/SKILL.md#L657)
+- implementation: implements [skills/plan-execution/SKILL.md:658](../../skills/plan-execution/SKILL.md#L658)
 - unit-test: verifies [tests/policy-conformance.test.js:10](../../tests/policy-conformance.test.js#L10)
 - integration-test: verifies [tests/plan-execution-policy.test.js:4](../../tests/plan-execution-policy.test.js#L4)
 - uat: verifies [pm/uat/ponytail-cli-agent-harness.md:17](../../pm/uat/ponytail-cli-agent-harness.md#L17)

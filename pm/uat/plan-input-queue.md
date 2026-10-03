@@ -42,6 +42,8 @@ Profile: automated by `node --test tests/plan-input.test.js` and
 4. Drain the remaining entries and inspect the plan-execution instructions.
    - They require FIFO draining and a fresh canonical selector run before slow
      plan work resumes.
+   - The final `claim --json` returns `null` with exit status zero, not a
+     silent nonzero failure; it writes no queue entry.
 
 Profile: automated by the same focused tests and the plan-execution policy
 test.

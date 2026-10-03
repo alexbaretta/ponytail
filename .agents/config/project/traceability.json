@@ -54,6 +54,7 @@
     }
   ],
   "artifacts": [
+    {"class": "issue", "path": "pm/bugs/in_progress/2026-10-02-BUG-empty_plan_input_claim_failure.md", "locator": "text"},
     {"class": "issue", "path": "pm/bugs/closed/2026-10-02-BUG-reuse_reserved_session_identity.md", "locator": "text"},
     {"class":"plan","path":"pm/plans/closed/2026-10-02-unknown-dispatch-retry/plan.md","locator":"text"},
     {"class": "issue", "path": "pm/bugs/closed/2026-10-02-BUG-post_merge_worker_progress.md", "locator": "text"},

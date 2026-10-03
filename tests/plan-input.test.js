@@ -6,6 +6,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
+const { spawnSync } = require('node:child_process');
 const { claim, complete, enqueue, entries, main, parseCli, readV1, readV2 } = require('../src/plan-input');
 
 function repository() {
@@ -113,4 +114,17 @@ test('CLI producer resolves a member plan to the campaign root', (context) => {
   assert.deepEqual(entries(root, 'root').map(({ submittedPlanId, prompt }) => ({ submittedPlanId, prompt })), [
     { submittedPlanId: 'child', prompt: 'cli requirement' },
   ]);
+});
+
+test('empty campaign claim returns successful explicit JSON exhaustion', (context) => {
+  const root = campaignRepository();
+  const lines = [];
+  context.mock.method(console, 'log', (line) => lines.push(line));
+  assert.equal(main(['claim', 'child', '--json'], root), 0);
+  assert.equal(main(['claim', 'child'], root), 0);
+  assert.deepEqual(lines, ['null', 'No pending plan input']);
+  assert.deepEqual(entries(root, 'root'), []);
+  const command = spawnSync(process.execPath, [path.join(__dirname, '..', 'src', 'plan-input.js'), 'claim', 'child', '--json'], { cwd: root, encoding: 'utf8' });
+  assert.equal(command.status, 0, command.stderr);
+  assert.equal(command.stdout, 'null\n');
 });

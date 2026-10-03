@@ -351,7 +351,8 @@ before starting or resuming selected plan work:
 4. After all applicable PM records exist, run `ponytail plan-input complete
    <campaign-root> <id> --record <pm-path>...`. If processing fails, leave the entry in
    progress so it remains recoverable.
-5. Continue until `ponytail plan-input claim <campaign-root> --json` reports no entry. Then
+5. Continue until `ponytail plan-input claim <campaign-root> --json` returns
+   `null` with exit status zero. Then
    rerun the canonical sprint and tasklet selectors from the reconciled files;
    never resume from conversational memory of the interrupted selection.
 
