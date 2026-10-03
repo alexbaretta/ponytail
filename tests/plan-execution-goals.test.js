@@ -7,7 +7,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 
-const skill = fs.readFileSync(path.join(__dirname, '..', 'skills', 'plan-execution', 'SKILL.md'), 'utf8');
+const skill = fs.readFileSync(path.join(__dirname, '..', 'skills', 'parallel-plan-scheduler', 'SKILL.md'), 'utf8');
 
 test('Codex campaign workers establish and retain native assignment Goals before work', () => {
   assert.match(skill, /every new or resumed worker must have an active native\s+Goal for its exact campaign assignment before it executes the action/);

@@ -250,6 +250,23 @@
     {
       "kind": "skill",
       "status": "enabled",
+      "name": "parallel-plan-scheduler",
+      "source": "skills/parallel-plan-scheduler",
+      "hosts": [
+        "claude",
+        "codex",
+        "copilot",
+        "devin",
+        "hermes",
+        "openclaw",
+        "pi",
+        "qoder"
+      ],
+      "reason": "Deprecated parallel campaign scheduler protocol"
+    },
+    {
+      "kind": "skill",
+      "status": "enabled",
       "name": "ponytail",
       "source": "skills/ponytail",
       "hosts": [

@@ -7,6 +7,28 @@ Licensed under the MIT License. See LICENSE in the project root.
 
 # Campaign orchestration Suite
 
+## Arc: Serial plan execution does not activate the deprecated scheduler
+
+Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
+
+Actor: agent executing an approved managed plan. Prerequisite: the plan may
+belong to a campaign, but the user has not requested parallel scheduler use.
+
+1. Load `plan-execution` and select the next approved sprint and tasklet.
+   Expect normal serial plan execution and campaign graph validation without
+   any requirement to run `campaign schedule-ready`, `advance`, `ready-actions`,
+   observe host sessions, or create a worker.
+2. Inspect the available `parallel-plan-scheduler` skill. Expect it to be
+   explicitly marked deprecated and to retain the historical scheduler and
+   worker-recovery protocol without being loaded as a mandatory part of
+   `plan-execution`.
+3. Explicitly request maintenance of an existing scheduler ledger. Expect the
+   separate skill to require its original action, identity, authorization, and
+   recovery guards; deprecation must not silently weaken those guards.
+
+Automated skill-policy and registry checks cover the separation and retained
+contract. This Arc does not assert that live parallel dispatch works.
+
 ## Arc: Reject prose-only linked plan dispatch prerequisites
 
 Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION

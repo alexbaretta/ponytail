@@ -37,8 +37,13 @@ retaining final integrated acceptance as the closure and cleanup gate. The
 stakeholder further clarified that an outstanding integration action must not
 prevent dispatch of independent dependency-ready plans. The stakeholder then
 selected `ready-actions` as the coordinator-facing name for the deterministic
-list of host actions that are executable now and required its use to be
-documented in the plan-execution skill. The stakeholder further clarified that
+list of host actions that are executable now and originally required its use to
+be documented in the plan-execution skill. On 2026-10-02, after the parallel
+scheduler experiment was abandoned, the stakeholder directed that all
+scheduler-use instructions be moved to a separate deprecated
+`parallel-plan-scheduler` skill. Ordinary plan execution no longer requires
+the scheduler; its historical operational contract remains available only
+when explicitly requested. The stakeholder further clarified that
 a missing worker checkout must not block a campaign when the completed
 session's authenticated delivery already preserves the exact clean commit and
 validation evidence. The stakeholder then instructed Ponytail to provide a

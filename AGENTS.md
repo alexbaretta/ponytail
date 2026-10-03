@@ -104,7 +104,9 @@ services. `PROJECT_STRUCTURE.md` is authoritative for that boundary.
   <action-id> --json` for project-owned cleanup after the original worker chat
   is archived; authenticated workers record merge-ready
   revisions with `ponytail campaign deliver <campaign> --result <json>`. The
-  canonical coordinator workflow is owned by `skills/plan-execution/SKILL.md`.
+  deprecated coordinator workflow is isolated in
+  `skills/parallel-plan-scheduler/SKILL.md`; ordinary plan execution does not
+  require it.
 - Project initialization and registration: `ponytail register`; removal:
   `ponytail unregister <repository-root>`; listing: `ponytail list-projects`.
 - Worktree selection: `ponytail bless[-worktree]`; display it with `ponytail

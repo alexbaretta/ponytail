@@ -460,6 +460,11 @@
       "locator": "text"
     },
     {
+      "class": "implementation",
+      "path": "skills/parallel-plan-scheduler/SKILL.md",
+      "locator": "text"
+    },
+    {
       "class": "unit-test",
       "path": "tests/issue-requirement-activation-policy.test.js",
       "locator": "text"

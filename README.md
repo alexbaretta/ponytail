@@ -154,12 +154,11 @@ Enable or disable the summary, per-plan, and incomplete-sprint tables with
 their corresponding `--[no-]...-table` options. Use `--json` for the normalized
 tasklet-level records; JSON cannot be combined with table options.
 
-Campaign coordinators use `ponytail campaign advance [<campaign>] --json` to
-materialize one deterministic transition, then `ponytail campaign ready-actions
-[<campaign>] --json` to read every durable host action executable now. The
-ready-action view excludes dependency-blocked and already-started dispatches;
-`campaign status` retains the complete recovery inventory. Execute only actions
-from the ready-action view and record each result by its action ID.
+The parallel campaign scheduler is deprecated and is not part of ordinary
+`plan-execution`. Its historical action and recovery protocol is preserved in
+[parallel-plan-scheduler](skills/parallel-plan-scheduler/SKILL.md) for explicitly
+requested maintenance of existing campaign ledgers. Campaign census,
+validation, and serial plan execution remain available without scheduling.
 
 `ponytail worktree reclaim` reads the invoking project's committed
 `.agents/config/project/worktree-lifecycle.json`. Its committed executable

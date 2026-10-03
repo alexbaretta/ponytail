@@ -29,6 +29,7 @@ provides_skills:
   - lossless-json-contracts
   - monetary-contract-safety
   - plan-execution
+  - parallel-plan-scheduler
   - ponytail
   - ponytail-audit
   - ponytail-debt

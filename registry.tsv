@@ -16,6 +16,7 @@ skill	enabled	issue-tracking	skills/issue-tracking	claude,codex,copilot,devin,he
 skill	enabled	lossless-json-contracts	skills/lossless-json-contracts	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Exact JSON boundary rules
 skill	enabled	monetary-contract-safety	skills/monetary-contract-safety	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Monetary contract rules
 skill	enabled	plan-execution	skills/plan-execution	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Durable project management workflow
+skill	enabled	parallel-plan-scheduler	skills/parallel-plan-scheduler	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Deprecated parallel campaign scheduler protocol
 skill	enabled	ponytail	skills/ponytail	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Portable core policy
 skill	enabled	ponytail-audit	skills/ponytail-audit	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Repository complexity audit
 skill	enabled	ponytail-debt	skills/ponytail-debt	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Technical debt reconciliation
