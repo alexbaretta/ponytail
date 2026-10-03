@@ -333,7 +333,11 @@ alone is not planning readiness: aggregate plans and non-`STUB` planning
 states require their own ordinary lifecycle or prerequisite reconciliation.
 After planning joins, the same assignment continues through actual tasklet
 review, implementation selection, and final acceptance without a replacement
-worker.
+worker. While its planning action is pending, a clean fast-forward of the
+same authenticated worker branch to an integrated descendant may refresh the
+same attachment capability and revision. A dirty or unintegrated revision may
+not refresh it. A completed planning action must round-trip through the
+current ledger reader so its successful result remains durable.
 
 The scheduler must also report continuation of an existing unfinished
 assignment independently of new-plan dispatch. For each assigned plan still in

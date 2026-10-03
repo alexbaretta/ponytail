@@ -252,6 +252,13 @@ function readCompletedActionV2(value, label = 'completed action') {
   return { ...value, result: { ...value.result } };
 }
 
+function readCompletedActionV3(value, label = 'completed action') {
+  exactKeys(value, ['actionId', 'assignmentId', 'type', 'result'], label);
+  for (const key of ['actionId', 'assignmentId']) if (typeof value[key] !== 'string' || !value[key]) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', `${label}.${key} must be a nonempty string`);
+  if (!ACTION_TYPES_V6.includes(value.type) || !value.result || typeof value.result !== 'object' || Array.isArray(value.result)) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', `${label} has invalid type or result`);
+  return { ...value, result: { ...value.result } };
+}
+
 function readWorkerBindingsV1(value, file = 'campaign worker bindings') {
   exactKeys(value, ['schemaVersion', 'bindings'], file);
   if (value.schemaVersion !== 1 || !Array.isArray(value.bindings)) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', `${file}: expected worker binding schema V1`);
@@ -491,7 +498,7 @@ function readLedgerV8(value, file = 'campaign ledger') {
   for (const key of ['assignments', 'pendingActions', 'completedActions', 'workers', 'dispatchRetries']) if (!Array.isArray(value[key])) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', `${file}.${key} must be an array`);
   const assignments = value.assignments.map((assignment, index) => readAssignmentV1(assignment, `${file}.assignments[${index}]`));
   const pendingActions = value.pendingActions.map((pendingAction, index) => readActionV6(pendingAction, `${file}.pendingActions[${index}]`));
-  const completedActions = value.completedActions.map((actionResult, index) => readCompletedActionV2(actionResult, `${file}.completedActions[${index}]`));
+  const completedActions = value.completedActions.map((actionResult, index) => readCompletedActionV3(actionResult, `${file}.completedActions[${index}]`));
   const workers = value.workers.map((worker, index) => readWorkerV1(worker, `${file}.workers[${index}]`));
   if (new Set(pendingActions.map(({ id }) => id)).size !== pendingActions.length
     || new Set(pendingActions.map(({ assignmentId }) => assignmentId)).size !== pendingActions.length
@@ -1130,6 +1137,20 @@ function bindWorker(environment, invocationWorktree, attachToken, sessionId) {
     const replay = state.bindings.find((binding) => binding.attachTokenHash === attachTokenHash);
     if (replay) {
       if (replay.sessionId !== sessionId || replay.worktree !== canonicalWorktree) fail('CAMPAIGN_WORKER_BINDING_CONFLICT', 'attach token is already bound to another worker');
+      if (pendingAction?.type === 'PLAN_WORKER') {
+        const currentIdentity = repositoryIdentity(canonicalWorktree);
+        if (currentIdentity.branch !== replay.branch) fail('CAMPAIGN_WORKER_BINDING_CONFLICT', 'planning worker changed its authenticated branch');
+        if (currentIdentity.revision !== replay.revision) {
+          const integratedRevision = repositoryIdentity(ledger.topLevelWorktree).revision;
+          if (git(canonicalWorktree, ['status', '--porcelain'])
+            || spawnSync('git', ['-C', ledger.topLevelWorktree, 'merge-base', '--is-ancestor', replay.revision, currentIdentity.revision]).status !== 0
+            || spawnSync('git', ['-C', ledger.topLevelWorktree, 'merge-base', '--is-ancestor', currentIdentity.revision, integratedRevision]).status !== 0) {
+            fail('CAMPAIGN_WORKER_BINDING_CONFLICT', 'planning worker attachment can advance only on a clean branch to an integrated descendant');
+          }
+          replay.revision = currentIdentity.revision;
+          replay.boundAt = new Date().toISOString();
+        }
+      }
       return replay;
     }
     const previous = state.bindings.find(binding => binding.sessionId === sessionId || binding.worktree === canonicalWorktree);

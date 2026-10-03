@@ -896,6 +896,47 @@ test('initial planning uses an idle campaign pair while independent implementati
   assert.equal(ledger.assignments.find(({ planId }) => planId === 'plan').sessionId, null);
 });
 
+test('planning worker can refresh its pending attachment after a clean integrated fast-forward', () => {
+  const root = repository();
+  const environment = { ...process.env, PONYTAIL_CAMPAIGN_STATE_DIR: temporaryDirectory('ponytail-planning-attach-refresh') };
+  const worktreePath = path.join(temporaryDirectory('ponytail-planning-attach-worker'), 'worker');
+  command(root, ['worktree', 'add', '-qb', 'planning-worker', worktreePath]);
+  const worktree = fs.realpathSync(worktreePath);
+  const campaignGraph = graph([
+    { id: 'campaign', parentPlanId: null, dependsOn: [], lifecycle: 'in_progress', path: 'root' },
+    { id: 'plan', parentPlanId: 'campaign', dependsOn: [], lifecycle: 'open', path: 'plan', planningSprint: { sprintId: 'S01', planningStatus: 'STUB' } },
+  ]);
+  writeHostObservation(root, 'campaign', { schemaVersion: 1, campaignId: 'campaign', observedAt: new Date().toISOString(),
+    completeSessionIds: ['planning-session'], sessions: [{ sessionId: 'planning-session', state: 'waiting', worktree, managedWorktree: true }] }, environment);
+  const scheduled = withLedgerLock(root, 'campaign', environment, ledger => {
+    ledger.coordinatorSessionId = 'coordinator';
+    const worker = { sessionId: 'planning-session', worktree, branch: 'planning-worker', revision: ledger.integrationRevision,
+      clean: true, activity: 'idle', evidenceComplete: false, worktreeArchived: false, sessionArchived: false };
+    ledger.workers.push(worker);
+    recordCreatedWorker(ledger, worker);
+    return schedulePlanningReadyPlans(campaignGraph, ledger, environment).actions[0];
+  });
+  const first = bindWorker(environment, worktree, scheduled.payload.attachToken, 'planning-session');
+  fs.writeFileSync(path.join(root, 'new-plan.txt'), 'integrated planning source');
+  command(root, ['add', 'new-plan.txt']);
+  command(root, ['-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.test', 'commit', '-qm', 'integrated plan source']);
+  const integrated = command(root, ['rev-parse', 'HEAD']);
+  command(worktree, ['merge', '--ff-only', integrated]);
+  fs.writeFileSync(path.join(worktree, 'uncommitted.txt'), 'not an integrated checkpoint');
+  assert.equal(captureError(() => bindWorker(environment, worktree, scheduled.payload.attachToken, 'planning-session')).code, 'CAMPAIGN_WORKER_BINDING_CONFLICT');
+  fs.unlinkSync(path.join(worktree, 'uncommitted.txt'));
+  const refreshed = bindWorker(environment, worktree, scheduled.payload.attachToken, 'planning-session');
+  assert.equal(refreshed.assignmentId, first.assignmentId);
+  assert.equal(refreshed.revision, integrated);
+  assert.equal(readWorkerBindings(environment).bindings.filter(item => item.assignmentId === first.assignmentId).length, 1);
+  const result = { ok: true, sessionId: refreshed.sessionId, worktree: refreshed.worktree, branch: refreshed.branch, revision: refreshed.revision };
+  withLedgerLock(root, 'campaign', environment, ledger => {
+    assert.doesNotThrow(() => validateActionResultBinding(ledger, scheduled.id, result, environment));
+    recordActionResult(ledger, scheduled.id, result, campaignGraph);
+  });
+  assert.equal(readLedger(root, 'campaign', environment).assignments.find(item => item.id === scheduled.assignmentId).state, 'ACTIVE');
+});
+
 test('retry-dispatch persists one fenced successor across CLI restarts and retains unknown capacity', () => {
   const root = fs.realpathSync(campaignRepository());
   const environment = { ...process.env, PONYTAIL_CAMPAIGN_STATE_DIR: temporaryDirectory('ponytail-retry-state'), PONYTAIL_SESSION_ID: 'coordinator' };

@@ -33,3 +33,13 @@ implementation/planning reservations, unready-before-start postponement,
 started-action retention, CLI routing, and no product-edit authority from
 planning attachment. Live GWEN acceptance requires the existing QA repair
 plan to receive a real worker; a passing fixture test alone is not closure.
+
+Live dispatch exposed a follow-on completion defect: the reused planning
+worker was first authenticated before its branch fast-forwarded to the
+integrated dispatch commit. Repeating the same attachment returned the stale
+revision, so the coordinator could not report the exact action result. Even
+after refreshing that binding, ledger V8 rejected its own completed
+`PLAN_WORKER` record because its completed-action reader still accepted only
+older action types. The same action must accept only a clean, integrated
+fast-forward of its original bound branch and durably round-trip its completed
+result. No replacement session or action is authorized.

@@ -854,6 +854,12 @@ durable state instead of remembering worker assignments in conversation:
    join. Planning alone grants no product-path lease. Keep this assignment for
    later review, implementation, and acceptance rather than dispatching a
    second worker when planning completes.
+   If the coordinator's integrated branch advances while that planning action
+   is pending, the worker first fast-forwards its clean assigned branch to the
+   integrated commit and retries `campaign attach` with the same token. This
+   refreshes only its authenticated revision; the coordinator reports action
+   success using the refreshed attachment, never the old revision. A dirty,
+   divergent, or not-yet-integrated worker revision cannot refresh the binding.
    Successful attachment records an ACTIVE assignment, not plan activation or
    product tasklet execution. The coordinator's plan may remain OPEN while the
    original authenticated worker awaits its exact lifecycle/backlink leases.

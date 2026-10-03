@@ -764,6 +764,11 @@ Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
    milestone.
    - Attachment or an empty tasklet count never authorizes a product edit or
      marks the sprint approved or reviewed without the worker's real evidence.
+   - While the action remains pending, advance the coordinator to an integrated
+     descendant and fast-forward the clean worker branch. Retrying the same
+     attachment refreshes its revision, and the exact action result persists
+     through a ledger reload. A dirty or unintegrated worker revision cannot
+     refresh the binding.
 3. Make the sprint unready before an unstarted action, then repeat
    `ready-actions`; separately repeat after a started action.
    - The unstarted action is withheld and can be postponed. The started action
