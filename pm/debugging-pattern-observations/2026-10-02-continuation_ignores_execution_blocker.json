@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-10-02-continuation_ignores_execution_blocker",
+  "recorded_at": "2026-10-02T21:34:00-07:00",
+  "source_references": ["pm/bugs/closed/2026-10-02-BUG-continuation_ignores_execution_blocker.md"],
+  "context": {
+    "languages": ["javascript"],
+    "frameworks": [],
+    "components": ["campaign scheduler"],
+    "affected_boundaries": ["durable execution blocker report to existing-session continuation readiness"],
+    "code_references": ["src/campaign-orchestration.js:reconcile", "src/campaign-orchestration.js:runnablePlanDiagnostics"]
+  },
+  "observed_behavior": "An idle assigned worker with a present checkout was marked ready for continuation despite its unresolved ENVIRONMENT_BLOCKED execution report.",
+  "expected_behavior": "The continuation names the unresolved blocker and remains not ready until its prerequisite is repaired and the report is resolved.",
+  "causal_mechanism": "Runnable-plan diagnostics read the durable report store, but continuation readiness was derived only from host and assignment diagnostics.",
+  "anti_pattern": {
+    "structural_description": "Two projections of actionability consumed different subsets of the same authoritative evidence.",
+    "why_it_fails": "The coordinator can wake an idle worker into a known, unchanged failure while believing the assignment is ready."
+  },
+  "correct_pattern": {
+    "required_invariant": "Every unresolved applicable execution report obstructs both runnable diagnostics and existing-session continuation readiness.",
+    "implementation_description": "Select latest applicable reports once, then use that selection in both projections."
+  },
+  "applicability_conditions": ["Existing active assignment", "Durable unresolved report for that assignment", "Waiting or completed original session with present managed checkout"],
+  "known_non_matches": ["Resolved report", "Report scoped to an action no longer pending", "Worker already working"],
+  "confirmation_evidence": ["Live GWEN API standalone continuation was ready while its durable ENVIRONMENT_BLOCKED report remained unresolved.", "Focused real-Git regression failed before the repair and passed after it."],
+  "regression_proofs": ["tests/campaign-orchestration.test.js: unfinished assignment continuation requires the original idle session and live checkout"]
+}

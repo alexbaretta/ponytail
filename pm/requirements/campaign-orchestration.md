@@ -404,7 +404,9 @@ and the evidence blocking a wakeup. It may mark the assignment ready to resume
 only after a fresh, complete host observation proves the original session is
 waiting or completed, its matching managed checkout exists, no host action is
 pending for that assignment, and no other live assignment owns the same plan,
-session, or checkout. A working session is already active, not a resume
+session, or checkout. An unresolved coordinator-reported execution blocker
+also prevents a ready continuation until its prerequisite is repaired and the
+report is resolved. A working session is already active, not a resume
 candidate. Missing checkouts and unknown sessions remain blocked, not replaced.
 Closure cleanup is not worker continuation. Waking the original worker does not
 waive the normal planning, review, tasklet, delivery, or acceptance gates and

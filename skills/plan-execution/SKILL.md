@@ -691,6 +691,11 @@ durable state instead of remembering worker assignments in conversation:
    a duplicate prompt while the first host delivery or worker turn is
    unresolved. A `ready: false` continuation carries the exact objections:
    repair those first, and never replace a missing worker from this signal.
+   Record a known external prerequisite with `report-blocker` before deciding
+   whether to wake its worker. An unresolved report prevents a ready
+   continuation even if the session is idle and its checkout exists; resolve
+   it only after the prerequisite is repaired. Do not repeat an unchanged
+   blocked test to inflate active-session counts.
    Closed-plan cleanup is not a continuation. If
    `readyToMerge` is nonempty, give the verified join priority: run `advance`
    and refresh status until its merge is recorded before reserving more

@@ -160,6 +160,16 @@ test('unfinished assignment continuation requires the original idle session and 
   const [ready] = reconcile(campaignGraph, ledger, root, environment).continuations;
   assert.deepEqual(ready, { assignmentId: 'unfinished', planId: 'work', sessionId: 'original-session',
     worktree, phase: 'PLAN_CONTINUATION', ready: true, objections: [] });
+  recordExecutionBlocker(ledger, { schemaVersion: 1, assignmentId: assignment.id, actionId: null,
+    phase: 'EXECUTION', state: 'BLOCKED', code: 'ENVIRONMENT_BLOCKED',
+    summary: 'Provider prerequisite is absent.', requiredAction: 'Integrate the provider prerequisite.' },
+  { ...environment, PONYTAIL_SESSION_ID: 'coordinator' });
+  assert.deepEqual(reconcile(campaignGraph, ledger, root, environment).continuations[0].objections, ['ENVIRONMENT_BLOCKED']);
+  recordExecutionBlocker(ledger, { schemaVersion: 1, assignmentId: assignment.id, actionId: null,
+    phase: 'EXECUTION', state: 'RESOLVED', code: 'ENVIRONMENT_BLOCKED',
+    summary: 'Provider prerequisite integrated.', requiredAction: 'Resume the original worker.' },
+  { ...environment, PONYTAIL_SESSION_ID: 'coordinator' });
+  assert.deepEqual(reconcile(campaignGraph, ledger, root, environment).continuations[0].objections, []);
   campaignGraph.plans[0].runnableTasklets = { sprintId: 'S01', taskletIds: ['S01-F01-T01'] };
   assert.equal(reconcile(campaignGraph, ledger, root, environment).continuations[0].phase, 'TASKLETS');
   campaignGraph.plans[0].runnableTasklets = null;

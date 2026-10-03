@@ -711,6 +711,11 @@ Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
    - The query reflects the current checkout/activity and report disposition;
      the original action can resume through the normal protocol. Resolution
      alone cannot claim native activation or authenticated attachment.
+   - For an already assigned, waiting original worker with a present checkout,
+     an unresolved `EXECUTION` report makes its status continuation not ready
+     and names the blocker code in `objections`. A matching resolved report
+     restores continuation readiness without creating an assignment or waking
+     the worker. This applies even when runnable tasklets exist.
 5. Repeat with missing, incomplete, and stale host evidence, and with a full
    pool lacking a safe reusable pair.
    - Observed concurrency is unknown when unproved. Capacity wait is distinct

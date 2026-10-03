@@ -1906,11 +1906,13 @@ function reconcile(graph, ledger, invocationWorktree = ledger.topLevelWorktree, 
   status.diagnostics.sort((left, right) => left.code.localeCompare(right.code)
     || (left.planId ?? '').localeCompare(right.planId ?? '')
     || (left.assignmentId ?? '').localeCompare(right.assignmentId ?? ''));
+  const unresolvedBlockers = environment ? unresolvedExecutionBlockers(ledger, environment) : [];
   status.continuations = assignments.filter((assignment) => assignment.sessionId && assignment.worktree
     && assignment.planLifecycle === graph.lifecycle.activeWork
     && ['ACTIVE', 'WORK_COMPLETE', 'REBASE_REQUIRED', 'MERGED'].includes(assignment.state)).map((assignment) => {
     const objections = status.diagnostics.filter((item) => item.assignmentId === assignment.id
       || item.assignmentIds?.includes(assignment.id)).map((item) => item.code);
+    objections.push(...unresolvedBlockers.filter(({ report }) => report.assignmentId === assignment.id).map(({ report }) => report.code));
     if (assignment.hostState === 'working') objections.push('HOST_SESSION_WORKING');
     else if (!['waiting', 'completed'].includes(assignment.hostState)) objections.push('HOST_SESSION_NOT_IDLE');
     if (ledger.pendingActions.some((item) => item.assignmentId === assignment.id)) objections.push('PENDING_ACTION');
@@ -2055,6 +2057,15 @@ function readExecutionBlockers(repositoryRoot, campaignId, environment) {
   return value;
 }
 
+function unresolvedExecutionBlockers(ledger, environment) {
+  const latest = new Map();
+  for (const item of readExecutionBlockers(ledger.topLevelWorktree, ledger.campaignId, environment).reports) {
+    latest.set(JSON.stringify([item.report.assignmentId, item.report.phase]), item);
+  }
+  return [...latest.values()].filter(({ report }) => report.state === 'BLOCKED'
+    && (report.actionId === null || ledger.pendingActions.some(({ id }) => id === report.actionId)));
+}
+
 function recordExecutionBlocker(ledger, input, environment) {
   const report = readBlockerReportV1(input);
   const sessionId = environment.PONYTAIL_SESSION_ID ?? environment.CODEX_SESSION_ID;
@@ -2114,9 +2125,7 @@ function runnablePlanDiagnostics(graph, ledger, invocationWorktree, environment)
   const status = reconcile(graph, ledger, invocationWorktree, environment);
   const observation = readHostObservation(ledger.topLevelWorktree, ledger.campaignId, environment);
   const fresh = Boolean(observation && Date.now() - Date.parse(observation.observedAt) <= HOST_OBSERVATION_MAX_AGE_MS);
-  const reports = readExecutionBlockers(ledger.topLevelWorktree, ledger.campaignId, environment);
-  const latest = new Map();
-  for (const item of reports.reports) latest.set(JSON.stringify([item.report.assignmentId, item.report.phase]), item);
+  const unresolvedBlockers = unresolvedExecutionBlockers(ledger, environment);
   const plans = runnablePlans(graph).map(plan => {
     const assignment = status.assignments.find(item => item.planId === plan.id && item.state !== 'ARCHIVED');
     const pendingAction = ledger.pendingActions.find(item => item.assignmentId === assignment?.id);
@@ -2128,9 +2137,8 @@ function runnablePlanDiagnostics(graph, ledger, invocationWorktree, environment)
       .map(item => ({ code: item.code, message: item.message, requiredAction: 'Inspect the exact worker and canonical status diagnostic; repair its prerequisite before resuming the original action.', source: 'OBSERVED', recordedAt: observation?.observedAt ?? null }));
     if (worktree && !fs.existsSync(worktree) && !anomalies.some(item => item.code.includes('WORKTREE_MISSING') || item.code === 'CAMPAIGN_WORKTREE_RECOVERY_REQUIRED')) anomalies.push({ code: 'CAMPAIGN_WORKTREE_MISSING', message: `original worker checkout is missing: ${worktree}`, requiredAction: 'Work with this original worker to run canonical exact-path recovery and immediate adoption; obtain narrowly scoped human authority if required.', source: 'OBSERVED', recordedAt: null });
     if (sessionId && hostState === null && !anomalies.some(item => item.code.startsWith('CAMPAIGN_HOST_OBSERVATION'))) anomalies.push({ code: 'CAMPAIGN_HOST_OBSERVATION_UNAVAILABLE', message: 'Fresh complete host evidence is unavailable for the original session.', requiredAction: 'Inspect the exact native session and refresh campaign observation; do not infer that it is idle or missing.', source: 'OBSERVED', recordedAt: observation?.observedAt ?? null });
-    for (const { report, recordedAt } of latest.values()) {
-      if (report.assignmentId !== assignment?.id || report.state !== 'BLOCKED') continue;
-      if (report.actionId !== null && !ledger.pendingActions.some(item => item.id === report.actionId)) continue;
+    for (const { report, recordedAt } of unresolvedBlockers) {
+      if (report.assignmentId !== assignment?.id) continue;
       anomalies.push({ code: report.code, message: `${report.phase}: ${report.summary}`, requiredAction: report.requiredAction, source: 'REPORTED', recordedAt });
     }
     anomalies.sort((a, b) => a.code.localeCompare(b.code) || a.message.localeCompare(b.message));
