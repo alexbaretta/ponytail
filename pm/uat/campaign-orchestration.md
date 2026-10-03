@@ -741,6 +741,38 @@ Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
    branch, or no original safe pair.
    - No review dispatch occurs, and the exact objection remains visible.
 
+## Arc: Assign an initial planning sprint without inventing runnable tasklets
+
+Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
+
+- **Actor:** Bound campaign coordinator and original idle campaign workers.
+- **Prerequisites:** One approved member plan with a dependency-ready `STUB`
+  sprint and no tasklets; a separate reviewed implementation-ready plan; two
+  safe idle pairs created for this campaign. Include aggregate zero-tasklet
+  plans and unmet campaign dependencies as controls.
+- **Profiles:** Automated CLI and live Codex host attachment.
+- **External effects:** One durable planning reuse assignment; no new session,
+  checkout, product edit, or inferred approval.
+
+1. Run `campaign schedule-ready --json`, then
+   `campaign schedule-planning-ready --json` twice.
+   - Implementation and planning reserve distinct original pairs. The second
+     planning call returns the same action and assignment identities; only the
+     selector-ready `STUB` receives a `PLAN_WORKER` action.
+2. Start and attach that exact original worker; have it run the planning
+   selector, author the named sprint's graph, and deliver a clean planning
+   milestone.
+   - Attachment or an empty tasklet count never authorizes a product edit or
+     marks the sprint approved or reviewed without the worker's real evidence.
+3. Make the sprint unready before an unstarted action, then repeat
+   `ready-actions`; separately repeat after a started action.
+   - The unstarted action is withheld and can be postponed. The started action
+     keeps its original host identity and is not duplicated.
+4. After the planning milestone joins, continue the same assignment through
+   tasklet review and the ordinary execution selector.
+   - Product implementation begins only after its independent review and
+     nonempty runnable-tasklet proof; no replacement worker is created.
+
 ## Arc: Resume an unfinished assignment only through its original idle session
 
 Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION

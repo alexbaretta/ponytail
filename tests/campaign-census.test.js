@@ -170,6 +170,16 @@ test('campaign graph exposes a validated review scope without runnable implement
   assert.deepEqual(review.reviewableSprint, { sprintId: 'S01', taskletIds: ['S01-F01-T01'] });
 });
 
+test('campaign report and graph accept an initial planning-only sprint', () => {
+  const root = repository();
+  const selected = plan(root, 'open', 'planning', null, { schemaVersion: 2, empty: true });
+  commit(root);
+  const result = spawnSync(process.execPath, [campaignCli, 'report', selected, '--plan-table'], { cwd: root, encoding: 'utf8' });
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /Plan census/);
+  assert.deepEqual(campaignGraph(root, 'planning').plans[0].planningSprint, { sprintId: 'S01', planningStatus: 'STUB' });
+});
+
 test('management configuration reader requires one exact safe V1 contract', () => {
   const valid = {
     schemaVersion: 1,

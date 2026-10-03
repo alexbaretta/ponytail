@@ -745,6 +745,15 @@ durable state instead of remembering worker assignments in conversation:
    host actions through the same authenticated protocol below. The command
    does not start Codex sessions: the current supported CLI protocol lacks
    managed-worktree creation, so native host effects remain adapter-owned.
+   Then run `ponytail campaign schedule-planning-ready [<campaign-root>]
+   --json`. It reserves a dependency-ready initial `STUB` sprint selected by
+   the canonical planning selector only on a safe idle pair originally created
+   for this campaign. A zero-tasklet count alone is not eligibility: aggregate
+   plans and `PLANNING` or `READY_FOR_REVIEW` sprints are not initial `STUB`
+   selections. The typed `PLAN_WORKER` action grants the exact original worker
+   planning authority for `payload.sprintId`, not product-edit authority or a
+   new worker slot. Preserve a started action even if planning readiness
+   changes; postpone only an action proven never started.
    Then run `ponytail campaign schedule-review-ready [<campaign-root>] --json`
    when a safe original campaign pair remains idle. This separate operation
    reserves approved, dependency-ready V3 sprints whose validated tasklets
@@ -794,7 +803,7 @@ durable state instead of remembering worker assignments in conversation:
    use worker-owned optimistic rebasing and create no `REQUEST_REBASE` action.
    On resumption, inspect the named
    worker before repeating an unresolved host request. For `CREATE_WORKER`,
-   `REUSE_WORKER`, and `REVIEW_WORKER`, `ready-actions` already proves that
+   `REUSE_WORKER`, `REVIEW_WORKER`, and `PLAN_WORKER`, `ready-actions` already proves that
    `payload.dispatch.ready` is true, its state is `NOT_STARTED`, and the same
    applicable implementation or review predicate still holds. For an
    existing assignment, use the separate `status.continuations` readiness
@@ -803,6 +812,9 @@ durable state instead of remembering worker assignments in conversation:
    `PLAN_CONTINUATION` permit only their respective plan-owned work until
    the ordinary execution selector passes. A `REVIEW_WORKER` action authorizes only the exact
    `payload.sprintId` tasklet review and plan metadata reconciliation.
+   A `PLAN_WORKER` action authorizes only initial planning of the exact
+   `payload.sprintId`; product edits still require approved planning, tasklet
+   review, and a nonempty ordinary execution selection.
    Delivered rebase/integration work remains independently executable, and
    workers retain autonomous recovery authority. As soon as
    the supported host operation begins,
@@ -822,8 +834,8 @@ durable state instead of remembering worker assignments in conversation:
    create another checkout or alter an existing branch. Only then does it run
    the authenticated campaign attach command.
    Bootstrap establishes local worktree prerequisites only: no plan edits or
-   execution precede authenticated attachment. For `REUSE_WORKER` or
-   `REVIEW_WORKER`, message
+   execution precede authenticated attachment. For `REUSE_WORKER`,
+   `REVIEW_WORKER`, or `PLAN_WORKER`, message
    only the exact session named by the action, previously created for this
    campaign. An unrelated idle chat is never a substitute, even if it shares
    the project or checkout. Require the same verified prerequisites and
@@ -839,6 +851,12 @@ durable state instead of remembering worker assignments in conversation:
    selector returns nonempty runnable tasklets may that same assignment edit
    product paths. Attachment or a coordinator message never substitutes for
    the worker's actual review or marks tasklets reviewed automatically.
+   For `PLAN_WORKER`, the same worker runs the canonical planning selector,
+   authors and reviews the exact selected `STUB` sprint and its atomic graph,
+   then delivers the clean planning milestone through the ordinary worker-owned
+   join. Planning alone grants no product-path lease. Keep this assignment for
+   later review, implementation, and acceptance rather than dispatching a
+   second worker when planning completes.
    Successful attachment records an ACTIVE assignment, not plan activation or
    product tasklet execution. The coordinator's plan may remain OPEN while the
    original authenticated worker awaits its exact lifecycle/backlink leases.

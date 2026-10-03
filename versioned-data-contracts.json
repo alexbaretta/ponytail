@@ -285,9 +285,9 @@
         "module": "src/campaign-orchestration.js",
         "readerRegistryExport": "CampaignLedgerReaders"
       },
-      "currentVersion": "V6",
-      "versions": ["V1", "V2", "V3", "V4", "V5", "V6"],
-      "supportedReadVersions": ["V1", "V2", "V3", "V4", "V5", "V6"],
+      "currentVersion": "V8",
+      "versions": ["V1", "V2", "V3", "V4", "V5", "V6", "V7", "V8"],
+      "supportedReadVersions": ["V1", "V2", "V3", "V4", "V5", "V6", "V7", "V8"],
       "supportedDowngradeVersions": []
     },
     {
@@ -309,9 +309,9 @@
         "module": "src/campaign-orchestration.js",
         "readerRegistryExport": "CampaignStatusReaders"
       },
-      "currentVersion": "V6",
-      "versions": ["V1", "V2", "V3", "V4", "V5", "V6"],
-      "supportedReadVersions": ["V1", "V2", "V3", "V4", "V5", "V6"],
+      "currentVersion": "V9",
+      "versions": ["V1", "V2", "V3", "V4", "V5", "V6", "V7", "V8", "V9"],
+      "supportedReadVersions": ["V1", "V2", "V3", "V4", "V5", "V6", "V7", "V8", "V9"],
       "supportedDowngradeVersions": []
     },
     {
@@ -321,9 +321,9 @@
         "module": "src/campaign-orchestration.js",
         "readerRegistryExport": "CampaignActionReaders"
       },
-      "currentVersion": "V4",
-      "versions": ["V1", "V2", "V3", "V4"],
-      "supportedReadVersions": ["V1", "V2", "V3", "V4"],
+      "currentVersion": "V6",
+      "versions": ["V1", "V2", "V3", "V4", "V5", "V6"],
+      "supportedReadVersions": ["V1", "V2", "V3", "V4", "V5", "V6"],
       "supportedDowngradeVersions": []
     },
     {
@@ -333,9 +333,9 @@
         "module": "src/campaign-orchestration.js",
         "readerRegistryExport": "CampaignReadyActionsReaders"
       },
-      "currentVersion": "V4",
-      "versions": ["V1", "V2", "V3", "V4"],
-      "supportedReadVersions": ["V1", "V2", "V3", "V4"],
+      "currentVersion": "V6",
+      "versions": ["V1", "V2", "V3", "V4", "V5", "V6"],
+      "supportedReadVersions": ["V1", "V2", "V3", "V4", "V5", "V6"],
       "supportedDowngradeVersions": []
     },
     {

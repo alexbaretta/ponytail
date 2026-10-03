@@ -318,6 +318,23 @@ edits require the ordinary reviewed execution selector to pass. Repeating the
 operation preserves the assignment and action identities, and a competing
 implementation assignment cannot own the same plan or pair.
 
+The same maximum-parallelism request covers an approved campaign member whose
+first dependency-ready sprint is still a planning `STUB` and therefore has no
+tasklets. `campaign schedule-planning-ready` selects that exact sprint through
+the canonical planning selector, after campaign prerequisites are complete.
+It may reserve only a safe idle session/worktree pair originally created for
+this campaign; it neither imports nor creates a worker. Its typed `PLAN_WORKER`
+action authorizes authenticated planning and metadata delivery for the named
+sprint, not product-path edits or automatic approval. Repeating the command
+preserves action and assignment identities. An unstarted action becomes
+non-executable when its sprint ceases to be planning-ready; a started action
+retains its original host identity for reconciliation. A zero-tasklet total
+alone is not planning readiness: aggregate plans and non-`STUB` planning
+states require their own ordinary lifecycle or prerequisite reconciliation.
+After planning joins, the same assignment continues through actual tasklet
+review, implementation selection, and final acceptance without a replacement
+worker.
+
 The scheduler must also report continuation of an existing unfinished
 assignment independently of new-plan dispatch. For each assigned plan still in
 active work, status identifies its original session and checkout, the next

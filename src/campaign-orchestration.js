@@ -31,6 +31,7 @@ const ACTION_TYPES_V2 = [...ACTION_TYPES_V1, 'RECOVER_WORKTREE'];
 const ACTION_TYPES_V3 = ['CREATE_WORKER', 'REUSE_WORKER', 'REQUEST_REBASE', 'ARCHIVE_WORKTREE', 'ARCHIVE_SESSION', 'RECOVER_WORKTREE'];
 const ACTION_TYPES_V4 = ACTION_TYPES_V3;
 const ACTION_TYPES_V5 = [...ACTION_TYPES_V4, 'REVIEW_WORKER'];
+const ACTION_TYPES_V6 = [...ACTION_TYPES_V5, 'PLAN_WORKER'];
 const HOST_SESSION_STATES = ['working', 'waiting', 'completed', 'archived', 'missing', 'unknown'];
 const HOST_OBSERVATION_MAX_AGE_MS = 5 * 60 * 1000;
 const WORKER_BINDINGS_FILE = 'campaign-worker-bindings.json';
@@ -142,6 +143,25 @@ function readActionV5(value, label = 'action') {
   return { ...value, payload: { ...value.payload } };
 }
 
+function readActionV6(value, label = 'action') {
+  if (value === null) return null;
+  if (value.schemaVersion !== 6 || !ACTION_TYPES_V6.includes(value.type)) fail('CAMPAIGN_ORCHESTRATION_VERSION', `${label} has an unsupported type or version`);
+  if (value.type === 'PLAN_WORKER') {
+    exactKeys(value, ['schemaVersion', 'id', 'type', 'assignmentId', 'idempotencyKey', 'payload'], label);
+    for (const key of ['id', 'assignmentId', 'idempotencyKey']) if (typeof value[key] !== 'string' || !value[key]) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', `${label}.${key} must be a nonempty string`);
+    exactKeys(value.payload, ['planId', 'sprintId', 'attachToken', 'sessionId', 'worktree', 'dispatch'], `${label}.payload`);
+    for (const key of ['planId', 'sprintId', 'attachToken', 'sessionId', 'worktree']) if (typeof value.payload[key] !== 'string' || !value.payload[key]) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', `${label}.payload.${key} must be a nonempty string`);
+    if (!path.isAbsolute(value.payload.worktree) || path.resolve(value.payload.worktree) !== value.payload.worktree) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', `${label}.payload.worktree must be a normalized absolute path`);
+    exactKeys(value.payload.dispatch, ['ready', 'state', 'hostIdentity'], `${label}.payload.dispatch`);
+    if (typeof value.payload.dispatch.ready !== 'boolean' || !['NOT_STARTED', 'STARTED'].includes(value.payload.dispatch.state)) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', `${label}.payload.dispatch has invalid readiness or state`);
+    optionalString(value.payload.dispatch.hostIdentity, `${label}.payload.dispatch.hostIdentity`);
+    if ((value.payload.dispatch.state === 'NOT_STARTED') !== (value.payload.dispatch.hostIdentity === null)) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', `${label}.payload.dispatch identity disagrees with state`);
+    return { ...value, payload: { ...value.payload } };
+  }
+  readActionV5({ ...value, schemaVersion: 5 }, label);
+  return { ...value, payload: { ...value.payload } };
+}
+
 function readActionV1OrV2(value, label = 'action') {
   return value?.schemaVersion === 2 ? readActionV2(value, label) : readActionV1(value, label);
 }
@@ -161,8 +181,9 @@ function readActionAsV4(value, assignment, label = 'action') {
 }
 
 function readCurrentAction(value, assignment, label = 'action') {
-  if (value?.schemaVersion === 5) return readActionV5(value, label);
-  return readActionV5({ ...readActionAsV4(value, assignment, label), schemaVersion: 5 }, label);
+  if (value?.schemaVersion === 6) return readActionV6(value, label);
+  const previous = value?.schemaVersion === 5 ? readActionV5(value, label) : readActionAsV4(value, assignment, label);
+  return readActionV6({ ...previous, schemaVersion: 6 }, label);
 }
 
 function readWorkerV1(value, label = 'worker') {
@@ -364,10 +385,11 @@ function readLedgerV5(value, file = 'campaign ledger') {
 }
 
 function readCurrentLedger(value, file = 'campaign ledger') {
-  if (value?.schemaVersion === 7) return readLedgerV7(value, file);
-  const previous = value?.schemaVersion === 6 ? readLedgerV6(value, file)
-    : readLedgerV6({ ...readHistoricalLedger(value, file), schemaVersion: 6, dispatchRetries: [] }, file);
-  return readLedgerV7({ ...previous, schemaVersion: 7,
+  if (value?.schemaVersion === 8) return readLedgerV8(value, file);
+  const previous = value?.schemaVersion === 7 ? readLedgerV7(value, file)
+    : value?.schemaVersion === 6 ? readLedgerV6(value, file)
+      : readLedgerV6({ ...readHistoricalLedger(value, file), schemaVersion: 6, dispatchRetries: [] }, file);
+  return readLedgerV8({ ...previous, schemaVersion: 8,
     pendingActions: previous.pendingActions.map((pendingAction, index) => readCurrentAction(
       pendingAction, previous.assignments.find(({ id }) => id === pendingAction.assignmentId), `${file}.pendingActions[${index}]`)),
   }, file);
@@ -460,7 +482,45 @@ function readLedgerV7(value, file = 'campaign ledger') {
   return ledger;
 }
 
-const CampaignLedgerReaders = Object.freeze({ V1: readLedgerV1, V2: readLedgerV2, V3: readLedgerV3, V4: readLedgerV4, V5: readLedgerV5, V6: readLedgerV6, V7: readLedgerV7 });
+function readLedgerV8(value, file = 'campaign ledger') {
+  exactKeys(value, ['schemaVersion', 'campaignId', 'topLevelWorktree', 'coordinatorSessionId', 'integrationBranch', 'integrationRevision', 'assignments', 'pendingActions', 'completedActions', 'workers', 'dispatchRetries'], file);
+  if (value.schemaVersion !== 8) fail('CAMPAIGN_ORCHESTRATION_VERSION', `${file}: unsupported schemaVersion`);
+  for (const key of ['campaignId', 'topLevelWorktree', 'integrationRevision']) if (typeof value[key] !== 'string' || !value[key]) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', `${file}.${key} must be a nonempty string`);
+  optionalString(value.coordinatorSessionId, `${file}.coordinatorSessionId`);
+  optionalString(value.integrationBranch, `${file}.integrationBranch`);
+  for (const key of ['assignments', 'pendingActions', 'completedActions', 'workers', 'dispatchRetries']) if (!Array.isArray(value[key])) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', `${file}.${key} must be an array`);
+  const assignments = value.assignments.map((assignment, index) => readAssignmentV1(assignment, `${file}.assignments[${index}]`));
+  const pendingActions = value.pendingActions.map((pendingAction, index) => readActionV6(pendingAction, `${file}.pendingActions[${index}]`));
+  const completedActions = value.completedActions.map((actionResult, index) => readCompletedActionV2(actionResult, `${file}.completedActions[${index}]`));
+  const workers = value.workers.map((worker, index) => readWorkerV1(worker, `${file}.workers[${index}]`));
+  if (new Set(pendingActions.map(({ id }) => id)).size !== pendingActions.length
+    || new Set(pendingActions.map(({ assignmentId }) => assignmentId)).size !== pendingActions.length
+    || pendingActions.filter(({ type }) => type === 'REQUEST_REBASE').length > 1
+    || new Set(completedActions.map(({ actionId }) => actionId)).size !== completedActions.length) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', `${file} has conflicting action identities`);
+  const originals = new Set();
+  const successors = new Set();
+  for (const retry of value.dispatchRetries) {
+    exactKeys(retry, ['originalAction', 'successorActionId', 'authorization', 'recordedAt', 'outcome'], 'dispatch retry');
+    const original = retry.originalAction?.schemaVersion === 6 ? readActionV6(retry.originalAction)
+      : retry.originalAction?.schemaVersion === 5 ? readActionV5(retry.originalAction) : readActionV4(retry.originalAction);
+    if (!original || retry.outcome !== 'UNKNOWN_OUTCOME_SUPERSEDED' || original.type !== 'CREATE_WORKER' || original.payload.dispatch?.state !== 'STARTED'
+      || typeof original.payload.dispatch.hostIdentity !== 'string' || !original.payload.dispatch.hostIdentity
+      || original.payload.bootstrap || !assignments.some(({ id }) => id === original.assignmentId)) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', 'retry history requires an original unprovisioned started creation');
+    for (const key of ['successorActionId', 'authorization', 'recordedAt']) if (typeof retry[key] !== 'string' || !retry[key].trim()) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', `dispatch retry ${key} must be nonempty`);
+    if (!Number.isFinite(Date.parse(retry.recordedAt)) || originals.has(original.id) || successors.has(retry.successorActionId)
+      || original.id === retry.successorActionId || pendingActions.some(({ id }) => id === original.id)) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', 'invalid or duplicate dispatch retry identity');
+    originals.add(original.id);
+    successors.add(retry.successorActionId);
+  }
+  for (const retry of value.dispatchRetries) {
+    if (!pendingActions.some(item => item.id === retry.successorActionId && item.assignmentId === retry.originalAction.assignmentId)
+      && !completedActions.some(item => item.actionId === retry.successorActionId && item.assignmentId === retry.originalAction.assignmentId)
+      && !value.dispatchRetries.some(item => item.originalAction.id === retry.successorActionId && item.originalAction.assignmentId === retry.originalAction.assignmentId)) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', 'retry successor is missing or belongs to another assignment');
+  }
+  return { ...value, assignments, pendingActions, completedActions, workers };
+}
+
+const CampaignLedgerReaders = Object.freeze({ V1: readLedgerV1, V2: readLedgerV2, V3: readLedgerV3, V4: readLedgerV4, V5: readLedgerV5, V6: readLedgerV6, V7: readLedgerV7, V8: readLedgerV8 });
 const CampaignHostObservationReaders = Object.freeze({ V1: readHostObservationV1 });
 const CampaignWorkerBindingReaders = Object.freeze({ V1: readWorkerBindingsV1, V2: readWorkerBindingsV2 });
 const CampaignWorkerDeliveryReaders = Object.freeze({ V1: readWorkerDeliveriesV1 });
@@ -576,7 +636,22 @@ function readReadyActionsV5(value) {
   return { ...value, actions };
 }
 
-const CampaignReadyActionsReaders = Object.freeze({ V1: readReadyActionsV1, V2: readReadyActionsV2, V3: readReadyActionsV3, V4: readReadyActionsV4, V5: readReadyActionsV5 });
+const CampaignReadyActionsReaders = Object.freeze({ V1: readReadyActionsV1, V2: readReadyActionsV2, V3: readReadyActionsV3, V4: readReadyActionsV4, V5: readReadyActionsV5, V6: readReadyActionsV6 });
+
+function readReadyActionsV6(value) {
+  readReadyActionsV5({ ...value, schemaVersion: 5, actions: [] });
+  if (value.schemaVersion !== 6) fail('CAMPAIGN_ORCHESTRATION_VERSION', 'unsupported campaign ready-actions version');
+  const actions = value.actions.map((pendingAction, index) => readCurrentAction(pendingAction, null, `campaign ready actions actions[${index}]`));
+  if (new Set(actions.map(({ id }) => id)).size !== actions.length
+    || new Set(actions.map(({ assignmentId }) => assignmentId)).size !== actions.length
+    || actions.filter(({ type }) => type === 'REQUEST_REBASE').length > 1) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', 'campaign ready actions has conflicting action identities');
+  for (const pendingAction of actions) {
+    if (['CREATE_WORKER', 'REUSE_WORKER', 'REVIEW_WORKER', 'PLAN_WORKER'].includes(pendingAction.type)
+      && (pendingAction.payload.dispatch?.ready !== true || pendingAction.payload.dispatch.state !== 'NOT_STARTED'
+        || pendingAction.payload.dispatch.hostIdentity !== null)) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', 'campaign ready actions contains a dispatch that is not ready to start');
+  }
+  return { ...value, actions };
+}
 
 function readStatusV1(value) {
   exactKeys(value, ['schemaVersion', 'campaignId', 'invocationWorktree', 'effectiveWorktree', 'coordinatorSessionId', 'integrationRevision', 'assignments', 'readyPlans', 'activeWorkers', 'idleWorkers', 'rebaseRequired', 'readyToMerge', 'cleanupPending', 'pendingAction', 'diagnostics'], 'campaign status');
@@ -679,7 +754,18 @@ function readStatusV8(value) {
   return value;
 }
 
-const CampaignStatusReaders = Object.freeze({ V1: readStatusV1, V2: readStatusV2, V3: readStatusV3, V4: readStatusV4, V5: readStatusV5, V6: readStatusV6, V7: readStatusV7, V8: readStatusV8 });
+function readStatusV9(value) {
+  readStatusV8({ ...value, schemaVersion: 8, pendingActions: [] });
+  if (value.schemaVersion !== 9 || !Array.isArray(value.pendingActions)) fail('CAMPAIGN_ORCHESTRATION_VERSION', 'unsupported campaign status version');
+  const pendingActions = value.pendingActions.map((pendingAction, index) => readCurrentAction(pendingAction,
+    value.assignments.find(({ id }) => id === pendingAction.assignmentId), `campaign status pendingActions[${index}]`));
+  if (new Set(pendingActions.map(({ id }) => id)).size !== pendingActions.length
+    || new Set(pendingActions.map(({ assignmentId }) => assignmentId)).size !== pendingActions.length
+    || pendingActions.filter(({ type }) => type === 'REQUEST_REBASE').length > 1) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', 'campaign status has conflicting action identities');
+  return { ...value, pendingActions };
+}
+
+const CampaignStatusReaders = Object.freeze({ V1: readStatusV1, V2: readStatusV2, V3: readStatusV3, V4: readStatusV4, V5: readStatusV5, V6: readStatusV6, V7: readStatusV7, V8: readStatusV8, V9: readStatusV9 });
 
 function git(repositoryRoot, args, accepted = [0]) {
   const result = spawnSync('git', ['-C', repositoryRoot, ...args], { encoding: 'utf8' });
@@ -1011,7 +1097,7 @@ function attachmentForToken(environment, attachToken) {
     let ledger;
     try { ledger = readCurrentLedger(JSON.parse(fs.readFileSync(file, 'utf8')), file); } catch (error) { continue; }
     const assignment = ledger.assignments.find((item) => item.attachToken === attachToken && item.state === 'DISPATCH_PENDING');
-    if (assignment && ledger.pendingActions.some((pendingAction) => pendingAction.assignmentId === assignment.id && ['CREATE_WORKER', 'REUSE_WORKER', 'REVIEW_WORKER'].includes(pendingAction.type))) {
+    if (assignment && ledger.pendingActions.some((pendingAction) => pendingAction.assignmentId === assignment.id && ['CREATE_WORKER', 'REUSE_WORKER', 'REVIEW_WORKER', 'PLAN_WORKER'].includes(pendingAction.type))) {
       matches.push({ ledger, assignment });
     }
   }
@@ -1034,8 +1120,8 @@ function bindWorker(environment, invocationWorktree, attachToken, sessionId) {
   const source = recoverySource(ledger.topLevelWorktree);
   if (repositoryCommonDirectory(canonicalWorktree) !== source.mainGitDirectory) fail('CAMPAIGN_WORKER_SCOPE', 'worker does not belong to the owning project Git repository');
   if (!identity.branch) fail('CAMPAIGN_WORKER_SCOPE', 'worker worktree must have a branch');
-  if (['REUSE_WORKER', 'REVIEW_WORKER'].includes(pendingAction?.type) && assignment.sessionId !== sessionId) fail('CAMPAIGN_WORKER_SCOPE', `assignment is reserved for session ${assignment.sessionId}`);
-  if (['REUSE_WORKER', 'REVIEW_WORKER'].includes(pendingAction?.type) && !campaignCreatedSessionIds(ledger).has(sessionId)) fail('CAMPAIGN_WORKER_SCOPE', `session ${sessionId} was not created for campaign ${ledger.campaignId}`);
+  if (['REUSE_WORKER', 'REVIEW_WORKER', 'PLAN_WORKER'].includes(pendingAction?.type) && assignment.sessionId !== sessionId) fail('CAMPAIGN_WORKER_SCOPE', `assignment is reserved for session ${assignment.sessionId}`);
+  if (['REUSE_WORKER', 'REVIEW_WORKER', 'PLAN_WORKER'].includes(pendingAction?.type) && !campaignCreatedSessionIds(ledger).has(sessionId)) fail('CAMPAIGN_WORKER_SCOPE', `session ${sessionId} was not created for campaign ${ledger.campaignId}`);
   if (assignment.worktree && assignment.worktree !== canonicalWorktree) fail('CAMPAIGN_WORKER_SCOPE', `assignment is reserved for worker ${assignment.worktree}`);
   const attachTokenHash = crypto.createHash('sha256').update(attachToken).digest('hex');
   return withWorkerBindingsLock(environment, (state) => {
@@ -1184,7 +1270,7 @@ function legacyRecoveryTarget(binding, assignment, ledger, environment) {
   const observation = readHostObservation(binding.repositoryRoot, binding.campaignId, environment);
   const hostSession = observation?.sessions.find(item => item.sessionId === binding.sessionId);
   const dispatches = ledger.completedActions.filter(item => item.assignmentId === assignment.id
-    && ['CREATE_WORKER', 'REUSE_WORKER', 'REVIEW_WORKER'].includes(item.type) && item.result.ok === true);
+    && ['CREATE_WORKER', 'REUSE_WORKER', 'REVIEW_WORKER', 'PLAN_WORKER'].includes(item.type) && item.result.ok === true);
   const dispatch = dispatches[0];
   const recovery = ledger.completedActions.filter(item => item.assignmentId === assignment.id
     && item.type === 'RECOVER_WORKTREE' && item.result.ok === true
@@ -1337,8 +1423,8 @@ function resolveInvocationWorktree(invocationWorktree, environment = process.env
 
 function newLedger(repositoryRoot, campaignId, coordinatorSessionId) {
   const identity = repositoryIdentity(repositoryRoot);
-  return readLedgerV7({
-    schemaVersion: 7,
+  return readLedgerV8({
+    schemaVersion: 8,
     campaignId,
     topLevelWorktree: repositoryRoot,
     coordinatorSessionId,
@@ -1366,7 +1452,7 @@ function readLedger(repositoryRoot, campaignId, environment = process.env) {
 }
 
 function writeLedger(file, ledger) {
-  const value = readLedgerV7(ledger, file);
+  const value = readLedgerV8(ledger, file);
   fs.mkdirSync(path.dirname(file), { recursive: true });
   const temporary = `${file}.${process.pid}.${crypto.randomUUID()}.tmp`;
   fs.writeFileSync(temporary, `${JSON.stringify(value, null, 2)}\n`, { flag: 'wx', mode: 0o600 });
@@ -1643,7 +1729,7 @@ function reconcile(graph, ledger, invocationWorktree = ledger.topLevelWorktree, 
       && binding.branch === assignment.branch && binding.coordinatorSessionId === ledger.coordinatorSessionId
       && binding.attachTokenHash === crypto.createHash('sha256').update(assignment.attachToken).digest('hex')
       && ledger.completedActions.some(item => item.assignmentId === assignment.id
-        && ['CREATE_WORKER', 'REUSE_WORKER', 'REVIEW_WORKER'].includes(item.type) && item.result.ok === true
+        && ['CREATE_WORKER', 'REUSE_WORKER', 'REVIEW_WORKER', 'PLAN_WORKER'].includes(item.type) && item.result.ok === true
         && item.result.sessionId === assignment.sessionId && item.result.worktree === assignment.worktree
         && item.result.branch === assignment.branch);
   }).map(assignment => assignment.id));
@@ -1701,7 +1787,7 @@ function reconcile(graph, ledger, invocationWorktree = ledger.topLevelWorktree, 
   }).sort((left, right) => left.planId.localeCompare(right.planId));
   const reusableWorkers = idleWorkers;
   const status = {
-    schemaVersion: 8,
+    schemaVersion: 9,
     campaignId: graph.campaignId,
     invocationWorktree,
     effectiveWorktree: ledger.topLevelWorktree,
@@ -1813,13 +1899,13 @@ function reconcile(graph, ledger, invocationWorktree = ledger.topLevelWorktree, 
     return { assignmentId: assignment.id, planId: assignment.planId, sessionId: assignment.sessionId,
       worktree: assignment.worktree, phase, ready: objections.length === 0, objections: [...new Set(objections)].sort() };
   });
-  return readStatusV8(status);
+  return readStatusV9(status);
 }
 
 function action(type, assignment, payload = {}) {
-  if (['CREATE_WORKER', 'REUSE_WORKER', 'REVIEW_WORKER'].includes(type)) payload = { ...payload, dispatch: { ready: true, state: 'NOT_STARTED', hostIdentity: null } };
-  return readActionV5({
-    schemaVersion: 5,
+  if (['CREATE_WORKER', 'REUSE_WORKER', 'REVIEW_WORKER', 'PLAN_WORKER'].includes(type)) payload = { ...payload, dispatch: { ready: true, state: 'NOT_STARTED', hostIdentity: null } };
+  return readActionV6({
+    schemaVersion: 6,
     id: crypto.randomUUID(),
     type,
     assignmentId: assignment.id,
@@ -1849,6 +1935,16 @@ function planIsRunnable(graph, planId) {
 
 function planIsReviewable(graph, planId) {
   return planIsEligible(graph, planId, 'reviewableSprint');
+}
+
+function planIsPlannable(graph, planId) {
+  const completedPlans = new Set(graph.plans.filter(({ lifecycle }) => lifecycle === graph.lifecycle.successfulCompletion).map(({ id }) => id));
+  const plan = graph.plans.find(({ id }) => id === planId);
+  return Boolean(plan)
+    && [graph.lifecycle.initial, graph.lifecycle.activeWork].includes(plan.lifecycle)
+    && plan.planningSprint?.planningStatus === 'STUB'
+    && plan.dependsOn.every((id) => completedPlans.has(id))
+    && !graph.plans.some(({ parentPlanId, id }) => parentPlanId === plan.id && !completedPlans.has(id));
 }
 
 function runnablePlans(graph) {
@@ -2031,16 +2127,19 @@ function readyActions(status, graph) {
   const actions = status.pendingActions.filter((pendingAction) => (
     (pendingAction.type === 'RECOVER_WORKTREE'
       ? recoveryIsRunnable(status, graph, pendingAction.assignmentId)
-      : !['CREATE_WORKER', 'REUSE_WORKER', 'REVIEW_WORKER', 'ARCHIVE_WORKTREE', 'ARCHIVE_SESSION'].includes(pendingAction.type))
+      : !['CREATE_WORKER', 'REUSE_WORKER', 'REVIEW_WORKER', 'PLAN_WORKER', 'ARCHIVE_WORKTREE', 'ARCHIVE_SESSION'].includes(pendingAction.type))
       || (pendingAction.payload.dispatch?.ready === true
         && pendingAction.payload.dispatch.state === 'NOT_STARTED'
-        && (pendingAction.type === 'REVIEW_WORKER'
+        && (pendingAction.type === 'PLAN_WORKER'
+          ? planIsPlannable(graph, pendingAction.payload.planId)
+            && graph.plans.find(({ id }) => id === pendingAction.payload.planId)?.planningSprint?.sprintId === pendingAction.payload.sprintId
+          : pendingAction.type === 'REVIEW_WORKER'
           ? planIsReviewable(graph, pendingAction.payload.planId)
             && graph.plans.find(({ id }) => id === pendingAction.payload.planId)?.reviewableSprint?.sprintId === pendingAction.payload.sprintId
           : planIsRunnable(graph, pendingAction.payload.planId)))
   ));
-  return readReadyActionsV5({
-    schemaVersion: 5,
+  return readReadyActionsV6({
+    schemaVersion: 6,
     campaignId: status.campaignId,
     invocationWorktree: status.invocationWorktree,
     effectiveWorktree: status.effectiveWorktree,
@@ -2094,8 +2193,10 @@ function reconcileLedger(graph, ledger, environment = null) {
 function prepareDispatches(graph, ledger) {
   const createdSessionIds = campaignCreatedSessionIds(ledger);
   for (const pendingAction of ledger.pendingActions) {
-    if (['CREATE_WORKER', 'REUSE_WORKER', 'REVIEW_WORKER'].includes(pendingAction.type)) dispatchRecord(pendingAction).ready = (
-      pendingAction.type === 'REVIEW_WORKER' ? planIsReviewable(graph, pendingAction.payload.planId)
+    if (['CREATE_WORKER', 'REUSE_WORKER', 'REVIEW_WORKER', 'PLAN_WORKER'].includes(pendingAction.type)) dispatchRecord(pendingAction).ready = (
+      pendingAction.type === 'PLAN_WORKER' ? planIsPlannable(graph, pendingAction.payload.planId)
+        && graph.plans.find(({ id }) => id === pendingAction.payload.planId)?.planningSprint?.sprintId === pendingAction.payload.sprintId
+        : pendingAction.type === 'REVIEW_WORKER' ? planIsReviewable(graph, pendingAction.payload.planId)
         && graph.plans.find(({ id }) => id === pendingAction.payload.planId)?.reviewableSprint?.sprintId === pendingAction.payload.sprintId
         : planIsRunnable(graph, pendingAction.payload.planId))
       && (pendingAction.type === 'CREATE_WORKER' || createdSessionIds.has(pendingAction.payload.sessionId));
@@ -2170,7 +2271,7 @@ function advanceLedger(graph, ledger, environment = null) {
     return null;
   }
   return scheduleWorker(graph, ledger, status)
-    ?? ledger.pendingActions.find(item => !['REUSE_WORKER', 'REVIEW_WORKER'].includes(item.type) || campaignCreatedSessionIds(ledger).has(item.payload.sessionId))
+    ?? ledger.pendingActions.find(item => !['REUSE_WORKER', 'REVIEW_WORKER', 'PLAN_WORKER'].includes(item.type) || campaignCreatedSessionIds(ledger).has(item.payload.sessionId))
     ?? null;
 }
 
@@ -2242,6 +2343,37 @@ function scheduleReviewReadyPlans(graph, ledger, environment = null) {
   return readyActions(status, graph);
 }
 
+function schedulePlanningReadyPlans(graph, ledger, environment = null) {
+  if (!ledger.coordinatorSessionId) fail('CAMPAIGN_COORDINATOR_REQUIRED', 'campaign planning scheduling requires one authenticated coordinator binding');
+  prepareDispatches(graph, ledger);
+  let status = reconcile(graph, ledger, ledger.topLevelWorktree, environment);
+  const conflicts = blockingDiagnostics(status);
+  if (conflicts.length) fail('CAMPAIGN_STATUS_BLOCKED', conflicts.map(({ message }) => message).join('; '));
+  if (ledger.integrationRevision !== status.integrationRevision) {
+    if (ledger.pendingActions.some(({ type }) => type === 'REQUEST_REBASE')) fail('CAMPAIGN_INTEGRATION_CHANGED', 'integration revision changed while a rebase action is pending');
+    ledger.integrationRevision = status.integrationRevision;
+  }
+  while (status.idleWorkers.length > 0) {
+    const assignedPlans = new Set(ledger.assignments.filter(({ state }) => state !== 'ARCHIVED').map(({ planId }) => planId));
+    const queued = ledger.assignments.filter(({ state, planId, id }) => state === 'DISPATCH_PENDING'
+      && !ledger.pendingActions.some(({ assignmentId }) => assignmentId === id) && planIsPlannable(graph, planId))
+      .sort((left, right) => left.planId.localeCompare(right.planId))[0];
+    const plan = queued ? graph.plans.find(({ id }) => id === queued.planId)
+      : graph.plans.filter(({ id }) => !assignedPlans.has(id) && planIsPlannable(graph, id))
+        .sort((left, right) => left.id.localeCompare(right.id))[0];
+    if (!plan) break;
+    const idle = status.idleWorkers[0];
+    const assignment = queued ?? reserveAssignment(ledger, plan.id, idle);
+    if (queued) Object.assign(queued, { dispatchRevision: ledger.integrationRevision, sessionId: idle.sessionId,
+      worktree: idle.worktree, branch: idle.branch, workerRevision: idle.revision });
+    ledger.pendingActions.push(action('PLAN_WORKER', assignment, { planId: plan.id,
+      sprintId: plan.planningSprint.sprintId, attachToken: assignment.attachToken,
+      sessionId: idle.sessionId, worktree: idle.worktree }));
+    status = reconcile(graph, ledger, ledger.topLevelWorktree, environment);
+  }
+  return readyActions(status, graph);
+}
+
 function recordActionResult(ledger, actionId, result, graph = null) {
   if (ledger.dispatchRetries.some(({ originalAction }) => originalAction.id === actionId)) fail('CAMPAIGN_DISPATCH_SUPERSEDED', `action ${actionId} has an unknown superseded outcome; use its recorded successor`);
   const completed = ledger.completedActions.find((item) => item.actionId === actionId);
@@ -2266,21 +2398,25 @@ function recordActionResult(ledger, actionId, result, graph = null) {
   }
   if (result?.disposition === 'STARTED') {
     exactKeys(result, ['ok', 'disposition', 'hostIdentity'], 'started action result');
-    if (result.ok !== true || !['CREATE_WORKER', 'REUSE_WORKER', 'REVIEW_WORKER'].includes(pendingAction.type)
+    if (result.ok !== true || !['CREATE_WORKER', 'REUSE_WORKER', 'REVIEW_WORKER', 'PLAN_WORKER'].includes(pendingAction.type)
       || typeof result.hostIdentity !== 'string' || !result.hostIdentity) fail('CAMPAIGN_ACTION_RESULT', 'STARTED requires a worker dispatch and nonempty hostIdentity');
     const dispatch = dispatchRecord(pendingAction);
     if (dispatch.state === 'STARTED' && dispatch.hostIdentity !== result.hostIdentity) fail('CAMPAIGN_ACTION_MISMATCH', `action ${actionId} started with a different host identity`);
-    pendingAction.payload.dispatch = { ready: graph ? pendingAction.type === 'REVIEW_WORKER'
-      ? planIsReviewable(graph, assignment.planId) : planIsRunnable(graph, assignment.planId) : dispatch.ready,
+    pendingAction.payload.dispatch = { ready: graph ? pendingAction.type === 'PLAN_WORKER'
+      ? planIsPlannable(graph, assignment.planId)
+        : pendingAction.type === 'REVIEW_WORKER' ? planIsReviewable(graph, assignment.planId)
+          : planIsRunnable(graph, assignment.planId) : dispatch.ready,
     state: 'STARTED', hostIdentity: result.hostIdentity };
     return assignment;
   }
   if (result?.disposition === 'NOT_STARTED') {
     exactKeys(result, ['ok', 'disposition'], 'not-started action result');
-    if (result.ok !== false || !['CREATE_WORKER', 'REUSE_WORKER', 'REVIEW_WORKER'].includes(pendingAction.type)) fail('CAMPAIGN_ACTION_RESULT', 'NOT_STARTED applies only to worker dispatch');
+    if (result.ok !== false || !['CREATE_WORKER', 'REUSE_WORKER', 'REVIEW_WORKER', 'PLAN_WORKER'].includes(pendingAction.type)) fail('CAMPAIGN_ACTION_RESULT', 'NOT_STARTED applies only to worker dispatch');
     const dispatch = dispatchRecord(pendingAction);
     if (dispatch.state === 'STARTED') fail('CAMPAIGN_ACTION_STARTED', `action ${actionId} has already started as ${dispatch.hostIdentity}`);
-    if (!graph || (pendingAction.type === 'REVIEW_WORKER' ? planIsReviewable(graph, assignment.planId) : planIsRunnable(graph, assignment.planId))) fail('CAMPAIGN_ACTION_RESULT', `action ${actionId} cannot be postponed while its plan remains ready`);
+    if (!graph || (pendingAction.type === 'PLAN_WORKER' ? planIsPlannable(graph, assignment.planId)
+      : pendingAction.type === 'REVIEW_WORKER' ? planIsReviewable(graph, assignment.planId)
+        : planIsRunnable(graph, assignment.planId))) fail('CAMPAIGN_ACTION_RESULT', `action ${actionId} cannot be postponed while its plan remains ready`);
     if (graph.plans.find(plan => plan.id === assignment.planId)?.lifecycle === graph.lifecycle.successfulCompletion) {
       if (pendingAction.type !== 'CREATE_WORKER' || pendingAction.payload.bootstrap
         || assignment.state !== 'DISPATCH_PENDING'
@@ -2289,7 +2425,7 @@ function recordActionResult(ledger, actionId, result, graph = null) {
       }
       assignment.state = 'ARCHIVED';
     }
-    if (['REUSE_WORKER', 'REVIEW_WORKER'].includes(pendingAction.type)) {
+    if (['REUSE_WORKER', 'REVIEW_WORKER', 'PLAN_WORKER'].includes(pendingAction.type)) {
       assignment.sessionId = null;
       assignment.worktree = null;
       assignment.branch = null;
@@ -2300,9 +2436,9 @@ function recordActionResult(ledger, actionId, result, graph = null) {
     return assignment;
   }
   if (!result || typeof result !== 'object' || Array.isArray(result) || result.ok !== true) fail('CAMPAIGN_ACTION_FAILED', `action ${actionId} did not report success`);
-  if (['CREATE_WORKER', 'REUSE_WORKER', 'REVIEW_WORKER'].includes(pendingAction.type)) {
+  if (['CREATE_WORKER', 'REUSE_WORKER', 'REVIEW_WORKER', 'PLAN_WORKER'].includes(pendingAction.type)) {
     for (const key of ['sessionId', 'worktree', 'branch', 'revision']) if (typeof result[key] !== 'string' || !result[key]) fail('CAMPAIGN_ACTION_RESULT', `${pendingAction.type} result requires ${key}`);
-    if (['REUSE_WORKER', 'REVIEW_WORKER'].includes(pendingAction.type) && !campaignCreatedSessionIds(ledger).has(result.sessionId)) fail('CAMPAIGN_WORKER_SCOPE', 'reuse session was not created for this campaign');
+    if (['REUSE_WORKER', 'REVIEW_WORKER', 'PLAN_WORKER'].includes(pendingAction.type) && !campaignCreatedSessionIds(ledger).has(result.sessionId)) fail('CAMPAIGN_WORKER_SCOPE', 'reuse session was not created for this campaign');
     assignment.sessionId = result.sessionId;
     assignment.worktree = result.worktree;
     assignment.branch = result.branch;
@@ -2432,7 +2568,7 @@ function validateActionResultBinding(ledger, actionId, result, environment) {
       boundAt: new Date().toISOString(),
     };
   }
-  if (!['CREATE_WORKER', 'REUSE_WORKER', 'REVIEW_WORKER'].includes(pendingAction.type)) return;
+  if (!['CREATE_WORKER', 'REUSE_WORKER', 'REVIEW_WORKER', 'PLAN_WORKER'].includes(pendingAction.type)) return;
   if (!binding) fail('CAMPAIGN_WORKER_BINDING_MISSING', `assignment ${pendingAction.assignmentId} has not completed its authenticated attach handshake`);
   for (const key of ['sessionId', 'worktree', 'branch', 'revision']) {
     if (result?.[key] !== binding[key]) fail('CAMPAIGN_WORKER_BINDING_CONFLICT', `action result ${key} does not match the authenticated worker binding`);
@@ -2554,7 +2690,7 @@ function parseArguments(argv) {
   let json = false;
   let actionId;
   let result;
-  if (['status', 'reservation-audit', 'runnable-plans', 'schedule-ready', 'schedule-review-ready', 'ready-actions', 'advance', 'reconcile'].includes(operation)) {
+  if (['status', 'reservation-audit', 'runnable-plans', 'schedule-ready', 'schedule-review-ready', 'schedule-planning-ready', 'ready-actions', 'advance', 'reconcile'].includes(operation)) {
     for (const argument of argv.slice(1)) {
       if (argument === '--json' && !json) json = true;
       else if (argument.startsWith('-') || input !== undefined) fail('CAMPAIGN_ORCHESTRATION_USAGE', usage(), 2);
@@ -2587,7 +2723,7 @@ function parseArguments(argv) {
 }
 
 function usage() {
-  return 'usage: ponytail campaign status [<campaign>] [--json]\n       ponytail campaign reservation-audit [<campaign>] [--json]\n       ponytail campaign runnable-plans [<campaign>] [--json]\n       ponytail campaign schedule-ready [<campaign>] [--json]\n       ponytail campaign schedule-review-ready [<campaign>] [--json]\n       ponytail campaign ready-actions [<campaign>] [--json]\n       ponytail campaign report-blocker <campaign> --result <json>\n       ponytail campaign observe <campaign> --snapshot <json>\n       ponytail campaign advance [<campaign>] [--json]\n       ponytail campaign reconcile <campaign> [--json]\n       ponytail campaign retry-dispatch <campaign> <original-action-id> --authorization <non-secret-reference> [--json]\n       ponytail campaign action-result <campaign> <action-id> --result <json>\n       ponytail campaign retire-worktree <campaign> <action-id> [--json]\n       ponytail campaign attach <token>\n       ponytail campaign deliver <campaign> --result <json>';
+  return 'usage: ponytail campaign status [<campaign>] [--json]\n       ponytail campaign reservation-audit [<campaign>] [--json]\n       ponytail campaign runnable-plans [<campaign>] [--json]\n       ponytail campaign schedule-ready [<campaign>] [--json]\n       ponytail campaign schedule-review-ready [<campaign>] [--json]\n       ponytail campaign schedule-planning-ready [<campaign>] [--json]\n       ponytail campaign ready-actions [<campaign>] [--json]\n       ponytail campaign report-blocker <campaign> --result <json>\n       ponytail campaign observe <campaign> --snapshot <json>\n       ponytail campaign advance [<campaign>] [--json]\n       ponytail campaign reconcile <campaign> [--json]\n       ponytail campaign retry-dispatch <campaign> <original-action-id> --authorization <non-secret-reference> [--json]\n       ponytail campaign action-result <campaign> <action-id> --result <json>\n       ponytail campaign retire-worktree <campaign> <action-id> [--json]\n       ponytail campaign attach <token>\n       ponytail campaign deliver <campaign> --result <json>';
 }
 
 function run(argv = process.argv.slice(2), options = {}) {
@@ -2698,6 +2834,11 @@ function run(argv = process.argv.slice(2), options = {}) {
     process.stdout.write(request.json ? `${JSON.stringify(result)}\n` : humanReadyActions(result));
     return result;
   }
+  if (request.operation === 'schedule-planning-ready') {
+    const result = withWorktreeLock(resolution.effectiveWorktree, environment, () => withLedgerLock(resolution.effectiveWorktree, graph.campaignId, environment, (ledger) => schedulePlanningReadyPlans(graph, ledger, environment)));
+    process.stdout.write(request.json ? `${JSON.stringify(result)}\n` : humanReadyActions(result));
+    return result;
+  }
   let status;
   if (['advance', 'reconcile', 'retire-worktree'].includes(request.operation)) {
     withWorktreeLock(resolution.effectiveWorktree, environment, () => (
@@ -2728,7 +2869,7 @@ module.exports = {
   workerRecoveryBinding,
   workerRecoveryContext,
   workerRecoveryContextDetails,
-  CampaignActionReaders: Object.freeze({ V1: readActionV1, V2: readActionV2, V3: readActionV3, V4: readActionV4, V5: readActionV5 }),
+  CampaignActionReaders: Object.freeze({ V1: readActionV1, V2: readActionV2, V3: readActionV3, V4: readActionV4, V5: readActionV5, V6: readActionV6 }),
   CampaignHostObservationReaders,
   CampaignLedgerReaders,
   CampaignOrchestrationError,
@@ -2747,6 +2888,7 @@ module.exports = {
   advanceLedger,
   scheduleReadyPlans,
   scheduleReviewReadyPlans,
+  schedulePlanningReadyPlans,
   readRunnablePlansV1,
   readRunnablePlansV2,
   runnablePlanDiagnostics,
@@ -2764,6 +2906,7 @@ module.exports = {
   readActionV3,
   readActionV4,
   readActionV5,
+  readActionV6,
   readAssignmentV1,
   readLedger,
   readLedgerV1,
@@ -2773,11 +2916,13 @@ module.exports = {
   readLedgerV5,
   readLedgerV6,
   readLedgerV7,
+  readLedgerV8,
   readReadyActionsV1,
   readReadyActionsV2,
   readReadyActionsV3,
   readReadyActionsV4,
   readReadyActionsV5,
+  readReadyActionsV6,
   readHostObservation,
   readHostObservationV1,
   readWorkerBindings,
@@ -2796,6 +2941,7 @@ module.exports = {
   readStatusV6,
   readStatusV7,
   readStatusV8,
+  readStatusV9,
   readWorkerV1,
   reconcile,
   reconcileLedger,

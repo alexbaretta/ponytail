@@ -387,6 +387,11 @@
       "locator": "text"
     },
     {
+      "class": "issue",
+      "path": "pm/bugs/in_progress/2026-10-02-BUG-initial_planning_dispatch_gap.md",
+      "locator": "text"
+    },
+    {
       "class": "plan",
       "path": "pm/plans/closed/2026-09-29-campaign-orchestration/plan.md",
       "locator": "text"

@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-10-02-initial_planning_dispatch_gap",
+  "recorded_at": "2026-10-02T18:14:56-07:00",
+  "source_references": ["pm/bugs/in_progress/2026-10-02-BUG-initial_planning_dispatch_gap.md"],
+  "context": {
+    "languages": ["javascript"],
+    "frameworks": [],
+    "components": ["campaign scheduler", "plan-execution skill"],
+    "affected_boundaries": ["planning selector to authenticated campaign dispatch"],
+    "code_references": ["src/campaign-census.js:validatePlanContents", "src/campaign-orchestration.js:schedulePlanningReadyPlans"]
+  },
+  "observed_behavior": "A dependency-ready initial STUB sprint with no tasklets received no campaign dispatch despite an idle original campaign worker.",
+  "expected_behavior": "The original idle worker can be assigned to author the selected sprint without receiving product implementation authority.",
+  "causal_mechanism": "The campaign scheduler had dispatch predicates for runnable implementation tasklets and reviewed tasklet graphs but omitted the canonical initial planning selector.",
+  "anti_pattern": {
+    "structural_description": "Worker dispatch availability was inferred solely from downstream tasklet readiness states.",
+    "why_it_fails": "A valid planning-only sprint cannot have runnable tasklets until its graph is authored and reviewed, so it is never selected to start that work."
+  },
+  "correct_pattern": {
+    "required_invariant": "Each worker-owned lifecycle phase has a typed dispatch gated by its canonical phase selector and the same authenticated campaign provenance checks.",
+    "implementation_description": "Expose the selected STUB sprint in the campaign graph and reserve an original idle campaign pair through PLAN_WORKER without altering implementation or review readiness."
+  },
+  "applicability_conditions": ["Dependency-ready initial STUB sprint", "No existing assignment for the plan", "Safe original idle campaign session and worktree pair"],
+  "known_non_matches": ["Aggregate plan without a STUB sprint", "PLANNING or READY_FOR_REVIEW sprint without the initial planning selector", "Approved tasklet graph requiring review"],
+  "confirmation_evidence": ["GWEN integration-scaffolding-json-policy selected S01 via the canonical planning selector while previous schedule-ready and schedule-review-ready exposed no dispatch.", "The focused planning dispatch regression and campaign report regression pass."],
+  "regression_proofs": ["tests/campaign-census.test.js: campaign report and graph accept an initial planning-only sprint", "tests/campaign-orchestration.test.js: initial planning uses an idle campaign pair while independent implementation retains its own pair"]
+}
