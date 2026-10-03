@@ -44,6 +44,15 @@ remained. The assignment then reported `REBASE_REQUIRED` plus
 `CAMPAIGN_WORKTREE_RECOVERY_REQUIRED`. This proves post-delivery checkout
 loss, but not which host policy or action removed it. The session's observed
 `waiting` state does not prove it can accept a new prompt without restoration.
+The coordinator then sent that exact original QA session a recovery prompt at
+about 20:11; Codex accepted it and reported an active turn. This particular
+missing-checkout session can therefore reach the LLM without a manual Restore
+click. Its authenticated recovery then restored the original checkout, branch,
+and committed delivery in the same session. The worker rebased and delivered
+its clean closure state at integrated revision
+`e47898bbaaeb9e3519aa0dd7129ba8a19496705a`. This proves one successful
+same-session recovery and continuation, not that every missing-checkout chat
+can receive a prompt or that the restored checkout will remain retained.
 
 The [official Codex worktree documentation](https://learn.chatgpt.com/docs/environments/git-worktrees#worktree-cleanup)
 states that the desktop app defaults to retaining only the most recent 15
