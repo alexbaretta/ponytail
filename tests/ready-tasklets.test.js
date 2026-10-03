@@ -50,7 +50,7 @@ function select(fixture, last = null) {
 }
 
 test('retains strict physical V1 parsing and scalar selection', () => {
-  assert.deepEqual(Object.keys(TaskletMetadataReaders), ['V1', 'V2', 'V3']);
+  assert.deepEqual(Object.keys(TaskletMetadataReaders), ['V1', 'V2', 'V3', 'V4']);
   const metadata = {
     schemaVersion: 1,
     sprint: 'S01',
@@ -67,11 +67,22 @@ test('retains strict physical V1 parsing and scalar selection', () => {
   assert.equal(execFileSync(process.execPath, [tool, fixture.sprint], { encoding: 'utf8' }), '{"next":"S01-F01-T02","criteria":{"risk":"high","affinity_overlap":0,"unfinished_descendants":0,"remaining_depth":0}}\n');
 });
 
+test('V4 preserves V3 local tasklet selection and validates typed external edges', () => {
+  const metadata = { ...graphV3(), schemaVersion: 4,
+    external_depends_on: { 'S01-F01-T01': [{ plan_id: 'external-plan', tasklet_id: 'S05-F01-T02' }] } };
+  const fixture = writeFixture(metadata);
+  assert.deepEqual(readTaskletGraph(fixture.sprint).externalDependsOn.get('S01-F01-T01'),
+    [{ planId: 'external-plan', taskletId: 'S05-F01-T02' }]);
+  assert.deepEqual(select(fixture).next[0].tasklets[0], 'S01-F01-T01');
+  assert.throws(() => readTaskletGraph(writeFixture({ ...metadata, external_depends_on: { 'S01-F01-T99': metadata.external_depends_on['S01-F01-T01'] } }).sprint), /known tasklet/);
+  assert.throws(() => readTaskletGraph(writeFixture({ ...metadata, external_depends_on: { 'S01-F01-T01': [metadata.external_depends_on['S01-F01-T01'][0], metadata.external_depends_on['S01-F01-T01'][0]] } }).sprint), /duplicate external dependency/);
+});
+
 test('requires strict V2 identity, keys, feature membership, risks, and paths', () => {
   const valid = writeFixture(graphV2());
   assert.equal(readTaskletGraph(valid.sprint).schemaVersion, 2);
   assert.equal(readTaskletGraph(writeFixture(graphV3()).sprint).schemaVersion, 3);
-  const unsupported = writeFixture({ ...graphV2(), schemaVersion: 4 });
+  const unsupported = writeFixture({ ...graphV2(), schemaVersion: 5 });
   assert.throws(() => readTaskletGraph(unsupported.sprint), /unsupported schemaVersion/);
   const extra = graphV2(); extra.tasklets['S01-F01-T01'].description = 'not scheduling metadata';
   assert.throws(() => readTaskletGraph(writeFixture(extra).sprint), /exactly/);

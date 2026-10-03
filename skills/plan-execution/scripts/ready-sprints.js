@@ -177,7 +177,7 @@ function validatePathOwnership(sprints, sprintById) {
 
 function readV3PlannedPaths(sprint) {
   const metadata = readTaskletGraph(sprint.filePath);
-  if (metadata.schemaVersion !== 3) fail(`${metadata.filePath} must contain V3 tasklet metadata for ${sprint.id}`);
+  if (![3, 4].includes(metadata.schemaVersion)) fail(`${metadata.filePath} must contain V3 or V4 tasklet metadata for ${sprint.id}`);
   const paths = [];
   for (const tasklet of metadata.tasklets.values()) paths.push(...tasklet.planned_paths);
   return [...new Set(paths)];

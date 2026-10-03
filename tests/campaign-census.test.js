@@ -170,6 +170,43 @@ test('campaign graph exposes a validated review scope without runnable implement
   assert.deepEqual(review.reviewableSprint, { sprintId: 'S01', taskletIds: ['S01-F01-T01'] });
 });
 
+test('cross-plan tasklet prerequisites block review and execution until integrated DONE and reject invalid edges', () => {
+  const root = repository();
+  plan(root, 'in_progress', 'campaign', null, { schemaVersion: 2 });
+  plan(root, 'open', 'source', 'campaign', { schemaVersion: 2, parentLifecycle: 'in_progress', unreviewed: true });
+  plan(root, 'open', 'prerequisite', 'campaign', { schemaVersion: 2, parentLifecycle: 'in_progress' });
+  const sourceMetadata = path.join(root, 'pm/plans/open/source/sprints/S01.tasklets.json');
+  const prerequisiteMetadata = path.join(root, 'pm/plans/open/prerequisite/sprints/S01.tasklets.json');
+  const external = { plan_id: 'prerequisite', tasklet_id: 'S01-F01-T01' };
+  const metadata = JSON.parse(fs.readFileSync(sourceMetadata, 'utf8'));
+  fs.writeFileSync(sourceMetadata, `${JSON.stringify({ ...metadata, schemaVersion: 4, external_depends_on: { 'S01-F01-T01': [external] } }, null, 2)}\n`);
+  const blocked = campaignGraph(root, 'campaign').plans.find(({ id }) => id === 'source');
+  assert.equal(blocked.reviewableSprint, null);
+  assert.equal(blocked.runnableTasklets, null);
+  assert.deepEqual(campaignGraph(root, 'campaign').plans.find(({ id }) => id === 'prerequisite').runnableTasklets,
+    { sprintId: 'S01', taskletIds: ['S01-F01-T01'] });
+  commit(root);
+  const query = spawnSync(process.execPath, [campaignCli, 'tasklet-prerequisites', 'campaign', '--json'], {
+    cwd: root, encoding: 'utf8', env: { ...process.env, PONYTAIL_CAMPAIGN_STATE_DIR: temporaryDirectory('ponytail-external-dependencies') },
+  });
+  assert.equal(query.status, 0, query.stderr);
+  assert.deepEqual(JSON.parse(query.stdout).prerequisites, [{ planId: 'source', sprintId: 'S01', taskletId: 'S01-F01-T01',
+    requiredPlanId: 'prerequisite', requiredTaskletId: 'S01-F01-T01', status: 'PENDING' }]);
+  const targetSprint = path.join(root, 'pm/plans/open/prerequisite/sprints/S01.md');
+  fs.writeFileSync(targetSprint, fs.readFileSync(targetSprint, 'utf8').replace('### [ ] Tasklet', '### [DONE] Tasklet'));
+  assert.equal(campaignGraph(root, 'campaign').plans.find(({ id }) => id === 'source').reviewableSprint, null);
+  commit(root);
+  assert.deepEqual(campaignGraph(root, 'campaign').plans.find(({ id }) => id === 'source').reviewableSprint,
+    { sprintId: 'S01', taskletIds: ['S01-F01-T01'] });
+  fs.writeFileSync(sourceMetadata, `${JSON.stringify({ ...metadata, schemaVersion: 4, external_depends_on: { 'S01-F01-T01': [{ ...external, tasklet_id: 'S01-F01-T99' }] } }, null, 2)}\n`);
+  assert.equal(captureError(() => campaignGraph(root, 'campaign')).code, 'CAMPAIGN_TASKLET_DEPENDENCY');
+  fs.writeFileSync(targetSprint, fs.readFileSync(targetSprint, 'utf8').replace('### [DONE] Tasklet', '### [ ] Tasklet'));
+  fs.writeFileSync(sourceMetadata, `${JSON.stringify({ ...metadata, schemaVersion: 4, external_depends_on: { 'S01-F01-T01': [external] } }, null, 2)}\n`);
+  const targetMetadata = JSON.parse(fs.readFileSync(prerequisiteMetadata, 'utf8'));
+  fs.writeFileSync(prerequisiteMetadata, `${JSON.stringify({ ...targetMetadata, schemaVersion: 4, external_depends_on: { 'S01-F01-T01': [{ plan_id: 'source', tasklet_id: 'S01-F01-T01' }] } }, null, 2)}\n`);
+  assert.equal(captureError(() => campaignGraph(root, 'campaign')).code, 'CAMPAIGN_TASKLET_DEPENDENCY_CYCLE');
+});
+
 test('campaign report and graph accept an initial planning-only sprint', () => {
   const root = repository();
   const selected = plan(root, 'open', 'planning', null, { schemaVersion: 2, empty: true });

@@ -23,6 +23,7 @@ const {
   rankedReadyTasklets,
   readTaskletGraph,
   validateTaskletGraph,
+  effectiveDependencies,
 } = require('../skills/plan-execution/scripts/ready-tasklets.js');
 
 const MANAGEMENT_CONFIG_PATH = '.agents/config/project/management.json';
@@ -521,23 +522,82 @@ function validateCampaignDependencies(plans) {
   for (const plan of plans) visit(plan);
 }
 
+function validateExternalTaskletDependencies(repositoryRoot, plans, contents) {
+  const tasklets = new Map();
+  for (const plan of plans) {
+    for (const tasklet of contents.get(plan.id).taskletDependencies) {
+      tasklets.set(`${plan.id}\0${tasklet.id}`, { ...tasklet, planId: plan.id, path: plan.relativePlanFile });
+    }
+  }
+  const blockedSprints = new Set();
+  const prerequisites = [];
+  const edges = new Map();
+  const integratedSprints = new Map();
+  const integratedStatus = (tasklet) => {
+    const sprintFile = path.posix.join(path.posix.dirname(tasklet.path), 'sprints', `${tasklet.sprintId}.md`);
+    if (!integratedSprints.has(sprintFile)) {
+      const result = spawnSync('git', ['-C', repositoryRoot, 'show', `HEAD:${sprintFile}`], { encoding: 'utf8' });
+      integratedSprints.set(sprintFile, result.status === 0 ? parseTaskletStatuses(sprintFile, result.stdout) : new Map());
+    }
+    return tasklet.status === 'DONE' && integratedSprints.get(sprintFile).get(tasklet.id) === 'DONE' ? 'DONE'
+      : tasklet.status === 'ERROR' ? 'ERROR' : 'PENDING';
+  };
+  for (const [key, tasklet] of tasklets) {
+    const dependencies = tasklet.dependsOn.map((id) => `${tasklet.planId}\0${id}`);
+    for (const external of tasklet.externalDependsOn) {
+      const target = tasklets.get(`${external.planId}\0${external.taskletId}`);
+      if (!target || external.planId === tasklet.planId) {
+        dataError('CAMPAIGN_TASKLET_DEPENDENCY', `external tasklet prerequisite must name another campaign plan and an existing tasklet: ${external.planId}/${external.taskletId}`, tasklet.planId, tasklet.path);
+      }
+      const status = integratedStatus(target);
+      if (tasklet.status === 'DONE' && status !== 'DONE') {
+        dataError('CAMPAIGN_TASKLET_DEPENDENCY', `completed tasklet ${tasklet.id} has unfinished external prerequisite ${external.planId}/${external.taskletId}`, tasklet.planId, tasklet.path);
+      }
+      if (status !== 'DONE') blockedSprints.add(`${tasklet.planId}\0${tasklet.sprintId}`);
+      prerequisites.push({ planId: tasklet.planId, sprintId: tasklet.sprintId, taskletId: tasklet.id,
+        requiredPlanId: external.planId, requiredTaskletId: external.taskletId, status });
+      dependencies.push(`${external.planId}\0${external.taskletId}`);
+    }
+    edges.set(key, dependencies);
+  }
+  const visiting = new Set();
+  const visited = new Set();
+  const visit = (key) => {
+    if (visiting.has(key)) {
+      const tasklet = tasklets.get(key);
+      dataError('CAMPAIGN_TASKLET_DEPENDENCY_CYCLE', `cross-plan tasklet dependency cycle reaches ${tasklet.planId}/${tasklet.id}`, tasklet.planId, tasklet.path);
+    }
+    if (visited.has(key)) return;
+    visiting.add(key);
+    for (const dependency of edges.get(key)) visit(dependency);
+    visiting.delete(key);
+    visited.add(key);
+  };
+  for (const key of tasklets.keys()) visit(key);
+  return { blockedSprints, prerequisites: prerequisites.sort((left, right) =>
+    JSON.stringify([left.planId, left.sprintId, left.taskletId, left.requiredPlanId, left.requiredTaskletId])
+      .localeCompare(JSON.stringify([right.planId, right.sprintId, right.taskletId, right.requiredPlanId, right.requiredTaskletId]))) };
+}
+
 function campaignGraph(repositoryRoot, input) {
   const canonicalRepositoryRoot = fs.realpathSync(repositoryRoot);
   const config = readManagementConfig(canonicalRepositoryRoot);
   const campaign = discoverCampaign(canonicalRepositoryRoot, config, input);
   validateCampaignDependencies(campaign.plans);
   const contents = new Map(campaign.plans.map((plan) => [plan.id, validatePlanContents(plan, config, canonicalRepositoryRoot)]));
+  const { blockedSprints, prerequisites } = validateExternalTaskletDependencies(canonicalRepositoryRoot, campaign.plans, contents);
   return {
     campaignId: campaign.root.id,
     submittedPlanId: campaign.selected.id,
+    externalPrerequisites: prerequisites,
     plans: campaign.plans.map((plan) => ({
       id: plan.id,
       parentPlanId: plan.parentPlanId,
       dependsOn: [...plan.dependsOn],
       lifecycle: plan.lifecycle,
       path: plan.relativePlanFile,
-      runnableTasklets: contents.get(plan.id).runnableTasklets,
-      reviewableSprint: contents.get(plan.id).reviewableSprint,
+      runnableTasklets: blockedSprints.has(`${plan.id}\0${contents.get(plan.id).runnableTasklets?.sprintId}`) ? null : contents.get(plan.id).runnableTasklets,
+      reviewableSprint: blockedSprints.has(`${plan.id}\0${contents.get(plan.id).reviewableSprint?.sprintId}`) ? null : contents.get(plan.id).reviewableSprint,
       planningSprint: contents.get(plan.id).planningSprint,
     })),
     lifecycle: { ...config.lifecycle.roles },
@@ -567,6 +627,7 @@ function validatePlanContents(plan, config, repositoryRoot) {
   }
   const normalizedSprints = [];
   const normalizedTasklets = [];
+  const taskletDependencies = [];
   let runnableTasklets = null;
   let reviewableSprint = null;
   const planningSprint = planningReady.length ? { sprintId: planningReady[0], planningStatus: 'STUB' } : null;
@@ -602,6 +663,7 @@ function validatePlanContents(plan, config, repositoryRoot) {
     for (const [id, tasklet] of [...graph.tasklets].sort(([left], [right]) => left.localeCompare(right))) {
       const status = statuses.get(id);
       increment(taskletCounts, status);
+      taskletDependencies.push({ id, sprintId: sprint.id, status, dependsOn: effectiveDependencies(graph, id), externalDependsOn: graph.externalDependsOn?.get(id) ?? [] });
       normalizedTasklets.push({
         id,
         planId: plan.id,
@@ -628,7 +690,7 @@ function validatePlanContents(plan, config, repositoryRoot) {
       dataError('CAMPAIGN_PLAN_CLOSED_INCOMPLETE', 'completed plan contains unfinished sprint or tasklet state', plan.id, plan.relativePlanFile);
     }
   }
-  return { sprints: normalizedSprints, tasklets: normalizedTasklets, runnableTasklets, reviewableSprint, planningSprint };
+  return { sprints: normalizedSprints, tasklets: normalizedTasklets, taskletDependencies, runnableTasklets, reviewableSprint, planningSprint };
 }
 
 function git(repositoryRoot, gitArguments, allowFailure = false) {
@@ -1291,12 +1353,12 @@ function repositoryRoot() {
 }
 
 function usage() {
-  return 'usage: ponytail campaign validate <plan-name-or-path>\n       ponytail campaign validate --all [--json]\n       ponytail campaign report [<plan-name-or-path>] [--json] [--[no-]summary-table] [--[no-]plan-table] [--[no-]sprint-table]\n       ponytail campaign list [--active|--pending|--closed|--deferred|--rejected]\n       ponytail campaign activate <plan-name-or-path>\n       ponytail campaign status [<campaign>] [--json]\n       ponytail campaign reservation-audit [<campaign>] [--json]\n       ponytail campaign runnable-plans [<campaign>] [--json]\n       ponytail campaign schedule-ready [<campaign>] [--json]\n       ponytail campaign schedule-review-ready [<campaign>] [--json]\n       ponytail campaign schedule-planning-ready [<campaign>] [--json]\n       ponytail campaign ready-actions [<campaign>] [--json]\n       ponytail campaign report-blocker <campaign> --result <json>\n       ponytail campaign observe <campaign> --snapshot <json>\n       ponytail campaign advance [<campaign>] [--json]\n       ponytail campaign reconcile <campaign> [--json]\n       ponytail campaign retry-dispatch <campaign> <original-action-id> --authorization <non-secret-reference> [--json]\n       ponytail campaign action-result <campaign> <action-id> --result <json>\n       ponytail campaign retire-worktree <campaign> <action-id> [--json]\n       ponytail campaign attach <token>\n       ponytail campaign deliver <campaign> --result <json>';
+  return 'usage: ponytail campaign validate <plan-name-or-path>\n       ponytail campaign validate --all [--json]\n       ponytail campaign report [<plan-name-or-path>] [--json] [--[no-]summary-table] [--[no-]plan-table] [--[no-]sprint-table]\n       ponytail campaign list [--active|--pending|--closed|--deferred|--rejected]\n       ponytail campaign activate <plan-name-or-path>\n       ponytail campaign status [<campaign>] [--json]\n       ponytail campaign reservation-audit [<campaign>] [--json]\n       ponytail campaign runnable-plans [<campaign>] [--json]\n       ponytail campaign tasklet-prerequisites [<campaign>] [--json]\n       ponytail campaign schedule-ready [<campaign>] [--json]\n       ponytail campaign schedule-review-ready [<campaign>] [--json]\n       ponytail campaign schedule-planning-ready [<campaign>] [--json]\n       ponytail campaign ready-actions [<campaign>] [--json]\n       ponytail campaign report-blocker <campaign> --result <json>\n       ponytail campaign observe <campaign> --snapshot <json>\n       ponytail campaign advance [<campaign>] [--json]\n       ponytail campaign reconcile <campaign> [--json]\n       ponytail campaign retry-dispatch <campaign> <original-action-id> --authorization <non-secret-reference> [--json]\n       ponytail campaign action-result <campaign> <action-id> --result <json>\n       ponytail campaign retire-worktree <campaign> <action-id> [--json]\n       ponytail campaign attach <token>\n       ponytail campaign deliver <campaign> --result <json>';
 }
 
 function run(argv = process.argv.slice(2)) {
   const operation = argv[0];
-  if (['status', 'reservation-audit', 'runnable-plans', 'schedule-ready', 'schedule-review-ready', 'schedule-planning-ready', 'ready-actions', 'observe', 'advance', 'reconcile', 'retire-worktree', 'retry-dispatch', 'action-result', 'report-blocker', 'attach', 'deliver'].includes(operation)) {
+  if (['status', 'reservation-audit', 'runnable-plans', 'tasklet-prerequisites', 'schedule-ready', 'schedule-review-ready', 'schedule-planning-ready', 'ready-actions', 'observe', 'advance', 'reconcile', 'retire-worktree', 'retry-dispatch', 'action-result', 'report-blocker', 'attach', 'deliver'].includes(operation)) {
     return require('./campaign-orchestration').run(argv);
   }
   let input;

@@ -9,7 +9,7 @@ const path = require('node:path');
 
 const TASKLET_STATUSES = new Set([' ', 'DONE', 'ERROR']);
 const RISK_VALUES = new Set(['normal', 'high']);
-const SCHEMA_VERSION = 3;
+const SCHEMA_VERSION = 4;
 const MAX_BATCH_TASKLETS = 16;
 
 function fail(message) { throw new Error(message); }
@@ -126,7 +126,29 @@ function readTaskletMetadataV3(sprintId, metadata, graphFile) {
   return { schemaVersion: 3, sprint: sprintId, features, tasklets, filePath: graphFile };
 }
 
-const TaskletMetadataReaders = Object.freeze({ V1: readTaskletMetadataV1, V2: readTaskletMetadataV2, V3: readTaskletMetadataV3 });
+function readTaskletMetadataV4(sprintId, metadata, graphFile) {
+  exactKeys(metadata, ['schemaVersion', 'sprint', 'features', 'tasklets', 'external_depends_on'], 'tasklet metadata');
+  if (metadata.schemaVersion !== 4) fail(`${graphFile} has unsupported schemaVersion: ${metadata.schemaVersion}`);
+  const { external_depends_on: externalDependencies, ...localMetadata } = metadata;
+  const graph = readTaskletMetadataV3(sprintId, { ...localMetadata, schemaVersion: 3 }, graphFile);
+  if (!externalDependencies || typeof externalDependencies !== 'object' || Array.isArray(externalDependencies)) fail('external_depends_on must be an object');
+  const externalDependsOn = new Map();
+  for (const [id, dependencies] of Object.entries(externalDependencies)) {
+    if (!graph.tasklets.has(id) || !Array.isArray(dependencies) || dependencies.length === 0) fail(`external dependencies require a known tasklet and nonempty list: ${id}`);
+    const seen = new Set();
+    externalDependsOn.set(id, dependencies.map((dependency) => {
+      exactKeys(dependency, ['plan_id', 'tasklet_id'], `external dependency of ${id}`);
+      if (typeof dependency.plan_id !== 'string' || !dependency.plan_id || !/^S\d+-F\d+-T\d+$/.test(dependency.tasklet_id)) fail(`invalid external dependency of ${id}`);
+      const key = `${dependency.plan_id}\0${dependency.tasklet_id}`;
+      if (seen.has(key)) fail(`duplicate external dependency of ${id}: ${dependency.plan_id}/${dependency.tasklet_id}`);
+      seen.add(key);
+      return { planId: dependency.plan_id, taskletId: dependency.tasklet_id };
+    }));
+  }
+  return { ...graph, schemaVersion: 4, externalDependsOn };
+}
+
+const TaskletMetadataReaders = Object.freeze({ V1: readTaskletMetadataV1, V2: readTaskletMetadataV2, V3: readTaskletMetadataV3, V4: readTaskletMetadataV4 });
 
 function readTaskletGraph(sprintFile) {
   const graphFile = sprintFile.replace(/\.md$/, '.tasklets.json');
@@ -267,7 +289,7 @@ function selectNextTasklet(graph, statuses, derived, lastTasklet = null) {
 
 function selectReadyTasklets(graph, statuses, derived, lastTasklet = null) {
   if (graph.schemaVersion === 1) return selectNextTasklet(graph, statuses, derived, lastTasklet);
-  if (graph.schemaVersion === 3) return selectReadyTaskletBatch(graph, statuses, derived, lastTasklet);
+  if (graph.schemaVersion >= 3) return selectReadyTaskletBatch(graph, statuses, derived, lastTasklet);
   const ranked = rankedReadyTasklets(graph, statuses, derived, lastTasklet);
   if (ranked.length === 0) return { next: null };
   const [id, criteria] = ranked[0];
@@ -319,7 +341,7 @@ function main(argv = process.argv.slice(2)) {
   return result;
 }
 
-module.exports = { SCHEMA_VERSION, MAX_BATCH_TASKLETS, TaskletMetadataReaders, parseTaskletStatuses, readTaskletGraph, validateTaskletGraph, rankedReadyTasklets, selectNextTasklet, selectReadyTasklets, selectReadyTaskletBatch, main };
+module.exports = { SCHEMA_VERSION, MAX_BATCH_TASKLETS, TaskletMetadataReaders, parseTaskletStatuses, readTaskletGraph, validateTaskletGraph, effectiveDependencies, rankedReadyTasklets, selectNextTasklet, selectReadyTasklets, selectReadyTaskletBatch, main };
 
 if (require.main === module) {
   try { main(); } catch (error) { process.stderr.write(`${error.message}\n`); process.exitCode = 1; }

@@ -351,6 +351,18 @@
       "supportedDowngradeVersions": []
     },
     {
+      "id": "campaign-tasklet-prerequisites",
+      "implementation": {
+        "workspace": "ponytail",
+        "module": "src/campaign-orchestration.js",
+        "readerRegistryExport": "CampaignTaskletPrerequisitesReaders"
+      },
+      "currentVersion": "V1",
+      "versions": ["V1"],
+      "supportedReadVersions": ["V1"],
+      "supportedDowngradeVersions": []
+    },
+    {
       "id": "campaign-blocker-report",
       "implementation": { "workspace": "ponytail", "module": "src/campaign-orchestration.js", "readerRegistryExport": "CampaignBlockerReportReaders" },
       "currentVersion": "V1", "versions": ["V1"], "supportedReadVersions": ["V1"], "supportedDowngradeVersions": []
@@ -413,9 +425,9 @@
         "module": "skills/plan-execution/scripts/ready-tasklets.js",
         "readerRegistryExport": "TaskletMetadataReaders"
       },
-      "currentVersion": "V3",
-      "versions": ["V1", "V2", "V3"],
-      "supportedReadVersions": ["V1", "V2", "V3"],
+      "currentVersion": "V4",
+      "versions": ["V1", "V2", "V3", "V4"],
+      "supportedReadVersions": ["V1", "V2", "V3", "V4"],
       "supportedDowngradeVersions": []
     },
     {

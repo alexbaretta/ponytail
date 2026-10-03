@@ -778,6 +778,30 @@ Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
    - Product implementation begins only after its independent review and
      nonempty runnable-tasklet proof; no replacement worker is created.
 
+## Arc: Block a sprint until an external tasklet is integrated
+
+Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
+
+- **Actor:** Campaign coordinator and worker assigned to the dependent plan.
+- **Prerequisites:** Two sibling campaign plans; a V4 tasklet graph in one
+  sprint names a tasklet in the other plan as an external prerequisite. Keep
+  an independent sprint ready as a control.
+- **Profiles:** Automated campaign graph and live integrated-tree selection.
+- **External effects:** No dispatch for a blocked sprint; no new host session.
+
+1. Leave the external target unchecked on the coordinator's integrated tree.
+   - The dependent sprint is neither reviewable nor implementation-runnable;
+     independent work remains eligible.
+2. Mark the target DONE only in the coordinator working tree, then commit it
+   while its plan remains open.
+   - The uncommitted marker does not release the sprint. Once the exact DONE
+     record joins HEAD, the dependent sprint becomes eligible without waiting
+     for whole-plan closure. A worker verifies this integrated status through
+     `campaign tasklet-prerequisites --json` before proceeding.
+3. Name a missing target, a target outside the campaign, then a cycle.
+   - Each invalid graph fails validation with an actionable dependency error;
+     Ponytail never infers an edge from prose.
+
 ## Arc: Resume an unfinished assignment only through its original idle session
 
 Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION

@@ -89,7 +89,9 @@ services. `PROJECT_STRUCTURE.md` is authoritative for that boundary.
   coordinator-reported host refusals and their resolution,
   `ponytail campaign ready-actions [<campaign>] --json`,
   `ponytail campaign runnable-plans [<campaign>] --json` for the exact
-  dependency-and-tasklet-ready summary, `ponytail campaign schedule-ready
+  dependency-and-tasklet-ready summary,
+  `ponytail campaign tasklet-prerequisites [<campaign>] --json` for integrated
+  cross-plan tasklet gates, `ponytail campaign schedule-ready
   [<campaign>] --json` for deterministic batch dispatch reservations,
   `ponytail campaign schedule-review-ready [<campaign>] --json` for
   authenticated review-only reuse of idle same-campaign workers,

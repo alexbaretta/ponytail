@@ -339,6 +339,20 @@ same attachment capability and revision. A dirty or unintegrated revision may
 not refresh it. A completed planning action must round-trip through the
 current ledger reader so its successful result remains durable.
 
+An approved sprint may declare a hard prerequisite on a tasklet in another
+plan of the same campaign using V4 tasklet metadata
+`external_depends_on`, keyed by the dependent local tasklet ID with exact
+`plan_id` and `tasklet_id` targets. The campaign graph validates target
+existence, rejects cross-plan tasklet cycles and completed dependents with
+unfinished prerequisites, and evaluates target DONE status from the
+coordinator's integrated tree. An unfinished target withholds review and
+implementation dispatch for the affected sprint, not unrelated sprints or
+plans. Prose references do not create scheduler edges; authors must encode
+them in the versioned graph. A worker's local selector alone cannot prove an
+external prerequisite has joined the integrated tree.
+An authenticated worker can query the exact cross-plan edges and target
+statuses from the coordinator's integrated tree without changing checkouts.
+
 The scheduler must also report continuation of an existing unfinished
 assignment independently of new-plan dispatch. For each assigned plan still in
 active work, status identifies its original session and checkout, the next

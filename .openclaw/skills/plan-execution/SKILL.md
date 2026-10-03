@@ -509,7 +509,7 @@ validation commands or made build-impact-aware.
 
 ## Commit And Execution Workflow
 
-For each V1/V2 tasklet or V3 tasklet batch:
+For each V1/V2 tasklet or V3/V4 tasklet batch:
 
 1. Rehydrate the manifest, active sprint, current story, and current tasklet.
 2. Confirm approval, dependencies, and applicable host configuration.
@@ -528,7 +528,7 @@ For each V1/V2 tasklet or V3 tasklet batch:
 8. Record each tasklet's validation result, mark every accepted tasklet
    `[DONE]`, and commit the management record last. When implementation,
    configuration, and management artifacts share a repository, include them
-   in one commit for the selected V1/V2 tasklet or V3 batch. Treat working-tree
+   in one commit for the selected V1/V2 tasklet or V3/V4 batch. Treat working-tree
    `[DONE]` markers as provisional until that commit succeeds; restore `[ ]`
    and record the pending reason for any tasklet whose commit fails.
 9. Continue immediately to the next selected tasklet or batch unless a stop
@@ -1118,8 +1118,9 @@ V1 plans retain dependency-based sprint readiness and scalar tasklet selection;
 historical V2 plans retain numeric checkpoint metadata and list-shaped
 tasklet selection. Selectors read solely by physical `schemaVersion`, reject
 unsupported versions, and reject a plan containing mixed physical sprint
-versions. V3 is the latest write format; do not migrate an older record in
-place merely to execute or inspect it.
+versions. V3 remains the latest sprint write format; V4 is the latest tasklet
+metadata write format. Do not migrate an older record in place merely to
+execute or inspect it.
 
 The executing agent first settles plan-wide architecture, approved scope,
 shared contracts, and coarse ownership, then creates intent-level sprint stubs. A
@@ -1158,7 +1159,24 @@ tasklet and feature-validation dependency graph. This rule applies within and
 across features; ordered overlap remains valid and makes the serial write
 sequence explicit.
 
-A V3 tasklet is ready only when its direct tasklet dependencies and every
+V4 tasklet metadata preserves V3 local fields and adds a top-level
+`external_depends_on` object. Each key is a dependent local tasklet ID; its
+nonempty array contains exact `{ "plan_id": "<same-campaign-plan-id>",
+"tasklet_id": "SNN-FNN-TNN" }` targets. Use V4 when a tasklet has a hard
+cross-plan prerequisite; do not leave such an edge solely in prose. Campaign
+validation checks that the target exists, is in the same campaign, and does
+not form a cycle. The coordinator's integrated tree must show every target
+`[DONE]` before the affected sprint is assigned for review or execution.
+The worker must not treat its local tasklet selector as proof that an external
+prerequisite has joined. Before reviewing or executing a V4 sprint, run
+`ponytail campaign tasklet-prerequisites <campaign> --json` from the
+authenticated worker checkout. That read-only command resolves the owning
+coordinator's integrated tree; confirm every edge for the selected sprint has
+`status: "DONE"` at the reported integration revision. If one remains
+unfinished, leave that sprint untouched and report its exact target; continue
+independent work.
+
+A V3/V4 tasklet is ready only when its direct tasklet dependencies and every
 dependency feature's validation tasklet are `[DONE]`. The selector ranks ready
 tasklets by high risk, greatest affinity overlap with the last completed
 tasklet, greatest number of unfinished descendants, longest remaining

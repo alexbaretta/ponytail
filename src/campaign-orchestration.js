@@ -1994,6 +1994,29 @@ function readRunnablePlansV1(value) {
   return value;
 }
 
+function readTaskletPrerequisitesV1(value) {
+  exactKeys(value, ['schemaVersion', 'campaignId', 'effectiveWorktree', 'integrationRevision', 'prerequisites'], 'tasklet prerequisites');
+  if (value.schemaVersion !== 1) fail('CAMPAIGN_ORCHESTRATION_VERSION', 'unsupported tasklet prerequisites version');
+  for (const key of ['campaignId', 'effectiveWorktree', 'integrationRevision']) {
+    if (typeof value[key] !== 'string' || !value[key]) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', `tasklet prerequisites ${key} must be nonempty`);
+  }
+  if (!Array.isArray(value.prerequisites)) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', 'tasklet prerequisites must be an array');
+  const seen = new Set();
+  for (const prerequisite of value.prerequisites) {
+    exactKeys(prerequisite, ['planId', 'sprintId', 'taskletId', 'requiredPlanId', 'requiredTaskletId', 'status'], 'tasklet prerequisite');
+    for (const key of ['planId', 'sprintId', 'taskletId', 'requiredPlanId', 'requiredTaskletId']) {
+      if (typeof prerequisite[key] !== 'string' || !prerequisite[key]) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', `tasklet prerequisite ${key} must be nonempty`);
+    }
+    if (!['PENDING', 'DONE', 'ERROR'].includes(prerequisite.status)) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', 'invalid tasklet prerequisite status');
+    const key = JSON.stringify([prerequisite.planId, prerequisite.sprintId, prerequisite.taskletId, prerequisite.requiredPlanId, prerequisite.requiredTaskletId]);
+    if (seen.has(key)) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', 'duplicate tasklet prerequisite');
+    seen.add(key);
+  }
+  return value;
+}
+
+const CampaignTaskletPrerequisitesReaders = Object.freeze({ V1: readTaskletPrerequisitesV1 });
+
 function readBlockerReportV1(value) {
   exactKeys(value, ['schemaVersion', 'assignmentId', 'actionId', 'phase', 'state', 'code', 'summary', 'requiredAction'], 'execution blocker report');
   if (value.schemaVersion !== 1) fail('CAMPAIGN_ORCHESTRATION_VERSION', 'unsupported execution blocker report version');
@@ -2711,7 +2734,7 @@ function parseArguments(argv) {
   let json = false;
   let actionId;
   let result;
-  if (['status', 'reservation-audit', 'runnable-plans', 'schedule-ready', 'schedule-review-ready', 'schedule-planning-ready', 'ready-actions', 'advance', 'reconcile'].includes(operation)) {
+  if (['status', 'reservation-audit', 'runnable-plans', 'tasklet-prerequisites', 'schedule-ready', 'schedule-review-ready', 'schedule-planning-ready', 'ready-actions', 'advance', 'reconcile'].includes(operation)) {
     for (const argument of argv.slice(1)) {
       if (argument === '--json' && !json) json = true;
       else if (argument.startsWith('-') || input !== undefined) fail('CAMPAIGN_ORCHESTRATION_USAGE', usage(), 2);
@@ -2744,7 +2767,7 @@ function parseArguments(argv) {
 }
 
 function usage() {
-  return 'usage: ponytail campaign status [<campaign>] [--json]\n       ponytail campaign reservation-audit [<campaign>] [--json]\n       ponytail campaign runnable-plans [<campaign>] [--json]\n       ponytail campaign schedule-ready [<campaign>] [--json]\n       ponytail campaign schedule-review-ready [<campaign>] [--json]\n       ponytail campaign schedule-planning-ready [<campaign>] [--json]\n       ponytail campaign ready-actions [<campaign>] [--json]\n       ponytail campaign report-blocker <campaign> --result <json>\n       ponytail campaign observe <campaign> --snapshot <json>\n       ponytail campaign advance [<campaign>] [--json]\n       ponytail campaign reconcile <campaign> [--json]\n       ponytail campaign retry-dispatch <campaign> <original-action-id> --authorization <non-secret-reference> [--json]\n       ponytail campaign action-result <campaign> <action-id> --result <json>\n       ponytail campaign retire-worktree <campaign> <action-id> [--json]\n       ponytail campaign attach <token>\n       ponytail campaign deliver <campaign> --result <json>';
+  return 'usage: ponytail campaign status [<campaign>] [--json]\n       ponytail campaign reservation-audit [<campaign>] [--json]\n       ponytail campaign runnable-plans [<campaign>] [--json]\n       ponytail campaign tasklet-prerequisites [<campaign>] [--json]\n       ponytail campaign schedule-ready [<campaign>] [--json]\n       ponytail campaign schedule-review-ready [<campaign>] [--json]\n       ponytail campaign schedule-planning-ready [<campaign>] [--json]\n       ponytail campaign ready-actions [<campaign>] [--json]\n       ponytail campaign report-blocker <campaign> --result <json>\n       ponytail campaign observe <campaign> --snapshot <json>\n       ponytail campaign advance [<campaign>] [--json]\n       ponytail campaign reconcile <campaign> [--json]\n       ponytail campaign retry-dispatch <campaign> <original-action-id> --authorization <non-secret-reference> [--json]\n       ponytail campaign action-result <campaign> <action-id> --result <json>\n       ponytail campaign retire-worktree <campaign> <action-id> [--json]\n       ponytail campaign attach <token>\n       ponytail campaign deliver <campaign> --result <json>';
 }
 
 function run(argv = process.argv.slice(2), options = {}) {
@@ -2827,8 +2850,14 @@ function run(argv = process.argv.slice(2), options = {}) {
     process.stdout.write(`${JSON.stringify(status)}\n`);
     return status;
   }
-  const resolution = resolveInvocationWorktree(invocationWorktree, environment, ['status', 'reservation-audit', 'runnable-plans'].includes(request.operation));
+  const resolution = resolveInvocationWorktree(invocationWorktree, environment, ['status', 'reservation-audit', 'runnable-plans', 'tasklet-prerequisites'].includes(request.operation));
   const graph = resolveGraph(resolution.effectiveWorktree, request.input ?? resolution.workerBinding?.campaignId);
+  if (request.operation === 'tasklet-prerequisites') {
+    const result = readTaskletPrerequisitesV1({ schemaVersion: 1, campaignId: graph.campaignId, effectiveWorktree: resolution.effectiveWorktree,
+      integrationRevision: git(resolution.effectiveWorktree, ['rev-parse', 'HEAD']), prerequisites: graph.externalPrerequisites });
+    process.stdout.write(request.json ? `${JSON.stringify(result)}\n` : `${result.prerequisites.map(item => `${item.planId}\t${item.sprintId}\t${item.taskletId}\t${item.requiredPlanId}\t${item.requiredTaskletId}\t${item.status}`).join('\n')}${result.prerequisites.length ? '\n' : ''}`);
+    return result;
+  }
   if (request.operation === 'reservation-audit') {
     const result = reservationAudit(graph, readLedger(resolution.effectiveWorktree, graph.campaignId, environment), environment);
     process.stdout.write(request.json ? `${JSON.stringify(result)}\n` : `${result.reservations.map(item => `${item.kind}\t${item.sessionId ?? item.hostIdentity ?? '-'}\t${item.creationState}\t${item.hostState}\t${item.unmergedCommits === null ? 'unknown' : item.unmergedCommits ? 'unmerged' : 'integrated'}\t${item.canRelease ? 'releasable' : item.objections.join(',')}`).join('\n')}${result.reservations.length ? '\n' : ''}`);
@@ -2912,6 +2941,7 @@ module.exports = {
   schedulePlanningReadyPlans,
   readRunnablePlansV1,
   readRunnablePlansV2,
+  CampaignTaskletPrerequisitesReaders,
   runnablePlanDiagnostics,
   recordExecutionBlocker,
   bindWorker,

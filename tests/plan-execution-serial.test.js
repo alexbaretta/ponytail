@@ -27,7 +27,7 @@ test('serial policy preserves atomic batch and convergence boundaries', () => {
   assert.match(skill, /Each selector returns at most\s+one selection/);
   assert.match(skill, /Numeric sprint order is the deterministic tie-breaker/);
   assert.match(skill, /physical V1 and V2 sprint and tasklet readers remain immutable/i);
-  assert.match(skill, /V3 is the latest write format/);
+  assert.match(skill, /V3 remains the latest sprint write format; V4 is the latest tasklet/);
   assert.match(skill, /V3 tasklet metadata is the sole exact write-path owner/);
   assert.match(skill, /selects the highest-ranked root,\s+then extends that single batch with up to sixteen ordered descendants/);
   assert.match(skill, /Do not subdivide a valid selected\s+batch merely to produce smaller changes or commits/);
@@ -78,9 +78,10 @@ test('orchestration metadata retains every immutable reader', () => {
   const families = versionedContracts.families.filter(({ id }) => expected.has(id));
   assert.equal(families.length, expected.size);
   for (const family of families) {
-    assert.equal(family.currentVersion, 'V3');
-    assert.deepEqual(family.versions, ['V1', 'V2', 'V3']);
-    assert.deepEqual(family.supportedReadVersions, ['V1', 'V2', 'V3']);
+    const versions = family.id === 'parallel-tasklet-scheduling-metadata' ? ['V1', 'V2', 'V3', 'V4'] : ['V1', 'V2', 'V3'];
+    assert.equal(family.currentVersion, versions.at(-1));
+    assert.deepEqual(family.versions, versions);
+    assert.deepEqual(family.supportedReadVersions, versions);
     assert.deepEqual(family.supportedDowngradeVersions, []);
     assert.equal(family.implementation.module, expected.get(family.id));
     const implementation = require(path.join(root, family.implementation.module));
