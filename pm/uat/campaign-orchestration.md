@@ -493,6 +493,8 @@ Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
 2. The coordinator advances one join. The second worker checks status again.
    - The first commit fast-forwards exactly once; the second becomes
      `REBASE_REQUIRED`. No new `REQUEST_REBASE` action is created.
+   If another worker has resumed work after an earlier merge, its pending
+   assignment-state reconciliation does not postpone this verified ready join.
 3. Without a coordinator message, the second worker semantically rebases onto
    the new integration revision, runs focused validation and redelivers.
    - Ponytail reports `READY_TO_MERGE`; coordinator advance fast-forwards it.

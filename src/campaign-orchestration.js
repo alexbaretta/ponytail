@@ -2266,6 +2266,16 @@ function advanceLedger(graph, ledger, environment = null) {
     ledger.integrationRevision = status.integrationRevision;
     return null;
   }
+  const merge = integrationAction ? null : ledger.assignments.find((item) => item.state === 'READY_TO_MERGE'
+    && status.readyToMerge.some((current) => current.id === item.id));
+  if (merge) {
+    const current = status.readyToMerge.find((item) => item.id === merge.id);
+    git(ledger.topLevelWorktree, ['merge', '--ff-only', current.workerRevision]);
+    ledger.integrationRevision = git(ledger.topLevelWorktree, ['rev-parse', 'HEAD']);
+    merge.workerRevision = current.workerRevision;
+    merge.state = 'MERGED';
+    return null;
+  }
   const assignment = ledger.assignments.find((item) => status.assignments.some((current) => current.id === item.id && current.state !== item.state));
   if (assignment) {
     const reconciled = status.assignments.find((current) => current.id === assignment.id);
@@ -2288,13 +2298,6 @@ function advanceLedger(graph, ledger, environment = null) {
     });
     ledger.pendingActions.push(pendingAction);
     return pendingAction;
-  }
-  const merge = integrationAction ? null : ledger.assignments.find((item) => item.state === 'READY_TO_MERGE');
-  if (merge) {
-    git(ledger.topLevelWorktree, ['merge', '--ff-only', merge.workerRevision]);
-    ledger.integrationRevision = git(ledger.topLevelWorktree, ['rev-parse', 'HEAD']);
-    merge.state = 'MERGED';
-    return null;
   }
   const reuse = reusableCleanupAssignments(graph, ledger, status)[0];
   if (reuse) {

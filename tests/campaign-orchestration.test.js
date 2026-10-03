@@ -1610,6 +1610,43 @@ test('completed work is classified by Git ancestry and fast-forward merged exact
   assert.equal(ledger.assignments[0].state, 'ARCHIVED');
 });
 
+test('ready fast-forward join outranks unrelated assignment-state reconciliation', () => {
+  const root = repository();
+  const base = command(root, ['rev-parse', 'HEAD']);
+  command(root, ['checkout', '-qb', 'ready-worker']);
+  write(root, 'delivery.txt', 'verified delivery\n');
+  command(root, ['add', '.']);
+  command(root, ['-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.test', 'commit', '-qm', 'delivery']);
+  const deliveredRevision = command(root, ['rev-parse', 'HEAD']);
+  command(root, ['checkout', '-q', 'main']);
+  const bookkeepingWorktree = path.join(root, 'bookkeeping-worktree');
+  fs.mkdirSync(bookkeepingWorktree);
+  const ledger = newLedger(root, 'campaign', 'coordinator');
+  ledger.assignments.push({
+    id: 'bookkeeping', planId: 'other', sessionId: 'other-session', worktree: bookkeepingWorktree,
+    branch: 'other-worker', dispatchRevision: base, workerRevision: base, state: 'MERGED',
+    idempotencyKey: 'other-key', attachToken: 'other-token', worktreeArchived: false, sessionArchived: false,
+  }, {
+    id: 'ready', planId: 'ready', sessionId: 'ready-session', worktree: root,
+    branch: 'ready-worker', dispatchRevision: base, workerRevision: deliveredRevision, state: 'READY_TO_MERGE',
+    idempotencyKey: 'ready-key', attachToken: 'ready-token', worktreeArchived: false, sessionArchived: false,
+  });
+  ledger.workers.push({ sessionId: 'other-session', worktree: bookkeepingWorktree, branch: 'other-worker',
+    revision: base, clean: false, activity: 'active', evidenceComplete: false, worktreeArchived: false, sessionArchived: false },
+  { sessionId: 'ready-session', worktree: root, branch: 'ready-worker', revision: deliveredRevision,
+    clean: true, activity: 'completed', evidenceComplete: true, worktreeArchived: false, sessionArchived: false });
+  const campaignGraph = graph([
+    { id: 'campaign', parentPlanId: null, dependsOn: [], lifecycle: 'in_progress', path: 'root' },
+    { id: 'other', parentPlanId: 'campaign', dependsOn: [], lifecycle: 'in_progress', path: 'other' },
+    { id: 'ready', parentPlanId: 'campaign', dependsOn: [], lifecycle: 'in_progress', path: 'ready' },
+  ]);
+  assert.equal(reconcile(campaignGraph, ledger).assignments.find(({ id }) => id === 'bookkeeping').state, 'ACTIVE');
+  assert.deepEqual(reconcile(campaignGraph, ledger).readyToMerge.map(({ id }) => id), ['ready']);
+  assert.equal(advanceLedger(campaignGraph, ledger), null);
+  assert.equal(command(root, ['rev-parse', 'HEAD']), deliveredRevision);
+  assert.equal(ledger.assignments[1].state, 'MERGED');
+});
+
 test('verified worker delivery integrates before plan closure and cleanup waits for closure', () => {
   const root = repository();
   const state = temporaryDirectory('ponytail-delivery-state');
