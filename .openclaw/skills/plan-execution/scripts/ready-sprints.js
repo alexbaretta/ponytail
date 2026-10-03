@@ -267,6 +267,17 @@ function selectExecutionRunnableSprints(sprints, sprintById) {
   return selectExecutionSprintsV3(sprints, sprintById, status);
 }
 
+function selectExecutionReviewableSprints(sprints, sprintById) {
+  if (sprints[0]?.schemaVersion !== 3) return [];
+  validateDependencyExecutionOrder(sprints, sprintById);
+  if (sprints.some(({ execution }) => execution?.status === 'IN_PROGRESS')) return [];
+  const sprint = sprints.find((candidate) => candidate.planning.status === 'APPROVED'
+    && candidate.execution?.status === 'PENDING'
+    && !candidate.execution.tasklets_reviewed
+    && candidate.execution.depends_on.every((id) => sprintById.get(id).execution?.status === 'DONE'));
+  return sprint ? [sprint.id] : [];
+}
+
 function main(argv = process.argv.slice(2)) {
   if (argv.length !== 2 || !['planning', 'execution'].includes(argv[0])) fail('usage: ready-sprints.js <planning|execution> <plan-directory>');
   const planDirectory = path.resolve(argv[1]);
@@ -279,7 +290,7 @@ function main(argv = process.argv.slice(2)) {
   return result;
 }
 
-module.exports = { METADATA_MARKER, SCHEMA_VERSION, SprintMetadataReaders, parseSprintFile, readSprints, validateDependencies, validatePathOwnership, validateV3PathOwnership, validateCheckpointOrder, validateDependencyExecutionOrder, selectPlanningReadySprints, selectExecutionReadySprints, selectExecutionRunnableSprints, main };
+module.exports = { METADATA_MARKER, SCHEMA_VERSION, SprintMetadataReaders, parseSprintFile, readSprints, validateDependencies, validatePathOwnership, validateV3PathOwnership, validateCheckpointOrder, validateDependencyExecutionOrder, selectPlanningReadySprints, selectExecutionReadySprints, selectExecutionRunnableSprints, selectExecutionReviewableSprints, main };
 
 if (require.main === module) {
   try { main(); } catch (error) { process.stderr.write(`${error.message}\n`); process.exitCode = 1; }

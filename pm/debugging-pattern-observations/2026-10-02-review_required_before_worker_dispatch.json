@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-10-02-review_required_before_worker_dispatch",
+  "recorded_at": "2026-10-02T17:30:30-07:00",
+  "source_references": [
+    "pm/bugs/in_progress/2026-10-02-BUG-worker_review_dispatch_deadlock.md",
+    "pm/plans/in_progress/2026-10-02-campaign-review-only-dispatch/plan.md"
+  ],
+  "context": {
+    "languages": ["javascript"],
+    "frameworks": [],
+    "components": ["campaign scheduler", "V3 sprint selector"],
+    "affected_boundaries": ["worker assignment", "executing-agent tasklet review"],
+    "code_references": ["src/campaign-orchestration.js", "skills/plan-execution/scripts/ready-sprints.js"]
+  },
+  "observed_behavior": "An approved V3 sprint with validated, unreviewed tasklets could not receive an idle campaign worker because implementation dispatch required tasklets_reviewed first.",
+  "expected_behavior": "An original idle campaign worker can be assigned to perform authenticated tasklet review without receiving product implementation authority.",
+  "causal_mechanism": "The only worker dispatch selector required nonempty implementation-runnable tasklets, while the executing worker was the actor required to review those tasklets before they became runnable.",
+  "anti_pattern": {
+    "structural_description": "A prerequisite operation depended on the eligibility predicate that the operation itself was responsible for satisfying.",
+    "why_it_fails": "No worker can pass the implementation dispatch gate to perform the preceding review, leaving an otherwise approved sprint unable to progress."
+  },
+  "correct_pattern": {
+    "required_invariant": "Review assignment and implementation assignment have distinct eligibility and authority; the latter still requires completed review and runnable tasklets.",
+    "implementation_description": "A review-only selector and typed same-campaign reuse action permit the original worker to complete review without asserting product execution readiness."
+  },
+  "applicability_conditions": ["A V3 sprint has approved planning, pending execution, incomplete tasklet review, and a nonempty validated tasklet graph.", "A safe idle pair originally created for the campaign is available."],
+  "known_non_matches": ["Planning-only STUB sprints need a separate planning assignment contract.", "A reviewed sprint with no runnable tasklets remains ineligible for implementation dispatch."],
+  "confirmation_evidence": ["The live GWEN graph contained an approved reviewable sprint absent from the runnable tasklet selector.", "The focused review-only scheduling test produced a typed action while the ordinary runnable selector remained empty."],
+  "regression_proofs": ["tests/campaign-orchestration.test.js: review-only scheduling reuses one original idle pair without making unreviewed tasklets executable", "tests/ready-sprints.test.js: reviewable selection finds only an approved unreviewed V3 sprint with completed dependencies"]
+}

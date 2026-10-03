@@ -6,7 +6,7 @@ const path = require('node:path');
 const { execFileSync } = require('node:child_process');
 
 const tool = path.join(__dirname, '..', 'skills', 'plan-execution', 'scripts', 'ready-sprints.js');
-const { SprintMetadataReaders, parseSprintFile, readSprints, validateDependencies, validatePathOwnership, validateCheckpointOrder, selectPlanningReadySprints, selectExecutionReadySprints, selectExecutionRunnableSprints } = require(tool);
+const { SprintMetadataReaders, parseSprintFile, readSprints, validateDependencies, validatePathOwnership, validateCheckpointOrder, selectPlanningReadySprints, selectExecutionReadySprints, selectExecutionRunnableSprints, selectExecutionReviewableSprints } = require(tool);
 
 function metadata(id, version = 2, overrides = {}) {
   const execution = {
@@ -63,6 +63,25 @@ test('V3 runnable selection resumes the started sprint without relaxing start or
   assert.deepEqual(selectExecutionRunnableSprints(sprints, sprintById), ['S02']);
   sprints[1].execution.status = 'DONE';
   assert.deepEqual(selectExecutionRunnableSprints(sprints, sprintById), []);
+});
+
+test('reviewable selection finds only an approved unreviewed V3 sprint with completed dependencies', () => {
+  const sprints = readSprints(writePlan([
+    metadata('S01', 3, { execution: { status: 'DONE', depends_on: [], tasklets_reviewed: true } }),
+    metadata('S02', 3, { execution: { status: 'PENDING', depends_on: ['S01'], tasklets_reviewed: false } }),
+    metadata('S03', 3, { execution: { status: 'PENDING', depends_on: ['S02'], tasklets_reviewed: false } }),
+  ]));
+  const sprintById = validateDependencies(sprints);
+  assert.deepEqual(selectExecutionReviewableSprints(sprints, sprintById), ['S02']);
+  assert.deepEqual(selectExecutionRunnableSprints(sprints, sprintById), []);
+  sprints[1].execution.tasklets_reviewed = true;
+  assert.deepEqual(selectExecutionReviewableSprints(sprints, sprintById), []);
+  sprints[1].execution.status = 'IN_PROGRESS';
+  assert.deepEqual(selectExecutionReviewableSprints(sprints, sprintById), []);
+  sprints[1].execution.status = 'DONE';
+  assert.deepEqual(selectExecutionReviewableSprints(sprints, sprintById), ['S03']);
+  sprints[2].planning.status = 'STUB';
+  assert.deepEqual(selectExecutionReviewableSprints(sprints, sprintById), []);
 });
 
 test('retains strict physical V1, V2, and V3 sprint readers', () => {

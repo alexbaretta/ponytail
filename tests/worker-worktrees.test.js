@@ -552,7 +552,7 @@ test('worker-owned recovery acknowledges the original pending action without a n
   withLedgerLock(root, 'campaign', environment, ledger => {
     const assignment = ledger.assignments.find(item => item.id === binding.assignmentId);
     Object.assign(assignment, { sessionId: binding.sessionId, worktree, branch: binding.branch, workerRevision: binding.revision, state: 'ACTIVE' });
-    ledger.pendingActions = [{ schemaVersion: 4, id: 'original-recovery', type: 'RECOVER_WORKTREE', assignmentId: binding.assignmentId,
+    ledger.pendingActions = [{ schemaVersion: 5, id: 'original-recovery', type: 'RECOVER_WORKTREE', assignmentId: binding.assignmentId,
       idempotencyKey: 'original-recovery-key', payload: { sessionId: binding.sessionId, previousWorktree: worktree, branch: binding.branch, revision: binding.revision } }];
   });
   fs.rmSync(worktree, { recursive: true });

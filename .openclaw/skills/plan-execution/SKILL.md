@@ -731,6 +731,13 @@ durable state instead of remembering worker assignments in conversation:
    host actions through the same authenticated protocol below. The command
    does not start Codex sessions: the current supported CLI protocol lacks
    managed-worktree creation, so native host effects remain adapter-owned.
+   Then run `ponytail campaign schedule-review-ready [<campaign-root>] --json`
+   when a safe original campaign pair remains idle. This separate operation
+   reserves approved, dependency-ready V3 sprints whose validated tasklets
+   still require executing-agent review. It never creates or imports a
+   session, consumes a new slot, or makes those tasklets implementation-ready.
+   Repeating it preserves the action and assignment identities. Give
+   implementation-ready work priority when the same idle pair is needed.
    Do not choose or activate plans agentically. Repeating this command resumes
    existing identities and cannot allocate a duplicate assignment. It does not
    perform joins; use the serialized join workflow independently.
@@ -772,11 +779,13 @@ durable state instead of remembering worker assignments in conversation:
    neither execute an action twice nor request a second rebase. New deliveries
    use worker-owned optimistic rebasing and create no `REQUEST_REBASE` action.
    On resumption, inspect the named
-   worker before repeating an unresolved host request. For `CREATE_WORKER` and
-   `REUSE_WORKER`, `ready-actions` already proves that
+   worker before repeating an unresolved host request. For `CREATE_WORKER`,
+   `REUSE_WORKER`, and `REVIEW_WORKER`, `ready-actions` already proves that
    `payload.dispatch.ready` is true, its state is `NOT_STARTED`, and the same
-   runnable-plan predicate still holds. Do not wake a retained worker to
-   continue product tasklets unless its plan appears in `runnable-plans`.
+   applicable implementation or review predicate still holds. Do not wake a
+   retained worker to continue product tasklets unless its plan appears in
+   `runnable-plans`. A `REVIEW_WORKER` action authorizes only the exact
+   `payload.sprintId` tasklet review and plan metadata reconciliation.
    Delivered rebase/integration work remains independently executable, and
    workers retain autonomous recovery authority. As soon as
    the supported host operation begins,
@@ -796,14 +805,23 @@ durable state instead of remembering worker assignments in conversation:
    create another checkout or alter an existing branch. Only then does it run
    the authenticated campaign attach command.
    Bootstrap establishes local worktree prerequisites only: no plan edits or
-   execution precede authenticated attachment. For `REUSE_WORKER`, message
+   execution precede authenticated attachment. For `REUSE_WORKER` or
+   `REVIEW_WORKER`, message
    only the exact session named by the action, previously created for this
    campaign. An unrelated idle chat is never a substitute, even if it shares
    the project or checkout. Require the same verified prerequisites and
    attach command. Retry the same attachment token in the same session
    after a prerequisite failure; do not allocate a replacement worker. Record
    the exact host session, canonical worktree, branch, and revision only after
-   the attach hook authenticates them.
+   the attach hook authenticates them. For `REVIEW_WORKER`, the original worker
+   activates its assigned plan in its checkout, reviews the entire named V3
+   sprint and its atomic tasklet graph, and commits the reviewed plan metadata
+   without product-path edits. It delivers that clean review milestone through
+   the ordinary worker-owned rebase and coordinator fast-forward join. Only
+   after the reviewed metadata is integrated and the ordinary execution
+   selector returns nonempty runnable tasklets may that same assignment edit
+   product paths. Attachment or a coordinator message never substitutes for
+   the worker's actual review or marks tasklets reviewed automatically.
    Successful attachment records an ACTIVE assignment, not plan activation or
    product tasklet execution. The coordinator's plan may remain OPEN while the
    original authenticated worker awaits its exact lifecycle/backlink leases.

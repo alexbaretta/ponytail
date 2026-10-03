@@ -91,6 +91,8 @@ services. `PROJECT_STRUCTURE.md` is authoritative for that boundary.
   `ponytail campaign runnable-plans [<campaign>] --json` for the exact
   dependency-and-tasklet-ready summary, `ponytail campaign schedule-ready
   [<campaign>] --json` for deterministic batch dispatch reservations,
+  `ponytail campaign schedule-review-ready [<campaign>] --json` for
+  authenticated review-only reuse of idle same-campaign workers,
   `ponytail campaign reconcile <campaign> --json` for pre-existing active plans,
   `ponytail campaign observe <campaign> --snapshot <json>`, `ponytail campaign
   advance [<campaign>] --json`, and `ponytail campaign action-result <campaign>

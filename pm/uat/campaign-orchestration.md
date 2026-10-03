@@ -708,6 +708,39 @@ Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
      first two phases as non-tasklet activity and claims product execution
      only after verifying the exact tasklet phase separately.
 
+## Arc: Assign an idle campaign worker for tasklet review without granting implementation
+
+Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
+
+- **Actor:** Bound campaign coordinator and an original campaign worker.
+- **Prerequisites:** An approved V3 sprint with validated but unreviewed
+  tasklets and completed execution dependencies; one safe idle pair created
+  for this campaign. Also include a reviewed implementation-ready plan and a
+  distinct campaign's idle pair as controls.
+- **Profiles:** Automated CLI and live Codex host attachment.
+- **External effects:** One durable reuse assignment; no new Codex session,
+  checkout, capacity reservation, or product edit.
+
+1. Run `campaign runnable-plans --json` and `campaign schedule-ready --json`.
+   - The unreviewed sprint is absent from implementation-ready plans and is
+     not dispatched as product work.
+2. Run `campaign schedule-review-ready --json` twice.
+   - Exactly one typed review-only action reserves the original safe idle
+     campaign pair for the approved sprint. Both calls return the same action
+     and assignment identities; neither uses the other campaign's pair or
+     creates a new reservation.
+3. Start and attach that exact worker through the authenticated action. Have
+   it inspect and reconcile the sprint's atomic tasklets.
+   - Before a real review and selector pass, product-path edits are refused.
+     Attachment alone does not set `tasklets_reviewed` or claim completion.
+4. After the worker records the reviewed metadata and its plan-owned commit is
+   integrated, rerun the ordinary implementation selector and scheduling.
+   - Only the reviewed, dependency-ready tasklets become implementation-ready;
+     no second concurrent assignment of the same plan or pair is made.
+5. Repeat with stale host evidence, unfinished prior assignment, unintegrated
+   branch, or no original safe pair.
+   - No review dispatch occurs, and the exact objection remains visible.
+
 ## Arc: Audit every campaign worker reservation before cleanup
 
 Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION

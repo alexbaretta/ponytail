@@ -11,6 +11,7 @@ const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 const {
   readSprints,
+  selectExecutionReviewableSprints,
   selectExecutionRunnableSprints,
   selectPlanningReadySprints,
   validateDependencies,
@@ -536,6 +537,7 @@ function campaignGraph(repositoryRoot, input) {
       lifecycle: plan.lifecycle,
       path: plan.relativePlanFile,
       runnableTasklets: contents.get(plan.id).runnableTasklets,
+      reviewableSprint: contents.get(plan.id).reviewableSprint,
     })),
     lifecycle: { ...config.lifecycle.roles },
   };
@@ -549,6 +551,7 @@ function validatePlanContents(plan, config, repositoryRoot) {
   let sprints;
   let sprintById;
   let executionReady;
+  let reviewReady;
   try {
     sprints = readSprints(plan.planDirectory);
     sprintById = validateDependencies(sprints);
@@ -556,12 +559,14 @@ function validatePlanContents(plan, config, repositoryRoot) {
     if (sprints[0].schemaVersion === 3) validateV3PathOwnership(sprints, sprintById);
     selectPlanningReadySprints(sprints, sprintById);
     executionReady = selectExecutionRunnableSprints(sprints, sprintById);
+    reviewReady = selectExecutionReviewableSprints(sprints, sprintById);
   } catch (error) {
     dataError('CAMPAIGN_SPRINT_INVALID', error.message, plan.id, plan.relativePlanFile);
   }
   const normalizedSprints = [];
   const normalizedTasklets = [];
   let runnableTasklets = null;
+  let reviewableSprint = null;
   for (const sprint of sprints) {
     if (sprint.execution === null) {
       normalizedSprints.push({
@@ -583,6 +588,9 @@ function validatePlanContents(plan, config, repositoryRoot) {
       if (executionReady.includes(sprint.id)) {
         const taskletIds = rankedReadyTasklets(graph, statuses, derived, null).map(([id]) => id);
         if (taskletIds.length > 0) runnableTasklets = { sprintId: sprint.id, taskletIds };
+      }
+      if (reviewReady.includes(sprint.id) && graph.tasklets.size > 0) {
+        reviewableSprint = { sprintId: sprint.id, taskletIds: [...graph.tasklets.keys()].sort() };
       }
     } catch (error) {
       dataError('CAMPAIGN_TASKLET_INVALID', error.message, plan.id, path.relative(repositoryRoot, sprint.filePath).split(path.sep).join('/'));
@@ -617,7 +625,7 @@ function validatePlanContents(plan, config, repositoryRoot) {
       dataError('CAMPAIGN_PLAN_CLOSED_INCOMPLETE', 'completed plan contains unfinished sprint or tasklet state', plan.id, plan.relativePlanFile);
     }
   }
-  return { sprints: normalizedSprints, tasklets: normalizedTasklets, runnableTasklets };
+  return { sprints: normalizedSprints, tasklets: normalizedTasklets, runnableTasklets, reviewableSprint };
 }
 
 function git(repositoryRoot, gitArguments, allowFailure = false) {
@@ -1280,12 +1288,12 @@ function repositoryRoot() {
 }
 
 function usage() {
-  return 'usage: ponytail campaign validate <plan-name-or-path>\n       ponytail campaign validate --all [--json]\n       ponytail campaign report [<plan-name-or-path>] [--json] [--[no-]summary-table] [--[no-]plan-table] [--[no-]sprint-table]\n       ponytail campaign list [--active|--pending|--closed|--deferred|--rejected]\n       ponytail campaign activate <plan-name-or-path>\n       ponytail campaign status [<campaign>] [--json]\n       ponytail campaign reservation-audit [<campaign>] [--json]\n       ponytail campaign runnable-plans [<campaign>] [--json]\n       ponytail campaign schedule-ready [<campaign>] [--json]\n       ponytail campaign ready-actions [<campaign>] [--json]\n       ponytail campaign report-blocker <campaign> --result <json>\n       ponytail campaign observe <campaign> --snapshot <json>\n       ponytail campaign advance [<campaign>] [--json]\n       ponytail campaign reconcile <campaign> [--json]\n       ponytail campaign retry-dispatch <campaign> <original-action-id> --authorization <non-secret-reference> [--json]\n       ponytail campaign action-result <campaign> <action-id> --result <json>\n       ponytail campaign retire-worktree <campaign> <action-id> [--json]\n       ponytail campaign attach <token>\n       ponytail campaign deliver <campaign> --result <json>';
+  return 'usage: ponytail campaign validate <plan-name-or-path>\n       ponytail campaign validate --all [--json]\n       ponytail campaign report [<plan-name-or-path>] [--json] [--[no-]summary-table] [--[no-]plan-table] [--[no-]sprint-table]\n       ponytail campaign list [--active|--pending|--closed|--deferred|--rejected]\n       ponytail campaign activate <plan-name-or-path>\n       ponytail campaign status [<campaign>] [--json]\n       ponytail campaign reservation-audit [<campaign>] [--json]\n       ponytail campaign runnable-plans [<campaign>] [--json]\n       ponytail campaign schedule-ready [<campaign>] [--json]\n       ponytail campaign schedule-review-ready [<campaign>] [--json]\n       ponytail campaign ready-actions [<campaign>] [--json]\n       ponytail campaign report-blocker <campaign> --result <json>\n       ponytail campaign observe <campaign> --snapshot <json>\n       ponytail campaign advance [<campaign>] [--json]\n       ponytail campaign reconcile <campaign> [--json]\n       ponytail campaign retry-dispatch <campaign> <original-action-id> --authorization <non-secret-reference> [--json]\n       ponytail campaign action-result <campaign> <action-id> --result <json>\n       ponytail campaign retire-worktree <campaign> <action-id> [--json]\n       ponytail campaign attach <token>\n       ponytail campaign deliver <campaign> --result <json>';
 }
 
 function run(argv = process.argv.slice(2)) {
   const operation = argv[0];
-  if (['status', 'reservation-audit', 'runnable-plans', 'schedule-ready', 'ready-actions', 'observe', 'advance', 'reconcile', 'retire-worktree', 'retry-dispatch', 'action-result', 'report-blocker', 'attach', 'deliver'].includes(operation)) {
+  if (['status', 'reservation-audit', 'runnable-plans', 'schedule-ready', 'schedule-review-ready', 'ready-actions', 'observe', 'advance', 'reconcile', 'retire-worktree', 'retry-dispatch', 'action-result', 'report-blocker', 'attach', 'deliver'].includes(operation)) {
     return require('./campaign-orchestration').run(argv);
   }
   let input;

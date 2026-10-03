@@ -302,6 +302,22 @@ dispatch, and coordinator recovery reminders for active product work. Recovery
 needed for an authenticated delivered integration remains independently ready.
 Workers retain their own recovery authority.
 
+The stakeholder's request to assign safe idle campaign workers to unfinished
+plans also covers the review needed before V3 implementation becomes runnable.
+Keep that separate from `runnable-plans` and `schedule-ready`: a review-only
+selection identifies an approved V3 sprint with incomplete tasklet review,
+completed execution dependencies, and a validated nonempty tasklet graph. It
+does not assert that any tasklet is implementation-ready. A deterministic
+`campaign schedule-review-ready` operation may reserve such a plan only on a
+safe idle session/worktree pair originally created for this campaign. It never
+creates or imports a session, consumes a new worker slot, or retries an unknown
+creation. The typed host action names the exact plan, sprint, original session,
+worktree, and attachment identity. Successful authenticated attachment grants
+the worker only plan/tasklet review and reconciliation authority; product-path
+edits require the ordinary reviewed execution selector to pass. Repeating the
+operation preserves the assignment and action identities, and a competing
+implementation assignment cannot own the same plan or pair.
+
 The stakeholder clarified on 2026-10-01 that runnable eligibility alone is
 insufficient operational diagnosis. The runnable-plan summary must also report
 each eligible plan's assignment, original session/checkout, pending host action,

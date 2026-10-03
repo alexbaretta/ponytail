@@ -15,6 +15,7 @@ const {
   activateCampaign,
   buildReport,
   buildRepositoryInventory,
+  campaignGraph,
   humanReport,
   listCampaigns,
   listPlanSourceFiles,
@@ -61,12 +62,12 @@ function managementConfig(root) {
   }, null, 2)}\n`);
 }
 
-function sprint(root, lifecycle, planId, { closed = false, empty = false } = {}) {
+function sprint(root, lifecycle, planId, { closed = false, empty = false, unreviewed = false } = {}) {
   const directory = `pm/plans/${lifecycle}/${planId}/sprints`;
   const execution = empty ? null : {
     status: closed ? 'DONE' : 'PENDING',
     depends_on: [],
-    tasklets_reviewed: true,
+    tasklets_reviewed: !unreviewed,
   };
   write(root, `${directory}/S01.md`, `# S01: Fixture sprint
 
@@ -158,6 +159,16 @@ function captureError(callback) {
   }
   assert.fail('expected CampaignError');
 }
+
+test('campaign graph exposes a validated review scope without runnable implementation tasklets', () => {
+  const root = repository();
+  plan(root, 'in_progress', 'campaign', null, { schemaVersion: 2 });
+  plan(root, 'open', 'review', 'campaign', { schemaVersion: 2, parentLifecycle: 'in_progress', unreviewed: true });
+  const graph = campaignGraph(root, 'campaign');
+  const review = graph.plans.find(({ id }) => id === 'review');
+  assert.equal(review.runnableTasklets, null);
+  assert.deepEqual(review.reviewableSprint, { sprintId: 'S01', taskletIds: ['S01-F01-T01'] });
+});
 
 test('management configuration reader requires one exact safe V1 contract', () => {
   const valid = {
