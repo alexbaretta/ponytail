@@ -172,11 +172,15 @@ atomically revoke its capability before exposing one idempotent successor.
 Reject late original attachment/results. Provisioned identities, authenticated
 bindings, deliveries and assigned sessions/checkouts are ineligible.
 
-Require fresh complete retained-session observation, ordinary campaign validity
-and runnable tasklets. Prefer safe idle reuse. Every unresolved original keeps
-its capacity reservation independently of its successor; fresh creation still
-obeys the fifteen-worker limit. Without capacity or safe reuse, reject without
-supersession. No deletion, missing-checkout replacement or planning dispatch.
+Require fresh complete retained-session observation, ordinary campaign validity,
+and either immediately runnable tasklets or one review-ready sprint. Prefer
+safe idle reuse. A review-only retry requires an original safe idle campaign
+pair and produces `REVIEW_WORKER` for that exact sprint, without product-edit
+authority; it cannot create another worker. Every unresolved original keeps
+its capacity reservation independently of its successor; fresh implementation
+creation still obeys the fifteen-worker limit. Without applicable capacity or
+safe reuse, reject without supersession. No deletion, missing-checkout
+replacement or initial planning dispatch.
 
 Authenticated create/reuse completion assigns the original worker; it does not
 itself move the tracked plan. While that worker activates its assigned plan,

@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-10-02-phase_specific_retry_readiness",
+  "recorded_at": "2026-10-02T20:40:30-07:00",
+  "source_references": ["pm/bugs/in_progress/2026-10-02-BUG-fenced_retry_blocks_review_only_plan.md"],
+  "context": {
+    "languages": ["javascript"],
+    "frameworks": [],
+    "components": ["campaign scheduler"],
+    "affected_boundaries": ["unknown-outcome creation retry to typed review dispatch"],
+    "code_references": ["src/campaign-orchestration.js:retryDispatch"]
+  },
+  "observed_behavior": "An original STARTED creation with unknown host outcome could not be retried after its plan became review-ready, even with a safe original idle campaign pair.",
+  "expected_behavior": "A directly authorized retry can supersede that original with one review-only action on the safe pair while retaining the original receipt and capacity reservation.",
+  "causal_mechanism": "The retry path checked implementation tasklet readiness before selecting the successor action type, so review-only readiness was never considered.",
+  "anti_pattern": {
+    "structural_description": "A retry of a polymorphic dispatch was gated by one lifecycle phase's readiness predicate.",
+    "why_it_fails": "A plan can legitimately leave implementation readiness and enter review readiness while the original host creation remains unresolved."
+  },
+  "correct_pattern": {
+    "required_invariant": "Retry eligibility and successor type must agree on the same current, phase-specific readiness predicate without weakening original identity fencing.",
+    "implementation_description": "Choose the existing implementation predicate or the review predicate; require a safe original idle pair for review and issue REVIEW_WORKER for its exact sprint while preserving the original STARTED receipt."
+  },
+  "applicability_conditions": ["Original unprovisioned STARTED creation with unknown outcome", "Current plan is review-ready without runnable implementation tasklets", "Fresh complete host observation and a safe original idle campaign pair"],
+  "known_non_matches": ["Initial STUB planning", "Provisioned or authenticated original creation", "Missing-checkout replacement"],
+  "confirmation_evidence": ["The focused regression failed with CAMPAIGN_DISPATCH_NOT_READY before the phase-specific retry change and passes after it."],
+  "regression_proofs": ["tests/campaign-orchestration.test.js: fenced retry reuses an original idle pair for review when implementation readiness became review-only"]
+}

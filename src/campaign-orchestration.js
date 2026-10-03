@@ -2640,21 +2640,23 @@ function retryDispatch(graph, ledger, actionId, authorization, environment, bind
     || bindings.bindings.some(binding => binding.repositoryRoot === ledger.topLevelWorktree && binding.campaignId === ledger.campaignId && binding.assignmentId === assignment.id)
     || readWorkerDeliveries(ledger.topLevelWorktree, ledger.campaignId, environment).deliveries.some(delivery => delivery.assignmentId === assignment.id)) fail('CAMPAIGN_RETRY_INELIGIBLE', 'only an original unprovisioned, unattached STARTED creation can be retried');
   if (authorization.includes(assignment.attachToken)) fail('CAMPAIGN_RETRY_AUTHORIZATION', 'authorization reference must not contain attachment capabilities');
-  if (!planIsRunnable(graph, assignment.planId)) fail('CAMPAIGN_DISPATCH_NOT_READY', 'retry plan has no immediately runnable tasklets');
+  const runnable = planIsRunnable(graph, assignment.planId);
+  const reviewOnly = !runnable && planIsReviewable(graph, assignment.planId);
+  if (!runnable && !reviewOnly) fail('CAMPAIGN_DISPATCH_NOT_READY', 'retry plan has no immediately runnable tasklets or reviewable sprint');
   const observation = readHostObservation(ledger.topLevelWorktree, ledger.campaignId, environment);
   if (!observation || Date.now() - Date.parse(observation.observedAt) > HOST_OBSERVATION_MAX_AGE_MS) fail('CAMPAIGN_HOST_OBSERVATION_STALE', 'retry requires a fresh complete retained-session observation');
-  prepareDispatches(graph, ledger);
   const status = reconcile(graph, ledger, ledger.topLevelWorktree, environment);
   const conflicts = blockingDiagnostics(status);
   if (conflicts.length) fail('CAMPAIGN_STATUS_BLOCKED', conflicts.map(({ message }) => message).join('; '));
   if (ledger.workers.some(worker => campaignCreatedSessionIds(ledger).has(worker.sessionId) && !worker.sessionArchived
     && !observation.completeSessionIds.includes(worker.sessionId))) fail('CAMPAIGN_HOST_OBSERVATION_INCOMPLETE', 'retry observation must include every retained campaign worker');
   const idle = status.idleWorkers[0] ?? null;
-  if (!idle && campaignWorkerCount(ledger) >= CAMPAIGN_WORKER_LIMIT) fail('CAMPAIGN_WORKER_CAPACITY_REACHED', 'unresolved original retains its slot; no capacity or safe idle pair is available');
+  if (!idle && (reviewOnly || campaignWorkerCount(ledger) >= CAMPAIGN_WORKER_LIMIT)) fail('CAMPAIGN_WORKER_CAPACITY_REACHED', 'unresolved original retains its slot; no capacity or safe idle pair is available');
   if (ledger.integrationRevision !== status.integrationRevision) fail('CAMPAIGN_INTEGRATION_CHANGED', 'refresh scheduling at the current integration revision before retry');
   const token = crypto.randomBytes(32).toString('base64url');
-  const successor = action(idle ? 'REUSE_WORKER' : 'CREATE_WORKER', assignment, {
+  const successor = action(reviewOnly ? 'REVIEW_WORKER' : idle ? 'REUSE_WORKER' : 'CREATE_WORKER', assignment, {
     planId: assignment.planId, attachToken: token, sessionId: idle?.sessionId ?? null, worktree: idle?.worktree ?? null,
+    ...(reviewOnly ? { sprintId: graph.plans.find(({ id }) => id === assignment.planId).reviewableSprint.sprintId } : {}),
   });
   successor.idempotencyKey = `${assignment.id}:retry:${successor.id}`;
   ledger.dispatchRetries.push({ originalAction: structuredClone(original), successorActionId: successor.id, authorization, recordedAt: new Date().toISOString(), outcome: 'UNKNOWN_OUTCOME_SUPERSEDED' });

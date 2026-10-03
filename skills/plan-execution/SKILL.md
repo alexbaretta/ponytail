@@ -724,8 +724,13 @@ durable state instead of remembering worker assignments in conversation:
    successor through ordinary authenticated dispatch. Do not retry an original
    native creation, send its old token, manually edit state, replace a missing-
    checkout worker, or release capacity. A capacity refusal requires safe reuse
-   or actual capacity, not repeated retry. Superseded late originals must not
-   attach; inspect them separately without granting assignment ownership.
+   or actual capacity, not repeated retry. When the same plan has become
+   review-ready but has no runnable implementation tasklets, the fenced retry
+   requires a safe idle original campaign pair and returns `REVIEW_WORKER` for
+   the exact sprint; no fresh worker or product-edit lease is authorized.
+   Initial `STUB` planning is not eligible for this retry. Superseded late
+   originals must not attach; inspect them separately without granting
+   assignment ownership.
    Record a sanitized host refusal with `ponytail campaign report-blocker
    <campaign-root> --result <json>` from the bound coordinator. The V1 object
    contains `schemaVersion: 1`, the exact `assignmentId`, nullable `actionId`,

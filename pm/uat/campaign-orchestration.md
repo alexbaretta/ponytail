@@ -13,7 +13,8 @@ Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
 
 Actor: bound coordinator with direct human authorization for the exact original
 creation. Prerequisite: unknown STARTED outcome, no provisioned/attached identity,
-fresh complete retained-session observation and immediately runnable tasklets.
+fresh complete retained-session observation and either immediately runnable
+tasklets or one review-ready sprint with a safe idle original campaign pair.
 
 1. Run `ponytail campaign retry-dispatch <campaign> <original-action-id>
    --authorization <non-secret-reference> --json`. Expect one successor with
@@ -24,6 +25,13 @@ fresh complete retained-session observation and immediately runnable tasklets.
 4. Try provisioned/attached original, stale observation, blocked tasklets or full
    capacity without reuse. Expect refusal without mutation. With safe idle reuse,
    expect REUSE even at capacity; original reservation remains counted.
+5. Move the same plan from tasklet-ready to review-only readiness while its
+   original creation remains STARTED. Without a safe idle pair, expect refusal
+   without mutation. With one, retry the original action and expect one
+   `REVIEW_WORKER` successor for the exact sprint on that pair, a new capability,
+   preserved original receipt, and rejection of the old capability. Repeat the
+   retry after restart and expect the same successor. The review lease grants no
+   product edits or initial planning dispatch.
 
 Automated proof uses real-Git Node fixtures in campaign-orchestration.test.js;
 native creation remains host-owned and is not claimed by repository acceptance.

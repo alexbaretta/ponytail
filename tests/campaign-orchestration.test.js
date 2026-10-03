@@ -1011,6 +1011,53 @@ test('retry-dispatch persists one fenced successor across CLI restarts and retai
   assert.equal(remaining.actions.some(({ id }) => id === reuseId), true);
 });
 
+test('fenced retry reuses an original idle pair for review when implementation readiness became review-only', () => {
+  const root = repository();
+  const environment = { ...process.env, PONYTAIL_CAMPAIGN_STATE_DIR: temporaryDirectory('ponytail-retry-review'), PONYTAIL_SESSION_ID: 'coordinator' };
+  const campaignGraph = graph([
+    { id: 'campaign', parentPlanId: null, dependsOn: [], lifecycle: 'in_progress', path: 'root' },
+    { id: 'review', parentPlanId: 'campaign', dependsOn: [], lifecycle: 'open', path: 'review' },
+  ]);
+  const ledger = newLedger(root, 'campaign', 'coordinator');
+  const original = scheduleReadyPlans(campaignGraph, ledger).actions[0];
+  recordActionResult(ledger, original.id, { ok: true, disposition: 'STARTED', hostIdentity: 'unknown-client' });
+  const originalStarted = structuredClone(ledger.pendingActions[0]);
+  campaignGraph.plans[1].runnableTasklets = null;
+  campaignGraph.plans[1].reviewableSprint = { sprintId: 'S01', taskletIds: ['S01-F01-T01'] };
+  writeHostObservation(root, 'campaign', { schemaVersion: 1, campaignId: 'campaign', observedAt: new Date().toISOString(),
+    completeSessionIds: [], sessions: [] }, environment);
+  const before = structuredClone(ledger);
+  assert.equal(captureError(() => retryDispatch(campaignGraph, ledger, original.id, 'human-review-retry', environment, { bindings: [] })).code,
+    'CAMPAIGN_WORKER_CAPACITY_REACHED');
+  assert.deepEqual(ledger, before);
+  const idleWorktree = path.join(temporaryDirectory('ponytail-retry-review-worker'), 'worker');
+  command(root, ['worktree', 'add', '-qb', 'review-retry', idleWorktree]);
+  ledger.workers.push({ sessionId: 'idle-session', worktree: idleWorktree, branch: 'review-retry', revision: ledger.integrationRevision,
+    clean: true, activity: 'idle', evidenceComplete: false, worktreeArchived: false, sessionArchived: false });
+  recordCreatedWorker(ledger, ledger.workers[0]);
+  writeHostObservation(root, 'campaign', { schemaVersion: 1, campaignId: 'campaign', observedAt: new Date().toISOString(),
+    completeSessionIds: ['idle-session'], sessions: [{ sessionId: 'idle-session', state: 'waiting', worktree: idleWorktree, managedWorktree: true }] }, environment);
+  const successorId = retryDispatch(campaignGraph, ledger, original.id, 'human-review-retry', environment, { bindings: [] });
+  const successor = ledger.pendingActions.find(({ id }) => id === successorId);
+  assert.equal(successor.type, 'REVIEW_WORKER');
+  assert.equal(successor.assignmentId, original.assignmentId);
+  assert.equal(successor.payload.sprintId, 'S01');
+  assert.equal(successor.payload.sessionId, 'idle-session');
+  assert.equal(successor.payload.worktree, idleWorktree);
+  assert.notEqual(successor.payload.attachToken, original.payload.attachToken);
+  assert.equal(ledger.dispatchRetries[0].originalAction.id, originalStarted.id);
+  assert.equal(ledger.dispatchRetries[0].originalAction.payload.attachToken, originalStarted.payload.attachToken);
+  assert.equal(ledger.dispatchRetries[0].originalAction.payload.dispatch.state, 'STARTED');
+  assert.equal(ledger.dispatchRetries[0].originalAction.payload.dispatch.hostIdentity, 'unknown-client');
+  assert.equal(ledger.dispatchRetries[0].successorActionId, successorId);
+  assert.deepEqual(readLedgerV8(ledger), ledger);
+  assert.equal(captureError(() => bindWorker(environment, idleWorktree, original.payload.attachToken, 'idle-session')).code, 'CAMPAIGN_ATTACH_TOKEN');
+  assert.equal(readyActions(reconcile(campaignGraph, ledger, root, environment), campaignGraph).actions[0].id, successorId);
+  recordActionResult(ledger, successorId, { ok: true, disposition: 'STARTED', hostIdentity: 'review-client' }, campaignGraph);
+  assert.equal(ledger.pendingActions.find(({ id }) => id === successorId).payload.dispatch.ready, true);
+  assert.equal(retryDispatch(campaignGraph, ledger, original.id, 'human-review-retry', environment, { bindings: [] }), successorId);
+});
+
 test('retry-dispatch rejects unavailable authority, observation, readiness and owned identities', () => {
   for (const condition of ['coordinator', 'authorization', 'observation', 'readiness', 'bootstrap', 'binding', 'sessionId', 'worktree', 'branch', 'workerRevision', 'not-started']) {
     const root = repository();
