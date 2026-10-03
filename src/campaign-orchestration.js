@@ -643,7 +643,7 @@ function readReadyActionsV5(value) {
   return { ...value, actions };
 }
 
-const CampaignReadyActionsReaders = Object.freeze({ V1: readReadyActionsV1, V2: readReadyActionsV2, V3: readReadyActionsV3, V4: readReadyActionsV4, V5: readReadyActionsV5, V6: readReadyActionsV6 });
+const CampaignReadyActionsReaders = Object.freeze({ V1: readReadyActionsV1, V2: readReadyActionsV2, V3: readReadyActionsV3, V4: readReadyActionsV4, V5: readReadyActionsV5, V6: readReadyActionsV6, V7: readReadyActionsV7 });
 
 function readReadyActionsV6(value) {
   readReadyActionsV5({ ...value, schemaVersion: 5, actions: [] });
@@ -656,6 +656,25 @@ function readReadyActionsV6(value) {
     if (['CREATE_WORKER', 'REUSE_WORKER', 'REVIEW_WORKER', 'PLAN_WORKER'].includes(pendingAction.type)
       && (pendingAction.payload.dispatch?.ready !== true || pendingAction.payload.dispatch.state !== 'NOT_STARTED'
         || pendingAction.payload.dispatch.hostIdentity !== null)) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', 'campaign ready actions contains a dispatch that is not ready to start');
+  }
+  return { ...value, actions };
+}
+
+function readReadyActionsV7(value) {
+  readReadyActionsV6({ ...value, schemaVersion: 6, actions: value.actions.filter(item => item.payload?.resumeOnly !== true) });
+  if (value.schemaVersion !== 7) fail('CAMPAIGN_ORCHESTRATION_VERSION', 'unsupported campaign ready-actions version');
+  if (new Set(value.actions.map(({ id }) => id)).size !== value.actions.length
+    || new Set(value.actions.map(({ assignmentId }) => assignmentId)).size !== value.actions.length) {
+    fail('CAMPAIGN_ORCHESTRATION_SCHEMA', 'campaign ready actions has conflicting action identities');
+  }
+  const actions = value.actions.map((item, index) => readCurrentAction(item, null, `campaign ready actions actions[${index}]`));
+  for (const [index, item] of actions.entries()) {
+    if (item.payload?.resumeOnly !== true) continue;
+    if (item.type !== 'CREATE_WORKER' || item.payload.dispatch?.state !== 'STARTED'
+      || !item.payload.bootstrap || !item.payload.bootstrap.sessionId || !item.payload.bootstrap.worktree) {
+      fail('CAMPAIGN_ORCHESTRATION_SCHEMA', 'resume-only action must retain its original provisioned creation');
+    }
+    readCurrentWorkerBootstrap(item.payload.bootstrap);
   }
   return { ...value, actions };
 }
@@ -772,7 +791,21 @@ function readStatusV9(value) {
   return { ...value, pendingActions };
 }
 
-const CampaignStatusReaders = Object.freeze({ V1: readStatusV1, V2: readStatusV2, V3: readStatusV3, V4: readStatusV4, V5: readStatusV5, V6: readStatusV6, V7: readStatusV7, V8: readStatusV8, V9: readStatusV9 });
+function readStatusV10(value) {
+  const { bootstrapContinuations, ...previous } = value;
+  readStatusV9({ ...previous, schemaVersion: 9 });
+  if (value.schemaVersion !== 10 || !Array.isArray(bootstrapContinuations)) fail('CAMPAIGN_ORCHESTRATION_VERSION', 'unsupported campaign status version');
+  for (const continuation of bootstrapContinuations) {
+    exactKeys(continuation, ['actionId', 'assignmentId', 'sessionId', 'worktree', 'ready', 'objections'], 'bootstrap continuation');
+    for (const key of ['actionId', 'assignmentId', 'sessionId', 'worktree']) if (typeof continuation[key] !== 'string' || !continuation[key]) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', `bootstrap continuation ${key} must be nonempty`);
+    if (typeof continuation.ready !== 'boolean' || !Array.isArray(continuation.objections)
+      || continuation.objections.some(item => typeof item !== 'string' || !item)
+      || continuation.ready !== (continuation.objections.length === 0)) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', 'bootstrap continuation has invalid readiness');
+  }
+  return value;
+}
+
+const CampaignStatusReaders = Object.freeze({ V1: readStatusV1, V2: readStatusV2, V3: readStatusV3, V4: readStatusV4, V5: readStatusV5, V6: readStatusV6, V7: readStatusV7, V8: readStatusV8, V9: readStatusV9, V10: readStatusV10 });
 
 function git(repositoryRoot, args, accepted = [0]) {
   const result = spawnSync('git', ['-C', repositoryRoot, ...args], { encoding: 'utf8' });
@@ -1808,7 +1841,7 @@ function reconcile(graph, ledger, invocationWorktree = ledger.topLevelWorktree, 
   }).sort((left, right) => left.planId.localeCompare(right.planId));
   const reusableWorkers = idleWorkers;
   const status = {
-    schemaVersion: 9,
+    schemaVersion: 10,
     campaignId: graph.campaignId,
     invocationWorktree,
     effectiveWorktree: ledger.topLevelWorktree,
@@ -1831,6 +1864,7 @@ function reconcile(graph, ledger, invocationWorktree = ledger.topLevelWorktree, 
     readyToMerge: assignments.filter((assignment) => assignment.state === 'READY_TO_MERGE'),
     cleanupPending: assignments.filter((assignment) => assignment.state === 'CLEANUP_PENDING'),
     continuations: [],
+    bootstrapContinuations: [],
     pendingActions: ledger.pendingActions,
     diagnostics: [],
   };
@@ -1922,7 +1956,28 @@ function reconcile(graph, ledger, invocationWorktree = ledger.topLevelWorktree, 
     return { assignmentId: assignment.id, planId: assignment.planId, sessionId: assignment.sessionId,
       worktree: assignment.worktree, phase, ready: objections.length === 0, objections: [...new Set(objections)].sort() };
   });
-  return readStatusV9(status);
+  for (const pending of ledger.pendingActions) {
+    const bootstrap = pending.payload.bootstrap && readCurrentWorkerBootstrap(pending.payload.bootstrap);
+    if (pending.type !== 'CREATE_WORKER' || pending.payload.dispatch?.state !== 'STARTED' || !bootstrap) continue;
+    const assignment = assignments.find(({ id }) => id === pending.assignmentId);
+    const hostSession = hostSessions.get(bootstrap.sessionId);
+    const objections = [];
+    if (!assignment || assignment.state !== 'DISPATCH_PENDING' || assignment.sessionId || assignment.worktree
+      || assignment.dispatchRevision !== bootstrap.dispatchRevision) objections.push('ORIGINAL_ASSIGNMENT_MISMATCH');
+    if (!planIsRunnable(graph, pending.payload.planId)) objections.push('PLAN_NOT_RUNNABLE');
+    if (!hostObservation || hostObservationStale || !completeSessionIds.has(bootstrap.sessionId)) objections.push('HOST_OBSERVATION_INCOMPLETE');
+    if (!hostSession || !['waiting', 'completed'].includes(hostSession.state)) objections.push('HOST_SESSION_NOT_IDLE');
+    if (!hostSession?.managedWorktree || hostSession.worktree !== bootstrap.worktree) objections.push('HOST_WORKTREE_IDENTITY_MISMATCH');
+    if (!fs.existsSync(bootstrap.worktree)) objections.push('WORKTREE_MISSING');
+    if (assignments.some(item => item.id !== pending.assignmentId && item.state !== 'ARCHIVED'
+      && (item.sessionId === bootstrap.sessionId || item.worktree === bootstrap.worktree))
+      || ledger.pendingActions.some(item => item.id !== pending.id && item.payload.bootstrap
+        && (item.payload.bootstrap.sessionId === bootstrap.sessionId || item.payload.bootstrap.worktree === bootstrap.worktree))) objections.push('BOOTSTRAP_IDENTITY_CONFLICT');
+    if (unresolvedBlockers.some(({ report }) => report.assignmentId === pending.assignmentId)) objections.push('EXECUTION_BLOCKED');
+    status.bootstrapContinuations.push({ actionId: pending.id, assignmentId: pending.assignmentId,
+      sessionId: bootstrap.sessionId, worktree: bootstrap.worktree, ready: objections.length === 0, objections });
+  }
+  return readStatusV10(status);
 }
 
 function action(type, assignment, payload = {}) {
@@ -2190,8 +2245,13 @@ function readyActions(status, graph) {
             && graph.plans.find(({ id }) => id === pendingAction.payload.planId)?.reviewableSprint?.sprintId === pendingAction.payload.sprintId
           : planIsRunnable(graph, pendingAction.payload.planId)))
   ));
-  return readReadyActionsV6({
-    schemaVersion: 6,
+  for (const continuation of status.bootstrapContinuations ?? []) {
+    if (!continuation.ready) continue;
+    const original = status.pendingActions.find(({ id }) => id === continuation.actionId);
+    if (original) actions.push({ ...original, payload: { ...original.payload, resumeOnly: true } });
+  }
+  return readReadyActionsV7({
+    schemaVersion: 7,
     campaignId: status.campaignId,
     invocationWorktree: status.invocationWorktree,
     effectiveWorktree: status.effectiveWorktree,
@@ -2741,7 +2801,7 @@ function humanReadyActions(result) {
     `Worktree: ${result.effectiveWorktree}`,
     `Integration revision: ${result.integrationRevision}`,
   ];
-  for (const pendingAction of result.actions) lines.push(`ACTION\t${pendingAction.type}\t${pendingAction.id}`);
+  for (const pendingAction of result.actions) lines.push(`${pendingAction.payload.resumeOnly ? 'RESUME_ONLY' : 'ACTION'}\t${pendingAction.type}\t${pendingAction.id}`);
   return `${lines.join('\n')}\n`;
 }
 
@@ -2991,6 +3051,7 @@ module.exports = {
   readReadyActionsV4,
   readReadyActionsV5,
   readReadyActionsV6,
+  readReadyActionsV7,
   readHostObservation,
   readHostObservationV1,
   readWorkerBindings,
@@ -3010,6 +3071,7 @@ module.exports = {
   readStatusV7,
   readStatusV8,
   readStatusV9,
+  readStatusV10,
   readWorkerV1,
   reconcile,
   reconcileLedger,

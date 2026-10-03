@@ -288,6 +288,15 @@ Ponytail must preserve the same action, host identity, session or pending-
 session identity, worktree, attachment token, and retry identity rather than
 postpone it or create a replacement.
 
+For a STARTED creation with a provisioned original session, `ready-actions`
+must expose a resume-only instruction for that same action after fresh,
+complete host evidence proves the original managed checkout is present and
+the session is idle, the plan is runnable, and its execution blocker is
+resolved. This instruction cannot authorize another native creation or a
+replacement identity. An unprovisioned or unverified STARTED creation remains
+withheld. Its attachment and final action result still use the original
+capability and action ID.
+
 For each unassigned dependency-ready plan, the coordinator must schedule it on
 an idle campaign worker when one is safe to reuse, or create a new worker
 session and worktree when none is available. A worker is not idle while it has

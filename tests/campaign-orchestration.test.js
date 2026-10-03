@@ -46,9 +46,11 @@ const {
   readReadyActionsV4,
   readReadyActionsV5,
   readReadyActionsV6,
+  readReadyActionsV7,
   readStatusV7,
   readStatusV8,
   readStatusV9,
+  readStatusV10,
   readRunnablePlansV1,
   readRunnablePlansV2,
   CampaignRunnablePlansReaders,
@@ -528,7 +530,7 @@ test('status reports active plan, session, and worktree conflicts while mutation
   ]), ledger)).code, 'CAMPAIGN_STATUS_BLOCKED');
 });
 
-test('V9 status exposes session, worktree, activity, assignment, action, and conflict views', () => {
+test('V10 status exposes session, worktree, activity, assignment, action, and conflict views', () => {
   const root = repository();
   const existingWorker = temporaryDirectory('ponytail-existing-worker');
   const missingWorker = path.join(temporaryDirectory('ponytail-missing-worker-parent'), 'missing');
@@ -567,9 +569,9 @@ test('V9 status exposes session, worktree, activity, assignment, action, and con
     { id: 'missing-plan', parentPlanId: 'campaign', dependsOn: [], lifecycle: 'in_progress', path: 'missing' },
     { id: 'unassigned-plan', parentPlanId: 'campaign', dependsOn: [], lifecycle: 'in_progress', path: 'unassigned' },
   ]), ledger, root, environment);
-  assert.equal(status.schemaVersion, 9);
-  assert.deepEqual(readStatusV9(status), status);
-  const { continuations, ...historicalStatus } = status;
+  assert.equal(status.schemaVersion, 10);
+  assert.deepEqual(readStatusV10(status), status);
+  const { continuations, bootstrapContinuations, ...historicalStatus } = status;
   assert.deepEqual(readStatusV7({ ...historicalStatus, schemaVersion: 7, pendingActions: [] }).schemaVersion, 7);
   assert.throws(() => readStatusV7({ ...status, schemaVersion: 7 }), /exactly/);
   assert.equal(status.observedAt, observedAt);
@@ -607,13 +609,13 @@ test('stale host observations are diagnosed and block mutation', () => {
   assert.equal(captureError(() => advanceLedger(campaignGraph, ledger, environment)).code, 'CAMPAIGN_STATUS_BLOCKED');
 });
 
-test('campaign observe persists a normalized host snapshot and returns V9 status', () => {
+test('campaign observe persists a normalized host snapshot and returns V10 status', () => {
   const root = campaignRepository();
   const environment = { ...process.env, PONYTAIL_CAMPAIGN_STATE_DIR: temporaryDirectory('ponytail-observe-cli'), PONYTAIL_SESSION_ID: 'coordinator' };
   const snapshot = { schemaVersion: 1, campaignId: 'campaign', observedAt: '2026-09-30T12:00:00-07:00', completeSessionIds: [], sessions: [] };
   const result = spawnSync(process.execPath, [campaignCli, 'observe', 'campaign', '--snapshot', JSON.stringify(snapshot)], { cwd: root, encoding: 'utf8', env: environment });
   assert.equal(result.status, 0, result.stderr);
-  assert.equal(JSON.parse(result.stdout).schemaVersion, 9);
+  assert.equal(JSON.parse(result.stdout).schemaVersion, 10);
   assert.deepEqual(readHostObservation(fs.realpathSync(root), 'campaign', environment), snapshot);
   assert.deepEqual(parseArguments(['observe', 'campaign', '--snapshot', JSON.stringify(snapshot)]), {
     operation: 'observe', input: 'campaign', json: false, actionId: undefined, result: snapshot,
@@ -1357,8 +1359,48 @@ test('ready actions exclude blocked and started dispatch without mutating durabl
   const result = readyActions(status, campaignGraph);
   assert.deepEqual(result.actions, [rebase, ready].map(item => ({ ...item, schemaVersion: 6 })));
   assert.equal(JSON.stringify(status), before);
-  assert.deepEqual(readReadyActionsV6(result), result);
+  assert.deepEqual(readReadyActionsV7(result), result);
   assert.equal(captureError(() => readyActions({ ...status, diagnostics: [{ message: 'conflict' }] }, campaignGraph)).code, 'CAMPAIGN_STATUS_BLOCKED');
+});
+
+test('ready actions expose only a fresh, idle original provisioned bootstrap as resume-only', () => {
+  const root = repository();
+  const environment = { ...process.env, PONYTAIL_CAMPAIGN_STATE_DIR: temporaryDirectory('ponytail-bootstrap-resume'), PONYTAIL_SESSION_ID: 'coordinator' };
+  const ledger = newLedger(root, 'campaign', 'coordinator');
+  const campaignGraph = graph([
+    { id: 'campaign', parentPlanId: null, dependsOn: [], lifecycle: 'in_progress', path: 'root' },
+    { id: 'work', parentPlanId: 'campaign', dependsOn: [], lifecycle: 'open', path: 'work' },
+  ]);
+  const pending = advanceLedger(campaignGraph, ledger);
+  const worktree = path.join(temporaryDirectory('ponytail-bootstrap-checkout'), 'worker');
+  command(root, ['worktree', 'add', '--detach', worktree]);
+  recordActionResult(ledger, pending.id, { ok: true, disposition: 'STARTED', hostIdentity: 'original-client' }, campaignGraph);
+  recordActionResult(ledger, pending.id, { ok: true, disposition: 'PROVISIONED', sessionId: 'original-session', worktree }, campaignGraph);
+  const observe = (state, observedAt = new Date().toISOString(), sessionWorktree = worktree) => writeHostObservation(root, 'campaign', {
+    schemaVersion: 1, campaignId: 'campaign', observedAt, completeSessionIds: ['original-session'],
+    sessions: [{ sessionId: 'original-session', state, worktree: sessionWorktree, managedWorktree: true }],
+  }, environment);
+  observe('waiting');
+  const ready = readyActions(reconcile(campaignGraph, ledger, root, environment), campaignGraph);
+  assert.equal(ready.actions.length, 1);
+  assert.equal(ready.actions[0].id, pending.id);
+  assert.equal(ready.actions[0].payload.resumeOnly, true);
+  assert.equal(ready.actions[0].payload.bootstrap.sessionId, 'original-session');
+  assert.equal(ledger.pendingActions[0].payload.resumeOnly, undefined);
+  observe('working');
+  assert.deepEqual(readyActions(reconcile(campaignGraph, ledger, root, environment), campaignGraph).actions, []);
+  observe('waiting', new Date(Date.now() - 6 * 60 * 1000).toISOString());
+  assert.deepEqual(readyActions(reconcile(campaignGraph, ledger, root, environment), campaignGraph).actions, []);
+  observe('waiting', new Date().toISOString(), path.join(root, 'wrong-checkout'));
+  assert.deepEqual(readyActions(reconcile(campaignGraph, ledger, root, environment), campaignGraph).actions, []);
+  observe('waiting');
+  const blocker = { schemaVersion: 1, assignmentId: pending.assignmentId, actionId: pending.id,
+    phase: 'ATTACH', state: 'BLOCKED', code: 'HOST_REVIEW_REJECTED', summary: 'Original adoption was rejected.',
+    requiredAction: 'Resolve source prerequisite and refresh exact host evidence.' };
+  recordExecutionBlocker(ledger, blocker, environment);
+  assert.deepEqual(readyActions(reconcile(campaignGraph, ledger, root, environment), campaignGraph).actions, []);
+  recordExecutionBlocker(ledger, { ...blocker, state: 'RESOLVED', summary: 'Source prerequisite integrated.' }, environment);
+  assert.equal(readyActions(reconcile(campaignGraph, ledger, root, environment), campaignGraph).actions[0].id, pending.id);
 });
 
 test('advance reuses a clean idle worker before requesting a new worker', () => {
@@ -2390,7 +2432,7 @@ test('campaign status and advance CLI expose stable JSON and do not duplicate di
   result = spawnSync(process.execPath, [campaignCli, 'ready-actions', 'campaign', '--json'], { cwd: root, encoding: 'utf8', env: environment });
   assert.equal(result.status, 0, result.stderr);
   const ready = JSON.parse(result.stdout);
-  assert.equal(ready.schemaVersion, 6);
+  assert.equal(ready.schemaVersion, 7);
   assert.deepEqual(ready.actions, first.pendingActions);
   assert.equal(fs.readFileSync(ledgerFile, 'utf8'), ledgerBefore);
   assert.equal(command(root, ['rev-parse', 'HEAD']), revisionBefore);

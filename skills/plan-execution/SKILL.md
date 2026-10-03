@@ -795,7 +795,11 @@ durable state instead of remembering worker assignments in conversation:
    authenticated assignment or the worker-owned recovery described below.
    `status.pendingActions` remains the
    complete durable recovery inventory and may also contain dependency-blocked
-   or already-started dispatches that must not be invoked again. If no ready
+   or already-started dispatches that must not be invoked again. A returned
+   STARTED `CREATE_WORKER` with `payload.resumeOnly: true` authorizes only a
+   message to its original provisioned session to finish the same bootstrap;
+   it never authorizes another native creation, replacement session, or
+   second checkout. If no ready
    action is returned, inspect status and advance again only when another
    compatible transition is currently warranted. `ready-actions` is read-only:
    it never creates assignments, materializes actions, or performs effects.
@@ -816,6 +820,13 @@ durable state instead of remembering worker assignments in conversation:
    their work is integrated; missing checkouts need recovery, not deletion.
 6. Resume each returned action by its exact action ID; never allocate a
    replacement session or worktree, and never assign a plan conversationally.
+   For a resume-only `CREATE_WORKER`, verify the named bootstrap session and
+   checkout still match the fresh status observation, establish or retain its
+   exact Goal, and message that session the original attachment capability.
+   It performs canonical upgrade, adoption, branch setup, and attachment in
+   that order. Preserve the original STARTED action and record its success
+   only after authenticated attachment; do not record another STARTED or
+   PROVISIONED disposition merely because the message was sent.
    On Codex hosts, every new or resumed worker must have an active native
    Goal for its exact campaign assignment before it executes the action.
    A host message is only the bootstrap transport; do not treat its delivery
@@ -832,7 +843,8 @@ durable state instead of remembering worker assignments in conversation:
    On resumption, inspect the named
    worker before repeating an unresolved host request. For `CREATE_WORKER`,
    `REUSE_WORKER`, `REVIEW_WORKER`, and `PLAN_WORKER`, `ready-actions` already proves that
-   `payload.dispatch.ready` is true, its state is `NOT_STARTED`, and the same
+   `payload.dispatch.ready` is true and its state is `NOT_STARTED`, except for
+   the explicit resume-only original creation described above. The same
    applicable implementation or review predicate still holds. For an
    existing assignment, use the separate `status.continuations` readiness
    and the same original session; do not wake it for product tasklets unless
@@ -856,7 +868,8 @@ durable state instead of remembering worker assignments in conversation:
    `{"ok":false,"disposition":"NOT_STARTED"}` so the scheduler can postpone
    that assignment and select unrelated ready work. Never report
    `NOT_STARTED` after a host operation begins.
-7. For `CREATE_WORKER`, create one supported managed-worktree worker and put
+7. For a `CREATE_WORKER` without `payload.resumeOnly`, create one supported
+   managed-worktree worker and put
    the Goal handshake, bootstrap sequence, and `ponytail campaign attach <attachToken>`
    in its first instruction. The coordinator gives the worker
    its exact campaign and assignment IDs, plan ID, typed action and current

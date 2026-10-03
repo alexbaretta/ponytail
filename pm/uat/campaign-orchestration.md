@@ -423,14 +423,15 @@ Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
 
 - **Actor:** Campaign coordinator.
 - **Prerequisites:** Durable pending dispatch, rebase, and cleanup actions;
-  one dispatch becomes dependency-blocked, one has already started, and more
+  one dispatch becomes dependency-blocked, one has started without a provisioned
+  worker, and more
   clean completed workers exist than current dispatch demand can reuse.
 - **Profiles:** Automated scheduler and adapter contract profile.
 - **External effects:** None; the command is read-only.
 
 1. Run `ponytail campaign ready-actions <campaign> --json`.
-   - The V1 result preserves every currently executable action envelope and
-     excludes the blocked and already-started dispatches without changing the
+   - The current result preserves every currently executable action envelope and
+     excludes the blocked and unprovisioned STARTED dispatches without changing the
      ledger or Git revision.
 2. Advance until cleanup is selected.
    - Only enough clean completed workers are retained to satisfy dispatch
@@ -439,6 +440,34 @@ Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
 3. Perform project-aware worktree retirement for a returned cleanup action.
    - Project resources such as databases, containers, and Docker networks are
      released before the managed checkout and bounded slot are reclaimed.
+
+## Arc: Resume a provisioned original creation without duplicating it
+
+Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
+
+- **Actor:** Campaign coordinator and original worker.
+- **Prerequisites:** A STARTED creation with a durable original session and
+  checkout, prior adoption blocker, and later integrated prerequisite repair.
+- **Profiles:** Automated scheduler and Codex host-adapter contract profile.
+- **External effects:** Message only the original worker; no new session or
+  worktree is created.
+
+1. Resolve the exact blocker and refresh complete host observation after the
+   source repair is integrated.
+   - The original waiting session, managed checkout, and action identity are
+     confirmed; resolution alone does not claim authenticated attachment.
+2. Run `ponytail campaign ready-actions <campaign> --json`.
+   - The original CREATE_WORKER action appears once with
+     `payload.resumeOnly: true`, its original bootstrap, and unchanged ID.
+     The persisted action remains STARTED without this output-only marker.
+3. Resume the named original session to upgrade/adopt its original checkout
+   and attach with its retained capability. Record success only after the
+   authenticated attachment is proven.
+   - No host creation, replacement, reassignment, or duplicate action occurs.
+4. Repeat with an unresolved blocker, stale or incomplete observation,
+   working or mismatched session, missing checkout, or unready plan.
+   - No resume-only action is returned; the status gives its specific
+     objection and no ledger or Git state changes.
 
 ## Arc: Integrate a delivered revision after its checkout disappears
 
