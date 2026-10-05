@@ -774,6 +774,40 @@ test('indexes canonical plan hierarchy and separates legacy, invalid, and strand
     relationship.role === 'campaign-parent'), true);
 });
 
+test('indexes empty STUB sprints but rejects empty executable and malformed tasklet sprints', () => {
+  const root = planFixture();
+  const sprintDirectory = path.join(root, 'pm/plans/in_progress/root/sprints');
+  fs.mkdirSync(sprintDirectory);
+  const sprintPath = path.join(sprintDirectory, 'S06.md');
+  const sprintSource = (planningStatus, execution, body = '') => `# Sprint S06
+
+<!-- ponytail-plan-sprint
+${JSON.stringify({
+    schemaVersion: 3,
+    id: 'S06',
+    planning: { status: planningStatus, depends_on: [], scope_roots: ['src'] },
+    execution,
+  })}
+-->
+${body}`;
+  const parseSprint = () => collectPlanProjection(root).files
+    .find(file => file.path === 'pm/plans/in_progress/root/sprints/S06.md').parse().records;
+
+  fs.writeFileSync(sprintPath, sprintSource('STUB', null));
+  const records = parseSprint();
+  assert.equal(records.some(record => record.recordKind === 'sprint' && record.status === 'STUB'), true);
+  assert.equal(records.some(record => record.recordKind === 'tasklet-status'), false);
+
+  fs.writeFileSync(sprintPath, sprintSource('APPROVED', {
+    status: 'PENDING', depends_on: [], tasklets_reviewed: true,
+  }));
+  assert.throws(parseSprint, /contains no tasklet headings/);
+
+  fs.writeFileSync(sprintPath, sprintSource('STUB', null,
+    '### [x] Tasklet S06-F01-T01: Invalid marker\n'));
+  assert.throws(parseSprint, /contains a malformed tasklet heading/);
+});
+
 test('reuses immutable cached plan parses without opening the source parser', async () => {
   const projection = collectPlanProjection(planFixture());
   let parses = 0;

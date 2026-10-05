@@ -416,7 +416,8 @@ function parsePlanIndexSprint(relativePath, source) {
     })] };
   }
   const headings = headingLines(source);
-  const statuses = parseTaskletStatuses(relativePath, source);
+  const statuses = parseTaskletStatuses(relativePath, source,
+    sprint.execution === null && sprint.planning.status === 'STUB');
   const records = [planRecord({
     recordKind: 'sprint',
     recordId: sprint.id,
