@@ -28,6 +28,10 @@ test('Ponytail keeps mechanical blockers agent-owned', () => {
   assert.match(ponytail, /missing lifecycle\s+commands/);
   assert.match(ponytail, /Never ask the user to hand-edit generated, derived, indexed, audit, or other\s+machine-maintained data/);
   assert.match(ponytail, /change approach on the first repetition/);
+  assert.match(ponytail, /Never require the user to perform a test step that the agent can complete\s+from in-scope test artifacts or tooling/);
+  assert.match(ponytail, /automated integration test must\s+automate its complete Arc/);
+  assert.match(ponytail, /extracting links or tokens from a test\s+mailbox and submitting the resulting request/);
+  assert.match(ponytail, /complete the interaction rather than block on manual user action/);
   assert.match(ponytail, /blocks the next\s+critical path and no independent approved work remains/);
 });
 

@@ -355,7 +355,7 @@ Requirement: [pm/requirements/developer-private-agent-instructions.md](developer
 
 - implementation: implements [cli/ponytail:7](../../cli/ponytail#L7)
 - implementation: supports [skills/ponytail/SKILL.md:24](../../skills/ponytail/SKILL.md#L24)
-- unit-test: verifies [tests/policy-conformance.test.js:60](../../tests/policy-conformance.test.js#L60)
+- unit-test: verifies [tests/policy-conformance.test.js:64](../../tests/policy-conformance.test.js#L64)
 - integration-test: verifies [tests/project-validation.test.js:183](../../tests/project-validation.test.js#L183)
 - uat: verifies [pm/uat/developer-private-agent-instructions.md:13](../../pm/uat/developer-private-agent-instructions.md#L13)
 - issue: introduces [pm/bugs/closed/2026-09-30-FEAT-developer_private_agent_instructions.md:20](../../pm/bugs/closed/2026-09-30-FEAT-developer_private_agent_instructions.md#L20)

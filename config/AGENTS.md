@@ -199,6 +199,12 @@ These rules remain active at every compaction level, including `off`:
   machine-maintained data, run a local repository command the agent can run, or
   resolve a tooling gap within approved scope. Do not repeatedly recheck an
   unchanged mechanical condition; change approach on the first repetition.
+- Never require the user to perform a test step that the agent can complete
+  from in-scope test artifacts or tooling. An automated integration test must
+  automate its complete Arc, including extracting links or tokens from a test
+  mailbox and submitting the resulting request. During interactive testing,
+  the agent must inspect those artifacts, extract the required value, and
+  complete the interaction rather than block on manual user action.
 - When a legitimate gate blocks one path, continue independent approved work.
   Stop or mark the whole goal blocked only when the condition blocks the next
   critical path and no independent approved work remains.

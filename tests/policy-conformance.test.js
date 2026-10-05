@@ -54,6 +54,10 @@ const alwaysOnRules = [
   'without it, refuse the outside modification',
   'Whenever returning control to the user, print the current local timestamp',
   'AGENTS.local.md',
+  'Never require the user to perform a test step that the agent can complete',
+  'automated integration test must',
+  'automate its complete Arc',
+  'complete the interaction rather than block on manual user action',
 ];
 
 test('portable policy loads only safe developer-private project instructions', () => {
