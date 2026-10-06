@@ -42,8 +42,15 @@ files, Gitlinks, and binary files are not searchable. Symlinks are never
 followed. Superseded overlay mappings and documents not retained by Git history
 or another current overlay are removed.
 
-Every command that consumes this index must refresh it before querying. A
-refresh compares the current refs and worktree with the last complete
+Every command that consumes this index must refresh its selected state before
+querying. Reference QA and current-worktree queries require only the caller's
+HEAD history and worktree overlay. Independent branch/tag advances must not
+invalidate those operations or change their repository ref observations.
+Caller HEAD and content changes during publication still reject the refresh.
+This clarification addresses the source-confirmed parallel-worker commit-hook
+defect reported on 2026-10-06 within the stakeholder-authorized collaboration.
+
+Explicit repository maintenance compares current refs and worktree with the last complete
 checkpoint, ingests only unseen Git objects, and reindexes only dirty or
 untracked content whose digest changed. It may ingest immutable history while
 branches advance, but before publication it must select current refs and HEAD,

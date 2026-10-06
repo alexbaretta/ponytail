@@ -54,6 +54,8 @@
     }
   ],
   "artifacts": [
+    {"class":"issue","path":"pm/bugs/closed/2026-10-06-BUG-peer_refs_block_commit_hook.md","locator":"text"},
+    {"class":"integration-test","path":"tests/repository-index-concurrency.test.js","locator":"text"},
     {"class":"issue","path":"pm/bugs/closed/2026-10-06-BUG-planning_only_sprint_index.md","locator":"text"},
     {"class": "issue", "path": "pm/bugs/closed/2026-10-02-BUG-merged_worker_checkout_has_no_recovery_action.md", "locator": "text"},
     {"class": "issue", "path": "pm/bugs/closed/2026-10-02-BUG-continuation_ignores_execution_blocker.md", "locator": "text"},

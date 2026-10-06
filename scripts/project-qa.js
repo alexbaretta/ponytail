@@ -238,7 +238,7 @@ if (require.main === module) {
     const pool = new (require('pg').Pool)(databaseOptions(root));
     let findings;
     try {
-      const refreshed = await refreshRepositoryTextIndex({ root, pool });
+      const refreshed = await refreshRepositoryTextIndex({ root, pool, scope: 'worktree' });
       findings = await checkReferences(root, project, projects, query => grepRepository({
         query,
         selector: 'worktree',

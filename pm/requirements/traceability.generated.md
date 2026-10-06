@@ -111,10 +111,12 @@ Requirement: [pm/requirements/repository-text-index.md](repository-text-index.md
 - implementation: implements [src/project-index.js:35](../../src/project-index.js#L35)
 - unit-test: verifies [tests/project-index.test.js:34](../../tests/project-index.test.js#L34)
 - integration-test: verifies [scripts/test-project-index-postgres.sh:7](../../scripts/test-project-index-postgres.sh#L7)
+- integration-test: verifies [tests/repository-index-concurrency.test.js:12](../../tests/repository-index-concurrency.test.js#L12)
 - uat: verifies [pm/uat/repository-text-index.md:14](../../pm/uat/repository-text-index.md#L14)
 - uat: verifies [pm/uat/repository-text-index.md:76](../../pm/uat/repository-text-index.md#L76)
 - uat: verifies [pm/uat/repository-text-index.md:102](../../pm/uat/repository-text-index.md#L102)
 - uat: verifies [pm/uat/repository-text-index.md:131](../../pm/uat/repository-text-index.md#L131)
+- uat: verifies [pm/uat/repository-text-index.md:154](../../pm/uat/repository-text-index.md#L154)
 - plan: plans-implementation [pm/plans/closed/2026-09-30-repository-text-index-and-grep/plan.md:18](../../pm/plans/closed/2026-09-30-repository-text-index-and-grep/plan.md#L18)
 - plan: plans-verification [pm/plans/closed/2026-09-30-repository-text-index-and-grep/plan.md:19](../../pm/plans/closed/2026-09-30-repository-text-index-and-grep/plan.md#L19)
 - plan: plans-implementation [pm/plans/closed/2026-10-01-late-repository-ref-snapshot/plan.md:15](../../pm/plans/closed/2026-10-01-late-repository-ref-snapshot/plan.md#L15)
@@ -144,6 +146,7 @@ Requirement: [pm/requirements/repository-text-index.md](repository-text-index.md
 - issue: plans-implementation [pm/bugs/closed/2026-09-30-FEAT-repository_text_index_and_grep.md:22](../../pm/bugs/closed/2026-09-30-FEAT-repository_text_index_and_grep.md#L22)
 - issue: plans-verification [pm/bugs/closed/2026-09-30-FEAT-repository_text_index_and_grep.md:23](../../pm/bugs/closed/2026-09-30-FEAT-repository_text_index_and_grep.md#L23)
 - issue: introduces [pm/bugs/closed/2026-10-01-FEAT-search_index_progress_resume.md:15](../../pm/bugs/closed/2026-10-01-FEAT-search_index_progress_resume.md#L15)
+- issue: introduces [pm/bugs/closed/2026-10-06-BUG-peer_refs_block_commit_hook.md:13](../../pm/bugs/closed/2026-10-06-BUG-peer_refs_block_commit_hook.md#L13)
 
 ## REQ-CAMPAIGN-ORCHESTRATION
 

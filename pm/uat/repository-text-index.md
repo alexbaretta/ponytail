@@ -126,6 +126,29 @@ Traceability: verifies REQ-REPOSITORY-TEXT-INDEX
      overlay pointers remain unchanged, and the newly referenced commit is not
      published without history.
 
+## Arc: Index one worktree while independent workers commit
+
+Traceability: verifies REQ-REPOSITORY-TEXT-INDEX
+
+- **Actor:** Developer or worker committing in a linked Git worktree.
+- **Prerequisites:** Two linked worktrees sharing one repository, the configured
+  PostgreSQL index, and uniquely owned fixture rows.
+- **Profiles:** Real Git and PostgreSQL production refresh/query boundaries.
+- **External effects:** Fixture-only history and overlay publications.
+
+1. Refresh the caller's current-worktree index while the peer commits.
+   - The refresh succeeds and searches the caller's current content. Peer
+     content is absent and repository ref observations are unchanged.
+2. Change caller HEAD, then caller content during publication.
+   - Both attempts fail with `REPOSITORY_INDEX_UNSTABLE`; the prior overlay
+     and repository ref pointers remain unchanged.
+3. Run explicit repository maintenance.
+   - Peer history and refs are published. A peer ref changing during final
+     repository publication still fails atomically and preserves prior pointers.
+4. Run ordinary reference QA through a commit hook.
+   - It uses current-worktree scope, retains reference-policy validation, and
+     requires no quiet window for unrelated worker commits.
+
 ## Arc: Ingest complete batches with real worker processes
 
 Traceability: verifies REQ-REPOSITORY-TEXT-INDEX

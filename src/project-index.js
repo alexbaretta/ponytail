@@ -2217,7 +2217,8 @@ async function publishWorktreeOverlay(client, context) {
     JOIN ponytail_index.worktree_text_generation_v1 generation USING (generation_id)
     WHERE published.worktree_id = $1::uuid`, [context.worktreeId]);
   if (current.rows[0]?.state_digest === second.stateDigest) {
-    return { generationId: current.rows[0].generation_id, indexedDocuments: 0, reused: true };
+    return { generationId: current.rows[0].generation_id, stateDigest: second.stateDigest,
+      indexedDocuments: 0, reused: true };
   }
   const generation = await one(client, `
     INSERT INTO ponytail_index.worktree_text_generation_v1 (
@@ -2262,10 +2263,15 @@ async function publishWorktreeOverlay(client, context) {
         WHERE search.document_id = document.document_id
       )`);
   }
-  return { generationId: generation.generation_id, indexedDocuments, reused: false };
+  return { generationId: generation.generation_id, stateDigest: second.stateDigest,
+    indexedDocuments, reused: false };
 }
 
 async function refreshRepositoryTextIndex(options = {}) {
+  const scope = options.scope ?? 'repository';
+  if (!['repository', 'worktree'].includes(scope)) {
+    throw new ProjectIndexError('REPOSITORY_INDEX_SCOPE', `unsupported repository index scope: ${scope}`);
+  }
   const root = fs.realpathSync(options.root ?? git(process.cwd(), ['rev-parse', '--show-toplevel']));
   const pool = options.pool ?? new (require('pg').Pool)(databaseOptions(root));
   const client = await pool.connect();
@@ -2281,7 +2287,7 @@ async function refreshRepositoryTextIndex(options = {}) {
     if (!lock.acquired) throw new ProjectIndexError('REPOSITORY_INDEX_BUSY', 'repository text index writer is already active');
     lockKey = writerKey;
     await client.query('COMMIT');
-    const initialRefs = await currentRefs(root);
+    const initialRefs = scope === 'repository' ? await currentRefs(root) : new Map();
     const initialHeadCommit = git(root, ['rev-parse', 'HEAD']);
     let history = { commits: 0, blobs: 0 };
     let total = 0;
@@ -2312,7 +2318,7 @@ async function refreshRepositoryTextIndex(options = {}) {
       ...new Set([...initialRefs.values(), initialHeadCommit, ...(options.tips ?? [])]),
     ]);
     options.signal?.throwIfAborted();
-    const lateRefs = await currentRefs(root);
+    const lateRefs = scope === 'repository' ? await currentRefs(root) : new Map();
     const lateHeadCommit = git(root, ['rev-parse', 'HEAD']);
     await ingestSnapshot([
       ...new Set([...lateRefs.values(), lateHeadCommit, ...(options.tips ?? [])]),
@@ -2320,9 +2326,9 @@ async function refreshRepositoryTextIndex(options = {}) {
     options.signal?.throwIfAborted();
     await options.onPublish?.();
     await client.query('BEGIN');
-    const priorResult = await client.query(`
+    const priorResult = scope === 'repository' ? await client.query(`
       SELECT ref_name, commit_oid FROM ponytail_index.git_ref_current_v1
-      WHERE repository_id = $1::uuid`, [context.repositoryId]);
+      WHERE repository_id = $1::uuid`, [context.repositoryId]) : { rows: [] };
     const prior = new Map(priorResult.rows.map(row => [row.ref_name, row.commit_oid]));
     const observedAt = (await one(client, 'SELECT clock_timestamp() AS observed_at')).observed_at;
     for (const [refName, commitOid] of lateRefs) {
@@ -2355,8 +2361,12 @@ async function refreshRepositoryTextIndex(options = {}) {
     }
     const overlay = await publishWorktreeOverlay(client, context);
     if (git(root, ['rev-parse', 'HEAD']) !== lateHeadCommit ||
-        JSON.stringify([...await currentRefs(root)]) !== JSON.stringify([...lateRefs])) {
+        (scope === 'repository' &&
+          JSON.stringify([...await currentRefs(root)]) !== JSON.stringify([...lateRefs]))) {
       throw new ProjectIndexError('REPOSITORY_INDEX_UNSTABLE', 'repository refs changed while indexing');
+    }
+    if ((await collectWorktreeOverlay(context)).stateDigest !== overlay.stateDigest) {
+      throw new ProjectIndexError('REPOSITORY_INDEX_UNSTABLE', 'worktree changed while indexing');
     }
     options.signal?.throwIfAborted();
     await client.query('COMMIT');
@@ -2459,7 +2469,8 @@ async function grepRepository(search, options = {}) {
   const pool = options.pool ?? new (require('pg').Pool)(databaseOptions(root));
   try {
     const refreshed = options.refreshed ?? await refreshRepositoryTextIndex({
-      root, pool, tips: commitOid === null ? [] : [commitOid],
+      root, pool, scope: search.selector === 'worktree' ? 'worktree' : 'repository',
+      tips: commitOid === null ? [] : [commitOid],
     });
     const client = await pool.connect();
     try {

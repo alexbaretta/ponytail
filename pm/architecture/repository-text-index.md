@@ -30,7 +30,14 @@ tombstones. The effective current tree is the `HEAD` tree with overlay paths
 replaced, removed, or added. Git's own ignore rules determine untracked
 participation; symlink targets are represented without following them.
 
-Before a query, the indexer observes refs and uses the prior checkpoint to
+Current-worktree queries and reference QA select worktree refresh scope. That
+scope captures and ingests only caller HEAD history, publishes its overlay,
+and checks caller HEAD and the final content digest before commit. It neither
+publishes nor requires stability of independent branch/tag refs. Both scopes
+use the same ingestion and overlay-publication implementation and per-worktree
+writer lock; changing caller content rolls back publication.
+
+For explicit repository maintenance and ref/history queries, the indexer observes refs and uses the prior checkpoint to
 ingest only unseen commits, trees, and blobs. After that immutable backfill it
 captures refs and HEAD once more and sends only the late snapshot's unseen
 delta through the same ingestion path. That late snapshot is the sole
@@ -61,7 +68,7 @@ historical commit completion may occur out of topological order because parent
 edges reference their owning commit, not a required parent row.
 
 The coordinator retains the advisory writer lock and is the only process that
-publishes refs and the worktree overlay. Cancellation closes queue assignment,
+publishes the worktree overlay and, in repository scope, refs. Cancellation closes queue assignment,
 notifies every child, waits for their transaction cleanup and exit, and only
 then releases the writer connection. A durable batch may finish during that
 drain; progress observes it only after commit. An unfinished batch rolls back,

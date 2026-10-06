@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-10-06-local_index_gate_depended_on_shared_refs",
+  "recorded_at": "2026-10-06T16:10:00-07:00",
+  "source_references": ["pm/bugs/closed/2026-10-06-BUG-peer_refs_block_commit_hook.md"],
+  "context": {
+    "languages": ["javascript"],
+    "frameworks": ["Node.js", "PostgreSQL", "Git"],
+    "components": ["repository text index", "reference QA"],
+    "affected_boundaries": ["independent linked-worktree commit hooks"],
+    "code_references": ["src/project-index.js:refreshRepositoryTextIndex", "scripts/project-qa.js"]
+  },
+  "observed_behavior": "A peer branch commit invalidates an unchanged caller's reference QA publication.",
+  "expected_behavior": "Worktree-scoped QA depends only on caller HEAD and content; explicit repository indexing retains shared-ref validation.",
+  "causal_mechanism": "A local commit gate refreshed and fenced every shared branch and tag, making independent worker progress an availability dependency.",
+  "anti_pattern": {
+    "structural_description": "A local validation gate inherits a repository-wide mutable-state boundary.",
+    "why_it_fails": "Independent linked worktrees share refs and therefore invalidate each other's otherwise valid publications."
+  },
+  "correct_pattern": {
+    "required_invariant": "Publication stability matches the selected query scope without weakening caller-state validation.",
+    "implementation_description": "Select worktree scope in the canonical refresh for QA and current-worktree queries; fence caller HEAD and overlay content before transaction commit."
+  },
+  "applicability_conditions": ["Independent linked Git worktrees share mutable refs."],
+  "known_non_matches": ["Explicit repository maintenance intentionally observes and validates every shared ref."],
+  "confirmation_evidence": ["The real PostgreSQL linked-worktree regression failed on peer ref movement before the fix and passes afterward."],
+  "regression_proofs": ["tests/repository-index-concurrency.test.js: worktree indexing tolerates peer commits while fencing caller HEAD and content"]
+}
