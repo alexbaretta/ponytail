@@ -397,7 +397,7 @@ function headingLines(source) {
   return headings;
 }
 
-function parsePlanIndexSprint(relativePath, source) {
+function parsePlanIndexSprint(relativePath, source, hasTaskletGraph) {
   const planId = path.basename(path.dirname(path.dirname(relativePath)));
   const text = headingAndExcerpt(source);
   let sprint;
@@ -417,7 +417,7 @@ function parsePlanIndexSprint(relativePath, source) {
   }
   const headings = headingLines(source);
   const statuses = parseTaskletStatuses(relativePath, source,
-    sprint.execution === null && sprint.planning.status === 'STUB');
+    sprint.execution === null && (!hasTaskletGraph || sprint.planning.status === 'STUB'));
   const records = [planRecord({
     recordKind: 'sprint',
     recordId: sprint.id,
@@ -837,10 +837,12 @@ function collectPlanProjection(root = fs.realpathSync(git(process.cwd(), ['rev-p
   ]));
   const files = [...paths].sort().map(relativePath => {
     const { content, gitState } = fileState(root, relativePath);
+    const hasTaskletGraph = /S\d+\.md$/u.test(relativePath) &&
+      paths.has(relativePath.replace(/\.md$/, '.tasklets.json'));
     return {
       path: relativePath,
       contentDigest: digest(content),
-      parserIdentity: digest(`${parserIdentity}\n${configurationDigest}\n${relativePath}`),
+      parserIdentity: digest(`${parserIdentity}\n${configurationDigest}\n${relativePath}\n${hasTaskletGraph}`),
       gitState,
       parse: () => {
         if (relativePath.endsWith('/plan.md')) {
@@ -852,7 +854,8 @@ function collectPlanProjection(root = fs.realpathSync(git(process.cwd(), ['rev-p
           );
         }
         if (/S\d+\.md$/u.test(relativePath)) {
-          return parsePlanIndexSprint(relativePath, content.toString('utf8'));
+          return parsePlanIndexSprint(relativePath, content.toString('utf8'),
+            hasTaskletGraph);
         }
         if (/S\d+\.tasklets\.json$/u.test(relativePath)) {
           return parsePlanIndexTasklets(relativePath, content.toString('utf8'));

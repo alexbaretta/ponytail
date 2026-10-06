@@ -774,7 +774,7 @@ test('indexes canonical plan hierarchy and separates legacy, invalid, and strand
     relationship.role === 'campaign-parent'), true);
 });
 
-test('indexes empty STUB sprints but rejects empty executable and malformed tasklet sprints', () => {
+test('indexes planning-only sprints while enforcing executable and tasklet-graph headings', () => {
   const root = planFixture();
   const sprintDirectory = path.join(root, 'pm/plans/in_progress/root/sprints');
   fs.mkdirSync(sprintDirectory);
@@ -797,6 +797,23 @@ ${body}`;
   const records = parseSprint();
   assert.equal(records.some(record => record.recordKind === 'sprint' && record.status === 'STUB'), true);
   assert.equal(records.some(record => record.recordKind === 'tasklet-status'), false);
+
+  fs.writeFileSync(sprintPath, sprintSource('READY_FOR_REVIEW', null));
+  assert.equal(parseSprint().some(record => record.recordKind === 'sprint' &&
+    record.status === 'READY_FOR_REVIEW'), true);
+  const planningOnlyFile = collectPlanProjection(root).files
+    .find(file => file.path === 'pm/plans/in_progress/root/sprints/S06.md');
+
+  fs.writeFileSync(path.join(sprintDirectory, 'S06.tasklets.json'), JSON.stringify({
+    schemaVersion: 3, sprint: 'S06', features: {}, tasklets: {},
+  }));
+  const detailedFile = collectPlanProjection(root).files
+    .find(file => file.path === planningOnlyFile.path);
+  assert.equal(detailedFile.contentDigest, planningOnlyFile.contentDigest);
+  assert.notEqual(detailedFile.parserIdentity, planningOnlyFile.parserIdentity);
+  assert.throws(parseSprint, /contains no tasklet headings/);
+  fs.writeFileSync(sprintPath, sprintSource('STUB', null));
+  assert.equal(parseSprint().some(record => record.recordKind === 'sprint'), true);
 
   fs.writeFileSync(sprintPath, sprintSource('APPROVED', {
     status: 'PENDING', depends_on: [], tasklets_reviewed: true,

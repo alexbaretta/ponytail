@@ -93,14 +93,15 @@ Requirement: [pm/requirements/traceability-index.md](traceability-index.md)
 - uat: verifies [pm/uat/traceability-index.md:16](../../pm/uat/traceability-index.md#L16)
 - uat: verifies [pm/uat/traceability-index.md:48](../../pm/uat/traceability-index.md#L48)
 - uat: verifies [pm/uat/traceability-index.md:71](../../pm/uat/traceability-index.md#L71)
-- uat: verifies [pm/uat/traceability-index.md:107](../../pm/uat/traceability-index.md#L107)
-- uat: verifies [pm/uat/traceability-index.md:131](../../pm/uat/traceability-index.md#L131)
+- uat: verifies [pm/uat/traceability-index.md:111](../../pm/uat/traceability-index.md#L111)
+- uat: verifies [pm/uat/traceability-index.md:135](../../pm/uat/traceability-index.md#L135)
 - plan: plans-implementation [pm/plans/closed/2026-09-29-traceability-index/plan.md:95](../../pm/plans/closed/2026-09-29-traceability-index/plan.md#L95)
 - plan: plans-verification [pm/plans/closed/2026-09-29-traceability-index/plan.md:96](../../pm/plans/closed/2026-09-29-traceability-index/plan.md#L96)
 - tasklet: plans-implementation [pm/plans/closed/2026-09-29-traceability-index/sprints/S02.md:27](../../pm/plans/closed/2026-09-29-traceability-index/sprints/S02.md#L27)
 - tasklet: plans-verification [pm/plans/closed/2026-09-29-traceability-index/sprints/S02.md:54](../../pm/plans/closed/2026-09-29-traceability-index/sprints/S02.md#L54)
 - tasklet: plans-implementation [pm/plans/closed/2026-09-29-traceability-index/sprints/S02.md:71](../../pm/plans/closed/2026-09-29-traceability-index/sprints/S02.md#L71)
 - tasklet: plans-verification [pm/plans/closed/2026-09-29-traceability-index/sprints/S02.md:99](../../pm/plans/closed/2026-09-29-traceability-index/sprints/S02.md#L99)
+- issue: introduces [pm/bugs/closed/2026-10-06-BUG-planning_only_sprint_index.md:13](../../pm/bugs/closed/2026-10-06-BUG-planning_only_sprint_index.md#L13)
 
 ## REQ-REPOSITORY-TEXT-INDEX
 

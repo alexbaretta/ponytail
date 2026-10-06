@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-10-06-sprint_projection_ignored_graph_presence",
+  "recorded_at": "2026-10-06T15:43:21-07:00",
+  "source_references": ["pm/bugs/closed/2026-10-06-BUG-planning_only_sprint_index.md"],
+  "context": {
+    "languages": ["javascript"],
+    "frameworks": ["Node.js"],
+    "components": ["plan index", "campaign census"],
+    "affected_boundaries": ["planning-only sprint projection"],
+    "code_references": ["src/project-index.js:parsePlanIndexSprint", "src/campaign-census.js:validatePlanContents"]
+  },
+  "observed_behavior": "A valid planning-review sprint without execution or a tasklet graph aborts plan indexing for missing tasklet headings.",
+  "expected_behavior": "The index records planning-only sprints without requiring executable tasklets, while detailed graphs and executable sprints retain heading validation.",
+  "causal_mechanism": "The projection applied the executable heading parser unconditionally and considered STUB status alone, omitting the canonical sibling-graph presence boundary.",
+  "anti_pattern": {
+    "structural_description": "A projection reproduces only part of the canonical eligibility predicate.",
+    "why_it_fails": "Records accepted by the owning validator become indexing failures; their sibling inputs are also absent from the parse-cache key."
+  },
+  "correct_pattern": {
+    "required_invariant": "Projection eligibility and its cache identity account for every input in the canonical execution/graph predicate.",
+    "implementation_description": "Pass graph presence from the file inventory into the sprint parser and include it in the file's parser identity."
+  },
+  "applicability_conditions": ["Projection depends on both source content and sibling-file presence."],
+  "known_non_matches": ["Executable sprints and detailed empty graphs still require tasklet headings."],
+  "confirmation_evidence": ["The planning-review regression failed before the fix and passes after it."],
+  "regression_proofs": ["tests/project-index.test.js: indexes planning-only sprints while enforcing executable and tasklet-graph headings"]
+}

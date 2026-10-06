@@ -121,6 +121,14 @@ versioned document and one trailing newline.
 
 ## Plans, tasklets, and issues
 
+Sprint indexing follows the canonical campaign parser's execution/graph
+boundary. A planning-only sprint with null execution and no sibling tasklet
+graph may have no tasklet headings, including during planning review. A STUB
+may also have an empty graph. Detailed tasklet graphs and executable sprints
+require headings, and malformed headings remain errors. This clarification
+repairs the source-confirmed indexing discrepancy reported on 2026-10-06
+within the stakeholder-authorized Ponytail/GWEN collaboration.
+
 Traceability annotations must cover prospective work without presenting it as
 completed coverage. Plans and tasklets may declare that they plan
 implementation or verification for an approved requirement. Project issues,

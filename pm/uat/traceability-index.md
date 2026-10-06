@@ -98,6 +98,10 @@ Traceability: verifies REQ-TRACEABILITY-INDEX
 5. Change only one sprint or tasklet file and reindex.
    - Only invalidated plan inputs are reparsed, the plan generation changes,
      and the unchanged traceability corpus remains queryable.
+   - A planning-only `READY_FOR_REVIEW` sprint with null execution and no
+     tasklet graph indexes its sprint and sections without inventing tasklets.
+     Adding an empty detailed graph, or enabling execution without headings,
+     fails. An empty STUB graph remains permitted; malformed headings fail.
 6. Query after plan inputs or the plan schema become stale.
    - Structural and text commands fail with an actionable diagnostic and do
      not silently rebuild or return a partial graph.
