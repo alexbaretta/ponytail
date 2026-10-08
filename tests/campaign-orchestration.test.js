@@ -60,6 +60,8 @@ const {
   reservationAudit,
   reconcile,
   recordActionResult,
+  releaseLedgerCoordinator,
+  setLedgerCoordinator,
   retryDispatch,
   retireWorktree,
   recordWorkerDelivery,
@@ -71,6 +73,29 @@ const {
   withWorktreeLock,
 } = require('../src/campaign-orchestration');
 const campaignCli = path.join(__dirname, '..', 'src', 'campaign-census.js');
+
+test('coordinator handoff preserves unfinished assignments and started host operations', () => {
+  const root = repository();
+  const environment = { ...process.env, PONYTAIL_CAMPAIGN_STATE_DIR: temporaryDirectory('ponytail-coordinator-handoff') };
+  setLedgerCoordinator(root, 'campaign', 'original-coordinator', environment);
+  withLedgerLock(root, 'campaign', environment, ledger => {
+    ledger.assignments.push({ id: 'pending-assignment', planId: 'ready', sessionId: null, worktree: null,
+      branch: null, dispatchRevision: ledger.integrationRevision, workerRevision: null, state: 'DISPATCH_PENDING',
+      idempotencyKey: 'pending-key', attachToken: 'pending-token', worktreeArchived: false, sessionArchived: false });
+    ledger.pendingActions.push(readActionV6({ schemaVersion: 6, id: 'started-action', type: 'CREATE_WORKER',
+      assignmentId: 'pending-assignment', idempotencyKey: 'pending-key', payload: { planId: 'ready',
+        dispatch: { ready: false, state: 'STARTED', hostIdentity: 'client-new-thread:original' } } }));
+  });
+  const before = readLedger(root, 'campaign', environment);
+  assert.throws(() => releaseLedgerCoordinator(root, 'campaign', 'other-coordinator', environment),
+    { code: 'CAMPAIGN_COORDINATOR_CONFLICT' });
+  releaseLedgerCoordinator(root, 'campaign', 'original-coordinator', environment);
+  assert.deepEqual(readLedger(root, 'campaign', environment), { ...before, coordinatorSessionId: null });
+  setLedgerCoordinator(root, 'campaign', 'new-coordinator', environment);
+  assert.deepEqual(readLedger(root, 'campaign', environment), { ...before, coordinatorSessionId: 'new-coordinator' });
+  assert.throws(() => setLedgerCoordinator(root, 'campaign', 'original-coordinator', environment),
+    { code: 'CAMPAIGN_COORDINATOR_CONFLICT' });
+});
 
 test('reservation audit distinguishes retained workers, provisioned sessions, and unresolved starts', () => {
   const root = repository();

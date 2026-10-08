@@ -1596,7 +1596,6 @@ function setLedgerCoordinator(repositoryRoot, campaignId, sessionId, environment
 function releaseLedgerCoordinator(repositoryRoot, campaignId, sessionId, environment = process.env) {
   return withLedgerLock(repositoryRoot, campaignId, environment, (ledger) => {
     if (ledger.coordinatorSessionId !== sessionId) fail('CAMPAIGN_COORDINATOR_CONFLICT', `campaign ${campaignId} ledger is owned by another coordinator`);
-    if (ledger.assignments.some((assignment) => assignment.state !== 'ARCHIVED')) fail('CAMPAIGN_COORDINATOR_ACTIVE', 'coordinator cannot be released while campaign assignments remain active');
     ledger.coordinatorSessionId = null;
     return ledger;
   });
