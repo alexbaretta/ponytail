@@ -161,10 +161,14 @@ without implementation beginning does not meet the gate.
    - `FEAT` adds requirements: write the approved new behavior into its owning
      pages and navigation. If that exact addition was already documented,
      verify and link it; do not create duplicate text.
-   - `BUG` may clarify requirements: add or clarify intended behavior when
-     absent or ambiguous. If the exact expected behavior is already present,
+   - `CHNG` changes an existing requirement only according to its explicit
+     issue-level approval under `issue-tracking`; retain the decision and
+     superseded behavior as provenance.
+   - `BUG` links existing required behavior and may clarify ambiguity without
+     inventing new behavior. If the exact expected behavior is already present,
      no requirements document edit is needed; link that passage and record
-     why it already covers the bug.
+     why it already covers the bug. Classify genuinely new behavior under
+     `issue-tracking` rather than promoting it as a bug clarification.
    - `TASK` requires the same assessment: update requirements if intended
      behavior or constraints change; otherwise record the linked review and
      why no requirements change is needed.

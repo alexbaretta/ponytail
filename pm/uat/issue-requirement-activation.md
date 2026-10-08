@@ -8,6 +8,35 @@ Licensed under the MIT License. See LICENSE in the project root.
 [Back to UAT index](index.md) · Requirement:
 [`REQ-ISSUE-REQUIREMENT-ACTIVATION`](../requirements/issue-requirement-activation.md).
 
+## Arc: Triage Reports And Preserve Authorization Gates
+
+Traceability: verifies REQ-ISSUE-REQUIREMENT-ACTIVATION
+
+- **Actor:** User and triaging agent.
+- **Prerequisites:** Canonical requirements, manually filed and imported
+  reports, and configured issue collections and type tokens.
+- **Profiles:** Reusable-policy scenario review.
+- **External effects:** Local records only; external publication needs authority.
+
+1. Review a novel noncontradictory request, a contradictory request, and a
+   discrepancy from existing required behavior despite misleading tracker labels.
+   - Classify them as FEAT, CHNG, and BUG respectively, preserving provenance
+     and exact requirement references. Leave underspecified reports unresolved.
+2. Compare approvals across sources.
+   - BUGs and manually user-filed FEATs are approved for possible planning.
+     Imported FEATs and every CHNG await explicit approval one by one.
+     Refreshing source data does not overwrite reviewed classification or approval.
+3. Attempt plan inclusion and execution.
+   - Only approved scope enters a plan or campaign. Approval and inclusion do
+     not activate requirements or authorize execution. Explicit human kickoff
+     authorizes the included approved scope; a small standalone issue instead
+     requires an explicit implementation request.
+4. Test a BUG whose existing behavior satisfies its governing requirement.
+   - Record WORKS FOR ME or an equivalent configured disposition, with tested
+     version or revision, reproduction steps, observed result, and requirement
+     in resolution comments. Claim no fix. An inconclusive reproduction leaves
+     unverified conditions explicit.
+
 ## Arc: Keep issue intake out of canonical requirements
 
 Traceability: verifies REQ-ISSUE-REQUIREMENT-ACTIVATION

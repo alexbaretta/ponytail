@@ -42,15 +42,18 @@ owner, for example `.agents/config/project/management.md`, for:
 This is agent-readable configuration, not an extension to either existing
 `ponytail.json` JSON schema. A host may keep these values directly in
 `AGENTS.md`; a separate file is unnecessary when no customization is needed.
-Use the defaults below for omitted categories. An explicit type or status set
-replaces its default set; do not append default values to a custom set.
+Use the defaults below for omitted categories. Every project supports at least
+`BUG`, `FEAT`, `CHNG`, and `TASK`; projects may extend this list with additional
+issue types and their explicit semantics. An explicit status set replaces the
+default status set; do not append default statuses to a custom set.
 
-The default types are:
+The required base types are:
 
 | Type | Meaning | Requirements effect when implementation activates |
 | --- | --- | --- |
-| `BUG` | Existing behavior violates intended behavior | Clarify missing or ambiguous requirements when necessary |
+| `BUG` | Reported behavior violates existing required behavior | Verify and link the existing requirements; clarify ambiguity without inventing new behavior |
 | `FEAT` | Add intended capability or behavior | Add the approved requirements |
+| `CHNG` | Change behavior specified by an existing requirement | Reconcile the explicitly approved change and retain superseded-source provenance |
 | `TASK` | Work not inherently a defect or new capability | Assess and document any effect on requirements |
 
 The default shared statuses and transitions are:
@@ -69,8 +72,8 @@ is `closed`.
 governs issue and whole-plan placement, not serialized sprint execution states
 or tasklet markers owned by `plan-execution`.
 
-For customization, the host can declare, for example, type `CHANGE` as an
-addition to requirements, statuses `backlog`, `active`, `done`, and `parked`,
+For customization, the host can declare, for example, statuses
+`backlog`, `active`, `done`, and `parked`,
 initial role `backlog`, active-work role `active`, successful-completion role
 `done`, and the exact
 allowed transitions between those states. Define whether `parked` is deferred
@@ -81,6 +84,57 @@ spelling. Resolve missing semantics before the affected transition.
 Use type tokens and status names that each fit one filename/path component,
 without separators, `.` or `..`. Keep type spelling and case as configured.
 Apply `project-structure` when establishing or changing the owning configuration.
+
+## Requirements-Relative Triage And Approval
+
+Use the host's configured import tooling and requested source selection to
+store external reports in their configured local collections. Preserve source
+identity, reporter, and report text. External labels are provenance, not the
+local semantic classification; refreshes must preserve reviewed classification
+and approval evidence.
+
+Compare each report's intended behavior with canonical requirements:
+
+- `FEAT`: it adds behavior absent from requirements without contradicting an
+  existing requirement.
+- `CHNG`: it contradicts or changes an existing requirement. Record the exact
+  requirement and proposed change for the user's decision.
+- `BUG`: it reports a discrepancy from behavior already required. Link the
+  requirement; the report alone does not establish that a defect exists.
+
+Keep insufficiently specified reports unresolved until they can be classified.
+Separate independently classifiable requests in a mixed report into linked
+records. Apply the host's explicit semantics for additional issue types.
+
+Approval permits possible inclusion in a plan or campaign; it does not
+authorize implementation or require prioritization:
+
+- BUGs are automatically approved regardless of source.
+- FEATs filed manually by the current human user are approved at filing.
+  Imported FEATs require that user's explicit approval one by one.
+- CHNGs require that user's explicit approval one by one regardless of source.
+
+Record the source and approval evidence separately from implementation
+authorization. Only approved changes may enter a plan or campaign's executable
+scope. The human user's explicit kickoff authorizes implementation of its
+included approved scope. A sufficiently small issue may instead be implemented
+without a plan when the user explicitly requests its standalone implementation.
+Automatic BUG approval or manual FEAT filing alone never authorizes execution.
+Use `plan-execution` for plan eligibility and execution gates, and `requirements`
+for activation; approval and plan inclusion leave new expectations issue-local
+until implementation begins.
+
+### Reports That Already Work
+
+Investigate a BUG against its linked requirement. When testing demonstrates
+that the reported behavior already satisfies the requirement, record a
+`WORKS FOR ME` or equivalent supported disposition. Include the exact tested
+version or revision, reproduction steps, observed result, and requirement
+reference in the issue's resolution comments. Do not claim a fix or fabricate
+an implementation change. A failed attempt to reproduce alone does not prove
+correctness; retain any unverified conditions explicitly. Use the host's
+configured lifecycle for this disposition, without adding a new shared status.
+External comments or status updates still require authority to publish.
 
 ## Placement And Identity
 

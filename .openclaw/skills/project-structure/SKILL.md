@@ -81,6 +81,11 @@ Keep the agent instructions compact. Put detailed directory trees,
 documentation taxonomies, cloud topology, environment inventories, and
 service descriptions in referenced project-local documents.
 
+The project structure must identify issue placement for at least `BUG`, `FEAT`,
+`CHNG`, and `TASK`, using the canonical meanings and approval rules in
+`issue-tracking`. Client projects may extend that list with explicitly defined
+types and collection ownership; extensions do not remove the base types.
+
 A host may explicitly mark a configuration category not applicable, with a
 short reason. Documentation-only repositories, libraries, local-only tools,
 and partial component repositories need not invent build, integration,

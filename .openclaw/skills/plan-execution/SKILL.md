@@ -194,6 +194,12 @@ multi-step work rather than appending to a large completed plan.
 
 ## Questions, Readiness, And Approval
 
+Apply `issue-tracking`'s requirements-relative classification and approval
+rules before including an issue in executable plan or campaign scope. Issue
+approval permits planning; the human user's explicit kickoff authorizes
+implementation of the included approved scope. An issue added after kickoff
+requires explicit authorization for that scope addition before implementation.
+
 Before requesting approval to start a plan:
 
 1. Identify all known product, contract, security, persistence, infrastructure,
@@ -368,7 +374,10 @@ Direct user requests that add behavior to an active plan must be recorded in
 the applicable sprint before implementation and explicitly approved when they
 change approved scope.
 
-Every planned deliverable must trace to an approved requirement. Do not turn
+Every planned deliverable must trace to an approved requirement or an approved
+issue-local outcome awaiting implementation activation under `issue-tracking`.
+At activation, reconcile that outcome into canonical requirements and
+traceability before product edits. Do not turn
 an architectural aspiration, illustrative example, possible future migration,
 or implementation opportunity into current scope. When a necessary outcome is
 absent from the requirements, record it as a proposal and obtain stakeholder

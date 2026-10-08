@@ -127,7 +127,10 @@ while project-wide management records remain under `pm/`.
 - `pm/plans/<status>/<plan-id>/` owns new long-lived plans and their sprint
   records. Existing flat `pm/plans/<plan-id>/` records are historical layouts
   and remain in place until an explicitly scoped migration.
-- `pm/bugs/<status>/` owns all issue types. New issue filenames follow
+- `pm/bugs/<status>/` owns `BUG`, `FEAT`, `CHNG`, `TASK`, and any additional
+  project-defined issue types. These four base categories are required;
+  client projects may extend the list under `issue-tracking`, which owns
+  their meanings and approval rules. New issue filenames follow
   `YYYY-MM-DD-<type>-<short_description>.md`. Existing filenames remain stable
   until an explicitly scoped migration.
 - `pm/requirements/index.md` is the entry point for the linked requirements

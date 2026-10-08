@@ -14,6 +14,9 @@ authorized for standalone implementation with “Make it happen.”
 
 **Source:**
 [`2026-09-29-BUG-premature_requirement_promotion`](../bugs/closed/2026-09-29-BUG-premature_requirement_promotion.md).
+The stakeholder extended this policy on 2026-10-08 with requirements-relative
+triage, separate approval and implementation authorization, and tested-version
+evidence for reports whose behavior is already correct.
 
 Ponytail must keep issue intake distinct from requirements activation.
 
@@ -32,6 +35,38 @@ remain in the issue.
 An issue may link an approved requirement that already exists. In particular,
 a bug may identify an existing requirement violated by observed behavior. This
 link does not create a new requirement.
+
+## Triage, Approval, And Authorization
+
+Reusable issue policy must classify reports against canonical requirements,
+irrespective of external tracker labels. New noncontradictory behavior is
+`FEAT`; a change contradicting an existing requirement is `CHNG`; a reported
+discrepancy from existing required behavior is `BUG`. Projects retain ownership
+of source selection, import tools, type-specific collections, custom type
+extensions, and lifecycle mappings. Project structure must support at least
+`BUG`, `FEAT`, `CHNG`, and `TASK`; clients may add explicitly defined issue
+types without removing these base categories. Preserve reviewed local
+classification and approval evidence across external refreshes.
+
+BUGs are automatically approved regardless of source. FEATs manually filed by
+the current human user are approved at filing; imported FEATs require explicit
+user approval one by one. Every CHNG requires explicit user approval one by
+one, regardless of source. Approval permits possible inclusion in a plan or
+campaign, without authorizing implementation. Only approved changes may enter
+executable scope. The human user's explicit kickoff authorizes implementation
+of the included approved scope. A sufficiently small issue may instead receive
+an explicit standalone implementation request. Filing or automatic approval
+alone does not authorize implementation.
+
+Testing may establish that a BUG is moot because existing behavior satisfies
+the requirement. Record `WORKS FOR ME` or an equivalent configured disposition
+with resolution comments identifying the tested version or revision,
+reproduction steps, observed result, and governing requirement. Do not claim
+an implementation fix. Failure to reproduce alone is insufficient evidence of
+correctness; disclose unverified conditions. Publication to an external tracker
+remains separately authorized.
+
+## Implementation Activation
 
 Issue behavior enters the requirements corpus only when implementation
 activates through either of these gates:

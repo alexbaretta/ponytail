@@ -17,7 +17,8 @@ policy belongs in `skills/ponytail/SKILL.md`; do not duplicate it here.
 - Structure and ownership: `PROJECT_STRUCTURE.md`.
 - Project-management root: `pm/`.
 - Long-lived plans: `pm/plans/<status>/<plan-id>/` for new records.
-- Issues of all types: `pm/bugs/<status>/`.
+- Issues (`BUG`, `FEAT`, `CHNG`, `TASK`, and project-defined extensions):
+  `pm/bugs/<status>/`; semantics are owned by `issue-tracking`.
 - Requirements: linked Markdown rooted at `pm/requirements/index.md`.
 - Architecture: linked Markdown rooted at `pm/architecture/index.md`.
 - UAT documentation root: `pm/uat`.
