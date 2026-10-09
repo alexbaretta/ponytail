@@ -4,7 +4,8 @@
 - Type: `FEAT`
 - Source: Human-provided client-agent analysis, 2026-10-09.
 - Approval: Human-filed proposal approved for possible planning at intake.
-- Implementation authorization: Not granted; recording only.
+- Status: `in_progress`.
+- Implementation authorization: Explicit human plan kickoff on 2026-10-09.
 
 ## Reported incident and existing capabilities
 

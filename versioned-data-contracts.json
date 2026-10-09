@@ -761,11 +761,11 @@
       "implementation": {
         "workspace": "ponytail",
         "module": "tsts/src/index.ts",
-        "readerRegistryExport": "checkProject"
+        "readerRegistryExport": "TstsConfigReaders"
       },
-      "currentVersion": "V2",
-      "versions": ["V1", "V2"],
-      "supportedReadVersions": ["V2"],
+      "currentVersion": "V3",
+      "versions": ["V1", "V2", "V3"],
+      "supportedReadVersions": ["V2", "V3"],
       "supportedDowngradeVersions": []
     },
     {

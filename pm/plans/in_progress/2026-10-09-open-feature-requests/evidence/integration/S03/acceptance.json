@@ -1,0 +1,64 @@
+{
+  "schemaVersion": 1,
+  "scope": "S01-S03 integration arcs",
+  "revision": "690fe0bc946ed538fac3eb70a390a04a5b2a0220",
+  "dirtyState": [
+    "M  .agents/config/project/traceability.json",
+    "M  pm/architecture/index.md",
+    "M  pm/bugs/in_progress/2026-10-01-FEAT-typescript_only_source.md",
+    "M  pm/bugs/in_progress/2026-10-08-FEAT-traceability_index_batch_resume.md",
+    "M  pm/bugs/in_progress/2026-10-08-FEAT-traceability_index_progress.md",
+    "M  pm/bugs/in_progress/2026-10-09-FEAT-tsts_shared_message_contracts.md",
+    "A  pm/bugs/open/2026-10-09-BUG-search_index_noncommit_tag.md",
+    "A  pm/plans/in_progress/2026-10-09-open-feature-requests/evidence/integration/S03/acceptance.json",
+    "M  pm/plans/in_progress/2026-10-09-open-feature-requests/plan.md",
+    "MM pm/plans/in_progress/2026-10-09-open-feature-requests/sprints/S03.md",
+    "A  pm/plans/in_progress/2026-10-09-open-feature-requests/sprints/S03.tasklets.json",
+    "M  pm/requirements/traceability.generated.md",
+    "M  pm/uat/open-features.md",
+    "M  tsts/README.md",
+    "M  tsts/docs/architecture.md",
+    "A  tsts/docs/shared-message-contracts.md",
+    "M  tsts/src/index.ts",
+    "A  tsts/src/shared-message-contracts.ts",
+    "M  tsts/test/config.test.ts",
+    "A  tsts/test/shared-message-contracts-cli.test.ts",
+    "A  tsts/test/shared-message-contracts.test.ts",
+    "A  tsts/test/shared-message-fixture.ts",
+    "M  tsts/tsconfig.json",
+    "M  versioned-data-contracts.json"
+  ],
+  "inputs": {
+    "src/project-index.js": "d06dc51766ed0243125949153bc1b4c80c3fe2b713368bd9b2db3276c8c7e71f",
+    "tests/traceability-batch-resume.test.js": "2e785c97b667d440bb3e8cea17da7550ece7e18bf708f71afbbcac9c965c0579",
+    "tsts/src/index.ts": "675b06dbdb75ac9f3a0b6921ec38879c993a1e7f710bc846c0865785c5a2ddf1",
+    "tsts/src/shared-message-contracts.ts": "73fd54f1d06d6ff247951180ef0e7c6cb1cfc83777f3cb4156fc6423703760da",
+    "tsts/tsconfig.json": "cb22555e34ad9d3a5d4a45fe735ce664d1bf4e8a28637a403c2867f8360bb762",
+    "tsts/test/shared-message-fixture.ts": "520aeb9808fdd6141d568669b8bae785ccb2c47dea56e813f946fcf14a852f88",
+    "tsts/test/shared-message-contracts-cli.test.ts": "d7e431b080b13708deae7a69f9d76762880e50d5868be0b01f6c7cae5c7a3303"
+  },
+  "command": [
+    "/Users/alex/.nvm/versions/node/v24.21.0/bin/node",
+    "--test",
+    "tests/traceability-batch-resume.test.js",
+    "tsts/dist/test/shared-message-contracts-cli.test.js"
+  ],
+  "start": "2026-10-09T14:31:51-07:00",
+  "completion": "2026-10-09T14:31:56-07:00",
+  "exitCode": 0,
+  "signal": null,
+  "error": null,
+  "stdout": "✔ real PostgreSQL retains batches across SIGKILL without partial publication (4569.023083ms)\n✔ real CLI accepts shared contracts; TypeScript rejects an object for JSON-text payloads (1026.352042ms)\nℹ tests 2\nℹ suites 0\nℹ pass 2\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 4618.8745\n",
+  "stderr": "",
+  "outcome": "PASS",
+  "counts": {
+    "tests": 2,
+    "passed": 2,
+    "failed": 0,
+    "skipped": 0
+  },
+  "notes": [
+    "The unrelated search-tag BUG was temporarily staged only for the tracked-file policy and is excluded from feature commits.",
+    "S04 and whole-plan final acceptance remain pending."
+  ]
+}

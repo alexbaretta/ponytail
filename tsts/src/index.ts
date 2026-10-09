@@ -10,6 +10,9 @@ import { isLosslessNumber } from 'lossless-json';
 import { parseJsonLosslessly } from './lossless-json.js';
 import { checkDirectoryStructure } from './directory-structure.js';
 import { checkTraceabilityAnnotations } from './traceability.js';
+import { checkSharedMessageContracts } from './shared-message-contracts.js';
+import type { TstsSharedMessageContractsConfig, TstsMessageApi, TstsMessageContract,
+    TstsMessageAdapter } from './shared-message-contracts.js';
 
 export type TstsDiagnosticSeverity = 'error' | 'warning';
 
@@ -45,6 +48,11 @@ export interface TstsConfig {
     readonly unusedCode?: TstsUnusedCodeConfig | undefined;
     readonly versionedDataContracts?: TstsVersionedDataContractsConfig | undefined;
     readonly workspaces: readonly TstsWorkspaceConfig[];
+}
+
+export interface TstsConfigV3 extends Omit<TstsConfig, 'schemaVersion'> {
+    readonly schemaVersion: 3;
+    readonly sharedMessageContracts?: TstsSharedMessageContractsConfig;
 }
 
 export interface TstsNoAliasingConfig {
@@ -240,7 +248,7 @@ async function checkConfiguredProject(input: {
     const diagnostics: TstsDiagnostic[] = [];
 
     try {
-        const config: TstsConfig = await loadTstsConfig(resolvedConfigPath);
+        const config: TstsConfigV3 = await loadTstsConfig(resolvedConfigPath);
         const noAliasingSeverity: TstsDiagnosticSeverity = config.noAliasing?.severity ?? 'error';
         const configDirectory: string = path.dirname(resolvedConfigPath);
         const graph: UnusedCodeGraph = await buildUnusedCodeGraph({
@@ -249,6 +257,11 @@ async function checkConfiguredProject(input: {
             diagnostics,
         });
         diagnostics.push(...checkDiscriminatedUnionDispatch(graph.workspaces));
+
+        if (config.sharedMessageContracts !== undefined) {
+            diagnostics.push(...checkSharedMessageContracts(graph.workspaces,
+                config.sharedMessageContracts, configDirectory));
+        }
 
         if (config.noAliasing !== undefined) {
             diagnostics.push(
@@ -432,6 +445,7 @@ function checkDiscriminatedUnionDispatch(
 }
 
 interface LoadedWorkspace {
+    readonly program: ts.Program;
     readonly checker: ts.TypeChecker;
     readonly config: TstsWorkspaceConfig;
     readonly exportedTypeDeclarationIds: Set<string>;
@@ -492,7 +506,7 @@ interface ReachabilityState {
 }
 
 async function buildUnusedCodeGraph(input: {
-    readonly config: TstsConfig;
+    readonly config: TstsConfigV3;
     readonly configDirectory: string;
     readonly diagnostics: TstsDiagnostic[];
 }): Promise<UnusedCodeGraph> {
@@ -550,6 +564,7 @@ async function buildUnusedCodeGraph(input: {
                     !sourceFile.isDeclarationFile || projectFilePaths.has(sourceFile.fileName)
             );
         const workspace: LoadedWorkspace = {
+            program,
             checker,
             config: workspaceConfig,
             exportedTypeDeclarationIds: new Set(),
@@ -2998,10 +3013,15 @@ const versionedDataContractsConfigKeys: readonly string[] = [
     'severity',
 ];
 
-async function loadTstsConfig(configPath: string): Promise<TstsConfig> {
+async function loadTstsConfig(configPath: string): Promise<TstsConfigV3> {
     const absoluteConfigPath: string = path.resolve(configPath);
     const rawText: string = await readFile(absoluteConfigPath, 'utf8');
     const data: unknown = parseJsonLosslessly(rawText);
+
+    if (isObjectRecord(data) && (data.schemaVersion === 3 ||
+        (isLosslessNumber(data.schemaVersion) && data.schemaVersion.value === '3'))) {
+        return TstsConfigReaders.variants.V3(data);
+    }
 
     if (!isObjectRecord(data) || !isSchemaVersion2(data.schemaVersion)) {
         throw new Error(
@@ -3029,8 +3049,108 @@ async function loadTstsConfig(configPath: string): Promise<TstsConfig> {
         );
     }
 
+    return { ...config, schemaVersion: 3 };
+}
+
+function parseMessageParameterPosition(value: unknown): number | undefined {
+    if (typeof value === 'number') return Number.isSafeInteger(value) && value >= 0 ? value : undefined;
+    if (!isLosslessNumber(value) || !/^(0|[1-9]\d*)$/u.test(value.value)) return undefined;
+    const integer: bigint = BigInt(value.value);
+    return integer <= BigInt(Number.MAX_SAFE_INTEGER) ? Number(integer) : undefined;
+}
+
+function parseSharedMessageContractsConfig(value: unknown): TstsSharedMessageContractsConfig | undefined {
+    if (!isObjectRecord(value) || !hasOnlyKeys(value, ['contracts', 'apis', 'adapters', 'severity']) ||
+        !isOptionalSeverity(value.severity)) return undefined;
+    const identifier = (candidate: unknown): candidate is string => typeof candidate === 'string' && candidate.length > 0;
+    if (!Array.isArray(value.contracts) || value.contracts.length === 0 ||
+        !Array.isArray(value.apis) || value.apis.length === 0) return undefined;
+    const contracts: TstsMessageContract[] = [];
+    for (const candidate of value.contracts) {
+        if (!isObjectRecord(candidate) || !identifier(candidate.id) || !identifier(candidate.path) ||
+            !identifier(candidate.exportName) || !hasOnlyKeys(candidate, ['id', 'path', 'exportName']) ||
+            contracts.some(contract => contract.id === candidate.id)) return undefined;
+        if (contracts.some(contract => contract.path === candidate.path && contract.exportName === candidate.exportName)) return undefined;
+        contracts.push({ id: candidate.id, path: candidate.path, exportName: candidate.exportName });
+    }
+    const apis: TstsMessageApi[] = [];
+    for (const candidate of value.apis) {
+        if (!isObjectRecord(candidate) || !identifier(candidate.id) || !identifier(candidate.method) ||
+            !identifier(candidate.contractId) || !contracts.some(contract => contract.id === candidate.contractId) ||
+            !isObjectRecord(candidate.receiver) || !identifier(candidate.receiver.path) || !identifier(candidate.receiver.exportName) ||
+            !hasOnlyKeys(candidate.receiver, ['path', 'exportName']) ||
+            (candidate.raw !== undefined && typeof candidate.raw !== 'boolean') ||
+            apis.some(api => api.id === candidate.id)) return undefined;
+        const channelParameter: number | undefined = parseMessageParameterPosition(candidate.channelParameter);
+        if (channelParameter === undefined) return undefined;
+        const common: readonly string[] = ['id', 'receiver', 'method', 'contractId', 'channelParameter', 'raw', 'role'];
+        const base = { id: candidate.id, method: candidate.method, contractId: candidate.contractId,
+            receiver: { path: candidate.receiver.path, exportName: candidate.receiver.exportName },
+            channelParameter, ...(candidate.raw === undefined ? {} : { raw: candidate.raw }) };
+        if (candidate.role === 'producer' && hasOnlyKeys(candidate, [...common, 'payloadParameter'])) {
+            const payloadParameter: number | undefined = parseMessageParameterPosition(candidate.payloadParameter);
+            if (payloadParameter === undefined || payloadParameter <= channelParameter) return undefined;
+            apis.push({ ...base, role: 'producer', payloadParameter });
+        } else if (candidate.role === 'consumer' && hasOnlyKeys(candidate, [...common, 'callbackParameter', 'callbackPayloadParameter'])) {
+            const callbackParameter: number | undefined = parseMessageParameterPosition(candidate.callbackParameter);
+            const callbackPayloadParameter: number | undefined = parseMessageParameterPosition(candidate.callbackPayloadParameter);
+            if (callbackParameter === undefined || callbackPayloadParameter === undefined || callbackParameter === channelParameter) return undefined;
+            apis.push({ ...base, role: 'consumer', callbackParameter, callbackPayloadParameter });
+        } else return undefined;
+    }
+    const adapters: TstsMessageAdapter[] = [];
+    if (value.adapters !== undefined) {
+        if (!Array.isArray(value.adapters)) return undefined;
+        for (const candidate of value.adapters) {
+            if (!isObjectRecord(candidate) || !identifier(candidate.path) || !identifier(candidate.exportName) ||
+                !identifier(candidate.apiId) || !apis.some(api => api.id === candidate.apiId && api.raw !== true) ||
+                !hasOnlyKeys(candidate, ['path', 'exportName', 'apiId']) ||
+                adapters.some(adapter => adapter.path === candidate.path && adapter.exportName === candidate.exportName)) return undefined;
+            adapters.push({ path: candidate.path, exportName: candidate.exportName, apiId: candidate.apiId });
+        }
+    }
+    return { contracts, apis, ...(value.adapters === undefined ? {} : { adapters }),
+        ...(value.severity === undefined ? {} : { severity: value.severity }) };
+}
+
+function parseTstsConfigV3(value: unknown): TstsConfigV3 | undefined {
+    if (!isObjectRecord(value) || !(value.schemaVersion === 3 ||
+        (isLosslessNumber(value.schemaVersion) && value.schemaVersion.value === '3')) ||
+        !hasOnlyKeys(value, [...tstsConfigKeys, 'sharedMessageContracts'])) return undefined;
+    const { sharedMessageContracts, ...historicalFields } = value;
+    const messageConfig: TstsSharedMessageContractsConfig | undefined = sharedMessageContracts === undefined
+        ? undefined : parseSharedMessageContractsConfig(sharedMessageContracts);
+    if (sharedMessageContracts !== undefined && messageConfig === undefined) return undefined;
+    const historicalConfig: TstsConfig | undefined = parseTstsConfig({ ...historicalFields, schemaVersion: 2 });
+    if (historicalConfig === undefined) return undefined;
+    return { ...historicalConfig, schemaVersion: 3,
+        ...(messageConfig === undefined ? {} : { sharedMessageContracts: messageConfig }) };
+}
+
+export function readTstsConfigV2(value: unknown): TstsConfigV3 {
+    const config: TstsConfig | undefined = parseTstsConfig(value);
+    if (config === undefined) throw new Error('Invalid TSTS configuration V2.');
+    return { ...config, schemaVersion: 3 };
+}
+
+export function readTstsConfigV3(value: unknown): TstsConfigV3 {
+    const config: TstsConfigV3 | undefined = parseTstsConfigV3(value);
+    if (config === undefined) throw new Error('Invalid TSTS configuration V3; use documented sharedMessageContracts keys and value shapes.');
     return config;
 }
+
+export interface TstsConfigReaders {
+    readonly writerVariant: 'V3';
+    readonly variants: {
+        readonly V2: typeof readTstsConfigV2;
+        readonly V3: typeof readTstsConfigV3;
+    };
+}
+
+export const TstsConfigReaders: TstsConfigReaders = {
+    writerVariant: 'V3',
+    variants: { V2: readTstsConfigV2, V3: readTstsConfigV3 },
+};
 
 function parseTstsConfig(value: unknown): TstsConfig | undefined {
     if (

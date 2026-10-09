@@ -34,7 +34,7 @@ completeness, and reverse-view generation.
 
 ```text
 CLI arguments
-  -> strict configuration v2 parser
+  -> exact configuration V2/V3 reader
   -> workspace program loader
   -> explicitly selected rules
   -> diagnostics
@@ -45,13 +45,13 @@ The CLI may also receive a TypeScript project directly for checks that do not
 require workspace configuration. Supplying both inputs runs their checks in
 one invocation and combines their diagnostics.
 
-## Configuration Version 2
+## Configuration Versions 2 and 3
 
-Every configuration has `schemaVersion: 2`. The parser accepts only the
-documented keys at the root and in every nested object. A missing version, a
-different version, an unknown key, or an invalid value is a configuration
-error. There is no legacy parser, conversion branch, inferred default rule,
-or compatibility fallback.
+V2 retains its exact historical shape; V3 adds `sharedMessageContracts`.
+Explicit version dispatch uses the same V2 field parser for common fields,
+normalizes V2 to current V3, and validates the new block only for V3.
+Unknown keys, unsupported versions and invalid values fail; no inferred
+default rule or compatibility fallback exists. V1 remains retired.
 
 Each rule is activated independently by the presence of its configuration
 block. An absent block is inactive. A present block is active and must satisfy
@@ -64,6 +64,18 @@ or activate other rules.
 
 See [Configuration v2 upgrade](configuration-v2-upgrade.md) for the mechanical
 upgrade procedure.
+
+## Canonical shared messages
+
+`shared-message-contracts.ts` is the independent compiler-rule owner. Configured
+export declarations resolve through each loaded program; canonical symbols
+and argument tuple bindings establish provenance, not structural equality.
+Method signature declarations identify direct/extracted transport calls,
+including unregistered channel calls. All exposed overloads are checked.
+Canonical maps have finite required string channels and typed tuples.
+Dependency raw calls are contained to resolved adapter exports returning the
+configured typed receiver. External runtime validation remains host-owned.
+See [rule configuration](shared-message-contracts.md).
 
 ## Versioned Contract Manifest Selection
 

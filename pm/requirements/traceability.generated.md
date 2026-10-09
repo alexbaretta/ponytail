@@ -11,9 +11,11 @@ Requirement: [pm/requirements/open-features.md](open-features.md)
 - implementation: implements [src/project-index.js:963](../../src/project-index.js#L963)
 - unit-test: verifies [tests/project-index.test.js:560](../../tests/project-index.test.js#L560)
 - integration-test: verifies [tests/traceability-batch-resume.test.js:38](../../tests/traceability-batch-resume.test.js#L38)
-- uat: verifies [pm/uat/open-features.md:9](../../pm/uat/open-features.md#L9)
+- uat: verifies [pm/uat/open-features.md:11](../../pm/uat/open-features.md#L11)
 - plan: plans-implementation [pm/plans/in_progress/2026-10-09-open-feature-requests/plan.md:153](../../pm/plans/in_progress/2026-10-09-open-feature-requests/plan.md#L153)
 - plan: plans-verification [pm/plans/in_progress/2026-10-09-open-feature-requests/plan.md:154](../../pm/plans/in_progress/2026-10-09-open-feature-requests/plan.md#L154)
+- tasklet: plans-implementation [pm/plans/in_progress/2026-10-09-open-feature-requests/sprints/S01.md:102](../../pm/plans/in_progress/2026-10-09-open-feature-requests/sprints/S01.md#L102)
+- tasklet: plans-verification [pm/plans/in_progress/2026-10-09-open-feature-requests/sprints/S01.md:103](../../pm/plans/in_progress/2026-10-09-open-feature-requests/sprints/S01.md#L103)
 - issue: introduces [pm/bugs/in_progress/2026-10-08-FEAT-traceability_index_batch_resume.md:77](../../pm/bugs/in_progress/2026-10-08-FEAT-traceability_index_batch_resume.md#L77)
 
 ## REQ-TRACEABILITY-PROGRESS
@@ -23,25 +25,32 @@ Requirement: [pm/requirements/open-features.md](open-features.md)
 - implementation: implements [src/index-progress.ts:8](../../src/index-progress.ts#L8)
 - unit-test: verifies [tests/traceability-projection.test.ts:66](../../tests/traceability-projection.test.ts#L66)
 - integration-test: verifies [tests/traceability-batch-resume.test.js:39](../../tests/traceability-batch-resume.test.js#L39)
-- uat: verifies [pm/uat/open-features.md:29](../../pm/uat/open-features.md#L29)
+- uat: verifies [pm/uat/open-features.md:31](../../pm/uat/open-features.md#L31)
 - plan: plans-implementation [pm/plans/in_progress/2026-10-09-open-feature-requests/plan.md:155](../../pm/plans/in_progress/2026-10-09-open-feature-requests/plan.md#L155)
 - plan: plans-verification [pm/plans/in_progress/2026-10-09-open-feature-requests/plan.md:156](../../pm/plans/in_progress/2026-10-09-open-feature-requests/plan.md#L156)
+- tasklet: plans-implementation [pm/plans/in_progress/2026-10-09-open-feature-requests/sprints/S02.md:65](../../pm/plans/in_progress/2026-10-09-open-feature-requests/sprints/S02.md#L65)
+- tasklet: plans-verification [pm/plans/in_progress/2026-10-09-open-feature-requests/sprints/S02.md:66](../../pm/plans/in_progress/2026-10-09-open-feature-requests/sprints/S02.md#L66)
 - issue: introduces [pm/bugs/in_progress/2026-10-08-FEAT-traceability_index_progress.md:54](../../pm/bugs/in_progress/2026-10-08-FEAT-traceability_index_progress.md#L54)
 
 ## REQ-TSTS-SHARED-MESSAGE-CONTRACTS
 
 Requirement: [pm/requirements/open-features.md](open-features.md)
 
-- uat: verifies [pm/uat/open-features.md:43](../../pm/uat/open-features.md#L43)
+- implementation: implements [tsts/src/shared-message-contracts.ts:185](../../tsts/src/shared-message-contracts.ts#L185)
+- unit-test: verifies [tsts/test/shared-message-contracts.test.ts:16](../../tsts/test/shared-message-contracts.test.ts#L16)
+- integration-test: verifies [tsts/test/shared-message-contracts-cli.test.ts:13](../../tsts/test/shared-message-contracts-cli.test.ts#L13)
+- uat: verifies [pm/uat/open-features.md:45](../../pm/uat/open-features.md#L45)
 - plan: plans-implementation [pm/plans/in_progress/2026-10-09-open-feature-requests/plan.md:157](../../pm/plans/in_progress/2026-10-09-open-feature-requests/plan.md#L157)
 - plan: plans-verification [pm/plans/in_progress/2026-10-09-open-feature-requests/plan.md:158](../../pm/plans/in_progress/2026-10-09-open-feature-requests/plan.md#L158)
-- issue: introduces [pm/bugs/in_progress/2026-10-09-FEAT-tsts_shared_message_contracts.md:91](../../pm/bugs/in_progress/2026-10-09-FEAT-tsts_shared_message_contracts.md#L91)
+- tasklet: plans-implementation [pm/plans/in_progress/2026-10-09-open-feature-requests/sprints/S03.md:279](../../pm/plans/in_progress/2026-10-09-open-feature-requests/sprints/S03.md#L279)
+- tasklet: plans-verification [pm/plans/in_progress/2026-10-09-open-feature-requests/sprints/S03.md:280](../../pm/plans/in_progress/2026-10-09-open-feature-requests/sprints/S03.md#L280)
+- issue: introduces [pm/bugs/in_progress/2026-10-09-FEAT-tsts_shared_message_contracts.md:92](../../pm/bugs/in_progress/2026-10-09-FEAT-tsts_shared_message_contracts.md#L92)
 
 ## REQ-TYPESCRIPT-ONLY-SOURCE
 
 Requirement: [pm/requirements/open-features.md](open-features.md)
 
-- uat: verifies [pm/uat/open-features.md:59](../../pm/uat/open-features.md#L59)
+- uat: verifies [pm/uat/open-features.md:61](../../pm/uat/open-features.md#L61)
 - plan: plans-implementation [pm/plans/in_progress/2026-10-09-open-feature-requests/plan.md:159](../../pm/plans/in_progress/2026-10-09-open-feature-requests/plan.md#L159)
 - plan: plans-verification [pm/plans/in_progress/2026-10-09-open-feature-requests/plan.md:160](../../pm/plans/in_progress/2026-10-09-open-feature-requests/plan.md#L160)
 - issue: introduces [pm/bugs/in_progress/2026-10-01-FEAT-typescript_only_source.md:84](../../pm/bugs/in_progress/2026-10-01-FEAT-typescript_only_source.md#L84)

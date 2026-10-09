@@ -7,15 +7,15 @@ Licensed under the MIT License. See LICENSE in the project root.
 
 ## Status
 
-open
+in_progress
 
 ## Type, source, and authorization
 
 - **Type:** FEAT
 - **Canonical issue ID:** `2026-10-01-FEAT-typescript_only_source`
 - **Source:** Stakeholder feature request on 2026-10-01.
-- **Authorization:** Record the feature request. Implementation has not started
-  and has not been activated by this issue-intake change.
+- **Authorization:** Explicit human plan kickoff on 2026-10-09; S04 execution
+  remains pending dependency completion and detailed planning.
 - **Canonical home:** `pm/bugs`, as configured for Ponytail issues.
 
 ## Objective

@@ -45,7 +45,7 @@ describe('TSTS configuration v2', (): void => {
         for (const config of [
             { workspaces: validConfig.workspaces },
             { schemaVersion: 1, workspaces: validConfig.workspaces },
-            { schemaVersion: 3, workspaces: validConfig.workspaces },
+            { schemaVersion: 4, workspaces: validConfig.workspaces },
         ]) {
             const fixture: ConfigCheckFixture = await checkConfig(config);
 

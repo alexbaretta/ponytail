@@ -5,7 +5,7 @@
 - Status: `in_progress`
 - Source: Direct human request, 2026-10-08, while configuring IPG traceability.
 - Approval: Approved at filing as a human-filed feature request.
-- Implementation authorization: Not granted; this request records the feature only.
+- Implementation authorization: Explicit human plan kickoff on 2026-10-09.
 
 ## Request and intended behavior
 

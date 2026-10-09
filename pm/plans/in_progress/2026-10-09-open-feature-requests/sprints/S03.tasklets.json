@@ -1,0 +1,626 @@
+{
+  "schemaVersion": 3,
+  "sprint": "S03",
+  "features": {
+    "S03-F01": {
+      "depends_on": [],
+      "validation_tasklet": "S03-F01-T31"
+    }
+  },
+  "tasklets": {
+    "S03-F01-T01": {
+      "depends_on": [],
+      "affinity": [
+        "tsts"
+      ],
+      "risk": "normal",
+      "feature": "S03-F01",
+      "planned_paths": [
+        "tsts/src/shared-message-contracts.ts"
+      ]
+    },
+    "S03-F01-T02": {
+      "depends_on": [
+        "S03-F01-T01"
+      ],
+      "affinity": [
+        "tsts"
+      ],
+      "risk": "normal",
+      "feature": "S03-F01",
+      "planned_paths": [
+        "tsts/src/shared-message-contracts.ts"
+      ]
+    },
+    "S03-F01-T03": {
+      "depends_on": [
+        "S03-F01-T02"
+      ],
+      "affinity": [
+        "tsts"
+      ],
+      "risk": "normal",
+      "feature": "S03-F01",
+      "planned_paths": [
+        "tsts/src/shared-message-contracts.ts"
+      ]
+    },
+    "S03-F01-T04": {
+      "depends_on": [
+        "S03-F01-T03"
+      ],
+      "affinity": [
+        "tsts"
+      ],
+      "risk": "normal",
+      "feature": "S03-F01",
+      "planned_paths": [
+        "tsts/src/shared-message-contracts.ts"
+      ]
+    },
+    "S03-F01-T05": {
+      "depends_on": [
+        "S03-F01-T04"
+      ],
+      "affinity": [
+        "tsts"
+      ],
+      "risk": "normal",
+      "feature": "S03-F01",
+      "planned_paths": [
+        "tsts/src/shared-message-contracts.ts"
+      ]
+    },
+    "S03-F01-T06": {
+      "depends_on": [
+        "S03-F01-T05"
+      ],
+      "affinity": [
+        "tsts"
+      ],
+      "risk": "normal",
+      "feature": "S03-F01",
+      "planned_paths": [
+        "tsts/src/shared-message-contracts.ts"
+      ]
+    },
+    "S03-F01-T07": {
+      "depends_on": [
+        "S03-F01-T06"
+      ],
+      "affinity": [
+        "tsts"
+      ],
+      "risk": "normal",
+      "feature": "S03-F01",
+      "planned_paths": [
+        "tsts/src/shared-message-contracts.ts"
+      ]
+    },
+    "S03-F01-T08": {
+      "depends_on": [
+        "S03-F01-T07"
+      ],
+      "affinity": [
+        "tsts"
+      ],
+      "risk": "normal",
+      "feature": "S03-F01",
+      "planned_paths": [
+        "tsts/src/shared-message-contracts.ts"
+      ]
+    },
+    "S03-F01-T09": {
+      "depends_on": [
+        "S03-F01-T08"
+      ],
+      "affinity": [
+        "tsts"
+      ],
+      "risk": "normal",
+      "feature": "S03-F01",
+      "planned_paths": [
+        "tsts/src/shared-message-contracts.ts"
+      ]
+    },
+    "S03-F01-T10": {
+      "depends_on": [
+        "S03-F01-T09"
+      ],
+      "affinity": [
+        "tsts"
+      ],
+      "risk": "normal",
+      "feature": "S03-F01",
+      "planned_paths": [
+        "tsts/src/shared-message-contracts.ts"
+      ]
+    },
+    "S03-F01-T11": {
+      "depends_on": [
+        "S03-F01-T10"
+      ],
+      "affinity": [
+        "tsts"
+      ],
+      "risk": "normal",
+      "feature": "S03-F01",
+      "planned_paths": [
+        "tsts/src/shared-message-contracts.ts"
+      ]
+    },
+    "S03-F01-T12": {
+      "depends_on": [
+        "S03-F01-T11"
+      ],
+      "affinity": [
+        "tsts"
+      ],
+      "risk": "normal",
+      "feature": "S03-F01",
+      "planned_paths": [
+        "tsts/src/shared-message-contracts.ts"
+      ]
+    },
+    "S03-F01-T13": {
+      "depends_on": [
+        "S03-F01-T12"
+      ],
+      "affinity": [
+        "tsts"
+      ],
+      "risk": "normal",
+      "feature": "S03-F01",
+      "planned_paths": [
+        "tsts/src/shared-message-contracts.ts"
+      ]
+    },
+    "S03-F01-T14": {
+      "depends_on": [
+        "S03-F01-T13"
+      ],
+      "affinity": [
+        "tsts"
+      ],
+      "risk": "normal",
+      "feature": "S03-F01",
+      "planned_paths": [
+        "tsts/src/shared-message-contracts.ts"
+      ]
+    },
+    "S03-F01-T15": {
+      "depends_on": [
+        "S03-F01-T14"
+      ],
+      "affinity": [
+        "tsts"
+      ],
+      "risk": "normal",
+      "feature": "S03-F01",
+      "planned_paths": [
+        "tsts/src/shared-message-contracts.ts"
+      ]
+    },
+    "S03-F01-T16": {
+      "depends_on": [
+        "S03-F01-T15"
+      ],
+      "affinity": [
+        "tsts"
+      ],
+      "risk": "normal",
+      "feature": "S03-F01",
+      "planned_paths": [
+        "tsts/src/shared-message-contracts.ts"
+      ]
+    },
+    "S03-F01-T17": {
+      "depends_on": [
+        "S03-F01-T16"
+      ],
+      "affinity": [
+        "tsts"
+      ],
+      "risk": "normal",
+      "feature": "S03-F01",
+      "planned_paths": [
+        "tsts/src/shared-message-contracts.ts"
+      ]
+    },
+    "S03-F01-T18": {
+      "depends_on": [
+        "S03-F01-T32"
+      ],
+      "affinity": [
+        "tsts"
+      ],
+      "risk": "high",
+      "risk_reason": "Canonical identity and adapter containment",
+      "feature": "S03-F01",
+      "planned_paths": [
+        "tsts/src/shared-message-contracts.ts"
+      ]
+    },
+    "S03-F01-T19": {
+      "depends_on": [
+        "S03-F01-T18"
+      ],
+      "affinity": [
+        "tsts"
+      ],
+      "risk": "normal",
+      "feature": "S03-F01",
+      "planned_paths": [
+        "tsts/src/index.ts"
+      ]
+    },
+    "S03-F01-T20": {
+      "depends_on": [
+        "S03-F01-T19"
+      ],
+      "affinity": [
+        "tsts"
+      ],
+      "risk": "normal",
+      "feature": "S03-F01",
+      "planned_paths": [
+        "tsts/src/index.ts"
+      ]
+    },
+    "S03-F01-T21": {
+      "depends_on": [
+        "S03-F01-T20"
+      ],
+      "affinity": [
+        "tsts"
+      ],
+      "risk": "normal",
+      "feature": "S03-F01",
+      "planned_paths": [
+        "tsts/src/index.ts"
+      ]
+    },
+    "S03-F01-T22": {
+      "depends_on": [
+        "S03-F01-T33"
+      ],
+      "affinity": [
+        "tsts"
+      ],
+      "risk": "normal",
+      "feature": "S03-F01",
+      "planned_paths": [
+        "tsts/src/index.ts"
+      ]
+    },
+    "S03-F01-T23": {
+      "depends_on": [
+        "S03-F01-T22"
+      ],
+      "affinity": [
+        "tsts"
+      ],
+      "risk": "normal",
+      "feature": "S03-F01",
+      "planned_paths": [
+        "tsts/src/index.ts"
+      ]
+    },
+    "S03-F01-T24": {
+      "depends_on": [
+        "S03-F01-T23"
+      ],
+      "affinity": [
+        "tsts"
+      ],
+      "risk": "normal",
+      "feature": "S03-F01",
+      "planned_paths": [
+        "tsts/src/index.ts"
+      ]
+    },
+    "S03-F01-T25": {
+      "depends_on": [
+        "S03-F01-T24"
+      ],
+      "affinity": [
+        "tsts"
+      ],
+      "risk": "normal",
+      "feature": "S03-F01",
+      "planned_paths": [
+        "tsts/src/index.ts"
+      ]
+    },
+    "S03-F01-T26": {
+      "depends_on": [
+        "S03-F01-T34"
+      ],
+      "affinity": [
+        "tsts"
+      ],
+      "risk": "normal",
+      "feature": "S03-F01",
+      "planned_paths": [
+        "tsts/src/index.ts"
+      ]
+    },
+    "S03-F01-T27": {
+      "depends_on": [
+        "S03-F01-T26"
+      ],
+      "affinity": [
+        "tsts"
+      ],
+      "risk": "normal",
+      "feature": "S03-F01",
+      "planned_paths": [
+        "tsts/src/index.ts"
+      ]
+    },
+    "S03-F01-T28": {
+      "depends_on": [
+        "S03-F01-T27"
+      ],
+      "affinity": [
+        "tsts"
+      ],
+      "risk": "normal",
+      "feature": "S03-F01",
+      "planned_paths": [
+        "tsts/src/index.ts"
+      ]
+    },
+    "S03-F01-T29": {
+      "depends_on": [
+        "S03-F01-T41"
+      ],
+      "affinity": [
+        "tsts"
+      ],
+      "risk": "normal",
+      "feature": "S03-F01",
+      "planned_paths": [
+        "tsts/test/shared-message-contracts.test.ts"
+      ]
+    },
+    "S03-F01-T30": {
+      "depends_on": [
+        "S03-F01-T29"
+      ],
+      "affinity": [
+        "tsts"
+      ],
+      "risk": "normal",
+      "feature": "S03-F01",
+      "planned_paths": [
+        "tsts/test/config.test.ts"
+      ]
+    },
+    "S03-F01-T31": {
+      "depends_on": [
+        "S03-F01-T01",
+        "S03-F01-T02",
+        "S03-F01-T03",
+        "S03-F01-T04",
+        "S03-F01-T05",
+        "S03-F01-T06",
+        "S03-F01-T07",
+        "S03-F01-T08",
+        "S03-F01-T09",
+        "S03-F01-T10",
+        "S03-F01-T11",
+        "S03-F01-T12",
+        "S03-F01-T13",
+        "S03-F01-T14",
+        "S03-F01-T15",
+        "S03-F01-T16",
+        "S03-F01-T17",
+        "S03-F01-T18",
+        "S03-F01-T19",
+        "S03-F01-T20",
+        "S03-F01-T21",
+        "S03-F01-T22",
+        "S03-F01-T23",
+        "S03-F01-T24",
+        "S03-F01-T25",
+        "S03-F01-T26",
+        "S03-F01-T27",
+        "S03-F01-T28",
+        "S03-F01-T29",
+        "S03-F01-T30",
+        "S03-F01-T32",
+        "S03-F01-T33",
+        "S03-F01-T34",
+        "S03-F01-T35",
+        "S03-F01-T36",
+        "S03-F01-T37",
+        "S03-F01-T38",
+        "S03-F01-T39",
+        "S03-F01-T40",
+        "S03-F01-T41",
+        "S03-F01-T42",
+        "S03-F01-T43"
+      ],
+      "affinity": [
+        "tsts"
+      ],
+      "risk": "normal",
+      "feature": "S03-F01",
+      "planned_paths": [
+        ".agents/config/project/traceability.json",
+        "versioned-data-contracts.json",
+        "tsts/README.md",
+        "tsts/docs/architecture.md",
+        "tsts/docs/shared-message-contracts.md",
+        "pm/architecture/index.md",
+        "pm/requirements/traceability.generated.md",
+        "pm/uat/open-features.md",
+        "pm/plans/in_progress/2026-10-09-open-feature-requests/plan.md",
+        "pm/plans/in_progress/2026-10-09-open-feature-requests/sprints/S03.md",
+        "pm/plans/in_progress/2026-10-09-open-feature-requests/sprints/S03.tasklets.json",
+        "pm/bugs/in_progress/2026-10-01-FEAT-typescript_only_source.md",
+        "pm/bugs/in_progress/2026-10-08-FEAT-traceability_index_batch_resume.md",
+        "pm/bugs/in_progress/2026-10-08-FEAT-traceability_index_progress.md",
+        "pm/bugs/in_progress/2026-10-09-FEAT-tsts_shared_message_contracts.md",
+        "pm/plans/in_progress/2026-10-09-open-feature-requests/evidence/integration/S03/acceptance.json"
+      ]
+    },
+    "S03-F01-T32": {
+      "depends_on": [
+        "S03-F01-T17"
+      ],
+      "affinity": [
+        "tsts"
+      ],
+      "risk": "normal",
+      "feature": "S03-F01",
+      "planned_paths": [
+        "tsts/src/shared-message-contracts.ts"
+      ]
+    },
+    "S03-F01-T33": {
+      "depends_on": [
+        "S03-F01-T21"
+      ],
+      "affinity": [
+        "tsts"
+      ],
+      "risk": "normal",
+      "feature": "S03-F01",
+      "planned_paths": [
+        "tsts/src/index.ts"
+      ]
+    },
+    "S03-F01-T34": {
+      "depends_on": [
+        "S03-F01-T25"
+      ],
+      "affinity": [
+        "tsts"
+      ],
+      "risk": "normal",
+      "feature": "S03-F01",
+      "planned_paths": [
+        "tsts/src/index.ts"
+      ]
+    },
+    "S03-F01-T35": {
+      "depends_on": [
+        "S03-F01-T28"
+      ],
+      "affinity": [
+        "tsts"
+      ],
+      "risk": "normal",
+      "feature": "S03-F01",
+      "planned_paths": [
+        "tsts/test/shared-message-fixture.ts"
+      ]
+    },
+    "S03-F01-T36": {
+      "depends_on": [
+        "S03-F01-T35"
+      ],
+      "affinity": [
+        "tsts"
+      ],
+      "risk": "normal",
+      "feature": "S03-F01",
+      "planned_paths": [
+        "tsts/test/shared-message-fixture.ts"
+      ]
+    },
+    "S03-F01-T37": {
+      "depends_on": [
+        "S03-F01-T36"
+      ],
+      "affinity": [
+        "tsts"
+      ],
+      "risk": "normal",
+      "feature": "S03-F01",
+      "planned_paths": [
+        "tsts/test/shared-message-fixture.ts"
+      ]
+    },
+    "S03-F01-T38": {
+      "depends_on": [
+        "S03-F01-T37"
+      ],
+      "affinity": [
+        "tsts"
+      ],
+      "risk": "normal",
+      "feature": "S03-F01",
+      "planned_paths": [
+        "tsts/test/shared-message-fixture.ts"
+      ]
+    },
+    "S03-F01-T39": {
+      "depends_on": [
+        "S03-F01-T38"
+      ],
+      "affinity": [
+        "tsts"
+      ],
+      "risk": "normal",
+      "feature": "S03-F01",
+      "planned_paths": [
+        "tsts/test/shared-message-fixture.ts"
+      ]
+    },
+    "S03-F01-T40": {
+      "depends_on": [
+        "S03-F01-T39"
+      ],
+      "affinity": [
+        "tsts"
+      ],
+      "risk": "normal",
+      "feature": "S03-F01",
+      "planned_paths": [
+        "tsts/test/shared-message-fixture.ts"
+      ]
+    },
+    "S03-F01-T41": {
+      "depends_on": [
+        "S03-F01-T40"
+      ],
+      "affinity": [
+        "tsts"
+      ],
+      "risk": "normal",
+      "feature": "S03-F01",
+      "planned_paths": [
+        "tsts/test/shared-message-fixture.ts"
+      ]
+    },
+    "S03-F01-T42": {
+      "depends_on": [
+        "S03-F01-T30"
+      ],
+      "affinity": [
+        "tsts"
+      ],
+      "risk": "normal",
+      "feature": "S03-F01",
+      "planned_paths": [
+        "tsts/test/shared-message-contracts-cli.test.ts"
+      ]
+    },
+    "S03-F01-T43": {
+      "depends_on": [
+        "S03-F01-T42"
+      ],
+      "affinity": [
+        "tsts"
+      ],
+      "risk": "normal",
+      "feature": "S03-F01",
+      "planned_paths": [
+        "tsts/tsconfig.json"
+      ]
+    }
+  }
+}

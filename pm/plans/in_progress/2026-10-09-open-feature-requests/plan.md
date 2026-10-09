@@ -17,7 +17,7 @@ Licensed under the MIT License. See LICENSE in the project root.
 
 ## Objective and scope
 
-Implement all four FEAT records currently in `pm/bugs/open/`, retaining their
+Implement all four FEAT records in `pm/bugs/open/` at the initial planning census, retaining their
 original acceptance matrices. Already-active FEATs remain with their existing
 plans; closed, deferred, and rejected requests are not reopened. Scope does not
 automatically grow when another issue is filed.
@@ -68,22 +68,22 @@ ownership, installation behavior and benchmark isolation. Inventory the final
 tree; the issue's historical 96-file count is not the acceptance denominator.
 Decompose detailed work into atomic declarations and validation tasklets.
 
-These are selected designs, not yet implemented architecture. Update canonical
-architecture pages with implemented changes at their owning gates.
+S01-S03 designs are implemented and their owning architecture pages updated.
+S04 remains selected but not implemented.
 
 ## Sprint manifest
 
-| Sprint | Intent | Planning | Dependencies |
+| Sprint | Intent | Status | Dependencies |
 | --- | --- | --- | --- |
 | [S01](sprints/S01.md) | Durable checkpoints and restart | DONE | none |
 | [S02](sprints/S02.md) | Honest progress | DONE | S01 |
-| [S03](sprints/S03.md) | Shared message contract enforcement | STUB | none |
+| [S03](sprints/S03.md) | Shared message contract enforcement | DONE | S02 execution (shared PM paths) |
 | [S04](sprints/S04.md) | TypeScript migration and final acceptance | STUB | S01, S02, S03 |
 
-No executable tasklets exist yet. Complete dependency-ready sprint planning,
-freeze exact paths and atomic graphs, and review before execution. S02 execution
-must follow S01; S04 execution must follow completed S01-S03. Preserve those
-dependencies when detailed execution metadata is written.
+S01-S03 tasklets and acceptance are complete. S04 detailed planning is next;
+freeze its exact source inventory, runtime ownership and atomic graphs before
+migration. S04 execution follows completed S01-S03. The plan remains active;
+full migration and plan-wide final acceptance are not complete.
 
 ## Readiness questions and decisions
 

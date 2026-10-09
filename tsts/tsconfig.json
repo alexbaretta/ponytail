@@ -11,6 +11,7 @@
     "noImplicitReturns": true,
     "noUncheckedIndexedAccess": true,
     "outDir": "dist",
+    "removeComments": true,
     "rootDir": ".",
     "strict": true,
     "target": "ES2024",

@@ -4,6 +4,8 @@
 
 These Arcs are acceptance contracts, not passing execution evidence.
 
+Execution receipts are recorded below; S04 remains unexecuted.
+
 ## Arc: Resume durable traceability batches
 
 Traceability: verifies REQ-TRACEABILITY-BATCH-RESUME
@@ -69,3 +71,25 @@ Traceability: verifies REQ-TYPESCRIPT-ONLY-SOURCE
    - Regression enforcement rejects it but accepts documented generated JS.
 3. Verify benchmark ownership and its separate execution.
    - Core commands neither provision nor execute benchmarks.
+
+## Execution receipts: 2026-10-09
+
+S01: `node --test tests/project-index.test.js` passed 33/33 at the S01 gate.
+`node --test tests/traceability-batch-resume.test.js` passed real PostgreSQL
+SIGKILL, checkpoint reuse/invalidation, same-key writer contention,
+independent-worktree publication and add/rename/delete/configuration coverage.
+No skips; isolated test UUIDs and fixture roots were cleaned up.
+
+S02: focused projection suite passed 36/36; final progress subset passed 7/7.
+Real PostgreSQL checkpoint counters passed. Actual CLI regular-file captures
+had 35 printable progress lines and separately parsed V2 JSON (140 traceability
+files, 135 plan files). Actual PTY showed both corpus bars. Actual SIGINT after
+start exited 130 with empty stdout and actionable stderr, without false success.
+
+S03: strict TSTS build and compiler/configuration/CLI fixtures establish the
+rejection and acceptance matrix. Exact final counts and revision are retained
+in [S03](../plans/in_progress/2026-10-09-open-feature-requests/sprints/S03.md).
+External runtime validation remains client-owned, not proven by this static rule.
+
+S04 and plan-wide final acceptance remain pending. These receipts do not claim
+the TypeScript-only repository requirement or the whole plan is complete.

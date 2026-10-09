@@ -4,7 +4,7 @@ TSTS is Ponytail's project-agnostic TypeScript static analyzer. Its canonical
 source lives here; consuming projects use the installed CLI instead of editing
 a Git submodule. It checks public union discriminators and exhaustive dispatch,
 with additional configuration-driven no-aliasing, unique-exported-type-name,
-unused-code, type-safe serialization, and versioned-data-contract rules.
+unused-code, type-safe serialization, shared-message-contract and versioned-data-contract rules.
 
 ## Installation and use
 
@@ -40,7 +40,8 @@ non-TypeScript locators, coverage completeness, generated-source mappings, and
 reverse views.
 
 See [architecture](docs/architecture.md),
-[configuration V2](docs/configuration-v2-upgrade.md), and the
+[configuration V2](docs/configuration-v2-upgrade.md),
+[shared message contracts / V3](docs/shared-message-contracts.md), and the
 [directory-structure manifest](docs/directory-structure.md). A minimal analysis
 configuration:
 
@@ -66,8 +67,9 @@ TypeScript is a runtime dependency because TSTS uses the compiler API.
 `lossless-json` preserves numeric tokens at the analyzer's JSON boundary.
 The exported `checkProject` entry point owns reading the physical analysis
 configuration and versioned-contract manifest listed in the root contract
-inventory. V1 analysis configuration remains retired; V2 is the supported
-physical configuration. This import does not change analyzer semantics.
+inventory. V1 analysis configuration remains retired; V2 retains its exact
+fields and V3 adds shared message checking. Historical V2 input normalizes to
+V3 without activating the new rule.
 
 Directory-structure analysis is independent of TypeScript analysis and may run
 alone or in the same invocation as `--project` or `--config`. Client projects
