@@ -320,6 +320,7 @@ Requirement: [pm/requirements/issue-requirement-activation.md](issue-requirement
 - uat: verifies [pm/uat/issue-requirement-activation.md:42](../../pm/uat/issue-requirement-activation.md#L42)
 - uat: verifies [pm/uat/issue-requirement-activation.md:63](../../pm/uat/issue-requirement-activation.md#L63)
 - uat: verifies [pm/uat/issue-requirement-activation.md:79](../../pm/uat/issue-requirement-activation.md#L79)
+- uat: verifies [pm/uat/issue-requirement-activation.md:97](../../pm/uat/issue-requirement-activation.md#L97)
 - issue: introduces [pm/bugs/closed/2026-09-29-BUG-premature_requirement_promotion.md:22](../../pm/bugs/closed/2026-09-29-BUG-premature_requirement_promotion.md#L22)
 - issue: plans-implementation [pm/bugs/closed/2026-09-29-BUG-premature_requirement_promotion.md:23](../../pm/bugs/closed/2026-09-29-BUG-premature_requirement_promotion.md#L23)
 - issue: plans-verification [pm/bugs/closed/2026-09-29-BUG-premature_requirement_promotion.md:24](../../pm/bugs/closed/2026-09-29-BUG-premature_requirement_promotion.md#L24)

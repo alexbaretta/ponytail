@@ -60,8 +60,8 @@ the referenced approved requirement exists:
 
 - `plans-implementation`: a plan or tasklet intends to produce implementation;
 - `plans-verification`: a plan or tasklet intends to produce verification; and
-- `introduces`: an implementation-activated issue introduces or clarifies a
-  requirement.
+- `introduces`: an implementation-activated issue identifies an affected
+  requirement, whether existing, newly introduced, changed, or clarified.
 
 Prospective roles are provenance and planning evidence. They never satisfy
 completed implementation, unit-test, integration-test, or UAT coverage.
@@ -89,6 +89,14 @@ Issue intake alone never creates a requirement ID or an `introduces`
 relationship. Add issue prospective relationships only when standalone
 implementation is authorized, or when the issue belongs to a plan or campaign
 whose implementation begins, as owned by `requirements` and `issue-tracking`.
+An explicitly authorized addition to an executing plan or campaign also meets
+that gate. Link every affected requirement from the issue, including unchanged
+requirements governing a BUG. Maintain the requirement's UAT, implementation,
+unit-test, and integration-test relationships as the work progresses; use
+stable methods or endpoints where those are the smallest owned units. Record
+missing implementation and verification in active scope at authorization,
+then reconcile actual coverage before completion. A planned test is not a
+passing or implemented test.
 
 Every prospective annotation requires an explicit `plan`, `tasklet`, or
 `issue` identity. Other explicit identities must match a configured entity

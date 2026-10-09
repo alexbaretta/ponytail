@@ -95,6 +95,9 @@ Both conditions in the second gate are required. Merely adding an issue to a
 plan, approving a future plan, or moving an issue among non-active lifecycle
 states does not activate requirements. Direct stakeholder authorization to
 implement behavior outside a plan is the first gate, not an exception to it.
+Explicit stakeholder authorization to add an issue to a currently executing
+plan or campaign activates that scope addition immediately; do not wait for
+another kickoff.
 
 Classify the source, approval state, and implementation-activation state before
 changing canonical behavior. A stakeholder instruction to implement is an
@@ -175,6 +178,9 @@ without implementation beginning does not meet the gate.
      why no requirements change is needed.
    - For custom types, use their configured requirements effect rather than
      assuming they behave like one of the default tokens.
+   A purported BUG whose expectation is absent from or contradicts requirements
+   must be reclassified and pass the corresponding approval gate before that
+   expectation is incorporated.
 3. Resolve conflicting or unspecified product decisions with the user when
    they affect the intended result. Do not rewrite requirements to excuse
    observed defective behavior. Keep the active-state transition pending when
@@ -185,6 +191,23 @@ without implementation beginning does not meet the gate.
    document edit is needed, the recorded review and exact existing references
    are still required. For work with no relevant product requirement, record
    the reviewed area and the reason instead of inventing a requirement.
+5. Reconcile every activated issue outcome with a specific UAT procedure:
+   - `FEAT` adds new noncontradictory requirements and new UAT coverage for
+     that behavior, extending an existing Arc when appropriate.
+   - `BUG` links the existing requirement and UAT procedure; clarify imprecise
+     requirement text and add or refine UAT Steps when existing coverage does
+     not prove the reported behavior.
+   - `CHNG` modifies the existing requirement as explicitly approved and
+     updates the corresponding UAT procedure and expected results. Do not leave
+     superseded behavior as the active acceptance expectation.
+6. Apply `requirements-traceability` to maintain discovery from the issue to
+   every affected requirement, its UAT procedure, the implementing source
+   files and stable methods or endpoints, and its unit and integration tests.
+   At activation, record planned implementation and test gaps in the active
+   scope; do not claim future artifacts as completed coverage. Before closure,
+   reconcile actual artifacts, canonical annotations, and generated reverse
+   links and run the configured checks. Reuse exact existing coverage without
+   duplication; apply only the justified dispositions allowed by that skill.
 
 An epic's plan links the affected requirements after implementation activates;
 the plan association alone neither creates those requirements nor replaces

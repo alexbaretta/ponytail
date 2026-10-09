@@ -82,5 +82,21 @@ not sufficient. At activation, the issue, requirement, UAT, traceability, and
 active-work lifecycle records must be reconciled together before product
 implementation proceeds.
 
+Explicit human authorization to add an issue to an executing plan or campaign
+activates the added scope immediately. Before product edits, reconcile every
+authorized outcome: FEAT adds new noncontradictory requirements and new UAT
+coverage; BUG links existing requirements and UAT, clarifying imprecise text
+and filling acceptance gaps when needed; CHNG modifies the existing requirement
+and corresponding UAT expectations exactly as approved. A misclassified BUG
+must pass the correct type's approval gate before promoting its expectation.
+
+Maintain full traceability from each activated issue to its requirements,
+plain-English UAT procedures, implementing source files and stable methods or
+endpoints, unit tests, and integration tests, with generated reverse discovery.
+At authorization, record missing implementation and verification in active
+scope without claiming completed coverage. At closure, reconcile the actual
+artifacts and evidence under the traceability contract; reuse exact existing
+coverage rather than duplicating it.
+
 Acceptance coverage:
 [Issue requirement activation Suite](../uat/issue-requirement-activation.md).

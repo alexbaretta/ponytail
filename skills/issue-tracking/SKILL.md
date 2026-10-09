@@ -204,6 +204,11 @@ shared plan; preserve each issue's own scope and acceptance evidence.
    configured active-work role in the same change. Reopening or resuming
    implementation repeats this review. A configured rename of `in_progress`
    retains the same semantics.
+   Explicitly authorized additions to an executing plan or campaign meet this
+   gate immediately. Apply the type-specific requirements and UAT reconciliation
+   in `requirements` before product edits, and maintain issue-to-requirement,
+   UAT, implementation, unit-test, and integration-test traceability through
+   completion under `requirements-traceability`.
 3. Move the issue and update links, reconciliation evidence, and any associated
    plan in one coordinated change. If required requirements changes remain
    unresolved, leave the transition pending and continue independent work.

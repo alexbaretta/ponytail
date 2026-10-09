@@ -89,3 +89,31 @@ Traceability: verifies REQ-ISSUE-REQUIREMENT-ACTIVATION
 2. Begin implementation of the plan or campaign.
    - Before product edits, the agent reconciles the issue’s approved scope into
      requirements, UAT, traceability, and active-work lifecycle state.
+3. Explicitly authorize another issue as an addition to the executing scope.
+   - Reconciliation happens immediately, without waiting for another kickoff.
+
+## Arc: Reconcile Each Issue Type And Its Complete Traceability
+
+Traceability: verifies REQ-ISSUE-REQUIREMENT-ACTIVATION
+
+- **Actor:** Stakeholder and implementing agent.
+- **Prerequisites:** Approved FEAT, BUG, and CHNG records authorized for
+  implementation; existing requirements and acceptance procedures.
+- **Profiles:** Reusable-policy scenario review.
+- **External effects:** Local requirements, acceptance, and traceability records.
+
+1. Activate the FEAT.
+   - Add its new noncontradictory requirement and specific new UAT coverage.
+2. Activate the BUG.
+   - Link existing requirements and UAT; clarify imprecise text and fill UAT
+     gaps without inventing new behavior. If misclassified, apply the correct
+     type's approval gate before incorporating the expectation.
+3. Activate the CHNG.
+   - Modify the existing requirement and corresponding UAT expected results
+     as approved, retaining superseded behavior only as provenance.
+4. Follow each issue's traceability through completion.
+   - At activation, discover its requirements and UAT and record missing
+     implementation and tests in active scope, without claiming coverage.
+   - At closure, discover the implementing source files and stable methods or
+     endpoints, unit and integration tests, and reverse links. Configured
+     traceability checks pass with only justified permitted dispositions.
