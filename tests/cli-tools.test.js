@@ -138,6 +138,12 @@ test('ponytail root help lists only first-level chapters and utilities', () => {
   assert.doesNotMatch(result.stdout, /Preconditions:|Chapter commands:|request-review|freeze-publication|plan-input coordinate|traceability index/);
 });
 
+test('traceability index help publishes the batch-size contract', () => {
+  const result = run(ponytail, ['traceability', 'index', '--help'], { cwd: root });
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /ponytail traceability index \[--batch-size <n>\] \[--rebuild\] \[--json\]/);
+});
+
 test('QA omits campaign census and the CLI dispatches it through campaign', () => {
   const contents = fs.readFileSync(ponytail, 'utf8');
   const qaFunction = contents.match(/def qa\([\s\S]+?\n\ndef update_skills/)[0];
