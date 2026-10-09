@@ -86,6 +86,19 @@ The project structure must identify issue placement for at least `BUG`, `FEAT`,
 `issue-tracking`. Client projects may extend that list with explicitly defined
 types and collection ownership; extensions do not remove the base types.
 
+When the host keeps project-specific intake rules in a management document,
+use a compact reference in its agent instructions, for example:
+
+```markdown
+## Issue Tracking
+
+Apply Ponytail's issue-tracking skill.
+Project-specific intake rules: `.agents/config/project/management.md`.
+```
+
+Reference the actual owning document; do not require this example path or
+create an empty management document when the defaults suffice.
+
 A host may explicitly mark a configuration category not applicable, with a
 short reason. Documentation-only repositories, libraries, local-only tools,
 and partial component repositories need not invent build, integration,

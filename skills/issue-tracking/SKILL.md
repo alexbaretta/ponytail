@@ -88,10 +88,15 @@ Apply `project-structure` when establishing or changing the owning configuration
 ## Requirements-Relative Triage And Approval
 
 Use the host's configured import tooling and requested source selection to
-store external reports in their configured local collections. Preserve source
-identity, reporter, and report text. External labels are provenance, not the
-local semantic classification; refreshes must preserve reviewed classification
-and approval evidence.
+store external reports in their configured local collections:
+
+- Preserve the external ID, URL, reporter, creation date, and report text.
+- Classify against canonical requirements, not issue tracker labels; preserve
+  those labels as provenance.
+- Refresh existing records by external ID within their source issue tracker,
+  without overwriting local classification, approval evidence, or
+  implementation notes.
+- Do not publish comments or change issue tracker statuses unless requested.
 
 Compare each report's intended behavior with canonical requirements:
 
