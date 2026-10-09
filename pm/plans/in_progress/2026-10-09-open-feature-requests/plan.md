@@ -76,7 +76,7 @@ architecture pages with implemented changes at their owning gates.
 | Sprint | Intent | Planning | Dependencies |
 | --- | --- | --- | --- |
 | [S01](sprints/S01.md) | Durable checkpoints and restart | DONE | none |
-| [S02](sprints/S02.md) | Honest progress | STUB | S01 |
+| [S02](sprints/S02.md) | Honest progress | DONE | S01 |
 | [S03](sprints/S03.md) | Shared message contract enforcement | STUB | none |
 | [S04](sprints/S04.md) | TypeScript migration and final acceptance | STUB | S01, S02, S03 |
 

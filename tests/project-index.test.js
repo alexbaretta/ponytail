@@ -215,6 +215,24 @@ test('TTY index progress renders the installed open-source bar with percent and 
   assert.match(output, /50% 1\/2 commits \| ETA 1s/);
 });
 
+test('file checkpoint progress is emitted only after durable commits', async () => {
+  const { configurationPath } = fixture();
+  const projection = collectTraceabilityProjection(configurationPath);
+  const client = new BoundaryClient();
+  const events = [];
+  await publishTraceabilityGeneration(client, projection, { batchSize: 1,
+    onProgress(value, total, corpus, phase, details) {
+      if (phase !== 'cached files') return;
+      assert.equal(client.queries.at(-1).text, 'COMMIT');
+      events.push({ value, total, corpus, ...details });
+    },
+  });
+  assert.equal(events[0].value, 0);
+  assert.equal(events.at(-1).value, projection.files.length);
+  assert.equal(events.at(-1).parsedFiles, projection.files.length);
+  assert.equal(events.at(-1).corpus, 'traceability');
+});
+
 function planFixture() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ponytail-plan-index-'));
   execFileSync('git', ['init', '-q'], { cwd: root });

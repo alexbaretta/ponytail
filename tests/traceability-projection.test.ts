@@ -62,3 +62,16 @@ test('file elapsed time includes nested certificate assessment work',()=>{
  assert.match(output,/150\/150 files \| elapsed 22s/);
  assert.match(output,/58\/58 certificate assessments \| elapsed 21s/);
 });
+
+// Traceability: verifies REQ-TRACEABILITY-PROGRESS
+for(const isTTY of [true,false]) test(`cached file progress reports parsed and reused counts; TTY=${isTTY}`,()=>{
+ let output='';let milliseconds=0;
+ const progress=indexProgress({isTTY,write(text){output+=text;}},()=>milliseconds);
+ try {
+  progress.update(0,3,'traceability','cached files',{parsedFiles:0,reusedFiles:0});
+  milliseconds=1000;
+  progress.update(2,3,'traceability','cached files',{parsedFiles:1,reusedFiles:1});
+ } finally {progress.stop();}
+ assert.match(output,/66% 2\/3 cached files \| elapsed 1s \| ETA 1s \| 1 parsed, 1 reused/);
+ if(!isTTY) assert.doesNotMatch(output,/[\x00-\x09\x0b-\x1f\x7f]/u);
+});

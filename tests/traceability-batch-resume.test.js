@@ -36,6 +36,7 @@ if (process.argv[2] === '--crash-worker') {
   });
 } else {
   // Traceability: verifies REQ-TRACEABILITY-BATCH-RESUME
+  // Traceability: verifies REQ-TRACEABILITY-PROGRESS
   test('real PostgreSQL retains batches across SIGKILL without partial publication',
     { timeout: 60000 }, async t => {
       const databaseRoot = path.resolve(__dirname, '..');
@@ -124,9 +125,17 @@ if (process.argv[2] === '--crash-worker') {
       assert.equal(signal, 'SIGKILL');
       fs.appendFileSync(path.join(root, 'src/value-0.js'), '// changed checkpoint before restart\n');
       const restart = collectTraceabilityProjection(configurationPath);
-      const resumed = await publishTraceabilityGeneration(client, restart, { batchSize: 3 });
+      const events = [];
+      const resumed = await publishTraceabilityGeneration(client, restart, { batchSize: 3,
+        onProgress(value, total, corpus, phase, details) {
+          if (phase === 'cached files') events.push({ value, total, corpus, ...details });
+        },
+      });
       assert.equal(resumed.reusedFiles, 2);
       assert.equal(resumed.parsedFiles, restart.files.length - 2);
+      assert.equal(events.at(-1).value, restart.files.length);
+      assert.equal(events.at(-1).parsedFiles, resumed.parsedFiles);
+      assert.equal(events.at(-1).reusedFiles, resumed.reusedFiles);
       const clean = await publishTraceabilityGeneration(peerClient,
         { ...restart, worktreePath: `${root}/independent` }, { batchSize: 3 });
       const graph = async generationId => {

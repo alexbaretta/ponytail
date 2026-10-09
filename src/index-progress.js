@@ -43,7 +43,7 @@ function indexProgress(indexProgressStream = process.stdout, now = Date.now) {
             spinnerTimer = setInterval(pulse, 200);
             spinnerTimer.unref();
         },
-        update(completed, total, corpus, phase = 'files') {
+        update(completed, total, corpus, phase = 'files', details) {
             const stage = `${corpus}:${phase}`;
             const first = stage !== currentStage;
             if (first) {
@@ -58,7 +58,8 @@ function indexProgress(indexProgressStream = process.stdout, now = Date.now) {
             const percentage = total === 0 ? 100 : Math.floor(completed * 100 / total);
             const filled = Math.floor(percentage * 40 / 100);
             const eta = total === 0 ? '0s' : completed === 0 ? 'unknown' : `${Math.ceil((now() - startedAt) / 1000 * (total - completed) / completed)}s`;
-            const text = `${corpus.padEnd(12)} [${'='.repeat(filled)}${' '.repeat(40 - filled)}] ${percentage}% ${completed}/${total} ${phase} | elapsed ${Math.floor((now() - startedAt) / 1000)}s | ETA ${eta}`;
+            const counts = details === undefined ? '' : ` | ${details.parsedFiles} parsed, ${details.reusedFiles} reused`;
+            const text = `${corpus.padEnd(12)} [${'='.repeat(filled)}${' '.repeat(40 - filled)}] ${percentage}% ${completed}/${total} ${phase} | elapsed ${Math.floor((now() - startedAt) / 1000)}s | ETA ${eta}${counts}`;
             const line = indexProgressStream.isTTY ? text.padEnd(lineLength) : text;
             indexProgressStream.write(indexProgressStream.isTTY ? `\r${line}` : `${line}\n`);
             lineLength = line.length;

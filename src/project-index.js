@@ -1001,6 +1001,8 @@ async function publishTraceabilityGeneration(client, projection, options = {}) {
     const parseResultIds = [];
     let parsedFiles = 0;
     let reusedFiles = 0;
+    onProgress?.(0, projection.files.length, projection.corpus,
+      'cached files', { parsedFiles, reusedFiles });
     for (let offset = 0; offset < projection.files.length; offset += batchSize) {
       options.signal?.throwIfAborted();
       await client.query('BEGIN');
@@ -1056,7 +1058,8 @@ async function publishTraceabilityGeneration(client, projection, options = {}) {
       options.signal?.throwIfAborted();
       await client.query('COMMIT');
       transactionActive = false;
-      onProgress?.(payloads.length, projection.files.length, projection.corpus);
+      onProgress?.(payloads.length, projection.files.length, projection.corpus,
+        'cached files', { parsedFiles, reusedFiles });
     }
     options.signal?.throwIfAborted();
     await client.query('BEGIN');
@@ -1236,7 +1239,6 @@ async function indexProject(options = {}) {
   try {
     const corpora = [];
     for (const projection of [traceability, plans]) {
-      options.onProgress?.(0, projection.files.length, projection.corpus);
       const publication = await publishTraceabilityGeneration(client, projection, options);
       corpora.push({
         corpus: projection.corpus,
@@ -2739,7 +2741,7 @@ async function run(args) {
       'index update interrupted; rerun to resume completed checkpoints'));
     process.once('SIGINT', interrupt);
     process.once('SIGTERM', interrupt);
-    const progress = seen.has('--json') ? null : indexProgress();
+    const progress = seen.has('--json') ? null : indexProgress(process.stderr);
     let result;
     try {
       result = await indexProject({ rebuild: seen.has('--rebuild'), batchSize,

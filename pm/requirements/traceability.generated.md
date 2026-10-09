@@ -9,7 +9,7 @@ Source: `.agents/config/project/traceability.json`
 Requirement: [pm/requirements/open-features.md](open-features.md)
 
 - implementation: implements [src/project-index.js:963](../../src/project-index.js#L963)
-- unit-test: verifies [tests/project-index.test.js:542](../../tests/project-index.test.js#L542)
+- unit-test: verifies [tests/project-index.test.js:560](../../tests/project-index.test.js#L560)
 - integration-test: verifies [tests/traceability-batch-resume.test.js:38](../../tests/traceability-batch-resume.test.js#L38)
 - uat: verifies [pm/uat/open-features.md:9](../../pm/uat/open-features.md#L9)
 - plan: plans-implementation [pm/plans/in_progress/2026-10-09-open-feature-requests/plan.md:153](../../pm/plans/in_progress/2026-10-09-open-feature-requests/plan.md#L153)
@@ -20,6 +20,9 @@ Requirement: [pm/requirements/open-features.md](open-features.md)
 
 Requirement: [pm/requirements/open-features.md](open-features.md)
 
+- implementation: implements [src/index-progress.ts:8](../../src/index-progress.ts#L8)
+- unit-test: verifies [tests/traceability-projection.test.ts:66](../../tests/traceability-projection.test.ts#L66)
+- integration-test: verifies [tests/traceability-batch-resume.test.js:39](../../tests/traceability-batch-resume.test.js#L39)
 - uat: verifies [pm/uat/open-features.md:29](../../pm/uat/open-features.md#L29)
 - plan: plans-implementation [pm/plans/in_progress/2026-10-09-open-feature-requests/plan.md:155](../../pm/plans/in_progress/2026-10-09-open-feature-requests/plan.md#L155)
 - plan: plans-verification [pm/plans/in_progress/2026-10-09-open-feature-requests/plan.md:156](../../pm/plans/in_progress/2026-10-09-open-feature-requests/plan.md#L156)
@@ -134,7 +137,7 @@ Requirement: [pm/requirements/plan-input-queue.md](plan-input-queue.md)
 
 Requirement: [pm/requirements/traceability-index.md](traceability-index.md)
 
-- implementation: implements [src/index-progress.ts:6](../../src/index-progress.ts#L6)
+- implementation: implements [src/index-progress.ts:7](../../src/index-progress.ts#L7)
 - implementation: implements [src/project-index.js:37](../../src/project-index.js#L37)
 - implementation: implements [src/traceability-projection.ts:17](../../src/traceability-projection.ts#L17)
 - unit-test: verifies [tests/project-index.test.js:34](../../tests/project-index.test.js#L34)

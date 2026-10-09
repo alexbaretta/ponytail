@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 3,
+  "sprint": "S02",
+  "features": {"S02-F01": {"depends_on": [], "validation_tasklet": "S02-F01-T05"}},
+  "tasklets": {
+    "S02-F01-T01": {"depends_on": [], "affinity": ["index"], "risk": "normal", "feature": "S02-F01", "planned_paths": ["src/project-index.js"]},
+    "S02-F01-T02": {"depends_on": ["S02-F01-T01"], "affinity": ["index"], "risk": "normal", "feature": "S02-F01", "planned_paths": ["src/index-progress.ts", "src/index-progress.js"]},
+    "S02-F01-T03": {"depends_on": ["S02-F01-T02"], "affinity": ["index"], "risk": "normal", "feature": "S02-F01", "planned_paths": ["src/project-index.js"]},
+    "S02-F01-T04": {"depends_on": ["S02-F01-T03"], "affinity": ["index"], "risk": "normal", "feature": "S02-F01", "planned_paths": ["tests/project-index.test.js", "tests/traceability-projection.test.ts", "tests/traceability-batch-resume.test.js"]},
+    "S02-F01-T05": {"depends_on": ["S02-F01-T01", "S02-F01-T02", "S02-F01-T03", "S02-F01-T04"], "affinity": ["index"], "risk": "normal", "feature": "S02-F01", "planned_paths": ["pm", ".agents/config/project/traceability.json"]}
+  }
+}

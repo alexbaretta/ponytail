@@ -56,6 +56,13 @@ rather than aliasing it to a different tree.
 Validated immutable file parses are committed in batches (default 10 files,
 configurable with `--batch-size`). Compatible batches survive abrupt termination;
 reuse keys include exact content, path, configuration and parser/schema identity.
+The CLI uses the canonical index progress reporter per corpus. Terminal
+bars and redirected newline records advance after durable batch commits,
+report parsed/reused counts, and distinguish processing from publication.
+Human progress uses stderr while results use stdout; `--json` suppresses
+progress so stdout remains exactly one machine-readable result.
+Cancellation closes the display, releases the lock and exits 130 without
+reporting successful publication.
 Rebuild and incremental update publish new worktree corpus generations in one
 final transaction; readers select the published generation for their exact project,
 repository, worktree, and corpus. The database stores no authoritative
