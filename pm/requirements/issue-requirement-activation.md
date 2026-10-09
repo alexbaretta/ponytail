@@ -82,6 +82,14 @@ not sufficient. At activation, the issue, requirement, UAT, traceability, and
 active-work lifecycle records must be reconciled together before product
 implementation proceeds.
 
+Activation of a pre-planned plan or campaign must reconcile all included
+approved issue outcomes across its member plans and sprints, including later
+sprints, before the first product edit. This applies to conversational kickoff
+and CLI lifecycle activation alike. Record reconciliation evidence; a lifecycle
+transition alone does not prove semantic reconciliation. Resumption must
+verify that current scope is reconciled and repair omissions before product
+edits, without duplicating exact existing requirements or acceptance coverage.
+
 Explicit human authorization to add an issue to an executing plan or campaign
 activates the added scope immediately. Before product edits, reconcile every
 authorized outcome: FEAT adds new noncontradictory requirements and new UAT

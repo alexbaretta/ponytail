@@ -200,6 +200,32 @@ approval permits planning; the human user's explicit kickoff authorizes
 implementation of the included approved scope. An issue added after kickoff
 requires explicit authorization for that scope addition before implementation.
 
+### Implementation Kickoff Reconciliation
+
+Activating a pre-planned plan or campaign triggers reconciliation of its
+entire approved implementation scope, not just issues added after kickoff.
+Before the first product edit:
+
+1. Enumerate the included issues and approved issue-local outcomes across the
+   plan or campaign's member plans and sprints, including work scheduled for
+   later sprints. Exclude deferred, rejected, and unauthorized proposals.
+2. Apply `requirements`' Issue Implementation Gate to every included issue:
+   reconcile FEAT additions, BUG requirements and clarifications, and approved
+   CHNG replacements with their specific UAT procedures.
+3. Apply `requirements-traceability` to link the issues and activated
+   requirements, UAT, and planned work. Record missing implementation, unit
+   tests, and integration tests with owning tasklets; do not claim completed
+   coverage for planned artifacts.
+4. Record reconciliation evidence in the plan and issue records. On resumption,
+   verify that evidence against current scope and finish any missing
+   reconciliation before product edits; retain exact existing coverage rather
+   than duplicating requirements or tests.
+
+The same gate applies whether kickoff is requested conversationally or uses
+`ponytail campaign activate`. A lifecycle command is not evidence that semantic
+requirements and UAT reconciliation occurred. Approval or scheduling of a
+future plan alone still does not trigger activation.
+
 Before requesting approval to start a plan:
 
 1. Identify all known product, contract, security, persistence, infrastructure,

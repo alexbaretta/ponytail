@@ -89,8 +89,16 @@ Traceability: verifies REQ-ISSUE-REQUIREMENT-ACTIVATION
 2. Begin implementation of the plan or campaign.
    - Before product edits, the agent reconciles the issue’s approved scope into
      requirements, UAT, traceability, and active-work lifecycle state.
+   - Repeat for every included approved issue across member plans and sprints,
+     including later sprints, whether kickoff is conversational or uses CLI
+     lifecycle activation. Deferred, rejected, and unauthorized proposals do
+     not enter the activated scope.
 3. Explicitly authorize another issue as an addition to the executing scope.
    - Reconciliation happens immediately, without waiting for another kickoff.
+4. Resume an activated campaign with a previously omitted reconciliation.
+   - Detect and finish the missing reconciliation before product edits; a
+     lifecycle transition alone is not sufficient evidence. Preserve exact
+     existing requirements and UAT coverage without duplication.
 
 ## Arc: Reconcile Each Issue Type And Its Complete Traceability
 
