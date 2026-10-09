@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 3,
+  "sprint": "S01",
+  "features": {"S01-F01": {"depends_on": [], "validation_tasklet": "S01-F01-T10"}},
+  "tasklets": {
+    "S01-F01-T01": {"depends_on": [], "affinity": ["index"], "risk": "high", "risk_reason": "Reject stale final publication", "feature": "S01-F01", "planned_paths": ["src/project-index.js"]},
+    "S01-F01-T02": {"depends_on": ["S01-F01-T01"], "affinity": ["index"], "risk": "normal", "feature": "S01-F01", "planned_paths": ["src/project-index.js"]},
+    "S01-F01-T03": {"depends_on": ["S01-F01-T02"], "affinity": ["index"], "risk": "normal", "feature": "S01-F01", "planned_paths": ["src/project-index.js"]},
+    "S01-F01-T04": {"depends_on": ["S01-F01-T03"], "affinity": ["index"], "risk": "high", "risk_reason": "Lock ownership across checkpoint commits", "feature": "S01-F01", "planned_paths": ["src/project-index.js"]},
+    "S01-F01-T05": {"depends_on": ["S01-F01-T04"], "affinity": ["index"], "risk": "normal", "feature": "S01-F01", "planned_paths": ["src/project-index.js"]},
+    "S01-F01-T06": {"depends_on": ["S01-F01-T05"], "affinity": ["index"], "risk": "normal", "feature": "S01-F01", "planned_paths": ["src/project-index.js"]},
+    "S01-F01-T07": {"depends_on": ["S01-F01-T06"], "affinity": ["index"], "risk": "normal", "feature": "S01-F01", "planned_paths": ["src/project-index.js", "cli/ponytail", "AGENTS.md"]},
+    "S01-F01-T08": {"depends_on": ["S01-F01-T07"], "affinity": ["index"], "risk": "normal", "feature": "S01-F01", "planned_paths": ["tests/project-index.test.js"]},
+    "S01-F01-T09": {"depends_on": ["S01-F01-T08"], "affinity": ["index"], "risk": "high", "risk_reason": "Real crash and concurrent database proof", "feature": "S01-F01", "planned_paths": ["tests/traceability-batch-resume.test.js"]},
+    "S01-F01-T10": {"depends_on": ["S01-F01-T01", "S01-F01-T02", "S01-F01-T03", "S01-F01-T04", "S01-F01-T05", "S01-F01-T06", "S01-F01-T07", "S01-F01-T08", "S01-F01-T09"], "affinity": ["index"], "risk": "normal", "feature": "S01-F01", "planned_paths": ["pm", ".agents/config/project/traceability.json"]}
+  }
+}

@@ -3,6 +3,22 @@
   "projectRoot": "../../..",
   "requirements": [
     {
+      "id": "REQ-TRACEABILITY-BATCH-RESUME",
+      "sourcePath": "pm/requirements/open-features.md"
+    },
+    {
+      "id": "REQ-TRACEABILITY-PROGRESS",
+      "sourcePath": "pm/requirements/open-features.md"
+    },
+    {
+      "id": "REQ-TSTS-SHARED-MESSAGE-CONTRACTS",
+      "sourcePath": "pm/requirements/open-features.md"
+    },
+    {
+      "id": "REQ-TYPESCRIPT-ONLY-SOURCE",
+      "sourcePath": "pm/requirements/open-features.md"
+    },
+    {
       "id": "REQ-CLI-INTERRUPTION",
       "sourcePath": "pm/requirements/cli-interruption.md"
     },
@@ -145,6 +161,36 @@
     }
   ],
   "artifacts": [
+    {
+      "class": "uat",
+      "path": "pm/uat/open-features.md",
+      "locator": "text"
+    },
+    {
+      "class": "plan",
+      "path": "pm/plans/in_progress/2026-10-09-open-feature-requests/plan.md",
+      "locator": "text"
+    },
+    {
+      "class": "issue",
+      "path": "pm/bugs/in_progress/2026-10-08-FEAT-traceability_index_batch_resume.md",
+      "locator": "text"
+    },
+    {
+      "class": "issue",
+      "path": "pm/bugs/in_progress/2026-10-08-FEAT-traceability_index_progress.md",
+      "locator": "text"
+    },
+    {
+      "class": "issue",
+      "path": "pm/bugs/in_progress/2026-10-09-FEAT-tsts_shared_message_contracts.md",
+      "locator": "text"
+    },
+    {
+      "class": "issue",
+      "path": "pm/bugs/in_progress/2026-10-01-FEAT-typescript_only_source.md",
+      "locator": "text"
+    },
     {
       "class": "issue",
       "path": "pm/bugs/closed/2026-10-06-BUG-peer_refs_block_commit_hook.md",

@@ -17,6 +17,7 @@ boundary by `tests/campaign-census.test.js`.
 - [Rolling campaigns](rolling-campaigns.md)
 - [Static language acceptance](static-language.md)
 - [Obligation-centered execution](obligation-execution.md)
+- [Activated feature acceptance](open-features.md)
 - [CLI interruption](cli-interruption.md)
 
 - [Campaign census](#campaign-census-suite)

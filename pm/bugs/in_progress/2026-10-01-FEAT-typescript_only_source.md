@@ -73,8 +73,20 @@ plan.
 
 ## Implementation and validation
 
-No implementation plan or validation evidence exists yet. Because the
+Implementation plan: [Open feature requests](../../plans/in_progress/2026-10-09-open-feature-requests/plan.md),
+S04. Planning admission does not authorize implementation. No implementation
+validation evidence exists yet. Because the
 migration spans many independently testable code areas, implementation will
 require a long-lived plan with atomic tasklets and an explicit ordering for
 compiler configuration, runtime build outputs, source migration, and final
 JavaScript prohibition.
+
+Traceability: introduces REQ-TYPESCRIPT-ONLY-SOURCE from issue 2026-10-01-FEAT-typescript_only_source
+
+## Implementation activation
+
+Explicit human kickoff on 2026-10-09 authorizes implementation within
+[Open feature requests](../../plans/in_progress/2026-10-09-open-feature-requests/plan.md).
+Reconciled [requirements](../../requirements/open-features.md) and
+[UAT](../../uat/open-features.md) apply. Earlier intake-only statements
+above describe filing history, not current authority.

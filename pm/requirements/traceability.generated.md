@@ -4,6 +4,42 @@
 
 Source: `.agents/config/project/traceability.json`
 
+## REQ-TRACEABILITY-BATCH-RESUME
+
+Requirement: [pm/requirements/open-features.md](open-features.md)
+
+- uat: verifies [pm/uat/open-features.md:9](../../pm/uat/open-features.md#L9)
+- plan: plans-implementation [pm/plans/in_progress/2026-10-09-open-feature-requests/plan.md:153](../../pm/plans/in_progress/2026-10-09-open-feature-requests/plan.md#L153)
+- plan: plans-verification [pm/plans/in_progress/2026-10-09-open-feature-requests/plan.md:154](../../pm/plans/in_progress/2026-10-09-open-feature-requests/plan.md#L154)
+- issue: introduces [pm/bugs/in_progress/2026-10-08-FEAT-traceability_index_batch_resume.md:77](../../pm/bugs/in_progress/2026-10-08-FEAT-traceability_index_batch_resume.md#L77)
+
+## REQ-TRACEABILITY-PROGRESS
+
+Requirement: [pm/requirements/open-features.md](open-features.md)
+
+- uat: verifies [pm/uat/open-features.md:29](../../pm/uat/open-features.md#L29)
+- plan: plans-implementation [pm/plans/in_progress/2026-10-09-open-feature-requests/plan.md:155](../../pm/plans/in_progress/2026-10-09-open-feature-requests/plan.md#L155)
+- plan: plans-verification [pm/plans/in_progress/2026-10-09-open-feature-requests/plan.md:156](../../pm/plans/in_progress/2026-10-09-open-feature-requests/plan.md#L156)
+- issue: introduces [pm/bugs/in_progress/2026-10-08-FEAT-traceability_index_progress.md:54](../../pm/bugs/in_progress/2026-10-08-FEAT-traceability_index_progress.md#L54)
+
+## REQ-TSTS-SHARED-MESSAGE-CONTRACTS
+
+Requirement: [pm/requirements/open-features.md](open-features.md)
+
+- uat: verifies [pm/uat/open-features.md:43](../../pm/uat/open-features.md#L43)
+- plan: plans-implementation [pm/plans/in_progress/2026-10-09-open-feature-requests/plan.md:157](../../pm/plans/in_progress/2026-10-09-open-feature-requests/plan.md#L157)
+- plan: plans-verification [pm/plans/in_progress/2026-10-09-open-feature-requests/plan.md:158](../../pm/plans/in_progress/2026-10-09-open-feature-requests/plan.md#L158)
+- issue: introduces [pm/bugs/in_progress/2026-10-09-FEAT-tsts_shared_message_contracts.md:91](../../pm/bugs/in_progress/2026-10-09-FEAT-tsts_shared_message_contracts.md#L91)
+
+## REQ-TYPESCRIPT-ONLY-SOURCE
+
+Requirement: [pm/requirements/open-features.md](open-features.md)
+
+- uat: verifies [pm/uat/open-features.md:59](../../pm/uat/open-features.md#L59)
+- plan: plans-implementation [pm/plans/in_progress/2026-10-09-open-feature-requests/plan.md:159](../../pm/plans/in_progress/2026-10-09-open-feature-requests/plan.md#L159)
+- plan: plans-verification [pm/plans/in_progress/2026-10-09-open-feature-requests/plan.md:160](../../pm/plans/in_progress/2026-10-09-open-feature-requests/plan.md#L160)
+- issue: introduces [pm/bugs/in_progress/2026-10-01-FEAT-typescript_only_source.md:84](../../pm/bugs/in_progress/2026-10-01-FEAT-typescript_only_source.md#L84)
+
 ## REQ-CLI-INTERRUPTION
 
 Requirement: [pm/requirements/cli-interruption.md](cli-interruption.md)
@@ -66,7 +102,7 @@ Requirement: [pm/requirements/index.md](index.md)
 - implementation: implements [src/campaign-report.ts:245](../../src/campaign-report.ts#L245)
 - unit-test: verifies [tests/campaign-census-format.test.js:11](../../tests/campaign-census-format.test.js#L11)
 - integration-test: verifies [tests/campaign-census.test.js:606](../../tests/campaign-census.test.js#L606)
-- uat: verifies [pm/uat/index.md:45](../../pm/uat/index.md#L45)
+- uat: verifies [pm/uat/index.md:46](../../pm/uat/index.md#L46)
 
 ## REQ-PLAN-INPUT-QUEUE
 

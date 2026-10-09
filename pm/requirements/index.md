@@ -15,6 +15,7 @@ behavior independently from implementation plans and architecture.
 - [Rolling campaigns](rolling-campaigns.md)
 - [Ponytail implementation language](static-language.md)
 - [Obligation-centered execution](obligation-execution.md)
+- [Activated feature requirements](open-features.md)
 - [CLI interruption](cli-interruption.md)
 
 - [Debugging pattern observations](debugging-pattern-observations.md)
