@@ -3059,6 +3059,7 @@ function parseMessageParameterPosition(value: unknown): number | undefined {
     return integer <= BigInt(Number.MAX_SAFE_INTEGER) ? Number(integer) : undefined;
 }
 
+// Traceability: supports REQ-TSTS-SHARED-MESSAGE-CONTRACTS
 function parseSharedMessageContractsConfig(value: unknown): TstsSharedMessageContractsConfig | undefined {
     if (!isObjectRecord(value) || !hasOnlyKeys(value, ['contracts', 'apis', 'adapters', 'severity']) ||
         !isOptionalSeverity(value.severity)) return undefined;

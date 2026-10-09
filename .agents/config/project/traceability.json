@@ -167,6 +167,11 @@
       "locator": "typescript"
     },
     {
+      "class": "implementation",
+      "path": "tsts/src/index.ts",
+      "locator": "typescript"
+    },
+    {
       "class": "unit-test",
       "path": "tsts/test/shared-message-contracts.test.ts",
       "locator": "text"
@@ -1342,6 +1347,10 @@
     {
       "path": "tests/helpers/obligation-fixture.js",
       "sourcePath": "tests/helpers/obligation-fixture.ts"
+    },
+    {
+      "path": "tsts/dist/src/index.js",
+      "sourcePath": "tsts/src/index.ts"
     },
     {
       "path": "tsts/dist/src/shared-message-contracts.js",
