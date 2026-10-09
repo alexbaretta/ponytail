@@ -580,6 +580,15 @@ function parseFile(configuration, relativePath, source) {
   };
 }
 
+function assertProjectionCurrent(expected, collect) {
+  const current = collect();
+  if (['headCommit', 'stateDigest', 'configurationDigest', 'parserIdentity'].some(
+    field => current[field] !== expected[field])) {
+    throw new ProjectIndexError('TRACEABILITY_INDEX_INPUT_CHANGED',
+      'index inputs changed during processing; rerun to reuse compatible checkpoints');
+  }
+}
+
 function collectTraceabilityProjection(configurationPath, onProgress) {
   configurationPath = fs.realpathSync(configurationPath);
   const configuration = loadTraceabilityConfiguration(configurationPath);
@@ -625,7 +634,7 @@ function collectTraceabilityProjection(configurationPath, onProgress) {
   const stateDigest = digest(files.map(file =>
     `${file.path}\0${file.gitState}\0${file.contentDigest}\n`).join(''));
   const project = JSON.parse(fs.readFileSync(path.join(root, 'ponytail-journal.json'), 'utf8'));
-  return {
+  const projection = {
     projectId: project.projectId,
     projectName: project.projectName,
     repositoryPath: gitPath(root, ['--git-common-dir']),
@@ -640,6 +649,9 @@ function collectTraceabilityProjection(configurationPath, onProgress) {
     normalizePayloads: normalizeTraceabilityPayloads,
     files,
   };
+  projection.assertCurrent = () => assertProjectionCurrent(projection,
+    () => collectTraceabilityProjection(configurationPath));
+  return projection;
 }
 
 function planEntityId(record) {
@@ -920,7 +932,7 @@ function collectPlanProjection(root = fs.realpathSync(git(process.cwd(), ['rev-p
   const stateDigest = digest(files.map(file =>
     `${file.path}\0${file.gitState}\0${file.contentDigest}\0${file.parserIdentity}\n`).join(''));
   const project = JSON.parse(fs.readFileSync(path.join(root, 'ponytail-journal.json'), 'utf8'));
-  return {
+  const projection = {
     projectId: project.projectId,
     projectName: project.projectName,
     repositoryPath: gitPath(root, ['--git-common-dir']),
@@ -937,6 +949,9 @@ function collectPlanProjection(root = fs.realpathSync(git(process.cwd(), ['rev-p
     normalizePayloads: normalizePlanPayloads,
     files,
   };
+  projection.assertCurrent = () => assertProjectionCurrent(projection,
+    () => collectPlanProjection(root));
+  return projection;
 }
 
 async function one(client, text, values) {
@@ -945,18 +960,25 @@ async function one(client, text, values) {
   return result.rows[0];
 }
 
-async function publishTraceabilityGeneration(client, projection, onProgress) {
-  await client.query('BEGIN');
+// Traceability: implements REQ-TRACEABILITY-BATCH-RESUME
+async function publishTraceabilityGeneration(client, projection, options = {}) {
+  const batchSize = options.batchSize ?? 10;
+  if (!Number.isSafeInteger(batchSize) || batchSize < 1) {
+    throw new ProjectIndexError('TRACEABILITY_INDEX_BATCH_SIZE',
+      'batch size must be a positive safe integer');
+  }
+  const lockKey = JSON.stringify([
+    projection.projectId, projection.repositoryPath, projection.worktreePath, projection.corpus,
+  ]);
+  const lock = await one(client,
+    'SELECT pg_try_advisory_lock(hashtextextended($1, 0)) AS acquired', [lockKey]);
+  if (!lock.acquired) throw new Error('project index writer is already active for this worktree corpus');
+  const onProgress = options.onProgress;
+  let transactionActive = false;
   try {
-    const lockKey = JSON.stringify([
-      projection.projectId,
-      projection.repositoryPath,
-      projection.worktreePath,
-      projection.corpus,
-    ]);
-    const lock = await one(client,
-      'SELECT pg_try_advisory_xact_lock(hashtextextended($1, 0)) AS acquired', [lockKey]);
-    if (!lock.acquired) throw new Error('project index writer is already active for this worktree corpus');
+    options.signal?.throwIfAborted();
+    await client.query('BEGIN');
+    transactionActive = true;
     await client.query('SELECT ponytail_index.register_project($1::uuid, $2)', [
       projection.projectId,
       projection.projectName,
@@ -973,52 +995,19 @@ async function publishTraceabilityGeneration(client, projection, onProgress) {
       ON CONFLICT (repository_id, root_path) DO UPDATE
       SET root_path = EXCLUDED.root_path
       RETURNING worktree_id`, [repository.repository_id, projection.worktreePath]);
-    const previous = await client.query(`
-      SELECT generation_id
-      FROM ponytail_index.published_generation_v1
-      WHERE worktree_id = $1::uuid AND corpus = $2`, [worktree.worktree_id, projection.corpus]);
-    const generation = await one(client, `
-      INSERT INTO ponytail_index.generation_v1 (
-        worktree_id, corpus, head_commit, state_digest, configuration_digest, parser_identity
-      ) VALUES ($1::uuid, $2, $3, $4, $5, $6)
-      RETURNING generation_id`, [
-      worktree.worktree_id,
-      projection.corpus,
-      projection.headCommit,
-      projection.stateDigest,
-      projection.configurationDigest,
-      projection.parserIdentity,
-    ]);
+    await client.query('COMMIT');
+    transactionActive = false;
     const payloads = [];
+    const parseResultIds = [];
     let parsedFiles = 0;
     let reusedFiles = 0;
-    for (const file of projection.files) {
-      let parseResult = await client.query(`
-        SELECT parse_result_id, payload
-        FROM ponytail_index.parse_result_v1
-        WHERE project_id = $1::uuid AND corpus = $2
-          AND content_digest = $3 AND parser_identity = $4`, [
-        projection.projectId,
-        projection.corpus,
-        file.contentDigest,
-        file.parserIdentity,
-      ]);
-      if (parseResult.rows.length > 1) throw new Error('duplicate immutable parse results');
-      if (parseResult.rows.length === 0) {
-        parsedFiles += 1;
-        const payload = file.parse();
-        await client.query(`
-        INSERT INTO ponytail_index.parse_result_v1 (
-          project_id, corpus, content_digest, parser_identity, payload
-        ) VALUES ($1::uuid, $2, $3, $4, $5::jsonb)
-        ON CONFLICT (project_id, corpus, content_digest, parser_identity) DO NOTHING`, [
-          projection.projectId,
-          projection.corpus,
-          file.contentDigest,
-          file.parserIdentity,
-          JSON.stringify(payload),
-        ]);
-        parseResult = await client.query(`
+    for (let offset = 0; offset < projection.files.length; offset += batchSize) {
+      options.signal?.throwIfAborted();
+      await client.query('BEGIN');
+      transactionActive = true;
+      for (const file of projection.files.slice(offset, offset + batchSize)) {
+        options.signal?.throwIfAborted();
+        let parseResult = await client.query(`
           SELECT parse_result_id, payload
           FROM ponytail_index.parse_result_v1
           WHERE project_id = $1::uuid AND corpus = $2
@@ -1028,14 +1017,63 @@ async function publishTraceabilityGeneration(client, projection, onProgress) {
           file.contentDigest,
           file.parserIdentity,
         ]);
-      } else {
-        reusedFiles += 1;
+        if (parseResult.rows.length > 1) throw new Error('duplicate immutable parse results');
+        if (parseResult.rows.length === 0) {
+          parsedFiles += 1;
+          const payload = projection.readPayload(file.parse());
+          await client.query(`
+          INSERT INTO ponytail_index.parse_result_v1 (
+            project_id, corpus, content_digest, parser_identity, payload
+          ) VALUES ($1::uuid, $2, $3, $4, $5::jsonb)
+          ON CONFLICT (project_id, corpus, content_digest, parser_identity) DO NOTHING`, [
+            projection.projectId,
+            projection.corpus,
+            file.contentDigest,
+            file.parserIdentity,
+            JSON.stringify(payload),
+          ]);
+          parseResult = await client.query(`
+            SELECT parse_result_id, payload
+            FROM ponytail_index.parse_result_v1
+            WHERE project_id = $1::uuid AND corpus = $2
+              AND content_digest = $3 AND parser_identity = $4`, [
+            projection.projectId,
+            projection.corpus,
+            file.contentDigest,
+            file.parserIdentity,
+          ]);
+        } else {
+          reusedFiles += 1;
+        }
+        if (parseResult.rows.length !== 1) throw new Error('immutable parse result was not persisted');
+        const parsed = {
+          ...parseResult.rows[0],
+          payload: projection.readPayload(parseResult.rows[0].payload),
+        };
+        parseResultIds.push(parsed.parse_result_id);
+        payloads.push(parsed.payload);
       }
-      if (parseResult.rows.length !== 1) throw new Error('immutable parse result was not persisted');
-      const parsed = {
-        ...parseResult.rows[0],
-        payload: projection.readPayload(parseResult.rows[0].payload),
-      };
+      options.signal?.throwIfAborted();
+      await client.query('COMMIT');
+      transactionActive = false;
+      onProgress?.(payloads.length, projection.files.length, projection.corpus);
+    }
+    options.signal?.throwIfAborted();
+    await client.query('BEGIN');
+    transactionActive = true;
+    const previous = await client.query(`
+      SELECT generation_id
+      FROM ponytail_index.published_generation_v1
+      WHERE worktree_id = $1::uuid AND corpus = $2`, [worktree.worktree_id, projection.corpus]);
+    const generation = await one(client, `
+      INSERT INTO ponytail_index.generation_v1 (
+        worktree_id, corpus, head_commit, state_digest, configuration_digest, parser_identity
+      ) VALUES ($1::uuid, $2, $3, $4, $5, $6)
+      RETURNING generation_id`, [
+      worktree.worktree_id, projection.corpus, projection.headCommit,
+      projection.stateDigest, projection.configurationDigest, projection.parserIdentity,
+    ]);
+    for (const [index, file] of projection.files.entries()) {
       await client.query(`
         INSERT INTO ponytail_index.file_v1 (
           generation_id, path, content_digest, git_state, parse_result_id
@@ -1044,10 +1082,8 @@ async function publishTraceabilityGeneration(client, projection, onProgress) {
         file.path,
         file.contentDigest,
         file.gitState,
-        parsed.parse_result_id,
+        parseResultIds[index],
       ]);
-      payloads.push(parsed.payload);
-      onProgress?.(payloads.length, projection.files.length, projection.corpus);
     }
     const normalized = projection.normalizePayloads === undefined
       ? {
@@ -1143,7 +1179,10 @@ async function publishTraceabilityGeneration(client, projection, onProgress) {
         previous.rows[0].generation_id,
       ]);
     }
+    projection.assertCurrent?.();
+    options.signal?.throwIfAborted();
     await client.query('COMMIT');
+    transactionActive = false;
     publishedRecords++;publicationProgress();
     return {
       generationId: generation.generation_id,
@@ -1152,8 +1191,10 @@ async function publishTraceabilityGeneration(client, projection, onProgress) {
       reusedFiles,
     };
   } catch (error) {
-    await client.query('ROLLBACK');
+    if (transactionActive) await client.query('ROLLBACK');
     throw error;
+  } finally {
+    await client.query('SELECT pg_advisory_unlock(hashtextextended($1, 0))', [lockKey]);
   }
 }
 
@@ -1164,7 +1205,7 @@ async function indexTraceability(options = {}) {
   const pool = options.pool ?? new (require('pg').Pool)(databaseOptions(projection.worktreePath));
   const client = await pool.connect();
   try {
-    const publication = await publishTraceabilityGeneration(client, projection, options.onProgress);
+    const publication = await publishTraceabilityGeneration(client, projection, options);
     return TraceabilityIndexResultReaders.variants.V1({
       schemaVersion: 1,
       corpus: 'traceability',
@@ -1196,7 +1237,7 @@ async function indexProject(options = {}) {
     const corpora = [];
     for (const projection of [traceability, plans]) {
       options.onProgress?.(0, projection.files.length, projection.corpus);
-      const publication = await publishTraceabilityGeneration(client, projection, options.onProgress);
+      const publication = await publishTraceabilityGeneration(client, projection, options);
       corpora.push({
         corpus: projection.corpus,
         generationId: publication.generationId,
@@ -2674,19 +2715,41 @@ async function run(args) {
     return;
   }
   if (operation === 'index') {
-    const allowed = new Set(['--rebuild', '--json']);
-    if (args.some(argument => !allowed.has(argument)) || new Set(args).size !== args.length) {
-      throw new ProjectIndexError(
-        'TRACEABILITY_INDEX_USAGE',
-        'usage: ponytail traceability index [--rebuild] [--json]',
-      );
+    const seen = new Set();
+    let batchSize = 10;
+    for (let index = 0; index < args.length; index += 1) {
+      const argument = args[index];
+      if (!['--rebuild', '--json', '--batch-size'].includes(argument) || seen.has(argument)) {
+        throw new ProjectIndexError('TRACEABILITY_INDEX_USAGE',
+          'usage: ponytail traceability index [--batch-size <n>] [--rebuild] [--json]');
+      }
+      seen.add(argument);
+      if (argument === '--batch-size') {
+        const value = args[++index];
+        if (!/^[1-9]\d*$/u.test(value ?? '') || !Number.isSafeInteger(Number(value))) {
+          throw new ProjectIndexError('TRACEABILITY_INDEX_BATCH_SIZE',
+            'batch size must be a positive safe integer');
+        }
+        batchSize = Number(value);
+      }
     }
-    const progress = args.includes('--json') ? null : indexProgress();
+    const abortController = new AbortController();
+    const interrupt = () => abortController.abort(new ProjectIndexError(
+      'TRACEABILITY_INDEX_INTERRUPTED',
+      'index update interrupted; rerun to resume completed checkpoints'));
+    process.once('SIGINT', interrupt);
+    process.once('SIGTERM', interrupt);
+    const progress = seen.has('--json') ? null : indexProgress();
     let result;
     try {
-      result = await indexProject({ rebuild: args.includes('--rebuild'), onProgress: progress?.update, onPrepare: progress?.prepare });
-    } finally { progress?.stop(); }
-    if (args.includes('--json')) process.stdout.write(`${JSON.stringify(result)}\n`);
+      result = await indexProject({ rebuild: seen.has('--rebuild'), batchSize,
+        signal: abortController.signal, onProgress: progress?.update, onPrepare: progress?.prepare });
+    } finally {
+      progress?.stop();
+      process.removeListener('SIGINT', interrupt);
+      process.removeListener('SIGTERM', interrupt);
+    }
+    if (seen.has('--json')) process.stdout.write(`${JSON.stringify(result)}\n`);
     else for (const corpus of result.corpora) process.stdout.write(
       `indexed ${corpus.corpus}: ${corpus.processedFiles} files, ` +
       `${corpus.parsedFiles} parsed, ${corpus.reusedFiles} reused\n`);
@@ -2716,7 +2779,8 @@ if (require.main === module && process.argv[2] === '--repository-index-worker') 
   run(process.argv.slice(2)).catch(error => {
     const code = error instanceof ProjectIndexError ? error.code : 'PROJECT_INDEX_FAILURE';
     process.stderr.write(`error ${code}: ${error.message}\n`);
-    process.exitCode = code === 'REPOSITORY_INDEX_INTERRUPTED' ? 130 : 2;
+    process.exitCode = ['REPOSITORY_INDEX_INTERRUPTED', 'TRACEABILITY_INDEX_INTERRUPTED']
+      .includes(code) ? 130 : 2;
   });
 }
 

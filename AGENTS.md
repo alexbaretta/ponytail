@@ -167,6 +167,9 @@ services. `PROJECT_STRUCTURE.md` is authoritative for that boundary.
 - Full-text index maintenance: `ponytail search update-index [-j <n_workers>]
   [-n <commits_per_db_transaction>]`; query:
   `ponytail search query <text>` with optional ref, commit, history, and path selectors.
+- Traceability/plan index checkpoints: `ponytail traceability index
+  [--batch-size <n>] [--rebuild] [--json]`; default batch size is 10 files.
+  Durable compatible parse batches survive crashes; publication remains atomic.
 - Campaign coordination: `ponytail campaign --help` lists the canonical
   rolling commands; `ponytail campaign <command> --help` describes arguments,
   preconditions, mutations and results. Commands use named flags and return

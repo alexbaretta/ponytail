@@ -341,6 +341,7 @@ class BoundaryClient {
     this.options = options;
     this.queries = [];
     this.parseResult = 0;
+    this.cache = new Map();
   }
 
   async query(text, values = []) {
@@ -348,7 +349,9 @@ class BoundaryClient {
     if (this.options.failAt !== undefined && text.includes(this.options.failAt)) {
       throw new Error('injected database failure');
     }
-    if (text.includes('pg_try_advisory_xact_lock')) {
+    if (text === 'BEGIN') this.checkpoint = new Map(this.cache);
+    if (text === 'ROLLBACK') this.cache = this.checkpoint;
+    if (text.includes('pg_try_advisory_lock')) {
       return { rows: [{ acquired: this.options.acquired ?? true }] };
     }
     if (text.includes('RETURNING repository_id')) return { rows: [{ repository_id: 'repository' }] };
@@ -356,18 +359,19 @@ class BoundaryClient {
     if (text.includes('FROM ponytail_index.published_generation_v1')) return { rows: [] };
     if (text.includes('RETURNING generation_id')) return { rows: [{ generation_id: 'generation' }] };
     if (text.includes('SELECT parse_result_id, payload')) {
-      if (this.options.cachedPayload !== undefined) {
+      const payload = this.cache.get(JSON.stringify(values)) ?? this.options.cachedPayload;
+      if (payload !== undefined) {
         this.parseResult += 1;
         return { rows: [{
           parse_result_id: `parse-${this.parseResult}`,
-          payload: this.options.cachedPayload,
+          payload,
         }] };
       }
       return { rows: [] };
     }
     if (text.includes('INSERT INTO ponytail_index.parse_result_v1')) {
       this.parseResult += 1;
-      this.options.cachedPayload = JSON.parse(values[4]);
+      this.cache.set(JSON.stringify(values.slice(0, 4)), JSON.parse(values[4]));
       return { rows: [] };
     }
     return { rows: [] };
@@ -486,16 +490,19 @@ test('publishes a complete generation with parameterized statements', async () =
   const projection = collectTraceabilityProjection(configurationPath);
   const client = new BoundaryClient();
   let committedProgress = false;
-  const result = await publishTraceabilityGeneration(client, projection, (completed, total, corpus, phase) => {
-    if (phase === 'database records' && completed === total) {
-      assert.equal(client.queries.at(-1).text, 'COMMIT');
-      committedProgress = true;
-    }
+  const result = await publishTraceabilityGeneration(client, projection, {
+    onProgress(completed, total, corpus, phase) {
+      if (phase === 'database records' && completed === total) {
+        assert.equal(client.queries.at(-1).text, 'COMMIT');
+        committedProgress = true;
+      }
+    },
   });
   assert.equal(committedProgress, true);
   assert.equal(result.stateDigest, projection.stateDigest);
-  assert.equal(client.queries[0].text, 'BEGIN');
-  assert.equal(client.queries.at(-1).text, 'COMMIT');
+  assert.match(client.queries[0].text, /pg_try_advisory_lock/);
+  assert.equal(client.queries.at(-2).text, 'COMMIT');
+  assert.match(client.queries.at(-1).text, /pg_advisory_unlock/);
   const publication = client.queries.find(query =>
     query.text.includes('INSERT INTO ponytail_index.published_generation_v1'));
   assert.deepEqual(publication.values, ['worktree', 'traceability', 'generation']);
@@ -510,8 +517,14 @@ test('rolls back failed and contended publications', async () => {
     new BoundaryClient({ failAt: 'INSERT INTO ponytail_index.generation_v1' }),
   ]) {
     await assert.rejects(() => publishTraceabilityGeneration(client, projection));
-    assert.equal(client.queries.at(-1).text, 'ROLLBACK');
-    assert.equal(client.queries.some(query => query.text === 'COMMIT'), false);
+    if (client.options.acquired === false) {
+      assert.equal(client.queries.length, 1);
+    } else {
+      assert.equal(client.queries.at(-2).text, 'ROLLBACK');
+      assert.match(client.queries.at(-1).text, /pg_advisory_unlock/);
+      assert.ok(client.queries.some(query => query.text === 'COMMIT'));
+      assert.ok(client.cache.size > 0);
+    }
   }
 });
 
@@ -523,7 +536,52 @@ test('rejects malformed durable cache payloads before publication', async () => 
     () => publishTraceabilityGeneration(client, projection),
     /invalid project-index storage V1 payload/,
   );
-  assert.equal(client.queries.at(-1).text, 'ROLLBACK');
+  assert.equal(client.queries.at(-2).text, 'ROLLBACK');
+});
+
+// Traceability: verifies REQ-TRACEABILITY-BATCH-RESUME
+test('commits compatible batches before publication and rejects changed inputs', async () => {
+  const { configurationPath, root } = fixture();
+  const projection = collectTraceabilityProjection(configurationPath);
+  const client = new BoundaryClient();
+  fs.appendFileSync(path.join(root, 'src/value.js'), '// dirty edit\n');
+  await assert.rejects(() => publishTraceabilityGeneration(client, projection, { batchSize: 1 }),
+    /inputs changed/);
+  assert.equal(client.cache.size, projection.files.length);
+  assert.equal(client.queries.filter(query => query.text === 'COMMIT').length,
+    projection.files.length + 1);
+  assert.equal(client.queries.at(-2).text, 'ROLLBACK');
+  const result = await publishTraceabilityGeneration(client,
+    collectTraceabilityProjection(configurationPath), { batchSize: 2 });
+  assert.equal(result.parsedFiles, 1);
+  assert.equal(result.reusedFiles, projection.files.length - 1);
+});
+
+test('validates batch sizes before effects and cancels without publication', async () => {
+  const { configurationPath } = fixture();
+  const projection = collectTraceabilityProjection(configurationPath);
+  for (const batchSize of [0, -1, 1.5, NaN, Number.MAX_SAFE_INTEGER + 1]) {
+    const client = new BoundaryClient();
+    await assert.rejects(() => publishTraceabilityGeneration(client, projection, { batchSize }),
+      /positive safe integer/);
+    assert.equal(client.queries.length, 0);
+  }
+  const abortController = new AbortController();
+  abortController.abort(new Error('cancelled'));
+  const client = new BoundaryClient();
+  await assert.rejects(() => publishTraceabilityGeneration(client, projection,
+    { signal: abortController.signal }), /cancelled/);
+  assert.equal(client.queries.some(query => query.text === 'COMMIT'), false);
+  assert.match(client.queries.at(-1).text, /pg_advisory_unlock/);
+});
+
+test('traceability CLI rejects invalid and duplicate batch-size options', () => {
+  for (const args of [['--batch-size'], ['--batch-size', '0'],
+    ['--batch-size', '1', '--batch-size', '2']]) {
+    assert.throws(() => execFileSync(process.execPath,
+      ['src/project-index.js', 'traceability', 'index', ...args], { stdio: 'pipe' }),
+    error => error.status === 2 && /BATCH_SIZE|USAGE/.test(error.stderr.toString()));
+  }
 });
 
 test('parses exact search filters and rejects ambiguous options', () => {

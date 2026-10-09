@@ -53,8 +53,11 @@ key is its canonical absolute Git common-directory path, and the worktree key
 is its canonical absolute top-level path. These machine locators are excluded
 from full-text search. Moving or removing a checkout retires that locator
 rather than aliasing it to a different tree.
-Rebuild and incremental update write new worktree corpus generations in one
-transaction; readers select the published generation for their exact project,
+Validated immutable file parses are committed in batches (default 10 files,
+configurable with `--batch-size`). Compatible batches survive abrupt termination;
+reuse keys include exact content, path, configuration and parser/schema identity.
+Rebuild and incremental update publish new worktree corpus generations in one
+final transaction; readers select the published generation for their exact project,
 repository, worktree, and corpus. The database stores no authoritative
 approval or completion state. Superseded generation rows are removed without
 invalidating concurrent PostgreSQL snapshots; reusable content and parse rows
@@ -118,7 +121,7 @@ are impossible.
 The installed dispatcher exposes one command family:
 
 ```text
-ponytail traceability index [--rebuild] [--json]
+ponytail traceability index [--batch-size <n>] [--rebuild] [--json]
 ponytail traceability search <query> [filters] [--json]
 ponytail traceability validate [--plan <plan> | --campaign <plan>] [--json]
 ponytail plan search <query> [filters] [--json]
@@ -144,13 +147,17 @@ source.
 
 ### Concurrency and failure
 
-PostgreSQL MVCC permits concurrent snapshot readers. A transaction-scoped
+PostgreSQL MVCC permits concurrent snapshot readers. A session-scoped
 advisory lock is keyed by project, repository, worktree, and corpus; it
 serializes competing refreshes of the same answer without globally locking
 other worktrees or corpora. A second same-key writer reports a bounded,
-retryable diagnostic. Immutable content-cache insertion is idempotent and does
+retryable diagnostic. The lock spans checkpoint commits, is released in finally,
+and is released by PostgreSQL on connection death. Immutable content-cache insertion is idempotent and does
 not publish another worktree's generation. A transaction publishes no partial
-generation. A crash leaves the prior generation current; a schema mismatch,
+generation. Before the final commit, collectors revalidate HEAD and exact
+source/configuration/parser identities; changed inputs roll back publication
+while retaining compatible cache work. A crash leaves the prior generation
+current and durable batches reusable; a schema mismatch,
 integrity failure, or projection-policy change requires explicit setup or
 rebuild. One worktree's dirty files, indexing failure, or lock cannot alter
 another worktree's published query result.

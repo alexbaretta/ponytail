@@ -448,6 +448,11 @@
     },
     {
       "class": "integration-test",
+      "path": "tests/traceability-batch-resume.test.js",
+      "locator": "text"
+    },
+    {
+      "class": "integration-test",
       "path": "scripts/test-project-index-postgres.sh",
       "locator": "text"
     },
