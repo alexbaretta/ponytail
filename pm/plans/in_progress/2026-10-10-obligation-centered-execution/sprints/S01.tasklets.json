@@ -1,0 +1,173 @@
+{
+  "schemaVersion": 4,
+  "sprint": "S01",
+  "features": {
+    "S01-F01": {
+      "depends_on": [],
+      "validation_tasklet": "S01-F01-T09"
+    }
+  },
+  "tasklets": {
+    "S01-F01-T01": {
+      "depends_on": [],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S01-F01",
+      "planned_paths": [
+        "pm/requirements/obligation-execution.md",
+        "pm/requirements/index.md",
+        "pm/uat/obligation-execution.md",
+        "pm/uat/index.md",
+        ".agents/config/project/traceability.json",
+        "pm/requirements/traceability.generated.md",
+        "pm/bugs/in_progress/2026-10-10-CHNG-obligation_centered_execution.md",
+        "pm/bugs/in_progress/2026-10-10-CHNG-repair_plan_starting_gate.md"
+      ]
+    },
+    "S01-F01-T02": {
+      "depends_on": [
+        "S01-F01-T10"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S01-F01",
+      "planned_paths": [
+        "skills/requirements/SKILL.md",
+        ".openclaw/skills/requirements/SKILL.md",
+        "tests/issue-requirement-activation-policy.test.js"
+      ]
+    },
+    "S01-F01-T03": {
+      "depends_on": [
+        "S01-F01-T02"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S01-F01",
+      "planned_paths": [
+        "skills/user-acceptance-testing/SKILL.md",
+        ".openclaw/skills/user-acceptance-testing/SKILL.md",
+        "tests/requirements-traceability-policy.test.js"
+      ]
+    },
+    "S01-F01-T04": {
+      "depends_on": [
+        "S01-F01-T03"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S01-F01",
+      "planned_paths": [
+        "skills/requirements-traceability/SKILL.md",
+        ".openclaw/skills/requirements-traceability/SKILL.md",
+        "tests/requirements-traceability-policy.test.js"
+      ]
+    },
+    "S01-F01-T05": {
+      "depends_on": [
+        "S01-F01-T04"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S01-F01",
+      "planned_paths": [
+        "skills/issue-tracking/SKILL.md",
+        ".openclaw/skills/issue-tracking/SKILL.md",
+        "tests/issue-requirement-activation-policy.test.js"
+      ]
+    },
+    "S01-F01-T06": {
+      "depends_on": [
+        "S01-F01-T05"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S01-F01",
+      "planned_paths": [
+        "skills/plan-execution/SKILL.md",
+        ".openclaw/skills/plan-execution/SKILL.md",
+        "tests/plan-execution-policy.test.js"
+      ]
+    },
+    "S01-F01-T07": {
+      "depends_on": [
+        "S01-F01-T06"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S01-F01",
+      "planned_paths": [
+        "skills/ponytail/SKILL.md",
+        ".openclaw/skills/ponytail/SKILL.md",
+        "config/AGENTS.md",
+        ".cursor/rules/ponytail.mdc",
+        ".windsurf/rules/ponytail.md",
+        ".clinerules/ponytail.md",
+        ".agents/rules/ponytail.md",
+        ".qoder/rules/ponytail.md",
+        ".github/copilot-instructions.md",
+        ".kiro/steering/ponytail.md",
+        "tests/policy-conformance.test.js"
+      ]
+    },
+    "S01-F01-T08": {
+      "depends_on": [
+        "S01-F01-T11"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S01-F01",
+      "planned_paths": [
+        "PROJECT_STRUCTURE.md",
+        "AGENTS.md",
+        ".agents/config/project/traceability.json",
+        "pm/requirements/traceability.generated.md"
+      ]
+    },
+    "S01-F01-T09": {
+      "depends_on": [
+        "S01-F01-T01",
+        "S01-F01-T02",
+        "S01-F01-T03",
+        "S01-F01-T04",
+        "S01-F01-T05",
+        "S01-F01-T06",
+        "S01-F01-T07",
+        "S01-F01-T08",
+        "S01-F01-T10",
+        "S01-F01-T11"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S01-F01",
+      "planned_paths": []
+    },
+    "S01-F01-T10": {
+      "depends_on": [
+        "S01-F01-T01"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S01-F01",
+      "planned_paths": [
+        "skills/plan-execution/references/glossary.md",
+        ".openclaw/skills/plan-execution/references/glossary.md",
+        "tests/obligation-glossary.test.js"
+      ]
+    },
+    "S01-F01-T11": {
+      "depends_on": [
+        "S01-F01-T07"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S01-F01",
+      "planned_paths": [
+        "skills/production-test-boundaries/SKILL.md",
+        ".openclaw/skills/production-test-boundaries/SKILL.md",
+        "tests/production-test-boundaries.test.js"
+      ]
+    }
+  },
+  "external_depends_on": {}
+}
