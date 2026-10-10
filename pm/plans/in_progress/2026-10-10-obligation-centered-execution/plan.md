@@ -17,7 +17,7 @@ Licensed under the MIT License. See LICENSE in the project root.
 - Final validation: pending implementation; document checks are recorded below.
 
 <!-- ponytail-plan-campaign
-{"schemaVersion":2,"id":"2026-10-10-obligation-centered-execution","parent_plan_id":null,"depends_on":[]}
+{"schemaVersion":3,"id":"2026-10-10-obligation-centered-execution","parent_plan_id":null,"depends_on":[],"obligation_document":"pm/plans/in_progress/2026-10-10-obligation-centered-execution/obligations.json"}
 -->
 
 ## Objective and provenance
@@ -36,8 +36,8 @@ this plan. Imported decisions are design inputs, not implementation authority.
 
 Canonical approved behavior remains in the
 [requirements web](../../../requirements/index.md); canonical acceptance
-procedures remain in the [UAT web](../../../uat/index.md). This open plan does
-not activate new requirements or claim completed traceability coverage.
+procedures remain in the [UAT web](../../../uat/index.md). The approved requirements are activated; coverage and execution are independently
+assessed in the canonical local pilot.
 
 ## Scope and exclusions
 
@@ -328,7 +328,7 @@ not decisions already approved by accepting the obligation definition.
 | [S01](./sprints/S01.md) | Adopt the reviewed policy and acceptance contract after kickoff. | None | DONE |
 | [S02](./sprints/S02.md) | Implement durable records, validation, and obligation-first selection. | S01 | DONE |
 | [S03](./sprints/S03.md) | Integrate assignment/delivery and discovery; prove compatibility. | S02 | DONE |
-| [S04](./sprints/S04.md) | Run approved local pilot, reconcile generated policy, and final acceptance. | S03 | STUB |
+| [S04](./sprints/S04.md) | Run approved local pilot, reconcile generated policy, and final acceptance. | S03 | IN_PROGRESS |
 
 S01 has a detailed proposed tasklet graph under current V4 metadata. Later
 sprints remain intent-level V3 stubs; their tasklet graphs follow dependency-ready

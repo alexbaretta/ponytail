@@ -1,0 +1,9 @@
+{
+  "repositoryRoot": "/Users/alex/git/ctosclub/ponytail",
+  "profile": "local-node-full",
+  "unitCommand": "npm test",
+  "integrationCommand": "npm test",
+  "cloudResources": [],
+  "externalProjects": [],
+  "coordinator": "ponytail-local-approved-coordinator"
+}
