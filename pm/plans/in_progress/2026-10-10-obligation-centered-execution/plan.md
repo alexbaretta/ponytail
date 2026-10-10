@@ -327,7 +327,7 @@ not decisions already approved by accepting the obligation definition.
 | --- | --- | --- | --- |
 | [S01](./sprints/S01.md) | Adopt the reviewed policy and acceptance contract after kickoff. | None | DONE |
 | [S02](./sprints/S02.md) | Implement durable records, validation, and obligation-first selection. | S01 | DONE |
-| [S03](./sprints/S03.md) | Integrate assignment/delivery and discovery; prove compatibility. | S02 | STUB |
+| [S03](./sprints/S03.md) | Integrate assignment/delivery and discovery; prove compatibility. | S02 | DONE |
 | [S04](./sprints/S04.md) | Run approved local pilot, reconcile generated policy, and final acceptance. | S03 | STUB |
 
 S01 has a detailed proposed tasklet graph under current V4 metadata. Later
@@ -401,7 +401,7 @@ Those planning-time selectors allowed S01 review and no implementation;
 S01 is now DONE and S02 is detailed, approved and pending execution. Detailed
 evidence is recorded in the S01 sprint document.
 S01 and S02 implementation are complete with focused evidence in their sprint
-records. S03 consumer integration and S04 final acceptance remain pending.
+records. S03 consumer integration is complete; S04 final acceptance remains pending.
 
 Traceability: plans-implementation REQ-PONYTAIL-GLOSSARY from plan 2026-10-10-obligation-centered-execution
 Traceability: plans-verification REQ-PONYTAIL-GLOSSARY from plan 2026-10-10-obligation-centered-execution
