@@ -326,7 +326,7 @@ not decisions already approved by accepting the obligation definition.
 | Sprint | Intent | Planning dependency | State |
 | --- | --- | --- | --- |
 | [S01](./sprints/S01.md) | Adopt the reviewed policy and acceptance contract after kickoff. | None | DONE |
-| [S02](./sprints/S02.md) | Implement durable records, validation, and obligation-first selection. | S01 | STUB |
+| [S02](./sprints/S02.md) | Implement durable records, validation, and obligation-first selection. | S01 | APPROVED |
 | [S03](./sprints/S03.md) | Integrate assignment/delivery and discovery; prove compatibility. | S02 | STUB |
 | [S04](./sprints/S04.md) | Run approved local pilot, reconcile generated policy, and final acceptance. | S03 | STUB |
 
@@ -397,7 +397,8 @@ sprint. Original file-link and whitespace checks passed. Subsequent S01 detailed
 planning is READY_FOR_REVIEW with eleven proposed pending tasklets; canonical graph,
 dependency and scoped campaign validation pass. All 28 relative file links in the
 eight plan/design/sprint/issue documents resolve; JSON and whitespace checks pass.
-The current selectors allow S01 planning review and no implementation. Detailed
+Those planning-time selectors allowed S01 review and no implementation;
+S01 is now DONE and S02 is detailed, approved and pending execution. Detailed
 evidence is recorded in the S01 sprint document.
 Implementation and final acceptance have not started; no product tests or builds
 were required for recording this proposal.

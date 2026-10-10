@@ -1,0 +1,126 @@
+{
+  "schemaVersion": 4,
+  "sprint": "S02",
+  "features": {
+    "S02-F01": {
+      "depends_on": [],
+      "validation_tasklet": "S02-F01-T09"
+    }
+  },
+  "tasklets": {
+    "S02-F01-T01": {
+      "depends_on": [],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S02-F01",
+      "planned_paths": [
+        "skills/plan-execution/scripts/obligations.js",
+        "tests/obligations.test.js"
+      ]
+    },
+    "S02-F01-T02": {
+      "depends_on": [
+        "S02-F01-T01"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S02-F01",
+      "planned_paths": [
+        "skills/plan-execution/scripts/obligations.js",
+        "tests/obligations.test.js"
+      ]
+    },
+    "S02-F01-T03": {
+      "depends_on": [
+        "S02-F01-T02"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S02-F01",
+      "planned_paths": [
+        "skills/plan-execution/scripts/obligations.js",
+        "tests/obligations.test.js"
+      ]
+    },
+    "S02-F01-T04": {
+      "depends_on": [
+        "S02-F01-T03"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S02-F01",
+      "planned_paths": [
+        "skills/plan-execution/scripts/obligations.js",
+        "tests/obligations.test.js"
+      ]
+    },
+    "S02-F01-T05": {
+      "depends_on": [
+        "S02-F01-T04"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S02-F01",
+      "planned_paths": [
+        "skills/plan-execution/scripts/obligations.js",
+        "tests/obligations.test.js"
+      ]
+    },
+    "S02-F01-T06": {
+      "depends_on": [
+        "S02-F01-T05"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S02-F01",
+      "planned_paths": [
+        "skills/plan-execution/scripts/obligations.js",
+        "tests/obligations.test.js"
+      ]
+    },
+    "S02-F01-T07": {
+      "depends_on": [
+        "S02-F01-T06"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S02-F01",
+      "planned_paths": [
+        "skills/plan-execution/scripts/obligations.js",
+        "tests/obligations.test.js",
+        ".openclaw/skills/plan-execution/scripts/obligations.js"
+      ]
+    },
+    "S02-F01-T08": {
+      "depends_on": [
+        "S02-F01-T07"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S02-F01",
+      "planned_paths": [
+        "versioned-data-contracts.json",
+        "PROJECT_STRUCTURE.md",
+        ".agents/config/project/traceability.json",
+        "pm/requirements/traceability.generated.md"
+      ]
+    },
+    "S02-F01-T09": {
+      "depends_on": [
+        "S02-F01-T01",
+        "S02-F01-T02",
+        "S02-F01-T03",
+        "S02-F01-T04",
+        "S02-F01-T05",
+        "S02-F01-T06",
+        "S02-F01-T07",
+        "S02-F01-T08"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S02-F01",
+      "planned_paths": []
+    }
+  },
+  "external_depends_on": {}
+}
