@@ -31,9 +31,6 @@ ready plans, prioritize source-proven product repair over coverage expansion
 without inventing a dependency or pausing already dispatched work.
 
 ### Campaign Scheduler Protocol
-
-Traceability: implements REQ-PONYTAIL-CLI-AGENT-HARNESS
-
 When the host provides the campaign orchestration commands and coordinated
 multi-session execution is approved, the campaign coordinator must use their
 durable state instead of remembering worker assignments in conversation:
@@ -393,9 +390,6 @@ A Codex-managed worktree is not necessarily an archive artifact attached to a
 chat. Retention is the default; plan closure is not retirement authority.
 
 ### Worker-Owned Checkout Recovery
-
-Traceability: supports REQ-WORKER-WORKTREE-RETENTION
-
 An original native worker may need recovery before its first adoption and
 authenticated attachment. First correlate its ready session and exact native
 cwd with the original started creation, and include that supported identity

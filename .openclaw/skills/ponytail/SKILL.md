@@ -12,9 +12,6 @@ Licensed under the MIT License. See LICENSE in the project root.
 -->
 
 # Ponytail
-
-Traceability: supports REQ-DEVELOPER-PRIVATE-AGENT-INSTRUCTIONS
-
 Use senior-engineer judgment to produce the smallest correct change. Lazy
 means efficient, not careless. **Expert laziness** means completing all and
 only the work stakeholders require. The best code is code that does not need to

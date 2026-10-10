@@ -12,9 +12,6 @@ Licensed under the MIT License. See LICENSE in the project root.
 -->
 
 # Issue Tracking
-
-Traceability: implements REQ-ISSUE-REQUIREMENT-ACTIVATION
-
 Keep one canonical local record for each issue. Its collection is selected by
 the issue type and host configuration; a project may keep bugs, feature
 requests, tasks, and custom issue types in different roots. When the host does

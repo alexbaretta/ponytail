@@ -112,6 +112,14 @@ cannot discharge obligations; preserve superseded work and its rationale.
 Strict descent in `N^6` is well-founded but reaching zero additionally requires
 reachable authorized repairs, finite preparation and controlled disturbances.
 Never claim unconditional convergence or substitute a finite weighted scalar.
+For adopted plans, run the configured obligation selector first. Invoke portable
+subordinate selection as `ready-tasklets.js <sprint.md> [last-id] --obligations
+<configured-document> --root <repository-root>`. A V3 adopted plan cannot silently
+use the bare legacy selector. The host's existing operations expose the frozen
+responsibility lease and current metrics. Renew responsibility for a retained
+idle worker only after current-revision and fresh idle evidence; preserve prior
+lease IDs and fields. A bounded no-edit assessment needs no invented tasklet.
+
 ## Host Configuration Contract
 
 Use the project-local agent instructions already in context. They should
@@ -342,7 +350,14 @@ Before requesting approval to start a plan:
 A plan may not start while a known question is open. Approval is explicit; do
 not infer it from discussion, urgency, or approval of a different plan. A
 failing or unavailable required starting-checkpoint test also prevents the
-plan from starting. Record tests that inherently require a human participant as manual
+plan from starting, except for a reproduced pre-existing failure expressly owned
+by the approved repair objective. Before kickoff, record its exact failing
+selection and evidence, governing requirement, unresolved obligation and bounded
+repair scope. Admit only that declared existing repair failure; unrelated,
+unplanned or newly introduced failures still block. Never enroll another failing
+selection through blanket plan approval. The admitted failure remains unresolved
+and prevents final acceptance until repaired; never weaken assertions or label
+the whole repository green while it remains red. Record tests that inherently require a human participant as manual
 acceptance; do not put them on the automatic development critical path or
 represent them as automated evidence.
 

@@ -21,11 +21,11 @@ const NAMES = entries.map((entry) => entry.name);
 const DESCRIPTIONS = Object.fromEntries(entries.map((entry) => [entry.name, entry.reason]));
 
 function sourceBody(name) {
-  return fs.readFileSync(path.join(root, 'skills', name, 'SKILL.md'), 'utf8')
+  return removeRelationshipAnnotations(fs.readFileSync(path.join(root, 'skills', name, 'SKILL.md'), 'utf8')
     .replace(/\r\n/g, '\n')
     .replace(/^---\n[\s\S]*?\n---\n?/, '')
     .replace(/^\n?<!--[\s\S]*?-->\n?/, '')
-    .replace(/^\n+/, '');
+    .replace(/^\n+/, ''));
 }
 
 function render(name) {
@@ -61,6 +61,22 @@ function copyResources(name) {
   }
 }
 
+function removeRelationshipAnnotations(source) {
+  let fence = null;
+  return source.split(/(^ {0,3}(?:`{3,}|~{3,})[^\n]*(?:\n|$))/mu).map(part => {
+    const delimiter = part.match(/^ {0,3}(`{3,}|~{3,})/u)?.[1];
+    if (delimiter) {
+      if (fence === null) fence = delimiter;
+      else if (delimiter[0] === fence[0] && delimiter.length >= fence.length) fence = null;
+      return part;
+    }
+    return fence !== null ? part : part.replace(
+      /^\s*(?:\/\/|#|<!--)?\s*Traceability:\s*(?:implements|supports|verifies)\s+[A-Z][A-Z0-9-]*(?:\s*-->)?\s*\n/gmu,
+      '',
+    );
+  }).join('');
+}
+
 function stripTraceabilityAnnotations(target) {
   const stat = fs.statSync(target);
   if (stat.isDirectory()) {
@@ -70,10 +86,7 @@ function stripTraceabilityAnnotations(target) {
     return;
   }
   const source = fs.readFileSync(target, 'utf8');
-  const stripped = source.replace(
-    /^\s*(?:\/\/|#|<!--)?\s*Traceability:\s*(?:implements|supports|verifies)\s+[A-Z][A-Z0-9-]*(?:\s*-->)?\s*\n/gmu,
-    '',
-  );
+  const stripped = removeRelationshipAnnotations(source);
   if (stripped !== source) fs.writeFileSync(target, stripped);
 }
 

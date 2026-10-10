@@ -152,10 +152,6 @@ to those requirements. Invalid membership must fail; never fall back to a
 broader scope.
 
 ## Obligation certificates and completeness
-
-Traceability: supports REQ-OBLIGATION-COMPLETENESS
-Traceability: supports REQ-OBLIGATION-DISCHARGE
-
 For a frozen approved baseline, assess these upstream certificates:
 
 - T1: adequate linked plain-English UAT proves the entire atomic requirement.

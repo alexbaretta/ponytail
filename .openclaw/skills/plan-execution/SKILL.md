@@ -12,9 +12,6 @@ Licensed under the MIT License. See LICENSE in the project root.
 -->
 
 # Plan Execution
-
-Traceability: supports REQ-ISSUE-REQUIREMENT-ACTIVATION
-
 Manage durable project work without depending on chat history, one Git branch,
 or one repository. The host project's agent configuration supplies paths,
 commands, repository ownership, commit conventions, and additional gates.
@@ -23,16 +20,6 @@ Shared terms use the [Ponytail glossary](references/glossary.md). This resource
 owns short definitions; detailed execution contracts remain in this skill.
 
 ## Obligation-centered acceptance
-
-Traceability: supports REQ-OBLIGATION-IDENTITY
-Traceability: supports REQ-OBLIGATION-DISCHARGE
-Traceability: supports REQ-OBLIGATION-ASSIGNMENT
-Traceability: supports REQ-OBLIGATION-PRIORITY
-Traceability: supports REQ-OBLIGATION-TRANSITIONS
-Traceability: supports REQ-OBLIGATION-FRESHNESS
-Traceability: supports REQ-OBLIGATION-COMPATIBILITY
-Traceability: supports REQ-REPAIR-PLAN-STARTING-GATE
-
 Newly activated plans adopt obligations as durable planning, assignment and
 acceptance objects once the project configures implemented obligation operations.
 Until then, preserve the canonical selectors below and record pending adoption;
@@ -108,6 +95,14 @@ cannot discharge obligations; preserve superseded work and its rationale.
 Strict descent in `N^6` is well-founded but reaching zero additionally requires
 reachable authorized repairs, finite preparation and controlled disturbances.
 Never claim unconditional convergence or substitute a finite weighted scalar.
+For adopted plans, run the configured obligation selector first. Invoke portable
+subordinate selection as `ready-tasklets.js <sprint.md> [last-id] --obligations
+<configured-document> --root <repository-root>`. A V3 adopted plan cannot silently
+use the bare legacy selector. The host's existing operations expose the frozen
+responsibility lease and current metrics. Renew responsibility for a retained
+idle worker only after current-revision and fresh idle evidence; preserve prior
+lease IDs and fields. A bounded no-edit assessment needs no invented tasklet.
+
 ## Host Configuration Contract
 
 Use the project-local agent instructions already in context. They should
@@ -338,7 +333,14 @@ Before requesting approval to start a plan:
 A plan may not start while a known question is open. Approval is explicit; do
 not infer it from discussion, urgency, or approval of a different plan. A
 failing or unavailable required starting-checkpoint test also prevents the
-plan from starting. Record tests that inherently require a human participant as manual
+plan from starting, except for a reproduced pre-existing failure expressly owned
+by the approved repair objective. Before kickoff, record its exact failing
+selection and evidence, governing requirement, unresolved obligation and bounded
+repair scope. Admit only that declared existing repair failure; unrelated,
+unplanned or newly introduced failures still block. Never enroll another failing
+selection through blanket plan approval. The admitted failure remains unresolved
+and prevents final acceptance until repaired; never weaken assertions or label
+the whole repository green while it remains red. Record tests that inherently require a human participant as manual
 acceptance; do not put them on the automatic development critical path or
 represent them as automated evidence.
 
@@ -438,9 +440,6 @@ that this can override restrictive rules managed by an administrator.
 ## Approval And Scope Growth
 
 ### Fast plan input
-
-Traceability: supports REQ-PLAN-INPUT-QUEUE
-
 When the host provides `ponytail plan-input`, treat each campaign-scoped queue
 as the fast input queue in front of that campaign's sprint and tasklet
 selection. Every campaign has exactly one campaign coordinator. Only that

@@ -12,9 +12,6 @@ Licensed under the MIT License. See LICENSE in the project root.
 -->
 
 # Worktree Lifecycle
-
-Traceability: supports REQ-WORKER-WORKTREE-RETENTION
-
 Treat every agent-created worktree as a resource with an explicit owner and
 disposition. Record its repository, physical root, Git registration, task or
 agent owner, creation purpose, and project-local resources when it is created

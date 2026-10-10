@@ -149,3 +149,13 @@ test('standalone and planned issue execution share the implementation activation
   assert.match(userAcceptanceTesting, /merely planning an issue does not\n+incorporate a requirement and must not create UAT coverage/);
   assert.match(requirementsTraceability, /Issue intake alone never creates a requirement ID or an `introduces`\n+relationship/);
 });
+
+// Traceability: verifies REQ-REPAIR-PLAN-STARTING-GATE
+test('starting policy admits only expressly owned reproduced failures and preserves final gates', () => {
+  const policy = fs.readFileSync(path.join(__dirname, '..', 'skills/plan-execution/SKILL.md'), 'utf8');
+  assert.match(policy, /reproduced pre-existing failure expressly owned\s+by the approved repair objective/u);
+  assert.match(policy, /Before kickoff, record its exact failing\s+selection and evidence, governing requirement, unresolved obligation and bounded\s+repair scope/u);
+  assert.match(policy, /unrelated,\s+unplanned or newly introduced failures still block/u);
+  assert.match(policy, /failure remains unresolved\s+and prevents final acceptance until repaired/u);
+  assert.match(policy, /never weaken assertions/u);
+});

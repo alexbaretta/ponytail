@@ -12,9 +12,6 @@ Licensed under the MIT License. See LICENSE in the project root.
 -->
 
 # Requirements
-
-Traceability: supports REQ-ISSUE-REQUIREMENT-ACTIVATION
-
 Maintain the human-language description of what the project must do in its
 configured requirements root, by default `pm/requirements`. Aim for complete
 coverage of intended behavior over time. Do not invent requirements to fill
@@ -31,10 +28,6 @@ elegant, uniform, extensible, or future-proof.
 ## Baselines and atomic requirements
 
 Shared terms use the [Ponytail glossary](../plan-execution/references/glossary.md).
-
-Traceability: supports REQ-OBLIGATION-BASELINE
-Traceability: supports REQ-OBLIGATION-COMPLETENESS
-
 For obligation execution, freeze selected approved IDs, canonical sources,
 meanings and exact input identities. A scope move, deferral or decomposition
 cannot remove an approved responsibility. Unknown coverage remains unresolved.
