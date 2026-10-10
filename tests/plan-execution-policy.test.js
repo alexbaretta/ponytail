@@ -27,7 +27,7 @@ test('plan execution serializes fast input before selector-based resumption', ()
 test('campaign policy requires repository inventory and V2 direct dependencies', () => {
   const policy = fs.readFileSync(path.join(__dirname, '..', 'skills', 'plan-execution', 'SKILL.md'), 'utf8');
   const generated = fs.readFileSync(path.join(__dirname, '..', '.openclaw', 'skills', 'plan-execution', 'SKILL.md'), 'utf8');
-  assert.match(policy, /Writers emit exactly `schemaVersion`, `id`,\n`parent_plan_id`, and `depends_on`/);
+  assert.match(policy, /Legacy writers emit exactly `schemaVersion`, `id`,\n`parent_plan_id`, and `depends_on`/);
   assert.match(policy, /ponytail campaign validate --all \[--json\]/);
   assert.match(policy, /no campaign block as unmanaged legacy data without inferred\nmembership regardless of its location/);
   assert.match(policy, /managed plan names an unmarked\nplan as its direct parent or dependency/);

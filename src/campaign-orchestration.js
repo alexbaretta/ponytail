@@ -538,6 +538,8 @@ function parseCampaignJson(text) {
   });
 }
 
+// Traceability: implements REQ-OBLIGATION-ASSIGNMENT
+// Traceability: implements REQ-OBLIGATION-IDENTITY
 function readObligationAssignmentV1(value) {
   exactKeys(value, ['id', 'predecessorBindingId', 'assignmentId', 'documentPath', 'scopeId', 'baselineId', 'predecessorId', 'revision', 'obligationIds', 'taskletIds', 'plannedPaths'], 'obligation assignment');
   for (const field of ['id', 'assignmentId', 'documentPath', 'scopeId', 'baselineId', 'revision']) if (typeof value[field] !== 'string' || !value[field]) fail('CAMPAIGN_OBLIGATION_BINDING', `binding ${field} is required`);
@@ -549,6 +551,8 @@ function readObligationAssignmentV1(value) {
   return value;
 }
 
+// Traceability: implements REQ-OBLIGATION-ASSIGNMENT
+// Traceability: implements REQ-OBLIGATION-COMPATIBILITY
 function readLedgerV9(value, file = 'campaign ledger') {
   const { obligationAssignments, ...previous } = value;
   if (value.schemaVersion !== 9 || !Array.isArray(obligationAssignments)) fail('CAMPAIGN_ORCHESTRATION_VERSION', 'expected campaign ledger V9');
@@ -576,6 +580,8 @@ function adoptedObligationState(graph, root) {
 const CampaignLedgerReaders = Object.freeze({ V1: readLedgerV1, V2: readLedgerV2, V3: readLedgerV3, V4: readLedgerV4, V5: readLedgerV5, V6: readLedgerV6, V7: readLedgerV7, V8: readLedgerV8, V9: readLedgerV9 });
 const CampaignHostObservationReaders = Object.freeze({ V1: readHostObservationV1 });
 const CampaignWorkerBindingReaders = Object.freeze({ V1: readWorkerBindingsV1, V2: readWorkerBindingsV2 });
+// Traceability: implements REQ-OBLIGATION-ASSIGNMENT
+// Traceability: implements REQ-OBLIGATION-COMPATIBILITY
 function readWorkerDeliveriesV2(value, file = 'campaign worker deliveries') {
   if (value.schemaVersion !== 2 || !Array.isArray(value.deliveries)) fail('CAMPAIGN_ORCHESTRATION_VERSION', 'expected worker deliveries V2');
   const deliveries = value.deliveries.map(delivery => {
@@ -878,6 +884,8 @@ function readObligationProjection(value) {
   return value;
 }
 
+// Traceability: implements REQ-OBLIGATION-PRIORITY
+// Traceability: implements REQ-OBLIGATION-COMPATIBILITY
 function readStatusV11(value) {
   const { obligations, obligationAssignments, ...previous } = value;
   readStatusV10({ ...previous, schemaVersion: 10 });
@@ -887,6 +895,8 @@ function readStatusV11(value) {
   return value;
 }
 
+// Traceability: implements REQ-OBLIGATION-PRIORITY
+// Traceability: implements REQ-OBLIGATION-COMPATIBILITY
 function readReadyActionsV8(value) {
   const { obligations, obligationAssignments, ...previous } = value;
   const normalized = readReadyActionsV7({ ...previous, schemaVersion: 7 });
@@ -1124,6 +1134,7 @@ function writeWorkerDeliveries(repositoryRoot, campaignId, deliveries, environme
   return value;
 }
 
+// Traceability: implements REQ-OBLIGATION-ASSIGNMENT
 function recordWorkerDelivery(repositoryRoot, campaignId, assignment, result, environment = process.env) {
   const ledger = readLedger(repositoryRoot, campaignId, environment);
   const obligation = ledger.obligationAssignments.findLast(binding => binding.assignmentId === assignment.id) ?? null;
@@ -1621,6 +1632,7 @@ function writeLedger(file, ledger) {
   fs.renameSync(temporary, file);
 }
 
+// Traceability: implements REQ-OBLIGATION-TRANSITIONS
 function withLedgerLock(repositoryRoot, campaignId, environment, operation) {
   const file = ledgerPath(repositoryRoot, campaignId, environment);
   const lock = `${file}.lock`;
@@ -2437,6 +2449,8 @@ function createObligationAssignment(graph, ledger, assignment) {
   return binding;
 }
 
+// Traceability: implements REQ-OBLIGATION-ASSIGNMENT
+// Traceability: implements REQ-OBLIGATION-IDENTITY
 function renewObligationAssignment(graph, ledger, assignmentId, environment) {
   if (environment.PONYTAIL_SESSION_ID !== ledger.coordinatorSessionId) fail('CAMPAIGN_COORDINATOR_REQUIRED', 'only the coordinator may renew a responsibility lease');
   const assignment = ledger.assignments.find(item => item.id === assignmentId && item.state !== 'ARCHIVED');

@@ -22,7 +22,7 @@ owns short definitions; detailed execution contracts remain in this skill.
 ## Obligation-centered acceptance
 Newly activated plans adopt obligations as durable planning, assignment and
 acceptance objects once the project configures implemented obligation operations.
-Until then, preserve the canonical selectors below and record pending adoption;
+Projects without those configured operations preserve the canonical legacy selectors below;
 never invent an unavailable command. Existing plans require explicitly scoped
 migration. Keep historical physical readers and their meanings unchanged.
 
@@ -685,7 +685,7 @@ ordinary plan execution neither loads nor requires its dispatch protocol.
 
 Every newly drafted or updated managed plan contains exactly one
 `ponytail-plan-campaign` JSON metadata block. The V1 write format has been
-superseded by V2. Writers emit exactly `schemaVersion`, `id`,
+superseded by V2 for legacy plans. Legacy writers emit exactly `schemaVersion`, `id`,
 `parent_plan_id`, and `depends_on`. A campaign root writes a null parent; every
 descendant writes its one direct parent plan ID. `depends_on` contains only
 authored direct plan dependencies and does not duplicate parentage. Derive
@@ -694,6 +694,15 @@ not author child lists, reverse dependencies, duplicate lifecycle state, or
 issue IDs in campaign metadata. Lifecycle comes only from the host's configured
 status directory. Readers continue to accept immutable V1 records, whose
 normalized direct dependencies are empty.
+
+For a project configuring implemented obligation operations, new activated plans
+write V3 metadata: the V2 fields above plus one repository-relative
+`obligation_document` pointing to the owning canonical document. All campaign
+members use the root pointer. Explicitly migrated plans retain original IDs and
+assess certificates; never derive satisfaction from DONE. Historical V1/V2 readers
+remain available. The coordinator runs configured obligation status/accept/assign
+operations; worker delivery proposes evidence against its frozen lease. Publication
+validates the predecessor and authority under existing coordinator serialization.
 
 Encode every hard whole-plan dispatch prerequisite in `depends_on`, including
 one described in a sprint's dispatch gate. For V2 plans, a `Dispatch only after`

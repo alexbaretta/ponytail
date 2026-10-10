@@ -340,6 +340,7 @@ function selectObligationTasklets(graph, statuses, derived, lastTasklet, obligat
   if (typeof planId !== 'string' || !planId) fail('obligation selection requires its owning plan ID');
   if (!obligation || !obligation.acceptanceGroups.includes(planId) || obligation.execution.sprintId !== graph.sprint) return { ...selection, taskletIds: [], plannedPaths: [] };
   const allowed = new Set(obligation.execution.taskletIds);
+  if (allowed.size === 0) return { ...selection, taskletIds: [], plannedPaths: [] };
   for (const id of allowed) {
     const tasklet = graph.tasklets.get(id);
     if (!tasklet) fail(`unknown obligation tasklet: ${id}`);

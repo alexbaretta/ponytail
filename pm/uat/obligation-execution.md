@@ -18,15 +18,29 @@ Traceability: verifies REQ-PONYTAIL-GLOSSARY
   conditions, canonical artifact references and reproducible evidence.
 - **Profile:** Local automated module/CLI proof; no production or cloud effects.
 
-1. Prepare the applicable valid and invalid cases described by the acceptance
-   condition using the same canonical record/selection path as ordinary work.
-2. Perform the complete operation through that path and inspect returned state,
-   evidence and preserved history against each clause of the acceptance condition.
-3. Verify every stated rejection leaves accepted state unchanged and that each
-   successful operation preserves authority, canonical relationships and history.
+1. Create the owned Git-backed adopted fixture, declared six inventories and
+   exact worker paths. Resolve canonical/source-generated glossary definitions;
+   mark edits DONE and observe that the CLI still reports unresolved obligations.
+2. Dispatch through the existing ledger, commit a permitted change, and deliver
+   against its lease. Observe unchanged acceptance; reject a mismatched path.
+3. Publish bounded neutral preparation through `campaign obligation-accept`;
+   reject repeated preparation. Assess T1, discover an integration responsibility,
+   and publish productive downstream growth. Reject the obsolete predecessor.
+4. Inspect each earliest selection, assess complete inventories and discovered
+   responsibilities without an edit, and publish until status reports zero.
+5. Change manifested assessment evidence. Observe the original IDs reopened;
+   reject productive publication before disturbance and reject hidden membership.
+6. Reject an unauthorized baseline meaning edit. Activate the declared successor
+   through rebaseline; observe retained IDs, predecessor and unresolved history.
+   Reject duplicate obligation identity and verify rejected writes preserve bytes.
 
-Execution evidence remains pending until the linked executable selection actually
-implements these actions and assertions. No future test is credited as coverage.
+Executable Arc: `Suite obligation execution: Arc coordinated responsibility
+lifecycle through real CLI` in `tests/obligation-execution.integration.test.js`.
+Run `node --test tests/obligation-execution.integration.test.js`; each named Step
+is independently reported. This complete Arc proves each linked condition with
+its applicable observations; unit proofs additionally cover failure/skip/target,
+authority, dependency and immutable historical physical-reader boundaries.
+Final execution evidence is recorded in the approved plan acceptance record.
 
 ## OBL-IDENTITY
 
@@ -39,15 +53,29 @@ Traceability: verifies REQ-OBLIGATION-IDENTITY
   conditions, canonical artifact references and reproducible evidence.
 - **Profile:** Local automated module/CLI proof; no production or cloud effects.
 
-1. Prepare the applicable valid and invalid cases described by the acceptance
-   condition using the same canonical record/selection path as ordinary work.
-2. Perform the complete operation through that path and inspect returned state,
-   evidence and preserved history against each clause of the acceptance condition.
-3. Verify every stated rejection leaves accepted state unchanged and that each
-   successful operation preserves authority, canonical relationships and history.
+1. Create the owned Git-backed adopted fixture, declared six inventories and
+   exact worker paths. Resolve canonical/source-generated glossary definitions;
+   mark edits DONE and observe that the CLI still reports unresolved obligations.
+2. Dispatch through the existing ledger, commit a permitted change, and deliver
+   against its lease. Observe unchanged acceptance; reject a mismatched path.
+3. Publish bounded neutral preparation through `campaign obligation-accept`;
+   reject repeated preparation. Assess T1, discover an integration responsibility,
+   and publish productive downstream growth. Reject the obsolete predecessor.
+4. Inspect each earliest selection, assess complete inventories and discovered
+   responsibilities without an edit, and publish until status reports zero.
+5. Change manifested assessment evidence. Observe the original IDs reopened;
+   reject productive publication before disturbance and reject hidden membership.
+6. Reject an unauthorized baseline meaning edit. Activate the declared successor
+   through rebaseline; observe retained IDs, predecessor and unresolved history.
+   Reject duplicate obligation identity and verify rejected writes preserve bytes.
 
-Execution evidence remains pending until the linked executable selection actually
-implements these actions and assertions. No future test is credited as coverage.
+Executable Arc: `Suite obligation execution: Arc coordinated responsibility
+lifecycle through real CLI` in `tests/obligation-execution.integration.test.js`.
+Run `node --test tests/obligation-execution.integration.test.js`; each named Step
+is independently reported. This complete Arc proves each linked condition with
+its applicable observations; unit proofs additionally cover failure/skip/target,
+authority, dependency and immutable historical physical-reader boundaries.
+Final execution evidence is recorded in the approved plan acceptance record.
 
 ## OBL-DISCHARGE
 
@@ -60,15 +88,29 @@ Traceability: verifies REQ-OBLIGATION-DISCHARGE
   conditions, canonical artifact references and reproducible evidence.
 - **Profile:** Local automated module/CLI proof; no production or cloud effects.
 
-1. Prepare the applicable valid and invalid cases described by the acceptance
-   condition using the same canonical record/selection path as ordinary work.
-2. Perform the complete operation through that path and inspect returned state,
-   evidence and preserved history against each clause of the acceptance condition.
-3. Verify every stated rejection leaves accepted state unchanged and that each
-   successful operation preserves authority, canonical relationships and history.
+1. Create the owned Git-backed adopted fixture, declared six inventories and
+   exact worker paths. Resolve canonical/source-generated glossary definitions;
+   mark edits DONE and observe that the CLI still reports unresolved obligations.
+2. Dispatch through the existing ledger, commit a permitted change, and deliver
+   against its lease. Observe unchanged acceptance; reject a mismatched path.
+3. Publish bounded neutral preparation through `campaign obligation-accept`;
+   reject repeated preparation. Assess T1, discover an integration responsibility,
+   and publish productive downstream growth. Reject the obsolete predecessor.
+4. Inspect each earliest selection, assess complete inventories and discovered
+   responsibilities without an edit, and publish until status reports zero.
+5. Change manifested assessment evidence. Observe the original IDs reopened;
+   reject productive publication before disturbance and reject hidden membership.
+6. Reject an unauthorized baseline meaning edit. Activate the declared successor
+   through rebaseline; observe retained IDs, predecessor and unresolved history.
+   Reject duplicate obligation identity and verify rejected writes preserve bytes.
 
-Execution evidence remains pending until the linked executable selection actually
-implements these actions and assertions. No future test is credited as coverage.
+Executable Arc: `Suite obligation execution: Arc coordinated responsibility
+lifecycle through real CLI` in `tests/obligation-execution.integration.test.js`.
+Run `node --test tests/obligation-execution.integration.test.js`; each named Step
+is independently reported. This complete Arc proves each linked condition with
+its applicable observations; unit proofs additionally cover failure/skip/target,
+authority, dependency and immutable historical physical-reader boundaries.
+Final execution evidence is recorded in the approved plan acceptance record.
 
 ## OBL-ASSIGNMENT
 
@@ -81,15 +123,29 @@ Traceability: verifies REQ-OBLIGATION-ASSIGNMENT
   conditions, canonical artifact references and reproducible evidence.
 - **Profile:** Local automated module/CLI proof; no production or cloud effects.
 
-1. Prepare the applicable valid and invalid cases described by the acceptance
-   condition using the same canonical record/selection path as ordinary work.
-2. Perform the complete operation through that path and inspect returned state,
-   evidence and preserved history against each clause of the acceptance condition.
-3. Verify every stated rejection leaves accepted state unchanged and that each
-   successful operation preserves authority, canonical relationships and history.
+1. Create the owned Git-backed adopted fixture, declared six inventories and
+   exact worker paths. Resolve canonical/source-generated glossary definitions;
+   mark edits DONE and observe that the CLI still reports unresolved obligations.
+2. Dispatch through the existing ledger, commit a permitted change, and deliver
+   against its lease. Observe unchanged acceptance; reject a mismatched path.
+3. Publish bounded neutral preparation through `campaign obligation-accept`;
+   reject repeated preparation. Assess T1, discover an integration responsibility,
+   and publish productive downstream growth. Reject the obsolete predecessor.
+4. Inspect each earliest selection, assess complete inventories and discovered
+   responsibilities without an edit, and publish until status reports zero.
+5. Change manifested assessment evidence. Observe the original IDs reopened;
+   reject productive publication before disturbance and reject hidden membership.
+6. Reject an unauthorized baseline meaning edit. Activate the declared successor
+   through rebaseline; observe retained IDs, predecessor and unresolved history.
+   Reject duplicate obligation identity and verify rejected writes preserve bytes.
 
-Execution evidence remains pending until the linked executable selection actually
-implements these actions and assertions. No future test is credited as coverage.
+Executable Arc: `Suite obligation execution: Arc coordinated responsibility
+lifecycle through real CLI` in `tests/obligation-execution.integration.test.js`.
+Run `node --test tests/obligation-execution.integration.test.js`; each named Step
+is independently reported. This complete Arc proves each linked condition with
+its applicable observations; unit proofs additionally cover failure/skip/target,
+authority, dependency and immutable historical physical-reader boundaries.
+Final execution evidence is recorded in the approved plan acceptance record.
 
 ## OBL-PRIORITY
 
@@ -102,15 +158,29 @@ Traceability: verifies REQ-OBLIGATION-PRIORITY
   conditions, canonical artifact references and reproducible evidence.
 - **Profile:** Local automated module/CLI proof; no production or cloud effects.
 
-1. Prepare the applicable valid and invalid cases described by the acceptance
-   condition using the same canonical record/selection path as ordinary work.
-2. Perform the complete operation through that path and inspect returned state,
-   evidence and preserved history against each clause of the acceptance condition.
-3. Verify every stated rejection leaves accepted state unchanged and that each
-   successful operation preserves authority, canonical relationships and history.
+1. Create the owned Git-backed adopted fixture, declared six inventories and
+   exact worker paths. Resolve canonical/source-generated glossary definitions;
+   mark edits DONE and observe that the CLI still reports unresolved obligations.
+2. Dispatch through the existing ledger, commit a permitted change, and deliver
+   against its lease. Observe unchanged acceptance; reject a mismatched path.
+3. Publish bounded neutral preparation through `campaign obligation-accept`;
+   reject repeated preparation. Assess T1, discover an integration responsibility,
+   and publish productive downstream growth. Reject the obsolete predecessor.
+4. Inspect each earliest selection, assess complete inventories and discovered
+   responsibilities without an edit, and publish until status reports zero.
+5. Change manifested assessment evidence. Observe the original IDs reopened;
+   reject productive publication before disturbance and reject hidden membership.
+6. Reject an unauthorized baseline meaning edit. Activate the declared successor
+   through rebaseline; observe retained IDs, predecessor and unresolved history.
+   Reject duplicate obligation identity and verify rejected writes preserve bytes.
 
-Execution evidence remains pending until the linked executable selection actually
-implements these actions and assertions. No future test is credited as coverage.
+Executable Arc: `Suite obligation execution: Arc coordinated responsibility
+lifecycle through real CLI` in `tests/obligation-execution.integration.test.js`.
+Run `node --test tests/obligation-execution.integration.test.js`; each named Step
+is independently reported. This complete Arc proves each linked condition with
+its applicable observations; unit proofs additionally cover failure/skip/target,
+authority, dependency and immutable historical physical-reader boundaries.
+Final execution evidence is recorded in the approved plan acceptance record.
 
 ## OBL-TRANSITIONS
 
@@ -123,15 +193,29 @@ Traceability: verifies REQ-OBLIGATION-TRANSITIONS
   conditions, canonical artifact references and reproducible evidence.
 - **Profile:** Local automated module/CLI proof; no production or cloud effects.
 
-1. Prepare the applicable valid and invalid cases described by the acceptance
-   condition using the same canonical record/selection path as ordinary work.
-2. Perform the complete operation through that path and inspect returned state,
-   evidence and preserved history against each clause of the acceptance condition.
-3. Verify every stated rejection leaves accepted state unchanged and that each
-   successful operation preserves authority, canonical relationships and history.
+1. Create the owned Git-backed adopted fixture, declared six inventories and
+   exact worker paths. Resolve canonical/source-generated glossary definitions;
+   mark edits DONE and observe that the CLI still reports unresolved obligations.
+2. Dispatch through the existing ledger, commit a permitted change, and deliver
+   against its lease. Observe unchanged acceptance; reject a mismatched path.
+3. Publish bounded neutral preparation through `campaign obligation-accept`;
+   reject repeated preparation. Assess T1, discover an integration responsibility,
+   and publish productive downstream growth. Reject the obsolete predecessor.
+4. Inspect each earliest selection, assess complete inventories and discovered
+   responsibilities without an edit, and publish until status reports zero.
+5. Change manifested assessment evidence. Observe the original IDs reopened;
+   reject productive publication before disturbance and reject hidden membership.
+6. Reject an unauthorized baseline meaning edit. Activate the declared successor
+   through rebaseline; observe retained IDs, predecessor and unresolved history.
+   Reject duplicate obligation identity and verify rejected writes preserve bytes.
 
-Execution evidence remains pending until the linked executable selection actually
-implements these actions and assertions. No future test is credited as coverage.
+Executable Arc: `Suite obligation execution: Arc coordinated responsibility
+lifecycle through real CLI` in `tests/obligation-execution.integration.test.js`.
+Run `node --test tests/obligation-execution.integration.test.js`; each named Step
+is independently reported. This complete Arc proves each linked condition with
+its applicable observations; unit proofs additionally cover failure/skip/target,
+authority, dependency and immutable historical physical-reader boundaries.
+Final execution evidence is recorded in the approved plan acceptance record.
 
 ## OBL-COMPLETENESS
 
@@ -144,15 +228,29 @@ Traceability: verifies REQ-OBLIGATION-COMPLETENESS
   conditions, canonical artifact references and reproducible evidence.
 - **Profile:** Local automated module/CLI proof; no production or cloud effects.
 
-1. Prepare the applicable valid and invalid cases described by the acceptance
-   condition using the same canonical record/selection path as ordinary work.
-2. Perform the complete operation through that path and inspect returned state,
-   evidence and preserved history against each clause of the acceptance condition.
-3. Verify every stated rejection leaves accepted state unchanged and that each
-   successful operation preserves authority, canonical relationships and history.
+1. Create the owned Git-backed adopted fixture, declared six inventories and
+   exact worker paths. Resolve canonical/source-generated glossary definitions;
+   mark edits DONE and observe that the CLI still reports unresolved obligations.
+2. Dispatch through the existing ledger, commit a permitted change, and deliver
+   against its lease. Observe unchanged acceptance; reject a mismatched path.
+3. Publish bounded neutral preparation through `campaign obligation-accept`;
+   reject repeated preparation. Assess T1, discover an integration responsibility,
+   and publish productive downstream growth. Reject the obsolete predecessor.
+4. Inspect each earliest selection, assess complete inventories and discovered
+   responsibilities without an edit, and publish until status reports zero.
+5. Change manifested assessment evidence. Observe the original IDs reopened;
+   reject productive publication before disturbance and reject hidden membership.
+6. Reject an unauthorized baseline meaning edit. Activate the declared successor
+   through rebaseline; observe retained IDs, predecessor and unresolved history.
+   Reject duplicate obligation identity and verify rejected writes preserve bytes.
 
-Execution evidence remains pending until the linked executable selection actually
-implements these actions and assertions. No future test is credited as coverage.
+Executable Arc: `Suite obligation execution: Arc coordinated responsibility
+lifecycle through real CLI` in `tests/obligation-execution.integration.test.js`.
+Run `node --test tests/obligation-execution.integration.test.js`; each named Step
+is independently reported. This complete Arc proves each linked condition with
+its applicable observations; unit proofs additionally cover failure/skip/target,
+authority, dependency and immutable historical physical-reader boundaries.
+Final execution evidence is recorded in the approved plan acceptance record.
 
 ## OBL-BASELINE
 
@@ -165,15 +263,29 @@ Traceability: verifies REQ-OBLIGATION-BASELINE
   conditions, canonical artifact references and reproducible evidence.
 - **Profile:** Local automated module/CLI proof; no production or cloud effects.
 
-1. Prepare the applicable valid and invalid cases described by the acceptance
-   condition using the same canonical record/selection path as ordinary work.
-2. Perform the complete operation through that path and inspect returned state,
-   evidence and preserved history against each clause of the acceptance condition.
-3. Verify every stated rejection leaves accepted state unchanged and that each
-   successful operation preserves authority, canonical relationships and history.
+1. Create the owned Git-backed adopted fixture, declared six inventories and
+   exact worker paths. Resolve canonical/source-generated glossary definitions;
+   mark edits DONE and observe that the CLI still reports unresolved obligations.
+2. Dispatch through the existing ledger, commit a permitted change, and deliver
+   against its lease. Observe unchanged acceptance; reject a mismatched path.
+3. Publish bounded neutral preparation through `campaign obligation-accept`;
+   reject repeated preparation. Assess T1, discover an integration responsibility,
+   and publish productive downstream growth. Reject the obsolete predecessor.
+4. Inspect each earliest selection, assess complete inventories and discovered
+   responsibilities without an edit, and publish until status reports zero.
+5. Change manifested assessment evidence. Observe the original IDs reopened;
+   reject productive publication before disturbance and reject hidden membership.
+6. Reject an unauthorized baseline meaning edit. Activate the declared successor
+   through rebaseline; observe retained IDs, predecessor and unresolved history.
+   Reject duplicate obligation identity and verify rejected writes preserve bytes.
 
-Execution evidence remains pending until the linked executable selection actually
-implements these actions and assertions. No future test is credited as coverage.
+Executable Arc: `Suite obligation execution: Arc coordinated responsibility
+lifecycle through real CLI` in `tests/obligation-execution.integration.test.js`.
+Run `node --test tests/obligation-execution.integration.test.js`; each named Step
+is independently reported. This complete Arc proves each linked condition with
+its applicable observations; unit proofs additionally cover failure/skip/target,
+authority, dependency and immutable historical physical-reader boundaries.
+Final execution evidence is recorded in the approved plan acceptance record.
 
 ## OBL-FRESHNESS
 
@@ -186,15 +298,29 @@ Traceability: verifies REQ-OBLIGATION-FRESHNESS
   conditions, canonical artifact references and reproducible evidence.
 - **Profile:** Local automated module/CLI proof; no production or cloud effects.
 
-1. Prepare the applicable valid and invalid cases described by the acceptance
-   condition using the same canonical record/selection path as ordinary work.
-2. Perform the complete operation through that path and inspect returned state,
-   evidence and preserved history against each clause of the acceptance condition.
-3. Verify every stated rejection leaves accepted state unchanged and that each
-   successful operation preserves authority, canonical relationships and history.
+1. Create the owned Git-backed adopted fixture, declared six inventories and
+   exact worker paths. Resolve canonical/source-generated glossary definitions;
+   mark edits DONE and observe that the CLI still reports unresolved obligations.
+2. Dispatch through the existing ledger, commit a permitted change, and deliver
+   against its lease. Observe unchanged acceptance; reject a mismatched path.
+3. Publish bounded neutral preparation through `campaign obligation-accept`;
+   reject repeated preparation. Assess T1, discover an integration responsibility,
+   and publish productive downstream growth. Reject the obsolete predecessor.
+4. Inspect each earliest selection, assess complete inventories and discovered
+   responsibilities without an edit, and publish until status reports zero.
+5. Change manifested assessment evidence. Observe the original IDs reopened;
+   reject productive publication before disturbance and reject hidden membership.
+6. Reject an unauthorized baseline meaning edit. Activate the declared successor
+   through rebaseline; observe retained IDs, predecessor and unresolved history.
+   Reject duplicate obligation identity and verify rejected writes preserve bytes.
 
-Execution evidence remains pending until the linked executable selection actually
-implements these actions and assertions. No future test is credited as coverage.
+Executable Arc: `Suite obligation execution: Arc coordinated responsibility
+lifecycle through real CLI` in `tests/obligation-execution.integration.test.js`.
+Run `node --test tests/obligation-execution.integration.test.js`; each named Step
+is independently reported. This complete Arc proves each linked condition with
+its applicable observations; unit proofs additionally cover failure/skip/target,
+authority, dependency and immutable historical physical-reader boundaries.
+Final execution evidence is recorded in the approved plan acceptance record.
 
 ## OBL-COMPATIBILITY
 
@@ -207,15 +333,29 @@ Traceability: verifies REQ-OBLIGATION-COMPATIBILITY
   conditions, canonical artifact references and reproducible evidence.
 - **Profile:** Local automated module/CLI proof; no production or cloud effects.
 
-1. Prepare the applicable valid and invalid cases described by the acceptance
-   condition using the same canonical record/selection path as ordinary work.
-2. Perform the complete operation through that path and inspect returned state,
-   evidence and preserved history against each clause of the acceptance condition.
-3. Verify every stated rejection leaves accepted state unchanged and that each
-   successful operation preserves authority, canonical relationships and history.
+1. Create the owned Git-backed adopted fixture, declared six inventories and
+   exact worker paths. Resolve canonical/source-generated glossary definitions;
+   mark edits DONE and observe that the CLI still reports unresolved obligations.
+2. Dispatch through the existing ledger, commit a permitted change, and deliver
+   against its lease. Observe unchanged acceptance; reject a mismatched path.
+3. Publish bounded neutral preparation through `campaign obligation-accept`;
+   reject repeated preparation. Assess T1, discover an integration responsibility,
+   and publish productive downstream growth. Reject the obsolete predecessor.
+4. Inspect each earliest selection, assess complete inventories and discovered
+   responsibilities without an edit, and publish until status reports zero.
+5. Change manifested assessment evidence. Observe the original IDs reopened;
+   reject productive publication before disturbance and reject hidden membership.
+6. Reject an unauthorized baseline meaning edit. Activate the declared successor
+   through rebaseline; observe retained IDs, predecessor and unresolved history.
+   Reject duplicate obligation identity and verify rejected writes preserve bytes.
 
-Execution evidence remains pending until the linked executable selection actually
-implements these actions and assertions. No future test is credited as coverage.
+Executable Arc: `Suite obligation execution: Arc coordinated responsibility
+lifecycle through real CLI` in `tests/obligation-execution.integration.test.js`.
+Run `node --test tests/obligation-execution.integration.test.js`; each named Step
+is independently reported. This complete Arc proves each linked condition with
+its applicable observations; unit proofs additionally cover failure/skip/target,
+authority, dependency and immutable historical physical-reader boundaries.
+Final execution evidence is recorded in the approved plan acceptance record.
 
 ## REPAIR-START
 
@@ -228,13 +368,14 @@ Traceability: verifies REQ-REPAIR-PLAN-STARTING-GATE
   conditions, canonical artifact references and reproducible evidence.
 - **Profile:** Local automated module/CLI proof; no production or cloud effects.
 
-1. Prepare the applicable valid and invalid cases described by the acceptance
-   condition using the same canonical record/selection path as ordinary work.
-2. Perform the complete operation through that path and inspect returned state,
-   evidence and preserved history against each clause of the acceptance condition.
-3. Verify every stated rejection leaves accepted state unchanged and that each
-   successful operation preserves authority, canonical relationships and history.
+1. Inspect the canonical plan-execution starting gate and its generated adapter.
+2. Verify the existing repair exception requires a reproduced pre-existing failure,
+   exact failing selection/evidence, approved requirement, unresolved obligation and
+   bounded repair, all recorded before kickoff.
+3. Verify new/unrelated failures still block and the final acceptance gate remains
+   mandatory. Execute `node --test tests/plan-execution-policy.test.js`; its starting
+   gate case and generated-copy checks independently report these observations.
 
-Execution evidence remains pending until the linked executable selection actually
-implements these actions and assertions. No future test is credited as coverage.
+This instruction-only condition uses the configured policy integration selection;
+its scoped unit disposition does not waive future executable runtime behavior.
 
