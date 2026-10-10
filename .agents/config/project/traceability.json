@@ -565,7 +565,9 @@
     {"class": "implementation", "path": "skills/production-test-boundaries/SKILL.md", "locator": "text"},
     {"class": "unit-test", "path": "tests/obligation-glossary.test.js", "locator": "text"},
     {"class": "issue", "path": "pm/bugs/in_progress/2026-10-10-CHNG-obligation_centered_execution.md", "locator": "text"},
-    {"class": "issue", "path": "pm/bugs/in_progress/2026-10-10-CHNG-repair_plan_starting_gate.md", "locator": "text"}
+    {"class": "issue", "path": "pm/bugs/in_progress/2026-10-10-CHNG-repair_plan_starting_gate.md", "locator": "text"},
+    {"class": "implementation", "path": "skills/plan-execution/scripts/obligations.js", "locator": "text"},
+    {"class": "unit-test", "path": "tests/obligations.test.js", "locator": "text"}
   ],
   "entities": [],
   "generatedArtifacts": [
@@ -591,7 +593,8 @@
     {"path": ".openclaw/skills/user-acceptance-testing/SKILL.md", "sourcePath": "skills/user-acceptance-testing/SKILL.md"},
     {"path": ".openclaw/skills/issue-tracking/SKILL.md", "sourcePath": "skills/issue-tracking/SKILL.md"},
     {"path": ".openclaw/skills/production-test-boundaries/SKILL.md", "sourcePath": "skills/production-test-boundaries/SKILL.md"},
-    {"path": ".openclaw/skills/plan-execution/references/glossary.md", "sourcePath": "skills/plan-execution/references/glossary.md"}
+    {"path": ".openclaw/skills/plan-execution/references/glossary.md", "sourcePath": "skills/plan-execution/references/glossary.md"},
+    {"path": ".openclaw/skills/plan-execution/scripts/obligations.js", "sourcePath": "skills/plan-execution/scripts/obligations.js"}
   ],
   "reverseViewPath": "pm/requirements/traceability.generated.md",
   "typescript": {

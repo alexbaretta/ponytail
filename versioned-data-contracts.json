@@ -3,6 +3,22 @@
   "schemaVersion": 1,
   "families": [
     {
+      "id": "plan-obligation-document",
+      "implementation": {
+        "workspace": "ponytail",
+        "module": "skills/plan-execution/scripts/obligations.js",
+        "readerRegistryExport": "ObligationDocumentReaders"
+      },
+      "currentVersion": "V1",
+      "versions": [
+        "V1"
+      ],
+      "supportedReadVersions": [
+        "V1"
+      ],
+      "supportedDowngradeVersions": []
+    },
+    {
       "id": "requirements-traceability-project-config",
       "implementation": {
         "workspace": "ponytail",

@@ -16,6 +16,8 @@ while project-wide management records remain under `pm/`.
 
 - `skills/` owns canonical reusable skills and the portable Ponytail policy.
   `skills/plan-execution/references/glossary.md` owns shared short definitions.
+  `skills/plan-execution/scripts/obligations.js` owns the portable V1 obligation
+  reader, certificate projection, checkpoint validation and scoped entrypoint.
   Configured obligation documents beside their owning plan/issue own conditions,
   certificate assessments and checkpoint history; campaign members reference the
   root document rather than duplicate it. Assignments remain in their execution

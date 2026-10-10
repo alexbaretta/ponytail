@@ -388,28 +388,37 @@ Requirement: [pm/requirements/obligation-execution.md](obligation-execution.md)
 - implementation: implements [skills/plan-execution/references/glossary.md:8](../../skills/plan-execution/references/glossary.md#L8)
 - unit-test: verifies [tests/obligation-glossary.test.js:14](../../tests/obligation-glossary.test.js#L14)
 - uat: verifies [pm/uat/obligation-execution.md:12](../../pm/uat/obligation-execution.md#L12)
-- plan: plans-implementation [pm/plans/in_progress/2026-10-10-obligation-centered-execution/plan.md:405](../../pm/plans/in_progress/2026-10-10-obligation-centered-execution/plan.md#L405)
-- plan: plans-verification [pm/plans/in_progress/2026-10-10-obligation-centered-execution/plan.md:406](../../pm/plans/in_progress/2026-10-10-obligation-centered-execution/plan.md#L406)
+- plan: plans-implementation [pm/plans/in_progress/2026-10-10-obligation-centered-execution/plan.md:406](../../pm/plans/in_progress/2026-10-10-obligation-centered-execution/plan.md#L406)
+- plan: plans-verification [pm/plans/in_progress/2026-10-10-obligation-centered-execution/plan.md:407](../../pm/plans/in_progress/2026-10-10-obligation-centered-execution/plan.md#L407)
 - issue: introduces [pm/bugs/in_progress/2026-10-10-CHNG-obligation_centered_execution.md:61](../../pm/bugs/in_progress/2026-10-10-CHNG-obligation_centered_execution.md#L61)
 
 ## REQ-OBLIGATION-IDENTITY
 
 Requirement: [pm/requirements/obligation-execution.md](obligation-execution.md)
 
+- implementation: implements [skills/plan-execution/scripts/obligations.js:61](../../skills/plan-execution/scripts/obligations.js#L61)
 - implementation: supports [skills/plan-execution/SKILL.md:31](../../skills/plan-execution/SKILL.md#L31)
+- unit-test: verifies [tests/obligations.test.js:25](../../tests/obligations.test.js#L25)
+- unit-test: verifies [tests/obligations.test.js:289](../../tests/obligations.test.js#L289)
 - uat: verifies [pm/uat/obligation-execution.md:33](../../pm/uat/obligation-execution.md#L33)
-- plan: plans-implementation [pm/plans/in_progress/2026-10-10-obligation-centered-execution/plan.md:408](../../pm/plans/in_progress/2026-10-10-obligation-centered-execution/plan.md#L408)
-- plan: plans-verification [pm/plans/in_progress/2026-10-10-obligation-centered-execution/plan.md:409](../../pm/plans/in_progress/2026-10-10-obligation-centered-execution/plan.md#L409)
+- plan: plans-implementation [pm/plans/in_progress/2026-10-10-obligation-centered-execution/plan.md:409](../../pm/plans/in_progress/2026-10-10-obligation-centered-execution/plan.md#L409)
+- plan: plans-verification [pm/plans/in_progress/2026-10-10-obligation-centered-execution/plan.md:410](../../pm/plans/in_progress/2026-10-10-obligation-centered-execution/plan.md#L410)
 - issue: introduces [pm/bugs/in_progress/2026-10-10-CHNG-obligation_centered_execution.md:62](../../pm/bugs/in_progress/2026-10-10-CHNG-obligation_centered_execution.md#L62)
 
 ## REQ-OBLIGATION-DISCHARGE
 
 Requirement: [pm/requirements/obligation-execution.md](obligation-execution.md)
 
+- implementation: implements [skills/plan-execution/scripts/obligations.js:220](../../skills/plan-execution/scripts/obligations.js#L220)
+- implementation: implements [skills/plan-execution/scripts/obligations.js:305](../../skills/plan-execution/scripts/obligations.js#L305)
 - implementation: supports [skills/plan-execution/SKILL.md:32](../../skills/plan-execution/SKILL.md#L32)
+- unit-test: verifies [tests/obligations.test.js:85](../../tests/obligations.test.js#L85)
+- unit-test: verifies [tests/obligations.test.js:150](../../tests/obligations.test.js#L150)
+- unit-test: verifies [tests/obligations.test.js:211](../../tests/obligations.test.js#L211)
+- unit-test: verifies [tests/obligations.test.js:269](../../tests/obligations.test.js#L269)
 - uat: verifies [pm/uat/obligation-execution.md:54](../../pm/uat/obligation-execution.md#L54)
-- plan: plans-implementation [pm/plans/in_progress/2026-10-10-obligation-centered-execution/plan.md:411](../../pm/plans/in_progress/2026-10-10-obligation-centered-execution/plan.md#L411)
-- plan: plans-verification [pm/plans/in_progress/2026-10-10-obligation-centered-execution/plan.md:412](../../pm/plans/in_progress/2026-10-10-obligation-centered-execution/plan.md#L412)
+- plan: plans-implementation [pm/plans/in_progress/2026-10-10-obligation-centered-execution/plan.md:412](../../pm/plans/in_progress/2026-10-10-obligation-centered-execution/plan.md#L412)
+- plan: plans-verification [pm/plans/in_progress/2026-10-10-obligation-centered-execution/plan.md:413](../../pm/plans/in_progress/2026-10-10-obligation-centered-execution/plan.md#L413)
 - issue: introduces [pm/bugs/in_progress/2026-10-10-CHNG-obligation_centered_execution.md:63](../../pm/bugs/in_progress/2026-10-10-CHNG-obligation_centered_execution.md#L63)
 
 ## REQ-OBLIGATION-ASSIGNMENT
@@ -418,68 +427,97 @@ Requirement: [pm/requirements/obligation-execution.md](obligation-execution.md)
 
 - implementation: supports [skills/plan-execution/SKILL.md:33](../../skills/plan-execution/SKILL.md#L33)
 - uat: verifies [pm/uat/obligation-execution.md:75](../../pm/uat/obligation-execution.md#L75)
-- plan: plans-implementation [pm/plans/in_progress/2026-10-10-obligation-centered-execution/plan.md:414](../../pm/plans/in_progress/2026-10-10-obligation-centered-execution/plan.md#L414)
-- plan: plans-verification [pm/plans/in_progress/2026-10-10-obligation-centered-execution/plan.md:415](../../pm/plans/in_progress/2026-10-10-obligation-centered-execution/plan.md#L415)
+- plan: plans-implementation [pm/plans/in_progress/2026-10-10-obligation-centered-execution/plan.md:415](../../pm/plans/in_progress/2026-10-10-obligation-centered-execution/plan.md#L415)
+- plan: plans-verification [pm/plans/in_progress/2026-10-10-obligation-centered-execution/plan.md:416](../../pm/plans/in_progress/2026-10-10-obligation-centered-execution/plan.md#L416)
 - issue: introduces [pm/bugs/in_progress/2026-10-10-CHNG-obligation_centered_execution.md:64](../../pm/bugs/in_progress/2026-10-10-CHNG-obligation_centered_execution.md#L64)
 
 ## REQ-OBLIGATION-PRIORITY
 
 Requirement: [pm/requirements/obligation-execution.md](obligation-execution.md)
 
+- implementation: implements [skills/plan-execution/scripts/obligations.js:323](../../skills/plan-execution/scripts/obligations.js#L323)
 - implementation: supports [skills/plan-execution/SKILL.md:34](../../skills/plan-execution/SKILL.md#L34)
+- unit-test: verifies [tests/obligations.test.js:179](../../tests/obligations.test.js#L179)
+- unit-test: verifies [tests/obligations.test.js:334](../../tests/obligations.test.js#L334)
 - uat: verifies [pm/uat/obligation-execution.md:96](../../pm/uat/obligation-execution.md#L96)
-- plan: plans-implementation [pm/plans/in_progress/2026-10-10-obligation-centered-execution/plan.md:417](../../pm/plans/in_progress/2026-10-10-obligation-centered-execution/plan.md#L417)
-- plan: plans-verification [pm/plans/in_progress/2026-10-10-obligation-centered-execution/plan.md:418](../../pm/plans/in_progress/2026-10-10-obligation-centered-execution/plan.md#L418)
+- plan: plans-implementation [pm/plans/in_progress/2026-10-10-obligation-centered-execution/plan.md:418](../../pm/plans/in_progress/2026-10-10-obligation-centered-execution/plan.md#L418)
+- plan: plans-verification [pm/plans/in_progress/2026-10-10-obligation-centered-execution/plan.md:419](../../pm/plans/in_progress/2026-10-10-obligation-centered-execution/plan.md#L419)
 - issue: introduces [pm/bugs/in_progress/2026-10-10-CHNG-obligation_centered_execution.md:65](../../pm/bugs/in_progress/2026-10-10-CHNG-obligation_centered_execution.md#L65)
 
 ## REQ-OBLIGATION-TRANSITIONS
 
 Requirement: [pm/requirements/obligation-execution.md](obligation-execution.md)
 
+- implementation: implements [skills/plan-execution/scripts/obligations.js:313](../../skills/plan-execution/scripts/obligations.js#L313)
+- implementation: implements [skills/plan-execution/scripts/obligations.js:410](../../skills/plan-execution/scripts/obligations.js#L410)
 - implementation: supports [skills/plan-execution/SKILL.md:35](../../skills/plan-execution/SKILL.md#L35)
+- unit-test: verifies [tests/obligations.test.js:168](../../tests/obligations.test.js#L168)
+- unit-test: verifies [tests/obligations.test.js:209](../../tests/obligations.test.js#L209)
+- unit-test: verifies [tests/obligations.test.js:236](../../tests/obligations.test.js#L236)
+- unit-test: verifies [tests/obligations.test.js:253](../../tests/obligations.test.js#L253)
+- unit-test: verifies [tests/obligations.test.js:271](../../tests/obligations.test.js#L271)
 - uat: verifies [pm/uat/obligation-execution.md:117](../../pm/uat/obligation-execution.md#L117)
-- plan: plans-implementation [pm/plans/in_progress/2026-10-10-obligation-centered-execution/plan.md:420](../../pm/plans/in_progress/2026-10-10-obligation-centered-execution/plan.md#L420)
-- plan: plans-verification [pm/plans/in_progress/2026-10-10-obligation-centered-execution/plan.md:421](../../pm/plans/in_progress/2026-10-10-obligation-centered-execution/plan.md#L421)
+- plan: plans-implementation [pm/plans/in_progress/2026-10-10-obligation-centered-execution/plan.md:421](../../pm/plans/in_progress/2026-10-10-obligation-centered-execution/plan.md#L421)
+- plan: plans-verification [pm/plans/in_progress/2026-10-10-obligation-centered-execution/plan.md:422](../../pm/plans/in_progress/2026-10-10-obligation-centered-execution/plan.md#L422)
 - issue: introduces [pm/bugs/in_progress/2026-10-10-CHNG-obligation_centered_execution.md:66](../../pm/bugs/in_progress/2026-10-10-CHNG-obligation_centered_execution.md#L66)
 
 ## REQ-OBLIGATION-COMPLETENESS
 
 Requirement: [pm/requirements/obligation-execution.md](obligation-execution.md)
 
+- implementation: implements [skills/plan-execution/scripts/obligations.js:306](../../skills/plan-execution/scripts/obligations.js#L306)
+- implementation: implements [skills/plan-execution/scripts/obligations.js:411](../../skills/plan-execution/scripts/obligations.js#L411)
 - implementation: supports [skills/requirements/SKILL.md:37](../../skills/requirements/SKILL.md#L37)
+- unit-test: verifies [tests/obligations.test.js:151](../../tests/obligations.test.js#L151)
+- unit-test: verifies [tests/obligations.test.js:237](../../tests/obligations.test.js#L237)
+- unit-test: verifies [tests/obligations.test.js:333](../../tests/obligations.test.js#L333)
 - uat: verifies [pm/uat/obligation-execution.md:138](../../pm/uat/obligation-execution.md#L138)
-- plan: plans-implementation [pm/plans/in_progress/2026-10-10-obligation-centered-execution/plan.md:423](../../pm/plans/in_progress/2026-10-10-obligation-centered-execution/plan.md#L423)
-- plan: plans-verification [pm/plans/in_progress/2026-10-10-obligation-centered-execution/plan.md:424](../../pm/plans/in_progress/2026-10-10-obligation-centered-execution/plan.md#L424)
+- plan: plans-implementation [pm/plans/in_progress/2026-10-10-obligation-centered-execution/plan.md:424](../../pm/plans/in_progress/2026-10-10-obligation-centered-execution/plan.md#L424)
+- plan: plans-verification [pm/plans/in_progress/2026-10-10-obligation-centered-execution/plan.md:425](../../pm/plans/in_progress/2026-10-10-obligation-centered-execution/plan.md#L425)
 - issue: introduces [pm/bugs/in_progress/2026-10-10-CHNG-obligation_centered_execution.md:67](../../pm/bugs/in_progress/2026-10-10-CHNG-obligation_centered_execution.md#L67)
 
 ## REQ-OBLIGATION-BASELINE
 
 Requirement: [pm/requirements/obligation-execution.md](obligation-execution.md)
 
+- implementation: implements [skills/plan-execution/scripts/obligations.js:62](../../skills/plan-execution/scripts/obligations.js#L62)
+- implementation: implements [skills/plan-execution/scripts/obligations.js:409](../../skills/plan-execution/scripts/obligations.js#L409)
 - implementation: supports [skills/requirements/SKILL.md:36](../../skills/requirements/SKILL.md#L36)
+- unit-test: verifies [tests/obligations.test.js:26](../../tests/obligations.test.js#L26)
+- unit-test: verifies [tests/obligations.test.js:210](../../tests/obligations.test.js#L210)
+- unit-test: verifies [tests/obligations.test.js:290](../../tests/obligations.test.js#L290)
 - uat: verifies [pm/uat/obligation-execution.md:159](../../pm/uat/obligation-execution.md#L159)
-- plan: plans-implementation [pm/plans/in_progress/2026-10-10-obligation-centered-execution/plan.md:426](../../pm/plans/in_progress/2026-10-10-obligation-centered-execution/plan.md#L426)
-- plan: plans-verification [pm/plans/in_progress/2026-10-10-obligation-centered-execution/plan.md:427](../../pm/plans/in_progress/2026-10-10-obligation-centered-execution/plan.md#L427)
+- plan: plans-implementation [pm/plans/in_progress/2026-10-10-obligation-centered-execution/plan.md:427](../../pm/plans/in_progress/2026-10-10-obligation-centered-execution/plan.md#L427)
+- plan: plans-verification [pm/plans/in_progress/2026-10-10-obligation-centered-execution/plan.md:428](../../pm/plans/in_progress/2026-10-10-obligation-centered-execution/plan.md#L428)
 - issue: introduces [pm/bugs/in_progress/2026-10-10-CHNG-obligation_centered_execution.md:68](../../pm/bugs/in_progress/2026-10-10-CHNG-obligation_centered_execution.md#L68)
 
 ## REQ-OBLIGATION-FRESHNESS
 
 Requirement: [pm/requirements/obligation-execution.md](obligation-execution.md)
 
+- implementation: implements [skills/plan-execution/scripts/obligations.js:209](../../skills/plan-execution/scripts/obligations.js#L209)
+- implementation: implements [skills/plan-execution/scripts/obligations.js:221](../../skills/plan-execution/scripts/obligations.js#L221)
 - implementation: supports [skills/plan-execution/SKILL.md:36](../../skills/plan-execution/SKILL.md#L36)
+- unit-test: verifies [tests/obligations.test.js:84](../../tests/obligations.test.js#L84)
+- unit-test: verifies [tests/obligations.test.js:112](../../tests/obligations.test.js#L112)
+- unit-test: verifies [tests/obligations.test.js:270](../../tests/obligations.test.js#L270)
 - uat: verifies [pm/uat/obligation-execution.md:180](../../pm/uat/obligation-execution.md#L180)
-- plan: plans-implementation [pm/plans/in_progress/2026-10-10-obligation-centered-execution/plan.md:429](../../pm/plans/in_progress/2026-10-10-obligation-centered-execution/plan.md#L429)
-- plan: plans-verification [pm/plans/in_progress/2026-10-10-obligation-centered-execution/plan.md:430](../../pm/plans/in_progress/2026-10-10-obligation-centered-execution/plan.md#L430)
+- plan: plans-implementation [pm/plans/in_progress/2026-10-10-obligation-centered-execution/plan.md:430](../../pm/plans/in_progress/2026-10-10-obligation-centered-execution/plan.md#L430)
+- plan: plans-verification [pm/plans/in_progress/2026-10-10-obligation-centered-execution/plan.md:431](../../pm/plans/in_progress/2026-10-10-obligation-centered-execution/plan.md#L431)
 - issue: introduces [pm/bugs/in_progress/2026-10-10-CHNG-obligation_centered_execution.md:69](../../pm/bugs/in_progress/2026-10-10-CHNG-obligation_centered_execution.md#L69)
 
 ## REQ-OBLIGATION-COMPATIBILITY
 
 Requirement: [pm/requirements/obligation-execution.md](obligation-execution.md)
 
+- implementation: implements [skills/plan-execution/scripts/obligations.js:63](../../skills/plan-execution/scripts/obligations.js#L63)
+- implementation: implements [skills/plan-execution/scripts/obligations.js:454](../../skills/plan-execution/scripts/obligations.js#L454)
 - implementation: supports [skills/plan-execution/SKILL.md:37](../../skills/plan-execution/SKILL.md#L37)
+- unit-test: verifies [tests/obligations.test.js:27](../../tests/obligations.test.js#L27)
+- unit-test: verifies [tests/obligations.test.js:308](../../tests/obligations.test.js#L308)
 - uat: verifies [pm/uat/obligation-execution.md:201](../../pm/uat/obligation-execution.md#L201)
-- plan: plans-implementation [pm/plans/in_progress/2026-10-10-obligation-centered-execution/plan.md:432](../../pm/plans/in_progress/2026-10-10-obligation-centered-execution/plan.md#L432)
-- plan: plans-verification [pm/plans/in_progress/2026-10-10-obligation-centered-execution/plan.md:433](../../pm/plans/in_progress/2026-10-10-obligation-centered-execution/plan.md#L433)
+- plan: plans-implementation [pm/plans/in_progress/2026-10-10-obligation-centered-execution/plan.md:433](../../pm/plans/in_progress/2026-10-10-obligation-centered-execution/plan.md#L433)
+- plan: plans-verification [pm/plans/in_progress/2026-10-10-obligation-centered-execution/plan.md:434](../../pm/plans/in_progress/2026-10-10-obligation-centered-execution/plan.md#L434)
 - issue: introduces [pm/bugs/in_progress/2026-10-10-CHNG-obligation_centered_execution.md:70](../../pm/bugs/in_progress/2026-10-10-CHNG-obligation_centered_execution.md#L70)
 
 ## REQ-REPAIR-PLAN-STARTING-GATE
@@ -488,6 +526,6 @@ Requirement: [pm/requirements/obligation-execution.md](obligation-execution.md)
 
 - implementation: supports [skills/plan-execution/SKILL.md:38](../../skills/plan-execution/SKILL.md#L38)
 - uat: verifies [pm/uat/obligation-execution.md:222](../../pm/uat/obligation-execution.md#L222)
-- plan: plans-implementation [pm/plans/in_progress/2026-10-10-obligation-centered-execution/plan.md:435](../../pm/plans/in_progress/2026-10-10-obligation-centered-execution/plan.md#L435)
-- plan: plans-verification [pm/plans/in_progress/2026-10-10-obligation-centered-execution/plan.md:436](../../pm/plans/in_progress/2026-10-10-obligation-centered-execution/plan.md#L436)
+- plan: plans-implementation [pm/plans/in_progress/2026-10-10-obligation-centered-execution/plan.md:436](../../pm/plans/in_progress/2026-10-10-obligation-centered-execution/plan.md#L436)
+- plan: plans-verification [pm/plans/in_progress/2026-10-10-obligation-centered-execution/plan.md:437](../../pm/plans/in_progress/2026-10-10-obligation-centered-execution/plan.md#L437)
 - issue: introduces [pm/bugs/in_progress/2026-10-10-CHNG-repair_plan_starting_gate.md:51](../../pm/bugs/in_progress/2026-10-10-CHNG-repair_plan_starting_gate.md#L51)
