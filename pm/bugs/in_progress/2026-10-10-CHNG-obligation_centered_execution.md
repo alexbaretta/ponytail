@@ -30,7 +30,7 @@ Planning amendment on 2026-10-10: the stakeholder requested a shared glossary
 for rules and skills and suggested acceptance for the atomic UAT condition.
 The design proposes one canonical definition source, acceptance for the condition
 and Arc for its demonstration. Existing integration execution semantics remain
-unchanged. This scope is planned; implementation activation remains pending.
+unchanged. This scope was approved and activated with the recorded plan.
 
 ## Acceptance and authority
 

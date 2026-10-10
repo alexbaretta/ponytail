@@ -4,7 +4,7 @@
 - Type: CHNG
 - Status: in_progress
 - Source: coordinator proposal from the stakeholder's 2026-10-10 convergence
-  discussion; detailed planning authorized, policy amendment not yet approved.
+  discussion; approved and activated with the recorded plan.
 - Approval: the current human stakeholder approved this named CHNG as part of
   the recorded plan and glossary amendment with "Approved. Go." on 2026-10-10.
 - Implementation activation: stakeholder kickoff on 2026-10-10; requirements
@@ -39,8 +39,7 @@ approval or implementation has already occurred.
 
 ## Validation and resolution
 
-Proposal links and lifecycle placement are subject to document checks. Runtime
-proof and policy amendment remain pending.
+Proposal links and lifecycle placement are subject to document checks. The approved policy is implemented; final acceptance remains pending.
 
 ## Activation reconciliation
 

@@ -330,13 +330,11 @@ not decisions already approved by accepting the obligation definition.
 | [S03](./sprints/S03.md) | Integrate assignment/delivery and discovery; prove compatibility. | S02 | DONE |
 | [S04](./sprints/S04.md) | Run approved local pilot, reconcile generated policy, and final acceptance. | S03 | IN_PROGRESS |
 
-S01 has a detailed proposed tasklet graph under current V4 metadata. Later
-sprints remain intent-level V3 stubs; their tasklet graphs follow dependency-ready
-detailed planning. S01 and S02 execution are complete. Before implementation, resolve material questions,
-complete current planning/review/selector gates, freeze exact paths, obtain
-explicit kickoff, and reconcile approved requirements/UAT/configuration. Adoption
-must not use the proposed machinery as authority before it is implemented and
-approved. Shared aggregate paths require explicit execution ordering.
+All four sprints now have reviewed V4 tasklet graphs and approved V3 execution
+metadata. S01–S03 are DONE. S04 has adopted this plan as the authorized local pilot;
+C1/C2 and the final synchronization gate remain unresolved until actual final QA.
+Shared aggregate paths retain explicit execution ordering. The V3 plan pointer
+names the sole canonical obligation document.
 
 ## Acceptance and validation examples
 
@@ -387,8 +385,8 @@ referenced from rules and skills. Use acceptance for the atomic UAT condition an
 Arc for its ordered demonstration; preserve the Suite/Arc/Step hierarchy and
 existing traceability certificates. The detailed glossary and ownership/migration
 contract are in design.md. S01 includes a dedicated glossary tasklet plus updates
-to each existing owner's reference tasklet; this amendment authorizes planning,
-not implementation or installation.
+to each existing owner's reference tasklet; the subsequent stakeholder approval authorized implementation; user-directory
+installation remains excluded.
 
 Document-recording validation on 2026-10-10: scoped campaign validation passes
 for the original one open plan, four V3 sprint stubs, and zero tasklets.
@@ -398,10 +396,11 @@ planning is READY_FOR_REVIEW with eleven proposed pending tasklets; canonical gr
 dependency and scoped campaign validation pass. All 28 relative file links in the
 eight plan/design/sprint/issue documents resolve; JSON and whitespace checks pass.
 Those planning-time selectors allowed S01 review and no implementation;
-S01 is now DONE and S02 is detailed, approved and pending execution. Detailed
+S01–S03 are now DONE. Detailed
 evidence is recorded in the S01 sprint document.
-S01 and S02 implementation are complete with focused evidence in their sprint
-records. S03 consumer integration is complete; S04 final acceptance remains pending.
+S01–S03 implementation and focused acceptance are complete in their sprint
+records. S04 final acceptance remains pending; initial full QA found an obsolete
+V2-only policy assertion, corrected under the approved adoption scope.
 
 Traceability: plans-implementation REQ-PONYTAIL-GLOSSARY from plan 2026-10-10-obligation-centered-execution
 Traceability: plans-verification REQ-PONYTAIL-GLOSSARY from plan 2026-10-10-obligation-centered-execution
