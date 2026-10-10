@@ -45,7 +45,7 @@ test('serial policy preserves atomic batch and convergence boundaries', () => {
 });
 
 test('campaign census policy preserves scoped reports and adds repository inventory', () => {
-  assert.match(skill, /Writers emit exactly `schemaVersion`, `id`,\s+`parent_plan_id`, and `depends_on`/);
+  assert.match(skill, /Legacy writers emit exactly `schemaVersion`, `id`,\s+`parent_plan_id`, and `depends_on`/);
   assert.match(skill, /Derive\s+children and reverse dependencies by inventorying these forward records/);
   assert.match(skill, /only the campaign containing the supplied plan/);
   assert.match(skill, /malformed or contradictory unrelated\s+campaigns do not affect the result/);
