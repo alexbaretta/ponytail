@@ -22,6 +22,8 @@ while project-wide management records remain under `pm/`.
   certificate assessments and checkpoint history; campaign members reference the
   root document rather than duplicate it. Assignments remain in their execution
   owner, and canonical relationship annotations retain their existing ownership.
+  Campaign ledger V9 owns append-only frozen obligation lease history; delivery V2
+  proposes evidence and current status/ready responses project acceptance.
 - `commands/` owns canonical command prompts.
 - `config/AGENTS.md` is the generated global Codex policy installed by the
   Codex installer.

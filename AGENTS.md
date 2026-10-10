@@ -16,8 +16,17 @@ policy belongs in `skills/ponytail/SKILL.md`; do not duplicate it here.
 - Repository and management root: this repository.
 - Structure and ownership: `PROJECT_STRUCTURE.md`.
 - Project-management root: `pm/`.
-- Obligation operations: pending S02/S03 implementation; current selectors remain
-  authoritative until adoption. Shared vocabulary: the plan-execution glossary.
+- Obligation operations: plan campaign V3 explicitly names the canonical
+  repository-relative `obligation_document`. Portable inspection:
+  `node skills/plan-execution/scripts/obligations.js <validate|status|select>
+  <document-path> <repository-root>`. Campaign projection:
+  `ponytail campaign obligation-status <campaign> --json`; coordinator publication:
+  `ponytail campaign obligation-accept <campaign> --candidate <relative-path> --json`;
+  retained idle worker renewal: `ponytail campaign obligation-assign <campaign>
+  --assignment <assignment-id> --json`. Adopted subordinate selection uses
+  `ready-tasklets.js <sprint.md> [last-id] --obligations <document> --root <root>`.
+  Legacy plan/sprint/tasklet readers remain supported. Shared vocabulary:
+  `skills/plan-execution/references/glossary.md`.
 - Long-lived plans: `pm/plans/<status>/<plan-id>/` for new records.
 - Issues (`BUG`, `FEAT`, `CHNG`, `TASK`, and project-defined extensions):
   `pm/bugs/<status>/`; semantics are owned by `issue-tracking`.
@@ -57,7 +66,13 @@ services. `PROJECT_STRUCTURE.md` is authoritative for that boundary.
 - TSTS focused tests after build: `node --test [--test-name-pattern=<pattern>] tsts/dist/test/<file>.test.js`.
 - TSTS full unit tests: `npm run test:tsts` (included in `npm test`).
 - TypeScript test indexes/audit metadata: not configured; tests discovered in `tsts/test/`.
-- Lossless JSON boundary: `tsts/src/lossless-json.ts`, using `lossless-json`; focused proof `node --test tsts/dist/test/lossless-json.test.js`.
+- Lossless JSON boundaries: `tsts/src/lossless-json.ts`, portable obligation
+  parsing in `skills/plan-execution/scripts/obligations.js`, and campaign ledger/
+  delivery parsing in `src/campaign-orchestration.js`, using `lossless-json`.
+  Obligation/campaign numbers are safe integers, validated before native conversion;
+  TSTS retains lossless numeric values. Focused proof:
+  `node --test tsts/dist/test/lossless-json.test.js`, `node --test
+  tests/obligations.test.js tests/obligation-execution.test.js`.
 - Unit-test command families:
   - Node focused: `node --test [--test-name-pattern=<pattern>] <test-files>`.
   - Node full: `npm test`.

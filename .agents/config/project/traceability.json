@@ -62,7 +62,7 @@
     {"id": "REQ-OBLIGATION-BASELINE", "sourcePath": "pm/requirements/obligation-execution.md"},
     {"id": "REQ-OBLIGATION-FRESHNESS", "sourcePath": "pm/requirements/obligation-execution.md"},
     {"id": "REQ-OBLIGATION-COMPATIBILITY", "sourcePath": "pm/requirements/obligation-execution.md"},
-    {"id": "REQ-REPAIR-PLAN-STARTING-GATE", "sourcePath": "pm/requirements/obligation-execution.md"}
+    {"id": "REQ-REPAIR-PLAN-STARTING-GATE", "sourcePath": "pm/requirements/obligation-execution.md", "noUnitTestReason": "The sole owned implementation is the agent instruction at skills/plan-execution/SKILL.md starting-checkpoint gate, with no independently executable product unit. The configured policy integration proof guards the instruction; scoped UAT assesses its application. This disposition covers only that declaration and does not waive future executable starting-gate units."}
   ],
   "artifacts": [
     {"class":"issue","path":"pm/bugs/closed/2026-10-06-BUG-peer_refs_block_commit_hook.md","locator":"text"},
@@ -567,7 +567,8 @@
     {"class": "issue", "path": "pm/bugs/in_progress/2026-10-10-CHNG-obligation_centered_execution.md", "locator": "text"},
     {"class": "issue", "path": "pm/bugs/in_progress/2026-10-10-CHNG-repair_plan_starting_gate.md", "locator": "text"},
     {"class": "implementation", "path": "skills/plan-execution/scripts/obligations.js", "locator": "text"},
-    {"class": "unit-test", "path": "tests/obligations.test.js", "locator": "text"}
+    {"class": "unit-test", "path": "tests/obligations.test.js", "locator": "text"},
+    {"class": "unit-test", "path": "tests/obligation-execution.test.js", "locator": "text"}
   ],
   "entities": [],
   "generatedArtifacts": [
@@ -594,7 +595,8 @@
     {"path": ".openclaw/skills/issue-tracking/SKILL.md", "sourcePath": "skills/issue-tracking/SKILL.md"},
     {"path": ".openclaw/skills/production-test-boundaries/SKILL.md", "sourcePath": "skills/production-test-boundaries/SKILL.md"},
     {"path": ".openclaw/skills/plan-execution/references/glossary.md", "sourcePath": "skills/plan-execution/references/glossary.md"},
-    {"path": ".openclaw/skills/plan-execution/scripts/obligations.js", "sourcePath": "skills/plan-execution/scripts/obligations.js"}
+    {"path": ".openclaw/skills/plan-execution/scripts/obligations.js", "sourcePath": "skills/plan-execution/scripts/obligations.js"},
+    {"path": ".openclaw/skills/plan-execution/scripts/ready-tasklets.js", "sourcePath": "skills/plan-execution/scripts/ready-tasklets.js"}
   ],
   "reverseViewPath": "pm/requirements/traceability.generated.md",
   "typescript": {

@@ -1,0 +1,179 @@
+{
+  "schemaVersion": 4,
+  "sprint": "S03",
+  "features": {
+    "S03-F01": {
+      "depends_on": [],
+      "validation_tasklet": "S03-F01-T10"
+    }
+  },
+  "tasklets": {
+    "S03-F01-T01": {
+      "depends_on": [],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S03-F01",
+      "planned_paths": [
+        "src/campaign-census.js",
+        "skills/plan-execution/scripts/ready-tasklets.js",
+        "tests/obligation-execution.test.js"
+      ]
+    },
+    "S03-F01-T02": {
+      "depends_on": [
+        "S03-F01-T01"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S03-F01",
+      "planned_paths": [
+        "src/campaign-orchestration.js",
+        "tests/obligation-execution.test.js"
+      ]
+    },
+    "S03-F01-T03": {
+      "depends_on": [
+        "S03-F01-T02"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S03-F01",
+      "planned_paths": [
+        "src/campaign-orchestration.js",
+        "tests/obligation-execution.test.js"
+      ]
+    },
+    "S03-F01-T04": {
+      "depends_on": [
+        "S03-F01-T03"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S03-F01",
+      "planned_paths": [
+        "src/campaign-orchestration.js",
+        "tests/obligation-execution.test.js"
+      ]
+    },
+    "S03-F01-T05": {
+      "depends_on": [
+        "S03-F01-T04"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S03-F01",
+      "planned_paths": [
+        "src/campaign-orchestration.js",
+        "src/campaign-census.js",
+        "tests/obligation-execution.test.js"
+      ]
+    },
+    "S03-F01-T06": {
+      "depends_on": [
+        "S03-F01-T05"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S03-F01",
+      "planned_paths": [
+        "src/campaign-orchestration.js",
+        "tests/obligation-execution.test.js",
+        "tests/campaign-orchestration.test.js"
+      ]
+    },
+    "S03-F01-T07": {
+      "depends_on": [
+        "S03-F01-T06"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S03-F01",
+      "planned_paths": [
+        "src/project-index.js",
+        "tests/obligation-execution.test.js",
+        "tests/project-index.test.js"
+      ]
+    },
+    "S03-F01-T08": {
+      "depends_on": [
+        "S03-F01-T12"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S03-F01",
+      "planned_paths": [
+        "scripts/build-openclaw-skills.js",
+        "tests/obligation-execution.test.js",
+        ".openclaw/skills/requirements-traceability/SKILL.md",
+        ".openclaw/skills/ponytail/SKILL.md",
+        ".openclaw/skills/plan-execution/SKILL.md",
+        ".openclaw/skills/requirements/SKILL.md",
+        ".openclaw/skills/issue-tracking/SKILL.md",
+        ".openclaw/skills/parallel-plan-scheduler/SKILL.md",
+        ".openclaw/skills/worktree-lifecycle/SKILL.md"
+      ]
+    },
+    "S03-F01-T09": {
+      "depends_on": [
+        "S03-F01-T08"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S03-F01",
+      "planned_paths": [
+        "versioned-data-contracts.json",
+        "AGENTS.md",
+        "PROJECT_STRUCTURE.md",
+        ".agents/config/project/traceability.json",
+        "pm/requirements/traceability.generated.md",
+        ".openclaw/skills/plan-execution/scripts/ready-tasklets.js"
+      ]
+    },
+    "S03-F01-T10": {
+      "depends_on": [
+        "S03-F01-T01",
+        "S03-F01-T02",
+        "S03-F01-T03",
+        "S03-F01-T04",
+        "S03-F01-T05",
+        "S03-F01-T06",
+        "S03-F01-T07",
+        "S03-F01-T08",
+        "S03-F01-T09",
+        "S03-F01-T11",
+        "S03-F01-T12"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S03-F01",
+      "planned_paths": []
+    },
+    "S03-F01-T11": {
+      "depends_on": [
+        "S03-F01-T07"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S03-F01",
+      "planned_paths": [
+        "skills/plan-execution/SKILL.md",
+        "tests/plan-execution-policy.test.js",
+        ".openclaw/skills/plan-execution/SKILL.md"
+      ]
+    },
+    "S03-F01-T12": {
+      "depends_on": [
+        "S03-F01-T11"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S03-F01",
+      "planned_paths": [
+        "skills/plan-execution/scripts/obligations.js",
+        "tests/obligations.test.js",
+        ".openclaw/skills/plan-execution/scripts/obligations.js"
+      ]
+    }
+  },
+  "external_depends_on": {}
+}

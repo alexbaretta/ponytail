@@ -356,3 +356,24 @@ test('zero requires all six assessed inventories and applicable non-metric autho
   acceptCheckpoint(accepted, candidate, root);
   assert.equal(projectObligations(candidate, root).complete, true);
 });
+
+// Traceability: verifies REQ-OBLIGATION-TRANSITIONS
+test('reordering JSON object keys cannot bypass the completed neutral preparation bound', t => {
+  const {root,document}=assessedFixture(t);
+  const previous=initialObservation(document,root);
+  const candidate=structuredClone(previous);
+  candidate.checkpoints.push(checkpoint({id:'CP2',predecessorId:'CP1',kind:'neutral',selectedIds:['OBL-1'],preparation:{obligationId:'OBL-1',operations:['inspect'],deliverable:'inspection complete'}}));
+  acceptCheckpoint(previous,candidate,root);
+  const repeated=structuredClone(candidate);
+  repeated.checkpoints.push({...structuredClone(candidate.checkpoints.at(-1)),id:'CP3',predecessorId:'CP2',preparation:{deliverable:'inspection complete',operations:['inspect'],obligationId:'OBL-1'}});
+  assert.throws(()=>acceptCheckpoint(candidate,repeated,root),/repeated completed preparation/);
+});
+
+// Traceability: verifies REQ-OBLIGATION-COMPLETENESS
+test('reader cannot hide declared membership from the accepted current observation', t => {
+  const {root,document}=assessedFixture(t);
+  const accepted=initialObservation(document,root);
+  accepted.obligations.push({...structuredClone(accepted.obligations[0]),id:'OBL-7',responsibilityId:'hidden responsibility'});
+  accepted.baselines[0].obligationIds.push('OBL-7');
+  assert.throws(()=>readObligationDocumentV1(accepted),/unregistered/);
+});

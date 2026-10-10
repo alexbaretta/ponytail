@@ -22,6 +22,7 @@ const {
 const {
   parseTaskletStatuses,
   rankedReadyTasklets,
+  selectObligationTasklets,
   readTaskletGraph,
   validateTaskletGraph,
   effectiveDependencies,
@@ -238,7 +239,18 @@ function readPlanMetadataV2(candidate) {
   return { ...plan, schemaVersion: PLAN_SCHEMA_VERSION, dependsOn: [...metadata.depends_on].sort() };
 }
 
-const CampaignPlanMetadataReaders = Object.freeze({ V1: readPlanMetadataV1, V2: readPlanMetadataV2 });
+// Traceability: implements REQ-OBLIGATION-COMPATIBILITY
+function readPlanMetadataV3(candidate) {
+  exactKeys(candidate.metadata, ['schemaVersion', 'id', 'parent_plan_id', 'depends_on', 'obligation_document'], 'plan campaign metadata V3');
+  if (candidate.metadata.schemaVersion !== 3) dataError('CAMPAIGN_PLAN_VERSION', 'expected plan campaign V3');
+  const documentPath = candidate.metadata.obligation_document;
+  if (typeof documentPath !== 'string' || !documentPath || documentPath.includes('\\') || documentPath.split('/').some(segment => !segment || segment === '.' || segment === '..')) dataError('CAMPAIGN_OBLIGATION_PATH', 'obligation_document must be repository-relative');
+  const { obligation_document, ...metadata } = candidate.metadata;
+  const plan = readPlanMetadataV2({ ...candidate, metadata: { ...metadata, schemaVersion: 2 } });
+  return { ...plan, schemaVersion: 3, obligationDocument: obligation_document };
+}
+
+const CampaignPlanMetadataReaders = Object.freeze({ V1: readPlanMetadataV1, V2: readPlanMetadataV2, V3: readPlanMetadataV3 });
 
 function readManagedPlan(candidate) {
   if (fs.lstatSync(candidate.planFile).isSymbolicLink()) {
@@ -487,6 +499,7 @@ function discoverCampaign(repositoryRoot, config, input) {
     config.lifecycle.directories.indexOf(left.lifecycle) - config.lifecycle.directories.indexOf(right.lifecycle)
     || left.id.localeCompare(right.id)
   ));
+  if (plans.some(plan => plan.obligationDocument !== root.obligationDocument)) dataError('CAMPAIGN_OBLIGATION_SCOPE', 'adopted campaign members must reference the root obligation document');
   return { root, selected, plans, invocationInput: resolvedInputPlan.invocationInput };
 }
 
@@ -606,6 +619,7 @@ function campaignGraph(repositoryRoot, input) {
   return {
     campaignId: campaign.root.id,
     submittedPlanId: campaign.selected.id,
+    obligationDocument: campaign.root.obligationDocument ?? null,
     externalPrerequisites: prerequisites,
     plans: campaign.plans.map((plan) => ({
       id: plan.id,
@@ -649,6 +663,14 @@ function validatePlanContents(plan, config, repositoryRoot) {
   const taskletDependencies = [];
   let runnableTasklets = null;
   let reviewableSprint = null;
+  let obligationDocument = null;
+  if (plan.obligationDocument) {
+    try {
+      const { parseObligationDocument, inputDigest } = require('../skills/plan-execution/scripts/obligations');
+      inputDigest(repositoryRoot, plan.obligationDocument);
+      obligationDocument = parseObligationDocument(fs.readFileSync(path.join(repositoryRoot, plan.obligationDocument), 'utf8'));
+    } catch (error) { dataError('CAMPAIGN_OBLIGATION_INVALID', error.message, plan.id, plan.obligationDocument); }
+  }
   const planningSprint = planningReady.length ? { sprintId: planningReady[0], planningStatus: 'STUB' } : null;
   for (const sprint of sprints) {
     let graph;
@@ -659,7 +681,9 @@ function validatePlanContents(plan, config, repositoryRoot) {
         graph = readTaskletGraph(sprint.filePath);
         const derived = validateTaskletGraph(graph, statuses);
         if (executionReady.includes(sprint.id)) {
-          const taskletIds = rankedReadyTasklets(graph, statuses, derived, null).map(([id]) => id);
+          const taskletIds = obligationDocument
+            ? selectObligationTasklets(graph, statuses, derived, null, obligationDocument, repositoryRoot, plan.id).taskletIds
+            : rankedReadyTasklets(graph, statuses, derived, null).map(([id]) => id);
           if (taskletIds.length > 0) runnableTasklets = { sprintId: sprint.id, taskletIds };
         }
         if ((reviewReady.includes(sprint.id) || planningReviewReady.includes(sprint.id)) && graph.tasklets.size > 0 && !reviewableSprint) {
@@ -696,6 +720,7 @@ function validatePlanContents(plan, config, repositoryRoot) {
     });
   }
   if (plan.lifecycle === config.lifecycle.roles.successfulCompletion) {
+    if (obligationDocument && !require('../skills/plan-execution/scripts/obligations').projectObligations(obligationDocument, repositoryRoot).complete) dataError('CAMPAIGN_OBLIGATION_INCOMPLETE', 'completed plan has unresolved obligations', plan.id, plan.obligationDocument);
     const unfinishedSprint = normalizedSprints.find((sprint) => sprint.executionStatus !== 'DONE');
     const unfinishedTasklet = normalizedTasklets.find((tasklet) => tasklet.status !== 'DONE');
     if (unfinishedSprint || unfinishedTasklet) {
@@ -1370,7 +1395,7 @@ function usage() {
 
 function run(argv = process.argv.slice(2)) {
   const operation = argv[0];
-  if (['status', 'reservation-audit', 'runnable-plans', 'tasklet-prerequisites', 'schedule-ready', 'schedule-review-ready', 'schedule-planning-ready', 'ready-actions', 'observe', 'advance', 'reconcile', 'retire-worktree', 'retry-dispatch', 'action-result', 'report-blocker', 'attach', 'deliver'].includes(operation)) {
+  if (operation?.startsWith('obligation-') || ['status', 'reservation-audit', 'runnable-plans', 'tasklet-prerequisites', 'schedule-ready', 'schedule-review-ready', 'schedule-planning-ready', 'ready-actions', 'observe', 'advance', 'reconcile', 'retire-worktree', 'retry-dispatch', 'action-result', 'report-blocker', 'attach', 'deliver'].includes(operation)) {
     return require('./campaign-orchestration').run(argv);
   }
   let input;

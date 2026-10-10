@@ -6,6 +6,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
+const { isDeepStrictEqual } = require('node:util');
 const { parse } = require('lossless-json');
 
 const COORDINATES = ['T1', 'T2', 'T3', 'T4', 'C1', 'C2'];
@@ -186,7 +187,11 @@ function readObligationDocumentV1(value) {
       nonemptyString(checkpoint.preparation.deliverable, 'preparation deliverable');
     }
   }
-  replayHistory(value);
+  const replay = replayHistory(value);
+  if (value.checkpoints.length) {
+    requireCondition(replay.baseline.id === value.baselines.at(-1).id, 'current baseline must have an accepted observation');
+    requireCondition(isDeepStrictEqual(replay.baseline.obligationIds, value.baselines.at(-1).obligationIds), 'current observation contains unregistered obligation membership');
+  }
   return value;
 }
 
@@ -328,7 +333,7 @@ function checkpointTransition(obligationDocument, checkpoint, before, after, pri
     const obligation = obligationDocument.obligations.find(obligation => obligation.id === checkpoint.preparation.obligationId);
     requireCondition(checkpoint.selectedIds.includes(obligation.id) && checkpoint.preparation.operations.every(operation => obligation.execution.operations.includes(operation)), 'preparation exceeds selected execution binding');
     const sinceChange = priorCheckpoints.slice(priorCheckpoints.findLastIndex(previous => previous.kind !== 'neutral') + 1);
-    requireCondition(!sinceChange.some(previous => JSON.stringify(previous.preparation) === JSON.stringify(checkpoint.preparation)), 'repeated completed preparation on unchanged state');
+    requireCondition(!sinceChange.some(previous => isDeepStrictEqual(previous.preparation, checkpoint.preparation)), 'repeated completed preparation on unchanged state');
   } else {
     requireCondition(checkpoint.preparation === null, 'only neutral checkpoints permit preparation');
     if (checkpoint.kind === 'disturbance') requireCondition(difference >= 0 && (difference > 0 || checkpoint.invalidatedIds.length > 0 || checkpoint.registeredIds.length > 0), 'disturbance must record discovery or invalidation honestly');
@@ -387,7 +392,7 @@ function replayHistory(obligationDocument) {
 }
 
 function appendOnly(previous, candidate, label) {
-  requireCondition(candidate.length >= previous.length && previous.every((item, index) => JSON.stringify(item) === JSON.stringify(candidate[index])), `${label} accepted prefix must be immutable`);
+  requireCondition(candidate.length >= previous.length && previous.every((item, index) => isDeepStrictEqual(item, candidate[index])), `${label} accepted prefix must be immutable`);
 }
 function acceptCheckpoint(previous, candidate, root) {
   readObligationDocumentV1(previous);
@@ -404,7 +409,7 @@ function acceptCheckpoint(previous, candidate, root) {
     const after = candidate.baselines[index];
     requireCondition(after !== undefined, 'baseline history must be retained');
     appendOnly(before.obligationIds, after.obligationIds, 'baseline membership');
-    requireCondition(JSON.stringify({ ...before, obligationIds: [] }) === JSON.stringify({ ...after, obligationIds: [] }), 'baseline meaning and authority require a new baseline');
+    requireCondition(isDeepStrictEqual({ ...before, obligationIds: [] }, { ...after, obligationIds: [] }), 'baseline meaning and authority require a new baseline');
   }
   const before = projectObligations(previous, root);
   const acceptedBefore = previous.checkpoints.at(-1)?.after ?? before.vector;

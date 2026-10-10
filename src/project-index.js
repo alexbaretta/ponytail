@@ -808,6 +808,33 @@ function normalizePlanPayloads(payloads) {
   return { entities, relationships };
 }
 
+// Traceability: implements REQ-OBLIGATION-IDENTITY
+// Traceability: implements REQ-OBLIGATION-DISCHARGE
+// Traceability: implements REQ-OBLIGATION-FRESHNESS
+function parsePlanIndexObligations(root, relativePath, source) {
+  const { parseObligationDocument, projectObligations } = require('../skills/plan-execution/scripts/obligations');
+  try {
+    const obligationDocument = parseObligationDocument(source);
+    const projection = projectObligations(obligationDocument, root);
+    const records = [];
+    for (const obligation of obligationDocument.obligations) records.push(planRecord({
+      recordKind: 'obligation', recordId: obligation.id, owningPlanId: obligationDocument.scopeId,
+      path: relativePath, heading: obligation.condition, excerpt: JSON.stringify(obligation),
+      status: !projection.unresolvedIds.includes(obligation.id) && !projection.satisfiedIds.includes(obligation.id) ? 'RETIRED' : projection.satisfiedIds.includes(obligation.id) ? 'SATISFIED' : 'UNRESOLVED',
+      dependsOn: obligation.dependsOn, plannedPaths: obligation.execution.plannedPaths,
+    }));
+    for (const baseline of obligationDocument.baselines) records.push(planRecord({ recordKind: 'obligation-baseline', recordId: baseline.id, owningPlanId: obligationDocument.scopeId, path: relativePath,
+      status: baseline.id === projection.baselineId ? 'CURRENT' : 'HISTORICAL', excerpt: JSON.stringify(baseline) }));
+    for (const certificate of obligationDocument.certificates) records.push(planRecord({ recordKind: 'obligation-certificate', recordId: certificate.id, owningPlanId: obligationDocument.scopeId, path: relativePath,
+      status: projection.assessments.some(assessment => assessment.id === certificate.id && assessment.valid) ? 'VALID' : 'UNACCEPTED_OR_INVALID', excerpt: JSON.stringify(certificate) }));
+    for (const checkpoint of obligationDocument.checkpoints) records.push(planRecord({ recordKind: 'obligation-checkpoint', recordId: checkpoint.id, owningPlanId: obligationDocument.scopeId, path: relativePath, status: checkpoint.kind, excerpt: JSON.stringify(checkpoint) }));
+    return { schemaVersion: 1, records };
+  } catch (error) {
+    return { schemaVersion: 1, records: [planRecord({ recordKind: 'invalid-obligation-document', recordId: relativePath,
+      owningPlanId: relativePath, path: relativePath, status: 'INVALID', excerpt: error.message })] };
+  }
+}
+
 function collectPlanProjection(root = fs.realpathSync(git(process.cwd(), ['rev-parse', '--show-toplevel']))) {
   root = fs.realpathSync(root);
   const managementPath = path.join(root, '.agents/config/project/management.json');
@@ -816,8 +843,28 @@ function collectPlanProjection(root = fs.realpathSync(git(process.cwd(), ['rev-p
   const planSources = listPlanSourceFiles(root, management);
   const sourceByPath = new Map(planSources.map(source => [source.relativePlanFile, source]));
   const paths = new Set([path.relative(root, managementPath)]);
+  const obligationDependencyDigests = new Map();
   for (const source of planSources) {
     paths.add(source.relativePlanFile);
+    let plan;
+    try { plan = parsePlanSource(root, source.relativePlanFile, source.lifecycle, fs.readFileSync(path.join(root, source.relativePlanFile), 'utf8')); }
+    catch { plan = null; }
+    if (plan?.obligationDocument) {
+      const { inputDigest, parseObligationDocument } = require('../skills/plan-execution/scripts/obligations');
+      const documentPath = plan.obligationDocument;
+      const dependencyDigests = [];
+      try {
+        inputDigest(root, documentPath);
+        const obligationDocument = parseObligationDocument(fs.readFileSync(path.join(root, documentPath), 'utf8'));
+        const inputs = new Set([...obligationDocument.baselines.flatMap(baseline => baseline.requirements.map(requirement => requirement.path)), ...obligationDocument.certificates.flatMap(certificate => certificate.inputs.map(input => input.path))]);
+        for (const relative of [...inputs].sort()) {
+          try { dependencyDigests.push(`${relative}:${inputDigest(root, relative)}`); }
+          catch (error) { dependencyDigests.push(`${relative}:unavailable:${error.message}`); }
+        }
+      } catch (error) { dependencyDigests.push(`invalid:${error.message}`); }
+      paths.add(documentPath);
+      obligationDependencyDigests.set(documentPath, digest(dependencyDigests.join('\n')));
+    }
     const sprintDirectory = path.join(root, path.dirname(source.relativePlanFile), 'sprints');
     if (!fs.existsSync(sprintDirectory)) continue;
     for (const name of fs.readdirSync(sprintDirectory).sort()) {
@@ -842,9 +889,10 @@ function collectPlanProjection(root = fs.realpathSync(git(process.cwd(), ['rev-p
     return {
       path: relativePath,
       contentDigest: digest(content),
-      parserIdentity: digest(`${parserIdentity}\n${configurationDigest}\n${relativePath}\n${hasTaskletGraph}`),
+      parserIdentity: digest(`${parserIdentity}\n${configurationDigest}\n${relativePath}\n${hasTaskletGraph}\n${obligationDependencyDigests.get(relativePath) ?? ''}`),
       gitState,
       parse: () => {
+        if (obligationDependencyDigests.has(relativePath)) return parsePlanIndexObligations(root, relativePath, content.toString('utf8'));
         if (relativePath.endsWith('/plan.md')) {
           return parsePlanIndexPlan(
             root,
@@ -865,7 +913,7 @@ function collectPlanProjection(root = fs.realpathSync(git(process.cwd(), ['rev-p
     };
   });
   const stateDigest = digest(files.map(file =>
-    `${file.path}\0${file.gitState}\0${file.contentDigest}\n`).join(''));
+    `${file.path}\0${file.gitState}\0${file.contentDigest}\0${file.parserIdentity}\n`).join(''));
   const project = JSON.parse(fs.readFileSync(path.join(root, 'ponytail-journal.json'), 'utf8'));
   return {
     projectId: project.projectId,
@@ -2681,6 +2729,7 @@ module.exports = {
   PlanSearchResultReaders,
   PlanGraphResultReaders,
   collectPlanProjection,
+  parsePlanIndexObligations,
   collectTraceabilityProjection,
   digest,
   parseFile,

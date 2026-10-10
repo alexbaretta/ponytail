@@ -277,9 +277,9 @@
         "module": "src/campaign-census.js",
         "readerRegistryExport": "CampaignPlanMetadataReaders"
       },
-      "currentVersion": "V2",
-      "versions": ["V1", "V2"],
-      "supportedReadVersions": ["V1", "V2"],
+      "currentVersion": "V3",
+      "versions": ["V1", "V2", "V3"],
+      "supportedReadVersions": ["V1", "V2", "V3"],
       "supportedDowngradeVersions": []
     },
     {
@@ -301,9 +301,9 @@
         "module": "src/campaign-orchestration.js",
         "readerRegistryExport": "CampaignLedgerReaders"
       },
-      "currentVersion": "V8",
-      "versions": ["V1", "V2", "V3", "V4", "V5", "V6", "V7", "V8"],
-      "supportedReadVersions": ["V1", "V2", "V3", "V4", "V5", "V6", "V7", "V8"],
+      "currentVersion": "V9",
+      "versions": ["V1", "V2", "V3", "V4", "V5", "V6", "V7", "V8", "V9"],
+      "supportedReadVersions": ["V1", "V2", "V3", "V4", "V5", "V6", "V7", "V8", "V9"],
       "supportedDowngradeVersions": []
     },
     {
@@ -325,9 +325,9 @@
         "module": "src/campaign-orchestration.js",
         "readerRegistryExport": "CampaignStatusReaders"
       },
-      "currentVersion": "V9",
-      "versions": ["V1", "V2", "V3", "V4", "V5", "V6", "V7", "V8", "V9"],
-      "supportedReadVersions": ["V1", "V2", "V3", "V4", "V5", "V6", "V7", "V8", "V9"],
+      "currentVersion": "V11",
+      "versions": ["V1", "V2", "V3", "V4", "V5", "V6", "V7", "V8", "V9", "V10", "V11"],
+      "supportedReadVersions": ["V1", "V2", "V3", "V4", "V5", "V6", "V7", "V8", "V9", "V10", "V11"],
       "supportedDowngradeVersions": []
     },
     {
@@ -349,9 +349,9 @@
         "module": "src/campaign-orchestration.js",
         "readerRegistryExport": "CampaignReadyActionsReaders"
       },
-      "currentVersion": "V6",
-      "versions": ["V1", "V2", "V3", "V4", "V5", "V6"],
-      "supportedReadVersions": ["V1", "V2", "V3", "V4", "V5", "V6"],
+      "currentVersion": "V8",
+      "versions": ["V1", "V2", "V3", "V4", "V5", "V6", "V7", "V8"],
+      "supportedReadVersions": ["V1", "V2", "V3", "V4", "V5", "V6", "V7", "V8"],
       "supportedDowngradeVersions": []
     },
     {
@@ -417,9 +417,9 @@
         "module": "src/campaign-orchestration.js",
         "readerRegistryExport": "CampaignWorkerDeliveryReaders"
       },
-      "currentVersion": "V1",
-      "versions": ["V1"],
-      "supportedReadVersions": ["V1"],
+      "currentVersion": "V2",
+      "versions": ["V1", "V2"],
+      "supportedReadVersions": ["V1", "V2"],
       "supportedDowngradeVersions": []
     },
     {

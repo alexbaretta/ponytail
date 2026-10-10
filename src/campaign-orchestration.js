@@ -7,6 +7,7 @@
 // Traceability: implements REQ-CAMPAIGN-ORCHESTRATION
 // Traceability: implements REQ-WORKER-WORKTREE-RETENTION
 
+const { parse, toSafeNumberOrThrow } = require('lossless-json');
 const crypto = require('node:crypto');
 const fs = require('node:fs');
 const os = require('node:os');
@@ -392,11 +393,12 @@ function readLedgerV5(value, file = 'campaign ledger') {
 }
 
 function readCurrentLedger(value, file = 'campaign ledger') {
-  if (value?.schemaVersion === 8) return readLedgerV8(value, file);
+  if (value?.schemaVersion === 9) return readLedgerV9(value, file);
+  if (value?.schemaVersion === 8) return readLedgerV9({ ...readLedgerV8(value, file), schemaVersion: 9, obligationAssignments: [] }, file);
   const previous = value?.schemaVersion === 7 ? readLedgerV7(value, file)
     : value?.schemaVersion === 6 ? readLedgerV6(value, file)
       : readLedgerV6({ ...readHistoricalLedger(value, file), schemaVersion: 6, dispatchRetries: [] }, file);
-  return readLedgerV8({ ...previous, schemaVersion: 8,
+  return readLedgerV9({ ...previous, schemaVersion: 9, obligationAssignments: [],
     pendingActions: previous.pendingActions.map((pendingAction, index) => readCurrentAction(
       pendingAction, previous.assignments.find(({ id }) => id === pendingAction.assignmentId), `${file}.pendingActions[${index}]`)),
   }, file);
@@ -527,10 +529,69 @@ function readLedgerV8(value, file = 'campaign ledger') {
   return { ...value, assignments, pendingActions, completedActions, workers };
 }
 
-const CampaignLedgerReaders = Object.freeze({ V1: readLedgerV1, V2: readLedgerV2, V3: readLedgerV3, V4: readLedgerV4, V5: readLedgerV5, V6: readLedgerV6, V7: readLedgerV7, V8: readLedgerV8 });
+// Traceability: implements REQ-OBLIGATION-ASSIGNMENT
+function parseCampaignJson(text) {
+  return parse(text, null, token => {
+    const number = toSafeNumberOrThrow(token);
+    if (!Number.isSafeInteger(number)) fail('CAMPAIGN_ORCHESTRATION_SCHEMA', 'campaign JSON numbers must be safe integers');
+    return number;
+  });
+}
+
+function readObligationAssignmentV1(value) {
+  exactKeys(value, ['id', 'predecessorBindingId', 'assignmentId', 'documentPath', 'scopeId', 'baselineId', 'predecessorId', 'revision', 'obligationIds', 'taskletIds', 'plannedPaths'], 'obligation assignment');
+  for (const field of ['id', 'assignmentId', 'documentPath', 'scopeId', 'baselineId', 'revision']) if (typeof value[field] !== 'string' || !value[field]) fail('CAMPAIGN_OBLIGATION_BINDING', `binding ${field} is required`);
+  optionalString(value.predecessorId, 'binding predecessorId');
+  optionalString(value.predecessorBindingId, 'binding predecessorBindingId');
+  for (const field of ['obligationIds', 'taskletIds', 'plannedPaths']) if (!Array.isArray(value[field]) || value[field].some(item => typeof item !== 'string' || !item) || new Set(value[field]).size !== value[field].length) fail('CAMPAIGN_OBLIGATION_BINDING', `binding ${field} must be unique strings`);
+  if (value.obligationIds.length === 0 || value.obligationIds.some(id => !/^OBL-[1-9][0-9]*$/.test(id))) fail('CAMPAIGN_OBLIGATION_BINDING', 'binding requires stable obligation IDs');
+  for (const relative of [value.documentPath, ...value.plannedPaths]) if (relative.includes('\\') || relative.split('/').some(segment => !segment || segment === '.' || segment === '..')) fail('CAMPAIGN_OBLIGATION_BINDING', 'binding paths must be repository-relative');
+  return value;
+}
+
+function readLedgerV9(value, file = 'campaign ledger') {
+  const { obligationAssignments, ...previous } = value;
+  if (value.schemaVersion !== 9 || !Array.isArray(obligationAssignments)) fail('CAMPAIGN_ORCHESTRATION_VERSION', 'expected campaign ledger V9');
+  const ledger = readLedgerV8({ ...previous, schemaVersion: 8 }, file);
+  obligationAssignments.forEach(readObligationAssignmentV1);
+  if (new Set(obligationAssignments.map(binding => binding.id)).size !== obligationAssignments.length || obligationAssignments.some(binding => !ledger.assignments.some(assignment => assignment.id === binding.assignmentId))) fail('CAMPAIGN_OBLIGATION_BINDING', 'binding assignment identity must be unique and owned');
+  const previousBindings = new Map();
+  for (const binding of obligationAssignments) {
+    if (binding.predecessorBindingId !== (previousBindings.get(binding.assignmentId) ?? null)) fail('CAMPAIGN_OBLIGATION_BINDING', 'binding predecessor must retain assignment lease history');
+    previousBindings.set(binding.assignmentId, binding.id);
+  }
+  return { ...ledger, schemaVersion: 9, obligationAssignments };
+}
+
+function adoptedObligationState(graph, root) {
+  if (!graph.obligationDocument) return null;
+  const { inputDigest, parseObligationDocument, selectObligation } = require('../skills/plan-execution/scripts/obligations');
+  inputDigest(root, graph.obligationDocument);
+  const obligationDocument = parseObligationDocument(fs.readFileSync(path.join(root, graph.obligationDocument), 'utf8'));
+  if (obligationDocument.scopeId !== graph.campaignId) fail('CAMPAIGN_OBLIGATION_SCOPE', 'obligation document scope must identify the campaign root');
+  const selection = selectObligation(obligationDocument, root);
+  return { documentPath: graph.obligationDocument, obligationDocument, selection };
+}
+
+const CampaignLedgerReaders = Object.freeze({ V1: readLedgerV1, V2: readLedgerV2, V3: readLedgerV3, V4: readLedgerV4, V5: readLedgerV5, V6: readLedgerV6, V7: readLedgerV7, V8: readLedgerV8, V9: readLedgerV9 });
 const CampaignHostObservationReaders = Object.freeze({ V1: readHostObservationV1 });
 const CampaignWorkerBindingReaders = Object.freeze({ V1: readWorkerBindingsV1, V2: readWorkerBindingsV2 });
-const CampaignWorkerDeliveryReaders = Object.freeze({ V1: readWorkerDeliveriesV1 });
+function readWorkerDeliveriesV2(value, file = 'campaign worker deliveries') {
+  if (value.schemaVersion !== 2 || !Array.isArray(value.deliveries)) fail('CAMPAIGN_ORCHESTRATION_VERSION', 'expected worker deliveries V2');
+  const deliveries = value.deliveries.map(delivery => {
+    exactKeys(delivery, ['assignmentId', 'revision', 'evidencePaths', 'recordedAt', 'obligation', 'changedPaths'], 'worker delivery V2');
+    if (delivery.obligation !== null) {
+      readObligationAssignmentV1(delivery.obligation);
+      if (delivery.assignmentId !== delivery.obligation.assignmentId) fail('CAMPAIGN_OBLIGATION_BINDING', 'delivery assignment disagrees with binding');
+    }
+    if (!Array.isArray(delivery.changedPaths) || new Set(delivery.changedPaths).size !== delivery.changedPaths.length || delivery.changedPaths.some(relative => typeof relative !== 'string' || !relative || relative.split('/').some(segment => !segment || segment === '.' || segment === '..'))) fail('CAMPAIGN_WORKER_DELIVERY', 'invalid changedPaths');
+    return delivery;
+  });
+  readWorkerDeliveriesV1({ ...value, schemaVersion: 1, deliveries: deliveries.map(({ obligation, changedPaths, ...delivery }) => delivery) }, file);
+  return { ...value, deliveries };
+}
+
+const CampaignWorkerDeliveryReaders = Object.freeze({ V1: readWorkerDeliveriesV1, V2: readWorkerDeliveriesV2 });
 
 function readReadyActionsV1(value) {
   exactKeys(value, ['schemaVersion', 'campaignId', 'invocationWorktree', 'effectiveWorktree', 'integrationRevision', 'actions'], 'campaign ready actions');
@@ -643,7 +704,7 @@ function readReadyActionsV5(value) {
   return { ...value, actions };
 }
 
-const CampaignReadyActionsReaders = Object.freeze({ V1: readReadyActionsV1, V2: readReadyActionsV2, V3: readReadyActionsV3, V4: readReadyActionsV4, V5: readReadyActionsV5, V6: readReadyActionsV6, V7: readReadyActionsV7 });
+const CampaignReadyActionsReaders = Object.freeze({ V1: readReadyActionsV1, V2: readReadyActionsV2, V3: readReadyActionsV3, V4: readReadyActionsV4, V5: readReadyActionsV5, V6: readReadyActionsV6, V7: readReadyActionsV7, V8: readReadyActionsV8 });
 
 function readReadyActionsV6(value) {
   readReadyActionsV5({ ...value, schemaVersion: 5, actions: [] });
@@ -805,7 +866,48 @@ function readStatusV10(value) {
   return value;
 }
 
-const CampaignStatusReaders = Object.freeze({ V1: readStatusV1, V2: readStatusV2, V3: readStatusV3, V4: readStatusV4, V5: readStatusV5, V6: readStatusV6, V7: readStatusV7, V8: readStatusV8, V9: readStatusV9, V10: readStatusV10 });
+function readObligationProjection(value) {
+  if (value === null) return value;
+  exactKeys(value, ['documentPath', 'scopeId', 'baselineId', 'vector', 'selectedId', 'blockedIds', 'gates', 'complete'], 'obligation projection');
+  for (const field of ['documentPath', 'scopeId', 'baselineId']) if (typeof value[field] !== 'string' || !value[field]) fail('CAMPAIGN_OBLIGATION_PROJECTION', `projection ${field} must be nonempty`);
+  optionalString(value.selectedId, 'selected obligation');
+  if (value.selectedId !== null && !/^OBL-[1-9][0-9]*$/.test(value.selectedId)) fail('CAMPAIGN_OBLIGATION_PROJECTION', 'selected obligation requires stable identity');
+  if (!Array.isArray(value.vector) || value.vector.length !== 6 || value.vector.some(count => !Number.isSafeInteger(count) || count < 0) || typeof value.complete !== 'boolean') fail('CAMPAIGN_OBLIGATION_PROJECTION', 'invalid obligation vector/completion');
+  for (const field of ['blockedIds', 'gates']) if (!Array.isArray(value[field]) || value[field].some(id => !/^OBL-[1-9][0-9]*$/.test(id)) || new Set(value[field]).size !== value[field].length) fail('CAMPAIGN_OBLIGATION_PROJECTION', `invalid projection ${field}`);
+  if (value.complete !== (value.vector.every(count => count === 0) && value.gates.length === 0)) fail('CAMPAIGN_OBLIGATION_PROJECTION', 'completion disagrees with vector and gates');
+  return value;
+}
+
+function readStatusV11(value) {
+  const { obligations, obligationAssignments, ...previous } = value;
+  readStatusV10({ ...previous, schemaVersion: 10 });
+  if (value.schemaVersion !== 11 || !Array.isArray(obligationAssignments)) fail('CAMPAIGN_ORCHESTRATION_VERSION', 'expected campaign status V11');
+  readObligationProjection(obligations);
+  obligationAssignments.forEach(readObligationAssignmentV1);
+  return value;
+}
+
+function readReadyActionsV8(value) {
+  const { obligations, obligationAssignments, ...previous } = value;
+  const normalized = readReadyActionsV7({ ...previous, schemaVersion: 7 });
+  if (value.schemaVersion !== 8 || !Array.isArray(obligationAssignments)) fail('CAMPAIGN_ORCHESTRATION_VERSION', 'expected ready-actions V8');
+  readObligationProjection(obligations);
+  obligationAssignments.forEach(readObligationAssignmentV1);
+  return { ...normalized, schemaVersion: 8, obligations, obligationAssignments };
+}
+
+// Traceability: implements REQ-OBLIGATION-PRIORITY
+function obligationProjection(graph, root) {
+  const adopted = adoptedObligationState(graph, root);
+  if (!adopted) return null;
+  return readObligationProjection({ documentPath: adopted.documentPath,
+    scopeId: adopted.obligationDocument.scopeId, baselineId: adopted.selection.projection.baselineId,
+    vector: adopted.selection.projection.vector, selectedId: adopted.selection.selectedId,
+    blockedIds: adopted.selection.blockedIds, gates: adopted.selection.projection.gates,
+    complete: adopted.selection.projection.complete });
+}
+
+const CampaignStatusReaders = Object.freeze({ V1: readStatusV1, V2: readStatusV2, V3: readStatusV3, V4: readStatusV4, V5: readStatusV5, V6: readStatusV6, V7: readStatusV7, V8: readStatusV8, V9: readStatusV9, V10: readStatusV10, V11: readStatusV11 });
 
 function git(repositoryRoot, args, accepted = [0]) {
   const result = spawnSync('git', ['-C', repositoryRoot, ...args], { encoding: 'utf8' });
@@ -1002,17 +1104,18 @@ function workerDeliveriesPath(repositoryRoot, campaignId, environment = process.
 
 function readWorkerDeliveries(repositoryRoot, campaignId, environment = process.env) {
   const file = workerDeliveriesPath(repositoryRoot, campaignId, environment);
-  if (!fs.existsSync(file)) return { schemaVersion: 1, campaignId, deliveries: [] };
+  if (!fs.existsSync(file)) return { schemaVersion: 2, campaignId, deliveries: [] };
   let value;
-  try { value = JSON.parse(fs.readFileSync(file, 'utf8')); } catch (error) { fail('CAMPAIGN_WORKER_DELIVERY_IO', `${file}: ${error.message}`, 2); }
-  const deliveries = readWorkerDeliveriesV1(value, file);
+  try { value = parseCampaignJson(fs.readFileSync(file, 'utf8')); } catch (error) { fail('CAMPAIGN_WORKER_DELIVERY_IO', `${file}: ${error.message}`, 2); }
+  const deliveries = value.schemaVersion === 2 ? readWorkerDeliveriesV2(value, file)
+    : readWorkerDeliveriesV2({ ...readWorkerDeliveriesV1(value, file), schemaVersion: 2, deliveries: value.deliveries.map(delivery => ({ ...delivery, obligation: null, changedPaths: [] })) }, file);
   if (deliveries.campaignId !== campaignId) fail('CAMPAIGN_WORKER_DELIVERY_SCOPE', `${file}: delivery scope does not match campaign ${campaignId}`);
   return deliveries;
 }
 
 function writeWorkerDeliveries(repositoryRoot, campaignId, deliveries, environment = process.env) {
   const file = workerDeliveriesPath(repositoryRoot, campaignId, environment);
-  const value = readWorkerDeliveriesV1(deliveries, file);
+  const value = deliveries.schemaVersion === 2 ? readWorkerDeliveriesV2(deliveries, file) : readWorkerDeliveriesV2({ ...readWorkerDeliveriesV1(deliveries, file), schemaVersion: 2, deliveries: deliveries.deliveries.map(delivery => ({ ...delivery, obligation: null, changedPaths: [] })) }, file);
   if (value.campaignId !== campaignId) fail('CAMPAIGN_WORKER_DELIVERY_SCOPE', `${file}: delivery scope does not match campaign ${campaignId}`);
   fs.mkdirSync(path.dirname(file), { recursive: true });
   const temporary = `${file}.${process.pid}.${crypto.randomUUID()}.tmp`;
@@ -1022,7 +1125,11 @@ function writeWorkerDeliveries(repositoryRoot, campaignId, deliveries, environme
 }
 
 function recordWorkerDelivery(repositoryRoot, campaignId, assignment, result, environment = process.env) {
-  exactKeys(result, ['revision', 'evidencePaths'], 'worker delivery result');
+  const ledger = readLedger(repositoryRoot, campaignId, environment);
+  const obligation = ledger.obligationAssignments.findLast(binding => binding.assignmentId === assignment.id) ?? null;
+  exactKeys(result, obligation ? ['schemaVersion', 'bindingId', 'revision', 'evidencePaths', 'obligationIds', 'predecessorId', 'changedPaths'] : ['revision', 'evidencePaths'], 'worker delivery result');
+  const changedPaths = obligation ? git(assignment.worktree, ['diff', '--name-only', '--no-renames', '-z', obligation.revision, result.revision]).split('\0').filter(Boolean).sort() : [];
+  if (obligation && (result.schemaVersion !== 2 || result.bindingId !== obligation.id || JSON.stringify(result.obligationIds) !== JSON.stringify(obligation.obligationIds) || result.predecessorId !== obligation.predecessorId || !Array.isArray(result.changedPaths) || new Set(result.changedPaths).size !== result.changedPaths.length || JSON.stringify([...result.changedPaths].sort()) !== JSON.stringify(changedPaths) || changedPaths.some(relative => !obligation.plannedPaths.includes(relative)))) fail('CAMPAIGN_OBLIGATION_DELIVERY', 'delivery must match frozen obligations, predecessor and actual permitted changes');
   if (typeof result.revision !== 'string' || !result.revision || !Array.isArray(result.evidencePaths) || result.evidencePaths.length === 0) {
     fail('CAMPAIGN_WORKER_DELIVERY', 'worker delivery requires revision and at least one evidence path');
   }
@@ -1051,7 +1158,7 @@ function recordWorkerDelivery(repositoryRoot, campaignId, assignment, result, en
   const value = readWorkerDeliveries(repositoryRoot, campaignId, environment);
   const existing = value.deliveries.find(({ assignmentId }) => assignmentId === assignment.id);
   if (existing && existing.revision === result.revision && JSON.stringify(existing.evidencePaths) === JSON.stringify(evidencePaths)) return existing;
-  const delivery = { assignmentId: assignment.id, revision: result.revision, evidencePaths, recordedAt: new Date().toISOString() };
+  const delivery = { assignmentId: assignment.id, revision: result.revision, evidencePaths, recordedAt: new Date().toISOString(), obligation, changedPaths };
   value.deliveries = value.deliveries.filter(({ assignmentId }) => assignmentId !== assignment.id);
   value.deliveries.push(delivery);
   writeWorkerDeliveries(repositoryRoot, campaignId, value, environment);
@@ -1477,8 +1584,9 @@ function resolveInvocationWorktree(invocationWorktree, environment = process.env
 
 function newLedger(repositoryRoot, campaignId, coordinatorSessionId) {
   const identity = repositoryIdentity(repositoryRoot);
-  return readLedgerV8({
-    schemaVersion: 8,
+  return readLedgerV9({
+    schemaVersion: 9,
+    obligationAssignments: [],
     campaignId,
     topLevelWorktree: repositoryRoot,
     coordinatorSessionId,
@@ -1497,7 +1605,7 @@ function readLedger(repositoryRoot, campaignId, environment = process.env) {
   const boundSession = coordinatorBinding(environment.PLUGIN_DATA, repositoryRoot, campaignId);
   if (!fs.existsSync(file)) return newLedger(repositoryRoot, campaignId, environment.PONYTAIL_SESSION_ID || boundSession);
   let value;
-  try { value = JSON.parse(fs.readFileSync(file, 'utf8')); } catch (error) { fail('CAMPAIGN_LEDGER_IO', `${file}: ${error.message}`, 2); }
+  try { value = parseCampaignJson(fs.readFileSync(file, 'utf8')); } catch (error) { fail('CAMPAIGN_LEDGER_IO', `${file}: ${error.message}`, 2); }
   const ledger = readCurrentLedger(value, file);
   if (ledger.campaignId !== campaignId || ledger.topLevelWorktree !== repositoryRoot) fail('CAMPAIGN_LEDGER_SCOPE', `${file}: ledger scope does not match this campaign worktree`);
   if (boundSession && ledger.coordinatorSessionId && boundSession !== ledger.coordinatorSessionId) fail('CAMPAIGN_COORDINATOR_CONFLICT', `ledger coordinator ${ledger.coordinatorSessionId} disagrees with bound coordinator ${boundSession}`);
@@ -1506,7 +1614,7 @@ function readLedger(repositoryRoot, campaignId, environment = process.env) {
 }
 
 function writeLedger(file, ledger) {
-  const value = readLedgerV8(ledger, file);
+  const value = readLedgerV9(ledger, file);
   fs.mkdirSync(path.dirname(file), { recursive: true });
   const temporary = `${file}.${process.pid}.${crypto.randomUUID()}.tmp`;
   fs.writeFileSync(temporary, `${JSON.stringify(value, null, 2)}\n`, { flag: 'wx', mode: 0o600 });
@@ -1521,6 +1629,7 @@ function withLedgerLock(repositoryRoot, campaignId, environment, operation) {
     try {
       const descriptor = fs.openSync(lock, 'wx', 0o600);
       try {
+        fs.writeFileSync(descriptor, String(process.pid));
         const ledger = readLedger(repositoryRoot, campaignId, environment);
         const result = operation(ledger);
         writeLedger(file, ledger);
@@ -1531,7 +1640,30 @@ function withLedgerLock(repositoryRoot, campaignId, environment, operation) {
       }
     } catch (error) {
       if (error.code !== 'EEXIST') throw error;
-      if (Date.now() - fs.statSync(lock).mtimeMs > 5000) { fs.unlinkSync(lock); continue; }
+      let owner;
+      try { owner = fs.readFileSync(lock, 'utf8'); }
+      catch (readError) { if (readError.code === 'ENOENT') continue; throw readError; }
+      if (/^[1-9][0-9]*$/.test(owner) && Number.isSafeInteger(Number(owner))) {
+        try { process.kill(Number(owner), 0); }
+        catch (ownerError) {
+          if (ownerError.code === 'ESRCH') {
+            // Serialize contenders reaping this dead owner so a second reaper
+            // cannot unlink a fresh owner's lock after the first removes it.
+            const reaper = `${lock}.${owner}.reap`;
+            let descriptor;
+            try {
+              descriptor = fs.openSync(reaper, 'wx', 0o600);
+              if (fs.readFileSync(lock, 'utf8') === owner) fs.unlinkSync(lock);
+            } catch (readError) {
+              if (!['ENOENT', 'EEXIST'].includes(readError.code)) throw readError;
+            } finally {
+              if (descriptor !== undefined) { fs.closeSync(descriptor); fs.unlinkSync(reaper); }
+            }
+            continue;
+          }
+          if (ownerError.code !== 'EPERM') throw ownerError;
+        }
+      }
       Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 10);
     }
   }
@@ -1840,7 +1972,9 @@ function reconcile(graph, ledger, invocationWorktree = ledger.topLevelWorktree, 
   }).sort((left, right) => left.planId.localeCompare(right.planId));
   const reusableWorkers = idleWorkers;
   const status = {
-    schemaVersion: 10,
+    schemaVersion: 11,
+    obligations: obligationProjection(graph, ledger.topLevelWorktree),
+    obligationAssignments: ledger.obligationAssignments ?? [],
     campaignId: graph.campaignId,
     invocationWorktree,
     effectiveWorktree: ledger.topLevelWorktree,
@@ -1976,7 +2110,7 @@ function reconcile(graph, ledger, invocationWorktree = ledger.topLevelWorktree, 
     status.bootstrapContinuations.push({ actionId: pending.id, assignmentId: pending.assignmentId,
       sessionId: bootstrap.sessionId, worktree: bootstrap.worktree, ready: objections.length === 0, objections });
   }
-  return readStatusV10(status);
+  return readStatusV11(status);
 }
 
 function action(type, assignment, payload = {}) {
@@ -2249,8 +2383,10 @@ function readyActions(status, graph) {
     const original = status.pendingActions.find(({ id }) => id === continuation.actionId);
     if (original) actions.push({ ...original, payload: { ...original.payload, resumeOnly: true } });
   }
-  return readReadyActionsV7({
-    schemaVersion: 7,
+  return readReadyActionsV8({
+    schemaVersion: 8,
+    obligations: status.obligations ?? null,
+    obligationAssignments: status.obligationAssignments ?? [],
     campaignId: status.campaignId,
     invocationWorktree: status.invocationWorktree,
     effectiveWorktree: status.effectiveWorktree,
@@ -2278,7 +2414,41 @@ function reusableCleanupAssignments(graph, ledger, status) {
   }).sort((left, right) => left.planId.localeCompare(right.planId) || left.id.localeCompare(right.id));
 }
 
-function reserveAssignment(ledger, planId, idle = null) {
+// Traceability: implements REQ-OBLIGATION-ASSIGNMENT
+function createObligationAssignment(graph, ledger, assignment) {
+  const adopted = adoptedObligationState(graph, ledger.topLevelWorktree);
+  if (!adopted) fail('CAMPAIGN_OBLIGATION_NOT_ADOPTED', 'scope has not adopted obligations');
+  const obligation = adopted.obligationDocument.obligations.find(item => item.id === adopted.selection.selectedId);
+  if (!obligation || !obligation.acceptanceGroups.includes(assignment.planId)) fail('CAMPAIGN_OBLIGATION_BLOCKED', 'assignment must own the earliest selected responsibility');
+  const { compareVectors } = require('../skills/plan-execution/scripts/obligations');
+  if (!adopted.obligationDocument.checkpoints.length || compareVectors(adopted.obligationDocument.checkpoints.at(-1).after, adopted.selection.projection.vector) !== 0) fail('CAMPAIGN_OBLIGATION_DISTURBANCE', 'record honest observation/disturbance before assigning changed inputs');
+  const prior = ledger.obligationAssignments.findLast(binding => binding.assignmentId === assignment.id);
+  if (ledger.obligationAssignments.some(binding => binding.assignmentId !== assignment.id && binding.obligationIds.includes(obligation.id) && ledger.assignments.some(item => item.id === binding.assignmentId && item.state !== 'ARCHIVED') && ledger.obligationAssignments.findLast(item => item.assignmentId === binding.assignmentId).id === binding.id)) fail('CAMPAIGN_OBLIGATION_ASSIGNED', 'selected obligation already has an active lease');
+  const plan = graph.plans.find(item => item.id === assignment.planId);
+  const taskletIds = obligation.execution.taskletIds.length ? plan?.runnableTasklets?.taskletIds : [];
+  if (!taskletIds || obligation.execution.taskletIds.length && obligation.execution.sprintId !== plan.runnableTasklets.sprintId) fail('CAMPAIGN_OBLIGATION_SCOPE', 'assignment must retain selected subordinate readiness');
+  const revision = repositoryIdentity(ledger.topLevelWorktree).revision;
+  if (assignment.worktree && repositoryIdentity(assignment.worktree).revision !== revision) fail('CAMPAIGN_OBLIGATION_REVISION', 'existing worker must reconcile to the integration revision before a new lease');
+  const binding = readObligationAssignmentV1({ id: crypto.randomUUID(), predecessorBindingId: prior?.id ?? null,
+    assignmentId: assignment.id, documentPath: adopted.documentPath, scopeId: adopted.obligationDocument.scopeId,
+    baselineId: adopted.selection.projection.baselineId, predecessorId: adopted.obligationDocument.checkpoints.at(-1).id,
+    revision, obligationIds: [obligation.id], taskletIds, plannedPaths: [...obligation.execution.plannedPaths] });
+  if (prior && JSON.stringify({ ...prior, id: null, predecessorBindingId: null }) === JSON.stringify({ ...binding, id: null, predecessorBindingId: null })) fail('CAMPAIGN_OBLIGATION_NO_CHANGE', 'unchanged frozen lease needs no renewal');
+  return binding;
+}
+
+function renewObligationAssignment(graph, ledger, assignmentId, environment) {
+  if (environment.PONYTAIL_SESSION_ID !== ledger.coordinatorSessionId) fail('CAMPAIGN_COORDINATOR_REQUIRED', 'only the coordinator may renew a responsibility lease');
+  const assignment = ledger.assignments.find(item => item.id === assignmentId && item.state !== 'ARCHIVED');
+  if (!assignment?.sessionId || !assignment.worktree || git(assignment.worktree, ['status', '--porcelain'])) fail('CAMPAIGN_OBLIGATION_WORKER', 'renewal requires a retained clean worker');
+  const observation = readHostObservation(ledger.topLevelWorktree, ledger.campaignId, environment);
+  if (!observation || Date.now() - Date.parse(observation.observedAt) > HOST_OBSERVATION_MAX_AGE_MS || !observation.completeSessionIds.includes(assignment.sessionId) || !observation.sessions.some(session => session.sessionId === assignment.sessionId && session.worktree === assignment.worktree && ['waiting', 'completed'].includes(session.state))) fail('CAMPAIGN_OBLIGATION_WORKER', 'renewal requires fresh complete evidence that the original worker is idle');
+  const binding = createObligationAssignment(graph, ledger, assignment);
+  ledger.obligationAssignments.push(binding);
+  return binding;
+}
+
+function reserveAssignment(ledger, planId, idle = null, graph = null) {
   const assignment = readAssignmentV1({
     id: crypto.randomUUID(), planId,
     sessionId: idle?.sessionId ?? null, worktree: idle?.worktree ?? null,
@@ -2287,6 +2457,7 @@ function reserveAssignment(ledger, planId, idle = null) {
     idempotencyKey: crypto.randomUUID(), attachToken: crypto.randomBytes(32).toString('base64url'),
     worktreeArchived: false, sessionArchived: false,
   });
+  if (graph?.obligationDocument) ledger.obligationAssignments.push(createObligationAssignment(graph, ledger, assignment));
   ledger.assignments.push(assignment);
   return assignment;
 }
@@ -2297,7 +2468,7 @@ function reconcileLedger(graph, ledger, environment = null) {
   const conflicts = blockingDiagnostics(status).filter(({ code }) => code !== 'CAMPAIGN_PLAN_UNASSIGNED');
   if (conflicts.length) fail('CAMPAIGN_STATUS_BLOCKED', conflicts.map(({ message }) => message).join('; '));
   ledger.integrationRevision = status.integrationRevision;
-  for (const diagnostic of status.diagnostics.filter(({ code }) => code === 'CAMPAIGN_PLAN_UNASSIGNED')) reserveAssignment(ledger, diagnostic.planId);
+  for (const diagnostic of status.diagnostics.filter(({ code }) => code === 'CAMPAIGN_PLAN_UNASSIGNED')) reserveAssignment(ledger, diagnostic.planId, null, graph);
   return null;
 }
 
@@ -2403,7 +2574,7 @@ function scheduleWorker(graph, ledger, status) {
   const planId = queued?.planId ?? status.readyPlans[0];
   const idle = status.idleWorkers[0] ?? null;
   if (!idle && campaignWorkerCount(ledger) >= CAMPAIGN_WORKER_LIMIT) return null;
-  const assignmentRecord = queued ?? reserveAssignment(ledger, planId, idle);
+  const assignmentRecord = queued ?? reserveAssignment(ledger, planId, idle, graph);
   if (queued) {
     queued.dispatchRevision = ledger.integrationRevision;
     queued.sessionId = idle?.sessionId ?? null;
@@ -2450,7 +2621,7 @@ function scheduleReviewReadyPlans(graph, ledger, environment = null) {
         .sort((left, right) => left.id.localeCompare(right.id))[0];
     if (!plan) break;
     const idle = status.idleWorkers[0];
-    const assignment = queued ?? reserveAssignment(ledger, plan.id, idle);
+    const assignment = queued ?? reserveAssignment(ledger, plan.id, idle, graph);
     if (queued) Object.assign(queued, { dispatchRevision: ledger.integrationRevision, sessionId: idle.sessionId,
       worktree: idle.worktree, branch: idle.branch, workerRevision: idle.revision });
     ledger.pendingActions.push(action('REVIEW_WORKER', assignment, { planId: plan.id,
@@ -2481,7 +2652,7 @@ function schedulePlanningReadyPlans(graph, ledger, environment = null) {
         .sort((left, right) => left.id.localeCompare(right.id))[0];
     if (!plan) break;
     const idle = status.idleWorkers[0];
-    const assignment = queued ?? reserveAssignment(ledger, plan.id, idle);
+    const assignment = queued ?? reserveAssignment(ledger, plan.id, idle, graph);
     if (queued) Object.assign(queued, { dispatchRevision: ledger.integrationRevision, sessionId: idle.sessionId,
       worktree: idle.worktree, branch: idle.branch, workerRevision: idle.revision });
     ledger.pendingActions.push(action('PLAN_WORKER', assignment, { planId: plan.id,
@@ -2804,13 +2975,40 @@ function humanReadyActions(result) {
   return `${lines.join('\n')}\n`;
 }
 
+// Traceability: implements REQ-OBLIGATION-TRANSITIONS
+// Traceability: implements REQ-OBLIGATION-BASELINE
+// Traceability: implements REQ-OBLIGATION-DISCHARGE
+function publishObligationCheckpoint(graph, repositoryRoot, candidatePath, environment) {
+  return withLedgerLock(repositoryRoot, graph.campaignId, environment, ledger => {
+    if (!ledger.coordinatorSessionId || environment.PONYTAIL_SESSION_ID !== ledger.coordinatorSessionId) fail('CAMPAIGN_COORDINATOR_REQUIRED', 'only the bound coordinator may accept obligation evidence');
+    const adopted = adoptedObligationState(graph, repositoryRoot);
+    if (!adopted) fail('CAMPAIGN_OBLIGATION_NOT_ADOPTED', 'campaign does not configure obligation operations');
+    const { inputDigest, parseObligationDocument, acceptCheckpoint } = require('../skills/plan-execution/scripts/obligations');
+    inputDigest(repositoryRoot, candidatePath);
+    let candidate;
+    try { candidate = parseObligationDocument(fs.readFileSync(path.join(repositoryRoot, candidatePath), 'utf8')); }
+    catch (error) { fail('CAMPAIGN_OBLIGATION_INVALID', error.message); }
+    if (candidate.checkpoints.at(-1)?.assessor !== ledger.coordinatorSessionId) fail('CAMPAIGN_COORDINATOR_REQUIRED', 'checkpoint must identify the authenticated coordinator');
+    for (const certificate of candidate.certificates) if (certificate.inputs.some(input => input.path === adopted.documentPath)) fail('CAMPAIGN_OBLIGATION_SELF_INPUT', 'accepted document cannot certify its own bytes');
+    try { acceptCheckpoint(adopted.obligationDocument, candidate, repositoryRoot); }
+    catch (error) { fail('CAMPAIGN_OBLIGATION_INVALID', error.message); }
+    const file = path.join(repositoryRoot, adopted.documentPath);
+    const temporary = `${file}.${process.pid}.${crypto.randomUUID()}.tmp`;
+    try {
+      fs.writeFileSync(temporary, `${JSON.stringify(candidate, null, 2)}\n`, { flag: 'wx', mode: 0o600 });
+      fs.renameSync(temporary, file);
+    } finally { if (fs.existsSync(temporary)) fs.unlinkSync(temporary); }
+    return candidate;
+  });
+}
+
 function parseArguments(argv) {
   const operation = argv[0];
   let input;
   let json = false;
   let actionId;
   let result;
-  if (['status', 'reservation-audit', 'runnable-plans', 'tasklet-prerequisites', 'schedule-ready', 'schedule-review-ready', 'schedule-planning-ready', 'ready-actions', 'advance', 'reconcile'].includes(operation)) {
+  if (['obligation-status', 'status', 'reservation-audit', 'runnable-plans', 'tasklet-prerequisites', 'schedule-ready', 'schedule-review-ready', 'schedule-planning-ready', 'ready-actions', 'advance', 'reconcile'].includes(operation)) {
     for (const argument of argv.slice(1)) {
       if (argument === '--json' && !json) json = true;
       else if (argument.startsWith('-') || input !== undefined) fail('CAMPAIGN_ORCHESTRATION_USAGE', usage(), 2);
@@ -2834,7 +3032,11 @@ function parseArguments(argv) {
     try { result = JSON.parse(argv[3]); } catch (error) { fail('CAMPAIGN_HOST_OBSERVATION', `snapshot is not valid JSON: ${error.message}`, 2); }
   } else if (['deliver', 'report-blocker'].includes(operation) && argv.length === 4 && argv[2] === '--result') {
     input = argv[1];
-    try { result = JSON.parse(argv[3]); } catch (error) { fail('CAMPAIGN_WORKER_DELIVERY', `result is not valid JSON: ${error.message}`, 2); }
+    try { result = parseCampaignJson(argv[3]); } catch (error) { fail('CAMPAIGN_WORKER_DELIVERY', `result is not valid JSON: ${error.message}`, 2); }
+  } else if (operation === 'obligation-assign' && (argv.length === 4 || argv.length === 5 && argv[4] === '--json') && argv[2] === '--assignment') {
+    input = argv[1]; result = argv[3]; json = argv.length === 5;
+  } else if (operation === 'obligation-accept' && (argv.length === 4 || argv.length === 5 && argv[4] === '--json') && argv[2] === '--candidate') {
+    input = argv[1]; result = argv[3]; json = argv.length === 5;
   } else if (operation === 'attach' && argv.length === 2) {
     result = argv[1];
   } else fail('CAMPAIGN_ORCHESTRATION_USAGE', usage(), 2);
@@ -2843,7 +3045,7 @@ function parseArguments(argv) {
 }
 
 function usage() {
-  return 'usage: ponytail campaign status [<campaign>] [--json]\n       ponytail campaign reservation-audit [<campaign>] [--json]\n       ponytail campaign runnable-plans [<campaign>] [--json]\n       ponytail campaign tasklet-prerequisites [<campaign>] [--json]\n       ponytail campaign schedule-ready [<campaign>] [--json]\n       ponytail campaign schedule-review-ready [<campaign>] [--json]\n       ponytail campaign schedule-planning-ready [<campaign>] [--json]\n       ponytail campaign ready-actions [<campaign>] [--json]\n       ponytail campaign report-blocker <campaign> --result <json>\n       ponytail campaign observe <campaign> --snapshot <json>\n       ponytail campaign advance [<campaign>] [--json]\n       ponytail campaign reconcile <campaign> [--json]\n       ponytail campaign retry-dispatch <campaign> <original-action-id> --authorization <non-secret-reference> [--json]\n       ponytail campaign action-result <campaign> <action-id> --result <json>\n       ponytail campaign retire-worktree <campaign> <action-id> [--json]\n       ponytail campaign attach <token>\n       ponytail campaign deliver <campaign> --result <json>';
+  return 'usage: ponytail campaign obligation-status <campaign> --json\n       ponytail campaign obligation-accept <campaign> --candidate <relative-path> --json\n       ponytail campaign obligation-assign <campaign> --assignment <assignment-id> --json\n       ponytail campaign status [<campaign>] [--json]\n       ponytail campaign reservation-audit [<campaign>] [--json]\n       ponytail campaign runnable-plans [<campaign>] [--json]\n       ponytail campaign tasklet-prerequisites [<campaign>] [--json]\n       ponytail campaign schedule-ready [<campaign>] [--json]\n       ponytail campaign schedule-review-ready [<campaign>] [--json]\n       ponytail campaign schedule-planning-ready [<campaign>] [--json]\n       ponytail campaign ready-actions [<campaign>] [--json]\n       ponytail campaign report-blocker <campaign> --result <json>\n       ponytail campaign observe <campaign> --snapshot <json>\n       ponytail campaign advance [<campaign>] [--json]\n       ponytail campaign reconcile <campaign> [--json]\n       ponytail campaign retry-dispatch <campaign> <original-action-id> --authorization <non-secret-reference> [--json]\n       ponytail campaign action-result <campaign> <action-id> --result <json>\n       ponytail campaign retire-worktree <campaign> <action-id> [--json]\n       ponytail campaign attach <token>\n       ponytail campaign deliver <campaign> --result <json>';
 }
 
 function run(argv = process.argv.slice(2), options = {}) {
@@ -2926,8 +3128,23 @@ function run(argv = process.argv.slice(2), options = {}) {
     process.stdout.write(`${JSON.stringify(status)}\n`);
     return status;
   }
-  const resolution = resolveInvocationWorktree(invocationWorktree, environment, ['status', 'reservation-audit', 'runnable-plans', 'tasklet-prerequisites'].includes(request.operation));
+  const resolution = resolveInvocationWorktree(invocationWorktree, environment, ['obligation-status', 'status', 'reservation-audit', 'runnable-plans', 'tasklet-prerequisites'].includes(request.operation));
   const graph = resolveGraph(resolution.effectiveWorktree, request.input ?? resolution.workerBinding?.campaignId);
+  if (request.operation === 'obligation-assign') {
+    const result = withLedgerLock(resolution.effectiveWorktree, graph.campaignId, environment, ledger => renewObligationAssignment(graph, ledger, request.result, environment));
+    process.stdout.write(`${JSON.stringify(result)}\n`); return result;
+  }
+  if (request.operation === 'obligation-accept') {
+    const result = publishObligationCheckpoint(graph, resolution.effectiveWorktree, request.result, environment);
+    process.stdout.write(`${JSON.stringify(result)}\n`);
+    return result;
+  }
+  if (request.operation === 'obligation-status') {
+    const adopted = adoptedObligationState(graph, resolution.effectiveWorktree);
+    if (!adopted) fail('CAMPAIGN_OBLIGATION_NOT_ADOPTED', 'campaign does not configure obligation operations');
+    process.stdout.write(`${JSON.stringify(adopted.selection)}\n`);
+    return adopted.selection;
+  }
   if (request.operation === 'tasklet-prerequisites') {
     const result = readTaskletPrerequisitesV1({ schemaVersion: 1, campaignId: graph.campaignId, effectiveWorktree: resolution.effectiveWorktree,
       integrationRevision: git(resolution.effectiveWorktree, ['rev-parse', 'HEAD']), prerequisites: graph.externalPrerequisites });
@@ -3044,6 +3261,14 @@ module.exports = {
   readLedgerV6,
   readLedgerV7,
   readLedgerV8,
+  readLedgerV9,
+  parseCampaignJson,
+  readObligationAssignmentV1,
+  reserveAssignment,
+  renewObligationAssignment,
+  readWorkerDeliveriesV2,
+  recordWorkerDelivery,
+  adoptedObligationState,
   readReadyActionsV1,
   readReadyActionsV2,
   readReadyActionsV3,
@@ -3071,6 +3296,9 @@ module.exports = {
   readStatusV8,
   readStatusV9,
   readStatusV10,
+  readStatusV11,
+  readReadyActionsV8,
+  obligationProjection,
   readWorkerV1,
   reconcile,
   reconcileLedger,
@@ -3087,6 +3315,7 @@ module.exports = {
   usage,
   validateActionResultBinding,
   withLedgerLock,
+  publishObligationCheckpoint,
   withWorktreeLock,
   writeHostObservation,
   writeWorkerDeliveries,
