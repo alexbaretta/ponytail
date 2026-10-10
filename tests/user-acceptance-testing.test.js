@@ -30,7 +30,8 @@ test('requirements preserve provenance and stakeholder conflict resolution', () 
 
 test('UAT derives release evidence from approved requirements', () => {
   assert.match(uat, /UAT derives expected outcomes from approved requirements/);
-  assert.match(uat, /one canonical plain-English Arc for one behavior/);
+  assert.match(uat, /Multiple Arcs may demonstrate it when each independently proves the whole/);
+  assert.match(uat, /are attributes of an Arc, not reasons to duplicate that Arc/);
   assert.match(uat, /Candidate and observed requirements may support explicitly exploratory Arcs/);
   assert.match(uat, /Passing UAT means the recorded acceptance selection passed/);
   assert.match(uat, /does not by\nitself manufacture a developer, operator, or stakeholder approval/);

@@ -37,7 +37,8 @@
         "pm/requirements/traceability.generated.md",
         "tests/plan-execution-policy.test.js",
         "src/campaign-orchestration.js",
-        "tests/plan-execution-serial.test.js"
+        "tests/plan-execution-serial.test.js",
+        "tests/user-acceptance-testing.test.js"
       ]
     },
     "S04-F01-T03": {
