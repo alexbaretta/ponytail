@@ -325,7 +325,7 @@ not decisions already approved by accepting the obligation definition.
 
 | Sprint | Intent | Planning dependency | State |
 | --- | --- | --- | --- |
-| [S01](./sprints/S01.md) | Adopt the reviewed policy and acceptance contract after kickoff. | None | APPROVED |
+| [S01](./sprints/S01.md) | Adopt the reviewed policy and acceptance contract after kickoff. | None | DONE |
 | [S02](./sprints/S02.md) | Implement durable records, validation, and obligation-first selection. | S01 | STUB |
 | [S03](./sprints/S03.md) | Integrate assignment/delivery and discovery; prove compatibility. | S02 | STUB |
 | [S04](./sprints/S04.md) | Run approved local pilot, reconcile generated policy, and final acceptance. | S03 | STUB |
