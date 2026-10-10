@@ -97,6 +97,10 @@ These rules remain active at every compaction level, including `off`:
   and inert reference data that no such path consumes are exempt from product
   tests, but still require applicable syntax, schema, link, generator, or
   comparable structural checks.
+- Use the `plan-execution` skill's `references/glossary.md` as the canonical
+  shared vocabulary. Apply that skill's obligation-centered acceptance when
+  the project has adopted its configured operations; preserve legacy selectors
+  until adoption. Do not equate finished edits with discharged obligations.
 - When a project configures `requirements-traceability`, keep its canonical
   annotations, artifact classification, generated-source mappings, and
   generated reverse view synchronized for every affected approved

@@ -46,12 +46,9 @@ discrepancy policy.
 
 ## Integration-Test Hierarchy
 
-Use these terms consistently:
-
-- **Suite**: a named set of related Arcs.
-- **Arc**: a named ordered sequence of one or more Steps.
-- **Step**: the smallest independently reported executable integration-test
-  operation together with its assertions.
+Use the [Ponytail glossary](../plan-execution/references/glossary.md) for the
+canonical Suite, Arc and Step definitions. This skill owns execution semantics.
+Acceptance names a condition; its Arc supplies the ordered demonstration.
 
 Steps execute in their declared Arc order. When a Step fails, stop that Arc's
 ordinary Steps after running required harness finalization. Do not stop the

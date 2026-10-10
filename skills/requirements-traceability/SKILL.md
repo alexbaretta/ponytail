@@ -19,6 +19,8 @@ maps. The annotation beside the smallest stable owned implementation or
 verification unit is the canonical relationship. Generate requirement-oriented
 reverse views from those annotations.
 
+Shared terms use the [Ponytail glossary](../plan-execution/references/glossary.md).
+Acceptance conditions and their demonstration Arcs remain distinct.
 ## Project Configuration Contract
 
 The host configures this skill in `AGENTS.md`, directly or by reference, with:
@@ -150,6 +152,46 @@ tasklets, linked issues, named requirements, and the actual artifacts related
 to those requirements. Invalid membership must fail; never fall back to a
 broader scope.
 
+## Obligation certificates and completeness
+
+Traceability: supports REQ-OBLIGATION-COMPLETENESS
+Traceability: supports REQ-OBLIGATION-DISCHARGE
+
+For a frozen approved baseline, assess these upstream certificates:
+
+- T1: adequate linked plain-English UAT proves the entire atomic requirement.
+- T2: a selectable executable integration Arc implements the required UAT actions,
+  observations and lifecycle through the real product path.
+- T3: truthful annotations resolve acceptance responsibilities to actual stable
+  owned implementation units and necessary support.
+- T4: independently testable owned responsibilities have adequate executable
+  unit proof, or an admissible scoped no-unit-test disposition.
+
+Registration, valid IDs/roles, semantic attachment, generated-source integrity
+and reverse parity are necessary certificate conditions. They do not establish
+behavioral adequacy or passing execution. Planned units, empty tests and passing
+substitute paths cannot discharge proof. Keep the annotations above as the sole
+relationship source; certificate assessments reference them without another map.
+
+Count responsibilities, not diagnostics: one T1 per atomic requirement, one T2
+per required UAT Arc, one T3 per acceptance Step/assertion responsibility, and one
+T4 per independently testable unit/responsibility. Optional redundant proof is not
+mandatory merely because it exists. Tests can discharge several responsibilities
+only when each is adequately asserted. Unit proof need not duplicate integration.
+
+Inventory review must examine requirements, acceptance observations, executable
+selection/lifecycle, actual implementation/support, unit proof and required
+execution targets. Until a category inventory is reviewed, retain an unresolved
+inventory obligation there. Closing it enumerates necessary responsibilities.
+Same-category discovery can increase counts: record it as disturbance, never
+manufacture a decreasing history. Later discovery invalidates prior completeness.
+
+A disposition covers only the exact genuinely untestable responsibility and its
+canonical justification. It creates no C1 execution obligation and waives neither
+integration nor UAT. A requirement-level legacy reason cannot waive discovered
+testable units. Unknown or inadequately assessed certificates remain unresolved.
+Immediately register every necessary downstream obligation exposed by repair.
+`plan-execution` owns the controller, execution evidence and acceptance boundary.
 ## Enforcement Boundaries
 
 The project-neutral structural checker owns strict configuration parsing,

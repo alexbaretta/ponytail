@@ -51,3 +51,20 @@ listed in the design; they become active only through the normal kickoff gate.
 Proposal links and lifecycle placement are subject to document checks. Product
 implementation, certificate evidence and acceptance are pending. This is a
 proposed change, not a confirmed defect or a completed correction.
+
+## Activation reconciliation
+
+Approved scope has been reconciled into [requirements](../../requirements/obligation-execution.md)
+and [UAT](../../uat/obligation-execution.md). Implementation and executable proof
+gaps remain owned by the active plan. No planned test is credited as completed.
+
+Traceability: introduces REQ-PONYTAIL-GLOSSARY from issue 2026-10-10-CHNG-obligation_centered_execution
+Traceability: introduces REQ-OBLIGATION-IDENTITY from issue 2026-10-10-CHNG-obligation_centered_execution
+Traceability: introduces REQ-OBLIGATION-DISCHARGE from issue 2026-10-10-CHNG-obligation_centered_execution
+Traceability: introduces REQ-OBLIGATION-ASSIGNMENT from issue 2026-10-10-CHNG-obligation_centered_execution
+Traceability: introduces REQ-OBLIGATION-PRIORITY from issue 2026-10-10-CHNG-obligation_centered_execution
+Traceability: introduces REQ-OBLIGATION-TRANSITIONS from issue 2026-10-10-CHNG-obligation_centered_execution
+Traceability: introduces REQ-OBLIGATION-COMPLETENESS from issue 2026-10-10-CHNG-obligation_centered_execution
+Traceability: introduces REQ-OBLIGATION-BASELINE from issue 2026-10-10-CHNG-obligation_centered_execution
+Traceability: introduces REQ-OBLIGATION-FRESHNESS from issue 2026-10-10-CHNG-obligation_centered_execution
+Traceability: introduces REQ-OBLIGATION-COMPATIBILITY from issue 2026-10-10-CHNG-obligation_centered_execution

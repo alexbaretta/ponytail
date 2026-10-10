@@ -51,7 +51,18 @@
     {
       "id": "REQ-WORKTREE-RECLAMATION",
       "sourcePath": "pm/requirements/worktree-reclamation.md"
-    }
+    },
+    {"id": "REQ-PONYTAIL-GLOSSARY", "sourcePath": "pm/requirements/obligation-execution.md"},
+    {"id": "REQ-OBLIGATION-IDENTITY", "sourcePath": "pm/requirements/obligation-execution.md"},
+    {"id": "REQ-OBLIGATION-DISCHARGE", "sourcePath": "pm/requirements/obligation-execution.md"},
+    {"id": "REQ-OBLIGATION-ASSIGNMENT", "sourcePath": "pm/requirements/obligation-execution.md"},
+    {"id": "REQ-OBLIGATION-PRIORITY", "sourcePath": "pm/requirements/obligation-execution.md"},
+    {"id": "REQ-OBLIGATION-TRANSITIONS", "sourcePath": "pm/requirements/obligation-execution.md"},
+    {"id": "REQ-OBLIGATION-COMPLETENESS", "sourcePath": "pm/requirements/obligation-execution.md"},
+    {"id": "REQ-OBLIGATION-BASELINE", "sourcePath": "pm/requirements/obligation-execution.md"},
+    {"id": "REQ-OBLIGATION-FRESHNESS", "sourcePath": "pm/requirements/obligation-execution.md"},
+    {"id": "REQ-OBLIGATION-COMPATIBILITY", "sourcePath": "pm/requirements/obligation-execution.md"},
+    {"id": "REQ-REPAIR-PLAN-STARTING-GATE", "sourcePath": "pm/requirements/obligation-execution.md"}
   ],
   "artifacts": [
     {"class":"issue","path":"pm/bugs/closed/2026-10-06-BUG-peer_refs_block_commit_hook.md","locator":"text"},
@@ -546,7 +557,15 @@
       "class": "issue",
       "path": "pm/bugs/closed/2026-09-30-FEAT-developer_private_agent_instructions.md",
       "locator": "text"
-    }
+    },
+    {"class": "uat", "path": "pm/uat/obligation-execution.md", "locator": "text"},
+    {"class": "plan", "path": "pm/plans/in_progress/2026-10-10-obligation-centered-execution/plan.md", "locator": "text"},
+    {"class": "implementation", "path": "skills/plan-execution/references/glossary.md", "locator": "text"},
+    {"class": "implementation", "path": "skills/user-acceptance-testing/SKILL.md", "locator": "text"},
+    {"class": "implementation", "path": "skills/production-test-boundaries/SKILL.md", "locator": "text"},
+    {"class": "unit-test", "path": "tests/obligation-glossary.test.js", "locator": "text"},
+    {"class": "issue", "path": "pm/bugs/in_progress/2026-10-10-CHNG-obligation_centered_execution.md", "locator": "text"},
+    {"class": "issue", "path": "pm/bugs/in_progress/2026-10-10-CHNG-repair_plan_starting_gate.md", "locator": "text"}
   ],
   "entities": [],
   "generatedArtifacts": [
@@ -565,7 +584,14 @@
     {
       "path": "plugin.yaml",
       "sourcePath": "registry.tsv"
-    }
+    },
+    {"path": ".openclaw/skills/ponytail/SKILL.md", "sourcePath": "skills/ponytail/SKILL.md"},
+    {"path": ".openclaw/skills/plan-execution/SKILL.md", "sourcePath": "skills/plan-execution/SKILL.md"},
+    {"path": ".openclaw/skills/requirements/SKILL.md", "sourcePath": "skills/requirements/SKILL.md"},
+    {"path": ".openclaw/skills/user-acceptance-testing/SKILL.md", "sourcePath": "skills/user-acceptance-testing/SKILL.md"},
+    {"path": ".openclaw/skills/issue-tracking/SKILL.md", "sourcePath": "skills/issue-tracking/SKILL.md"},
+    {"path": ".openclaw/skills/production-test-boundaries/SKILL.md", "sourcePath": "skills/production-test-boundaries/SKILL.md"},
+    {"path": ".openclaw/skills/plan-execution/references/glossary.md", "sourcePath": "skills/plan-execution/references/glossary.md"}
   ],
   "reverseViewPath": "pm/requirements/traceability.generated.md",
   "typescript": {

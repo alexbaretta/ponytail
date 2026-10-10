@@ -401,3 +401,36 @@ The current selectors allow S01 planning review and no implementation. Detailed
 evidence is recorded in the S01 sprint document.
 Implementation and final acceptance have not started; no product tests or builds
 were required for recording this proposal.
+
+Traceability: plans-implementation REQ-PONYTAIL-GLOSSARY from plan 2026-10-10-obligation-centered-execution
+Traceability: plans-verification REQ-PONYTAIL-GLOSSARY from plan 2026-10-10-obligation-centered-execution
+
+Traceability: plans-implementation REQ-OBLIGATION-IDENTITY from plan 2026-10-10-obligation-centered-execution
+Traceability: plans-verification REQ-OBLIGATION-IDENTITY from plan 2026-10-10-obligation-centered-execution
+
+Traceability: plans-implementation REQ-OBLIGATION-DISCHARGE from plan 2026-10-10-obligation-centered-execution
+Traceability: plans-verification REQ-OBLIGATION-DISCHARGE from plan 2026-10-10-obligation-centered-execution
+
+Traceability: plans-implementation REQ-OBLIGATION-ASSIGNMENT from plan 2026-10-10-obligation-centered-execution
+Traceability: plans-verification REQ-OBLIGATION-ASSIGNMENT from plan 2026-10-10-obligation-centered-execution
+
+Traceability: plans-implementation REQ-OBLIGATION-PRIORITY from plan 2026-10-10-obligation-centered-execution
+Traceability: plans-verification REQ-OBLIGATION-PRIORITY from plan 2026-10-10-obligation-centered-execution
+
+Traceability: plans-implementation REQ-OBLIGATION-TRANSITIONS from plan 2026-10-10-obligation-centered-execution
+Traceability: plans-verification REQ-OBLIGATION-TRANSITIONS from plan 2026-10-10-obligation-centered-execution
+
+Traceability: plans-implementation REQ-OBLIGATION-COMPLETENESS from plan 2026-10-10-obligation-centered-execution
+Traceability: plans-verification REQ-OBLIGATION-COMPLETENESS from plan 2026-10-10-obligation-centered-execution
+
+Traceability: plans-implementation REQ-OBLIGATION-BASELINE from plan 2026-10-10-obligation-centered-execution
+Traceability: plans-verification REQ-OBLIGATION-BASELINE from plan 2026-10-10-obligation-centered-execution
+
+Traceability: plans-implementation REQ-OBLIGATION-FRESHNESS from plan 2026-10-10-obligation-centered-execution
+Traceability: plans-verification REQ-OBLIGATION-FRESHNESS from plan 2026-10-10-obligation-centered-execution
+
+Traceability: plans-implementation REQ-OBLIGATION-COMPATIBILITY from plan 2026-10-10-obligation-centered-execution
+Traceability: plans-verification REQ-OBLIGATION-COMPATIBILITY from plan 2026-10-10-obligation-centered-execution
+
+Traceability: plans-implementation REQ-REPAIR-PLAN-STARTING-GATE from plan 2026-10-10-obligation-centered-execution
+Traceability: plans-verification REQ-REPAIR-PLAN-STARTING-GATE from plan 2026-10-10-obligation-centered-execution

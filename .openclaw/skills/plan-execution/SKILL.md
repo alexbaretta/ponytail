@@ -19,6 +19,95 @@ Manage durable project work without depending on chat history, one Git branch,
 or one repository. The host project's agent configuration supplies paths,
 commands, repository ownership, commit conventions, and additional gates.
 
+Shared terms use the [Ponytail glossary](references/glossary.md). This resource
+owns short definitions; detailed execution contracts remain in this skill.
+
+## Obligation-centered acceptance
+
+Traceability: supports REQ-OBLIGATION-IDENTITY
+Traceability: supports REQ-OBLIGATION-DISCHARGE
+Traceability: supports REQ-OBLIGATION-ASSIGNMENT
+Traceability: supports REQ-OBLIGATION-PRIORITY
+Traceability: supports REQ-OBLIGATION-TRANSITIONS
+Traceability: supports REQ-OBLIGATION-FRESHNESS
+Traceability: supports REQ-OBLIGATION-COMPATIBILITY
+Traceability: supports REQ-REPAIR-PLAN-STARTING-GATE
+
+Newly activated plans adopt obligations as durable planning, assignment and
+acceptance objects once the project configures implemented obligation operations.
+Until then, preserve the canonical selectors below and record pending adoption;
+never invent an unavailable command. Existing plans require explicitly scoped
+migration. Keep historical physical readers and their meanings unchanged.
+
+The host names one canonical obligation document beside its owning plan or issue.
+A campaign root owns shared scope; members reference it rather than duplicate it.
+That document owns conditions, certificate assessments and checkpoint history.
+Canonical requirements and relationship annotations remain in their existing owners.
+Derive satisfaction and counts; assignment, tasklet DONE and merged edits are not
+additional satisfaction flags. Preserve identity across moves, reassignment and
+unchanged rebaselines; changed condition meanings get explicit successor IDs.
+
+Tasklets remain atomic implementation steps where decomposition is useful.
+An obligation may require several tasklets or reuse adequate evidence without
+an edit. A bounded inspection or no-edit assessment need not have a tasklet graph;
+its configured execution binding still needs authority and exact permitted paths.
+Do not replace a multi-edit repair with unrestricted outcome-based authority.
+
+Assign workers selected obligation IDs, prerequisites, exact path/operation
+boundaries, evidence expectations and return conditions. Delivery proposes discharge.
+The existing authorized coordinator accepts shared-scope certificates on reconciled
+inputs; standalone agents use existing local authority. Human acceptance remains
+explicit where required. Do not invent an independent reviewer or new scheduler.
+
+For each frozen baseline use the finite integer vector `(T1,T2,T3,T4,C1,C2)`.
+`requirements-traceability` owns T1-T4 certificate adequacy. C1 counts required
+unit selections lacking fresh passing evidence. C2 counts required integration
+Arc/profile/environment selections lacking fresh passing evidence. Other rule
+obligations are gates, not a seventh coordinate. Structural success is not product
+compliance; unknown, unsupported, stale, skipped and failing proof is unresolved.
+
+Globally select the earliest nonzero coordinate, then stable eligible obligation
+ID order. Stage one reaches global traceability zero; stage two resolves C1 then
+C2, preserving earlier zeros. Subordinate tasklet ranking cannot bypass this
+priority. Freeze same-category repair batches and paths. Immediately register
+required downstream growth; unrelated later-category work cannot join the batch.
+Necessary mandatory tests may run at any stage and supply reusable evidence.
+
+A productive checkpoint strictly decreases the vector lexicographically: earlier
+coordinates equal, first difference smaller, later coordinates any finite
+non-negative values. Record exact predecessor/baseline, selected and changed IDs,
+before/after vectors, commands, inputs, evidence and remaining gaps. Accept only
+the complete reconciled change-set; intermediate edits are not transitions.
+Integration source repair must restore traceability and affected unit correctness
+before accepting a C2 decrease. Preserve the existing focused/feature/sprint/final
+QA cadence; tasklet counts are operational information, not acceptance progress.
+
+Neutral preparation leaves the vector unchanged and names one obligation, a finite
+operation/inspection set, deliverable and stop result. Exhaust that episode before
+another; a repeated no-op needs new evidence or a different bounded approach.
+Invalidated certificates and newly discovered gaps are disturbances: preserve the
+honest increase and cause, return upstream, and distinguish monotonic segments.
+Approved activated amendments start successor baselines, never old-baseline decreases.
+
+Execution evidence identifies relevant content/configuration/dependency inputs,
+revision and dirty state, exact command/selection, target/profile/deployed identity,
+timestamps, outcomes, skips/failures, output and finalization references. Reuse only
+when relevant inputs and required target conditions are unchanged. If dependency
+closure is unknown, assess the full applicable input set; do not assume freshness.
+Timestamps alone prove nothing. The host's operations verify mutable target state.
+
+One coordinator owns the accepted shared document and Git index. Workers retain
+candidate evidence within leases. Inside the existing serialized mutation boundary,
+verify predecessor/current inputs before acceptance; compare-then-rename alone is
+not atomic compare-and-swap. Stale deliveries must reconcile and revalidate.
+Keep acceptance records with their lifecycle transition and cohesive commits.
+
+Parents complete only when owned obligations and applicable QA gates are satisfied.
+Keep necessary unfinished work pending. Cancellation, deferral and decomposition
+cannot discharge obligations; preserve superseded work and its rationale.
+Strict descent in `N^6` is well-founded but reaching zero additionally requires
+reachable authorized repairs, finite preparation and controlled disturbances.
+Never claim unconditional convergence or substitute a finite weighted scalar.
 ## Host Configuration Contract
 
 Use the project-local agent instructions already in context. They should
@@ -793,8 +882,8 @@ tasklet, greatest number of unfinished descendants, longest remaining
 dependency path, then lowest tasklet ID. It selects the highest-ranked root,
 then extends that single batch with up to sixteen ordered descendants whose
 dependencies are already `DONE` or earlier in the same batch. Feature
-validation waits until every implementation tasklet is complete. Tasklets
-remain the atomic acceptance and evidence units; the batch amortizes context,
+validation waits until every implementation tasklet is complete. In legacy tasklet execution, tasklets
+remain the atomic edit and focused-evidence units; the batch amortizes context,
 review, validation, and commit overhead. Do not subdivide a valid selected
 batch merely to produce smaller changes or commits. V3 returns
 `{"next":[{"tasklets":[...],"planned_paths":[...]}],"criteria":{...}}`;

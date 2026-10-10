@@ -15,6 +15,11 @@ while project-wide management records remain under `pm/`.
 ## Ownership
 
 - `skills/` owns canonical reusable skills and the portable Ponytail policy.
+  `skills/plan-execution/references/glossary.md` owns shared short definitions.
+  Configured obligation documents beside their owning plan/issue own conditions,
+  certificate assessments and checkpoint history; campaign members reference the
+  root document rather than duplicate it. Assignments remain in their execution
+  owner, and canonical relationship annotations retain their existing ownership.
 - `commands/` owns canonical command prompts.
 - `config/AGENTS.md` is the generated global Codex policy installed by the
   Codex installer.

@@ -18,6 +18,10 @@ user-facing behavior. UAT derives expected outcomes from approved requirements;
 it does not create requirements, convert observations into intended behavior,
 or replace explicit release authorization.
 
+Shared terms use the [Ponytail glossary](../plan-execution/references/glossary.md).
+An acceptance is the atomic condition recorded in the configured UAT root. Its
+Arc supplies actors, prerequisites, ordered actions and observations proving it.
+A condition alone does not establish coverage.
 ## Project Configuration Contract
 
 The host configures this skill in `AGENTS.md`, directly or by reference, with:
@@ -77,16 +81,15 @@ process and thematic Suite pages through ordinary relative Markdown links.
 Every page must be reachable from the index and link back to its parent or the
 index. Create the root with its first substantive content, not as a placeholder.
 
-Use the canonical integration hierarchy from `production-test-boundaries`:
+Use the canonical Suite/Arc/Step definitions in the glossary; execution
+semantics remain owned by `production-test-boundaries`.
 
-- a **Suite** groups related acceptance coverage;
-- an **Arc** is an independently selectable user outcome; and
-- a **Step** is one ordered user or system action with its expected observable
-  result.
-
-Keep one canonical plain-English Arc for one behavior. Execution profile,
-manual versus automated operation, and target environment are attributes of
-that Arc, not reasons to duplicate it.
+One acceptance states the whole atomic requirement's observable compliance.
+Multiple Arcs may demonstrate it when each independently proves the whole
+requirement. If distinct procedures are jointly necessary, apply requirements'
+controlled split process rather than credit fragments as complete coverage.
+Execution profile, manual versus automated operation and target environment
+are attributes of an Arc, not reasons to duplicate that Arc.
 
 Each Arc records:
 

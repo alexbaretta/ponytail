@@ -44,9 +44,12 @@ test('execution profiles preserve one Arc and test-owned state', () => {
 });
 
 test('integration terminology has one canonical hierarchy', () => {
-  assert.match(skill, /\*\*Suite\*\*: a named set of related Arcs/);
-  assert.match(skill, /\*\*Arc\*\*: a named ordered sequence of one or more Steps/);
-  assert.match(skill, /\*\*Step\*\*: the smallest independently reported executable integration-test/);
+  assert.match(skill, /Ponytail glossary/);
+  const glossary = fs.readFileSync(path.join(__dirname, '..', 'skills',
+    'plan-execution', 'references', 'glossary.md'), 'utf8');
+  assert.match(glossary, /\| Suite \| A named set of related Arcs/);
+  assert.match(glossary, /\| Arc \| A named ordered sequence of one or more Steps/);
+  assert.match(glossary, /\| Step \|.*independently reported operation with assertions/);
   for (const relatedSkill of relatedSkills) {
     assert.match(relatedSkill, /canonical Suite,\nArc, and Step definitions from `production-test-boundaries`/);
   }

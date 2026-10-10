@@ -41,3 +41,11 @@ approval or implementation has already occurred.
 
 Proposal links and lifecycle placement are subject to document checks. Runtime
 proof and policy amendment remain pending.
+
+## Activation reconciliation
+
+Approved scope has been reconciled into [requirements](../../requirements/obligation-execution.md)
+and [UAT](../../uat/obligation-execution.md). Implementation and executable proof
+gaps remain owned by the active plan. No planned test is credited as completed.
+
+Traceability: introduces REQ-REPAIR-PLAN-STARTING-GATE from issue 2026-10-10-CHNG-repair_plan_starting_gate

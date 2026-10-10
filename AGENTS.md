@@ -16,6 +16,8 @@ policy belongs in `skills/ponytail/SKILL.md`; do not duplicate it here.
 - Repository and management root: this repository.
 - Structure and ownership: `PROJECT_STRUCTURE.md`.
 - Project-management root: `pm/`.
+- Obligation operations: pending S02/S03 implementation; current selectors remain
+  authoritative until adoption. Shared vocabulary: the plan-execution glossary.
 - Long-lived plans: `pm/plans/<status>/<plan-id>/` for new records.
 - Issues (`BUG`, `FEAT`, `CHNG`, `TASK`, and project-defined extensions):
   `pm/bugs/<status>/`; semantics are owned by `issue-tracking`.

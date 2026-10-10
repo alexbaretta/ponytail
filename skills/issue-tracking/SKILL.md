@@ -23,6 +23,10 @@ not configure type-specific roots, every type uses the default `bugs/`
 collection. External issue trackers do not replace these records unless the
 host explicitly assigns them that ownership.
 
+Shared terms use the [Ponytail glossary](../plan-execution/references/glossary.md).
+An approved activated FEAT/CHNG affecting a frozen baseline invokes requirements'
+rebaseline contract. Filing, approval and implementation activation remain separate;
+no metric or obligation record grants approval or changes issue-type semantics.
 ## Project Configuration
 
 Read the host's Ponytail project configuration through its agent instructions,

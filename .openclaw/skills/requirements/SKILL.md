@@ -28,6 +28,25 @@ proposals until a stakeholder approves them as requirements. Do not convert
 them into active scope merely because they would make the product more useful,
 elegant, uniform, extensible, or future-proof.
 
+## Baselines and atomic requirements
+
+Shared terms use the [Ponytail glossary](../plan-execution/references/glossary.md).
+
+Traceability: supports REQ-OBLIGATION-BASELINE
+Traceability: supports REQ-OBLIGATION-COMPLETENESS
+
+For obligation execution, freeze selected approved IDs, canonical sources,
+meanings and exact input identities. A scope move, deferral or decomposition
+cannot remove an approved responsibility. Unknown coverage remains unresolved.
+Each atomic requirement admits an independently complete acceptance procedure;
+if distinct procedures are jointly necessary, propose a controlled requirement
+split. Several ordered Steps in one Arc do not require splitting.
+
+An approved, implementation-activated FEAT or CHNG starts a successor baseline.
+Preserve its predecessor, authority, reason, superseded meanings and unresolved
+obligations. Rebaselining is not progress within the predecessor baseline. Apply
+issue-tracking's approval rules and the activation gate below; do not change
+requirements to excuse behavior, simplify proof or reduce a metric.
 ## Source Authority And Ingestion
 
 Treat imported project-management material as evidence about requirements,

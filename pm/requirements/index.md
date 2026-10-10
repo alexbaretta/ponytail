@@ -12,6 +12,7 @@ behavior independently from implementation plans and architecture.
 
 ## Requirement sets
 
+- [Obligation-centered execution](obligation-execution.md)
 - [CLI interruption](cli-interruption.md)
 
 - [Debugging pattern observations](debugging-pattern-observations.md)
