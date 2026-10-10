@@ -2,14 +2,14 @@
 
 - Issue ID: `2026-10-10-CHNG-obligation_centered_execution`
 - Type: CHNG
-- Status: in_progress
+- Status: closed
 - Source: stakeholder's 2026-10-10 discussion of obligation-centered execution;
   coordinator-authored incorporation proposal, now recorded for review.
 - Approval: the current human stakeholder approved this named CHNG as part of
   the recorded plan and glossary amendment with "Approved. Go." on 2026-10-10.
 - Implementation activation: stakeholder kickoff on 2026-10-10; requirements
   and acceptance reconciliation is the first S01 gate.
-- Epic plan: [Obligation-centered execution](../../plans/in_progress/2026-10-10-obligation-centered-execution/plan.md).
+- Epic plan: [Obligation-centered execution](../../plans/closed/2026-10-10-obligation-centered-execution/plan.md).
 
 ## Existing behavior and proposed change
 
@@ -24,7 +24,7 @@ The accepted definition and six-coordinate order are design inputs. This issue
 proposes new satisfaction/assignment semantics, certificate-based parent closure,
 obligation-first selection, scoped completeness/counting, UAT alternatives, and
 versioned assignment/discovery integration as specified by the
-[design](../../plans/in_progress/2026-10-10-obligation-centered-execution/design.md).
+[design](../../plans/closed/2026-10-10-obligation-centered-execution/design.md).
 
 Planning amendment on 2026-10-10: the stakeholder requested a shared glossary
 for rules and skills and suggested acceptance for the atomic UAT condition.
@@ -49,14 +49,14 @@ listed in the design; they become active only through the normal kickoff gate.
 ## Validation and resolution
 
 Proposal links and lifecycle placement are subject to document checks. Product
-implementation, certificate evidence and acceptance are pending. This is a
-proposed change, not a confirmed defect or a completed correction.
+implementation, certificate evidence and acceptance are complete. This is a
+approved change, implemented and verified under its linked plan.
 
 ## Activation reconciliation
 
 Approved scope has been reconciled into [requirements](../../requirements/obligation-execution.md)
 and [UAT](../../uat/obligation-execution.md). Implementation and executable proof
-gaps remain owned by the active plan. No planned test is credited as completed.
+gaps were resolved by the closed plan; only actual adequate proof was credited.
 
 Traceability: introduces REQ-PONYTAIL-GLOSSARY from issue 2026-10-10-CHNG-obligation_centered_execution
 Traceability: introduces REQ-OBLIGATION-IDENTITY from issue 2026-10-10-CHNG-obligation_centered_execution
@@ -68,3 +68,9 @@ Traceability: introduces REQ-OBLIGATION-COMPLETENESS from issue 2026-10-10-CHNG-
 Traceability: introduces REQ-OBLIGATION-BASELINE from issue 2026-10-10-CHNG-obligation_centered_execution
 Traceability: introduces REQ-OBLIGATION-FRESHNESS from issue 2026-10-10-CHNG-obligation_centered_execution
 Traceability: introduces REQ-OBLIGATION-COMPATIBILITY from issue 2026-10-10-CHNG-obligation_centered_execution
+
+## Completed resolution
+
+The explicitly approved amendment is implemented and accepted by the closed
+plan. All applicable full tests pass; canonical requirements/UAT, generated
+copies, scoped certificates and historical compatibility are reconciled.

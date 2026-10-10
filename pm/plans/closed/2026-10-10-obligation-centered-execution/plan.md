@@ -6,7 +6,7 @@ Licensed under the MIT License. See LICENSE in the project root.
 # Obligation-centered planning, execution, and acceptance
 
 - Plan ID: `2026-10-10-obligation-centered-execution`
-- **Status:** `in_progress`
+- **Status:** `closed`
 - Management and component repository: Ponytail, in the supplied checkout.
 - Authority: the stakeholder approved the recorded plan, detailed design, glossary
   amendment and its two named CHNG proposals with "Approved. Go." on 2026-10-10.
@@ -14,10 +14,10 @@ Licensed under the MIT License. See LICENSE in the project root.
   Outside-project migration and installation remain excluded.
 - Planning authority: on 2026-10-10 the stakeholder instructed the coordinator
   to proceed with detailed planning. Explicit implementation kickoff was subsequently given with "Approved. Go.".
-- Final validation: pending implementation; document checks are recorded below.
+- Final validation: configured full acceptance passed; scoped certificates and lifecycle evidence are recorded below.
 
 <!-- ponytail-plan-campaign
-{"schemaVersion":3,"id":"2026-10-10-obligation-centered-execution","parent_plan_id":null,"depends_on":[],"obligation_document":"pm/plans/in_progress/2026-10-10-obligation-centered-execution/obligations.json"}
+{"schemaVersion":3,"id":"2026-10-10-obligation-centered-execution","parent_plan_id":null,"depends_on":[],"obligation_document":"pm/plans/closed/2026-10-10-obligation-centered-execution/obligations.json"}
 -->
 
 ## Objective and provenance
@@ -290,8 +290,8 @@ manifest registration, and compatibility proof. Decide exact schemas in planning
 stakeholder-authorized detailed planning. Its record is the canonical design
 specification; the summaries here do not create alternate physical schemas.
 
-Canonical proposed issues: [obligation-centered execution epic](../../../bugs/in_progress/2026-10-10-CHNG-obligation_centered_execution.md)
-and [repair-plan starting gate](../../../bugs/in_progress/2026-10-10-CHNG-repair_plan_starting_gate.md).
+Canonical proposed issues: [obligation-centered execution epic](../../../bugs/closed/2026-10-10-CHNG-obligation_centered_execution.md)
+and [repair-plan starting gate](../../../bugs/closed/2026-10-10-CHNG-repair_plan_starting_gate.md).
 Both named CHNGs were explicitly approved with the plan and are now in progress.
 Their requirements and UAT reconciliation precedes the first product policy edit.
 
@@ -328,11 +328,11 @@ not decisions already approved by accepting the obligation definition.
 | [S01](./sprints/S01.md) | Adopt the reviewed policy and acceptance contract after kickoff. | None | DONE |
 | [S02](./sprints/S02.md) | Implement durable records, validation, and obligation-first selection. | S01 | DONE |
 | [S03](./sprints/S03.md) | Integrate assignment/delivery and discovery; prove compatibility. | S02 | DONE |
-| [S04](./sprints/S04.md) | Run approved local pilot, reconcile generated policy, and final acceptance. | S03 | IN_PROGRESS |
+| [S04](./sprints/S04.md) | Run approved local pilot, reconcile generated policy, and final acceptance. | S03 | DONE |
 
 All four sprints now have reviewed V4 tasklet graphs and approved V3 execution
-metadata. S01–S03 are DONE. S04 has adopted this plan as the authorized local pilot;
-C1/C2 and the final synchronization gate remain unresolved until actual final QA.
+metadata. All four sprints are DONE. S04 adopted this authorized local pilot;
+C1/C2 and the final synchronization gate are discharged by recorded final proof.
 Shared aggregate paths retain explicit execution ordering. The V3 plan pointer
 names the sole canonical obligation document.
 
@@ -399,7 +399,7 @@ Those planning-time selectors allowed S01 review and no implementation;
 S01–S03 are now DONE. Detailed
 evidence is recorded in the S01 sprint document.
 S01–S03 implementation and focused acceptance are complete in their sprint
-records. S04 final acceptance remains pending; initial full QA found an obsolete
+records. S04 final acceptance passed; initial full QA found an obsolete
 V2-only policy assertion, corrected under the approved adoption scope.
 
 Traceability: plans-implementation REQ-PONYTAIL-GLOSSARY from plan 2026-10-10-obligation-centered-execution
@@ -434,3 +434,18 @@ Traceability: plans-verification REQ-OBLIGATION-COMPATIBILITY from plan 2026-10-
 
 Traceability: plans-implementation REQ-REPAIR-PLAN-STARTING-GATE from plan 2026-10-10-obligation-centered-execution
 Traceability: plans-verification REQ-REPAIR-PLAN-STARTING-GATE from plan 2026-10-10-obligation-centered-execution
+
+## Final implementation and acceptance
+
+The approved implementation is complete. Final `npm test` passed 606 core,
+23 extension, 4 MCP and 80 TSTS cases with no failures or skips; installer,
+registry, manifest, rule-copy and structural checks passed. Build-impact returned
+no affected or indeterminate targets. Full execution revision and exact input
+digests are in `evidence/final-run.json` and `evidence/final-inputs.json`; raw
+output is `evidence/final-tests.log`. Local adoption preserves sixty stable
+obligation IDs, exact baseline requirement bytes and all accepted history.
+Lifecycle relocation is recorded as an honest disturbance followed by fresh
+assessment of relocated byte-identical proof; no historical prefix is rewritten.
+Closure claims only these eleven approved requirements in Ponytail.
+
+[Canonical obligations](obligations.json) | [Adequacy assessment](evidence/acceptance.md)

@@ -1,0 +1,21 @@
+{
+  "command": "npm test",
+  "startedAt": "2026-10-10T21:53:25.960Z",
+  "revision": "07d12fa7d3711103cc8c886015d25abdd658fc9f",
+  "dirty": false,
+  "target": "/Users/alex/git/ctosclub/ponytail",
+  "profile": "local-node-full",
+  "completedAt": "2026-10-10T21:54:57.498Z",
+  "outcome": "pass",
+  "exitCode": 0,
+  "results": {
+    "core": 606,
+    "piExtension": 23,
+    "mcp": 4,
+    "tsts": 80,
+    "failures": 0,
+    "skips": 0,
+    "structuralFiles": 684,
+    "traceabilityRelationships": 457
+  }
+}

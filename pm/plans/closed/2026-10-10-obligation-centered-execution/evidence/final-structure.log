@@ -1,0 +1,8 @@
+Post-lifecycle relocation: same execution inputs; structural locator reconciliation
+8 rule copies match skills/ponytail/SKILL.md.
+All 7 version files pinned at 4.8.4.
+
+> @alexbaretta/ponytail@4.8.4 check:traceability
+> node skills/requirements-traceability/scripts/check-traceability.js --config .agents/config/project/traceability.json
+
+Traceability checked 457 relationships: no violations found.

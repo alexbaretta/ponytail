@@ -697,7 +697,7 @@
     },
     {
       "class": "plan",
-      "path": "pm/plans/in_progress/2026-10-10-obligation-centered-execution/plan.md",
+      "path": "pm/plans/closed/2026-10-10-obligation-centered-execution/plan.md",
       "locator": "text"
     },
     {
@@ -722,12 +722,12 @@
     },
     {
       "class": "issue",
-      "path": "pm/bugs/in_progress/2026-10-10-CHNG-obligation_centered_execution.md",
+      "path": "pm/bugs/closed/2026-10-10-CHNG-obligation_centered_execution.md",
       "locator": "text"
     },
     {
       "class": "issue",
-      "path": "pm/bugs/in_progress/2026-10-10-CHNG-repair_plan_starting_gate.md",
+      "path": "pm/bugs/closed/2026-10-10-CHNG-repair_plan_starting_gate.md",
       "locator": "text"
     },
     {
