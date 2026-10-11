@@ -16,7 +16,7 @@ const { PLAN_METADATA_MARKER, CampaignPlanMetadataReaders, metadataBlocks,
 const { scanPlanCandidates, listPlanSourceFiles, linkedPlanFiles } = require('./campaign-plan-sources');
 const { validatePlanContents } = require('./campaign-plan-contents');
 const { campaignGraph } = require('./campaign-graph');
-const { buildReport, readCampaignReportV1, repositoryIdentity } = require('./campaign-report');
+const { buildReport, readCampaignReportV1, repositoryIdentity, humanReport } = require('./campaign-report');
 const { discoverCampaign, resolveCampaignRoot, resolveCampaignScope, validateCampaignReference } = require('./campaign-scope');
 
 const INVENTORY_SCHEMA_VERSION = 3;
@@ -313,79 +313,6 @@ function readCampaignReportV3(value) {
 }
 
 CampaignReportReaders = Object.freeze({ V1: readCampaignReportV1, V2: readCampaignReportV2, V3: readCampaignReportV3 });
-
-function percentage(value) {
-  return value === null ? 'unavailable (no tasklets)' : `${Number.isInteger(value) ? value : value.toFixed(2)}%`;
-}
-
-function taskletCountRow(label, taskletCounts) {
-  const total = taskletCounts.DONE + taskletCounts.PENDING + taskletCounts.ERROR;
-  return [label, taskletCounts.DONE, taskletCounts.PENDING, taskletCounts.ERROR, total];
-}
-
-function formatTable(rows) {
-  const widths = rows[0].map((_, column) => Math.max(...rows.map((row) => String(row[column]).length)));
-  return rows.map((row) => row.map((value, column) => {
-    const text = String(value);
-    return typeof value === 'number' ? text.padStart(widths[column]) : text.padEnd(widths[column]);
-  }).join('  ').trimEnd()).join('\n');
-}
-
-// Traceability: implements REQ-CAMPAIGN-CENSUS-CLI
-function humanReport(report, worktree, tableOptions = {}) {
-  const summaryTable = tableOptions.summaryTable ?? true;
-  const planTable = tableOptions.planTable ?? false;
-  const sprintTable = tableOptions.sprintTable ?? false;
-  const taskletsByPlanLifecycle = Object.fromEntries(
-    Object.keys(report.totals.plansByLifecycle)
-      .map((lifecycle) => [lifecycle, { PENDING: 0, DONE: 0, ERROR: 0 }]),
-  );
-  for (const plan of report.campaign.plans) {
-    for (const status of ['PENDING', 'DONE', 'ERROR']) {
-      taskletsByPlanLifecycle[plan.lifecycle][status] += plan.taskletCounts[status];
-    }
-  }
-  const incompleteSprints = report.campaign.sprints
-    .filter((sprint) => sprint.executionStatus !== 'DONE');
-  const taskletRows = [['Plan lifecycle', 'DONE', 'PENDING', 'ERROR', 'Total']];
-  for (const [lifecycle, taskletCounts] of Object.entries(taskletsByPlanLifecycle)) {
-    taskletRows.push(taskletCountRow(lifecycle, taskletCounts));
-  }
-  taskletRows.push(taskletCountRow('Campaign total', report.totals.taskletsByStatus));
-  const planRows = [['Lifecycle', 'Plan', 'DONE', 'PENDING', 'ERROR', 'Total']];
-  for (const plan of report.campaign.plans) {
-    planRows.push([plan.lifecycle, plan.id, plan.taskletCounts.DONE, plan.taskletCounts.PENDING, plan.taskletCounts.ERROR, plan.totalTasklets]);
-  }
-  const lines = [
-    `Campaign: ${report.campaign.rootPlanId}`,
-    `Worktree: ${worktree}`,
-    `Revision: ${report.repository.commit} (${report.repository.branch ?? 'detached'}, ${report.repository.clean ? 'clean' : 'dirty'})`,
-    `Plans: ${report.totals.plans}; Sprints: ${report.totals.sprints} (${report.totals.incompleteSprints} incomplete)`,
-  ];
-  if (summaryTable) {
-    lines.push(
-      '',
-      'Tasklet census',
-      formatTable(taskletRows),
-      `Campaign completion: ${percentage(report.totals.taskletCompletionPercentage)} by tasklet count`,
-      'PENDING and ERROR are distinct formal tasklet states.',
-    );
-  }
-  if (planTable) lines.push('', 'Plan census', formatTable(planRows));
-  if (sprintTable) {
-    lines.push('', 'Incomplete sprint census');
-    if (incompleteSprints.length === 0) {
-      lines.push('None');
-    } else {
-      const sprintRows = [['Plan/Sprint', 'Planning', 'Execution', 'DONE', 'PENDING', 'ERROR', 'Total']];
-      for (const sprint of incompleteSprints) {
-        sprintRows.push([`${sprint.planId}/${sprint.id}`, sprint.planningStatus, sprint.executionStatus ?? 'UNPLANNED', sprint.taskletCounts.DONE, sprint.taskletCounts.PENDING, sprint.taskletCounts.ERROR, sprint.totalTasklets]);
-      }
-      lines.push(formatTable(sprintRows));
-    }
-  }
-  return `${lines.join('\n')}\n`;
-}
 
 function humanInventory(inventory, worktree) {
   const activeCampaigns = inventory.activeCampaigns.length === 0

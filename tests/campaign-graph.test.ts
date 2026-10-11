@@ -5,7 +5,9 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { execFileSync } from 'node:child_process';
 import { campaignGraph, type CampaignGraph } from '../src/campaign-graph.js';
+import { buildReport } from '../src/campaign-report.js';
 import { type CampaignManagementConfigV1 } from '../src/campaign-configuration.js';
 import { type CampaignPlanMetadataV1 } from '../src/campaign-plan-metadata.js';
 import { type SprintMetadataV3 } from '../skills/plan-execution/scripts/sprint-metadata.js';
@@ -29,4 +31,10 @@ test('typed campaign graph retains a planning-only scope and explicit legacy obl
       runnableTasklets: null, reviewableSprint: null, planningSprint: { sprintId: 'S01', planningStatus: 'STUB' } }],
     lifecycle: campaignManagementConfigV1.lifecycle.roles };
   assert.deepEqual(campaignGraph(root, 'plan'), campaignGraphExpected);
+  fs.mkdirSync(path.join(root, 'pm/plans/in_progress'), { recursive: true });
+  fs.renameSync(path.join(root, 'pm/plans/open/plan'), path.join(root, 'pm/plans/in_progress/plan'));
+  assert.equal(campaignGraph(root).campaignId, 'plan');
+  execFileSync('git', ['init', '-q', root]);
+  execFileSync('git', ['-C', root, '-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', 'commit', '-q', '--allow-empty', '-m', 'fixture']);
+  assert.equal(buildReport(root, campaignManagementConfigV1).invocation.input, '');
 });

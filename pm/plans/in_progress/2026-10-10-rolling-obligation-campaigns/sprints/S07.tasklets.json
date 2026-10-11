@@ -137,6 +137,12 @@
         "S07-F22"
       ],
       "validation_tasklet": "S07-F23-T05"
+    },
+    "S07-F24": {
+      "depends_on": [
+        "S07-F23"
+      ],
+      "validation_tasklet": "S07-F24-T04"
     }
   },
   "tasklets": {
@@ -2457,6 +2463,51 @@
       "affinity": [],
       "risk": "normal",
       "feature": "S07-F23",
+      "planned_paths": []
+    },
+    "S07-F24-T01": {
+      "depends_on": [],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F24",
+      "planned_paths": [
+        "src/campaign-report.ts",
+        "src/campaign-graph.ts",
+        "src/campaign-census.js"
+      ]
+    },
+    "S07-F24-T02": {
+      "depends_on": [],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F24",
+      "planned_paths": [
+        "tests/campaign-report.test.ts",
+        "tests/campaign-graph.test.ts"
+      ]
+    },
+    "S07-F24-T03": {
+      "depends_on": [],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F24",
+      "planned_paths": [
+        "src/campaign-report.js",
+        "src/campaign-graph.js",
+        "AGENTS.md",
+        "PROJECT_STRUCTURE.md",
+        "pm/requirements/traceability.generated.md"
+      ]
+    },
+    "S07-F24-T04": {
+      "depends_on": [
+        "S07-F24-T01",
+        "S07-F24-T02",
+        "S07-F24-T03"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F24",
       "planned_paths": []
     }
   },

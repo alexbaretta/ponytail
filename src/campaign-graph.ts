@@ -18,7 +18,7 @@ export interface CampaignGraph {
   readonly lifecycle: CampaignLifecycleRoles;
 }
 
-export function campaignGraph(repositoryRoot: string, input: string): CampaignGraph {
+export function campaignGraph(repositoryRoot: string, input?: string): CampaignGraph {
   const canonicalRepositoryRoot = fs.realpathSync(repositoryRoot);
   const campaignManagementConfigV1: CampaignManagementConfigV1 = readManagementConfig(canonicalRepositoryRoot);
   const discoveredCampaign: DiscoveredCampaign = discoverCampaign(canonicalRepositoryRoot, campaignManagementConfigV1, input);

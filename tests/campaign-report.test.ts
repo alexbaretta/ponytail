@@ -2,7 +2,7 @@
 // Licensed under the MIT License. See LICENSE in the project root.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readCampaignReportV1, type CampaignReportV1 } from '../src/campaign-report.js';
+import { readCampaignReportV1, humanReport, type CampaignReportV1, type CampaignReportTableOptions } from '../src/campaign-report.js';
 import { CampaignError } from '../src/campaign-configuration.js';
 
 function report(): CampaignReportV1 {
@@ -48,4 +48,16 @@ test('V1 report reader retains the explicit null percentage for empty execution'
       incompleteSprintsByPlanningStatus: {}, incompleteSprintsByExecutionStatus: {}, tasklets: 0,
       taskletsByStatus: { PENDING: 0, DONE: 0, ERROR: 0 }, doneTasklets: 0, taskletCompletionPercentage: null } };
   assert.equal(readCampaignReportV1(campaignReportV1).totals.taskletCompletionPercentage, null);
+});
+
+test('typed presentation retains exact header output and independently selected tables', () => {
+  const campaignReportV1: CampaignReportV1 = report();
+  const campaignReportTableOptions: CampaignReportTableOptions = { summaryTable: false };
+  assert.equal(humanReport(campaignReportV1, 'checkout', campaignReportTableOptions),
+    'Campaign: plan\nWorktree: checkout\nRevision: revision (detached, clean)\nPlans: 1; Sprints: 1 (1 incomplete)\n');
+  const tables = humanReport(campaignReportV1, 'checkout', { summaryTable: false, planTable: true, sprintTable: true });
+  assert.doesNotMatch(tables, /Tasklet census/);
+  assert.match(tables, /Plan census\nLifecycle  Plan  DONE  PENDING  ERROR  Total/);
+  assert.match(tables, /Incomplete sprint census\n/);
+  assert.match(tables, /historical planning\s+historical execution/);
 });

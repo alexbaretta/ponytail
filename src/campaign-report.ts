@@ -68,7 +68,7 @@ export function repositoryIdentity(repositoryRoot: string): CampaignRepositoryId
   };
 }
 
-export function buildReport(repositoryRoot: string, campaignManagementConfigV1: CampaignManagementConfigV1, input: string): CampaignReportV1 {
+export function buildReport(repositoryRoot: string, campaignManagementConfigV1: CampaignManagementConfigV1, input?: string): CampaignReportV1 {
   const canonicalRepositoryRoot = fs.realpathSync(repositoryRoot);
   const campaign = discoverCampaign(canonicalRepositoryRoot, campaignManagementConfigV1, input);
   validateCampaignDependencies(campaign.plans);
@@ -213,4 +213,85 @@ function validateCampaignReportV1(value: unknown): asserts value is CampaignRepo
 export function readCampaignReportV1(value: unknown): CampaignReportV1 {
   validateCampaignReportV1(value);
   return value;
+}
+
+export interface CampaignReportTableOptions {
+  readonly summaryTable?: boolean; readonly planTable?: boolean; readonly sprintTable?: boolean;
+}
+type CampaignReportTable = [(string | number)[], ...(string | number)[][]];
+
+function percentage(value: number | null): string {
+  return value === null ? 'unavailable (no tasklets)' : `${Number.isInteger(value) ? value : value.toFixed(2)}%`;
+}
+
+function taskletCountRow(label: string, campaignTaskletCounts: CampaignTaskletCounts): (string | number)[] {
+  const total = campaignTaskletCounts.DONE + campaignTaskletCounts.PENDING + campaignTaskletCounts.ERROR;
+  return [label, campaignTaskletCounts.DONE, campaignTaskletCounts.PENDING, campaignTaskletCounts.ERROR, total];
+}
+
+function formatTable(campaignReportTable: CampaignReportTable): string {
+  const widths = campaignReportTable[0].map((_, column) => Math.max(...campaignReportTable.map(row => String(row[column]).length)));
+  return campaignReportTable.map(row => widths.map((width, column) => {
+    const value = row[column];
+    const text = String(value);
+    return typeof value === 'number' ? text.padStart(width) : text.padEnd(width);
+  }).join('  ').trimEnd()).join('\n');
+}
+
+// Traceability: implements REQ-CAMPAIGN-CENSUS-CLI
+export function humanReport(campaignReportV1: CampaignReportV1, worktree: string, campaignReportTableOptions: CampaignReportTableOptions = {}): string {
+  const summaryTable = campaignReportTableOptions.summaryTable ?? true;
+  const planTable = campaignReportTableOptions.planTable ?? false;
+  const sprintTable = campaignReportTableOptions.sprintTable ?? false;
+  const taskletsByPlanLifecycle: Record<string, CampaignTaskletCounts> = Object.fromEntries(
+    Object.keys(campaignReportV1.totals.plansByLifecycle)
+      .map((lifecycle) => [lifecycle, { PENDING: 0, DONE: 0, ERROR: 0 }]),
+  );
+  for (const plan of campaignReportV1.campaign.plans) {
+    const campaignTaskletCounts = taskletsByPlanLifecycle[plan.lifecycle];
+    if (campaignTaskletCounts === undefined) throw new Error(`report lifecycle counts are absent: ${plan.lifecycle}`);
+    campaignTaskletCounts.PENDING += plan.taskletCounts.PENDING;
+    campaignTaskletCounts.DONE += plan.taskletCounts.DONE;
+    campaignTaskletCounts.ERROR += plan.taskletCounts.ERROR;
+  }
+  const incompleteSprints = campaignReportV1.campaign.sprints
+    .filter((sprint) => sprint.executionStatus !== 'DONE');
+  const taskletCampaignReportTable: CampaignReportTable = [['Plan lifecycle', 'DONE', 'PENDING', 'ERROR', 'Total']];
+  for (const [lifecycle, taskletCounts] of Object.entries(taskletsByPlanLifecycle)) {
+    taskletCampaignReportTable.push(taskletCountRow(lifecycle, taskletCounts));
+  }
+  taskletCampaignReportTable.push(taskletCountRow('Campaign total', campaignReportV1.totals.taskletsByStatus));
+  const planCampaignReportTable: CampaignReportTable = [['Lifecycle', 'Plan', 'DONE', 'PENDING', 'ERROR', 'Total']];
+  for (const plan of campaignReportV1.campaign.plans) {
+    planCampaignReportTable.push([plan.lifecycle, plan.id, plan.taskletCounts.DONE, plan.taskletCounts.PENDING, plan.taskletCounts.ERROR, plan.totalTasklets]);
+  }
+  const lines = [
+    `Campaign: ${campaignReportV1.campaign.rootPlanId}`,
+    `Worktree: ${worktree}`,
+    `Revision: ${campaignReportV1.repository.commit} (${campaignReportV1.repository.branch ?? 'detached'}, ${campaignReportV1.repository.clean ? 'clean' : 'dirty'})`,
+    `Plans: ${campaignReportV1.totals.plans}; Sprints: ${campaignReportV1.totals.sprints} (${campaignReportV1.totals.incompleteSprints} incomplete)`,
+  ];
+  if (summaryTable) {
+    lines.push(
+      '',
+      'Tasklet census',
+      formatTable(taskletCampaignReportTable),
+      `Campaign completion: ${percentage(campaignReportV1.totals.taskletCompletionPercentage)} by tasklet count`,
+      'PENDING and ERROR are distinct formal tasklet states.',
+    );
+  }
+  if (planTable) lines.push('', 'Plan census', formatTable(planCampaignReportTable));
+  if (sprintTable) {
+    lines.push('', 'Incomplete sprint census');
+    if (incompleteSprints.length === 0) {
+      lines.push('None');
+    } else {
+      const sprintCampaignReportTable: CampaignReportTable = [['Plan/Sprint', 'Planning', 'Execution', 'DONE', 'PENDING', 'ERROR', 'Total']];
+      for (const sprint of incompleteSprints) {
+        sprintCampaignReportTable.push([`${sprint.planId}/${sprint.id}`, sprint.planningStatus, sprint.executionStatus ?? 'UNPLANNED', sprint.taskletCounts.DONE, sprint.taskletCounts.PENDING, sprint.taskletCounts.ERROR, sprint.totalTasklets]);
+      }
+      lines.push(formatTable(sprintCampaignReportTable));
+    }
+  }
+  return `${lines.join('\n')}\n`;
 }
