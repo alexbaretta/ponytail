@@ -579,12 +579,10 @@ class RollingCampaignStore {
             requireState(rollingStoredAssignment.state === 'RESERVED' && rollingStoredAssignment.sessionId === null && !rollingStoredAssignment.retired, 'worker creation requires an unattached reservation');
             this.currentLease(rollingStoredAssignment, this.graph(rollingCampaignRow, rollingCampaignRow.graph_digest));
             const rollingStoredWorktree = readWorktree((await poolClient.query('SELECT * FROM ponytail_index.rolling_worktree_v1 WHERE project_id=$1 AND number=$2', [this.projectId, rollingStoredAssignment.worktreeNumber])).rows[0]);
-            const rollingExecutionConfig = executionConfiguration(rollingCampaignRow.configuration_text);
-            const base = (0, node_child_process_1.spawnSync)('git', ['-C', rollingCampaignRow.coordinator_root, 'rev-parse', `refs/heads/${rollingExecutionConfig.incrementRef}^{commit}`], { encoding: 'utf8' });
-            requireState(!base.error && base.status === 0 && /^(?:[a-f0-9]{40}|[a-f0-9]{64})$/u.test(base.stdout.trim()), 'campaign increment has no identified base');
+            const baseCommit = this.campaignBase(rollingCampaignRow);
             await poolClient.query("UPDATE ponytail_index.rolling_action_v1 SET state='STARTED' WHERE action_id=$1", [actionId]);
             return { coordinatorRoot: rollingCampaignRow.coordinator_root, rootPath: rollingStoredWorktree.rootPath,
-                number: rollingStoredWorktree.number, baseCommit: base.stdout.trim(), assignmentId: rollingStoredAssignment.id, generation };
+                number: rollingStoredWorktree.number, baseCommit, assignmentId: rollingStoredAssignment.id, generation };
         });
     }
     async recordWorkerCreation(campaignId, actionId, generation, rollingWorkerCreationV1) {
@@ -628,9 +626,10 @@ class RollingCampaignStore {
     async attachedWorkerIdentity(poolClient, campaignId, rollingStoredAssignment) {
         requireState(rollingStoredAssignment.sessionId && !rollingStoredAssignment.retired, 'worker has no retained session identity');
         const id = rollingStoredAssignment.id;
-        const generation = rollingStoredAssignment.generation;
-        const row = (await poolClient.query("SELECT result_text FROM ponytail_index.rolling_action_v1 WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3 AND generation=$4 AND kind='START_WORKER' AND state='COMPLETED'", [this.projectId, campaignId, id, generation])).rows[0];
-        requireState(row, 'worker has no completed native creation');
+        const rows = (await poolClient.query("SELECT result_text FROM ponytail_index.rolling_action_v1 WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3 AND kind='START_WORKER' AND state='COMPLETED'", [this.projectId, campaignId, id])).rows;
+        requireState(rows.length === 1, 'worker has no unique completed native creation');
+        const row = rows[0];
+        requireState(row, 'worker creation is missing');
         const rollingWorkerCreationV1 = (0, rolling_worker_js_1.parseRollingWorkerCreation)(stringColumn(row.result_text, 'worker creation receipt'));
         requireState(rollingWorkerCreationV1.sessionId === rollingStoredAssignment.sessionId, 'creation receipt differs from attached worker');
         const rollingStoredWorktree = readWorktree((await poolClient.query('SELECT * FROM ponytail_index.rolling_worktree_v1 WHERE project_id=$1 AND number=$2', [this.projectId, rollingStoredAssignment.worktreeNumber])).rows[0]);
@@ -638,6 +637,51 @@ class RollingCampaignStore {
             && node_fs_1.default.realpathSync(rollingWorkerCreationV1.rootPath) === rollingWorkerCreationV1.rootPath, 'creation checkout differs from assignment');
         (0, rolling_worktrees_js_1.validateRollingSessionMarker)(rollingWorkerCreationV1.rootPath, rollingWorkerCreationV1.sessionId);
         return rollingWorkerCreationV1;
+    }
+    campaignBase(rollingCampaignRow) {
+        const rollingExecutionConfig = executionConfiguration(rollingCampaignRow.configuration_text);
+        const result = (0, node_child_process_1.spawnSync)('git', ['-C', rollingCampaignRow.coordinator_root, 'rev-parse', `refs/heads/${rollingExecutionConfig.incrementRef}^{commit}`], { encoding: 'utf8' });
+        requireState(!result.error && result.status === 0 && /^(?:[a-f0-9]{40}|[a-f0-9]{64})$/u.test(result.stdout.trim()), 'campaign increment has no identified base');
+        return result.stdout.trim();
+    }
+    async claimWorkerResumption(campaignId, actionId, generation) {
+        return this.transaction(campaignId, async (poolClient, rollingCampaignRow) => {
+            const rollingActionRow = readAction((await poolClient.query('SELECT * FROM ponytail_index.rolling_action_v1 WHERE project_id=$1 AND campaign_id=$2 AND action_id=$3', [this.projectId, campaignId, actionId])).rows[0]);
+            requireState(rollingActionRow.kind === 'RESUME_WORKER' && rollingActionRow.generation === generation && rollingActionRow.state === 'PENDING', 'worker resumption is already claimed or not eligible; reconcile its original outcome');
+            const rollingStoredAssignment = await this.assignment(poolClient, campaignId, rollingActionRow.assignmentId, generation);
+            requireState(rollingStoredAssignment.state === 'RESERVED' && rollingStoredAssignment.sessionId && !rollingStoredAssignment.retired, 'resumption requires its retained reservation');
+            this.currentLease(rollingStoredAssignment, this.graph(rollingCampaignRow, rollingCampaignRow.graph_digest));
+            const rollingWorkerCreationV1 = await this.attachedWorkerIdentity(poolClient, campaignId, rollingStoredAssignment);
+            const row = (await poolClient.query('SELECT observation_text FROM ponytail_index.rolling_worker_stop_v1 WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3 ORDER BY created_at DESC LIMIT 1', [this.projectId, campaignId, rollingStoredAssignment.id])).rows[0];
+            requireState(row, 'retained native worker has no stopped observation');
+            const rollingWorkerStopV1 = (0, rolling_worker_js_1.parseRollingWorkerStop)(stringColumn(row.observation_text, 'worker stop observation'));
+            requireState(rollingWorkerStopV1.threadId === rollingWorkerCreationV1.threadId && rollingWorkerStopV1.sessionId === rollingWorkerCreationV1.sessionId, 'stopped observation differs from retained identity');
+            const rollingWorkerResumptionV1 = { schemaVersion: 1, rollingWorkerCreationV1, baseCommit: this.campaignBase(rollingCampaignRow) };
+            await poolClient.query("UPDATE ponytail_index.rolling_action_v1 SET state='STARTED' WHERE action_id=$1", [actionId]);
+            return rollingWorkerResumptionV1;
+        });
+    }
+    async completeWorkerResumption(campaignId, actionId, generation, rollingWorkerResumptionV1) {
+        const checkedRollingWorkerResumptionV1 = (0, rolling_worker_js_1.readRollingWorkerResumptionV1)(rollingWorkerResumptionV1);
+        return this.transaction(campaignId, async (poolClient, rollingCampaignRow) => {
+            const rollingActionRow = readAction((await poolClient.query('SELECT * FROM ponytail_index.rolling_action_v1 WHERE project_id=$1 AND campaign_id=$2 AND action_id=$3', [this.projectId, campaignId, actionId])).rows[0]);
+            requireState(rollingActionRow.kind === 'RESUME_WORKER' && rollingActionRow.generation === generation
+                && (rollingActionRow.state === 'STARTED' || rollingActionRow.state === 'COMPLETED'), 'resumption requires its claimed action');
+            const rollingStoredAssignment = await this.assignment(poolClient, campaignId, rollingActionRow.assignmentId, generation);
+            requireState(rollingStoredAssignment.state === 'RESERVED' || rollingStoredAssignment.state === 'WORKING', 'resumption reservation differs');
+            this.currentLease(rollingStoredAssignment, this.graph(rollingCampaignRow, rollingCampaignRow.graph_digest));
+            const rollingWorkerCreationV1 = await this.attachedWorkerIdentity(poolClient, campaignId, rollingStoredAssignment);
+            requireState((0, node_util_1.isDeepStrictEqual)(checkedRollingWorkerResumptionV1.rollingWorkerCreationV1, rollingWorkerCreationV1), 'resumption differs from original native worker');
+            if (rollingActionRow.resultText !== null)
+                requireState((0, node_util_1.isDeepStrictEqual)((0, rolling_worker_js_1.parseRollingWorkerResumption)(rollingActionRow.resultText), checkedRollingWorkerResumptionV1), 'resumption receipt is immutable');
+            else {
+                requireState(checkedRollingWorkerResumptionV1.baseCommit === this.campaignBase(rollingCampaignRow), 'resumption campaign base changed');
+                await poolClient.query("UPDATE ponytail_index.rolling_action_v1 SET state='COMPLETED',result_text=$2 WHERE action_id=$1", [actionId, JSON.stringify(checkedRollingWorkerResumptionV1)]);
+            }
+            await poolClient.query("UPDATE ponytail_index.rolling_assignment_v1 SET state='WORKING' WHERE assignment_id=$1", [rollingStoredAssignment.id]);
+            await poolClient.query("UPDATE ponytail_index.rolling_worktree_v1 SET state='ACTIVE' WHERE project_id=$1 AND number=$2", [this.projectId, rollingStoredAssignment.worktreeNumber]);
+            return { id: rollingStoredAssignment.id, sessionId: rollingWorkerCreationV1.sessionId, state: 'WORKING' };
+        });
     }
     async workerIdentity(campaignId, id, generation) {
         return this.transaction(campaignId, async (poolClient) => this.attachedWorkerIdentity(poolClient, campaignId, await this.assignment(poolClient, campaignId, id, generation)));
@@ -685,12 +729,17 @@ class RollingCampaignStore {
             && !rollingStoredAssignment.retired && rollingStoredAssignment.sessionId, 'worker instructions require an active attached session');
         const obligationLeaseV1 = this.currentLease(rollingStoredAssignment, rollingGraph);
         const rollingWorkerCreationV1 = await this.attachedWorkerIdentity(poolClient, campaignId, rollingStoredAssignment);
+        const action = readAction((await poolClient.query("SELECT * FROM ponytail_index.rolling_action_v1 WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3 AND generation=$4 AND state='COMPLETED'", [this.projectId, campaignId, id, generation])).rows[0]);
+        requireState(action.resultText !== null, 'worker generation has no native receipt');
+        const generationRollingWorkerCreationV1 = action.kind === 'START_WORKER' ? (0, rolling_worker_js_1.parseRollingWorkerCreation)(action.resultText)
+            : (0, rolling_worker_js_1.parseRollingWorkerResumption)(action.resultText).rollingWorkerCreationV1;
+        requireState((0, node_util_1.isDeepStrictEqual)(generationRollingWorkerCreationV1, rollingWorkerCreationV1), 'worker generation differs from original native identity');
         const obligation = rollingGraph.document.obligations.find(item => item.id === rollingStoredAssignment.obligationId);
         const obligationBaseline = rollingGraph.document.baselines.at(-1);
         requireState(obligation && obligationBaseline, 'worker obligation or baseline is missing');
         return { rollingWorkerCreationV1, obligation, requirements: obligationBaseline.requirements.filter(item => obligation.requirementIds.includes(item.id)),
             binding: rollingStoredAssignment.binding, lease: obligationLeaseV1, configuration: executionConfiguration(rollingCampaignRow.configuration_text),
-            qa: rollingGraph.projectConfiguration.qa };
+            qa: rollingGraph.projectConfiguration.qa, baseCommit: this.campaignBase(rollingCampaignRow) };
     }
     async claimWorkerDispatch(campaignId, id, generation, instructions) {
         requireState(instructions.trim().length > 0, 'worker instructions are empty');

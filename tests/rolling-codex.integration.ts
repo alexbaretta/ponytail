@@ -99,3 +99,9 @@ test('live attached worker receives exact obligation, traceability, frozen lease
 // Traceability: verifies REQ-ROLLING-STATE
 test('live worker suspension observes idle native activity and retains its dirty checkout while freeing capacity',
  t => runRollingWorkerScenario(t, 'native', 'suspension'));
+
+// Traceability: verifies REQ-ROLLING-WORKERS
+// Traceability: verifies REQ-ROLLING-SCHEDULING
+// Traceability: verifies REQ-ROLLING-STATE
+test('live worker resumption restores its original native session with refreshed scope and campaign base',
+ t => runRollingWorkerScenario(t,'native','resumption'));

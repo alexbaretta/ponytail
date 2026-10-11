@@ -8,7 +8,7 @@ import test from 'node:test';
 import { execFileSync } from 'node:child_process';
 import { RollingCodex, type RollingNativeThread } from '../src/rolling-codex.js';
 import { readRollingWorkerCreationV1, parseRollingWorkerCreation, identifyRollingWorkerCreation,
- readRollingWorkerStopV1, parseRollingWorkerStop, type RollingWorkerStopV1, buildRollingWorkerInstructions, type RollingWorkerContext, initializeRollingWorker, observeRollingWorkerInitialization, type RollingWorkerCreationV1 } from '../src/rolling-worker.js';
+ readRollingWorkerResumptionV1, parseRollingWorkerResumption, type RollingWorkerResumptionV1, readRollingWorkerStopV1, parseRollingWorkerStop, type RollingWorkerStopV1, buildRollingWorkerInstructions, type RollingWorkerContext, initializeRollingWorker, observeRollingWorkerInitialization, type RollingWorkerCreationV1 } from '../src/rolling-worker.js';
 import { validateRollingSessionMarker, requireRollingSessionMarkerAbsent } from '../src/rolling-worktrees.js';
 
 // Traceability: verifies REQ-ROLLING-STATE
@@ -71,6 +71,7 @@ test('worker instructions retain exact obligation, requirement, acceptance step,
    binding:{obligationId:'OBL-1',revisionId:'BIND-1',dependsOn:[],execution:{sprintId:null,taskletIds:[],plannedPaths:['fixture.ts'],
     operations:['inspect','edit','test'],selection:['focused fixture'],target:{identity:'local',profile:'fixture'}}}},
   configuration:{mainline:{remote:'origin',branch:'main'},incrementRef:'campaign/fixture',maxActiveWorkers:1,publicationSize:1},
+  baseCommit:'c'.repeat(40),
   qa:{focused:[['node','--test','fixture.test.ts']],publication:[['npm','test']]}
  };
  const instructions = buildRollingWorkerInstructions(rollingWorkerContext);
@@ -100,4 +101,16 @@ test('stop observations retain native idle identity, exact stopped turn and dirt
   {...rollingWorkerStopV1,observedAt:'unknown'}, {...rollingWorkerStopV1,checkpoint:{revision:'short',gitStatus:''}},
   {...rollingWorkerStopV1,sessionId:'foreign\nsession'}]) assert.throws(() => readRollingWorkerStopV1(value));
  assert.throws(() => parseRollingWorkerStop(JSON.stringify(rollingWorkerStopV1).replace('"schemaVersion":1','"schemaVersion":1.0')));
+});
+
+// Traceability: verifies REQ-ROLLING-WORKERS
+// Traceability: verifies REQ-ROLLING-STATE
+test('resumption receipt retains original native identity and an exact refreshed campaign base',() => {
+ const rollingWorkerResumptionV1:RollingWorkerResumptionV1 = {schemaVersion:1,
+  rollingWorkerCreationV1:{schemaVersion:1,threadId:'thread',sessionId:'session',rootPath:'/fixture'},baseCommit:'a'.repeat(40)};
+ assert.deepEqual(parseRollingWorkerResumption(JSON.stringify(rollingWorkerResumptionV1)),rollingWorkerResumptionV1);
+ for (const value of [null,{...rollingWorkerResumptionV1,extra:true},{...rollingWorkerResumptionV1,schemaVersion:2},
+  {...rollingWorkerResumptionV1,baseCommit:'short'},{...rollingWorkerResumptionV1,rollingWorkerCreationV1:{...rollingWorkerResumptionV1.rollingWorkerCreationV1,extra:true}}])
+  assert.throws(() => readRollingWorkerResumptionV1(value));
+ assert.throws(() => parseRollingWorkerResumption(JSON.stringify(rollingWorkerResumptionV1).replace('"schemaVersion":1','"schemaVersion":1.0')));
 });

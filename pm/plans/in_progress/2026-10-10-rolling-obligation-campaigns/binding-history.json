@@ -1808,6 +1808,122 @@
           "profile": "rolling-worker-suspension-OBL-46"
         }
       }
+    },
+    {
+      "id": "BIND-41",
+      "obligationId": "OBL-47",
+      "predecessorId": null,
+      "baselineId": "BASELINE-14",
+      "assessor": "coordinator",
+      "authority": [
+        "user-goal-2026-10-10-rolling-campaigns",
+        "user-goal-2026-10-10-static-language-existing-tsts",
+        "user-2026-10-10-normative-atomic-obligations"
+      ],
+      "reason": "Reserve capacity for an unblocked retained worker, refresh the authoritative lease and campaign base, and resume its original native identity without replacing the session or resetting its dirty checkout. Keep discharge pending until the full application resumption Arc is established.",
+      "dependsOn": [
+        "OBL-46"
+      ],
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "src/rolling-worker.ts",
+          "src/rolling-worker.js",
+          "src/rolling-codex.ts",
+          "src/rolling-codex.js",
+          "tests/rolling-codex.test.ts",
+          "src/rolling-worktrees.ts",
+          "src/rolling-worktrees.js",
+          "src/rolling-worker-submission.ts",
+          "src/rolling-worker-submission.js",
+          "src/rolling-campaign-store.ts",
+          "src/rolling-campaign-store.js",
+          "tests/rolling-worker.test.ts",
+          "tests/rolling-campaign-store.integration.test.ts",
+          "tests/rolling-codex.integration.ts",
+          "tests/fixtures/rolling-codex-server.ts",
+          "scripts/project-index.sql",
+          "scripts/build-runtime.ts",
+          "versioned-data-contracts.json",
+          "AGENTS.md",
+          ".agents/config/project/traceability.json",
+          "pm/requirements/traceability.generated.md"
+        ],
+        "operations": [
+          "inspect",
+          "edit",
+          "build",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "Application resumption Arc"
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "rolling-worker-resumption-OBL-46"
+        }
+      }
+    },
+    {
+      "id": "BIND-42",
+      "obligationId": "OBL-47",
+      "predecessorId": "BIND-41",
+      "baselineId": "BASELINE-14",
+      "assessor": "coordinator",
+      "authority": [
+        "user-goal-2026-10-10-rolling-campaigns",
+        "user-goal-2026-10-10-static-language-existing-tsts",
+        "user-2026-10-10-normative-atomic-obligations"
+      ],
+      "reason": "Correct the new resumption proof profile label while preserving the previously recorded binding.",
+      "dependsOn": [
+        "OBL-46"
+      ],
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "src/rolling-worker.ts",
+          "src/rolling-worker.js",
+          "src/rolling-codex.ts",
+          "src/rolling-codex.js",
+          "tests/rolling-codex.test.ts",
+          "src/rolling-worktrees.ts",
+          "src/rolling-worktrees.js",
+          "src/rolling-worker-submission.ts",
+          "src/rolling-worker-submission.js",
+          "src/rolling-campaign-store.ts",
+          "src/rolling-campaign-store.js",
+          "tests/rolling-worker.test.ts",
+          "tests/rolling-campaign-store.integration.test.ts",
+          "tests/rolling-codex.integration.ts",
+          "tests/fixtures/rolling-codex-server.ts",
+          "scripts/project-index.sql",
+          "scripts/build-runtime.ts",
+          "versioned-data-contracts.json",
+          "AGENTS.md",
+          ".agents/config/project/traceability.json",
+          "pm/requirements/traceability.generated.md"
+        ],
+        "operations": [
+          "inspect",
+          "edit",
+          "build",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "Application resumption Arc"
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "rolling-worker-resumption-OBL-47"
+        }
+      }
     }
   ]
 }

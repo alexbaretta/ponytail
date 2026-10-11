@@ -106,6 +106,7 @@ export interface RollingWorkerContext {
  readonly lease: ObligationLeaseV1;
  readonly configuration: RollingResolvedConfiguration;
  readonly qa: RollingProjectConfigV1['qa'];
+ readonly baseCommit: string;
 }
 
 // Traceability: implements REQ-ROLLING-WORKERS
@@ -186,6 +187,39 @@ export function parseRollingWorkerStop(text:string):RollingWorkerStopV1 {
  return readRollingWorkerStopV1(parse(text,null,token => {requireWorker(token === '1','invalid stop numeric token');return 1;}));
 }
 export const RollingWorkerStopReaders = {V1:readRollingWorkerStopV1};
+
+export interface RollingWorkerResumptionV1 {
+ readonly schemaVersion:1;
+ readonly rollingWorkerCreationV1:RollingWorkerCreationV1;
+ readonly baseCommit:string;
+}
+
+// Traceability: implements REQ-ROLLING-WORKERS
+// Traceability: implements REQ-ROLLING-STATE
+export function readRollingWorkerResumptionV1(value:unknown):RollingWorkerResumptionV1 {
+ const record = stopFields(value,['schemaVersion','rollingWorkerCreationV1','baseCommit']);
+ requireWorker(record.schemaVersion === 1 && typeof record.baseCommit === 'string'
+  && /^(?:[a-f0-9]{40}|[a-f0-9]{64})$/u.test(record.baseCommit),'invalid resumption version or campaign base');
+ return {schemaVersion:1,rollingWorkerCreationV1:readRollingWorkerCreationV1(record.rollingWorkerCreationV1),baseCommit:record.baseCommit};
+}
+export function parseRollingWorkerResumption(text:string):RollingWorkerResumptionV1 {
+ return readRollingWorkerResumptionV1(parse(text,null,token => {requireWorker(token === '1','invalid resumption numeric token');return 1;}));
+}
+export const RollingWorkerResumptionReaders = {V1:readRollingWorkerResumptionV1};
+
+// Traceability: implements REQ-ROLLING-WORKERS
+// Traceability: implements REQ-ROLLING-SCHEDULING
+export async function resumeRollingWorker(rollingCampaignStore:RollingCampaignStore,rollingCodex:RollingCodex,
+ campaignId:string,actionId:string,generation:string):Promise<RollingSessionAttachment> {
+ const rollingWorkerResumptionV1 = await rollingCampaignStore.claimWorkerResumption(campaignId,actionId,generation);
+ const rollingWorkerCreationV1 = rollingWorkerResumptionV1.rollingWorkerCreationV1;
+ const rollingNativeThread = await rollingCodex.resumeThread(rollingWorkerCreationV1.threadId,rollingWorkerCreationV1.rootPath);
+ requireWorker(JSON.stringify(identifyRollingWorkerCreation(rollingNativeThread,rollingWorkerCreationV1.rootPath))
+  === JSON.stringify(rollingWorkerCreationV1),'resumed worker differs from original identity');
+ const rollingNativeThreadActivity = await rollingCodex.readThreadActivity(rollingWorkerCreationV1.threadId);
+ requireWorker(rollingNativeThreadActivity.status === 'idle','resumed worker is not known idle; preserve reserved capacity');
+ return rollingCampaignStore.completeWorkerResumption(campaignId,actionId,generation,rollingWorkerResumptionV1);
+}
 
 // Traceability: implements REQ-ROLLING-WORKERS
 // Traceability: implements REQ-ROLLING-SCHEDULING

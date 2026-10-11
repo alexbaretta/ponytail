@@ -6,7 +6,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.RollingWorkerStopReaders = exports.RollingWorkerCreationReaders = void 0;
+exports.RollingWorkerResumptionReaders = exports.RollingWorkerStopReaders = exports.RollingWorkerCreationReaders = void 0;
 exports.readRollingWorkerCreationV1 = readRollingWorkerCreationV1;
 exports.parseRollingWorkerCreation = parseRollingWorkerCreation;
 exports.identifyRollingWorkerCreation = identifyRollingWorkerCreation;
@@ -18,6 +18,9 @@ exports.buildRollingWorkerInstructions = buildRollingWorkerInstructions;
 exports.dispatchRollingWorker = dispatchRollingWorker;
 exports.readRollingWorkerStopV1 = readRollingWorkerStopV1;
 exports.parseRollingWorkerStop = parseRollingWorkerStop;
+exports.readRollingWorkerResumptionV1 = readRollingWorkerResumptionV1;
+exports.parseRollingWorkerResumption = parseRollingWorkerResumption;
+exports.resumeRollingWorker = resumeRollingWorker;
 exports.suspendRollingWorker = suspendRollingWorker;
 const node_path_1 = __importDefault(require("node:path"));
 const node_fs_1 = __importDefault(require("node:fs"));
@@ -139,6 +142,26 @@ function parseRollingWorkerStop(text) {
     return readRollingWorkerStopV1((0, lossless_json_1.parse)(text, null, token => { requireWorker(token === '1', 'invalid stop numeric token'); return 1; }));
 }
 exports.RollingWorkerStopReaders = { V1: readRollingWorkerStopV1 };
+function readRollingWorkerResumptionV1(value) {
+    const record = stopFields(value, ['schemaVersion', 'rollingWorkerCreationV1', 'baseCommit']);
+    requireWorker(record.schemaVersion === 1 && typeof record.baseCommit === 'string'
+        && /^(?:[a-f0-9]{40}|[a-f0-9]{64})$/u.test(record.baseCommit), 'invalid resumption version or campaign base');
+    return { schemaVersion: 1, rollingWorkerCreationV1: readRollingWorkerCreationV1(record.rollingWorkerCreationV1), baseCommit: record.baseCommit };
+}
+function parseRollingWorkerResumption(text) {
+    return readRollingWorkerResumptionV1((0, lossless_json_1.parse)(text, null, token => { requireWorker(token === '1', 'invalid resumption numeric token'); return 1; }));
+}
+exports.RollingWorkerResumptionReaders = { V1: readRollingWorkerResumptionV1 };
+async function resumeRollingWorker(rollingCampaignStore, rollingCodex, campaignId, actionId, generation) {
+    const rollingWorkerResumptionV1 = await rollingCampaignStore.claimWorkerResumption(campaignId, actionId, generation);
+    const rollingWorkerCreationV1 = rollingWorkerResumptionV1.rollingWorkerCreationV1;
+    const rollingNativeThread = await rollingCodex.resumeThread(rollingWorkerCreationV1.threadId, rollingWorkerCreationV1.rootPath);
+    requireWorker(JSON.stringify(identifyRollingWorkerCreation(rollingNativeThread, rollingWorkerCreationV1.rootPath))
+        === JSON.stringify(rollingWorkerCreationV1), 'resumed worker differs from original identity');
+    const rollingNativeThreadActivity = await rollingCodex.readThreadActivity(rollingWorkerCreationV1.threadId);
+    requireWorker(rollingNativeThreadActivity.status === 'idle', 'resumed worker is not known idle; preserve reserved capacity');
+    return rollingCampaignStore.completeWorkerResumption(campaignId, actionId, generation, rollingWorkerResumptionV1);
+}
 async function suspendRollingWorker(rollingCampaignStore, rollingCodex, campaignId, assignmentId, generation, blockers, timeoutMs = 60000) {
     const rollingWorkerCreationV1 = await rollingCampaignStore.workerIdentity(campaignId, assignmentId, generation);
     const rollingWorkerDispatch = await rollingCampaignStore.workerDispatch(campaignId, assignmentId, generation);
