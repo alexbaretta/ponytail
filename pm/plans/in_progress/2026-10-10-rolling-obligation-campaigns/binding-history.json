@@ -306,6 +306,95 @@
           "profile": "typed-sprint-owner-OBL-86"
         }
       }
+    },
+    {
+      "id": "BIND-8",
+      "obligationId": "OBL-87",
+      "predecessorId": null,
+      "baselineId": "BASELINE-14",
+      "assessor": "coordinator",
+      "authority": [
+        "user-goal-2026-10-10-rolling-campaigns",
+        "user-goal-2026-10-10-static-language-existing-tsts",
+        "user-2026-10-10-normative-atomic-obligations"
+      ],
+      "reason": "Complete the started sprint dependency proof and convert its historical handwritten JavaScript fixture suite to checked TypeScript. Synchronize the canonical classification and reverse view; retain all original condition meanings.",
+      "dependsOn": [
+        "OBL-112"
+      ],
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "skills/plan-execution/scripts/sprint-graph.ts",
+          "skills/plan-execution/scripts/sprint-graph.js",
+          "tests/sprint-graph.test.ts",
+          "tests/ready-sprints.test.js",
+          "tests/ready-sprints.test.ts",
+          ".agents/config/project/traceability.json",
+          "pm/requirements/traceability.generated.md"
+        ],
+        "operations": [
+          "inspect",
+          "edit",
+          "build",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "typed sprint dependency identity and acyclicity"
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "typed-sprint-graph"
+        }
+      }
+    },
+    {
+      "id": "BIND-9",
+      "obligationId": "OBL-87",
+      "predecessorId": "BIND-8",
+      "baselineId": "BASELINE-14",
+      "assessor": "coordinator",
+      "authority": [
+        "user-goal-2026-10-10-rolling-campaigns",
+        "user-goal-2026-10-10-static-language-existing-tsts",
+        "user-2026-10-10-normative-atomic-obligations"
+      ],
+      "reason": "The invoking project QA configuration still names the removed handwritten test. Include its owner to synchronize those configured focused commands with the same TypeScript conversion.",
+      "dependsOn": [
+        "OBL-112"
+      ],
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "skills/plan-execution/scripts/sprint-graph.ts",
+          "skills/plan-execution/scripts/sprint-graph.js",
+          "tests/sprint-graph.test.ts",
+          "tests/ready-sprints.test.js",
+          "tests/ready-sprints.test.ts",
+          ".agents/config/project/traceability.json",
+          "pm/requirements/traceability.generated.md",
+          "AGENTS.md"
+        ],
+        "operations": [
+          "inspect",
+          "edit",
+          "build",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "typed sprint dependency identity and acyclicity"
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "typed-sprint-graph"
+        }
+      }
     }
   ]
 }

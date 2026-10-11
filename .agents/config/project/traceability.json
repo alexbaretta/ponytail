@@ -568,7 +568,7 @@
     },
     {
       "class": "unit-test",
-      "path": "tests/ready-sprints.test.js",
+      "path": "tests/ready-sprints.test.ts",
       "locator": "text"
     },
     {

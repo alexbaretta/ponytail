@@ -14,6 +14,32 @@ function legacySprint(id: string, depends_on: readonly string[], planned_paths: 
     execution: { status: 'PENDING', depends_on, planned_paths }, filePath: `${id}.md` };
 }
 
+test('both dependency lifecycles reject unknown identities, self edges and cycles without mutating inputs', () => {
+  for (const lifecycle of ['planning', 'execution']) {
+    const firstSprintV1: SprintV1 = legacySprint('S01', [], []);
+    const secondSprintV1: SprintV1 = legacySprint('S02', [], []);
+    function withDependencies(sprintV1: SprintV1, depends_on: readonly string[]): SprintV1 {
+      return lifecycle === 'planning'
+        ? { ...sprintV1, planning: { ...sprintV1.planning, depends_on } }
+        : { ...sprintV1, execution: { status: 'PENDING', depends_on, planned_paths: [] } };
+    }
+    const valid: readonly SprintV1[] = [firstSprintV1, withDependencies(secondSprintV1, ['S01'])];
+    const before = JSON.stringify(valid);
+    const sprintById: ReadonlyMap<string, SprintV1> = validateDependencies(valid);
+    assert.deepEqual([...sprintById.keys()], ['S01', 'S02']);
+    assert.equal(sprintById.get('S01'), firstSprintV1);
+    assert.equal(JSON.stringify(valid), before);
+    const missing: readonly SprintV1[] = [withDependencies(firstSprintV1, ['S99'])];
+    const self: readonly SprintV1[] = [withDependencies(firstSprintV1, ['S01'])];
+    const cyclic: readonly SprintV1[] = [withDependencies(firstSprintV1, ['S02']), withDependencies(secondSprintV1, ['S01'])];
+    for (const invalid of [missing, self, cyclic]) {
+      const original = JSON.stringify(invalid);
+      assert.throws(() => validateDependencies(invalid));
+      assert.equal(JSON.stringify(invalid), original);
+    }
+  }
+});
+
 test('legacy path ownership recognizes transitive execution ordering and rejects unordered sharing', () => {
   const firstSprintV1: SprintV1 = legacySprint('S01', [], ['src/shared.ts']);
   const middleSprintV1: SprintV1 = legacySprint('S02', ['S01'], ['src/middle.ts']);

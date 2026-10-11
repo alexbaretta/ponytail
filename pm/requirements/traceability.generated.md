@@ -166,7 +166,7 @@ Requirement: [pm/requirements/campaign-orchestration.md](campaign-orchestration.
 - implementation: implements [src/campaign-orchestration.js:2322](../../src/campaign-orchestration.js#L2322)
 - implementation: implements [src/campaign-orchestration.js:2881](../../src/campaign-orchestration.js#L2881)
 - unit-test: verifies [tests/campaign-orchestration.test.js:7](../../tests/campaign-orchestration.test.js#L7)
-- unit-test: verifies [tests/ready-sprints.test.js:44](../../tests/ready-sprints.test.js#L44)
+- unit-test: verifies [tests/ready-sprints.test.ts:52](../../tests/ready-sprints.test.ts#L52)
 - integration-test: verifies [tests/campaign-census.test.js:722](../../tests/campaign-census.test.js#L722)
 - integration-test: verifies [tests/plan-input-hooks.test.js:88](../../tests/plan-input-hooks.test.js#L88)
 - integration-test: verifies [tests/plan-input-hooks.test.js:121](../../tests/plan-input-hooks.test.js#L121)
