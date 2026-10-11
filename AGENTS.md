@@ -87,8 +87,9 @@ services. `PROJECT_STRUCTURE.md` is authoritative for that boundary.
 - Rolling checkout focused proof: `node --test tests/rolling-worktrees.test.js
   tests/rolling-worktrees.integration.test.js`; all Git worktrees belong to
   disposable test repositories.
+- Project database options focused proof: `node --test dist/tests/project-index-database.test.js`.
 - Rolling campaign store focused proof: `node --test dist/tests/rolling-campaign-store.test.js
-  tests/rolling-campaign-store.integration.test.js`; uses isolated project rows in
+  dist/tests/rolling-campaign-store.integration.test.js`; uses isolated project rows in
   the configured local PostgreSQL database after `./scripts/setup-project-journal.sh`.
 - Integration tests: no separate integration suite; supported adapter and
   bundled-subproject behavior is exercised by the Node full command.

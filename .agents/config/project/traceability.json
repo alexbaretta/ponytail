@@ -828,7 +828,7 @@
     },
     {
       "class": "integration-test",
-      "path": "tests/rolling-campaign-store.integration.test.js",
+      "path": "tests/rolling-campaign-store.integration.test.ts",
       "locator": "text"
     },
     {
@@ -880,6 +880,16 @@
       "path": "pm/uat/static-language.md",
       "locator": "text",
       "class": "uat"
+    },
+    {
+      "class": "implementation",
+      "path": "src/project-index-database.ts",
+      "locator": "text"
+    },
+    {
+      "class": "unit-test",
+      "path": "tests/project-index-database.test.ts",
+      "locator": "text"
     }
   ],
   "entities": [],
@@ -955,6 +965,10 @@
     {
       "path": "src/rolling-campaign-store.js",
       "sourcePath": "src/rolling-campaign-store.ts"
+    },
+    {
+      "path": "src/project-index-database.js",
+      "sourcePath": "src/project-index-database.ts"
     }
   ],
   "reverseViewPath": "pm/requirements/traceability.generated.md",

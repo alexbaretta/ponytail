@@ -7,6 +7,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { execFileSync, fork, spawn, spawnSync } = require('node:child_process');
+const { ProjectIndexError, databaseOptions } = require('./project-index-database');
 
 const {
   findRelationships,
@@ -247,13 +248,6 @@ const PlanGraphResultReaders = Object.freeze({
   variants: Object.freeze({ V1: readPlanGraphResultV1 }),
   writerVariant: 'V1',
 });
-
-class ProjectIndexError extends Error {
-  constructor(code, message) {
-    super(message);
-    this.code = code;
-  }
-}
 
 function digest(value) {
   return crypto.createHash('sha256').update(value).digest('hex');
@@ -1141,27 +1135,6 @@ async function publishTraceabilityGeneration(client, projection) {
     await client.query('ROLLBACK');
     throw error;
   }
-}
-
-function databaseOptions(worktreePath) {
-  const project = JSON.parse(fs.readFileSync(
-    path.join(worktreePath, 'ponytail-journal.json'), 'utf8'));
-  const database = project.database;
-  if (database.passwordEnvironment !== undefined &&
-      process.env[database.passwordEnvironment] === undefined) {
-    throw new ProjectIndexError(
-      'PROJECT_INDEX_PASSWORD_MISSING',
-      `password environment variable is missing: ${database.passwordEnvironment}`,
-    );
-  }
-  return {
-    database: database.name,
-    host: database.host,
-    port: database.port,
-    user: database.role,
-    password: database.passwordEnvironment === undefined
-      ? undefined : process.env[database.passwordEnvironment],
-  };
 }
 
 async function indexTraceability(options = {}) {

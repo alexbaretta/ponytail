@@ -57,6 +57,9 @@ while project-wide management records remain under `pm/`.
 - `scripts/setup-project-journal.sh`, `scripts/project-journal.sql`, and
   `scripts/project-index.sql` own PostgreSQL 18 journal and project-index
   provisioning and their immutable V1 storage contracts.
+- `src/project-index-database.ts` owns the checked project-local PostgreSQL
+  connection options and shared index error declaration. `src/project-index-database.js`
+  is compiler-generated compatibility runtime.
 - `src/project-index.js` owns Git-aware PostgreSQL traceability, plan, and
   repository-text projections, transactional generation publication,
   freshness-checked structured queries, incremental historical and worktree

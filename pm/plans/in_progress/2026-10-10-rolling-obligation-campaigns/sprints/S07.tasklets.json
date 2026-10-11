@@ -23,6 +23,12 @@
         "S07-F03"
       ],
       "validation_tasklet": "S07-F04-T04"
+    },
+    "S07-F05": {
+      "depends_on": [
+        "S07-F04"
+      ],
+      "validation_tasklet": "S07-F05-T05"
     }
   },
   "tasklets": {
@@ -578,6 +584,67 @@
         ".agents/config/project/traceability.json",
         "pm/requirements/traceability.generated.md"
       ]
+    },
+    "S07-F05-T01": {
+      "depends_on": [],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F05",
+      "planned_paths": [
+        "src/project-index-database.ts",
+        "src/project-index-database.js",
+        "src/project-index.js",
+        "scripts/build-runtime.ts"
+      ]
+    },
+    "S07-F05-T02": {
+      "depends_on": [
+        "S07-F05-T01"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F05",
+      "planned_paths": [
+        "tests/project-index-database.test.ts"
+      ]
+    },
+    "S07-F05-T03": {
+      "depends_on": [
+        "S07-F05-T02"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F05",
+      "planned_paths": [
+        "tests/rolling-campaign-store.integration.test.ts",
+        "tests/rolling-campaign-store.integration.test.js"
+      ]
+    },
+    "S07-F05-T04": {
+      "depends_on": [
+        "S07-F05-T03"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F05",
+      "planned_paths": [
+        "AGENTS.md",
+        "PROJECT_STRUCTURE.md",
+        ".agents/config/project/traceability.json",
+        "pm/requirements/traceability.generated.md"
+      ]
+    },
+    "S07-F05-T05": {
+      "depends_on": [
+        "S07-F05-T01",
+        "S07-F05-T02",
+        "S07-F05-T03",
+        "S07-F05-T04"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F05",
+      "planned_paths": []
     }
   },
   "external_depends_on": {}
