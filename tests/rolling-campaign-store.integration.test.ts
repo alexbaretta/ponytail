@@ -582,9 +582,19 @@ for (const reviewScenario of reviewScenarios) {
 
 // Traceability: verifies REQ-ROLLING-WORKERS
 // Traceability: verifies REQ-ROLLING-STATE
-function connectRollingWorkerCodex(): Promise<RollingCodex> {
+async function connectRollingWorkerCodex(t: TestContext): Promise<RollingCodex> {
   // Node's test-runner metadata belongs to this harness, not the native worker.
-  return RollingCodex.connect({executable:'env',argv:['-u','NODE_TEST_CONTEXT','codex','app-server','--listen','stdio://']});
+  const rollingCodex = await RollingCodex.connect({executable:'env',argv:['-u','NODE_TEST_CONTEXT','codex','app-server','--listen','stdio://']});
+  rollingCodex.on('notification', notification => {
+    if (!['turn/started','turn/completed','thread/status/changed'].includes(notification.method)) return;
+    const params = notification.params;
+    if (params === null || typeof params !== 'object' || Array.isArray(params)) return;
+    const threadId = 'threadId' in params ? params.threadId : null;
+    const turn = 'turn' in params ? params.turn : null;
+    const status = 'status' in params ? params.status : null;
+    t.diagnostic(`native lifecycle ${notification.method}; thread=${typeof threadId === 'string' ? threadId : 'unknown'}; turn=${JSON.stringify(turn === null || typeof turn !== 'object' ? null : {id:'id' in turn ? turn.id : null,status:'status' in turn ? turn.status : null})}; activity=${JSON.stringify(status)}`);
+  });
+  return rollingCodex;
 }
 
 async function observeRollingWorkerTurn(t: TestContext, rollingCodex: RollingCodex, threadId: string,
@@ -607,7 +617,7 @@ export async function runRollingWorkerScenario(t: TestContext, mode: 'protocol' 
   const projectId = crypto.randomUUID();
   const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'rolling-worker-store-')));
   const rollingCampaignStore = new RollingCampaignStore(pool, projectId);
-  let rollingCodex = mode === 'native' ? await connectRollingWorkerCodex()
+  let rollingCodex = mode === 'native' ? await connectRollingWorkerCodex(t)
     : new RollingCodex({executable:process.execPath,argv:[path.join(__dirname,'fixtures/rolling-codex-server.js')]});
   let rollingWorkerInitialization: RollingWorkerInitialization | null = null;
   let provisioningStarted = false;
@@ -787,7 +797,7 @@ export async function runRollingWorkerScenario(t: TestContext, mode: 'protocol' 
       await rollingCodex.request('fixture-activity',{active:false});
     } else {
       await rollingCodex.close();
-      rollingCodex = await connectRollingWorkerCodex();
+      rollingCodex = await connectRollingWorkerCodex(t);
       rollingCodex.on('serverRequest',message => rollingCodex.respondToServer(message.id,{decision:'decline'}));
     }
     // The product operation receives only durable action selectors. It reads
@@ -1175,7 +1185,7 @@ export async function runRollingWorkerScenario(t: TestContext, mode: 'protocol' 
   if (mode === 'native') {
     const {rollingWorkerCreationV1,rollingTurnStarted} = rollingWorkerInitialization;
     await rollingCodex.close();
-    rollingCodex = await connectRollingWorkerCodex();
+    rollingCodex = await connectRollingWorkerCodex(t);
     rollingCodex.on('serverRequest',message => rollingCodex.respondToServer(message.id,{decision:'decline'}));
     const rollingNativeThread = await rollingCodex.resumeThread(rollingWorkerCreationV1.threadId,rollingWorkerCreationV1.rootPath);
     assert.equal(rollingNativeThread.thread.sessionId,rollingSessionAttachment.sessionId);
