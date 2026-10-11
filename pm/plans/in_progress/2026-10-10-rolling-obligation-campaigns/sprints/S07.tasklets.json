@@ -77,6 +77,12 @@
         "S07-F12"
       ],
       "validation_tasklet": "S07-F13-T06"
+    },
+    "S07-F14": {
+      "depends_on": [
+        "S07-F13"
+      ],
+      "validation_tasklet": "S07-F14-T09"
     }
   },
   "tasklets": {
@@ -1533,6 +1539,119 @@
       "affinity": [],
       "risk": "normal",
       "feature": "S07-F13",
+      "planned_paths": []
+    },
+    "S07-F14-T01": {
+      "depends_on": [],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F14",
+      "planned_paths": [
+        "skills/plan-execution/scripts/tasklet-metadata.ts"
+      ]
+    },
+    "S07-F14-T02": {
+      "depends_on": [
+        "S07-F14-T01"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F14",
+      "planned_paths": [
+        "skills/plan-execution/scripts/tasklet-metadata.ts"
+      ]
+    },
+    "S07-F14-T03": {
+      "depends_on": [
+        "S07-F14-T02"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F14",
+      "planned_paths": [
+        "skills/plan-execution/scripts/tasklet-metadata.ts"
+      ]
+    },
+    "S07-F14-T04": {
+      "depends_on": [
+        "S07-F14-T03"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F14",
+      "planned_paths": [
+        "skills/plan-execution/scripts/tasklet-metadata.ts"
+      ]
+    },
+    "S07-F14-T05": {
+      "depends_on": [
+        "S07-F14-T04"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F14",
+      "planned_paths": [
+        "skills/plan-execution/scripts/tasklet-metadata.ts"
+      ]
+    },
+    "S07-F14-T06": {
+      "depends_on": [
+        "S07-F14-T05"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F14",
+      "planned_paths": [
+        "skills/plan-execution/scripts/tasklet-metadata.ts"
+      ]
+    },
+    "S07-F14-T07": {
+      "depends_on": [
+        "S07-F14-T06"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F14",
+      "planned_paths": [
+        "tests/tasklet-metadata.test.ts"
+      ]
+    },
+    "S07-F14-T08": {
+      "depends_on": [
+        "S07-F14-T07"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F14",
+      "planned_paths": [
+        "skills/plan-execution/scripts/tasklet-metadata.js",
+        "skills/plan-execution/scripts/ready-tasklets.js",
+        "src/campaign-dependencies.ts",
+        "scripts/build-runtime.ts",
+        "versioned-data-contracts.json",
+        "AGENTS.md",
+        "PROJECT_STRUCTURE.md",
+        ".agents/config/project/traceability.json",
+        "pm/requirements/traceability.generated.md",
+        ".openclaw/skills/plan-execution/scripts/tasklet-metadata.ts",
+        ".openclaw/skills/plan-execution/scripts/tasklet-metadata.js",
+        ".openclaw/skills/plan-execution/scripts/ready-tasklets.js"
+      ]
+    },
+    "S07-F14-T09": {
+      "depends_on": [
+        "S07-F14-T01",
+        "S07-F14-T02",
+        "S07-F14-T03",
+        "S07-F14-T04",
+        "S07-F14-T05",
+        "S07-F14-T06",
+        "S07-F14-T07",
+        "S07-F14-T08"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F14",
       "planned_paths": []
     }
   },

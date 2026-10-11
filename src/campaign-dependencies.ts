@@ -6,7 +6,7 @@ import { dataError } from './campaign-configuration.js';
 import { type CampaignPlanV1, type CampaignPlanV2, type CampaignPlanV3 } from './campaign-plan-metadata.js';
 import { parseTaskletStatuses, type TaskletStatus } from '../skills/plan-execution/scripts/tasklet-statuses.js';
 
-export interface ExternalTaskletDependency { readonly planId: string; readonly taskletId: string }
+import { type ExternalTaskletDependency } from '../skills/plan-execution/scripts/tasklet-metadata.js';
 export interface CampaignTaskletDependency {
   readonly id: string;
   readonly sprintId: string;

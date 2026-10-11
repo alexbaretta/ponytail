@@ -502,7 +502,7 @@
       "id": "parallel-tasklet-scheduling-metadata",
       "implementation": {
         "workspace": "ponytail",
-        "module": "skills/plan-execution/scripts/ready-tasklets.js",
+        "module": "skills/plan-execution/scripts/tasklet-metadata.ts",
         "readerRegistryExport": "TaskletMetadataReaders"
       },
       "currentVersion": "V4",
