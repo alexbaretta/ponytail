@@ -707,7 +707,12 @@ export async function runRollingWorkerScenario(t: TestContext, mode: 'protocol' 
   provisioningStarted = true;
   rollingWorkerInitialization = await provisionRollingWorker(rollingCampaignStore,rollingCodex,'worker-fixture',rollingAllocationResult.actionId,generation);
   if (operation === 'code') {
-    fs.symlinkSync(path.join(repositoryRoot,'node_modules'),path.join(rollingAllocationResult.worktree.rootPath,'node_modules'),'dir');
+    // Declared compilation inputs must physically belong to the fixture checkout.
+    // Keep the compiler and its Node type dependencies inside its ignored tree.
+    for (const dependency of ['typescript','@types/node','undici-types']) {
+      fs.cpSync(path.join(repositoryRoot,'node_modules',dependency),path.join(rollingAllocationResult.worktree.rootPath,'node_modules',dependency),
+        {recursive:true,dereference:true});
+    }
     t.diagnostic(`native fixture identity thread=${rollingWorkerInitialization.rollingWorkerCreationV1.threadId}; root=${rollingAllocationResult.worktree.rootPath}`);
   }
   await assert.rejects(rollingCampaignStore.claimWorkerCreation('worker-fixture',rollingAllocationResult.actionId,generation),/already claimed/);
