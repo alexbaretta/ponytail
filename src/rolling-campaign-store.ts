@@ -12,7 +12,7 @@ import { parseRollingWorkerSubmission, readRollingWorkerSubmissionV1, validateRo
 import { readObligationLeaseV1, freezeObligationLease, assertObligationLeaseOperation,
   type ObligationLeaseV1 } from '../skills/plan-execution/scripts/obligation-binding-history.js';
 import { relativePath, type Obligation } from '../skills/plan-execution/scripts/obligations.js';
-import { readRollingWorkerCreationV1, parseRollingWorkerCreation, type RollingWorkerCreationV1 } from './rolling-worker.js';
+import { buildRollingWorkerInstructions, readRollingWorkerCreationV1, parseRollingWorkerCreation, type RollingWorkerCreationV1, type RollingWorkerContext } from './rolling-worker.js';
 import { validateRollingSessionMarker } from './rolling-worktrees.js';
 import { readRollingReviewRequestV1, readRollingReviewOutcomeV1, parseRollingReviewRequest, parseRollingReviewOutcome,
   validateRollingReviewOutcome, type RollingReviewRequestV1, type RollingReviewOutcomeV1, type RollingStoredReview } from './rolling-review.js';
@@ -96,6 +96,11 @@ export interface RollingWorkerReservation {
   readonly assignmentId: string;
   readonly generation: string;
 }
+interface RollingWorkerDispatchIdentity { readonly id: string; readonly threadId: string; readonly instructions: string }
+export interface RollingWorkerDispatchStarted extends RollingWorkerDispatchIdentity { readonly state: 'STARTED' }
+export interface RollingWorkerDispatchAttached extends RollingWorkerDispatchIdentity { readonly state: 'ATTACHED'; readonly turnId: string }
+// Discriminator: state
+export type RollingWorkerDispatch = RollingWorkerDispatchStarted | RollingWorkerDispatchAttached;
 export interface RollingAllocatedWorktree { readonly number: number; readonly rootPath: string }
 export interface RollingAllocationResult {
   readonly assignment: RollingStoredAssignment | null;
@@ -339,6 +344,8 @@ export class RollingCampaignStore {
     await poolClient.query<Record<string, unknown>>("UPDATE ponytail_index.rolling_action_v1 SET state='CANCELLED' WHERE project_id=$1 AND assignment_id=$2 AND state='PENDING'", [this.projectId, assignmentId]);
     const started = (await poolClient.query<Record<string, unknown>>("SELECT action_id FROM ponytail_index.rolling_action_v1 WHERE project_id=$1 AND assignment_id=$2 AND state='STARTED'", [this.projectId, assignmentId])).rows;
     requireState(started.length === 0, 'external action outcome must be reconciled before stopping ownership');
+    const workerDispatches = (await poolClient.query<Record<string, unknown>>("SELECT dispatch_id FROM ponytail_index.rolling_worker_dispatch_v1 WHERE project_id=$1 AND assignment_id=$2 AND state='STARTED'", [this.projectId, assignmentId])).rows;
+    requireState(workerDispatches.length === 0, 'worker dispatch outcome must be reconciled before stopping ownership');
   }
 
   async suspend(campaignId: string, id: string, generation: string, stopped: boolean, blockers: readonly string[]): Promise<RollingAssignmentTransition> {
@@ -756,6 +763,91 @@ export class RollingCampaignStore {
       await poolClient.query<Record<string, unknown>>("UPDATE ponytail_index.rolling_worktree_v1 SET state='ACTIVE' WHERE project_id=$1 AND number=$2",
         [this.projectId,rollingStoredAssignment.worktreeNumber]);
       return {id:rollingStoredAssignment.id,sessionId:checkedRollingWorkerCreationV1.sessionId,state:'WORKING'};
+    });
+  }
+
+  // Traceability: implements REQ-ROLLING-WORKERS
+  async workerContext(campaignId: string, id: string, generation: string): Promise<RollingWorkerContext> {
+    return this.transaction(campaignId,(poolClient,rollingCampaignRow) => this.workerContextValue(poolClient,rollingCampaignRow,id,generation));
+  }
+
+  private async workerContextValue(poolClient: PoolClient, rollingCampaignRow: RollingCampaignRow, id: string,
+    generation: string): Promise<RollingWorkerContext> {
+    const campaignId = rollingCampaignRow.campaign_id;
+    const rollingGraph = this.graph(rollingCampaignRow,rollingCampaignRow.graph_digest);
+    const rollingStoredAssignment = await this.assignment(poolClient,campaignId,id,generation);
+    requireState(rollingStoredAssignment.state === 'WORKING' && !rollingStoredAssignment.activityStopped
+      && !rollingStoredAssignment.retired && rollingStoredAssignment.sessionId, 'worker instructions require an active attached session');
+    const obligationLeaseV1 = this.currentLease(rollingStoredAssignment,rollingGraph);
+    const row = (await poolClient.query<Record<string, unknown>>(
+      "SELECT result_text FROM ponytail_index.rolling_action_v1 WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3 AND generation=$4 AND kind='START_WORKER' AND state='COMPLETED'",
+      [this.projectId,campaignId,id,generation])).rows[0];
+    requireState(row, 'worker has no completed native creation');
+    const rollingWorkerCreationV1 = parseRollingWorkerCreation(stringColumn(row.result_text,'worker creation receipt'));
+    requireState(rollingWorkerCreationV1.sessionId === rollingStoredAssignment.sessionId, 'creation receipt differs from attached worker');
+    const rollingStoredWorktree = readWorktree((await poolClient.query<Record<string, unknown>>(
+      'SELECT * FROM ponytail_index.rolling_worktree_v1 WHERE project_id=$1 AND number=$2',
+      [this.projectId,rollingStoredAssignment.worktreeNumber])).rows[0]);
+    requireState(rollingStoredWorktree.rootPath === rollingWorkerCreationV1.rootPath
+      && fs.realpathSync(rollingWorkerCreationV1.rootPath) === rollingWorkerCreationV1.rootPath, 'creation checkout differs from assignment');
+    validateRollingSessionMarker(rollingWorkerCreationV1.rootPath,rollingWorkerCreationV1.sessionId);
+    const obligation = rollingGraph.document.obligations.find(item => item.id === rollingStoredAssignment.obligationId);
+    const obligationBaseline = rollingGraph.document.baselines.at(-1);
+    requireState(obligation && obligationBaseline, 'worker obligation or baseline is missing');
+    return {rollingWorkerCreationV1,obligation,requirements:obligationBaseline.requirements.filter(item => obligation.requirementIds.includes(item.id)),
+      binding:rollingStoredAssignment.binding,lease:obligationLeaseV1,configuration:executionConfiguration(rollingCampaignRow.configuration_text),
+      qa:rollingGraph.projectConfiguration.qa};
+  }
+
+  // Traceability: implements REQ-ROLLING-WORKERS
+  async claimWorkerDispatch(campaignId: string, id: string, generation: string, instructions: string): Promise<RollingWorkerDispatchStarted> {
+    requireState(instructions.trim().length > 0,'worker instructions are empty');
+    return this.transaction<RollingWorkerDispatchStarted>(campaignId,async (poolClient,rollingCampaignRow) => {
+      const rollingWorkerContext = await this.workerContextValue(poolClient,rollingCampaignRow,id,generation);
+      requireState(buildRollingWorkerInstructions(rollingWorkerContext) === instructions,'worker instructions differ from current coordinator scope');
+      const rollingWorkerCreationV1 = rollingWorkerContext.rollingWorkerCreationV1;
+      const existing = (await poolClient.query<Record<string, unknown>>(
+        'SELECT dispatch_id FROM ponytail_index.rolling_worker_dispatch_v1 WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3 AND generation=$4',
+        [this.projectId,campaignId,id,generation])).rows;
+      requireState(existing.length === 0,'worker dispatch is already claimed; reconcile the original turn');
+      const dispatchId = crypto.randomUUID();
+      await poolClient.query<Record<string, unknown>>(
+        "INSERT INTO ponytail_index.rolling_worker_dispatch_v1(project_id,campaign_id,assignment_id,generation,dispatch_id,thread_id,instructions_text,state) VALUES($1,$2,$3,$4,$5,$6,$7,'STARTED')",
+        [this.projectId,campaignId,id,generation,dispatchId,rollingWorkerCreationV1.threadId,instructions]);
+      return {id:dispatchId,threadId:rollingWorkerCreationV1.threadId,instructions,state:'STARTED'};
+    });
+  }
+
+  // Traceability: implements REQ-ROLLING-WORKERS
+  async workerDispatch(campaignId: string, id: string, generation: string): Promise<RollingWorkerDispatch | null> {
+    const row = (await this.pool.query<Record<string, unknown>>(
+      'SELECT * FROM ponytail_index.rolling_worker_dispatch_v1 WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3 AND generation=$4',
+      [this.projectId,campaignId,id,generation])).rows[0];
+    if (!row) return null;
+    const rollingWorkerDispatchIdentity: RollingWorkerDispatchIdentity = {id:stringColumn(row.dispatch_id,'worker dispatch'),
+      threadId:stringColumn(row.thread_id,'worker thread'),instructions:stringColumn(row.instructions_text,'worker instructions')};
+    if (row.state === 'STARTED') {requireState(row.turn_id === null,'started worker dispatch has a turn');return {...rollingWorkerDispatchIdentity,state:'STARTED'};}
+    requireState(row.state === 'ATTACHED','invalid worker dispatch state');
+    return {...rollingWorkerDispatchIdentity,state:'ATTACHED',turnId:stringColumn(row.turn_id,'worker turn')};
+  }
+
+  // Traceability: implements REQ-ROLLING-WORKERS
+  async attachWorkerDispatch(campaignId: string, id: string, generation: string, dispatchId: string,
+    turnId: string): Promise<RollingWorkerDispatchAttached> {
+    requireState(turnId.trim().length > 0,'worker turn identity is empty');
+    return this.transaction<RollingWorkerDispatchAttached>(campaignId,async (poolClient,rollingCampaignRow) => {
+      const rollingStoredAssignment = await this.assignment(poolClient,campaignId,id,generation);
+      requireState(rollingStoredAssignment.state === 'WORKING' && !rollingStoredAssignment.activityStopped && !rollingStoredAssignment.retired,
+        'worker is no longer active');
+      this.currentLease(rollingStoredAssignment,this.graph(rollingCampaignRow,rollingCampaignRow.graph_digest));
+      const row = (await poolClient.query<Record<string, unknown>>(
+        'SELECT * FROM ponytail_index.rolling_worker_dispatch_v1 WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3 AND generation=$4',
+        [this.projectId,campaignId,id,generation])).rows[0];
+      requireState(row && row.dispatch_id === dispatchId,'worker dispatch identity differs');
+      requireState(row.state === 'STARTED' || row.state === 'ATTACHED' && row.turn_id === turnId,'worker turn attachment is immutable');
+      await poolClient.query<Record<string, unknown>>("UPDATE ponytail_index.rolling_worker_dispatch_v1 SET state='ATTACHED',turn_id=$5 WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3 AND generation=$4",
+        [this.projectId,campaignId,id,generation,turnId]);
+      return {id:dispatchId,threadId:stringColumn(row.thread_id,'worker thread'),instructions:stringColumn(row.instructions_text,'worker instructions'),state:'ATTACHED',turnId};
     });
   }
 

@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Alex Baretta. All rights reserved.
 // Licensed under the MIT License. See LICENSE in the project root.
 import readline from 'node:readline';
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { parseRollingWorkerCreation } from '../../src/rolling-worker.js';
@@ -60,7 +61,12 @@ lines.on('line', line => {
     turns.set(turnId, { id: turnId, status: prompt === 'pending' ? 'inProgress' : prompt, items: [] });
     result = { turn: { id: turnId } };
     send({ method: 'turn/started', params: { threadId: params.threadId, turn: { id: turnId } } });
-    if (prompt.startsWith('Initialize this Ponytail worker')) {
+    if (prompt.startsWith('Execute the assigned atomic obligation')) {
+      const rollingNativeTurn: RollingNativeTurn = {id:turnId,status:'completed',
+        items:[{type:'agentMessage',text:`Worker instructions digest: ${crypto.createHash('sha256').update(prompt).digest('hex')}`}]};
+      turns.set(turnId,rollingNativeTurn);
+      send({method:'turn/completed',params:{threadId:params.threadId,turn:rollingNativeTurn}});
+    } else if (prompt.startsWith('Initialize this Ponytail worker')) {
       const marker = 'Worker attachment: ';
       const rollingWorkerCreationV1 = parseRollingWorkerCreation(prompt.slice(prompt.lastIndexOf(marker) + marker.length));
       fs.writeFileSync(path.join(rollingWorkerCreationV1.rootPath, 'session_id.txt'), `${rollingWorkerCreationV1.sessionId}\n`, {flag:'wx'});

@@ -16,7 +16,7 @@ import type { ObligationBindingHistoryV1, ObligationBindingRevisionV1 } from '..
 import type { ObligationEvidence } from '../skills/plan-execution/scripts/obligations.js';
 import type { RollingWorkerSubmissionV1 } from '../src/rolling-worker-submission.js';
 import { dispatchRollingReview, collectRollingReview, type RollingReviewOutcomeV1 } from '../src/rolling-review.js';
-import { provisionRollingWorker, attachRollingWorker, type RollingWorkerInitialization } from '../src/rolling-worker.js';
+import { provisionRollingWorker, attachRollingWorker, dispatchRollingWorker, buildRollingWorkerInstructions, type RollingWorkerInitialization } from '../src/rolling-worker.js';
 import { RollingCodex, type RollingNativeThread } from '../src/rolling-codex.js';
 import { acceptBoundCheckpoint, type ObligationCertificateBindingV1, type ObligationCertificateSubmission,
   type ObligationCertificateBindingRequest } from '../skills/plan-execution/scripts/obligation-certificate-bindings.js';
@@ -582,6 +582,30 @@ export async function runRollingWorkerProvisionScenario(t: TestContext, mode: 'p
   assert.deepEqual(await rollingCampaignStore.completeWorkerCreation('worker-fixture',rollingAllocationResult.actionId,generation,
     rollingWorkerInitialization.rollingWorkerCreationV1),rollingSessionAttachment);
   assert.equal(execFileSync('git',['-C',rollingAllocationResult.worktree.rootPath,'status','--porcelain'],{encoding:'utf8'}),'');
+  if (mode === 'protocol') {
+    const rollingWorkerContext = await rollingCampaignStore.workerContext('worker-fixture',rollingAllocationResult.assignment.id,generation);
+    assert.equal(rollingWorkerContext.obligation.id,obligation.id);
+    assert.deepEqual(rollingWorkerContext.lease,rollingAllocationResult.assignment.lease);
+    assert.deepEqual(rollingWorkerContext.qa,rollingProjectConfigV1.qa);
+    const rollingWorkerDispatchAttached = await dispatchRollingWorker(rollingCampaignStore,rollingCodex,'worker-fixture',rollingAllocationResult.assignment.id,generation);
+    const rollingNativeTurn = await rollingCodex.waitForTurn(rollingWorkerDispatchAttached.threadId,rollingWorkerDispatchAttached.turnId);
+    assert.equal(rollingNativeTurn.status,'completed');
+    assert.equal(rollingNativeTurn.items.at(-1)?.text,`Worker instructions digest: ${crypto.createHash('sha256').update(buildRollingWorkerInstructions(rollingWorkerContext)).digest('hex')}`);
+    assert.deepEqual(await new RollingCampaignStore(pool,projectId).workerDispatch('worker-fixture',rollingAllocationResult.assignment.id,generation),rollingWorkerDispatchAttached);
+    // Simulate a lost turn-attachment receipt: native activity is known to this
+    // fixture but its durable dispatch remains STARTED and cannot be abandoned.
+    await pool.query("UPDATE ponytail_index.rolling_worker_dispatch_v1 SET state='STARTED',turn_id=NULL WHERE project_id=$1 AND dispatch_id=$2",
+      [projectId,rollingWorkerDispatchAttached.id]);
+    await assert.rejects(rollingCampaignStore.retire('worker-fixture',rollingAllocationResult.assignment.id,generation,true),/worker dispatch outcome must be reconciled/);
+    await rollingCampaignStore.attachWorkerDispatch('worker-fixture',rollingAllocationResult.assignment.id,generation,
+      rollingWorkerDispatchAttached.id,rollingWorkerDispatchAttached.turnId);
+
+    await assert.rejects(dispatchRollingWorker(rollingCampaignStore,rollingCodex,'worker-fixture',rollingAllocationResult.assignment.id,generation),/already claimed/);
+    await assert.rejects(rollingCampaignStore.claimWorkerDispatch('worker-fixture',rollingAllocationResult.assignment.id,generation,'foreign instructions'),/coordinator scope/);
+    await assert.rejects(rollingCampaignStore.attachWorkerDispatch('worker-fixture',rollingAllocationResult.assignment.id,generation,rollingWorkerDispatchAttached.id,'foreign-turn'),/immutable/);
+    const foreignRollingCampaignStore = new RollingCampaignStore(pool,crypto.randomUUID());
+    assert.equal(await foreignRollingCampaignStore.workerDispatch('worker-fixture',rollingAllocationResult.assignment.id,generation),null);
+  }
   if (mode === 'native') {
     const {rollingWorkerCreationV1,rollingTurnStarted} = rollingWorkerInitialization;
     await rollingCodex.close();

@@ -8,7 +8,7 @@ import test from 'node:test';
 import { execFileSync } from 'node:child_process';
 import { RollingCodex, type RollingNativeThread } from '../src/rolling-codex.js';
 import { readRollingWorkerCreationV1, parseRollingWorkerCreation, identifyRollingWorkerCreation,
- initializeRollingWorker, observeRollingWorkerInitialization, type RollingWorkerCreationV1 } from '../src/rolling-worker.js';
+ buildRollingWorkerInstructions, type RollingWorkerContext, initializeRollingWorker, observeRollingWorkerInitialization, type RollingWorkerCreationV1 } from '../src/rolling-worker.js';
 import { validateRollingSessionMarker, requireRollingSessionMarkerAbsent } from '../src/rolling-worktrees.js';
 
 // Traceability: verifies REQ-ROLLING-STATE
@@ -53,4 +53,32 @@ test('initialization uses the returned native thread directly and binds only its
  fs.writeFileSync(path.join(root,'session_id.txt'),'session-fixture');
  execFileSync('git',['-C',root,'add','-f','session_id.txt']);
  assert.throws(() => validateRollingSessionMarker(root,rollingWorkerCreationV1.sessionId),/marker must be untracked/);
+});
+
+// Traceability: verifies REQ-ROLLING-WORKERS
+test('worker instructions retain exact obligation, requirement, acceptance step, lease and QA selections', () => {
+ const rollingWorkerContext: RollingWorkerContext = {
+  rollingWorkerCreationV1:{schemaVersion:1,threadId:'thread',sessionId:'session',rootPath:'/fixture'},
+  obligation:{id:'OBL-1',category:'gate',requirementIds:['REQ-FIXTURE'],responsibilityId:'owner',condition:'Exact fixture condition',
+   criterion:'Exact fixture proof',dependsOn:[],acceptanceGroups:['acceptance'],supersedes:null,
+   execution:{sprintId:null,taskletIds:[],plannedPaths:[],operations:['inspect'],selection:[],target:null}},
+  requirements:[{id:'REQ-FIXTURE',path:'pm/requirements/fixture.md',digest:'a'.repeat(64)}],
+  binding:{obligationId:'OBL-1',implementationIds:['IMPL-FIXTURE'],sourcePaths:['fixture.ts'],
+   acceptances:[{id:'ACCEPT-FIXTURE',arcId:'ARC-FIXTURE',stepId:'STEP-FIXTURE'}],
+   unitTests:[{id:'UNIT-FIXTURE',path:'fixture.test.ts',selection:['unit selection']}],
+   integrationTests:[{id:'INTEGRATION-FIXTURE',path:'fixture.test.ts',selection:['integration selection']}],exclusiveResources:[]},
+  lease:{schemaVersion:1,scopeId:'fixture',baselineId:'BASELINE-1',graphDigest:'b'.repeat(64),generation:'generation',assessor:'coordinator',authority:['fixture'],
+   binding:{obligationId:'OBL-1',revisionId:'BIND-1',dependsOn:[],execution:{sprintId:null,taskletIds:[],plannedPaths:['fixture.ts'],
+    operations:['inspect','edit','test'],selection:['focused fixture'],target:{identity:'local',profile:'fixture'}}}},
+  configuration:{mainline:{remote:'origin',branch:'main'},incrementRef:'campaign/fixture',maxActiveWorkers:1,publicationSize:1},
+  qa:{focused:[['node','--test','fixture.test.ts']],publication:[['npm','test']]}
+ };
+ const instructions = buildRollingWorkerInstructions(rollingWorkerContext);
+ const marker = 'Worker responsibility: ';
+ const received: unknown = JSON.parse(instructions.slice(instructions.lastIndexOf(marker)+marker.length));
+ assert.deepEqual(received,rollingWorkerContext);
+ assert.ok(instructions.includes('publication QA belongs to the coordinator publication gate'));
+ assert.ok(instructions.includes('coordinator graph is authoritative'));
+ assert.throws(() => buildRollingWorkerInstructions({...rollingWorkerContext,requirements:[]}),/requirement references/);
+ assert.throws(() => buildRollingWorkerInstructions({...rollingWorkerContext,binding:{...rollingWorkerContext.binding,obligationId:'OBL-2'}}),/frozen obligation/);
 });

@@ -402,6 +402,23 @@ $rolling_action_identity$;
 CREATE INDEX IF NOT EXISTS rolling_action_v1_pending
 ON rolling_action_v1 (project_id,campaign_id,created_at,action_id) WHERE state IN ('PENDING','STARTED');
 
+CREATE TABLE IF NOT EXISTS rolling_worker_dispatch_v1 (
+  project_id uuid NOT NULL,
+  campaign_id text NOT NULL,
+  assignment_id uuid NOT NULL,
+  generation uuid NOT NULL,
+  dispatch_id uuid NOT NULL,
+  thread_id text NOT NULL CHECK (thread_id <> ''),
+  instructions_text text NOT NULL CHECK (instructions_text <> ''),
+  state text NOT NULL CHECK (state IN ('STARTED','ATTACHED')),
+  turn_id text,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (project_id,campaign_id,assignment_id,generation),
+  FOREIGN KEY (project_id,campaign_id,assignment_id)
+    REFERENCES rolling_assignment_v1(project_id,campaign_id,assignment_id) ON DELETE CASCADE,
+  CHECK ((state='STARTED' AND turn_id IS NULL) OR (state='ATTACHED' AND turn_id IS NOT NULL AND turn_id <> ''))
+);
+
 CREATE OR REPLACE FUNCTION register_project(
   requested_project_id uuid,
   requested_project_name text

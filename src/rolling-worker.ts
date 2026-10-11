@@ -6,7 +6,10 @@ import { parse } from 'lossless-json';
 import { RollingCodex, type RollingNativeThread, type RollingTurnStarted } from './rolling-codex.js';
 import { validateRollingSessionMarker, requireRollingSessionMarkerAbsent, provisionRollingWorktree } from './rolling-worktrees.js';
 
-import type { RollingCampaignStore, RollingSessionAttachment } from './rolling-campaign-store.js';
+import type { Obligation, ObligationRequirement } from '../skills/plan-execution/scripts/obligations.js';
+import type { ObligationLeaseV1 } from '../skills/plan-execution/scripts/obligation-binding-history.js';
+import type { RollingBinding, RollingProjectConfigV1, RollingResolvedConfiguration } from './rolling-campaign.js';
+import type { RollingCampaignStore, RollingSessionAttachment, RollingWorkerDispatchAttached } from './rolling-campaign-store.js';
 
 export interface RollingWorkerCreationV1 {
  readonly schemaVersion: 1;
@@ -92,4 +95,45 @@ export async function attachRollingWorker(rollingCampaignStore: RollingCampaignS
  timeoutMs = 60000): Promise<RollingSessionAttachment> {
  const rollingWorkerCreationV1 = await observeRollingWorkerInitialization(rollingCodex,rollingWorkerInitialization,timeoutMs);
  return rollingCampaignStore.completeWorkerCreation(campaignId,actionId,generation,rollingWorkerCreationV1);
+}
+
+export interface RollingWorkerContext {
+ readonly rollingWorkerCreationV1: RollingWorkerCreationV1;
+ readonly obligation: Obligation;
+ readonly requirements: readonly ObligationRequirement[];
+ readonly binding: RollingBinding;
+ readonly lease: ObligationLeaseV1;
+ readonly configuration: RollingResolvedConfiguration;
+ readonly qa: RollingProjectConfigV1['qa'];
+}
+
+// Traceability: implements REQ-ROLLING-WORKERS
+export function buildRollingWorkerInstructions(rollingWorkerContext: RollingWorkerContext): string {
+ const {obligation,requirements,binding,lease} = rollingWorkerContext;
+ requireWorker(obligation.id === lease.binding.obligationId && binding.obligationId === obligation.id,
+  'worker instructions differ from frozen obligation');
+ requireWorker(obligation.requirementIds.every(id => requirements.some(item => item.id === id))
+  && requirements.every(item => obligation.requirementIds.includes(item.id)), 'worker instructions lack exact requirement references');
+ return 'Execute the assigned atomic obligation in this existing checkout and original session. Read the applicable project rules and skills before work. '
+  + 'The coordinator graph is authoritative; the frozen lease below owns current prerequisites, permitted paths, operations, proof selection and target. '
+  + 'The obligation owns the canonical condition and discharge criterion. Its historical execution field does not override this frozen lease. '
+  + 'Use the exact requirement references, acceptance arc and step references, implementation IDs, source paths, unit and integration selections below. '
+  + 'Implement only this obligation within the lease. Run configured focused QA and the referenced focused arcs; publication QA belongs to the coordinator publication gate. '
+  + 'Preserve static typing and project build-impact rules. Report newly discovered prerequisites to the coordinator; do not silently change the authoritative graph. '
+  + 'If blocked, stop activity and report the blocker while retaining the checkout. Delivery is proposed discharge, not acceptance. '
+  + 'Before submission, fetch the configured campaign branch and perform a full semantic rebase commit by commit, refresh affected evidence, retain the exact candidate SHA and base, and stop activity. '
+  + 'Return the candidate and evidence to the coordinator for adversarial review; never publish to mainline yourself.\n'
+  + `Worker responsibility: ${JSON.stringify(rollingWorkerContext)}`;
+}
+
+// Traceability: implements REQ-ROLLING-WORKERS
+export async function dispatchRollingWorker(rollingCampaignStore: RollingCampaignStore, rollingCodex: RollingCodex,
+ campaignId: string, assignmentId: string, generation: string): Promise<RollingWorkerDispatchAttached> {
+ const rollingWorkerContext = await rollingCampaignStore.workerContext(campaignId,assignmentId,generation);
+ const instructions = buildRollingWorkerInstructions(rollingWorkerContext);
+ const rollingWorkerDispatchStarted = await rollingCampaignStore.claimWorkerDispatch(campaignId,assignmentId,generation,instructions);
+ const rollingNativeThread = await rollingCodex.resumeThread(rollingWorkerDispatchStarted.threadId,rollingWorkerContext.rollingWorkerCreationV1.rootPath);
+ requireWorker(rollingNativeThread.thread.sessionId === rollingWorkerContext.rollingWorkerCreationV1.sessionId, 'resumed worker differs from attached session');
+ const rollingTurnStarted = await rollingCodex.startTurn(rollingNativeThread.thread.id,instructions);
+ return rollingCampaignStore.attachWorkerDispatch(campaignId,assignmentId,generation,rollingWorkerDispatchStarted.id,rollingTurnStarted.turn.id);
 }
