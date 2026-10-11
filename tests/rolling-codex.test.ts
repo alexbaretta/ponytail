@@ -41,9 +41,13 @@ test('native protocol binds checkout and session, preserves numbers and observes
   await assert.rejects(rollingCodex.readThreadActivity('unsupported-activity'),/unsupported native thread activity/);
   await rollingCodex.request('fixture-activity',{active:true});
   assert.equal((await rollingCodex.readThreadActivity(started.thread.id)).status,'active');
-  await assert.rejects(rollingCodex.close(),/observe terminal turns/);
-  await rollingCodex.request('fixture-activity',{active:false});
-  assert.equal((await rollingCodex.readThreadActivity(started.thread.id)).status,'idle');
+  try {
+    await assert.rejects(rollingCodex.close(),(cause:unknown) => cause instanceof Error
+      && cause.message.includes('observe terminal turns') && cause.message.includes(JSON.stringify([[started.thread.id,null]])));
+  } finally {
+    await rollingCodex.request('fixture-activity',{active:false});
+    assert.equal((await rollingCodex.readThreadActivity(started.thread.id)).status,'idle');
+  }
   await assert.rejects(rollingCodex.resumeThread('wrong-thread', root),
     (cause: unknown) => cause instanceof RollingNativeResponseError && cause.nativeResult !== undefined);
   for (const status of ['completed', 'failed', 'interrupted']) {

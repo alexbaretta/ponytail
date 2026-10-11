@@ -330,7 +330,7 @@ class RollingCodex extends node_events_1.EventEmitter {
         return result;
     }
     async close() {
-        requireProtocol(this.failure || this.activeTurns.size === 0, 'interrupt and observe terminal turns before closing the owned App Server');
+        requireProtocol(this.failure || this.activeTurns.size === 0, `interrupt and observe terminal turns before closing the owned App Server; unresolved activity ${JSON.stringify([...this.activeTurns])}`);
         this.childProcess.stdin.end();
         this.childProcess.kill('SIGTERM');
         await this.closed;

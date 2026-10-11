@@ -1,0 +1,430 @@
+✔ native code fixture approvals permit exact shell-wrapped commands only for the assigned checkout and turn (0.552875ms)
+✔ real PostgreSQL records lost reviewer replacement and fences the old actor while retaining fresh review after restart (4848.867375ms)
+ℹ Lost review aa4a1e17-19ab-41a0-8bf1-b6e0717521e6 retained unchanged; recorded replacement d1060bcf-372f-4d88-a72f-8aa59ed00e14; old dispatch and decisions fenced after restart; fresh review pending.
+✔ real PostgreSQL serializes allocation, retains ownership and persists accepted review (8142.444916ms)
+✔ real PostgreSQL serializes allocation, retains ownership and persists rejected review (4474.532125ms)
+✔ real PostgreSQL serializes allocation, retains ownership and persists native application review (4644.320667ms)
+✔ worker provisioning fences creation and atomically attaches the native identity and ignored marker (2303.345167ms)
+✔ worker suspension observes stopped activity and frees capacity while retaining dirty ownership (2335.049792ms)
+ℹ worker suspension thread=thread-fixture; session=session-fixture; native=idle; retained checkout=101 with dirty checkpoint; next obligation=OBL-3; allocated checkout=102
+✔ worker resumption restores original native identity and refreshes its scope before new work (3244.88625ms)
+ℹ worker suspension thread=thread-fixture; session=session-fixture; native=idle; retained checkout=101 with dirty checkpoint; retained for reactivation
+ℹ worker resumption thread=thread-fixture; session=session-fixture; checkout=101; base=d436f130edf2d0d1cda9584796678364bc82d251; generation=ef3bb2ce-bd0f-472a-b4df-d306c8533a6f; fresh instructions completed before new allocation
+✔ worker creation recovery retains uncertain ownership and attaches original initialization after restart (2489.893042ms)
+ℹ worker recovery thread=thread-fixture; session=session-fixture; initialization=turn-1; original action recovered after restart without duplicate creation; missing receipt and active activity preserve reservation
+✔ submission collection binds terminal idle actor and exact passing candidate before review (4017.565958ms)
+ℹ component submission revision=b0e4d9eb644bacee0a57adfd61e5ca992513bbf9; exact original turn=turn-2; session=session-fixture; focused QA=2; REVIEW persisted; native code/rebase Arc remains unverified
+✔ live adversarial reviewer rejects the exact bad candidate and persists its decision after restart (32911.369917ms)
+ℹ {"timestamp":"2026-10-11T18:33:31.354924Z","level":"WARN","fields":{"message":"ignoring interface.icon_small: icon path with '..' must resolve under plugin assets/"},"target":"codex_skills::interface"}
+ℹ {"timestamp":"2026-10-11T18:33:31.354972Z","level":"WARN","fields":{"message":"ignoring interface.icon_large: icon path with '..' must resolve under plugin assets/"},"target":"codex_skills::interface"}
+ℹ {"timestamp":"2026-10-11T18:33:31.724923Z","level":"WARN","fields":{"message":"ignoring interface.icon_small: icon path with '..' must resolve under plugin assets/"},"target":"codex_skills::interface"}
+{"timestamp":"2026-10-11T18:33:31.724951Z","level":"WARN","fields":{"message":"ignoring interface.icon_large: icon path with '..' must resolve under plugin assets/"},"target":"codex_skills::interface"}
+ℹ native review=d2fb1758-5fea-48b5-a7f8-2e12c4c266fc; thread=01a12c3d-d1b5-7990-b95c-3243b57be533; session=01a12c3d-d1b5-7990-b95c-3243b57be533; candidate=4473d885a39dab061b5968c60800e64089485805; terminal=completed; final={"schemaVersion":1,"reviewId":"d2fb1758-5fea-48b5-a7f8-2e12c4c266fc","revision":"4473d885a39dab061b5968c60800e64089485805","reviewerSessionId":"01a12c3d-d1b5-7990-b95c-3243b57be533","completedAt":"2026-10-11T11:33:55-07:00","decision":"rejected","findings":["fixture/current.ts:1: The complete candidate diff changes the exported value from 1 to 2, violating OBL-2 and its acceptance criterion. The retained syntax-check proof matches the candidate inputs but does not establish the required value. Restore the exported value to exactly 1 and retain proof that verifies that condition."]}
+ℹ native review=d2fb1758-5fea-48b5-a7f8-2e12c4c266fc; thread=01a12c3d-d1b5-7990-b95c-3243b57be533; session=01a12c3d-d1b5-7990-b95c-3243b57be533; candidate=4473d885a39dab061b5968c60800e64089485805; decision=rejected; findings=["fixture/current.ts:1: The complete candidate diff changes the exported value from 1 to 2, violating OBL-2 and its acceptance criterion. The retained syntax-check proof matches the candidate inputs but does not establish the required value. Restore the exported value to exactly 1 and retain proof that verifies that condition."]; recovered after App Server restart
+✔ live replacement reviewer freshly reviews the exact candidate after recorded original reviewer loss (39946.622625ms)
+ℹ {"timestamp":"2026-10-11T18:34:04.024739Z","level":"WARN","fields":{"message":"ignoring interface.icon_small: icon path with '..' must resolve under plugin assets/"},"target":"codex_skills::interface"}
+{"timestamp":"2026-10-11T18:34:04.024774Z","level":"WARN","fields":{"message":"ignoring interface.icon_large: icon path with '..' must resolve under plugin assets/"},"target":"codex_skills::interface"}
+ℹ {"timestamp":"2026-10-11T18:34:04.315358Z","level":"WARN","fields":{"message":"ignoring interface.icon_small: icon path with '..' must resolve under plugin assets/"},"target":"codex_skills::interface"}
+ℹ {"timestamp":"2026-10-11T18:34:04.315379Z","level":"WARN","fields":{"message":"ignoring interface.icon_large: icon path with '..' must resolve under plugin assets/"},"target":"codex_skills::interface"}
+ℹ {"timestamp":"2026-10-11T18:34:04.372790Z","level":"WARN","fields":{"message":"state db discrepancy during find_thread_path_by_id_str_in_subdir: falling_back"},"target":"codex_rollout::list"}
+ℹ {"timestamp":"2026-10-11T18:34:04.372883Z","level":"WARN","fields":{"message":"state db discrepancy during read_repair_rollout_path: upsert_needed (slow path)"},"target":"codex_rollout::state_db"}
+ℹ Lost review 7520bec3-a10e-49bd-aa17-31b48cbc5490 retained unchanged; recorded replacement 0101aa90-50f7-4499-a21b-a5abde8868bf; old dispatch and decisions fenced after restart; fresh review pending.
+ℹ native review=0101aa90-50f7-4499-a21b-a5abde8868bf; thread=01a12c3e-52de-7fd2-b3c6-2db2d0bb590e; session=01a12c3e-52de-7fd2-b3c6-2db2d0bb590e; candidate=6ca242e25945cd306173151ed6bd89b2ed4e9b25; terminal=completed; final={"schemaVersion":1,"reviewId":"0101aa90-50f7-4499-a21b-a5abde8868bf","revision":"6ca242e25945cd306173151ed6bd89b2ed4e9b25","reviewerSessionId":"01a12c3e-52de-7fd2-b3c6-2db2d0bb590e","completedAt":"2026-10-11T11:34:35.130-07:00","decision":"rejected","findings":["fixture/current.ts:1: The candidate changes the exported value from 1 to 2, violating OBL-2 and acceptance group ROLL-INVENTORY-T2. The retained syntax-check proof cannot establish the required value. Restore the initializer to exactly 1 and retain proof that verifies that condition."]}
+ℹ {"timestamp":"2026-10-11T18:34:40.149870Z","level":"WARN","fields":{"message":"failed to flush rollout after emitting terminal turn event: thread 01a12c3e-52de-7fd2-b3c6-2db2d0bb590e not found"},"target":"codex_core::tasks"}
+ℹ native review=0101aa90-50f7-4499-a21b-a5abde8868bf; thread=01a12c3e-52de-7fd2-b3c6-2db2d0bb590e; session=01a12c3e-52de-7fd2-b3c6-2db2d0bb590e; candidate=6ca242e25945cd306173151ed6bd89b2ed4e9b25; decision=rejected; findings=["fixture/current.ts:1: The candidate changes the exported value from 1 to 2, violating OBL-2 and acceptance group ROLL-INVENTORY-T2. The retained syntax-check proof cannot establish the required value. Restore the initializer to exactly 1 and retain proof that verifies that condition."]; recovered after App Server restart
+✔ native App Server starts and resumes the same session in the designated existing checkout (22787.147625ms)
+ℹ {"timestamp":"2026-10-11T18:34:40.854387Z","level":"WARN","fields":{"message":"ignoring interface.icon_small: icon path with '..' must resolve under plugin assets/"},"target":"codex_skills::interface"}
+ℹ {"timestamp":"2026-10-11T18:34:40.854424Z","level":"WARN","fields":{"message":"ignoring interface.icon_large: icon path with '..' must resolve under plugin assets/"},"target":"codex_skills::interface"}
+ℹ {"timestamp":"2026-10-11T18:34:41.197985Z","level":"WARN","fields":{"message":"ignoring interface.icon_small: icon path with '..' must resolve under plugin assets/"},"target":"codex_skills::interface"}
+{"timestamp":"2026-10-11T18:34:41.198011Z","level":"WARN","fields":{"message":"ignoring interface.icon_large: icon path with '..' must resolve under plugin assets/"},"target":"codex_skills::interface"}
+ℹ native thread=01a12c3e-e13f-7351-8e9e-b2ebac6c60e6; session=01a12c3e-e13f-7351-8e9e-b2ebac6c60e6; cwd=/private/var/folders/yv/v_v6t2lj1nz4ypl2bpp_ytqm0000gp/T/rolling-native-5jiNhl; resumed after App Server restart; model=gpt-6.1-sol
+✔ live worker provisioning binds the reserved checkout and persists its actual native session after restart (15308.456209ms)
+ℹ {"timestamp":"2026-10-11T18:35:05.183972Z","level":"WARN","fields":{"message":"ignoring interface.icon_small: icon path with '..' must resolve under plugin assets/"},"target":"codex_skills::interface"}
+{"timestamp":"2026-10-11T18:35:05.184008Z","level":"WARN","fields":{"message":"ignoring interface.icon_large: icon path with '..' must resolve under plugin assets/"},"target":"codex_skills::interface"}
+ℹ worker native thread=01a12c3f-403e-73f1-9d10-81613d8a1ad4; session=01a12c3f-403e-73f1-9d10-81613d8a1ad4; checkout=/private/var/folders/yv/v_v6t2lj1nz4ypl2bpp_ytqm0000gp/T/rolling-worker-store-tfCJxQ/managed/101; attachment recovered after restart; model=gpt-6.1-sol
+✔ live attached worker receives exact obligation, traceability, frozen lease and QA instructions (53308.068292ms)
+ℹ {"timestamp":"2026-10-11T18:35:20.577669Z","level":"WARN","fields":{"message":"ignoring interface.icon_small: icon path with '..' must resolve under plugin assets/"},"target":"codex_skills::interface"}
+{"timestamp":"2026-10-11T18:35:20.577708Z","level":"WARN","fields":{"message":"ignoring interface.icon_large: icon path with '..' must resolve under plugin assets/"},"target":"codex_skills::interface"}
+ℹ worker instruction turn=01a12c3f-b32a-70a0-bed9-ec1a8056c555; thread=01a12c3f-7c60-7a63-969d-5b695836ffc6; final=Proposed discharge of **OBL-2 / rolling-inventory-T2**, acceptance group **ROLL-INVENTORY-T2**, for coordinator review.
+
+Inspection confirmed `fixture.ts` exports `value: number = 1`. Focused QA `node --test fixture.test.ts` passed both selections: **2 passed, 0 failures, 0 skips**. No files changed; checkout remains clean. No new prerequisites discovered.
+
+Assigned references:
+
+- Requirements: REQ-ROLLING-CONFIGURATION, REQ-ROLLING-GRAPH, REQ-ROLLING-SCHEDULING, REQ-ROLLING-STATE, REQ-ROLLING-WORKERS, REQ-ROLLING-REVIEW, REQ-ROLLING-PUBLICATION, REQ-ROLLING-INTERFACES.
+- Acceptance: ACCEPT-FIXTURE; Arc: ARC-FIXTURE; step: STEP-FIXTURE.
+- Implementation: IMPL-FIXTURE; source: `fixture.ts`.
+- Unit: UNIT-FIXTURE, `fixture.test.ts`, selection `fixture unit`.
+- Integration: INTEGRATION-FIXTURE, `fixture.test.ts`, selection `fixture integration`.
+- Permitted paths: `fixture.ts`, `fixture.test.ts`, `pm/requirements/rolling-campaigns.md`; operations: `inspect`, `test`.
+- Lease generation: `6c15ca36-7d28-4aec-bda3-db837ff03ae4`; target: identity `local`, profile `fixture`.
+- Assignment: `92174db0-a353-415c-a56d-e55bb5521096`; session: `01a12c3f-7c60-7a63-969d-5b695836ffc6`.
+- Graph digest: `3d5dd88864759d75a3a8f8f0fda32d5331b4afcb40e21c3970f86f29443b7247`.
+- HEAD and base: `dddb8364a45ec243594fa4b99309b42d379abf71`.
+
+QA ran from `2026-10-11T11:35:57.353101-07:00` through `2026-10-11T11:35:57.473181-07:00`; actual output is retained in this session’s tool record. No build inputs changed. No Git mutations or publication QA performed. Activity stopped; checkout retained.
+
+2026-10-11T11:35:57.473181-07:00
+ℹ worker native thread=01a12c3f-7c60-7a63-969d-5b695836ffc6; session=01a12c3f-7c60-7a63-969d-5b695836ffc6; checkout=/private/var/folders/yv/v_v6t2lj1nz4ypl2bpp_ytqm0000gp/T/rolling-worker-store-sSZV25/managed/101; attachment recovered after restart; model=gpt-6.1-sol
+✔ live worker suspension observes idle native activity and retains its dirty checkout while freeing capacity (46022.773958ms)
+ℹ {"timestamp":"2026-10-11T18:36:13.935942Z","level":"WARN","fields":{"message":"ignoring interface.icon_small: icon path with '..' must resolve under plugin assets/"},"target":"codex_skills::interface"}
+{"timestamp":"2026-10-11T18:36:13.935982Z","level":"WARN","fields":{"message":"ignoring interface.icon_large: icon path with '..' must resolve under plugin assets/"},"target":"codex_skills::interface"}
+ℹ worker instruction turn=01a12c40-720c-7ad3-bb08-ce438428e399; thread=01a12c40-4ccd-79c2-b566-2bddfc3a0f29; final=Proposed discharge of **OBL-2** (`rolling-inventory-T2`, `ROLL-INVENTORY-T2`): inspected `fixture.ts`; it exports `value: number = 1`. No files modified or Git mutations performed.
+
+`node --test fixture.test.ts` passed both configured selections: **fixture unit** and **fixture integration**. Tests: 2 passed, 0 failed, 0 skipped. Target: identity `local`, profile `fixture`.
+
+Assigned references:
+
+- Requirements: `REQ-ROLLING-CONFIGURATION`, `REQ-ROLLING-GRAPH`, `REQ-ROLLING-SCHEDULING`, `REQ-ROLLING-STATE`, `REQ-ROLLING-WORKERS`, `REQ-ROLLING-REVIEW`, `REQ-ROLLING-PUBLICATION`, `REQ-ROLLING-INTERFACES`.
+- Implementation/source: `IMPL-FIXTURE` / `fixture.ts`.
+- Acceptance: `ACCEPT-FIXTURE`; Arc: `ARC-FIXTURE`; step: `STEP-FIXTURE`.
+- Unit: `UNIT-FIXTURE`, `fixture.test.ts`, selection `fixture unit`.
+- Integration: `INTEGRATION-FIXTURE`, `fixture.test.ts`, selection `fixture integration`.
+- Permitted paths: `fixture.ts`, `fixture.test.ts`, `pm/requirements/rolling-campaigns.md`; operations: `inspect`, `test`.
+- Lease generation: `53ef5ca9-17c5-489d-98c3-2dd1c8a53c5e`.
+- Assignment: `ae4bd9ae-f4bd-4d03-8988-b193e56d26dc`; session: `01a12c40-4ccd-79c2-b566-2bddfc3a0f29`.
+- Graph digest: `8849251dbeb7e0b61e36be84e88f8ee6349567b475bd8d3096db3216fa2926a1`.
+- Revision/base: `627f1736e672b44a3e0f276f5629a096f669e581`; worktree clean.
+
+Proof ran from `2026-10-11T11:36:46.086723-07:00` through `2026-10-11T11:36:46.185400-07:00`; actual output is retained in this session’s tool record. Source and test hashes remained unchanged. No new prerequisites discovered. Coordinator acceptance remains pending.
+
+2026-10-11T11:36:46.185400-07:00
+ℹ worker suspension thread=01a12c40-4ccd-79c2-b566-2bddfc3a0f29; session=01a12c40-4ccd-79c2-b566-2bddfc3a0f29; native=idle; retained checkout=101 with dirty checkpoint; next obligation=OBL-3; allocated checkout=102
+ℹ worker native thread=01a12c40-4ccd-79c2-b566-2bddfc3a0f29; session=01a12c40-4ccd-79c2-b566-2bddfc3a0f29; checkout=/private/var/folders/yv/v_v6t2lj1nz4ypl2bpp_ytqm0000gp/T/rolling-worker-store-fgt3uP/managed/101; attachment recovered after restart; model=gpt-6.1-sol
+✔ live worker resumption restores its original native session with refreshed scope and campaign base (61751.308666ms)
+ℹ {"timestamp":"2026-10-11T18:36:59.961579Z","level":"WARN","fields":{"message":"ignoring interface.icon_small: icon path with '..' must resolve under plugin assets/"},"target":"codex_skills::interface"}
+{"timestamp":"2026-10-11T18:36:59.961621Z","level":"WARN","fields":{"message":"ignoring interface.icon_large: icon path with '..' must resolve under plugin assets/"},"target":"codex_skills::interface"}
+ℹ worker instruction turn=01a12c41-326a-7192-8192-e7ffe0ce0dc4; thread=01a12c41-0098-7fd2-81ef-ad858a3a7d45; final=Proposed discharge of **OBL-2** (`rolling-inventory-T2`, acceptance group `ROLL-INVENTORY-T2`) for coordinator review.
+
+Inspection confirmed `fixture.ts` exports `value: number = 1`. `node --test fixture.test.ts` passed both assigned selections: **2 passed, 0 failed, 0 skipped**. No files modified or Git mutations performed; checkout retained clean at revision/base `e66312baeaa0ae5c50569d672b6c3aa6b88a188a`.
+
+Assigned references:
+
+- Requirements: `REQ-ROLLING-CONFIGURATION`, `REQ-ROLLING-GRAPH`, `REQ-ROLLING-SCHEDULING`, `REQ-ROLLING-STATE`, `REQ-ROLLING-WORKERS`, `REQ-ROLLING-REVIEW`, `REQ-ROLLING-PUBLICATION`, `REQ-ROLLING-INTERFACES`.
+- Acceptance: `ACCEPT-FIXTURE`; Arc: `ARC-FIXTURE`; step: `STEP-FIXTURE`.
+- Implementation: `IMPL-FIXTURE`; source: `fixture.ts`.
+- Unit: `UNIT-FIXTURE`, selection `fixture unit`; integration: `INTEGRATION-FIXTURE`, selection `fixture integration`; both in `fixture.test.ts`.
+- Permitted paths: `fixture.ts`, `fixture.test.ts`, `pm/requirements/rolling-campaigns.md`; operations: `inspect`, `test`.
+- Lease generation: `2ee3b0cc-88bf-41a5-847b-bfd9bb94b6a3`; target: identity `local`, profile `fixture`.
+- Assignment: `d4f727d5-56fd-4f51-a9c3-58c48aec8546`; session: `01a12c41-0098-7fd2-81ef-ad858a3a7d45`.
+
+Proof ran from `2026-10-11T11:37:28.769201-07:00` to `2026-10-11T11:37:28.885555-07:00`; actual output is retained in the tool transcript. Requirement-file SHA-256 matched the assigned digest. No new prerequisites discovered. Publication QA remains with the coordinator.
+
+Stopped: 2026-10-11T11:37:28.885555-07:00.
+ℹ worker suspension thread=01a12c41-0098-7fd2-81ef-ad858a3a7d45; session=01a12c41-0098-7fd2-81ef-ad858a3a7d45; native=idle; retained checkout=101 with dirty checkpoint; retained for reactivation
+ℹ worker resumption thread=01a12c41-0098-7fd2-81ef-ad858a3a7d45; session=01a12c41-0098-7fd2-81ef-ad858a3a7d45; checkout=101; base=73eaccf0a33be6c4eceab409395cb7f2f130f31d; generation=4fce0fd5-0c41-4d9e-9b40-81ccad9d1042; fresh instructions completed before new allocation
+ℹ worker native thread=01a12c41-0098-7fd2-81ef-ad858a3a7d45; session=01a12c41-0098-7fd2-81ef-ad858a3a7d45; checkout=/private/var/folders/yv/v_v6t2lj1nz4ypl2bpp_ytqm0000gp/T/rolling-worker-store-qUElbQ/managed/101; attachment recovered after restart; model=gpt-6.1-sol
+✖ live worker creation recovery attaches original initialization after coordinator and native connection restart (50069.393333ms)
+ℹ {"timestamp":"2026-10-11T18:38:01.679890Z","level":"WARN","fields":{"message":"ignoring interface.icon_small: icon path with '..' must resolve under plugin assets/"},"target":"codex_skills::interface"}
+{"timestamp":"2026-10-11T18:38:01.679929Z","level":"WARN","fields":{"message":"ignoring interface.icon_large: icon path with '..' must resolve under plugin assets/"},"target":"codex_skills::interface"}
+ℹ worker recovery thread=01a12c41-f1ae-7982-99bd-7706707ce446; session=01a12c41-f1ae-7982-99bd-7706707ce446; initialization=01a12c41-f258-7970-bb25-067ae0f7efc0; original action recovered after restart without duplicate creation; missing receipt and active activity preserve reservation
+ℹ worker instruction turn=01a12c42-23b1-79b1-85d8-62952d41c36f; thread=01a12c41-f1ae-7982-99bd-7706707ce446; final=Proposed discharge of **OBL-2**, responsibility `rolling-inventory-T2`, acceptance group `ROLL-INVENTORY-T2`, for coordinator review.
+
+Inspection confirmed `fixture.ts` exports `const value: number = 1`. Configured focused QA, `node --test fixture.test.ts`, passed both selections: **2 passed, 0 failures, 0 skips**, exit code 0.
+
+Assigned references:
+
+- Requirements: `REQ-ROLLING-CONFIGURATION`, `REQ-ROLLING-GRAPH`, `REQ-ROLLING-SCHEDULING`, `REQ-ROLLING-STATE`, `REQ-ROLLING-WORKERS`, `REQ-ROLLING-REVIEW`, `REQ-ROLLING-PUBLICATION`, `REQ-ROLLING-INTERFACES`.
+- Requirement source: `pm/requirements/rolling-campaigns.md`; SHA-256 matches assigned digest `34ace4778b1cfe7b1d85efa26a127ac9479dca21dd0f9147d177edf8d145964a`.
+- Implementation: `IMPL-FIXTURE`; source: `fixture.ts`.
+- Acceptance: `ACCEPT-FIXTURE`; Arc: `ARC-FIXTURE`; step: `STEP-FIXTURE`.
+- Unit: `UNIT-FIXTURE`, `fixture.test.ts`, selection `fixture unit`.
+- Integration: `INTEGRATION-FIXTURE`, `fixture.test.ts`, selection `fixture integration`.
+- Permitted paths: `fixture.ts`, `fixture.test.ts`, `pm/requirements/rolling-campaigns.md`; operations: `inspect`, `test`.
+- Lease generation: `b60997ee-5af0-480d-9f53-a97bd87a65e7`; target: identity `local`, profile `fixture`.
+- Assignment: `35f8382e-e7ae-4149-a757-e928ac1ca987`; session: `01a12c41-f1ae-7982-99bd-7706707ce446`.
+- Campaign: `worker-fixture`; baseline: `BASELINE-1`; graph digest: `47cf78784b604b67dde9e22203d62b8ed5a2f101abafeee628fe9a5f5d549732`.
+
+Proof ran from `2026-10-11T11:38:36.522599-07:00` to `2026-10-11T11:38:36.639212-07:00` on revision/base `6b6186acbb878e515f26c1f3b6b62ca3602f22de`, with clean Git status.
+
+No files modified, Git mutations performed, or new prerequisites discovered. Checkout retained; activity stopped. Delivery proposes discharge, not acceptance.
+
+2026-10-11T11:38:36-07:00
+✔ live worker implements and semantically rebases its exact candidate before submission (134226.725791ms)
+ℹ {"timestamp":"2026-10-11T18:38:51.964412Z","level":"WARN","fields":{"message":"ignoring interface.icon_small: icon path with '..' must resolve under plugin assets/"},"target":"codex_skills::interface"}
+{"timestamp":"2026-10-11T18:38:51.964453Z","level":"WARN","fields":{"message":"ignoring interface.icon_large: icon path with '..' must resolve under plugin assets/"},"target":"codex_skills::interface"}
+ℹ native fixture identity thread=01a12c42-b619-78d1-b280-a426e10dc7db; root=/private/var/folders/yv/v_v6t2lj1nz4ypl2bpp_ytqm0000gp/T/rolling-worker-store-47EXbm/managed/101
+ℹ native QA approval method=item/commandExecution/requestApproval; decision=accept exact fixture command; request={"kind":"command","threadId":"01a12c42-b619-78d1-b280-a426e10dc7db","turnId":"01a12c42-db90-72f1-8121-cbfb9f2f8b0f","itemId":"exec-c5aaa2c4-51b3-4d2d-b0b4-39782c837424","startedAtMs":{"isLosslessNumber":true,"value":"1791743988361"},"environmentId":"local","reason":"Allow the required fresh campaign fetch into shared Git metadata?","command":"/opt/homebrew/bin/bash -lc 'git fetch origin campaign/worker-fixture > tmp/fetch.txt 2>&1'","cwd":"/private/var/folders/yv/v_v6t2lj1nz4ypl2bpp_ytqm0000gp/T/rolling-worker-store-47EXbm/managed/101","commandActions":[{"type":"unknown","command":"git fetch origin campaign/worker-fixture > tmp/fetch.txt 2>&1"}],"proposedExecpolicyAmendment":["/opt/homebrew/bin/bash","-lc","git fetch origin campaign/worker-fixture > tmp/fetch.txt 2>&1"],"availableDecisions":["accept",{"acceptWithExecpolicyAmendment":{"execpolicy_amendment":["/opt/homebrew/bin/bash","-lc","git fetch origin campaign/worker-fixture > tmp/fetch.txt 2>&1"]}},"cancel"]}
+ℹ native QA approval method=item/commandExecution/requestApproval; decision=accept exact fixture command; request={"kind":"command","threadId":"01a12c42-b619-78d1-b280-a426e10dc7db","turnId":"01a12c42-db90-72f1-8121-cbfb9f2f8b0f","itemId":"exec-b70227d7-d201-4ac6-be7b-6bd5762728db","startedAtMs":{"isLosslessNumber":true,"value":"1791743993181"},"environmentId":"local","reason":"Allow the authorized interactive semantic rebase with the configured edit-stop editor?","command":"/opt/homebrew/bin/bash -lc 'git rebase -i origin/campaign/worker-fixture > tmp/semantic-rebase.txt 2>&1'","cwd":"/private/var/folders/yv/v_v6t2lj1nz4ypl2bpp_ytqm0000gp/T/rolling-worker-store-47EXbm/managed/101","commandActions":[{"type":"unknown","command":"git rebase -i origin/campaign/worker-fixture > tmp/semantic-rebase.txt 2>&1"}],"proposedExecpolicyAmendment":["/opt/homebrew/bin/bash","-lc","git rebase -i origin/campaign/worker-fixture > tmp/semantic-rebase.txt 2>&1"],"availableDecisions":["accept",{"acceptWithExecpolicyAmendment":{"execpolicy_amendment":["/opt/homebrew/bin/bash","-lc","git rebase -i origin/campaign/worker-fixture > tmp/semantic-rebase.txt 2>&1"]}},"cancel"]}
+ℹ worker turn remains active: thread=01a12c42-b619-78d1-b280-a426e10dc7db; turn=01a12c42-db90-72f1-8121-cbfb9f2f8b0f; continue observing the same handle
+ℹ native QA approval method=item/commandExecution/requestApproval; decision=accept exact fixture command; request={"kind":"command","threadId":"01a12c42-b619-78d1-b280-a426e10dc7db","turnId":"01a12c42-db90-72f1-8121-cbfb9f2f8b0f","itemId":"exec-b4284e5a-94b2-4ab2-8eef-bcc637287c94","startedAtMs":{"isLosslessNumber":true,"value":"1791744021556"},"environmentId":"local","reason":"Allow continuing the single-commit rebase after semantic inspection and passing focused QA?","command":"/opt/homebrew/bin/bash -lc 'git rebase --continue >> tmp/semantic-rebase.txt 2>&1'","cwd":"/private/var/folders/yv/v_v6t2lj1nz4ypl2bpp_ytqm0000gp/T/rolling-worker-store-47EXbm/managed/101","commandActions":[{"type":"unknown","command":"git rebase --continue >> tmp/semantic-rebase.txt 2>&1"}],"proposedExecpolicyAmendment":["/opt/homebrew/bin/bash","-lc","git rebase --continue >> tmp/semantic-rebase.txt 2>&1"],"availableDecisions":["accept",{"acceptWithExecpolicyAmendment":{"execpolicy_amendment":["/opt/homebrew/bin/bash","-lc","git rebase --continue >> tmp/semantic-rebase.txt 2>&1"]}},"cancel"]}
+ℹ worker turn remains active: thread=01a12c42-b619-78d1-b280-a426e10dc7db; turn=01a12c42-db90-72f1-8121-cbfb9f2f8b0f; continue observing the same handle
+ℹ native worker final response: {"schemaVersion":1,"campaignId":"worker-fixture","assignmentId":"bd1949c6-79fd-41df-b898-cc997a252201","generation":"e26c0b78-875b-4e76-89cf-d5debc0e74b8","sessionId":"01a12c42-b619-78d1-b280-a426e10dc7db","graphDigest":"06a0c8ac43816d3f24229739575c5978682fda55c58df06b63dd5b91b64302ce","revision":"149baac965237cfe5c3914d98b505938f9ffa5f4","baseCommit":"5bb75c9fe2498d5f4e19e7a40f7e8474dd702408","stopped":true,"proof":[{"operation":"test","evidence":{"command":"npm run build && node --test --test-reporter=tap fixture.test.ts","selection":["fixture unit","fixture integration"],"target":{"identity":"local","profile":"fixture","verification":"tmp/verification.json"},"revision":"149baac965237cfe5c3914d98b505938f9ffa5f4","dirty":false,"startedAt":"2026-10-11T11:40:17.556149-07:00","completedAt":"2026-10-11T11:40:18.816037-07:00","outcome":"pass","skips":0,"failures":0,"inputs":[{"path":"fixture.ts","digest":"2d70d6b9667adb3841a01a4733553b466ffdaf2de258596f42d7c14d0f1038ab"},{"path":"fixture.test.ts","digest":"9ed6d98527ea55b5667b0def3ad75d8a176a4dab6a2f0b1710c8bf9dfac8c601"},{"path":"package.json","digest":"7d4c8e5b3e35857b265ecd2219e99070ef4e828bc8d5548f2cf7462d772f11e4"},{"path":"tsconfig.json","digest":"1985699b4930f1cc1601c9f572f15361e135e1ec334a10ada11d413a51c8b55a"},{"path":"ponytail.json","digest":"7a43abd0ca71b4610ade2754921edc600ebc7868833206f8b2d0c53bf7fa4440"},{"path":".agents/config/project/rolling-campaigns.json","digest":"de1e2a49716e509ccffca80ac269a468f19aa5eb86c773244ae6cee17ea4542e"},{"path":"bindings.json","digest":"909e3f3df85154e6c1e1066a74624fe069e944b777b8603d427a935e1a2c605d"},{"path":"pm/requirements/rolling-campaigns.md","digest":"e8a99a44603092bd089e4bd11bd1e3648393dd5154e5c7628952a163f9f01a13"},{"path":"upstream.txt","digest":"24d33653807d6c87209832cd468c9d49915b59ed0048ddeadf92c85315d6110f"},{"path":"tmp/original-commit.txt","digest":"2f9eeda6b2f5aac88217236fdec1813c8876c52c5b449f3788a6935f16b9fa6d"},{"path":"tmp/fetch.txt","digest":"95b349f6e44e9cc9fe94d9f3ac5ddd11b321ab1df421910be1bc73584c285bf9"},{"path":"tmp/semantic-rebase.txt","digest":"e62377e4be9ab921ebda9ca3361ea93d10f0a8fc5bb6971284e2d73c0282c036"},{"path":"tmp/build-impact.txt","digest":"52660dd633c5d27cba3ae4b8b26a8792e700e10f2ae50ff93c8cf413419e0475"},{"path":"tmp/proof-times.json","digest":"dab567fd6e624a191ea71b4989c57b89454a718732a29e5364006313cf3bc6f6"},{"path":"tmp/verification.json","digest":"18a7c8ca82955fedbf453779793a84b23a541f5a0ca0db712f056003a22b0709"},{"path":"tmp/focused.txt","digest":"6ba5c89acc32e31e582fe399dabcb130a819d4d2dd49586a32c592ec33e4502c"}],"outputPath":"tmp/focused.txt","finalization":"pass"}}]}
+ℹ native semantic rebase record: Rebasing (1/1)Stopped at 7650160...  # Set fixture value and unit expectation to 2
+You can amend the commit now, with
+
+  git commit --amend
+
+Once you are satisfied with your changes, run
+
+  git rebase --continue
+
+Semantic inspection at single replayed commit
+Original commit: 76501602b13a4a2f73e7ed5722d45d68cabaf710
+
+$ git rev-parse HEAD
+149baac965237cfe5c3914d98b505938f9ffa5f4
+
+$ git show --format=fuller HEAD -- fixture.ts fixture.test.ts
+commit 149baac965237cfe5c3914d98b505938f9ffa5f4
+Author:     Alex Baretta <alex@baretta.com>
+AuthorDate: Sun Oct 11 11:39:40 2026 -0700
+Commit:     Alex Baretta <alex@baretta.com>
+CommitDate: Sun Oct 11 11:39:53 2026 -0700
+
+    Set fixture value and unit expectation to 2
+
+diff --git a/fixture.test.ts b/fixture.test.ts
+index 87c5c24..2bdfe94 100644
+--- a/fixture.test.ts
++++ b/fixture.test.ts
+@@ -1,5 +1,5 @@
+ import test from 'node:test';
+ import assert from 'node:assert/strict';
+ import { value } from './fixture.ts';
+-test('fixture unit', () => assert.equal(value, 1));
++test('fixture unit', () => assert.equal(value, 2));
+ test('fixture integration', () => assert.equal(Number.isSafeInteger(value), true));
+diff --git a/fixture.ts b/fixture.ts
+index 13d7f8c..e3f0f4e 100644
+--- a/fixture.ts
++++ b/fixture.ts
+@@ -1 +1 @@
+-export const value: number = 1;
++export const value: number = 2;
+
+$ git diff origin/campaign/worker-fixture HEAD --
+diff --git a/fixture.test.ts b/fixture.test.ts
+index 87c5c24..2bdfe94 100644
+--- a/fixture.test.ts
++++ b/fixture.test.ts
+@@ -1,5 +1,5 @@
+ import test from 'node:test';
+ import assert from 'node:assert/strict';
+ import { value } from './fixture.ts';
+-test('fixture unit', () => assert.equal(value, 1));
++test('fixture unit', () => assert.equal(value, 2));
+ test('fixture integration', () => assert.equal(Number.isSafeInteger(value), true));
+diff --git a/fixture.ts b/fixture.ts
+index 13d7f8c..e3f0f4e 100644
+--- a/fixture.ts
++++ b/fixture.ts
+@@ -1 +1 @@
+-export const value: number = 1;
++export const value: number = 2;
+
+$ git status --porcelain=v1
+
+Context:
+export const value: number = 2;
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { value } from './fixture.ts';
+test('fixture unit', () => assert.equal(value, 2));
+test('fixture integration', () => assert.equal(Number.isSafeInteger(value), true));
+Preserve this independently published campaign increment.
+Assessment: one replayed commit; explicit number type retained; unit expects 2; safe-integer integration assertion unchanged; independent upstream.txt preserved. No textual or semantic conflict and no amendment required.
+Focused QA at edit stop: npm run build && node --test --test-reporter=tap fixture.test.ts
+Started: 2026-10-11T11:40:17.556149-07:00
+Completed: 2026-10-11T11:40:18.816037-07:00
+Exit: 0; build passed; both tests passed; zero failures and skips. Output: tmp/focused.txt
+Successfully rebased and updated refs/heads/ponytail/worker-101/e26c0b78-875b-4e76-89cf-d5debc0e74b8.
+Finalization: HEAD 149baac965237cfe5c3914d98b505938f9ffa5f4; parent 5bb75c9fe2498d5f4e19e7a40f7e8474dd702408; clean worktree; no rebase state; only fixture.ts and fixture.test.ts in candidate patch; focused QA revision unchanged.
+
+ℹ native code submission session=01a12c42-b619-78d1-b280-a426e10dc7db; turn=01a12c42-db90-72f1-8121-cbfb9f2f8b0f; original=76501602b13a4a2f73e7ed5722d45d68cabaf710; fresh base=5bb75c9fe2498d5f4e19e7a40f7e8474dd702408; rebased=149baac965237cfe5c3914d98b505938f9ffa5f4; focused QA=2; REVIEW persisted after restart
+✔ live rejected candidate returns to its original worker and is accepted by its original reviewer after correction and semantic rebase (249988.569583ms)
+ℹ {"timestamp":"2026-10-11T18:41:06.007187Z","level":"WARN","fields":{"message":"ignoring interface.icon_small: icon path with '..' must resolve under plugin assets/"},"target":"codex_skills::interface"}
+ℹ {"timestamp":"2026-10-11T18:41:06.007235Z","level":"WARN","fields":{"message":"ignoring interface.icon_large: icon path with '..' must resolve under plugin assets/"},"target":"codex_skills::interface"}
+ℹ native fixture identity thread=01a12c44-c1a4-7332-b943-4ab814d767bb; root=/private/var/folders/yv/v_v6t2lj1nz4ypl2bpp_ytqm0000gp/T/rolling-worker-store-xzEF02/managed/101
+ℹ worker turn remains active: thread=01a12c44-e9f3-73e3-867c-4a7b018b5868; turn=01a12c44-eb46-7d23-8c6e-8d7b5aa21b4b; continue observing the same handle
+ℹ native rejected review: {"request":{"schemaVersion":1,"id":"22543b85-d9bc-4ebf-81dd-7580e5a35d91","campaignId":"worker-fixture","assignmentId":"78706901-acaa-4e3f-b567-9615dfe327ca","generation":"e1b1c2e2-ab96-4c30-873c-664b7464a54f","baseCommit":"3e23b205b6372e74a9e5a7bf677e1f136a37db22","revision":"c7eb0eabce2e1775b95f5d751a036012f05618e8","reviewerSessionId":"01a12c44-e9f3-73e3-867c-4a7b018b5868"},"outcome":{"schemaVersion":1,"reviewId":"22543b85-d9bc-4ebf-81dd-7580e5a35d91","revision":"c7eb0eabce2e1775b95f5d751a036012f05618e8","reviewerSessionId":"01a12c44-e9f3-73e3-867c-4a7b018b5868","completedAt":"2026-10-11T11:42:09.583-07:00","decision":"rejected","findings":["fixture.ts:1: The exported value is 3, violating OBL-2's required value of 2; change it to 2 and update fixture.test.ts:4 to expect 2. Current tests and build pass but do not establish compliance.","pm/requirements/rolling-campaigns.md:3: Required semantic-rebase proof is absent: tmp/original-commit.txt and tmp/semantic-rebase.txt are missing, and the candidate history contains only one unreplayed seed commit; complete the authorized fresh fetch and two-commit interactive semantic rebase, inspecting and running focused QA at each stop, and retain the original SHA and actual output with semantic inspection.","pm/requirements/rolling-campaigns.md:3: The submission supplies only tmp/seed-focused.txt and omits required tmp/focused.txt and hashes for retained rebase outputs; after correcting and rebasing the candidate, retain actual final TAP output in tmp/focused.txt and submit fresh revision-bound evidence with hashes covering both source files and all required retained outputs."]}}
+ℹ native QA approval method=item/commandExecution/requestApproval; decision=accept exact fixture command; request={"kind":"command","threadId":"01a12c44-c1a4-7332-b943-4ab814d767bb","turnId":"01a12c45-e329-7753-a9ee-54bd80ebb90e","itemId":"exec-e0f6d8a0-d8e4-429f-bef9-ce107a075192","startedAtMs":{"isLosslessNumber":true,"value":"1791744180482"},"environmentId":"local","reason":"Allow the required fresh fetch of origin campaign/worker-fixture and retention of its output?","command":"/opt/homebrew/bin/bash -lc 'git fetch origin campaign/worker-fixture > tmp/fetch.txt 2>&1'","cwd":"/private/var/folders/yv/v_v6t2lj1nz4ypl2bpp_ytqm0000gp/T/rolling-worker-store-xzEF02/managed/101","commandActions":[{"type":"unknown","command":"git fetch origin campaign/worker-fixture > tmp/fetch.txt 2>&1"}],"proposedExecpolicyAmendment":["/opt/homebrew/bin/bash","-lc","git fetch origin campaign/worker-fixture > tmp/fetch.txt 2>&1"],"availableDecisions":["accept",{"acceptWithExecpolicyAmendment":{"execpolicy_amendment":["/opt/homebrew/bin/bash","-lc","git fetch origin campaign/worker-fixture > tmp/fetch.txt 2>&1"]}},"cancel"]}
+ℹ native QA approval method=item/commandExecution/requestApproval; decision=accept exact fixture command; request={"kind":"command","threadId":"01a12c44-c1a4-7332-b943-4ab814d767bb","turnId":"01a12c45-e329-7753-a9ee-54bd80ebb90e","itemId":"exec-a8e6936b-eea4-4c0e-ba63-75d422742514","startedAtMs":{"isLosslessNumber":true,"value":"1791744187036"},"environmentId":"local","reason":"Allow the authorized interactive semantic rebase using the configured edit-stop sequence editor?","command":"/opt/homebrew/bin/bash -lc 'git rebase -i origin/campaign/worker-fixture > tmp/semantic-rebase.txt 2>&1'","cwd":"/private/var/folders/yv/v_v6t2lj1nz4ypl2bpp_ytqm0000gp/T/rolling-worker-store-xzEF02/managed/101","commandActions":[{"type":"unknown","command":"git rebase -i origin/campaign/worker-fixture > tmp/semantic-rebase.txt 2>&1"}],"proposedExecpolicyAmendment":["/opt/homebrew/bin/bash","-lc","git rebase -i origin/campaign/worker-fixture > tmp/semantic-rebase.txt 2>&1"],"availableDecisions":["accept",{"acceptWithExecpolicyAmendment":{"execpolicy_amendment":["/opt/homebrew/bin/bash","-lc","git rebase -i origin/campaign/worker-fixture > tmp/semantic-rebase.txt 2>&1"]}},"cancel"]}
+ℹ worker turn remains active: thread=01a12c44-c1a4-7332-b943-4ab814d767bb; turn=01a12c45-e329-7753-a9ee-54bd80ebb90e; continue observing the same handle
+ℹ native QA approval method=item/commandExecution/requestApproval; decision=accept exact fixture command; request={"kind":"command","threadId":"01a12c44-c1a4-7332-b943-4ab814d767bb","turnId":"01a12c45-e329-7753-a9ee-54bd80ebb90e","itemId":"exec-cf698bb0-5316-4fe9-a2db-3c801aff9b27","startedAtMs":{"isLosslessNumber":true,"value":"1791744203763"},"environmentId":"local","reason":"Allow continuation to the second edit stop after the first commit's semantic inspection and focused QA passed?","command":"/opt/homebrew/bin/bash -lc 'git rebase --continue >> tmp/semantic-rebase.txt 2>&1'","cwd":"/private/var/folders/yv/v_v6t2lj1nz4ypl2bpp_ytqm0000gp/T/rolling-worker-store-xzEF02/managed/101","commandActions":[{"type":"unknown","command":"git rebase --continue >> tmp/semantic-rebase.txt 2>&1"}],"proposedExecpolicyAmendment":["/opt/homebrew/bin/bash","-lc","git rebase --continue >> tmp/semantic-rebase.txt 2>&1"],"availableDecisions":["accept",{"acceptWithExecpolicyAmendment":{"execpolicy_amendment":["/opt/homebrew/bin/bash","-lc","git rebase --continue >> tmp/semantic-rebase.txt 2>&1"]}},"cancel"]}
+ℹ native QA approval method=item/commandExecution/requestApproval; decision=accept exact fixture command; request={"kind":"command","threadId":"01a12c44-c1a4-7332-b943-4ab814d767bb","turnId":"01a12c45-e329-7753-a9ee-54bd80ebb90e","itemId":"exec-0da2422e-d817-448a-9319-91bc0c4b66c3","startedAtMs":{"isLosslessNumber":true,"value":"1791744219900"},"environmentId":"local","reason":"Allow final rebase continuation after the correction commit's semantic inspection and focused QA passed?","command":"/opt/homebrew/bin/bash -lc 'git rebase --continue >> tmp/semantic-rebase.txt 2>&1'","cwd":"/private/var/folders/yv/v_v6t2lj1nz4ypl2bpp_ytqm0000gp/T/rolling-worker-store-xzEF02/managed/101","commandActions":[{"type":"unknown","command":"git rebase --continue >> tmp/semantic-rebase.txt 2>&1"}],"proposedExecpolicyAmendment":["/opt/homebrew/bin/bash","-lc","git rebase --continue >> tmp/semantic-rebase.txt 2>&1"],"availableDecisions":["accept",{"acceptWithExecpolicyAmendment":{"execpolicy_amendment":["/opt/homebrew/bin/bash","-lc","git rebase --continue >> tmp/semantic-rebase.txt 2>&1"]}},"cancel"]}
+ℹ worker turn remains active: thread=01a12c44-c1a4-7332-b943-4ab814d767bb; turn=01a12c45-e329-7753-a9ee-54bd80ebb90e; continue observing the same handle
+ℹ native corrective worker response: {"schemaVersion":1,"campaignId":"worker-fixture","assignmentId":"78706901-acaa-4e3f-b567-9615dfe327ca","generation":"fe1ae8fb-7324-42a3-a75c-a4965dd85e2c","sessionId":"01a12c44-c1a4-7332-b943-4ab814d767bb","graphDigest":"98f4eb875876695cbfc7e74f1a54399317f411712d39ee2c6bb6d9abcb73c460","revision":"249b65cc48e5efa5817aadd8d3e107d32d65a49c","baseCommit":"2350c962261156627a9d8cad03816b5e4ed45cca","stopped":true,"proof":[{"operation":"test","evidence":{"command":"node --test --test-reporter=tap fixture.test.ts","selection":["fixture unit","fixture integration"],"target":{"identity":"local","profile":"fixture","verification":"tmp/verification.json"},"revision":"249b65cc48e5efa5817aadd8d3e107d32d65a49c","dirty":false,"startedAt":"2026-10-11T11:44:18.899869-07:00","completedAt":"2026-10-11T11:44:19.000194-07:00","outcome":"pass","skips":0,"failures":0,"inputs":[{"path":"fixture.ts","digest":"2d70d6b9667adb3841a01a4733553b466ffdaf2de258596f42d7c14d0f1038ab"},{"path":"fixture.test.ts","digest":"9ed6d98527ea55b5667b0def3ad75d8a176a4dab6a2f0b1710c8bf9dfac8c601"},{"path":"package.json","digest":"7d4c8e5b3e35857b265ecd2219e99070ef4e828bc8d5548f2cf7462d772f11e4"},{"path":"tsconfig.json","digest":"1985699b4930f1cc1601c9f572f15361e135e1ec334a10ada11d413a51c8b55a"},{"path":"ponytail.json","digest":"7a43abd0ca71b4610ade2754921edc600ebc7868833206f8b2d0c53bf7fa4440"},{"path":".agents/config/project/rolling-campaigns.json","digest":"de1e2a49716e509ccffca80ac269a468f19aa5eb86c773244ae6cee17ea4542e"},{"path":"bindings.json","digest":"909e3f3df85154e6c1e1066a74624fe069e944b777b8603d427a935e1a2c605d"},{"path":"pm/requirements/rolling-campaigns.md","digest":"a80dcccf384a7dab813542c2fbc61ebef6fc0e3f0eb0a7f6e27258d40ab95a54"},{"path":"tmp/original-commit.txt","digest":"07d36d52001e3da9bcfba4d06dac123507b104c012bd5cb22db83049070f7919"},{"path":"tmp/fetch.txt","digest":"89f140ee38ffcfbead66ce6cc615a5e0bb1ad14c94666d9aa8f21b4890aebf23"},{"path":"tmp/semantic-rebase.txt","digest":"a1299a05a4c805d1417f69d6dbf8e3eb88335a33b7743458b3f2429a6b9624b3"},{"path":"tmp/focused.txt","digest":"1fcee40ca083a85fc220ea3225ebdc236a7181cdc89ed56fda146a1792afcb0a"},{"path":"tmp/verification.json","digest":"e2fd5857a7333b405a8bfa3210ceeef41ab691b2a1c8a38d4279925f55498d79"},{"path":"node_modules/typescript/package.json","digest":"9332e97c30d3e53ed54910b89207ed657fb444066484df6e5b6965bf130865e9"},{"path":"node_modules/@types/node/package.json","digest":"ae4f8e4af79292a8dbf5585d4d4d6e33854a846c4f113d08ebe13dd0f92ce791"}],"outputPath":"tmp/focused.txt","finalization":"pass"}}]}
+ℹ native corrective semantic rebase: Rebasing (1/2)Stopped at c7eb0ea...  # Seed incorrect candidate for native review
+You can amend the commit now, with
+
+  git commit --amend
+
+Once you are satisfied with your changes, run
+
+  git rebase --continue
+
+STOP 1 semantic inspection 2026-10-11T11:43:19.357198-07:00
+$ git show --format=fuller HEAD --
+commit 0fe847b9a6ecd2d5141b03069b449d14873c0699
+Author:     Fixture <fixture@example.test>
+AuthorDate: Sun Oct 11 11:41:15 2026 -0700
+Commit:     Alex Baretta <alex@baretta.com>
+CommitDate: Sun Oct 11 11:43:07 2026 -0700
+
+    Seed incorrect candidate for native review
+
+diff --git a/fixture.test.ts b/fixture.test.ts
+index 87c5c24..6617166 100644
+--- a/fixture.test.ts
++++ b/fixture.test.ts
+@@ -1,5 +1,5 @@
+ import test from 'node:test';
+ import assert from 'node:assert/strict';
+ import { value } from './fixture.ts';
+-test('fixture unit', () => assert.equal(value, 1));
++test('fixture unit', () => assert.equal(value, 3));
+ test('fixture integration', () => assert.equal(Number.isSafeInteger(value), true));
+diff --git a/fixture.ts b/fixture.ts
+index 13d7f8c..b6270a1 100644
+--- a/fixture.ts
++++ b/fixture.ts
+@@ -1 +1 @@
+-export const value: number = 1;
++export const value: number = 3;
+exit=0
+$ git status --porcelain
+exit=0
+$ git diff --check
+exit=0
+$ node /Users/alex/.codex/skills/build-impact/scripts/build-impact.js --file fixture.ts --file fixture.test.ts
+{"version":1,"status":"ok","affectedTargets":[{"name":"fixture","buildCommand":"npm run build","changedFiles":["fixture.test.ts","fixture.ts"]}],"indeterminateTargets":[],"error":null}
+exit=0
+$ npm run build
+
+> build
+> node node_modules/typescript/bin/tsc --project tsconfig.json
+
+exit=0
+$ node --test --test-reporter=tap fixture.test.ts
+TAP version 13
+# Subtest: fixture unit
+ok 1 - fixture unit
+  ---
+  duration_ms: 0.354166
+  type: 'test'
+  ...
+# Subtest: fixture integration
+ok 2 - fixture integration
+  ---
+  duration_ms: 0.060834
+  type: 'test'
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 2
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 64.181709
+exit=0
+Semantic assessment: replayed seed retains its original 1-to-3 intent with matching unit expectation and safe-integer integration invariant; the independent upstream file is preserved. This historical intermediate state does not discharge OBL-2; the next correction commit establishes 2. No semantic adaptation is needed. Focused build and both tests passed at this stop.
+Rebasing (2/2)Stopped at 37cf408...  # Set fixture value and unit expectation to 2
+You can amend the commit now, with
+
+  git commit --amend
+
+Once you are satisfied with your changes, run
+
+  git rebase --continue
+
+STOP 2 semantic inspection 2026-10-11T11:43:35.336604-07:00
+$ git show --format=fuller HEAD --
+commit 249b65cc48e5efa5817aadd8d3e107d32d65a49c
+Author:     Alex Baretta <alex@baretta.com>
+AuthorDate: Sun Oct 11 11:42:55 2026 -0700
+Commit:     Alex Baretta <alex@baretta.com>
+CommitDate: Sun Oct 11 11:43:23 2026 -0700
+
+    Set fixture value and unit expectation to 2
+
+diff --git a/fixture.test.ts b/fixture.test.ts
+index 6617166..2bdfe94 100644
+--- a/fixture.test.ts
++++ b/fixture.test.ts
+@@ -1,5 +1,5 @@
+ import test from 'node:test';
+ import assert from 'node:assert/strict';
+ import { value } from './fixture.ts';
+-test('fixture unit', () => assert.equal(value, 3));
++test('fixture unit', () => assert.equal(value, 2));
+ test('fixture integration', () => assert.equal(Number.isSafeInteger(value), true));
+diff --git a/fixture.ts b/fixture.ts
+index b6270a1..e3f0f4e 100644
+--- a/fixture.ts
++++ b/fixture.ts
+@@ -1 +1 @@
+-export const value: number = 3;
++export const value: number = 2;
+exit=0
+$ git status --porcelain
+exit=0
+$ git diff --check
+exit=0
+$ node /Users/alex/.codex/skills/build-impact/scripts/build-impact.js --file fixture.ts --file fixture.test.ts
+{"version":1,"status":"ok","affectedTargets":[{"name":"fixture","buildCommand":"npm run build","changedFiles":["fixture.test.ts","fixture.ts"]}],"indeterminateTargets":[],"error":null}
+exit=0
+$ npm run build
+
+> build
+> node node_modules/typescript/bin/tsc --project tsconfig.json
+
+exit=0
+$ node --test --test-reporter=tap fixture.test.ts
+TAP version 13
+# Subtest: fixture unit
+ok 1 - fixture unit
+  ---
+  duration_ms: 0.352
+  type: 'test'
+  ...
+# Subtest: fixture integration
+ok 2 - fixture integration
+  ---
+  duration_ms: 0.061666
+  type: 'test'
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 2
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 64.54625
+exit=0
+Semantic assessment: correction replays the original 3-to-2 change in both source and unit expectation, establishing OBL-2 and IMPL-FIXTURE. UNIT-FIXTURE and INTEGRATION-FIXTURE (ACCEPT-FIXTURE / ARC-FIXTURE / STEP-FIXTURE) pass; the integration invariant and independent campaign increment are preserved. No semantic adaptation is needed. Focused build and both tests passed before continuation.
+Successfully rebased and updated refs/heads/ponytail/worker-101/e1b1c2e2-ab96-4c30-873c-664b7464a54f.
+
+Final semantic verification 2026-10-11T11:44:18.738335-07:00
+1:  c7eb0ea = 1:  0fe847b Seed incorrect candidate for native review
+2:  37cf408 = 2:  249b65c Set fixture value and unit expectation to 2
+0fe847b Seed incorrect candidate for native review
+249b65c Set fixture value and unit expectation to 2
+Verified two replayed commits, identical original patches, clean final tree, no remaining rebase state, required campaign base ancestor, and only fixture.ts / fixture.test.ts changed against base. Final build evidence at stop 2 applies to unchanged final revision 249b65cc48e5efa5817aadd8d3e107d32d65a49c.
+
+ℹ native accepted review: {"request":{"schemaVersion":1,"id":"127b33db-3cfe-429a-9572-a6a25c5ee43f","campaignId":"worker-fixture","assignmentId":"78706901-acaa-4e3f-b567-9615dfe327ca","generation":"fe1ae8fb-7324-42a3-a75c-a4965dd85e2c","baseCommit":"2350c962261156627a9d8cad03816b5e4ed45cca","revision":"249b65cc48e5efa5817aadd8d3e107d32d65a49c","reviewerSessionId":"01a12c44-e9f3-73e3-867c-4a7b018b5868"},"outcome":{"schemaVersion":1,"reviewId":"127b33db-3cfe-429a-9572-a6a25c5ee43f","revision":"249b65cc48e5efa5817aadd8d3e107d32d65a49c","reviewerSessionId":"01a12c44-e9f3-73e3-867c-4a7b018b5868","completedAt":"2026-10-11T11:45:10-07:00","decision":"accepted","findings":[]}}
+ℹ native correction Arc worker=01a12c44-c1a4-7332-b943-4ab814d767bb; original reviewer=01a12c44-e9f3-73e3-867c-4a7b018b5868; rejected=c7eb0eabce2e1775b95f5d751a036012f05618e8; corrected=249b65cc48e5efa5817aadd8d3e107d32d65a49c; fresh base=2350c962261156627a9d8cad03816b5e4ed45cca; two commits replayed; focused QA=2; both verdicts retained after store restart
+ℹ tests 20
+ℹ suites 0
+ℹ pass 19
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1007350.6545
+
+✖ failing tests:
+
+test at dist/tests/rolling-codex.integration.js:86:25
+✖ live worker creation recovery attaches original initialization after coordinator and native connection restart (50069.393333ms)
+  Error: rolling Codex: interrupt and observe terminal turns before closing the owned App Server
+      at requireProtocol (/Users/alex/git/ctosclub/ponytail/dist/src/rolling-codex.js:50:15)
+      at RollingCodex.close (/Users/alex/git/ctosclub/ponytail/dist/src/rolling-codex.js:330:9)
+      at runRollingWorkerScenario (/Users/alex/git/ctosclub/ponytail/dist/tests/rolling-campaign-store.integration.test.js:1155:28)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1208:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7)

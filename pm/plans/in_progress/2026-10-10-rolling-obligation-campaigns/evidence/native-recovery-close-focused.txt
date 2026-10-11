@@ -1,0 +1,34 @@
+✔ live worker creation recovery attaches original initialization after coordinator and native connection restart (47529.967209ms)
+ℹ {"timestamp":"2026-10-11T18:42:40.029158Z","level":"WARN","fields":{"message":"ignoring interface.icon_small: icon path with '..' must resolve under plugin assets/"},"target":"codex_skills::interface"}
+ℹ {"timestamp":"2026-10-11T18:42:40.029201Z","level":"WARN","fields":{"message":"ignoring interface.icon_large: icon path with '..' must resolve under plugin assets/"},"target":"codex_skills::interface"}
+ℹ worker recovery thread=01a12c46-30f5-7ed1-8e0f-0f810201094a; session=01a12c46-30f5-7ed1-8e0f-0f810201094a; initialization=01a12c46-31b0-7073-81a7-e8b1fa5c1361; original action recovered after restart without duplicate creation; missing receipt and active activity preserve reservation
+ℹ worker instruction turn=01a12c46-62c5-7101-9162-f70a5800bd4c; thread=01a12c46-30f5-7ed1-8e0f-0f810201094a; final=Proposed discharge of **OBL-2** (`rolling-inventory-T2`, group `ROLL-INVENTORY-T2`): inspected `fixture.ts`; its export remains `export const value: number = 1;`.
+
+Focused QA: `node --test fixture.test.ts` passed both `fixture unit` and `fixture integration`: **2 passed, 0 failures, 0 skips**. Started and completed at `2026-10-11T11:43:12-07:00`. Output is retained in the session tool result; no files were modified.
+
+Assigned references:
+
+- Requirements: `REQ-ROLLING-CONFIGURATION`, `REQ-ROLLING-GRAPH`, `REQ-ROLLING-SCHEDULING`, `REQ-ROLLING-STATE`, `REQ-ROLLING-WORKERS`, `REQ-ROLLING-REVIEW`, `REQ-ROLLING-PUBLICATION`, `REQ-ROLLING-INTERFACES`.
+- Requirement source: `pm/requirements/rolling-campaigns.md`; its SHA-256 matches the assigned digest.
+- Acceptance: `ACCEPT-FIXTURE`; Arc: `ARC-FIXTURE`; step: `STEP-FIXTURE`.
+- Implementation: `IMPL-FIXTURE`; source: `fixture.ts`.
+- Unit: `UNIT-FIXTURE`, `fixture.test.ts`, selection `fixture unit`.
+- Integration: `INTEGRATION-FIXTURE`, `fixture.test.ts`, selection `fixture integration`.
+- Permitted paths: `fixture.ts`, `fixture.test.ts`, `pm/requirements/rolling-campaigns.md`; operations: `inspect`, `test`.
+- Lease generation: `831219d7-b5dc-4fc0-94e9-1fa8d4314972`; target: identity `local`, profile `fixture`.
+- Assignment: `e17b3258-a87a-4961-a7d2-70c72933fc66`; session: `01a12c46-30f5-7ed1-8e0f-0f810201094a`.
+- Graph digest: `365c427ceb3a4a16460576aad72bd178de7ccc97275eefce8a151301e6ef24b9`.
+- Revision and base: `0e545a706a1cc85b738401d5fb05a7a317631995`; worktree clean.
+
+No new prerequisites discovered. No Git mutations or build-input changes. Activity stopped; checkout retained for coordinator review. Acceptance remains coordinator-owned.
+
+2026-10-11T11:43:12-07:00
+ℹ worker native thread=01a12c46-30f5-7ed1-8e0f-0f810201094a; session=01a12c46-30f5-7ed1-8e0f-0f810201094a; checkout=/private/var/folders/yv/v_v6t2lj1nz4ypl2bpp_ytqm0000gp/T/rolling-worker-store-CbbFaA/managed/101; attachment recovered after restart; model=gpt-6.1-sol
+ℹ tests 1
+ℹ suites 0
+ℹ pass 1
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 47630.180083
