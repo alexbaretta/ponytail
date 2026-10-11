@@ -107,6 +107,12 @@
         "S07-F17"
       ],
       "validation_tasklet": "S07-F18-T08"
+    },
+    "S07-F19": {
+      "depends_on": [
+        "S07-F18"
+      ],
+      "validation_tasklet": "S07-F19-T07"
     }
   },
   "tasklets": {
@@ -2035,6 +2041,93 @@
       "affinity": [],
       "risk": "normal",
       "feature": "S07-F18",
+      "planned_paths": []
+    },
+    "S07-F19-T01": {
+      "depends_on": [],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F19",
+      "planned_paths": [
+        "skills/plan-execution/scripts/sprint-graph.ts"
+      ]
+    },
+    "S07-F19-T02": {
+      "depends_on": [
+        "S07-F19-T01"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F19",
+      "planned_paths": [
+        "skills/plan-execution/scripts/sprint-graph.ts"
+      ]
+    },
+    "S07-F19-T03": {
+      "depends_on": [
+        "S07-F19-T02"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F19",
+      "planned_paths": [
+        "skills/plan-execution/scripts/sprint-graph.ts"
+      ]
+    },
+    "S07-F19-T04": {
+      "depends_on": [
+        "S07-F19-T03"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F19",
+      "planned_paths": [
+        "skills/plan-execution/scripts/sprint-graph.ts"
+      ]
+    },
+    "S07-F19-T05": {
+      "depends_on": [
+        "S07-F19-T04"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F19",
+      "planned_paths": [
+        "tests/sprint-graph.test.ts"
+      ]
+    },
+    "S07-F19-T06": {
+      "depends_on": [
+        "S07-F19-T05"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F19",
+      "planned_paths": [
+        "skills/plan-execution/scripts/sprint-graph.js",
+        "skills/plan-execution/scripts/ready-sprints.js",
+        "scripts/build-runtime.ts",
+        "AGENTS.md",
+        "PROJECT_STRUCTURE.md",
+        ".agents/config/project/traceability.json",
+        "pm/requirements/traceability.generated.md",
+        ".openclaw/skills/plan-execution/scripts/sprint-graph.ts",
+        ".openclaw/skills/plan-execution/scripts/sprint-graph.js",
+        ".openclaw/skills/plan-execution/scripts/ready-sprints.js"
+      ]
+    },
+    "S07-F19-T07": {
+      "depends_on": [
+        "S07-F19-T01",
+        "S07-F19-T02",
+        "S07-F19-T03",
+        "S07-F19-T04",
+        "S07-F19-T05",
+        "S07-F19-T06"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F19",
       "planned_paths": []
     }
   },

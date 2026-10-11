@@ -1015,6 +1015,16 @@
       "class": "unit-test",
       "path": "tests/sprint-metadata.test.ts",
       "locator": "text"
+    },
+    {
+      "class": "implementation",
+      "path": "skills/plan-execution/scripts/sprint-graph.ts",
+      "locator": "text"
+    },
+    {
+      "class": "unit-test",
+      "path": "tests/sprint-graph.test.ts",
+      "locator": "text"
     }
   ],
   "entities": [],
@@ -1182,6 +1192,18 @@
     {
       "path": ".openclaw/skills/plan-execution/scripts/sprint-metadata.js",
       "sourcePath": "skills/plan-execution/scripts/sprint-metadata.ts"
+    },
+    {
+      "path": "skills/plan-execution/scripts/sprint-graph.js",
+      "sourcePath": "skills/plan-execution/scripts/sprint-graph.ts"
+    },
+    {
+      "path": ".openclaw/skills/plan-execution/scripts/sprint-graph.ts",
+      "sourcePath": "skills/plan-execution/scripts/sprint-graph.ts"
+    },
+    {
+      "path": ".openclaw/skills/plan-execution/scripts/sprint-graph.js",
+      "sourcePath": "skills/plan-execution/scripts/sprint-graph.ts"
     }
   ],
   "reverseViewPath": "pm/requirements/traceability.generated.md",

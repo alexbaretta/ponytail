@@ -5,104 +5,11 @@
  */
 
 const path = require('node:path');
-const { readTaskletGraph } = require('./ready-tasklets.js');
+const { validateDependencies, validatePathOwnership, validateV3PathOwnership } = require('./sprint-graph');
 
 const { METADATA_MARKER, SprintMetadataReaders, parseSprintFile, readSprints } = require('./sprint-metadata');
 const SCHEMA_VERSION = 3;
 function fail(message) { throw new Error(message); }
-
-function validateGraph(sprints, lifecycle) {
-  const map = new Map(sprints.map((sprint) => [sprint.id, sprint]));
-  const visiting = new Set();
-  const visited = new Set();
-  const walk = (id, trail) => {
-    if (visiting.has(id)) {
-      const start = trail.indexOf(id);
-      fail(`${lifecycle} dependency cycle: ${[...trail.slice(start), id].join(' -> ')}`);
-    }
-    if (visited.has(id)) return;
-    const sprint = map.get(id);
-    if (!sprint) fail(`unknown ${lifecycle} dependency: ${id}`);
-    visiting.add(id);
-    const dependencies = sprint[lifecycle] ? sprint[lifecycle].depends_on : [];
-    for (const dependency of dependencies) {
-      if (dependency === id) fail(`${lifecycle} sprint ${id} cannot depend on itself`);
-      walk(dependency, [...trail, id]);
-    }
-    visiting.delete(id);
-    visited.add(id);
-  };
-  for (const sprint of sprints) walk(sprint.id, []);
-  return map;
-}
-
-function validateDependencies(sprints) {
-  const map = validateGraph(sprints, 'planning');
-  validateGraph(sprints, 'execution');
-  return map;
-}
-
-function validatePathOwnership(sprints, sprintById) {
-  const reachability = new Map();
-  const reachable = (id) => {
-    if (reachability.has(id)) return reachability.get(id);
-    const result = new Set();
-    const sprint = sprintById.get(id);
-    if (sprint?.execution) for (const dependency of sprint.execution.depends_on) {
-      result.add(dependency);
-      for (const ancestor of reachable(dependency)) result.add(ancestor);
-    }
-    reachability.set(id, result);
-    return result;
-  };
-  for (const sprint of sprints) reachable(sprint.id);
-  for (let first = 0; first < sprints.length; first += 1) {
-    const left = sprints[first];
-    if (!left.execution) continue;
-    for (let second = first + 1; second < sprints.length; second += 1) {
-      const right = sprints[second];
-      if (!right.execution || reachable(left.id).has(right.id) || reachable(right.id).has(left.id)) continue;
-      const rightPaths = new Set(right.execution.planned_paths);
-      const overlap = left.execution.planned_paths.find((candidate) => rightPaths.has(candidate));
-      if (overlap) fail(`unordered sprint path overlap: ${left.id}, ${right.id}, ${overlap}`);
-    }
-  }
-}
-
-function readV3PlannedPaths(sprint) {
-  const metadata = readTaskletGraph(sprint.filePath);
-  if (![3, 4].includes(metadata.schemaVersion)) fail(`${metadata.filePath} must contain V3 or V4 tasklet metadata for ${sprint.id}`);
-  const paths = [];
-  for (const tasklet of metadata.tasklets.values()) paths.push(...tasklet.planned_paths);
-  return [...new Set(paths)];
-}
-
-function validateV3PathOwnership(sprints, sprintById) {
-  const reachability = new Map();
-  const reachable = (id) => {
-    if (reachability.has(id)) return reachability.get(id);
-    const result = new Set();
-    const sprint = sprintById.get(id);
-    if (sprint?.execution) for (const dependency of sprint.execution.depends_on) {
-      result.add(dependency);
-      for (const ancestor of reachable(dependency)) result.add(ancestor);
-    }
-    reachability.set(id, result);
-    return result;
-  };
-  const paths = new Map(sprints.filter(({ execution }) => execution).map((sprint) => [sprint.id, readV3PlannedPaths(sprint)]));
-  for (let first = 0; first < sprints.length; first += 1) {
-    const left = sprints[first];
-    if (!left.execution) continue;
-    for (let second = first + 1; second < sprints.length; second += 1) {
-      const right = sprints[second];
-      if (!right.execution || reachable(left.id).has(right.id) || reachable(right.id).has(left.id)) continue;
-      const rightPaths = new Set(paths.get(right.id));
-      const overlap = paths.get(left.id).find((candidate) => rightPaths.has(candidate));
-      if (overlap) fail(`unordered sprint path overlap: ${left.id}, ${right.id}, ${overlap}`);
-    }
-  }
-}
 
 function selectPlanningReadySprints(sprints, sprintById) {
   const sprint = sprints.find((candidate) => candidate.planning.status === 'STUB'
