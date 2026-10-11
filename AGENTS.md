@@ -113,7 +113,10 @@ services. `PROJECT_STRUCTURE.md` is authoritative for that boundary.
   dist/tests/rolling-codex.test.js dist/tests/rolling-campaign-store.test.js
   dist/tests/rolling-campaign-store.integration.test.js`.
   Explicit live native acceptance: `node --test dist/tests/rolling-codex.integration.js`;
-  preserves configured model/permissions and uses disposable checkouts.
+  preserves configured model/permissions and uses disposable checkouts and
+  isolated project records in the existing local PostgreSQL database. Includes
+  exact-candidate adversarial rejection and persisted decision recovery after
+  App Server restart; ordinary focused tests use the controlled protocol fixture.
 - Rolling checkout focused proof: `node --test tests/rolling-worktrees.test.js
   tests/rolling-worktrees.integration.test.js`; all Git worktrees belong to
   disposable test repositories.

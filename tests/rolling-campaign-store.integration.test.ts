@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Alex Baretta. All rights reserved.
 // Licensed under the MIT License. See LICENSE in the project root.
 import assert from 'node:assert/strict';
-import test from 'node:test';
+import test, { type TestContext } from 'node:test';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -22,18 +22,39 @@ import { acceptBoundCheckpoint, type ObligationCertificateBindingV1, type Obliga
 
 // Traceability: verifies REQ-ROLLING-STATE
 // Traceability: verifies REQ-ROLLING-SCHEDULING
-interface ReviewScenario { readonly decision: RollingReviewOutcomeV1['decision']; readonly native: boolean }
-const reviewScenarios: readonly ReviewScenario[] = [{ decision: 'accepted', native: false }, { decision: 'rejected', native: false }, { decision: 'accepted', native: true }];
-for (const reviewScenario of reviewScenarios) {
-const reviewDecision = reviewScenario.decision;
-test(`real PostgreSQL serializes allocation, retains ownership and persists ${reviewScenario.native ? 'native application' : reviewDecision} review`, async t => {
+export interface ReviewScenario { readonly decision: RollingReviewOutcomeV1['decision']; readonly mode: 'manual' | 'protocol' | 'native' }
+function declineReviewApprovals(rollingCodex: RollingCodex): void {
+  rollingCodex.on('serverRequest', message => rollingCodex.respondToServer(message.id, { decision: 'decline' }));
+}
+export async function runRollingReviewScenario(t: TestContext, reviewScenario: ReviewScenario): Promise<void> {
+  const reviewDecision = reviewScenario.decision;
   const repositoryRoot = path.resolve(__dirname, '../..');
   const pool: Pool = new Pool(databaseOptions(repositoryRoot));
   const projectId = crypto.randomUUID();
   const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'rolling-store-')));
+  let liveRollingCodex: RollingCodex | null = null;
+  let liveReviewerThreadId: string | null = null;
+  let liveReviewId: string | null = null;
   t.after(async () => {
-    try { await pool.query('DELETE FROM ponytail_index.project_v1 WHERE project_id=$1', [projectId]); }
-    finally { await pool.end(); fs.rmSync(root, { recursive: true, force: true }); }
+    try {
+      if (liveRollingCodex && liveReviewerThreadId) {
+        if (liveReviewId) {
+          const dispatch = await rollingCampaignStore.reviewDispatch('bound-fixture', liveReviewId);
+          assert.ok(dispatch?.state !== 'STARTED', 'unknown native dispatch retains its checkout for reconciliation');
+          if (dispatch?.state === 'ATTACHED') {
+            const turn = await liveRollingCodex.readTurn(liveReviewerThreadId, dispatch.turnId);
+            if (turn.status === 'inProgress') {
+              await liveRollingCodex.interruptTurn(liveReviewerThreadId, dispatch.turnId);
+              await liveRollingCodex.waitForTurn(liveReviewerThreadId, dispatch.turnId);
+            }
+          }
+        }
+        await liveRollingCodex.archiveThread(liveReviewerThreadId);
+        await liveRollingCodex.close();
+        liveRollingCodex = null;
+      }
+      await pool.query('DELETE FROM ponytail_index.project_v1 WHERE project_id=$1', [projectId]);
+    } finally { await pool.end(); if (liveRollingCodex === null) fs.rmSync(root, { recursive: true, force: true }); }
   });
   execFileSync('git', ['init', '-q', root]);
   execFileSync('git', ['-C', root, '-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.test', 'commit', '-q', '--allow-empty', '-m', 'fixture']);
@@ -158,7 +179,10 @@ test(`real PostgreSQL serializes allocation, retains ownership and persists ${re
 
   // Traceability: verifies REQ-ROLLING-GRAPH
   // Explicit V2 adoption shares this isolated project pool with the retained V1 owner.
-  const boundObligationDocumentV1: ObligationDocumentV1 = { ...obligationDocumentV1, scopeId: 'bound-fixture' };
+  const boundObligationDocumentV1: ObligationDocumentV1 = { ...obligationDocumentV1, scopeId: 'bound-fixture',
+    obligations: reviewScenario.mode === 'native' ? obligationDocumentV1.obligations.map(item => item.id === firstRollingBinding.obligationId
+      ? { ...item, condition: 'The exported value in fixture/current.ts must remain exactly 1.',
+        criterion: 'Inspect the exact candidate diff and establish that the exported value remains 1.' } : item) : obligationDocumentV1.obligations };
   fs.writeFileSync(path.join(root, 'bound-obligations.json'), JSON.stringify(boundObligationDocumentV1));
   const boundRollingBindingsV1: RollingBindingsV1 = { schemaVersion: 1, bindings: [firstRollingBinding] };
   fs.writeFileSync(path.join(root, 'bound-bindings.json'), JSON.stringify(boundRollingBindingsV1));
@@ -302,8 +326,16 @@ test(`real PostgreSQL serializes allocation, retains ownership and persists ${re
   assert.deepEqual(await foreignRollingCampaignStore.submissions('bound-fixture', submissionRollingStoredAssignment.id), []);
 
   // Traceability: verifies REQ-ROLLING-REVIEW
-  // The native application case uses a controlled protocol process, not a live model.
-  const reviewerSessionId = reviewScenario.native ? 'session-fixture' : 'reviewer-session';
+  // Only the explicit live acceptance profile starts a real model.
+  let reviewerSessionId = reviewScenario.mode === 'protocol' ? 'session-fixture' : 'reviewer-session';
+  if (reviewScenario.mode === 'native') {
+    liveRollingCodex = await RollingCodex.connect();
+    declineReviewApprovals(liveRollingCodex);
+    liveRollingCodex.on('diagnostic', message => t.diagnostic(message.trim()));
+    const rollingNativeThread = await liveRollingCodex.startThread(workerRoot);
+    liveReviewerThreadId = rollingNativeThread.thread.id;
+    reviewerSessionId = rollingNativeThread.thread.sessionId;
+  }
   await assert.rejects(rollingCampaignStore.requestReview('bound-fixture', submissionRollingStoredAssignment.id,
     submissionRollingStoredAssignment.generation, revision, rollingWorkerSubmissionV1.sessionId), /own submission/);
   await assert.rejects(rollingCampaignStore.requestReview('bound-fixture', submissionRollingStoredAssignment.id,
@@ -320,22 +352,45 @@ test(`real PostgreSQL serializes allocation, retains ownership and persists ${re
   assert.equal(rollingReviewContext.obligation.id, firstRollingBinding.obligationId);
   assert.deepEqual(rollingReviewContext.binding, submissionRollingStoredAssignment.binding);
   assert.deepEqual(rollingReviewContext.submission, storedSubmissions[0]);
-  if (reviewScenario.native) {
-    const rollingCodex: RollingCodex = new RollingCodex({ executable: process.execPath,
-      argv: [path.join(__dirname, 'fixtures/rolling-codex-server.js')] });
+  if (reviewScenario.mode !== 'manual') {
+    let rollingCodex: RollingCodex;
+    let reviewerThreadId: string;
+    if (reviewScenario.mode === 'native') {
+      assert.ok(liveRollingCodex && liveReviewerThreadId);
+      rollingCodex = liveRollingCodex;
+      reviewerThreadId = liveReviewerThreadId;
+    } else {
+      rollingCodex = new RollingCodex({ executable: process.execPath, argv: [path.join(__dirname, 'fixtures/rolling-codex-server.js')] });
+      reviewerThreadId = 'thread-fixture';
+    }
     try {
-      await rollingCodex.initialize();
-      const rollingReviewDispatchAttached = await dispatchRollingReview(rollingCampaignStore, rollingCodex, 'bound-fixture', rollingStoredReview.request.id, 'thread-fixture');
-      await assert.rejects(dispatchRollingReview(rollingCampaignStore, rollingCodex, 'bound-fixture', rollingStoredReview.request.id, 'thread-fixture'), /already claimed/);
+      if (reviewScenario.mode === 'protocol') await rollingCodex.initialize();
+      liveReviewId = reviewScenario.mode === 'native' ? rollingStoredReview.request.id : null;
+      const rollingReviewDispatchAttached = await dispatchRollingReview(rollingCampaignStore, rollingCodex, 'bound-fixture', rollingStoredReview.request.id, reviewerThreadId);
+      await assert.rejects(dispatchRollingReview(rollingCampaignStore, rollingCodex, 'bound-fixture', rollingStoredReview.request.id, reviewerThreadId), /already claimed/);
       assert.equal(rollingReviewDispatchAttached.state, 'ATTACHED');
+      let collectingRollingCodex: RollingCodex = rollingCodex;
+      if (reviewScenario.mode === 'native') {
+        await rollingCodex.waitForTurn(reviewerThreadId, rollingReviewDispatchAttached.turnId);
+        await rollingCodex.close();
+        liveRollingCodex = await RollingCodex.connect();
+        declineReviewApprovals(liveRollingCodex);
+        collectingRollingCodex = liveRollingCodex;
+      }
       const restartedRollingCampaignStore: RollingCampaignStore = new RollingCampaignStore(pool, projectId);
-      const result = await collectRollingReview(restartedRollingCampaignStore, rollingCodex, 'bound-fixture', rollingStoredReview.request.id);
-      assert.equal(result.outcome?.decision, 'accepted');
+      const result = await collectRollingReview(restartedRollingCampaignStore, collectingRollingCodex, 'bound-fixture', rollingStoredReview.request.id);
+      assert.equal(result.outcome?.decision, reviewDecision);
       assert.equal(result.outcome?.revision, revision);
       assert.equal(result.outcome?.reviewerSessionId, reviewerSessionId);
-      assert.deepEqual(await collectRollingReview(restartedRollingCampaignStore, rollingCodex, 'bound-fixture', rollingStoredReview.request.id), result);
-      assert.equal((await rollingCampaignStore.status('bound-fixture')).assignments[0]?.state, 'INTEGRATING');
-    } finally { await rollingCodex.close(); }
+      assert.deepEqual(await collectRollingReview(restartedRollingCampaignStore, collectingRollingCodex, 'bound-fixture', rollingStoredReview.request.id), result);
+      assert.equal((await rollingCampaignStore.status('bound-fixture')).assignments[0]?.state, reviewDecision === 'accepted' ? 'INTEGRATING' : 'REWORK');
+      if (reviewScenario.mode === 'native') {
+        assert.ok(result.outcome?.findings.some(item => /current\.ts|value/iu.test(item)), 'live reviewer must identify the deliberate candidate violation');
+        assert.ok(!collectRollingGraph(root, 'bound-obligations.json', 'bound-bindings.json', 'history.json').projection.satisfiedIds.includes(firstRollingBinding.obligationId));
+        t.diagnostic(`native review=${rollingStoredReview.request.id}; thread=${reviewerThreadId}; session=${reviewerSessionId}; candidate=${revision}; decision=${result.outcome?.decision}; findings=${JSON.stringify(result.outcome?.findings)}; recovered after App Server restart`);
+        return;
+      }
+    } finally { if (reviewScenario.mode === 'protocol') await rollingCodex.close(); }
   } else {
   assert.equal(await rollingCampaignStore.reviewDispatch('bound-fixture', rollingStoredReview.request.id), null);
   const dispatchClaims = await Promise.allSettled(Array.from({ length: 4 }, () => rollingCampaignStore.claimReviewDispatch('bound-fixture', rollingStoredReview.request.id, 'reviewer-thread')));
@@ -426,5 +481,9 @@ test(`real PostgreSQL serializes allocation, retains ownership and persists ${re
   assert.throws(() => acceptBoundCheckpoint(boundObligationDocumentV1, candidateBoundObligationDocumentV1, root,
     submissionObligationBindingHistoryV1, [obligationCertificateBindingRequest]), /changed input: fixture\/current.ts/);
   assert.ok(!collectRollingGraph(root, 'bound-obligations.json', 'bound-bindings.json', 'history.json').projection.satisfiedIds.includes(firstRollingBinding.obligationId));
-});
+}
+const reviewScenarios: readonly ReviewScenario[] = [{ decision: 'accepted', mode: 'manual' }, { decision: 'rejected', mode: 'manual' }, { decision: 'accepted', mode: 'protocol' }];
+for (const reviewScenario of reviewScenarios) {
+  test(`real PostgreSQL serializes allocation, retains ownership and persists ${reviewScenario.mode === 'protocol' ? 'native application' : reviewScenario.decision} review`,
+    t => runRollingReviewScenario(t, reviewScenario));
 }

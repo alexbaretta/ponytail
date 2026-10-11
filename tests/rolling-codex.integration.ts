@@ -11,10 +11,15 @@ import test from 'node:test';
 import crypto from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { RollingCodex } from '../src/rolling-codex.js';
+import { runRollingReviewScenario } from './rolling-campaign-store.integration.test.js';
 
 function declineApprovals(rollingCodex: RollingCodex): void {
   rollingCodex.on('serverRequest', message => rollingCodex.respondToServer(message.id, { decision: 'decline' }));
 }
+
+// Traceability: verifies REQ-ROLLING-REVIEW
+test('live adversarial reviewer rejects the exact bad candidate and persists its decision after restart',
+ t => runRollingReviewScenario(t, { decision: 'rejected', mode: 'native' }));
 
 // Traceability: verifies REQ-ROLLING-WORKERS
 // Traceability: verifies REQ-PONYTAIL-STATIC-LANGUAGE
