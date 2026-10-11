@@ -1,0 +1,64 @@
+{
+  "schemaVersion": 1,
+  "certificateId": "CERT-51",
+  "lease": {
+    "schemaVersion": 1,
+    "scopeId": "2026-10-10-rolling-obligation-campaigns",
+    "baselineId": "BASELINE-14",
+    "graphDigest": "1707abea755b4ad1fcf2e1486fc736208d31a5cbb70e1649f633f97316e236b4",
+    "generation": "standalone-obligation-tasklets-OBL-105-2026-10-11",
+    "assessor": "coordinator",
+    "authority": [
+      "user-goal-2026-10-10-rolling-campaigns",
+      "user-goal-2026-10-10-static-language-existing-tsts",
+      "user-2026-10-10-normative-atomic-obligations"
+    ],
+    "binding": {
+      "obligationId": "OBL-105",
+      "revisionId": "BIND-26",
+      "dependsOn": [
+        "OBL-112"
+      ],
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "skills/plan-execution/scripts/ready-tasklets.ts",
+          "skills/plan-execution/scripts/ready-tasklets.js",
+          "tests/ready-tasklets-cli.test.ts",
+          "tests/obligation-execution.test.js",
+          "tests/obligation-tasklet-execution.test.ts",
+          "tests/helpers/obligation-fixture.ts",
+          "tests/helpers/obligation-fixture.js",
+          "scripts/build-runtime.ts",
+          "AGENTS.md",
+          ".agents/config/project/traceability.json",
+          "pm/requirements/traceability.generated.md"
+        ],
+        "operations": [
+          "inspect",
+          "edit",
+          "build",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "Select subordinate tasklets within the selected obligation's frozen ownership through a checked static implementation preserving the approved portable behavior and historical contract meanings."
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "typed-obligation-tasklets-OBL-105"
+        }
+      }
+    }
+  },
+  "revision": "b966e18842f7b5681c77474ad53b06ba037941a6",
+  "proof": [
+    {
+      "operation": "test",
+      "certificateEvidenceIndex": 0,
+      "submissionEvidenceIndex": 0
+    }
+  ]
+}
