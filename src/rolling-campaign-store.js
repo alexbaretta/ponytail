@@ -399,6 +399,47 @@ class RollingCampaignStore {
             return { request: rollingReviewRequestV1, outcome: rollingReviewOutcomeV1 };
         });
     }
+    async claimReviewDispatch(campaignId, reviewId, reviewerThreadId) {
+        requireState(reviewerThreadId.length > 0 && reviewerThreadId.trim() === reviewerThreadId && !/[\0\r\n]/u.test(reviewerThreadId), 'invalid reviewer thread identity');
+        return this.transaction(campaignId, async (poolClient, rollingCampaignRow) => {
+            const row = (await poolClient.query('SELECT request_text,outcome_text FROM ponytail_index.rolling_review_v1 WHERE project_id=$1 AND campaign_id=$2 AND review_id=$3', [this.projectId, campaignId, reviewId])).rows[0];
+            requireState(row && row.outcome_text === null, 'review is missing or already decided');
+            const rollingReviewRequestV1 = (0, rolling_review_js_1.parseRollingReviewRequest)(stringColumn(row.request_text, 'review request'));
+            const rollingStoredAssignment = await this.assignment(poolClient, campaignId, rollingReviewRequestV1.assignmentId, rollingReviewRequestV1.generation);
+            requireState(rollingStoredAssignment.state === 'REVIEW' && rollingStoredAssignment.activityStopped && !rollingStoredAssignment.retired, 'candidate is no longer awaiting review');
+            this.currentLease(rollingStoredAssignment, this.graph(rollingCampaignRow, rollingCampaignRow.graph_digest));
+            const existing = await poolClient.query('SELECT dispatch_id FROM ponytail_index.rolling_review_dispatch_v1 WHERE project_id=$1 AND campaign_id=$2 AND review_id=$3', [this.projectId, campaignId, reviewId]);
+            requireState(existing.rows.length === 0, 'review dispatch already claimed; recover its original outcome instead of retrying');
+            const id = node_crypto_1.default.randomUUID();
+            await poolClient.query('INSERT INTO ponytail_index.rolling_review_dispatch_v1(project_id,campaign_id,review_id,dispatch_id,reviewer_thread_id,state) VALUES($1,$2,$3,$4,$5,\'STARTED\')', [this.projectId, campaignId, reviewId, id, reviewerThreadId]);
+            return { id, reviewerThreadId, state: 'STARTED' };
+        });
+    }
+    async reviewDispatch(campaignId, reviewId) {
+        const row = (await this.pool.query('SELECT dispatch_id,reviewer_thread_id,state,turn_id FROM ponytail_index.rolling_review_dispatch_v1 WHERE project_id=$1 AND campaign_id=$2 AND review_id=$3', [this.projectId, campaignId, reviewId])).rows[0];
+        if (!row)
+            return null;
+        const id = stringColumn(row.dispatch_id, 'review dispatch');
+        const reviewerThreadId = stringColumn(row.reviewer_thread_id, 'reviewer thread');
+        if (row.state === 'STARTED') {
+            requireState(row.turn_id === null, 'started review dispatch has a turn');
+            return { id, reviewerThreadId, state: 'STARTED' };
+        }
+        requireState(row.state === 'ATTACHED', 'unsupported review dispatch state');
+        return { id, reviewerThreadId, state: 'ATTACHED', turnId: stringColumn(row.turn_id, 'review turn') };
+    }
+    async attachReviewDispatch(campaignId, reviewId, dispatchId, reviewerSessionId, turnId) {
+        requireState(turnId.length > 0 && turnId.trim() === turnId && !/[\0\r\n]/u.test(turnId), 'invalid review turn identity');
+        return this.transaction(campaignId, async (poolClient) => {
+            const row = (await poolClient.query('SELECT d.dispatch_id,d.reviewer_thread_id,d.state,d.turn_id,r.request_text FROM ponytail_index.rolling_review_dispatch_v1 d JOIN ponytail_index.rolling_review_v1 r USING(project_id,campaign_id,review_id) WHERE d.project_id=$1 AND d.campaign_id=$2 AND d.review_id=$3', [this.projectId, campaignId, reviewId])).rows[0];
+            requireState(row && row.dispatch_id === dispatchId, 'invalid review dispatch identity');
+            const rollingReviewRequestV1 = (0, rolling_review_js_1.parseRollingReviewRequest)(stringColumn(row.request_text, 'review request'));
+            requireState(rollingReviewRequestV1.reviewerSessionId === reviewerSessionId, 'native session differs from assigned reviewer');
+            requireState(row.state === 'STARTED' || row.state === 'ATTACHED' && row.turn_id === turnId, 'review dispatch retry differs from original turn');
+            await poolClient.query("UPDATE ponytail_index.rolling_review_dispatch_v1 SET state='ATTACHED',turn_id=$4 WHERE project_id=$1 AND campaign_id=$2 AND review_id=$3", [this.projectId, campaignId, reviewId, turnId]);
+            return { id: dispatchId, reviewerThreadId: stringColumn(row.reviewer_thread_id, 'reviewer thread'), state: 'ATTACHED', turnId };
+        });
+    }
     async recordReviewOutcome(campaignId, reviewId, actorSessionId, rollingReviewOutcomeV1) {
         const checkedRollingReviewOutcomeV1 = (0, rolling_review_js_1.readRollingReviewOutcomeV1)(rollingReviewOutcomeV1);
         return this.transaction(campaignId, async (poolClient, rollingCampaignRow) => {

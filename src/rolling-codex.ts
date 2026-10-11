@@ -269,6 +269,36 @@ export class RollingCodex extends EventEmitter<RollingCodexEvents> {
 
   interruptTurn(threadId: string, turnId: string): Promise<unknown> { return this.request('turn/interrupt', { threadId, turnId }); }
 
+  async readTurn(threadId: string, turnId: string): Promise<RollingNativeTurn> {
+    requireProtocol(threadId.length > 0 && turnId.length > 0, 'turn read requires thread and turn identities');
+    let cursor: string | null = null;
+    const cursors = new Set<string>();
+    do {
+      const result = nativeRecord(await this.request('thread/turns/list', { threadId, cursor, limit: 50,
+        sortDirection: 'desc', itemsView: 'full' }));
+      requireProtocol(Array.isArray(result.data), 'turn history lacks data');
+      for (const value of result.data) {
+        const record = nativeRecord(value);
+        if (record.id !== turnId) continue;
+        const rollingNativeTurn = completedTurn(record);
+        if (rollingNativeTurn.status === 'inProgress') this.activeTurns.set(threadId, turnId);
+        else {
+          requireProtocol(['completed', 'failed', 'interrupted'].includes(rollingNativeTurn.status), 'unsupported persisted turn status');
+          this.completedTurns.set(threadId, rollingNativeTurn);
+          if (this.activeTurns.get(threadId) === turnId) this.activeTurns.delete(threadId);
+        }
+        return rollingNativeTurn;
+      }
+      requireProtocol(result.nextCursor === undefined || result.nextCursor === null || typeof result.nextCursor === 'string', 'invalid turn history cursor');
+      cursor = result.nextCursor ?? null;
+      if (cursor !== null) {
+        requireProtocol(cursor.length > 0 && !cursors.has(cursor), 'turn history cursor did not advance');
+        cursors.add(cursor);
+      }
+    } while (cursor !== null);
+    throw new Error('rolling Codex: assigned turn is absent from native history');
+  }
+
   waitForTurn(threadId: string, turnId: string, timeoutMs = 60000): Promise<RollingNativeTurn> {
     const rollingNativeTurn = this.completedTurns.get(threadId);
     if (rollingNativeTurn?.id === turnId) return Promise.resolve(rollingNativeTurn);

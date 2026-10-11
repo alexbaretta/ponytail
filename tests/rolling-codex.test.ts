@@ -38,6 +38,7 @@ test('native protocol binds checkout and session, preserves numbers and observes
   for (const status of ['completed', 'failed', 'interrupted']) {
     const turn = await rollingCodex.startTurn(started.thread.id, status);
     assert.equal((await rollingCodex.waitForTurn(started.thread.id, turn.turn.id)).status, status);
+    assert.equal((await rollingCodex.readTurn(started.thread.id, turn.turn.id)).status, status);
   }
   await rollingCodex.interruptTurn(started.thread.id, 'turn-fixture');
   assert.equal(stringify(await rollingCodex.request('unsafe-number', {})), '{"value":9007199254740993}');
@@ -85,4 +86,12 @@ test('review dispatch resumes the assigned native reviewer and observes its exac
   assert.equal(rollingReviewOutcomeV1.reviewerSessionId, rollingReviewRequestV1.reviewerSessionId);
   assert.equal(rollingReviewOutcomeV1.decision, 'accepted');
   assert.deepEqual(await observeRollingReviewTurn(rollingCodex, rollingReviewTurn), rollingReviewOutcomeV1);
+  const pending = await rollingCodex.startTurn('thread-fixture', 'pending');
+  assert.equal((await rollingCodex.readTurn('thread-fixture', pending.turn.id)).status, 'inProgress');
+  const recovered = await rollingCodex.readTurn('thread-fixture', rollingReviewTurn.started.turn.id);
+  assert.equal(recovered.id, rollingReviewTurn.started.turn.id);
+  assert.equal(recovered.status, 'completed');
+  await assert.rejects(rollingCodex.readTurn('thread-fixture', 'missing-turn'), /absent from native history/);
+  await rollingCodex.interruptTurn('thread-fixture', pending.turn.id);
+  assert.equal((await rollingCodex.readTurn('thread-fixture', pending.turn.id)).status, 'interrupted');
 });

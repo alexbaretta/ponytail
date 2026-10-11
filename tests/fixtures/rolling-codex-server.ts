@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See LICENSE in the project root.
 import readline from 'node:readline';
 import { parseRollingReviewRequest, type RollingReviewOutcomeV1 } from '../../src/rolling-review.js';
+import type { RollingNativeTurn } from '../../src/rolling-codex.js';
 
 interface FixtureThreadResult {
   readonly thread: { readonly id: string; readonly sessionId: string };
@@ -28,6 +29,7 @@ function send(value: unknown): void { process.stdout.write(`${JSON.stringify(val
 const lines = readline.createInterface({ input: process.stdin });
 let initialized = false;
 let turnCount = 0;
+const turns = new Map<string, RollingNativeTurn>();
 lines.on('line', line => {
   const parsed: unknown = JSON.parse(line);
   const message = record(parsed);
@@ -49,6 +51,7 @@ lines.on('line', line => {
     const turnId = `turn-${++turnCount}`;
     if (!Array.isArray(params.input)) throw new Error('missing turn input');
     const prompt = text(record(params.input[0]).text);
+    turns.set(turnId, { id: turnId, status: prompt === 'pending' ? 'inProgress' : prompt, items: [] });
     result = { turn: { id: turnId } };
     send({ method: 'turn/started', params: { threadId: params.threadId, turn: { id: turnId } } });
     if (prompt.startsWith('Perform an adversarial review')) {
@@ -57,15 +60,23 @@ lines.on('line', line => {
       const rollingReviewOutcomeV1: RollingReviewOutcomeV1 = { schemaVersion: 1, reviewId: rollingReviewRequestV1.id,
         revision: rollingReviewRequestV1.revision, reviewerSessionId: rollingReviewRequestV1.reviewerSessionId,
         completedAt: '2026-10-11T10:00:00Z', decision: 'accepted', findings: [] };
-      send({ method: 'turn/completed', params: { threadId: params.threadId, turn: { id: turnId, status: 'completed',
-        items: [{ type: 'agentMessage', text: 'Review in progress.' }, { type: 'agentMessage', text: JSON.stringify(rollingReviewOutcomeV1) }] } } });
+      const rollingNativeTurn: RollingNativeTurn = { id: turnId, status: 'completed',
+        items: [{ type: 'agentMessage', text: 'Review in progress.' }, { type: 'agentMessage', text: JSON.stringify(rollingReviewOutcomeV1) }] };
+      turns.set(turnId, rollingNativeTurn);
+      send({ method: 'turn/completed', params: { threadId: params.threadId, turn: rollingNativeTurn } });
     } else if (prompt !== 'pending') send({ method: 'turn/completed', params: {
       threadId: params.threadId, turn: { id: turnId, status: prompt, items: [] }
     } });
   } else if (method === 'turn/interrupt') {
+    const turnId = text(params.turnId);
+    turns.set(turnId, { id: turnId, status: 'interrupted', items: [] });
     send({ method: 'turn/completed', params: {
       threadId: params.threadId, turn: { id: params.turnId, status: 'interrupted', items: [] }
     } });
+  } else if (method === 'thread/turns/list') {
+    const history = [...turns.values()].reverse();
+    const offset = params.cursor === null ? 0 : Number(text(params.cursor));
+    result = { data: history.slice(offset, offset + 1), nextCursor: offset + 1 < history.length ? String(offset + 1) : null };
   } else if (method === 'approval') {
     send({ id: 'approval-id', method: 'item/commandExecution/requestApproval', params: { threadId: 'thread-fixture' } });
   } else if (method === 'explode') {

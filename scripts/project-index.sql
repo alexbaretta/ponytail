@@ -361,6 +361,21 @@ ON rolling_review_v1 (project_id,campaign_id,assignment_id,created_at,review_id)
 CREATE INDEX IF NOT EXISTS rolling_review_v1_pending
 ON rolling_review_v1 (project_id,campaign_id,created_at,review_id) WHERE outcome_text IS NULL;
 
+CREATE TABLE IF NOT EXISTS rolling_review_dispatch_v1 (
+  project_id uuid NOT NULL,
+  campaign_id text NOT NULL,
+  review_id uuid NOT NULL,
+  dispatch_id uuid NOT NULL,
+  reviewer_thread_id text NOT NULL CHECK (reviewer_thread_id <> ''),
+  state text NOT NULL CHECK (state IN ('STARTED','ATTACHED')),
+  turn_id text,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (project_id,campaign_id,review_id),
+  FOREIGN KEY (project_id,campaign_id,review_id)
+    REFERENCES rolling_review_v1(project_id,campaign_id,review_id) ON DELETE CASCADE,
+  CHECK ((state='STARTED' AND turn_id IS NULL) OR (state='ATTACHED' AND turn_id IS NOT NULL AND turn_id <> ''))
+);
+
 CREATE TABLE IF NOT EXISTS rolling_action_v1 (
   project_id uuid NOT NULL,
   campaign_id text NOT NULL,

@@ -1239,6 +1239,10 @@
       "sourcePath": "src/rolling-review.ts"
     },
     {
+      "path": "src/rolling-codex.js",
+      "sourcePath": "src/rolling-codex.ts"
+    },
+    {
       "path": "src/project-index-database.js",
       "sourcePath": "src/project-index-database.ts"
     },

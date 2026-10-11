@@ -62,6 +62,13 @@ test('native App Server starts and resumes the same session in the designated ex
   assert.equal(resumed.thread.id, threadId);
   assert.equal(resumed.thread.sessionId, started.thread.sessionId);
   assert.ok(resumed.instructionSources.includes(path.join(root, 'AGENTS.md')));
+  const recoveredTurn = await rollingCodex.readTurn(threadId, result.turn.id);
+  assert.equal(recoveredTurn.id, result.turn.id);
+  assert.equal(recoveredTurn.status, 'completed');
+  // Persisted history includes tool and commentary items omitted by the terminal
+  // notification. Recovery must preserve the exact final answer, not its subset.
+  assert.deepEqual(recoveredTurn.items.filter(item => item.type === 'agentMessage').at(-1),
+    turn.items.filter(item => item.type === 'agentMessage').at(-1));
   const second = await rollingCodex.startTurn(threadId, 'Repeat the exact file contents you just read from fixture.txt, using the existing conversation. Do not modify files.');
   activeTurnId = second.turn.id;
   const resumedTurn = await rollingCodex.waitForTurn(threadId, activeTurnId);

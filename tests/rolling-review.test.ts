@@ -2,6 +2,8 @@
 // Licensed under the MIT License. See LICENSE in the project root.
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { readRollingReviewRequestV1, readRollingReviewOutcomeV1, parseRollingReviewRequest, parseRollingReviewOutcome,
  validateRollingReviewOutcome, RollingReviewRequestReaders, RollingReviewOutcomeReaders, readRollingReviewTurn, type RollingReviewTurn,
  type RollingReviewRequestV1, type RollingReviewAcceptedV1, type RollingReviewRejectedV1 } from '../src/rolling-review.js';
@@ -12,6 +14,11 @@ function request(): RollingReviewRequestV1 {
 function accepted(): RollingReviewAcceptedV1 {
  return { schemaVersion: 1, reviewId: 'review', revision: 'b'.repeat(40), reviewerSessionId: 'reviewer', completedAt: '2026-10-11T10:00:00Z', decision: 'accepted', findings: [] };
 }
+
+test('shipped review runtime loads its generated native adapter outside the dist tree', async () => {
+ const loaded: unknown = await import(pathToFileURL(path.resolve(__dirname, '../../src/rolling-review.js')).href);
+ assert.ok(loaded !== null && typeof loaded === 'object');
+});
 // Traceability: verifies REQ-ROLLING-REVIEW
 test('physical V1 requests and decisions retain exact immutable candidate and reviewer identities', () => {
  const rollingReviewRequestV1: RollingReviewRequestV1 = request();

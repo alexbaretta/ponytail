@@ -311,6 +311,22 @@ test(`real PostgreSQL serializes allocation, retains ownership and persists ${re
   assert.ok(reviewRequests.every(item => item.request.id === rollingStoredReview.request.id && item.outcome === null));
   assert.equal((await rollingCampaignStore.reviews('bound-fixture', submissionRollingStoredAssignment.id)).length, 1);
   assert.equal(rollingStoredReview.request.baseCommit, rollingWorkerSubmissionV1.baseCommit);
+  assert.equal(await rollingCampaignStore.reviewDispatch('bound-fixture', rollingStoredReview.request.id), null);
+  const dispatchClaims = await Promise.allSettled(Array.from({ length: 4 }, () => rollingCampaignStore.claimReviewDispatch('bound-fixture', rollingStoredReview.request.id, 'reviewer-thread')));
+  const claimed = dispatchClaims.find(item => item.status === 'fulfilled');
+  assert.ok(claimed?.status === 'fulfilled');
+  assert.equal(dispatchClaims.filter(item => item.status === 'fulfilled').length, 1);
+  assert.equal(dispatchClaims.filter(item => item.status === 'rejected').length, 3);
+  const restartedRollingCampaignStore: RollingCampaignStore = new RollingCampaignStore(pool, projectId);
+  assert.deepEqual(await restartedRollingCampaignStore.reviewDispatch('bound-fixture', rollingStoredReview.request.id), claimed.value);
+  await assert.rejects(restartedRollingCampaignStore.claimReviewDispatch('bound-fixture', rollingStoredReview.request.id, 'reviewer-thread'), /already claimed/);
+  await assert.rejects(rollingCampaignStore.attachReviewDispatch('bound-fixture', rollingStoredReview.request.id, 'wrong-dispatch', 'reviewer-session', 'review-turn'), /dispatch identity/);
+  await assert.rejects(rollingCampaignStore.attachReviewDispatch('bound-fixture', rollingStoredReview.request.id, claimed.value.id, 'other-reviewer', 'review-turn'), /native session differs/);
+  const attachments = await Promise.all(Array.from({ length: 4 }, () => rollingCampaignStore.attachReviewDispatch('bound-fixture', rollingStoredReview.request.id, claimed.value.id, 'reviewer-session', 'review-turn')));
+  assert.ok(attachments.every(item => item.state === 'ATTACHED' && item.turnId === 'review-turn'));
+  await assert.rejects(rollingCampaignStore.attachReviewDispatch('bound-fixture', rollingStoredReview.request.id, claimed.value.id, 'reviewer-session', 'different-turn'), /retry differs/);
+  assert.deepEqual(await restartedRollingCampaignStore.reviewDispatch('bound-fixture', rollingStoredReview.request.id), attachments[0]);
+  assert.equal(await foreignRollingCampaignStore.reviewDispatch('bound-fixture', rollingStoredReview.request.id), null);
   await assert.rejects(rollingCampaignStore.requestReview('bound-fixture', submissionRollingStoredAssignment.id,
     submissionRollingStoredAssignment.generation, revision, 'other-reviewer'), /retry differs/);
   const rollingReviewOutcomeV1: RollingReviewOutcomeV1 = reviewDecision === 'accepted'
