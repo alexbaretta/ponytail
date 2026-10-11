@@ -338,7 +338,7 @@
       "id": "campaign-plan-metadata",
       "implementation": {
         "workspace": "ponytail",
-        "module": "src/campaign-census.js",
+        "module": "src/campaign-plan-metadata.ts",
         "readerRegistryExport": "CampaignPlanMetadataReaders"
       },
       "currentVersion": "V3",

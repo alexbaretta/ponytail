@@ -47,6 +47,12 @@
         "S07-F07"
       ],
       "validation_tasklet": "S07-F08-T08"
+    },
+    "S07-F09": {
+      "depends_on": [
+        "S07-F08"
+      ],
+      "validation_tasklet": "S07-F09-T11"
     }
   },
   "tasklets": {
@@ -992,6 +998,151 @@
       "risk": "normal",
       "feature": "S07-F08",
       "planned_paths": []
+    },
+    "S07-F09-T01": {
+      "depends_on": [],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F09",
+      "planned_paths": [
+        "src/campaign-plan-metadata.ts"
+      ]
+    },
+    "S07-F09-T02": {
+      "depends_on": [
+        "S07-F09-T01"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F09",
+      "planned_paths": [
+        "src/campaign-plan-metadata.ts"
+      ]
+    },
+    "S07-F09-T03": {
+      "depends_on": [
+        "S07-F09-T12"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F09",
+      "planned_paths": [
+        "src/campaign-plan-metadata.ts"
+      ]
+    },
+    "S07-F09-T04": {
+      "depends_on": [
+        "S07-F09-T03"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F09",
+      "planned_paths": [
+        "src/campaign-plan-metadata.ts"
+      ]
+    },
+    "S07-F09-T05": {
+      "depends_on": [
+        "S07-F09-T04"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F09",
+      "planned_paths": [
+        "src/campaign-plan-metadata.ts"
+      ]
+    },
+    "S07-F09-T06": {
+      "depends_on": [
+        "S07-F09-T05"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F09",
+      "planned_paths": [
+        "src/campaign-plan-metadata.ts"
+      ]
+    },
+    "S07-F09-T07": {
+      "depends_on": [
+        "S07-F09-T06"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F09",
+      "planned_paths": [
+        "src/campaign-plan-metadata.ts"
+      ]
+    },
+    "S07-F09-T08": {
+      "depends_on": [
+        "S07-F09-T07"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F09",
+      "planned_paths": [
+        "src/campaign-plan-metadata.ts"
+      ]
+    },
+    "S07-F09-T09": {
+      "depends_on": [
+        "S07-F09-T08"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F09",
+      "planned_paths": [
+        "tests/campaign-plan-metadata.test.ts"
+      ]
+    },
+    "S07-F09-T10": {
+      "depends_on": [
+        "S07-F09-T09"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F09",
+      "planned_paths": [
+        "scripts/build-runtime.ts",
+        "src/campaign-plan-metadata.js",
+        "src/campaign-census.js",
+        "versioned-data-contracts.json",
+        "AGENTS.md",
+        "PROJECT_STRUCTURE.md",
+        ".agents/config/project/traceability.json",
+        "pm/requirements/traceability.generated.md"
+      ]
+    },
+    "S07-F09-T11": {
+      "depends_on": [
+        "S07-F09-T01",
+        "S07-F09-T02",
+        "S07-F09-T03",
+        "S07-F09-T04",
+        "S07-F09-T05",
+        "S07-F09-T06",
+        "S07-F09-T07",
+        "S07-F09-T08",
+        "S07-F09-T09",
+        "S07-F09-T10",
+        "S07-F09-T12"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F09",
+      "planned_paths": []
+    },
+    "S07-F09-T12": {
+      "depends_on": [
+        "S07-F09-T02"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F09",
+      "planned_paths": [
+        "src/campaign-plan-metadata.ts"
+      ]
     }
   },
   "external_depends_on": {}

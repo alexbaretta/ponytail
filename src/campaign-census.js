@@ -11,6 +11,8 @@ const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 const { CampaignError, dataError, toolError, exactKeys, CampaignManagementConfigReaders,
   readManagementConfigV1, readManagementConfig } = require('./campaign-configuration');
+const { PLAN_METADATA_MARKER, CampaignPlanMetadataReaders, metadataBlocks, parseCandidate,
+  readPlanMetadataV1, readPlanMetadataV2, readManagedPlan, parsePlanSource } = require('./campaign-plan-metadata');
 const {
   readSprints,
   selectExecutionReviewableSprints,
@@ -30,8 +32,6 @@ const {
   effectiveDependencies,
 } = require('../skills/plan-execution/scripts/ready-tasklets.js');
 
-const PLAN_METADATA_MARKER = 'ponytail-plan-campaign';
-const PLAN_SCHEMA_VERSION = 2;
 const REPORT_SCHEMA_VERSION = 1;
 const INVENTORY_SCHEMA_VERSION = 3;
 const CAMPAIGN_STATUSES = ['active', 'pending', 'closed', 'deferred', 'rejected'];
@@ -43,132 +43,6 @@ const REPORT_TABLE_FLAGS = Object.freeze({
   '--sprint-table': ['sprintTable', true],
   '--no-sprint-table': ['sprintTable', false],
 });
-
-function metadataBlocks(text) {
-  const marker = new RegExp(`^<!--\\s*${PLAN_METADATA_MARKER}\\s*$([\\s\\S]*?)^-->\\s*$`, 'gm');
-  return [...text.matchAll(marker)].map((match) => match[1]);
-}
-
-function parseCandidate(planFile, lifecycle, repositoryRoot) {
-  const relativePlanFile = path.relative(repositoryRoot, planFile).split(path.sep).join('/');
-  let text;
-  try {
-    text = fs.readFileSync(planFile, 'utf8');
-  } catch (error) {
-    return { planFile, relativePlanFile, lifecycle, text: null, blocks: [], metadata: null, parseError: error };
-  }
-  const blocks = metadataBlocks(text);
-  let metadata = null;
-  let parseError = null;
-  if (blocks.length === 1) {
-    try {
-      metadata = JSON.parse(blocks[0]);
-    } catch (error) {
-      parseError = error;
-    }
-  }
-  return { planFile, relativePlanFile, lifecycle, text, blocks, metadata, parseError };
-}
-
-function readPlanMetadataV1(candidate) {
-  const { metadata, planFile, relativePlanFile, lifecycle, text } = candidate;
-  exactKeys(metadata, ['schemaVersion', 'id', 'parent_plan_id'], 'plan campaign metadata');
-  if (metadata.schemaVersion !== 1) {
-    dataError('CAMPAIGN_PLAN_VERSION', `unsupported plan campaign version: ${metadata.schemaVersion}`, null, relativePlanFile);
-  }
-  const directoryId = path.basename(path.dirname(planFile));
-  if (typeof metadata.id !== 'string' || metadata.id !== directoryId) {
-    dataError('CAMPAIGN_PLAN_ID', `plan metadata id must be ${directoryId}`, metadata.id ?? null, relativePlanFile);
-  }
-  if (metadata.parent_plan_id !== null
-    && (typeof metadata.parent_plan_id !== 'string' || !metadata.parent_plan_id || metadata.parent_plan_id === metadata.id)) {
-    dataError('CAMPAIGN_PARENT', 'parent_plan_id must be null or a different nonempty plan ID', metadata.id, relativePlanFile);
-  }
-  if (lifecycle === null) {
-    dataError('CAMPAIGN_LEGACY_LAYOUT', 'managed plans must use a configured lifecycle directory', metadata.id, relativePlanFile);
-  }
-  const escapedId = metadata.id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  if (!new RegExp(`(?:Plan ID:\\*\\*|Plan ID:)\\s*\`?${escapedId}\`?`).test(text)) {
-    dataError('CAMPAIGN_PLAN_PROSE_ID', `manifest prose must declare Plan ID ${metadata.id}`, metadata.id, relativePlanFile);
-  }
-  return {
-    schemaVersion: 1,
-    id: metadata.id,
-    parentPlanId: metadata.parent_plan_id,
-    dependsOn: [],
-    lifecycle,
-    planFile,
-    relativePlanFile,
-    planDirectory: path.dirname(planFile),
-    text,
-  };
-}
-
-function readPlanMetadataV2(candidate) {
-  const { metadata } = candidate;
-  exactKeys(metadata, ['schemaVersion', 'id', 'parent_plan_id', 'depends_on'], 'plan campaign metadata');
-  if (metadata.schemaVersion !== PLAN_SCHEMA_VERSION) {
-    dataError('CAMPAIGN_PLAN_VERSION', `unsupported plan campaign version: ${metadata.schemaVersion}`, null, candidate.relativePlanFile);
-  }
-  if (!Array.isArray(metadata.depends_on)
-    || metadata.depends_on.some((id) => typeof id !== 'string' || !id || id === metadata.id)
-    || new Set(metadata.depends_on).size !== metadata.depends_on.length) {
-    dataError('CAMPAIGN_DEPENDENCY', 'depends_on must contain unique, nonempty plan IDs other than the current plan', metadata.id ?? null, candidate.relativePlanFile);
-  }
-  const plan = readPlanMetadataV1({
-    ...candidate,
-    metadata: {
-      schemaVersion: 1,
-      id: metadata.id,
-      parent_plan_id: metadata.parent_plan_id,
-    },
-  });
-  const lines = candidate.text.split(/\r?\n/);
-  const dependenciesHeading = lines.indexOf('## Dependencies');
-  if (dependenciesHeading !== -1) {
-    let dispatchPrerequisite = false;
-    for (let index = dependenciesHeading + 1; index < lines.length && !lines[index].startsWith('## '); index += 1) {
-      const line = lines[index].trim();
-      if (line.startsWith('- ')) dispatchPrerequisite = line.startsWith('- Dispatch only after');
-      if (!dispatchPrerequisite) continue;
-      for (const [, reference] of lines[index].matchAll(/\[[^\]]+\]\((\.\.?\/[^)]+\/plan\.md)\)/g)) {
-        const prerequisiteId = path.posix.basename(path.posix.dirname(reference));
-        if (!metadata.depends_on.includes(prerequisiteId)) {
-          dataError('CAMPAIGN_DEPENDENCY', `dispatch prerequisite ${prerequisiteId} must appear in depends_on`, metadata.id, candidate.relativePlanFile);
-        }
-      }
-    }
-  }
-  return { ...plan, schemaVersion: PLAN_SCHEMA_VERSION, dependsOn: [...metadata.depends_on].sort() };
-}
-
-// Traceability: implements REQ-OBLIGATION-COMPATIBILITY
-function readPlanMetadataV3(candidate) {
-  exactKeys(candidate.metadata, ['schemaVersion', 'id', 'parent_plan_id', 'depends_on', 'obligation_document'], 'plan campaign metadata V3');
-  if (candidate.metadata.schemaVersion !== 3) dataError('CAMPAIGN_PLAN_VERSION', 'expected plan campaign V3');
-  const documentPath = candidate.metadata.obligation_document;
-  if (typeof documentPath !== 'string' || !documentPath || documentPath.includes('\\') || documentPath.split('/').some(segment => !segment || segment === '.' || segment === '..')) dataError('CAMPAIGN_OBLIGATION_PATH', 'obligation_document must be repository-relative');
-  const { obligation_document, ...metadata } = candidate.metadata;
-  const plan = readPlanMetadataV2({ ...candidate, metadata: { ...metadata, schemaVersion: 2 } });
-  return { ...plan, schemaVersion: 3, obligationDocument: obligation_document };
-}
-
-const CampaignPlanMetadataReaders = Object.freeze({ V1: readPlanMetadataV1, V2: readPlanMetadataV2, V3: readPlanMetadataV3 });
-
-function readManagedPlan(candidate) {
-  if (fs.lstatSync(candidate.planFile).isSymbolicLink()) {
-    dataError('CAMPAIGN_PLAN_FILE', 'managed plan manifest must not be a symbolic link', candidate.metadata?.id ?? null, candidate.relativePlanFile);
-  }
-  if (candidate.blocks.length !== 1) {
-    dataError('CAMPAIGN_PLAN_BLOCK', `${candidate.relativePlanFile} must contain exactly one ${PLAN_METADATA_MARKER} block`, candidate.metadata?.id ?? null, candidate.relativePlanFile);
-  }
-  if (candidate.parseError || !candidate.metadata) {
-    dataError('CAMPAIGN_PLAN_JSON', `${candidate.relativePlanFile} campaign metadata is not valid JSON`, null, candidate.relativePlanFile);
-  }
-  const reader = CampaignPlanMetadataReaders[`V${candidate.metadata.schemaVersion}`];
-  if (!reader) dataError('CAMPAIGN_PLAN_VERSION', `unsupported plan campaign version: ${candidate.metadata.schemaVersion}`, candidate.metadata.id ?? null, candidate.relativePlanFile);
-  return reader(candidate);
-}
 
 function sortedDirectories(directory) {
   try {
@@ -257,29 +131,6 @@ function listPlanSourceFiles(repositoryRoot, config) {
   }
   return sources.sort((left, right) =>
     left.relativePlanFile.localeCompare(right.relativePlanFile));
-}
-
-function parsePlanSource(repositoryRoot, relativePlanFile, lifecycle, text) {
-  const planFile = path.join(repositoryRoot, relativePlanFile);
-  const blocks = metadataBlocks(text);
-  let metadata = null;
-  let parseError = null;
-  if (blocks.length === 1) {
-    try {
-      metadata = JSON.parse(blocks[0]);
-    } catch (error) {
-      parseError = error;
-    }
-  }
-  return readManagedPlan({
-    planFile,
-    relativePlanFile,
-    lifecycle,
-    text,
-    blocks,
-    metadata,
-    parseError,
-  });
 }
 
 function resolveInputPlan(input, repositoryRoot, config, candidates) {
