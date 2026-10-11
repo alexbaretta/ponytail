@@ -78,6 +78,8 @@ services. `PROJECT_STRUCTURE.md` is authoritative for that boundary.
   tests/obligations.test.js tests/obligation-execution.test.js`.
   Rolling configuration focused proof: `node --test dist/tests/rolling-campaign.test.js
   dist/tests/rolling-campaign.integration.test.js`.
+- Tasklet graph focused proof: `node --test dist/tests/tasklet-graph.test.js
+  tests/ready-tasklets.test.js tests/campaign-census.test.js tests/obligation-execution.test.js`.
 - Tasklet metadata focused proof: `node --test dist/tests/tasklet-metadata.test.js
   tests/ready-tasklets.test.js tests/campaign-census.test.js`.
 - Campaign dependency focused proof: `node --test dist/tests/campaign-dependencies.test.js

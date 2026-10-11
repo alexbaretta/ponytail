@@ -980,6 +980,16 @@
       "class": "unit-test",
       "path": "tests/tasklet-metadata.test.ts",
       "locator": "text"
+    },
+    {
+      "class": "implementation",
+      "path": "skills/plan-execution/scripts/tasklet-graph.ts",
+      "locator": "text"
+    },
+    {
+      "class": "unit-test",
+      "path": "tests/tasklet-graph.test.ts",
+      "locator": "text"
     }
   ],
   "entities": [],
@@ -1115,6 +1125,18 @@
     {
       "path": ".openclaw/skills/plan-execution/scripts/tasklet-metadata.js",
       "sourcePath": "skills/plan-execution/scripts/tasklet-metadata.ts"
+    },
+    {
+      "path": "skills/plan-execution/scripts/tasklet-graph.js",
+      "sourcePath": "skills/plan-execution/scripts/tasklet-graph.ts"
+    },
+    {
+      "path": ".openclaw/skills/plan-execution/scripts/tasklet-graph.ts",
+      "sourcePath": "skills/plan-execution/scripts/tasklet-graph.ts"
+    },
+    {
+      "path": ".openclaw/skills/plan-execution/scripts/tasklet-graph.js",
+      "sourcePath": "skills/plan-execution/scripts/tasklet-graph.ts"
     }
   ],
   "reverseViewPath": "pm/requirements/traceability.generated.md",

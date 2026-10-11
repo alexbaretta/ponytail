@@ -8,113 +8,12 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const { parseTaskletStatuses } = require('./tasklet-statuses');
+const { validateTaskletGraph, effectiveDependencies } = require('./tasklet-graph');
 const { TaskletMetadataReaders, readTaskletGraph } = require('./tasklet-metadata');
 const SCHEMA_VERSION = 4;
 const MAX_BATCH_TASKLETS = 16;
 
 function fail(message) { throw new Error(message); }
-
-function validateFeatureGraph(graph) {
-  if (graph.schemaVersion === 1) return;
-  const visiting = new Set();
-  const visited = new Set();
-  const walk = (id, trail) => {
-    if (visiting.has(id)) fail(`feature dependency cycle: ${[...trail.slice(trail.indexOf(id)), id].join(' -> ')}`);
-    if (visited.has(id)) return;
-    const feature = graph.features.get(id);
-    if (!feature) fail(`unknown feature dependency: ${id}`);
-    visiting.add(id);
-    for (const dependency of feature.depends_on) {
-      if (dependency === id) fail(`feature ${id} cannot depend on itself`);
-      walk(dependency, [...trail, id]);
-    }
-    visiting.delete(id);
-    visited.add(id);
-  };
-  for (const id of graph.features.keys()) walk(id, []);
-  for (const [featureId, feature] of graph.features) {
-    const validation = graph.tasklets.get(feature.validation_tasklet);
-    if (!validation || validation.feature !== featureId) fail(`feature ${featureId} has invalid validation_tasklet`);
-    const members = [...graph.tasklets].filter(([, tasklet]) => tasklet.feature === featureId).map(([id]) => id);
-    const missing = members.filter((id) => id !== feature.validation_tasklet && !validation.depends_on.includes(id));
-    if (missing.length) fail(`validation tasklet ${feature.validation_tasklet} must directly depend on every other feature tasklet: ${missing.join(', ')}`);
-    for (const id of members) {
-      if (id !== feature.validation_tasklet && graph.tasklets.get(id).planned_paths.length === 0) fail(`non-validation tasklet ${id} requires planned_paths`);
-      for (const dependency of graph.tasklets.get(id).depends_on) {
-        const dependencyFeature = graph.tasklets.get(dependency)?.feature;
-        if (dependencyFeature && dependencyFeature !== featureId && !feature.depends_on.includes(dependencyFeature)) {
-          fail(`tasklet ${id} cross-feature dependency requires feature dependency: ${dependencyFeature}`);
-        }
-      }
-    }
-  }
-}
-
-function effectiveDependencies(graph, id) {
-  const tasklet = graph.tasklets.get(id);
-  if (graph.schemaVersion === 1) return tasklet.depends_on;
-  return [...new Set([
-    ...tasklet.depends_on,
-    ...graph.features.get(tasklet.feature).depends_on.map((feature) => graph.features.get(feature)?.validation_tasklet ?? feature),
-  ])];
-}
-
-function validateTaskletGraph(graph, statuses) {
-  const ids = new Set(graph.tasklets.keys());
-  if (ids.size !== statuses.size || [...ids].some((id) => !statuses.has(id))) fail('tasklet metadata and Markdown headings must contain exactly the same tasklet IDs');
-  validateFeatureGraph(graph);
-  const visiting = new Set();
-  const visited = new Set();
-  const reverse = new Map([...ids].map((id) => [id, []]));
-  const walk = (id, trail) => {
-    if (visiting.has(id)) fail(`tasklet dependency cycle: ${[...trail.slice(trail.indexOf(id)), id].join(' -> ')}`);
-    if (visited.has(id)) return;
-    visiting.add(id);
-    for (const dependency of effectiveDependencies(graph, id)) {
-      if (!ids.has(dependency)) fail(`unknown tasklet dependency: ${dependency}`);
-      if (dependency === id) fail(`tasklet ${id} cannot depend on itself`);
-      if (statuses.get(dependency) === 'ERROR') fail(`tasklet ${id} depends on [ERROR] tasklet ${dependency}`);
-      reverse.get(dependency).push(id);
-      walk(dependency, [...trail, id]);
-    }
-    if (statuses.get(id) === 'DONE' && effectiveDependencies(graph, id).some((dependency) => statuses.get(dependency) !== 'DONE')) fail(`completed tasklet ${id} depends on unfinished tasklet`);
-    visiting.delete(id);
-    visited.add(id);
-  };
-  for (const id of ids) walk(id, []);
-  const descendants = new Map();
-  const depth = new Map();
-  const derive = (id) => {
-    if (descendants.has(id)) return;
-    const all = new Set();
-    let maxDepth = 0;
-    for (const child of reverse.get(id)) {
-      derive(child);
-      all.add(child);
-      for (const descendant of descendants.get(child)) all.add(descendant);
-      maxDepth = Math.max(maxDepth, 1 + depth.get(child));
-    }
-    descendants.set(id, all);
-    depth.set(id, maxDepth);
-  };
-  for (const id of ids) derive(id);
-  if (graph.schemaVersion >= 2) {
-    const taskletIds = [...ids];
-    for (let first = 0; first < taskletIds.length; first += 1) {
-      const left = taskletIds[first];
-      const leftPaths = new Set(graph.tasklets.get(left).planned_paths);
-      for (let second = first + 1; second < taskletIds.length; second += 1) {
-        const right = taskletIds[second];
-        const overlap = graph.tasklets.get(right).planned_paths.find((candidate) => leftPaths.has(candidate));
-        if (overlap && !descendants.get(left).has(right) && !descendants.get(right).has(left)) {
-          fail(`unordered tasklet path overlap: ${left}, ${right}, ${overlap}`);
-        }
-      }
-    }
-  }
-  const unfinishedDescendants = new Map([...ids].map((id) => [id, [...descendants.get(id)].filter((descendant) => statuses.get(descendant) === 'PENDING').length]));
-  return { reverse, descendants, depth, unfinishedDescendants };
-}
 
 function rankedReadyTasklets(graph, statuses, derived, lastTasklet) {
   if (lastTasklet !== null && (!statuses.has(lastTasklet) || statuses.get(lastTasklet) !== 'DONE')) fail(`last completed tasklet must be a known [DONE] tasklet: ${lastTasklet}`);
