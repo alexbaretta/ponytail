@@ -7,7 +7,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { execFileSync } from 'node:child_process';
+import { execFileSync,spawnSync } from 'node:child_process';
 import { Pool } from 'pg';
 import { databaseOptions } from '../src/project-index-database.js';
 import { collectRollingGraph, type RollingProjectConfigV1, type RollingBindingsV1, type RollingBinding, type RollingGraph } from '../src/rolling-campaign.js';
@@ -780,7 +780,8 @@ async function observeRollingWorkerTurn(t: TestContext, rollingCodex: RollingCod
   }
 }
 
-export async function runRollingWorkerScenario(t: TestContext, mode: 'protocol' | 'native', operation: 'attachment' | 'instructions' | 'suspension' | 'resumption' | 'recovery' | 'collection' | 'code', rework = false): Promise<void> {
+export async function runRollingWorkerScenario(t: TestContext, mode: 'protocol' | 'native', operation: 'attachment' | 'instructions' | 'suspension' | 'resumption' | 'recovery' | 'collection' | 'code', rework = false, integrationRepair = false): Promise<void> {
+  assert.ok(!integrationRepair || mode === 'protocol' && operation === 'collection');
   assert.ok(!rework || mode === 'native' && operation === 'code', 'correction Arc requires the real native code worker');
   const repositoryRoot = path.resolve(__dirname, '../..');
   const pool = new Pool(databaseOptions(repositoryRoot));
@@ -837,7 +838,7 @@ export async function runRollingWorkerScenario(t: TestContext, mode: 'protocol' 
   execFileSync('git',['init','-q',root]);
   fs.mkdirSync(path.join(root,'.agents/config/project'),{recursive:true});
   const rollingProjectConfigV1: RollingProjectConfigV1 = {schemaVersion:1,mainline:{remote:'origin',branch:'main'},
-    managedWorktrees:{directory:'managed',anchor:'main'},maxActiveWorkers:1,publicationSize:1,setupCommands:[],qa:{focused:operation === 'code' ? [['npm','run','build'],['node','--test','--test-reporter=tap','fixture.test.ts']] : operation !== 'attachment' ? [['node','--test','fixture.test.ts']] : [],publication:[['node','--test']]}};
+    managedWorktrees:{directory:'managed',anchor:'main'},maxActiveWorkers:1,publicationSize:1,setupCommands:[],qa:{focused:integrationRepair ? [[process.execPath,'--test','--test-reporter=tap','fixture.test.ts']] : operation === 'code' ? [['npm','run','build'],['node','--test','--test-reporter=tap','fixture.test.ts']] : operation !== 'attachment' ? [['node','--test','fixture.test.ts']] : [],publication:[['node','--test']]}};
   fs.writeFileSync(path.join(root,'.agents/config/project/rolling-campaigns.json'),JSON.stringify(rollingProjectConfigV1));
   fs.writeFileSync(path.join(root,'.gitignore'),`/managed/\n/session_id.txt\n/origin.git/\n${operation === 'collection' || operation === 'code' ? '/tmp/\n/upstream/\n/node_modules\n' : ''}`);
   if (operation === 'code') {
@@ -855,6 +856,7 @@ export async function runRollingWorkerScenario(t: TestContext, mode: 'protocol' 
   let fixtureRequirementText = operation === 'code'
     ? `# Worker code fixture\n\nChange the exported fixture value to 2 and update the unit expectation. Preserve the integration invariant. Commit only fixture.ts and fixture.test.ts. Then freshly fetch origin campaign/worker-fixture and perform an interactive semantic rebase, stopping after ${rework ? 'each of its two replayed commits' : 'its single replayed commit'} to inspect the patch in the new base and run focused QA before continuing. The project already configures a checked sequence editor to mark ${rework ? 'every commit' : 'the commit'} for an edit stop: use ordinary git rebase -i with that editor, without an editor override or terminal interaction. Retain the original pre-rebase commit SHA in ignored tmp/original-commit.txt and actual rebase output plus the semantic inspection in ignored tmp/semantic-rebase.txt. Use ignored tmp/focused.txt for the actual final focused test output, with --test-reporter=tap. Return only strict submission JSON with fresh evidence and hashes covering both source files and the retained outputs.\n`
     : '# Worker responsibility fixture\n\nInspect the fixture value and report the assigned requirement, acceptance, Arc/step, implementation, unit/integration, lease, path and QA references. Preserve the source files.\n';
+  if (integrationRepair) fixtureRequirementText = 'Establish fixture value 2, preserve independently published upstream context, and prove focused unit and integration behavior. Substantive integration repairs require fresh semantic inspection, rebase, focused QA and the original reviewer.\n';
   if (operation === 'code') fixtureRequirementText += 'For Git mutations, invoke separate commands exactly from this reviewed list, without bundling them with other commands or editor overrides. Other inspection and proof commands remain ordinary local operations.\n'
     + nativeCodeFixtureCommands.map(command => `- ${command}`).join('\n') + '\n';
   const obligationBaseline: ObligationBaseline = {...originalObligationBaseline,
@@ -863,7 +865,7 @@ export async function runRollingWorkerScenario(t: TestContext, mode: 'protocol' 
   const obligationDocumentV1: ObligationDocumentV1 = {...sourceObligationDocumentV1,scopeId:'worker-fixture',baselines:[obligationBaseline],
     obligations:sourceObligationDocumentV1.obligations.filter(item => obligationBaseline.obligationIds.includes(item.id)).map((item,index) =>
       operation !== 'attachment' && index === 1 ? {...item,
-        condition:operation === 'code' ? fixtureRequirementText : 'Inspect fixture.ts and establish that its exported value remains 1. Run the configured focused fixture QA. In the final report identify every assigned requirement ID, acceptance ID, Arc/step IDs, implementation ID, unit/integration IDs and selections, permitted paths, lease generation and target. Do not modify files.',
+        condition:operation === 'code' || integrationRepair ? fixtureRequirementText : 'Inspect fixture.ts and establish that its exported value remains 1. Run the configured focused fixture QA. In the final report identify every assigned requirement ID, acceptance ID, Arc/step IDs, implementation ID, unit/integration IDs and selections, permitted paths, lease generation and target. Do not modify files.',
         criterion:operation === 'code' ? 'Native code implementation, focused QA, fresh commit-by-commit semantic rebase and exact stopped submission in REVIEW.' : 'Read-only fixture inspection and passing focused QA with the exact worker responsibility references in the final report.'} : item),
     certificates:[],checkpoints:[]};
   fs.mkdirSync(path.join(root,'pm/requirements'),{recursive:true});
@@ -886,7 +888,7 @@ export async function runRollingWorkerScenario(t: TestContext, mode: 'protocol' 
   const obligationBindingRevisionV1: ObligationBindingRevisionV1 = {id:'BIND-1',obligationId:obligation.id,predecessorId:null,
     baselineId:obligationBaseline.id,assessor:'coordinator',authority:obligationBaseline.authority.references,reason:'Isolated worker attachment',dependsOn:[],
     execution:{sprintId:null,taskletIds:[],plannedPaths:operation !== 'attachment' ? ['fixture.ts','fixture.test.ts','pm/requirements/rolling-campaigns.md'] : ['fixture.ts'],
-      operations:operation === 'code' ? ['inspect','edit','build','test'] : operation !== 'attachment' ? ['inspect','test'] : ['edit','test'],selection:operation !== 'attachment' ? ['fixture unit','fixture integration'] : ['fixture'],target:{identity:'local',profile:'fixture'}}};
+      operations:operation === 'code' ? ['inspect','edit','build','test'] : integrationRepair ? ['inspect','edit','test'] : operation !== 'attachment' ? ['inspect','test'] : ['edit','test'],selection:operation !== 'attachment' ? ['fixture unit','fixture integration'] : ['fixture'],target:{identity:'local',profile:'fixture'}}};
   const nextObligationBindingRevisionV1:ObligationBindingRevisionV1 = {...obligationBindingRevisionV1,id:'BIND-2',obligationId:nextObligation.id,
     reason:'Independent next fixture obligation',execution:{...obligationBindingRevisionV1.execution,plannedPaths:['next.ts']}};
   const obligationBindingHistoryV1: ObligationBindingHistoryV1 = {schemaVersion:1,scopeId:'worker-fixture',
@@ -900,7 +902,7 @@ export async function runRollingWorkerScenario(t: TestContext, mode: 'protocol' 
       .map(item => `'${item.replaceAll("'","'\\''")}'`).join(' ');
     execFileSync('git',['-C',root,'config','sequence.editor',editorCommand]);
   }
-  if (operation !== 'attachment' && mode === 'native') {
+  if (operation !== 'attachment' && mode === 'native' || integrationRepair) {
     const origin = path.join(root,'origin.git');
     execFileSync('git',['clone','--bare','-q',root,origin]);
     execFileSync('git',['-C',root,'remote','add','origin',origin]);
@@ -1152,6 +1154,12 @@ export async function runRollingWorkerScenario(t: TestContext, mode: 'protocol' 
     assert.ok(rollingWorkerDispatchAttached);
     const rollingWorkerContext = await rollingCampaignStore.workerContext('worker-fixture',rollingAllocationResult.assignment.id,generation);
     const rootPath = rollingAllocationResult.worktree.rootPath;
+    if (integrationRepair) {
+      fs.writeFileSync(path.join(rootPath,'fixture.ts'),'export const value: number = 2;\n');
+      fs.writeFileSync(path.join(rootPath,'fixture.test.ts'),fs.readFileSync(path.join(rootPath,'fixture.test.ts'),'utf8').replace('assert.equal(value, 1)','assert.equal(value, 2)'));
+      execFileSync('git',['-C',rootPath,'add','fixture.ts','fixture.test.ts']);
+      execFileSync('git',['-C',rootPath,'-c','user.name=Fixture','-c','user.email=fixture@example.test','commit','-q','-m','Reviewed fixture implementation']);
+    }
     const startedAt = new Date().toISOString();
     const processEnv:NodeJS.ProcessEnv = {...process.env,NODE_TEST_CONTEXT:undefined};
     const output = execFileSync(process.execPath,['--test','--test-reporter=tap','fixture.test.ts'],{cwd:rootPath,encoding:'utf8',env:processEnv});
@@ -1161,7 +1169,7 @@ export async function runRollingWorkerScenario(t: TestContext, mode: 'protocol' 
     fs.writeFileSync(path.join(rootPath,'tmp/focused.txt'),output);
     const revision = execFileSync('git',['-C',rootPath,'rev-parse','HEAD'],{encoding:'utf8'}).trim();
     const target = rollingWorkerContext.lease.binding.execution.target;assert.ok(target);
-    const obligationEvidence:ObligationEvidence = {command:`${process.execPath} --test fixture.test.ts`,selection:rollingWorkerContext.lease.binding.execution.selection,
+    const obligationEvidence:ObligationEvidence = {command:integrationRepair ? `${process.execPath} --test --test-reporter=tap fixture.test.ts` : `${process.execPath} --test fixture.test.ts`,selection:rollingWorkerContext.lease.binding.execution.selection,
       target:{...target,verification:'tmp/focused.txt'},revision,dirty:false,startedAt,completedAt,outcome:'pass',skips:0,failures:0,finalization:'pass',
       inputs:['fixture.ts','fixture.test.ts','tmp/focused.txt'].map(relative => ({path:relative,digest:inputDigest(rootPath,relative)})),outputPath:'tmp/focused.txt'};
     const rollingWorkerSubmissionV1:RollingWorkerSubmissionV1 = {schemaVersion:1,campaignId:'worker-fixture',assignmentId:rollingAllocationResult.assignment.id,
@@ -1191,6 +1199,80 @@ export async function runRollingWorkerScenario(t: TestContext, mode: 'protocol' 
     assert.equal((await rollingCampaignStore.status('worker-fixture')).assignments[0]?.activityStopped,true);
     assert.equal(execFileSync('git',['-C',rootPath,'status','--porcelain'],{encoding:'utf8'}),'');
     t.diagnostic(`component submission revision=${revision}; exact original turn=${rollingWorkerDispatchAttached.turnId}; session=${rollingSessionAttachment.sessionId}; focused QA=2; REVIEW persisted; native code/rebase Arc remains unverified`);
+    if (integrationRepair) {
+      const acceptedRollingStoredReview = await rollingCampaignStore.requestReview('worker-fixture',rollingAllocationResult.assignment.id,generation,revision,'original-reviewer');
+      const acceptedRollingReviewOutcomeV1: RollingReviewOutcomeV1 = {schemaVersion:1,reviewId:acceptedRollingStoredReview.request.id,revision,
+        reviewerSessionId:'original-reviewer',completedAt:new Date().toISOString(),decision:'accepted',findings:[]};
+      await rollingCampaignStore.recordReviewOutcome('worker-fixture',acceptedRollingStoredReview.request.id,'original-reviewer',acceptedRollingReviewOutcomeV1);
+      await rollingCampaignStore.claimIncrement('worker-fixture',acceptedRollingStoredReview.request.id);
+      const upstreamRoot = path.join(root,'upstream');
+      execFileSync('git',['clone','-q','--branch','campaign/worker-fixture',path.join(root,'origin.git'),upstreamRoot]);
+      fs.writeFileSync(path.join(upstreamRoot,'fixture.ts'),'export const value: number = 1; // upstream context\n');
+      execFileSync('git',['-C',upstreamRoot,'add','fixture.ts']);
+      execFileSync('git',['-C',upstreamRoot,'-c','user.name=Fixture','-c','user.email=fixture@example.test','commit','-q','-m','Independent upstream context']);
+      const upstreamRevision = execFileSync('git',['-C',upstreamRoot,'rev-parse','HEAD'],{encoding:'utf8'}).trim();
+      execFileSync('git',['-C',upstreamRoot,'push','-q','origin','HEAD:refs/heads/campaign/worker-fixture']);
+      const conflictIntent = await rollingCampaignStore.beginIncrementRebase('worker-fixture',acceptedRollingStoredReview.request.id);
+      const conflictResult = rebasePreparedRollingIncrement(rootPath,conflictIntent);assert.ok(conflictResult.state === 'TEXTUAL_CONFLICT');
+      await rollingCampaignStore.recordIncrementRebase('worker-fixture',acceptedRollingStoredReview.request.id,conflictResult);
+      const rollingIncrementRepair = await rollingCampaignStore.requestIncrementRepair('worker-fixture',acceptedRollingStoredReview.request.id,'Inspect upstream context and preserve approved fixture value');
+      await suspendRollingWorker(rollingCampaignStore,rollingCodex,'worker-fixture',rollingAllocationResult.assignment.id,generation,[]);
+      const stop = await rollingCampaignStore.workerStop('worker-fixture',rollingAllocationResult.assignment.id,generation);
+      assert.ok(stop?.checkpoint.gitStatus.includes('fixture.ts'));
+      execFileSync('git',['-C',root,'update-ref','refs/heads/campaign/worker-fixture',upstreamRevision,rollingWorkerContext.baseCommit]);
+      prepareCoordinatorIncrementCheckout(root,'campaign/worker-fixture');
+      const repairRollingGraph = collectRollingGraph(root,'obligations.json','bindings.json','history.json');
+      await rollingCampaignStore.reconcileGraph('worker-fixture',rollingGraph.digest,repairRollingGraph.digest);
+      const repairAllocation = await rollingCampaignStore.allocate('worker-fixture',repairRollingGraph.digest);
+      assert.ok(repairAllocation.assignment && repairAllocation.actionId);
+      assert.equal(repairAllocation.assignment.id,rollingAllocationResult.assignment.id);
+      assert.equal(repairAllocation.assignment.sessionId,rollingSessionAttachment.sessionId);
+      assert.equal(repairAllocation.assignment.worktreeNumber,rollingAllocationResult.assignment.worktreeNumber);
+      await resumeRollingWorker(rollingCampaignStore,rollingCodex,'worker-fixture',repairAllocation.actionId,repairAllocation.assignment.generation);
+      const repairRollingWorkerContext = await rollingCampaignStore.workerContext('worker-fixture',repairAllocation.assignment.id,repairAllocation.assignment.generation);
+      assert.deepEqual(repairRollingWorkerContext.incrementRepair,rollingIncrementRepair);
+      assert.equal(repairRollingWorkerContext.rejectedReview,null);
+      assert.equal(repairRollingWorkerContext.baseCommit,upstreamRevision);
+      assert.ok(buildRollingWorkerInstructions(repairRollingWorkerContext).includes(JSON.stringify(repairRollingWorkerContext.incrementRepair)));
+      // Controlled component worker: inspect the only replayed commit explicitly.
+      // Native semantic-rebase proof remains owned by the native worker Arc.
+      execFileSync('git',['-C',rootPath,'rebase','--abort']);
+      const replay = spawnSync('git',['-C',rootPath,'rebase','-i','--onto',upstreamRevision,rollingWorkerContext.baseCommit],
+        {encoding:'utf8',env:{...process.env,GIT_SEQUENCE_EDITOR:'true',GIT_EDITOR:'true'}});
+      assert.equal(replay.status,1);
+      const inspectedCommit = execFileSync('git',['-C',rootPath,'show','REBASE_HEAD','--','fixture.ts','fixture.test.ts'],{encoding:'utf8'});
+      assert.ok(inspectedCommit.includes('value: number = 2'));
+      fs.writeFileSync(path.join(rootPath,'fixture.ts'),'export const value: number = 2; // upstream context\n');
+      execFileSync('git',['-C',rootPath,'add','fixture.ts']);
+      execFileSync('git',['-C',rootPath,'rebase','--continue'],{env:{...process.env,GIT_EDITOR:'true'}});
+      const repairedRevision = execFileSync('git',['-C',rootPath,'rev-parse','HEAD'],{encoding:'utf8'}).trim();
+      const repairStartedAt = new Date().toISOString();
+      const repairOutput = execFileSync(process.execPath,['--test','--test-reporter=tap','fixture.test.ts'],{cwd:rootPath,encoding:'utf8',env:processEnv});
+      const repairCompletedAt = new Date().toISOString();
+      assert.match(repairOutput,/# pass 2\n/u);assert.match(repairOutput,/# fail 0\n/u);
+      fs.writeFileSync(path.join(rootPath,'tmp/focused.txt'),repairOutput);
+      const repairedRollingWorkerSubmissionV1: RollingWorkerSubmissionV1 = {...rollingWorkerSubmissionV1,generation:repairAllocation.assignment.generation,
+        graphDigest:repairRollingWorkerContext.lease.graphDigest,revision:repairedRevision,baseCommit:upstreamRevision,
+        proof:[{operation:'test',evidence:{...obligationEvidence,revision:repairedRevision,startedAt:repairStartedAt,completedAt:repairCompletedAt,
+          inputs:obligationEvidence.inputs.map(input=>({path:input.path,digest:inputDigest(rootPath,input.path)}))}}]};
+      await rollingCampaignStore.submit('worker-fixture',repairAllocation.assignment.id,repairAllocation.assignment.generation,repairedRollingWorkerSubmissionV1);
+      await assert.rejects(rollingCampaignStore.requestReview('worker-fixture',repairAllocation.assignment.id,repairAllocation.assignment.generation,repairedRevision,'different-reviewer'),/original reviewer/);
+      const repairedReview = await rollingCampaignStore.requestReview('worker-fixture',repairAllocation.assignment.id,repairAllocation.assignment.generation,repairedRevision,'original-reviewer');
+      assert.notEqual(repairedReview.request.id,acceptedRollingStoredReview.request.id);
+      await rollingCampaignStore.recordReviewOutcome('worker-fixture',repairedReview.request.id,'original-reviewer',{...acceptedRollingReviewOutcomeV1,
+        reviewId:repairedReview.request.id,revision:repairedRevision,completedAt:new Date().toISOString()});
+      const repairedClaim = await rollingCampaignStore.claimIncrement('worker-fixture',repairedReview.request.id);
+      const repairedIntent = await rollingCampaignStore.beginIncrementRebase('worker-fixture',repairedReview.request.id);
+      await rollingCampaignStore.recordIncrementRebase('worker-fixture',repairedReview.request.id,rebasePreparedRollingIncrement(rootPath,repairedIntent));
+      await rollingCampaignStore.recordIncrementProof('worker-fixture',repairedReview.request.id,repairedRollingWorkerSubmissionV1);
+      prepareCoordinatorIncrementCheckout(root,'campaign/worker-fixture');
+      assert.equal((await rollingCampaignStore.publishIncrement('worker-fixture',repairedReview.request.id)).result.state,'PUBLISHED');
+      const retainedReviews = await new RollingCampaignStore(pool,projectId).reviews('worker-fixture',repairAllocation.assignment.id);
+      assert.equal(retainedReviews.length,2);
+      assert.ok(retainedReviews.every(review=>review.outcome?.decision === 'accepted' && review.request.reviewerSessionId === 'original-reviewer'));
+      assert.equal((await pool.query<Record<string,unknown>>('SELECT count(*)::integer AS count FROM ponytail_index.rolling_increment_delivery_v1 WHERE project_id=$1 AND increment_id=$2',[projectId,repairedClaim.id])).rows[0]?.count,1);
+      return;
+    }
     // Traceability: verifies REQ-ROLLING-REVIEW
     // This controlled Arc proves ownership/reviewer continuity, not native code correction.
     const rejectedRollingStoredReview = await rollingCampaignStore.requestReview('worker-fixture',rollingAllocationResult.assignment.id,generation,revision,'original-reviewer');
@@ -1413,3 +1495,8 @@ test('real PostgreSQL retains inspected conflict continuation across restart wit
 // Traceability: verifies REQ-ROLLING-REVIEW
 test('real PostgreSQL routes substantive integration conflicts to retained worker without changing accepted review',
  t=>runRollingReviewScenario(t,{decision:'accepted',mode:'manual',conflictRepair:true}));
+
+// Traceability: verifies REQ-ROLLING-REVIEW
+// Traceability: verifies REQ-ROLLING-PUBLICATION
+test('substantive integration repair retains worker and reviewer through fresh proof and publication',
+ t=>runRollingWorkerScenario(t,'protocol','collection',false,true));

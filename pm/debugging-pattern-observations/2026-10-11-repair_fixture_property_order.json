@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-10-11-repair_fixture_property_order",
+  "recorded_at": "2026-10-11T14:43:30-07:00",
+  "source_references": [
+    "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/obligations.json#OBL-53"
+  ],
+  "context": {
+    "languages": [
+      "typescript"
+    ],
+    "frameworks": [],
+    "components": [
+      "controlled increment repair Arc"
+    ],
+    "affected_boundaries": [
+      "worker context, focused QA and authoritative coordinator graph"
+    ],
+    "code_references": [
+      "tests/rolling-campaign-store.integration.test.ts"
+    ]
+  },
+  "observed_behavior": "Structurally equal repair records failed the instruction inclusion assertion.",
+  "expected_behavior": "The complete controlled repair Arc preserves the original worker and reviewer, refreshes proof and publishes exactly one corrected increment.",
+  "causal_mechanism": "The fixture serialized the expected record in insertion order rebase/reference, while the reconstructed worker context used reference/rebase.",
+  "anti_pattern": {
+    "structural_description": "Comparing JSON byte order where the contract defines record fields without key-order semantics.",
+    "why_it_fails": "The fixture violates the declared boundary before it can establish the intended end-to-end outcome."
+  },
+  "correct_pattern": {
+    "required_invariant": "Structural equality must establish the data relationship; rendered inclusion uses the actual rendered context.",
+    "implementation_description": "Keep the existing deep equality check and test inclusion against serialization of the actual worker-context record."
+  },
+  "applicability_conditions": [
+    "A controlled fixture composes review, conflict repair, retained-worker renewal and publication."
+  ],
+  "known_non_matches": [],
+  "confirmation_evidence": [
+    "The focused Arc failed at the named boundary; the final corrected Arc passes with zero failures or skips.",
+    "The product boundary remained unchanged while the fixture was corrected."
+  ],
+  "regression_proofs": [
+    "tests/rolling-campaign-store.integration.test.ts: substantive integration repair retains worker and reviewer through fresh proof and publication"
+  ]
+}

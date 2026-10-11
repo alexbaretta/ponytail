@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-10-11-repair_fixture_coordinator_checkpoint",
+  "recorded_at": "2026-10-11T14:43:30-07:00",
+  "source_references": [
+    "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/obligations.json#OBL-53"
+  ],
+  "context": {
+    "languages": [
+      "typescript"
+    ],
+    "frameworks": [],
+    "components": [
+      "controlled increment repair Arc"
+    ],
+    "affected_boundaries": [
+      "worker context, focused QA and authoritative coordinator graph"
+    ],
+    "code_references": [
+      "tests/rolling-campaign-store.integration.test.ts"
+    ]
+  },
+  "observed_behavior": "Publication was refused with stale coordinator graph after the repaired candidate had been accepted.",
+  "expected_behavior": "The complete controlled repair Arc preserves the original worker and reviewer, refreshes proof and publishes exactly one corrected increment.",
+  "causal_mechanism": "The fixture changed the coordinator HEAD by switching to the advanced campaign branch only after claiming integration under the previous graph digest.",
+  "anti_pattern": {
+    "structural_description": "A fixture mutates an authoritative graph input after freezing the generation and claim that consume it.",
+    "why_it_fails": "The fixture violates the declared boundary before it can establish the intended end-to-end outcome."
+  },
+  "correct_pattern": {
+    "required_invariant": "Renew worker and integration authority only after reconciling the current coordinator checkpoint.",
+    "implementation_description": "Switch to the advanced configured campaign branch and reconcile its graph before allocating the retained worker generation and requesting the corrected review."
+  },
+  "applicability_conditions": [
+    "A controlled fixture composes review, conflict repair, retained-worker renewal and publication."
+  ],
+  "known_non_matches": [],
+  "confirmation_evidence": [
+    "The focused Arc failed at the named boundary; the final corrected Arc passes with zero failures or skips.",
+    "The product boundary remained unchanged while the fixture was corrected."
+  ],
+  "regression_proofs": [
+    "tests/rolling-campaign-store.integration.test.ts: substantive integration repair retains worker and reviewer through fresh proof and publication"
+  ]
+}
