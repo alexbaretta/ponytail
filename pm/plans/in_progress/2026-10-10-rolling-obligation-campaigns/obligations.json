@@ -11625,6 +11625,183 @@
       },
       "assessor": "coordinator",
       "reason": "Inspect and discharge the started worker suspension obligation using its frozen standalone binding and actual native application evidence."
+    },
+    {
+      "id": "CHECKPOINT-102",
+      "predecessorId": "CHECKPOINT-101",
+      "baselineId": "BASELINE-14",
+      "kind": "disturbance",
+      "selectedIds": [],
+      "registeredIds": [],
+      "certificateIds": [],
+      "invalidatedIds": [
+        "CERT-67",
+        "CERT-68"
+      ],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": null,
+      "assessor": "coordinator",
+      "reason": "Committed worker resumption and binding changes altered aggregate certificate inputs; preserve explicit invalidation before renewal."
+    },
+    {
+      "id": "CHECKPOINT-103",
+      "predecessorId": "CHECKPOINT-102",
+      "baselineId": "BASELINE-14",
+      "kind": "neutral",
+      "selectedIds": [
+        "OBL-107",
+        "OBL-108",
+        "OBL-22",
+        "OBL-23",
+        "OBL-24",
+        "OBL-25",
+        "OBL-26",
+        "OBL-27",
+        "OBL-28",
+        "OBL-29",
+        "OBL-30",
+        "OBL-31",
+        "OBL-32",
+        "OBL-33",
+        "OBL-34",
+        "OBL-35",
+        "OBL-36",
+        "OBL-37",
+        "OBL-38",
+        "OBL-39",
+        "OBL-40",
+        "OBL-41",
+        "OBL-42",
+        "OBL-43",
+        "OBL-70",
+        "OBL-71",
+        "OBL-73",
+        "OBL-74",
+        "OBL-75",
+        "OBL-76",
+        "OBL-101",
+        "OBL-109",
+        "OBL-110",
+        "OBL-111",
+        "OBL-112",
+        "OBL-83",
+        "OBL-84",
+        "OBL-85",
+        "OBL-86",
+        "OBL-87",
+        "OBL-88",
+        "OBL-89",
+        "OBL-90",
+        "OBL-91",
+        "OBL-92",
+        "OBL-93",
+        "OBL-94",
+        "OBL-95",
+        "OBL-96",
+        "OBL-97",
+        "OBL-98",
+        "OBL-99",
+        "OBL-100",
+        "OBL-102",
+        "OBL-103",
+        "OBL-104",
+        "OBL-105",
+        "OBL-106",
+        "OBL-77",
+        "OBL-78",
+        "OBL-79",
+        "OBL-80",
+        "OBL-81",
+        "OBL-82",
+        "OBL-50",
+        "OBL-44",
+        "OBL-45",
+        "OBL-46"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "CERT-69"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": {
+        "obligationId": "OBL-112",
+        "operations": [
+          "assess"
+        ],
+        "deliverable": "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/worker-resumption-component-renewal.md"
+      },
+      "assessor": "coordinator",
+      "reason": "Complete renewal of existing assessments before accepting the started native worker resumption obligation."
+    },
+    {
+      "id": "CHECKPOINT-104",
+      "predecessorId": "CHECKPOINT-103",
+      "baselineId": "BASELINE-14",
+      "kind": "neutral",
+      "selectedIds": [
+        "OBL-47"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "CERT-70"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": {
+        "obligationId": "OBL-47",
+        "operations": [
+          "inspect"
+        ],
+        "deliverable": "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/live-worker-resumption-completion.md"
+      },
+      "assessor": "coordinator",
+      "reason": "Inspect and discharge the started worker resumption obligation using its frozen standalone binding and actual native application evidence."
     }
   ]
 }
