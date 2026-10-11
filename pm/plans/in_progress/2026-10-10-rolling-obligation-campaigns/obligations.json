@@ -14766,6 +14766,45 @@
       },
       "assessor": "coordinator",
       "reason": "Required proof-packet ownership for completing started OBL-55; preserve all historical certificates and claim no discharge at this scope checkpoint."
+    },
+    {
+      "id": "CHECKPOINT-160",
+      "predecessorId": "CHECKPOINT-159",
+      "baselineId": "BASELINE-16",
+      "kind": "neutral",
+      "selectedIds": [
+        "OBL-55"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "CERT-112"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": {
+        "obligationId": "OBL-55",
+        "operations": [
+          "inspect"
+        ],
+        "deliverable": "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/increment-push-recovery.md"
+      },
+      "assessor": "coordinator",
+      "reason": "Discharge started atomic push recovery without renewing stale prior evidence or closing other delivery/acceptance gates."
     }
   ]
 }
