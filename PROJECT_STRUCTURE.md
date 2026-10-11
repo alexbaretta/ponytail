@@ -85,6 +85,9 @@ while project-wide management records remain under `pm/`.
 - `skills/plan-execution/scripts/tasklet-metadata.ts` owns physical V1–V4
   tasklet metadata readers and shared external dependency identities; its adjacent
   JavaScript runtime is compiler-generated.
+- `src/campaign-report.ts` owns typed V1 report construction, unknown input
+  validation and Git repository identity; its adjacent runtime is generated.
+  The inventory V2/V3 reader registry remains in `src/campaign-census.js`.
 - `src/campaign-graph.ts` owns typed campaign graph projection and prerequisite
   blocking over validated plan contents; its adjacent runtime is generated.
 - `src/campaign-plan-contents.ts` owns typed sprint/tasklet content validation,

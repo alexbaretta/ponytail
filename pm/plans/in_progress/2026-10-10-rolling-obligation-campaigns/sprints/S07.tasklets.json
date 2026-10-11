@@ -131,6 +131,12 @@
         "S07-F21"
       ],
       "validation_tasklet": "S07-F22-T04"
+    },
+    "S07-F23": {
+      "depends_on": [
+        "S07-F22"
+      ],
+      "validation_tasklet": "S07-F23-T05"
     }
   },
   "tasklets": {
@@ -2395,6 +2401,62 @@
       "affinity": [],
       "risk": "normal",
       "feature": "S07-F22",
+      "planned_paths": []
+    },
+    "S07-F23-T01": {
+      "depends_on": [],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F23",
+      "planned_paths": [
+        "src/campaign-report.ts"
+      ]
+    },
+    "S07-F23-T02": {
+      "depends_on": [
+        "S07-F23-T01"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F23",
+      "planned_paths": [
+        "src/campaign-report.ts",
+        "src/campaign-census.js"
+      ]
+    },
+    "S07-F23-T03": {
+      "depends_on": [],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F23",
+      "planned_paths": [
+        "tests/campaign-report.test.ts"
+      ]
+    },
+    "S07-F23-T04": {
+      "depends_on": [],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F23",
+      "planned_paths": [
+        "src/campaign-report.js",
+        "scripts/build-runtime.ts",
+        "AGENTS.md",
+        "PROJECT_STRUCTURE.md",
+        ".agents/config/project/traceability.json",
+        "pm/requirements/traceability.generated.md"
+      ]
+    },
+    "S07-F23-T05": {
+      "depends_on": [
+        "S07-F23-T01",
+        "S07-F23-T02",
+        "S07-F23-T03",
+        "S07-F23-T04"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F23",
       "planned_paths": []
     }
   },
