@@ -6,7 +6,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
-import { humanInventory, buildRepositoryInventory, readCampaignReportV2, readCampaignReportV3, type CampaignInventoryV2, type CampaignInventoryV3 } from '../src/campaign-inventory.js';
+import { listCampaigns, humanInventory, buildRepositoryInventory, readCampaignReportV2, readCampaignReportV3, type CampaignInventoryV2, type CampaignInventoryV3 } from '../src/campaign-inventory.js';
 import { CampaignError, type CampaignManagementConfigV1 } from '../src/campaign-configuration.js';
 
 function inventory(): CampaignInventoryV3 {
@@ -62,6 +62,8 @@ test('typed inventory construction retains invalid metadata identity and unrelat
   assert.equal(campaignInventoryV3.invalidPlans[0]?.diagnostics[0]?.recordId, 42);
   assert.deepEqual(campaignInventoryV3.unmanagedPlans, [{ path: 'pm/plans/legacy/plan.md' }]);
   assert.equal(campaignInventoryV3.invocation.command, 'list');
+  assert.throws(() => listCampaigns(root, campaignManagementConfigV1), error =>
+    error instanceof CampaignError && error.code === 'CAMPAIGN_INVENTORY_INVALID' && error.status === 1);
 });
 
 test('typed inventory presentation preserves complete V2/V3 diagnostic output and inputs', () => {

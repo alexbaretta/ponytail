@@ -44,3 +44,7 @@ Known operation migration obligation:
 [OBL-73](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-73)
 references the canonical condition and discharge criterion for inventory
 presentation. It is one bounded operation, not the remaining migration scope.
+
+[OBL-74](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-74)
+references the canonical typed campaign listing condition and its discharge
+criterion, including configured lifecycle normalization and active membership.

@@ -16,7 +16,7 @@ const { CampaignPlanMetadataReaders, metadataBlocks,
 const { listPlanSourceFiles, linkedPlanFiles } = require('./campaign-plan-sources');
 const { campaignGraph } = require('./campaign-graph');
 const { buildReport, readCampaignReportV1, humanReport } = require('./campaign-report');
-const { humanInventory, buildRepositoryInventory, campaignDiagnostic, readCampaignReportV2, readCampaignReportV3, CampaignReportReaders } = require('./campaign-inventory');
+const { listCampaigns, humanInventory, buildRepositoryInventory, campaignDiagnostic, readCampaignReportV2, readCampaignReportV3, CampaignReportReaders } = require('./campaign-inventory');
 const { discoverCampaign, resolveCampaignRoot, resolveCampaignScope } = require('./campaign-scope');
 
 const CAMPAIGN_STATUSES = ['active', 'pending', 'closed', 'deferred', 'rejected'];
@@ -28,26 +28,6 @@ const REPORT_TABLE_FLAGS = Object.freeze({
   '--sprint-table': ['sprintTable', true],
   '--no-sprint-table': ['sprintTable', false],
 });
-
-function campaignStatus(inventory, config, campaign) {
-  if (inventory.activeCampaigns.some(({ rootPlanId }) => rootPlanId === campaign.rootPlanId)) return 'active';
-  const root = inventory.plans.find(({ id }) => id === campaign.rootPlanId);
-  const statuses = {
-    [config.lifecycle.roles.initial]: 'pending',
-    [config.lifecycle.roles.successfulCompletion]: 'closed',
-    [config.lifecycle.roles.deferred]: 'deferred',
-    [config.lifecycle.roles.rejected]: 'rejected',
-  };
-  return statuses[root.lifecycle];
-}
-
-function listCampaigns(repositoryRoot, config, status = 'active') {
-  const inventory = buildRepositoryInventory(repositoryRoot, config, 'list');
-  if (!inventory.valid) dataError('CAMPAIGN_INVENTORY_INVALID', 'repository campaign inventory is invalid');
-  return inventory.campaigns
-    .map((campaign) => ({ rootPlanId: campaign.rootPlanId, status: campaignStatus(inventory, config, campaign) }))
-    .filter((campaign) => campaign.status === status);
-}
 
 function markdownFiles(directory) {
   const files = [];

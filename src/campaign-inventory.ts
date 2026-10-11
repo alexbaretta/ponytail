@@ -33,6 +33,10 @@ export interface CampaignInventoryV2 extends CampaignInventoryRecords {
 export interface CampaignInventoryV3 extends CampaignInventoryRecords {
   readonly schemaVersion: 3; readonly invocation: { readonly command: 'list' | 'report' | 'validate' };
 }
+export type CampaignStatus = 'active' | 'pending' | 'closed' | 'deferred' | 'rejected';
+export interface CampaignListEntry {
+  readonly rootPlanId: string; readonly status: CampaignStatus;
+}
 interface CampaignInventoryEntry {
   readonly plan: CampaignPlanV1 | CampaignPlanV2 | CampaignPlanV3; readonly candidate: CampaignPlanCandidate;
 }
@@ -356,4 +360,31 @@ export function humanInventory(campaignInventory: CampaignInventoryV2 | Campaign
     lines.push('Unmanaged legacy plans:', ...campaignInventory.unmanagedPlans.map((plan) => `- ${plan.path}`));
   }
   return `${lines.join('\n')}\n`;
+}
+
+function campaignStatus(campaignInventoryV3: CampaignInventoryV3, campaignManagementConfigV1: CampaignManagementConfigV1,
+  campaignInventoryCampaign: CampaignInventoryCampaign): CampaignStatus | undefined {
+  if (campaignInventoryV3.activeCampaigns.some(({ rootPlanId }) => rootPlanId === campaignInventoryCampaign.rootPlanId)) return 'active';
+  const campaignInventoryPlan: CampaignInventoryPlan | undefined = campaignInventoryV3.plans.find(({ id }) => id === campaignInventoryCampaign.rootPlanId);
+  if (!campaignInventoryPlan) dataError('CAMPAIGN_INVENTORY_INVALID', 'repository campaign inventory is invalid');
+  const statuses: Readonly<Record<string, CampaignStatus>> = {
+    [campaignManagementConfigV1.lifecycle.roles.initial]: 'pending',
+    [campaignManagementConfigV1.lifecycle.roles.successfulCompletion]: 'closed',
+    [campaignManagementConfigV1.lifecycle.roles.deferred]: 'deferred',
+    [campaignManagementConfigV1.lifecycle.roles.rejected]: 'rejected',
+  };
+  return statuses[campaignInventoryPlan.lifecycle];
+}
+
+// Traceability: implements REQ-PONYTAIL-STATIC-LANGUAGE
+export function listCampaigns(repositoryRoot: string, campaignManagementConfigV1: CampaignManagementConfigV1,
+  requestedCampaignStatus: CampaignStatus = 'active'): readonly CampaignListEntry[] {
+  const campaignInventoryV3: CampaignInventoryV3 = buildRepositoryInventory(repositoryRoot, campaignManagementConfigV1, 'list');
+  if (!campaignInventoryV3.valid) dataError('CAMPAIGN_INVENTORY_INVALID', 'repository campaign inventory is invalid');
+  const campaignListEntries: CampaignListEntry[] = [];
+  for (const campaignInventoryCampaign of campaignInventoryV3.campaigns) {
+    const selectedCampaignStatus: CampaignStatus | undefined = campaignStatus(campaignInventoryV3, campaignManagementConfigV1, campaignInventoryCampaign);
+    if (selectedCampaignStatus === requestedCampaignStatus) campaignListEntries.push({ rootPlanId: campaignInventoryCampaign.rootPlanId, status: selectedCampaignStatus });
+  }
+  return campaignListEntries;
 }

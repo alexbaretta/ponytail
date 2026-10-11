@@ -160,7 +160,7 @@ Requirement: [pm/requirements/campaign-orchestration.md](campaign-orchestration.
 
 - implementation: supports [hooks/plan-input.js:6](../../hooks/plan-input.js#L6)
 - implementation: implements [skills/plan-execution/scripts/ready-sprints.ts:80](../../skills/plan-execution/scripts/ready-sprints.ts#L80)
-- implementation: implements [src/campaign-inventory.ts:105](../../src/campaign-inventory.ts#L105)
+- implementation: implements [src/campaign-inventory.ts:109](../../src/campaign-inventory.ts#L109)
 - implementation: implements [src/campaign-orchestration.js:7](../../src/campaign-orchestration.js#L7)
 - implementation: implements [src/campaign-orchestration.js:1016](../../src/campaign-orchestration.js#L1016)
 - implementation: implements [src/campaign-orchestration.js:2322](../../src/campaign-orchestration.js#L2322)
@@ -696,7 +696,8 @@ Requirement: [pm/requirements/rolling-campaigns.md](rolling-campaigns.md)
 Requirement: [pm/requirements/static-language.md](static-language.md)
 
 - implementation: implements [skills/plan-execution/scripts/obligations.ts:286](../../skills/plan-execution/scripts/obligations.ts#L286)
-- implementation: implements [src/campaign-inventory.ts:340](../../src/campaign-inventory.ts#L340)
+- implementation: implements [src/campaign-inventory.ts:344](../../src/campaign-inventory.ts#L344)
+- implementation: implements [src/campaign-inventory.ts:379](../../src/campaign-inventory.ts#L379)
 - implementation: implements [src/rolling-campaign.ts:137](../../src/rolling-campaign.ts#L137)
 - implementation: implements [src/rolling-codex.ts:139](../../src/rolling-codex.ts#L139)
 - unit-test: verifies [tests/rolling-campaign-store.test.ts:10](../../tests/rolling-campaign-store.test.ts#L10)

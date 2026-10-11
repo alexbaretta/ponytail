@@ -12,6 +12,7 @@ exports.readCampaignReportV3 = readCampaignReportV3;
 exports.campaignDiagnostic = campaignDiagnostic;
 exports.buildRepositoryInventory = buildRepositoryInventory;
 exports.humanInventory = humanInventory;
+exports.listCampaigns = listCampaigns;
 const node_fs_1 = __importDefault(require("node:fs"));
 const node_path_1 = __importDefault(require("node:path"));
 const campaign_configuration_js_1 = require("./campaign-configuration.js");
@@ -339,4 +340,30 @@ function humanInventory(campaignInventory, worktree) {
         lines.push('Unmanaged legacy plans:', ...campaignInventory.unmanagedPlans.map((plan) => `- ${plan.path}`));
     }
     return `${lines.join('\n')}\n`;
+}
+function campaignStatus(campaignInventoryV3, campaignManagementConfigV1, campaignInventoryCampaign) {
+    if (campaignInventoryV3.activeCampaigns.some(({ rootPlanId }) => rootPlanId === campaignInventoryCampaign.rootPlanId))
+        return 'active';
+    const campaignInventoryPlan = campaignInventoryV3.plans.find(({ id }) => id === campaignInventoryCampaign.rootPlanId);
+    if (!campaignInventoryPlan)
+        (0, campaign_configuration_js_1.dataError)('CAMPAIGN_INVENTORY_INVALID', 'repository campaign inventory is invalid');
+    const statuses = {
+        [campaignManagementConfigV1.lifecycle.roles.initial]: 'pending',
+        [campaignManagementConfigV1.lifecycle.roles.successfulCompletion]: 'closed',
+        [campaignManagementConfigV1.lifecycle.roles.deferred]: 'deferred',
+        [campaignManagementConfigV1.lifecycle.roles.rejected]: 'rejected',
+    };
+    return statuses[campaignInventoryPlan.lifecycle];
+}
+function listCampaigns(repositoryRoot, campaignManagementConfigV1, requestedCampaignStatus = 'active') {
+    const campaignInventoryV3 = buildRepositoryInventory(repositoryRoot, campaignManagementConfigV1, 'list');
+    if (!campaignInventoryV3.valid)
+        (0, campaign_configuration_js_1.dataError)('CAMPAIGN_INVENTORY_INVALID', 'repository campaign inventory is invalid');
+    const campaignListEntries = [];
+    for (const campaignInventoryCampaign of campaignInventoryV3.campaigns) {
+        const selectedCampaignStatus = campaignStatus(campaignInventoryV3, campaignManagementConfigV1, campaignInventoryCampaign);
+        if (selectedCampaignStatus === requestedCampaignStatus)
+            campaignListEntries.push({ rootPlanId: campaignInventoryCampaign.rootPlanId, status: selectedCampaignStatus });
+    }
+    return campaignListEntries;
 }

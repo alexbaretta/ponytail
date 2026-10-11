@@ -42,3 +42,13 @@ empty valid inventories, then existing census CLI proof. Observe exact summaries
 both diagnostic levels, unmanaged references, input preservation and final
 newline through the generated typed runtime. Strict build and unchanged TSTS
 must pass. This proves this operation only; whole-language acceptance remains open.
+
+### Acceptance STATIC-CAMPAIGN-LISTING
+
+Demonstrates
+[OBL-74](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-74)
+through STATIC-RUNTIME. Execute the existing campaign listing CLI proof against
+the generated typed owner. Observe all five normalized lifecycle filters, active
+membership precedence and unchanged output. Verify invalid inventory rejection,
+strict build and unchanged TSTS. This demonstrates listing only; activation,
+dispatch replacement and whole-language acceptance remain open.
