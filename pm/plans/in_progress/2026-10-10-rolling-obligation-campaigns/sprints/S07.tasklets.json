@@ -35,6 +35,12 @@
         "S07-F05"
       ],
       "validation_tasklet": "S07-F06-T13"
+    },
+    "S07-F07": {
+      "depends_on": [
+        "S07-F06"
+      ],
+      "validation_tasklet": "S07-F07-T05"
     }
   },
   "tasklets": {
@@ -821,6 +827,67 @@
         "tests/plan-input-queue.test.ts",
         "tests/plan-input.test.js"
       ]
+    },
+    "S07-F07-T01": {
+      "depends_on": [],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F07",
+      "planned_paths": [
+        "src/plan-input-command.ts"
+      ]
+    },
+    "S07-F07-T02": {
+      "depends_on": [
+        "S07-F07-T01"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F07",
+      "planned_paths": [
+        "src/plan-input-command.ts"
+      ]
+    },
+    "S07-F07-T03": {
+      "depends_on": [
+        "S07-F07-T02"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F07",
+      "planned_paths": [
+        "tests/plan-input-command.test.ts",
+        "tests/plan-input.test.js"
+      ]
+    },
+    "S07-F07-T04": {
+      "depends_on": [
+        "S07-F07-T03"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F07",
+      "planned_paths": [
+        "scripts/build-runtime.ts",
+        "src/plan-input-command.js",
+        "src/plan-input.js",
+        "AGENTS.md",
+        "PROJECT_STRUCTURE.md",
+        ".agents/config/project/traceability.json",
+        "pm/requirements/traceability.generated.md"
+      ]
+    },
+    "S07-F07-T05": {
+      "depends_on": [
+        "S07-F07-T01",
+        "S07-F07-T02",
+        "S07-F07-T03",
+        "S07-F07-T04"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F07",
+      "planned_paths": []
     }
   },
   "external_depends_on": {}

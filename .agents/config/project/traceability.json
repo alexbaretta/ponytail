@@ -900,6 +900,16 @@
       "class": "unit-test",
       "path": "tests/plan-input-queue.test.ts",
       "locator": "text"
+    },
+    {
+      "class": "implementation",
+      "path": "src/plan-input-command.ts",
+      "locator": "text"
+    },
+    {
+      "class": "unit-test",
+      "path": "tests/plan-input-command.test.ts",
+      "locator": "text"
     }
   ],
   "entities": [],
@@ -983,6 +993,10 @@
     {
       "path": "src/plan-input-queue.js",
       "sourcePath": "src/plan-input-queue.ts"
+    },
+    {
+      "path": "src/plan-input-command.js",
+      "sourcePath": "src/plan-input-command.ts"
     }
   ],
   "reverseViewPath": "pm/requirements/traceability.generated.md",

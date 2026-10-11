@@ -7,7 +7,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
-const { claim, enqueue, entries, main, parseCli } = require('../src/plan-input');
+const { claim, enqueue, entries, main } = require('../src/plan-input');
 
 function repository() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ponytail-plan-input-'));
@@ -36,17 +36,6 @@ function campaignRepository() {
   fs.writeFileSync(path.join(plans, 'child', 'plan.md'), '# Child\n\nPlan ID: child\nStatus: in_progress\n\n[Parent](../root/plan.md)\n<!-- ponytail-plan-campaign\n{"schemaVersion":1,"id":"child","parent_plan_id":"root"}\n-->\n');
   return root;
 }
-
-test('CLI grammar preserves multiword prompts and validates lifecycle commands', () => {
-  assert.deepEqual(parseCli(['plan', '--', 'a', 'new', 'bug']), { command: 'enqueue', plan: 'plan', prompt: 'a new bug' });
-  assert.deepEqual(parseCli(['coordinate', 'plan']), { command: 'coordinate', plan: 'plan' });
-  assert.deepEqual(parseCli(['release', 'plan']), { command: 'release', plan: 'plan' });
-  assert.deepEqual(parseCli(['claim', 'plan', '--json']), { command: 'claim', plan: 'plan', json: true });
-  assert.deepEqual(parseCli(['complete', 'plan', 'id', '--record', 'pm/requirements/index.md']), {
-    command: 'complete', plan: 'plan', id: 'id', records: ['pm/requirements/index.md'],
-  });
-  assert.throws(() => parseCli(['complete', 'plan', 'id']), /usage/);
-});
 
 test('coordinator lifecycle commands validate campaign membership', (context) => {
   const root = campaignRepository();
