@@ -81,7 +81,7 @@ services. `PROJECT_STRUCTURE.md` is authoritative for that boundary.
 - Campaign dependency focused proof: `node --test dist/tests/campaign-dependencies.test.js
   dist/tests/tasklet-statuses.test.js tests/campaign-census.test.js tests/ready-tasklets.test.js`.
 - Campaign scope focused proof: `node --test dist/tests/campaign-scope.test.js
-  tests/campaign-census.test.js tests/plan-input.test.js`.
+  tests/campaign-census.test.js dist/tests/plan-input.test.js`.
 - Unit-test command families:
   - Node focused: `node --test [--test-name-pattern=<pattern>] <test-files>`.
   - Node full: `npm test`.
@@ -94,7 +94,7 @@ services. `PROJECT_STRUCTURE.md` is authoritative for that boundary.
 - Campaign source discovery focused proof: `node --test dist/tests/campaign-plan-sources.test.js tests/campaign-census.test.js tests/project-index.test.js`.
 - Campaign plan metadata focused proof: `node --test dist/tests/campaign-plan-metadata.test.js tests/campaign-census.test.js tests/obligations.test.js tests/obligation-execution.test.js`.
 - Campaign configuration focused proof: `node --test dist/tests/campaign-configuration.test.js tests/campaign-census.test.js tests/campaign-census-format.test.js`.
-- Plan-input queue focused proof: `node --test dist/tests/plan-input-queue.test.js dist/tests/plan-input-command.test.js tests/plan-input.test.js tests/plan-input-hooks.test.js`; the CLI/hook tests still await language migration.
+- Plan-input queue focused proof: `node --test dist/tests/plan-input-queue.test.js dist/tests/plan-input-command.test.js dist/tests/plan-input.test.js tests/plan-input-hooks.test.js`; the hook tests still await language migration.
 - Project database options focused proof: `node --test dist/tests/project-index-database.test.js`.
 - Rolling campaign store focused proof: `node --test dist/tests/rolling-campaign-store.test.js
   dist/tests/rolling-campaign-store.integration.test.js`; uses isolated project rows in

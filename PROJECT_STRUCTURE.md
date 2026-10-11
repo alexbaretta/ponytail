@@ -81,8 +81,9 @@ while project-wide management records remain under `pm/`.
 - `src/` owns non-script runtime implementations dispatched by user-facing
   CLI entrypoints. `src/pm-pdf.py` owns configured linked-Markdown PDF
   rendering. `src/plan-input-queue.ts` owns the durable plan-input queue contract and
-  lifecycle; its `.js` runtime is compiler-generated. `src/plan-input.js` retains
-  the legacy campaign CLI adapter until its prerequisites are migrated.
+  lifecycle; its `.js` runtime is compiler-generated. `src/plan-input.ts` owns
+  the plan-input CLI adapter over typed campaign scope and queue operations;
+  its `.js` launch path is compiler-generated.
   `src/plan-input-command.ts` owns its typed command grammar; its `.js` runtime
   is compiler-generated. `src/campaign-census.js` owns campaign configuration and
   plan metadata readers, scoped campaign discovery and validation,

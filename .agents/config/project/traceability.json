@@ -363,12 +363,12 @@
     },
     {
       "class": "implementation",
-      "path": "src/plan-input.js",
+      "path": "src/plan-input.ts",
       "locator": "text"
     },
     {
       "class": "unit-test",
-      "path": "tests/plan-input.test.js",
+      "path": "tests/plan-input.test.ts",
       "locator": "text"
     },
     {
@@ -1089,6 +1089,10 @@
     {
       "path": ".openclaw/skills/plan-execution/scripts/tasklet-statuses.js",
       "sourcePath": "skills/plan-execution/scripts/tasklet-statuses.ts"
+    },
+    {
+      "path": "src/plan-input.js",
+      "sourcePath": "src/plan-input.ts"
     }
   ],
   "reverseViewPath": "pm/requirements/traceability.generated.md",

@@ -14,6 +14,7 @@ const sources: readonly string[] = [
   'src/project-index-database.ts',
   'src/plan-input-queue.ts',
   'src/plan-input-command.ts',
+  'src/plan-input.ts',
   'src/campaign-configuration.ts',
   'src/campaign-plan-metadata.ts',
   'src/campaign-plan-sources.ts',
