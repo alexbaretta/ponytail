@@ -116,7 +116,11 @@ services. `PROJECT_STRUCTURE.md` is authoritative for that boundary.
   preserves configured model/permissions and uses disposable checkouts and
   isolated project records in the existing local PostgreSQL database. Includes
   exact-candidate adversarial rejection and persisted decision recovery after
-  App Server restart; ordinary focused tests use the controlled protocol fixture.
+  App Server restart, plus allocation-to-native-worker attachment and same-session
+  recovery. Ordinary focused tests use the controlled protocol fixture.
+- Rolling worker attachment focused proof: `node --test dist/tests/rolling-worker.test.js
+  dist/tests/rolling-campaign-store.integration.test.js`; actual native provisioning
+  uses the explicit live native acceptance command above.
 - Rolling checkout focused proof: `node --test tests/rolling-worktrees.test.js
   tests/rolling-worktrees.integration.test.js`; all Git worktrees belong to
   disposable test repositories.

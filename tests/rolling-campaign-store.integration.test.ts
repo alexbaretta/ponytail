@@ -16,7 +16,7 @@ import type { ObligationBindingHistoryV1, ObligationBindingRevisionV1 } from '..
 import type { ObligationEvidence } from '../skills/plan-execution/scripts/obligations.js';
 import type { RollingWorkerSubmissionV1 } from '../src/rolling-worker-submission.js';
 import { dispatchRollingReview, collectRollingReview, type RollingReviewOutcomeV1 } from '../src/rolling-review.js';
-import { provisionRollingWorker, attachRollingWorker } from '../src/rolling-worker.js';
+import { provisionRollingWorker, attachRollingWorker, type RollingWorkerInitialization } from '../src/rolling-worker.js';
 import { RollingCodex, type RollingNativeThread } from '../src/rolling-codex.js';
 import { acceptBoundCheckpoint, type ObligationCertificateBindingV1, type ObligationCertificateSubmission,
   type ObligationCertificateBindingRequest } from '../skills/plan-execution/scripts/obligation-certificate-bindings.js';
@@ -496,17 +496,33 @@ for (const reviewScenario of reviewScenarios) {
 
 // Traceability: verifies REQ-ROLLING-WORKERS
 // Traceability: verifies REQ-ROLLING-STATE
-test('worker provisioning fences creation and atomically attaches the native identity and ignored marker', async t => {
+export async function runRollingWorkerProvisionScenario(t: TestContext, mode: 'protocol' | 'native'): Promise<void> {
   const repositoryRoot = path.resolve(__dirname, '../..');
   const pool = new Pool(databaseOptions(repositoryRoot));
   const projectId = crypto.randomUUID();
   const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'rolling-worker-store-')));
   const rollingCampaignStore = new RollingCampaignStore(pool, projectId);
-  const rollingCodex = new RollingCodex({executable:process.execPath,argv:[path.join(__dirname,'fixtures/rolling-codex-server.js')]});
+  let rollingCodex = mode === 'native' ? await RollingCodex.connect()
+    : new RollingCodex({executable:process.execPath,argv:[path.join(__dirname,'fixtures/rolling-codex-server.js')]});
+  let rollingWorkerInitialization: RollingWorkerInitialization | null = null;
+  let provisioningStarted = false;
+  let cleanupSafe = false;
   t.after(async () => {
-    await rollingCodex.close();
-    try {await pool.query('DELETE FROM ponytail_index.project_v1 WHERE project_id=$1',[projectId]);}
-    finally {await pool.end();fs.rmSync(root,{recursive:true,force:true});}
+    try {
+      if (mode === 'native' && provisioningStarted) {
+        assert.ok(rollingWorkerInitialization, 'unknown worker creation retains its checkout and database reservation');
+        const {rollingWorkerCreationV1,rollingTurnStarted} = rollingWorkerInitialization;
+        const rollingNativeTurn = await rollingCodex.readTurn(rollingWorkerCreationV1.threadId,rollingTurnStarted.turn.id);
+        if (rollingNativeTurn.status === 'inProgress') {
+          await rollingCodex.interruptTurn(rollingWorkerCreationV1.threadId,rollingTurnStarted.turn.id);
+          await rollingCodex.waitForTurn(rollingWorkerCreationV1.threadId,rollingTurnStarted.turn.id);
+        }
+        await rollingCodex.archiveThread(rollingWorkerCreationV1.threadId);
+      }
+      await rollingCodex.close();
+      await pool.query('DELETE FROM ponytail_index.project_v1 WHERE project_id=$1',[projectId]);
+      cleanupSafe = true;
+    } finally {await pool.end();if (cleanupSafe) fs.rmSync(root,{recursive:true,force:true});}
   });
   execFileSync('git',['init','-q',root]);
   fs.mkdirSync(path.join(root,'.agents/config/project'),{recursive:true});
@@ -545,8 +561,13 @@ test('worker provisioning fences creation and atomically attaches the native ide
   const rollingAllocationResult = await rollingCampaignStore.allocate('worker-fixture',rollingGraph.digest);
   assert.ok(rollingAllocationResult.assignment && rollingAllocationResult.actionId && rollingAllocationResult.worktree);
   const generation = rollingAllocationResult.assignment.generation;
-  await rollingCodex.initialize();
-  const rollingWorkerInitialization = await provisionRollingWorker(rollingCampaignStore,rollingCodex,'worker-fixture',rollingAllocationResult.actionId,generation);
+  if (mode === 'protocol') await rollingCodex.initialize();
+  else {
+    rollingCodex.on('serverRequest',message => rollingCodex.respondToServer(message.id,{decision:'decline'}));
+    rollingCodex.on('diagnostic',message => t.diagnostic(message.trim()));
+  }
+  provisioningStarted = true;
+  rollingWorkerInitialization = await provisionRollingWorker(rollingCampaignStore,rollingCodex,'worker-fixture',rollingAllocationResult.actionId,generation);
   await assert.rejects(rollingCampaignStore.claimWorkerCreation('worker-fixture',rollingAllocationResult.actionId,generation),/already claimed/);
   await assert.rejects(rollingCampaignStore.recordWorkerCreation('worker-fixture',rollingAllocationResult.actionId,generation,
     {...rollingWorkerInitialization.rollingWorkerCreationV1,sessionId:'foreign'}),/immutable/);
@@ -554,11 +575,29 @@ test('worker provisioning fences creation and atomically attaches the native ide
     {...rollingWorkerInitialization.rollingWorkerCreationV1,sessionId:'foreign'}),/receipt differs/);
   const rollingSessionAttachment = await attachRollingWorker(rollingCampaignStore,rollingCodex,'worker-fixture',rollingAllocationResult.actionId,
     generation,rollingWorkerInitialization);
-  assert.equal(rollingSessionAttachment.sessionId,'session-fixture');
+  assert.equal(rollingSessionAttachment.sessionId,rollingWorkerInitialization.rollingWorkerCreationV1.sessionId);
   assert.equal(rollingSessionAttachment.state,'WORKING');
   assert.equal((await rollingCampaignStore.status('worker-fixture')).assignments[0]?.sessionId,rollingWorkerInitialization.rollingWorkerCreationV1.sessionId);
   assert.deepEqual(await rollingCampaignStore.nextActions('worker-fixture'),[]);
   assert.deepEqual(await rollingCampaignStore.completeWorkerCreation('worker-fixture',rollingAllocationResult.actionId,generation,
     rollingWorkerInitialization.rollingWorkerCreationV1),rollingSessionAttachment);
   assert.equal(execFileSync('git',['-C',rollingAllocationResult.worktree.rootPath,'status','--porcelain'],{encoding:'utf8'}),'');
-});
+  if (mode === 'native') {
+    const {rollingWorkerCreationV1,rollingTurnStarted} = rollingWorkerInitialization;
+    await rollingCodex.close();
+    rollingCodex = await RollingCodex.connect();
+    rollingCodex.on('serverRequest',message => rollingCodex.respondToServer(message.id,{decision:'decline'}));
+    const rollingNativeThread = await rollingCodex.resumeThread(rollingWorkerCreationV1.threadId,rollingWorkerCreationV1.rootPath);
+    assert.equal(rollingNativeThread.thread.sessionId,rollingSessionAttachment.sessionId);
+    assert.equal(rollingNativeThread.cwd,rollingAllocationResult.worktree.rootPath);
+    assert.equal((await rollingCodex.readTurn(rollingNativeThread.thread.id,rollingTurnStarted.turn.id)).status,'completed');
+    const restartedRollingCampaignStore = new RollingCampaignStore(pool,projectId);
+    assert.equal((await restartedRollingCampaignStore.status('worker-fixture')).assignments[0]?.sessionId,rollingNativeThread.thread.sessionId);
+    t.diagnostic(`worker native thread=${rollingNativeThread.thread.id}; session=${rollingNativeThread.thread.sessionId}; checkout=${rollingNativeThread.cwd}; attachment recovered after restart; model=${rollingNativeThread.model}`);
+  }
+}
+
+// Traceability: verifies REQ-ROLLING-WORKERS
+// Traceability: verifies REQ-ROLLING-STATE
+test('worker provisioning fences creation and atomically attaches the native identity and ignored marker',
+ t => runRollingWorkerProvisionScenario(t, 'protocol'));
