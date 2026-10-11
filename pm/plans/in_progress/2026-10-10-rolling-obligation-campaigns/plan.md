@@ -79,6 +79,23 @@ establish acceptance of the converted implementation. S04's uncommitted native
 transport is converted before its implementation tasklet is accepted. See S07
 for migration order, runtime compatibility and compiler/checker gates.
 
+## Work metric
+
+Use the canonical obligation projection as the quantitative work metric:
+discharged obligations divided by the current baseline's obligation inventory,
+with unresolved obligation IDs and gates reported explicitly. Tasklet counts,
+file counts and passing checks are supporting execution evidence and must not
+be presented as a percentage of campaign completion. Do not infer lifecycle
+counts that the authoritative projection does not record.
+
+The current BASELINE-2 declares 21 obligations: 12 inventory obligations and
+9 requirement acceptance gates. At this checkpoint, the canonical projection
+reports 0 satisfied and 21 unresolved, with no accepted discharge certificates.
+Current language migration contributes to OBL-21; completed migration slices
+are evidence toward that obligation, not separate discharged obligations.
+Refresh this assessment using the configured obligation status operation when
+reporting progress; do not alter historical baselines to improve the metric.
+
 ## Acceptance
 
 Every requirement below has implemented behavior, adequate unit proof,
