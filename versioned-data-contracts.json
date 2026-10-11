@@ -3,6 +3,18 @@
   "schemaVersion": 1,
   "families": [
     {
+      "id": "obligation-certificate-binding",
+      "implementation": {
+        "workspace": "ponytail",
+        "module": "skills/plan-execution/scripts/obligation-certificate-bindings.ts",
+        "readerRegistryExport": "ObligationCertificateBindingReaders"
+      },
+      "currentVersion": "V1",
+      "versions": ["V1"],
+      "supportedReadVersions": ["V1"],
+      "supportedDowngradeVersions": []
+    },
+    {
       "id": "rolling-worker-submission",
       "implementation": {
         "workspace": "ponytail",

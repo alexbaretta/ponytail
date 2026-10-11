@@ -163,3 +163,9 @@ Traceability: verifies REQ-ROLLING-STATE
 Traceability: verifies REQ-ROLLING-WORKERS
 
 Step ROLL-WORKER-SUBMIT demonstrates [OBL-111](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-111): submit an actual isolated Git candidate from its stopped retained owner, reject foreign changes and stale evidence, persist it atomically in PostgreSQL and replay the exact submission without duplicate review records. Submission alone leaves obligation acceptance unresolved.
+
+### Acceptance ROLL-BOUND-ACCEPTANCE
+
+Traceability: verifies REQ-ROLLING-GRAPH
+
+Step ROLL-ACCEPT-BINDING demonstrates [OBL-112](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-112): read an actual retained PostgreSQL submission, reconcile its Git candidate in a disposable coordinator checkout, and accept only fresh proof for its frozen current binding. Reject stale or forged references, changed inputs and unmet current prerequisites while preserving legacy V1 meanings.

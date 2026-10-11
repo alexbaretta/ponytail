@@ -8,6 +8,7 @@ import path from 'node:path';
 const root = path.resolve(__dirname, '../..');
 const sources: readonly string[] = [
   'skills/plan-execution/scripts/obligation-binding-history.ts',
+  'skills/plan-execution/scripts/obligation-certificate-bindings.ts',
   'skills/plan-execution/scripts/obligations.ts',
   'src/rolling-campaign.ts',
   'src/rolling-worktrees.ts',

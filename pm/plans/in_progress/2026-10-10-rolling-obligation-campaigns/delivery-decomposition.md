@@ -269,3 +269,7 @@ OBL-110 scope amendment BIND-1 includes `scripts/project-index.sql` after the re
 Final OBL-111 audit invalidated CERT-17 in CHECKPOINT-33 after finding the new artifacts absent from explicit traceability configuration. BIND-2 adds `.agents/config/project/traceability.json` to the same obligation scope before its bounded coordinator repair. Original obligation and certificate records remain immutable; completion requires corrected classification, generated mapping/view and fresh reassessment.
 
 OBL-111 BIND-3 additionally freezes the two existing generated OpenClaw obligation source/runtime copies. The canonical generator synchronizes them after the evidence-reader source rename; this remains part of the same withdrawn-assessment repair, before fresh reassessment.
+
+## Bound certificate acceptance prerequisite
+
+<a id="obl-112"></a>[OBL-112](obligations.json) owns the portable additional acceptance fence for amended execution bindings. BASELINE-14 declares canonical configuration and generated host copies before edits. Preserve every historical V1 constraint; a binding amendment cannot waive existing criteria. The worker submission remains an immutable operational record, the certificate binding is a hashed coordinator artifact, and the canonical document remains the certificate/checkpoint owner. Review/publication and live CLI/MCP orchestration remain separate required work.

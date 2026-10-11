@@ -15,6 +15,8 @@ import { inputDigest, parseObligationDocument, type ObligationDocumentV1, type O
 import type { ObligationBindingHistoryV1, ObligationBindingRevisionV1 } from '../skills/plan-execution/scripts/obligation-binding-history.js';
 import type { ObligationEvidence } from '../skills/plan-execution/scripts/obligations.js';
 import type { RollingWorkerSubmissionV1 } from '../src/rolling-worker-submission.js';
+import { acceptBoundCheckpoint, type ObligationCertificateBindingV1, type ObligationCertificateSubmission,
+  type ObligationCertificateBindingRequest } from '../skills/plan-execution/scripts/obligation-certificate-bindings.js';
 
 // Traceability: verifies REQ-ROLLING-STATE
 // Traceability: verifies REQ-ROLLING-SCHEDULING
@@ -292,4 +294,48 @@ test('real PostgreSQL serializes allocation, retains suspended ownership and rel
   await assert.rejects(rollingCampaignStore.submit('bound-fixture', submissionRollingStoredAssignment.id, submissionRollingStoredAssignment.generation, differentRollingWorkerSubmissionV1), /immutable result/);
   const foreignRollingCampaignStore: RollingCampaignStore = new RollingCampaignStore(pool, crypto.randomUUID());
   assert.deepEqual(await foreignRollingCampaignStore.submissions('bound-fixture', submissionRollingStoredAssignment.id), []);
+
+  // Traceability: verifies REQ-ROLLING-GRAPH
+  // This fixture reconciles Git and certificate inputs; it does not replace adversarial review or production publication.
+  const rollingStoredSubmission = storedSubmissions[0];
+  assert.ok(rollingStoredSubmission);
+  execFileSync('git', ['-C', root, 'merge', '-q', '--ff-only', revision]);
+  fs.copyFileSync(path.join(workerRoot, 'proof.txt'), path.join(root, 'proof.txt'));
+  const obligationCertificateSubmission: ObligationCertificateSubmission = { lease: rollingStoredSubmission.lease,
+    revision: rollingStoredSubmission.submission.revision, operations: rollingStoredSubmission.submission.proof.map(item => item.operation),
+    evidence: rollingStoredSubmission.submission.proof.map(item => item.evidence) };
+  const obligationCertificateBindingV1: ObligationCertificateBindingV1 = { schemaVersion: 1, certificateId: 'CERT-bound-candidate',
+    lease: rollingStoredSubmission.lease, revision: rollingStoredSubmission.submission.revision,
+    proof: [{ operation: 'check', certificateEvidenceIndex: 0, submissionEvidenceIndex: 0 }] };
+  fs.writeFileSync(path.join(root, 'certificate-binding.json'), JSON.stringify(obligationCertificateBindingV1));
+  const obligationCertificateBindingRequest: ObligationCertificateBindingRequest = { path: 'certificate-binding.json', submission: obligationCertificateSubmission };
+  const boundObligationCertificate: ObligationCertificate = { id: obligationCertificateBindingV1.certificateId,
+    obligationIds: [firstRollingBinding.obligationId], inputs: [...new Set([...fixtureObligationBaseline.requirements.map(item => item.path),
+      ...submissionObligationEvidence.inputs.map(item => item.path), 'certificate-binding.json'])].map(relative => ({ path: relative, digest: inputDigest(root, relative) })),
+    artifacts: ['certificate-binding.json'], assessor: 'coordinator', authority: fixtureObligationBaseline.authority.references,
+    adequate: true, reason: 'Isolated stored-submission acceptance contract proof', disposition: null,
+    evidence: obligationCertificateSubmission.evidence, inventoryIds: [] };
+  const boundObligationCheckpoint: ObligationCheckpoint = { id: 'CP-bound-acceptance', predecessorId: productiveObligationCheckpoint.id,
+    baselineId: fixtureObligationBaseline.id, kind: 'productive', selectedIds: boundObligationCertificate.obligationIds,
+    registeredIds: [], certificateIds: [boundObligationCertificate.id], invalidatedIds: [], before: [0, 1, 1, 1, 1, 1], after: [0, 0, 1, 1, 1, 1],
+    preparation: null, reason: 'Isolated proof accepted on reconciled inputs', assessor: 'coordinator' };
+  const candidateBoundObligationDocumentV1: ObligationDocumentV1 = { ...boundObligationDocumentV1,
+    certificates: [...boundObligationDocumentV1.certificates, boundObligationCertificate],
+    checkpoints: [...boundObligationDocumentV1.checkpoints, boundObligationCheckpoint] };
+  const forgedObligationCertificateBindingRequest: ObligationCertificateBindingRequest = { ...obligationCertificateBindingRequest,
+    submission: { ...obligationCertificateSubmission, revision: 'f'.repeat(40) } };
+  assert.throws(() => acceptBoundCheckpoint(boundObligationDocumentV1, candidateBoundObligationDocumentV1, root,
+    submissionObligationBindingHistoryV1, [forgedObligationCertificateBindingRequest]), /retained submission/);
+  const acceptedBoundObligationDocumentV1 = acceptBoundCheckpoint(boundObligationDocumentV1, candidateBoundObligationDocumentV1, root,
+    submissionObligationBindingHistoryV1, [obligationCertificateBindingRequest]);
+  assert.deepEqual(acceptedBoundObligationDocumentV1.obligations, boundObligationDocumentV1.obligations);
+  fs.writeFileSync(path.join(root, 'bound-obligations.json'), JSON.stringify(acceptedBoundObligationDocumentV1));
+  const acceptedBoundRollingGraph = collectRollingGraph(root, 'bound-obligations.json', 'bound-bindings.json', 'history.json');
+  assert.ok(acceptedBoundRollingGraph.projection.satisfiedIds.includes(firstRollingBinding.obligationId));
+  await rollingCampaignStore.reconcileGraph('bound-fixture', submissionRollingGraph.digest, acceptedBoundRollingGraph.digest);
+  assert.equal((await rollingCampaignStore.status('bound-fixture')).assignments[0]?.state, 'REVIEW');
+  fs.writeFileSync(path.join(root, 'fixture/current.ts'), 'export const value: number = 3;\n');
+  assert.throws(() => acceptBoundCheckpoint(boundObligationDocumentV1, candidateBoundObligationDocumentV1, root,
+    submissionObligationBindingHistoryV1, [obligationCertificateBindingRequest]), /changed input: fixture\/current.ts/);
+  assert.ok(!collectRollingGraph(root, 'bound-obligations.json', 'bound-bindings.json', 'history.json').projection.satisfiedIds.includes(firstRollingBinding.obligationId));
 });

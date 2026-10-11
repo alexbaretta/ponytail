@@ -1112,6 +1112,16 @@
       "locator": "text"
     },
     {
+      "class": "implementation",
+      "path": "skills/plan-execution/scripts/obligation-certificate-bindings.ts",
+      "locator": "text"
+    },
+    {
+      "class": "unit-test",
+      "path": "tests/obligation-certificate-bindings.test.ts",
+      "locator": "text"
+    },
+    {
       "class": "unit-test",
       "path": "tests/obligation-binding-history.test.ts",
       "locator": "text"
@@ -1343,6 +1353,18 @@
     {
       "path": "skills/plan-execution/scripts/obligation-binding-history.js",
       "sourcePath": "skills/plan-execution/scripts/obligation-binding-history.ts"
+    },
+    {
+      "path": "skills/plan-execution/scripts/obligation-certificate-bindings.js",
+      "sourcePath": "skills/plan-execution/scripts/obligation-certificate-bindings.ts"
+    },
+    {
+      "path": ".openclaw/skills/plan-execution/scripts/obligation-certificate-bindings.ts",
+      "sourcePath": "skills/plan-execution/scripts/obligation-certificate-bindings.ts"
+    },
+    {
+      "path": ".openclaw/skills/plan-execution/scripts/obligation-certificate-bindings.js",
+      "sourcePath": "skills/plan-execution/scripts/obligation-certificate-bindings.js"
     },
     {
       "path": ".openclaw/skills/plan-execution/scripts/obligation-binding-history.ts",
