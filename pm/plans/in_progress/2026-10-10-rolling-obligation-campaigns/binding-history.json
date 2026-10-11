@@ -226,6 +226,86 @@
           "profile": "typed-sprint-v2"
         }
       }
+    },
+    {
+      "id": "BIND-6",
+      "obligationId": "OBL-85",
+      "predecessorId": null,
+      "baselineId": "BASELINE-14",
+      "assessor": "coordinator",
+      "authority": [
+        "user-goal-2026-10-10-rolling-campaigns",
+        "user-goal-2026-10-10-static-language-existing-tsts",
+        "user-2026-10-10-normative-atomic-obligations"
+      ],
+      "reason": "Complete the already-started sprint owner proof under bounded standalone coordinator authority; retain original identity, condition and criterion.",
+      "dependsOn": [
+        "OBL-112"
+      ],
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "skills/plan-execution/scripts/sprint-metadata.ts",
+          "skills/plan-execution/scripts/sprint-metadata.js",
+          "tests/sprint-metadata.test.ts"
+        ],
+        "operations": [
+          "inspect",
+          "edit",
+          "build",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "Read physical V3 sprint metadata through a checked static implementation preserving the approved portable behavior and historical contract meanings."
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "typed-sprint-owner-OBL-85"
+        }
+      }
+    },
+    {
+      "id": "BIND-7",
+      "obligationId": "OBL-86",
+      "predecessorId": null,
+      "baselineId": "BASELINE-14",
+      "assessor": "coordinator",
+      "authority": [
+        "user-goal-2026-10-10-rolling-campaigns",
+        "user-goal-2026-10-10-static-language-existing-tsts",
+        "user-2026-10-10-normative-atomic-obligations"
+      ],
+      "reason": "Complete the already-started sprint owner proof under bounded standalone coordinator authority; retain original identity, condition and criterion.",
+      "dependsOn": [
+        "OBL-112"
+      ],
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "skills/plan-execution/scripts/sprint-metadata.ts",
+          "skills/plan-execution/scripts/sprint-metadata.js",
+          "tests/sprint-metadata.test.ts"
+        ],
+        "operations": [
+          "inspect",
+          "edit",
+          "build",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "Discover a homogeneous sprint collection in numeric order through a checked static implementation preserving the approved portable behavior and historical contract meanings."
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "typed-sprint-owner-OBL-86"
+        }
+      }
     }
   ]
 }

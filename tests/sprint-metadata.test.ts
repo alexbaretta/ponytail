@@ -95,6 +95,28 @@ test('physical V2 sprint metadata preserves reviewed and null execution without 
   }
 });
 
+test('physical V3 sprint metadata preserves its complete value and leaves rejected input unchanged', () => {
+  const sprintMetadataV3: SprintMetadataV3 = metadata();
+  const original = JSON.stringify(sprintMetadataV3);
+  const sprintV3: SprintV3 = readSprintMetadataV3('S01.md', sprintMetadataV3);
+  assert.deepEqual(sprintV3, { ...sprintMetadataV3, filePath: 'S01.md' });
+  assert.equal(JSON.stringify(sprintMetadataV3), original);
+  const planningOnlySprintMetadataV3: SprintMetadataV3 = { ...sprintMetadataV3, execution: null };
+  assert.deepEqual(parseSprintFile('S01.md', source(planningOnlySprintMetadataV3)),
+    { ...planningOnlySprintMetadataV3, filePath: 'S01.md' });
+  const malformedInputs: readonly unknown[] = [
+    { ...sprintMetadataV3, schemaVersion: 2 },
+    { ...sprintMetadataV3, extra: true },
+    { ...sprintMetadataV3, execution: { status: 'PENDING', depends_on: [], tasklets_reviewed: 'false' } },
+    { ...sprintMetadataV3, execution: { status: 'PENDING', depends_on: [], planned_paths: ['src/input.ts'] } }
+  ];
+  for (const malformedInput of malformedInputs) {
+    const before = JSON.stringify(malformedInput);
+    assert.throws(() => readSprintMetadataV3('S01.md', malformedInput));
+    assert.equal(JSON.stringify(malformedInput), before);
+  }
+});
+
 test('unknown sprint metadata rejects invalid reviewed flags, paths, identity and block count', () => {
   const sprintMetadataV3: SprintMetadataV3 = metadata();
   const invalidReviewed: unknown = { ...sprintMetadataV3, execution: { status: 'PENDING', depends_on: [], tasklets_reviewed: 'false' } };
@@ -123,4 +145,31 @@ test('discovery retains numeric ordering and rejects duplicate ordinals and mixe
   const laterSprintMetadataV2: SprintMetadataV2 = { ...laterSprintMetadataV3, schemaVersion: 2 };
   fs.writeFileSync(path.join(directory, 'S10.md'), source(laterSprintMetadataV2));
   assert.throws(() => readSprints(root), /must not mix physical sprint schema versions/);
+});
+
+test('discovery preserves homogeneous physical collections and files and rejects absent or empty collections', t => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'sprint-discovery-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  assert.throws(() => readSprints(root), /sprint directory does not exist/);
+  const directory = path.join(root, 'sprints');
+  fs.mkdirSync(directory);
+  assert.throws(() => readSprints(root), /no SNN.md sprint files/);
+  fs.writeFileSync(path.join(directory, 'notes.md'), '# Inert prose');
+  fs.mkdirSync(path.join(directory, 'S99.md'));
+  const sprintMetadataV1: SprintMetadataV1 = { schemaVersion: 1, id: 'S2',
+    planning: { status: 'APPROVED', depends_on: [], scope_roots: ['src'] },
+    execution: { status: 'PENDING', depends_on: [], planned_paths: ['src/input.ts'] } };
+  const sprintMetadataV2: SprintMetadataV2 = { schemaVersion: 2, id: 'S2',
+    planning: { status: 'APPROVED', depends_on: [], scope_roots: ['src'] },
+    execution: { status: 'PENDING', depends_on: [], tasklets_reviewed: true } };
+  const sprintMetadataV3: SprintMetadataV3 = metadata('S2');
+  for (const sprintMetadata of [sprintMetadataV1, sprintMetadataV2, sprintMetadataV3]) {
+    const text = source(sprintMetadata);
+    const file = path.join(directory, 'S2.md');
+    fs.writeFileSync(file, text);
+    assert.deepEqual(readSprints(root), [{ ...sprintMetadata, filePath: file }]);
+    assert.equal(fs.readFileSync(file, 'utf8'), text);
+    assert.equal(fs.readFileSync(path.join(directory, 'notes.md'), 'utf8'), '# Inert prose');
+    assert.ok(fs.statSync(path.join(directory, 'S99.md')).isDirectory());
+  }
 });
