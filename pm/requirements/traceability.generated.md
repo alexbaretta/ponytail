@@ -64,7 +64,7 @@ Requirement: [pm/requirements/index.md](index.md)
 - implementation: implements [src/campaign-census.js:1202](../../src/campaign-census.js#L1202)
 - unit-test: verifies [tests/campaign-census-format.test.js:11](../../tests/campaign-census-format.test.js#L11)
 - integration-test: verifies [tests/campaign-census.test.js:626](../../tests/campaign-census.test.js#L626)
-- uat: verifies [pm/uat/index.md:43](../../pm/uat/index.md#L43)
+- uat: verifies [pm/uat/index.md:44](../../pm/uat/index.md#L44)
 
 ## REQ-PLAN-INPUT-QUEUE
 
@@ -586,3 +586,59 @@ Requirement: [pm/requirements/obligation-execution.md](obligation-execution.md)
 - plan: plans-implementation [pm/plans/closed/2026-10-10-obligation-centered-execution/plan.md:435](../../pm/plans/closed/2026-10-10-obligation-centered-execution/plan.md#L435)
 - plan: plans-verification [pm/plans/closed/2026-10-10-obligation-centered-execution/plan.md:436](../../pm/plans/closed/2026-10-10-obligation-centered-execution/plan.md#L436)
 - issue: introduces [pm/bugs/closed/2026-10-10-CHNG-repair_plan_starting_gate.md:50](../../pm/bugs/closed/2026-10-10-CHNG-repair_plan_starting_gate.md#L50)
+
+## REQ-ROLLING-CONFIGURATION
+
+Requirement: [pm/requirements/rolling-campaigns.md](rolling-campaigns.md)
+
+- uat: verifies [pm/uat/rolling-campaigns.md:17](../../pm/uat/rolling-campaigns.md#L17)
+- plan: plans-implementation [pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/plan.md:98](../../pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/plan.md#L98)
+
+## REQ-ROLLING-GRAPH
+
+Requirement: [pm/requirements/rolling-campaigns.md](rolling-campaigns.md)
+
+- uat: verifies [pm/uat/rolling-campaigns.md:29](../../pm/uat/rolling-campaigns.md#L29)
+- plan: plans-implementation [pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/plan.md:99](../../pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/plan.md#L99)
+
+## REQ-ROLLING-SCHEDULING
+
+Requirement: [pm/requirements/rolling-campaigns.md](rolling-campaigns.md)
+
+- uat: verifies [pm/uat/rolling-campaigns.md:42](../../pm/uat/rolling-campaigns.md#L42)
+- plan: plans-implementation [pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/plan.md:100](../../pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/plan.md#L100)
+
+## REQ-ROLLING-STATE
+
+Requirement: [pm/requirements/rolling-campaigns.md](rolling-campaigns.md)
+
+- uat: verifies [pm/uat/rolling-campaigns.md:56](../../pm/uat/rolling-campaigns.md#L56)
+- plan: plans-implementation [pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/plan.md:101](../../pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/plan.md#L101)
+
+## REQ-ROLLING-WORKERS
+
+Requirement: [pm/requirements/rolling-campaigns.md](rolling-campaigns.md)
+
+- uat: verifies [pm/uat/rolling-campaigns.md:68](../../pm/uat/rolling-campaigns.md#L68)
+- plan: plans-implementation [pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/plan.md:102](../../pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/plan.md#L102)
+
+## REQ-ROLLING-REVIEW
+
+Requirement: [pm/requirements/rolling-campaigns.md](rolling-campaigns.md)
+
+- uat: verifies [pm/uat/rolling-campaigns.md:81](../../pm/uat/rolling-campaigns.md#L81)
+- plan: plans-implementation [pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/plan.md:103](../../pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/plan.md#L103)
+
+## REQ-ROLLING-PUBLICATION
+
+Requirement: [pm/requirements/rolling-campaigns.md](rolling-campaigns.md)
+
+- uat: verifies [pm/uat/rolling-campaigns.md:93](../../pm/uat/rolling-campaigns.md#L93)
+- plan: plans-implementation [pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/plan.md:104](../../pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/plan.md#L104)
+
+## REQ-ROLLING-INTERFACES
+
+Requirement: [pm/requirements/rolling-campaigns.md](rolling-campaigns.md)
+
+- uat: verifies [pm/uat/rolling-campaigns.md:106](../../pm/uat/rolling-campaigns.md#L106)
+- plan: plans-implementation [pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/plan.md:105](../../pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/plan.md#L105)

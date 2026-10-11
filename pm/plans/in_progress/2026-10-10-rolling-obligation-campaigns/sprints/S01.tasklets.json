@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 4,
+  "sprint": "S01",
+  "features": {
+    "S01-F01": {
+      "depends_on": [],
+      "validation_tasklet": "S01-F01-T04"
+    }
+  },
+  "tasklets": {
+    "S01-F01-T01": {
+      "depends_on": [],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S01-F01",
+      "planned_paths": [
+        "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/plan.md",
+        "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/design.md",
+        "pm/requirements/rolling-campaigns.md",
+        "pm/requirements/index.md",
+        "pm/uat/rolling-campaigns.md",
+        "pm/uat/index.md"
+      ]
+    },
+    "S01-F01-T02": {
+      "depends_on": [
+        "S01-F01-T01"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S01-F01",
+      "planned_paths": [
+        "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/obligations.json"
+      ]
+    },
+    "S01-F01-T03": {
+      "depends_on": [
+        "S01-F01-T02"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S01-F01",
+      "planned_paths": [
+        "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/starting.md"
+      ]
+    },
+    "S01-F01-T04": {
+      "depends_on": [
+        "S01-F01-T01",
+        "S01-F01-T02",
+        "S01-F01-T03"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S01-F01",
+      "planned_paths": [
+        ".agents/config/project/traceability.json",
+        "pm/requirements/traceability.generated.md"
+      ]
+    }
+  },
+  "external_depends_on": {}
+}

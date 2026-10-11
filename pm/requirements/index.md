@@ -12,6 +12,7 @@ behavior independently from implementation plans and architecture.
 
 ## Requirement sets
 
+- [Rolling campaigns](rolling-campaigns.md)
 - [Obligation-centered execution](obligation-execution.md)
 - [CLI interruption](cli-interruption.md)
 

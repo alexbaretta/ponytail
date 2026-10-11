@@ -102,6 +102,38 @@
       "id": "REQ-REPAIR-PLAN-STARTING-GATE",
       "sourcePath": "pm/requirements/obligation-execution.md",
       "noUnitTestReason": "The sole owned implementation is the agent instruction at skills/plan-execution/SKILL.md starting-checkpoint gate, with no independently executable product unit. The configured policy integration proof guards the instruction; scoped UAT assesses its application. This disposition covers only that declaration and does not waive future executable starting-gate units."
+    },
+    {
+      "id": "REQ-ROLLING-CONFIGURATION",
+      "sourcePath": "pm/requirements/rolling-campaigns.md"
+    },
+    {
+      "id": "REQ-ROLLING-GRAPH",
+      "sourcePath": "pm/requirements/rolling-campaigns.md"
+    },
+    {
+      "id": "REQ-ROLLING-SCHEDULING",
+      "sourcePath": "pm/requirements/rolling-campaigns.md"
+    },
+    {
+      "id": "REQ-ROLLING-STATE",
+      "sourcePath": "pm/requirements/rolling-campaigns.md"
+    },
+    {
+      "id": "REQ-ROLLING-WORKERS",
+      "sourcePath": "pm/requirements/rolling-campaigns.md"
+    },
+    {
+      "id": "REQ-ROLLING-REVIEW",
+      "sourcePath": "pm/requirements/rolling-campaigns.md"
+    },
+    {
+      "id": "REQ-ROLLING-PUBLICATION",
+      "sourcePath": "pm/requirements/rolling-campaigns.md"
+    },
+    {
+      "id": "REQ-ROLLING-INTERFACES",
+      "sourcePath": "pm/requirements/rolling-campaigns.md"
     }
   ],
   "artifacts": [
@@ -748,6 +780,16 @@
     {
       "class": "integration-test",
       "path": "tests/obligation-execution.integration.test.js",
+      "locator": "text"
+    },
+    {
+      "class": "plan",
+      "path": "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/plan.md",
+      "locator": "text"
+    },
+    {
+      "class": "uat",
+      "path": "pm/uat/rolling-campaigns.md",
       "locator": "text"
     }
   ],
