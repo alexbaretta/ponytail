@@ -832,6 +832,16 @@
       "locator": "text"
     },
     {
+      "class": "implementation",
+      "path": "src/rolling-review.ts",
+      "locator": "text"
+    },
+    {
+      "class": "unit-test",
+      "path": "tests/rolling-review.test.ts",
+      "locator": "text"
+    },
+    {
       "class": "unit-test",
       "path": "tests/rolling-worker-submission.test.ts",
       "locator": "text"
@@ -1223,6 +1233,10 @@
     {
       "path": "src/rolling-worker-submission.js",
       "sourcePath": "src/rolling-worker-submission.ts"
+    },
+    {
+      "path": "src/rolling-review.js",
+      "sourcePath": "src/rolling-review.ts"
     },
     {
       "path": "src/project-index-database.js",

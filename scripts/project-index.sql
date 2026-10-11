@@ -330,6 +330,37 @@ CREATE TABLE IF NOT EXISTS rolling_submission_v1 (
 CREATE INDEX IF NOT EXISTS rolling_submission_v1_assignment_history
 ON rolling_submission_v1 (project_id,campaign_id,assignment_id,created_at,revision);
 
+CREATE TABLE IF NOT EXISTS rolling_review_v1 (
+  project_id uuid NOT NULL,
+  campaign_id text NOT NULL,
+  review_id uuid NOT NULL,
+  assignment_id uuid NOT NULL,
+  generation uuid NOT NULL,
+  revision text NOT NULL,
+  request_text text NOT NULL CHECK (COALESCE(jsonb_typeof((request_text::jsonb)->'schemaVersion')='number'
+    AND (request_text::jsonb)->>'schemaVersion'='1'
+    AND (request_text::jsonb)->>'id'=review_id::text
+    AND (request_text::jsonb)->>'campaignId'=campaign_id
+    AND (request_text::jsonb)->>'assignmentId'=assignment_id::text
+    AND (request_text::jsonb)->>'generation'=generation::text
+    AND (request_text::jsonb)->>'revision'=revision, false)),
+  outcome_text text CHECK (outcome_text IS NULL OR COALESCE(jsonb_typeof((outcome_text::jsonb)->'schemaVersion')='number'
+    AND (outcome_text::jsonb)->>'schemaVersion'='1'
+    AND (outcome_text::jsonb)->>'reviewId'=review_id::text
+    AND (outcome_text::jsonb)->>'revision'=revision
+    AND (outcome_text::jsonb)->>'reviewerSessionId'=(request_text::jsonb)->>'reviewerSessionId', false)),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (project_id,campaign_id,review_id),
+  FOREIGN KEY (project_id,campaign_id,assignment_id,generation,revision)
+    REFERENCES rolling_submission_v1(project_id,campaign_id,assignment_id,generation,revision) ON DELETE CASCADE
+);
+CREATE UNIQUE INDEX IF NOT EXISTS rolling_review_v1_pending_owner
+ON rolling_review_v1 (project_id,campaign_id,assignment_id) WHERE outcome_text IS NULL;
+CREATE INDEX IF NOT EXISTS rolling_review_v1_assignment_history
+ON rolling_review_v1 (project_id,campaign_id,assignment_id,created_at,review_id);
+CREATE INDEX IF NOT EXISTS rolling_review_v1_pending
+ON rolling_review_v1 (project_id,campaign_id,created_at,review_id) WHERE outcome_text IS NULL;
+
 CREATE TABLE IF NOT EXISTS rolling_action_v1 (
   project_id uuid NOT NULL,
   campaign_id text NOT NULL,

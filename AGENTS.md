@@ -109,6 +109,8 @@ services. `PROJECT_STRUCTURE.md` is authoritative for that boundary.
   - Node focused: `node --test [--test-name-pattern=<pattern>] <test-files>`.
   - Node full: `npm test`.
 - Rolling Codex protocol proof: `node --test dist/tests/rolling-codex.test.js`.
+- Rolling review focused proof: `node --test dist/tests/rolling-review.test.js
+  dist/tests/rolling-campaign-store.test.js dist/tests/rolling-campaign-store.integration.test.js`.
   Explicit live native acceptance: `node --test dist/tests/rolling-codex.integration.js`;
   preserves configured model/permissions and uses disposable checkouts.
 - Rolling checkout focused proof: `node --test tests/rolling-worktrees.test.js

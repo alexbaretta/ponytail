@@ -20,6 +20,7 @@ const node_child_process_1 = require("node:child_process");
 const rolling_worker_submission_js_1 = require("./rolling-worker-submission.js");
 const obligation_binding_history_js_1 = require("../skills/plan-execution/scripts/obligation-binding-history.js");
 const obligations_js_1 = require("../skills/plan-execution/scripts/obligations.js");
+const rolling_review_js_1 = require("./rolling-review.js");
 const rolling_campaign_js_1 = require("./rolling-campaign.js");
 function requireState(condition, message) {
     if (!condition)
@@ -360,6 +361,68 @@ class RollingCampaignStore {
         const rows = (await this.pool.query('SELECT submission_text,lease_text FROM ponytail_index.rolling_submission_v1 WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3 ORDER BY created_at,revision', [this.projectId, campaignId, id])).rows;
         return rows.map(row => ({ submission: (0, rolling_worker_submission_js_1.parseRollingWorkerSubmission)(stringColumn(row.submission_text, 'submission')),
             lease: (0, obligation_binding_history_js_1.readObligationLeaseV1)(readStateText(stringColumn(row.lease_text, 'submission lease'))) }));
+    }
+    async requestReview(campaignId, id, generation, revision, reviewerSessionId) {
+        return this.transaction(campaignId, async (poolClient, rollingCampaignRow) => {
+            const rollingStoredAssignment = await this.assignment(poolClient, campaignId, id, generation);
+            requireState(!rollingStoredAssignment.retired && rollingStoredAssignment.activityStopped, 'review requires a stopped retained worker');
+            requireState(reviewerSessionId !== rollingStoredAssignment.sessionId, 'worker cannot review its own submission');
+            const existing = (await poolClient.query('SELECT request_text,outcome_text FROM ponytail_index.rolling_review_v1 WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3 AND generation=$4 ORDER BY created_at DESC,review_id DESC LIMIT 1', [this.projectId, campaignId, id, generation])).rows[0];
+            if (existing) {
+                const rollingReviewRequestV1 = (0, rolling_review_js_1.parseRollingReviewRequest)(stringColumn(existing.request_text, 'review request'));
+                requireState(rollingReviewRequestV1.revision === revision && rollingReviewRequestV1.reviewerSessionId === reviewerSessionId, 'review retry differs from assigned candidate or reviewer');
+                const text = nullableStringColumn(existing.outcome_text, 'review outcome');
+                return { request: rollingReviewRequestV1, outcome: text === null ? null : (0, rolling_review_js_1.parseRollingReviewOutcome)(text) };
+            }
+            requireState(rollingStoredAssignment.state === 'REVIEW', 'assignment is not awaiting review');
+            this.currentLease(rollingStoredAssignment, this.graph(rollingCampaignRow, rollingCampaignRow.graph_digest));
+            const submission = (await poolClient.query('SELECT submission_text,lease_text FROM ponytail_index.rolling_submission_v1 WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3 AND generation=$4 AND revision=$5', [this.projectId, campaignId, id, generation, revision])).rows[0];
+            requireState(submission, 'candidate has no validated worker submission');
+            const rollingWorkerSubmissionV1 = (0, rolling_worker_submission_js_1.parseRollingWorkerSubmission)(stringColumn(submission.submission_text, 'submission'));
+            const obligationLeaseV1 = (0, obligation_binding_history_js_1.readObligationLeaseV1)(readStateText(stringColumn(submission.lease_text, 'submission lease')));
+            const rollingStoredWorktree = readWorktree((await poolClient.query('SELECT * FROM ponytail_index.rolling_worktree_v1 WHERE project_id=$1 AND number=$2', [this.projectId, rollingStoredAssignment.worktreeNumber])).rows[0]);
+            (0, rolling_worker_submission_js_1.validateRollingWorkerSubmission)(rollingStoredWorktree.rootPath, obligationLeaseV1, rollingWorkerSubmissionV1);
+            const rollingReviewRequestV1 = (0, rolling_review_js_1.readRollingReviewRequestV1)({ schemaVersion: 1, id: node_crypto_1.default.randomUUID(),
+                campaignId, assignmentId: id, generation, baseCommit: rollingWorkerSubmissionV1.baseCommit, revision, reviewerSessionId });
+            await poolClient.query('INSERT INTO ponytail_index.rolling_review_v1(project_id,campaign_id,review_id,assignment_id,generation,revision,request_text) VALUES($1,$2,$3,$4,$5,$6,$7)', [this.projectId, campaignId, rollingReviewRequestV1.id, id, generation, revision, JSON.stringify(rollingReviewRequestV1)]);
+            return { request: rollingReviewRequestV1, outcome: null };
+        });
+    }
+    async reviews(campaignId, id) {
+        const rows = (await this.pool.query('SELECT request_text,outcome_text FROM ponytail_index.rolling_review_v1 WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3 ORDER BY created_at,review_id', [this.projectId, campaignId, id])).rows;
+        return rows.map(row => {
+            const text = nullableStringColumn(row.outcome_text, 'review outcome');
+            const rollingReviewRequestV1 = (0, rolling_review_js_1.parseRollingReviewRequest)(stringColumn(row.request_text, 'review request'));
+            const rollingReviewOutcomeV1 = text === null ? null : (0, rolling_review_js_1.parseRollingReviewOutcome)(text);
+            if (rollingReviewOutcomeV1)
+                (0, rolling_review_js_1.validateRollingReviewOutcome)(rollingReviewRequestV1, rollingReviewOutcomeV1);
+            return { request: rollingReviewRequestV1, outcome: rollingReviewOutcomeV1 };
+        });
+    }
+    async recordReviewOutcome(campaignId, reviewId, actorSessionId, rollingReviewOutcomeV1) {
+        const checkedRollingReviewOutcomeV1 = (0, rolling_review_js_1.readRollingReviewOutcomeV1)(rollingReviewOutcomeV1);
+        return this.transaction(campaignId, async (poolClient, rollingCampaignRow) => {
+            const row = (await poolClient.query('SELECT request_text,outcome_text FROM ponytail_index.rolling_review_v1 WHERE project_id=$1 AND campaign_id=$2 AND review_id=$3', [this.projectId, campaignId, reviewId])).rows[0];
+            requireState(row, 'review request is missing');
+            const rollingReviewRequestV1 = (0, rolling_review_js_1.parseRollingReviewRequest)(stringColumn(row.request_text, 'review request'));
+            requireState(actorSessionId === rollingReviewRequestV1.reviewerSessionId, 'only the assigned reviewer may report a decision');
+            (0, rolling_review_js_1.validateRollingReviewOutcome)(rollingReviewRequestV1, checkedRollingReviewOutcomeV1);
+            const text = nullableStringColumn(row.outcome_text, 'review outcome');
+            if (text !== null) {
+                requireState((0, node_util_1.isDeepStrictEqual)((0, rolling_review_js_1.parseRollingReviewOutcome)(text), checkedRollingReviewOutcomeV1), 'review retry differs from immutable decision');
+                return { request: rollingReviewRequestV1, outcome: checkedRollingReviewOutcomeV1 };
+            }
+            const rollingStoredAssignment = await this.assignment(poolClient, campaignId, rollingReviewRequestV1.assignmentId, rollingReviewRequestV1.generation);
+            requireState(rollingStoredAssignment.state === 'REVIEW' && rollingStoredAssignment.activityStopped && !rollingStoredAssignment.retired, 'candidate is no longer awaiting review');
+            this.currentLease(rollingStoredAssignment, this.graph(rollingCampaignRow, rollingCampaignRow.graph_digest));
+            const submission = (await poolClient.query('SELECT submission_text,lease_text FROM ponytail_index.rolling_submission_v1 WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3 AND generation=$4 AND revision=$5', [this.projectId, campaignId, rollingReviewRequestV1.assignmentId, rollingReviewRequestV1.generation, rollingReviewRequestV1.revision])).rows[0];
+            requireState(submission, 'reviewed candidate has no retained submission');
+            const rollingStoredWorktree = readWorktree((await poolClient.query('SELECT * FROM ponytail_index.rolling_worktree_v1 WHERE project_id=$1 AND number=$2', [this.projectId, rollingStoredAssignment.worktreeNumber])).rows[0]);
+            (0, rolling_worker_submission_js_1.validateRollingWorkerSubmission)(rollingStoredWorktree.rootPath, (0, obligation_binding_history_js_1.readObligationLeaseV1)(readStateText(stringColumn(submission.lease_text, 'submission lease'))), (0, rolling_worker_submission_js_1.parseRollingWorkerSubmission)(stringColumn(submission.submission_text, 'submission')));
+            await poolClient.query('UPDATE ponytail_index.rolling_review_v1 SET outcome_text=$4 WHERE project_id=$1 AND campaign_id=$2 AND review_id=$3', [this.projectId, campaignId, reviewId, JSON.stringify(checkedRollingReviewOutcomeV1)]);
+            await poolClient.query('UPDATE ponytail_index.rolling_assignment_v1 SET state=$2 WHERE assignment_id=$1', [rollingReviewRequestV1.assignmentId, checkedRollingReviewOutcomeV1.decision === 'accepted' ? 'INTEGRATING' : 'REWORK']);
+            return { request: rollingReviewRequestV1, outcome: checkedRollingReviewOutcomeV1 };
+        });
     }
     async rebindLease(campaignId, id, generation, graphDigest) {
         return this.transaction(campaignId, async (poolClient, rollingCampaignRow) => {

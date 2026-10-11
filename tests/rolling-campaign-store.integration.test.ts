@@ -15,12 +15,15 @@ import { inputDigest, parseObligationDocument, type ObligationDocumentV1, type O
 import type { ObligationBindingHistoryV1, ObligationBindingRevisionV1 } from '../skills/plan-execution/scripts/obligation-binding-history.js';
 import type { ObligationEvidence } from '../skills/plan-execution/scripts/obligations.js';
 import type { RollingWorkerSubmissionV1 } from '../src/rolling-worker-submission.js';
+import type { RollingReviewOutcomeV1 } from '../src/rolling-review.js';
 import { acceptBoundCheckpoint, type ObligationCertificateBindingV1, type ObligationCertificateSubmission,
   type ObligationCertificateBindingRequest } from '../skills/plan-execution/scripts/obligation-certificate-bindings.js';
 
 // Traceability: verifies REQ-ROLLING-STATE
 // Traceability: verifies REQ-ROLLING-SCHEDULING
-test('real PostgreSQL serializes allocation, retains suspended ownership and releases without ready work', async t => {
+const reviewDecisions: readonly RollingReviewOutcomeV1['decision'][] = ['accepted', 'rejected'];
+for (const reviewDecision of reviewDecisions) {
+test(`real PostgreSQL serializes allocation, retains ownership and persists ${reviewDecision} review`, async t => {
   const repositoryRoot = path.resolve(__dirname, '../..');
   const pool: Pool = new Pool(databaseOptions(repositoryRoot));
   const projectId = crypto.randomUUID();
@@ -295,6 +298,44 @@ test('real PostgreSQL serializes allocation, retains suspended ownership and rel
   const foreignRollingCampaignStore: RollingCampaignStore = new RollingCampaignStore(pool, crypto.randomUUID());
   assert.deepEqual(await foreignRollingCampaignStore.submissions('bound-fixture', submissionRollingStoredAssignment.id), []);
 
+  // Traceability: verifies REQ-ROLLING-REVIEW
+  // Durable boundary proof; native reviewer dispatch remains an application gate.
+  await assert.rejects(rollingCampaignStore.requestReview('bound-fixture', submissionRollingStoredAssignment.id,
+    submissionRollingStoredAssignment.generation, revision, rollingWorkerSubmissionV1.sessionId), /own submission/);
+  await assert.rejects(rollingCampaignStore.requestReview('bound-fixture', submissionRollingStoredAssignment.id,
+    submissionRollingStoredAssignment.generation, 'f'.repeat(40), 'reviewer-session'), /no validated worker submission/);
+  const reviewRequests = await Promise.all(Array.from({ length: 4 }, () => rollingCampaignStore.requestReview('bound-fixture',
+    submissionRollingStoredAssignment.id, submissionRollingStoredAssignment.generation, revision, 'reviewer-session')));
+  const rollingStoredReview = reviewRequests[0];
+  assert.ok(rollingStoredReview);
+  assert.ok(reviewRequests.every(item => item.request.id === rollingStoredReview.request.id && item.outcome === null));
+  assert.equal((await rollingCampaignStore.reviews('bound-fixture', submissionRollingStoredAssignment.id)).length, 1);
+  assert.equal(rollingStoredReview.request.baseCommit, rollingWorkerSubmissionV1.baseCommit);
+  await assert.rejects(rollingCampaignStore.requestReview('bound-fixture', submissionRollingStoredAssignment.id,
+    submissionRollingStoredAssignment.generation, revision, 'other-reviewer'), /retry differs/);
+  const rollingReviewOutcomeV1: RollingReviewOutcomeV1 = reviewDecision === 'accepted'
+    ? { schemaVersion: 1, reviewId: rollingStoredReview.request.id, revision,
+      reviewerSessionId: 'reviewer-session', completedAt: new Date().toISOString(), decision: 'accepted', findings: [] }
+    : { schemaVersion: 1, reviewId: rollingStoredReview.request.id, revision,
+      reviewerSessionId: 'reviewer-session', completedAt: new Date().toISOString(), decision: 'rejected', findings: ['Required correction.'] };
+  await assert.rejects(rollingCampaignStore.recordReviewOutcome('bound-fixture', rollingStoredReview.request.id, 'other-reviewer', rollingReviewOutcomeV1), /only the assigned/);
+  await assert.rejects(rollingCampaignStore.recordReviewOutcome('bound-fixture', rollingStoredReview.request.id, 'reviewer-session',
+    { ...rollingReviewOutcomeV1, revision: 'f'.repeat(40) }), /differs from assigned/);
+  fs.writeFileSync(path.join(workerRoot, 'unexpected.ts'), 'dirty during review');
+  await assert.rejects(rollingCampaignStore.recordReviewOutcome('bound-fixture', rollingStoredReview.request.id, 'reviewer-session', rollingReviewOutcomeV1), /dirty/);
+  fs.unlinkSync(path.join(workerRoot, 'unexpected.ts'));
+  const decisions = await Promise.all(Array.from({ length: 4 }, () => rollingCampaignStore.recordReviewOutcome('bound-fixture',
+    rollingStoredReview.request.id, 'reviewer-session', rollingReviewOutcomeV1)));
+  assert.ok(decisions.every(item => JSON.stringify(item.outcome) === JSON.stringify(rollingReviewOutcomeV1)));
+  assert.equal((await rollingCampaignStore.status('bound-fixture')).assignments[0]?.state, reviewDecision === 'accepted' ? 'INTEGRATING' : 'REWORK');
+  const changedRollingReviewOutcomeV1: RollingReviewOutcomeV1 = reviewDecision === 'accepted'
+    ? { ...rollingReviewOutcomeV1, decision: 'rejected', findings: ['Changed verdict.'] }
+    : { ...rollingReviewOutcomeV1, decision: 'accepted', findings: [] };
+  await assert.rejects(rollingCampaignStore.recordReviewOutcome('bound-fixture', rollingStoredReview.request.id, 'reviewer-session', changedRollingReviewOutcomeV1), /immutable decision/);
+  assert.deepEqual((await rollingCampaignStore.reviews('bound-fixture', submissionRollingStoredAssignment.id))[0]?.outcome, rollingReviewOutcomeV1);
+  assert.deepEqual(await foreignRollingCampaignStore.reviews('bound-fixture', submissionRollingStoredAssignment.id), []);
+  assert.ok(!collectRollingGraph(root, 'bound-obligations.json', 'bound-bindings.json', 'history.json').projection.satisfiedIds.includes(firstRollingBinding.obligationId));
+
   // Traceability: verifies REQ-ROLLING-GRAPH
   // This fixture reconciles Git and certificate inputs; it does not replace adversarial review or production publication.
   const rollingStoredSubmission = storedSubmissions[0];
@@ -333,9 +374,10 @@ test('real PostgreSQL serializes allocation, retains suspended ownership and rel
   const acceptedBoundRollingGraph = collectRollingGraph(root, 'bound-obligations.json', 'bound-bindings.json', 'history.json');
   assert.ok(acceptedBoundRollingGraph.projection.satisfiedIds.includes(firstRollingBinding.obligationId));
   await rollingCampaignStore.reconcileGraph('bound-fixture', submissionRollingGraph.digest, acceptedBoundRollingGraph.digest);
-  assert.equal((await rollingCampaignStore.status('bound-fixture')).assignments[0]?.state, 'REVIEW');
+  assert.equal((await rollingCampaignStore.status('bound-fixture')).assignments[0]?.state, reviewDecision === 'accepted' ? 'INTEGRATING' : 'REWORK');
   fs.writeFileSync(path.join(root, 'fixture/current.ts'), 'export const value: number = 3;\n');
   assert.throws(() => acceptBoundCheckpoint(boundObligationDocumentV1, candidateBoundObligationDocumentV1, root,
     submissionObligationBindingHistoryV1, [obligationCertificateBindingRequest]), /changed input: fixture\/current.ts/);
   assert.ok(!collectRollingGraph(root, 'bound-obligations.json', 'bound-bindings.json', 'history.json').projection.satisfiedIds.includes(firstRollingBinding.obligationId));
 });
+}

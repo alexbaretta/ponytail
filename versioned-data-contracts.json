@@ -3,6 +3,30 @@
   "schemaVersion": 1,
   "families": [
     {
+      "id": "rolling-review-request",
+      "implementation": {
+        "workspace": "ponytail",
+        "module": "src/rolling-review.ts",
+        "readerRegistryExport": "RollingReviewRequestReaders"
+      },
+      "currentVersion": "V1",
+      "versions": ["V1"],
+      "supportedReadVersions": ["V1"],
+      "supportedDowngradeVersions": []
+    },
+    {
+      "id": "rolling-review-outcome",
+      "implementation": {
+        "workspace": "ponytail",
+        "module": "src/rolling-review.ts",
+        "readerRegistryExport": "RollingReviewOutcomeReaders"
+      },
+      "currentVersion": "V1",
+      "versions": ["V1"],
+      "supportedReadVersions": ["V1"],
+      "supportedDowngradeVersions": []
+    },
+    {
       "id": "obligation-certificate-binding",
       "implementation": {
         "workspace": "ponytail",

@@ -1434,6 +1434,55 @@
           "profile": "typed-portable-obligations-OBL-82"
         }
       }
+    },
+    {
+      "id": "BIND-34",
+      "obligationId": "OBL-50",
+      "predecessorId": null,
+      "baselineId": "BASELINE-14",
+      "assessor": "coordinator",
+      "authority": [
+        "user-goal-2026-10-10-rolling-campaigns",
+        "user-goal-2026-10-10-static-language-existing-tsts",
+        "user-2026-10-10-normative-atomic-obligations"
+      ],
+      "reason": "Begin the review operation required to unblock final campaign acceptance. Bind durable reviewer requests and exact candidate decisions to existing validated submissions; preserve the original application Arc criterion until native dispatch is implemented and proven.",
+      "dependsOn": [
+        "OBL-112"
+      ],
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "src/rolling-review.ts",
+          "src/rolling-review.js",
+          "src/rolling-campaign-store.ts",
+          "src/rolling-campaign-store.js",
+          "tests/rolling-review.test.ts",
+          "tests/rolling-campaign-store.integration.test.ts",
+          "scripts/project-index.sql",
+          "scripts/build-runtime.ts",
+          "versioned-data-contracts.json",
+          "AGENTS.md",
+          ".agents/config/project/traceability.json",
+          "pm/requirements/traceability.generated.md"
+        ],
+        "operations": [
+          "inspect",
+          "edit",
+          "build",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "Review the exact candidate adversarially and persist the assigned reviewer identity."
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "rolling-review-OBL-50"
+        }
+      }
     }
   ]
 }
