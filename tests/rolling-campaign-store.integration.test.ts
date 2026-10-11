@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Alex Baretta. All rights reserved.
 // Licensed under the MIT License. See LICENSE in the project root.
 import assert from 'node:assert/strict';
-import {rebasePreparedRollingIncrement,continueFastRebaseRollingIncrement,publishRollingIncrement,fastForwardRollingIncrement} from '../src/rolling-integration.js';
+import {readRollingIncrementClaimV1,rebasePreparedRollingIncrement,continueFastRebaseRollingIncrement,publishRollingIncrement,fastForwardRollingIncrement} from '../src/rolling-integration.js';
 import test, { type TestContext } from 'node:test';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
@@ -16,7 +16,7 @@ import { inputDigest, parseObligationDocument, type ObligationDocumentV1, type O
 import type { ObligationBindingHistoryV1, ObligationBindingRevisionV1 } from '../skills/plan-execution/scripts/obligation-binding-history.js';
 import type { ObligationEvidence } from '../skills/plan-execution/scripts/obligations.js';
 import type { RollingWorkerSubmissionV1,RollingSubmissionProof } from '../src/rolling-worker-submission.js';
-import { dispatchRollingReview, collectRollingReview, type RollingReviewOutcomeV1 } from '../src/rolling-review.js';
+import { readRollingReviewRequestV1,readRollingReviewOutcomeV1,dispatchRollingReview, collectRollingReview, type RollingReviewOutcomeV1 } from '../src/rolling-review.js';
 import { provisionRollingWorker, attachRollingWorker, suspendRollingWorker, collectRollingWorkerSubmission, recoverRollingWorkerCreation, observeRollingWorkerInitialization, resumeRollingWorker, parseRollingWorkerResumption, dispatchRollingWorker, buildRollingWorkerInstructions, type RollingWorkerInitialization } from '../src/rolling-worker.js';
 import { RollingCodex, RollingObservationTimeout, type RollingNativeTurn, type RollingNativeThread, type RollingNativeServerRequest } from '../src/rolling-codex.js';
 import { acceptBoundCheckpoint, type ObligationCertificateBindingV1, type ObligationCertificateSubmission,
@@ -746,6 +746,24 @@ export async function runRollingReviewScenario(t: TestContext, reviewScenario: R
     await assert.rejects(rollingCampaignStore.acceptIncrementCertificates('bound-fixture',rollingStoredReview.request.id,candidatePath,['certificate-binding.json']),/changed input/);
     fs.writeFileSync(path.join(root,'fixture/current.ts'),sourceText);
     assert.equal(fs.readFileSync(path.join(root,'bound-obligations.json'),'utf8'),previousDocumentText);
+    // Model another accepted integration owning the same coordinator lane.
+    const busyReviewId = crypto.randomUUID();
+    const busyRollingReviewRequestV1 = readRollingReviewRequestV1({...rollingStoredReview.request,id:busyReviewId});
+    const decidedRollingStoredReview = (await rollingCampaignStore.reviews('bound-fixture',submissionRollingStoredAssignment.id)).find(review=>review.request.id === rollingStoredReview.request.id);
+    assert.ok(decidedRollingStoredReview?.outcome);
+    const busyRollingReviewOutcomeV1 = readRollingReviewOutcomeV1({...decidedRollingStoredReview.outcome,reviewId:busyReviewId});
+    const incrementRow = (await pool.query<Record<string,unknown>>('SELECT claim_text FROM ponytail_index.rolling_increment_v1 WHERE project_id=$1 AND review_id=$2',[projectId,rollingStoredReview.request.id])).rows[0];
+    assert.ok(incrementRow && typeof incrementRow.claim_text === 'string');
+    const storedClaim: unknown = JSON.parse(incrementRow.claim_text);
+    const rollingIncrementClaimV1 = readRollingIncrementClaimV1(storedClaim);
+    const busyRollingIncrementClaimV1 = readRollingIncrementClaimV1({...rollingIncrementClaimV1,id:crypto.randomUUID(),reviewId:busyReviewId});
+    await pool.query('INSERT INTO ponytail_index.rolling_review_v1(project_id,campaign_id,review_id,assignment_id,generation,revision,request_text,outcome_text) VALUES($1,$2,$3,$4,$5,$6,$7,$8)',
+      [projectId,'bound-fixture',busyReviewId,busyRollingReviewRequestV1.assignmentId,busyRollingReviewRequestV1.generation,busyRollingReviewRequestV1.revision,JSON.stringify(busyRollingReviewRequestV1),JSON.stringify(busyRollingReviewOutcomeV1)]);
+    await pool.query('INSERT INTO ponytail_index.rolling_increment_v1(project_id,campaign_id,review_id,increment_id,claim_text,state) VALUES($1,$2,$3,$4,$5,\'PUSHING\')',
+      [projectId,'bound-fixture',busyReviewId,busyRollingIncrementClaimV1.id,JSON.stringify(busyRollingIncrementClaimV1)]);
+    await assert.rejects(rollingCampaignStore.acceptIncrementCertificates('bound-fixture',rollingStoredReview.request.id,candidatePath,['certificate-binding.json']),/integration lane is occupied/);
+    assert.equal(fs.readFileSync(path.join(root,'bound-obligations.json'),'utf8'),previousDocumentText);
+    await pool.query('DELETE FROM ponytail_index.rolling_review_v1 WHERE project_id=$1 AND review_id=$2',[projectId,busyReviewId]);
     const previousGraphDigest = (await rollingCampaignStore.status('bound-fixture')).graphDigest;
     const acceptedDocuments = await Promise.all(Array.from({length:4},()=>rollingCampaignStore.acceptIncrementCertificates('bound-fixture',rollingStoredReview.request.id,candidatePath,['certificate-binding.json'])));
     for (const acceptedObligationDocumentV1 of acceptedDocuments) assert.deepEqual(acceptedObligationDocumentV1,candidateBoundObligationDocumentV1);

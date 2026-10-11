@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-10-11-integrated_certificate_lane_race",
+  "recorded_at": "2026-10-11T15:09:44-07:00",
+  "source_references": [
+    "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/obligations.json#OBL-56"
+  ],
+  "context": {
+    "languages": [
+      "typescript"
+    ],
+    "frameworks": [
+      "postgresql"
+    ],
+    "components": [
+      "increment publication and certificate assessment"
+    ],
+    "affected_boundaries": [
+      "Git mutation outside transaction and integrated-file assessment under database lock"
+    ],
+    "code_references": [
+      "src/rolling-campaign-store.ts",
+      "tests/rolling-campaign-store.integration.test.ts"
+    ]
+  },
+  "observed_behavior": "Certificate assessment accepted and published its checkpoint while another increment retained PUSHING ownership of the coordinator integration lane.",
+  "expected_behavior": "Integrated inputs remain stable during certificate assessment; in-flight Git integration must finish before assessment can begin.",
+  "causal_mechanism": "The project database lock serialized mutations, but publication commits its push intent before mutating Git outside that transaction. Assessment checked only its already-published increment and could overlap a newer integration using the same checkout.",
+  "anti_pattern": {
+    "structural_description": "Treating a database transaction as protection for external mutations whose intents have already committed.",
+    "why_it_fails": "The external Git operation can change assessed inputs after validation and before certificate publication."
+  },
+  "correct_pattern": {
+    "required_invariant": "No active integration may own the same coordinator checkout when assessment enters its serialized critical section.",
+    "implementation_description": "Within the existing project transaction, refuse assessment while any project campaign with that canonical coordinator root has an active unrepaired increment. The same project lock prevents a new intent being claimed until assessment finishes."
+  },
+  "applicability_conditions": [
+    "External Git mutation follows a committed database intent.",
+    "Multiple increments can become ready while a published increment awaits certificate assessment."
+  ],
+  "known_non_matches": [
+    "Already published receipts and conflicts returned to worker repair do not own an active integration lane."
+  ],
+  "confirmation_evidence": [
+    "The focused regression reported Missing expected rejection when a valid active PUSHING row was present.",
+    "Adding the lane fence makes the full assessment Arc pass and verifies the accepted file remains unchanged during refusal."
+  ],
+  "regression_proofs": [
+    "tests/rolling-campaign-store.integration.test.ts: integrated certificate assessment uses retained published proof and serializes accepted record publication"
+  ]
+}

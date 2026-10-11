@@ -690,6 +690,8 @@ class RollingCampaignStore {
         return this.transaction(campaignId, async (poolClient, rollingCampaignRow) => {
             const row = (await poolClient.query('SELECT claim_text,state,candidate_revision,proof_text FROM ponytail_index.rolling_increment_v1 WHERE project_id=$1 AND campaign_id=$2 AND review_id=$3', [this.projectId, campaignId, reviewId])).rows[0];
             requireState(row && row.state === 'PUBLISHED' && row.proof_text !== null, 'certificate assessment requires a published reviewed increment');
+            const activeIncrementRecords = (await poolClient.query('SELECT i.review_id FROM ponytail_index.rolling_increment_v1 i JOIN ponytail_index.rolling_campaign_v1 c USING(project_id,campaign_id) WHERE i.project_id=$1 AND c.coordinator_root=$2 AND i.state<>\'PUBLISHED\' AND i.repair_reference IS NULL', [this.projectId, rollingCampaignRow.coordinator_root])).rows;
+            requireState(activeIncrementRecords.length === 0, 'integration lane is occupied; finish its Git outcome before assessing certificates');
             const rollingIncrementClaimV1 = (0, rolling_integration_js_1.readRollingIncrementClaimV1)(readStateText(stringColumn(row.claim_text, 'increment claim')));
             const rollingStoredAssignment = await this.assignment(poolClient, campaignId, rollingIncrementClaimV1.assignmentId, rollingIncrementClaimV1.generation);
             requireState(rollingStoredAssignment.state === 'INTEGRATING' && rollingStoredAssignment.activityStopped && !rollingStoredAssignment.retired, 'certificate assessment requires stopped retained integration ownership');
