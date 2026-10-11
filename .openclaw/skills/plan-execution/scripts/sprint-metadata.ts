@@ -99,7 +99,7 @@ export function parseSprintFile(filePath: string, text = fs.readFileSync(filePat
     default: fail(`${filePath} has unsupported schemaVersion: ${version}`);
   }
 }
-export function readSprints(planDirectory: string): (SprintV1 | SprintV2 | SprintV3)[] {
+export function readSprints(planDirectory: string): SprintV1[] | SprintV2[] | SprintV3[] {
   const sprintDirectory = path.join(planDirectory, 'sprints');
   if (!fs.existsSync(sprintDirectory) || !fs.statSync(sprintDirectory).isDirectory()) fail(`sprint directory does not exist: ${sprintDirectory}`);
   const files = fs.readdirSync(sprintDirectory).filter(name => /^S\d+\.md$/.test(name) && fs.statSync(path.join(sprintDirectory, name)).isFile())
@@ -115,6 +115,8 @@ export function readSprints(planDirectory: string): (SprintV1 | SprintV2 | Sprin
     if (ordinals.has(ordinal)) fail(`duplicate numeric sprint order: ${ordinal}`);
     ordinals.add(ordinal);
   }
-  if (new Set(sprints.map(({ schemaVersion }) => schemaVersion)).size !== 1) fail('plan must not mix physical sprint schema versions');
-  return sprints;
+  if (sprints.every((sprint): sprint is SprintV1 => sprint.schemaVersion === 1)) return sprints;
+  if (sprints.every((sprint): sprint is SprintV2 => sprint.schemaVersion === 2)) return sprints;
+  if (sprints.every((sprint): sprint is SprintV3 => sprint.schemaVersion === 3)) return sprints;
+  fail('plan must not mix physical sprint schema versions');
 }

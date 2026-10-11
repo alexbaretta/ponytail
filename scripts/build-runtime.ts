@@ -25,7 +25,8 @@ const sources: readonly string[] = [
   'skills/plan-execution/scripts/tasklet-graph.ts',
   'skills/plan-execution/scripts/ready-tasklets.ts',
   'skills/plan-execution/scripts/sprint-metadata.ts',
-  'skills/plan-execution/scripts/sprint-graph.ts'
+  'skills/plan-execution/scripts/sprint-graph.ts',
+  'skills/plan-execution/scripts/ready-sprints.ts'
 ];
 const argv = process.argv.slice(2);
 if (!(argv.length === 0 || argv.length === 1 && argv[0] === '--check')) {

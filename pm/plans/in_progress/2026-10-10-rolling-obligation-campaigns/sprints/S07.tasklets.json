@@ -113,6 +113,12 @@
         "S07-F18"
       ],
       "validation_tasklet": "S07-F19-T07"
+    },
+    "S07-F20": {
+      "depends_on": [
+        "S07-F19"
+      ],
+      "validation_tasklet": "S07-F20-T09"
     }
   },
   "tasklets": {
@@ -2128,6 +2134,123 @@
       "affinity": [],
       "risk": "normal",
       "feature": "S07-F19",
+      "planned_paths": []
+    },
+    "S07-F20-T01": {
+      "depends_on": [],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F20",
+      "planned_paths": [
+        "skills/plan-execution/scripts/sprint-metadata.ts",
+        "skills/plan-execution/scripts/sprint-graph.ts",
+        "skills/plan-execution/scripts/ready-sprints.ts"
+      ]
+    },
+    "S07-F20-T02": {
+      "depends_on": [
+        "S07-F20-T01"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F20",
+      "planned_paths": [
+        "skills/plan-execution/scripts/ready-sprints.ts"
+      ]
+    },
+    "S07-F20-T03": {
+      "depends_on": [
+        "S07-F20-T02"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F20",
+      "planned_paths": [
+        "skills/plan-execution/scripts/ready-sprints.ts"
+      ]
+    },
+    "S07-F20-T04": {
+      "depends_on": [
+        "S07-F20-T03"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F20",
+      "planned_paths": [
+        "skills/plan-execution/scripts/ready-sprints.ts"
+      ]
+    },
+    "S07-F20-T05": {
+      "depends_on": [
+        "S07-F20-T04"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F20",
+      "planned_paths": [
+        "skills/plan-execution/scripts/ready-sprints.ts"
+      ]
+    },
+    "S07-F20-T06": {
+      "depends_on": [
+        "S07-F20-T05"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F20",
+      "planned_paths": [
+        "skills/plan-execution/scripts/ready-sprints.ts"
+      ]
+    },
+    "S07-F20-T07": {
+      "depends_on": [
+        "S07-F20-T06"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F20",
+      "planned_paths": [
+        "tests/ready-sprints-cli.test.ts"
+      ]
+    },
+    "S07-F20-T08": {
+      "depends_on": [
+        "S07-F20-T07"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F20",
+      "planned_paths": [
+        "skills/plan-execution/scripts/ready-sprints.js",
+        "scripts/build-runtime.ts",
+        "AGENTS.md",
+        "PROJECT_STRUCTURE.md",
+        ".agents/config/project/traceability.json",
+        "pm/requirements/traceability.generated.md",
+        ".openclaw/skills/plan-execution/scripts/ready-sprints.ts",
+        ".openclaw/skills/plan-execution/scripts/ready-sprints.js",
+        ".openclaw/skills/plan-execution/scripts/sprint-metadata.ts",
+        ".openclaw/skills/plan-execution/scripts/sprint-metadata.js",
+        ".openclaw/skills/plan-execution/scripts/sprint-graph.ts",
+        ".openclaw/skills/plan-execution/scripts/sprint-graph.js",
+        "skills/plan-execution/scripts/sprint-metadata.js",
+        "skills/plan-execution/scripts/sprint-graph.js"
+      ]
+    },
+    "S07-F20-T09": {
+      "depends_on": [
+        "S07-F20-T01",
+        "S07-F20-T02",
+        "S07-F20-T03",
+        "S07-F20-T04",
+        "S07-F20-T05",
+        "S07-F20-T06",
+        "S07-F20-T07",
+        "S07-F20-T08"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F20",
       "planned_paths": []
     }
   },

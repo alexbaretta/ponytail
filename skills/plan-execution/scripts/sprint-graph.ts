@@ -69,7 +69,7 @@ function validatePathPairs(sprints: readonly (SprintV1 | SprintV3)[], paths: Rea
     }
   }
 }
-export function validatePathOwnership(sprints: readonly SprintV1[], sprintById: ReadonlyMap<string, SprintV1>): void {
+export function validatePathOwnership(sprints: readonly SprintV1[], sprintById: ReadonlyMap<string, SprintV1 | SprintV2 | SprintV3>): void {
   const reachable = executionReachability(sprintById);
   for (const sprint of sprints) reachable(sprint.id);
   const paths = new Map<string, readonly string[]>();
@@ -83,7 +83,7 @@ function readV3PlannedPaths(sprintV3: SprintV3): readonly string[] {
   for (const tasklet of graph.tasklets.values()) paths.push(...tasklet.planned_paths);
   return [...new Set(paths)];
 }
-export function validateV3PathOwnership(sprints: readonly SprintV3[], sprintById: ReadonlyMap<string, SprintV3>): void {
+export function validateV3PathOwnership(sprints: readonly SprintV3[], sprintById: ReadonlyMap<string, SprintV1 | SprintV2 | SprintV3>): void {
   const reachable = executionReachability(sprintById);
   const paths = new Map(sprints.filter(({ execution }) => execution).map(sprint => [sprint.id, readV3PlannedPaths(sprint)]));
   validatePathPairs(sprints, paths, reachable);

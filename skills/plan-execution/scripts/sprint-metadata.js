@@ -134,7 +134,11 @@ function readSprints(planDirectory) {
             fail(`duplicate numeric sprint order: ${ordinal}`);
         ordinals.add(ordinal);
     }
-    if (new Set(sprints.map(({ schemaVersion }) => schemaVersion)).size !== 1)
-        fail('plan must not mix physical sprint schema versions');
-    return sprints;
+    if (sprints.every((sprint) => sprint.schemaVersion === 1))
+        return sprints;
+    if (sprints.every((sprint) => sprint.schemaVersion === 2))
+        return sprints;
+    if (sprints.every((sprint) => sprint.schemaVersion === 3))
+        return sprints;
+    fail('plan must not mix physical sprint schema versions');
 }
