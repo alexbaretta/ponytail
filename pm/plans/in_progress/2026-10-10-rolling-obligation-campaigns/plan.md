@@ -5,6 +5,18 @@ Licensed under the MIT License. See LICENSE in the project root.
 
 # Rolling obligation campaigns
 
+## Stakeholder scope correction — 2026-10-11
+
+The repository's [local rules](../../../../AGENTS.md#local-rules) own the
+corrected prospective language scope: our Codex plan-execution code only.
+Keep completed translations. Earlier whole-owned-codebase migration statements
+in this plan, S07, the language inventory and decomposition are historical
+interpretations superseded by this correction. Do not start further migration
+of pre-existing Ponytail code. Preserve immutable obligation and certificate
+history. BASELINE-15 activates the corrected requirement bytes and authority,
+retains all 91 registered atomic delivery obligations and invalidates affected
+certificates for explicit renewal. This amendment awards no completion.
+
 - Plan ID: `2026-10-10-rolling-obligation-campaigns`
 - **Status:** `in_progress`
 - Management and component repository: Ponytail in the supplied checkout.
@@ -72,12 +84,12 @@ The active sprint's exact declarations, paths, invariants and focused proofs
 are recorded before source edits. Later sprint detail is refined from the
 accepted design before its readiness gate, without expanding approved scope.
 
-The amended language gate applies to the whole owned executable codebase,
-including tests, generators, portable skill scripts and host adapters. Existing
-S02/S03 and checkout evidence records the previous implementation; it does not
-establish acceptance of the converted implementation. S04's uncommitted native
-transport is converted before its implementation tasklet is accepted. See S07
-for migration order, runtime compatibility and compiler/checker gates.
+The corrected language gate applies to code introduced by our Codex
+plan-execution work and its supporting tests/tooling. Preserve completed
+translations and their verification responsibilities. Existing S02/S03 and
+checkout evidence does not by itself establish acceptance after relevant source
+changes. The former S07 blanket migration frontier is historical; it does not
+authorize further conversion of unrelated Ponytail code.
 
 ## Work metric
 

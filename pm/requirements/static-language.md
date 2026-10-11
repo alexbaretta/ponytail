@@ -9,7 +9,16 @@ Approval: stakeholder instructions on 2026-10-10 to convert JavaScript to fully
 statically typed TypeScript, apply TSTS locally, and replan as necessary; followed
 by clarification that existing TSTS suffices and need not be extended.
 
-## REQ-PONYTAIL-STATIC-LANGUAGE: Check every owned executable implementation
+## Stakeholder scope correction — 2026-10-11
+
+The [repository-local language rule](../../AGENTS.md#local-rules) supersedes
+the broader migration scope recorded below. It applies prospectively to our
+Codex plan-execution implementation, tests and tooling. Completed translations
+remain in place. The previous whole-codebase inventory and accepted evidence
+remain historical records; they do not authorize further migration of
+pre-existing Ponytail code or impose language mandates on client projects.
+
+## REQ-PONYTAIL-STATIC-LANGUAGE: Check our Codex plan-execution implementation
 
 **Atomic obligations:** [OBL-70](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-70),
 [OBL-71](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-71)
@@ -17,17 +26,17 @@ and [OBL-72](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delive
 define the known compiler/checker/runtime foundation conditions in the canonical
 campaign obligation document.
 
-In addition, each owned executable operation requires an identified atomic
+In addition, each operation introduced by our Codex plan-execution work requires an identified atomic
 obligation establishing its checked static implementation with preserved approved
 behavior and focused proof. The complete operation inventory must include
 implementation, independently consumed QA/tooling and embedded executable source,
 with generated copies attached to their canonical owners. Existing S07 migration
 evidence supplies inspection inputs, not an alternative condition registry.
-Registration of these operation obligations is incomplete and explicitly remains
-an unresolved completeness responsibility; the three foundation obligations do
-not stand for the whole-codebase migration or authorize unbounded assignment.
+The inventory concerns our plan-execution implementation, its supporting
+tests/tooling and retained completed translations. The three foundation
+obligations do not authorize migrating other pre-existing Ponytail operations.
 
-Owned handwritten JavaScript is prohibited. TypeScript implementation, scripts,
+Handwritten JavaScript introduced by our work is prohibited. Its TypeScript implementation, scripts,
 tests and adapters use full static typing and strict compilation. Apply existing
 TSTS to Ponytail's local TypeScript codebase, including its executable tooling.
 Other implementation languages must be strongly statically typed. Validate
@@ -37,8 +46,9 @@ external unknown data before it enters owned logic; do not conceal defects with
 JavaScript emitted by a checked TypeScript compiler is a generated runtime
 artifact with a canonical typed source owner. Preserve supported runtime,
 installation, packaging and serialized-contract behavior during conversion.
-This requirement authorizes migration and local checker configuration, not
-extensions to TSTS or changes to other projects.
+This requirement authorizes typed implementation and local checker configuration
+within that scope, not further blanket migration, extensions to TSTS or changes
+to other projects. Preserve translations already completed.
 
 Known operation migration obligation:
 [OBL-73](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-73)
@@ -90,5 +100,8 @@ Known portable operation obligations:
 [OBL-106](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-106).
 These canonical records cover inspected portable readers, projection, acceptance
 and selectors. Their inspection-only bindings do not authorize implementation
-until prerequisites, exact paths and operations are reconciled. Remaining
-indexing, worktree, host and tooling scope is still unregistered.
+until prerequisites, exact paths and operations are reconciled. The former
+blanket migration frontier for indexing, host adapters and unrelated tooling is
+superseded by the stakeholder scope correction; it is not outstanding campaign
+work. Already registered and translated outcomes retain their identities and
+required verification.

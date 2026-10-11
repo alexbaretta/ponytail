@@ -61,8 +61,7 @@ services. `PROJECT_STRUCTURE.md` is authoritative for that boundary.
 - Dependency update: use the same two install commands after dependency or
   lockfile changes.
 - Build targets: `npm run build` for root TypeScript and `npm run build:tsts`
-  for TSTS. Existing handwritten JavaScript is being migrated under S07 of
-  the rolling campaign plan; its presence is not final language acceptance.
+  for TSTS.
 - Build-impact configuration: `ponytail.json`.
 - Build-impact query: `node skills/build-impact/scripts/build-impact.js --file <changed-path>`.
 - TSTS focused tests after build: `node --test [--test-name-pattern=<pattern>] tsts/dist/test/<file>.test.js`.
@@ -223,6 +222,14 @@ rule-copy check, and the version check for final core acceptance.
 
 ## Local Rules
 
+- The user's language and static-type-safety mandates apply prospectively
+  only to code introduced by our work, specifically the Codex plan-execution
+  CLI and its supporting implementation, tests and tooling. Write that code
+  in TypeScript with strong static types and apply TSTS to it. These mandates
+  do not authorize migrating pre-existing Ponytail code or impose a language
+  migration requirement on client projects. Preserve translations already
+  completed; do not translate them back. This scope correction supersedes
+  broader language-migration scope in existing plan records.
 - Keep generated host adapters synchronized with their canonical sources in
   the same commit.
 - Do not hand-edit generated skill copies when the owning generator can

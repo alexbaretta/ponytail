@@ -5,6 +5,11 @@ Licensed under the MIT License. See LICENSE in the project root.
 
 # Owned executable language inventory
 
+Historical scope snapshot. The [2026-10-11 scope correction](plan.md#stakeholder-scope-correction--2026-10-11)
+supersedes its whole-codebase migration requirements. Retain completed
+translations; use this inventory for inspection, not authority to migrate
+additional pre-existing Ponytail operations.
+
 [Plan](plan.md) | [Delivery decomposition](delivery-decomposition.md)
 
 Inspection basis: `c82e80c`, clean tracked checkout before this documentation

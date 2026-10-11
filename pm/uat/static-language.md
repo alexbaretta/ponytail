@@ -11,8 +11,8 @@ Licensed under the MIT License. See LICENSE in the project root.
 
 Traceability: verifies REQ-PONYTAIL-STATIC-LANGUAGE
 
-1. **Step STATIC-INVENTORY:** Inspect every owned executable source, including
-   tests, portable skills and hidden host adapters. No handwritten JavaScript
+1. **Step STATIC-INVENTORY:** Inspect the Codex plan-execution sources introduced
+   by our work, their supporting tests/tooling and completed translations. No handwritten JavaScript
    or unapproved dynamically typed implementation remains. Every generated
    JavaScript artifact resolves to its checked canonical TypeScript source.
 2. **Step STATIC-CHECK:** Acceptance contribution to
@@ -23,14 +23,19 @@ Traceability: verifies REQ-PONYTAIL-STATIC-LANGUAGE
 3. **Step STATIC-RUNTIME:** Acceptance contribution to
    [OBL-72](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-72)
    and the pending per-operation migration obligations. Build and install from clean inputs. Exercise focused
-   runtime proofs, native worker startup/resume, installers and final repository
+   runtime proofs, native worker startup/resume, affected installers and final repository
    QA against emitted code. Supported behavior and V1 contract meanings remain
    intact; historical JavaScript evidence alone cannot satisfy this Step.
 
-STATIC-INVENTORY must enumerate and register the remaining per-operation atomic
+The 2026-10-11 stakeholder correction limits prospective language work to our
+Codex plan-execution code; preserve completed translations. Pre-existing
+Ponytail commands, host adapters and benchmarks require no further migration.
+This is a local acceptance contract, not a client-project language mandate.
+
+STATIC-INVENTORY must enumerate and register remaining in-scope atomic
 obligations before their assignments or final acceptance. STATIC-RUNTIME then
 identifies the exact registered IDs demonstrated by each focused operation proof.
-Until that reconciliation is complete, the inventory and whole-language acceptance
+Until that reconciliation is complete, the inventory and scoped language acceptance
 remain unresolved even when the compiler/checker/runtime foundation passes.
 
 ### Acceptance STATIC-INVENTORY-PRESENTATION

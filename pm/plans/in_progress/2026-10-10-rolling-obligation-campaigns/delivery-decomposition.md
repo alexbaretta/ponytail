@@ -5,6 +5,13 @@ Licensed under the MIT License. See LICENSE in the project root.
 
 # Atomic delivery decomposition
 
+The [2026-10-11 scope correction](plan.md#stakeholder-scope-correction--2026-10-11)
+supersedes prospective whole-codebase language migration below. Historical
+obligations and accepted certificates retain their original meanings. The
+BASELINE-15 activates the corrected scope and retains all 91 registered atomic
+delivery obligations. Renew affected proof before reporting current completion;
+do not expand this inventory by migrating more pre-existing Ponytail code.
+
 [Plan and atomicity criterion](plan.md#work-metric) | [Execution contract](design.md)
 
 ## Assessment boundary
@@ -135,7 +142,13 @@ does not establish checked ownership of every retained runtime entrypoint.
 | <a id="obl-75"></a>[OBL-75](obligations.json) | Typed activation move/link/rollback proof and census CLI | Certificate CERT-4; see canonical ledger freshness projection |
 | <a id="obl-76"></a>[OBL-76](obligations.json) | Typed invocation parser and census CLI/format proof | Certificate CERT-4; see canonical ledger freshness projection |
 
-## Remaining decomposition before baseline activation
+## Historical blanket migration frontier — superseded
+
+The following inspection frontier preserves earlier planning provenance.
+The 2026-10-11 scope correction removes its prospective migration mandate.
+It neither adds outstanding delivery obligations nor cancels completed
+translations or their verification. Current atomic IDs remain in the canonical
+approved baseline; no completion is awarded by this scope correction.
 
 The 48 registered rolling delivery obligations and three language foundation
 obligations are not the campaign-wide denominator. The full
