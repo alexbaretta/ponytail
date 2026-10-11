@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "certificateId": "CERT-22",
+  "lease": {
+    "schemaVersion": 1,
+    "scopeId": "2026-10-10-rolling-obligation-campaigns",
+    "baselineId": "BASELINE-14",
+    "graphDigest": "63bc9f89500ef1533dd13ea1d2bb554bd7c780ddfcc1c36ff8cb16d73a9a10a8",
+    "generation": "standalone-sprint-v1-2026-10-11",
+    "assessor": "coordinator",
+    "authority": [
+      "user-goal-2026-10-10-rolling-campaigns",
+      "user-goal-2026-10-10-static-language-existing-tsts",
+      "user-2026-10-10-normative-atomic-obligations"
+    ],
+    "binding": {
+      "obligationId": "OBL-83",
+      "revisionId": "BIND-4",
+      "dependsOn": [
+        "OBL-112"
+      ],
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "skills/plan-execution/scripts/sprint-metadata.ts",
+          "skills/plan-execution/scripts/sprint-metadata.js",
+          "tests/sprint-metadata.test.ts"
+        ],
+        "operations": [
+          "inspect",
+          "edit",
+          "build",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "physical V1 sprint metadata completion"
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "typed-sprint-v1"
+        }
+      }
+    }
+  },
+  "revision": "347b43be3b80f5218a932791a8dbbd883ad79f76",
+  "proof": [
+    {
+      "operation": "test",
+      "certificateEvidenceIndex": 0,
+      "submissionEvidenceIndex": 0
+    }
+  ]
+}
