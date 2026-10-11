@@ -83,7 +83,7 @@ while project-wide management records remain under `pm/`.
   independently testable graph/scheduling boundary. Its project configuration
   is `.agents/config/project/rolling-campaigns.json`; existing campaign dispatch
   remains legacy until the replacement operation layer is integrated.
-  `src/rolling-campaign-store.js` owns transactional PostgreSQL campaign,
+  `src/rolling-campaign-store.ts` owns transactional PostgreSQL campaign,
   checkout and assignment leases and durable external-action intents.
   Its tables and indexes use the existing `scripts/project-index.sql` setup.
   `src/rolling-worktrees.ts` validates the shared physical pool and provisions
@@ -216,3 +216,8 @@ The rolling configuration/graph/scheduler and checkout runtime entrypoints in
 canonical `.ts` owners by `scripts/build-runtime.ts`. Their behavioral tests are
 migrated to checked TypeScript before language acceptance; checkout tests now
 execute their typed setup fixture and compiled test runtime.
+
+The rolling PostgreSQL store has a canonical checked TypeScript owner; its
+established `.js` entrypoint is materialized compiler output. Database rows are
+validated before entering owned typed contracts. Published `@types/pg` is a
+development dependency; runtime PostgreSQL topology and schema remain unchanged.

@@ -818,12 +818,12 @@
     },
     {
       "class": "implementation",
-      "path": "src/rolling-campaign-store.js",
+      "path": "src/rolling-campaign-store.ts",
       "locator": "text"
     },
     {
       "class": "unit-test",
-      "path": "tests/rolling-campaign-store.test.js",
+      "path": "tests/rolling-campaign-store.test.ts",
       "locator": "text"
     },
     {
@@ -951,6 +951,10 @@
     {
       "path": "src/rolling-worktrees.js",
       "sourcePath": "src/rolling-worktrees.ts"
+    },
+    {
+      "path": "src/rolling-campaign-store.js",
+      "sourcePath": "src/rolling-campaign-store.ts"
     }
   ],
   "reverseViewPath": "pm/requirements/traceability.generated.md",

@@ -6,7 +6,7 @@
       "id": "rolling-assignment-scope",
       "implementation": {
         "workspace": "ponytail",
-        "module": "src/rolling-campaign-store.js",
+        "module": "src/rolling-campaign-store.ts",
         "readerRegistryExport": "RollingAssignmentScopeReaders"
       },
       "currentVersion": "V1",
@@ -22,7 +22,7 @@
       "id": "rolling-execution-configuration",
       "implementation": {
         "workspace": "ponytail",
-        "module": "src/rolling-campaign-store.js",
+        "module": "src/rolling-campaign-store.ts",
         "readerRegistryExport": "RollingExecutionConfigReaders"
       },
       "currentVersion": "V1",

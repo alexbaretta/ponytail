@@ -99,6 +99,7 @@
     "tsts": "cli/tsts"
   },
   "devDependencies": {
-    "@types/node": "25.7.0"
+    "@types/node": "25.7.0",
+    "@types/pg": "^8.23.1"
   }
 }
