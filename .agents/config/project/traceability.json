@@ -134,6 +134,10 @@
     {
       "id": "REQ-ROLLING-INTERFACES",
       "sourcePath": "pm/requirements/rolling-campaigns.md"
+    },
+    {
+      "id": "REQ-PONYTAIL-STATIC-LANGUAGE",
+      "sourcePath": "pm/requirements/static-language.md"
     }
   ],
   "artifacts": [
@@ -851,6 +855,31 @@
       "class": "plan",
       "path": "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/sprints/S04.md",
       "locator": "text"
+    },
+    {
+      "class": "implementation",
+      "path": "src/rolling-codex.ts",
+      "locator": "text"
+    },
+    {
+      "class": "unit-test",
+      "path": "tests/rolling-codex.test.ts",
+      "locator": "text"
+    },
+    {
+      "class": "integration-test",
+      "path": "tests/rolling-codex.integration.ts",
+      "locator": "text"
+    },
+    {
+      "path": "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/sprints/S07.md",
+      "locator": "text",
+      "class": "plan"
+    },
+    {
+      "path": "pm/uat/static-language.md",
+      "locator": "text",
+      "class": "uat"
     }
   ],
   "entities": [],

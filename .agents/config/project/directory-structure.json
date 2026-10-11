@@ -34,6 +34,8 @@
       "benchmarks/.gitignore",
       "tsts/package.json",
       "tsts/tsconfig.json",
+      "tsconfig.json",
+      "tsts.json",
       "versioned-data-contracts.json"
     ],
     "data": ["assets/**", "benchmarks/**"],
@@ -108,11 +110,17 @@
       "git": "ignored"
     },
     {
+      "path": "dist",
+      "recursive": true,
+      "allowedContentKinds": ["compiled"],
+      "git": "ignored"
+    },
+    {
       "path": "tsts/dist",
       "recursive": true,
       "allowedContentKinds": ["compiled"],
       "git": "ignored"
     }
   ],
-  "opaqueDirectories": ["**/node_modules", "**/__pycache__", "tmp", "tsts/dist"]
+  "opaqueDirectories": ["**/node_modules", "**/__pycache__", "tmp", "tsts/dist", "dist"]
 }

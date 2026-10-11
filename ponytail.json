@@ -17,6 +17,13 @@
         "type": "typescript",
         "targets": [
           {
+            "name": "ponytail",
+            "buildCommand": "npm run build",
+            "tsconfig": "tsconfig.json",
+            "configurationInputs": ["tsts.json"],
+            "additionalInputs": []
+          },
+          {
             "name": "tsts",
             "buildCommand": "npm run build:tsts",
             "tsconfig": "tsts/tsconfig.json",

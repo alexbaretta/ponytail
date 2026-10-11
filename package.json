@@ -69,13 +69,15 @@
   ],
   "scripts": {
     "test": "npm run test:core",
-    "test:core": "node scripts/registry.js && node scripts/build-registry-data.js && node scripts/build-command-adapters.js && node scripts/build-manifests.js && node scripts/check-rule-copies.js && npm run check:traceability && node --test tests/*.test.js && ./scripts/test-install-to-codex.sh && npm test --prefix pi-extension && npm test --prefix ponytail-mcp && npm run test:tsts && npm run check:tsts",
+    "test:core": "node scripts/registry.js && node scripts/build-registry-data.js && node scripts/build-command-adapters.js && node scripts/build-manifests.js && node scripts/check-rule-copies.js && npm run check:traceability && node --test tests/*.test.js && npm run build && npm run test:typed && ./scripts/test-install-to-codex.sh && npm test --prefix pi-extension && npm test --prefix ponytail-mcp && npm run test:tsts && npm run check:tsts",
+    "build": "tsc -p tsconfig.json",
     "build:tsts": "tsc -p tsts/tsconfig.json",
-    "check:tsts": "node tsts/dist/src/cli.js --project tsts/tsconfig.json --directory-structure .agents/config/project/directory-structure.json",
+    "check:tsts": "node tsts/dist/src/cli.js --config tsts.json --directory-structure .agents/config/project/directory-structure.json",
+    "test:typed": "node --test dist/tests/*.test.js",
     "build:traceability": "node skills/requirements-traceability/scripts/check-traceability.js --config .agents/config/project/traceability.json --write",
     "check:traceability": "node skills/requirements-traceability/scripts/check-traceability.js --config .agents/config/project/traceability.json",
     "test:tsts": "node --test tsts/dist/test/*.test.js",
-    "prepare": "npm run build:tsts"
+    "prepare": "npm run build:tsts && npm run build"
   },
   "pi": {
     "extensions": ["./pi-extension/index.js"],

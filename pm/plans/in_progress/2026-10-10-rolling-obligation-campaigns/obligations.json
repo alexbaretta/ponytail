@@ -79,6 +79,103 @@
         "OBL-5",
         "OBL-6"
       ]
+    },
+    {
+      "id": "BASELINE-2",
+      "predecessorId": "BASELINE-1",
+      "authority": {
+        "references": [
+          "user-goal-2026-10-10-rolling-campaigns",
+          "user-goal-2026-10-10-static-language-existing-tsts"
+        ],
+        "assessors": [
+          "coordinator"
+        ]
+      },
+      "requirements": [
+        {
+          "id": "REQ-ROLLING-CONFIGURATION",
+          "path": "pm/requirements/rolling-campaigns.md",
+          "digest": "857a59f0163a862e2811ca352a3df82a5b5a3d8ef70171da019de9466ca5bc5d"
+        },
+        {
+          "id": "REQ-ROLLING-GRAPH",
+          "path": "pm/requirements/rolling-campaigns.md",
+          "digest": "857a59f0163a862e2811ca352a3df82a5b5a3d8ef70171da019de9466ca5bc5d"
+        },
+        {
+          "id": "REQ-ROLLING-SCHEDULING",
+          "path": "pm/requirements/rolling-campaigns.md",
+          "digest": "857a59f0163a862e2811ca352a3df82a5b5a3d8ef70171da019de9466ca5bc5d"
+        },
+        {
+          "id": "REQ-ROLLING-STATE",
+          "path": "pm/requirements/rolling-campaigns.md",
+          "digest": "857a59f0163a862e2811ca352a3df82a5b5a3d8ef70171da019de9466ca5bc5d"
+        },
+        {
+          "id": "REQ-ROLLING-WORKERS",
+          "path": "pm/requirements/rolling-campaigns.md",
+          "digest": "857a59f0163a862e2811ca352a3df82a5b5a3d8ef70171da019de9466ca5bc5d"
+        },
+        {
+          "id": "REQ-ROLLING-REVIEW",
+          "path": "pm/requirements/rolling-campaigns.md",
+          "digest": "857a59f0163a862e2811ca352a3df82a5b5a3d8ef70171da019de9466ca5bc5d"
+        },
+        {
+          "id": "REQ-ROLLING-PUBLICATION",
+          "path": "pm/requirements/rolling-campaigns.md",
+          "digest": "857a59f0163a862e2811ca352a3df82a5b5a3d8ef70171da019de9466ca5bc5d"
+        },
+        {
+          "id": "REQ-ROLLING-INTERFACES",
+          "path": "pm/requirements/rolling-campaigns.md",
+          "digest": "857a59f0163a862e2811ca352a3df82a5b5a3d8ef70171da019de9466ca5bc5d"
+        },
+        {
+          "id": "REQ-PONYTAIL-STATIC-LANGUAGE",
+          "path": "pm/requirements/static-language.md",
+          "digest": "e4c28fe338db42cb941ca0a5f03a39904f2e8c2ac704908aa425469d8e19d0bf"
+        }
+      ],
+      "obligationIds": [
+        "OBL-1",
+        "OBL-2",
+        "OBL-3",
+        "OBL-4",
+        "OBL-5",
+        "OBL-6",
+        "OBL-7",
+        "OBL-8",
+        "OBL-9",
+        "OBL-10",
+        "OBL-11",
+        "OBL-12",
+        "OBL-13",
+        "OBL-14",
+        "OBL-15",
+        "OBL-16",
+        "OBL-17",
+        "OBL-18",
+        "OBL-19",
+        "OBL-20",
+        "OBL-21"
+      ],
+      "inventoryIds": [
+        "OBL-1",
+        "OBL-2",
+        "OBL-3",
+        "OBL-4",
+        "OBL-5",
+        "OBL-6",
+        "OBL-15",
+        "OBL-16",
+        "OBL-17",
+        "OBL-18",
+        "OBL-19",
+        "OBL-20"
+      ]
     }
   ],
   "obligations": [
@@ -473,8 +570,279 @@
         "selection": [],
         "target": null
       }
+    },
+    {
+      "id": "OBL-15",
+      "category": "T1",
+      "requirementIds": [
+        "REQ-PONYTAIL-STATIC-LANGUAGE"
+      ],
+      "responsibilityId": "static-language-inventory-T1",
+      "condition": "Every necessary T1 responsibility for the approved static-language migration has been identified.",
+      "criterion": "Adequate inventory inspection enumerates all necessary downstream responsibilities; planned or absent proof is unresolved.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "STATIC-INVENTORY-T1"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-16",
+      "category": "T2",
+      "requirementIds": [
+        "REQ-PONYTAIL-STATIC-LANGUAGE"
+      ],
+      "responsibilityId": "static-language-inventory-T2",
+      "condition": "Every necessary T2 responsibility for the approved static-language migration has been identified.",
+      "criterion": "Adequate inventory inspection enumerates all necessary downstream responsibilities; planned or absent proof is unresolved.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "STATIC-INVENTORY-T2"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-17",
+      "category": "T3",
+      "requirementIds": [
+        "REQ-PONYTAIL-STATIC-LANGUAGE"
+      ],
+      "responsibilityId": "static-language-inventory-T3",
+      "condition": "Every necessary T3 responsibility for the approved static-language migration has been identified.",
+      "criterion": "Adequate inventory inspection enumerates all necessary downstream responsibilities; planned or absent proof is unresolved.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "STATIC-INVENTORY-T3"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-18",
+      "category": "T4",
+      "requirementIds": [
+        "REQ-PONYTAIL-STATIC-LANGUAGE"
+      ],
+      "responsibilityId": "static-language-inventory-T4",
+      "condition": "Every necessary T4 responsibility for the approved static-language migration has been identified.",
+      "criterion": "Adequate inventory inspection enumerates all necessary downstream responsibilities; planned or absent proof is unresolved.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "STATIC-INVENTORY-T4"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-19",
+      "category": "C1",
+      "requirementIds": [
+        "REQ-PONYTAIL-STATIC-LANGUAGE"
+      ],
+      "responsibilityId": "static-language-inventory-C1",
+      "condition": "Every necessary C1 responsibility for the approved static-language migration has been identified.",
+      "criterion": "Adequate inventory inspection enumerates all necessary downstream responsibilities; planned or absent proof is unresolved.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "STATIC-INVENTORY-C1"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-20",
+      "category": "C2",
+      "requirementIds": [
+        "REQ-PONYTAIL-STATIC-LANGUAGE"
+      ],
+      "responsibilityId": "static-language-inventory-C2",
+      "condition": "Every necessary C2 responsibility for the approved static-language migration has been identified.",
+      "criterion": "Adequate inventory inspection enumerates all necessary downstream responsibilities; planned or absent proof is unresolved.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "STATIC-INVENTORY-C2"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-21",
+      "category": "gate",
+      "requirementIds": [
+        "REQ-PONYTAIL-STATIC-LANGUAGE"
+      ],
+      "responsibilityId": "REQ-PONYTAIL-STATIC-LANGUAGE",
+      "condition": "REQ-PONYTAIL-STATIC-LANGUAGE is implemented and accepted on final relevant inputs.",
+      "criterion": "Canonical requirements, executable product-boundary proof, UAT and final applicable QA establish the full responsibility.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "STATIC-LANGUAGE"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
     }
   ],
   "certificates": [],
-  "checkpoints": []
+  "checkpoints": [
+    {
+      "selectedIds": [],
+      "certificateIds": [],
+      "invalidatedIds": [],
+      "preparation": null,
+      "assessor": "coordinator",
+      "id": "CHECKPOINT-1",
+      "predecessorId": null,
+      "baselineId": "BASELINE-1",
+      "kind": "initial",
+      "registeredIds": [
+        "OBL-1",
+        "OBL-2",
+        "OBL-3",
+        "OBL-4",
+        "OBL-5",
+        "OBL-6",
+        "OBL-7",
+        "OBL-8",
+        "OBL-9",
+        "OBL-10",
+        "OBL-11",
+        "OBL-12",
+        "OBL-13",
+        "OBL-14"
+      ],
+      "before": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "after": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "reason": "Observe the activated rolling campaign baseline; previous implementation tasklets do not discharge obligations."
+    },
+    {
+      "selectedIds": [],
+      "certificateIds": [],
+      "invalidatedIds": [],
+      "preparation": null,
+      "assessor": "coordinator",
+      "id": "CHECKPOINT-2",
+      "predecessorId": "CHECKPOINT-1",
+      "baselineId": "BASELINE-2",
+      "kind": "rebaseline",
+      "registeredIds": [
+        "OBL-1",
+        "OBL-2",
+        "OBL-3",
+        "OBL-4",
+        "OBL-5",
+        "OBL-6",
+        "OBL-7",
+        "OBL-8",
+        "OBL-9",
+        "OBL-10",
+        "OBL-11",
+        "OBL-12",
+        "OBL-13",
+        "OBL-14",
+        "OBL-15",
+        "OBL-16",
+        "OBL-17",
+        "OBL-18",
+        "OBL-19",
+        "OBL-20",
+        "OBL-21"
+      ],
+      "before": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "reason": "Stakeholder authorizes whole-codebase static-language migration and applying existing TSTS, without TSTS extensions. Preserve original requirements and add unresolved migration responsibilities."
+    }
+  ]
 }

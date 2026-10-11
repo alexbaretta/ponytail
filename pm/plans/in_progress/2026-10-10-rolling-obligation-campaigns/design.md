@@ -115,7 +115,11 @@ Create ordinary Git worktrees with project setup, then start a fresh Codex threa
 with explicit `cwd` through the documented App Server. The installed CLI's
 `--cd` supports manual operation; do not use `--worktree`. A dedicated transport
 adapter owns initialization, request/response IDs, returned thread/session IDs,
-turns, interruption, resumption, event observation and error recovery. No Ponytail
+turns, interruption, resumption, event observation and error recovery. The
+canonical transport is an owned stdio App Server process. On host/process loss,
+keep assignments reserved until activity and preserved state are reconciled;
+resume persisted native sessions rather than create replacements. Closing an
+owned server requires observed terminal turns. No Ponytail
 plugin is necessary for execution. Desktop visibility must be tested separately
 and reported truthfully, not inferred from successful thread creation.
 

@@ -60,7 +60,9 @@ services. `PROJECT_STRUCTURE.md` is authoritative for that boundary.
 - Initial setup: `npm install` and `npm install --prefix ponytail-mcp`.
 - Dependency update: use the same two install commands after dependency or
   lockfile changes.
-- Build target: `npm run build:tsts`; other Ponytail tooling ships source files.
+- Build targets: `npm run build` for root TypeScript and `npm run build:tsts`
+  for TSTS. Existing handwritten JavaScript is being migrated under S07 of
+  the rolling campaign plan; its presence is not final language acceptance.
 - Build-impact configuration: `ponytail.json`.
 - Build-impact query: `node skills/build-impact/scripts/build-impact.js --file <changed-path>`.
 - TSTS focused tests after build: `node --test [--test-name-pattern=<pattern>] tsts/dist/test/<file>.test.js`.
@@ -79,6 +81,9 @@ services. `PROJECT_STRUCTURE.md` is authoritative for that boundary.
 - Unit-test command families:
   - Node focused: `node --test [--test-name-pattern=<pattern>] <test-files>`.
   - Node full: `npm test`.
+- Rolling Codex protocol proof: `node --test dist/tests/rolling-codex.test.js`.
+  Explicit live native acceptance: `node --test dist/tests/rolling-codex.integration.js`;
+  preserves configured model/permissions and uses disposable checkouts.
 - Rolling checkout focused proof: `node --test tests/rolling-worktrees.test.js
   tests/rolling-worktrees.integration.test.js`; all Git worktrees belong to
   disposable test repositories.

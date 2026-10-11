@@ -26,3 +26,6 @@ ponytail-*.gif
 
 # Compiled TSTS runtime and tests
 tsts/dist/
+
+# Compiled Ponytail runtime and tests
+/dist/

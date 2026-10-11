@@ -10,7 +10,10 @@ Licensed under the MIT License. See LICENSE in the project root.
 - Management and component repository: Ponytail in the supplied checkout.
 - Implementation authority: stakeholder goal on 2026-10-10: "Finish
   documenting this campaign, the implement it. If possible, do away with the
-  requirement to leverage a ponytail plugin."
+  requirement to leverage a ponytail plugin." Amended by the stakeholder on
+  2026-10-10: handwritten JavaScript is prohibited; use fully statically typed
+  TypeScript and apply existing TSTS to Ponytail itself. TSTS extensions are
+  explicitly unnecessary.
 - Starting revision: `fc8f0d43382d7e7b3d38d5881483a074d525a4ff`; clean tracked tree.
 - Starting QA: all configured unit families passed (606 core, 23 extension,
   4 MCP, 80 TSTS); installer checks passed. Final directory validation passed
@@ -60,13 +63,21 @@ and no retrospective rewrite of closed plan evidence.
 | S01 | Activated requirements/UAT, execution design, starting evidence and atomic implementation records | Done |
 | S02 | [Configuration and graph](sprints/S02.md) | Done |
 | S03 | [PostgreSQL execution ownership](sprints/S03.md) | Done |
-| S04 | [Ponytail checkouts and direct Codex workers](sprints/S04.md) | In progress |
+| S07 | [Static TypeScript migration](sprints/S07.md), inserted before continuing S04 | In progress |
+| S04 | [Ponytail checkouts and direct Codex workers](sprints/S04.md) | Pending continuation after S07; existing tasklets retained |
 | S05 | Increment integration, publication batches and QA evidence on exact revisions | Pending |
 | S06 | Chapter CLI/MCP, old dispatcher replacement, portable policy and final acceptance | Pending |
 
 The active sprint's exact declarations, paths, invariants and focused proofs
 are recorded before source edits. Later sprint detail is refined from the
 accepted design before its readiness gate, without expanding approved scope.
+
+The amended language gate applies to the whole owned executable codebase,
+including tests, generators, portable skill scripts and host adapters. Existing
+S02/S03 and checkout evidence records the previous implementation; it does not
+establish acceptance of the converted implementation. S04's uncommitted native
+transport is converted before its implementation tasklet is accepted. See S07
+for migration order, runtime compatibility and compiler/checker gates.
 
 ## Acceptance
 

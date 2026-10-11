@@ -88,11 +88,19 @@ while project-wide management records remain under `pm/`.
   Its tables and indexes use the existing `scripts/project-index.sql` setup.
   `src/rolling-worktrees.js` validates the shared physical pool and provisions
   generation-bound ordinary Git checkouts with project setup and marker ignore.
+  `src/rolling-codex.ts` owns direct stdio App Server connections, native
+  thread/session identity, turns, approval routing and interruption observation.
+  `tests/rolling-codex.integration.ts` is explicit live native acceptance and
+  is excluded from default fixture-only test discovery.
   `src/worktree-reclamation.js` owns the versioned
   project lifecycle-adapter contracts, project-scoped reclamation lock,
   deterministic claim selection, generation fencing, and verified cleanup
   result.
-- `ponytail.json` owns the TSTS build-impact target.
+- `tsconfig.json` owns strict root TypeScript compilation into ignored `dist/`;
+  `npm run build` emits runtime and tests. `tsts.json` applies existing TSTS to
+  root TypeScript and the TSTS workspace. The root migration is incomplete
+  until every owned executable source has a checked typed owner.
+- `ponytail.json` owns the Ponytail and TSTS build-impact targets.
 - `cli/` owns user-facing parse-safe Bash tools. `cli/ponytail` owns project
   registration, optional pre-commit integration, and Codex configuration
   updates. The `ponytail` and `tsts` executables are linked to canonical source. Adding a `.sh` tool there

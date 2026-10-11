@@ -1,0 +1,14 @@
+✔ native App Server starts and resumes the same session in the designated existing checkout (21486.386917ms)
+ℹ {"timestamp":"2026-10-11T03:04:07.694347Z","level":"WARN","fields":{"message":"ignoring interface.icon_small: icon path with '..' must resolve under plugin assets/"},"target":"codex_skills::interface"}
+{"timestamp":"2026-10-11T03:04:07.694384Z","level":"WARN","fields":{"message":"ignoring interface.icon_large: icon path with '..' must resolve under plugin assets/"},"target":"codex_skills::interface"}
+ℹ {"timestamp":"2026-10-11T03:04:08.005608Z","level":"WARN","fields":{"message":"ignoring interface.icon_small: icon path with '..' must resolve under plugin assets/"},"target":"codex_skills::interface"}
+ℹ {"timestamp":"2026-10-11T03:04:08.005662Z","level":"WARN","fields":{"message":"ignoring interface.icon_large: icon path with '..' must resolve under plugin assets/"},"target":"codex_skills::interface"}
+ℹ native thread=01a128ea-eef5-7f60-acd8-e414501a364f; session=01a128ea-eef5-7f60-acd8-e414501a364f; cwd=/private/var/folders/yv/v_v6t2lj1nz4ypl2bpp_ytqm0000gp/T/rolling-native-jTXz7T; resumed after App Server restart; model=gpt-6.1-sol
+ℹ tests 1
+ℹ suites 0
+ℹ pass 1
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 21532.707083

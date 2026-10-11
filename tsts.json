@@ -1,0 +1,7 @@
+{
+  "schemaVersion": 2,
+  "workspaces": [
+    { "name": "ponytail", "projectPath": "tsconfig.json" },
+    { "name": "tsts", "projectPath": "tsts/tsconfig.json" }
+  ]
+}
