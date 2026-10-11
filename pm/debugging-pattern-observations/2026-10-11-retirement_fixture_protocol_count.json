@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-10-11T16:47:33-07:00",
+  "source_references": [
+    "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/plan.md"
+  ],
+  "context": {
+    "languages": [
+      "typescript"
+    ],
+    "frameworks": [],
+    "components": [
+      "rolling campaign retirement"
+    ],
+    "affected_boundaries": [
+      "native Codex archive acknowledgement",
+      "retained checkout release"
+    ],
+    "code_references": [
+      "src/rolling-worker.ts",
+      "src/rolling-codex.ts"
+    ]
+  },
+  "known_non_matches": [],
+  "observed_behavior": "The retirement fixture assertion compared a protocol archive count parsed as LosslessNumber with native number 1 and failed despite the correct count.",
+  "expected_behavior": "The assertion verifies the archive count without weakening the lossless protocol boundary.",
+  "causal_mechanism": "The production native transport intentionally retains lossless numeric values; the fixture assertion assumed native numeric conversion.",
+  "anti_pattern": {
+    "structural_description": "Asserting native representation equality across an intentionally lossless serialization boundary.",
+    "why_it_fails": "The same numeric token has different runtime representations, so equality fails independently of behavior."
+  },
+  "correct_pattern": {
+    "required_invariant": "Protocol assertions respect lossless numeric representation while checking the behavioral value.",
+    "implementation_description": "Serialize the returned protocol result with lossless-json and compare its exact count token, preserving the transport parser."
+  },
+  "applicability_conditions": [
+    "The protocol parser preserves numeric values losslessly.",
+    "A fixture returns a count through that protocol."
+  ],
+  "confirmation_evidence": [
+    "The failure showed actual count as LosslessNumber with value 1 and expected native number 1.",
+    "The passing retirement regression checks serialized count 1 and confirms archival occurred once."
+  ],
+  "regression_proofs": [
+    "tests/rolling-campaign-store.integration.test.ts: worker retirement revokes native ownership and fences checkout release through restartable cleanup"
+  ],
+  "observation_id": "2026-10-11-retirement_fixture_protocol_count"
+}

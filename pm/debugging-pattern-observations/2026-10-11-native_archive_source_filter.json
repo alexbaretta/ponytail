@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-10-11T16:47:33-07:00",
+  "source_references": [
+    "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/plan.md"
+  ],
+  "context": {
+    "languages": [
+      "typescript"
+    ],
+    "frameworks": [],
+    "components": [
+      "rolling campaign retirement"
+    ],
+    "affected_boundaries": [
+      "native Codex archive acknowledgement",
+      "retained checkout release"
+    ],
+    "code_references": [
+      "src/rolling-worker.ts",
+      "src/rolling-codex.ts"
+    ]
+  },
+  "known_non_matches": [],
+  "observed_behavior": "An archived inventory query filtered to appServer source omitted the exact worker created through the installed App Server.",
+  "expected_behavior": "Archive recovery finds the original actor independently of the native session source label.",
+  "causal_mechanism": "The runtime recorded the worker source as vscode. Creation transport and retained session source are distinct metadata boundaries.",
+  "anti_pattern": {
+    "structural_description": "Deriving a stored session source discriminator from the transport used to create the session.",
+    "why_it_fails": "Filtering with the inferred discriminator excludes a valid actor whose runtime source metadata differs."
+  },
+  "correct_pattern": {
+    "required_invariant": "Recovery uses the physical checkout and exact original actor identity without inferring source metadata from creation transport.",
+    "implementation_description": "Include all supported native source kinds in the exact-checkout archived query, then match the original thread ID and validate returned checkout identities."
+  },
+  "applicability_conditions": [
+    "Transport identity and persisted session source are separate metadata.",
+    "Archived inventory is filtered by session source."
+  ],
+  "confirmation_evidence": [
+    "The exact-checkout query including all supported kinds found the retired actor with source vscode while the appServer-only query returned false.",
+    "The final native retirement test passes with the source-independent query."
+  ],
+  "regression_proofs": [
+    "tests/rolling-codex.integration.ts: live worker acknowledges retirement, becomes idle and reconciles archival of the same actor",
+    "tests/rolling-codex.test.ts: archive recovery uses paginated exact-checkout inventory and rejects an escaped physical root"
+  ],
+  "observation_id": "2026-10-11-native_archive_source_filter"
+}

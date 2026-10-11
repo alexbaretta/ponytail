@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-10-11T16:47:33-07:00",
+  "source_references": [
+    "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/plan.md"
+  ],
+  "context": {
+    "languages": [
+      "typescript"
+    ],
+    "frameworks": [],
+    "components": [
+      "rolling campaign retirement"
+    ],
+    "affected_boundaries": [
+      "native Codex archive acknowledgement",
+      "retained checkout release"
+    ],
+    "code_references": [
+      "src/rolling-worker.ts",
+      "src/rolling-codex.ts"
+    ]
+  },
+  "known_non_matches": [],
+  "observed_behavior": "A second native thread/archive call after successful archival returned no rollout found for the same thread.",
+  "expected_behavior": "A retirement retry after an unknown archival acknowledgement recognizes the already archived actor and continues cleanup without repeating archival.",
+  "causal_mechanism": "The installed native archive operation removes the active rollout path; repeating the mutation cannot locate that path. The archived inventory still identifies the same actor.",
+  "anti_pattern": {
+    "structural_description": "Retrying a non-idempotent external mutation from a durable pending intent without reconciling authoritative external state.",
+    "why_it_fails": "A successful mutation with a lost acknowledgement appears pending locally, while its original mutation precondition no longer exists."
+  },
+  "correct_pattern": {
+    "required_invariant": "An unknown archival acknowledgement is reconciled against the exact original native identity before any repeated archive mutation or resource release.",
+    "implementation_description": "Query paginated archived inventory scoped to the physical checkout. If the original thread is already archived, advance the retained journal; otherwise archive that same actor. Preserve ownership on unknown or failed outcomes."
+  },
+  "applicability_conditions": [
+    "Native archival is not idempotent.",
+    "An archive acknowledgement can be lost after external mutation."
+  ],
+  "confirmation_evidence": [
+    "Native retirement test first acknowledged archive, then failed its second archive call with no rollout found.",
+    "Real PostgreSQL regression simulates lost archive acknowledgement and completes cleanup after inventory reconciliation, with archive count exactly one."
+  ],
+  "regression_proofs": [
+    "tests/rolling-campaign-store.integration.test.ts: worker retirement revokes native ownership and fences checkout release through restartable cleanup",
+    "tests/rolling-codex.integration.ts: live worker acknowledges retirement, becomes idle and reconciles archival of the same actor"
+  ],
+  "observation_id": "2026-10-11-native_archive_acknowledgement"
+}
