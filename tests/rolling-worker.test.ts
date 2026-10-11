@@ -73,7 +73,7 @@ test('worker instructions retain exact obligation, requirement, acceptance step,
    binding:{obligationId:'OBL-1',revisionId:'BIND-1',dependsOn:[],execution:{sprintId:null,taskletIds:[],plannedPaths:['fixture.ts'],
     operations:['inspect','edit','test'],selection:['focused fixture'],target:{identity:'local',profile:'fixture'}}}},
   configuration:{mainline:{remote:'origin',branch:'main'},incrementRef:'campaign/fixture',maxActiveWorkers:1,publicationSize:1},
-  baseCommit:'c'.repeat(40),
+  baseCommit:'c'.repeat(40),rejectedReview:null,
   qa:{focused:[['node','--test','fixture.test.ts']],publication:[['npm','test']]}
  };
  const instructions = buildRollingWorkerInstructions(rollingWorkerContext);
@@ -84,6 +84,12 @@ test('worker instructions retain exact obligation, requirement, acceptance step,
  assert.ok(instructions.includes('coordinator graph is authoritative'));
  assert.ok(instructions.includes('For a no-edit obligation, return fresh inspection and proof'));
  assert.ok(instructions.includes('When submitting code changes, fetch the configured campaign branch'));
+ const correctedRollingWorkerContext: RollingWorkerContext = { ...rollingWorkerContext,
+  rejectedReview: { schemaVersion:1,reviewId:'review',revision:'a'.repeat(40),reviewerSessionId:'original-reviewer',
+   completedAt:'2026-10-11T17:00:00.000Z',decision:'rejected',findings:['fixture.ts:1: Correct the missing failure path.'] } };
+ const correctedInstructions = buildRollingWorkerInstructions(correctedRollingWorkerContext);
+ assert.ok(correctedInstructions.includes('Correct every finding from the original reviewer before resubmission.'));
+ assert.ok(correctedInstructions.includes(JSON.stringify(correctedRollingWorkerContext.rejectedReview)));
  const outline = instructions.slice(instructions.indexOf('Code submission outline: ') + 'Code submission outline: '.length).split('\n')[0];
  assert.ok(outline);
  const submissionOutline:unknown = JSON.parse(outline);

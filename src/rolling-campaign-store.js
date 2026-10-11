@@ -379,6 +379,13 @@ class RollingCampaignStore {
                 return { request: rollingReviewRequestV1, outcome: text === null ? null : (0, rolling_review_js_1.parseRollingReviewOutcome)(text) };
             }
             requireState(rollingStoredAssignment.state === 'REVIEW', 'assignment is not awaiting review');
+            const previous = (await poolClient.query('SELECT request_text,outcome_text FROM ponytail_index.rolling_review_v1 WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3 ORDER BY created_at DESC,review_id DESC LIMIT 1', [this.projectId, campaignId, id])).rows[0];
+            if (previous) {
+                const previousRollingReviewRequestV1 = (0, rolling_review_js_1.parseRollingReviewRequest)(stringColumn(previous.request_text, 'previous review request'));
+                const previousOutcome = nullableStringColumn(previous.outcome_text, 'previous review outcome');
+                requireState(previousOutcome !== null && (0, rolling_review_js_1.parseRollingReviewOutcome)(previousOutcome).decision === 'rejected', 'corrected submission requires a decided rejected review');
+                requireState(previousRollingReviewRequestV1.reviewerSessionId === reviewerSessionId, 'corrected submission must retain its original reviewer');
+            }
             this.currentLease(rollingStoredAssignment, this.graph(rollingCampaignRow, rollingCampaignRow.graph_digest));
             const submission = (await poolClient.query('SELECT submission_text,lease_text FROM ponytail_index.rolling_submission_v1 WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3 AND generation=$4 AND revision=$5', [this.projectId, campaignId, id, generation, revision])).rows[0];
             requireState(submission, 'candidate has no validated worker submission');
@@ -715,11 +722,14 @@ class RollingCampaignStore {
         const checkedRollingWorkerStopV1 = (0, rolling_worker_js_1.readRollingWorkerStopV1)(rollingWorkerStopV1);
         requireState(checkedRollingWorkerStopV1.campaignId === campaignId && checkedRollingWorkerStopV1.assignmentId === id
             && checkedRollingWorkerStopV1.generation === generation, 'stop observation differs from assignment');
-        requireState(blockers.length > 0 && blockers.every(item => /^OBL-[1-9][0-9]*$/u.test(item))
+        requireState(blockers.every(item => /^OBL-[1-9][0-9]*$/u.test(item))
             && new Set(blockers).size === blockers.length, 'suspension requires unique obligation blockers');
         return this.transaction(campaignId, async (poolClient) => {
             const rollingStoredAssignment = await this.assignment(poolClient, campaignId, id, generation);
-            requireState(rollingStoredAssignment.state === 'WORKING' || rollingStoredAssignment.state === 'INACTIVE', 'worker is not eligible for suspension');
+            requireState(rollingStoredAssignment.state === 'WORKING' || rollingStoredAssignment.state === 'INACTIVE' || rollingStoredAssignment.state === 'REWORK', 'worker is not eligible for suspension');
+            const existing = await this.workerStopValue(poolClient, campaignId, id, generation);
+            requireState(blockers.length > 0 || rollingStoredAssignment.state === 'REWORK'
+                || rollingStoredAssignment.state === 'INACTIVE' && rollingStoredAssignment.blockers.length === 0 && existing !== null, 'suspension requires obligation blockers unless returning rejected work');
             const rollingWorkerCreationV1 = await this.attachedWorkerIdentity(poolClient, campaignId, rollingStoredAssignment);
             requireState(checkedRollingWorkerStopV1.threadId === rollingWorkerCreationV1.threadId
                 && checkedRollingWorkerStopV1.sessionId === rollingWorkerCreationV1.sessionId, 'stop observation differs from attached native worker');
@@ -727,7 +737,6 @@ class RollingCampaignStore {
             requireState(dispatch ? dispatch.state === 'ATTACHED' && dispatch.turn_id === checkedRollingWorkerStopV1.turn?.id
                 : checkedRollingWorkerStopV1.turn === null, 'stop observation differs from known worker turn');
             await this.cancelActions(poolClient, id);
-            const existing = await this.workerStopValue(poolClient, campaignId, id, generation);
             if (existing)
                 requireState((0, node_util_1.isDeepStrictEqual)(existing, { ...checkedRollingWorkerStopV1, observedAt: existing.observedAt }), 'stop observation checkpoint is immutable');
             else
@@ -755,9 +764,13 @@ class RollingCampaignStore {
         const obligation = rollingGraph.document.obligations.find(item => item.id === rollingStoredAssignment.obligationId);
         const obligationBaseline = rollingGraph.document.baselines.at(-1);
         requireState(obligation && obligationBaseline, 'worker obligation or baseline is missing');
+        const previousReview = (await poolClient.query('SELECT outcome_text FROM ponytail_index.rolling_review_v1 WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3 ORDER BY created_at DESC,review_id DESC LIMIT 1', [this.projectId, campaignId, id])).rows[0];
+        const previousOutcome = previousReview ? nullableStringColumn(previousReview.outcome_text, 'previous review outcome') : null;
+        const rollingReviewOutcomeV1 = previousOutcome === null ? null : (0, rolling_review_js_1.parseRollingReviewOutcome)(previousOutcome);
         return { assignmentId: id, rollingWorkerCreationV1, obligation, requirements: obligationBaseline.requirements.filter(item => obligation.requirementIds.includes(item.id)),
             binding: rollingStoredAssignment.binding, lease: obligationLeaseV1, configuration: executionConfiguration(rollingCampaignRow.configuration_text),
-            qa: rollingGraph.projectConfiguration.qa, baseCommit: this.campaignBase(rollingCampaignRow) };
+            qa: rollingGraph.projectConfiguration.qa, baseCommit: this.campaignBase(rollingCampaignRow),
+            rejectedReview: rollingReviewOutcomeV1?.decision === 'rejected' ? rollingReviewOutcomeV1 : null };
     }
     async claimWorkerDispatch(campaignId, id, generation, instructions) {
         requireState(instructions.trim().length > 0, 'worker instructions are empty');

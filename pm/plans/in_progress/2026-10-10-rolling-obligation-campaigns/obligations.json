@@ -12881,6 +12881,79 @@
       },
       "assessor": "coordinator",
       "reason": "Complete the already-started runtime materialization obligation through bounded no-edit inspection and actual proof."
+    },
+    {
+      "id": "CHECKPOINT-122",
+      "predecessorId": "CHECKPOINT-121",
+      "baselineId": "BASELINE-15",
+      "kind": "disturbance",
+      "selectedIds": [],
+      "registeredIds": [],
+      "certificateIds": [],
+      "invalidatedIds": [
+        "CERT-73",
+        "CERT-74",
+        "CERT-75",
+        "CERT-76",
+        "CERT-77",
+        "CERT-78",
+        "CERT-79",
+        "CERT-80",
+        "CERT-81",
+        "CERT-82",
+        "CERT-83",
+        "CERT-84"
+      ],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": null,
+      "assessor": "coordinator",
+      "reason": "Record the current binding amendment and resulting evidence freshness disturbance honestly before editing the first review/rework batch member."
+    },
+    {
+      "id": "CHECKPOINT-123",
+      "predecessorId": "CHECKPOINT-122",
+      "baselineId": "BASELINE-15",
+      "kind": "disturbance",
+      "selectedIds": [],
+      "registeredIds": [],
+      "certificateIds": [],
+      "invalidatedIds": [
+        "CERT-85"
+      ],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": null,
+      "assessor": "coordinator",
+      "reason": "Retain source-edit freshness disturbance explicitly. OBL-51 component proof passes, but native correction/re-review and reconciled batch certificate renewal remain unresolved."
     }
   ]
 }

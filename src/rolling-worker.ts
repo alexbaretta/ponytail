@@ -12,6 +12,7 @@ import type { Obligation, ObligationRequirement } from '../skills/plan-execution
 import type { ObligationLeaseV1 } from '../skills/plan-execution/scripts/obligation-binding-history.js';
 import type { RollingBinding, RollingProjectConfigV1, RollingResolvedConfiguration } from './rolling-campaign.js';
 import type { RollingCampaignStore, RollingSessionAttachment, RollingWorkerDispatchAttached, RollingAssignmentTransition, RollingSubmissionReceipt } from './rolling-campaign-store.js';
+import type { RollingReviewRejectedV1 } from './rolling-review.js';
 
 export interface RollingWorkerCreationV1 {
  readonly schemaVersion: 1;
@@ -144,6 +145,7 @@ export interface RollingWorkerContext {
  readonly configuration: RollingResolvedConfiguration;
  readonly qa: RollingProjectConfigV1['qa'];
  readonly baseCommit: string;
+ readonly rejectedReview: RollingReviewRejectedV1 | null;
 }
 
 // Traceability: implements REQ-ROLLING-WORKERS
@@ -175,6 +177,7 @@ export function buildRollingWorkerInstructions(rollingWorkerContext: RollingWork
   + 'If blocked, stop activity and report the blocker while retaining the checkout. Delivery is proposed discharge, not acceptance. '
   + 'When submitting code changes, fetch the configured campaign branch and perform a full semantic rebase commit by commit, refresh affected evidence, retain the exact candidate SHA and base, and stop activity. '
   + 'Return the candidate and evidence to the coordinator for adversarial review; never publish to mainline yourself. '
+  + (rollingWorkerContext.rejectedReview === null ? '' : `Correct every finding from the original reviewer before resubmission. Rejected review: ${JSON.stringify(rollingWorkerContext.rejectedReview)}\n`)
   + 'For code submissions, the final message must be only strict JSON, without Markdown fences or surrounding prose. '
   + 'Use exactly the physical record keys shown in the outline, at every level. Do not add stoppedAt, timestamp, status, blocker, validation or any other field to a successful submission. Keep actual timestamps in evidence.startedAt and evidence.completedAt only. '
   + 'Replace every placeholder and provide nonempty actual proof in the following typed submission outline; placeholders are not evidence. '

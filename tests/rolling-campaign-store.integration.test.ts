@@ -853,6 +853,7 @@ export async function runRollingWorkerScenario(t: TestContext, mode: 'protocol' 
     await rollingCodex.request('fixture-turn',{turnId:rollingWorkerDispatchAttached.turnId,status:'completed',text:JSON.stringify({...rollingWorkerSubmissionV1,sessionId:'foreign'})});
     await assert.rejects(collectRollingWorkerSubmission(rollingCampaignStore,rollingCodex,'worker-fixture',rollingAllocationResult.assignment.id,generation),/attached session/);
     await rollingCodex.request('fixture-turn',{turnId:rollingWorkerDispatchAttached.turnId,status:'completed',text});
+    await assert.rejects(suspendRollingWorker(rollingCampaignStore,rollingCodex,'worker-fixture',rollingAllocationResult.assignment.id,generation,[]),/obligation blockers/);
     const rollingSubmissionReceipt = await collectRollingWorkerSubmission(rollingCampaignStore,rollingCodex,'worker-fixture',rollingAllocationResult.assignment.id,generation);
     assert.equal(rollingSubmissionReceipt.revision,revision);assert.equal(rollingSubmissionReceipt.state,'REVIEW');
     assert.deepEqual(await collectRollingWorkerSubmission(new RollingCampaignStore(pool,projectId),rollingCodex,'worker-fixture',rollingAllocationResult.assignment.id,generation),rollingSubmissionReceipt);
@@ -861,6 +862,34 @@ export async function runRollingWorkerScenario(t: TestContext, mode: 'protocol' 
     assert.equal((await rollingCampaignStore.status('worker-fixture')).assignments[0]?.activityStopped,true);
     assert.equal(execFileSync('git',['-C',rootPath,'status','--porcelain'],{encoding:'utf8'}),'');
     t.diagnostic(`component submission revision=${revision}; exact original turn=${rollingWorkerDispatchAttached.turnId}; session=${rollingSessionAttachment.sessionId}; focused QA=2; REVIEW persisted; native code/rebase Arc remains unverified`);
+    // Traceability: verifies REQ-ROLLING-REVIEW
+    // This controlled Arc proves ownership/reviewer continuity, not native code correction.
+    const rejectedRollingStoredReview = await rollingCampaignStore.requestReview('worker-fixture',rollingAllocationResult.assignment.id,generation,revision,'original-reviewer');
+    const rejectedRollingReviewOutcomeV1: RollingReviewOutcomeV1 = {schemaVersion:1,reviewId:rejectedRollingStoredReview.request.id,
+      revision,reviewerSessionId:'original-reviewer',completedAt:new Date().toISOString(),decision:'rejected',findings:['fixture.ts:1: Required correction.']};
+    await rollingCampaignStore.recordReviewOutcome('worker-fixture',rejectedRollingStoredReview.request.id,'original-reviewer',rejectedRollingReviewOutcomeV1);
+    await suspendRollingWorker(rollingCampaignStore,rollingCodex,'worker-fixture',rollingAllocationResult.assignment.id,generation,[]);
+    await suspendRollingWorker(new RollingCampaignStore(pool,projectId),rollingCodex,'worker-fixture',rollingAllocationResult.assignment.id,generation,[]);
+    const reworkRollingAllocationResult = await rollingCampaignStore.allocate('worker-fixture',rollingGraph.digest);
+    assert.ok(reworkRollingAllocationResult.assignment && reworkRollingAllocationResult.actionId);
+    assert.equal(reworkRollingAllocationResult.assignment.id,rollingAllocationResult.assignment.id);
+    assert.equal(reworkRollingAllocationResult.assignment.worktreeNumber,rollingAllocationResult.assignment.worktreeNumber);
+    assert.equal(reworkRollingAllocationResult.assignment.sessionId,rollingSessionAttachment.sessionId);
+    assert.notEqual(reworkRollingAllocationResult.assignment.generation,generation);
+    await resumeRollingWorker(rollingCampaignStore,rollingCodex,'worker-fixture',reworkRollingAllocationResult.actionId,reworkRollingAllocationResult.assignment.generation);
+    const correctedRollingWorkerContext = await rollingCampaignStore.workerContext('worker-fixture',reworkRollingAllocationResult.assignment.id,reworkRollingAllocationResult.assignment.generation);
+    assert.deepEqual(correctedRollingWorkerContext.rejectedReview,rejectedRollingReviewOutcomeV1);
+    assert.ok(buildRollingWorkerInstructions(correctedRollingWorkerContext).includes(JSON.stringify(rejectedRollingReviewOutcomeV1)));
+    const correctedRollingWorkerSubmissionV1: RollingWorkerSubmissionV1 = {...rollingWorkerSubmissionV1,
+      generation:correctedRollingWorkerContext.lease.generation,graphDigest:correctedRollingWorkerContext.lease.graphDigest};
+    await rollingCampaignStore.submit('worker-fixture',reworkRollingAllocationResult.assignment.id,reworkRollingAllocationResult.assignment.generation,correctedRollingWorkerSubmissionV1);
+    await assert.rejects(rollingCampaignStore.requestReview('worker-fixture',reworkRollingAllocationResult.assignment.id,
+      reworkRollingAllocationResult.assignment.generation,revision,'different-reviewer'),/original reviewer/);
+    const correctedRollingStoredReview = await rollingCampaignStore.requestReview('worker-fixture',reworkRollingAllocationResult.assignment.id,
+      reworkRollingAllocationResult.assignment.generation,revision,'original-reviewer');
+    assert.equal(correctedRollingStoredReview.request.reviewerSessionId,rejectedRollingStoredReview.request.reviewerSessionId);
+    assert.notEqual(correctedRollingStoredReview.request.id,rejectedRollingStoredReview.request.id);
+    assert.deepEqual((await new RollingCampaignStore(pool,projectId).reviews('worker-fixture',rollingAllocationResult.assignment.id))[0]?.outcome,rejectedRollingReviewOutcomeV1);
   }
   if ((operation === 'suspension' || operation === 'resumption')) {
     assert.ok(rollingWorkerDispatchAttached);
