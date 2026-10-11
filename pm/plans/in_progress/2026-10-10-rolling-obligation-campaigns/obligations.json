@@ -15405,6 +15405,46 @@
       },
       "assessor": "coordinator",
       "reason": "Discharge started atomic worker retirement without renewing stale prior evidence or closing other delivery/acceptance gates."
+    },
+    {
+      "id": "CHECKPOINT-177",
+      "predecessorId": "CHECKPOINT-176",
+      "baselineId": "BASELINE-16",
+      "kind": "neutral",
+      "selectedIds": [
+        "OBL-58",
+        "OBL-59",
+        "OBL-60",
+        "OBL-61"
+      ],
+      "registeredIds": [],
+      "certificateIds": [],
+      "invalidatedIds": [],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": {
+        "obligationId": "OBL-58",
+        "operations": [
+          "inspect"
+        ],
+        "deliverable": "Freeze and execute the first approved four-obligation publication batch, retaining distinct certificates."
+      },
+      "assessor": "coordinator",
+      "reason": "OBL-57 is discharged. Begin the first user-approved group of four, OBL-58 through OBL-61; no delivery claimed by this scope checkpoint."
     }
   ]
 }
