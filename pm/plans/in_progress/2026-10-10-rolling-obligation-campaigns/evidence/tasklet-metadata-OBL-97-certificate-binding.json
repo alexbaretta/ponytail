@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "certificateId": "CERT-42",
+  "lease": {
+    "schemaVersion": 1,
+    "scopeId": "2026-10-10-rolling-obligation-campaigns",
+    "baselineId": "BASELINE-14",
+    "graphDigest": "f767fce05ea9fd053eb44f8f4a2b1483b5b2764c59d208f1f02221c1eb793c00",
+    "generation": "standalone-tasklet-metadata-OBL-97-2026-10-11",
+    "assessor": "coordinator",
+    "authority": [
+      "user-goal-2026-10-10-rolling-campaigns",
+      "user-goal-2026-10-10-static-language-existing-tsts",
+      "user-2026-10-10-normative-atomic-obligations"
+    ],
+    "binding": {
+      "obligationId": "OBL-97",
+      "revisionId": "BIND-19",
+      "dependsOn": [
+        "OBL-112"
+      ],
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "tests/ready-tasklets.test.js",
+          "tests/ready-tasklets.test.ts",
+          "AGENTS.md",
+          ".agents/config/project/traceability.json",
+          "pm/requirements/traceability.generated.md",
+          "skills/plan-execution/scripts/tasklet-metadata.ts",
+          "skills/plan-execution/scripts/tasklet-metadata.js",
+          "tests/tasklet-metadata.test.ts"
+        ],
+        "operations": [
+          "inspect",
+          "edit",
+          "build",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "Read physical V2 tasklet metadata through a checked static implementation preserving the approved portable behavior and historical contract meanings."
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "typed-tasklet-metadata-OBL-97"
+        }
+      }
+    }
+  },
+  "revision": "6790bdfbf53d49530b6c17900db8126278879d65",
+  "proof": [
+    {
+      "operation": "test",
+      "certificateEvidenceIndex": 0,
+      "submissionEvidenceIndex": 0
+    }
+  ]
+}
