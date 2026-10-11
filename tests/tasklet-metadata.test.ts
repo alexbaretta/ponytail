@@ -19,27 +19,37 @@ function metadata(): TaskletMetadataV2 {
 test('physical versions retain normalized maps, risk reasons and external dependency identities', () => {
   const taskletMetadataV1: TaskletMetadataV1 = { schemaVersion: 1, sprint: 'S01', tasklets: {
     'S01-F01-T01': { depends_on: [], affinity: [], risk: 'normal' } } };
+  const originalV1 = JSON.stringify(taskletMetadataV1);
   const taskletGraphV1: TaskletGraphV1 = readTaskletMetadataV1('S01', taskletMetadataV1, 'S01.tasklets.json');
   assert.equal(taskletGraphV1.schemaVersion, 1);
   assert.deepEqual([...taskletGraphV1.tasklets], Object.entries(taskletMetadataV1.tasklets));
+  assert.equal(JSON.stringify(taskletMetadataV1), originalV1);
   const taskletMetadataV2: TaskletMetadataV2 = metadata();
+  const originalV2 = JSON.stringify(taskletMetadataV2);
   const taskletGraphV2: TaskletGraphV2 = readTaskletMetadataV2('S01', taskletMetadataV2, 'S01.tasklets.json');
   const taskletMetadataV3: TaskletMetadataV3 = { ...taskletMetadataV2, schemaVersion: 3 };
+  const originalV3 = JSON.stringify(taskletMetadataV3);
   const taskletGraphV3: TaskletGraphV3 = readTaskletMetadataV3('S01', taskletMetadataV3, 'S01.tasklets.json');
   assert.deepEqual([...taskletGraphV2.tasklets], [...taskletGraphV3.tasklets]);
   assert.deepEqual([...taskletGraphV2.features], [...taskletGraphV3.features]);
+  assert.equal(JSON.stringify(taskletMetadataV2), originalV2);
+  assert.equal(JSON.stringify(taskletMetadataV3), originalV3);
   const taskletMetadataV4: TaskletMetadataV4 = { ...taskletMetadataV3, schemaVersion: 4,
     external_depends_on: { 'S01-F01-T01': [{ plan_id: 'parent', tasklet_id: 'S02-F01-T01' }] } };
+  const originalV4 = JSON.stringify(taskletMetadataV4);
   const taskletGraphV4: TaskletGraphV4 = readTaskletMetadataV4('S01', taskletMetadataV4, 'S01.tasklets.json');
   assert.deepEqual([...taskletGraphV4.externalDependsOn], [['S01-F01-T01', [{ planId: 'parent', taskletId: 'S02-F01-T01' }]]]);
   assert.deepEqual([...taskletGraphV4.tasklets], [...taskletGraphV3.tasklets]);
+  assert.equal(JSON.stringify(taskletMetadataV4), originalV4);
 });
 
 test('unknown metadata rejects invalid risk reasons, paths and external declarations', () => {
   const taskletMetadataV2: TaskletMetadataV2 = metadata();
   const missingReason: unknown = { ...taskletMetadataV2, tasklets: { 'S01-F01-T01': {
     depends_on: [], affinity: [], risk: 'high', feature: 'S01-F01', planned_paths: ['src/input.ts'] } } };
+  const originalMissingReason = JSON.stringify(missingReason);
   assert.throws(() => readTaskletMetadataV2('S01', missingReason, 'metadata'), /must contain exactly/);
+  assert.equal(JSON.stringify(missingReason), originalMissingReason);
   const invalidPaths: unknown = { ...taskletMetadataV2, tasklets: { 'S01-F01-T01': {
     depends_on: [], affinity: [], risk: 'normal', feature: 'S01-F01', planned_paths: ['../escape'] } } };
   assert.throws(() => readTaskletMetadataV2('S01', invalidPaths, 'metadata'), /invalid path segment/);
@@ -66,10 +76,13 @@ test('file dispatch validates unknown JSON and each supported physical version',
   for (const version of versions) {
     fs.writeFileSync(graphFile, JSON.stringify(version));
     assert.equal(readTaskletGraph(sprintFile).schemaVersion, version.schemaVersion);
+    assert.equal(fs.readFileSync(graphFile, 'utf8'), JSON.stringify(version));
   }
   fs.writeFileSync(graphFile, 'null');
   assert.throws(() => readTaskletGraph(sprintFile), /unsupported schemaVersion/);
+  assert.equal(fs.readFileSync(graphFile, 'utf8'), 'null');
   fs.writeFileSync(graphFile, '{');
   assert.throws(() => readTaskletGraph(sprintFile), /cannot parse tasklet metadata/);
+  assert.equal(fs.readFileSync(graphFile, 'utf8'), '{');
   assert.throws(() => readTaskletGraph(path.join(root, 'S01')), /must end in .md/);
 });

@@ -992,6 +992,11 @@
       "locator": "text"
     },
     {
+      "class": "unit-test",
+      "path": "tests/ready-tasklets.test.ts",
+      "locator": "text"
+    },
+    {
       "class": "implementation",
       "path": "skills/plan-execution/scripts/tasklet-graph.ts",
       "locator": "text"

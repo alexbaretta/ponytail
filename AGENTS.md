@@ -94,15 +94,15 @@ services. `PROJECT_STRUCTURE.md` is authoritative for that boundary.
 - Sprint metadata focused proof: `node --test dist/tests/sprint-metadata.test.js
   dist/tests/ready-sprints.test.js tests/campaign-census.test.js`.
 - Portable tasklet CLI focused proof: `node --test dist/tests/ready-tasklets-cli.test.js
-  tests/ready-tasklets.test.js tests/obligation-execution.test.js tests/campaign-census.test.js`.
+  dist/tests/ready-tasklets.test.js tests/obligation-execution.test.js tests/campaign-census.test.js`.
 - Tasklet selection focused proof: `node --test dist/tests/tasklet-selection.test.js
-  tests/ready-tasklets.test.js tests/campaign-census.test.js tests/obligation-execution.test.js`.
+  dist/tests/ready-tasklets.test.js tests/campaign-census.test.js tests/obligation-execution.test.js`.
 - Tasklet graph focused proof: `node --test dist/tests/tasklet-graph.test.js
-  tests/ready-tasklets.test.js tests/campaign-census.test.js tests/obligation-execution.test.js`.
+  dist/tests/ready-tasklets.test.js tests/campaign-census.test.js tests/obligation-execution.test.js`.
 - Tasklet metadata focused proof: `node --test dist/tests/tasklet-metadata.test.js
-  tests/ready-tasklets.test.js tests/campaign-census.test.js`.
+  dist/tests/ready-tasklets.test.js tests/campaign-census.test.js`.
 - Campaign dependency focused proof: `node --test dist/tests/campaign-dependencies.test.js
-  dist/tests/tasklet-statuses.test.js tests/campaign-census.test.js tests/ready-tasklets.test.js`.
+  dist/tests/tasklet-statuses.test.js tests/campaign-census.test.js dist/tests/ready-tasklets.test.js`.
 - Campaign scope focused proof: `node --test dist/tests/campaign-scope.test.js
   tests/campaign-census.test.js dist/tests/plan-input.test.js`.
 - Unit-test command families:

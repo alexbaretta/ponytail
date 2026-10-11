@@ -723,6 +723,231 @@
           "profile": "typed-sprint-selectors-OBL-95"
         }
       }
+    },
+    {
+      "id": "BIND-18",
+      "obligationId": "OBL-96",
+      "predecessorId": null,
+      "baselineId": "BASELINE-14",
+      "assessor": "coordinator",
+      "authority": [
+        "user-goal-2026-10-10-rolling-campaigns",
+        "user-goal-2026-10-10-static-language-existing-tsts",
+        "user-2026-10-10-normative-atomic-obligations"
+      ],
+      "reason": "Complete the started physical tasklet reader proof and convert its handwritten regression suite to exact checked types, synchronizing project QA commands and traceability. Preserve original identity, condition and criterion.",
+      "dependsOn": [
+        "OBL-112"
+      ],
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "tests/ready-tasklets.test.js",
+          "tests/ready-tasklets.test.ts",
+          "AGENTS.md",
+          ".agents/config/project/traceability.json",
+          "pm/requirements/traceability.generated.md",
+          "skills/plan-execution/scripts/tasklet-metadata.ts",
+          "skills/plan-execution/scripts/tasklet-metadata.js",
+          "tests/tasklet-metadata.test.ts"
+        ],
+        "operations": [
+          "inspect",
+          "edit",
+          "build",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "Read physical V1 tasklet metadata through a checked static implementation preserving the approved portable behavior and historical contract meanings."
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "typed-tasklet-metadata-OBL-96"
+        }
+      }
+    },
+    {
+      "id": "BIND-19",
+      "obligationId": "OBL-97",
+      "predecessorId": null,
+      "baselineId": "BASELINE-14",
+      "assessor": "coordinator",
+      "authority": [
+        "user-goal-2026-10-10-rolling-campaigns",
+        "user-goal-2026-10-10-static-language-existing-tsts",
+        "user-2026-10-10-normative-atomic-obligations"
+      ],
+      "reason": "Complete the started physical tasklet reader proof and convert its handwritten regression suite to exact checked types, synchronizing project QA commands and traceability. Preserve original identity, condition and criterion.",
+      "dependsOn": [
+        "OBL-112"
+      ],
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "tests/ready-tasklets.test.js",
+          "tests/ready-tasklets.test.ts",
+          "AGENTS.md",
+          ".agents/config/project/traceability.json",
+          "pm/requirements/traceability.generated.md",
+          "skills/plan-execution/scripts/tasklet-metadata.ts",
+          "skills/plan-execution/scripts/tasklet-metadata.js",
+          "tests/tasklet-metadata.test.ts"
+        ],
+        "operations": [
+          "inspect",
+          "edit",
+          "build",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "Read physical V2 tasklet metadata through a checked static implementation preserving the approved portable behavior and historical contract meanings."
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "typed-tasklet-metadata-OBL-97"
+        }
+      }
+    },
+    {
+      "id": "BIND-20",
+      "obligationId": "OBL-98",
+      "predecessorId": null,
+      "baselineId": "BASELINE-14",
+      "assessor": "coordinator",
+      "authority": [
+        "user-goal-2026-10-10-rolling-campaigns",
+        "user-goal-2026-10-10-static-language-existing-tsts",
+        "user-2026-10-10-normative-atomic-obligations"
+      ],
+      "reason": "Complete the started physical tasklet reader proof and convert its handwritten regression suite to exact checked types, synchronizing project QA commands and traceability. Preserve original identity, condition and criterion.",
+      "dependsOn": [
+        "OBL-112"
+      ],
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "tests/ready-tasklets.test.js",
+          "tests/ready-tasklets.test.ts",
+          "AGENTS.md",
+          ".agents/config/project/traceability.json",
+          "pm/requirements/traceability.generated.md",
+          "skills/plan-execution/scripts/tasklet-metadata.ts",
+          "skills/plan-execution/scripts/tasklet-metadata.js",
+          "tests/tasklet-metadata.test.ts"
+        ],
+        "operations": [
+          "inspect",
+          "edit",
+          "build",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "Read physical V3 tasklet metadata through a checked static implementation preserving the approved portable behavior and historical contract meanings."
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "typed-tasklet-metadata-OBL-98"
+        }
+      }
+    },
+    {
+      "id": "BIND-21",
+      "obligationId": "OBL-99",
+      "predecessorId": null,
+      "baselineId": "BASELINE-14",
+      "assessor": "coordinator",
+      "authority": [
+        "user-goal-2026-10-10-rolling-campaigns",
+        "user-goal-2026-10-10-static-language-existing-tsts",
+        "user-2026-10-10-normative-atomic-obligations"
+      ],
+      "reason": "Complete the started physical tasklet reader proof and convert its handwritten regression suite to exact checked types, synchronizing project QA commands and traceability. Preserve original identity, condition and criterion.",
+      "dependsOn": [
+        "OBL-112"
+      ],
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "tests/ready-tasklets.test.js",
+          "tests/ready-tasklets.test.ts",
+          "AGENTS.md",
+          ".agents/config/project/traceability.json",
+          "pm/requirements/traceability.generated.md",
+          "skills/plan-execution/scripts/tasklet-metadata.ts",
+          "skills/plan-execution/scripts/tasklet-metadata.js",
+          "tests/tasklet-metadata.test.ts"
+        ],
+        "operations": [
+          "inspect",
+          "edit",
+          "build",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "Read physical V4 tasklet metadata with external dependency identities through a checked static implementation preserving the approved portable behavior and historical contract meanings."
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "typed-tasklet-metadata-OBL-99"
+        }
+      }
+    },
+    {
+      "id": "BIND-22",
+      "obligationId": "OBL-100",
+      "predecessorId": null,
+      "baselineId": "BASELINE-14",
+      "assessor": "coordinator",
+      "authority": [
+        "user-goal-2026-10-10-rolling-campaigns",
+        "user-goal-2026-10-10-static-language-existing-tsts",
+        "user-2026-10-10-normative-atomic-obligations"
+      ],
+      "reason": "Complete the started physical tasklet reader proof and convert its handwritten regression suite to exact checked types, synchronizing project QA commands and traceability. Preserve original identity, condition and criterion.",
+      "dependsOn": [
+        "OBL-112"
+      ],
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "tests/ready-tasklets.test.js",
+          "tests/ready-tasklets.test.ts",
+          "AGENTS.md",
+          ".agents/config/project/traceability.json",
+          "pm/requirements/traceability.generated.md",
+          "skills/plan-execution/scripts/tasklet-metadata.ts",
+          "skills/plan-execution/scripts/tasklet-metadata.js",
+          "tests/tasklet-metadata.test.ts"
+        ],
+        "operations": [
+          "inspect",
+          "edit",
+          "build",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "Load a tasklet graph through its declared physical reader through a checked static implementation preserving the approved portable behavior and historical contract meanings."
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "typed-tasklet-metadata-OBL-100"
+        }
+      }
     }
   ]
 }
