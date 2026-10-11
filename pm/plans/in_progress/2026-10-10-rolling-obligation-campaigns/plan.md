@@ -81,20 +81,36 @@ for migration order, runtime compatibility and compiler/checker gates.
 
 ## Work metric
 
-Use the canonical obligation projection as the quantitative work metric:
-discharged obligations divided by the current baseline's obligation inventory,
-with unresolved obligation IDs and gates reported explicitly. Tasklet counts,
-file counts and passing checks are supporting execution evidence and must not
-be presented as a percentage of campaign completion. Do not infer lifecycle
-counts that the authoritative projection does not record.
+Work completion and final acceptance are separate measurements. Report work
+completion as discharged atomic delivery obligations divided by the approved
+inventory of atomic delivery obligations. Each delivery obligation must name
+one bounded outcome and an evidence-based discharge criterion, including its
+applicable focused QA. Keep outcomes at comparable granularity; decompose a
+whole-feature or whole-codebase responsibility before counting it as a unit of
+work. Use outcome obligations rather than tasklet, file or commit counts.
 
-The current BASELINE-2 declares 21 obligations: 12 inventory obligations and
-9 requirement acceptance gates. At this checkpoint, the canonical projection
-reports 0 satisfied and 21 unresolved, with no accepted discharge certificates.
-Current language migration contributes to OBL-21; completed migration slices
-are evidence toward that obligation, not separate discharged obligations.
-Refresh this assessment using the configured obligation status operation when
-reporting progress; do not alter historical baselines to improve the metric.
+Keep inventory checks and requirement-wide final acceptance gates in their
+own readouts. Their discharge remains mandatory for campaign closure, but
+mixing them with delivery obligations does not measure work completion. A
+completed delivery obligation never implies its parent requirement gate is
+satisfied. Evidence must remain valid for the relevant inputs; an edit or
+commit alone does not establish discharge.
+
+BASELINE-2 contains 12 inventory obligations and 9 broad requirement acceptance
+gates. Its 0 satisfied and 21 unresolved projection measures formal acceptance,
+not 0 percent of work performed. It does not yet provide a suitable delivery
+obligation denominator. Report work percentage as unassessed until bounded
+delivery obligations and their current evidence have been inventoried. The
+next assessment must enumerate completed and remaining component migration
+outcomes and rolling campaign operations, preserving the full approved scope,
+existing obligation IDs and historical baselines. Any denominator amendment
+must be explicit; never rewrite history or add only completed outcomes to
+inflate progress.
+
+Show both delivery progress and final acceptance in status reports. Passing
+checks and implementation details support the obligation assessment but are
+not independent units of work. Do not invent lifecycle counts or a numerical
+percentage unsupported by the authoritative records.
 
 ## Acceptance
 
