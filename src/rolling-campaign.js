@@ -214,12 +214,21 @@ function resolveRollingConfiguration(rollingProjectConfig, request, gitDefaultBr
   const maxActiveWorkers = request.maxActiveWorkers ?? rollingProjectConfig.maxActiveWorkers ?? 10;
   const publicationSize = request.publicationSize ?? rollingProjectConfig.publicationSize ?? 1;
   readRollingProjectConfigV1({ ...rollingProjectConfig, mainline, maxActiveWorkers, publicationSize });
-  for (const [label, ref] of [['mainline branch', mainline.branch], ['increment branch', request.incrementRef]]) {
+  return readRollingResolvedConfiguration({ mainline: { ...mainline }, incrementRef: request.incrementRef, maxActiveWorkers, publicationSize });
+}
+
+function readRollingResolvedConfiguration(value) {
+  requireRollingRecord(value, ['mainline', 'incrementRef', 'maxActiveWorkers', 'publicationSize'], 'resolved campaign configuration');
+  requireRollingRecord(value.mainline, ['remote', 'branch'], 'resolved mainline');
+  requireRollingCondition(typeof value.mainline.remote === 'string' && value.mainline.remote.length > 0
+    && value.mainline.remote.trim() === value.mainline.remote && !value.mainline.remote.startsWith('-'), 'invalid mainline remote');
+  for (const key of ['maxActiveWorkers', 'publicationSize']) requireRollingCondition(Number.isSafeInteger(value[key]) && value[key] > 0, `invalid resolved ${key}`);
+  for (const [label, ref] of [['mainline branch', value.mainline.branch], ['increment branch', value.incrementRef]]) {
     requireRollingCondition(typeof ref === 'string' && ref.length > 0 && !ref.startsWith('-')
       && spawnSync('git', ['check-ref-format', `refs/heads/${ref}`]).status === 0, `invalid ${label}`);
   }
-  requireRollingCondition(mainline.branch !== request.incrementRef, 'increment and mainline branches must differ');
-  return { mainline: { ...mainline }, incrementRef: request.incrementRef, maxActiveWorkers, publicationSize };
+  requireRollingCondition(value.mainline.branch !== value.incrementRef, 'increment and mainline branches must differ');
+  return value;
 }
 
 // Traceability: implements REQ-ROLLING-CONFIGURATION
@@ -236,5 +245,5 @@ function loadRollingConfiguration(coordinatorRoot, request) {
 }
 
 module.exports = { readRollingProjectConfigV1, parseRollingProjectConfig,
-  RollingProjectConfigReaders, resolveRollingConfiguration, loadRollingConfiguration,
+  RollingProjectConfigReaders, resolveRollingConfiguration, readRollingResolvedConfiguration, loadRollingConfiguration,
   readRollingBindingsV1, RollingBindingsReaders, collectRollingGraph, selectRollingAssignments };

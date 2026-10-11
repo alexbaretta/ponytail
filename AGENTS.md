@@ -79,6 +79,9 @@ services. `PROJECT_STRUCTURE.md` is authoritative for that boundary.
 - Unit-test command families:
   - Node focused: `node --test [--test-name-pattern=<pattern>] <test-files>`.
   - Node full: `npm test`.
+- Rolling campaign store focused proof: `node --test tests/rolling-campaign-store.test.js
+  tests/rolling-campaign-store.integration.test.js`; uses isolated project rows in
+  the configured local PostgreSQL database after `./scripts/setup-project-journal.sh`.
 - Integration tests: no separate integration suite; supported adapter and
   bundled-subproject behavior is exercised by the Node full command.
 - Integration arc listing: not applicable.

@@ -3,6 +3,38 @@
   "schemaVersion": 1,
   "families": [
     {
+      "id": "rolling-assignment-scope",
+      "implementation": {
+        "workspace": "ponytail",
+        "module": "src/rolling-campaign-store.js",
+        "readerRegistryExport": "RollingAssignmentScopeReaders"
+      },
+      "currentVersion": "V1",
+      "versions": [
+        "V1"
+      ],
+      "supportedReadVersions": [
+        "V1"
+      ],
+      "supportedDowngradeVersions": []
+    },
+    {
+      "id": "rolling-execution-configuration",
+      "implementation": {
+        "workspace": "ponytail",
+        "module": "src/rolling-campaign-store.js",
+        "readerRegistryExport": "RollingExecutionConfigReaders"
+      },
+      "currentVersion": "V1",
+      "versions": [
+        "V1"
+      ],
+      "supportedReadVersions": [
+        "V1"
+      ],
+      "supportedDowngradeVersions": []
+    },
+    {
       "id": "rolling-execution-bindings",
       "implementation": {
         "workspace": "ponytail",

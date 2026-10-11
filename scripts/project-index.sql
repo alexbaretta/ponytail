@@ -246,6 +246,88 @@ CREATE TABLE IF NOT EXISTS published_generation_v1 (
   PRIMARY KEY (worktree_id, corpus)
 );
 
+-- Traceability: implements REQ-ROLLING-STATE
+-- Traceability: supports REQ-ROLLING-SCHEDULING
+CREATE TABLE IF NOT EXISTS rolling_pool_v1 (
+  project_id uuid PRIMARY KEY REFERENCES project_v1(project_id) ON DELETE CASCADE,
+  managed_directory text NOT NULL CHECK (managed_directory <> '')
+);
+
+CREATE TABLE IF NOT EXISTS rolling_campaign_v1 (
+  project_id uuid NOT NULL REFERENCES rolling_pool_v1(project_id) ON DELETE CASCADE,
+  campaign_id text NOT NULL,
+  coordinator_root text NOT NULL,
+  document_path text NOT NULL,
+  bindings_path text NOT NULL,
+  graph_digest text NOT NULL CHECK (graph_digest ~ '^[0-9a-f]{64}$'),
+  configuration_text text NOT NULL CHECK ((configuration_text::jsonb)->>'schemaVersion' = '1'),
+  PRIMARY KEY (project_id, campaign_id)
+);
+
+CREATE TABLE IF NOT EXISTS rolling_worktree_v1 (
+  project_id uuid NOT NULL REFERENCES rolling_pool_v1(project_id) ON DELETE CASCADE,
+  number bigint NOT NULL CHECK (number BETWEEN 101 AND 9007199254740991),
+  root_path text NOT NULL,
+  state text NOT NULL CHECK (state IN ('AVAILABLE','PROVISIONING','RESERVED','ACTIVE','QUARANTINED')),
+  PRIMARY KEY (project_id, number),
+  UNIQUE (project_id, root_path)
+);
+CREATE INDEX IF NOT EXISTS rolling_worktree_v1_available
+ON rolling_worktree_v1 (project_id, number) WHERE state='AVAILABLE';
+
+CREATE TABLE IF NOT EXISTS rolling_assignment_v1 (
+  project_id uuid NOT NULL,
+  campaign_id text NOT NULL,
+  assignment_id uuid PRIMARY KEY,
+  obligation_id text NOT NULL,
+  worktree_number bigint NOT NULL,
+  generation uuid NOT NULL,
+  state text NOT NULL CHECK (state IN ('RESERVED','PROVISIONING','ATTACHING','WORKING','REVIEW','REWORK','INTEGRATING','RETIRING','INACTIVE','RELEASED')),
+  session_id text,
+  activity_stopped boolean NOT NULL DEFAULT false,
+  retired boolean NOT NULL DEFAULT false,
+  scope_text text NOT NULL CHECK ((scope_text::jsonb)->>'schemaVersion' = '1'),
+  blockers_text text NOT NULL DEFAULT '[]' CHECK (jsonb_typeof(blockers_text::jsonb)='array'),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  FOREIGN KEY (project_id,campaign_id) REFERENCES rolling_campaign_v1(project_id,campaign_id) ON DELETE CASCADE,
+  FOREIGN KEY (project_id,worktree_number) REFERENCES rolling_worktree_v1(project_id,number) ON DELETE CASCADE,
+  CHECK (state <> 'INACTIVE' OR activity_stopped)
+);
+CREATE UNIQUE INDEX IF NOT EXISTS rolling_assignment_v1_obligation_owner
+ON rolling_assignment_v1 (project_id,campaign_id,obligation_id) WHERE state <> 'RELEASED';
+CREATE UNIQUE INDEX IF NOT EXISTS rolling_assignment_v1_worktree_owner
+ON rolling_assignment_v1 (project_id,worktree_number) WHERE state <> 'RELEASED';
+CREATE INDEX IF NOT EXISTS rolling_assignment_v1_campaign_state
+ON rolling_assignment_v1 (project_id,campaign_id,state,created_at);
+CREATE UNIQUE INDEX IF NOT EXISTS rolling_assignment_v1_identity
+ON rolling_assignment_v1 (project_id,campaign_id,assignment_id);
+
+CREATE TABLE IF NOT EXISTS rolling_action_v1 (
+  project_id uuid NOT NULL,
+  campaign_id text NOT NULL,
+  action_id uuid PRIMARY KEY,
+  assignment_id uuid NOT NULL,
+  kind text NOT NULL CHECK (kind IN ('START_WORKER','RESUME_WORKER')),
+  generation uuid NOT NULL,
+  state text NOT NULL CHECK (state IN ('PENDING','STARTED','COMPLETED','CANCELLED')),
+  result_text text,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  FOREIGN KEY (project_id,campaign_id) REFERENCES rolling_campaign_v1(project_id,campaign_id) ON DELETE CASCADE,
+  UNIQUE (assignment_id,generation,kind)
+);
+DO $rolling_action_identity$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname='rolling_action_v1_assignment_identity'
+    AND conrelid='ponytail_index.rolling_action_v1'::regclass) THEN
+    ALTER TABLE rolling_action_v1 ADD CONSTRAINT rolling_action_v1_assignment_identity
+    FOREIGN KEY (project_id,campaign_id,assignment_id)
+    REFERENCES rolling_assignment_v1(project_id,campaign_id,assignment_id) ON DELETE CASCADE;
+  END IF;
+END
+$rolling_action_identity$;
+CREATE INDEX IF NOT EXISTS rolling_action_v1_pending
+ON rolling_action_v1 (project_id,campaign_id,created_at,action_id) WHERE state IN ('PENDING','STARTED');
+
 CREATE OR REPLACE FUNCTION register_project(
   requested_project_id uuid,
   requested_project_name text

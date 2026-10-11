@@ -811,6 +811,26 @@
       "class": "integration-test",
       "path": "tests/rolling-campaign.integration.test.js",
       "locator": "text"
+    },
+    {
+      "class": "implementation",
+      "path": "src/rolling-campaign-store.js",
+      "locator": "text"
+    },
+    {
+      "class": "unit-test",
+      "path": "tests/rolling-campaign-store.test.js",
+      "locator": "text"
+    },
+    {
+      "class": "integration-test",
+      "path": "tests/rolling-campaign-store.integration.test.js",
+      "locator": "text"
+    },
+    {
+      "class": "plan",
+      "path": "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/sprints/S03.md",
+      "locator": "text"
     }
   ],
   "entities": [],

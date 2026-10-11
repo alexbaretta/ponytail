@@ -83,6 +83,9 @@ while project-wide management records remain under `pm/`.
   independently testable graph/scheduling boundary. Its project configuration
   is `.agents/config/project/rolling-campaigns.json`; existing campaign dispatch
   remains legacy until the replacement operation layer is integrated.
+  `src/rolling-campaign-store.js` owns transactional PostgreSQL campaign,
+  checkout and assignment leases and durable external-action intents.
+  Its tables and indexes use the existing `scripts/project-index.sql` setup.
   `src/worktree-reclamation.js` owns the versioned
   project lifecycle-adapter contracts, project-scoped reclamation lock,
   deterministic claim selection, generation fencing, and verified cleanup
