@@ -2248,6 +2248,54 @@
           "profile": "review-rework"
         }
       }
+    },
+    {
+      "id": "BIND-49",
+      "obligationId": "OBL-52",
+      "predecessorId": null,
+      "baselineId": "BASELINE-15",
+      "assessor": "coordinator",
+      "authority": [
+        "user-goal-2026-10-10-rolling-campaigns",
+        "user-goal-2026-10-10-static-language-existing-tsts",
+        "user-2026-10-10-normative-atomic-obligations",
+        "user-2026-10-11-language-scope-our-code-preserve-translations"
+      ],
+      "reason": "Record explicit reviewer loss and replacement, preserve immutable prior review history, fence superseded requests, and obtain a fresh exact-candidate review within the agreed first batch.",
+      "dependsOn": [],
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "src/rolling-campaign-store.ts",
+          "src/rolling-campaign-store.js",
+          "src/rolling-review.ts",
+          "src/rolling-review.js",
+          "scripts/project-index.sql",
+          "versioned-data-contracts.json",
+          "tests/rolling-review.test.ts",
+          "tests/rolling-campaign-store.integration.test.ts",
+          "tests/rolling-codex.integration.ts",
+          "pm/requirements/rolling-campaigns.md",
+          "pm/uat/rolling-campaigns.md",
+          "pm/requirements/traceability.generated.md"
+        ],
+        "operations": [
+          "inspect",
+          "edit",
+          "build",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "lost reviewer replacement and fresh exact-candidate review"
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "reviewer-recovery"
+        }
+      }
     }
   ]
 }

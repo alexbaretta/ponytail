@@ -354,12 +354,21 @@ CREATE TABLE IF NOT EXISTS rolling_review_v1 (
   FOREIGN KEY (project_id,campaign_id,assignment_id,generation,revision)
     REFERENCES rolling_submission_v1(project_id,campaign_id,assignment_id,generation,revision) ON DELETE CASCADE
 );
-CREATE UNIQUE INDEX IF NOT EXISTS rolling_review_v1_pending_owner
-ON rolling_review_v1 (project_id,campaign_id,assignment_id) WHERE outcome_text IS NULL;
+ALTER TABLE rolling_review_v1 ADD COLUMN IF NOT EXISTS replacement_text text
+  CHECK (replacement_text IS NULL OR COALESCE((replacement_text::jsonb)->>'schemaVersion'='1'
+    AND (replacement_text::jsonb)->>'reviewId'=review_id::text
+    AND (replacement_text::jsonb)->>'previousReviewerSessionId'=(request_text::jsonb)->>'reviewerSessionId'
+    AND (replacement_text::jsonb)->>'reviewerSessionId'<>(request_text::jsonb)->>'reviewerSessionId'
+    AND (replacement_text::jsonb)->>'replacementReviewId'<>review_id::text
+    AND (outcome_text IS NULL OR (outcome_text::jsonb)->>'decision'='rejected'), false));
+DROP INDEX IF EXISTS rolling_review_v1_pending_owner;
+CREATE UNIQUE INDEX IF NOT EXISTS rolling_review_v1_pending_owner_v2
+ON rolling_review_v1 (project_id,campaign_id,assignment_id) WHERE outcome_text IS NULL AND replacement_text IS NULL;
 CREATE INDEX IF NOT EXISTS rolling_review_v1_assignment_history
 ON rolling_review_v1 (project_id,campaign_id,assignment_id,created_at,review_id);
-CREATE INDEX IF NOT EXISTS rolling_review_v1_pending
-ON rolling_review_v1 (project_id,campaign_id,created_at,review_id) WHERE outcome_text IS NULL;
+DROP INDEX IF EXISTS rolling_review_v1_pending;
+CREATE INDEX IF NOT EXISTS rolling_review_v1_pending_v2
+ON rolling_review_v1 (project_id,campaign_id,created_at,review_id) WHERE outcome_text IS NULL AND replacement_text IS NULL;
 
 CREATE TABLE IF NOT EXISTS rolling_review_dispatch_v1 (
   project_id uuid NOT NULL,

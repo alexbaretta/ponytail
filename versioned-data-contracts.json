@@ -55,6 +55,18 @@
       "supportedDowngradeVersions": []
     },
     {
+      "id": "rolling-review-replacement",
+      "implementation": {
+        "workspace": "ponytail",
+        "module": "src/rolling-review.ts",
+        "readerRegistryExport": "RollingReviewReplacementReaders"
+      },
+      "currentVersion": "V1",
+      "versions": ["V1"],
+      "supportedReadVersions": ["V1"],
+      "supportedDowngradeVersions": []
+    },
+    {
       "id": "obligation-certificate-binding",
       "implementation": {
         "workspace": "ponytail",

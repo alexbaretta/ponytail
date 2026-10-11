@@ -32,6 +32,16 @@ export interface RollingReviewRejectedV1 extends RollingReviewOutcomeIdentityV1 
 // Discriminator: decision
 export type RollingReviewOutcomeV1 = RollingReviewAcceptedV1 | RollingReviewRejectedV1;
 export interface RollingStoredReview { readonly request: RollingReviewRequestV1; readonly outcome: RollingReviewOutcomeV1 | null }
+export interface RollingReviewReplacementV1 {
+ readonly schemaVersion: 1;
+ readonly reviewId: string;
+ readonly replacementReviewId: string;
+ readonly previousReviewerSessionId: string;
+ readonly reviewerSessionId: string;
+ readonly recordedAt: string;
+ readonly lossReference: string;
+}
+export interface RollingReviewerLoss { readonly reviewId: string; readonly lossReference: string }
 function requireReview(condition: unknown, message: string): asserts condition {
  if (!condition) throw new Error(`rolling review: ${message}`);
 }
@@ -90,6 +100,20 @@ export function readRollingReviewOutcomeV1(value: unknown): RollingReviewOutcome
 }
 export const RollingReviewRequestReaders = { V1: readRollingReviewRequestV1 };
 export const RollingReviewOutcomeReaders = { V1: readRollingReviewOutcomeV1 };
+// Traceability: implements REQ-ROLLING-REVIEW
+export function readRollingReviewReplacementV1(value: unknown): RollingReviewReplacementV1 {
+ const record = fields(value, ['schemaVersion','reviewId','replacementReviewId','previousReviewerSessionId','reviewerSessionId','recordedAt','lossReference']);
+ const rollingReviewReplacementV1: RollingReviewReplacementV1 = { schemaVersion: 1,
+  reviewId: identity(record.reviewId), replacementReviewId: identity(record.replacementReviewId),
+  previousReviewerSessionId: identity(record.previousReviewerSessionId), reviewerSessionId: identity(record.reviewerSessionId),
+  recordedAt: identity(record.recordedAt), lossReference: identity(record.lossReference) };
+ requireReview(rollingReviewReplacementV1.reviewId !== rollingReviewReplacementV1.replacementReviewId, 'replacement requires a fresh review identity');
+ requireReview(rollingReviewReplacementV1.previousReviewerSessionId !== rollingReviewReplacementV1.reviewerSessionId, 'replacement requires a different reviewer');
+ requireReview(/^\d{4}-\d{2}-\d{2}T/u.test(rollingReviewReplacementV1.recordedAt) && Number.isFinite(Date.parse(rollingReviewReplacementV1.recordedAt)), 'invalid replacement timestamp');
+ return rollingReviewReplacementV1;
+}
+export const RollingReviewReplacementReaders = { V1: readRollingReviewReplacementV1 };
+export function parseRollingReviewReplacement(text: string): RollingReviewReplacementV1 { return readRollingReviewReplacementV1(json(text)); }
 export function parseRollingReviewRequest(text: string): RollingReviewRequestV1 { return readRollingReviewRequestV1(json(text)); }
 export function parseRollingReviewOutcome(text: string): RollingReviewOutcomeV1 { return readRollingReviewOutcomeV1(json(text)); }
 export function validateRollingReviewOutcome(rollingReviewRequestV1: RollingReviewRequestV1, rollingReviewOutcomeV1: RollingReviewOutcomeV1): void {

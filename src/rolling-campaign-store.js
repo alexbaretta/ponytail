@@ -366,25 +366,49 @@ class RollingCampaignStore {
         return rows.map(row => ({ submission: (0, rolling_worker_submission_js_1.parseRollingWorkerSubmission)(stringColumn(row.submission_text, 'submission')),
             lease: (0, obligation_binding_history_js_1.readObligationLeaseV1)(readStateText(stringColumn(row.lease_text, 'submission lease'))) }));
     }
-    async requestReview(campaignId, id, generation, revision, reviewerSessionId) {
+    async requestReview(campaignId, id, generation, revision, reviewerSessionId, rollingReviewerLoss = null) {
         return this.transaction(campaignId, async (poolClient, rollingCampaignRow) => {
             const rollingStoredAssignment = await this.assignment(poolClient, campaignId, id, generation);
             requireState(!rollingStoredAssignment.retired && rollingStoredAssignment.activityStopped, 'review requires a stopped retained worker');
             requireState(reviewerSessionId !== rollingStoredAssignment.sessionId, 'worker cannot review its own submission');
-            const existing = (await poolClient.query('SELECT request_text,outcome_text FROM ponytail_index.rolling_review_v1 WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3 AND generation=$4 ORDER BY created_at DESC,review_id DESC LIMIT 1', [this.projectId, campaignId, id, generation])).rows[0];
-            if (existing) {
+            if (rollingReviewerLoss !== null) {
+                const replaced = (await poolClient.query('SELECT replacement_text FROM ponytail_index.rolling_review_v1 WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3 AND review_id=$4', [this.projectId, campaignId, id, rollingReviewerLoss.reviewId])).rows[0];
+                requireState(replaced, 'lost review is absent from this assignment');
+                const replacementText = nullableStringColumn(replaced.replacement_text, 'review replacement');
+                if (replacementText !== null) {
+                    const rollingReviewReplacementV1 = (0, rolling_review_js_1.parseRollingReviewReplacement)(replacementText);
+                    requireState(rollingReviewReplacementV1.reviewerSessionId === reviewerSessionId && rollingReviewReplacementV1.lossReference === rollingReviewerLoss.lossReference, 'replacement retry differs from recorded reviewer loss');
+                    const replacement = (await poolClient.query('SELECT request_text,outcome_text FROM ponytail_index.rolling_review_v1 WHERE project_id=$1 AND campaign_id=$2 AND review_id=$3', [this.projectId, campaignId, rollingReviewReplacementV1.replacementReviewId])).rows[0];
+                    requireState(replacement, 'recorded replacement request is missing');
+                    const rollingReviewRequestV1 = (0, rolling_review_js_1.parseRollingReviewRequest)(stringColumn(replacement.request_text, 'replacement review request'));
+                    requireState(rollingReviewRequestV1.generation === generation && rollingReviewRequestV1.revision === revision, 'replacement retry differs from candidate');
+                    const outcome = nullableStringColumn(replacement.outcome_text, 'replacement review outcome');
+                    return { request: rollingReviewRequestV1, outcome: outcome === null ? null : (0, rolling_review_js_1.parseRollingReviewOutcome)(outcome) };
+                }
+            }
+            const existing = (await poolClient.query('SELECT request_text,outcome_text FROM ponytail_index.rolling_review_v1 WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3 AND generation=$4 AND replacement_text IS NULL ORDER BY created_at DESC,review_id DESC LIMIT 1', [this.projectId, campaignId, id, generation])).rows[0];
+            if (existing && rollingReviewerLoss === null) {
                 const rollingReviewRequestV1 = (0, rolling_review_js_1.parseRollingReviewRequest)(stringColumn(existing.request_text, 'review request'));
                 requireState(rollingReviewRequestV1.revision === revision && rollingReviewRequestV1.reviewerSessionId === reviewerSessionId, 'review retry differs from assigned candidate or reviewer');
                 const text = nullableStringColumn(existing.outcome_text, 'review outcome');
                 return { request: rollingReviewRequestV1, outcome: text === null ? null : (0, rolling_review_js_1.parseRollingReviewOutcome)(text) };
             }
             requireState(rollingStoredAssignment.state === 'REVIEW', 'assignment is not awaiting review');
-            const previous = (await poolClient.query('SELECT request_text,outcome_text FROM ponytail_index.rolling_review_v1 WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3 ORDER BY created_at DESC,review_id DESC LIMIT 1', [this.projectId, campaignId, id])).rows[0];
+            const previous = (await poolClient.query('SELECT request_text,outcome_text FROM ponytail_index.rolling_review_v1 WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3 AND replacement_text IS NULL ORDER BY created_at DESC,review_id DESC LIMIT 1', [this.projectId, campaignId, id])).rows[0];
             if (previous) {
                 const previousRollingReviewRequestV1 = (0, rolling_review_js_1.parseRollingReviewRequest)(stringColumn(previous.request_text, 'previous review request'));
                 const previousOutcome = nullableStringColumn(previous.outcome_text, 'previous review outcome');
-                requireState(previousOutcome !== null && (0, rolling_review_js_1.parseRollingReviewOutcome)(previousOutcome).decision === 'rejected', 'corrected submission requires a decided rejected review');
-                requireState(previousRollingReviewRequestV1.reviewerSessionId === reviewerSessionId, 'corrected submission must retain its original reviewer');
+                if (rollingReviewerLoss === null) {
+                    requireState(previousOutcome !== null && (0, rolling_review_js_1.parseRollingReviewOutcome)(previousOutcome).decision === 'rejected', 'corrected submission requires a decided rejected review');
+                    requireState(previousRollingReviewRequestV1.reviewerSessionId === reviewerSessionId, 'corrected submission must retain its original reviewer');
+                }
+                else {
+                    requireState(previousRollingReviewRequestV1.id === rollingReviewerLoss.reviewId, 'only the latest unreplaced reviewer may be replaced');
+                    requireState(previousRollingReviewRequestV1.reviewerSessionId !== reviewerSessionId, 'replacement requires a different reviewer');
+                    requireState(previousOutcome === null || (0, rolling_review_js_1.parseRollingReviewOutcome)(previousOutcome).decision === 'rejected', 'accepted review cannot be replaced');
+                    if (previousOutcome === null)
+                        requireState(previousRollingReviewRequestV1.generation === generation && previousRollingReviewRequestV1.revision === revision, 'pending replacement must retain its exact candidate');
+                }
             }
             this.currentLease(rollingStoredAssignment, this.graph(rollingCampaignRow, rollingCampaignRow.graph_digest));
             const submission = (await poolClient.query('SELECT submission_text,lease_text FROM ponytail_index.rolling_submission_v1 WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3 AND generation=$4 AND revision=$5', [this.projectId, campaignId, id, generation, revision])).rows[0];
@@ -395,9 +419,23 @@ class RollingCampaignStore {
             (0, rolling_worker_submission_js_1.validateRollingWorkerSubmission)(rollingStoredWorktree.rootPath, obligationLeaseV1, rollingWorkerSubmissionV1);
             const rollingReviewRequestV1 = (0, rolling_review_js_1.readRollingReviewRequestV1)({ schemaVersion: 1, id: node_crypto_1.default.randomUUID(),
                 campaignId, assignmentId: id, generation, baseCommit: rollingWorkerSubmissionV1.baseCommit, revision, reviewerSessionId });
+            if (rollingReviewerLoss !== null) {
+                requireState(previous, 'replacement requires a prior review');
+                const previousRollingReviewRequestV1 = (0, rolling_review_js_1.parseRollingReviewRequest)(stringColumn(previous.request_text, 'lost review request'));
+                const rollingReviewReplacementV1 = (0, rolling_review_js_1.readRollingReviewReplacementV1)({ schemaVersion: 1, reviewId: previousRollingReviewRequestV1.id,
+                    replacementReviewId: rollingReviewRequestV1.id, previousReviewerSessionId: previousRollingReviewRequestV1.reviewerSessionId,
+                    reviewerSessionId, recordedAt: new Date().toISOString(), lossReference: rollingReviewerLoss.lossReference });
+                await poolClient.query('UPDATE ponytail_index.rolling_review_v1 SET replacement_text=$4 WHERE project_id=$1 AND campaign_id=$2 AND review_id=$3', [this.projectId, campaignId, previousRollingReviewRequestV1.id, JSON.stringify(rollingReviewReplacementV1)]);
+            }
             await poolClient.query('INSERT INTO ponytail_index.rolling_review_v1(project_id,campaign_id,review_id,assignment_id,generation,revision,request_text) VALUES($1,$2,$3,$4,$5,$6,$7)', [this.projectId, campaignId, rollingReviewRequestV1.id, id, generation, revision, JSON.stringify(rollingReviewRequestV1)]);
             return { request: rollingReviewRequestV1, outcome: null };
         });
+    }
+    async reviewReplacement(campaignId, reviewId) {
+        const row = (await this.pool.query('SELECT replacement_text FROM ponytail_index.rolling_review_v1 WHERE project_id=$1 AND campaign_id=$2 AND review_id=$3', [this.projectId, campaignId, reviewId])).rows[0];
+        requireState(row, 'review request is missing');
+        const text = nullableStringColumn(row.replacement_text, 'review replacement');
+        return text === null ? null : (0, rolling_review_js_1.parseRollingReviewReplacement)(text);
     }
     async reviews(campaignId, id) {
         const rows = (await this.pool.query('SELECT request_text,outcome_text FROM ponytail_index.rolling_review_v1 WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3 ORDER BY created_at,review_id', [this.projectId, campaignId, id])).rows;
@@ -413,8 +451,9 @@ class RollingCampaignStore {
     async claimReviewDispatch(campaignId, reviewId, reviewerThreadId) {
         requireState(reviewerThreadId.length > 0 && reviewerThreadId.trim() === reviewerThreadId && !/[\0\r\n]/u.test(reviewerThreadId), 'invalid reviewer thread identity');
         return this.transaction(campaignId, async (poolClient, rollingCampaignRow) => {
-            const row = (await poolClient.query('SELECT request_text,outcome_text FROM ponytail_index.rolling_review_v1 WHERE project_id=$1 AND campaign_id=$2 AND review_id=$3', [this.projectId, campaignId, reviewId])).rows[0];
+            const row = (await poolClient.query('SELECT request_text,outcome_text,replacement_text FROM ponytail_index.rolling_review_v1 WHERE project_id=$1 AND campaign_id=$2 AND review_id=$3', [this.projectId, campaignId, reviewId])).rows[0];
             requireState(row && row.outcome_text === null, 'review is missing or already decided');
+            requireState(row.replacement_text === null, 'review request has been replaced');
             const rollingReviewRequestV1 = (0, rolling_review_js_1.parseRollingReviewRequest)(stringColumn(row.request_text, 'review request'));
             const rollingStoredAssignment = await this.assignment(poolClient, campaignId, rollingReviewRequestV1.assignmentId, rollingReviewRequestV1.generation);
             requireState(rollingStoredAssignment.state === 'REVIEW' && rollingStoredAssignment.activityStopped && !rollingStoredAssignment.retired, 'candidate is no longer awaiting review');
@@ -428,8 +467,9 @@ class RollingCampaignStore {
     }
     async reviewContext(campaignId, reviewId) {
         return this.transaction(campaignId, async (poolClient, rollingCampaignRow) => {
-            const row = (await poolClient.query('SELECT request_text,outcome_text FROM ponytail_index.rolling_review_v1 WHERE project_id=$1 AND campaign_id=$2 AND review_id=$3', [this.projectId, campaignId, reviewId])).rows[0];
+            const row = (await poolClient.query('SELECT request_text,outcome_text,replacement_text FROM ponytail_index.rolling_review_v1 WHERE project_id=$1 AND campaign_id=$2 AND review_id=$3', [this.projectId, campaignId, reviewId])).rows[0];
             requireState(row, 'review request is missing');
+            requireState(row.replacement_text === null, 'review request has been replaced');
             const rollingReviewRequestV1 = (0, rolling_review_js_1.parseRollingReviewRequest)(stringColumn(row.request_text, 'review request'));
             const text = nullableStringColumn(row.outcome_text, 'review outcome');
             const rollingReviewOutcomeV1 = text === null ? null : (0, rolling_review_js_1.parseRollingReviewOutcome)(text);
@@ -470,8 +510,9 @@ class RollingCampaignStore {
     async attachReviewDispatch(campaignId, reviewId, dispatchId, reviewerSessionId, turnId) {
         requireState(turnId.length > 0 && turnId.trim() === turnId && !/[\0\r\n]/u.test(turnId), 'invalid review turn identity');
         return this.transaction(campaignId, async (poolClient) => {
-            const row = (await poolClient.query('SELECT d.dispatch_id,d.reviewer_thread_id,d.state,d.turn_id,r.request_text FROM ponytail_index.rolling_review_dispatch_v1 d JOIN ponytail_index.rolling_review_v1 r USING(project_id,campaign_id,review_id) WHERE d.project_id=$1 AND d.campaign_id=$2 AND d.review_id=$3', [this.projectId, campaignId, reviewId])).rows[0];
+            const row = (await poolClient.query('SELECT d.dispatch_id,d.reviewer_thread_id,d.state,d.turn_id,r.request_text,r.replacement_text FROM ponytail_index.rolling_review_dispatch_v1 d JOIN ponytail_index.rolling_review_v1 r USING(project_id,campaign_id,review_id) WHERE d.project_id=$1 AND d.campaign_id=$2 AND d.review_id=$3', [this.projectId, campaignId, reviewId])).rows[0];
             requireState(row && row.dispatch_id === dispatchId, 'invalid review dispatch identity');
+            requireState(row.replacement_text === null, 'review request has been replaced');
             const rollingReviewRequestV1 = (0, rolling_review_js_1.parseRollingReviewRequest)(stringColumn(row.request_text, 'review request'));
             requireState(rollingReviewRequestV1.reviewerSessionId === reviewerSessionId, 'native session differs from assigned reviewer');
             requireState(row.state === 'STARTED' || row.state === 'ATTACHED' && row.turn_id === turnId, 'review dispatch retry differs from original turn');
@@ -482,8 +523,9 @@ class RollingCampaignStore {
     async recordReviewOutcome(campaignId, reviewId, actorSessionId, rollingReviewOutcomeV1) {
         const checkedRollingReviewOutcomeV1 = (0, rolling_review_js_1.readRollingReviewOutcomeV1)(rollingReviewOutcomeV1);
         return this.transaction(campaignId, async (poolClient, rollingCampaignRow) => {
-            const row = (await poolClient.query('SELECT request_text,outcome_text FROM ponytail_index.rolling_review_v1 WHERE project_id=$1 AND campaign_id=$2 AND review_id=$3', [this.projectId, campaignId, reviewId])).rows[0];
+            const row = (await poolClient.query('SELECT request_text,outcome_text,replacement_text FROM ponytail_index.rolling_review_v1 WHERE project_id=$1 AND campaign_id=$2 AND review_id=$3', [this.projectId, campaignId, reviewId])).rows[0];
             requireState(row, 'review request is missing');
+            requireState(row.replacement_text === null, 'review request has been replaced');
             const rollingReviewRequestV1 = (0, rolling_review_js_1.parseRollingReviewRequest)(stringColumn(row.request_text, 'review request'));
             requireState(actorSessionId === rollingReviewRequestV1.reviewerSessionId, 'only the assigned reviewer may report a decision');
             (0, rolling_review_js_1.validateRollingReviewOutcome)(rollingReviewRequestV1, checkedRollingReviewOutcomeV1);
@@ -764,7 +806,7 @@ class RollingCampaignStore {
         const obligation = rollingGraph.document.obligations.find(item => item.id === rollingStoredAssignment.obligationId);
         const obligationBaseline = rollingGraph.document.baselines.at(-1);
         requireState(obligation && obligationBaseline, 'worker obligation or baseline is missing');
-        const previousReview = (await poolClient.query('SELECT outcome_text FROM ponytail_index.rolling_review_v1 WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3 ORDER BY created_at DESC,review_id DESC LIMIT 1', [this.projectId, campaignId, id])).rows[0];
+        const previousReview = (await poolClient.query('SELECT outcome_text FROM ponytail_index.rolling_review_v1 WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3 AND replacement_text IS NULL ORDER BY created_at DESC,review_id DESC LIMIT 1', [this.projectId, campaignId, id])).rows[0];
         const previousOutcome = previousReview ? nullableStringColumn(previousReview.outcome_text, 'previous review outcome') : null;
         const rollingReviewOutcomeV1 = previousOutcome === null ? null : (0, rolling_review_js_1.parseRollingReviewOutcome)(previousOutcome);
         return { assignmentId: id, rollingWorkerCreationV1, obligation, requirements: obligationBaseline.requirements.filter(item => obligation.requirementIds.includes(item.id)),

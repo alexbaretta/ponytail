@@ -3,9 +3,11 @@
 // Generated from src/rolling-review.ts by npm run build.
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.RollingReviewOutcomeReaders = exports.RollingReviewRequestReaders = void 0;
+exports.RollingReviewReplacementReaders = exports.RollingReviewOutcomeReaders = exports.RollingReviewRequestReaders = void 0;
 exports.readRollingReviewRequestV1 = readRollingReviewRequestV1;
 exports.readRollingReviewOutcomeV1 = readRollingReviewOutcomeV1;
+exports.readRollingReviewReplacementV1 = readRollingReviewReplacementV1;
+exports.parseRollingReviewReplacement = parseRollingReviewReplacement;
 exports.parseRollingReviewRequest = parseRollingReviewRequest;
 exports.parseRollingReviewOutcome = parseRollingReviewOutcome;
 exports.validateRollingReviewOutcome = validateRollingReviewOutcome;
@@ -72,6 +74,19 @@ function readRollingReviewOutcomeV1(value) {
 }
 exports.RollingReviewRequestReaders = { V1: readRollingReviewRequestV1 };
 exports.RollingReviewOutcomeReaders = { V1: readRollingReviewOutcomeV1 };
+function readRollingReviewReplacementV1(value) {
+    const record = fields(value, ['schemaVersion', 'reviewId', 'replacementReviewId', 'previousReviewerSessionId', 'reviewerSessionId', 'recordedAt', 'lossReference']);
+    const rollingReviewReplacementV1 = { schemaVersion: 1,
+        reviewId: identity(record.reviewId), replacementReviewId: identity(record.replacementReviewId),
+        previousReviewerSessionId: identity(record.previousReviewerSessionId), reviewerSessionId: identity(record.reviewerSessionId),
+        recordedAt: identity(record.recordedAt), lossReference: identity(record.lossReference) };
+    requireReview(rollingReviewReplacementV1.reviewId !== rollingReviewReplacementV1.replacementReviewId, 'replacement requires a fresh review identity');
+    requireReview(rollingReviewReplacementV1.previousReviewerSessionId !== rollingReviewReplacementV1.reviewerSessionId, 'replacement requires a different reviewer');
+    requireReview(/^\d{4}-\d{2}-\d{2}T/u.test(rollingReviewReplacementV1.recordedAt) && Number.isFinite(Date.parse(rollingReviewReplacementV1.recordedAt)), 'invalid replacement timestamp');
+    return rollingReviewReplacementV1;
+}
+exports.RollingReviewReplacementReaders = { V1: readRollingReviewReplacementV1 };
+function parseRollingReviewReplacement(text) { return readRollingReviewReplacementV1(json(text)); }
 function parseRollingReviewRequest(text) { return readRollingReviewRequestV1(json(text)); }
 function parseRollingReviewOutcome(text) { return readRollingReviewOutcomeV1(json(text)); }
 function validateRollingReviewOutcome(rollingReviewRequestV1, rollingReviewOutcomeV1) {

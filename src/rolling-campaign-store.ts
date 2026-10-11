@@ -15,7 +15,8 @@ import { relativePath, type Obligation } from '../skills/plan-execution/scripts/
 import { readRollingWorkerResumptionV1, parseRollingWorkerResumption, type RollingWorkerResumptionV1, readRollingWorkerStopV1, parseRollingWorkerStop, type RollingWorkerStopV1, buildRollingWorkerInstructions, readRollingWorkerCreationV1, parseRollingWorkerCreation, type RollingWorkerCreationV1, type RollingWorkerContext } from './rolling-worker.js';
 import { validateRollingSessionMarker } from './rolling-worktrees.js';
 import { readRollingReviewRequestV1, readRollingReviewOutcomeV1, parseRollingReviewRequest, parseRollingReviewOutcome,
-  validateRollingReviewOutcome, type RollingReviewRequestV1, type RollingReviewOutcomeV1, type RollingStoredReview } from './rolling-review.js';
+  readRollingReviewReplacementV1, parseRollingReviewReplacement, validateRollingReviewOutcome, type RollingReviewRequestV1, type RollingReviewOutcomeV1,
+  type RollingReviewReplacementV1, type RollingReviewerLoss, type RollingStoredReview } from './rolling-review.js';
 import { collectRollingGraph, selectRollingAssignments, resolveRollingConfiguration, readRollingResolvedConfiguration, readRollingBindingsV1,
   type RollingAssignment, type RollingAssignmentState, type RollingBinding, type RollingCampaignRequest,
   type RollingGraph, type RollingResolvedConfiguration, type RollingSchedulingBlock } from './rolling-campaign.js';
@@ -478,27 +479,52 @@ export class RollingCampaignStore {
   }
 
   // Traceability: implements REQ-ROLLING-REVIEW
-  async requestReview(campaignId: string, id: string, generation: string, revision: string, reviewerSessionId: string): Promise<RollingStoredReview> {
+  async requestReview(campaignId: string, id: string, generation: string, revision: string, reviewerSessionId: string,
+    rollingReviewerLoss: RollingReviewerLoss | null = null): Promise<RollingStoredReview> {
     return this.transaction(campaignId, async (poolClient, rollingCampaignRow) => {
       const rollingStoredAssignment = await this.assignment(poolClient, campaignId, id, generation);
       requireState(!rollingStoredAssignment.retired && rollingStoredAssignment.activityStopped, 'review requires a stopped retained worker');
       requireState(reviewerSessionId !== rollingStoredAssignment.sessionId, 'worker cannot review its own submission');
-      const existing = (await poolClient.query<Record<string, unknown>>('SELECT request_text,outcome_text FROM ponytail_index.rolling_review_v1 WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3 AND generation=$4 ORDER BY created_at DESC,review_id DESC LIMIT 1',
+      if (rollingReviewerLoss !== null) {
+        const replaced = (await poolClient.query<Record<string, unknown>>('SELECT replacement_text FROM ponytail_index.rolling_review_v1 WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3 AND review_id=$4',
+          [this.projectId,campaignId,id,rollingReviewerLoss.reviewId])).rows[0];
+        requireState(replaced, 'lost review is absent from this assignment');
+        const replacementText = nullableStringColumn(replaced.replacement_text, 'review replacement');
+        if (replacementText !== null) {
+          const rollingReviewReplacementV1 = parseRollingReviewReplacement(replacementText);
+          requireState(rollingReviewReplacementV1.reviewerSessionId === reviewerSessionId && rollingReviewReplacementV1.lossReference === rollingReviewerLoss.lossReference, 'replacement retry differs from recorded reviewer loss');
+          const replacement = (await poolClient.query<Record<string, unknown>>('SELECT request_text,outcome_text FROM ponytail_index.rolling_review_v1 WHERE project_id=$1 AND campaign_id=$2 AND review_id=$3',
+            [this.projectId,campaignId,rollingReviewReplacementV1.replacementReviewId])).rows[0];
+          requireState(replacement, 'recorded replacement request is missing');
+          const rollingReviewRequestV1 = parseRollingReviewRequest(stringColumn(replacement.request_text,'replacement review request'));
+          requireState(rollingReviewRequestV1.generation === generation && rollingReviewRequestV1.revision === revision, 'replacement retry differs from candidate');
+          const outcome = nullableStringColumn(replacement.outcome_text,'replacement review outcome');
+          return { request: rollingReviewRequestV1, outcome: outcome === null ? null : parseRollingReviewOutcome(outcome) };
+        }
+      }
+      const existing = (await poolClient.query<Record<string, unknown>>('SELECT request_text,outcome_text FROM ponytail_index.rolling_review_v1 WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3 AND generation=$4 AND replacement_text IS NULL ORDER BY created_at DESC,review_id DESC LIMIT 1',
         [this.projectId, campaignId, id, generation])).rows[0];
-      if (existing) {
+      if (existing && rollingReviewerLoss === null) {
         const rollingReviewRequestV1 = parseRollingReviewRequest(stringColumn(existing.request_text, 'review request'));
         requireState(rollingReviewRequestV1.revision === revision && rollingReviewRequestV1.reviewerSessionId === reviewerSessionId, 'review retry differs from assigned candidate or reviewer');
         const text = nullableStringColumn(existing.outcome_text, 'review outcome');
         return { request: rollingReviewRequestV1, outcome: text === null ? null : parseRollingReviewOutcome(text) };
       }
       requireState(rollingStoredAssignment.state === 'REVIEW', 'assignment is not awaiting review');
-      const previous = (await poolClient.query<Record<string, unknown>>('SELECT request_text,outcome_text FROM ponytail_index.rolling_review_v1 WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3 ORDER BY created_at DESC,review_id DESC LIMIT 1',
+      const previous = (await poolClient.query<Record<string, unknown>>('SELECT request_text,outcome_text FROM ponytail_index.rolling_review_v1 WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3 AND replacement_text IS NULL ORDER BY created_at DESC,review_id DESC LIMIT 1',
         [this.projectId, campaignId, id])).rows[0];
       if (previous) {
         const previousRollingReviewRequestV1 = parseRollingReviewRequest(stringColumn(previous.request_text, 'previous review request'));
         const previousOutcome = nullableStringColumn(previous.outcome_text, 'previous review outcome');
-        requireState(previousOutcome !== null && parseRollingReviewOutcome(previousOutcome).decision === 'rejected', 'corrected submission requires a decided rejected review');
-        requireState(previousRollingReviewRequestV1.reviewerSessionId === reviewerSessionId, 'corrected submission must retain its original reviewer');
+        if (rollingReviewerLoss === null) {
+          requireState(previousOutcome !== null && parseRollingReviewOutcome(previousOutcome).decision === 'rejected', 'corrected submission requires a decided rejected review');
+          requireState(previousRollingReviewRequestV1.reviewerSessionId === reviewerSessionId, 'corrected submission must retain its original reviewer');
+        } else {
+          requireState(previousRollingReviewRequestV1.id === rollingReviewerLoss.reviewId, 'only the latest unreplaced reviewer may be replaced');
+          requireState(previousRollingReviewRequestV1.reviewerSessionId !== reviewerSessionId, 'replacement requires a different reviewer');
+          requireState(previousOutcome === null || parseRollingReviewOutcome(previousOutcome).decision === 'rejected', 'accepted review cannot be replaced');
+          if (previousOutcome === null) requireState(previousRollingReviewRequestV1.generation === generation && previousRollingReviewRequestV1.revision === revision, 'pending replacement must retain its exact candidate');
+        }
       }
       this.currentLease(rollingStoredAssignment, this.graph(rollingCampaignRow, rollingCampaignRow.graph_digest));
       const submission = (await poolClient.query<Record<string, unknown>>('SELECT submission_text,lease_text FROM ponytail_index.rolling_submission_v1 WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3 AND generation=$4 AND revision=$5',
@@ -510,10 +536,26 @@ export class RollingCampaignStore {
       validateRollingWorkerSubmission(rollingStoredWorktree.rootPath, obligationLeaseV1, rollingWorkerSubmissionV1);
       const rollingReviewRequestV1: RollingReviewRequestV1 = readRollingReviewRequestV1({ schemaVersion: 1, id: crypto.randomUUID(),
         campaignId, assignmentId: id, generation, baseCommit: rollingWorkerSubmissionV1.baseCommit, revision, reviewerSessionId });
+      if (rollingReviewerLoss !== null) {
+        requireState(previous, 'replacement requires a prior review');
+        const previousRollingReviewRequestV1 = parseRollingReviewRequest(stringColumn(previous.request_text,'lost review request'));
+        const rollingReviewReplacementV1 = readRollingReviewReplacementV1({ schemaVersion:1, reviewId:previousRollingReviewRequestV1.id,
+          replacementReviewId:rollingReviewRequestV1.id, previousReviewerSessionId:previousRollingReviewRequestV1.reviewerSessionId,
+          reviewerSessionId, recordedAt:new Date().toISOString(), lossReference:rollingReviewerLoss.lossReference });
+        await poolClient.query('UPDATE ponytail_index.rolling_review_v1 SET replacement_text=$4 WHERE project_id=$1 AND campaign_id=$2 AND review_id=$3',
+          [this.projectId,campaignId,previousRollingReviewRequestV1.id,JSON.stringify(rollingReviewReplacementV1)]);
+      }
       await poolClient.query<Record<string, unknown>>('INSERT INTO ponytail_index.rolling_review_v1(project_id,campaign_id,review_id,assignment_id,generation,revision,request_text) VALUES($1,$2,$3,$4,$5,$6,$7)',
         [this.projectId, campaignId, rollingReviewRequestV1.id, id, generation, revision, JSON.stringify(rollingReviewRequestV1)]);
       return { request: rollingReviewRequestV1, outcome: null };
     });
+  }
+
+  async reviewReplacement(campaignId: string, reviewId: string): Promise<RollingReviewReplacementV1 | null> {
+    const row = (await this.pool.query<Record<string,unknown>>('SELECT replacement_text FROM ponytail_index.rolling_review_v1 WHERE project_id=$1 AND campaign_id=$2 AND review_id=$3', [this.projectId,campaignId,reviewId])).rows[0];
+    requireState(row, 'review request is missing');
+    const text = nullableStringColumn(row.replacement_text,'review replacement');
+    return text === null ? null : parseRollingReviewReplacement(text);
   }
 
   async reviews(campaignId: string, id: string): Promise<readonly RollingStoredReview[]> {
@@ -530,8 +572,9 @@ export class RollingCampaignStore {
   async claimReviewDispatch(campaignId: string, reviewId: string, reviewerThreadId: string): Promise<RollingReviewDispatchStarted> {
     requireState(reviewerThreadId.length > 0 && reviewerThreadId.trim() === reviewerThreadId && !/[\0\r\n]/u.test(reviewerThreadId), 'invalid reviewer thread identity');
     return this.transaction(campaignId, async (poolClient, rollingCampaignRow) => {
-      const row = (await poolClient.query<Record<string, unknown>>('SELECT request_text,outcome_text FROM ponytail_index.rolling_review_v1 WHERE project_id=$1 AND campaign_id=$2 AND review_id=$3', [this.projectId, campaignId, reviewId])).rows[0];
+      const row = (await poolClient.query<Record<string, unknown>>('SELECT request_text,outcome_text,replacement_text FROM ponytail_index.rolling_review_v1 WHERE project_id=$1 AND campaign_id=$2 AND review_id=$3', [this.projectId, campaignId, reviewId])).rows[0];
       requireState(row && row.outcome_text === null, 'review is missing or already decided');
+      requireState(row.replacement_text === null, 'review request has been replaced');
       const rollingReviewRequestV1 = parseRollingReviewRequest(stringColumn(row.request_text, 'review request'));
       const rollingStoredAssignment = await this.assignment(poolClient, campaignId, rollingReviewRequestV1.assignmentId, rollingReviewRequestV1.generation);
       requireState(rollingStoredAssignment.state === 'REVIEW' && rollingStoredAssignment.activityStopped && !rollingStoredAssignment.retired, 'candidate is no longer awaiting review');
@@ -546,8 +589,9 @@ export class RollingCampaignStore {
 
   async reviewContext(campaignId: string, reviewId: string): Promise<RollingReviewContext> {
     return this.transaction(campaignId, async (poolClient, rollingCampaignRow) => {
-      const row = (await poolClient.query<Record<string, unknown>>('SELECT request_text,outcome_text FROM ponytail_index.rolling_review_v1 WHERE project_id=$1 AND campaign_id=$2 AND review_id=$3', [this.projectId, campaignId, reviewId])).rows[0];
+      const row = (await poolClient.query<Record<string, unknown>>('SELECT request_text,outcome_text,replacement_text FROM ponytail_index.rolling_review_v1 WHERE project_id=$1 AND campaign_id=$2 AND review_id=$3', [this.projectId, campaignId, reviewId])).rows[0];
       requireState(row, 'review request is missing');
+      requireState(row.replacement_text === null, 'review request has been replaced');
       const rollingReviewRequestV1 = parseRollingReviewRequest(stringColumn(row.request_text, 'review request'));
       const text = nullableStringColumn(row.outcome_text, 'review outcome');
       const rollingReviewOutcomeV1 = text === null ? null : parseRollingReviewOutcome(text);
@@ -587,8 +631,9 @@ export class RollingCampaignStore {
   async attachReviewDispatch(campaignId: string, reviewId: string, dispatchId: string, reviewerSessionId: string, turnId: string): Promise<RollingReviewDispatchAttached> {
     requireState(turnId.length > 0 && turnId.trim() === turnId && !/[\0\r\n]/u.test(turnId), 'invalid review turn identity');
     return this.transaction(campaignId, async poolClient => {
-      const row = (await poolClient.query<Record<string, unknown>>('SELECT d.dispatch_id,d.reviewer_thread_id,d.state,d.turn_id,r.request_text FROM ponytail_index.rolling_review_dispatch_v1 d JOIN ponytail_index.rolling_review_v1 r USING(project_id,campaign_id,review_id) WHERE d.project_id=$1 AND d.campaign_id=$2 AND d.review_id=$3', [this.projectId, campaignId, reviewId])).rows[0];
+      const row = (await poolClient.query<Record<string, unknown>>('SELECT d.dispatch_id,d.reviewer_thread_id,d.state,d.turn_id,r.request_text,r.replacement_text FROM ponytail_index.rolling_review_dispatch_v1 d JOIN ponytail_index.rolling_review_v1 r USING(project_id,campaign_id,review_id) WHERE d.project_id=$1 AND d.campaign_id=$2 AND d.review_id=$3', [this.projectId, campaignId, reviewId])).rows[0];
       requireState(row && row.dispatch_id === dispatchId, 'invalid review dispatch identity');
+      requireState(row.replacement_text === null, 'review request has been replaced');
       const rollingReviewRequestV1 = parseRollingReviewRequest(stringColumn(row.request_text, 'review request'));
       requireState(rollingReviewRequestV1.reviewerSessionId === reviewerSessionId, 'native session differs from assigned reviewer');
       requireState(row.state === 'STARTED' || row.state === 'ATTACHED' && row.turn_id === turnId, 'review dispatch retry differs from original turn');
@@ -600,8 +645,9 @@ export class RollingCampaignStore {
   async recordReviewOutcome(campaignId: string, reviewId: string, actorSessionId: string, rollingReviewOutcomeV1: RollingReviewOutcomeV1): Promise<RollingStoredReview> {
     const checkedRollingReviewOutcomeV1 = readRollingReviewOutcomeV1(rollingReviewOutcomeV1);
     return this.transaction(campaignId, async (poolClient, rollingCampaignRow) => {
-      const row = (await poolClient.query<Record<string, unknown>>('SELECT request_text,outcome_text FROM ponytail_index.rolling_review_v1 WHERE project_id=$1 AND campaign_id=$2 AND review_id=$3', [this.projectId, campaignId, reviewId])).rows[0];
+      const row = (await poolClient.query<Record<string, unknown>>('SELECT request_text,outcome_text,replacement_text FROM ponytail_index.rolling_review_v1 WHERE project_id=$1 AND campaign_id=$2 AND review_id=$3', [this.projectId, campaignId, reviewId])).rows[0];
       requireState(row, 'review request is missing');
+      requireState(row.replacement_text === null, 'review request has been replaced');
       const rollingReviewRequestV1 = parseRollingReviewRequest(stringColumn(row.request_text, 'review request'));
       requireState(actorSessionId === rollingReviewRequestV1.reviewerSessionId, 'only the assigned reviewer may report a decision');
       validateRollingReviewOutcome(rollingReviewRequestV1, checkedRollingReviewOutcomeV1);
@@ -967,7 +1013,7 @@ export class RollingCampaignStore {
     const obligation = rollingGraph.document.obligations.find(item => item.id === rollingStoredAssignment.obligationId);
     const obligationBaseline = rollingGraph.document.baselines.at(-1);
     requireState(obligation && obligationBaseline, 'worker obligation or baseline is missing');
-    const previousReview = (await poolClient.query<Record<string, unknown>>('SELECT outcome_text FROM ponytail_index.rolling_review_v1 WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3 ORDER BY created_at DESC,review_id DESC LIMIT 1',
+    const previousReview = (await poolClient.query<Record<string, unknown>>('SELECT outcome_text FROM ponytail_index.rolling_review_v1 WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3 AND replacement_text IS NULL ORDER BY created_at DESC,review_id DESC LIMIT 1',
       [this.projectId, campaignId, id])).rows[0];
     const previousOutcome = previousReview ? nullableStringColumn(previousReview.outcome_text, 'previous review outcome') : null;
     const rollingReviewOutcomeV1 = previousOutcome === null ? null : parseRollingReviewOutcome(previousOutcome);

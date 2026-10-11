@@ -84,7 +84,10 @@ criteria are owned by the referenced campaign obligation document. The prose
 below explains their approved scope; it is not a substitute delivery unit.
 
 Workers perform full semantic rebases and focused QA; adversarial review binds
-the exact candidate and preserves reviewer identity through corrections. The
+the exact candidate and preserves reviewer identity through corrections. If that
+reviewer is lost, the coordinator records the loss reference and replacement,
+preserves previous requests and verdicts, fences the replaced request, and obtains
+a fresh review of the exact candidate from the replacement reviewer. The
 coordinator uses the explicitly authorized interactive fast rebase, inspecting
 semantic conflicts when textual conflicts arise. Refresh required proof on
 changed inputs, push normally, and verify remote outcomes. Delivery does not

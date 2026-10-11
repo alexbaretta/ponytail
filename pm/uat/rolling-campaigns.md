@@ -82,6 +82,10 @@ Traceability: verifies REQ-ROLLING-REVIEW
 
 1. **Step REVIEW-CORRECTION:** Acceptance contribution to [OBL-50](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-50), [OBL-51](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-51), [OBL-52](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-52). Reject a candidate, return corrections, and submit
    a newly semantically rebased revision. The original reviewer assesses it.
+   For OBL-52, establish reviewer loss, record its reference and replacement,
+   reject late activity on the replaced request, and obtain a fresh exact-candidate
+   review from the replacement. Verify both the replacement record and immutable
+   prior requests/verdicts after restart; a timeout alone does not establish loss.
 2. **Step REVIEW-REBASE:** Acceptance contribution to [OBL-49](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-49), [OBL-53](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-53). Advance the campaign base with clean and conflicting
    edits. Full worker rebase inspects every commit; coordinator fast rebase
    applies the declared textual-conflict semantic-review exception.

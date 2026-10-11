@@ -6,7 +6,8 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { readRollingReviewRequestV1, readRollingReviewOutcomeV1, parseRollingReviewRequest, parseRollingReviewOutcome,
  validateRollingReviewOutcome, RollingReviewRequestReaders, RollingReviewOutcomeReaders, readRollingReviewTurn, type RollingReviewTurn,
- type RollingReviewRequestV1, type RollingReviewAcceptedV1, type RollingReviewRejectedV1 } from '../src/rolling-review.js';
+ readRollingReviewReplacementV1, parseRollingReviewReplacement, RollingReviewReplacementReaders,
+ type RollingReviewReplacementV1, type RollingReviewRequestV1, type RollingReviewAcceptedV1, type RollingReviewRejectedV1 } from '../src/rolling-review.js';
 function request(): RollingReviewRequestV1 {
  return { schemaVersion: 1, id: 'review', campaignId: 'campaign', assignmentId: 'assignment', generation: 'generation',
   baseCommit: 'a'.repeat(40), revision: 'b'.repeat(40), reviewerSessionId: 'reviewer' };
@@ -14,6 +15,20 @@ function request(): RollingReviewRequestV1 {
 function accepted(): RollingReviewAcceptedV1 {
  return { schemaVersion: 1, reviewId: 'review', revision: 'b'.repeat(40), reviewerSessionId: 'reviewer', completedAt: '2026-10-11T10:00:00Z', decision: 'accepted', findings: [] };
 }
+
+// Traceability: verifies REQ-ROLLING-REVIEW
+test('reviewer replacement records loss and fresh identities without changing historical review contracts', () => {
+ const rollingReviewReplacementV1: RollingReviewReplacementV1 = { schemaVersion:1, reviewId:'original', replacementReviewId:'replacement',
+  previousReviewerSessionId:'lost-reviewer', reviewerSessionId:'new-reviewer', recordedAt:'2026-10-11T18:00:00Z', lossReference:'host observation: original reviewer unavailable' };
+ assert.deepEqual(Object.keys(RollingReviewReplacementReaders), ['V1']);
+ assert.deepEqual(parseRollingReviewReplacement(JSON.stringify(rollingReviewReplacementV1)), rollingReviewReplacementV1);
+ for (const value of [ { ...rollingReviewReplacementV1,schemaVersion:2 }, { ...rollingReviewReplacementV1,lossReference:'' },
+  { ...rollingReviewReplacementV1,replacementReviewId:'original' }, { ...rollingReviewReplacementV1,reviewerSessionId:'lost-reviewer' },
+  { ...rollingReviewReplacementV1,recordedAt:'not a timestamp' }, { ...rollingReviewReplacementV1,reason:'extra' } ]) {
+  assert.throws(() => readRollingReviewReplacementV1(value));
+ }
+ for (const token of ['1.0','1e0','9007199254740993']) assert.throws(() => parseRollingReviewReplacement(JSON.stringify(rollingReviewReplacementV1).replace('"schemaVersion":1',`"schemaVersion":${token}`)));
+});
 
 test('shipped review runtime loads its generated native adapter outside the dist tree', async () => {
  const loaded: unknown = await import(pathToFileURL(path.resolve(__dirname, '../../src/rolling-review.js')).href);

@@ -66,7 +66,7 @@ test('native code fixture approvals permit exact shell-wrapped commands only for
 
 // Traceability: verifies REQ-ROLLING-STATE
 // Traceability: verifies REQ-ROLLING-SCHEDULING
-export interface ReviewScenario { readonly decision: RollingReviewOutcomeV1['decision']; readonly mode: 'manual' | 'protocol' | 'native' }
+export interface ReviewScenario { readonly decision: RollingReviewOutcomeV1['decision']; readonly mode: 'manual' | 'protocol' | 'native'; readonly replaceLostReviewer?: boolean }
 function declineReviewApprovals(rollingCodex: RollingCodex): void {
   rollingCodex.on('serverRequest', message => rollingCodex.respondToServer(message.id, { decision: 'decline' }));
 }
@@ -388,11 +388,51 @@ export async function runRollingReviewScenario(t: TestContext, reviewScenario: R
     submissionRollingStoredAssignment.generation, 'f'.repeat(40), 'reviewer-session'), /no validated worker submission/);
   const reviewRequests = await Promise.all(Array.from({ length: 4 }, () => rollingCampaignStore.requestReview('bound-fixture',
     submissionRollingStoredAssignment.id, submissionRollingStoredAssignment.generation, revision, reviewerSessionId)));
-  const rollingStoredReview = reviewRequests[0];
+  let rollingStoredReview = reviewRequests[0];
   assert.ok(rollingStoredReview);
-  assert.ok(reviewRequests.every(item => item.request.id === rollingStoredReview.request.id && item.outcome === null));
+  for (const review of reviewRequests) assert.deepEqual(review,rollingStoredReview);
+  assert.equal(rollingStoredReview.outcome,null);
   assert.equal((await rollingCampaignStore.reviews('bound-fixture', submissionRollingStoredAssignment.id)).length, 1);
   assert.equal(rollingStoredReview.request.baseCommit, rollingWorkerSubmissionV1.baseCommit);
+  if (reviewScenario.replaceLostReviewer) {
+    const originalRollingStoredReview = rollingStoredReview;
+    const originalReviewerSessionId = reviewerSessionId;
+    const lostReviewerThreadId = reviewScenario.mode === 'native' ? liveReviewerThreadId : 'lost-reviewer-thread';
+    assert.ok(lostReviewerThreadId);
+    const originalRollingReviewDispatchStarted = await rollingCampaignStore.claimReviewDispatch('bound-fixture',originalRollingStoredReview.request.id,lostReviewerThreadId);
+    reviewerSessionId = 'replacement-reviewer-session';
+    if (reviewScenario.mode === 'native') {
+      assert.ok(liveRollingCodex && liveReviewerThreadId);
+      await liveRollingCodex.archiveThread(liveReviewerThreadId);
+      liveRollingNativeThread = await liveRollingCodex.startThread(workerRoot);
+      liveReviewerThreadId = liveRollingNativeThread.thread.id;
+      reviewerSessionId = liveRollingNativeThread.thread.sessionId;
+    }
+    const rollingReviewerLoss = { reviewId:originalRollingStoredReview.request.id, lossReference:`coordinator-observed loss of ${originalReviewerSessionId}; original actor removed from review scope` };
+    const replacing = () => rollingCampaignStore.requestReview('bound-fixture',submissionRollingStoredAssignment.id,submissionRollingStoredAssignment.generation,revision,reviewerSessionId,rollingReviewerLoss);
+    await assert.rejects(rollingCampaignStore.requestReview('bound-fixture',submissionRollingStoredAssignment.id,submissionRollingStoredAssignment.generation,revision,reviewerSessionId,{ ...rollingReviewerLoss,lossReference:'' }), /invalid identity/);
+    assert.equal(await rollingCampaignStore.reviewReplacement('bound-fixture',originalRollingStoredReview.request.id),null);
+    const replacements = await Promise.all([replacing(),replacing()]);
+    rollingStoredReview = replacements[0];assert.ok(rollingStoredReview);
+    assert.deepEqual(replacements[1],rollingStoredReview);
+    assert.notEqual(rollingStoredReview.request.id,originalRollingStoredReview.request.id);
+    assert.equal(rollingStoredReview.request.revision,originalRollingStoredReview.request.revision);
+    assert.equal(rollingStoredReview.outcome,null);
+    await assert.rejects(rollingCampaignStore.requestReview('bound-fixture',submissionRollingStoredAssignment.id,submissionRollingStoredAssignment.generation,revision,'other-reviewer',rollingReviewerLoss), /replacement retry/);
+    await assert.rejects(rollingCampaignStore.reviewContext('bound-fixture',originalRollingStoredReview.request.id), /replaced/);
+    await assert.rejects(rollingCampaignStore.claimReviewDispatch('bound-fixture',originalRollingStoredReview.request.id,'lost-reviewer-thread'), /replaced/);
+    await assert.rejects(rollingCampaignStore.attachReviewDispatch('bound-fixture',originalRollingStoredReview.request.id,originalRollingReviewDispatchStarted.id,originalReviewerSessionId,'late-turn'), /replaced/);
+    await assert.rejects(rollingCampaignStore.recordReviewOutcome('bound-fixture',originalRollingStoredReview.request.id,originalReviewerSessionId,{ schemaVersion:1,
+      reviewId:originalRollingStoredReview.request.id,revision,reviewerSessionId:originalReviewerSessionId,completedAt:new Date().toISOString(),decision:'accepted',findings:[] }), /replaced/);
+    const restartedRollingCampaignStore = new RollingCampaignStore(pool,projectId);
+    assert.deepEqual((await restartedRollingCampaignStore.reviews('bound-fixture',submissionRollingStoredAssignment.id)).find(review => review.request.id === originalRollingStoredReview.request.id),originalRollingStoredReview);
+    const replacement = await restartedRollingCampaignStore.reviewReplacement('bound-fixture',originalRollingStoredReview.request.id);
+    assert.equal(replacement?.replacementReviewId,rollingStoredReview.request.id);
+    assert.equal(replacement?.previousReviewerSessionId,originalReviewerSessionId);
+    assert.equal(replacement?.reviewerSessionId,reviewerSessionId);
+    assert.equal(replacement?.lossReference,rollingReviewerLoss.lossReference);
+    t.diagnostic(`Lost review ${originalRollingStoredReview.request.id} retained unchanged; recorded replacement ${rollingStoredReview.request.id}; old dispatch and decisions fenced after restart; fresh review pending.`);
+  }
   const rollingReviewContext = await rollingCampaignStore.reviewContext('bound-fixture', rollingStoredReview.request.id);
   assert.equal(rollingReviewContext.rootPath, workerRoot);
   assert.equal(rollingReviewContext.obligation.id, firstRollingBinding.obligationId);
@@ -456,33 +496,33 @@ export async function runRollingReviewScenario(t: TestContext, reviewScenario: R
   } finally { await unusedRollingCodex.close(); }
   await assert.rejects(rollingCampaignStore.attachReviewDispatch('bound-fixture', rollingStoredReview.request.id, 'wrong-dispatch', 'reviewer-session', 'review-turn'), /dispatch identity/);
   await assert.rejects(rollingCampaignStore.attachReviewDispatch('bound-fixture', rollingStoredReview.request.id, claimed.value.id, 'other-reviewer', 'review-turn'), /native session differs/);
-  const attachments = await Promise.all(Array.from({ length: 4 }, () => rollingCampaignStore.attachReviewDispatch('bound-fixture', rollingStoredReview.request.id, claimed.value.id, 'reviewer-session', 'review-turn')));
+  const attachments = await Promise.all(Array.from({ length: 4 }, () => rollingCampaignStore.attachReviewDispatch('bound-fixture', rollingStoredReview.request.id, claimed.value.id, reviewerSessionId, 'review-turn')));
   assert.ok(attachments.every(item => item.state === 'ATTACHED' && item.turnId === 'review-turn'));
-  await assert.rejects(rollingCampaignStore.attachReviewDispatch('bound-fixture', rollingStoredReview.request.id, claimed.value.id, 'reviewer-session', 'different-turn'), /retry differs/);
+  await assert.rejects(rollingCampaignStore.attachReviewDispatch('bound-fixture', rollingStoredReview.request.id, claimed.value.id, reviewerSessionId, 'different-turn'), /retry differs/);
   assert.deepEqual(await restartedRollingCampaignStore.reviewDispatch('bound-fixture', rollingStoredReview.request.id), attachments[0]);
   assert.equal(await foreignRollingCampaignStore.reviewDispatch('bound-fixture', rollingStoredReview.request.id), null);
   await assert.rejects(rollingCampaignStore.requestReview('bound-fixture', submissionRollingStoredAssignment.id,
     submissionRollingStoredAssignment.generation, revision, 'other-reviewer'), /retry differs/);
   const rollingReviewOutcomeV1: RollingReviewOutcomeV1 = reviewDecision === 'accepted'
     ? { schemaVersion: 1, reviewId: rollingStoredReview.request.id, revision,
-      reviewerSessionId: 'reviewer-session', completedAt: new Date().toISOString(), decision: 'accepted', findings: [] }
+      reviewerSessionId, completedAt: new Date().toISOString(), decision: 'accepted', findings: [] }
     : { schemaVersion: 1, reviewId: rollingStoredReview.request.id, revision,
-      reviewerSessionId: 'reviewer-session', completedAt: new Date().toISOString(), decision: 'rejected', findings: ['Required correction.'] };
+      reviewerSessionId, completedAt: new Date().toISOString(), decision: 'rejected', findings: ['Required correction.'] };
   await assert.rejects(rollingCampaignStore.recordReviewOutcome('bound-fixture', rollingStoredReview.request.id, 'other-reviewer', rollingReviewOutcomeV1), /only the assigned/);
-  await assert.rejects(rollingCampaignStore.recordReviewOutcome('bound-fixture', rollingStoredReview.request.id, 'reviewer-session',
+  await assert.rejects(rollingCampaignStore.recordReviewOutcome('bound-fixture', rollingStoredReview.request.id, reviewerSessionId,
     { ...rollingReviewOutcomeV1, revision: 'f'.repeat(40) }), /differs from assigned/);
   fs.writeFileSync(path.join(workerRoot, 'unexpected.ts'), 'dirty during review');
-  await assert.rejects(rollingCampaignStore.recordReviewOutcome('bound-fixture', rollingStoredReview.request.id, 'reviewer-session', rollingReviewOutcomeV1), /dirty/);
+  await assert.rejects(rollingCampaignStore.recordReviewOutcome('bound-fixture', rollingStoredReview.request.id, reviewerSessionId, rollingReviewOutcomeV1), /dirty/);
   fs.unlinkSync(path.join(workerRoot, 'unexpected.ts'));
   const decisions = await Promise.all(Array.from({ length: 4 }, () => rollingCampaignStore.recordReviewOutcome('bound-fixture',
-    rollingStoredReview.request.id, 'reviewer-session', rollingReviewOutcomeV1)));
+    rollingStoredReview.request.id, reviewerSessionId, rollingReviewOutcomeV1)));
   assert.ok(decisions.every(item => JSON.stringify(item.outcome) === JSON.stringify(rollingReviewOutcomeV1)));
   assert.equal((await rollingCampaignStore.status('bound-fixture')).assignments[0]?.state, reviewDecision === 'accepted' ? 'INTEGRATING' : 'REWORK');
   const changedRollingReviewOutcomeV1: RollingReviewOutcomeV1 = reviewDecision === 'accepted'
     ? { ...rollingReviewOutcomeV1, decision: 'rejected', findings: ['Changed verdict.'] }
     : { ...rollingReviewOutcomeV1, decision: 'accepted', findings: [] };
-  await assert.rejects(rollingCampaignStore.recordReviewOutcome('bound-fixture', rollingStoredReview.request.id, 'reviewer-session', changedRollingReviewOutcomeV1), /immutable decision/);
-  assert.deepEqual((await rollingCampaignStore.reviews('bound-fixture', submissionRollingStoredAssignment.id))[0]?.outcome, rollingReviewOutcomeV1);
+  await assert.rejects(rollingCampaignStore.recordReviewOutcome('bound-fixture', rollingStoredReview.request.id, reviewerSessionId, changedRollingReviewOutcomeV1), /immutable decision/);
+  assert.deepEqual((await rollingCampaignStore.reviews('bound-fixture', submissionRollingStoredAssignment.id)).find(review => review.request.id === rollingStoredReview.request.id)?.outcome, rollingReviewOutcomeV1);
   assert.deepEqual(await foreignRollingCampaignStore.reviews('bound-fixture', submissionRollingStoredAssignment.id), []);
   assert.ok(!collectRollingGraph(root, 'bound-obligations.json', 'bound-bindings.json', 'history.json').projection.satisfiedIds.includes(firstRollingBinding.obligationId));
   }
@@ -532,6 +572,9 @@ export async function runRollingReviewScenario(t: TestContext, reviewScenario: R
   assert.ok(!collectRollingGraph(root, 'bound-obligations.json', 'bound-bindings.json', 'history.json').projection.satisfiedIds.includes(firstRollingBinding.obligationId));
 }
 const reviewScenarios: readonly ReviewScenario[] = [{ decision: 'accepted', mode: 'manual' }, { decision: 'rejected', mode: 'manual' }, { decision: 'accepted', mode: 'protocol' }];
+// Traceability: verifies REQ-ROLLING-REVIEW
+test('real PostgreSQL records lost reviewer replacement and fences the old actor while retaining fresh review after restart',
+  t => runRollingReviewScenario(t,{decision:'accepted',mode:'manual',replaceLostReviewer:true}));
 for (const reviewScenario of reviewScenarios) {
   test(`real PostgreSQL serializes allocation, retains ownership and persists ${reviewScenario.mode === 'protocol' ? 'native application' : reviewScenario.decision} review`,
     t => runRollingReviewScenario(t, reviewScenario));
@@ -996,6 +1039,26 @@ export async function runRollingWorkerScenario(t: TestContext, mode: 'protocol' 
     assert.equal(correctedRollingStoredReview.request.reviewerSessionId,rejectedRollingStoredReview.request.reviewerSessionId);
     assert.notEqual(correctedRollingStoredReview.request.id,rejectedRollingStoredReview.request.id);
     assert.deepEqual((await new RollingCampaignStore(pool,projectId).reviews('worker-fixture',rollingAllocationResult.assignment.id))[0]?.outcome,rejectedRollingReviewOutcomeV1);
+    const correctedRejectedRollingReviewOutcomeV1: RollingReviewOutcomeV1 = { ...rejectedRollingReviewOutcomeV1,
+      reviewId:correctedRollingStoredReview.request.id,completedAt:new Date().toISOString(),findings:['Controlled second rejection before reviewer loss.'] };
+    await rollingCampaignStore.recordReviewOutcome('worker-fixture',correctedRollingStoredReview.request.id,'original-reviewer',correctedRejectedRollingReviewOutcomeV1);
+    await suspendRollingWorker(rollingCampaignStore,rollingCodex,'worker-fixture',reworkRollingAllocationResult.assignment.id,reworkRollingAllocationResult.assignment.generation,[]);
+    const recoveryRollingAllocationResult = await rollingCampaignStore.allocate('worker-fixture',rollingGraph.digest);
+    assert.ok(recoveryRollingAllocationResult.assignment && recoveryRollingAllocationResult.actionId);
+    await resumeRollingWorker(rollingCampaignStore,rollingCodex,'worker-fixture',recoveryRollingAllocationResult.actionId,recoveryRollingAllocationResult.assignment.generation);
+    const recoveryRollingWorkerContext = await rollingCampaignStore.workerContext('worker-fixture',recoveryRollingAllocationResult.assignment.id,recoveryRollingAllocationResult.assignment.generation);
+    await rollingCampaignStore.submit('worker-fixture',recoveryRollingAllocationResult.assignment.id,recoveryRollingAllocationResult.assignment.generation,
+      {...rollingWorkerSubmissionV1,generation:recoveryRollingWorkerContext.lease.generation,graphDigest:recoveryRollingWorkerContext.lease.graphDigest});
+    const recoveryRollingStoredReview = await rollingCampaignStore.requestReview('worker-fixture',recoveryRollingAllocationResult.assignment.id,
+      recoveryRollingAllocationResult.assignment.generation,revision,'replacement-reviewer',
+      {reviewId:correctedRollingStoredReview.request.id,lossReference:'Controlled reviewer loss between rejection and corrected submission'});
+    assert.equal(recoveryRollingStoredReview.request.reviewerSessionId,'replacement-reviewer');
+    assert.equal(recoveryRollingStoredReview.request.generation,recoveryRollingAllocationResult.assignment.generation);
+    assert.equal(recoveryRollingStoredReview.outcome,null);
+    const recoveredReviews = await new RollingCampaignStore(pool,projectId).reviews('worker-fixture',rollingAllocationResult.assignment.id);
+    assert.deepEqual(recoveredReviews.find(review => review.request.id === rejectedRollingStoredReview.request.id)?.outcome,rejectedRollingReviewOutcomeV1);
+    assert.deepEqual(recoveredReviews.find(review => review.request.id === correctedRollingStoredReview.request.id)?.outcome,correctedRejectedRollingReviewOutcomeV1);
+    assert.equal((await rollingCampaignStore.reviewReplacement('worker-fixture',correctedRollingStoredReview.request.id))?.replacementReviewId,recoveryRollingStoredReview.request.id);
   }
   if ((operation === 'suspension' || operation === 'resumption')) {
     assert.ok(rollingWorkerDispatchAttached);

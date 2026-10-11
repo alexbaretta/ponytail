@@ -13521,6 +13521,49 @@
       },
       "assessor": "coordinator",
       "reason": "Discharge the started native review/rework obligation after prior proof renewal."
+    },
+    {
+      "id": "CHECKPOINT-137",
+      "predecessorId": "CHECKPOINT-136",
+      "baselineId": "BASELINE-15",
+      "kind": "disturbance",
+      "selectedIds": [],
+      "registeredIds": [],
+      "certificateIds": [],
+      "invalidatedIds": [
+        "CERT-86",
+        "CERT-87",
+        "CERT-88",
+        "CERT-89",
+        "CERT-90",
+        "CERT-91",
+        "CERT-92",
+        "CERT-93",
+        "CERT-94",
+        "CERT-95",
+        "CERT-96",
+        "CERT-97",
+        "CERT-98"
+      ],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": null,
+      "assessor": "coordinator",
+      "reason": "Record the reviewer recovery binding and resulting prior certificate freshness disturbance before source edits. Renew related batch evidence after reconciliation."
     }
   ]
 }

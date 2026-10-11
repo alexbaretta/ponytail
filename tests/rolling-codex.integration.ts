@@ -21,6 +21,10 @@ function declineApprovals(rollingCodex: RollingCodex): void {
 test('live adversarial reviewer rejects the exact bad candidate and persists its decision after restart',
  t => runRollingReviewScenario(t, { decision: 'rejected', mode: 'native' }));
 
+// Traceability: verifies REQ-ROLLING-REVIEW
+test('live replacement reviewer freshly reviews the exact candidate after recorded original reviewer loss',
+ t => runRollingReviewScenario(t,{decision:'rejected',mode:'native',replaceLostReviewer:true}));
+
 // Traceability: verifies REQ-ROLLING-WORKERS
 // Traceability: verifies REQ-PONYTAIL-STATIC-LANGUAGE
 test('native App Server starts and resumes the same session in the designated existing checkout', async t => {
