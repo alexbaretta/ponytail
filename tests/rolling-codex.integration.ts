@@ -110,3 +110,8 @@ test('live worker resumption restores its original native session with refreshed
 // Traceability: verifies REQ-ROLLING-WORKERS
 test('live worker creation recovery attaches original initialization after coordinator and native connection restart',
  t => runRollingWorkerScenario(t,'native','recovery'));
+
+// Traceability: verifies REQ-ROLLING-WORKERS
+// Traceability: verifies REQ-ROLLING-REVIEW
+test('live worker implements and semantically rebases its exact candidate before submission',
+ t => runRollingWorkerScenario(t,'native','code'));

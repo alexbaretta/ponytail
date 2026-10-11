@@ -78,6 +78,10 @@ export function validateRollingWorkerSubmission(root: string, obligationLeaseV1:
   requireSubmission(fs.realpathSync(root) === root && git(root, ['rev-parse', '--show-toplevel']).trim() === root, 'submission checkout identity differs');
   requireSubmission(rollingWorkerSubmissionV1.campaignId === obligationLeaseV1.scopeId, 'submission scope differs from lease');
   validateRollingSessionMarker(root, rollingWorkerSubmissionV1.sessionId);
+  for (const rebaseState of ['rebase-merge', 'rebase-apply']) {
+    requireSubmission(!fs.existsSync(git(root, ['rev-parse', '--path-format=absolute', '--git-path', rebaseState]).trim()),
+      'candidate rebase is unfinished');
+  }
   requireSubmission(git(root, ['status', '--porcelain=v1', '--untracked-files=all']).length === 0, 'candidate checkout is dirty');
   requireSubmission(git(root, ['rev-parse', 'HEAD']).trim() === rollingWorkerSubmissionV1.revision, 'candidate is not actual HEAD');
   git(root, ['merge-base', '--is-ancestor', rollingWorkerSubmissionV1.baseCommit, rollingWorkerSubmissionV1.revision]);

@@ -1,0 +1,102 @@
+✔ live worker implements and semantically rebases its exact candidate before submission (197315.246542ms)
+ℹ {"timestamp":"2026-10-11T16:12:07.525230Z","level":"WARN","fields":{"message":"ignoring interface.icon_small: icon path with '..' must resolve under plugin assets/"},"target":"codex_skills::interface"}
+{"timestamp":"2026-10-11T16:12:07.525265Z","level":"WARN","fields":{"message":"ignoring interface.icon_large: icon path with '..' must resolve under plugin assets/"},"target":"codex_skills::interface"}
+ℹ native fixture identity thread=01a12bbc-5dc3-7451-aea5-d96fc48c3a60; root=/private/var/folders/yv/v_v6t2lj1nz4ypl2bpp_ytqm0000gp/T/rolling-worker-store-Pnc1cQ/managed/101
+ℹ native QA approval method=item/commandExecution/requestApproval; decision=accept exact fixture command; request={"kind":"command","threadId":"01a12bbc-5dc3-7451-aea5-d96fc48c3a60","turnId":"01a12bbc-9708-7ec0-b846-28f3f75a07ac","itemId":"exec-6251130a-7c17-429d-b50b-cf4d49a35948","startedAtMs":{"isLosslessNumber":true,"value":"1791735201923"},"environmentId":"local","reason":"Allow the assigned fetch to update this checkout’s Git metadata outside its writable root?","command":"/opt/homebrew/bin/bash -lc 'git fetch origin campaign/worker-fixture > tmp/fetch.txt 2>&1'","cwd":"/private/var/folders/yv/v_v6t2lj1nz4ypl2bpp_ytqm0000gp/T/rolling-worker-store-Pnc1cQ/managed/101","commandActions":[{"type":"unknown","command":"git fetch origin campaign/worker-fixture > tmp/fetch.txt 2>&1"}],"proposedExecpolicyAmendment":["/opt/homebrew/bin/bash","-lc","git fetch origin campaign/worker-fixture > tmp/fetch.txt 2>&1"],"availableDecisions":["accept",{"acceptWithExecpolicyAmendment":{"execpolicy_amendment":["/opt/homebrew/bin/bash","-lc","git fetch origin campaign/worker-fixture > tmp/fetch.txt 2>&1"]}},"cancel"]}
+ℹ worker turn remains active: thread=01a12bbc-5dc3-7451-aea5-d96fc48c3a60; turn=01a12bbc-9708-7ec0-b846-28f3f75a07ac; continue observing the same handle
+ℹ native QA approval method=item/commandExecution/requestApproval; decision=accept exact fixture command; request={"kind":"command","threadId":"01a12bbc-5dc3-7451-aea5-d96fc48c3a60","turnId":"01a12bbc-9708-7ec0-b846-28f3f75a07ac","itemId":"exec-dc229dfd-0394-4fb0-ad55-72006bbdd004","startedAtMs":{"isLosslessNumber":true,"value":"1791735212160"},"environmentId":"local","reason":"Allow the required interactive rebase to write this checkout’s Git rebase metadata?","command":"/opt/homebrew/bin/bash -lc 'git rebase -i origin/campaign/worker-fixture > tmp/semantic-rebase.txt 2>&1'","cwd":"/private/var/folders/yv/v_v6t2lj1nz4ypl2bpp_ytqm0000gp/T/rolling-worker-store-Pnc1cQ/managed/101","commandActions":[{"type":"unknown","command":"git rebase -i origin/campaign/worker-fixture > tmp/semantic-rebase.txt 2>&1"}],"proposedExecpolicyAmendment":["/opt/homebrew/bin/bash","-lc","git rebase -i origin/campaign/worker-fixture > tmp/semantic-rebase.txt 2>&1"],"availableDecisions":["accept",{"acceptWithExecpolicyAmendment":{"execpolicy_amendment":["/opt/homebrew/bin/bash","-lc","git rebase -i origin/campaign/worker-fixture > tmp/semantic-rebase.txt 2>&1"]}},"cancel"]}
+ℹ native QA approval method=item/commandExecution/requestApproval; decision=accept exact fixture command; request={"kind":"command","threadId":"01a12bbc-5dc3-7451-aea5-d96fc48c3a60","turnId":"01a12bbc-9708-7ec0-b846-28f3f75a07ac","itemId":"exec-2f8e98f6-7c7c-4ce3-8a3b-3ddebef43511","startedAtMs":{"isLosslessNumber":true,"value":"1791735242814"},"environmentId":"local","reason":"Allow completion of the reviewed rebase after passing focused QA at the edit stop?","command":"/opt/homebrew/bin/bash -lc 'git rebase --continue >> tmp/semantic-rebase.txt 2>&1'","cwd":"/private/var/folders/yv/v_v6t2lj1nz4ypl2bpp_ytqm0000gp/T/rolling-worker-store-Pnc1cQ/managed/101","commandActions":[{"type":"unknown","command":"git rebase --continue >> tmp/semantic-rebase.txt 2>&1"}],"proposedExecpolicyAmendment":["/opt/homebrew/bin/bash","-lc","git rebase --continue >> tmp/semantic-rebase.txt 2>&1"],"availableDecisions":["accept",{"acceptWithExecpolicyAmendment":{"execpolicy_amendment":["/opt/homebrew/bin/bash","-lc","git rebase --continue >> tmp/semantic-rebase.txt 2>&1"]}},"cancel"]}
+ℹ worker turn remains active: thread=01a12bbc-5dc3-7451-aea5-d96fc48c3a60; turn=01a12bbc-9708-7ec0-b846-28f3f75a07ac; continue observing the same handle
+ℹ worker turn remains active: thread=01a12bbc-5dc3-7451-aea5-d96fc48c3a60; turn=01a12bbc-9708-7ec0-b846-28f3f75a07ac; continue observing the same handle
+ℹ native worker final response: {"schemaVersion":1,"campaignId":"worker-fixture","assignmentId":"79e16720-b59a-46d2-bfe1-5b39fb806a5b","generation":"02cd6441-924e-4147-b93d-0755e63b41f8","sessionId":"01a12bbc-5dc3-7451-aea5-d96fc48c3a60","graphDigest":"eb0eef9059d51373b2826d71c17aea79d149cd1c0f1a788ed5a9b1e16eb2c29a","revision":"f68ec359fafd6dc9da3181e422c7622d06db8280","baseCommit":"86b56e4e73009c09e9ece771b23aa634edd2d5b7","stopped":true,"proof":[{"operation":"test","evidence":{"command":"npm run build","selection":["fixture unit","fixture integration"],"target":{"identity":"local","profile":"fixture","verification":"tmp/verification.json"},"revision":"f68ec359fafd6dc9da3181e422c7622d06db8280","dirty":false,"startedAt":"2026-10-11T09:13:57.775676-07:00","completedAt":"2026-10-11T09:13:58.927558-07:00","outcome":"pass","skips":0,"failures":0,"inputs":[{"path":"fixture.ts","digest":"2d70d6b9667adb3841a01a4733553b466ffdaf2de258596f42d7c14d0f1038ab"},{"path":"fixture.test.ts","digest":"9ed6d98527ea55b5667b0def3ad75d8a176a4dab6a2f0b1710c8bf9dfac8c601"},{"path":"package.json","digest":"7d4c8e5b3e35857b265ecd2219e99070ef4e828bc8d5548f2cf7462d772f11e4"},{"path":"tsconfig.json","digest":"1985699b4930f1cc1601c9f572f15361e135e1ec334a10ada11d413a51c8b55a"},{"path":"ponytail.json","digest":"7a43abd0ca71b4610ade2754921edc600ebc7868833206f8b2d0c53bf7fa4440"},{"path":".agents/config/project/rolling-campaigns.json","digest":"de1e2a49716e509ccffca80ac269a468f19aa5eb86c773244ae6cee17ea4542e"},{"path":"bindings.json","digest":"909e3f3df85154e6c1e1066a74624fe069e944b777b8603d427a935e1a2c605d"},{"path":"pm/requirements/rolling-campaigns.md","digest":"e8a99a44603092bd089e4bd11bd1e3648393dd5154e5c7628952a163f9f01a13"},{"path":"upstream.txt","digest":"24d33653807d6c87209832cd468c9d49915b59ed0048ddeadf92c85315d6110f"},{"path":"tmp/original-commit.txt","digest":"c0d92f284527005cd8f3559db4d8cab43857e59989c1f6d8cb0d0324f0db87f0"},{"path":"tmp/fetch.txt","digest":"9956a877cc6ac4457169b54b92fe1be287301f29eaac156bbda10350774cd03c"},{"path":"tmp/semantic-rebase.txt","digest":"1574ea898af7b991e0ebd6421b6b15977dc6578556a8c33818887ae2166195a4"},{"path":"tmp/build-impact.txt","digest":"52660dd633c5d27cba3ae4b8b26a8792e700e10f2ae50ff93c8cf413419e0475"},{"path":"tmp/build.txt","digest":"05f9f1a2a0b4dbcb1f54b6a790f39ce708d9e4fa45ccebe8e159303a146002c0"},{"path":"tmp/focused.txt","digest":"5d821feb433c77d125bda4c1cc4f00d15741cf3f0fd214c3c0c354bc2344e785"},{"path":"tmp/run-metadata.json","digest":"9c62cdc77ff3e49b65d7f0a4dca010ab67fd93c965e759cd9e3463898e2ac82a"},{"path":"tmp/verification.json","digest":"0ec2d09e823b7e820415bac54bcd34eee1b772ee9d852c50f86141f5c92d981e"}],"outputPath":"tmp/build.txt","finalization":"pass"}},{"operation":"test","evidence":{"command":"node --test --test-reporter=tap fixture.test.ts","selection":["fixture unit","fixture integration"],"target":{"identity":"local","profile":"fixture","verification":"tmp/verification.json"},"revision":"f68ec359fafd6dc9da3181e422c7622d06db8280","dirty":false,"startedAt":"2026-10-11T09:13:58.943533-07:00","completedAt":"2026-10-11T09:13:59.045238-07:00","outcome":"pass","skips":0,"failures":0,"inputs":[{"path":"fixture.ts","digest":"2d70d6b9667adb3841a01a4733553b466ffdaf2de258596f42d7c14d0f1038ab"},{"path":"fixture.test.ts","digest":"9ed6d98527ea55b5667b0def3ad75d8a176a4dab6a2f0b1710c8bf9dfac8c601"},{"path":"package.json","digest":"7d4c8e5b3e35857b265ecd2219e99070ef4e828bc8d5548f2cf7462d772f11e4"},{"path":"tsconfig.json","digest":"1985699b4930f1cc1601c9f572f15361e135e1ec334a10ada11d413a51c8b55a"},{"path":"ponytail.json","digest":"7a43abd0ca71b4610ade2754921edc600ebc7868833206f8b2d0c53bf7fa4440"},{"path":".agents/config/project/rolling-campaigns.json","digest":"de1e2a49716e509ccffca80ac269a468f19aa5eb86c773244ae6cee17ea4542e"},{"path":"bindings.json","digest":"909e3f3df85154e6c1e1066a74624fe069e944b777b8603d427a935e1a2c605d"},{"path":"pm/requirements/rolling-campaigns.md","digest":"e8a99a44603092bd089e4bd11bd1e3648393dd5154e5c7628952a163f9f01a13"},{"path":"upstream.txt","digest":"24d33653807d6c87209832cd468c9d49915b59ed0048ddeadf92c85315d6110f"},{"path":"tmp/original-commit.txt","digest":"c0d92f284527005cd8f3559db4d8cab43857e59989c1f6d8cb0d0324f0db87f0"},{"path":"tmp/fetch.txt","digest":"9956a877cc6ac4457169b54b92fe1be287301f29eaac156bbda10350774cd03c"},{"path":"tmp/semantic-rebase.txt","digest":"1574ea898af7b991e0ebd6421b6b15977dc6578556a8c33818887ae2166195a4"},{"path":"tmp/build-impact.txt","digest":"52660dd633c5d27cba3ae4b8b26a8792e700e10f2ae50ff93c8cf413419e0475"},{"path":"tmp/build.txt","digest":"05f9f1a2a0b4dbcb1f54b6a790f39ce708d9e4fa45ccebe8e159303a146002c0"},{"path":"tmp/focused.txt","digest":"5d821feb433c77d125bda4c1cc4f00d15741cf3f0fd214c3c0c354bc2344e785"},{"path":"tmp/run-metadata.json","digest":"9c62cdc77ff3e49b65d7f0a4dca010ab67fd93c965e759cd9e3463898e2ac82a"},{"path":"tmp/verification.json","digest":"0ec2d09e823b7e820415bac54bcd34eee1b772ee9d852c50f86141f5c92d981e"}],"outputPath":"tmp/focused.txt","finalization":"pass"}}]}
+ℹ native semantic rebase record: Rebasing (1/1)Stopped at a94852f...  # Set fixture value and unit expectation to 2
+You can amend the commit now, with
+
+  git commit --amend
+
+Once you are satisfied with your changes, run
+
+  git rebase --continue
+
+$ git status
+interactive rebase in progress; onto 86b56e4
+Last command done (1 command done):
+   edit a94852f # Set fixture value and unit expectation to 2
+No commands remaining.
+You are currently editing a commit while rebasing branch 'ponytail/worker-101/02cd6441-924e-4147-b93d-0755e63b41f8' on '86b56e4'.
+  (use "git commit --amend" to amend the current commit)
+  (use "git rebase --continue" once you are satisfied with your changes)
+
+nothing to commit, working tree clean
+
+$ git show --format=fuller HEAD
+commit f68ec359fafd6dc9da3181e422c7622d06db8280
+Author:     Alex Baretta <alex@baretta.com>
+AuthorDate: Sun Oct 11 09:13:08 2026 -0700
+Commit:     Alex Baretta <alex@baretta.com>
+CommitDate: Sun Oct 11 09:13:32 2026 -0700
+
+    Set fixture value and unit expectation to 2
+
+diff --git a/fixture.test.ts b/fixture.test.ts
+index 87c5c24..2bdfe94 100644
+--- a/fixture.test.ts
++++ b/fixture.test.ts
+@@ -1,5 +1,5 @@
+ import test from 'node:test';
+ import assert from 'node:assert/strict';
+ import { value } from './fixture.ts';
+-test('fixture unit', () => assert.equal(value, 1));
++test('fixture unit', () => assert.equal(value, 2));
+ test('fixture integration', () => assert.equal(Number.isSafeInteger(value), true));
+diff --git a/fixture.ts b/fixture.ts
+index 13d7f8c..e3f0f4e 100644
+--- a/fixture.ts
++++ b/fixture.ts
+@@ -1 +1 @@
+-export const value: number = 1;
++export const value: number = 2;
+
+$ git diff HEAD^ HEAD -- fixture.ts fixture.test.ts
+diff --git a/fixture.test.ts b/fixture.test.ts
+index 87c5c24..2bdfe94 100644
+--- a/fixture.test.ts
++++ b/fixture.test.ts
+@@ -1,5 +1,5 @@
+ import test from 'node:test';
+ import assert from 'node:assert/strict';
+ import { value } from './fixture.ts';
+-test('fixture unit', () => assert.equal(value, 1));
++test('fixture unit', () => assert.equal(value, 2));
+ test('fixture integration', () => assert.equal(Number.isSafeInteger(value), true));
+diff --git a/fixture.ts b/fixture.ts
+index 13d7f8c..e3f0f4e 100644
+--- a/fixture.ts
++++ b/fixture.ts
+@@ -1 +1 @@
+-export const value: number = 1;
++export const value: number = 2;
+
+$ git diff origin/campaign/worker-fixture HEAD --stat
+ fixture.test.ts | 2 +-
+ fixture.ts      | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+$ git diff origin/campaign/worker-fixture HEAD -- upstream.txt
+
+Semantic inspection: original commit a94852f5955ed85e5b7a5e6aaa490ac6532eeb78 changes the exported number and unit expectation from 1 to 2. Replayed hunks preserve that exact intent, the number annotation and the safe-integer integration assertion. Base 86b56e4e73009c09e9ece771b23aa634edd2d5b7 adds only upstream.txt, which remains identical to the base. No textual or semantic conflicts; no adaptation needed. IMPL-FIXTURE, UNIT-FIXTURE and INTEGRATION-FIXTURE establish ACCEPT-FIXTURE / ARC-FIXTURE / STEP-FIXTURE under OBL-2.
+
+Focused QA at the edit stop: npm run build passed; node --test --test-reporter=tap fixture.test.ts passed both fixture unit and fixture integration, 0 failures and 0 skips. Outputs retained in tmp/build.txt and tmp/focused.txt. Continue authorized after this clean semantic inspection and focused proof.
+Successfully rebased and updated refs/heads/ponytail/worker-101/02cd6441-924e-4147-b93d-0755e63b41f8.
+
+Final inspection: rebase complete with no rebase metadata; clean worktree; final HEAD f68ec359fafd6dc9da3181e422c7622d06db8280 is unchanged from the focused QA edit stop. Base 86b56e4e73009c09e9ece771b23aa634edd2d5b7 is an ancestor; exactly one candidate commit changes only fixture.ts and fixture.test.ts. Independently published upstream.txt is preserved. Focused output is fresh for the exact final revision; no relevant inputs changed after QA. Finalization pass.
+
+ℹ native code submission session=01a12bbc-5dc3-7451-aea5-d96fc48c3a60; turn=01a12bbc-9708-7ec0-b846-28f3f75a07ac; original=a94852f5955ed85e5b7a5e6aaa490ac6532eeb78; fresh base=86b56e4e73009c09e9ece771b23aa634edd2d5b7; rebased=f68ec359fafd6dc9da3181e422c7622d06db8280; focused QA=2; REVIEW persisted after restart
+ℹ tests 1
+ℹ suites 0
+ℹ pass 1
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 197376.766875

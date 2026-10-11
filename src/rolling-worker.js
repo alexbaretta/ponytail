@@ -17,6 +17,7 @@ exports.attachRollingWorker = attachRollingWorker;
 exports.recoverRollingWorkerCreation = recoverRollingWorkerCreation;
 exports.buildRollingWorkerInstructions = buildRollingWorkerInstructions;
 exports.dispatchRollingWorker = dispatchRollingWorker;
+exports.collectRollingWorkerSubmission = collectRollingWorkerSubmission;
 exports.readRollingWorkerStopV1 = readRollingWorkerStopV1;
 exports.parseRollingWorkerStop = parseRollingWorkerStop;
 exports.readRollingWorkerResumptionV1 = readRollingWorkerResumptionV1;
@@ -28,6 +29,7 @@ const node_fs_1 = __importDefault(require("node:fs"));
 const lossless_json_1 = require("lossless-json");
 const node_child_process_1 = require("node:child_process");
 const rolling_worktrees_js_1 = require("./rolling-worktrees.js");
+const rolling_worker_submission_js_1 = require("./rolling-worker-submission.js");
 function requireWorker(condition, message) {
     if (!condition)
         throw new Error(`rolling worker: ${message}`);
@@ -108,6 +110,19 @@ function buildRollingWorkerInstructions(rollingWorkerContext) {
     requireWorker(obligation.id === lease.binding.obligationId && binding.obligationId === obligation.id, 'worker instructions differ from frozen obligation');
     requireWorker(obligation.requirementIds.every(id => requirements.some(item => item.id === id))
         && requirements.every(item => obligation.requirementIds.includes(item.id)), 'worker instructions lack exact requirement references');
+    const rollingWorkerSubmissionV1 = {
+        schemaVersion: 1, campaignId: lease.scopeId, assignmentId: rollingWorkerContext.assignmentId,
+        generation: lease.generation, sessionId: rollingWorkerContext.rollingWorkerCreationV1.sessionId,
+        graphDigest: lease.graphDigest, revision: '<actual final HEAD>', baseCommit: rollingWorkerContext.baseCommit, stopped: true,
+        proof: lease.binding.execution.target === null ? [] : [{ operation: 'test', evidence: {
+                    command: '<actual command string>', selection: lease.binding.execution.selection,
+                    target: { ...lease.binding.execution.target, verification: '<relative verification file>' },
+                    revision: '<actual final HEAD>', dirty: false, startedAt: '<actual ISO timestamp>', completedAt: '<actual ISO timestamp>',
+                    outcome: 'pass', skips: 0, failures: 0,
+                    inputs: [{ path: '<relative assessed input>', digest: '<actual SHA-256>' }],
+                    outputPath: '<relative output file>', finalization: 'pass'
+                } }]
+    };
     return 'Execute the assigned atomic obligation in this existing checkout and original session. Read the applicable project rules and skills before work. '
         + 'The coordinator graph is authoritative; the frozen lease below owns current prerequisites, permitted paths, operations, proof selection and target. '
         + 'The obligation owns the canonical condition and discharge criterion. Its historical execution field does not override this frozen lease. '
@@ -116,7 +131,16 @@ function buildRollingWorkerInstructions(rollingWorkerContext) {
         + 'Preserve static typing and project build-impact rules. Report newly discovered prerequisites to the coordinator; do not silently change the authoritative graph. '
         + 'If blocked, stop activity and report the blocker while retaining the checkout. Delivery is proposed discharge, not acceptance. '
         + 'When submitting code changes, fetch the configured campaign branch and perform a full semantic rebase commit by commit, refresh affected evidence, retain the exact candidate SHA and base, and stop activity. '
-        + 'Return the candidate and evidence to the coordinator for adversarial review; never publish to mainline yourself.\n'
+        + 'Return the candidate and evidence to the coordinator for adversarial review; never publish to mainline yourself. '
+        + 'For code submissions, the final message must be only strict JSON, without Markdown fences or surrounding prose. '
+        + 'Use exactly the physical record keys shown in the outline, at every level. Do not add stoppedAt, timestamp, status, blocker, validation or any other field to a successful submission. Keep actual timestamps in evidence.startedAt and evidence.completedAt only. '
+        + 'Replace every placeholder and provide nonempty actual proof in the following typed submission outline; placeholders are not evidence. '
+        + 'Each proof entry contains operation and evidence. Evidence contains command, selection, target (identity, profile, verification), revision, dirty, startedAt, completedAt, outcome, skips, failures, inputs (path, digest), outputPath and finalization. '
+        + 'command is a string, not an argv array. finalization is the string "pass" for successful finalization, not an object. '
+        + 'Use the frozen proof selection and target; hash every changed existing source plus test inputs and retained output with SHA-256, relative to this checkout. '
+        + 'target.verification is a relative retained verification-file path, not a prose claim; include both that path and outputPath in the hashed inputs. '
+        + 'Retain actual command output and ISO timestamps; only passing, finalized, clean evidence with zero skips and failures is eligible. '
+        + `Code submission outline: ${JSON.stringify(rollingWorkerSubmissionV1)}\n`
         + `Worker responsibility: ${JSON.stringify(rollingWorkerContext)}`;
 }
 async function dispatchRollingWorker(rollingCampaignStore, rollingCodex, campaignId, assignmentId, generation) {
@@ -127,6 +151,24 @@ async function dispatchRollingWorker(rollingCampaignStore, rollingCodex, campaig
     requireWorker(rollingNativeThread.thread.sessionId === rollingWorkerContext.rollingWorkerCreationV1.sessionId, 'resumed worker differs from attached session');
     const rollingTurnStarted = await rollingCodex.startTurn(rollingNativeThread.thread.id, instructions);
     return rollingCampaignStore.attachWorkerDispatch(campaignId, assignmentId, generation, rollingWorkerDispatchStarted.id, rollingTurnStarted.turn.id);
+}
+async function collectRollingWorkerSubmission(rollingCampaignStore, rollingCodex, campaignId, assignmentId, generation, timeoutMs = 60000) {
+    const rollingWorkerCreationV1 = await rollingCampaignStore.workerIdentity(campaignId, assignmentId, generation);
+    const rollingWorkerDispatch = await rollingCampaignStore.workerDispatch(campaignId, assignmentId, generation);
+    requireWorker(rollingWorkerDispatch?.state === 'ATTACHED', 'submission requires its known original instruction turn');
+    requireWorker(rollingWorkerDispatch.threadId === rollingWorkerCreationV1.threadId, 'instruction turn differs from original attached worker');
+    const rollingNativeThread = await rollingCodex.resumeThread(rollingWorkerCreationV1.threadId, rollingWorkerCreationV1.rootPath);
+    requireWorker(JSON.stringify(identifyRollingWorkerCreation(rollingNativeThread, rollingWorkerCreationV1.rootPath)) === JSON.stringify(rollingWorkerCreationV1), 'submission actor differs from original attached worker');
+    let rollingNativeTurn = await rollingCodex.readTurn(rollingWorkerDispatch.threadId, rollingWorkerDispatch.turnId);
+    if (rollingNativeTurn.status === 'inProgress')
+        rollingNativeTurn = await rollingCodex.waitForTurn(rollingWorkerDispatch.threadId, rollingWorkerDispatch.turnId, timeoutMs);
+    requireWorker(rollingNativeTurn.status === 'completed', 'submission instruction turn did not complete');
+    const rollingNativeThreadActivity = await rollingCodex.readThreadActivity(rollingWorkerDispatch.threadId);
+    requireWorker(rollingNativeThreadActivity.status === 'idle', 'submission actor is not known idle; preserve active ownership');
+    const finalText = rollingNativeTurn.items.filter(item => item.type === 'agentMessage').at(-1)?.text;
+    requireWorker(finalText, 'worker turn has no final submission');
+    const rollingWorkerSubmissionV1 = (0, rolling_worker_submission_js_1.parseRollingWorkerSubmission)(finalText);
+    return rollingCampaignStore.submit(campaignId, assignmentId, generation, rollingWorkerSubmissionV1);
 }
 function isStopRecord(value) {
     return value !== null && typeof value === 'object' && !Array.isArray(value);

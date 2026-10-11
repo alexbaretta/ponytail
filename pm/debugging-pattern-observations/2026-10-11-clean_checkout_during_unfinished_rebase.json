@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-10-11-clean_checkout_during_unfinished_rebase",
+  "recorded_at": "2026-10-11T09:02:00-07:00",
+  "source_references": ["pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/worker-submission-component.md"],
+  "context": {
+    "languages": ["typescript"],
+    "frameworks": ["node:test"],
+    "components": ["rolling worker submission"],
+    "affected_boundaries": ["Git candidate acceptance"],
+    "code_references": ["src/rolling-worker-submission.ts", "tests/rolling-worker-submission.test.ts"]
+  },
+  "observed_behavior": "Submission accepted a clean candidate while interactive rebase remained paused at an edit stop.",
+  "expected_behavior": "A worker must finish its semantic rebase before its candidate can enter review.",
+  "causal_mechanism": "Git porcelain status is empty at a clean edit stop; HEAD and linear ancestry can already match the proposed candidate. Those checks do not establish that rebase has completed.",
+  "anti_pattern": {
+    "structural_description": "Candidate validation inferred operation completion from clean content and ancestry rather than inspecting Git's operation state.",
+    "why_it_fails": "An intermediate operation state can satisfy all content checks while still owning the checkout."
+  },
+  "correct_pattern": {
+    "required_invariant": "Neither Git rebase backend may have retained operation state at submission.",
+    "implementation_description": "Resolve rebase-merge and rebase-apply through Git's absolute git-path lookup and reject retained state before candidate proof assessment."
+  },
+  "applicability_conditions": ["Submission claims completed rebased work", "Interactive rebase can pause with clean Git status"],
+  "known_non_matches": ["The same candidate after rebase --continue has no retained rebase state and passes validation"],
+  "confirmation_evidence": ["tmp/binding-selectors/worker-submission-state-before.txt: clean status and matching HEAD, but missing expected rejection"],
+  "regression_proofs": ["tests/rolling-worker-submission.test.ts: submission rejects a clean interactive rebase edit stop until the rebase completes", "tmp/binding-selectors/worker-submission-state-focused.txt: 10 tests passed"]
+}

@@ -100,6 +100,9 @@ lines.on('line', line => {
     send({ method: 'turn/completed', params: {
       threadId: params.threadId, turn: { id: params.turnId, status: 'interrupted', items: [] }
     } });
+  } else if (method === 'fixture-turn') {
+    const rollingNativeTurn:RollingNativeTurn = {id:text(params.turnId),status:text(params.status),items:[{type:'agentMessage',text:text(params.text)}]};
+    turns.set(rollingNativeTurn.id,rollingNativeTurn);
   } else if (method === 'thread/turns/list') {
     const history = [...turns.values()].reverse();
     const offset = params.cursor === null ? 0 : Number(text(params.cursor));

@@ -956,7 +956,7 @@ export class RollingCampaignStore {
     const obligation = rollingGraph.document.obligations.find(item => item.id === rollingStoredAssignment.obligationId);
     const obligationBaseline = rollingGraph.document.baselines.at(-1);
     requireState(obligation && obligationBaseline, 'worker obligation or baseline is missing');
-    return {rollingWorkerCreationV1,obligation,requirements:obligationBaseline.requirements.filter(item => obligation.requirementIds.includes(item.id)),
+    return {assignmentId:id,rollingWorkerCreationV1,obligation,requirements:obligationBaseline.requirements.filter(item => obligation.requirementIds.includes(item.id)),
       binding:rollingStoredAssignment.binding,lease:obligationLeaseV1,configuration:executionConfiguration(rollingCampaignRow.configuration_text),
       qa:rollingGraph.projectConfiguration.qa,baseCommit:this.campaignBase(rollingCampaignRow)};
   }

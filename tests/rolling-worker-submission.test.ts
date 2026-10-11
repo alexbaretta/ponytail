@@ -98,6 +98,22 @@ test('submission rejects dirty checkout, another HEAD and a foreign or tracked m
   assert.throws(() => validateRollingWorkerSubmission(submissionFixture.root, submissionFixture.lease, submissionFixture.submission), /marker must be untracked/);
 });
 
+// Traceability: verifies REQ-ROLLING-WORKERS
+test('submission rejects a clean interactive rebase edit stop until the rebase completes', t => {
+  const submissionFixture: SubmissionFixture = fixture();
+  t.after(() => fs.rmSync(submissionFixture.root, { recursive: true, force: true }));
+  const sequenceEditor = [process.execPath, path.resolve(__dirname, 'fixtures/rolling-rebase-editor.js')]
+    .map(item => `'${item.replaceAll("'", "'\\''")}'`).join(' ');
+  execFileSync('git', ['-C', submissionFixture.root, '-c', `sequence.editor=${sequenceEditor}`,
+    'rebase', '-i', submissionFixture.submission.baseCommit]);
+  assert.equal(execFileSync('git', ['-C', submissionFixture.root, 'status', '--porcelain=v1'], { encoding: 'utf8' }), '');
+  assert.equal(execFileSync('git', ['-C', submissionFixture.root, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(), submissionFixture.submission.revision);
+  assert.throws(() => validateRollingWorkerSubmission(submissionFixture.root, submissionFixture.lease, submissionFixture.submission), /rebase is unfinished/);
+  execFileSync('git', ['-C', submissionFixture.root, 'rebase', '--continue']);
+  assert.deepEqual(validateRollingWorkerSubmission(submissionFixture.root, submissionFixture.lease, submissionFixture.submission),
+    ['src/current.ts', 'src/deleted.ts', 'src/old.ts']);
+});
+
 // Traceability: verifies REQ-ROLLING-GRAPH
 test('submission rejects merge history and reverted out-of-scope commits', t => {
   const submissionFixture: SubmissionFixture = fixture();
@@ -128,7 +144,8 @@ test('physical submission V1 retains exact evidence and rejects unknown keys, un
   t.after(() => fs.rmSync(submissionFixture.root, { recursive: true, force: true }));
   assert.deepEqual(parseRollingWorkerSubmission(JSON.stringify(submissionFixture.submission)), submissionFixture.submission);
   assert.deepEqual(Object.keys(RollingWorkerSubmissionReaders), ['V1']);
-  const invalidInputs: readonly unknown[] = [ { ...submissionFixture.submission, schemaVersion: 2 }, { ...submissionFixture.submission, extra: true },
+  const invalidInputs: readonly unknown[] = [ { ...submissionFixture.submission, schemaVersion: 2 },
+    { ...submissionFixture.submission, stoppedAt: '2026-10-11T09:08:40-07:00' },
     { ...submissionFixture.submission, stopped: false }, { ...submissionFixture.submission, proof: [] },
     { ...submissionFixture.submission, revision: '--unsafe' }, { ...submissionFixture.submission, sessionId: '' },
     { ...submissionFixture.submission, graphDigest: 'wrong' } ];

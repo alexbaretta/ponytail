@@ -1982,6 +1982,183 @@
           "profile": "rolling-worker-recovery-OBL-48"
         }
       }
+    },
+    {
+      "id": "BIND-44",
+      "obligationId": "OBL-49",
+      "predecessorId": null,
+      "baselineId": "BASELINE-14",
+      "assessor": "coordinator",
+      "authority": [
+        "user-goal-2026-10-10-rolling-campaigns",
+        "user-goal-2026-10-10-static-language-existing-tsts",
+        "user-2026-10-10-normative-atomic-obligations"
+      ],
+      "reason": "Collect the original attached worker turn, establish terminal idle activity, validate its exact candidate and focused evidence, and submit through current coordinator fences. Establish actual native code execution and full semantic rebase before discharge; component or read-only evidence is insufficient.",
+      "dependsOn": [
+        "OBL-48"
+      ],
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "src/rolling-worker.ts",
+          "src/rolling-worker.js",
+          "src/rolling-codex.ts",
+          "src/rolling-codex.js",
+          "tests/rolling-codex.test.ts",
+          "src/rolling-worktrees.ts",
+          "src/rolling-worktrees.js",
+          "src/rolling-worker-submission.ts",
+          "src/rolling-worker-submission.js",
+          "src/rolling-campaign-store.ts",
+          "src/rolling-campaign-store.js",
+          "tests/rolling-worker.test.ts",
+          "tests/rolling-campaign-store.integration.test.ts",
+          "tests/rolling-codex.integration.ts",
+          "tests/fixtures/rolling-codex-server.ts",
+          "scripts/project-index.sql",
+          "scripts/build-runtime.ts",
+          "versioned-data-contracts.json",
+          "AGENTS.md",
+          ".agents/config/project/traceability.json",
+          "pm/requirements/traceability.generated.md"
+        ],
+        "operations": [
+          "inspect",
+          "edit",
+          "build",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "Worker submission Git Arc"
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "rolling-worker-submission-OBL-49"
+        }
+      }
+    },
+    {
+      "id": "BIND-45",
+      "obligationId": "OBL-49",
+      "predecessorId": "BIND-44",
+      "baselineId": "BASELINE-14",
+      "assessor": "coordinator",
+      "authority": [
+        "user-goal-2026-10-10-rolling-campaigns",
+        "user-goal-2026-10-10-static-language-existing-tsts",
+        "user-2026-10-10-normative-atomic-obligations"
+      ],
+      "reason": "Collect the original attached worker turn, establish terminal idle activity, validate its exact candidate and focused evidence, and submit through current coordinator fences. Establish actual native code execution and full semantic rebase before discharge; component or read-only evidence is insufficient.",
+      "dependsOn": [
+        "OBL-48"
+      ],
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "src/rolling-worker.ts",
+          "src/rolling-worker.js",
+          "src/rolling-codex.ts",
+          "src/rolling-codex.js",
+          "tests/rolling-codex.test.ts",
+          "src/rolling-worktrees.ts",
+          "src/rolling-worktrees.js",
+          "src/rolling-worker-submission.ts",
+          "src/rolling-worker-submission.js",
+          "src/rolling-campaign-store.ts",
+          "src/rolling-campaign-store.js",
+          "tests/rolling-worker.test.ts",
+          "tests/rolling-campaign-store.integration.test.ts",
+          "tests/rolling-codex.integration.ts",
+          "tests/fixtures/rolling-codex-server.ts",
+          "tests/fixtures/rolling-rebase-editor.ts",
+          "scripts/project-index.sql",
+          "scripts/build-runtime.ts",
+          "versioned-data-contracts.json",
+          "AGENTS.md",
+          ".agents/config/project/traceability.json",
+          "pm/requirements/traceability.generated.md"
+        ],
+        "operations": [
+          "inspect",
+          "edit",
+          "build",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "Worker submission Git Arc"
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "rolling-worker-submission-OBL-49"
+        }
+      }
+    },
+    {
+      "id": "BIND-46",
+      "obligationId": "OBL-49",
+      "predecessorId": "BIND-45",
+      "baselineId": "BASELINE-14",
+      "assessor": "coordinator",
+      "authority": [
+        "user-goal-2026-10-10-rolling-campaigns",
+        "user-goal-2026-10-10-static-language-existing-tsts",
+        "user-2026-10-10-normative-atomic-obligations"
+      ],
+      "reason": "Verify that an interactive rebase edit stop cannot be submitted as a completed semantic rebase even when Git status is clean; add the canonical submission regression test to the existing OBL-49 responsibility boundary.",
+      "dependsOn": [
+        "OBL-48"
+      ],
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "src/rolling-worker.ts",
+          "src/rolling-worker.js",
+          "src/rolling-codex.ts",
+          "src/rolling-codex.js",
+          "tests/rolling-codex.test.ts",
+          "src/rolling-worktrees.ts",
+          "src/rolling-worktrees.js",
+          "src/rolling-worker-submission.ts",
+          "src/rolling-worker-submission.js",
+          "src/rolling-campaign-store.ts",
+          "src/rolling-campaign-store.js",
+          "tests/rolling-worker.test.ts",
+          "tests/rolling-worker-submission.test.ts",
+          "tests/rolling-campaign-store.integration.test.ts",
+          "tests/rolling-codex.integration.ts",
+          "tests/fixtures/rolling-codex-server.ts",
+          "tests/fixtures/rolling-rebase-editor.ts",
+          "scripts/project-index.sql",
+          "scripts/build-runtime.ts",
+          "versioned-data-contracts.json",
+          "AGENTS.md",
+          ".agents/config/project/traceability.json",
+          "pm/requirements/traceability.generated.md"
+        ],
+        "operations": [
+          "inspect",
+          "edit",
+          "build",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "Worker submission Git Arc"
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "rolling-worker-submission-OBL-49"
+        }
+      }
     }
   ]
 }
