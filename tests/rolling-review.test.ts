@@ -59,7 +59,8 @@ test('unknown contract fields, malformed identities, revisions and unfounded rej
  }
  const invalidOutcomes: readonly unknown[] = [{ ...rollingReviewAcceptedV1, schemaVersion: 2 }, { ...rollingReviewAcceptedV1, decision: 'lost' },
   { ...rollingReviewAcceptedV1, decision: 'rejected' }, { ...rollingReviewAcceptedV1, findings: [5] }, { ...rollingReviewAcceptedV1, completedAt: 'never' },
-  { ...rollingReviewAcceptedV1, revision: 'bad' }];
+  { ...rollingReviewAcceptedV1, revision: 'bad' },
+  { ...rollingReviewAcceptedV1, decision: 'rejected', findings: [{ path: 'fixture/current.ts', description: 'Wrong value.' }] }];
  for (const value of invalidOutcomes) assert.throws(() => readRollingReviewOutcomeV1(value));
  for (const token of ['1.0','1e0','9007199254740993']) {
   assert.throws(() => parseRollingReviewRequest(JSON.stringify(rollingReviewRequestV1).replace('"schemaVersion":1', `"schemaVersion":${token}`)));

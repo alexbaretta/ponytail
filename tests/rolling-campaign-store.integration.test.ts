@@ -375,7 +375,8 @@ export async function runRollingReviewScenario(t: TestContext, reviewScenario: R
       assert.equal(rollingReviewDispatchAttached.state, 'ATTACHED');
       let collectingRollingCodex: RollingCodex = rollingCodex;
       if (reviewScenario.mode === 'native') {
-        await rollingCodex.waitForTurn(reviewerThreadId, rollingReviewDispatchAttached.turnId);
+        const rollingNativeTurn = await rollingCodex.waitForTurn(reviewerThreadId, rollingReviewDispatchAttached.turnId);
+        t.diagnostic(`native review=${rollingStoredReview.request.id}; thread=${reviewerThreadId}; session=${reviewerSessionId}; candidate=${revision}; terminal=${rollingNativeTurn.status}; final=${rollingNativeTurn.items.filter(item => item.type === 'agentMessage').at(-1)?.text}`);
         await rollingCodex.close();
         liveRollingCodex = await RollingCodex.connect();
         declineReviewApprovals(liveRollingCodex);
@@ -389,7 +390,7 @@ export async function runRollingReviewScenario(t: TestContext, reviewScenario: R
       assert.deepEqual(await collectRollingReview(restartedRollingCampaignStore, collectingRollingCodex, 'bound-fixture', rollingStoredReview.request.id), result);
       assert.equal((await rollingCampaignStore.status('bound-fixture')).assignments[0]?.state, reviewDecision === 'accepted' ? 'INTEGRATING' : 'REWORK');
       if (reviewScenario.mode === 'native') {
-        assert.ok(result.outcome?.findings.some(item => /current\.ts|value/iu.test(item)), 'live reviewer must identify the deliberate candidate violation');
+        assert.ok(result.outcome?.findings.some(item => /current\.ts|value/iu.test(item) && /\b1\b/u.test(item) && /\b2\b/u.test(item)), 'live reviewer must identify the deliberate change from 1 to 2');
         assert.ok(!collectRollingGraph(root, 'bound-obligations.json', 'bound-bindings.json', 'history.json').projection.satisfiedIds.includes(firstRollingBinding.obligationId));
         t.diagnostic(`native review=${rollingStoredReview.request.id}; thread=${reviewerThreadId}; session=${reviewerSessionId}; candidate=${revision}; decision=${result.outcome?.decision}; findings=${JSON.stringify(result.outcome?.findings)}; recovered after App Server restart`);
         return;

@@ -84,11 +84,15 @@ async function startRollingReviewTurn(rollingCodex, rollingReviewRequestV1, roll
     const checkedRollingReviewRequestV1 = readRollingReviewRequestV1(rollingReviewRequestV1);
     requireReview(rollingNativeThread.cwd === checkoutRoot, 'native reviewer differs from designated checkout');
     requireReview(rollingNativeThread.thread.sessionId === checkedRollingReviewRequestV1.reviewerSessionId, 'native session differs from assigned reviewer');
+    const rollingReviewRejectedV1 = { schemaVersion: 1, reviewId: checkedRollingReviewRequestV1.id,
+        revision: checkedRollingReviewRequestV1.revision, reviewerSessionId: checkedRollingReviewRequestV1.reviewerSessionId,
+        completedAt: new Date().toISOString(), decision: 'rejected', findings: ['path/to/source.ts:1: Explain the defect and required correction in one line.'] };
     const prompt = `Perform an adversarial review of this exact candidate. Read the project rules and applicable skills first.
 Review only: do not modify files, commits, branches or project state. Verify HEAD is ${checkedRollingReviewRequestV1.revision}; if it differs, report that the review cannot be completed.
 Inspect the complete change from ${checkedRollingReviewRequestV1.baseCommit} to ${checkedRollingReviewRequestV1.revision}, its approved obligation, requirements, acceptances, tests and retained proof. Seek correctness, regression, traceability and contract failures.
 Coordinator scope and retained evidence: ${instructions}
-Return your final message as a single JSON object without Markdown. Use schemaVersion 1, reviewId ${JSON.stringify(checkedRollingReviewRequestV1.id)}, revision ${JSON.stringify(checkedRollingReviewRequestV1.revision)}, reviewerSessionId ${JSON.stringify(checkedRollingReviewRequestV1.reviewerSessionId)}, completedAt as the current ISO timestamp, decision "accepted" or "rejected", and findings as an array of concrete findings. Rejection requires at least one finding. Never report acceptance without completing the review.
+Return your final message as a single JSON object without Markdown. Use schemaVersion 1, reviewId ${JSON.stringify(checkedRollingReviewRequestV1.id)}, revision ${JSON.stringify(checkedRollingReviewRequestV1.revision)}, reviewerSessionId ${JSON.stringify(checkedRollingReviewRequestV1.reviewerSessionId)}, completedAt as the actual completion ISO timestamp, decision "accepted" or "rejected", and findings as an array of strings, never objects. Each finding string must be nonempty, trimmed, and a single line without NUL, CR or LF. Include the source path, line, defect and required correction in that string. Rejection requires at least one finding; acceptance may use an empty array. Never report acceptance without completing the review.
+Output format example only, not an assessment: ${JSON.stringify(rollingReviewRejectedV1)}
 Review request: ${JSON.stringify(checkedRollingReviewRequestV1)}`;
     const rollingTurnStarted = await rollingCodex.startTurn(rollingNativeThread.thread.id, prompt);
     return { request: checkedRollingReviewRequestV1, thread: rollingNativeThread, started: rollingTurnStarted };
