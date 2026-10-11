@@ -746,6 +746,14 @@ export async function runRollingReviewScenario(t: TestContext, reviewScenario: R
     await assert.rejects(rollingCampaignStore.acceptIncrementCertificates('bound-fixture',rollingStoredReview.request.id,candidatePath,['certificate-binding.json']),/changed input/);
     fs.writeFileSync(path.join(root,'fixture/current.ts'),sourceText);
     assert.equal(fs.readFileSync(path.join(root,'bound-obligations.json'),'utf8'),previousDocumentText);
+    const assignedObligation = candidateBoundObligationDocumentV1.obligations.find(obligation=>obligation.id === firstRollingBinding.obligationId);
+    assert.ok(assignedObligation);
+    const scopeAmendmentCandidate = {...candidateBoundObligationDocumentV1,obligations:[...candidateBoundObligationDocumentV1.obligations,
+      {...assignedObligation,id:'OBL-999',responsibilityId:'unapproved-candidate-catalog-entry'}]};
+    fs.writeFileSync(path.join(root,candidatePath),JSON.stringify(scopeAmendmentCandidate));
+    await assert.rejects(rollingCampaignStore.acceptIncrementCertificates('bound-fixture',rollingStoredReview.request.id,candidatePath,['certificate-binding.json']),/cannot amend approved scope/);
+    assert.equal(fs.readFileSync(path.join(root,'bound-obligations.json'),'utf8'),previousDocumentText);
+    fs.writeFileSync(path.join(root,candidatePath),JSON.stringify(candidateBoundObligationDocumentV1));
     // Model another accepted integration owning the same coordinator lane.
     const busyReviewId = crypto.randomUUID();
     const busyRollingReviewRequestV1 = readRollingReviewRequestV1({...rollingStoredReview.request,id:busyReviewId});

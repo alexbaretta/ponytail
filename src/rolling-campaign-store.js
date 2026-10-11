@@ -707,6 +707,8 @@ class RollingCampaignStore {
             requireState(candidatePath !== documentPath, 'candidate must be separate from the accepted document');
             (0, obligations_js_1.inputDigest)(rollingCampaignRow.coordinator_root, candidatePath);
             const candidateObligationDocumentV1 = (0, obligations_js_1.parseObligationDocument)(node_fs_1.default.readFileSync(node_path_1.default.join(rollingCampaignRow.coordinator_root, candidatePath), 'utf8'));
+            requireState((0, node_util_1.isDeepStrictEqual)(candidateObligationDocumentV1.obligations, rollingGraph.document.obligations)
+                && (0, node_util_1.isDeepStrictEqual)(candidateObligationDocumentV1.baselines, rollingGraph.document.baselines), 'certificate assessment cannot amend approved scope; reconcile scope changes separately');
             const obligationCheckpoint = candidateObligationDocumentV1.checkpoints.at(-1);
             requireState(obligationCheckpoint && obligationCheckpoint.assessor === rollingExecutionConfig.bindingHistory.assessor
                 && obligationCheckpoint.selectedIds.length === 1 && obligationCheckpoint.selectedIds[0] === rollingStoredAssignment.obligationId, 'assessment must identify the authorized coordinator and exact assigned obligation');

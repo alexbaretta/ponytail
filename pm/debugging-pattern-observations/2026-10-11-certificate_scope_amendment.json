@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-10-11-certificate_scope_amendment",
+  "recorded_at": "2026-10-11T15:30:33-07:00",
+  "source_references": [
+    "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/obligations.json#OBL-56"
+  ],
+  "context": {
+    "languages": [
+      "typescript"
+    ],
+    "frameworks": [],
+    "components": [
+      "integrated certificate publication"
+    ],
+    "affected_boundaries": [
+      "general checkpoint verifier and certificate-only coordinator operation"
+    ],
+    "code_references": [
+      "src/rolling-campaign-store.ts",
+      "tests/rolling-campaign-store.integration.test.ts"
+    ]
+  },
+  "observed_behavior": "A valid certificate candidate appended an unapproved obligation catalog entry to accepted records.",
+  "expected_behavior": "Certificate publication updates certificate/checkpoint history while leaving approved obligation definitions and baselines unchanged.",
+  "causal_mechanism": "The canonical general checkpoint verifier allows append-only scope growth for its other operations. The certificate wrapper restricted certificate responsibility but did not restrict the candidate document catalog or baselines.",
+  "anti_pattern": {
+    "structural_description": "Using a general mutation verifier without imposing the narrower operation authority boundary.",
+    "why_it_fails": "Unrelated valid fields accompany an authorized certificate into accepted state."
+  },
+  "correct_pattern": {
+    "required_invariant": "A certificate-only candidate retains the exact current obligation catalog and baseline history.",
+    "implementation_description": "Compare those arrays structurally with the authoritative graph before calling the existing general bound verifier; scope amendments use their separate reconciliation path."
+  },
+  "applicability_conditions": [
+    "A general verifier serves both scope reconciliation and narrower certificate publication."
+  ],
+  "known_non_matches": [
+    "Authorized scope reconciliation retains its own general checkpoint contract."
+  ],
+  "confirmation_evidence": [
+    "The focused regression reported Missing expected rejection when OBL-999 was appended without changing the certificate.",
+    "The narrower guard makes the complete PostgreSQL Arc pass and verifies the accepted file remains unchanged during refusal."
+  ],
+  "regression_proofs": [
+    "tests/rolling-campaign-store.integration.test.ts: integrated certificate assessment uses retained published proof and serializes accepted record publication"
+  ]
+}
