@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "certificateId": "CERT-37",
+  "lease": {
+    "schemaVersion": 1,
+    "scopeId": "2026-10-10-rolling-obligation-campaigns",
+    "baselineId": "BASELINE-14",
+    "graphDigest": "da71cd62a6cc83aeb1295c9936ac6a3ad32bde2736275ff16ec06f51ad855efc",
+    "generation": "standalone-sprint-selectors-OBL-93-2026-10-11",
+    "assessor": "coordinator",
+    "authority": [
+      "user-goal-2026-10-10-rolling-campaigns",
+      "user-goal-2026-10-10-static-language-existing-tsts",
+      "user-2026-10-10-normative-atomic-obligations"
+    ],
+    "binding": {
+      "obligationId": "OBL-93",
+      "revisionId": "BIND-15",
+      "dependsOn": [
+        "OBL-112"
+      ],
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "skills/plan-execution/scripts/ready-sprints.ts",
+          "skills/plan-execution/scripts/ready-sprints.js",
+          "tests/ready-sprints-cli.test.ts",
+          "tests/ready-sprints.test.ts"
+        ],
+        "operations": [
+          "inspect",
+          "edit",
+          "build",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "Resume started V3 execution without relaxing start/review gates through a checked static implementation preserving the approved portable behavior and historical contract meanings."
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "typed-sprint-selectors-OBL-93"
+        }
+      }
+    }
+  },
+  "revision": "08c13fc9ee4e19151473ae61bfc3f0b21bd140cf",
+  "proof": [
+    {
+      "operation": "test",
+      "certificateEvidenceIndex": 0,
+      "submissionEvidenceIndex": 0
+    }
+  ]
+}
