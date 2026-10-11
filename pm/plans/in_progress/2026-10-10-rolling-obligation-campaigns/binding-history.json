@@ -3718,6 +3718,51 @@
           "profile": "increment-integration"
         }
       }
+    },
+    {
+      "id": "BIND-76",
+      "obligationId": "OBL-56",
+      "predecessorId": null,
+      "baselineId": "BASELINE-16",
+      "assessor": "coordinator",
+      "authority": [
+        "user-goal-2026-10-10-rolling-campaigns",
+        "user-goal-2026-10-10-static-language-existing-tsts",
+        "user-2026-10-10-normative-atomic-obligations",
+        "user-2026-10-11-language-scope-our-code-preserve-translations"
+      ],
+      "reason": "Freeze OBL-56 integrated certificate publication, retained proof scope, focused regressions and assessment artifacts.",
+      "dependsOn": [],
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "src/rolling-campaign-store.ts",
+          "src/rolling-campaign-store.js",
+          "tests/rolling-campaign-store.integration.test.ts",
+          "tests/rolling-campaign-store.test.ts",
+          "scripts/project-index.sql",
+          "pm/requirements/traceability.generated.md",
+          "pm/uat/rolling-campaigns.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/integrated-certificate-assessment.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/integrated-certificate-assessment-OBL-56-certificate-binding.json"
+        ],
+        "operations": [
+          "inspect",
+          "edit",
+          "build",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "Assess submitted certificates on integrated inputs without allowing worker candidates to mutate accepted records."
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "integrated-certificate-assessment"
+        }
+      }
     }
   ]
 }
