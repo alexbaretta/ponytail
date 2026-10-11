@@ -53,6 +53,12 @@
         "S07-F08"
       ],
       "validation_tasklet": "S07-F09-T11"
+    },
+    "S07-F10": {
+      "depends_on": [
+        "S07-F09"
+      ],
+      "validation_tasklet": "S07-F10-T08"
     }
   },
   "tasklets": {
@@ -1143,6 +1149,102 @@
       "planned_paths": [
         "src/campaign-plan-metadata.ts"
       ]
+    },
+    "S07-F10-T01": {
+      "depends_on": [],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F10",
+      "planned_paths": [
+        "src/campaign-plan-sources.ts"
+      ]
+    },
+    "S07-F10-T02": {
+      "depends_on": [
+        "S07-F10-T01"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F10",
+      "planned_paths": [
+        "src/campaign-plan-sources.ts"
+      ]
+    },
+    "S07-F10-T03": {
+      "depends_on": [
+        "S07-F10-T02"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F10",
+      "planned_paths": [
+        "src/campaign-plan-sources.ts"
+      ]
+    },
+    "S07-F10-T04": {
+      "depends_on": [
+        "S07-F10-T03"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F10",
+      "planned_paths": [
+        "src/campaign-plan-sources.ts"
+      ]
+    },
+    "S07-F10-T05": {
+      "depends_on": [
+        "S07-F10-T04"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F10",
+      "planned_paths": [
+        "src/campaign-plan-sources.ts"
+      ]
+    },
+    "S07-F10-T06": {
+      "depends_on": [
+        "S07-F10-T05"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F10",
+      "planned_paths": [
+        "tests/campaign-plan-sources.test.ts"
+      ]
+    },
+    "S07-F10-T07": {
+      "depends_on": [
+        "S07-F10-T06"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F10",
+      "planned_paths": [
+        "scripts/build-runtime.ts",
+        "src/campaign-plan-sources.js",
+        "src/campaign-census.js",
+        "AGENTS.md",
+        "PROJECT_STRUCTURE.md",
+        ".agents/config/project/traceability.json",
+        "pm/requirements/traceability.generated.md"
+      ]
+    },
+    "S07-F10-T08": {
+      "depends_on": [
+        "S07-F10-T01",
+        "S07-F10-T02",
+        "S07-F10-T03",
+        "S07-F10-T04",
+        "S07-F10-T05",
+        "S07-F10-T06",
+        "S07-F10-T07"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F10",
+      "planned_paths": []
     }
   },
   "external_depends_on": {}

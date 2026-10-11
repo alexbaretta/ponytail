@@ -11,8 +11,9 @@ const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 const { CampaignError, dataError, toolError, exactKeys, CampaignManagementConfigReaders,
   readManagementConfigV1, readManagementConfig } = require('./campaign-configuration');
-const { PLAN_METADATA_MARKER, CampaignPlanMetadataReaders, metadataBlocks, parseCandidate,
+const { PLAN_METADATA_MARKER, CampaignPlanMetadataReaders, metadataBlocks,
   readPlanMetadataV1, readPlanMetadataV2, readManagedPlan, parsePlanSource } = require('./campaign-plan-metadata');
+const { scanPlanCandidates, listPlanSourceFiles, linkedPlanFiles } = require('./campaign-plan-sources');
 const {
   readSprints,
   selectExecutionReviewableSprints,
@@ -43,95 +44,6 @@ const REPORT_TABLE_FLAGS = Object.freeze({
   '--sprint-table': ['sprintTable', true],
   '--no-sprint-table': ['sprintTable', false],
 });
-
-function sortedDirectories(directory) {
-  try {
-    return fs.readdirSync(directory, { withFileTypes: true })
-      .filter((entry) => entry.isDirectory())
-      .map((entry) => entry.name)
-      .sort();
-  } catch (error) {
-    toolError('CAMPAIGN_IO', `cannot list ${directory}: ${error.message}`);
-  }
-}
-
-function scanPlanCandidates(repositoryRoot, config) {
-  const planRoot = path.join(repositoryRoot, config.planRoot);
-  if (!fs.existsSync(planRoot) || !fs.statSync(planRoot).isDirectory()) {
-    toolError('CAMPAIGN_PLAN_ROOT', `configured plan root does not exist: ${config.planRoot}`, config.planRoot);
-  }
-  if (fs.lstatSync(planRoot).isSymbolicLink()) {
-    dataError('CAMPAIGN_CONFIG_PATH', `configured plan root must not be a symbolic link: ${config.planRoot}`, null, config.planRoot);
-  }
-  const canonicalPlanRoot = fs.realpathSync(planRoot);
-  if (canonicalPlanRoot !== repositoryRoot && !canonicalPlanRoot.startsWith(`${repositoryRoot}${path.sep}`)) {
-    dataError('CAMPAIGN_CONFIG_PATH', `configured plan root escapes the repository: ${config.planRoot}`, null, config.planRoot);
-  }
-  const candidates = [];
-  for (const lifecycle of config.lifecycle.directories) {
-    const lifecycleDirectory = path.join(planRoot, lifecycle);
-    if (!fs.existsSync(lifecycleDirectory)) continue;
-    if (fs.lstatSync(lifecycleDirectory).isSymbolicLink() || !fs.statSync(lifecycleDirectory).isDirectory()) {
-      dataError('CAMPAIGN_CONFIG_PATH', `lifecycle location must be a regular directory: ${config.planRoot}/${lifecycle}`, null, `${config.planRoot}/${lifecycle}`);
-    }
-    for (const name of sortedDirectories(lifecycleDirectory)) {
-      const planFile = path.join(lifecycleDirectory, name, 'plan.md');
-      if (fs.existsSync(planFile) && !fs.lstatSync(planFile).isSymbolicLink() && fs.statSync(planFile).isFile()) {
-        candidates.push(parseCandidate(planFile, lifecycle, repositoryRoot));
-      }
-    }
-  }
-  if (config.legacyPlanLayout === 'flat') {
-    const lifecycleDirectories = new Set(config.lifecycle.directories);
-    for (const name of sortedDirectories(planRoot)) {
-      if (lifecycleDirectories.has(name)) continue;
-      const planFile = path.join(planRoot, name, 'plan.md');
-      if (fs.existsSync(planFile) && !fs.lstatSync(planFile).isSymbolicLink() && fs.statSync(planFile).isFile()) {
-        candidates.push(parseCandidate(planFile, null, repositoryRoot));
-      }
-    }
-  }
-  return candidates.sort((left, right) => {
-    const leftOrder = left.lifecycle === null ? config.lifecycle.directories.length : config.lifecycle.directories.indexOf(left.lifecycle);
-    const rightOrder = right.lifecycle === null ? config.lifecycle.directories.length : config.lifecycle.directories.indexOf(right.lifecycle);
-    return leftOrder - rightOrder || left.relativePlanFile.localeCompare(right.relativePlanFile);
-  });
-}
-
-function listPlanSourceFiles(repositoryRoot, config) {
-  const planRoot = path.join(repositoryRoot, config.planRoot);
-  const sources = [];
-  for (const lifecycle of config.lifecycle.directories) {
-    const directory = path.join(planRoot, lifecycle);
-    if (!fs.existsSync(directory)) continue;
-    for (const name of sortedDirectories(directory)) {
-      const planFile = path.join(directory, name, 'plan.md');
-      if (fs.existsSync(planFile) && fs.statSync(planFile).isFile() &&
-          !fs.lstatSync(planFile).isSymbolicLink()) {
-        sources.push({
-          lifecycle,
-          relativePlanFile: path.relative(repositoryRoot, planFile).split(path.sep).join('/'),
-        });
-      }
-    }
-  }
-  if (config.legacyPlanLayout === 'flat') {
-    const lifecycleDirectories = new Set(config.lifecycle.directories);
-    for (const name of sortedDirectories(planRoot)) {
-      if (lifecycleDirectories.has(name)) continue;
-      const planFile = path.join(planRoot, name, 'plan.md');
-      if (fs.existsSync(planFile) && fs.statSync(planFile).isFile() &&
-          !fs.lstatSync(planFile).isSymbolicLink()) {
-        sources.push({
-          lifecycle: null,
-          relativePlanFile: path.relative(repositoryRoot, planFile).split(path.sep).join('/'),
-        });
-      }
-    }
-  }
-  return sources.sort((left, right) =>
-    left.relativePlanFile.localeCompare(right.relativePlanFile));
-}
 
 function resolveInputPlan(input, repositoryRoot, config, candidates) {
   if (input === undefined) {
@@ -191,15 +103,6 @@ function resolveInputPlan(input, repositoryRoot, config, candidates) {
     candidate,
     invocationInput: path.relative(repositoryRoot, inputPath).split(path.sep).join('/'),
   };
-}
-
-function linkedPlanFiles(plan) {
-  const links = [...plan.text.matchAll(/\[[^\]]+\]\(([^)#]+)(?:#[^)]+)?\)/g)];
-  return links.flatMap((match) => {
-    const target = path.resolve(path.dirname(plan.planFile), match[1]);
-    const file = path.basename(target) === 'plan.md' ? target : path.join(target, 'plan.md');
-    return fs.existsSync(file) ? [fs.realpathSync(file)] : [];
-  });
 }
 
 function validateCampaignReference(plan, parent) {
