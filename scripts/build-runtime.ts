@@ -16,7 +16,8 @@ const sources: readonly string[] = [
   'src/plan-input-command.ts',
   'src/campaign-configuration.ts',
   'src/campaign-plan-metadata.ts',
-  'src/campaign-plan-sources.ts'
+  'src/campaign-plan-sources.ts',
+  'src/campaign-scope.ts'
 ];
 const argv = process.argv.slice(2);
 if (!(argv.length === 0 || argv.length === 1 && argv[0] === '--check')) {

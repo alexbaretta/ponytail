@@ -940,6 +940,16 @@
       "class": "unit-test",
       "path": "tests/campaign-plan-sources.test.ts",
       "locator": "text"
+    },
+    {
+      "class": "implementation",
+      "path": "src/campaign-scope.ts",
+      "locator": "text"
+    },
+    {
+      "class": "unit-test",
+      "path": "tests/campaign-scope.test.ts",
+      "locator": "text"
     }
   ],
   "entities": [],
@@ -1039,6 +1049,10 @@
     {
       "path": "src/campaign-plan-sources.js",
       "sourcePath": "src/campaign-plan-sources.ts"
+    },
+    {
+      "path": "src/campaign-scope.js",
+      "sourcePath": "src/campaign-scope.ts"
     }
   ],
   "reverseViewPath": "pm/requirements/traceability.generated.md",
