@@ -395,6 +395,88 @@
           "profile": "typed-sprint-graph"
         }
       }
+    },
+    {
+      "id": "BIND-10",
+      "obligationId": "OBL-88",
+      "predecessorId": null,
+      "baselineId": "BASELINE-14",
+      "assessor": "coordinator",
+      "authority": [
+        "user-goal-2026-10-10-rolling-campaigns",
+        "user-goal-2026-10-10-static-language-existing-tsts",
+        "user-2026-10-10-normative-atomic-obligations"
+      ],
+      "reason": "Complete the started sprint path ownership proof with explicit non-mutation observations and the already-converted canonical fixture path; retain original identity, condition and criterion.",
+      "dependsOn": [
+        "OBL-112"
+      ],
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "skills/plan-execution/scripts/sprint-graph.ts",
+          "skills/plan-execution/scripts/sprint-graph.js",
+          "tests/sprint-graph.test.ts",
+          "tests/ready-sprints.test.ts"
+        ],
+        "operations": [
+          "inspect",
+          "edit",
+          "build",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "Validate legacy sprint path ownership against execution ordering through a checked static implementation preserving the approved portable behavior and historical contract meanings."
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "typed-sprint-paths-OBL-88"
+        }
+      }
+    },
+    {
+      "id": "BIND-11",
+      "obligationId": "OBL-89",
+      "predecessorId": null,
+      "baselineId": "BASELINE-14",
+      "assessor": "coordinator",
+      "authority": [
+        "user-goal-2026-10-10-rolling-campaigns",
+        "user-goal-2026-10-10-static-language-existing-tsts",
+        "user-2026-10-10-normative-atomic-obligations"
+      ],
+      "reason": "Complete the started sprint path ownership proof with explicit non-mutation observations and the already-converted canonical fixture path; retain original identity, condition and criterion.",
+      "dependsOn": [
+        "OBL-112"
+      ],
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "skills/plan-execution/scripts/sprint-graph.ts",
+          "skills/plan-execution/scripts/sprint-graph.js",
+          "tests/sprint-graph.test.ts",
+          "tests/ready-sprints.test.ts"
+        ],
+        "operations": [
+          "inspect",
+          "edit",
+          "build",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "Derive V3 ownership from tasklet paths while exempting planning-only sprints through a checked static implementation preserving the approved portable behavior and historical contract meanings."
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "typed-sprint-paths-OBL-89"
+        }
+      }
     }
   ]
 }

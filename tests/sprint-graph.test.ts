@@ -46,10 +46,14 @@ test('legacy path ownership recognizes transitive execution ordering and rejects
   const lastSprintV1: SprintV1 = legacySprint('S03', ['S02'], ['src/shared.ts']);
   const sprints: readonly SprintV1[] = [firstSprintV1, middleSprintV1, lastSprintV1];
   const sprintById: ReadonlyMap<string, SprintV1> = validateDependencies(sprints);
+  const before = JSON.stringify(sprints);
   validatePathOwnership(sprints, sprintById);
+  assert.equal(JSON.stringify(sprints), before);
   const unorderedLastSprintV1: SprintV1 = legacySprint('S03', [], ['src/shared.ts']);
   const unorderedSprints: readonly SprintV1[] = [firstSprintV1, middleSprintV1, unorderedLastSprintV1];
+  const unorderedBefore = JSON.stringify(unorderedSprints);
   assert.throws(() => validatePathOwnership(unorderedSprints, validateDependencies(unorderedSprints)), /unordered sprint path overlap: S01, S03, src\/shared.ts/);
+  assert.equal(JSON.stringify(unorderedSprints), unorderedBefore);
 });
 
 function taskletSprint(root: string, id: string, depends_on: readonly string[]): SprintV3 {
@@ -70,10 +74,22 @@ test('V3 ownership derives tasklet paths while planning-only sprints consume no 
   const firstSprintV3: SprintV3 = taskletSprint(root, 'S01', []);
   const secondSprintV3: SprintV3 = taskletSprint(root, 'S02', []);
   const unorderedSprints: readonly SprintV3[] = [firstSprintV3, secondSprintV3];
+  const firstFile = path.join(root, 'S01.tasklets.json');
+  const secondFile = path.join(root, 'S02.tasklets.json');
+  const firstText = fs.readFileSync(firstFile, 'utf8');
+  const secondText = fs.readFileSync(secondFile, 'utf8');
+  const unorderedBefore = JSON.stringify(unorderedSprints);
   assert.throws(() => validateV3PathOwnership(unorderedSprints, validateDependencies(unorderedSprints)), /unordered sprint path overlap/);
+  assert.equal(JSON.stringify(unorderedSprints), unorderedBefore);
+  assert.equal(fs.readFileSync(firstFile, 'utf8'), firstText);
+  assert.equal(fs.readFileSync(secondFile, 'utf8'), secondText);
   const orderedSecondSprintV3: SprintV3 = { ...secondSprintV3, execution: { status: 'PENDING', depends_on: ['S01'], tasklets_reviewed: true } };
   const orderedSprints: readonly SprintV3[] = [firstSprintV3, orderedSecondSprintV3];
+  const orderedBefore = JSON.stringify(orderedSprints);
   validateV3PathOwnership(orderedSprints, validateDependencies(orderedSprints));
+  assert.equal(JSON.stringify(orderedSprints), orderedBefore);
+  assert.equal(fs.readFileSync(firstFile, 'utf8'), firstText);
+  assert.equal(fs.readFileSync(secondFile, 'utf8'), secondText);
   const planningOnlySprintV3: SprintV3 = { ...secondSprintV3, id: 'S03', execution: null, filePath: path.join(root, 'S03.md') };
   const planningOnlySprints: readonly SprintV3[] = [planningOnlySprintV3];
   validateV3PathOwnership(planningOnlySprints, validateDependencies(planningOnlySprints));
