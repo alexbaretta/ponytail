@@ -338,3 +338,53 @@ export function verifyRollingIncrementRebase(rootPath: string,rollingFastRebaseR
   requireIntegration(JSON.stringify(conflictedPaths) === JSON.stringify(rollingFastRebaseResult.conflictedPaths),'conflict paths differ from checkout');
  }
 }
+
+export interface RollingIncrementPublicationV1 {
+ readonly schemaVersion: 1;
+ readonly incrementId: string;
+ readonly result: RollingIncrementPublicationResult;
+}
+// Traceability: implements REQ-ROLLING-PUBLICATION
+export function readRollingIncrementPublicationV1(value: unknown): RollingIncrementPublicationV1 {
+ const publicationRecord = record(value,['schemaVersion','incrementId','result']);
+ requireIntegration(publicationRecord.schemaVersion === 1,'unsupported publication version');
+ requireIntegration(typeof publicationRecord.incrementId === 'string' && publicationRecord.incrementId.trim().length > 0,'invalid increment identity');
+ requireIntegration(isRecord(publicationRecord.result),'invalid publication result');
+ let rollingIncrementPublicationResult: RollingIncrementPublicationResult;
+ switch (publicationRecord.result.state) {
+  case 'PUBLISHED':
+  case 'REBASE_REQUIRED': {
+   const resultRecord = record(publicationRecord.result,['state','revision','remoteRevision']);
+   rollingIncrementPublicationResult = {state:publicationRecord.result.state,revision:recordCommit(resultRecord.revision),remoteRevision:recordCommit(resultRecord.remoteRevision)};
+   break;
+  }
+  case 'PUSH_REJECTED': {
+   const resultRecord = record(publicationRecord.result,['state','revision','remoteRevision','reason']);
+   requireIntegration(typeof resultRecord.reason === 'string' && resultRecord.reason.trim().length > 0,'missing push rejection reason');
+   rollingIncrementPublicationResult = {state:'PUSH_REJECTED',revision:recordCommit(resultRecord.revision),remoteRevision:recordCommit(resultRecord.remoteRevision),reason:resultRecord.reason};
+   break;
+  }
+  case 'UNCONFIRMED': {
+   const resultRecord = record(publicationRecord.result,['state','revision','reason']);
+   requireIntegration(typeof resultRecord.reason === 'string' && resultRecord.reason.trim().length > 0,'missing unknown-outcome reason');
+   rollingIncrementPublicationResult = {state:'UNCONFIRMED',revision:recordCommit(resultRecord.revision),reason:resultRecord.reason};
+   break;
+  }
+  default: throw new Error('rolling integration: unsupported publication state');
+ }
+ return {schemaVersion:1,incrementId:publicationRecord.incrementId,result:rollingIncrementPublicationResult};
+}
+export const RollingIncrementPublicationReaders = {V1:readRollingIncrementPublicationV1};
+
+export interface RollingIncrementPushStarted {
+ readonly claim: RollingIncrementClaimV1;
+ readonly revision: string;
+}
+
+// Traceability: implements REQ-ROLLING-PUBLICATION
+export function verifyRollingIncrementLocalIntegration(rootPath: string,branch: string,revision: string): void {
+ commit(revision);
+ git(rootPath,['check-ref-format',`refs/heads/${branch}`]);
+ const spawnSyncReturns = gitResult(rootPath,['merge-base','--is-ancestor',revision,`refs/heads/${branch}`]);
+ requireIntegration(spawnSyncReturns.status === 0,'local increment branch lacks the published candidate');
+}

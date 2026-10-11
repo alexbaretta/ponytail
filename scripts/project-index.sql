@@ -393,8 +393,43 @@ ALTER TABLE rolling_increment_v1 ADD COLUMN IF NOT EXISTS rebase_text text
   CHECK (rebase_text IS NULL OR COALESCE(jsonb_typeof((rebase_text::jsonb)->'schemaVersion')='number'
     AND (rebase_text::jsonb)->>'schemaVersion'='1'
     AND (rebase_text::jsonb)->>'incrementId'=increment_id::text, false));
+ALTER TABLE rolling_increment_v1 ADD COLUMN IF NOT EXISTS proof_text text
+  CHECK (proof_text IS NULL OR COALESCE(jsonb_typeof((proof_text::jsonb)->'schemaVersion')='number'
+    AND (proof_text::jsonb)->>'schemaVersion'='1'
+    AND (proof_text::jsonb)->>'revision'=candidate_revision, false));
+ALTER TABLE rolling_increment_v1 ADD COLUMN IF NOT EXISTS publication_text text
+  CHECK (publication_text IS NULL OR COALESCE(jsonb_typeof((publication_text::jsonb)->'schemaVersion')='number'
+    AND (publication_text::jsonb)->>'schemaVersion'='1'
+    AND (publication_text::jsonb)->>'incrementId'=increment_id::text, false));
 CREATE UNIQUE INDEX IF NOT EXISTS rolling_increment_v1_active_campaign
 ON rolling_increment_v1 (project_id,campaign_id) WHERE state <> 'PUBLISHED';
+
+CREATE TABLE IF NOT EXISTS rolling_increment_proof_v1 (
+  project_id uuid NOT NULL,
+  campaign_id text NOT NULL,
+  increment_id uuid NOT NULL,
+  proof_digest text NOT NULL CHECK (proof_digest ~ '^[a-f0-9]{64}$'),
+  proof_text text NOT NULL CHECK (COALESCE(jsonb_typeof((proof_text::jsonb)->'schemaVersion')='number'
+    AND (proof_text::jsonb)->>'schemaVersion'='1', false)),
+  recorded_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (project_id,campaign_id,increment_id,proof_digest),
+  FOREIGN KEY (project_id,campaign_id,increment_id)
+    REFERENCES rolling_increment_v1(project_id,campaign_id,increment_id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS rolling_increment_delivery_v1 (
+  project_id uuid NOT NULL,
+  campaign_id text NOT NULL,
+  increment_id uuid NOT NULL,
+  revision text NOT NULL,
+  remote_revision text NOT NULL,
+  delivered_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (project_id,campaign_id,increment_id),
+  FOREIGN KEY (project_id,campaign_id,increment_id)
+    REFERENCES rolling_increment_v1(project_id,campaign_id,increment_id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS rolling_increment_delivery_v1_campaign_order
+ON rolling_increment_delivery_v1(project_id,campaign_id,delivered_at,increment_id);
 
 CREATE TABLE IF NOT EXISTS rolling_review_dispatch_v1 (
   project_id uuid NOT NULL,

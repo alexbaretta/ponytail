@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Alex Baretta. All rights reserved.
 // Licensed under the MIT License. See LICENSE in the project root.
 import assert from 'node:assert/strict';
-import {rebasePreparedRollingIncrement} from '../src/rolling-integration.js';
+import {rebasePreparedRollingIncrement,publishRollingIncrement,fastForwardRollingIncrement} from '../src/rolling-integration.js';
 import test, { type TestContext } from 'node:test';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
@@ -15,7 +15,7 @@ import { RollingCampaignStore, type RollingCampaignRegistration, type RollingAll
 import { inputDigest, parseObligationDocument, type ObligationDocumentV1, type ObligationBaseline, type Obligation, type ObligationCertificate, type ObligationCheckpoint } from '../skills/plan-execution/scripts/obligations.js';
 import type { ObligationBindingHistoryV1, ObligationBindingRevisionV1 } from '../skills/plan-execution/scripts/obligation-binding-history.js';
 import type { ObligationEvidence } from '../skills/plan-execution/scripts/obligations.js';
-import type { RollingWorkerSubmissionV1 } from '../src/rolling-worker-submission.js';
+import type { RollingWorkerSubmissionV1,RollingSubmissionProof } from '../src/rolling-worker-submission.js';
 import { dispatchRollingReview, collectRollingReview, type RollingReviewOutcomeV1 } from '../src/rolling-review.js';
 import { provisionRollingWorker, attachRollingWorker, suspendRollingWorker, collectRollingWorkerSubmission, recoverRollingWorkerCreation, observeRollingWorkerInitialization, resumeRollingWorker, parseRollingWorkerResumption, dispatchRollingWorker, buildRollingWorkerInstructions, type RollingWorkerInitialization } from '../src/rolling-worker.js';
 import { RollingCodex, RollingObservationTimeout, type RollingNativeTurn, type RollingNativeThread, type RollingNativeServerRequest } from '../src/rolling-codex.js';
@@ -549,6 +549,44 @@ export async function runRollingReviewScenario(t: TestContext, reviewScenario: R
     assert.deepEqual(await rollingCampaignStore.incrementRebase('bound-fixture',rollingStoredReview.request.id),recordedRollingIncrementRebaseV1);
     await assert.rejects(rollingCampaignStore.recordIncrementRebase('bound-fixture',rollingStoredReview.request.id,{...rollingFastRebaseResult,integrationBase:'f'.repeat(40)}),/differs from recorded intent/);
     assert.equal((await pool.query<Record<string,unknown>>('SELECT state FROM ponytail_index.rolling_increment_v1 WHERE project_id=$1',[projectId])).rows[0]?.state,'REBASED');
+    await assert.rejects(rollingCampaignStore.beginIncrementPush('bound-fixture',rollingStoredReview.request.id),/fresh QA/);
+    await assert.rejects(rollingCampaignStore.recordIncrementProof('bound-fixture',rollingStoredReview.request.id,{...rollingWorkerSubmissionV1,revision:'f'.repeat(40)}),/another integration candidate/);
+    assert.deepEqual(await rollingCampaignStore.recordIncrementProof('bound-fixture',rollingStoredReview.request.id,rollingWorkerSubmissionV1),rollingWorkerSubmissionV1);
+    const refreshedProofStartedAt = new Date().toISOString();
+    execFileSync(process.execPath,['--check',path.join(workerRoot,'fixture/current.ts')]);
+    const refreshedProofCompletedAt = new Date().toISOString();
+    const refreshedRollingWorkerSubmissionV1: RollingWorkerSubmissionV1 = {...rollingWorkerSubmissionV1,proof:rollingWorkerSubmissionV1.proof.map((proof): RollingSubmissionProof => ({...proof,
+      evidence:{...proof.evidence,startedAt:refreshedProofStartedAt,completedAt:refreshedProofCompletedAt}}))};
+    assert.deepEqual(await rollingCampaignStore.recordIncrementProof('bound-fixture',rollingStoredReview.request.id,refreshedRollingWorkerSubmissionV1),refreshedRollingWorkerSubmissionV1);
+    assert.equal((await pool.query<Record<string,unknown>>('SELECT count(*)::integer AS count FROM ponytail_index.rolling_increment_proof_v1 WHERE project_id=$1',[projectId])).rows[0]?.count,2);
+
+    const priorProofText = fs.readFileSync(path.join(workerRoot,'proof.txt'),'utf8');
+    fs.appendFileSync(path.join(workerRoot,'proof.txt'),'stale proof output');
+    await assert.rejects(rollingCampaignStore.beginIncrementPush('bound-fixture',rollingStoredReview.request.id),/stale focused input/);
+    fs.writeFileSync(path.join(workerRoot,'proof.txt'),priorProofText);
+    const pushes = await Promise.allSettled(Array.from({length:4},()=>rollingCampaignStore.beginIncrementPush('bound-fixture',rollingStoredReview.request.id)));
+    assert.equal(pushes.filter(push=>push.status === 'fulfilled').length,1);
+    assert.equal(pushes.filter(push=>push.status === 'rejected').length,3);
+    await assert.rejects(rollingCampaignStore.recordIncrementPublication('bound-fixture',rollingStoredReview.request.id,
+      {state:'PUBLISHED',revision,remoteRevision:revision}),/local increment branch lacks/);
+    const unknownRollingIncrementPublicationV1 = await rollingCampaignStore.recordIncrementPublication('bound-fixture',rollingStoredReview.request.id,
+      {state:'UNCONFIRMED',revision,reason:'Fixture lost the push response; observe the remote before retrying.'});
+    assert.equal(unknownRollingIncrementPublicationV1.result.state,'UNCONFIRMED');
+    assert.equal((await pool.query<Record<string,unknown>>('SELECT count(*)::integer AS count FROM ponytail_index.rolling_increment_delivery_v1 WHERE project_id=$1',[projectId])).rows[0]?.count,0);
+    const untrackedPaths = execFileSync('git',['-C',root,'ls-files','--others','--exclude-standard','-z'],{encoding:'utf8'}).split('\0').filter(relative=>relative.length > 0);
+    // Only this disposable fixture's untracked management records are excluded;
+    // the production coordinator requires a genuinely clean configured checkout.
+    fs.appendFileSync(path.join(root,'.git/info/exclude'),untrackedPaths.map(relative=>`/${relative}`).join('\n')+'\n');
+    execFileSync('git',['-C',root,'switch','-q','campaign/bound-fixture']);
+    fastForwardRollingIncrement(root,'campaign/bound-fixture',revision);
+    const rollingIncrementPublicationResult = publishRollingIncrement({rootPath:workerRoot,target:rollingIncrementClaimV1.target,revision});
+    assert.ok(rollingIncrementPublicationResult.state === 'PUBLISHED');
+    const deliveredRollingIncrementPublicationV1 = await restartedRollingCampaignStore.observeIncrementPublication('bound-fixture',rollingStoredReview.request.id);
+    assert.deepEqual(deliveredRollingIncrementPublicationV1.result,rollingIncrementPublicationResult);
+    const deliveries = await Promise.all(Array.from({length:4},()=>rollingCampaignStore.recordIncrementPublication('bound-fixture',rollingStoredReview.request.id,rollingIncrementPublicationResult)));
+    assert.ok(deliveries.every(delivery=>JSON.stringify(delivery) === JSON.stringify(deliveredRollingIncrementPublicationV1)));
+    assert.equal((await pool.query<Record<string,unknown>>('SELECT count(*)::integer AS count FROM ponytail_index.rolling_increment_delivery_v1 WHERE project_id=$1',[projectId])).rows[0]?.count,1);
+
 
   } else await assert.rejects(rollingCampaignStore.claimIncrement('bound-fixture',rollingStoredReview.request.id),/accepted review/);
   const changedRollingReviewOutcomeV1: RollingReviewOutcomeV1 = reviewDecision === 'accepted'

@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-10-11-untyped_proof_factory_timestamp",
+  "recorded_at": "2026-10-11T13:53:04-07:00",
+  "source_references": [
+    "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/obligations.json#OBL-54"
+  ],
+  "context": {
+    "languages": [
+      "typescript"
+    ],
+    "frameworks": [],
+    "components": [
+      "increment QA history fixture"
+    ],
+    "affected_boundaries": [
+      "test proof factory and exact execution-evidence reader"
+    ],
+    "code_references": [
+      "tests/rolling-campaign-store.integration.test.ts",
+      "skills/plan-execution/scripts/obligations.ts"
+    ]
+  },
+  "observed_behavior": "The accepted publication scenario failed when renewed QA evidence contained endedAt in addition to the canonical fields.",
+  "expected_behavior": "The proof factory creates only the defined startedAt and completedAt timestamp fields, and invalid literal properties fail compilation.",
+  "causal_mechanism": "The map callback inferred a wider evidence object. Structural assignability allowed its extra endedAt property through the submission argument, while the exact runtime reader correctly rejected it.",
+  "anti_pattern": {
+    "structural_description": "A valid test-data factory infers its return shape instead of constructing the declared contract.",
+    "why_it_fails": "Additional properties in a structurally assignable inferred value evade contextual literal checking."
+  },
+  "correct_pattern": {
+    "required_invariant": "Valid proof factories return the declared RollingSubmissionProof shape.",
+    "implementation_description": "Use completedAt, annotate the map callback return as RollingSubmissionProof, and type the enclosing submission. Preserve exact runtime validation."
+  },
+  "applicability_conditions": [
+    "A valid fixture map callback constructs contract literals without an explicit return type."
+  ],
+  "known_non_matches": [
+    "Explicitly malformed values used to test a rejecting reader remain unknown inputs."
+  ],
+  "confirmation_evidence": [
+    "The fixture compilation succeeded but the exact evidence reader rejected endedAt; the accepted publication test failed at recordIncrementProof.",
+    "After correcting the field and typing the factory, the affected PostgreSQL scenario passes, followed by all three focused PostgreSQL review/publication scenarios."
+  ],
+  "regression_proofs": [
+    "tests/rolling-campaign-store.integration.test.ts: real PostgreSQL serializes allocation, retains ownership and persists accepted review",
+    "npm run build"
+  ]
+}

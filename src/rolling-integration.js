@@ -6,7 +6,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.RollingIncrementRebaseReaders = exports.RollingIncrementClaimReaders = void 0;
+exports.RollingIncrementPublicationReaders = exports.RollingIncrementRebaseReaders = exports.RollingIncrementClaimReaders = void 0;
 exports.prepareRollingIncrementRebase = prepareRollingIncrementRebase;
 exports.rebasePreparedRollingIncrement = rebasePreparedRollingIncrement;
 exports.fastRebaseRollingIncrement = fastRebaseRollingIncrement;
@@ -17,6 +17,8 @@ exports.fastForwardRollingIncrement = fastForwardRollingIncrement;
 exports.readRollingIncrementClaimV1 = readRollingIncrementClaimV1;
 exports.readRollingIncrementRebaseV1 = readRollingIncrementRebaseV1;
 exports.verifyRollingIncrementRebase = verifyRollingIncrementRebase;
+exports.readRollingIncrementPublicationV1 = readRollingIncrementPublicationV1;
+exports.verifyRollingIncrementLocalIntegration = verifyRollingIncrementLocalIntegration;
 const node_fs_1 = __importDefault(require("node:fs"));
 const node_path_1 = __importDefault(require("node:path"));
 const node_child_process_1 = require("node:child_process");
@@ -245,4 +247,40 @@ function verifyRollingIncrementRebase(rootPath, rollingFastRebaseResult) {
         const conflictedPaths = git(rootPath, ['diff', '--name-only', '--diff-filter=U', '-z']).split('\0').filter(value => value.length > 0);
         requireIntegration(JSON.stringify(conflictedPaths) === JSON.stringify(rollingFastRebaseResult.conflictedPaths), 'conflict paths differ from checkout');
     }
+}
+function readRollingIncrementPublicationV1(value) {
+    const publicationRecord = record(value, ['schemaVersion', 'incrementId', 'result']);
+    requireIntegration(publicationRecord.schemaVersion === 1, 'unsupported publication version');
+    requireIntegration(typeof publicationRecord.incrementId === 'string' && publicationRecord.incrementId.trim().length > 0, 'invalid increment identity');
+    requireIntegration(isRecord(publicationRecord.result), 'invalid publication result');
+    let rollingIncrementPublicationResult;
+    switch (publicationRecord.result.state) {
+        case 'PUBLISHED':
+        case 'REBASE_REQUIRED': {
+            const resultRecord = record(publicationRecord.result, ['state', 'revision', 'remoteRevision']);
+            rollingIncrementPublicationResult = { state: publicationRecord.result.state, revision: recordCommit(resultRecord.revision), remoteRevision: recordCommit(resultRecord.remoteRevision) };
+            break;
+        }
+        case 'PUSH_REJECTED': {
+            const resultRecord = record(publicationRecord.result, ['state', 'revision', 'remoteRevision', 'reason']);
+            requireIntegration(typeof resultRecord.reason === 'string' && resultRecord.reason.trim().length > 0, 'missing push rejection reason');
+            rollingIncrementPublicationResult = { state: 'PUSH_REJECTED', revision: recordCommit(resultRecord.revision), remoteRevision: recordCommit(resultRecord.remoteRevision), reason: resultRecord.reason };
+            break;
+        }
+        case 'UNCONFIRMED': {
+            const resultRecord = record(publicationRecord.result, ['state', 'revision', 'reason']);
+            requireIntegration(typeof resultRecord.reason === 'string' && resultRecord.reason.trim().length > 0, 'missing unknown-outcome reason');
+            rollingIncrementPublicationResult = { state: 'UNCONFIRMED', revision: recordCommit(resultRecord.revision), reason: resultRecord.reason };
+            break;
+        }
+        default: throw new Error('rolling integration: unsupported publication state');
+    }
+    return { schemaVersion: 1, incrementId: publicationRecord.incrementId, result: rollingIncrementPublicationResult };
+}
+exports.RollingIncrementPublicationReaders = { V1: readRollingIncrementPublicationV1 };
+function verifyRollingIncrementLocalIntegration(rootPath, branch, revision) {
+    commit(revision);
+    git(rootPath, ['check-ref-format', `refs/heads/${branch}`]);
+    const spawnSyncReturns = gitResult(rootPath, ['merge-base', '--is-ancestor', revision, `refs/heads/${branch}`]);
+    requireIntegration(spawnSyncReturns.status === 0, 'local increment branch lacks the published candidate');
 }

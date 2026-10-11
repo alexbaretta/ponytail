@@ -14655,6 +14655,43 @@
       },
       "assessor": "coordinator",
       "reason": "Required downstream observation ownership for the confirmed rebase-result metadata leak; preserve the existing batch and claim no discharge."
+    },
+    {
+      "id": "CHECKPOINT-157",
+      "predecessorId": "CHECKPOINT-156",
+      "baselineId": "BASELINE-16",
+      "kind": "neutral",
+      "selectedIds": [
+        "OBL-53"
+      ],
+      "registeredIds": [],
+      "certificateIds": [],
+      "invalidatedIds": [],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": {
+        "obligationId": "OBL-53",
+        "operations": [
+          "inspect"
+        ],
+        "deliverable": "Inspect and register the proof-factory timestamp observation path; stop after finite scope reconciliation."
+      },
+      "assessor": "coordinator",
+      "reason": "Required observation ownership for the confirmed proof-factory timestamp mismatch; preserve the existing batch and claim no discharge."
     }
   ]
 }

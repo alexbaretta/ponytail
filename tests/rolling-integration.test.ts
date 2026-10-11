@@ -6,7 +6,7 @@ import path from 'node:path';
 import {execFileSync} from 'node:child_process';
 import assert from 'node:assert/strict';
 import test,{type TestContext} from 'node:test';
-import {fastRebaseRollingIncrement,continueFastRebaseRollingIncrement,publishRollingIncrement,reconcileRollingIncrementPublication,fastForwardRollingIncrement,readRollingIncrementClaimV1,readRollingIncrementRebaseV1,prepareRollingIncrementRebase,rebasePreparedRollingIncrement,type RollingReviewedIncrement} from '../src/rolling-integration.js';
+import {fastRebaseRollingIncrement,continueFastRebaseRollingIncrement,publishRollingIncrement,reconcileRollingIncrementPublication,fastForwardRollingIncrement,readRollingIncrementClaimV1,readRollingIncrementRebaseV1,readRollingIncrementPublicationV1,prepareRollingIncrementRebase,rebasePreparedRollingIncrement,type RollingReviewedIncrement} from '../src/rolling-integration.js';
 
 interface RollingIntegrationFixture {
  readonly root: string;
@@ -219,4 +219,20 @@ test('prepared rebase records exact inputs before replay and refuses changed can
   {...completedRollingIncrementRebaseV1,result:{...rollingFastRebaseResult,integrationBase:'a'.repeat(40)}}]) {
   assert.throws(()=>readRollingIncrementRebaseV1(invalid),/rolling integration/);
  }
+});
+
+// Traceability: verifies REQ-ROLLING-PUBLICATION
+test('publication receipt reader preserves separate confirmed, rejected, divergent and unknown outcomes',()=> {
+ const revision = 'a'.repeat(40);
+ const remoteRevision = 'b'.repeat(40);
+ const results = [{state:'PUBLISHED',revision,remoteRevision},{state:'REBASE_REQUIRED',revision,remoteRevision},
+  {state:'PUSH_REJECTED',revision,remoteRevision,reason:'Remote policy declined.'},{state:'UNCONFIRMED',revision,reason:'Connection lost.'}];
+ for (const result of results) {
+  const receipt = {schemaVersion:1,incrementId:'increment',result};
+  assert.deepEqual(readRollingIncrementPublicationV1(receipt),receipt);
+  assert.throws(()=>readRollingIncrementPublicationV1({...receipt,schemaVersion:2}),/unsupported publication version/);
+  assert.throws(()=>readRollingIncrementPublicationV1({...receipt,result:{...result,extra:true}}),/invalid rebase record fields/);
+ }
+ assert.throws(()=>readRollingIncrementPublicationV1({schemaVersion:1,incrementId:'increment',result:{state:'PUBLISHED',revision}}),/record fields/);
+ assert.throws(()=>readRollingIncrementPublicationV1({schemaVersion:1,incrementId:'increment',result:{state:'UNCONFIRMED',revision,reason:''}}),/reason/);
 });

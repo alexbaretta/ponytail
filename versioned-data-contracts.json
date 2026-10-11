@@ -3,6 +3,14 @@
   "schemaVersion": 1,
   "families": [
     {
+      "id": "rolling-increment-publication",
+      "implementation": {"workspace": "ponytail", "module": "src/rolling-integration.ts", "readerRegistryExport": "RollingIncrementPublicationReaders"},
+      "currentVersion": "V1",
+      "versions": ["V1"],
+      "supportedReadVersions": ["V1"],
+      "supportedDowngradeVersions": []
+    },
+    {
       "id": "rolling-increment-rebase",
       "implementation": {"workspace": "ponytail", "module": "src/rolling-integration.ts", "readerRegistryExport": "RollingIncrementRebaseReaders"},
       "currentVersion": "V1",
