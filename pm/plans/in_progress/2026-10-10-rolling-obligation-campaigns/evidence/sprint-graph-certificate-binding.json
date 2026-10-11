@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "certificateId": "CERT-29",
+  "lease": {
+    "schemaVersion": 1,
+    "scopeId": "2026-10-10-rolling-obligation-campaigns",
+    "baselineId": "BASELINE-14",
+    "graphDigest": "17c85ceefd83af3297516ee33dcb5c7508d8343c307ab923da392efb6ef6fec0",
+    "generation": "standalone-sprint-graph-2026-10-11-configuration",
+    "assessor": "coordinator",
+    "authority": [
+      "user-goal-2026-10-10-rolling-campaigns",
+      "user-goal-2026-10-10-static-language-existing-tsts",
+      "user-2026-10-10-normative-atomic-obligations"
+    ],
+    "binding": {
+      "obligationId": "OBL-87",
+      "revisionId": "BIND-9",
+      "dependsOn": [
+        "OBL-112"
+      ],
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "skills/plan-execution/scripts/sprint-graph.ts",
+          "skills/plan-execution/scripts/sprint-graph.js",
+          "tests/sprint-graph.test.ts",
+          "tests/ready-sprints.test.js",
+          "tests/ready-sprints.test.ts",
+          ".agents/config/project/traceability.json",
+          "pm/requirements/traceability.generated.md",
+          "AGENTS.md"
+        ],
+        "operations": [
+          "inspect",
+          "edit",
+          "build",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "typed sprint dependency identity and acyclicity"
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "typed-sprint-graph"
+        }
+      }
+    }
+  },
+  "revision": "824be1d7fc78fb98066274ff0015fe35d69f8539",
+  "proof": [
+    {
+      "operation": "test",
+      "certificateEvidenceIndex": 0,
+      "submissionEvidenceIndex": 0
+    }
+  ]
+}
