@@ -115,3 +115,7 @@ test('live worker creation recovery attaches original initialization after coord
 // Traceability: verifies REQ-ROLLING-REVIEW
 test('live worker implements and semantically rebases its exact candidate before submission',
  t => runRollingWorkerScenario(t,'native','code'));
+
+// Traceability: verifies REQ-ROLLING-REVIEW
+test('live rejected candidate returns to its original worker and is accepted by its original reviewer after correction and semantic rebase',
+ t => runRollingWorkerScenario(t,'native','code',true));

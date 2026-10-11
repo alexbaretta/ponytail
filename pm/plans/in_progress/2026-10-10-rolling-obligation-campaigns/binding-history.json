@@ -2203,6 +2203,51 @@
           "profile": "review-rework"
         }
       }
+    },
+    {
+      "id": "BIND-48",
+      "obligationId": "OBL-51",
+      "predecessorId": "BIND-47",
+      "baselineId": "BASELINE-15",
+      "assessor": "coordinator",
+      "authority": [
+        "user-goal-2026-10-10-rolling-campaigns",
+        "user-goal-2026-10-10-static-language-existing-tsts",
+        "user-2026-10-10-normative-atomic-obligations",
+        "user-2026-10-11-language-scope-our-code-preserve-translations"
+      ],
+      "reason": "Include the checked QA sequence editor so the actual native correction Arc can stop and inspect both the seeded defective commit and its corrective commit. Preserve the one-commit Arc and all existing scope fences.",
+      "dependsOn": [],
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "src/rolling-campaign-store.ts",
+          "src/rolling-campaign-store.js",
+          "src/rolling-worker.ts",
+          "src/rolling-worker.js",
+          "tests/rolling-worker.test.ts",
+          "tests/rolling-campaign-store.integration.test.ts",
+          "tests/rolling-codex.integration.ts",
+          "pm/requirements/traceability.generated.md",
+          "tests/fixtures/rolling-rebase-editor.ts"
+        ],
+        "operations": [
+          "inspect",
+          "edit",
+          "build",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "rejected worker correction and same-reviewer resubmission"
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "review-rework"
+        }
+      }
     }
   ]
 }
