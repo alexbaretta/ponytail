@@ -36,6 +36,35 @@ test('physical sprint readers preserve planning, version-specific execution and 
   assert.deepEqual(parseSprintFile('S01.md', source(sprintMetadataV3)), sprintV3);
 });
 
+test('physical V1 sprint metadata retains null execution and rejects malformed inputs without mutation', () => {
+  const sprintMetadataV1: SprintMetadataV1 = { schemaVersion: 1, id: 'S01',
+    planning: { status: 'APPROVED', depends_on: ['S00'], scope_roots: ['src'] },
+    execution: { status: 'PENDING', depends_on: ['S00'], planned_paths: ['src/input.ts'] } };
+  const original = JSON.stringify(sprintMetadataV1);
+  const sprintV1: SprintV1 = readSprintMetadataV1('S01.md', sprintMetadataV1);
+  assert.deepEqual(sprintV1, { ...sprintMetadataV1, filePath: 'S01.md' });
+  assert.equal(JSON.stringify(sprintMetadataV1), original);
+  const planningOnlySprintMetadataV1: SprintMetadataV1 = { ...sprintMetadataV1, execution: null };
+  const planningOnlySprintV1: SprintV1 = readSprintMetadataV1('S01.md', planningOnlySprintMetadataV1);
+  assert.deepEqual(planningOnlySprintV1, { ...planningOnlySprintMetadataV1, filePath: 'S01.md' });
+  assert.deepEqual(parseSprintFile('S01.md', source(planningOnlySprintMetadataV1)), planningOnlySprintV1);
+  const malformedInputs: readonly unknown[] = [
+    { ...sprintMetadataV1, schemaVersion: 2 },
+    { ...sprintMetadataV1, extra: true },
+    { ...sprintMetadataV1, id: 'S02' },
+    { ...sprintMetadataV1, planning: { ...sprintMetadataV1.planning, status: 'UNKNOWN' } },
+    { ...sprintMetadataV1, planning: { ...sprintMetadataV1.planning, depends_on: ['S00', 'S00'] } },
+    { ...sprintMetadataV1, execution: { status: 'UNKNOWN', depends_on: [], planned_paths: [] } },
+    { ...sprintMetadataV1, execution: { status: 'PENDING', depends_on: [], planned_paths: ['../escape'] } },
+    { ...sprintMetadataV1, execution: { status: 'PENDING', depends_on: [], tasklets_reviewed: true } }
+  ];
+  for (const malformedInput of malformedInputs) {
+    const before = JSON.stringify(malformedInput);
+    assert.throws(() => readSprintMetadataV1('S01.md', malformedInput));
+    assert.equal(JSON.stringify(malformedInput), before);
+  }
+});
+
 test('unknown sprint metadata rejects invalid reviewed flags, paths, identity and block count', () => {
   const sprintMetadataV3: SprintMetadataV3 = metadata();
   const invalidReviewed: unknown = { ...sprintMetadataV3, execution: { status: 'PENDING', depends_on: [], tasklets_reviewed: 'false' } };

@@ -146,6 +146,46 @@
           "profile": "frozen-worker-submission"
         }
       }
+    },
+    {
+      "id": "BIND-4",
+      "obligationId": "OBL-83",
+      "predecessorId": null,
+      "baselineId": "BASELINE-14",
+      "assessor": "coordinator",
+      "authority": [
+        "user-goal-2026-10-10-rolling-campaigns",
+        "user-goal-2026-10-10-static-language-existing-tsts",
+        "user-2026-10-10-normative-atomic-obligations"
+      ],
+      "reason": "Complete the already-started V1 sprint metadata proof under standalone coordinator authority; include its missing null execution and non-mutation checks. Preserve the original condition and criterion.",
+      "dependsOn": [
+        "OBL-112"
+      ],
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "skills/plan-execution/scripts/sprint-metadata.ts",
+          "skills/plan-execution/scripts/sprint-metadata.js",
+          "tests/sprint-metadata.test.ts"
+        ],
+        "operations": [
+          "inspect",
+          "edit",
+          "build",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "physical V1 sprint metadata completion"
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "typed-sprint-v1"
+        }
+      }
     }
   ]
 }
