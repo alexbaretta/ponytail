@@ -13,6 +13,7 @@
     "noUncheckedIndexedAccess": true,
     "outDir": "dist",
     "resolveJsonModule": true,
+    "removeComments": true,
     "rootDir": ".",
     "strict": true,
     "target": "ES2024",

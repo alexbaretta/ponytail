@@ -70,7 +70,7 @@
       "id": "plan-obligation-document",
       "implementation": {
         "workspace": "ponytail",
-        "module": "skills/plan-execution/scripts/obligations.js",
+        "module": "skills/plan-execution/scripts/obligations.ts",
         "readerRegistryExport": "ObligationDocumentReaders"
       },
       "currentVersion": "V1",

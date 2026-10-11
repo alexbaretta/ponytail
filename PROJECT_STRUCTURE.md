@@ -201,3 +201,12 @@ project-local skills into the published reusable collection.
 Ponytail owns no cloud environments, deployment topology, or ancillary cloud
 services. If that changes, add a dedicated cloud infrastructure architecture
 document and reference it from `AGENTS.md` in the same change-set.
+
+
+During the static-language migration, portable obligation logic is canonical in
+`skills/plan-execution/scripts/obligations.ts`. Strict compilation emits it under
+`dist/`; `scripts/build-skill-runtime.ts`, executed by `npm run build`, materializes
+its compiler output at the established portable `.js` launch path. That tracked
+text is generated runtime, not a second handwritten owner. Existing OpenClaw
+resource generation copies the typed owner and generated runtime. Traceability
+and versioned-contract ownership point to the typed source.

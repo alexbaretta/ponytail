@@ -70,7 +70,7 @@
   "scripts": {
     "test": "npm run test:core",
     "test:core": "node scripts/registry.js && node scripts/build-registry-data.js && node scripts/build-command-adapters.js && node scripts/build-manifests.js && node scripts/check-rule-copies.js && npm run check:traceability && node --test tests/*.test.js && npm run build && npm run test:typed && ./scripts/test-install-to-codex.sh && npm test --prefix pi-extension && npm test --prefix ponytail-mcp && npm run test:tsts && npm run check:tsts",
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json && node dist/scripts/build-skill-runtime.js",
     "build:tsts": "tsc -p tsts/tsconfig.json",
     "check:tsts": "node tsts/dist/src/cli.js --config tsts.json --directory-structure .agents/config/project/directory-structure.json",
     "test:typed": "node --test dist/tests/*.test.js",

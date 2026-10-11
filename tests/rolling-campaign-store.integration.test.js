@@ -34,6 +34,10 @@ test('real PostgreSQL serializes allocation, retains suspended ownership and rel
   }));
   const source = path.join(__dirname, '../pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/obligations.json');
   const document = JSON.parse(fs.readFileSync(source, 'utf8'));
+  // This isolated Arc uses the original rolling baseline, not migration responsibilities.
+  document.baselines = document.baselines.slice(0, 1);
+  document.obligations = document.obligations.filter(item => document.baselines[0].obligationIds.includes(item.id));
+  document.checkpoints = [];
   document.scopeId = 'fixture';
   fs.mkdirSync(path.join(root, 'pm/requirements'), { recursive: true });
   fs.copyFileSync(path.join(__dirname, '../pm/requirements/rolling-campaigns.md'), path.join(root, 'pm/requirements/rolling-campaigns.md'));

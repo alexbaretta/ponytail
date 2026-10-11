@@ -768,7 +768,7 @@
     },
     {
       "class": "implementation",
-      "path": "skills/plan-execution/scripts/obligations.js",
+      "path": "skills/plan-execution/scripts/obligations.ts",
       "locator": "text"
     },
     {
@@ -930,11 +930,19 @@
     },
     {
       "path": ".openclaw/skills/plan-execution/scripts/obligations.js",
-      "sourcePath": "skills/plan-execution/scripts/obligations.js"
+      "sourcePath": "skills/plan-execution/scripts/obligations.ts"
     },
     {
       "path": ".openclaw/skills/plan-execution/scripts/ready-tasklets.js",
       "sourcePath": "skills/plan-execution/scripts/ready-tasklets.js"
+    },
+    {
+      "path": "skills/plan-execution/scripts/obligations.js",
+      "sourcePath": "skills/plan-execution/scripts/obligations.ts"
+    },
+    {
+      "path": ".openclaw/skills/plan-execution/scripts/obligations.ts",
+      "sourcePath": "skills/plan-execution/scripts/obligations.ts"
     }
   ],
   "reverseViewPath": "pm/requirements/traceability.generated.md",

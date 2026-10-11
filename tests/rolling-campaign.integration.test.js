@@ -69,6 +69,7 @@ test('coordinator files alone determine graph identity, dependency changes and a
   const document = JSON.parse(fs.readFileSync(source, 'utf8'));
   fs.mkdirSync(path.join(root, 'pm/requirements'), { recursive: true });
   fs.copyFileSync(path.join(__dirname, '../pm/requirements/rolling-campaigns.md'), path.join(root, 'pm/requirements/rolling-campaigns.md'));
+  fs.copyFileSync(path.join(__dirname, '../pm/requirements/static-language.md'), path.join(root, 'pm/requirements/static-language.md'));
   fs.writeFileSync(path.join(root, 'obligations.json'), JSON.stringify(document));
   const bindings = { schemaVersion: 1, bindings: document.obligations.map(item => ({
     obligationId: item.id, implementationIds: [], sourcePaths: [], acceptances: [],
