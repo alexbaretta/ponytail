@@ -336,3 +336,24 @@ export function buildRepositoryInventory(repositoryRoot: string, campaignManagem
   };
   return readCampaignReportV3(campaignInventoryV3);
 }
+
+// Traceability: implements REQ-PONYTAIL-STATIC-LANGUAGE
+export function humanInventory(campaignInventory: CampaignInventoryV2 | CampaignInventoryV3, worktree: string): string {
+  const activeCampaigns = campaignInventory.activeCampaigns.length === 0
+    ? 'none'
+    : campaignInventory.activeCampaigns.map((campaign) => `${campaign.rootPlanId} (${campaign.activePlanIds.join(', ')})`).join('; ');
+  const lines = [
+    `Repository campaign inventory: ${campaignInventory.valid ? 'valid' : 'invalid'}`,
+    `Worktree: ${worktree}`,
+    `Active campaigns: ${activeCampaigns}`,
+    `Campaigns: ${campaignInventory.campaigns.length}; managed plans: ${campaignInventory.plans.length}; invalid plans: ${campaignInventory.invalidPlans.length}; unmanaged legacy plans: ${campaignInventory.unmanagedPlans.length}`,
+  ];
+  for (const plan of campaignInventory.invalidPlans) {
+    for (const item of plan.diagnostics) lines.push(`error ${item.code} ${plan.path}: ${item.message}`);
+  }
+  for (const item of campaignInventory.diagnostics) lines.push(`error ${item.code}: ${item.message}`);
+  if (campaignInventory.unmanagedPlans.length > 0) {
+    lines.push('Unmanaged legacy plans:', ...campaignInventory.unmanagedPlans.map((plan) => `- ${plan.path}`));
+  }
+  return `${lines.join('\n')}\n`;
+}

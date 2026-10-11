@@ -39,3 +39,8 @@ artifact with a canonical typed source owner. Preserve supported runtime,
 installation, packaging and serialized-contract behavior during conversion.
 This requirement authorizes migration and local checker configuration, not
 extensions to TSTS or changes to other projects.
+
+Known operation migration obligation:
+[OBL-73](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-73)
+references the canonical condition and discharge criterion for inventory
+presentation. It is one bounded operation, not the remaining migration scope.

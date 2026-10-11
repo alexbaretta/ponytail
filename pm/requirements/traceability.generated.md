@@ -696,6 +696,7 @@ Requirement: [pm/requirements/rolling-campaigns.md](rolling-campaigns.md)
 Requirement: [pm/requirements/static-language.md](static-language.md)
 
 - implementation: implements [skills/plan-execution/scripts/obligations.ts:286](../../skills/plan-execution/scripts/obligations.ts#L286)
+- implementation: implements [src/campaign-inventory.ts:340](../../src/campaign-inventory.ts#L340)
 - implementation: implements [src/rolling-campaign.ts:137](../../src/rolling-campaign.ts#L137)
 - implementation: implements [src/rolling-codex.ts:139](../../src/rolling-codex.ts#L139)
 - unit-test: verifies [tests/rolling-campaign-store.test.ts:10](../../tests/rolling-campaign-store.test.ts#L10)

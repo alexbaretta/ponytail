@@ -149,6 +149,12 @@
         "S07-F24"
       ],
       "validation_tasklet": "S07-F25-T06"
+    },
+    "S07-F26": {
+      "depends_on": [
+        "S07-F25"
+      ],
+      "validation_tasklet": "S07-F26-T04"
     }
   },
   "tasklets": {
@@ -2586,6 +2592,49 @@
       "affinity": [],
       "risk": "normal",
       "feature": "S07-F25",
+      "planned_paths": []
+    },
+    "S07-F26-T01": {
+      "depends_on": [],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F26",
+      "planned_paths": [
+        "src/campaign-inventory.ts",
+        "src/campaign-census.js"
+      ]
+    },
+    "S07-F26-T02": {
+      "depends_on": [],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F26",
+      "planned_paths": [
+        "tests/campaign-inventory.test.ts",
+        "tests/rolling-campaign-store.integration.test.ts",
+        "tests/rolling-campaign.integration.test.ts"
+      ]
+    },
+    "S07-F26-T03": {
+      "depends_on": [],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F26",
+      "planned_paths": [
+        "src/campaign-inventory.js",
+        "pm/requirements/traceability.generated.md",
+        "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/inventory-presentation.md"
+      ]
+    },
+    "S07-F26-T04": {
+      "depends_on": [
+        "S07-F26-T01",
+        "S07-F26-T02",
+        "S07-F26-T03"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F26",
       "planned_paths": []
     }
   },

@@ -16,7 +16,7 @@ const { CampaignPlanMetadataReaders, metadataBlocks,
 const { listPlanSourceFiles, linkedPlanFiles } = require('./campaign-plan-sources');
 const { campaignGraph } = require('./campaign-graph');
 const { buildReport, readCampaignReportV1, humanReport } = require('./campaign-report');
-const { buildRepositoryInventory, campaignDiagnostic, readCampaignReportV2, readCampaignReportV3, CampaignReportReaders } = require('./campaign-inventory');
+const { humanInventory, buildRepositoryInventory, campaignDiagnostic, readCampaignReportV2, readCampaignReportV3, CampaignReportReaders } = require('./campaign-inventory');
 const { discoverCampaign, resolveCampaignRoot, resolveCampaignScope } = require('./campaign-scope');
 
 const CAMPAIGN_STATUSES = ['active', 'pending', 'closed', 'deferred', 'rejected'];
@@ -28,26 +28,6 @@ const REPORT_TABLE_FLAGS = Object.freeze({
   '--sprint-table': ['sprintTable', true],
   '--no-sprint-table': ['sprintTable', false],
 });
-
-function humanInventory(inventory, worktree) {
-  const activeCampaigns = inventory.activeCampaigns.length === 0
-    ? 'none'
-    : inventory.activeCampaigns.map((campaign) => `${campaign.rootPlanId} (${campaign.activePlanIds.join(', ')})`).join('; ');
-  const lines = [
-    `Repository campaign inventory: ${inventory.valid ? 'valid' : 'invalid'}`,
-    `Worktree: ${worktree}`,
-    `Active campaigns: ${activeCampaigns}`,
-    `Campaigns: ${inventory.campaigns.length}; managed plans: ${inventory.plans.length}; invalid plans: ${inventory.invalidPlans.length}; unmanaged legacy plans: ${inventory.unmanagedPlans.length}`,
-  ];
-  for (const plan of inventory.invalidPlans) {
-    for (const item of plan.diagnostics) lines.push(`error ${item.code} ${plan.path}: ${item.message}`);
-  }
-  for (const item of inventory.diagnostics) lines.push(`error ${item.code}: ${item.message}`);
-  if (inventory.unmanagedPlans.length > 0) {
-    lines.push('Unmanaged legacy plans:', ...inventory.unmanagedPlans.map((plan) => `- ${plan.path}`));
-  }
-  return `${lines.join('\n')}\n`;
-}
 
 function campaignStatus(inventory, config, campaign) {
   if (inventory.activeCampaigns.some(({ rootPlanId }) => rootPlanId === campaign.rootPlanId)) return 'active';

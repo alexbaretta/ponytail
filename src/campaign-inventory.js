@@ -11,6 +11,7 @@ exports.readCampaignReportV2 = readCampaignReportV2;
 exports.readCampaignReportV3 = readCampaignReportV3;
 exports.campaignDiagnostic = campaignDiagnostic;
 exports.buildRepositoryInventory = buildRepositoryInventory;
+exports.humanInventory = humanInventory;
 const node_fs_1 = __importDefault(require("node:fs"));
 const node_path_1 = __importDefault(require("node:path"));
 const campaign_configuration_js_1 = require("./campaign-configuration.js");
@@ -317,4 +318,25 @@ function buildRepositoryInventory(repositoryRoot, campaignManagementConfigV1, co
         diagnostics,
     };
     return readCampaignReportV3(campaignInventoryV3);
+}
+function humanInventory(campaignInventory, worktree) {
+    const activeCampaigns = campaignInventory.activeCampaigns.length === 0
+        ? 'none'
+        : campaignInventory.activeCampaigns.map((campaign) => `${campaign.rootPlanId} (${campaign.activePlanIds.join(', ')})`).join('; ');
+    const lines = [
+        `Repository campaign inventory: ${campaignInventory.valid ? 'valid' : 'invalid'}`,
+        `Worktree: ${worktree}`,
+        `Active campaigns: ${activeCampaigns}`,
+        `Campaigns: ${campaignInventory.campaigns.length}; managed plans: ${campaignInventory.plans.length}; invalid plans: ${campaignInventory.invalidPlans.length}; unmanaged legacy plans: ${campaignInventory.unmanagedPlans.length}`,
+    ];
+    for (const plan of campaignInventory.invalidPlans) {
+        for (const item of plan.diagnostics)
+            lines.push(`error ${item.code} ${plan.path}: ${item.message}`);
+    }
+    for (const item of campaignInventory.diagnostics)
+        lines.push(`error ${item.code}: ${item.message}`);
+    if (campaignInventory.unmanagedPlans.length > 0) {
+        lines.push('Unmanaged legacy plans:', ...campaignInventory.unmanagedPlans.map((plan) => `- ${plan.path}`));
+    }
+    return `${lines.join('\n')}\n`;
 }

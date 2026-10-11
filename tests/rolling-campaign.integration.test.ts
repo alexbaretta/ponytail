@@ -69,6 +69,8 @@ test('coordinator files alone determine graph identity, dependency changes and a
   const repositoryRoot = path.resolve(__dirname, '../..');
   const source = path.join(repositoryRoot, 'pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/obligations.json');
   let obligationDocumentV1: ObligationDocumentV1 = parseObligationDocument(fs.readFileSync(source, 'utf8'));
+  // This isolated graph has no repository implementation evidence or history.
+  obligationDocumentV1 = { ...obligationDocumentV1, certificates: [], checkpoints: [] };
   fs.mkdirSync(path.join(root, 'pm/requirements'), { recursive: true });
   fs.copyFileSync(path.join(repositoryRoot, 'pm/requirements/rolling-campaigns.md'), path.join(root, 'pm/requirements/rolling-campaigns.md'));
   fs.copyFileSync(path.join(repositoryRoot, 'pm/requirements/static-language.md'), path.join(root, 'pm/requirements/static-language.md'));

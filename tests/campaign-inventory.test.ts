@@ -6,7 +6,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
-import { buildRepositoryInventory, readCampaignReportV2, readCampaignReportV3, type CampaignInventoryV2, type CampaignInventoryV3 } from '../src/campaign-inventory.js';
+import { humanInventory, buildRepositoryInventory, readCampaignReportV2, readCampaignReportV3, type CampaignInventoryV2, type CampaignInventoryV3 } from '../src/campaign-inventory.js';
 import { CampaignError, type CampaignManagementConfigV1 } from '../src/campaign-configuration.js';
 
 function inventory(): CampaignInventoryV3 {
@@ -62,4 +62,35 @@ test('typed inventory construction retains invalid metadata identity and unrelat
   assert.equal(campaignInventoryV3.invalidPlans[0]?.diagnostics[0]?.recordId, 42);
   assert.deepEqual(campaignInventoryV3.unmanagedPlans, [{ path: 'pm/plans/legacy/plan.md' }]);
   assert.equal(campaignInventoryV3.invocation.command, 'list');
+});
+
+test('typed inventory presentation preserves complete V2/V3 diagnostic output and inputs', () => {
+  const campaignInventoryV3: CampaignInventoryV3 = { ...inventory(),
+    activeCampaigns: [{ rootPlanId: 'plan', activePlanIds: ['plan', 'child'] },
+      { rootPlanId: 'other', activePlanIds: ['other'] }],
+    diagnostics: [{ code: 'GLOBAL', message: 'global issue', recordId: null, path: null }] };
+  const campaignInventoryV2: CampaignInventoryV2 = { ...campaignInventoryV3, schemaVersion: 2, invocation: { command: 'report' } };
+  for (const campaignInventory of [campaignInventoryV2, campaignInventoryV3]) {
+    const before = JSON.stringify(campaignInventory);
+    assert.equal(humanInventory(campaignInventory, '/fixture'), [
+      'Repository campaign inventory: invalid',
+      'Worktree: /fixture',
+      'Active campaigns: plan (plan, child); other (other)',
+      'Campaigns: 1; managed plans: 1; invalid plans: 1; unmanaged legacy plans: 1',
+      'error INVALID pm/invalid.md: invalid ID',
+      'error GLOBAL: global issue',
+      'Unmanaged legacy plans:',
+      '- pm/legacy.md', ''
+    ].join('\n'));
+    assert.equal(JSON.stringify(campaignInventory), before);
+  }
+});
+
+test('empty valid inventory presentation retains its summary and final newline', () => {
+  const campaignInventoryV3: CampaignInventoryV3 = { ...inventory(), valid: true,
+    activeCampaigns: [], campaigns: [], plans: [], invalidPlans: [], unmanagedPlans: [] };
+  assert.equal(humanInventory(campaignInventoryV3, '/empty'), [
+    'Repository campaign inventory: valid', 'Worktree: /empty', 'Active campaigns: none',
+    'Campaigns: 0; managed plans: 0; invalid plans: 0; unmanaged legacy plans: 0', ''
+  ].join('\n'));
 });

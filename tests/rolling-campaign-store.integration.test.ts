@@ -45,7 +45,7 @@ test('real PostgreSQL serializes allocation, retains suspended ownership and rel
       digest: inputDigest(repositoryRoot, requirement.path) })) };
   obligationDocumentV1 = { ...obligationDocumentV1, baselines: [fixtureObligationBaseline],
     obligations: obligationDocumentV1.obligations.filter(item => fixtureObligationBaseline.obligationIds.includes(item.id)),
-    checkpoints: [], scopeId: 'fixture' };
+    certificates: [], checkpoints: [], scopeId: 'fixture' };
   fs.mkdirSync(path.join(root, 'pm/requirements'), { recursive: true });
   fs.copyFileSync(path.join(repositoryRoot, 'pm/requirements/rolling-campaigns.md'), path.join(root, 'pm/requirements/rolling-campaigns.md'));
   fs.writeFileSync(path.join(root, 'obligations.json'), JSON.stringify(obligationDocumentV1));

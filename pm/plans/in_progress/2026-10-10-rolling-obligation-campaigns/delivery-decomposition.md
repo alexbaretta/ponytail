@@ -106,6 +106,12 @@ not certify any remaining handwritten operation or complete the language invento
 | <a id="obl-71"></a>[OBL-71](obligations.json) | Configured unchanged TSTS and directory coverage review | Checker evidence available; assess complete inputs |
 | <a id="obl-72"></a>[OBL-72](obligations.json) | Root build, runtime materialization check and emitted-runtime proofs | Runtime evidence available; assess complete inputs |
 
+## Registered language operation migrations
+
+| Canonical obligation | Evidence boundary | Assessment |
+| --- | --- | --- |
+| <a id="obl-73"></a>[OBL-73](obligations.json) | Typed inventory formatter and existing census CLI proof | Certificate CERT-1; see canonical ledger freshness projection |
+
 ## Remaining decomposition before baseline activation
 
 The 48 registered rolling delivery obligations and three language foundation

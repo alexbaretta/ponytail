@@ -325,6 +325,156 @@
         "OBL-19",
         "OBL-20"
       ]
+    },
+    {
+      "id": "BASELINE-4",
+      "predecessorId": "BASELINE-3",
+      "authority": {
+        "references": [
+          "user-goal-2026-10-10-rolling-campaigns",
+          "user-goal-2026-10-10-static-language-existing-tsts",
+          "user-2026-10-10-normative-atomic-obligations"
+        ],
+        "assessors": [
+          "coordinator"
+        ]
+      },
+      "requirements": [
+        {
+          "id": "REQ-ROLLING-CONFIGURATION",
+          "path": "pm/requirements/rolling-campaigns.md",
+          "digest": "dd90e7198653a290b46bb7b5c7e1bce5c9e3735820f79777d1b4b7236a7a0c09"
+        },
+        {
+          "id": "REQ-ROLLING-GRAPH",
+          "path": "pm/requirements/rolling-campaigns.md",
+          "digest": "dd90e7198653a290b46bb7b5c7e1bce5c9e3735820f79777d1b4b7236a7a0c09"
+        },
+        {
+          "id": "REQ-ROLLING-SCHEDULING",
+          "path": "pm/requirements/rolling-campaigns.md",
+          "digest": "dd90e7198653a290b46bb7b5c7e1bce5c9e3735820f79777d1b4b7236a7a0c09"
+        },
+        {
+          "id": "REQ-ROLLING-STATE",
+          "path": "pm/requirements/rolling-campaigns.md",
+          "digest": "dd90e7198653a290b46bb7b5c7e1bce5c9e3735820f79777d1b4b7236a7a0c09"
+        },
+        {
+          "id": "REQ-ROLLING-WORKERS",
+          "path": "pm/requirements/rolling-campaigns.md",
+          "digest": "dd90e7198653a290b46bb7b5c7e1bce5c9e3735820f79777d1b4b7236a7a0c09"
+        },
+        {
+          "id": "REQ-ROLLING-REVIEW",
+          "path": "pm/requirements/rolling-campaigns.md",
+          "digest": "dd90e7198653a290b46bb7b5c7e1bce5c9e3735820f79777d1b4b7236a7a0c09"
+        },
+        {
+          "id": "REQ-ROLLING-PUBLICATION",
+          "path": "pm/requirements/rolling-campaigns.md",
+          "digest": "dd90e7198653a290b46bb7b5c7e1bce5c9e3735820f79777d1b4b7236a7a0c09"
+        },
+        {
+          "id": "REQ-ROLLING-INTERFACES",
+          "path": "pm/requirements/rolling-campaigns.md",
+          "digest": "dd90e7198653a290b46bb7b5c7e1bce5c9e3735820f79777d1b4b7236a7a0c09"
+        },
+        {
+          "id": "REQ-PONYTAIL-STATIC-LANGUAGE",
+          "path": "pm/requirements/static-language.md",
+          "digest": "8f8bef1a2b3a109f9e1d4467f4f40b0ecb3dee491b097f3a3f740424cf0d9b4d"
+        }
+      ],
+      "obligationIds": [
+        "OBL-1",
+        "OBL-2",
+        "OBL-3",
+        "OBL-4",
+        "OBL-5",
+        "OBL-6",
+        "OBL-7",
+        "OBL-8",
+        "OBL-9",
+        "OBL-10",
+        "OBL-11",
+        "OBL-12",
+        "OBL-13",
+        "OBL-14",
+        "OBL-15",
+        "OBL-16",
+        "OBL-17",
+        "OBL-18",
+        "OBL-19",
+        "OBL-20",
+        "OBL-21",
+        "OBL-22",
+        "OBL-23",
+        "OBL-24",
+        "OBL-25",
+        "OBL-26",
+        "OBL-27",
+        "OBL-28",
+        "OBL-29",
+        "OBL-30",
+        "OBL-31",
+        "OBL-32",
+        "OBL-33",
+        "OBL-34",
+        "OBL-35",
+        "OBL-36",
+        "OBL-37",
+        "OBL-38",
+        "OBL-39",
+        "OBL-40",
+        "OBL-41",
+        "OBL-42",
+        "OBL-43",
+        "OBL-44",
+        "OBL-45",
+        "OBL-46",
+        "OBL-47",
+        "OBL-48",
+        "OBL-49",
+        "OBL-50",
+        "OBL-51",
+        "OBL-52",
+        "OBL-53",
+        "OBL-54",
+        "OBL-55",
+        "OBL-56",
+        "OBL-57",
+        "OBL-58",
+        "OBL-59",
+        "OBL-60",
+        "OBL-61",
+        "OBL-62",
+        "OBL-63",
+        "OBL-64",
+        "OBL-65",
+        "OBL-66",
+        "OBL-67",
+        "OBL-68",
+        "OBL-69",
+        "OBL-70",
+        "OBL-71",
+        "OBL-72",
+        "OBL-73"
+      ],
+      "inventoryIds": [
+        "OBL-1",
+        "OBL-2",
+        "OBL-3",
+        "OBL-4",
+        "OBL-5",
+        "OBL-6",
+        "OBL-15",
+        "OBL-16",
+        "OBL-17",
+        "OBL-18",
+        "OBL-19",
+        "OBL-20"
+      ]
     }
   ],
   "obligations": [
@@ -2191,6 +2341,56 @@
         "selection": [],
         "target": null
       }
+    },
+    {
+      "id": "OBL-73",
+      "category": "gate",
+      "requirementIds": [
+        "REQ-PONYTAIL-STATIC-LANGUAGE"
+      ],
+      "responsibilityId": "typed-inventory-presentation",
+      "condition": "Repository inventory presentation executes through a checked TypeScript contract with preserved summary and diagnostic output.",
+      "criterion": "Strict root build, unchanged configured TSTS, exact V2/V3 and empty inventory formatter proof and existing census CLI proof and isolated rolling graph/PostgreSQL proof pass on identified inputs; canonical source ownership, generated runtime and traceability remain synchronized.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "STATIC-INVENTORY-PRESENTATION"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": "S07",
+        "taskletIds": [
+          "S07-F26-T01",
+          "S07-F26-T02",
+          "S07-F26-T03",
+          "S07-F26-T04"
+        ],
+        "plannedPaths": [
+          "src/campaign-inventory.ts",
+          "src/campaign-census.js",
+          "tests/campaign-inventory.test.ts",
+          "src/campaign-inventory.js",
+          "pm/requirements/traceability.generated.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/inventory-presentation.md",
+          "tests/rolling-campaign-store.integration.test.ts",
+          "tests/rolling-campaign.integration.test.ts"
+        ],
+        "operations": [
+          "edit",
+          "build",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "typed inventory formatter",
+          "existing census CLI proof",
+          "isolated rolling graph and PostgreSQL proof"
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "focused-static-migration"
+        }
+      }
     }
   ],
   "certificates": [],
@@ -2390,6 +2590,152 @@
       ],
       "preparation": null,
       "reason": "Apply stakeholder-approved normative atomicity to known rolling delivery scope, requirement membership and acceptance contributions. Preserve historical gates and identities; register all known atoms without awarding discharge or claiming inventory completeness. Language operation decomposition and execution bindings remain pending. Register the three known compiler/checker/runtime foundation conditions separately from the unfinished operation migration inventory.",
+      "assessor": "coordinator"
+    },
+    {
+      "id": "CHECKPOINT-4",
+      "predecessorId": "CHECKPOINT-3",
+      "baselineId": "BASELINE-4",
+      "kind": "rebaseline",
+      "selectedIds": [],
+      "registeredIds": [
+        "OBL-1",
+        "OBL-2",
+        "OBL-3",
+        "OBL-4",
+        "OBL-5",
+        "OBL-6",
+        "OBL-7",
+        "OBL-8",
+        "OBL-9",
+        "OBL-10",
+        "OBL-11",
+        "OBL-12",
+        "OBL-13",
+        "OBL-14",
+        "OBL-15",
+        "OBL-16",
+        "OBL-17",
+        "OBL-18",
+        "OBL-19",
+        "OBL-20",
+        "OBL-21",
+        "OBL-22",
+        "OBL-23",
+        "OBL-24",
+        "OBL-25",
+        "OBL-26",
+        "OBL-27",
+        "OBL-28",
+        "OBL-29",
+        "OBL-30",
+        "OBL-31",
+        "OBL-32",
+        "OBL-33",
+        "OBL-34",
+        "OBL-35",
+        "OBL-36",
+        "OBL-37",
+        "OBL-38",
+        "OBL-39",
+        "OBL-40",
+        "OBL-41",
+        "OBL-42",
+        "OBL-43",
+        "OBL-44",
+        "OBL-45",
+        "OBL-46",
+        "OBL-47",
+        "OBL-48",
+        "OBL-49",
+        "OBL-50",
+        "OBL-51",
+        "OBL-52",
+        "OBL-53",
+        "OBL-54",
+        "OBL-55",
+        "OBL-56",
+        "OBL-57",
+        "OBL-58",
+        "OBL-59",
+        "OBL-60",
+        "OBL-61",
+        "OBL-62",
+        "OBL-63",
+        "OBL-64",
+        "OBL-65",
+        "OBL-66",
+        "OBL-67",
+        "OBL-68",
+        "OBL-69",
+        "OBL-70",
+        "OBL-71",
+        "OBL-72",
+        "OBL-73"
+      ],
+      "certificateIds": [],
+      "invalidatedIds": [],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": null,
+      "reason": "Register the atomic typed inventory presentation operation and its exact neutral-preparation binding under the approved whole-codebase language scope. Preserve all historical identities and incomplete inventories.",
+      "assessor": "coordinator"
+    },
+    {
+      "id": "CHECKPOINT-5",
+      "predecessorId": "CHECKPOINT-4",
+      "baselineId": "BASELINE-4",
+      "kind": "neutral",
+      "selectedIds": [
+        "OBL-73"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "CERT-1"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": {
+        "obligationId": "OBL-73",
+        "operations": [
+          "edit",
+          "build",
+          "test",
+          "check",
+          "assess"
+        ],
+        "deliverable": "Typed inventory presentation with exact output/CLI proof, synchronized runtime and fresh scoped certificate; stop after this bound operation."
+      },
+      "reason": "Accept the completed bounded language operation without claiming traceability inventory reduction, whole-language acceptance or campaign closure.",
       "assessor": "coordinator"
     }
   ]

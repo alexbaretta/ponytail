@@ -32,3 +32,13 @@ obligations before their assignments or final acceptance. STATIC-RUNTIME then
 identifies the exact registered IDs demonstrated by each focused operation proof.
 Until that reconciliation is complete, the inventory and whole-language acceptance
 remain unresolved even when the compiler/checker/runtime foundation passes.
+
+### Acceptance STATIC-INVENTORY-PRESENTATION
+
+Demonstrates
+[OBL-73](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-73)
+through STATIC-RUNTIME. Execute typed formatter proof for physical V2/V3 and
+empty valid inventories, then existing census CLI proof. Observe exact summaries,
+both diagnostic levels, unmanaged references, input preservation and final
+newline through the generated typed runtime. Strict build and unchanged TSTS
+must pass. This proves this operation only; whole-language acceptance remains open.
