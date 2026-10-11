@@ -370,6 +370,28 @@ DROP INDEX IF EXISTS rolling_review_v1_pending;
 CREATE INDEX IF NOT EXISTS rolling_review_v1_pending_v2
 ON rolling_review_v1 (project_id,campaign_id,created_at,review_id) WHERE outcome_text IS NULL AND replacement_text IS NULL;
 
+CREATE TABLE IF NOT EXISTS rolling_increment_v1 (
+  project_id uuid NOT NULL,
+  campaign_id text NOT NULL,
+  review_id uuid NOT NULL,
+  increment_id uuid NOT NULL,
+  claim_text text NOT NULL CHECK (COALESCE(jsonb_typeof((claim_text::jsonb)->'schemaVersion')='number'
+    AND (claim_text::jsonb)->>'schemaVersion'='1'
+    AND (claim_text::jsonb)->>'id'=increment_id::text
+    AND (claim_text::jsonb)->>'campaignId'=campaign_id
+    AND (claim_text::jsonb)->>'reviewId'=review_id::text, false)),
+  state text NOT NULL CHECK (state IN ('CLAIMED','REBASING','CONFLICT','REBASED','PUSHING','PUBLISHED','REBASE_REQUIRED','PUSH_REJECTED','UNCONFIRMED')),
+  candidate_revision text,
+  remote_revision text,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (project_id,campaign_id,review_id),
+  UNIQUE (project_id,campaign_id,increment_id),
+  FOREIGN KEY (project_id,campaign_id,review_id)
+    REFERENCES rolling_review_v1(project_id,campaign_id,review_id) ON DELETE CASCADE
+);
+CREATE UNIQUE INDEX IF NOT EXISTS rolling_increment_v1_active_campaign
+ON rolling_increment_v1 (project_id,campaign_id) WHERE state <> 'PUBLISHED';
+
 CREATE TABLE IF NOT EXISTS rolling_review_dispatch_v1 (
   project_id uuid NOT NULL,
   campaign_id text NOT NULL,

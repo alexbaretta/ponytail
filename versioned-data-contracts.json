@@ -3,6 +3,14 @@
   "schemaVersion": 1,
   "families": [
     {
+      "id": "rolling-increment-claim",
+      "implementation": {"workspace": "ponytail", "module": "src/rolling-integration.ts", "readerRegistryExport": "RollingIncrementClaimReaders"},
+      "currentVersion": "V1",
+      "versions": ["V1"],
+      "supportedReadVersions": ["V1"],
+      "supportedDowngradeVersions": []
+    },
+    {
       "id": "rolling-worker-resumption",
       "implementation": {"workspace": "ponytail", "module": "src/rolling-worker.ts", "readerRegistryExport": "RollingWorkerResumptionReaders"},
       "currentVersion": "V1",

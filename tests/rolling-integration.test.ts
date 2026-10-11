@@ -6,7 +6,7 @@ import path from 'node:path';
 import {execFileSync} from 'node:child_process';
 import assert from 'node:assert/strict';
 import test,{type TestContext} from 'node:test';
-import {fastRebaseRollingIncrement,continueFastRebaseRollingIncrement,publishRollingIncrement,reconcileRollingIncrementPublication,fastForwardRollingIncrement,type RollingReviewedIncrement} from '../src/rolling-integration.js';
+import {fastRebaseRollingIncrement,continueFastRebaseRollingIncrement,publishRollingIncrement,reconcileRollingIncrementPublication,fastForwardRollingIncrement,readRollingIncrementClaimV1,type RollingReviewedIncrement} from '../src/rolling-integration.js';
 
 interface RollingIntegrationFixture {
  readonly root: string;
@@ -183,4 +183,17 @@ test('coordinator fast-forwards its configured branch and refuses checkout chang
  fastForwardRollingIncrement(coordinatorRoot,'main',rollingFastRebaseResult.revision);
  assert.equal(git(coordinatorRoot,['rev-parse','HEAD']),rollingFastRebaseResult.revision);
  assert.equal(fs.readFileSync(path.join(coordinatorRoot,'obligation.txt'),'utf8'),'Reviewed obligation\nSecond implementation step\n');
+});
+
+// Traceability: verifies REQ-ROLLING-PUBLICATION
+test('integration claim reader freezes exact V1 fields and rejects malformed persisted identities',()=> {
+ const rollingIncrementClaimV1 = {schemaVersion:1,id:'increment',campaignId:'campaign',reviewId:'review',assignmentId:'assignment',
+  generation:'generation',graphDigest:'a'.repeat(64),rootPath:'/worker',coordinatorRoot:'/coordinator',
+  target:{remote:'origin',branch:'campaign/increment'},reviewedRevision:'b'.repeat(40),reviewedBase:'c'.repeat(40)};
+ assert.deepEqual(readRollingIncrementClaimV1(rollingIncrementClaimV1),rollingIncrementClaimV1);
+ for (const invalid of [null,{...rollingIncrementClaimV1,schemaVersion:2},{...rollingIncrementClaimV1,unexpected:true},
+  {...rollingIncrementClaimV1,rootPath:'relative'},{...rollingIncrementClaimV1,graphDigest:'stale'},
+  {...rollingIncrementClaimV1,reviewedRevision:'not-a-commit'},{...rollingIncrementClaimV1,target:{remote:'origin',branch:'increment',extra:true}}]) {
+  assert.throws(()=>readRollingIncrementClaimV1(invalid),/rolling integration/);
+ }
 });

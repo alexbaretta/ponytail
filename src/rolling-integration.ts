@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Alex Baretta. All rights reserved.
 // Licensed under the MIT License. See LICENSE in the project root.
 import fs from 'node:fs';
+import path from 'node:path';
 import {spawnSync,type SpawnSyncReturns} from 'node:child_process';
 
 export interface RollingIncrementTarget {
@@ -206,3 +207,47 @@ export function fastForwardRollingIncrement(rootPath: string,branch: string,revi
  git(rootPath,['merge','--ff-only','--no-autostash',revision]);
  requireIntegration(git(rootPath,['rev-parse','HEAD']).trim() === revision,'increment branch differs from candidate');
 }
+
+export interface RollingIncrementClaimV1 {
+ readonly schemaVersion: 1;
+ readonly id: string;
+ readonly campaignId: string;
+ readonly reviewId: string;
+ readonly assignmentId: string;
+ readonly generation: string;
+ readonly graphDigest: string;
+ readonly rootPath: string;
+ readonly coordinatorRoot: string;
+ readonly target: RollingIncrementTarget;
+ readonly reviewedRevision: string;
+ readonly reviewedBase: string;
+}
+
+// Traceability: implements REQ-ROLLING-PUBLICATION
+export function readRollingIncrementClaimV1(value: unknown): RollingIncrementClaimV1 {
+ requireIntegration(value !== null && typeof value === 'object' && !Array.isArray(value),'claim must be an object');
+ requireIntegration(Object.keys(value).sort().join('\0') === ['schemaVersion','id','campaignId','reviewId','assignmentId','generation',
+  'graphDigest','rootPath','coordinatorRoot','target','reviewedRevision','reviewedBase'].sort().join('\0'),'invalid claim fields');
+ requireIntegration('schemaVersion' in value && value.schemaVersion === 1,'unsupported integration claim version');
+ const claimIdentity = (field: unknown): string => {
+  requireIntegration(typeof field === 'string' && field.trim() === field && field.length > 0 && !/[\0\r\n]/u.test(field),'invalid claim identity');
+  return field;
+ };
+ requireIntegration('id' in value && 'campaignId' in value && 'reviewId' in value && 'assignmentId' in value
+  && 'generation' in value && 'graphDigest' in value && 'rootPath' in value && 'coordinatorRoot' in value
+  && 'target' in value && 'reviewedRevision' in value && 'reviewedBase' in value,'missing claim fields');
+ const target = value.target;
+ requireIntegration(target !== null && typeof target === 'object' && !Array.isArray(target)
+  && Object.keys(target).sort().join('\0') === 'branch\0remote' && 'branch' in target && 'remote' in target,'invalid claim target');
+ const rootPath = claimIdentity(value.rootPath);
+ const coordinatorRoot = claimIdentity(value.coordinatorRoot);
+ requireIntegration(path.isAbsolute(rootPath) && path.isAbsolute(coordinatorRoot),'claim checkout paths must be absolute');
+ const graphDigest = claimIdentity(value.graphDigest);
+ requireIntegration(/^[a-f0-9]{64}$/u.test(graphDigest),'invalid claim graph digest');
+ const reviewedRevision = commit(claimIdentity(value.reviewedRevision));
+ const reviewedBase = commit(claimIdentity(value.reviewedBase));
+ return {schemaVersion:1,id:claimIdentity(value.id),campaignId:claimIdentity(value.campaignId),reviewId:claimIdentity(value.reviewId),
+  assignmentId:claimIdentity(value.assignmentId),generation:claimIdentity(value.generation),graphDigest,rootPath,coordinatorRoot,
+  target:{branch:claimIdentity(target.branch),remote:claimIdentity(target.remote)},reviewedRevision,reviewedBase};
+}
+export const RollingIncrementClaimReaders = {V1:readRollingIncrementClaimV1};

@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Alex Baretta. All rights reserved.
 // Licensed under the MIT License. See LICENSE in the project root.
 import crypto from 'node:crypto';
+import {readRollingIncrementClaimV1,type RollingIncrementClaimV1} from './rolling-integration.js';
 import path from 'node:path';
 import { parse } from 'lossless-json';
 import type { Pool, PoolClient } from 'pg';
@@ -598,6 +599,41 @@ export class RollingCampaignStore {
       if (rollingReviewOutcomeV1) validateRollingReviewOutcome(rollingReviewRequestV1, rollingReviewOutcomeV1);
       const rollingReviewCandidate = await this.validateReviewCandidate(poolClient, rollingCampaignRow, rollingReviewRequestV1);
       return { review: { request: rollingReviewRequestV1, outcome: rollingReviewOutcomeV1 }, ...rollingReviewCandidate };
+    });
+  }
+
+  // Traceability: implements REQ-ROLLING-PUBLICATION
+  async claimIncrement(campaignId: string, reviewId: string): Promise<RollingIncrementClaimV1> {
+    return this.transaction(campaignId, async (poolClient, rollingCampaignRow) => {
+      const existing = (await poolClient.query<Record<string, unknown>>('SELECT claim_text FROM ponytail_index.rolling_increment_v1 WHERE project_id=$1 AND campaign_id=$2 AND review_id=$3', [this.projectId,campaignId,reviewId])).rows[0];
+      if (existing) {
+        const rollingIncrementClaimV1 = readRollingIncrementClaimV1(readStateText(stringColumn(existing.claim_text,'increment claim')));
+        requireState(rollingIncrementClaimV1.campaignId === campaignId && rollingIncrementClaimV1.reviewId === reviewId,'stored claim identity differs');
+        const rollingStoredAssignment = await this.assignment(poolClient,campaignId,rollingIncrementClaimV1.assignmentId,rollingIncrementClaimV1.generation);
+        requireState(rollingStoredAssignment.state === 'INTEGRATING' && rollingStoredAssignment.activityStopped && !rollingStoredAssignment.retired,
+          'increment requires stopped retained integrating ownership');
+        requireState(rollingIncrementClaimV1.graphDigest === rollingCampaignRow.graph_digest,'integration claim graph is stale');
+        this.currentLease(rollingStoredAssignment,this.graph(rollingCampaignRow,rollingCampaignRow.graph_digest));
+        return rollingIncrementClaimV1;
+      }
+      const row = (await poolClient.query<Record<string, unknown>>('SELECT request_text,outcome_text,replacement_text FROM ponytail_index.rolling_review_v1 WHERE project_id=$1 AND campaign_id=$2 AND review_id=$3', [this.projectId,campaignId,reviewId])).rows[0];
+      requireState(row && row.replacement_text === null && row.outcome_text !== null,'increment requires an unreplaced decided review');
+      const rollingReviewRequestV1 = parseRollingReviewRequest(stringColumn(row.request_text,'review request'));
+      const rollingReviewOutcomeV1 = parseRollingReviewOutcome(stringColumn(row.outcome_text,'review outcome'));
+      validateRollingReviewOutcome(rollingReviewRequestV1,rollingReviewOutcomeV1);
+      requireState(rollingReviewOutcomeV1.decision === 'accepted','increment requires an accepted review');
+      const rollingStoredAssignment = await this.assignment(poolClient,campaignId,rollingReviewRequestV1.assignmentId,rollingReviewRequestV1.generation);
+      requireState(rollingStoredAssignment.state === 'INTEGRATING','assignment is not integrating');
+      const rollingReviewCandidate = await this.validateReviewCandidate(poolClient,rollingCampaignRow,rollingReviewRequestV1);
+      const rollingExecutionConfig = executionConfiguration(rollingCampaignRow.configuration_text);
+      const rollingIncrementClaimV1 = readRollingIncrementClaimV1({schemaVersion:1,id:crypto.randomUUID(),campaignId,reviewId,
+        assignmentId:rollingReviewRequestV1.assignmentId,generation:rollingReviewRequestV1.generation,
+        graphDigest:rollingCampaignRow.graph_digest,rootPath:rollingReviewCandidate.rootPath,coordinatorRoot:rollingCampaignRow.coordinator_root,
+        target:{remote:rollingExecutionConfig.mainline.remote,branch:rollingExecutionConfig.incrementRef},
+        reviewedRevision:rollingReviewRequestV1.revision,reviewedBase:rollingReviewRequestV1.baseCommit});
+      await poolClient.query('INSERT INTO ponytail_index.rolling_increment_v1(project_id,campaign_id,review_id,increment_id,claim_text,state) VALUES($1,$2,$3,$4,$5,\'CLAIMED\')',
+        [this.projectId,campaignId,reviewId,rollingIncrementClaimV1.id,JSON.stringify(rollingIncrementClaimV1)]);
+      return rollingIncrementClaimV1;
     });
   }
 

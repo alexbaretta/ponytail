@@ -514,10 +514,23 @@ export async function runRollingReviewScenario(t: TestContext, reviewScenario: R
   fs.writeFileSync(path.join(workerRoot, 'unexpected.ts'), 'dirty during review');
   await assert.rejects(rollingCampaignStore.recordReviewOutcome('bound-fixture', rollingStoredReview.request.id, reviewerSessionId, rollingReviewOutcomeV1), /dirty/);
   fs.unlinkSync(path.join(workerRoot, 'unexpected.ts'));
+  await assert.rejects(rollingCampaignStore.claimIncrement('bound-fixture',rollingStoredReview.request.id),/decided review/);
   const decisions = await Promise.all(Array.from({ length: 4 }, () => rollingCampaignStore.recordReviewOutcome('bound-fixture',
     rollingStoredReview.request.id, reviewerSessionId, rollingReviewOutcomeV1)));
   assert.ok(decisions.every(item => JSON.stringify(item.outcome) === JSON.stringify(rollingReviewOutcomeV1)));
   assert.equal((await rollingCampaignStore.status('bound-fixture')).assignments[0]?.state, reviewDecision === 'accepted' ? 'INTEGRATING' : 'REWORK');
+  if (reviewDecision === 'accepted') {
+    const claims = await Promise.all(Array.from({length:4},()=>rollingCampaignStore.claimIncrement('bound-fixture',rollingStoredReview.request.id)));
+    const rollingIncrementClaimV1 = claims[0];assert.ok(rollingIncrementClaimV1);
+    assert.ok(claims.every(claim=>JSON.stringify(claim) === JSON.stringify(rollingIncrementClaimV1)));
+    assert.equal(rollingIncrementClaimV1.reviewedRevision,revision);
+    assert.equal(rollingIncrementClaimV1.target.branch,'campaign/bound-fixture');
+    assert.deepEqual(await restartedRollingCampaignStore.claimIncrement('bound-fixture',rollingStoredReview.request.id),rollingIncrementClaimV1);
+    fs.writeFileSync(path.join(workerRoot,'integration-in-progress.txt'),'Retained integration work');
+    assert.deepEqual(await restartedRollingCampaignStore.claimIncrement('bound-fixture',rollingStoredReview.request.id),rollingIncrementClaimV1);
+    fs.unlinkSync(path.join(workerRoot,'integration-in-progress.txt'));
+    assert.equal((await pool.query<Record<string,unknown>>('SELECT count(*)::integer AS count FROM ponytail_index.rolling_increment_v1 WHERE project_id=$1',[projectId])).rows[0]?.count,1);
+  } else await assert.rejects(rollingCampaignStore.claimIncrement('bound-fixture',rollingStoredReview.request.id),/accepted review/);
   const changedRollingReviewOutcomeV1: RollingReviewOutcomeV1 = reviewDecision === 'accepted'
     ? { ...rollingReviewOutcomeV1, decision: 'rejected', findings: ['Changed verdict.'] }
     : { ...rollingReviewOutcomeV1, decision: 'accepted', findings: [] };
@@ -575,6 +588,7 @@ const reviewScenarios: readonly ReviewScenario[] = [{ decision: 'accepted', mode
 // Traceability: verifies REQ-ROLLING-REVIEW
 test('real PostgreSQL records lost reviewer replacement and fences the old actor while retaining fresh review after restart',
   t => runRollingReviewScenario(t,{decision:'accepted',mode:'manual',replaceLostReviewer:true}));
+// Traceability: verifies REQ-ROLLING-PUBLICATION
 for (const reviewScenario of reviewScenarios) {
   test(`real PostgreSQL serializes allocation, retains ownership and persists ${reviewScenario.mode === 'protocol' ? 'native application' : reviewScenario.decision} review`,
     t => runRollingReviewScenario(t, reviewScenario));
