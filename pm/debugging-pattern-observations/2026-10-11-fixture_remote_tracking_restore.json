@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-10-11-fixture_remote_tracking_restore",
+  "recorded_at": "2026-10-11T14:05:04-07:00",
+  "source_references": [
+    "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/obligations.json#OBL-55"
+  ],
+  "context": {
+    "languages": [
+      "typescript"
+    ],
+    "frameworks": [],
+    "components": [
+      "push recovery PostgreSQL fixture"
+    ],
+    "affected_boundaries": [
+      "temporary upstream probe and fetched remote-tracking ref"
+    ],
+    "code_references": [
+      "tests/rolling-campaign-store.integration.test.ts"
+    ]
+  },
+  "observed_behavior": "The recovery fixture returned UNCONFIRMED after restoring the temporary remote upstream probe and expecting a normal retry.",
+  "expected_behavior": "Independent fixture cases restore all state created by the preceding probe, while production fetch remains non-forcing.",
+  "causal_mechanism": "The divergence probe advanced both the bare remote branch and the shared local remote-tracking ref. Restoring only the remote branch left the tracking ref ahead; the explicit non-forcing fetch rejected its backward update.",
+  "anti_pattern": {
+    "structural_description": "Fixture cleanup restores the producer state but leaves its observed local projection changed.",
+    "why_it_fails": "The subsequent case crosses a different ancestry boundary than its declared starting state."
+  },
+  "correct_pattern": {
+    "required_invariant": "Undo only the probe-created ref changes on both sides of the fixture boundary.",
+    "implementation_description": "Preserve the upstream probe commit under its own ref and compare-and-swap restore both the disposable remote branch and its local tracking ref. Preserve production refusal of non-fast-forward fetch."
+  },
+  "applicability_conditions": [
+    "One disposable fixture runs sequential upstream-divergence and successful-retry cases."
+  ],
+  "known_non_matches": [
+    "A genuine upstream history rewind remains an unresolved observation and must not be forced through by production recovery."
+  ],
+  "confirmation_evidence": [
+    "The fixture failed with UNCONFIRMED immediately after its upstream restore.",
+    "A minimal Git-only probe reproduced fetch exit 1 with the non-fast-forward rejection after restoring just the remote branch.",
+    "Restoring both fixture-created ref changes makes all three focused PostgreSQL review/publication scenarios pass with zero failures or skips."
+  ],
+  "regression_proofs": [
+    "tests/rolling-campaign-store.integration.test.ts: real PostgreSQL serializes allocation, retains ownership and persists accepted review"
+  ]
+}

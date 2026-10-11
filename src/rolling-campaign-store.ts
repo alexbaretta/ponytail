@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Alex Baretta. All rights reserved.
 // Licensed under the MIT License. See LICENSE in the project root.
 import crypto from 'node:crypto';
-import {readRollingIncrementClaimV1,readRollingIncrementRebaseV1,verifyRollingIncrementRebase,prepareRollingIncrementRebase,readRollingIncrementPublicationV1,reconcileRollingIncrementPublication,verifyRollingIncrementLocalIntegration,type RollingIncrementClaimV1,type RollingIncrementRebaseV1,type RollingFastRebaseResult,type RollingIncrementPublicationV1,type RollingIncrementPublicationResult,type RollingIncrementPushStarted} from './rolling-integration.js';
+import {readRollingIncrementClaimV1,readRollingIncrementRebaseV1,verifyRollingIncrementRebase,prepareRollingIncrementRebase,readRollingIncrementPublicationV1,reconcileRollingIncrementPublication,publishRollingIncrement,verifyRollingIncrementLocalIntegration,type RollingIncrementClaimV1,type RollingIncrementRebaseV1,type RollingFastRebaseResult,type RollingIncrementPublicationV1,type RollingIncrementPublicationResult,type RollingIncrementPushStarted} from './rolling-integration.js';
 import path from 'node:path';
 import { parse } from 'lossless-json';
 import type { Pool, PoolClient } from 'pg';
@@ -768,6 +768,36 @@ export class RollingCampaignStore {
     const rollingIncrementClaimV1 = readRollingIncrementClaimV1(readStateText(stringColumn(row.claim_text,'increment claim')));
     const rollingIncrementPublicationResult = reconcileRollingIncrementPublication({rootPath:rollingIncrementClaimV1.rootPath,target:rollingIncrementClaimV1.target,
       revision:stringColumn(row.candidate_revision,'candidate revision')});
+    return this.recordIncrementPublication(campaignId,reviewId,rollingIncrementPublicationResult);
+  }
+
+  // Traceability: implements REQ-ROLLING-PUBLICATION
+  async retryIncrementPush(campaignId: string,reviewId: string): Promise<RollingIncrementPublicationV1> {
+    const observedRollingIncrementPublicationV1 = await this.observeIncrementPublication(campaignId,reviewId);
+    if (observedRollingIncrementPublicationV1.result.state === 'PUBLISHED' || observedRollingIncrementPublicationV1.result.state === 'UNCONFIRMED') return observedRollingIncrementPublicationV1;
+    const rollingIncrementPushStarted = await this.transaction<RollingIncrementPushStarted>(campaignId,async (poolClient,rollingCampaignRow)=> {
+      const row = (await poolClient.query<Record<string,unknown>>('SELECT claim_text,state,proof_text FROM ponytail_index.rolling_increment_v1 WHERE project_id=$1 AND campaign_id=$2 AND review_id=$3',[this.projectId,campaignId,reviewId])).rows[0];
+      requireState(row && (row.state === 'REBASE_REQUIRED' || row.state === 'PUSH_REJECTED'),'push retry is already claimed; observe its original outcome');
+      const rollingIncrementClaimV1 = readRollingIncrementClaimV1(readStateText(stringColumn(row.claim_text,'increment claim')));
+      const rollingStoredAssignment = await this.assignment(poolClient,campaignId,rollingIncrementClaimV1.assignmentId,rollingIncrementClaimV1.generation);
+      requireState(rollingStoredAssignment.state === 'INTEGRATING' && rollingStoredAssignment.activityStopped && !rollingStoredAssignment.retired,'push retry requires stopped retained ownership');
+      const rollingGraph = this.collectGraph(rollingCampaignRow);
+      const obligationLeaseV1 = this.currentLease(rollingStoredAssignment,rollingGraph);
+      const obligationBaseline = rollingGraph.document.baselines.at(-1);
+      requireState(obligationBaseline && obligationBaseline.id === obligationLeaseV1.baselineId
+        && obligationBaseline.authority.assessors.includes(obligationLeaseV1.assessor)
+        && obligationLeaseV1.authority.every(reference=>obligationBaseline.authority.references.includes(reference)),'push retry authority changed');
+      const rollingExecutionConfig = executionConfiguration(rollingCampaignRow.configuration_text);
+      requireState(rollingIncrementClaimV1.target.remote === rollingExecutionConfig.mainline.remote
+        && rollingIncrementClaimV1.target.branch === rollingExecutionConfig.incrementRef,'push retry target changed');
+      const rollingWorkerSubmissionV1 = parseRollingWorkerSubmission(stringColumn(row.proof_text,'increment proof'));
+      validateRollingWorkerSubmission(rollingIncrementClaimV1.rootPath,obligationLeaseV1,rollingWorkerSubmissionV1);
+      for (const argv of rollingGraph.projectConfiguration.qa.focused) requireState(rollingWorkerSubmissionV1.proof.some(proof=>proof.evidence.command === argv.join(' ')),'configured focused QA is missing');
+      verifyRollingIncrementLocalIntegration(rollingIncrementClaimV1.coordinatorRoot,rollingIncrementClaimV1.target.branch,rollingWorkerSubmissionV1.revision);
+      await poolClient.query('UPDATE ponytail_index.rolling_increment_v1 SET state=\'PUSHING\' WHERE project_id=$1 AND campaign_id=$2 AND review_id=$3',[this.projectId,campaignId,reviewId]);
+      return {claim:rollingIncrementClaimV1,revision:rollingWorkerSubmissionV1.revision};
+    });
+    const rollingIncrementPublicationResult = publishRollingIncrement({rootPath:rollingIncrementPushStarted.claim.rootPath,target:rollingIncrementPushStarted.claim.target,revision:rollingIncrementPushStarted.revision});
     return this.recordIncrementPublication(campaignId,reviewId,rollingIncrementPublicationResult);
   }
 

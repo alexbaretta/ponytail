@@ -628,6 +628,36 @@ class RollingCampaignStore {
             revision: stringColumn(row.candidate_revision, 'candidate revision') });
         return this.recordIncrementPublication(campaignId, reviewId, rollingIncrementPublicationResult);
     }
+    async retryIncrementPush(campaignId, reviewId) {
+        const observedRollingIncrementPublicationV1 = await this.observeIncrementPublication(campaignId, reviewId);
+        if (observedRollingIncrementPublicationV1.result.state === 'PUBLISHED' || observedRollingIncrementPublicationV1.result.state === 'UNCONFIRMED')
+            return observedRollingIncrementPublicationV1;
+        const rollingIncrementPushStarted = await this.transaction(campaignId, async (poolClient, rollingCampaignRow) => {
+            const row = (await poolClient.query('SELECT claim_text,state,proof_text FROM ponytail_index.rolling_increment_v1 WHERE project_id=$1 AND campaign_id=$2 AND review_id=$3', [this.projectId, campaignId, reviewId])).rows[0];
+            requireState(row && (row.state === 'REBASE_REQUIRED' || row.state === 'PUSH_REJECTED'), 'push retry is already claimed; observe its original outcome');
+            const rollingIncrementClaimV1 = (0, rolling_integration_js_1.readRollingIncrementClaimV1)(readStateText(stringColumn(row.claim_text, 'increment claim')));
+            const rollingStoredAssignment = await this.assignment(poolClient, campaignId, rollingIncrementClaimV1.assignmentId, rollingIncrementClaimV1.generation);
+            requireState(rollingStoredAssignment.state === 'INTEGRATING' && rollingStoredAssignment.activityStopped && !rollingStoredAssignment.retired, 'push retry requires stopped retained ownership');
+            const rollingGraph = this.collectGraph(rollingCampaignRow);
+            const obligationLeaseV1 = this.currentLease(rollingStoredAssignment, rollingGraph);
+            const obligationBaseline = rollingGraph.document.baselines.at(-1);
+            requireState(obligationBaseline && obligationBaseline.id === obligationLeaseV1.baselineId
+                && obligationBaseline.authority.assessors.includes(obligationLeaseV1.assessor)
+                && obligationLeaseV1.authority.every(reference => obligationBaseline.authority.references.includes(reference)), 'push retry authority changed');
+            const rollingExecutionConfig = executionConfiguration(rollingCampaignRow.configuration_text);
+            requireState(rollingIncrementClaimV1.target.remote === rollingExecutionConfig.mainline.remote
+                && rollingIncrementClaimV1.target.branch === rollingExecutionConfig.incrementRef, 'push retry target changed');
+            const rollingWorkerSubmissionV1 = (0, rolling_worker_submission_js_1.parseRollingWorkerSubmission)(stringColumn(row.proof_text, 'increment proof'));
+            (0, rolling_worker_submission_js_1.validateRollingWorkerSubmission)(rollingIncrementClaimV1.rootPath, obligationLeaseV1, rollingWorkerSubmissionV1);
+            for (const argv of rollingGraph.projectConfiguration.qa.focused)
+                requireState(rollingWorkerSubmissionV1.proof.some(proof => proof.evidence.command === argv.join(' ')), 'configured focused QA is missing');
+            (0, rolling_integration_js_1.verifyRollingIncrementLocalIntegration)(rollingIncrementClaimV1.coordinatorRoot, rollingIncrementClaimV1.target.branch, rollingWorkerSubmissionV1.revision);
+            await poolClient.query('UPDATE ponytail_index.rolling_increment_v1 SET state=\'PUSHING\' WHERE project_id=$1 AND campaign_id=$2 AND review_id=$3', [this.projectId, campaignId, reviewId]);
+            return { claim: rollingIncrementClaimV1, revision: rollingWorkerSubmissionV1.revision };
+        });
+        const rollingIncrementPublicationResult = (0, rolling_integration_js_1.publishRollingIncrement)({ rootPath: rollingIncrementPushStarted.claim.rootPath, target: rollingIncrementPushStarted.claim.target, revision: rollingIncrementPushStarted.revision });
+        return this.recordIncrementPublication(campaignId, reviewId, rollingIncrementPublicationResult);
+    }
     async validateReviewCandidate(poolClient, rollingCampaignRow, rollingReviewRequestV1) {
         const rollingStoredAssignment = await this.assignment(poolClient, rollingReviewRequestV1.campaignId, rollingReviewRequestV1.assignmentId, rollingReviewRequestV1.generation);
         requireState(rollingStoredAssignment.activityStopped && !rollingStoredAssignment.retired, 'review candidate requires a stopped retained worker');
