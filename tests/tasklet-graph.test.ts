@@ -21,6 +21,9 @@ test('derivation retains direct reverse edges, transitive descendants, depth and
   const taskletGraphV3: TaskletGraphV3 = readTaskletMetadataV3('S01', taskletMetadataV3, 'S01.tasklets.json');
   const statuses: ReadonlyMap<string, TaskletStatus> = new Map([
     ['S01-F01-T01', 'DONE'], ['S01-F01-T02', 'PENDING'], ['S01-F02-T01', 'PENDING'], ['S01-F02-T02', 'PENDING'] ]);
+  const originalTasklets = JSON.stringify([...taskletGraphV3.tasklets]);
+  const originalFeatures = JSON.stringify([...taskletGraphV3.features]);
+  const originalStatuses = [...statuses];
   assert.deepEqual(effectiveDependencies(taskletGraphV3, 'S01-F02-T01'), ['S01-F01-T02']);
   assert.deepEqual(effectiveDependencies(taskletGraphV3, 'S01-F02-T02'), ['S01-F02-T01', 'S01-F01-T02']);
   const taskletGraphDerivation: TaskletGraphDerivation = validateTaskletGraph(taskletGraphV3, statuses);
@@ -35,4 +38,12 @@ test('derivation retains direct reverse edges, transitive descendants, depth and
   assert.equal(completedTaskletGraphDerivation.unfinishedDescendants.get('S01-F01-T01'), 0);
   assert.deepEqual([...completedTaskletGraphDerivation.depth], [...taskletGraphDerivation.depth]);
   assert.deepEqual(taskletMetadataV3, metadata());
+  assert.equal(JSON.stringify([...taskletGraphV3.tasklets]), originalTasklets);
+  assert.equal(JSON.stringify([...taskletGraphV3.features]), originalFeatures);
+  assert.deepEqual([...statuses], originalStatuses);
+  const mismatchedStatuses: ReadonlyMap<string, TaskletStatus> = new Map([['S01-F01-T01', 'DONE']]);
+  assert.throws(() => validateTaskletGraph(taskletGraphV3, mismatchedStatuses), /exactly the same tasklet IDs/);
+  assert.equal(JSON.stringify([...taskletGraphV3.tasklets]), originalTasklets);
+  assert.equal(JSON.stringify([...taskletGraphV3.features]), originalFeatures);
+  assert.deepEqual([...mismatchedStatuses], [['S01-F01-T01', 'DONE']]);
 });

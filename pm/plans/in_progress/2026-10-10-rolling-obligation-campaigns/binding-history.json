@@ -948,6 +948,132 @@
           "profile": "typed-tasklet-metadata-OBL-100"
         }
       }
+    },
+    {
+      "id": "BIND-23",
+      "obligationId": "OBL-102",
+      "predecessorId": null,
+      "baselineId": "BASELINE-14",
+      "assessor": "coordinator",
+      "authority": [
+        "user-goal-2026-10-10-rolling-campaigns",
+        "user-goal-2026-10-10-static-language-existing-tsts",
+        "user-2026-10-10-normative-atomic-obligations"
+      ],
+      "reason": "Finish the already-started graph and selector outcomes with the now-typed historical fixture suite; close missing ranking, path union and input non-mutation assertions. Preserve original conditions and criteria.",
+      "dependsOn": [
+        "OBL-112"
+      ],
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "skills/plan-execution/scripts/tasklet-graph.ts",
+          "skills/plan-execution/scripts/tasklet-graph.js",
+          "tests/tasklet-graph.test.ts",
+          "tests/tasklet-selection.test.ts",
+          "tests/ready-tasklets.test.ts"
+        ],
+        "operations": [
+          "inspect",
+          "edit",
+          "build",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "Validate tasklet/feature dependencies and derive the constrained execution graph through a checked static implementation preserving the approved portable behavior and historical contract meanings."
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "typed-tasklet-graph-OBL-102"
+        }
+      }
+    },
+    {
+      "id": "BIND-24",
+      "obligationId": "OBL-103",
+      "predecessorId": null,
+      "baselineId": "BASELINE-14",
+      "assessor": "coordinator",
+      "authority": [
+        "user-goal-2026-10-10-rolling-campaigns",
+        "user-goal-2026-10-10-static-language-existing-tsts",
+        "user-2026-10-10-normative-atomic-obligations"
+      ],
+      "reason": "Finish the already-started graph and selector outcomes with the now-typed historical fixture suite; close missing ranking, path union and input non-mutation assertions. Preserve original conditions and criteria.",
+      "dependsOn": [
+        "OBL-112"
+      ],
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "skills/plan-execution/scripts/tasklet-graph.ts",
+          "skills/plan-execution/scripts/tasklet-graph.js",
+          "tests/tasklet-graph.test.ts",
+          "tests/tasklet-selection.test.ts",
+          "tests/ready-tasklets.test.ts"
+        ],
+        "operations": [
+          "inspect",
+          "edit",
+          "build",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "Select one eligible tasklet using deterministic ranking and prior affinity through a checked static implementation preserving the approved portable behavior and historical contract meanings."
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "typed-tasklet-graph-OBL-103"
+        }
+      }
+    },
+    {
+      "id": "BIND-25",
+      "obligationId": "OBL-104",
+      "predecessorId": null,
+      "baselineId": "BASELINE-14",
+      "assessor": "coordinator",
+      "authority": [
+        "user-goal-2026-10-10-rolling-campaigns",
+        "user-goal-2026-10-10-static-language-existing-tsts",
+        "user-2026-10-10-normative-atomic-obligations"
+      ],
+      "reason": "Finish the already-started graph and selector outcomes with the now-typed historical fixture suite; close missing ranking, path union and input non-mutation assertions. Preserve original conditions and criteria.",
+      "dependsOn": [
+        "OBL-112"
+      ],
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "skills/plan-execution/scripts/tasklet-graph.ts",
+          "skills/plan-execution/scripts/tasklet-graph.js",
+          "tests/tasklet-graph.test.ts",
+          "tests/tasklet-selection.test.ts",
+          "tests/ready-tasklets.test.ts"
+        ],
+        "operations": [
+          "inspect",
+          "edit",
+          "build",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "Select a bounded ordered batch with an exact union of tasklet paths through a checked static implementation preserving the approved portable behavior and historical contract meanings."
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "typed-tasklet-graph-OBL-104"
+        }
+      }
     }
   ]
 }
