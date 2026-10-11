@@ -76,8 +76,21 @@ Arc/profile/environment selections lacking fresh passing evidence. Other rule
 obligations are gates, not a seventh coordinate. Structural success is not product
 compliance; unknown, unsupported, stale, skipped and failing proof is unresolved.
 
-Globally select the earliest nonzero coordinate, then stable eligible obligation
-ID order. Stage one reaches global traceability zero; stage two resolves C1 then
+Always prioritize completing obligations that have been started over starting
+new ones. Started includes unfinished implementation, verification, review,
+integration or discharge assessment; available proof awaiting assessment is
+unfinished work. Within the applicable dependency, authority and QA gates,
+select actionable started obligations before unstarted obligations. Reuse
+adequate fresh evidence and finish their discharge before expanding work in
+progress. If every started obligation is blocked, do authorized work that
+unblocks it; otherwise select eligible new work without pretending the blocked
+obligations are complete. Reactivate an unblocked started obligation before
+assigning a new one. Record blockers and retain completion priority when they
+clear. This rule applies to standalone agents and coordinators in client projects.
+
+Globally select the earliest nonzero coordinate, then actionable started
+obligations before unstarted ones, then stable eligible obligation ID order.
+Stage one reaches global traceability zero; stage two resolves C1 then
 C2, preserving earlier zeros. Subordinate tasklet ranking cannot bypass this
 priority. Freeze same-category repair batches and paths. Immediately register
 required downstream growth; unrelated later-category work cannot join the batch.

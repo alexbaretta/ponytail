@@ -101,6 +101,9 @@ These rules remain active at every compaction level, including `off`:
   skill's obligation-centered acceptance when
   the project has adopted its configured operations; preserve legacy selectors
   until adoption. Do not equate finished edits with discharged obligations.
+- Always prioritize completing obligations that have been started over
+  starting new ones. Apply the `plan-execution` skill's completion-first
+  scheduling rule, including verification and discharge.
 - When a project configures `requirements-traceability`, keep its canonical
   annotations, artifact classification, generated-source mappings, and
   generated reverse view synchronized for every affected approved
