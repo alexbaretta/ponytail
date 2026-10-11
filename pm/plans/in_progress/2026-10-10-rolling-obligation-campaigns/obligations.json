@@ -931,6 +931,189 @@
         "OBL-19",
         "OBL-20"
       ]
+    },
+    {
+      "id": "BASELINE-8",
+      "predecessorId": "BASELINE-7",
+      "authority": {
+        "references": [
+          "user-goal-2026-10-10-rolling-campaigns",
+          "user-goal-2026-10-10-static-language-existing-tsts",
+          "user-2026-10-10-normative-atomic-obligations"
+        ],
+        "assessors": [
+          "coordinator"
+        ]
+      },
+      "requirements": [
+        {
+          "id": "REQ-ROLLING-CONFIGURATION",
+          "path": "pm/requirements/rolling-campaigns.md",
+          "digest": "dd90e7198653a290b46bb7b5c7e1bce5c9e3735820f79777d1b4b7236a7a0c09"
+        },
+        {
+          "id": "REQ-ROLLING-GRAPH",
+          "path": "pm/requirements/rolling-campaigns.md",
+          "digest": "dd90e7198653a290b46bb7b5c7e1bce5c9e3735820f79777d1b4b7236a7a0c09"
+        },
+        {
+          "id": "REQ-ROLLING-SCHEDULING",
+          "path": "pm/requirements/rolling-campaigns.md",
+          "digest": "dd90e7198653a290b46bb7b5c7e1bce5c9e3735820f79777d1b4b7236a7a0c09"
+        },
+        {
+          "id": "REQ-ROLLING-STATE",
+          "path": "pm/requirements/rolling-campaigns.md",
+          "digest": "dd90e7198653a290b46bb7b5c7e1bce5c9e3735820f79777d1b4b7236a7a0c09"
+        },
+        {
+          "id": "REQ-ROLLING-WORKERS",
+          "path": "pm/requirements/rolling-campaigns.md",
+          "digest": "dd90e7198653a290b46bb7b5c7e1bce5c9e3735820f79777d1b4b7236a7a0c09"
+        },
+        {
+          "id": "REQ-ROLLING-REVIEW",
+          "path": "pm/requirements/rolling-campaigns.md",
+          "digest": "dd90e7198653a290b46bb7b5c7e1bce5c9e3735820f79777d1b4b7236a7a0c09"
+        },
+        {
+          "id": "REQ-ROLLING-PUBLICATION",
+          "path": "pm/requirements/rolling-campaigns.md",
+          "digest": "dd90e7198653a290b46bb7b5c7e1bce5c9e3735820f79777d1b4b7236a7a0c09"
+        },
+        {
+          "id": "REQ-ROLLING-INTERFACES",
+          "path": "pm/requirements/rolling-campaigns.md",
+          "digest": "dd90e7198653a290b46bb7b5c7e1bce5c9e3735820f79777d1b4b7236a7a0c09"
+        },
+        {
+          "id": "REQ-PONYTAIL-STATIC-LANGUAGE",
+          "path": "pm/requirements/static-language.md",
+          "digest": "de0467513b642259377cd9cbfb9c15d310c6e58681490f57bbaab32147358a8a"
+        }
+      ],
+      "obligationIds": [
+        "OBL-1",
+        "OBL-2",
+        "OBL-3",
+        "OBL-4",
+        "OBL-5",
+        "OBL-6",
+        "OBL-7",
+        "OBL-8",
+        "OBL-9",
+        "OBL-10",
+        "OBL-11",
+        "OBL-12",
+        "OBL-13",
+        "OBL-14",
+        "OBL-15",
+        "OBL-16",
+        "OBL-17",
+        "OBL-18",
+        "OBL-19",
+        "OBL-20",
+        "OBL-21",
+        "OBL-22",
+        "OBL-23",
+        "OBL-24",
+        "OBL-25",
+        "OBL-26",
+        "OBL-27",
+        "OBL-28",
+        "OBL-29",
+        "OBL-30",
+        "OBL-31",
+        "OBL-32",
+        "OBL-33",
+        "OBL-34",
+        "OBL-35",
+        "OBL-36",
+        "OBL-37",
+        "OBL-38",
+        "OBL-39",
+        "OBL-40",
+        "OBL-41",
+        "OBL-42",
+        "OBL-43",
+        "OBL-44",
+        "OBL-45",
+        "OBL-46",
+        "OBL-47",
+        "OBL-48",
+        "OBL-49",
+        "OBL-50",
+        "OBL-51",
+        "OBL-52",
+        "OBL-53",
+        "OBL-54",
+        "OBL-55",
+        "OBL-56",
+        "OBL-57",
+        "OBL-58",
+        "OBL-59",
+        "OBL-60",
+        "OBL-61",
+        "OBL-62",
+        "OBL-63",
+        "OBL-64",
+        "OBL-65",
+        "OBL-66",
+        "OBL-67",
+        "OBL-68",
+        "OBL-69",
+        "OBL-70",
+        "OBL-71",
+        "OBL-72",
+        "OBL-73",
+        "OBL-74",
+        "OBL-75",
+        "OBL-76",
+        "OBL-77",
+        "OBL-78",
+        "OBL-79",
+        "OBL-80",
+        "OBL-81",
+        "OBL-82",
+        "OBL-83",
+        "OBL-84",
+        "OBL-85",
+        "OBL-86",
+        "OBL-87",
+        "OBL-88",
+        "OBL-89",
+        "OBL-90",
+        "OBL-91",
+        "OBL-92",
+        "OBL-93",
+        "OBL-94",
+        "OBL-95",
+        "OBL-96",
+        "OBL-97",
+        "OBL-98",
+        "OBL-99",
+        "OBL-100",
+        "OBL-101",
+        "OBL-102",
+        "OBL-103",
+        "OBL-104",
+        "OBL-105",
+        "OBL-106"
+      ],
+      "inventoryIds": [
+        "OBL-1",
+        "OBL-2",
+        "OBL-3",
+        "OBL-4",
+        "OBL-5",
+        "OBL-6",
+        "OBL-15",
+        "OBL-16",
+        "OBL-17",
+        "OBL-18",
+        "OBL-19",
+        "OBL-20"
+      ]
     }
   ],
   "obligations": [
@@ -3005,6 +3188,1048 @@
           "profile": "focused-static-migration"
         }
       }
+    },
+    {
+      "id": "OBL-77",
+      "category": "gate",
+      "requirementIds": [
+        "REQ-PONYTAIL-STATIC-LANGUAGE"
+      ],
+      "responsibilityId": "typed-portable-read-physical-v1-obligation-documents-and-lossless-numeric-tokens",
+      "condition": "Read physical V1 obligation documents and lossless numeric tokens through a checked static implementation preserving the approved portable behavior and historical contract meanings.",
+      "criterion": "Strict compilation and unchanged TSTS cover the canonical implementation and its owned fixtures without bypasses; generated runtime and configured classification/mappings are synchronized. Focused executable proof demonstrates the entire condition, including applicable rejection, completion and non-mutation behavior. Inspected proof boundary: tests/obligations.test.js: unknown fields, identity, cycles and lossy tokens. Review that boundary for missing assertions before assessment; historical handwritten JavaScript tests must be converted to checked typed sources before this language obligation can be discharged.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "STATIC-PORTABLE-77"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "skills/plan-execution/scripts/obligations.ts",
+          "skills/plan-execution/scripts/obligations.js",
+          "tests/obligations.test.js"
+        ],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [
+          "Read physical V1 obligation documents and lossless numeric tokens"
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "portable-operation-inventory"
+        }
+      }
+    },
+    {
+      "id": "OBL-78",
+      "category": "gate",
+      "requirementIds": [
+        "REQ-PONYTAIL-STATIC-LANGUAGE"
+      ],
+      "responsibilityId": "typed-portable-assess-certificate-freshness-on-declared-current-inputs",
+      "condition": "Assess certificate freshness on declared current inputs through a checked static implementation preserving the approved portable behavior and historical contract meanings.",
+      "criterion": "Strict compilation and unchanged TSTS cover the canonical implementation and its owned fixtures without bypasses; generated runtime and configured classification/mappings are synchronized. Focused executable proof demonstrates the entire condition, including applicable rejection, completion and non-mutation behavior. Inspected proof boundary: Scoped input, adequacy and finalized execution evidence tests. Review that boundary for missing assertions before assessment; historical handwritten JavaScript tests must be converted to checked typed sources before this language obligation can be discharged.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "STATIC-PORTABLE-78"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "skills/plan-execution/scripts/obligations.ts",
+          "skills/plan-execution/scripts/obligations.js",
+          "tests/obligations.test.js"
+        ],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [
+          "Assess certificate freshness on declared current inputs"
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "portable-operation-inventory"
+        }
+      }
+    },
+    {
+      "id": "OBL-79",
+      "category": "gate",
+      "requirementIds": [
+        "REQ-PONYTAIL-STATIC-LANGUAGE"
+      ],
+      "responsibilityId": "typed-portable-project-accepted-obligation-satisfaction-and-reopen-stale-dependency-invalid-proof",
+      "condition": "Project accepted obligation satisfaction and reopen stale/dependency-invalid proof through a checked static implementation preserving the approved portable behavior and historical contract meanings.",
+      "criterion": "Strict compilation and unchanged TSTS cover the canonical implementation and its owned fixtures without bypasses; generated runtime and configured classification/mappings are synchronized. Focused executable proof demonstrates the entire condition, including applicable rejection, completion and non-mutation behavior. Inspected proof boundary: Projection, changed-input and completeness tests. Review that boundary for missing assertions before assessment; historical handwritten JavaScript tests must be converted to checked typed sources before this language obligation can be discharged.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "STATIC-PORTABLE-79"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "skills/plan-execution/scripts/obligations.ts",
+          "skills/plan-execution/scripts/obligations.js",
+          "tests/obligations.test.js"
+        ],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [
+          "Project accepted obligation satisfaction and reopen stale/dependency-invalid proof"
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "portable-operation-inventory"
+        }
+      }
+    },
+    {
+      "id": "OBL-80",
+      "category": "gate",
+      "requirementIds": [
+        "REQ-PONYTAIL-STATIC-LANGUAGE"
+      ],
+      "responsibilityId": "typed-portable-select-the-eligible-obligation-without-bypassing-earlier-unresolved-categories",
+      "condition": "Select the eligible obligation without bypassing earlier unresolved categories through a checked static implementation preserving the approved portable behavior and historical contract meanings.",
+      "criterion": "Strict compilation and unchanged TSTS cover the canonical implementation and its owned fixtures without bypasses; generated runtime and configured classification/mappings are synchronized. Focused executable proof demonstrates the entire condition, including applicable rejection, completion and non-mutation behavior. Inspected proof boundary: Blocked upstream and stable identity selection tests. Review that boundary for missing assertions before assessment; historical handwritten JavaScript tests must be converted to checked typed sources before this language obligation can be discharged.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "STATIC-PORTABLE-80"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "skills/plan-execution/scripts/obligations.ts",
+          "skills/plan-execution/scripts/obligations.js",
+          "tests/obligations.test.js"
+        ],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [
+          "Select the eligible obligation without bypassing earlier unresolved categories"
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "portable-operation-inventory"
+        }
+      }
+    },
+    {
+      "id": "OBL-81",
+      "category": "gate",
+      "requirementIds": [
+        "REQ-PONYTAIL-STATIC-LANGUAGE"
+      ],
+      "responsibilityId": "typed-portable-accept-an-authorized-append-only-checkpoint-on-its-exact-predecessor",
+      "condition": "Accept an authorized append-only checkpoint on its exact predecessor through a checked static implementation preserving the approved portable behavior and historical contract meanings.",
+      "criterion": "Strict compilation and unchanged TSTS cover the canonical implementation and its owned fixtures without bypasses; generated runtime and configured classification/mappings are synchronized. Focused executable proof demonstrates the entire condition, including applicable rejection, completion and non-mutation behavior. Inspected proof boundary: Authority, productive/neutral transitions, disturbance and rebaseline tests. Review that boundary for missing assertions before assessment; historical handwritten JavaScript tests must be converted to checked typed sources before this language obligation can be discharged.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "STATIC-PORTABLE-81"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "skills/plan-execution/scripts/obligations.ts",
+          "skills/plan-execution/scripts/obligations.js",
+          "tests/obligations.test.js"
+        ],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [
+          "Accept an authorized append-only checkpoint on its exact predecessor"
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "portable-operation-inventory"
+        }
+      }
+    },
+    {
+      "id": "OBL-82",
+      "category": "gate",
+      "requirementIds": [
+        "REQ-PONYTAIL-STATIC-LANGUAGE"
+      ],
+      "responsibilityId": "typed-portable-execute-scoped-portable-validation-status-and-selection-commands",
+      "condition": "Execute scoped portable validation, status and selection commands through a checked static implementation preserving the approved portable behavior and historical contract meanings.",
+      "criterion": "Strict compilation and unchanged TSTS cover the canonical implementation and its owned fixtures without bypasses; generated runtime and configured classification/mappings are synchronized. Focused executable proof demonstrates the entire condition, including applicable rejection, completion and non-mutation behavior. Inspected proof boundary: Explicit document/root, invalid data and IO diagnostic CLI tests. Review that boundary for missing assertions before assessment; historical handwritten JavaScript tests must be converted to checked typed sources before this language obligation can be discharged.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "STATIC-PORTABLE-82"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "skills/plan-execution/scripts/obligations.ts",
+          "skills/plan-execution/scripts/obligations.js",
+          "tests/obligations.test.js"
+        ],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [
+          "Execute scoped portable validation, status and selection commands"
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "portable-operation-inventory"
+        }
+      }
+    },
+    {
+      "id": "OBL-83",
+      "category": "gate",
+      "requirementIds": [
+        "REQ-PONYTAIL-STATIC-LANGUAGE"
+      ],
+      "responsibilityId": "typed-portable-read-physical-v1-sprint-metadata",
+      "condition": "Read physical V1 sprint metadata through a checked static implementation preserving the approved portable behavior and historical contract meanings.",
+      "criterion": "Strict compilation and unchanged TSTS cover the canonical implementation and its owned fixtures without bypasses; generated runtime and configured classification/mappings are synchronized. Focused executable proof demonstrates the entire condition, including applicable rejection, completion and non-mutation behavior. Inspected proof boundary: tests/sprint-metadata.test.ts: physical versions and malformed metadata. Review that boundary for missing assertions before assessment; historical handwritten JavaScript tests must be converted to checked typed sources before this language obligation can be discharged.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "STATIC-PORTABLE-83"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "skills/plan-execution/scripts/sprint-metadata.ts",
+          "skills/plan-execution/scripts/sprint-metadata.js",
+          "tests/sprint-metadata.test.ts"
+        ],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [
+          "Read physical V1 sprint metadata"
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "portable-operation-inventory"
+        }
+      }
+    },
+    {
+      "id": "OBL-84",
+      "category": "gate",
+      "requirementIds": [
+        "REQ-PONYTAIL-STATIC-LANGUAGE"
+      ],
+      "responsibilityId": "typed-portable-read-physical-v2-sprint-metadata",
+      "condition": "Read physical V2 sprint metadata through a checked static implementation preserving the approved portable behavior and historical contract meanings.",
+      "criterion": "Strict compilation and unchanged TSTS cover the canonical implementation and its owned fixtures without bypasses; generated runtime and configured classification/mappings are synchronized. Focused executable proof demonstrates the entire condition, including applicable rejection, completion and non-mutation behavior. Inspected proof boundary: Same proof, including reviewed execution and null execution. Review that boundary for missing assertions before assessment; historical handwritten JavaScript tests must be converted to checked typed sources before this language obligation can be discharged.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "STATIC-PORTABLE-84"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "skills/plan-execution/scripts/sprint-metadata.ts",
+          "skills/plan-execution/scripts/sprint-metadata.js",
+          "tests/sprint-metadata.test.ts"
+        ],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [
+          "Read physical V2 sprint metadata"
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "portable-operation-inventory"
+        }
+      }
+    },
+    {
+      "id": "OBL-85",
+      "category": "gate",
+      "requirementIds": [
+        "REQ-PONYTAIL-STATIC-LANGUAGE"
+      ],
+      "responsibilityId": "typed-portable-read-physical-v3-sprint-metadata",
+      "condition": "Read physical V3 sprint metadata through a checked static implementation preserving the approved portable behavior and historical contract meanings.",
+      "criterion": "Strict compilation and unchanged TSTS cover the canonical implementation and its owned fixtures without bypasses; generated runtime and configured classification/mappings are synchronized. Focused executable proof demonstrates the entire condition, including applicable rejection, completion and non-mutation behavior. Inspected proof boundary: Same proof, including version-specific execution. Review that boundary for missing assertions before assessment; historical handwritten JavaScript tests must be converted to checked typed sources before this language obligation can be discharged.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "STATIC-PORTABLE-85"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "skills/plan-execution/scripts/sprint-metadata.ts",
+          "skills/plan-execution/scripts/sprint-metadata.js",
+          "tests/sprint-metadata.test.ts"
+        ],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [
+          "Read physical V3 sprint metadata"
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "portable-operation-inventory"
+        }
+      }
+    },
+    {
+      "id": "OBL-86",
+      "category": "gate",
+      "requirementIds": [
+        "REQ-PONYTAIL-STATIC-LANGUAGE"
+      ],
+      "responsibilityId": "typed-portable-discover-a-homogeneous-sprint-collection-in-numeric-order",
+      "condition": "Discover a homogeneous sprint collection in numeric order through a checked static implementation preserving the approved portable behavior and historical contract meanings.",
+      "criterion": "Strict compilation and unchanged TSTS cover the canonical implementation and its owned fixtures without bypasses; generated runtime and configured classification/mappings are synchronized. Focused executable proof demonstrates the entire condition, including applicable rejection, completion and non-mutation behavior. Inspected proof boundary: Duplicate ordinal, mixed version and discovery tests. Review that boundary for missing assertions before assessment; historical handwritten JavaScript tests must be converted to checked typed sources before this language obligation can be discharged.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "STATIC-PORTABLE-86"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "skills/plan-execution/scripts/sprint-metadata.ts",
+          "skills/plan-execution/scripts/sprint-metadata.js",
+          "tests/sprint-metadata.test.ts"
+        ],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [
+          "Discover a homogeneous sprint collection in numeric order"
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "portable-operation-inventory"
+        }
+      }
+    },
+    {
+      "id": "OBL-87",
+      "category": "gate",
+      "requirementIds": [
+        "REQ-PONYTAIL-STATIC-LANGUAGE"
+      ],
+      "responsibilityId": "typed-portable-validate-sprint-dependency-identity-and-acyclicity",
+      "condition": "Validate sprint dependency identity and acyclicity through a checked static implementation preserving the approved portable behavior and historical contract meanings.",
+      "criterion": "Strict compilation and unchanged TSTS cover the canonical implementation and its owned fixtures without bypasses; generated runtime and configured classification/mappings are synchronized. Focused executable proof demonstrates the entire condition, including applicable rejection, completion and non-mutation behavior. Inspected proof boundary: tests/ready-sprints.test.js: dependency errors. Review that boundary for missing assertions before assessment; historical handwritten JavaScript tests must be converted to checked typed sources before this language obligation can be discharged.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "STATIC-PORTABLE-87"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "skills/plan-execution/scripts/sprint-graph.ts",
+          "skills/plan-execution/scripts/sprint-graph.js",
+          "tests/sprint-graph.test.ts",
+          "tests/ready-sprints.test.js"
+        ],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [
+          "Validate sprint dependency identity and acyclicity"
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "portable-operation-inventory"
+        }
+      }
+    },
+    {
+      "id": "OBL-88",
+      "category": "gate",
+      "requirementIds": [
+        "REQ-PONYTAIL-STATIC-LANGUAGE"
+      ],
+      "responsibilityId": "typed-portable-validate-legacy-sprint-path-ownership-against-execution-ordering",
+      "condition": "Validate legacy sprint path ownership against execution ordering through a checked static implementation preserving the approved portable behavior and historical contract meanings.",
+      "criterion": "Strict compilation and unchanged TSTS cover the canonical implementation and its owned fixtures without bypasses; generated runtime and configured classification/mappings are synchronized. Focused executable proof demonstrates the entire condition, including applicable rejection, completion and non-mutation behavior. Inspected proof boundary: tests/sprint-graph.test.ts: transitive ordering and unordered sharing. Review that boundary for missing assertions before assessment; historical handwritten JavaScript tests must be converted to checked typed sources before this language obligation can be discharged.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "STATIC-PORTABLE-88"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "skills/plan-execution/scripts/sprint-graph.ts",
+          "skills/plan-execution/scripts/sprint-graph.js",
+          "tests/sprint-graph.test.ts",
+          "tests/ready-sprints.test.js"
+        ],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [
+          "Validate legacy sprint path ownership against execution ordering"
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "portable-operation-inventory"
+        }
+      }
+    },
+    {
+      "id": "OBL-89",
+      "category": "gate",
+      "requirementIds": [
+        "REQ-PONYTAIL-STATIC-LANGUAGE"
+      ],
+      "responsibilityId": "typed-portable-derive-v3-ownership-from-tasklet-paths-while-exempting-planning-only-sprints",
+      "condition": "Derive V3 ownership from tasklet paths while exempting planning-only sprints through a checked static implementation preserving the approved portable behavior and historical contract meanings.",
+      "criterion": "Strict compilation and unchanged TSTS cover the canonical implementation and its owned fixtures without bypasses; generated runtime and configured classification/mappings are synchronized. Focused executable proof demonstrates the entire condition, including applicable rejection, completion and non-mutation behavior. Inspected proof boundary: V3 path derivation and no-tasklet-file tests. Review that boundary for missing assertions before assessment; historical handwritten JavaScript tests must be converted to checked typed sources before this language obligation can be discharged.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "STATIC-PORTABLE-89"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "skills/plan-execution/scripts/sprint-graph.ts",
+          "skills/plan-execution/scripts/sprint-graph.js",
+          "tests/sprint-graph.test.ts",
+          "tests/ready-sprints.test.js"
+        ],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [
+          "Derive V3 ownership from tasklet paths while exempting planning-only sprints"
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "portable-operation-inventory"
+        }
+      }
+    },
+    {
+      "id": "OBL-90",
+      "category": "gate",
+      "requirementIds": [
+        "REQ-PONYTAIL-STATIC-LANGUAGE"
+      ],
+      "responsibilityId": "typed-portable-select-a-dependency-ready-sprint-for-planning",
+      "condition": "Select a dependency-ready sprint for planning through a checked static implementation preserving the approved portable behavior and historical contract meanings.",
+      "criterion": "Strict compilation and unchanged TSTS cover the canonical implementation and its owned fixtures without bypasses; generated runtime and configured classification/mappings are synchronized. Focused executable proof demonstrates the entire condition, including applicable rejection, completion and non-mutation behavior. Inspected proof boundary: tests/ready-sprints.test.js: STUB and approved prerequisites. Review that boundary for missing assertions before assessment; historical handwritten JavaScript tests must be converted to checked typed sources before this language obligation can be discharged.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "STATIC-PORTABLE-90"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "skills/plan-execution/scripts/ready-sprints.ts",
+          "skills/plan-execution/scripts/ready-sprints.js",
+          "tests/ready-sprints-cli.test.ts",
+          "tests/ready-sprints.test.js"
+        ],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [
+          "Select a dependency-ready sprint for planning"
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "portable-operation-inventory"
+        }
+      }
+    },
+    {
+      "id": "OBL-91",
+      "category": "gate",
+      "requirementIds": [
+        "REQ-PONYTAIL-STATIC-LANGUAGE"
+      ],
+      "responsibilityId": "typed-portable-select-a-detailed-sprint-for-planning-review",
+      "condition": "Select a detailed sprint for planning review through a checked static implementation preserving the approved portable behavior and historical contract meanings.",
+      "criterion": "Strict compilation and unchanged TSTS cover the canonical implementation and its owned fixtures without bypasses; generated runtime and configured classification/mappings are synchronized. Focused executable proof demonstrates the entire condition, including applicable rejection, completion and non-mutation behavior. Inspected proof boundary: Detailed unapproved planning dependency tests. Review that boundary for missing assertions before assessment; historical handwritten JavaScript tests must be converted to checked typed sources before this language obligation can be discharged.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "STATIC-PORTABLE-91"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "skills/plan-execution/scripts/ready-sprints.ts",
+          "skills/plan-execution/scripts/ready-sprints.js",
+          "tests/ready-sprints-cli.test.ts",
+          "tests/ready-sprints.test.js"
+        ],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [
+          "Select a detailed sprint for planning review"
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "portable-operation-inventory"
+        }
+      }
+    },
+    {
+      "id": "OBL-92",
+      "category": "gate",
+      "requirementIds": [
+        "REQ-PONYTAIL-STATIC-LANGUAGE"
+      ],
+      "responsibilityId": "typed-portable-select-a-sprint-eligible-to-begin-execution-under-its-physical-version-rules",
+      "condition": "Select a sprint eligible to begin execution under its physical version rules through a checked static implementation preserving the approved portable behavior and historical contract meanings.",
+      "criterion": "Strict compilation and unchanged TSTS cover the canonical implementation and its owned fixtures without bypasses; generated runtime and configured classification/mappings are synchronized. Focused executable proof demonstrates the entire condition, including applicable rejection, completion and non-mutation behavior. Inspected proof boundary: V1 readiness, V2 earliest checkpoint and V3 reviewed readiness tests. Review that boundary for missing assertions before assessment; historical handwritten JavaScript tests must be converted to checked typed sources before this language obligation can be discharged.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "STATIC-PORTABLE-92"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "skills/plan-execution/scripts/ready-sprints.ts",
+          "skills/plan-execution/scripts/ready-sprints.js",
+          "tests/ready-sprints-cli.test.ts",
+          "tests/ready-sprints.test.js"
+        ],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [
+          "Select a sprint eligible to begin execution under its physical version rules"
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "portable-operation-inventory"
+        }
+      }
+    },
+    {
+      "id": "OBL-93",
+      "category": "gate",
+      "requirementIds": [
+        "REQ-PONYTAIL-STATIC-LANGUAGE"
+      ],
+      "responsibilityId": "typed-portable-resume-started-v3-execution-without-relaxing-start-review-gates",
+      "condition": "Resume started V3 execution without relaxing start/review gates through a checked static implementation preserving the approved portable behavior and historical contract meanings.",
+      "criterion": "Strict compilation and unchanged TSTS cover the canonical implementation and its owned fixtures without bypasses; generated runtime and configured classification/mappings are synchronized. Focused executable proof demonstrates the entire condition, including applicable rejection, completion and non-mutation behavior. Inspected proof boundary: Started sprint resumption tests. Review that boundary for missing assertions before assessment; historical handwritten JavaScript tests must be converted to checked typed sources before this language obligation can be discharged.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "STATIC-PORTABLE-93"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "skills/plan-execution/scripts/ready-sprints.ts",
+          "skills/plan-execution/scripts/ready-sprints.js",
+          "tests/ready-sprints-cli.test.ts",
+          "tests/ready-sprints.test.js"
+        ],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [
+          "Resume started V3 execution without relaxing start/review gates"
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "portable-operation-inventory"
+        }
+      }
+    },
+    {
+      "id": "OBL-94",
+      "category": "gate",
+      "requirementIds": [
+        "REQ-PONYTAIL-STATIC-LANGUAGE"
+      ],
+      "responsibilityId": "typed-portable-select-v3-tasklets-for-execution-review-before-starting",
+      "condition": "Select V3 tasklets for execution review before starting through a checked static implementation preserving the approved portable behavior and historical contract meanings.",
+      "criterion": "Strict compilation and unchanged TSTS cover the canonical implementation and its owned fixtures without bypasses; generated runtime and configured classification/mappings are synchronized. Focused executable proof demonstrates the entire condition, including applicable rejection, completion and non-mutation behavior. Inspected proof boundary: Approved unreviewed sprint and completed dependency tests. Review that boundary for missing assertions before assessment; historical handwritten JavaScript tests must be converted to checked typed sources before this language obligation can be discharged.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "STATIC-PORTABLE-94"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "skills/plan-execution/scripts/ready-sprints.ts",
+          "skills/plan-execution/scripts/ready-sprints.js",
+          "tests/ready-sprints-cli.test.ts",
+          "tests/ready-sprints.test.js"
+        ],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [
+          "Select V3 tasklets for execution review before starting"
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "portable-operation-inventory"
+        }
+      }
+    },
+    {
+      "id": "OBL-95",
+      "category": "gate",
+      "requirementIds": [
+        "REQ-PONYTAIL-STATIC-LANGUAGE"
+      ],
+      "responsibilityId": "typed-portable-execute-sprint-selection-cli-modes-with-exact-json-and-error-exits",
+      "condition": "Execute sprint-selection CLI modes with exact JSON and error exits through a checked static implementation preserving the approved portable behavior and historical contract meanings.",
+      "criterion": "Strict compilation and unchanged TSTS cover the canonical implementation and its owned fixtures without bypasses; generated runtime and configured classification/mappings are synchronized. Focused executable proof demonstrates the entire condition, including applicable rejection, completion and non-mutation behavior. Inspected proof boundary: tests/ready-sprints-cli.test.ts. Review that boundary for missing assertions before assessment; historical handwritten JavaScript tests must be converted to checked typed sources before this language obligation can be discharged.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "STATIC-PORTABLE-95"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "skills/plan-execution/scripts/ready-sprints.ts",
+          "skills/plan-execution/scripts/ready-sprints.js",
+          "tests/ready-sprints-cli.test.ts",
+          "tests/ready-sprints.test.js"
+        ],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [
+          "Execute sprint-selection CLI modes with exact JSON and error exits"
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "portable-operation-inventory"
+        }
+      }
+    },
+    {
+      "id": "OBL-96",
+      "category": "gate",
+      "requirementIds": [
+        "REQ-PONYTAIL-STATIC-LANGUAGE"
+      ],
+      "responsibilityId": "typed-portable-read-physical-v1-tasklet-metadata",
+      "condition": "Read physical V1 tasklet metadata through a checked static implementation preserving the approved portable behavior and historical contract meanings.",
+      "criterion": "Strict compilation and unchanged TSTS cover the canonical implementation and its owned fixtures without bypasses; generated runtime and configured classification/mappings are synchronized. Focused executable proof demonstrates the entire condition, including applicable rejection, completion and non-mutation behavior. Inspected proof boundary: tests/tasklet-metadata.test.ts; strict V1 portable tests. Review that boundary for missing assertions before assessment; historical handwritten JavaScript tests must be converted to checked typed sources before this language obligation can be discharged.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "STATIC-PORTABLE-96"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "skills/plan-execution/scripts/tasklet-metadata.ts",
+          "skills/plan-execution/scripts/tasklet-metadata.js",
+          "tests/tasklet-metadata.test.ts",
+          "tests/ready-tasklets.test.js"
+        ],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [
+          "Read physical V1 tasklet metadata"
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "portable-operation-inventory"
+        }
+      }
+    },
+    {
+      "id": "OBL-97",
+      "category": "gate",
+      "requirementIds": [
+        "REQ-PONYTAIL-STATIC-LANGUAGE"
+      ],
+      "responsibilityId": "typed-portable-read-physical-v2-tasklet-metadata",
+      "condition": "Read physical V2 tasklet metadata through a checked static implementation preserving the approved portable behavior and historical contract meanings.",
+      "criterion": "Strict compilation and unchanged TSTS cover the canonical implementation and its owned fixtures without bypasses; generated runtime and configured classification/mappings are synchronized. Focused executable proof demonstrates the entire condition, including applicable rejection, completion and non-mutation behavior. Inspected proof boundary: Physical maps, risk reasons, paths and feature membership tests. Review that boundary for missing assertions before assessment; historical handwritten JavaScript tests must be converted to checked typed sources before this language obligation can be discharged.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "STATIC-PORTABLE-97"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "skills/plan-execution/scripts/tasklet-metadata.ts",
+          "skills/plan-execution/scripts/tasklet-metadata.js",
+          "tests/tasklet-metadata.test.ts",
+          "tests/ready-tasklets.test.js"
+        ],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [
+          "Read physical V2 tasklet metadata"
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "portable-operation-inventory"
+        }
+      }
+    },
+    {
+      "id": "OBL-98",
+      "category": "gate",
+      "requirementIds": [
+        "REQ-PONYTAIL-STATIC-LANGUAGE"
+      ],
+      "responsibilityId": "typed-portable-read-physical-v3-tasklet-metadata",
+      "condition": "Read physical V3 tasklet metadata through a checked static implementation preserving the approved portable behavior and historical contract meanings.",
+      "criterion": "Strict compilation and unchanged TSTS cover the canonical implementation and its owned fixtures without bypasses; generated runtime and configured classification/mappings are synchronized. Focused executable proof demonstrates the entire condition, including applicable rejection, completion and non-mutation behavior. Inspected proof boundary: Physical-version dispatch and normalized map tests. Review that boundary for missing assertions before assessment; historical handwritten JavaScript tests must be converted to checked typed sources before this language obligation can be discharged.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "STATIC-PORTABLE-98"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "skills/plan-execution/scripts/tasklet-metadata.ts",
+          "skills/plan-execution/scripts/tasklet-metadata.js",
+          "tests/tasklet-metadata.test.ts",
+          "tests/ready-tasklets.test.js"
+        ],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [
+          "Read physical V3 tasklet metadata"
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "portable-operation-inventory"
+        }
+      }
+    },
+    {
+      "id": "OBL-99",
+      "category": "gate",
+      "requirementIds": [
+        "REQ-PONYTAIL-STATIC-LANGUAGE"
+      ],
+      "responsibilityId": "typed-portable-read-physical-v4-tasklet-metadata-with-external-dependency-identities",
+      "condition": "Read physical V4 tasklet metadata with external dependency identities through a checked static implementation preserving the approved portable behavior and historical contract meanings.",
+      "criterion": "Strict compilation and unchanged TSTS cover the canonical implementation and its owned fixtures without bypasses; generated runtime and configured classification/mappings are synchronized. Focused executable proof demonstrates the entire condition, including applicable rejection, completion and non-mutation behavior. Inspected proof boundary: External declarations and unchanged local-selection tests. Review that boundary for missing assertions before assessment; historical handwritten JavaScript tests must be converted to checked typed sources before this language obligation can be discharged.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "STATIC-PORTABLE-99"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "skills/plan-execution/scripts/tasklet-metadata.ts",
+          "skills/plan-execution/scripts/tasklet-metadata.js",
+          "tests/tasklet-metadata.test.ts",
+          "tests/ready-tasklets.test.js"
+        ],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [
+          "Read physical V4 tasklet metadata with external dependency identities"
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "portable-operation-inventory"
+        }
+      }
+    },
+    {
+      "id": "OBL-100",
+      "category": "gate",
+      "requirementIds": [
+        "REQ-PONYTAIL-STATIC-LANGUAGE"
+      ],
+      "responsibilityId": "typed-portable-load-a-tasklet-graph-through-its-declared-physical-reader",
+      "condition": "Load a tasklet graph through its declared physical reader through a checked static implementation preserving the approved portable behavior and historical contract meanings.",
+      "criterion": "Strict compilation and unchanged TSTS cover the canonical implementation and its owned fixtures without bypasses; generated runtime and configured classification/mappings are synchronized. Focused executable proof demonstrates the entire condition, including applicable rejection, completion and non-mutation behavior. Inspected proof boundary: Unknown JSON and supported file dispatch tests. Review that boundary for missing assertions before assessment; historical handwritten JavaScript tests must be converted to checked typed sources before this language obligation can be discharged.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "STATIC-PORTABLE-100"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "skills/plan-execution/scripts/tasklet-metadata.ts",
+          "skills/plan-execution/scripts/tasklet-metadata.js",
+          "tests/tasklet-metadata.test.ts",
+          "tests/ready-tasklets.test.js"
+        ],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [
+          "Load a tasklet graph through its declared physical reader"
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "portable-operation-inventory"
+        }
+      }
+    },
+    {
+      "id": "OBL-101",
+      "category": "gate",
+      "requirementIds": [
+        "REQ-PONYTAIL-STATIC-LANGUAGE"
+      ],
+      "responsibilityId": "typed-portable-parse-tasklet-heading-status-without-duplicate-or-malformed-declarations",
+      "condition": "Parse tasklet heading status without duplicate or malformed declarations through a checked static implementation preserving the approved portable behavior and historical contract meanings.",
+      "criterion": "Strict compilation and unchanged TSTS cover the canonical implementation and its owned fixtures without bypasses; generated runtime and configured classification/mappings are synchronized. Focused executable proof demonstrates the entire condition, including applicable rejection, completion and non-mutation behavior. Inspected proof boundary: tests/tasklet-statuses.test.ts. Review that boundary for missing assertions before assessment; historical handwritten JavaScript tests must be converted to checked typed sources before this language obligation can be discharged.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "STATIC-PORTABLE-101"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "skills/plan-execution/scripts/tasklet-statuses.ts",
+          "skills/plan-execution/scripts/tasklet-statuses.js",
+          "tests/tasklet-statuses.test.ts"
+        ],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [
+          "Parse tasklet heading status without duplicate or malformed declarations"
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "portable-operation-inventory"
+        }
+      }
+    },
+    {
+      "id": "OBL-102",
+      "category": "gate",
+      "requirementIds": [
+        "REQ-PONYTAIL-STATIC-LANGUAGE"
+      ],
+      "responsibilityId": "typed-portable-validate-tasklet-feature-dependencies-and-derive-the-constrained-execution-graph",
+      "condition": "Validate tasklet/feature dependencies and derive the constrained execution graph through a checked static implementation preserving the approved portable behavior and historical contract meanings.",
+      "criterion": "Strict compilation and unchanged TSTS cover the canonical implementation and its owned fixtures without bypasses; generated runtime and configured classification/mappings are synchronized. Focused executable proof demonstrates the entire condition, including applicable rejection, completion and non-mutation behavior. Inspected proof boundary: tests/tasklet-graph.test.ts; feature gates, cycles and path overlap portable tests. Review that boundary for missing assertions before assessment; historical handwritten JavaScript tests must be converted to checked typed sources before this language obligation can be discharged.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "STATIC-PORTABLE-102"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "skills/plan-execution/scripts/tasklet-graph.ts",
+          "skills/plan-execution/scripts/tasklet-graph.js",
+          "tests/tasklet-graph.test.ts",
+          "tests/tasklet-selection.test.ts",
+          "tests/ready-tasklets.test.js"
+        ],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [
+          "Validate tasklet/feature dependencies and derive the constrained execution graph"
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "portable-operation-inventory"
+        }
+      }
+    },
+    {
+      "id": "OBL-103",
+      "category": "gate",
+      "requirementIds": [
+        "REQ-PONYTAIL-STATIC-LANGUAGE"
+      ],
+      "responsibilityId": "typed-portable-select-one-eligible-tasklet-using-deterministic-ranking-and-prior-affinity",
+      "condition": "Select one eligible tasklet using deterministic ranking and prior affinity through a checked static implementation preserving the approved portable behavior and historical contract meanings.",
+      "criterion": "Strict compilation and unchanged TSTS cover the canonical implementation and its owned fixtures without bypasses; generated runtime and configured classification/mappings are synchronized. Focused executable proof demonstrates the entire condition, including applicable rejection, completion and non-mutation behavior. Inspected proof boundary: tests/tasklet-selection.test.ts; ranking/affinity portable tests. Review that boundary for missing assertions before assessment; historical handwritten JavaScript tests must be converted to checked typed sources before this language obligation can be discharged.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "STATIC-PORTABLE-103"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "skills/plan-execution/scripts/tasklet-graph.ts",
+          "skills/plan-execution/scripts/tasklet-graph.js",
+          "tests/tasklet-graph.test.ts",
+          "tests/tasklet-selection.test.ts",
+          "tests/ready-tasklets.test.js"
+        ],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [
+          "Select one eligible tasklet using deterministic ranking and prior affinity"
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "portable-operation-inventory"
+        }
+      }
+    },
+    {
+      "id": "OBL-104",
+      "category": "gate",
+      "requirementIds": [
+        "REQ-PONYTAIL-STATIC-LANGUAGE"
+      ],
+      "responsibilityId": "typed-portable-select-a-bounded-ordered-batch-with-an-exact-union-of-tasklet-paths",
+      "condition": "Select a bounded ordered batch with an exact union of tasklet paths through a checked static implementation preserving the approved portable behavior and historical contract meanings.",
+      "criterion": "Strict compilation and unchanged TSTS cover the canonical implementation and its owned fixtures without bypasses; generated runtime and configured classification/mappings are synchronized. Focused executable proof demonstrates the entire condition, including applicable rejection, completion and non-mutation behavior. Inspected proof boundary: V3 ordered batch and batch-bound tests. Review that boundary for missing assertions before assessment; historical handwritten JavaScript tests must be converted to checked typed sources before this language obligation can be discharged.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "STATIC-PORTABLE-104"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "skills/plan-execution/scripts/tasklet-graph.ts",
+          "skills/plan-execution/scripts/tasklet-graph.js",
+          "tests/tasklet-graph.test.ts",
+          "tests/tasklet-selection.test.ts",
+          "tests/ready-tasklets.test.js"
+        ],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [
+          "Select a bounded ordered batch with an exact union of tasklet paths"
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "portable-operation-inventory"
+        }
+      }
+    },
+    {
+      "id": "OBL-105",
+      "category": "gate",
+      "requirementIds": [
+        "REQ-PONYTAIL-STATIC-LANGUAGE"
+      ],
+      "responsibilityId": "typed-portable-select-subordinate-tasklets-within-the-selected-obligation-s-frozen-ownership",
+      "condition": "Select subordinate tasklets within the selected obligation's frozen ownership through a checked static implementation preserving the approved portable behavior and historical contract meanings.",
+      "criterion": "Strict compilation and unchanged TSTS cover the canonical implementation and its owned fixtures without bypasses; generated runtime and configured classification/mappings are synchronized. Focused executable proof demonstrates the entire condition, including applicable rejection, completion and non-mutation behavior. Inspected proof boundary: tests/obligation-execution.test.js: adopted scope and no-edit assessment. Review that boundary for missing assertions before assessment; historical handwritten JavaScript tests must be converted to checked typed sources before this language obligation can be discharged.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "STATIC-PORTABLE-105"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "skills/plan-execution/scripts/ready-tasklets.ts",
+          "skills/plan-execution/scripts/ready-tasklets.js",
+          "tests/ready-tasklets-cli.test.ts",
+          "tests/obligation-execution.test.js"
+        ],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [
+          "Select subordinate tasklets within the selected obligation's frozen ownership"
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "portable-operation-inventory"
+        }
+      }
+    },
+    {
+      "id": "OBL-106",
+      "category": "gate",
+      "requirementIds": [
+        "REQ-PONYTAIL-STATIC-LANGUAGE"
+      ],
+      "responsibilityId": "typed-portable-execute-tasklet-selection-cli-with-adopted-document-requirements-and-exact-completion-output",
+      "condition": "Execute tasklet-selection CLI with adopted document requirements and exact completion output through a checked static implementation preserving the approved portable behavior and historical contract meanings.",
+      "criterion": "Strict compilation and unchanged TSTS cover the canonical implementation and its owned fixtures without bypasses; generated runtime and configured classification/mappings are synchronized. Focused executable proof demonstrates the entire condition, including applicable rejection, completion and non-mutation behavior. Inspected proof boundary: tests/ready-tasklets-cli.test.ts; adopted CLI portable tests. Review that boundary for missing assertions before assessment; historical handwritten JavaScript tests must be converted to checked typed sources before this language obligation can be discharged.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "STATIC-PORTABLE-106"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "skills/plan-execution/scripts/ready-tasklets.ts",
+          "skills/plan-execution/scripts/ready-tasklets.js",
+          "tests/ready-tasklets-cli.test.ts",
+          "tests/obligation-execution.test.js"
+        ],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [
+          "Execute tasklet-selection CLI with adopted document requirements and exact completion output"
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "portable-operation-inventory"
+        }
+      }
     }
   ],
   "certificates": [],
@@ -3806,6 +5031,188 @@
         "deliverable": "Typed invocation grammar with CLI/format proof and renewed prior operation evidence; stop at this bounded parsing outcome."
       },
       "reason": "Accept typed campaign invocation and renew prior shared-input operation evidence, keeping completeness inventories and final language/campaign gates unresolved.",
+      "assessor": "coordinator"
+    },
+    {
+      "id": "CHECKPOINT-12",
+      "predecessorId": "CHECKPOINT-11",
+      "baselineId": "BASELINE-8",
+      "kind": "rebaseline",
+      "selectedIds": [],
+      "registeredIds": [
+        "OBL-1",
+        "OBL-2",
+        "OBL-3",
+        "OBL-4",
+        "OBL-5",
+        "OBL-6",
+        "OBL-7",
+        "OBL-8",
+        "OBL-9",
+        "OBL-10",
+        "OBL-11",
+        "OBL-12",
+        "OBL-13",
+        "OBL-14",
+        "OBL-15",
+        "OBL-16",
+        "OBL-17",
+        "OBL-18",
+        "OBL-19",
+        "OBL-20",
+        "OBL-21",
+        "OBL-22",
+        "OBL-23",
+        "OBL-24",
+        "OBL-25",
+        "OBL-26",
+        "OBL-27",
+        "OBL-28",
+        "OBL-29",
+        "OBL-30",
+        "OBL-31",
+        "OBL-32",
+        "OBL-33",
+        "OBL-34",
+        "OBL-35",
+        "OBL-36",
+        "OBL-37",
+        "OBL-38",
+        "OBL-39",
+        "OBL-40",
+        "OBL-41",
+        "OBL-42",
+        "OBL-43",
+        "OBL-44",
+        "OBL-45",
+        "OBL-46",
+        "OBL-47",
+        "OBL-48",
+        "OBL-49",
+        "OBL-50",
+        "OBL-51",
+        "OBL-52",
+        "OBL-53",
+        "OBL-54",
+        "OBL-55",
+        "OBL-56",
+        "OBL-57",
+        "OBL-58",
+        "OBL-59",
+        "OBL-60",
+        "OBL-61",
+        "OBL-62",
+        "OBL-63",
+        "OBL-64",
+        "OBL-65",
+        "OBL-66",
+        "OBL-67",
+        "OBL-68",
+        "OBL-69",
+        "OBL-70",
+        "OBL-71",
+        "OBL-72",
+        "OBL-73",
+        "OBL-74",
+        "OBL-75",
+        "OBL-76",
+        "OBL-77",
+        "OBL-78",
+        "OBL-79",
+        "OBL-80",
+        "OBL-81",
+        "OBL-82",
+        "OBL-83",
+        "OBL-84",
+        "OBL-85",
+        "OBL-86",
+        "OBL-87",
+        "OBL-88",
+        "OBL-89",
+        "OBL-90",
+        "OBL-91",
+        "OBL-92",
+        "OBL-93",
+        "OBL-94",
+        "OBL-95",
+        "OBL-96",
+        "OBL-97",
+        "OBL-98",
+        "OBL-99",
+        "OBL-100",
+        "OBL-101",
+        "OBL-102",
+        "OBL-103",
+        "OBL-104",
+        "OBL-105",
+        "OBL-106"
+      ],
+      "certificateIds": [],
+      "invalidatedIds": [
+        "CERT-4"
+      ],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": null,
+      "reason": "Register 30 inspected portable language outcomes with requirement and acceptance contributions; preserve history and unresolved completeness. Refreshed requirement inputs invalidate conservative CERT-4; prior operations require renewed evidence assessment.",
+      "assessor": "coordinator"
+    },
+    {
+      "id": "CHECKPOINT-13",
+      "predecessorId": "CHECKPOINT-12",
+      "baselineId": "BASELINE-8",
+      "kind": "neutral",
+      "selectedIds": [
+        "OBL-73",
+        "OBL-74",
+        "OBL-75",
+        "OBL-76"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "CERT-5"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": {
+        "obligationId": "OBL-76",
+        "operations": [
+          "test",
+          "check",
+          "assess"
+        ],
+        "deliverable": "Renew OBL-73–76 proof on the newly registered portable scope without certifying any new operation; stop at unchanged-source reassessment."
+      },
+      "reason": "Accept fresh evidence for prior bounded deliveries after portable scope registration; preserve unresolved completeness and new inspection-only obligations.",
       "assessor": "coordinator"
     }
   ]

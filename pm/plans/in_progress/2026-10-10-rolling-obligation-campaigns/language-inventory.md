@@ -478,6 +478,13 @@ expand approved behavior nor certify already typed sources. Canonical ledger
 registration must reconcile overlaps with existing obligation policies and their
 requirement/acceptance IDs before they enter the delivery denominator.
 
+Subsequent registration: BASELINE-8 now gives these 30 portable outcomes the
+canonical IDs OBL-77–106, in this table's order. Their conditions, criteria and
+inspection-only bindings live in the ledger; requirement and UAT contributions
+reference the [registered rows](delivery-decomposition.md#registered-portable-language-outcomes).
+They remain unassessed. The preceding 18 core candidates and the later index,
+worktree and host/tooling inventories still need canonical reconciliation.
+
 On 2026-10-10 the existing runtime proof selection below passed 72 tests with
 zero failures, cancellations or skips on source revision `9a77eaf` plus this
 prose-only inventory change. This is reusable behavioral evidence to assess;

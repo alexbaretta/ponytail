@@ -56,3 +56,39 @@ precondition errors and rollback after a failed move/write episode.
 [OBL-76](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-76)
 references the canonical typed campaign argument parsing condition and its
 selection, option compatibility and usage-error proof.
+
+Known portable operation obligations:
+[OBL-77](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-77),
+[OBL-78](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-78),
+[OBL-79](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-79),
+[OBL-80](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-80),
+[OBL-81](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-81),
+[OBL-82](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-82),
+[OBL-83](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-83),
+[OBL-84](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-84),
+[OBL-85](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-85),
+[OBL-86](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-86),
+[OBL-87](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-87),
+[OBL-88](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-88),
+[OBL-89](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-89),
+[OBL-90](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-90),
+[OBL-91](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-91),
+[OBL-92](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-92),
+[OBL-93](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-93),
+[OBL-94](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-94),
+[OBL-95](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-95),
+[OBL-96](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-96),
+[OBL-97](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-97),
+[OBL-98](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-98),
+[OBL-99](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-99),
+[OBL-100](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-100),
+[OBL-101](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-101),
+[OBL-102](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-102),
+[OBL-103](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-103),
+[OBL-104](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-104),
+[OBL-105](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-105),
+[OBL-106](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-106).
+These canonical records cover inspected portable readers, projection, acceptance
+and selectors. Their inspection-only bindings do not authorize implementation
+until prerequisites, exact paths and operations are reconciled. Remaining
+indexing, worktree, host and tooling scope is still unregistered.

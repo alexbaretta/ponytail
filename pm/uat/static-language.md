@@ -73,3 +73,44 @@ validate-all JSON rules, ordered table overrides and JSON/table incompatibility.
 Invalid commands, options, duplicates and extra inputs return CAMPAIGN_USAGE with
 the established usage message. Strict build and unchanged TSTS must pass.
 Legacy dispatch routing is not demonstrated by this acceptance.
+
+### Portable operation acceptance contributions
+
+Each contribution below uses STATIC-CHECK and STATIC-RUNTIME after its declared
+prerequisites. Inspect the canonical condition and complete discharge criterion;
+execute its focused proof through emitted code and observe that entire condition.
+A shared test can supply several contributions but must identify its observations
+for each ID. Registration and pre-existing test results do not establish discharge.
+
+| Acceptance | Obligation | Proving Steps |
+| --- | --- | --- |
+| STATIC-PORTABLE-77 | [OBL-77](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-77) | STATIC-CHECK, STATIC-RUNTIME |
+| STATIC-PORTABLE-78 | [OBL-78](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-78) | STATIC-CHECK, STATIC-RUNTIME |
+| STATIC-PORTABLE-79 | [OBL-79](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-79) | STATIC-CHECK, STATIC-RUNTIME |
+| STATIC-PORTABLE-80 | [OBL-80](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-80) | STATIC-CHECK, STATIC-RUNTIME |
+| STATIC-PORTABLE-81 | [OBL-81](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-81) | STATIC-CHECK, STATIC-RUNTIME |
+| STATIC-PORTABLE-82 | [OBL-82](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-82) | STATIC-CHECK, STATIC-RUNTIME |
+| STATIC-PORTABLE-83 | [OBL-83](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-83) | STATIC-CHECK, STATIC-RUNTIME |
+| STATIC-PORTABLE-84 | [OBL-84](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-84) | STATIC-CHECK, STATIC-RUNTIME |
+| STATIC-PORTABLE-85 | [OBL-85](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-85) | STATIC-CHECK, STATIC-RUNTIME |
+| STATIC-PORTABLE-86 | [OBL-86](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-86) | STATIC-CHECK, STATIC-RUNTIME |
+| STATIC-PORTABLE-87 | [OBL-87](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-87) | STATIC-CHECK, STATIC-RUNTIME |
+| STATIC-PORTABLE-88 | [OBL-88](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-88) | STATIC-CHECK, STATIC-RUNTIME |
+| STATIC-PORTABLE-89 | [OBL-89](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-89) | STATIC-CHECK, STATIC-RUNTIME |
+| STATIC-PORTABLE-90 | [OBL-90](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-90) | STATIC-CHECK, STATIC-RUNTIME |
+| STATIC-PORTABLE-91 | [OBL-91](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-91) | STATIC-CHECK, STATIC-RUNTIME |
+| STATIC-PORTABLE-92 | [OBL-92](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-92) | STATIC-CHECK, STATIC-RUNTIME |
+| STATIC-PORTABLE-93 | [OBL-93](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-93) | STATIC-CHECK, STATIC-RUNTIME |
+| STATIC-PORTABLE-94 | [OBL-94](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-94) | STATIC-CHECK, STATIC-RUNTIME |
+| STATIC-PORTABLE-95 | [OBL-95](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-95) | STATIC-CHECK, STATIC-RUNTIME |
+| STATIC-PORTABLE-96 | [OBL-96](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-96) | STATIC-CHECK, STATIC-RUNTIME |
+| STATIC-PORTABLE-97 | [OBL-97](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-97) | STATIC-CHECK, STATIC-RUNTIME |
+| STATIC-PORTABLE-98 | [OBL-98](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-98) | STATIC-CHECK, STATIC-RUNTIME |
+| STATIC-PORTABLE-99 | [OBL-99](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-99) | STATIC-CHECK, STATIC-RUNTIME |
+| STATIC-PORTABLE-100 | [OBL-100](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-100) | STATIC-CHECK, STATIC-RUNTIME |
+| STATIC-PORTABLE-101 | [OBL-101](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-101) | STATIC-CHECK, STATIC-RUNTIME |
+| STATIC-PORTABLE-102 | [OBL-102](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-102) | STATIC-CHECK, STATIC-RUNTIME |
+| STATIC-PORTABLE-103 | [OBL-103](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-103) | STATIC-CHECK, STATIC-RUNTIME |
+| STATIC-PORTABLE-104 | [OBL-104](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-104) | STATIC-CHECK, STATIC-RUNTIME |
+| STATIC-PORTABLE-105 | [OBL-105](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-105) | STATIC-CHECK, STATIC-RUNTIME |
+| STATIC-PORTABLE-106 | [OBL-106](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-106) | STATIC-CHECK, STATIC-RUNTIME |

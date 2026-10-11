@@ -163,3 +163,50 @@ Before activating implementation assignments or a completion denominator:
 
 Until that inventory is complete and activated, the work percentage remains
 unassessed. A partial inventory must not silently become the denominator.
+
+## Registered portable language outcomes
+
+BASELINE-8 registers the inspected portable outcomes without awarding discharge.
+All bindings permit inspection only; empty prerequisite lists are unresolved
+execution planning, not proof of independence. Canonical conditions and criteria
+remain in the ledger. The complete delivery denominator remains open.
+
+CERT-5 renews OBL-73–76 after the registration changed their conservative
+requirement inputs. Earlier certificates remain historical; use the ledger's
+freshness projection for current satisfaction. The new outcomes below have
+existing typed implementations, but require complete static fixture migration
+and evidence assessment before discharge. They represent work in progress,
+not 30 completed deliveries.
+
+| Obligation | Inspected implementation boundary | Assessment |
+| --- | --- | --- |
+| <a id="obl-77"></a>[OBL-77](obligations.json) | skills/plan-execution/scripts/obligations.ts | Unassessed; inspection only |
+| <a id="obl-78"></a>[OBL-78](obligations.json) | skills/plan-execution/scripts/obligations.ts | Unassessed; inspection only |
+| <a id="obl-79"></a>[OBL-79](obligations.json) | skills/plan-execution/scripts/obligations.ts | Unassessed; inspection only |
+| <a id="obl-80"></a>[OBL-80](obligations.json) | skills/plan-execution/scripts/obligations.ts | Unassessed; inspection only |
+| <a id="obl-81"></a>[OBL-81](obligations.json) | skills/plan-execution/scripts/obligations.ts | Unassessed; inspection only |
+| <a id="obl-82"></a>[OBL-82](obligations.json) | skills/plan-execution/scripts/obligations.ts | Unassessed; inspection only |
+| <a id="obl-83"></a>[OBL-83](obligations.json) | skills/plan-execution/scripts/sprint-metadata.ts | Unassessed; inspection only |
+| <a id="obl-84"></a>[OBL-84](obligations.json) | skills/plan-execution/scripts/sprint-metadata.ts | Unassessed; inspection only |
+| <a id="obl-85"></a>[OBL-85](obligations.json) | skills/plan-execution/scripts/sprint-metadata.ts | Unassessed; inspection only |
+| <a id="obl-86"></a>[OBL-86](obligations.json) | skills/plan-execution/scripts/sprint-metadata.ts | Unassessed; inspection only |
+| <a id="obl-87"></a>[OBL-87](obligations.json) | skills/plan-execution/scripts/sprint-graph.ts | Unassessed; inspection only |
+| <a id="obl-88"></a>[OBL-88](obligations.json) | skills/plan-execution/scripts/sprint-graph.ts | Unassessed; inspection only |
+| <a id="obl-89"></a>[OBL-89](obligations.json) | skills/plan-execution/scripts/sprint-graph.ts | Unassessed; inspection only |
+| <a id="obl-90"></a>[OBL-90](obligations.json) | skills/plan-execution/scripts/ready-sprints.ts | Unassessed; inspection only |
+| <a id="obl-91"></a>[OBL-91](obligations.json) | skills/plan-execution/scripts/ready-sprints.ts | Unassessed; inspection only |
+| <a id="obl-92"></a>[OBL-92](obligations.json) | skills/plan-execution/scripts/ready-sprints.ts | Unassessed; inspection only |
+| <a id="obl-93"></a>[OBL-93](obligations.json) | skills/plan-execution/scripts/ready-sprints.ts | Unassessed; inspection only |
+| <a id="obl-94"></a>[OBL-94](obligations.json) | skills/plan-execution/scripts/ready-sprints.ts | Unassessed; inspection only |
+| <a id="obl-95"></a>[OBL-95](obligations.json) | skills/plan-execution/scripts/ready-sprints.ts | Unassessed; inspection only |
+| <a id="obl-96"></a>[OBL-96](obligations.json) | skills/plan-execution/scripts/tasklet-metadata.ts | Unassessed; inspection only |
+| <a id="obl-97"></a>[OBL-97](obligations.json) | skills/plan-execution/scripts/tasklet-metadata.ts | Unassessed; inspection only |
+| <a id="obl-98"></a>[OBL-98](obligations.json) | skills/plan-execution/scripts/tasklet-metadata.ts | Unassessed; inspection only |
+| <a id="obl-99"></a>[OBL-99](obligations.json) | skills/plan-execution/scripts/tasklet-metadata.ts | Unassessed; inspection only |
+| <a id="obl-100"></a>[OBL-100](obligations.json) | skills/plan-execution/scripts/tasklet-metadata.ts | Unassessed; inspection only |
+| <a id="obl-101"></a>[OBL-101](obligations.json) | skills/plan-execution/scripts/tasklet-statuses.ts | Unassessed; inspection only |
+| <a id="obl-102"></a>[OBL-102](obligations.json) | skills/plan-execution/scripts/tasklet-graph.ts | Unassessed; inspection only |
+| <a id="obl-103"></a>[OBL-103](obligations.json) | skills/plan-execution/scripts/tasklet-graph.ts | Unassessed; inspection only |
+| <a id="obl-104"></a>[OBL-104](obligations.json) | skills/plan-execution/scripts/tasklet-graph.ts | Unassessed; inspection only |
+| <a id="obl-105"></a>[OBL-105](obligations.json) | skills/plan-execution/scripts/ready-tasklets.ts | Unassessed; inspection only |
+| <a id="obl-106"></a>[OBL-106](obligations.json) | skills/plan-execution/scripts/ready-tasklets.ts | Unassessed; inspection only |
