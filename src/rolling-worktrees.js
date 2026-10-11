@@ -8,6 +8,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.readRollingPhysicalDirectory = readRollingPhysicalDirectory;
 exports.resolveRollingManagedDirectory = resolveRollingManagedDirectory;
+exports.requireRollingSessionMarkerAbsent = requireRollingSessionMarkerAbsent;
+exports.validateRollingSessionMarker = validateRollingSessionMarker;
 exports.ensureRollingSessionIdIgnored = ensureRollingSessionIdIgnored;
 exports.provisionRollingWorktree = provisionRollingWorktree;
 const node_fs_1 = __importDefault(require("node:fs"));
@@ -69,6 +71,16 @@ function resolveRollingManagedDirectory(coordinatorRoot) {
     }
     return { directory, mainRoot, worktrees: inventory, configuration };
 }
+function requireRollingSessionMarkerAbsent(worktreeRoot) {
+    requireCheckout(!statIfPresent(node_path_1.default.join(worktreeRoot, 'session_id.txt')), 'previous session marker is still present');
+}
+function validateRollingSessionMarker(worktreeRoot, sessionId) {
+    const marker = node_path_1.default.join(worktreeRoot, 'session_id.txt');
+    requireCheckout(node_fs_1.default.lstatSync(marker).isFile() && !node_fs_1.default.lstatSync(marker).isSymbolicLink()
+        && node_fs_1.default.readFileSync(marker, 'utf8').trim() === sessionId, 'session marker differs');
+    git(worktreeRoot, ['check-ignore', '--no-index', '--quiet', '--', 'session_id.txt']);
+    requireCheckout(git(worktreeRoot, ['ls-files', '--', 'session_id.txt']).length === 0, 'session marker must be untracked');
+}
 function ensureRollingSessionIdIgnored(worktreeRoot) {
     const tracked = (0, node_child_process_1.spawnSync)('git', ['-C', worktreeRoot, 'ls-files', '--error-unmatch', '--', 'session_id.txt'], { encoding: 'utf8' });
     requireCheckout(tracked.status === 1, 'session_id.txt is tracked or Git tracking could not be checked');
@@ -98,7 +110,7 @@ function provisionRollingWorktree(coordinatorRoot, lease, baseCommit) {
     if (exists) {
         requireCheckout(exists.isDirectory() && node_fs_1.default.realpathSync(worktreeRoot) === worktreeRoot
             && pool.worktrees.includes(worktreeRoot), 'checkout path has unknown or conflicting registration');
-        requireCheckout(!statIfPresent(node_path_1.default.join(worktreeRoot, 'session_id.txt')), 'previous session marker is still present');
+        requireRollingSessionMarkerAbsent(worktreeRoot);
         requireCheckout(git(worktreeRoot, ['status', '--porcelain']).length === 0, 'checkout has uncommitted work; preserve it');
         const currentBranch = git(worktreeRoot, ['symbolic-ref', '--short', 'HEAD']);
         if (currentBranch === branch) {

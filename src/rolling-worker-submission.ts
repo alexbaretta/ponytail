@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Alex Baretta. All rights reserved.
 // Licensed under the MIT License. See LICENSE in the project root.
 import fs from 'node:fs';
+import { validateRollingSessionMarker } from './rolling-worktrees.js';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { parse } from 'lossless-json';
@@ -76,11 +77,7 @@ export function validateRollingWorkerSubmission(root: string, obligationLeaseV1:
   readRollingWorkerSubmissionV1(rollingWorkerSubmissionV1);
   requireSubmission(fs.realpathSync(root) === root && git(root, ['rev-parse', '--show-toplevel']).trim() === root, 'submission checkout identity differs');
   requireSubmission(rollingWorkerSubmissionV1.campaignId === obligationLeaseV1.scopeId, 'submission scope differs from lease');
-  const marker = path.join(root, 'session_id.txt');
-  requireSubmission(fs.lstatSync(marker).isFile() && !fs.lstatSync(marker).isSymbolicLink()
-    && fs.readFileSync(marker, 'utf8').trim() === rollingWorkerSubmissionV1.sessionId, 'session marker differs');
-  git(root, ['check-ignore', '--no-index', '--quiet', '--', 'session_id.txt']);
-  requireSubmission(git(root, ['ls-files', '--', 'session_id.txt']).length === 0, 'session marker must be untracked');
+  validateRollingSessionMarker(root, rollingWorkerSubmissionV1.sessionId);
   requireSubmission(git(root, ['status', '--porcelain=v1', '--untracked-files=all']).length === 0, 'candidate checkout is dirty');
   requireSubmission(git(root, ['rev-parse', 'HEAD']).trim() === rollingWorkerSubmissionV1.revision, 'candidate is not actual HEAD');
   git(root, ['merge-base', '--is-ancestor', rollingWorkerSubmissionV1.baseCommit, rollingWorkerSubmissionV1.revision]);

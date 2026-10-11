@@ -16,6 +16,7 @@ import type { ObligationBindingHistoryV1, ObligationBindingRevisionV1 } from '..
 import type { ObligationEvidence } from '../skills/plan-execution/scripts/obligations.js';
 import type { RollingWorkerSubmissionV1 } from '../src/rolling-worker-submission.js';
 import { dispatchRollingReview, collectRollingReview, type RollingReviewOutcomeV1 } from '../src/rolling-review.js';
+import { provisionRollingWorker, attachRollingWorker } from '../src/rolling-worker.js';
 import { RollingCodex, type RollingNativeThread } from '../src/rolling-codex.js';
 import { acceptBoundCheckpoint, type ObligationCertificateBindingV1, type ObligationCertificateSubmission,
   type ObligationCertificateBindingRequest } from '../skills/plan-execution/scripts/obligation-certificate-bindings.js';
@@ -492,3 +493,72 @@ for (const reviewScenario of reviewScenarios) {
   test(`real PostgreSQL serializes allocation, retains ownership and persists ${reviewScenario.mode === 'protocol' ? 'native application' : reviewScenario.decision} review`,
     t => runRollingReviewScenario(t, reviewScenario));
 }
+
+// Traceability: verifies REQ-ROLLING-WORKERS
+// Traceability: verifies REQ-ROLLING-STATE
+test('worker provisioning fences creation and atomically attaches the native identity and ignored marker', async t => {
+  const repositoryRoot = path.resolve(__dirname, '../..');
+  const pool = new Pool(databaseOptions(repositoryRoot));
+  const projectId = crypto.randomUUID();
+  const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'rolling-worker-store-')));
+  const rollingCampaignStore = new RollingCampaignStore(pool, projectId);
+  const rollingCodex = new RollingCodex({executable:process.execPath,argv:[path.join(__dirname,'fixtures/rolling-codex-server.js')]});
+  t.after(async () => {
+    await rollingCodex.close();
+    try {await pool.query('DELETE FROM ponytail_index.project_v1 WHERE project_id=$1',[projectId]);}
+    finally {await pool.end();fs.rmSync(root,{recursive:true,force:true});}
+  });
+  execFileSync('git',['init','-q',root]);
+  fs.mkdirSync(path.join(root,'.agents/config/project'),{recursive:true});
+  const rollingProjectConfigV1: RollingProjectConfigV1 = {schemaVersion:1,mainline:{remote:'origin',branch:'main'},
+    managedWorktrees:{directory:'managed',anchor:'main'},maxActiveWorkers:1,publicationSize:1,setupCommands:[],qa:{focused:[],publication:[['node','--test']]}};
+  fs.writeFileSync(path.join(root,'.agents/config/project/rolling-campaigns.json'),JSON.stringify(rollingProjectConfigV1));
+  fs.writeFileSync(path.join(root,'.gitignore'),'/managed/\n/session_id.txt\n');
+  const sourceObligationDocumentV1 = parseObligationDocument(fs.readFileSync(path.join(repositoryRoot,
+    'pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/obligations.json'),'utf8'));
+  const originalObligationBaseline = sourceObligationDocumentV1.baselines[0];assert.ok(originalObligationBaseline);
+  const obligationBaseline: ObligationBaseline = {...originalObligationBaseline,
+    requirements:originalObligationBaseline.requirements.map(item => ({...item,digest:inputDigest(repositoryRoot,item.path)}))};
+  const obligationDocumentV1: ObligationDocumentV1 = {...sourceObligationDocumentV1,scopeId:'worker-fixture',baselines:[obligationBaseline],
+    obligations:sourceObligationDocumentV1.obligations.filter(item => obligationBaseline.obligationIds.includes(item.id)),certificates:[],checkpoints:[]};
+  fs.mkdirSync(path.join(root,'pm/requirements'),{recursive:true});
+  fs.copyFileSync(path.join(repositoryRoot,'pm/requirements/rolling-campaigns.md'),path.join(root,'pm/requirements/rolling-campaigns.md'));
+  fs.writeFileSync(path.join(root,'obligations.json'),JSON.stringify(obligationDocumentV1));
+  const obligation = obligationDocumentV1.obligations[1];assert.ok(obligation);
+  const rollingBinding: RollingBinding = {obligationId:obligation.id,implementationIds:[],sourcePaths:[],acceptances:[],unitTests:[],integrationTests:[],exclusiveResources:[]};
+  const rollingBindingsV1: RollingBindingsV1 = {schemaVersion:1,bindings:[rollingBinding]};
+  fs.writeFileSync(path.join(root,'bindings.json'),JSON.stringify(rollingBindingsV1));
+  const obligationBindingRevisionV1: ObligationBindingRevisionV1 = {id:'BIND-1',obligationId:obligation.id,predecessorId:null,
+    baselineId:obligationBaseline.id,assessor:'coordinator',authority:obligationBaseline.authority.references,reason:'Isolated worker attachment',dependsOn:[],
+    execution:{sprintId:null,taskletIds:[],plannedPaths:['fixture.ts'],operations:['edit','test'],selection:['fixture'],target:{identity:'local',profile:'fixture'}}};
+  const obligationBindingHistoryV1: ObligationBindingHistoryV1 = {schemaVersion:1,scopeId:'worker-fixture',revisions:[obligationBindingRevisionV1]};
+  fs.writeFileSync(path.join(root,'history.json'),JSON.stringify(obligationBindingHistoryV1));
+  execFileSync('git',['-C',root,'add','.']);
+  execFileSync('git',['-C',root,'-c','user.name=Fixture','-c','user.email=fixture@example.test','commit','-q','-m','worker base']);
+  execFileSync('git',['-C',root,'branch','campaign/worker-fixture']);
+  const rollingGraph = collectRollingGraph(root,'obligations.json','bindings.json','history.json');
+  await pool.query('INSERT INTO ponytail_index.project_v1(project_id,project_name) VALUES($1,$2)',[projectId,`worker-${projectId}`]);
+  await rollingCampaignStore.registerCampaign({id:'worker-fixture',coordinatorRoot:root,documentPath:'obligations.json',bindingsPath:'bindings.json',
+    graphDigest:rollingGraph.digest,managedDirectory:path.join(root,'managed'),configuration:{mainline:{remote:'origin',branch:'main'},
+      incrementRef:'campaign/worker-fixture',maxActiveWorkers:1,publicationSize:1},
+    bindingHistory:{path:'history.json',assessor:'coordinator',authority:obligationBaseline.authority.references}});
+  const rollingAllocationResult = await rollingCampaignStore.allocate('worker-fixture',rollingGraph.digest);
+  assert.ok(rollingAllocationResult.assignment && rollingAllocationResult.actionId && rollingAllocationResult.worktree);
+  const generation = rollingAllocationResult.assignment.generation;
+  await rollingCodex.initialize();
+  const rollingWorkerInitialization = await provisionRollingWorker(rollingCampaignStore,rollingCodex,'worker-fixture',rollingAllocationResult.actionId,generation);
+  await assert.rejects(rollingCampaignStore.claimWorkerCreation('worker-fixture',rollingAllocationResult.actionId,generation),/already claimed/);
+  await assert.rejects(rollingCampaignStore.recordWorkerCreation('worker-fixture',rollingAllocationResult.actionId,generation,
+    {...rollingWorkerInitialization.rollingWorkerCreationV1,sessionId:'foreign'}),/immutable/);
+  await assert.rejects(rollingCampaignStore.completeWorkerCreation('worker-fixture',rollingAllocationResult.actionId,generation,
+    {...rollingWorkerInitialization.rollingWorkerCreationV1,sessionId:'foreign'}),/receipt differs/);
+  const rollingSessionAttachment = await attachRollingWorker(rollingCampaignStore,rollingCodex,'worker-fixture',rollingAllocationResult.actionId,
+    generation,rollingWorkerInitialization);
+  assert.equal(rollingSessionAttachment.sessionId,'session-fixture');
+  assert.equal(rollingSessionAttachment.state,'WORKING');
+  assert.equal((await rollingCampaignStore.status('worker-fixture')).assignments[0]?.sessionId,rollingWorkerInitialization.rollingWorkerCreationV1.sessionId);
+  assert.deepEqual(await rollingCampaignStore.nextActions('worker-fixture'),[]);
+  assert.deepEqual(await rollingCampaignStore.completeWorkerCreation('worker-fixture',rollingAllocationResult.actionId,generation,
+    rollingWorkerInitialization.rollingWorkerCreationV1),rollingSessionAttachment);
+  assert.equal(execFileSync('git',['-C',rollingAllocationResult.worktree.rootPath,'status','--porcelain'],{encoding:'utf8'}),'');
+});

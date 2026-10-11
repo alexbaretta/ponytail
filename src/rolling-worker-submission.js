@@ -11,6 +11,7 @@ exports.readRollingWorkerSubmissionV1 = readRollingWorkerSubmissionV1;
 exports.parseRollingWorkerSubmission = parseRollingWorkerSubmission;
 exports.validateRollingWorkerSubmission = validateRollingWorkerSubmission;
 const node_fs_1 = __importDefault(require("node:fs"));
+const rolling_worktrees_js_1 = require("./rolling-worktrees.js");
 const node_path_1 = __importDefault(require("node:path"));
 const node_child_process_1 = require("node:child_process");
 const lossless_json_1 = require("lossless-json");
@@ -64,11 +65,7 @@ function validateRollingWorkerSubmission(root, obligationLeaseV1, rollingWorkerS
     readRollingWorkerSubmissionV1(rollingWorkerSubmissionV1);
     requireSubmission(node_fs_1.default.realpathSync(root) === root && git(root, ['rev-parse', '--show-toplevel']).trim() === root, 'submission checkout identity differs');
     requireSubmission(rollingWorkerSubmissionV1.campaignId === obligationLeaseV1.scopeId, 'submission scope differs from lease');
-    const marker = node_path_1.default.join(root, 'session_id.txt');
-    requireSubmission(node_fs_1.default.lstatSync(marker).isFile() && !node_fs_1.default.lstatSync(marker).isSymbolicLink()
-        && node_fs_1.default.readFileSync(marker, 'utf8').trim() === rollingWorkerSubmissionV1.sessionId, 'session marker differs');
-    git(root, ['check-ignore', '--no-index', '--quiet', '--', 'session_id.txt']);
-    requireSubmission(git(root, ['ls-files', '--', 'session_id.txt']).length === 0, 'session marker must be untracked');
+    (0, rolling_worktrees_js_1.validateRollingSessionMarker)(root, rollingWorkerSubmissionV1.sessionId);
     requireSubmission(git(root, ['status', '--porcelain=v1', '--untracked-files=all']).length === 0, 'candidate checkout is dirty');
     requireSubmission(git(root, ['rev-parse', 'HEAD']).trim() === rollingWorkerSubmissionV1.revision, 'candidate is not actual HEAD');
     git(root, ['merge-base', '--is-ancestor', rollingWorkerSubmissionV1.baseCommit, rollingWorkerSubmissionV1.revision]);

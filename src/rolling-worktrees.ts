@@ -79,6 +79,20 @@ export function resolveRollingManagedDirectory(coordinatorRoot: string): Rolling
 }
 
 // Traceability: implements REQ-ROLLING-WORKERS
+export function requireRollingSessionMarkerAbsent(worktreeRoot: string): void {
+  requireCheckout(!statIfPresent(path.join(worktreeRoot, 'session_id.txt')), 'previous session marker is still present');
+}
+
+// Traceability: implements REQ-ROLLING-WORKERS
+export function validateRollingSessionMarker(worktreeRoot: string, sessionId: string): void {
+  const marker = path.join(worktreeRoot, 'session_id.txt');
+  requireCheckout(fs.lstatSync(marker).isFile() && !fs.lstatSync(marker).isSymbolicLink()
+    && fs.readFileSync(marker, 'utf8').trim() === sessionId, 'session marker differs');
+  git(worktreeRoot, ['check-ignore', '--no-index', '--quiet', '--', 'session_id.txt']);
+  requireCheckout(git(worktreeRoot, ['ls-files', '--', 'session_id.txt']).length === 0, 'session marker must be untracked');
+}
+
+// Traceability: implements REQ-ROLLING-WORKERS
 export function ensureRollingSessionIdIgnored(worktreeRoot: string): RollingMarkerIgnoreResult {
   const tracked = spawnSync('git', ['-C', worktreeRoot, 'ls-files', '--error-unmatch', '--', 'session_id.txt'], { encoding: 'utf8' });
   requireCheckout(tracked.status === 1, 'session_id.txt is tracked or Git tracking could not be checked');
@@ -109,7 +123,7 @@ export function provisionRollingWorktree(coordinatorRoot: string, lease: Rolling
   if (exists) {
     requireCheckout(exists.isDirectory() && fs.realpathSync(worktreeRoot) === worktreeRoot
       && pool.worktrees.includes(worktreeRoot), 'checkout path has unknown or conflicting registration');
-    requireCheckout(!statIfPresent(path.join(worktreeRoot, 'session_id.txt')), 'previous session marker is still present');
+    requireRollingSessionMarkerAbsent(worktreeRoot);
     requireCheckout(git(worktreeRoot, ['status', '--porcelain']).length === 0, 'checkout has uncommitted work; preserve it');
     const currentBranch = git(worktreeRoot, ['symbolic-ref', '--short', 'HEAD']);
     if (currentBranch === branch) {

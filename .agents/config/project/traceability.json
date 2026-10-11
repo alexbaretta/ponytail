@@ -1243,6 +1243,10 @@
       "sourcePath": "src/rolling-codex.ts"
     },
     {
+      "path": "src/rolling-worker.js",
+      "sourcePath": "src/rolling-worker.ts"
+    },
+    {
       "path": "src/project-index-database.js",
       "sourcePath": "src/project-index-database.ts"
     },
