@@ -1,0 +1,109 @@
+{
+  "schemaVersion": 4,
+  "sprint": "S04",
+  "features": {
+    "S04-F01": {
+      "depends_on": [],
+      "validation_tasklet": "S04-F01-T03"
+    },
+    "S04-F02": {
+      "depends_on": [
+        "S04-F01"
+      ],
+      "validation_tasklet": "S04-F02-T03"
+    }
+  },
+  "tasklets": {
+    "S04-F01-T01": {
+      "depends_on": [],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S04-F01",
+      "planned_paths": [
+        "src/rolling-worktrees.js",
+        "tests/rolling-worktrees.test.js",
+        "tests/rolling-worktrees.integration.test.js",
+        "AGENTS.md",
+        "PROJECT_STRUCTURE.md",
+        ".agents/config/project/traceability.json",
+        "pm/requirements/traceability.generated.md"
+      ]
+    },
+    "S04-F01-T02": {
+      "depends_on": [
+        "S04-F01-T01"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S04-F01",
+      "planned_paths": [
+        "src/rolling-worktrees.js",
+        "tests/rolling-worktrees.test.js",
+        "tests/rolling-worktrees.integration.test.js",
+        "AGENTS.md",
+        "PROJECT_STRUCTURE.md",
+        ".agents/config/project/traceability.json",
+        "pm/requirements/traceability.generated.md"
+      ]
+    },
+    "S04-F01-T03": {
+      "depends_on": [
+        "S04-F01-T01",
+        "S04-F01-T02"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S04-F01",
+      "planned_paths": []
+    },
+    "S04-F02-T01": {
+      "depends_on": [],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S04-F02",
+      "planned_paths": [
+        "src/rolling-codex.js",
+        "src/rolling-campaign-store.js",
+        "tests/rolling-codex.test.js",
+        "tests/rolling-codex.integration.test.js",
+        "scripts/project-index.sql",
+        "versioned-data-contracts.json",
+        "AGENTS.md",
+        "PROJECT_STRUCTURE.md",
+        ".agents/config/project/traceability.json",
+        "pm/requirements/traceability.generated.md"
+      ]
+    },
+    "S04-F02-T02": {
+      "depends_on": [
+        "S04-F02-T01"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S04-F02",
+      "planned_paths": [
+        "src/rolling-codex.js",
+        "src/rolling-campaign-store.js",
+        "tests/rolling-codex.test.js",
+        "tests/rolling-codex.integration.test.js",
+        "scripts/project-index.sql",
+        "versioned-data-contracts.json",
+        "AGENTS.md",
+        "PROJECT_STRUCTURE.md",
+        ".agents/config/project/traceability.json",
+        "pm/requirements/traceability.generated.md"
+      ]
+    },
+    "S04-F02-T03": {
+      "depends_on": [
+        "S04-F02-T01",
+        "S04-F02-T02"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S04-F02",
+      "planned_paths": []
+    }
+  },
+  "external_depends_on": {}
+}

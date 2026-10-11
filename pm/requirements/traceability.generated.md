@@ -645,6 +645,11 @@ Requirement: [pm/requirements/rolling-campaigns.md](rolling-campaigns.md)
 
 Requirement: [pm/requirements/rolling-campaigns.md](rolling-campaigns.md)
 
+- implementation: implements [src/rolling-worktrees.js:43](../../src/rolling-worktrees.js#L43)
+- implementation: implements [src/rolling-worktrees.js:61](../../src/rolling-worktrees.js#L61)
+- implementation: implements [src/rolling-worktrees.js:78](../../src/rolling-worktrees.js#L78)
+- unit-test: verifies [tests/rolling-worktrees.test.js:11](../../tests/rolling-worktrees.test.js#L11)
+- integration-test: verifies [tests/rolling-worktrees.integration.test.js:13](../../tests/rolling-worktrees.integration.test.js#L13)
 - uat: verifies [pm/uat/rolling-campaigns.md:68](../../pm/uat/rolling-campaigns.md#L68)
 - plan: plans-implementation [pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/plan.md:102](../../pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/plan.md#L102)
 

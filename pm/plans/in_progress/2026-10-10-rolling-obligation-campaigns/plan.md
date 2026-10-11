@@ -60,7 +60,7 @@ and no retrospective rewrite of closed plan evidence.
 | S01 | Activated requirements/UAT, execution design, starting evidence and atomic implementation records | Done |
 | S02 | [Configuration and graph](sprints/S02.md) | Done |
 | S03 | [PostgreSQL execution ownership](sprints/S03.md) | Done |
-| S04 | Ponytail worktree pool, direct Codex adapter, suspension/reactivation and review lifecycle | Pending |
+| S04 | [Ponytail checkouts and direct Codex workers](sprints/S04.md) | In progress |
 | S05 | Increment integration, publication batches and QA evidence on exact revisions | Pending |
 | S06 | Chapter CLI/MCP, old dispatcher replacement, portable policy and final acceptance | Pending |
 

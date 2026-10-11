@@ -108,6 +108,9 @@ Setup failure retains exact cleanup ownership. Quarantine uncertain checkouts.
 
 ## Workers and direct Codex control
 
+When the configured pool is inside the main checkout, project setup must make
+it Git ignored before allocation so integration retains a clean checkout.
+
 Create ordinary Git worktrees with project setup, then start a fresh Codex thread
 with explicit `cwd` through the documented App Server. The installed CLI's
 `--cd` supports manual operation; do not use `--worktree`. A dedicated transport

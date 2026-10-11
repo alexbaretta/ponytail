@@ -831,6 +831,26 @@
       "class": "plan",
       "path": "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/sprints/S03.md",
       "locator": "text"
+    },
+    {
+      "class": "implementation",
+      "path": "src/rolling-worktrees.js",
+      "locator": "text"
+    },
+    {
+      "class": "unit-test",
+      "path": "tests/rolling-worktrees.test.js",
+      "locator": "text"
+    },
+    {
+      "class": "integration-test",
+      "path": "tests/rolling-worktrees.integration.test.js",
+      "locator": "text"
+    },
+    {
+      "class": "plan",
+      "path": "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/sprints/S04.md",
+      "locator": "text"
     }
   ],
   "entities": [],

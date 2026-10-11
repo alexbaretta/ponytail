@@ -86,6 +86,8 @@ while project-wide management records remain under `pm/`.
   `src/rolling-campaign-store.js` owns transactional PostgreSQL campaign,
   checkout and assignment leases and durable external-action intents.
   Its tables and indexes use the existing `scripts/project-index.sql` setup.
+  `src/rolling-worktrees.js` validates the shared physical pool and provisions
+  generation-bound ordinary Git checkouts with project setup and marker ignore.
   `src/worktree-reclamation.js` owns the versioned
   project lifecycle-adapter contracts, project-scoped reclamation lock,
   deterministic claim selection, generation fencing, and verified cleanup
