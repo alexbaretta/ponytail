@@ -444,6 +444,7 @@ Requirement: [pm/requirements/obligation-execution.md](obligation-execution.md)
 
 Requirement: [pm/requirements/obligation-execution.md](obligation-execution.md)
 
+- implementation: implements [skills/plan-execution/scripts/ready-tasklets.ts:20](../../skills/plan-execution/scripts/ready-tasklets.ts#L20)
 - implementation: supports [skills/plan-execution/SKILL.md:33](../../skills/plan-execution/SKILL.md#L33)
 - implementation: implements [src/campaign-orchestration.js:532](../../src/campaign-orchestration.js#L532)
 - implementation: implements [src/campaign-orchestration.js:541](../../src/campaign-orchestration.js#L541)
@@ -466,6 +467,7 @@ Requirement: [pm/requirements/obligation-execution.md](obligation-execution.md)
 Requirement: [pm/requirements/obligation-execution.md](obligation-execution.md)
 
 - implementation: implements [skills/plan-execution/scripts/obligations.ts:503](../../skills/plan-execution/scripts/obligations.ts#L503)
+- implementation: implements [skills/plan-execution/scripts/ready-tasklets.ts:19](../../skills/plan-execution/scripts/ready-tasklets.ts#L19)
 - implementation: supports [skills/plan-execution/SKILL.md:34](../../skills/plan-execution/SKILL.md#L34)
 - implementation: implements [src/campaign-orchestration.js:887](../../src/campaign-orchestration.js#L887)
 - implementation: implements [src/campaign-orchestration.js:898](../../src/campaign-orchestration.js#L898)

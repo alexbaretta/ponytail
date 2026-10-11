@@ -995,6 +995,16 @@
       "class": "unit-test",
       "path": "tests/tasklet-selection.test.ts",
       "locator": "text"
+    },
+    {
+      "class": "implementation",
+      "path": "skills/plan-execution/scripts/ready-tasklets.ts",
+      "locator": "text"
+    },
+    {
+      "class": "unit-test",
+      "path": "tests/ready-tasklets-cli.test.ts",
+      "locator": "text"
     }
   ],
   "entities": [],
@@ -1049,7 +1059,7 @@
     },
     {
       "path": ".openclaw/skills/plan-execution/scripts/ready-tasklets.js",
-      "sourcePath": "skills/plan-execution/scripts/ready-tasklets.js"
+      "sourcePath": "skills/plan-execution/scripts/ready-tasklets.ts"
     },
     {
       "path": "skills/plan-execution/scripts/obligations.js",
@@ -1142,6 +1152,14 @@
     {
       "path": ".openclaw/skills/plan-execution/scripts/tasklet-graph.js",
       "sourcePath": "skills/plan-execution/scripts/tasklet-graph.ts"
+    },
+    {
+      "path": "skills/plan-execution/scripts/ready-tasklets.js",
+      "sourcePath": "skills/plan-execution/scripts/ready-tasklets.ts"
+    },
+    {
+      "path": ".openclaw/skills/plan-execution/scripts/ready-tasklets.ts",
+      "sourcePath": "skills/plan-execution/scripts/ready-tasklets.ts"
     }
   ],
   "reverseViewPath": "pm/requirements/traceability.generated.md",

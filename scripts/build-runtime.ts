@@ -22,7 +22,8 @@ const sources: readonly string[] = [
   'src/campaign-dependencies.ts',
   'skills/plan-execution/scripts/tasklet-statuses.ts',
   'skills/plan-execution/scripts/tasklet-metadata.ts',
-  'skills/plan-execution/scripts/tasklet-graph.ts'
+  'skills/plan-execution/scripts/tasklet-graph.ts',
+  'skills/plan-execution/scripts/ready-tasklets.ts'
 ];
 const argv = process.argv.slice(2);
 if (!(argv.length === 0 || argv.length === 1 && argv[0] === '--check')) {

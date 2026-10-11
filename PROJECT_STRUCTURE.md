@@ -67,6 +67,9 @@ while project-wide management records remain under `pm/`.
   search` command families; `scripts/test-project-index-postgres.sh` owns their
   real-database contract proof.
 - `tsts/` owns the canonical TypeScript analyzer and its Node tests. Root npm dependencies and `npm run build:tsts` produce ignored `tsts/dist/`; npm distributes only its compiled runtime. `cli/tsts` is the registered-project launcher installed alongside `ponytail`.
+- `skills/plan-execution/scripts/ready-tasklets.ts` owns the portable CLI and
+  obligation-scoped tasklet selection over typed graph and obligation operations;
+  its established `.js` launch path is compiler-generated.
 - `skills/plan-execution/scripts/tasklet-graph.ts` owns typed dependency and
   path validation, derived graph metrics, ranking and versioned batch selection;
   its adjacent runtime is generated.
