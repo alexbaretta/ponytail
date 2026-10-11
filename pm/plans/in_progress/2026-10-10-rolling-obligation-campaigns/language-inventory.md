@@ -417,6 +417,83 @@ materialization remain OBL-70–72. Next inspection covers portable obligation,
 sprint and tasklet selectors, report projection, coordinator input ownership,
 and retained index/worktree/host operations before the remaining untyped tools.
 
+## Inspected portable planning operations
+
+Source inspection at `9a77eaf` extends the candidate inventory below. These are
+retained portable planning operations, not the obsolete campaign dispatcher.
+Their use by existing projects remains supported while campaign scheduling moves
+to obligations. Existing physical contracts retain their meanings.
+
+| Candidate outcome | Source boundary | Proof boundary |
+| --- | --- | --- |
+| Read physical V1 obligation documents and lossless numeric tokens | `skills/plan-execution/scripts/obligations.ts`: reader/parser | `tests/obligations.test.js`: unknown fields, identity, cycles and lossy tokens |
+| Assess certificate freshness on declared current inputs | Same owner: `freshCertificate` | Scoped input, adequacy and finalized execution evidence tests |
+| Project accepted obligation satisfaction and reopen stale/dependency-invalid proof | Same owner: `projectObligations` | Projection, changed-input and completeness tests |
+| Select the eligible obligation without bypassing earlier unresolved categories | Same owner: `selectObligation` | Blocked upstream and stable identity selection tests |
+| Accept an authorized append-only checkpoint on its exact predecessor | Same owner: `acceptCheckpoint` | Authority, productive/neutral transitions, disturbance and rebaseline tests |
+| Execute scoped portable validation, status and selection commands | Same owner: `main` | Explicit document/root, invalid data and IO diagnostic CLI tests |
+| Read physical V1 sprint metadata | `skills/plan-execution/scripts/sprint-metadata.ts`: V1 reader | `tests/sprint-metadata.test.ts`: physical versions and malformed metadata |
+| Read physical V2 sprint metadata | Same owner: V2 reader | Same proof, including reviewed execution and null execution |
+| Read physical V3 sprint metadata | Same owner: V3 reader | Same proof, including version-specific execution |
+| Discover a homogeneous sprint collection in numeric order | Same owner: `parseSprintFile`, `readSprints` | Duplicate ordinal, mixed version and discovery tests |
+| Validate sprint dependency identity and acyclicity | `skills/plan-execution/scripts/sprint-graph.ts`: `validateDependencies` | `tests/ready-sprints.test.js`: dependency errors |
+| Validate legacy sprint path ownership against execution ordering | Same owner: `validatePathOwnership` | `tests/sprint-graph.test.ts`: transitive ordering and unordered sharing |
+| Derive V3 ownership from tasklet paths while exempting planning-only sprints | Same owner: `validateV3PathOwnership` | V3 path derivation and no-tasklet-file tests |
+| Select a dependency-ready sprint for planning | `skills/plan-execution/scripts/ready-sprints.ts`: planning-ready selector | `tests/ready-sprints.test.js`: STUB and approved prerequisites |
+| Select a detailed sprint for planning review | Same owner: planning-reviewable selector | Detailed unapproved planning dependency tests |
+| Select a sprint eligible to begin execution under its physical version rules | Same owner: execution-ready selector | V1 readiness, V2 earliest checkpoint and V3 reviewed readiness tests |
+| Resume started V3 execution without relaxing start/review gates | Same owner: execution-runnable selector | Started sprint resumption tests |
+| Select V3 tasklets for execution review before starting | Same owner: execution-reviewable selector | Approved unreviewed sprint and completed dependency tests |
+| Execute sprint-selection CLI modes with exact JSON and error exits | Same owner: `main` | `tests/ready-sprints-cli.test.ts` |
+| Read physical V1 tasklet metadata | `skills/plan-execution/scripts/tasklet-metadata.ts`: V1 reader | `tests/tasklet-metadata.test.ts`; strict V1 portable tests |
+| Read physical V2 tasklet metadata | Same owner: V2 reader | Physical maps, risk reasons, paths and feature membership tests |
+| Read physical V3 tasklet metadata | Same owner: V3 reader | Physical-version dispatch and normalized map tests |
+| Read physical V4 tasklet metadata with external dependency identities | Same owner: V4 reader | External declarations and unchanged local-selection tests |
+| Load a tasklet graph through its declared physical reader | Same owner: `readTaskletGraph` | Unknown JSON and supported file dispatch tests |
+| Parse tasklet heading status without duplicate or malformed declarations | `skills/plan-execution/scripts/tasklet-statuses.ts` | `tests/tasklet-statuses.test.ts` |
+| Validate tasklet/feature dependencies and derive the constrained execution graph | `skills/plan-execution/scripts/tasklet-graph.ts`: graph validators/derivation | `tests/tasklet-graph.test.ts`; feature gates, cycles and path overlap portable tests |
+| Select one eligible tasklet using deterministic ranking and prior affinity | Same owner: ranking and scalar selector | `tests/tasklet-selection.test.ts`; ranking/affinity portable tests |
+| Select a bounded ordered batch with an exact union of tasklet paths | Same owner: batch selector | V3 ordered batch and batch-bound tests |
+| Select subordinate tasklets within the selected obligation's frozen ownership | `skills/plan-execution/scripts/ready-tasklets.ts`: `selectObligationTasklets` | `tests/obligation-execution.test.js`: adopted scope and no-edit assessment |
+| Execute tasklet-selection CLI with adopted document requirements and exact completion output | Same owner: `main` | `tests/ready-tasklets-cli.test.ts`; adopted CLI portable tests |
+
+The single-tasklet selector and ordered batch selector have different observable
+results; the dispatcher that chooses between them is part of their transport
+contract. Ranking criteria and effective feature dependencies belong to the
+selection/graph outcomes, rather than becoming additional work units. Version
+type guards, digest helpers, vector comparison and history replay similarly
+support their consuming outcome. Checkpoint ordering and dependency execution
+ordering constrain sprint selectors; they are not additional deliveries merely
+because their validators are exported.
+
+The CLI row for each tool includes dispatch, argument diagnostics, exit status
+and serialization. Its individual subcommands may require subdivision if caller
+inspection establishes independently integrable transport work. Physical readers
+remain independent contracts; their shared implementation does not merge their
+historical responsibilities. Tests still written in JavaScript require migration
+with their owning outcome before satisfying the full language condition.
+
+These 30 candidates and the preceding 18 are inspection results. They neither
+expand approved behavior nor certify already typed sources. Canonical ledger
+registration must reconcile overlaps with existing obligation policies and their
+requirement/acceptance IDs before they enter the delivery denominator.
+
+On 2026-10-10 the existing runtime proof selection below passed 72 tests with
+zero failures, cancellations or skips on source revision `9a77eaf` plus this
+prose-only inventory change. This is reusable behavioral evidence to assess;
+it is not a certificate for the full static-language requirement. No build
+inputs changed, and the configured build-impact query selected no targets.
+
+```sh
+node --test \
+  dist/tests/sprint-metadata.test.js dist/tests/sprint-graph.test.js \
+  dist/tests/tasklet-metadata.test.js dist/tests/tasklet-graph.test.js \
+  dist/tests/tasklet-selection.test.js dist/tests/tasklet-statuses.test.js \
+  dist/tests/ready-sprints-cli.test.js dist/tests/ready-tasklets-cli.test.js \
+  tests/obligations.test.js tests/obligation-execution.test.js \
+  tests/ready-sprints.test.js tests/ready-tasklets.test.js
+```
+
 ## Registration and completion boundary
 
 The owner census is now explicit; the atomic outcome inventory is still incomplete.
