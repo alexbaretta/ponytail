@@ -1,0 +1,64 @@
+{
+  "schemaVersion": 1,
+  "certificateId": "CERT-92",
+  "lease": {
+    "schemaVersion": 1,
+    "scopeId": "2026-10-10-rolling-obligation-campaigns",
+    "baselineId": "BASELINE-15",
+    "graphDigest": "971ad7e913c0efcbd51d39c36ed3ebe8c0e45ef067c1a9741a8a557bfbff5025",
+    "generation": "standalone-native-rework-assessment-CERT-92-OBL-102",
+    "assessor": "coordinator",
+    "authority": [
+      "user-goal-2026-10-10-rolling-campaigns",
+      "user-goal-2026-10-10-static-language-existing-tsts",
+      "user-2026-10-10-normative-atomic-obligations",
+      "user-2026-10-11-language-scope-our-code-preserve-translations"
+    ],
+    "binding": {
+      "obligationId": "OBL-102",
+      "revisionId": "BIND-23",
+      "dependsOn": [
+        "OBL-112"
+      ],
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "skills/plan-execution/scripts/tasklet-graph.ts",
+          "skills/plan-execution/scripts/tasklet-graph.js",
+          "tests/tasklet-graph.test.ts",
+          "tests/tasklet-selection.test.ts",
+          "tests/ready-tasklets.test.ts"
+        ],
+        "operations": [
+          "inspect",
+          "edit",
+          "build",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "Validate tasklet/feature dependencies and derive the constrained execution graph through a checked static implementation preserving the approved portable behavior and historical contract meanings."
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "typed-tasklet-graph-OBL-102"
+        }
+      }
+    }
+  },
+  "revision": "674cb1ccf308071b5d8aebbb457a23081217240a",
+  "proof": [
+    {
+      "operation": "test",
+      "certificateEvidenceIndex": 36,
+      "submissionEvidenceIndex": 0
+    },
+    {
+      "operation": "test",
+      "certificateEvidenceIndex": 37,
+      "submissionEvidenceIndex": 1
+    }
+  ]
+}

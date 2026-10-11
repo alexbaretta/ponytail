@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "certificateId": "CERT-89",
+  "lease": {
+    "schemaVersion": 1,
+    "scopeId": "2026-10-10-rolling-obligation-campaigns",
+    "baselineId": "BASELINE-15",
+    "graphDigest": "f2661b28d30ee664eaf5f8334f4f3366ee1aaf84eb28166467ca4c372c2966ca",
+    "generation": "standalone-native-rework-assessment-CERT-89-OBL-110",
+    "assessor": "coordinator",
+    "authority": [
+      "user-goal-2026-10-10-rolling-campaigns",
+      "user-goal-2026-10-10-static-language-existing-tsts",
+      "user-2026-10-10-normative-atomic-obligations",
+      "user-2026-10-11-language-scope-our-code-preserve-translations"
+    ],
+    "binding": {
+      "obligationId": "OBL-110",
+      "revisionId": "BIND-1",
+      "dependsOn": [
+        "OBL-109"
+      ],
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "src/rolling-campaign-store.ts",
+          "src/rolling-campaign-store.js",
+          "src/rolling-campaign.ts",
+          "src/rolling-campaign.js",
+          "tests/rolling-campaign-store.test.ts",
+          "tests/rolling-campaign-store.integration.test.ts",
+          "versioned-data-contracts.json",
+          "pm/requirements/traceability.generated.md",
+          "scripts/project-index.sql"
+        ],
+        "operations": [
+          "edit",
+          "build",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "stored frozen lease allocation and retained-owner adoption"
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "stored-frozen-leases"
+        }
+      }
+    }
+  },
+  "revision": "674cb1ccf308071b5d8aebbb457a23081217240a",
+  "proof": [
+    {
+      "operation": "test",
+      "certificateEvidenceIndex": 0,
+      "submissionEvidenceIndex": 0
+    },
+    {
+      "operation": "test",
+      "certificateEvidenceIndex": 1,
+      "submissionEvidenceIndex": 1
+    }
+  ]
+}

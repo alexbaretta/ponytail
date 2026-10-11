@@ -1,0 +1,77 @@
+{
+  "schemaVersion": 1,
+  "certificateId": "CERT-93",
+  "lease": {
+    "schemaVersion": 1,
+    "scopeId": "2026-10-10-rolling-obligation-campaigns",
+    "baselineId": "BASELINE-15",
+    "graphDigest": "dde5de99f930b06331158b18c8e782467aec629784865c8d250891b70d832d96",
+    "generation": "standalone-native-rework-assessment-CERT-93-OBL-45",
+    "assessor": "coordinator",
+    "authority": [
+      "user-goal-2026-10-10-rolling-campaigns",
+      "user-goal-2026-10-10-static-language-existing-tsts",
+      "user-2026-10-10-normative-atomic-obligations",
+      "user-2026-10-11-language-scope-our-code-preserve-translations"
+    ],
+    "binding": {
+      "obligationId": "OBL-45",
+      "revisionId": "BIND-39",
+      "dependsOn": [
+        "OBL-44"
+      ],
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "src/rolling-worker.ts",
+          "src/rolling-worker.js",
+          "src/rolling-worktrees.ts",
+          "src/rolling-worktrees.js",
+          "src/rolling-worker-submission.ts",
+          "src/rolling-worker-submission.js",
+          "src/rolling-campaign-store.ts",
+          "src/rolling-campaign-store.js",
+          "tests/rolling-worker.test.ts",
+          "tests/rolling-campaign-store.integration.test.ts",
+          "tests/rolling-codex.integration.ts",
+          "tests/fixtures/rolling-codex-server.ts",
+          "scripts/project-index.sql",
+          "scripts/build-runtime.ts",
+          "versioned-data-contracts.json",
+          "AGENTS.md",
+          ".agents/config/project/traceability.json",
+          "pm/requirements/traceability.generated.md"
+        ],
+        "operations": [
+          "inspect",
+          "edit",
+          "build",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "Application worker-start Arc"
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "rolling-worker-instructions-OBL-45"
+        }
+      }
+    }
+  },
+  "revision": "674cb1ccf308071b5d8aebbb457a23081217240a",
+  "proof": [
+    {
+      "operation": "test",
+      "certificateEvidenceIndex": 0,
+      "submissionEvidenceIndex": 0
+    },
+    {
+      "operation": "test",
+      "certificateEvidenceIndex": 1,
+      "submissionEvidenceIndex": 1
+    }
+  ]
+}

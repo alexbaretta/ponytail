@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "certificateId": "CERT-92",
+  "lease": {
+    "schemaVersion": 1,
+    "scopeId": "2026-10-10-rolling-obligation-campaigns",
+    "baselineId": "BASELINE-15",
+    "graphDigest": "971ad7e913c0efcbd51d39c36ed3ebe8c0e45ef067c1a9741a8a557bfbff5025",
+    "generation": "standalone-native-rework-assessment-CERT-92-OBL-86",
+    "assessor": "coordinator",
+    "authority": [
+      "user-goal-2026-10-10-rolling-campaigns",
+      "user-goal-2026-10-10-static-language-existing-tsts",
+      "user-2026-10-10-normative-atomic-obligations",
+      "user-2026-10-11-language-scope-our-code-preserve-translations"
+    ],
+    "binding": {
+      "obligationId": "OBL-86",
+      "revisionId": "BIND-7",
+      "dependsOn": [
+        "OBL-112"
+      ],
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "skills/plan-execution/scripts/sprint-metadata.ts",
+          "skills/plan-execution/scripts/sprint-metadata.js",
+          "tests/sprint-metadata.test.ts"
+        ],
+        "operations": [
+          "inspect",
+          "edit",
+          "build",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "Discover a homogeneous sprint collection in numeric order through a checked static implementation preserving the approved portable behavior and historical contract meanings."
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "typed-sprint-owner-OBL-86"
+        }
+      }
+    }
+  },
+  "revision": "674cb1ccf308071b5d8aebbb457a23081217240a",
+  "proof": [
+    {
+      "operation": "test",
+      "certificateEvidenceIndex": 6,
+      "submissionEvidenceIndex": 0
+    },
+    {
+      "operation": "test",
+      "certificateEvidenceIndex": 7,
+      "submissionEvidenceIndex": 1
+    }
+  ]
+}

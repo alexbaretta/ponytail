@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 1,
+  "certificateId": "CERT-98",
+  "lease": {
+    "schemaVersion": 1,
+    "scopeId": "2026-10-10-rolling-obligation-campaigns",
+    "baselineId": "BASELINE-15",
+    "graphDigest": "066e522b8a7128726296092c5f5a15f591570ccc1ff6560c5ce5d87192500b25",
+    "generation": "standalone-native-rework-assessment-CERT-98-OBL-51",
+    "assessor": "coordinator",
+    "authority": [
+      "user-goal-2026-10-10-rolling-campaigns",
+      "user-goal-2026-10-10-static-language-existing-tsts",
+      "user-2026-10-10-normative-atomic-obligations",
+      "user-2026-10-11-language-scope-our-code-preserve-translations"
+    ],
+    "binding": {
+      "obligationId": "OBL-51",
+      "revisionId": "BIND-48",
+      "dependsOn": [],
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "src/rolling-campaign-store.ts",
+          "src/rolling-campaign-store.js",
+          "src/rolling-worker.ts",
+          "src/rolling-worker.js",
+          "tests/rolling-worker.test.ts",
+          "tests/rolling-campaign-store.integration.test.ts",
+          "tests/rolling-codex.integration.ts",
+          "pm/requirements/traceability.generated.md",
+          "tests/fixtures/rolling-rebase-editor.ts"
+        ],
+        "operations": [
+          "inspect",
+          "edit",
+          "build",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "rejected worker correction and same-reviewer resubmission"
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "review-rework"
+        }
+      }
+    }
+  },
+  "revision": "674cb1ccf308071b5d8aebbb457a23081217240a",
+  "proof": [
+    {
+      "operation": "test",
+      "certificateEvidenceIndex": 0,
+      "submissionEvidenceIndex": 0
+    },
+    {
+      "operation": "test",
+      "certificateEvidenceIndex": 1,
+      "submissionEvidenceIndex": 1
+    }
+  ]
+}
