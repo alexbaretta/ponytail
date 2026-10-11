@@ -14538,6 +14538,86 @@
       },
       "assessor": "coordinator",
       "reason": "Discharge started reviewer recovery after prior proof renewal."
+    },
+    {
+      "id": "CHECKPOINT-154",
+      "predecessorId": "CHECKPOINT-153",
+      "baselineId": "BASELINE-16",
+      "kind": "disturbance",
+      "selectedIds": [],
+      "registeredIds": [],
+      "certificateIds": [],
+      "invalidatedIds": [
+        "CERT-99",
+        "CERT-100",
+        "CERT-101",
+        "CERT-102",
+        "CERT-103",
+        "CERT-104",
+        "CERT-105",
+        "CERT-106",
+        "CERT-107",
+        "CERT-108",
+        "CERT-109",
+        "CERT-110",
+        "CERT-111"
+      ],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": null,
+      "assessor": "coordinator",
+      "reason": "Freeze the approved related OBL-53–55 integration batch. Shared binding-history input changes invalidate prior freshness conservatively; preserve the 74 historical deliveries and renew affected evidence after the batch, without rewriting their conditions or certificates."
+    },
+    {
+      "id": "CHECKPOINT-155",
+      "predecessorId": "CHECKPOINT-154",
+      "baselineId": "BASELINE-16",
+      "kind": "neutral",
+      "selectedIds": [
+        "OBL-53"
+      ],
+      "registeredIds": [],
+      "certificateIds": [],
+      "invalidatedIds": [],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": {
+        "obligationId": "OBL-53",
+        "operations": [
+          "inspect"
+        ],
+        "deliverable": "Synchronize new integration artifact classifications, generated reverse view, and semantic-rebase skill copy; stop after structural checks."
+      },
+      "assessor": "coordinator",
+      "reason": "Required same-category structural reconciliation following confirmed missing artifact classification and stale generated skill; no obligation discharge is claimed."
     }
   ]
 }

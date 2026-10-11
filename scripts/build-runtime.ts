@@ -16,6 +16,7 @@ const sources: readonly string[] = [
   'src/rolling-campaign-store.ts',
   'src/rolling-worker-submission.ts',
   'src/rolling-review.ts',
+  'src/rolling-integration.ts',
   'src/rolling-worker.ts',
   'src/rolling-codex.ts',
   'src/project-index-database.ts',

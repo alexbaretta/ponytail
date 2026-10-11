@@ -49,3 +49,22 @@ After the final commit, verify that no rebase state remains, the expected new
 base is an ancestor of `HEAD`, the resulting commit sequence preserves the
 original series' intent, and the worktree contains only understood changes.
 Run the repository's applicable final validation for the fully rebased tree.
+
+## Authorized Post-Review Fast Rebase
+
+A rolling campaign may explicitly authorize Ponytail's fast-rebase policy for
+coordinator integration after an adversarial review accepts the exact candidate.
+The worker has already performed its full semantic rebase. This bounded exception
+permits interactive replay onto the freshly fetched campaign branch without
+additional semantic inspection of cleanly replayed commits.
+
+Textual conflicts stop replay and require semantic inspection of the conflicting
+changes, identified by their original commit and integration base. Preserve the
+retained rebase and both sides' required behavior. Record the inspection before
+continuing; substantive repairs return to the original worker and reviewer for
+fresh implementation, full semantic rebase, proof and review.
+
+Preserve commit boundaries and unrelated branch refs. Refresh applicable focused
+QA when inputs change, then fast-forward and push normally. Verify remote
+containment before recording delivery. Worker rebases and mainline publication
+retain the full semantic-rebase procedure above.
