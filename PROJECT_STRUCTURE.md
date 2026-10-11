@@ -69,8 +69,9 @@ while project-wide management records remain under `pm/`.
 - `tsts/` owns the canonical TypeScript analyzer and its Node tests. Root npm dependencies and `npm run build:tsts` produce ignored `tsts/dist/`; npm distributes only its compiled runtime. `cli/tsts` is the registered-project launcher installed alongside `ponytail`.
 - `src/` owns non-script runtime implementations dispatched by user-facing
   CLI entrypoints. `src/pm-pdf.py` owns configured linked-Markdown PDF
-  rendering. `src/plan-input.js` owns the durable plan-input queue contract and
-  lifecycle. `src/campaign-census.js` owns campaign configuration and
+  rendering. `src/plan-input-queue.ts` owns the durable plan-input queue contract and
+  lifecycle; its `.js` runtime is compiler-generated. `src/plan-input.js` retains
+  the legacy campaign CLI adapter until its prerequisites are migrated. `src/campaign-census.js` owns campaign configuration and
   plan metadata readers, scoped campaign discovery and validation,
   repository-wide campaign inventory, census normalization, and human/JSON
   reporting and canonical immediately-runnable tasklet projection.

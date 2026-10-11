@@ -11,7 +11,8 @@ const sources: readonly string[] = [
   'src/rolling-campaign.ts',
   'src/rolling-worktrees.ts',
   'src/rolling-campaign-store.ts',
-  'src/project-index-database.ts'
+  'src/project-index-database.ts',
+  'src/plan-input-queue.ts'
 ];
 const argv = process.argv.slice(2);
 if (!(argv.length === 0 || argv.length === 1 && argv[0] === '--check')) {

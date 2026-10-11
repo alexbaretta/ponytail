@@ -302,7 +302,7 @@
       "id": "plan-input-entry",
       "implementation": {
         "workspace": "ponytail",
-        "module": "src/plan-input.js",
+        "module": "src/plan-input-queue.ts",
         "readerRegistryExport": "PlanInputReaders"
       },
       "currentVersion": "V2",

@@ -29,6 +29,12 @@
         "S07-F04"
       ],
       "validation_tasklet": "S07-F05-T05"
+    },
+    "S07-F06": {
+      "depends_on": [
+        "S07-F05"
+      ],
+      "validation_tasklet": "S07-F06-T13"
     }
   },
   "tasklets": {
@@ -645,6 +651,176 @@
       "risk": "normal",
       "feature": "S07-F05",
       "planned_paths": []
+    },
+    "S07-F06-T01": {
+      "depends_on": [],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F06",
+      "planned_paths": [
+        "src/plan-input-queue.ts"
+      ]
+    },
+    "S07-F06-T02": {
+      "depends_on": [
+        "S07-F06-T01"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F06",
+      "planned_paths": [
+        "src/plan-input-queue.ts"
+      ]
+    },
+    "S07-F06-T03": {
+      "depends_on": [
+        "S07-F06-T02"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F06",
+      "planned_paths": [
+        "src/plan-input-queue.ts"
+      ]
+    },
+    "S07-F06-T04": {
+      "depends_on": [
+        "S07-F06-T03"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F06",
+      "planned_paths": [
+        "src/plan-input-queue.ts"
+      ]
+    },
+    "S07-F06-T05": {
+      "depends_on": [
+        "S07-F06-T04"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F06",
+      "planned_paths": [
+        "src/plan-input-queue.ts"
+      ]
+    },
+    "S07-F06-T06": {
+      "depends_on": [
+        "S07-F06-T05"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F06",
+      "planned_paths": [
+        "src/plan-input-queue.ts"
+      ]
+    },
+    "S07-F06-T07": {
+      "depends_on": [
+        "S07-F06-T06"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F06",
+      "planned_paths": [
+        "src/plan-input-queue.ts"
+      ]
+    },
+    "S07-F06-T08": {
+      "depends_on": [
+        "S07-F06-T07"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F06",
+      "planned_paths": [
+        "src/plan-input-queue.ts"
+      ]
+    },
+    "S07-F06-T09": {
+      "depends_on": [
+        "S07-F06-T08"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F06",
+      "planned_paths": [
+        "src/plan-input-queue.ts"
+      ]
+    },
+    "S07-F06-T10": {
+      "depends_on": [
+        "S07-F06-T09"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F06",
+      "planned_paths": [
+        "src/plan-input-queue.ts"
+      ]
+    },
+    "S07-F06-T11": {
+      "depends_on": [
+        "S07-F06-T10"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F06",
+      "planned_paths": [
+        "src/plan-input-queue.ts"
+      ]
+    },
+    "S07-F06-T12": {
+      "depends_on": [
+        "S07-F06-T14"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F06",
+      "planned_paths": [
+        "scripts/build-runtime.ts",
+        "src/plan-input.js",
+        "src/plan-input-queue.js",
+        "AGENTS.md",
+        "PROJECT_STRUCTURE.md",
+        "versioned-data-contracts.json",
+        ".agents/config/project/traceability.json",
+        "pm/requirements/traceability.generated.md"
+      ]
+    },
+    "S07-F06-T13": {
+      "depends_on": [
+        "S07-F06-T01",
+        "S07-F06-T02",
+        "S07-F06-T03",
+        "S07-F06-T04",
+        "S07-F06-T05",
+        "S07-F06-T06",
+        "S07-F06-T07",
+        "S07-F06-T08",
+        "S07-F06-T09",
+        "S07-F06-T10",
+        "S07-F06-T11",
+        "S07-F06-T12",
+        "S07-F06-T14"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F06",
+      "planned_paths": []
+    },
+    "S07-F06-T14": {
+      "depends_on": [
+        "S07-F06-T11"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F06",
+      "planned_paths": [
+        "tests/plan-input-queue.test.ts",
+        "tests/plan-input.test.js"
+      ]
     }
   },
   "external_depends_on": {}
