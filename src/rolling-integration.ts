@@ -137,8 +137,14 @@ export interface RollingIncrementUnconfirmed {
  readonly revision: string;
  readonly reason: string;
 }
+export interface RollingIncrementPushRejected {
+ readonly state: 'PUSH_REJECTED';
+ readonly revision: string;
+ readonly remoteRevision: string;
+ readonly reason: string;
+}
 // Discriminator: state
-export type RollingIncrementPublicationResult = RollingIncrementPublished | RollingIncrementRebaseRequired | RollingIncrementUnconfirmed;
+export type RollingIncrementPublicationResult = RollingIncrementPublished | RollingIncrementRebaseRequired | RollingIncrementUnconfirmed | RollingIncrementPushRejected;
 
 function publicationRemoteRevision(rollingIncrementPublication: RollingIncrementPublication): string | null {
  const {rootPath,target} = rollingIncrementPublication;
@@ -176,11 +182,27 @@ export function publishRollingIncrement(rollingIncrementPublication: RollingIncr
  if (spawnSyncReturns.status === 1) return rollingIncrementPublicationResult;
  requireIntegration(spawnSyncReturns.status === 0,'increment ancestry check failed');
  // No force flag or '+' refspec. An upstream race is reconciled, never reset.
- const pushSpawnSyncReturns = gitResult(rootPath,['push','--',target.remote,`${revision}:refs/heads/${target.branch}`]);
+ const pushSpawnSyncReturns = gitResult(rootPath,['push','--porcelain','--',target.remote,`${revision}:refs/heads/${target.branch}`]);
  const reconciledRollingIncrementPublicationResult = reconcileRollingIncrementPublication(rollingIncrementPublication);
  if (reconciledRollingIncrementPublicationResult.state === 'REBASE_REQUIRED'
   && reconciledRollingIncrementPublicationResult.remoteRevision === rollingIncrementPublicationResult.remoteRevision) {
+  if (pushSpawnSyncReturns.stdout.split('\n').some(line=>line.startsWith('!\t'))) {
+   return {state:'PUSH_REJECTED',revision,remoteRevision:reconciledRollingIncrementPublicationResult.remoteRevision,
+    reason:pushSpawnSyncReturns.stdout.trim()};
+  }
   return {state:'UNCONFIRMED',revision,reason:pushSpawnSyncReturns.stderr.trim() || 'Push did not establish remote containment.'};
  }
  return reconciledRollingIncrementPublicationResult;
+}
+
+// Traceability: implements REQ-ROLLING-PUBLICATION
+export function fastForwardRollingIncrement(rootPath: string,branch: string,revision: string): void {
+ commit(revision);
+ git(rootPath,['check-ref-format',`refs/heads/${branch}`]);
+ requireIntegration(git(rootPath,['symbolic-ref','--quiet','HEAD']).trim() === `refs/heads/${branch}`,
+  'coordinator checkout must own the configured increment branch');
+ requireIntegration(git(rootPath,['status','--porcelain=v1','-z','--untracked-files=all']).length === 0,
+  'coordinator increment checkout is not clean');
+ git(rootPath,['merge','--ff-only','--no-autostash',revision]);
+ requireIntegration(git(rootPath,['rev-parse','HEAD']).trim() === revision,'increment branch differs from candidate');
 }

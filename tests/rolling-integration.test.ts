@@ -6,7 +6,7 @@ import path from 'node:path';
 import {execFileSync} from 'node:child_process';
 import assert from 'node:assert/strict';
 import test,{type TestContext} from 'node:test';
-import {fastRebaseRollingIncrement,continueFastRebaseRollingIncrement,publishRollingIncrement,reconcileRollingIncrementPublication,type RollingReviewedIncrement} from '../src/rolling-integration.js';
+import {fastRebaseRollingIncrement,continueFastRebaseRollingIncrement,publishRollingIncrement,reconcileRollingIncrementPublication,fastForwardRollingIncrement,type RollingReviewedIncrement} from '../src/rolling-integration.js';
 
 interface RollingIntegrationFixture {
  readonly root: string;
@@ -123,6 +123,10 @@ test('upstream divergence requests another rebase and preserves both revisions',
  const rollingIncrementPublicationResult = publishRollingIncrement({rootPath:rollingReviewedIncrement.rootPath,
   target:rollingReviewedIncrement.target,revision:rollingReviewedIncrement.revision});
  assert.equal(rollingIncrementPublicationResult.state,'REBASE_REQUIRED');
+ git(rollingIntegrationFixture.coordinatorRoot,['fetch',rollingReviewedIncrement.rootPath,'worker']);
+ const coordinatorRevision = git(rollingIntegrationFixture.coordinatorRoot,['rev-parse','HEAD']);
+ assert.throws(()=>fastForwardRollingIncrement(rollingIntegrationFixture.coordinatorRoot,'main',rollingReviewedIncrement.revision),/fast-forward/);
+ assert.equal(git(rollingIntegrationFixture.coordinatorRoot,['rev-parse','HEAD']),coordinatorRevision);
  assert.equal(git(rollingReviewedIncrement.rootPath,['rev-parse','HEAD']),rollingReviewedIncrement.revision);
  assert.equal(git(path.join(rollingIntegrationFixture.root,'origin.git'),['rev-parse','main']),
   git(rollingIntegrationFixture.coordinatorRoot,['rev-parse','HEAD']));
@@ -139,7 +143,7 @@ test('rejected push does not claim delivery and can be retried after rejection c
  const hook = path.join(rollingIntegrationFixture.root,'origin.git','hooks','pre-receive');
  fs.writeFileSync(hook,'#!/bin/sh\necho "fixture rejection" >&2\nexit 1\n',{mode:0o755});
  const rollingIncrementPublicationResult = publishRollingIncrement(rollingIncrementPublication);
- assert.equal(rollingIncrementPublicationResult.state,'UNCONFIRMED');
+ assert.equal(rollingIncrementPublicationResult.state,'PUSH_REJECTED');
  assert.equal(git(rollingReviewedIncrement.rootPath,['rev-parse','HEAD']),rollingFastRebaseResult.revision);
  fs.rmSync(hook);
  assert.equal(publishRollingIncrement(rollingIncrementPublication).state,'PUBLISHED');
@@ -160,4 +164,23 @@ test('lost remote observation remains unconfirmed until actual containment can b
  assert.equal(reconcileRollingIncrementPublication(rollingIncrementPublication).state,'UNCONFIRMED');
  fs.renameSync(unavailableRemoteRoot,remoteRoot);
  assert.equal(reconcileRollingIncrementPublication(rollingIncrementPublication).state,'PUBLISHED');
+});
+
+// Traceability: verifies REQ-ROLLING-PUBLICATION
+test('coordinator fast-forwards its configured branch and refuses checkout changes',testContext=> {
+ const rollingIntegrationFixture = fixture(testContext,false);
+ const rollingReviewedIncrement = rollingIntegrationFixture.rollingReviewedIncrement;
+ const rollingFastRebaseResult = fastRebaseRollingIncrement(rollingReviewedIncrement);
+ assert.ok(rollingFastRebaseResult.state === 'REBASED');
+ const coordinatorRoot = rollingIntegrationFixture.coordinatorRoot;
+ git(coordinatorRoot,['fetch',rollingReviewedIncrement.rootPath,'worker']);
+ assert.throws(()=>fastForwardRollingIncrement(coordinatorRoot,'other',rollingFastRebaseResult.revision),/configured increment branch/);
+ const untrackedPath = path.join(coordinatorRoot,'unfinished.txt');
+ fs.writeFileSync(untrackedPath,'Preserve coordinator changes\n');
+ assert.throws(()=>fastForwardRollingIncrement(coordinatorRoot,'main',rollingFastRebaseResult.revision),/not clean/);
+ assert.equal(fs.readFileSync(untrackedPath,'utf8'),'Preserve coordinator changes\n');
+ fs.rmSync(untrackedPath);
+ fastForwardRollingIncrement(coordinatorRoot,'main',rollingFastRebaseResult.revision);
+ assert.equal(git(coordinatorRoot,['rev-parse','HEAD']),rollingFastRebaseResult.revision);
+ assert.equal(fs.readFileSync(path.join(coordinatorRoot,'obligation.txt'),'utf8'),'Reviewed obligation\nSecond implementation step\n');
 });

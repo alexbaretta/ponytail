@@ -811,12 +811,14 @@ Requirement: [pm/requirements/rolling-campaigns.md](rolling-campaigns.md)
 
 Requirement: [pm/requirements/rolling-campaigns.md](rolling-campaigns.md)
 
-- implementation: implements [src/rolling-integration.ts:153](../../src/rolling-integration.ts#L153)
-- implementation: implements [src/rolling-integration.ts:168](../../src/rolling-integration.ts#L168)
+- implementation: implements [src/rolling-integration.ts:159](../../src/rolling-integration.ts#L159)
+- implementation: implements [src/rolling-integration.ts:174](../../src/rolling-integration.ts#L174)
+- implementation: implements [src/rolling-integration.ts:198](../../src/rolling-integration.ts#L198)
 - unit-test: verifies [tests/rolling-integration.test.ts:101](../../tests/rolling-integration.test.ts#L101)
 - unit-test: verifies [tests/rolling-integration.test.ts:119](../../tests/rolling-integration.test.ts#L119)
-- unit-test: verifies [tests/rolling-integration.test.ts:131](../../tests/rolling-integration.test.ts#L131)
-- unit-test: verifies [tests/rolling-integration.test.ts:148](../../tests/rolling-integration.test.ts#L148)
+- unit-test: verifies [tests/rolling-integration.test.ts:135](../../tests/rolling-integration.test.ts#L135)
+- unit-test: verifies [tests/rolling-integration.test.ts:152](../../tests/rolling-integration.test.ts#L152)
+- unit-test: verifies [tests/rolling-integration.test.ts:169](../../tests/rolling-integration.test.ts#L169)
 - uat: verifies [pm/uat/rolling-campaigns.md:97](../../pm/uat/rolling-campaigns.md#L97)
 - plan: plans-implementation [pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/plan.md:204](../../pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/plan.md#L204)
 

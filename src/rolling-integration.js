@@ -10,6 +10,7 @@ exports.fastRebaseRollingIncrement = fastRebaseRollingIncrement;
 exports.continueFastRebaseRollingIncrement = continueFastRebaseRollingIncrement;
 exports.reconcileRollingIncrementPublication = reconcileRollingIncrementPublication;
 exports.publishRollingIncrement = publishRollingIncrement;
+exports.fastForwardRollingIncrement = fastForwardRollingIncrement;
 const node_fs_1 = __importDefault(require("node:fs"));
 const node_child_process_1 = require("node:child_process");
 function requireIntegration(condition, message) {
@@ -115,11 +116,23 @@ function publishRollingIncrement(rollingIncrementPublication) {
     if (spawnSyncReturns.status === 1)
         return rollingIncrementPublicationResult;
     requireIntegration(spawnSyncReturns.status === 0, 'increment ancestry check failed');
-    const pushSpawnSyncReturns = gitResult(rootPath, ['push', '--', target.remote, `${revision}:refs/heads/${target.branch}`]);
+    const pushSpawnSyncReturns = gitResult(rootPath, ['push', '--porcelain', '--', target.remote, `${revision}:refs/heads/${target.branch}`]);
     const reconciledRollingIncrementPublicationResult = reconcileRollingIncrementPublication(rollingIncrementPublication);
     if (reconciledRollingIncrementPublicationResult.state === 'REBASE_REQUIRED'
         && reconciledRollingIncrementPublicationResult.remoteRevision === rollingIncrementPublicationResult.remoteRevision) {
+        if (pushSpawnSyncReturns.stdout.split('\n').some(line => line.startsWith('!\t'))) {
+            return { state: 'PUSH_REJECTED', revision, remoteRevision: reconciledRollingIncrementPublicationResult.remoteRevision,
+                reason: pushSpawnSyncReturns.stdout.trim() };
+        }
         return { state: 'UNCONFIRMED', revision, reason: pushSpawnSyncReturns.stderr.trim() || 'Push did not establish remote containment.' };
     }
     return reconciledRollingIncrementPublicationResult;
+}
+function fastForwardRollingIncrement(rootPath, branch, revision) {
+    commit(revision);
+    git(rootPath, ['check-ref-format', `refs/heads/${branch}`]);
+    requireIntegration(git(rootPath, ['symbolic-ref', '--quiet', 'HEAD']).trim() === `refs/heads/${branch}`, 'coordinator checkout must own the configured increment branch');
+    requireIntegration(git(rootPath, ['status', '--porcelain=v1', '-z', '--untracked-files=all']).length === 0, 'coordinator increment checkout is not clean');
+    git(rootPath, ['merge', '--ff-only', '--no-autostash', revision]);
+    requireIntegration(git(rootPath, ['rev-parse', 'HEAD']).trim() === revision, 'increment branch differs from candidate');
 }
