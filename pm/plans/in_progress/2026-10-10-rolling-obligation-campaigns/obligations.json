@@ -14729,6 +14729,43 @@
       },
       "assessor": "coordinator",
       "reason": "Required observation ownership for the confirmed fixture tracking-ref restoration defect; preserve the existing batch and claim no discharge."
+    },
+    {
+      "id": "CHECKPOINT-159",
+      "predecessorId": "CHECKPOINT-158",
+      "baselineId": "BASELINE-16",
+      "kind": "neutral",
+      "selectedIds": [
+        "OBL-55"
+      ],
+      "registeredIds": [],
+      "certificateIds": [],
+      "invalidatedIds": [],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": {
+        "obligationId": "OBL-55",
+        "operations": [
+          "inspect"
+        ],
+        "deliverable": "Inspect and register the OBL-55 proof packet paths; stop after finite assessment scope reconciliation."
+      },
+      "assessor": "coordinator",
+      "reason": "Required proof-packet ownership for completing started OBL-55; preserve all historical certificates and claim no discharge at this scope checkpoint."
     }
   ]
 }
