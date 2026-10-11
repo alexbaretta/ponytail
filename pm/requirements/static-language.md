@@ -52,3 +52,7 @@ criterion, including configured lifecycle normalization and active membership.
 [OBL-75](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-75)
 references the canonical typed activation condition, including link preservation,
 precondition errors and rollback after a failed move/write episode.
+
+[OBL-76](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-76)
+references the canonical typed campaign argument parsing condition and its
+selection, option compatibility and usage-error proof.

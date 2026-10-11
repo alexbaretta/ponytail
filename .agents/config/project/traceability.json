@@ -1085,6 +1085,16 @@
       "class": "unit-test",
       "path": "tests/campaign-activation.test.ts",
       "locator": "text"
+    },
+    {
+      "class": "implementation",
+      "path": "src/campaign-invocation.ts",
+      "locator": "text"
+    },
+    {
+      "class": "unit-test",
+      "path": "tests/campaign-invocation.test.ts",
+      "locator": "text"
     }
   ],
   "entities": [],
@@ -1296,6 +1306,10 @@
     {
       "path": "src/campaign-activation.js",
       "sourcePath": "src/campaign-activation.ts"
+    },
+    {
+      "path": "src/campaign-invocation.js",
+      "sourcePath": "src/campaign-invocation.ts"
     }
   ],
   "reverseViewPath": "pm/requirements/traceability.generated.md",

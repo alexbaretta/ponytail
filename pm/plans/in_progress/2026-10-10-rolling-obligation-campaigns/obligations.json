@@ -778,6 +778,159 @@
         "OBL-19",
         "OBL-20"
       ]
+    },
+    {
+      "id": "BASELINE-7",
+      "predecessorId": "BASELINE-6",
+      "authority": {
+        "references": [
+          "user-goal-2026-10-10-rolling-campaigns",
+          "user-goal-2026-10-10-static-language-existing-tsts",
+          "user-2026-10-10-normative-atomic-obligations"
+        ],
+        "assessors": [
+          "coordinator"
+        ]
+      },
+      "requirements": [
+        {
+          "id": "REQ-ROLLING-CONFIGURATION",
+          "path": "pm/requirements/rolling-campaigns.md",
+          "digest": "dd90e7198653a290b46bb7b5c7e1bce5c9e3735820f79777d1b4b7236a7a0c09"
+        },
+        {
+          "id": "REQ-ROLLING-GRAPH",
+          "path": "pm/requirements/rolling-campaigns.md",
+          "digest": "dd90e7198653a290b46bb7b5c7e1bce5c9e3735820f79777d1b4b7236a7a0c09"
+        },
+        {
+          "id": "REQ-ROLLING-SCHEDULING",
+          "path": "pm/requirements/rolling-campaigns.md",
+          "digest": "dd90e7198653a290b46bb7b5c7e1bce5c9e3735820f79777d1b4b7236a7a0c09"
+        },
+        {
+          "id": "REQ-ROLLING-STATE",
+          "path": "pm/requirements/rolling-campaigns.md",
+          "digest": "dd90e7198653a290b46bb7b5c7e1bce5c9e3735820f79777d1b4b7236a7a0c09"
+        },
+        {
+          "id": "REQ-ROLLING-WORKERS",
+          "path": "pm/requirements/rolling-campaigns.md",
+          "digest": "dd90e7198653a290b46bb7b5c7e1bce5c9e3735820f79777d1b4b7236a7a0c09"
+        },
+        {
+          "id": "REQ-ROLLING-REVIEW",
+          "path": "pm/requirements/rolling-campaigns.md",
+          "digest": "dd90e7198653a290b46bb7b5c7e1bce5c9e3735820f79777d1b4b7236a7a0c09"
+        },
+        {
+          "id": "REQ-ROLLING-PUBLICATION",
+          "path": "pm/requirements/rolling-campaigns.md",
+          "digest": "dd90e7198653a290b46bb7b5c7e1bce5c9e3735820f79777d1b4b7236a7a0c09"
+        },
+        {
+          "id": "REQ-ROLLING-INTERFACES",
+          "path": "pm/requirements/rolling-campaigns.md",
+          "digest": "dd90e7198653a290b46bb7b5c7e1bce5c9e3735820f79777d1b4b7236a7a0c09"
+        },
+        {
+          "id": "REQ-PONYTAIL-STATIC-LANGUAGE",
+          "path": "pm/requirements/static-language.md",
+          "digest": "dd37d73dfdc49c81635d7dd53ee5bfd7301919b0e0e78c55f393cd84a486dc6e"
+        }
+      ],
+      "obligationIds": [
+        "OBL-1",
+        "OBL-2",
+        "OBL-3",
+        "OBL-4",
+        "OBL-5",
+        "OBL-6",
+        "OBL-7",
+        "OBL-8",
+        "OBL-9",
+        "OBL-10",
+        "OBL-11",
+        "OBL-12",
+        "OBL-13",
+        "OBL-14",
+        "OBL-15",
+        "OBL-16",
+        "OBL-17",
+        "OBL-18",
+        "OBL-19",
+        "OBL-20",
+        "OBL-21",
+        "OBL-22",
+        "OBL-23",
+        "OBL-24",
+        "OBL-25",
+        "OBL-26",
+        "OBL-27",
+        "OBL-28",
+        "OBL-29",
+        "OBL-30",
+        "OBL-31",
+        "OBL-32",
+        "OBL-33",
+        "OBL-34",
+        "OBL-35",
+        "OBL-36",
+        "OBL-37",
+        "OBL-38",
+        "OBL-39",
+        "OBL-40",
+        "OBL-41",
+        "OBL-42",
+        "OBL-43",
+        "OBL-44",
+        "OBL-45",
+        "OBL-46",
+        "OBL-47",
+        "OBL-48",
+        "OBL-49",
+        "OBL-50",
+        "OBL-51",
+        "OBL-52",
+        "OBL-53",
+        "OBL-54",
+        "OBL-55",
+        "OBL-56",
+        "OBL-57",
+        "OBL-58",
+        "OBL-59",
+        "OBL-60",
+        "OBL-61",
+        "OBL-62",
+        "OBL-63",
+        "OBL-64",
+        "OBL-65",
+        "OBL-66",
+        "OBL-67",
+        "OBL-68",
+        "OBL-69",
+        "OBL-70",
+        "OBL-71",
+        "OBL-72",
+        "OBL-73",
+        "OBL-74",
+        "OBL-75",
+        "OBL-76"
+      ],
+      "inventoryIds": [
+        "OBL-1",
+        "OBL-2",
+        "OBL-3",
+        "OBL-4",
+        "OBL-5",
+        "OBL-6",
+        "OBL-15",
+        "OBL-16",
+        "OBL-17",
+        "OBL-18",
+        "OBL-19",
+        "OBL-20"
+      ]
     }
   ],
   "obligations": [
@@ -2796,6 +2949,62 @@
           "profile": "focused-static-migration"
         }
       }
+    },
+    {
+      "id": "OBL-76",
+      "category": "gate",
+      "requirementIds": [
+        "REQ-PONYTAIL-STATIC-LANGUAGE"
+      ],
+      "responsibilityId": "typed-campaign-invocation",
+      "condition": "Campaign inspection and activation arguments are parsed through checked discriminated TypeScript contracts while preserving input selection, option precedence and usage errors.",
+      "criterion": "Strict build and unchanged TSTS pass; exact typed invocation fixtures and existing census CLI/format proof establish list/activate/validate/report grammar, status filters, table override ordering and JSON conflicts. Canonical argument owner, emitted runtime, configuration and traceability are synchronized.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "STATIC-CAMPAIGN-INVOCATION"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": "S07",
+        "taskletIds": [
+          "S07-F29-T01",
+          "S07-F29-T02",
+          "S07-F29-T03",
+          "S07-F29-T04",
+          "S07-F29-T05",
+          "S07-F29-T06",
+          "S07-F29-T07",
+          "S07-F29-T08",
+          "S07-F29-T09",
+          "S07-F29-T10",
+          "S07-F29-T11"
+        ],
+        "plannedPaths": [
+          "src/campaign-invocation.ts",
+          "src/campaign-invocation.js",
+          "src/campaign-census.js",
+          "tests/campaign-invocation.test.ts",
+          "scripts/build-runtime.ts",
+          ".agents/config/project/traceability.json",
+          "pm/requirements/traceability.generated.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/campaign-invocation.md"
+        ],
+        "operations": [
+          "edit",
+          "build",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "typed campaign invocation",
+          "existing census CLI and format proof"
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "focused-static-migration"
+        }
+      }
     }
   ],
   "certificates": [],
@@ -3443,6 +3652,160 @@
         "deliverable": "Typed activation with real move/link/rollback and CLI proof, renewed shared formatter/listing certificate; stop at this bounded operation."
       },
       "reason": "Accept typed activation and renew shared-input formatter/listing evidence; preserve unresolved scope inventories and final campaign/language gates.",
+      "assessor": "coordinator"
+    },
+    {
+      "id": "CHECKPOINT-10",
+      "predecessorId": "CHECKPOINT-9",
+      "baselineId": "BASELINE-7",
+      "kind": "rebaseline",
+      "selectedIds": [],
+      "registeredIds": [
+        "OBL-1",
+        "OBL-2",
+        "OBL-3",
+        "OBL-4",
+        "OBL-5",
+        "OBL-6",
+        "OBL-7",
+        "OBL-8",
+        "OBL-9",
+        "OBL-10",
+        "OBL-11",
+        "OBL-12",
+        "OBL-13",
+        "OBL-14",
+        "OBL-15",
+        "OBL-16",
+        "OBL-17",
+        "OBL-18",
+        "OBL-19",
+        "OBL-20",
+        "OBL-21",
+        "OBL-22",
+        "OBL-23",
+        "OBL-24",
+        "OBL-25",
+        "OBL-26",
+        "OBL-27",
+        "OBL-28",
+        "OBL-29",
+        "OBL-30",
+        "OBL-31",
+        "OBL-32",
+        "OBL-33",
+        "OBL-34",
+        "OBL-35",
+        "OBL-36",
+        "OBL-37",
+        "OBL-38",
+        "OBL-39",
+        "OBL-40",
+        "OBL-41",
+        "OBL-42",
+        "OBL-43",
+        "OBL-44",
+        "OBL-45",
+        "OBL-46",
+        "OBL-47",
+        "OBL-48",
+        "OBL-49",
+        "OBL-50",
+        "OBL-51",
+        "OBL-52",
+        "OBL-53",
+        "OBL-54",
+        "OBL-55",
+        "OBL-56",
+        "OBL-57",
+        "OBL-58",
+        "OBL-59",
+        "OBL-60",
+        "OBL-61",
+        "OBL-62",
+        "OBL-63",
+        "OBL-64",
+        "OBL-65",
+        "OBL-66",
+        "OBL-67",
+        "OBL-68",
+        "OBL-69",
+        "OBL-70",
+        "OBL-71",
+        "OBL-72",
+        "OBL-73",
+        "OBL-74",
+        "OBL-75",
+        "OBL-76"
+      ],
+      "certificateIds": [],
+      "invalidatedIds": [
+        "CERT-3"
+      ],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": null,
+      "reason": "Register typed campaign invocation parsing and refreshed requirement identities. Preserve all history and invalidate conservative shared inputs before changes; reassess prior migrated operations on the final checkout.",
+      "assessor": "coordinator"
+    },
+    {
+      "id": "CHECKPOINT-11",
+      "predecessorId": "CHECKPOINT-10",
+      "baselineId": "BASELINE-7",
+      "kind": "neutral",
+      "selectedIds": [
+        "OBL-73",
+        "OBL-74",
+        "OBL-75",
+        "OBL-76"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "CERT-4"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": {
+        "obligationId": "OBL-76",
+        "operations": [
+          "edit",
+          "build",
+          "test",
+          "check",
+          "assess"
+        ],
+        "deliverable": "Typed invocation grammar with CLI/format proof and renewed prior operation evidence; stop at this bounded parsing outcome."
+      },
+      "reason": "Accept typed campaign invocation and renew prior shared-input operation evidence, keeping completeness inventories and final language/campaign gates unresolved.",
       "assessor": "coordinator"
     }
   ]

@@ -63,3 +63,13 @@ relative links with suffixes, unchanged absolute/URL/anchor links and symlink
 exclusion. A failed write must restore the directory and original Markdown bytes.
 Check existing-destination and invalid-status errors and already-active behavior.
 Strict build and unchanged TSTS must pass; this proves activation only.
+
+### Acceptance STATIC-CAMPAIGN-INVOCATION
+
+Demonstrates [OBL-76](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-76)
+through STATIC-RUNTIME. Parse list/activate/validate/report arguments and execute
+existing census CLI/format proof. Observe all status flags, required inputs,
+validate-all JSON rules, ordered table overrides and JSON/table incompatibility.
+Invalid commands, options, duplicates and extra inputs return CAMPAIGN_USAGE with
+the established usage message. Strict build and unchanged TSTS must pass.
+Legacy dispatch routing is not demonstrated by this acceptance.
