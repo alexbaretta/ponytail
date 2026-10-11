@@ -5,6 +5,8 @@ Licensed under the MIT License. See LICENSE in the project root.
 
 # Static language acceptance Suite
 
+[UAT index](index.md) | [Requirements](../requirements/static-language.md)
+
 ## Arc STATIC-LANGUAGE: Validate typed sources and emitted runtime
 
 Traceability: verifies REQ-PONYTAIL-STATIC-LANGUAGE
@@ -13,10 +15,20 @@ Traceability: verifies REQ-PONYTAIL-STATIC-LANGUAGE
    tests, portable skills and hidden host adapters. No handwritten JavaScript
    or unapproved dynamically typed implementation remains. Every generated
    JavaScript artifact resolves to its checked canonical TypeScript source.
-2. **Step STATIC-CHECK:** Run configured strict compiler and existing TSTS checks
+2. **Step STATIC-CHECK:** Acceptance contribution to
+   [OBL-70](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-70) and
+   [OBL-71](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-71). Run configured strict compiler and existing TSTS checks
    for all owned TypeScript projects. All pass without type-system bypasses;
    configuration does not evade diagnostics by accepting handwritten JavaScript.
-3. **Step STATIC-RUNTIME:** Build and install from clean inputs. Exercise focused
+3. **Step STATIC-RUNTIME:** Acceptance contribution to
+   [OBL-72](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-72)
+   and the pending per-operation migration obligations. Build and install from clean inputs. Exercise focused
    runtime proofs, native worker startup/resume, installers and final repository
    QA against emitted code. Supported behavior and V1 contract meanings remain
    intact; historical JavaScript evidence alone cannot satisfy this Step.
+
+STATIC-INVENTORY must enumerate and register the remaining per-operation atomic
+obligations before their assignments or final acceptance. STATIC-RUNTIME then
+identifies the exact registered IDs demonstrated by each focused operation proof.
+Until that reconciliation is complete, the inventory and whole-language acceptance
+remain unresolved even when the compiler/checker/runtime foundation passes.

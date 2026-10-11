@@ -176,6 +176,155 @@
         "OBL-19",
         "OBL-20"
       ]
+    },
+    {
+      "id": "BASELINE-3",
+      "predecessorId": "BASELINE-2",
+      "authority": {
+        "references": [
+          "user-goal-2026-10-10-rolling-campaigns",
+          "user-goal-2026-10-10-static-language-existing-tsts",
+          "user-2026-10-10-normative-atomic-obligations"
+        ],
+        "assessors": [
+          "coordinator"
+        ]
+      },
+      "requirements": [
+        {
+          "id": "REQ-ROLLING-CONFIGURATION",
+          "path": "pm/requirements/rolling-campaigns.md",
+          "digest": "dd90e7198653a290b46bb7b5c7e1bce5c9e3735820f79777d1b4b7236a7a0c09"
+        },
+        {
+          "id": "REQ-ROLLING-GRAPH",
+          "path": "pm/requirements/rolling-campaigns.md",
+          "digest": "dd90e7198653a290b46bb7b5c7e1bce5c9e3735820f79777d1b4b7236a7a0c09"
+        },
+        {
+          "id": "REQ-ROLLING-SCHEDULING",
+          "path": "pm/requirements/rolling-campaigns.md",
+          "digest": "dd90e7198653a290b46bb7b5c7e1bce5c9e3735820f79777d1b4b7236a7a0c09"
+        },
+        {
+          "id": "REQ-ROLLING-STATE",
+          "path": "pm/requirements/rolling-campaigns.md",
+          "digest": "dd90e7198653a290b46bb7b5c7e1bce5c9e3735820f79777d1b4b7236a7a0c09"
+        },
+        {
+          "id": "REQ-ROLLING-WORKERS",
+          "path": "pm/requirements/rolling-campaigns.md",
+          "digest": "dd90e7198653a290b46bb7b5c7e1bce5c9e3735820f79777d1b4b7236a7a0c09"
+        },
+        {
+          "id": "REQ-ROLLING-REVIEW",
+          "path": "pm/requirements/rolling-campaigns.md",
+          "digest": "dd90e7198653a290b46bb7b5c7e1bce5c9e3735820f79777d1b4b7236a7a0c09"
+        },
+        {
+          "id": "REQ-ROLLING-PUBLICATION",
+          "path": "pm/requirements/rolling-campaigns.md",
+          "digest": "dd90e7198653a290b46bb7b5c7e1bce5c9e3735820f79777d1b4b7236a7a0c09"
+        },
+        {
+          "id": "REQ-ROLLING-INTERFACES",
+          "path": "pm/requirements/rolling-campaigns.md",
+          "digest": "dd90e7198653a290b46bb7b5c7e1bce5c9e3735820f79777d1b4b7236a7a0c09"
+        },
+        {
+          "id": "REQ-PONYTAIL-STATIC-LANGUAGE",
+          "path": "pm/requirements/static-language.md",
+          "digest": "0a192196748a49cf9cbf4c8e2b7724f19b82756eca06f48347bb1c043bc8e532"
+        }
+      ],
+      "obligationIds": [
+        "OBL-1",
+        "OBL-2",
+        "OBL-3",
+        "OBL-4",
+        "OBL-5",
+        "OBL-6",
+        "OBL-7",
+        "OBL-8",
+        "OBL-9",
+        "OBL-10",
+        "OBL-11",
+        "OBL-12",
+        "OBL-13",
+        "OBL-14",
+        "OBL-15",
+        "OBL-16",
+        "OBL-17",
+        "OBL-18",
+        "OBL-19",
+        "OBL-20",
+        "OBL-21",
+        "OBL-22",
+        "OBL-23",
+        "OBL-24",
+        "OBL-25",
+        "OBL-26",
+        "OBL-27",
+        "OBL-28",
+        "OBL-29",
+        "OBL-30",
+        "OBL-31",
+        "OBL-32",
+        "OBL-33",
+        "OBL-34",
+        "OBL-35",
+        "OBL-36",
+        "OBL-37",
+        "OBL-38",
+        "OBL-39",
+        "OBL-40",
+        "OBL-41",
+        "OBL-42",
+        "OBL-43",
+        "OBL-44",
+        "OBL-45",
+        "OBL-46",
+        "OBL-47",
+        "OBL-48",
+        "OBL-49",
+        "OBL-50",
+        "OBL-51",
+        "OBL-52",
+        "OBL-53",
+        "OBL-54",
+        "OBL-55",
+        "OBL-56",
+        "OBL-57",
+        "OBL-58",
+        "OBL-59",
+        "OBL-60",
+        "OBL-61",
+        "OBL-62",
+        "OBL-63",
+        "OBL-64",
+        "OBL-65",
+        "OBL-66",
+        "OBL-67",
+        "OBL-68",
+        "OBL-69",
+        "OBL-70",
+        "OBL-71",
+        "OBL-72"
+      ],
+      "inventoryIds": [
+        "OBL-1",
+        "OBL-2",
+        "OBL-3",
+        "OBL-4",
+        "OBL-5",
+        "OBL-6",
+        "OBL-15",
+        "OBL-16",
+        "OBL-17",
+        "OBL-18",
+        "OBL-19",
+        "OBL-20"
+      ]
     }
   ],
   "obligations": [
@@ -745,6 +894,1303 @@
         "selection": [],
         "target": null
       }
+    },
+    {
+      "id": "OBL-22",
+      "category": "gate",
+      "requirementIds": [
+        "REQ-ROLLING-CONFIGURATION"
+      ],
+      "responsibilityId": "rolling-delivery-01",
+      "condition": "Resolve and retain the campaign publication target using explicit, project, then Git defaults.",
+      "criterion": "`tests/rolling-campaign.test.ts`; configuration Git Arc demonstrates the complete declared outcome on identified inputs, with applicable strict compilation, unchanged TSTS, focused QA, structural checks and generated-source synchronization. Partial, stale, skipped or substitute proof is unresolved.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "CONFIG-PRECEDENCE"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-23",
+      "category": "gate",
+      "requirementIds": [
+        "REQ-ROLLING-CONFIGURATION"
+      ],
+      "responsibilityId": "rolling-delivery-02",
+      "condition": "Resolve positive safe N/M limits using campaign, project and global defaults.",
+      "criterion": "`tests/rolling-campaign.test.ts` demonstrates the complete declared outcome on identified inputs, with applicable strict compilation, unchanged TSTS, focused QA, structural checks and generated-source synchronization. Partial, stale, skipped or substitute proof is unresolved.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "CONFIG-PRECEDENCE"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-24",
+      "category": "gate",
+      "requirementIds": [
+        "REQ-ROLLING-CONFIGURATION"
+      ],
+      "responsibilityId": "rolling-delivery-03",
+      "condition": "Accept only checked project configuration with literal executable argv and required publication QA.",
+      "criterion": "`tests/rolling-campaign.test.ts`; configuration Git Arc demonstrates the complete declared outcome on identified inputs, with applicable strict compilation, unchanged TSTS, focused QA, structural checks and generated-source synchronization. Partial, stale, skipped or substitute proof is unresolved.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "CONFIG-PRECEDENCE"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-25",
+      "category": "gate",
+      "requirementIds": [
+        "REQ-ROLLING-GRAPH"
+      ],
+      "responsibilityId": "rolling-delivery-04",
+      "condition": "Derive graph identity solely from coordinator inputs and reject obsolete identities before selection.",
+      "criterion": "`tests/rolling-campaign.integration.test.ts` demonstrates the complete declared outcome on identified inputs, with applicable strict compilation, unchanged TSTS, focused QA, structural checks and generated-source synchronization. Partial, stale, skipped or substitute proof is unresolved.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "GRAPH-AUTHORITY"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-26",
+      "category": "gate",
+      "requirementIds": [
+        "REQ-ROLLING-GRAPH"
+      ],
+      "responsibilityId": "rolling-delivery-05",
+      "condition": "Reject cyclic or unavailable prerequisite inputs before allocating work.",
+      "criterion": "`tests/rolling-campaign.integration.test.ts` demonstrates the complete declared outcome on identified inputs, with applicable strict compilation, unchanged TSTS, focused QA, structural checks and generated-source synchronization. Partial, stale, skipped or substitute proof is unresolved.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "GRAPH-DISCOVERY"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-27",
+      "category": "gate",
+      "requirementIds": [
+        "REQ-ROLLING-GRAPH"
+      ],
+      "responsibilityId": "rolling-delivery-06",
+      "condition": "Preserve acceptance Step references and exact implementation/test bindings in checked assignment input.",
+      "criterion": "`tests/rolling-campaign.test.ts` demonstrates the complete declared outcome on identified inputs, with applicable strict compilation, unchanged TSTS, focused QA, structural checks and generated-source synchronization. Partial, stale, skipped or substitute proof is unresolved.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "GRAPH-TRACE"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-28",
+      "category": "gate",
+      "requirementIds": [
+        "REQ-ROLLING-SCHEDULING"
+      ],
+      "responsibilityId": "rolling-delivery-07",
+      "condition": "Select a deterministic maximal compatible ready set within available active capacity.",
+      "criterion": "`tests/rolling-campaign.test.ts` demonstrates the complete declared outcome on identified inputs, with applicable strict compilation, unchanged TSTS, focused QA, structural checks and generated-source synchronization. Partial, stale, skipped or substitute proof is unresolved.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "SCHEDULE-FILL"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-29",
+      "category": "gate",
+      "requirementIds": [
+        "REQ-ROLLING-SCHEDULING"
+      ],
+      "responsibilityId": "rolling-delivery-08",
+      "condition": "Prefer eligible stopped inactive assignments over new work while retaining their ownership.",
+      "criterion": "`tests/rolling-campaign.test.ts`; PostgreSQL Arc demonstrates the complete declared outcome on identified inputs, with applicable strict compilation, unchanged TSTS, focused QA, structural checks and generated-source synchronization. Partial, stale, skipped or substitute proof is unresolved.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "SCHEDULE-RESUME"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-30",
+      "category": "gate",
+      "requirementIds": [
+        "REQ-ROLLING-SCHEDULING"
+      ],
+      "responsibilityId": "rolling-delivery-09",
+      "condition": "Prevent changed assignment scope or another campaign's conflicting ownership from entering a selected batch.",
+      "criterion": "`tests/rolling-campaign.test.ts` demonstrates the complete declared outcome on identified inputs, with applicable strict compilation, unchanged TSTS, focused QA, structural checks and generated-source synchronization. Partial, stale, skipped or substitute proof is unresolved.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "SCHEDULE-FILL"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-31",
+      "category": "gate",
+      "requirementIds": [
+        "REQ-ROLLING-SCHEDULING",
+        "REQ-ROLLING-STATE"
+      ],
+      "responsibilityId": "rolling-delivery-10",
+      "condition": "Reserve each obligation/worktree pair once under concurrent allocation requests.",
+      "criterion": "`tests/rolling-campaign-store.integration.test.ts` demonstrates the complete declared outcome on identified inputs, with applicable strict compilation, unchanged TSTS, focused QA, structural checks and generated-source synchronization. Partial, stale, skipped or substitute proof is unresolved.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "STATE-CONTENTION"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-32",
+      "category": "gate",
+      "requirementIds": [
+        "REQ-ROLLING-STATE"
+      ],
+      "responsibilityId": "rolling-delivery-11",
+      "condition": "Reject stale lease events after assignment generation changes.",
+      "criterion": "PostgreSQL Arc demonstrates the complete declared outcome on identified inputs, with applicable strict compilation, unchanged TSTS, focused QA, structural checks and generated-source synchronization. Partial, stale, skipped or substitute proof is unresolved.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "STATE-RECOVERY"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-33",
+      "category": "gate",
+      "requirementIds": [
+        "REQ-ROLLING-STATE"
+      ],
+      "responsibilityId": "rolling-delivery-12",
+      "condition": "Persist external action intent and require matching acknowledged results before state advances.",
+      "criterion": "PostgreSQL Arc demonstrates the complete declared outcome on identified inputs, with applicable strict compilation, unchanged TSTS, focused QA, structural checks and generated-source synchronization. Partial, stale, skipped or substitute proof is unresolved.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "STATE-RECOVERY"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-34",
+      "category": "gate",
+      "requirementIds": [
+        "REQ-ROLLING-SCHEDULING",
+        "REQ-ROLLING-STATE"
+      ],
+      "responsibilityId": "rolling-delivery-13",
+      "condition": "Release a retired database assignment successfully even when no obligation is ready.",
+      "criterion": "PostgreSQL Arc demonstrates the complete declared outcome on identified inputs, with applicable strict compilation, unchanged TSTS, focused QA, structural checks and generated-source synchronization. Partial, stale, skipped or substitute proof is unresolved.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "SCHEDULE-RELEASE"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-35",
+      "category": "gate",
+      "requirementIds": [
+        "REQ-ROLLING-GRAPH",
+        "REQ-ROLLING-STATE"
+      ],
+      "responsibilityId": "rolling-delivery-14",
+      "condition": "Reconcile an accepted graph change before subsequent database allocation.",
+      "criterion": "PostgreSQL Arc demonstrates the complete declared outcome on identified inputs, with applicable strict compilation, unchanged TSTS, focused QA, structural checks and generated-source synchronization. Partial, stale, skipped or substitute proof is unresolved.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "GRAPH-DISCOVERY"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-36",
+      "category": "gate",
+      "requirementIds": [
+        "REQ-ROLLING-CONFIGURATION",
+        "REQ-ROLLING-WORKERS"
+      ],
+      "responsibilityId": "rolling-delivery-15",
+      "condition": "Resolve every checkout's managed directory to one physical main-root-anchored pool.",
+      "criterion": "`tests/rolling-worktrees.integration.test.ts`; physical-path unit proof demonstrates the complete declared outcome on identified inputs, with applicable strict compilation, unchanged TSTS, focused QA, structural checks and generated-source synchronization. Partial, stale, skipped or substitute proof is unresolved.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "CONFIG-POOL"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-37",
+      "category": "gate",
+      "requirementIds": [
+        "REQ-ROLLING-CONFIGURATION",
+        "REQ-ROLLING-WORKERS"
+      ],
+      "responsibilityId": "rolling-delivery-16",
+      "condition": "Provision ordinary Git worktrees numbered 101 upward with configured project setup.",
+      "criterion": "Git worktree Arc demonstrates the complete declared outcome on identified inputs, with applicable strict compilation, unchanged TSTS, focused QA, structural checks and generated-source synchronization. Partial, stale, skipped or substitute proof is unresolved.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "CONFIG-POOL"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-38",
+      "category": "gate",
+      "requirementIds": [
+        "REQ-ROLLING-WORKERS"
+      ],
+      "responsibilityId": "rolling-delivery-17",
+      "condition": "Repair and verify effective ignore rules for the session marker without discarding existing rules.",
+      "criterion": "Git worktree Arc demonstrates the complete declared outcome on identified inputs, with applicable strict compilation, unchanged TSTS, focused QA, structural checks and generated-source synchronization. Partial, stale, skipped or substitute proof is unresolved.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "WORKER-START"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-39",
+      "category": "gate",
+      "requirementIds": [
+        "REQ-ROLLING-WORKERS"
+      ],
+      "responsibilityId": "rolling-delivery-18",
+      "condition": "Reuse a checkout only after its marker, uncommitted work and unintegrated commits permit reuse.",
+      "criterion": "Git worktree Arc demonstrates the complete declared outcome on identified inputs, with applicable strict compilation, unchanged TSTS, focused QA, structural checks and generated-source synchronization. Partial, stale, skipped or substitute proof is unresolved.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "WORKER-REUSE"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-40",
+      "category": "gate",
+      "requirementIds": [
+        "REQ-ROLLING-WORKERS"
+      ],
+      "responsibilityId": "rolling-delivery-19",
+      "condition": "Recover an identical provisioning intent without creating a second checkout; retain failed setup ownership.",
+      "criterion": "Git worktree Arc demonstrates the complete declared outcome on identified inputs, with applicable strict compilation, unchanged TSTS, focused QA, structural checks and generated-source synchronization. Partial, stale, skipped or substitute proof is unresolved.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "WORKER-START"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-41",
+      "category": "gate",
+      "requirementIds": [
+        "REQ-ROLLING-WORKERS"
+      ],
+      "responsibilityId": "rolling-delivery-20",
+      "condition": "Start and resume a native Codex thread in an explicitly designated existing checkout.",
+      "criterion": "`tests/rolling-codex.test.ts`; separate native smoke required demonstrates the complete declared outcome on identified inputs, with applicable strict compilation, unchanged TSTS, focused QA, structural checks and generated-source synchronization. Partial, stale, skipped or substitute proof is unresolved.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "WORKER-START"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-42",
+      "category": "gate",
+      "requirementIds": [
+        "REQ-ROLLING-WORKERS"
+      ],
+      "responsibilityId": "rolling-delivery-21",
+      "condition": "Observe native terminal turns and require them before closing the owned server.",
+      "criterion": "`tests/rolling-codex.test.ts` demonstrates the complete declared outcome on identified inputs, with applicable strict compilation, unchanged TSTS, focused QA, structural checks and generated-source synchronization. Partial, stale, skipped or substitute proof is unresolved.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "WORKER-REUSE"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-43",
+      "category": "gate",
+      "requirementIds": [
+        "REQ-ROLLING-WORKERS"
+      ],
+      "responsibilityId": "rolling-delivery-22",
+      "condition": "Preserve unknown native outcomes on timeout or transport loss without automatically recreating a worker.",
+      "criterion": "`tests/rolling-codex.test.ts` demonstrates the complete declared outcome on identified inputs, with applicable strict compilation, unchanged TSTS, focused QA, structural checks and generated-source synchronization. Partial, stale, skipped or substitute proof is unresolved.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "STATE-RECOVERY"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-44",
+      "category": "gate",
+      "requirementIds": [
+        "REQ-ROLLING-STATE",
+        "REQ-ROLLING-WORKERS"
+      ],
+      "responsibilityId": "rolling-delivery-23",
+      "condition": "Bind a reserved database assignment to its actual native session and matching ignored marker.",
+      "criterion": "Application provisioning Arc demonstrates the complete declared outcome on identified inputs, with applicable strict compilation, unchanged TSTS, focused QA, structural checks and generated-source synchronization. Partial, stale, skipped or substitute proof is unresolved.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "WORKER-START"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-45",
+      "category": "gate",
+      "requirementIds": [
+        "REQ-ROLLING-WORKERS"
+      ],
+      "responsibilityId": "rolling-delivery-24",
+      "condition": "Deliver exact obligation, traceability, lease and QA instructions to an attached worker.",
+      "criterion": "Application worker-start Arc demonstrates the complete declared outcome on identified inputs, with applicable strict compilation, unchanged TSTS, focused QA, structural checks and generated-source synchronization. Partial, stale, skipped or substitute proof is unresolved.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "GRAPH-TRACE"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-46",
+      "category": "gate",
+      "requirementIds": [
+        "REQ-ROLLING-SCHEDULING",
+        "REQ-ROLLING-STATE",
+        "REQ-ROLLING-WORKERS"
+      ],
+      "responsibilityId": "rolling-delivery-25",
+      "condition": "Suspend an actually stopped blocked worker and free capacity while retaining its checkout.",
+      "criterion": "Application suspension Arc with activity evidence demonstrates the complete declared outcome on identified inputs, with applicable strict compilation, unchanged TSTS, focused QA, structural checks and generated-source synchronization. Partial, stale, skipped or substitute proof is unresolved.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "SCHEDULE-SUSPEND"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-47",
+      "category": "gate",
+      "requirementIds": [
+        "REQ-ROLLING-SCHEDULING",
+        "REQ-ROLLING-STATE",
+        "REQ-ROLLING-WORKERS"
+      ],
+      "responsibilityId": "rolling-delivery-26",
+      "condition": "Resume the original unblocked native session after capacity reservation and scope/base refresh.",
+      "criterion": "Application resumption Arc demonstrates the complete declared outcome on identified inputs, with applicable strict compilation, unchanged TSTS, focused QA, structural checks and generated-source synchronization. Partial, stale, skipped or substitute proof is unresolved.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "WORKER-RESUME"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-48",
+      "category": "gate",
+      "requirementIds": [
+        "REQ-ROLLING-STATE",
+        "REQ-ROLLING-WORKERS"
+      ],
+      "responsibilityId": "rolling-delivery-27",
+      "condition": "Reconcile uncertain worker creation after coordinator restart without duplicate creation.",
+      "criterion": "Restart/recovery Arc demonstrates the complete declared outcome on identified inputs, with applicable strict compilation, unchanged TSTS, focused QA, structural checks and generated-source synchronization. Partial, stale, skipped or substitute proof is unresolved.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "STATE-RECOVERY"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-49",
+      "category": "gate",
+      "requirementIds": [
+        "REQ-ROLLING-REVIEW"
+      ],
+      "responsibilityId": "rolling-delivery-28",
+      "condition": "Submit the exact candidate only after focused QA and a fresh worker semantic rebase.",
+      "criterion": "Worker submission Git Arc demonstrates the complete declared outcome on identified inputs, with applicable strict compilation, unchanged TSTS, focused QA, structural checks and generated-source synchronization. Partial, stale, skipped or substitute proof is unresolved.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "REVIEW-REBASE"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-50",
+      "category": "gate",
+      "requirementIds": [
+        "REQ-ROLLING-REVIEW"
+      ],
+      "responsibilityId": "rolling-delivery-29",
+      "condition": "Review the exact candidate adversarially and persist the assigned reviewer identity.",
+      "criterion": "Review operation Arc demonstrates the complete declared outcome on identified inputs, with applicable strict compilation, unchanged TSTS, focused QA, structural checks and generated-source synchronization. Partial, stale, skipped or substitute proof is unresolved.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "REVIEW-CORRECTION"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-51",
+      "category": "gate",
+      "requirementIds": [
+        "REQ-ROLLING-REVIEW"
+      ],
+      "responsibilityId": "rolling-delivery-30",
+      "condition": "Return rejected work to its worker and reuse the same reviewer for corrected submissions.",
+      "criterion": "Review/rework Arc demonstrates the complete declared outcome on identified inputs, with applicable strict compilation, unchanged TSTS, focused QA, structural checks and generated-source synchronization. Partial, stale, skipped or substitute proof is unresolved.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "REVIEW-CORRECTION"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-52",
+      "category": "gate",
+      "requirementIds": [
+        "REQ-ROLLING-REVIEW"
+      ],
+      "responsibilityId": "rolling-delivery-31",
+      "condition": "Record reviewer replacement and obtain fresh review when the original reviewer is lost.",
+      "criterion": "Review recovery Arc demonstrates the complete declared outcome on identified inputs, with applicable strict compilation, unchanged TSTS, focused QA, structural checks and generated-source synchronization. Partial, stale, skipped or substitute proof is unresolved.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "REVIEW-CORRECTION"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-53",
+      "category": "gate",
+      "requirementIds": [
+        "REQ-ROLLING-REVIEW"
+      ],
+      "responsibilityId": "rolling-delivery-32",
+      "condition": "Apply the intentional fast-rebase policy after accepted review, with semantic inspection triggered by textual conflict.",
+      "criterion": "Increment integration Git Arc demonstrates the complete declared outcome on identified inputs, with applicable strict compilation, unchanged TSTS, focused QA, structural checks and generated-source synchronization. Partial, stale, skipped or substitute proof is unresolved.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "REVIEW-REBASE"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-54",
+      "category": "gate",
+      "requirementIds": [
+        "REQ-ROLLING-REVIEW",
+        "REQ-ROLLING-PUBLICATION"
+      ],
+      "responsibilityId": "rolling-delivery-33",
+      "condition": "Fast-forward and normally push a reviewed increment, recording delivery only after remote containment is verified.",
+      "criterion": "Increment push Git Arc demonstrates the complete declared outcome on identified inputs, with applicable strict compilation, unchanged TSTS, focused QA, structural checks and generated-source synchronization. Partial, stale, skipped or substitute proof is unresolved.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "REVIEW-PUSH"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-55",
+      "category": "gate",
+      "requirementIds": [
+        "REQ-ROLLING-REVIEW",
+        "REQ-ROLLING-PUBLICATION"
+      ],
+      "responsibilityId": "rolling-delivery-34",
+      "condition": "Reconcile rejected or uncertain increment pushes without force or duplicate delivery.",
+      "criterion": "Increment push recovery Arc demonstrates the complete declared outcome on identified inputs, with applicable strict compilation, unchanged TSTS, focused QA, structural checks and generated-source synchronization. Partial, stale, skipped or substitute proof is unresolved.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "REVIEW-PUSH"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-56",
+      "category": "gate",
+      "requirementIds": [
+        "REQ-ROLLING-GRAPH",
+        "REQ-ROLLING-STATE",
+        "REQ-ROLLING-REVIEW"
+      ],
+      "responsibilityId": "rolling-delivery-35",
+      "condition": "Assess submitted certificates on integrated inputs without allowing worker candidates to mutate accepted records.",
+      "criterion": "Integrated certificate operation Arc demonstrates the complete declared outcome on identified inputs, with applicable strict compilation, unchanged TSTS, focused QA, structural checks and generated-source synchronization. Partial, stale, skipped or substitute proof is unresolved.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "REVIEW-PUSH"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-57",
+      "category": "gate",
+      "requirementIds": [
+        "REQ-ROLLING-STATE",
+        "REQ-ROLLING-WORKERS"
+      ],
+      "responsibilityId": "rolling-delivery-36",
+      "condition": "Establish terminal worker cessation, revoke its generation and clean only its owned resources before checkout release.",
+      "criterion": "Retirement activity/filesystem Arc demonstrates the complete declared outcome on identified inputs, with applicable strict compilation, unchanged TSTS, focused QA, structural checks and generated-source synchronization. Partial, stale, skipped or substitute proof is unresolved.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "WORKER-REUSE"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-58",
+      "category": "gate",
+      "requirementIds": [
+        "REQ-ROLLING-STATE",
+        "REQ-ROLLING-PUBLICATION"
+      ],
+      "responsibilityId": "rolling-delivery-37",
+      "condition": "Freeze publication at M accepted increments; resubmissions and bookkeeping do not increment the count.",
+      "criterion": "Publication threshold Arc demonstrates the complete declared outcome on identified inputs, with applicable strict compilation, unchanged TSTS, focused QA, structural checks and generated-source synchronization. Partial, stale, skipped or substitute proof is unresolved.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "PUBLISH-BATCH"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-59",
+      "category": "gate",
+      "requirementIds": [
+        "REQ-ROLLING-PUBLICATION"
+      ],
+      "responsibilityId": "rolling-delivery-38",
+      "condition": "Flush a nonempty partial publication batch at explicit flush, completion or quiescence.",
+      "criterion": "Partial publication Arc demonstrates the complete declared outcome on identified inputs, with applicable strict compilation, unchanged TSTS, focused QA, structural checks and generated-source synchronization. Partial, stale, skipped or substitute proof is unresolved.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "PUBLISH-FLUSH"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-60",
+      "category": "gate",
+      "requirementIds": [
+        "REQ-ROLLING-PUBLICATION"
+      ],
+      "responsibilityId": "rolling-delivery-39",
+      "condition": "Incorporate fresh mainline into the publication candidate while preserving published campaign history.",
+      "criterion": "Publication reconciliation Git Arc demonstrates the complete declared outcome on identified inputs, with applicable strict compilation, unchanged TSTS, focused QA, structural checks and generated-source synchronization. Partial, stale, skipped or substitute proof is unresolved.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "PUBLISH-BATCH"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-61",
+      "category": "gate",
+      "requirementIds": [
+        "REQ-ROLLING-PUBLICATION"
+      ],
+      "responsibilityId": "rolling-delivery-40",
+      "condition": "Prevent mainline publication unless all required full QA passes on the exact candidate.",
+      "criterion": "Publication QA gate Arc demonstrates the complete declared outcome on identified inputs, with applicable strict compilation, unchanged TSTS, focused QA, structural checks and generated-source synchronization. Partial, stale, skipped or substitute proof is unresolved.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "PUBLISH-FAILURE"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-62",
+      "category": "gate",
+      "requirementIds": [
+        "REQ-ROLLING-STATE",
+        "REQ-ROLLING-PUBLICATION"
+      ],
+      "responsibilityId": "rolling-delivery-41",
+      "condition": "Reconcile mainline push races and unknown outcomes, refresh changed-input proof and synchronize the campaign base.",
+      "criterion": "Publication recovery Git Arc demonstrates the complete declared outcome on identified inputs, with applicable strict compilation, unchanged TSTS, focused QA, structural checks and generated-source synchronization. Partial, stale, skipped or substitute proof is unresolved.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "PUBLISH-FAILURE"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-63",
+      "category": "gate",
+      "requirementIds": [
+        "REQ-ROLLING-SCHEDULING",
+        "REQ-ROLLING-STATE",
+        "REQ-ROLLING-INTERFACES"
+      ],
+      "responsibilityId": "rolling-delivery-42",
+      "condition": "Replenish capacity from events and periodic reconciliation without duplicating allocations.",
+      "criterion": "Coordinator recovery/replenishment Arc demonstrates the complete declared outcome on identified inputs, with applicable strict compilation, unchanged TSTS, focused QA, structural checks and generated-source synchronization. Partial, stale, skipped or substitute proof is unresolved.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "STATE-ACTIONS"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-64",
+      "category": "gate",
+      "requirementIds": [
+        "REQ-ROLLING-STATE",
+        "REQ-ROLLING-INTERFACES"
+      ],
+      "responsibilityId": "rolling-delivery-43",
+      "condition": "Project exact next actions, prerequisite reasons and active/inactive/review/publication state for coordinator decisions.",
+      "criterion": "Application status/next-actions Arc demonstrates the complete declared outcome on identified inputs, with applicable strict compilation, unchanged TSTS, focused QA, structural checks and generated-source synchronization. Partial, stale, skipped or substitute proof is unresolved.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "STATE-ACTIONS"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-65",
+      "category": "gate",
+      "requirementIds": [
+        "REQ-ROLLING-INTERFACES"
+      ],
+      "responsibilityId": "rolling-delivery-44",
+      "condition": "Initialize and reconcile a campaign through the shared typed application operation layer.",
+      "criterion": "CLI operation Arc demonstrates the complete declared outcome on identified inputs, with applicable strict compilation, unchanged TSTS, focused QA, structural checks and generated-source synchronization. Partial, stale, skipped or substitute proof is unresolved.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "INTERFACE-PARITY"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-66",
+      "category": "gate",
+      "requirementIds": [
+        "REQ-ROLLING-INTERFACES"
+      ],
+      "responsibilityId": "rolling-delivery-45",
+      "condition": "Expose chapter/command usage with argument, precondition, mutation and result descriptions from one registry.",
+      "criterion": "CLI help contract proof demonstrates the complete declared outcome on identified inputs, with applicable strict compilation, unchanged TSTS, focused QA, structural checks and generated-source synchronization. Partial, stale, skipped or substitute proof is unresolved.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "INTERFACE-HELP"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-67",
+      "category": "gate",
+      "requirementIds": [
+        "REQ-ROLLING-INTERFACES"
+      ],
+      "responsibilityId": "rolling-delivery-46",
+      "condition": "Replace legacy plugin-based campaign dispatch while preserving explicit historical inspection boundaries.",
+      "criterion": "CLI replacement/migration Arc demonstrates the complete declared outcome on identified inputs, with applicable strict compilation, unchanged TSTS, focused QA, structural checks and generated-source synchronization. Partial, stale, skipped or substitute proof is unresolved.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "INTERFACE-LEGACY"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-68",
+      "category": "gate",
+      "requirementIds": [
+        "REQ-ROLLING-INTERFACES"
+      ],
+      "responsibilityId": "rolling-delivery-47",
+      "condition": "Expose the same fenced typed campaign operations and schemas through MCP and CLI.",
+      "criterion": "CLI/MCP operation parity Arc demonstrates the complete declared outcome on identified inputs, with applicable strict compilation, unchanged TSTS, focused QA, structural checks and generated-source synchronization. Partial, stale, skipped or substitute proof is unresolved.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "INTERFACE-PARITY"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-69",
+      "category": "gate",
+      "requirementIds": [
+        "REQ-ROLLING-STATE",
+        "REQ-ROLLING-INTERFACES"
+      ],
+      "responsibilityId": "rolling-delivery-48",
+      "condition": "Refuse campaign closure until all owned delivery obligations and final acceptance gates have fresh adequate evidence.",
+      "criterion": "Campaign closure Arc demonstrates the complete declared outcome on identified inputs, with applicable strict compilation, unchanged TSTS, focused QA, structural checks and generated-source synchronization. Partial, stale, skipped or substitute proof is unresolved.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "CAMPAIGN-CLOSE"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-70",
+      "category": "gate",
+      "requirementIds": [
+        "REQ-PONYTAIL-STATIC-LANGUAGE"
+      ],
+      "responsibilityId": "strict-typescript-compilation",
+      "condition": "The root TypeScript project strictly compiles every included owned TypeScript operation without allowing handwritten JavaScript or type-system bypasses.",
+      "criterion": "The configured root build passes with the approved strict compiler options, including exact optional properties and checked indexed access; source inventory and focused type-contract review establish that the configuration does not evade owned code.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "STATIC-CHECK"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-71",
+      "category": "gate",
+      "requirementIds": [
+        "REQ-PONYTAIL-STATIC-LANGUAGE"
+      ],
+      "responsibilityId": "unchanged-tsts-enforcement",
+      "condition": "The existing TSTS checker enforces the configured owned TypeScript programs without checker extensions or diagnostics bypasses.",
+      "criterion": "The unchanged configured TSTS operation checks the root and TSTS programs successfully, using the project-owned directory and artifact classifications; configuration and source review establish the intended coverage.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "STATIC-CHECK"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-72",
+      "category": "gate",
+      "requirementIds": [
+        "REQ-PONYTAIL-STATIC-LANGUAGE"
+      ],
+      "responsibilityId": "typed-runtime-materialization",
+      "condition": "Established runtime entrypoints are reproducibly materialized from their checked canonical TypeScript owners.",
+      "criterion": "The configured root build and runtime materialization check pass; exact generated/source mappings and focused emitted-runtime proofs preserve established launch behavior, without handwritten runtime duplicates.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "STATIC-RUNTIME"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
     }
   ],
   "certificates": [],
@@ -843,6 +2289,108 @@
         2
       ],
       "reason": "Stakeholder authorizes whole-codebase static-language migration and applying existing TSTS, without TSTS extensions. Preserve original requirements and add unresolved migration responsibilities."
+    },
+    {
+      "id": "CHECKPOINT-3",
+      "predecessorId": "CHECKPOINT-2",
+      "baselineId": "BASELINE-3",
+      "kind": "rebaseline",
+      "selectedIds": [],
+      "registeredIds": [
+        "OBL-1",
+        "OBL-2",
+        "OBL-3",
+        "OBL-4",
+        "OBL-5",
+        "OBL-6",
+        "OBL-7",
+        "OBL-8",
+        "OBL-9",
+        "OBL-10",
+        "OBL-11",
+        "OBL-12",
+        "OBL-13",
+        "OBL-14",
+        "OBL-15",
+        "OBL-16",
+        "OBL-17",
+        "OBL-18",
+        "OBL-19",
+        "OBL-20",
+        "OBL-21",
+        "OBL-22",
+        "OBL-23",
+        "OBL-24",
+        "OBL-25",
+        "OBL-26",
+        "OBL-27",
+        "OBL-28",
+        "OBL-29",
+        "OBL-30",
+        "OBL-31",
+        "OBL-32",
+        "OBL-33",
+        "OBL-34",
+        "OBL-35",
+        "OBL-36",
+        "OBL-37",
+        "OBL-38",
+        "OBL-39",
+        "OBL-40",
+        "OBL-41",
+        "OBL-42",
+        "OBL-43",
+        "OBL-44",
+        "OBL-45",
+        "OBL-46",
+        "OBL-47",
+        "OBL-48",
+        "OBL-49",
+        "OBL-50",
+        "OBL-51",
+        "OBL-52",
+        "OBL-53",
+        "OBL-54",
+        "OBL-55",
+        "OBL-56",
+        "OBL-57",
+        "OBL-58",
+        "OBL-59",
+        "OBL-60",
+        "OBL-61",
+        "OBL-62",
+        "OBL-63",
+        "OBL-64",
+        "OBL-65",
+        "OBL-66",
+        "OBL-67",
+        "OBL-68",
+        "OBL-69",
+        "OBL-70",
+        "OBL-71",
+        "OBL-72"
+      ],
+      "certificateIds": [],
+      "invalidatedIds": [],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": null,
+      "reason": "Apply stakeholder-approved normative atomicity to known rolling delivery scope, requirement membership and acceptance contributions. Preserve historical gates and identities; register all known atoms without awarding discharge or claiming inventory completeness. Language operation decomposition and execution bindings remain pending. Register the three known compiler/checker/runtime foundation conditions separately from the unfinished operation migration inventory.",
+      "assessor": "coordinator"
     }
   ]
 }

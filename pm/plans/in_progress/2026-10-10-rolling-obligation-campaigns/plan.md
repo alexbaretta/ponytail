@@ -106,7 +106,7 @@ completed delivery obligation never implies its parent requirement gate is
 satisfied. Evidence must remain valid for the relevant inputs; an edit or
 commit alone does not establish discharge.
 
-BASELINE-2 contains 12 inventory obligations and 9 broad requirement acceptance
+Historical BASELINE-2 contains 12 inventory obligations and 9 broad requirement acceptance
 gates. Its 0 satisfied and 21 unresolved projection measures formal acceptance,
 not 0 percent of work performed. It does not yet provide a suitable delivery
 obligation denominator. Report work percentage as unassessed until bounded
@@ -116,6 +116,33 @@ outcomes and rolling campaign operations, preserving the full approved scope,
 existing obligation IDs and historical baselines. Any denominator amendment
 must be explicit; never rewrite history or add only completed outcomes to
 inflate progress.
+
+BASELINE-3 appends 48 known rolling delivery obligations (OBL-22 through OBL-69)
+and three language foundation obligations (OBL-70 through OBL-72), reconciles
+requirement membership and acceptance Step contributions, and retains every
+previous ID and gate. These are registered conditions, not discharged work.
+Their execution bindings permit inspection only until prerequisites, exact
+paths and executable operations are reviewed and registered. Remaining language
+operation discovery keeps the full delivery denominator explicitly incomplete.
+
+Reconciliation QA additionally owns the fixture input-identity repair in
+`tests/rolling-campaign-store.integration.test.ts`: its isolated original-scope
+baseline copies the current requirement bytes, so derive its fixture hashes from
+those same inputs. Preserve every campaign historical baseline; do not weaken
+certificate adequacy or freshness validation. Focused Git/PostgreSQL proof,
+strict root build and unchanged TSTS validate this repair with the reconciliation.
+
+Reconciliation evidence, 2026-10-10: the existing `acceptCheckpoint` operation
+validates the successor against the immutable predecessor and current requirement
+digests. All 51 registered atomic conditions are referenced by requirement and
+acceptance records; 192 file/anchor links resolve. The configured strict root
+build, runtime materialization check and unchanged TSTS pass (865 files).
+Focused rolling configuration/graph/store proof passes 13 tests, including real
+Git and PostgreSQL, with no failures or skips after repairing the isolated
+fixture's stale input identities. Plan structure passes. Reverse-view generation
+is synchronized but still reports the same nine unfinished review/publication/
+interface coverage gaps. These checks validate reconciliation; they award no
+delivery certificate and do not establish final campaign acceptance.
 
 Show both delivery progress and final acceptance in status reports. Passing
 checks and implementation details support the obligation assessment but are

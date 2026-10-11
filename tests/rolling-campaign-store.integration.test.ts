@@ -36,10 +36,15 @@ test('real PostgreSQL serializes allocation, retains suspended ownership and rel
   const source = path.join(repositoryRoot, 'pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/obligations.json');
   let obligationDocumentV1: ObligationDocumentV1 = parseObligationDocument(fs.readFileSync(source, 'utf8'));
   // This isolated Arc uses the original rolling baseline, not migration responsibilities.
-  const obligationBaseline: ObligationBaseline | undefined = obligationDocumentV1.baselines[0];
-  assert.ok(obligationBaseline);
-  obligationDocumentV1 = { ...obligationDocumentV1, baselines: [obligationBaseline],
-    obligations: obligationDocumentV1.obligations.filter(item => obligationBaseline.obligationIds.includes(item.id)),
+  const sourceObligationBaseline: ObligationBaseline | undefined = obligationDocumentV1.baselines[0];
+  assert.ok(sourceObligationBaseline);
+  // The isolated fixture uses the original scope with today's copied requirement
+  // inputs. Its new baseline must not certify those bytes under historical hashes.
+  const fixtureObligationBaseline: ObligationBaseline = { ...sourceObligationBaseline,
+    requirements: sourceObligationBaseline.requirements.map(requirement => ({ ...requirement,
+      digest: inputDigest(repositoryRoot, requirement.path) })) };
+  obligationDocumentV1 = { ...obligationDocumentV1, baselines: [fixtureObligationBaseline],
+    obligations: obligationDocumentV1.obligations.filter(item => fixtureObligationBaseline.obligationIds.includes(item.id)),
     checkpoints: [], scopeId: 'fixture' };
   fs.mkdirSync(path.join(root, 'pm/requirements'), { recursive: true });
   fs.copyFileSync(path.join(repositoryRoot, 'pm/requirements/rolling-campaigns.md'), path.join(root, 'pm/requirements/rolling-campaigns.md'));
@@ -109,14 +114,14 @@ test('real PostgreSQL serializes allocation, retains suspended ownership and rel
   await rollingCampaignStore.retire('fixture', reusedRollingAllocationResult.assignment.id, reusedRollingAllocationResult.assignment.generation, true);
   const obligationCertificate: ObligationCertificate = { id: 'CERT-fixture', obligationIds: ['OBL-1'],
     inputs: [{ path: 'pm/requirements/rolling-campaigns.md', digest: inputDigest(root, 'pm/requirements/rolling-campaigns.md') }],
-    artifacts: ['pm/requirements/rolling-campaigns.md'], assessor: 'coordinator', authority: obligationBaseline.authority.references,
+    artifacts: ['pm/requirements/rolling-campaigns.md'], assessor: 'coordinator', authority: fixtureObligationBaseline.authority.references,
     adequate: true, reason: 'Fixture inventory assessment', disposition: null, evidence: [], inventoryIds: [] };
   obligationDocumentV1 = { ...obligationDocumentV1, certificates: [...obligationDocumentV1.certificates, obligationCertificate] };
-  const initialObligationCheckpoint: ObligationCheckpoint = { id: 'CP-fixture-initial', predecessorId: null, baselineId: obligationBaseline.id, kind: 'initial',
-    selectedIds: [], registeredIds: obligationBaseline.obligationIds, certificateIds: [], invalidatedIds: [],
+  const initialObligationCheckpoint: ObligationCheckpoint = { id: 'CP-fixture-initial', predecessorId: null, baselineId: fixtureObligationBaseline.id, kind: 'initial',
+    selectedIds: [], registeredIds: fixtureObligationBaseline.obligationIds, certificateIds: [], invalidatedIds: [],
     before: [1, 1, 1, 1, 1, 1], after: [1, 1, 1, 1, 1, 1], preparation: null, reason: 'Fixture initial observation', assessor: 'coordinator' };
   obligationDocumentV1 = { ...obligationDocumentV1, checkpoints: [...obligationDocumentV1.checkpoints, initialObligationCheckpoint] };
-  const productiveObligationCheckpoint: ObligationCheckpoint = { id: 'CP-fixture-discharge', predecessorId: 'CP-fixture-initial', baselineId: obligationBaseline.id, kind: 'productive',
+  const productiveObligationCheckpoint: ObligationCheckpoint = { id: 'CP-fixture-discharge', predecessorId: 'CP-fixture-initial', baselineId: fixtureObligationBaseline.id, kind: 'productive',
     selectedIds: ['OBL-1'], registeredIds: [], certificateIds: ['CERT-fixture'], invalidatedIds: [],
     before: [1, 1, 1, 1, 1, 1], after: [0, 1, 1, 1, 1, 1], preparation: null, reason: 'Fixture dependency discharged', assessor: 'coordinator' };
   obligationDocumentV1 = { ...obligationDocumentV1, checkpoints: [...obligationDocumentV1.checkpoints, productiveObligationCheckpoint] };

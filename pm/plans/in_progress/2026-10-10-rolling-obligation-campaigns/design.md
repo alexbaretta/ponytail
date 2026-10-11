@@ -179,7 +179,9 @@ Mainline publication, deployment and human acceptance are separate contracts.
 
 ## Interfaces and replacement
 
-One application operation layer serves CLI and optional MCP. Root help lists
+One application operation layer serves CLI and MCP, as required by
+REQ-ROLLING-INTERFACES. MCP parity is approved scope, not an optional replacement
+for the CLI. Root help lists
 chapters, chapter help lists commands and command help owns arguments, behavior,
 preconditions, mutations, results and examples. One registry provides CLI help
 and MCP schemas/descriptions. Proposed chapters: project, plan, campaign,
