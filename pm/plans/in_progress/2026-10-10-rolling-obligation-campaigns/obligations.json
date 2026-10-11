@@ -5214,6 +5214,45 @@
       },
       "reason": "Accept fresh evidence for prior bounded deliveries after portable scope registration; preserve unresolved completeness and new inspection-only obligations.",
       "assessor": "coordinator"
+    },
+    {
+      "id": "CHECKPOINT-14",
+      "predecessorId": "CHECKPOINT-13",
+      "baselineId": "BASELINE-8",
+      "kind": "neutral",
+      "selectedIds": [
+        "OBL-101"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "CERT-6"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": {
+        "obligationId": "OBL-101",
+        "operations": [
+          "inspect"
+        ],
+        "deliverable": "Inspect existing typed status parser, direct typed fixtures and current runtime evidence; stop at this no-edit assessment."
+      },
+      "reason": "Prioritize discharge of an existing atomic delivery obligation while broad completeness inventories remain unresolved.",
+      "assessor": "coordinator"
     }
   ]
 }

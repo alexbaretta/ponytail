@@ -209,7 +209,7 @@ not 30 completed deliveries.
 | <a id="obl-98"></a>[OBL-98](obligations.json) | skills/plan-execution/scripts/tasklet-metadata.ts | Unassessed; inspection only |
 | <a id="obl-99"></a>[OBL-99](obligations.json) | skills/plan-execution/scripts/tasklet-metadata.ts | Unassessed; inspection only |
 | <a id="obl-100"></a>[OBL-100](obligations.json) | skills/plan-execution/scripts/tasklet-metadata.ts | Unassessed; inspection only |
-| <a id="obl-101"></a>[OBL-101](obligations.json) | skills/plan-execution/scripts/tasklet-statuses.ts | Unassessed; inspection only |
+| <a id="obl-101"></a>[OBL-101](obligations.json) | skills/plan-execution/scripts/tasklet-statuses.ts | CERT-6: existing typed parser and direct fixtures assessed with focused parser/CLI proof; use ledger freshness projection |
 | <a id="obl-102"></a>[OBL-102](obligations.json) | skills/plan-execution/scripts/tasklet-graph.ts | Unassessed; inspection only |
 | <a id="obl-103"></a>[OBL-103](obligations.json) | skills/plan-execution/scripts/tasklet-graph.ts | Unassessed; inspection only |
 | <a id="obl-104"></a>[OBL-104](obligations.json) | skills/plan-execution/scripts/tasklet-graph.ts | Unassessed; inspection only |
