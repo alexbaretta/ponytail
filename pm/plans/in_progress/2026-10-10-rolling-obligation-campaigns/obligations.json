@@ -15253,6 +15253,45 @@
       },
       "assessor": "coordinator",
       "reason": "Frozen scope for starting the next eligible atomic obligation OBL-56; preserve all historical certificates and claim no discharge at this scope checkpoint."
+    },
+    {
+      "id": "CHECKPOINT-173",
+      "predecessorId": "CHECKPOINT-172",
+      "baselineId": "BASELINE-16",
+      "kind": "neutral",
+      "selectedIds": [
+        "OBL-56"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "CERT-115"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": {
+        "obligationId": "OBL-56",
+        "operations": [
+          "inspect"
+        ],
+        "deliverable": "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/integrated-certificate-assessment.md"
+      },
+      "assessor": "coordinator",
+      "reason": "Discharge started atomic integrated certificate assessment without renewing stale prior evidence or closing other delivery/acceptance gates."
     }
   ]
 }

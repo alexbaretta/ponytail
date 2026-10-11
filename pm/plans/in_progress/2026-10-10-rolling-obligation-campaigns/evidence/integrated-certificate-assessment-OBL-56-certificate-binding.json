@@ -1,0 +1,104 @@
+{
+  "schemaVersion": 1,
+  "certificateId": "CERT-115",
+  "lease": {
+    "schemaVersion": 1,
+    "scopeId": "2026-10-10-rolling-obligation-campaigns",
+    "baselineId": "BASELINE-16",
+    "graphDigest": "91bf87e5e5f6d6434e60b85b762cfd43f22a5c109e6cdc560f671cbfdc00155e",
+    "generation": "standalone-integrated-certificate-CERT-115",
+    "assessor": "coordinator",
+    "authority": [
+      "user-goal-2026-10-10-rolling-campaigns",
+      "user-goal-2026-10-10-static-language-existing-tsts",
+      "user-2026-10-10-normative-atomic-obligations",
+      "user-2026-10-11-language-scope-our-code-preserve-translations"
+    ],
+    "binding": {
+      "obligationId": "OBL-56",
+      "revisionId": "BIND-79",
+      "dependsOn": [],
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "pm/debugging-pattern-observations/2026-10-11-certificate_scope_amendment.json",
+          "pm/debugging-pattern-observations/2026-10-11-integrated_certificate_lane_race.json",
+          "pm/debugging-pattern-observations/2026-10-11-certificate_fixture_refusal_boundary.json",
+          "src/rolling-campaign-store.ts",
+          "src/rolling-campaign-store.js",
+          "tests/rolling-campaign-store.integration.test.ts",
+          "tests/rolling-campaign-store.test.ts",
+          "scripts/project-index.sql",
+          "pm/requirements/traceability.generated.md",
+          "pm/uat/rolling-campaigns.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/integrated-certificate-assessment.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/integrated-certificate-assessment-OBL-56-certificate-binding.json"
+        ],
+        "operations": [
+          "inspect",
+          "edit",
+          "build",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "Assess submitted certificates on integrated inputs without allowing worker candidates to mutate accepted records."
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "integrated-certificate-assessment"
+        }
+      }
+    }
+  },
+  "revision": "42619a9677d68532d18d4cee6cdeef3ebe5df38f",
+  "proof": [
+    {
+      "operation": "test",
+      "certificateEvidenceIndex": 0,
+      "submissionEvidenceIndex": 0
+    },
+    {
+      "operation": "test",
+      "certificateEvidenceIndex": 1,
+      "submissionEvidenceIndex": 1
+    },
+    {
+      "operation": "build",
+      "certificateEvidenceIndex": 2,
+      "submissionEvidenceIndex": 2
+    },
+    {
+      "operation": "check",
+      "certificateEvidenceIndex": 3,
+      "submissionEvidenceIndex": 3
+    },
+    {
+      "operation": "check",
+      "certificateEvidenceIndex": 4,
+      "submissionEvidenceIndex": 4
+    },
+    {
+      "operation": "check",
+      "certificateEvidenceIndex": 5,
+      "submissionEvidenceIndex": 5
+    },
+    {
+      "operation": "check",
+      "certificateEvidenceIndex": 6,
+      "submissionEvidenceIndex": 6
+    },
+    {
+      "operation": "check",
+      "certificateEvidenceIndex": 7,
+      "submissionEvidenceIndex": 7
+    },
+    {
+      "operation": "check",
+      "certificateEvidenceIndex": 8,
+      "submissionEvidenceIndex": 8
+    }
+  ]
+}
