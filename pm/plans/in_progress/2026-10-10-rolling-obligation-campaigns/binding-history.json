@@ -3904,6 +3904,71 @@
           "profile": "integrated-certificate-assessment"
         }
       }
+    },
+    {
+      "id": "BIND-80",
+      "obligationId": "OBL-57",
+      "predecessorId": null,
+      "baselineId": "BASELINE-16",
+      "assessor": "coordinator",
+      "authority": [
+        "user-goal-2026-10-10-rolling-campaigns",
+        "user-goal-2026-10-10-static-language-existing-tsts",
+        "user-2026-10-10-normative-atomic-obligations",
+        "user-2026-10-11-language-scope-our-code-preserve-translations"
+      ],
+      "reason": "Freeze OBL-57 native cessation, project-declared resource cleanup, authority revocation, retained checkout reuse and focused proof.",
+      "dependsOn": [],
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "src/rolling-campaign.ts",
+          "src/rolling-campaign.js",
+          "src/rolling-campaign-store.ts",
+          "src/rolling-campaign-store.js",
+          "src/rolling-worker.ts",
+          "src/rolling-worker.js",
+          "src/rolling-worktrees.ts",
+          "src/rolling-worktrees.js",
+          "src/rolling-codex.ts",
+          "src/rolling-codex.js",
+          "tests/rolling-campaign.test.ts",
+          "tests/rolling-worker.test.ts",
+          "tests/rolling-worktrees.test.ts",
+          "tests/rolling-worktrees.integration.test.ts",
+          "tests/rolling-campaign-store.integration.test.ts",
+          "tests/rolling-codex.test.ts",
+          "tests/rolling-codex.integration.ts",
+          "tests/fixtures/rolling-codex-server.ts",
+          "tests/fixtures/rolling-worktree-setup.ts",
+          "tests/fixtures/rolling-worktree-cleanup.ts",
+          "scripts/project-index.sql",
+          "versioned-data-contracts.json",
+          "skills/worktree-lifecycle/SKILL.md",
+          ".openclaw/skills/worktree-lifecycle/SKILL.md",
+          "pm/requirements/traceability.generated.md",
+          "pm/uat/rolling-campaigns.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/design.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/worker-retirement.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/worker-retirement-OBL-57-certificate-binding.json"
+        ],
+        "operations": [
+          "inspect",
+          "edit",
+          "build",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "Establish terminal worker cessation, revoke its generation and clean only its owned resources before checkout release."
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "worker-retirement"
+        }
+      }
     }
   ]
 }

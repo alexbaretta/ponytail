@@ -15292,6 +15292,43 @@
       },
       "assessor": "coordinator",
       "reason": "Discharge started atomic integrated certificate assessment without renewing stale prior evidence or closing other delivery/acceptance gates."
+    },
+    {
+      "id": "CHECKPOINT-174",
+      "predecessorId": "CHECKPOINT-173",
+      "baselineId": "BASELINE-16",
+      "kind": "neutral",
+      "selectedIds": [
+        "OBL-57"
+      ],
+      "registeredIds": [],
+      "certificateIds": [],
+      "invalidatedIds": [],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": {
+        "obligationId": "OBL-57",
+        "operations": [
+          "inspect"
+        ],
+        "deliverable": "Freeze the finite worker retirement and resource cleanup contract; stop after OBL-57 ownership reconciliation."
+      },
+      "assessor": "coordinator",
+      "reason": "Frozen scope for starting the next eligible atomic obligation OBL-57; preserve all historical certificates and claim no discharge at this scope checkpoint."
     }
   ]
 }
