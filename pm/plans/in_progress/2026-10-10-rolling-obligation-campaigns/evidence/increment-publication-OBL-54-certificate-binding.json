@@ -1,0 +1,114 @@
+{
+  "schemaVersion": 1,
+  "certificateId": "CERT-113",
+  "lease": {
+    "schemaVersion": 1,
+    "scopeId": "2026-10-10-rolling-obligation-campaigns",
+    "baselineId": "BASELINE-16",
+    "graphDigest": "280024379e30d3568011076cb09021c9ac6a323661d908aac97fbaa2e8d5bf3c",
+    "generation": "standalone-publication-CERT-113",
+    "assessor": "coordinator",
+    "authority": [
+      "user-goal-2026-10-10-rolling-campaigns",
+      "user-goal-2026-10-10-static-language-existing-tsts",
+      "user-2026-10-10-normative-atomic-obligations",
+      "user-2026-10-11-language-scope-our-code-preserve-translations"
+    ],
+    "binding": {
+      "obligationId": "OBL-54",
+      "revisionId": "BIND-70",
+      "dependsOn": [],
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "src/rolling-integration.ts",
+          "src/rolling-integration.js",
+          "src/rolling-campaign-store.ts",
+          "src/rolling-campaign-store.js",
+          "scripts/project-index.sql",
+          "scripts/build-runtime.ts",
+          "versioned-data-contracts.json",
+          "tests/rolling-integration.test.ts",
+          "tests/rolling-integration.integration.test.ts",
+          "tests/rolling-campaign-store.integration.test.ts",
+          "pm/uat/rolling-campaigns.md",
+          "pm/requirements/traceability.generated.md",
+          "skills/semantic-rebase/SKILL.md",
+          ".openclaw/skills/semantic-rebase/SKILL.md",
+          ".agents/config/project/traceability.json",
+          "pm/debugging-pattern-observations/2026-10-11-rebase_intent_metadata_leak.json",
+          "pm/debugging-pattern-observations/2026-10-11-untyped_proof_factory_timestamp.json",
+          "pm/debugging-pattern-observations/2026-10-11-fixture_remote_tracking_restore.json",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/increment-push-recovery.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/increment-push-recovery-OBL-55-certificate-binding.json",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/increment-publication.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/increment-publication-OBL-54-certificate-binding.json"
+        ],
+        "operations": [
+          "inspect",
+          "edit",
+          "build",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "Fast-forward and normally push a reviewed increment, recording delivery only after remote containment is verified."
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "increment-integration"
+        }
+      }
+    }
+  },
+  "revision": "abefd705867214dc6c3bab6b50769c7b26acd7a4",
+  "proof": [
+    {
+      "operation": "test",
+      "certificateEvidenceIndex": 0,
+      "submissionEvidenceIndex": 0
+    },
+    {
+      "operation": "test",
+      "certificateEvidenceIndex": 1,
+      "submissionEvidenceIndex": 1
+    },
+    {
+      "operation": "build",
+      "certificateEvidenceIndex": 2,
+      "submissionEvidenceIndex": 2
+    },
+    {
+      "operation": "check",
+      "certificateEvidenceIndex": 3,
+      "submissionEvidenceIndex": 3
+    },
+    {
+      "operation": "check",
+      "certificateEvidenceIndex": 4,
+      "submissionEvidenceIndex": 4
+    },
+    {
+      "operation": "check",
+      "certificateEvidenceIndex": 5,
+      "submissionEvidenceIndex": 5
+    },
+    {
+      "operation": "check",
+      "certificateEvidenceIndex": 6,
+      "submissionEvidenceIndex": 6
+    },
+    {
+      "operation": "check",
+      "certificateEvidenceIndex": 7,
+      "submissionEvidenceIndex": 7
+    },
+    {
+      "operation": "check",
+      "certificateEvidenceIndex": 8,
+      "submissionEvidenceIndex": 8
+    }
+  ]
+}
