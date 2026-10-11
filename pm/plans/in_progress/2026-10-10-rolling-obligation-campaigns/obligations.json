@@ -5253,6 +5253,63 @@
       },
       "reason": "Prioritize discharge of an existing atomic delivery obligation while broad completeness inventories remain unresolved.",
       "assessor": "coordinator"
+    },
+    {
+      "id": "CHECKPOINT-15",
+      "predecessorId": "CHECKPOINT-14",
+      "baselineId": "BASELINE-8",
+      "kind": "neutral",
+      "selectedIds": [
+        "OBL-22",
+        "OBL-23",
+        "OBL-24",
+        "OBL-25",
+        "OBL-26",
+        "OBL-27",
+        "OBL-28",
+        "OBL-29",
+        "OBL-30",
+        "OBL-31",
+        "OBL-32",
+        "OBL-33",
+        "OBL-34",
+        "OBL-35",
+        "OBL-36",
+        "OBL-37",
+        "OBL-38",
+        "OBL-39",
+        "OBL-40"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "CERT-7"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": {
+        "obligationId": "OBL-22",
+        "operations": [
+          "inspect"
+        ],
+        "deliverable": "Inspect complete existing typed configuration/graph/store/worktree proof against canonical OBL-22–40 and identified inputs; stop at no-edit component assessment."
+      },
+      "reason": "Discharge existing component outcomes before adding new scope, preserving all unresolved native/application and completeness responsibilities.",
+      "assessor": "coordinator"
     }
   ]
 }

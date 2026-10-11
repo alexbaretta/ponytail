@@ -33,7 +33,13 @@ inspected and passed in the typed test family on 2026-10-10 at revision
 `4b67352`. That run passed 75 tests with no failures or skips. `Required` means
 the named product workflow still needs implementation or adequate proof.
 Protocol proof does not establish a live worker's lifecycle. Database proof
-does not establish filesystem cessation. None of these rows is certified yet.
+does not establish filesystem cessation. CERT-7 now assesses OBL-22–40 against
+their complete component criteria, through the current 14-test typed unit,
+real PostgreSQL and Git worktree selection. See the
+[per-obligation observations and output](evidence/rolling-core-assessment.md).
+The `Available` entries below retain the earlier inspection boundary; current
+satisfaction comes from the canonical ledger freshness projection. OBL-41–69
+remain uncertified and require their declared native/application proof.
 
 ## Rolling outcomes
 
