@@ -1,14 +1,14 @@
 // Copyright (c) 2026 Alex Baretta. All rights reserved.
 // Licensed under the MIT License. See LICENSE in the project root.
-'use strict';
-const assert = require('node:assert/strict');
-const crypto = require('node:crypto');
-const fs = require('node:fs');
-const path = require('node:path');
-const os = require('node:os');
-const test = require('node:test');
-const { execFileSync } = require('node:child_process');
-const { resolveRollingManagedDirectory, ensureRollingSessionIdIgnored, provisionRollingWorktree } = require('../src/rolling-worktrees');
+import assert from 'node:assert/strict';
+import crypto from 'node:crypto';
+import fs from 'node:fs';
+import path from 'node:path';
+import os from 'node:os';
+import test from 'node:test';
+import { execFileSync } from 'node:child_process';
+import { resolveRollingManagedDirectory, ensureRollingSessionIdIgnored, provisionRollingWorktree, type RollingWorktreeLease } from '../src/rolling-worktrees.js';
+import type { RollingProjectConfigV1 } from '../src/rolling-campaign.js';
 
 // Traceability: verifies REQ-ROLLING-WORKERS
 test('ordinary Git pool setup, identical intent recovery and reuse preserve conflicting work', t => {
@@ -16,15 +16,15 @@ test('ordinary Git pool setup, identical intent recovery and reuse preserve conf
   t.after(() => fs.rmSync(fixture, { recursive: true, force: true }));
   const root = path.join(fixture, 'main');
   fs.mkdirSync(root);
-  const git = (cwd, argv) => execFileSync('git', ['-C', cwd, ...argv], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
+  const git = (cwd: string, argv: readonly string[]): string => execFileSync('git', ['-C', cwd, ...argv], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
   git(root, ['init', '-q']);
   git(root, ['config', 'user.name', 'Fixture']);
   git(root, ['config', 'user.email', 'fixture@example.test']);
   fs.mkdirSync(path.join(root, '.agents/config/project'), { recursive: true });
   const configPath = '.agents/config/project/rolling-campaigns.json';
-  const configuration = { schemaVersion: 1, mainline: { remote: 'origin', branch: 'main' },
+  let configuration: RollingProjectConfigV1 = { schemaVersion: 1, mainline: { remote: 'origin', branch: 'main' },
     managedWorktrees: { directory: 'pool', anchor: 'main' }, maxActiveWorkers: 2, publicationSize: 1,
-    setupCommands: [[process.execPath, '-e', "require('node:fs').writeFileSync('setup-proof.txt', process.cwd() + '\\n' + process.env.PONYTAIL_WORKTREE_NUMBER)"]],
+    setupCommands: [[process.execPath, path.join(__dirname, 'fixtures/rolling-worktree-setup.js')]],
     qa: { focused: [], publication: [['node', '--test']] } };
   fs.writeFileSync(path.join(root, configPath), JSON.stringify(configuration));
   assert.throws(() => resolveRollingManagedDirectory(root), /must be Git ignored/);
@@ -34,7 +34,7 @@ test('ordinary Git pool setup, identical intent recovery and reuse preserve conf
   const base = git(root, ['rev-parse', 'HEAD']);
   const pool = resolveRollingManagedDirectory(root);
   assert.equal(pool.directory, path.join(root, 'pool'));
-  const lease = { number: 101, rootPath: path.join(pool.directory, '101'), generation: crypto.randomUUID() };
+  const lease: RollingWorktreeLease = { number: 101, rootPath: path.join(pool.directory, '101'), generation: crypto.randomUUID() };
   const provisioned = provisionRollingWorktree(root, lease, base);
   assert.equal(git(lease.rootPath, ['symbolic-ref', '--short', 'HEAD']), provisioned.branch);
   assert.equal(fs.readFileSync(path.join(lease.rootPath, 'setup-proof.txt'), 'utf8'), `${lease.rootPath}\n101`);
@@ -45,7 +45,7 @@ test('ordinary Git pool setup, identical intent recovery and reuse preserve conf
   fs.writeFileSync(path.join(lease.rootPath, 'session_id.txt'), 'fixture-session');
   assert.throws(() => provisionRollingWorktree(root, { ...lease, generation: crypto.randomUUID() }, base), /marker is still present/);
   fs.unlinkSync(path.join(lease.rootPath, 'session_id.txt'));
-  const modifiedConfig = { ...configuration, managedWorktrees: { directory: '../other-pool', anchor: 'main' } };
+  const modifiedConfig: RollingProjectConfigV1 = { ...configuration, managedWorktrees: { directory: '../other-pool', anchor: 'main' } };
   fs.writeFileSync(path.join(lease.rootPath, configPath), JSON.stringify(modifiedConfig));
   assert.throws(() => resolveRollingManagedDirectory(root), /directory differs/);
   fs.writeFileSync(path.join(lease.rootPath, configPath), JSON.stringify(configuration));
@@ -63,10 +63,10 @@ test('ordinary Git pool setup, identical intent recovery and reuse preserve conf
   assert.deepEqual(ensureRollingSessionIdIgnored(lease.rootPath), { changed: true });
   assert.equal(git(lease.rootPath, ['check-ignore', 'session_id.txt']), 'session_id.txt');
   assert.ok(fs.readFileSync(path.join(lease.rootPath, '.gitignore'), 'utf8').startsWith('/setup-proof.txt\n'));
-  configuration.setupCommands = [[process.execPath, '-e', 'process.exit(7)']];
+  configuration = { ...configuration, setupCommands: [[process.execPath, path.join(__dirname, 'fixtures/rolling-worktree-setup.js'), '--fail']] };
   fs.writeFileSync(path.join(root, configPath), JSON.stringify(configuration));
   git(root, ['add', configPath]); git(root, ['commit', '-q', '-m', 'fixture failing setup']);
-  const failedLease = { number: 102, rootPath: path.join(pool.directory, '102'), generation: crypto.randomUUID() };
+  const failedLease: RollingWorktreeLease = { number: 102, rootPath: path.join(pool.directory, '102'), generation: crypto.randomUUID() };
   assert.throws(() => provisionRollingWorktree(root, failedLease, git(root, ['rev-parse', 'HEAD'])), /setup failed in retained checkout/);
   assert.equal(fs.statSync(failedLease.rootPath).isDirectory(), true);
   assert.ok(resolveRollingManagedDirectory(root).worktrees.includes(failedLease.rootPath));

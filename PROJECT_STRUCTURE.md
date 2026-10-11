@@ -79,14 +79,14 @@ while project-wide management records remain under `pm/`.
   reservations. `src/worker-worktrees.js` owns exact-path Git reconstruction
   and checkpointed pre-attachment upgrades from authenticated main-worktree
   provenance, independently of host tools.
-  `src/rolling-campaign.js` owns the new rolling execution configuration and
+  `src/rolling-campaign.ts` owns the new rolling execution configuration and
   independently testable graph/scheduling boundary. Its project configuration
   is `.agents/config/project/rolling-campaigns.json`; existing campaign dispatch
   remains legacy until the replacement operation layer is integrated.
   `src/rolling-campaign-store.js` owns transactional PostgreSQL campaign,
   checkout and assignment leases and durable external-action intents.
   Its tables and indexes use the existing `scripts/project-index.sql` setup.
-  `src/rolling-worktrees.js` validates the shared physical pool and provisions
+  `src/rolling-worktrees.ts` validates the shared physical pool and provisions
   generation-bound ordinary Git checkouts with project setup and marker ignore.
   `src/rolling-codex.ts` owns direct stdio App Server connections, native
   thread/session identity, turns, approval routing and interruption observation.
@@ -205,8 +205,14 @@ document and reference it from `AGENTS.md` in the same change-set.
 
 During the static-language migration, portable obligation logic is canonical in
 `skills/plan-execution/scripts/obligations.ts`. Strict compilation emits it under
-`dist/`; `scripts/build-skill-runtime.ts`, executed by `npm run build`, materializes
+`dist/`; `scripts/build-runtime.ts`, executed by `npm run build`, materializes
 its compiler output at the established portable `.js` launch path. That tracked
 text is generated runtime, not a second handwritten owner. Existing OpenClaw
 resource generation copies the typed owner and generated runtime. Traceability
 and versioned-contract ownership point to the typed source.
+
+The rolling configuration/graph/scheduler and checkout runtime entrypoints in
+`src/rolling-campaign.js` and `src/rolling-worktrees.js` are generated from their
+canonical `.ts` owners by `scripts/build-runtime.ts`. Their behavioral tests are
+migrated to checked TypeScript before language acceptance; checkout tests now
+execute their typed setup fixture and compiled test runtime.

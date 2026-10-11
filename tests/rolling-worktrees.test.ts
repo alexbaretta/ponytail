@@ -1,12 +1,11 @@
 // Copyright (c) 2026 Alex Baretta. All rights reserved.
 // Licensed under the MIT License. See LICENSE in the project root.
-'use strict';
-const assert = require('node:assert/strict');
-const fs = require('node:fs');
-const path = require('node:path');
-const os = require('node:os');
-const test = require('node:test');
-const { readRollingPhysicalDirectory, provisionRollingWorktree } = require('../src/rolling-worktrees');
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import os from 'node:os';
+import test from 'node:test';
+import { readRollingPhysicalDirectory, provisionRollingWorktree } from '../src/rolling-worktrees.js';
 
 // Traceability: verifies REQ-ROLLING-WORKERS
 test('physical pool identity follows symlink ancestors before missing directories are created', t => {

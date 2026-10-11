@@ -798,7 +798,7 @@
     },
     {
       "class": "implementation",
-      "path": "src/rolling-campaign.js",
+      "path": "src/rolling-campaign.ts",
       "locator": "text"
     },
     {
@@ -838,17 +838,17 @@
     },
     {
       "class": "implementation",
-      "path": "src/rolling-worktrees.js",
+      "path": "src/rolling-worktrees.ts",
       "locator": "text"
     },
     {
       "class": "unit-test",
-      "path": "tests/rolling-worktrees.test.js",
+      "path": "tests/rolling-worktrees.test.ts",
       "locator": "text"
     },
     {
       "class": "integration-test",
-      "path": "tests/rolling-worktrees.integration.test.js",
+      "path": "tests/rolling-worktrees.integration.test.ts",
       "locator": "text"
     },
     {
@@ -943,6 +943,14 @@
     {
       "path": ".openclaw/skills/plan-execution/scripts/obligations.ts",
       "sourcePath": "skills/plan-execution/scripts/obligations.ts"
+    },
+    {
+      "path": "src/rolling-campaign.js",
+      "sourcePath": "src/rolling-campaign.ts"
+    },
+    {
+      "path": "src/rolling-worktrees.js",
+      "sourcePath": "src/rolling-worktrees.ts"
     }
   ],
   "reverseViewPath": "pm/requirements/traceability.generated.md",

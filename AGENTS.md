@@ -96,7 +96,7 @@ services. `PROJECT_STRUCTURE.md` is authoritative for that boundary.
 - Rule-copy check: `node scripts/check-rule-copies.js`.
 - Registry check: `node scripts/registry.js`.
 - Portable typed skill runtime generation: `npm run build`; generated-runtime
-  consistency check: `node dist/scripts/build-skill-runtime.js --check`.
+  consistency check: `node dist/scripts/build-runtime.js --check`.
 - Command-adapter generation: `node scripts/build-command-adapters.js
   --write`; omit `--write` to check generated output.
 - Runtime-registry generation: `node scripts/build-registry-data.js

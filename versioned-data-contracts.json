@@ -38,7 +38,7 @@
       "id": "rolling-execution-bindings",
       "implementation": {
         "workspace": "ponytail",
-        "module": "src/rolling-campaign.js",
+        "module": "src/rolling-campaign.ts",
         "readerRegistryExport": "RollingBindingsReaders"
       },
       "currentVersion": "V1",
@@ -54,7 +54,7 @@
       "id": "rolling-project-configuration",
       "implementation": {
         "workspace": "ponytail",
-        "module": "src/rolling-campaign.js",
+        "module": "src/rolling-campaign.ts",
         "readerRegistryExport": "RollingProjectConfigReaders"
       },
       "currentVersion": "V1",
