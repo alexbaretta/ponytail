@@ -5,9 +5,97 @@ import fs from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
 import { parseObligationDocument, readObligationDocumentV1,
-  type ObligationDocumentV1 } from '../skills/plan-execution/scripts/obligations.js';
+  type ObligationBaseline, type ObligationDocumentV1 } from '../skills/plan-execution/scripts/obligations.js';
 import { acceptObligationBindingRevision, parseObligationBindingHistory, projectObligationBindings, readObligationBindingHistoryV1,
-  type ObligationBindingHistoryV1, type ObligationBindingRevisionV1 } from '../skills/plan-execution/scripts/obligation-binding-history.js';
+  freezeObligationLease, assertObligationLeaseOperation, readObligationLeaseV1, parseObligationLease, ObligationLeaseReaders,
+  type ObligationLeaseRequest, type ObligationLeaseV1, type ObligationBindingHistoryV1, type ObligationBindingRevisionV1 } from '../skills/plan-execution/scripts/obligation-binding-history.js';
+
+function leaseRequest(obligationDocumentV1: ObligationDocumentV1): ObligationLeaseRequest {
+  const reference = obligationDocumentV1.baselines[0]?.authority.references[0];
+  if (!reference) throw new Error('fixture authority missing');
+  return { obligationId: 'OBL-83', graphDigest: 'a'.repeat(64), generation: 'generation-1', assessor: 'coordinator', authority: [reference] };
+}
+
+// Traceability: verifies REQ-ROLLING-GRAPH
+test('frozen lease retains its revision, scope and proof binding across coordinator amendments', () => {
+  const obligationDocumentV1 = document();
+  const firstObligationBindingRevisionV1 = revision(obligationDocumentV1);
+  const firstObligationBindingHistoryV1 = history(obligationDocumentV1, [firstObligationBindingRevisionV1]);
+  const obligationLeaseRequest = leaseRequest(obligationDocumentV1);
+  const obligationLeaseV1 = freezeObligationLease(obligationDocumentV1, firstObligationBindingHistoryV1, obligationLeaseRequest);
+  const original = JSON.stringify(obligationLeaseV1);
+  const nextObligationBindingRevisionV1: ObligationBindingRevisionV1 = { ...revision(obligationDocumentV1, 'BIND-2', 'OBL-83', 'BIND-1', ['OBL-84']),
+    execution: { ...firstObligationBindingRevisionV1.execution, plannedPaths: ['tests/sprint-metadata.test.ts'], selection: ['new proof selection'] } };
+  const nextObligationBindingHistoryV1 = history(obligationDocumentV1, [firstObligationBindingRevisionV1, nextObligationBindingRevisionV1]);
+  const nextObligationLeaseV1 = freezeObligationLease(obligationDocumentV1, nextObligationBindingHistoryV1, { ...obligationLeaseRequest, generation: 'generation-2', graphDigest: 'b'.repeat(64) });
+  assert.equal(obligationLeaseV1.binding.revisionId, 'BIND-1');
+  assert.deepEqual(obligationLeaseV1.binding.execution, firstObligationBindingRevisionV1.execution);
+  assert.deepEqual(obligationLeaseV1.binding.dependsOn, []);
+  assert.equal(JSON.stringify(obligationLeaseV1), original);
+  assert.equal(nextObligationLeaseV1.binding.revisionId, 'BIND-2');
+  assert.deepEqual(nextObligationLeaseV1.binding.dependsOn, ['OBL-84']);
+  assertObligationLeaseOperation(obligationLeaseV1, 'generation-1', 'a'.repeat(64), 'edit', ['tests/ready-sprints.test.ts']);
+  assert.throws(() => assertObligationLeaseOperation(obligationLeaseV1, 'generation-1', 'a'.repeat(64), 'edit', ['tests/sprint-metadata.test.ts']), /outside frozen lease/);
+  assertObligationLeaseOperation(nextObligationLeaseV1, 'generation-2', 'b'.repeat(64), 'edit', ['tests/sprint-metadata.test.ts']);
+});
+
+// Traceability: verifies REQ-ROLLING-GRAPH
+test('lease issuance rejects foreign authority and out-of-baseline outcomes without widening defaults', () => {
+  const obligationDocumentV1 = document();
+  const obligationLeaseRequest = leaseRequest(obligationDocumentV1);
+  const obligationLeaseV1 = freezeObligationLease(obligationDocumentV1, history(obligationDocumentV1), obligationLeaseRequest);
+  assert.equal(obligationLeaseV1.binding.revisionId, null);
+  assert.equal(obligationLeaseV1.baselineId, 'BASELINE-1');
+  assert.throws(() => assertObligationLeaseOperation(obligationLeaseV1, 'generation-1', 'a'.repeat(64), 'edit', ['tests/ready-sprints.test.ts']), /operation outside/);
+  const invalidObligationLeaseRequests: readonly ObligationLeaseRequest[] = [
+    { ...obligationLeaseRequest, assessor: 'worker' }, { ...obligationLeaseRequest, authority: ['foreign'] },
+    { ...obligationLeaseRequest, authority: [] }, { ...obligationLeaseRequest, obligationId: 'OBL-9999' }
+  ];
+  for (const invalidObligationLeaseRequest of invalidObligationLeaseRequests)
+    assert.throws(() => freezeObligationLease(obligationDocumentV1, history(obligationDocumentV1), invalidObligationLeaseRequest));
+  const obligationBaseline = obligationDocumentV1.baselines[0];
+  assert.ok(obligationBaseline);
+  const proposedObligationBaseline: ObligationBaseline = { ...obligationBaseline, id: 'BASELINE-2', predecessorId: obligationBaseline.id,
+    authority: { references: ['proposed authority'], assessors: ['worker'] } };
+  const proposedObligationDocumentV1: ObligationDocumentV1 = { ...obligationDocumentV1, baselines: [...obligationDocumentV1.baselines, proposedObligationBaseline] };
+  assert.equal(freezeObligationLease(proposedObligationDocumentV1, history(proposedObligationDocumentV1), obligationLeaseRequest).baselineId, 'BASELINE-1');
+  assert.throws(() => freezeObligationLease(proposedObligationDocumentV1, history(proposedObligationDocumentV1), {
+    ...obligationLeaseRequest, assessor: 'worker', authority: ['proposed authority'] }), /unauthorized lease issuance/);
+});
+
+// Traceability: verifies REQ-ROLLING-GRAPH
+test('lease use fences graph and generation, operations and exact changed paths', () => {
+  const obligationDocumentV1 = document();
+  const obligationLeaseV1 = freezeObligationLease(obligationDocumentV1, history(obligationDocumentV1, [revision(obligationDocumentV1)]), leaseRequest(obligationDocumentV1));
+  assert.throws(() => assertObligationLeaseOperation(obligationLeaseV1, 'generation-2', 'a'.repeat(64), 'test'), /stale lease generation/);
+  assert.throws(() => assertObligationLeaseOperation(obligationLeaseV1, 'generation-1', 'b'.repeat(64), 'test'), /frozen graph/);
+  assert.throws(() => assertObligationLeaseOperation(obligationLeaseV1, 'generation-1', 'a'.repeat(64), 'publish'), /operation outside/);
+  for (const paths of [[], ['../tests/ready-sprints.test.ts'], ['tests/ready-sprints.test.ts.backup'], ['tests/ready-sprints.test.ts', 'tests/ready-sprints.test.ts']])
+    assert.throws(() => assertObligationLeaseOperation(obligationLeaseV1, 'generation-1', 'a'.repeat(64), 'edit', paths));
+  assertObligationLeaseOperation(obligationLeaseV1, 'generation-1', 'a'.repeat(64), 'test');
+  const directoryObligationLeaseV1: ObligationLeaseV1 = { ...obligationLeaseV1,
+    binding: { ...obligationLeaseV1.binding, execution: { ...obligationLeaseV1.binding.execution, plannedPaths: ['tests'] } } };
+  assertObligationLeaseOperation(directoryObligationLeaseV1, 'generation-1', 'a'.repeat(64), 'edit', ['tests/ready-sprints.test.ts']);
+  assert.throws(() => assertObligationLeaseOperation(directoryObligationLeaseV1, 'generation-1', 'a'.repeat(64), 'edit', ['tests-other/test.ts']));
+});
+
+// Traceability: verifies REQ-ROLLING-GRAPH
+test('physical lease reader retains exact V1 and rejects malformed identities and unbounded edit permission', () => {
+  const obligationDocumentV1 = document();
+  const obligationLeaseV1 = freezeObligationLease(obligationDocumentV1, history(obligationDocumentV1, [revision(obligationDocumentV1)]), leaseRequest(obligationDocumentV1));
+  const input: unknown = JSON.parse(JSON.stringify(obligationLeaseV1));
+  assert.deepEqual(readObligationLeaseV1(input), obligationLeaseV1);
+  assert.deepEqual(parseObligationLease(JSON.stringify(obligationLeaseV1)), obligationLeaseV1);
+  assert.throws(() => parseObligationLease(JSON.stringify(obligationLeaseV1).replace('"schemaVersion":1', '"schemaVersion":1.0')), /exact version integer/);
+  assert.deepEqual(Object.keys(ObligationLeaseReaders), ['V1']);
+  const invalidInputs: readonly unknown[] = [ { ...obligationLeaseV1, schemaVersion: 2 }, { ...obligationLeaseV1, extra: true },
+    { ...obligationLeaseV1, graphDigest: 'invalid' }, { ...obligationLeaseV1, generation: '' }, { ...obligationLeaseV1, authority: [] },
+    { ...obligationLeaseV1, binding: { ...obligationLeaseV1.binding, obligationId: 'invalid' } },
+    { ...obligationLeaseV1, binding: { ...obligationLeaseV1.binding, dependsOn: ['OBL-83'] } },
+    { ...obligationLeaseV1, binding: { ...obligationLeaseV1.binding, execution: { ...obligationLeaseV1.binding.execution, plannedPaths: [] } } }
+  ];
+  for (const invalidInput of invalidInputs) assert.throws(() => readObligationLeaseV1(invalidInput));
+});
 
 function document(): ObligationDocumentV1 {
   const root = path.join(__dirname, '..', '..');

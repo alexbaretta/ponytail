@@ -8,6 +8,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ObligationDocumentReaders = void 0;
+exports.relativePath = relativePath;
 exports.readObligationExecution = readObligationExecution;
 exports.readObligationDocumentV1 = readObligationDocumentV1;
 exports.parseObligationDocument = parseObligationDocument;

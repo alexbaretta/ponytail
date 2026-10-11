@@ -167,7 +167,7 @@ function uniqueStrings(value: unknown, label: string, nonempty = false): readonl
   requireCondition(new Set(strings).size === strings.length && (!nonempty || strings.length > 0), `${label} must contain unique${nonempty ? ', nonempty' : ''} values`);
   return strings;
 }
-function relativePath(value: unknown): asserts value is string {
+export function relativePath(value: unknown): asserts value is string {
   nonemptyString(value, 'path');
   requireCondition(!value.includes('\\') && !value.split('/').some(segment => !segment || segment === '.' || segment === '..') && !/[:*?{}]/.test(value), `invalid repository-relative path: ${value}`);
 }

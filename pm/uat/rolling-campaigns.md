@@ -141,3 +141,9 @@ Demonstrates [OBL-107](../plans/in_progress/2026-10-10-rolling-obligation-campai
 Traceability: verifies REQ-ROLLING-GRAPH
 
 Step ROLL-BINDING-QUERY demonstrates [OBL-108](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-108): query portable and rolling selection against an explicitly identified coordinator binding history, observe its complete declared criterion, then amend that history and reject the obsolete graph identity. Live lease and candidate acceptance integration remain required.
+
+### Acceptance ROLL-FROZEN-LEASE
+
+Traceability: verifies REQ-ROLLING-GRAPH
+
+Step ROLL-LEASE-CONTRACT demonstrates [OBL-109](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-109): issue an authorized portable frozen lease, amend coordinator bindings, and verify that the original lease retains its earlier permissions and rejects wrong generations, graph identities and out-of-scope changes. Live database and worker integration remain required.

@@ -3,6 +3,18 @@
   "schemaVersion": 1,
   "families": [
     {
+      "id": "obligation-execution-lease",
+      "implementation": {
+        "workspace": "ponytail",
+        "module": "skills/plan-execution/scripts/obligation-binding-history.ts",
+        "readerRegistryExport": "ObligationLeaseReaders"
+      },
+      "currentVersion": "V1",
+      "versions": ["V1"],
+      "supportedReadVersions": ["V1"],
+      "supportedDowngradeVersions": []
+    },
+    {
       "id": "obligation-binding-history",
       "implementation": {
         "workspace": "ponytail",

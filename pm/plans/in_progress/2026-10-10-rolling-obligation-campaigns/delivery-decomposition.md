@@ -251,3 +251,7 @@ frozen lease and acceptance integration must precede typed fixture edit leases.
 ## Shared binding-aware query prerequisite
 
 <a id="obl-108"></a>[OBL-108](obligations.json) owns shared current-binding query projection. BASELINE-10 freezes its paths before edits. Move the generic history owner into the portable skill resources so copied skills are self-contained; retain its identity and physical meaning. This query-only outcome does not authorize amended live leases or candidate acceptance.
+
+## Frozen lease contract prerequisite
+
+<a id="obl-109"></a>[OBL-109](obligations.json) owns portable lease issuance and operation enforcement as one independently verifiable contract boundary. BASELINE-11 freezes its paths before edits. This component is needed to finish the started fixture migrations; it does not substitute for live database allocation, worker delivery or candidate acceptance integration.

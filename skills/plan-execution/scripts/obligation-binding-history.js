@@ -3,11 +3,15 @@
 // Generated from skills/plan-execution/scripts/obligation-binding-history.ts by npm run build.
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ObligationBindingHistoryReaders = void 0;
+exports.ObligationLeaseReaders = exports.ObligationBindingHistoryReaders = void 0;
 exports.readObligationBindingHistoryV1 = readObligationBindingHistoryV1;
 exports.parseObligationBindingHistory = parseObligationBindingHistory;
 exports.projectObligationBindings = projectObligationBindings;
 exports.acceptObligationBindingRevision = acceptObligationBindingRevision;
+exports.readObligationLeaseV1 = readObligationLeaseV1;
+exports.parseObligationLease = parseObligationLease;
+exports.freezeObligationLease = freezeObligationLease;
+exports.assertObligationLeaseOperation = assertObligationLeaseOperation;
 const node_util_1 = require("node:util");
 const lossless_json_1 = require("lossless-json");
 const obligations_js_1 = require("./obligations.js");
@@ -50,11 +54,14 @@ function readObligationBindingHistoryV1(value) {
     return { schemaVersion: 1, scopeId: value.scopeId, revisions: value.revisions.map(readObligationBindingRevisionV1) };
 }
 exports.ObligationBindingHistoryReaders = { V1: readObligationBindingHistoryV1 };
-function parseObligationBindingHistory(text) {
-    return readObligationBindingHistoryV1((0, lossless_json_1.parse)(text, null, token => {
-        requireBinding(token === '1', 'history only permits its exact version integer');
+function parseVersionOneRecord(text, contract) {
+    return (0, lossless_json_1.parse)(text, null, token => {
+        requireBinding(token === '1', `${contract} only permits its exact version integer`);
         return 1;
-    }));
+    });
+}
+function parseObligationBindingHistory(text) {
+    return readObligationBindingHistoryV1(parseVersionOneRecord(text, 'history'));
 }
 function currentBaseline(obligationDocumentV1) {
     const baselineId = obligationDocumentV1.checkpoints.at(-1)?.baselineId ?? obligationDocumentV1.baselines[0]?.id;
@@ -121,4 +128,51 @@ function acceptObligationBindingRevision(obligationDocumentV1, previousObligatio
     requireBinding(obligationBindingRevisionV1 && obligationBindingRevisionV1.baselineId === currentBaseline(obligationDocumentV1).id, 'new revision requires current accepted baseline');
     projectObligationBindings(obligationDocumentV1, checkedObligationBindingHistoryV1);
     return checkedObligationBindingHistoryV1;
+}
+function readObligationLeaseV1(value) {
+    exactRecord(value, ['schemaVersion', 'scopeId', 'baselineId', 'graphDigest', 'generation', 'assessor', 'authority', 'binding']);
+    requireBinding(value.schemaVersion === 1, 'unsupported lease schemaVersion');
+    exactRecord(value.binding, ['obligationId', 'revisionId', 'dependsOn', 'execution']);
+    const obligationEffectiveBinding = { obligationId: text(value.binding.obligationId),
+        revisionId: value.binding.revisionId === null ? null : text(value.binding.revisionId),
+        dependsOn: uniqueTexts(value.binding.dependsOn), execution: (0, obligations_js_1.readObligationExecution)(value.binding.execution) };
+    requireBinding(/^OBL-[1-9][0-9]*$/u.test(obligationEffectiveBinding.obligationId)
+        && obligationEffectiveBinding.dependsOn.every(id => /^OBL-[1-9][0-9]*$/u.test(id))
+        && !obligationEffectiveBinding.dependsOn.includes(obligationEffectiveBinding.obligationId), 'invalid lease obligation references');
+    requireBinding(!obligationEffectiveBinding.execution.operations.includes('edit') || obligationEffectiveBinding.execution.plannedPaths.length > 0, 'edit permission requires exact planned paths');
+    const graphDigest = text(value.graphDigest);
+    requireBinding(/^[a-f0-9]{64}$/u.test(graphDigest), 'invalid lease graph digest');
+    return { schemaVersion: 1, scopeId: text(value.scopeId), baselineId: text(value.baselineId), graphDigest,
+        generation: text(value.generation), assessor: text(value.assessor), authority: uniqueTexts(value.authority, true), binding: obligationEffectiveBinding };
+}
+exports.ObligationLeaseReaders = { V1: readObligationLeaseV1 };
+function parseObligationLease(text) {
+    return readObligationLeaseV1(parseVersionOneRecord(text, 'lease'));
+}
+function freezeObligationLease(obligationDocumentV1, obligationBindingHistoryV1, obligationLeaseRequest) {
+    exactRecord(obligationLeaseRequest, ['obligationId', 'graphDigest', 'generation', 'assessor', 'authority']);
+    const bindings = projectObligationBindings(obligationDocumentV1, obligationBindingHistoryV1);
+    const obligationBaseline = currentBaseline(obligationDocumentV1);
+    const authority = uniqueTexts(obligationLeaseRequest.authority, true);
+    requireBinding(obligationBaseline.authority.assessors.includes(obligationLeaseRequest.assessor)
+        && authority.every(reference => obligationBaseline.authority.references.includes(reference)), 'unauthorized lease issuance');
+    const obligationEffectiveBinding = bindings.get(obligationLeaseRequest.obligationId);
+    requireBinding(obligationEffectiveBinding, 'lease obligation outside accepted baseline');
+    return readObligationLeaseV1({ schemaVersion: 1, scopeId: obligationDocumentV1.scopeId, baselineId: obligationBaseline.id,
+        graphDigest: obligationLeaseRequest.graphDigest, generation: obligationLeaseRequest.generation,
+        assessor: obligationLeaseRequest.assessor, authority, binding: obligationEffectiveBinding });
+}
+function assertObligationLeaseOperation(obligationLeaseV1, generation, graphDigest, operation, changedPaths = []) {
+    const checkedObligationLeaseV1 = readObligationLeaseV1(obligationLeaseV1);
+    requireBinding(checkedObligationLeaseV1.generation === generation, 'stale lease generation');
+    requireBinding(checkedObligationLeaseV1.graphDigest === graphDigest, 'wrong frozen graph identity');
+    const obligationExecution = checkedObligationLeaseV1.binding.execution;
+    requireBinding(obligationExecution.operations.includes(operation), 'operation outside frozen lease');
+    requireBinding(Array.isArray(changedPaths) && new Set(changedPaths).size === changedPaths.length, 'invalid changed paths');
+    requireBinding(operation !== 'edit' || changedPaths.length > 0, 'edit must identify changed paths');
+    requireBinding(changedPaths.length === 0 || obligationExecution.operations.includes('edit'), 'changes require frozen edit permission');
+    for (const changedPath of changedPaths) {
+        (0, obligations_js_1.relativePath)(changedPath);
+        requireBinding(obligationExecution.plannedPaths.some(permitted => changedPath === permitted || changedPath.startsWith(`${permitted}/`)), `change outside frozen lease: ${changedPath}`);
+    }
 }
