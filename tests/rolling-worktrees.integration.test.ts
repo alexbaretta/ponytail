@@ -7,8 +7,8 @@ import path from 'node:path';
 import os from 'node:os';
 import test from 'node:test';
 import { execFileSync } from 'node:child_process';
-import { resolveRollingManagedDirectory, ensureRollingSessionIdIgnored, provisionRollingWorktree, type RollingWorktreeLease } from '../src/rolling-worktrees.js';
-import type { RollingProjectConfigV1 } from '../src/rolling-campaign.js';
+import { cleanupRollingWorktree,resolveRollingManagedDirectory, ensureRollingSessionIdIgnored, provisionRollingWorktree, type RollingWorktreeRetirement,type RollingWorktreeLease } from '../src/rolling-worktrees.js';
+import type { RollingProjectConfigV1,RollingProjectConfigV2 } from '../src/rolling-campaign.js';
 
 // Traceability: verifies REQ-ROLLING-WORKERS
 test('ordinary Git pool setup, identical intent recovery and reuse preserve conflicting work', t => {
@@ -70,4 +70,51 @@ test('ordinary Git pool setup, identical intent recovery and reuse preserve conf
   assert.throws(() => provisionRollingWorktree(root, failedLease, git(root, ['rev-parse', 'HEAD'])), /setup failed in retained checkout/);
   assert.equal(fs.statSync(failedLease.rootPath).isDirectory(), true);
   assert.ok(resolveRollingManagedDirectory(root).worktrees.includes(failedLease.rootPath));
+});
+
+// Traceability: verifies REQ-ROLLING-WORKERS
+test('retirement cleanup verifies owner, preserves caches and user work, and retains failed cleanup',t=> {
+ const fixture = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(),'rolling-cleanup-')));
+ t.after(()=>fs.rmSync(fixture,{recursive:true,force:true}));
+ const root = path.join(fixture,'main');fs.mkdirSync(root);
+ function git(cwd:string,argv:readonly string[]):string {return execFileSync('git',['-C',cwd,...argv],{encoding:'utf8'}).trim();}
+ git(root,['init','-q']);git(root,['config','user.name','Fixture']);git(root,['config','user.email','fixture@example.test']);
+ fs.mkdirSync(path.join(root,'.agents/config/project'),{recursive:true});
+ const rollingProjectConfigV2: RollingProjectConfigV2 = {schemaVersion:2,mainline:{remote:'origin',branch:'main'},managedWorktrees:{directory:'pool',anchor:'main'},
+  maxActiveWorkers:1,publicationSize:1,setupCommands:[],qa:{focused:[],publication:[['node','--test']]},
+  retirementCommands:[[process.execPath,path.join(__dirname,'fixtures/rolling-worktree-cleanup.js')]]};
+ fs.writeFileSync(path.join(root,'.agents/config/project/rolling-campaigns.json'),JSON.stringify(rollingProjectConfigV2));
+ fs.writeFileSync(path.join(root,'.gitignore'),'/pool/\n/session_id.txt\n/owned-resource.txt\n/cleanup-refuse.txt\n/build-cache.txt\n');
+ git(root,['add','.']);git(root,['commit','-q','-m','cleanup fixture']);
+ const base = git(root,['rev-parse','HEAD']);
+ const rollingWorktreeLease: RollingWorktreeLease = {number:101,rootPath:path.join(root,'pool/101'),generation:crypto.randomUUID()};
+ provisionRollingWorktree(root,rollingWorktreeLease,base);
+ const rollingWorktreeRetirement: RollingWorktreeRetirement = {...rollingWorktreeLease,generation:crypto.randomUUID(),assignmentId:crypto.randomUUID(),sessionId:'original-session',
+  resourceGeneration:rollingWorktreeLease.generation,integratedRevision:base};
+ fs.writeFileSync(path.join(rollingWorktreeLease.rootPath,'session_id.txt'),'other-session');
+ assert.throws(()=>cleanupRollingWorktree(root,rollingWorktreeRetirement),/session marker differs/);
+ fs.writeFileSync(path.join(rollingWorktreeLease.rootPath,'session_id.txt'),rollingWorktreeRetirement.sessionId);
+ fs.writeFileSync(path.join(rollingWorktreeLease.rootPath,'user.txt'),'preserve user work');
+ assert.throws(()=>cleanupRollingWorktree(root,rollingWorktreeRetirement),/uncommitted work/);
+ assert.equal(fs.readFileSync(path.join(rollingWorktreeLease.rootPath,'user.txt'),'utf8'),'preserve user work');
+ fs.unlinkSync(path.join(rollingWorktreeLease.rootPath,'user.txt'));
+ fs.writeFileSync(path.join(rollingWorktreeLease.rootPath,'owned-resource.txt'),rollingWorktreeRetirement.resourceGeneration);
+ fs.writeFileSync(path.join(rollingWorktreeLease.rootPath,'build-cache.txt'),'reusable cached build');
+ fs.writeFileSync(path.join(rollingWorktreeLease.rootPath,'cleanup-refuse.txt'),'refuse cleanup');
+ assert.throws(()=>cleanupRollingWorktree(root,rollingWorktreeRetirement),/cleanup failed/);
+ assert.ok(fs.existsSync(path.join(rollingWorktreeLease.rootPath,'session_id.txt')));
+ assert.ok(fs.existsSync(path.join(rollingWorktreeLease.rootPath,'owned-resource.txt')));
+ fs.unlinkSync(path.join(rollingWorktreeLease.rootPath,'cleanup-refuse.txt'));
+ cleanupRollingWorktree(root,rollingWorktreeRetirement);
+ assert.equal(fs.existsSync(path.join(rollingWorktreeLease.rootPath,'session_id.txt')),false);
+ assert.equal(fs.existsSync(path.join(rollingWorktreeLease.rootPath,'owned-resource.txt')),false);
+ assert.equal(fs.readFileSync(path.join(rollingWorktreeLease.rootPath,'build-cache.txt'),'utf8'),'reusable cached build');
+ cleanupRollingWorktree(root,rollingWorktreeRetirement);
+ assert.ok(resolveRollingManagedDirectory(root).worktrees.includes(rollingWorktreeLease.rootPath));
+ assert.equal(git(rollingWorktreeLease.rootPath,['rev-parse','HEAD']),base);
+ fs.writeFileSync(path.join(rollingWorktreeLease.rootPath,'session_id.txt'),rollingWorktreeRetirement.sessionId);
+ fs.writeFileSync(path.join(rollingWorktreeLease.rootPath,'retained.ts'),'export const value = 1;\n');
+ git(rollingWorktreeLease.rootPath,['add','retained.ts']);git(rollingWorktreeLease.rootPath,['commit','-q','-m','Unintegrated result']);
+ assert.throws(()=>cleanupRollingWorktree(root,rollingWorktreeRetirement),/unintegrated commits/);
+ assert.ok(fs.existsSync(path.join(rollingWorktreeLease.rootPath,'session_id.txt')));
 });

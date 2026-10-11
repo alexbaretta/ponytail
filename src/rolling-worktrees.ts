@@ -7,6 +7,12 @@ import { spawnSync } from 'node:child_process';
 import { parseRollingProjectConfig, type RollingProjectConfigV2 } from './rolling-campaign.js';
 
 export interface RollingWorktreeLease { readonly number: number; readonly rootPath: string; readonly generation: string }
+export interface RollingWorktreeRetirement extends RollingWorktreeLease {
+  readonly assignmentId: string;
+  readonly sessionId: string;
+  readonly resourceGeneration: string;
+  readonly integratedRevision: string;
+}
 export interface RollingManagedDirectory {
   readonly directory: string;
   readonly mainRoot: string;
@@ -150,4 +156,40 @@ export function provisionRollingWorktree(coordinatorRoot: string, lease: Rolling
   ensureRollingSessionIdIgnored(worktreeRoot);
   requireCheckout(resolveRollingManagedDirectory(worktreeRoot).directory === pool.directory, 'setup changed the physical pool configuration');
   return { number: lease.number, rootPath: worktreeRoot, branch, baseCommit };
+}
+
+// Traceability: implements REQ-ROLLING-WORKERS
+// Call only after the coordinator has journaled native cessation and revoked
+// the assignment. A missing marker then supports retry after lost cleanup ack.
+export function cleanupRollingWorktree(coordinatorRoot: string,rollingWorktreeRetirement: RollingWorktreeRetirement): void {
+  requireCheckout(Number.isSafeInteger(rollingWorktreeRetirement.number) && rollingWorktreeRetirement.number >= 101,'invalid checkout number');
+  for (const identity of [rollingWorktreeRetirement.assignmentId,rollingWorktreeRetirement.generation,rollingWorktreeRetirement.resourceGeneration]) {
+    requireCheckout(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/u.test(identity),'invalid retirement owner identity');
+  }
+  requireCheckout(rollingWorktreeRetirement.sessionId.length > 0 && rollingWorktreeRetirement.sessionId.trim() === rollingWorktreeRetirement.sessionId
+    && !/[\0\r\n]/u.test(rollingWorktreeRetirement.sessionId),'invalid retirement session');
+  requireCheckout(/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/u.test(rollingWorktreeRetirement.integratedRevision),'invalid integrated revision');
+  const rollingManagedDirectory = resolveRollingManagedDirectory(coordinatorRoot);
+  requireCheckout(rollingManagedDirectory.configuration.retirementCommands !== null,'project retirement cleanup is unspecified; declare the V2 retirement contract before checkout reuse');
+  requireCheckout(rollingWorktreeRetirement.rootPath === path.join(rollingManagedDirectory.directory,String(rollingWorktreeRetirement.number))
+    && rollingManagedDirectory.worktrees.includes(rollingWorktreeRetirement.rootPath),'retirement root differs from its registered physical pool');
+  const markerPath = path.join(rollingWorktreeRetirement.rootPath,'session_id.txt');
+  if (statIfPresent(markerPath)) validateRollingSessionMarker(rollingWorktreeRetirement.rootPath,rollingWorktreeRetirement.sessionId);
+  requireCheckout(git(rollingWorktreeRetirement.rootPath,['status','--porcelain']).length === 0,'checkout has uncommitted work; preserve it');
+  const integrationSpawnSyncReturns = spawnSync('git',['-C',coordinatorRoot,'merge-base','--is-ancestor',git(rollingWorktreeRetirement.rootPath,['rev-parse','HEAD']),rollingWorktreeRetirement.integratedRevision],{encoding:'utf8'});
+  requireCheckout(!integrationSpawnSyncReturns.error && integrationSpawnSyncReturns.status === 0,'checkout has unintegrated commits or unreadable integration; preserve it');
+  const processEnv: NodeJS.ProcessEnv = {...process.env,PONYTAIL_WORKTREE_NUMBER:String(rollingWorktreeRetirement.number),
+    PONYTAIL_WORKTREE_ROOT:rollingWorktreeRetirement.rootPath,PONYTAIL_MAIN_WORKTREE_ROOT:rollingManagedDirectory.mainRoot,
+    PONYTAIL_WORKTREE_GENERATION:rollingWorktreeRetirement.resourceGeneration,PONYTAIL_ASSIGNMENT_GENERATION:rollingWorktreeRetirement.generation,
+    PONYTAIL_ASSIGNMENT_ID:rollingWorktreeRetirement.assignmentId,PONYTAIL_SESSION_ID:rollingWorktreeRetirement.sessionId};
+  for (const argv of rollingManagedDirectory.configuration.retirementCommands) {
+    const spawnSyncReturns = spawnSync(argv[0],argv.slice(1),{cwd:rollingWorktreeRetirement.rootPath,env:processEnv,encoding:'utf8'});
+    requireCheckout(!spawnSyncReturns.error && spawnSyncReturns.status === 0,
+      `cleanup failed in retained checkout: ${spawnSyncReturns.error?.message || spawnSyncReturns.stderr.trim() || argv[0]}`);
+  }
+  requireCheckout(git(rollingWorktreeRetirement.rootPath,['status','--porcelain']).length === 0,'cleanup changed tracked or untracked work; retain the checkout');
+  if (statIfPresent(markerPath)) {
+    validateRollingSessionMarker(rollingWorktreeRetirement.rootPath,rollingWorktreeRetirement.sessionId);
+    fs.unlinkSync(markerPath);
+  }
 }

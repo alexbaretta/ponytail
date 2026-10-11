@@ -12,6 +12,7 @@ exports.requireRollingSessionMarkerAbsent = requireRollingSessionMarkerAbsent;
 exports.validateRollingSessionMarker = validateRollingSessionMarker;
 exports.ensureRollingSessionIdIgnored = ensureRollingSessionIdIgnored;
 exports.provisionRollingWorktree = provisionRollingWorktree;
+exports.cleanupRollingWorktree = cleanupRollingWorktree;
 const node_fs_1 = __importDefault(require("node:fs"));
 const node_path_1 = __importDefault(require("node:path"));
 const node_child_process_1 = require("node:child_process");
@@ -138,4 +139,36 @@ function provisionRollingWorktree(coordinatorRoot, lease, baseCommit) {
     ensureRollingSessionIdIgnored(worktreeRoot);
     requireCheckout(resolveRollingManagedDirectory(worktreeRoot).directory === pool.directory, 'setup changed the physical pool configuration');
     return { number: lease.number, rootPath: worktreeRoot, branch, baseCommit };
+}
+function cleanupRollingWorktree(coordinatorRoot, rollingWorktreeRetirement) {
+    requireCheckout(Number.isSafeInteger(rollingWorktreeRetirement.number) && rollingWorktreeRetirement.number >= 101, 'invalid checkout number');
+    for (const identity of [rollingWorktreeRetirement.assignmentId, rollingWorktreeRetirement.generation, rollingWorktreeRetirement.resourceGeneration]) {
+        requireCheckout(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/u.test(identity), 'invalid retirement owner identity');
+    }
+    requireCheckout(rollingWorktreeRetirement.sessionId.length > 0 && rollingWorktreeRetirement.sessionId.trim() === rollingWorktreeRetirement.sessionId
+        && !/[\0\r\n]/u.test(rollingWorktreeRetirement.sessionId), 'invalid retirement session');
+    requireCheckout(/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/u.test(rollingWorktreeRetirement.integratedRevision), 'invalid integrated revision');
+    const rollingManagedDirectory = resolveRollingManagedDirectory(coordinatorRoot);
+    requireCheckout(rollingManagedDirectory.configuration.retirementCommands !== null, 'project retirement cleanup is unspecified; declare the V2 retirement contract before checkout reuse');
+    requireCheckout(rollingWorktreeRetirement.rootPath === node_path_1.default.join(rollingManagedDirectory.directory, String(rollingWorktreeRetirement.number))
+        && rollingManagedDirectory.worktrees.includes(rollingWorktreeRetirement.rootPath), 'retirement root differs from its registered physical pool');
+    const markerPath = node_path_1.default.join(rollingWorktreeRetirement.rootPath, 'session_id.txt');
+    if (statIfPresent(markerPath))
+        validateRollingSessionMarker(rollingWorktreeRetirement.rootPath, rollingWorktreeRetirement.sessionId);
+    requireCheckout(git(rollingWorktreeRetirement.rootPath, ['status', '--porcelain']).length === 0, 'checkout has uncommitted work; preserve it');
+    const integrationSpawnSyncReturns = (0, node_child_process_1.spawnSync)('git', ['-C', coordinatorRoot, 'merge-base', '--is-ancestor', git(rollingWorktreeRetirement.rootPath, ['rev-parse', 'HEAD']), rollingWorktreeRetirement.integratedRevision], { encoding: 'utf8' });
+    requireCheckout(!integrationSpawnSyncReturns.error && integrationSpawnSyncReturns.status === 0, 'checkout has unintegrated commits or unreadable integration; preserve it');
+    const processEnv = { ...process.env, PONYTAIL_WORKTREE_NUMBER: String(rollingWorktreeRetirement.number),
+        PONYTAIL_WORKTREE_ROOT: rollingWorktreeRetirement.rootPath, PONYTAIL_MAIN_WORKTREE_ROOT: rollingManagedDirectory.mainRoot,
+        PONYTAIL_WORKTREE_GENERATION: rollingWorktreeRetirement.resourceGeneration, PONYTAIL_ASSIGNMENT_GENERATION: rollingWorktreeRetirement.generation,
+        PONYTAIL_ASSIGNMENT_ID: rollingWorktreeRetirement.assignmentId, PONYTAIL_SESSION_ID: rollingWorktreeRetirement.sessionId };
+    for (const argv of rollingManagedDirectory.configuration.retirementCommands) {
+        const spawnSyncReturns = (0, node_child_process_1.spawnSync)(argv[0], argv.slice(1), { cwd: rollingWorktreeRetirement.rootPath, env: processEnv, encoding: 'utf8' });
+        requireCheckout(!spawnSyncReturns.error && spawnSyncReturns.status === 0, `cleanup failed in retained checkout: ${spawnSyncReturns.error?.message || spawnSyncReturns.stderr.trim() || argv[0]}`);
+    }
+    requireCheckout(git(rollingWorktreeRetirement.rootPath, ['status', '--porcelain']).length === 0, 'cleanup changed tracked or untracked work; retain the checkout');
+    if (statIfPresent(markerPath)) {
+        validateRollingSessionMarker(rollingWorktreeRetirement.rootPath, rollingWorktreeRetirement.sessionId);
+        node_fs_1.default.unlinkSync(markerPath);
+    }
 }
