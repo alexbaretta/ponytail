@@ -121,6 +121,12 @@ export interface RollingAction {
 }
 interface RollingActionRow extends RollingAction { readonly resultText: string | null }
 export interface RollingActionAcknowledgment { readonly id: string; readonly state: 'STARTED' | 'COMPLETED' }
+export interface RollingWorkerCreationInspection {
+  readonly action:RollingAction;
+  readonly assignment:RollingStoredAssignment;
+  readonly worktree:RollingAllocatedWorktree;
+  readonly rollingWorkerCreationV1:RollingWorkerCreationV1 | null;
+}
 interface RollingStoredWorktree extends RollingAllocatedWorktree {
   readonly state: 'AVAILABLE' | 'PROVISIONING' | 'RESERVED' | 'ACTIVE' | 'QUARANTINED';
 }
@@ -683,6 +689,32 @@ export class RollingCampaignStore {
   async nextActions(campaignId: string): Promise<readonly RollingAction[]> {
     const rows = (await this.pool.query<Record<string, unknown>>("SELECT * FROM ponytail_index.rolling_action_v1 WHERE project_id=$1 AND campaign_id=$2 AND state IN ('PENDING','STARTED') ORDER BY created_at,action_id", [this.projectId, campaignId])).rows;
     return rows.map(value => { const rollingActionRow = readAction(value); return { id: rollingActionRow.id, assignmentId: rollingActionRow.assignmentId, kind: rollingActionRow.kind, generation: rollingActionRow.generation, state: rollingActionRow.state }; });
+  }
+
+  // Traceability: implements REQ-ROLLING-STATE
+  // Traceability: implements REQ-ROLLING-WORKERS
+  async inspectWorkerCreation(campaignId:string,actionId:string,generation:string):Promise<RollingWorkerCreationInspection> {
+    return this.transaction(campaignId,async poolClient => {
+      const rollingActionRow = readAction((await poolClient.query<Record<string,unknown>>(
+        'SELECT * FROM ponytail_index.rolling_action_v1 WHERE project_id=$1 AND campaign_id=$2 AND action_id=$3',
+        [this.projectId,campaignId,actionId])).rows[0]);
+      requireState(rollingActionRow.kind === 'START_WORKER' && rollingActionRow.generation === generation
+        && (rollingActionRow.state === 'STARTED' || rollingActionRow.state === 'COMPLETED'),'creation recovery requires its original started action');
+      const rollingStoredAssignment = await this.assignment(poolClient,campaignId,rollingActionRow.assignmentId,generation);
+      requireState(!rollingStoredAssignment.retired && (rollingStoredAssignment.state === 'RESERVED' || rollingStoredAssignment.state === 'WORKING'),
+        'creation recovery no longer owns its reservation');
+      const rollingStoredWorktree = readWorktree((await poolClient.query<Record<string,unknown>>(
+        'SELECT * FROM ponytail_index.rolling_worktree_v1 WHERE project_id=$1 AND number=$2',
+        [this.projectId,rollingStoredAssignment.worktreeNumber])).rows[0]);
+      const rollingWorkerCreationV1 = rollingActionRow.resultText === null ? null : parseRollingWorkerCreation(rollingActionRow.resultText);
+      if (rollingWorkerCreationV1) requireState(rollingWorkerCreationV1.rootPath === rollingStoredWorktree.rootPath
+        && (rollingStoredAssignment.sessionId === null || rollingStoredAssignment.sessionId === rollingWorkerCreationV1.sessionId),
+        'creation recovery identity differs from reservation');
+      requireState(rollingActionRow.state !== 'COMPLETED' || rollingWorkerCreationV1 !== null,'completed creation lacks its native receipt');
+      const rollingAction:RollingAction = {id:rollingActionRow.id,assignmentId:rollingActionRow.assignmentId,kind:rollingActionRow.kind,
+        generation:rollingActionRow.generation,state:rollingActionRow.state};
+      return {action:rollingAction,assignment:rollingStoredAssignment,worktree:{number:rollingStoredWorktree.number,rootPath:rollingStoredWorktree.rootPath},rollingWorkerCreationV1};
+    });
   }
 
   // Traceability: implements REQ-ROLLING-STATE

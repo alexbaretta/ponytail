@@ -105,3 +105,8 @@ test('live worker suspension observes idle native activity and retains its dirty
 // Traceability: verifies REQ-ROLLING-STATE
 test('live worker resumption restores its original native session with refreshed scope and campaign base',
  t => runRollingWorkerScenario(t,'native','resumption'));
+
+// Traceability: verifies REQ-ROLLING-STATE
+// Traceability: verifies REQ-ROLLING-WORKERS
+test('live worker creation recovery attaches original initialization after coordinator and native connection restart',
+ t => runRollingWorkerScenario(t,'native','recovery'));

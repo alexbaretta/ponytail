@@ -98,6 +98,41 @@ export async function attachRollingWorker(rollingCampaignStore: RollingCampaignS
  return rollingCampaignStore.completeWorkerCreation(campaignId,actionId,generation,rollingWorkerCreationV1);
 }
 
+interface RollingWorkerCreationRecoveryIdentity {readonly assignmentId:string;readonly actionId:string;readonly generation:string;readonly rootPath:string}
+export interface RollingWorkerCreationRecoveryUnknown extends RollingWorkerCreationRecoveryIdentity {readonly state:'unknown'}
+export interface RollingWorkerCreationRecoveryActive extends RollingWorkerCreationRecoveryIdentity {
+ readonly state:'active';readonly rollingWorkerCreationV1:RollingWorkerCreationV1;readonly turnId:string | null;
+}
+export interface RollingWorkerCreationRecoveryAttached extends RollingWorkerCreationRecoveryIdentity {
+ readonly state:'attached';readonly rollingSessionAttachment:RollingSessionAttachment;
+}
+// Discriminator: state
+export type RollingWorkerCreationRecovery = RollingWorkerCreationRecoveryUnknown | RollingWorkerCreationRecoveryActive | RollingWorkerCreationRecoveryAttached;
+
+// Traceability: implements REQ-ROLLING-WORKERS
+// Traceability: implements REQ-ROLLING-STATE
+export async function recoverRollingWorkerCreation(rollingCampaignStore:RollingCampaignStore,rollingCodex:RollingCodex,
+ campaignId:string,actionId:string,generation:string):Promise<RollingWorkerCreationRecovery> {
+ const rollingWorkerCreationInspection = await rollingCampaignStore.inspectWorkerCreation(campaignId,actionId,generation);
+ const rollingWorkerCreationRecoveryIdentity:RollingWorkerCreationRecoveryIdentity = {assignmentId:rollingWorkerCreationInspection.assignment.id,
+  actionId,generation,rootPath:rollingWorkerCreationInspection.worktree.rootPath};
+ const rollingWorkerCreationV1 = rollingWorkerCreationInspection.rollingWorkerCreationV1;
+ if (rollingWorkerCreationV1 === null) return {...rollingWorkerCreationRecoveryIdentity,state:'unknown'};
+ const rollingNativeThread = await rollingCodex.resumeThread(rollingWorkerCreationV1.threadId,rollingWorkerCreationV1.rootPath);
+ requireWorker(JSON.stringify(identifyRollingWorkerCreation(rollingNativeThread,rollingWorkerCreationV1.rootPath)) === JSON.stringify(rollingWorkerCreationV1),
+  'recovered native worker differs from original receipt');
+ const rollingNativeTurn = rollingWorkerCreationInspection.action.state === 'COMPLETED' ? null
+  : await rollingCodex.readInitializationTurn(rollingWorkerCreationV1.threadId);
+ const rollingNativeThreadActivity = await rollingCodex.readThreadActivity(rollingWorkerCreationV1.threadId);
+ if (rollingNativeTurn?.status === 'inProgress' || rollingNativeThreadActivity.status === 'active')
+  return {...rollingWorkerCreationRecoveryIdentity,state:'active',rollingWorkerCreationV1,turnId:rollingNativeTurn?.id ?? null};
+ requireWorker(rollingNativeThreadActivity.status === 'idle' && (rollingNativeTurn === null || rollingNativeTurn.status === 'completed'),
+  'original initialization is not verified completed and idle; preserve its reservation');
+ validateRollingSessionMarker(rollingWorkerCreationV1.rootPath,rollingWorkerCreationV1.sessionId);
+ const rollingSessionAttachment = await rollingCampaignStore.completeWorkerCreation(campaignId,actionId,generation,rollingWorkerCreationV1);
+ return {...rollingWorkerCreationRecoveryIdentity,state:'attached',rollingSessionAttachment};
+}
+
 export interface RollingWorkerContext {
  readonly rollingWorkerCreationV1: RollingWorkerCreationV1;
  readonly obligation: Obligation;

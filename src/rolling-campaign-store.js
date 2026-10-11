@@ -570,6 +570,24 @@ class RollingCampaignStore {
         const rows = (await this.pool.query("SELECT * FROM ponytail_index.rolling_action_v1 WHERE project_id=$1 AND campaign_id=$2 AND state IN ('PENDING','STARTED') ORDER BY created_at,action_id", [this.projectId, campaignId])).rows;
         return rows.map(value => { const rollingActionRow = readAction(value); return { id: rollingActionRow.id, assignmentId: rollingActionRow.assignmentId, kind: rollingActionRow.kind, generation: rollingActionRow.generation, state: rollingActionRow.state }; });
     }
+    async inspectWorkerCreation(campaignId, actionId, generation) {
+        return this.transaction(campaignId, async (poolClient) => {
+            const rollingActionRow = readAction((await poolClient.query('SELECT * FROM ponytail_index.rolling_action_v1 WHERE project_id=$1 AND campaign_id=$2 AND action_id=$3', [this.projectId, campaignId, actionId])).rows[0]);
+            requireState(rollingActionRow.kind === 'START_WORKER' && rollingActionRow.generation === generation
+                && (rollingActionRow.state === 'STARTED' || rollingActionRow.state === 'COMPLETED'), 'creation recovery requires its original started action');
+            const rollingStoredAssignment = await this.assignment(poolClient, campaignId, rollingActionRow.assignmentId, generation);
+            requireState(!rollingStoredAssignment.retired && (rollingStoredAssignment.state === 'RESERVED' || rollingStoredAssignment.state === 'WORKING'), 'creation recovery no longer owns its reservation');
+            const rollingStoredWorktree = readWorktree((await poolClient.query('SELECT * FROM ponytail_index.rolling_worktree_v1 WHERE project_id=$1 AND number=$2', [this.projectId, rollingStoredAssignment.worktreeNumber])).rows[0]);
+            const rollingWorkerCreationV1 = rollingActionRow.resultText === null ? null : (0, rolling_worker_js_1.parseRollingWorkerCreation)(rollingActionRow.resultText);
+            if (rollingWorkerCreationV1)
+                requireState(rollingWorkerCreationV1.rootPath === rollingStoredWorktree.rootPath
+                    && (rollingStoredAssignment.sessionId === null || rollingStoredAssignment.sessionId === rollingWorkerCreationV1.sessionId), 'creation recovery identity differs from reservation');
+            requireState(rollingActionRow.state !== 'COMPLETED' || rollingWorkerCreationV1 !== null, 'completed creation lacks its native receipt');
+            const rollingAction = { id: rollingActionRow.id, assignmentId: rollingActionRow.assignmentId, kind: rollingActionRow.kind,
+                generation: rollingActionRow.generation, state: rollingActionRow.state };
+            return { action: rollingAction, assignment: rollingStoredAssignment, worktree: { number: rollingStoredWorktree.number, rootPath: rollingStoredWorktree.rootPath }, rollingWorkerCreationV1 };
+        });
+    }
     async claimWorkerCreation(campaignId, actionId, generation) {
         return this.transaction(campaignId, async (poolClient, rollingCampaignRow) => {
             const rollingActionRow = readAction((await poolClient.query('SELECT * FROM ponytail_index.rolling_action_v1 WHERE project_id=$1 AND campaign_id=$2 AND action_id=$3', [this.projectId, campaignId, actionId])).rows[0]);

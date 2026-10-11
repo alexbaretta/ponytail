@@ -10,13 +10,13 @@ import { execFileSync } from 'node:child_process';
 import { Pool } from 'pg';
 import { databaseOptions } from '../src/project-index-database.js';
 import { collectRollingGraph, type RollingProjectConfigV1, type RollingBindingsV1, type RollingBinding, type RollingGraph } from '../src/rolling-campaign.js';
-import { RollingCampaignStore, type RollingCampaignRegistration, type RollingAllocationResult, type RollingWorkerDispatchAttached, type RollingStoredAssignment, type RollingCampaignStatus } from '../src/rolling-campaign-store.js';
+import { RollingCampaignStore, type RollingCampaignRegistration, type RollingAllocationResult, type RollingWorkerDispatchAttached, type RollingSessionAttachment, type RollingStoredAssignment, type RollingCampaignStatus } from '../src/rolling-campaign-store.js';
 import { inputDigest, parseObligationDocument, type ObligationDocumentV1, type ObligationBaseline, type Obligation, type ObligationCertificate, type ObligationCheckpoint } from '../skills/plan-execution/scripts/obligations.js';
 import type { ObligationBindingHistoryV1, ObligationBindingRevisionV1 } from '../skills/plan-execution/scripts/obligation-binding-history.js';
 import type { ObligationEvidence } from '../skills/plan-execution/scripts/obligations.js';
 import type { RollingWorkerSubmissionV1 } from '../src/rolling-worker-submission.js';
 import { dispatchRollingReview, collectRollingReview, type RollingReviewOutcomeV1 } from '../src/rolling-review.js';
-import { provisionRollingWorker, attachRollingWorker, suspendRollingWorker, resumeRollingWorker, parseRollingWorkerResumption, dispatchRollingWorker, buildRollingWorkerInstructions, type RollingWorkerInitialization } from '../src/rolling-worker.js';
+import { provisionRollingWorker, attachRollingWorker, suspendRollingWorker, recoverRollingWorkerCreation, observeRollingWorkerInitialization, resumeRollingWorker, parseRollingWorkerResumption, dispatchRollingWorker, buildRollingWorkerInstructions, type RollingWorkerInitialization } from '../src/rolling-worker.js';
 import { RollingCodex, RollingObservationTimeout, type RollingNativeTurn, type RollingNativeThread } from '../src/rolling-codex.js';
 import { acceptBoundCheckpoint, type ObligationCertificateBindingV1, type ObligationCertificateSubmission,
   type ObligationCertificateBindingRequest } from '../skills/plan-execution/scripts/obligation-certificate-bindings.js';
@@ -514,7 +514,7 @@ async function observeRollingWorkerTurn(t: TestContext, rollingCodex: RollingCod
   }
 }
 
-export async function runRollingWorkerScenario(t: TestContext, mode: 'protocol' | 'native', operation: 'attachment' | 'instructions' | 'suspension' | 'resumption'): Promise<void> {
+export async function runRollingWorkerScenario(t: TestContext, mode: 'protocol' | 'native', operation: 'attachment' | 'instructions' | 'suspension' | 'resumption' | 'recovery'): Promise<void> {
   const repositoryRoot = path.resolve(__dirname, '../..');
   const pool = new Pool(databaseOptions(repositoryRoot));
   const projectId = crypto.randomUUID();
@@ -627,8 +627,42 @@ export async function runRollingWorkerScenario(t: TestContext, mode: 'protocol' 
     {...rollingWorkerInitialization.rollingWorkerCreationV1,sessionId:'foreign'}),/immutable/);
   await assert.rejects(rollingCampaignStore.completeWorkerCreation('worker-fixture',rollingAllocationResult.actionId,generation,
     {...rollingWorkerInitialization.rollingWorkerCreationV1,sessionId:'foreign'}),/receipt differs/);
-  const rollingSessionAttachment = await attachRollingWorker(rollingCampaignStore,rollingCodex,'worker-fixture',rollingAllocationResult.actionId,
-    generation,rollingWorkerInitialization);
+  let rollingSessionAttachment:RollingSessionAttachment;
+  if (operation === 'recovery') {
+    const rollingWorkerCreationV1 = rollingWorkerInitialization.rollingWorkerCreationV1;
+    await pool.query('UPDATE ponytail_index.rolling_action_v1 SET result_text=NULL WHERE project_id=$1 AND action_id=$2',[projectId,rollingAllocationResult.actionId]);
+    const restartedRollingCampaignStore = new RollingCampaignStore(pool,projectId);
+    const unknownRollingWorkerCreationRecovery = await recoverRollingWorkerCreation(restartedRollingCampaignStore,rollingCodex,'worker-fixture',rollingAllocationResult.actionId,generation);
+    assert.equal(unknownRollingWorkerCreationRecovery.state,'unknown');
+    assert.equal(unknownRollingWorkerCreationRecovery.rootPath,rollingAllocationResult.worktree.rootPath);
+    assert.equal((await restartedRollingCampaignStore.nextActions('worker-fixture'))[0]?.state,'STARTED');
+    assert.equal((await restartedRollingCampaignStore.allocate('worker-fixture',rollingGraph.digest)).reason,'capacity_reached');
+    await assert.rejects(restartedRollingCampaignStore.claimWorkerCreation('worker-fixture',rollingAllocationResult.actionId,generation),/already claimed/);
+    await assert.rejects(restartedRollingCampaignStore.retire('worker-fixture',rollingAllocationResult.assignment.id,generation,true),/external action outcome/);
+    // Restore the original externally observed receipt; no new native session
+    // is created to stand in for an unknown outcome.
+    await restartedRollingCampaignStore.recordWorkerCreation('worker-fixture',rollingAllocationResult.actionId,generation,rollingWorkerCreationV1);
+    await observeRollingWorkerInitialization(rollingCodex,rollingWorkerInitialization);
+    if (mode === 'protocol') {
+      await rollingCodex.request('fixture-activity',{active:true});
+      assert.equal((await recoverRollingWorkerCreation(restartedRollingCampaignStore,rollingCodex,'worker-fixture',rollingAllocationResult.actionId,generation)).state,'active');
+      assert.equal((await restartedRollingCampaignStore.status('worker-fixture')).assignments[0]?.state,'RESERVED');
+      await assert.rejects(rollingCodex.close(),/observe terminal turns/);
+      await rollingCodex.request('fixture-activity',{active:false});
+    } else {
+      await rollingCodex.close();
+      rollingCodex = await connectRollingWorkerCodex();
+      rollingCodex.on('serverRequest',message => rollingCodex.respondToServer(message.id,{decision:'decline'}));
+    }
+    // The product operation receives only durable action selectors. It reads
+    // the initialization from native history after the coordinator restart.
+    const rollingWorkerCreationRecovery = await recoverRollingWorkerCreation(new RollingCampaignStore(pool,projectId),rollingCodex,'worker-fixture',rollingAllocationResult.actionId,generation);
+    assert.equal(rollingWorkerCreationRecovery.state,'attached');assert.ok(rollingWorkerCreationRecovery.state === 'attached');
+    rollingSessionAttachment = rollingWorkerCreationRecovery.rollingSessionAttachment;
+    assert.deepEqual(await recoverRollingWorkerCreation(restartedRollingCampaignStore,rollingCodex,'worker-fixture',rollingAllocationResult.actionId,generation),rollingWorkerCreationRecovery);
+    assert.equal((await rollingCodex.readInitializationTurn(rollingWorkerCreationV1.threadId)).id,rollingWorkerInitialization.rollingTurnStarted.turn.id);
+    t.diagnostic(`worker recovery thread=${rollingWorkerCreationV1.threadId}; session=${rollingWorkerCreationV1.sessionId}; initialization=${rollingWorkerInitialization.rollingTurnStarted.turn.id}; original action recovered after restart without duplicate creation; missing receipt and active activity preserve reservation`);
+  } else rollingSessionAttachment = await attachRollingWorker(rollingCampaignStore,rollingCodex,'worker-fixture',rollingAllocationResult.actionId,generation,rollingWorkerInitialization);
   assert.equal(rollingSessionAttachment.sessionId,rollingWorkerInitialization.rollingWorkerCreationV1.sessionId);
   assert.equal(rollingSessionAttachment.state,'WORKING');
   assert.equal((await rollingCampaignStore.status('worker-fixture')).assignments[0]?.sessionId,rollingWorkerInitialization.rollingWorkerCreationV1.sessionId);
@@ -824,3 +858,8 @@ test('worker suspension observes stopped activity and frees capacity while retai
 // Traceability: verifies REQ-ROLLING-STATE
 test('worker resumption restores original native identity and refreshes its scope before new work',
  t => runRollingWorkerScenario(t,'protocol','resumption'));
+
+// Traceability: verifies REQ-ROLLING-STATE
+// Traceability: verifies REQ-ROLLING-WORKERS
+test('worker creation recovery retains uncertain ownership and attaches original initialization after restart',
+ t => runRollingWorkerScenario(t,'protocol','recovery'));

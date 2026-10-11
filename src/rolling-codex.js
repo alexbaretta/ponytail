@@ -252,16 +252,7 @@ class RollingCodex extends node_events_1.EventEmitter {
                 const record = nativeRecord(value);
                 if (record.id !== turnId)
                     continue;
-                const rollingNativeTurn = completedTurn(record);
-                if (rollingNativeTurn.status === 'inProgress')
-                    this.activeTurns.set(threadId, turnId);
-                else {
-                    requireProtocol(['completed', 'failed', 'interrupted'].includes(rollingNativeTurn.status), 'unsupported persisted turn status');
-                    this.completedTurns.set(threadId, rollingNativeTurn);
-                    if (this.activeTurns.get(threadId) === turnId)
-                        this.activeTurns.delete(threadId);
-                }
-                return rollingNativeTurn;
+                return this.observeNativeTurn(threadId, completedTurn(record));
             }
             requireProtocol(result.nextCursor === undefined || result.nextCursor === null || typeof result.nextCursor === 'string', 'invalid turn history cursor');
             cursor = result.nextCursor ?? null;
@@ -271,6 +262,24 @@ class RollingCodex extends node_events_1.EventEmitter {
             }
         } while (cursor !== null);
         throw new Error('rolling Codex: assigned turn is absent from native history');
+    }
+    observeNativeTurn(threadId, rollingNativeTurn) {
+        if (rollingNativeTurn.status === 'inProgress')
+            this.activeTurns.set(threadId, rollingNativeTurn.id);
+        else {
+            requireProtocol(['completed', 'failed', 'interrupted'].includes(rollingNativeTurn.status), 'unsupported persisted turn status');
+            this.completedTurns.set(threadId, rollingNativeTurn);
+            if (this.activeTurns.get(threadId) === rollingNativeTurn.id)
+                this.activeTurns.delete(threadId);
+        }
+        return rollingNativeTurn;
+    }
+    async readInitializationTurn(threadId) {
+        requireProtocol(threadId.length > 0, 'initialization history requires its original thread');
+        const result = nativeRecord(await this.request('thread/turns/list', { threadId, cursor: null, limit: 2, sortDirection: 'asc', itemsView: 'full' }));
+        requireProtocol(Array.isArray(result.data) && result.data.length === 1
+            && (result.nextCursor === null || result.nextCursor === undefined), 'initialization history is absent or ambiguous; preserve original ownership');
+        return this.observeNativeTurn(threadId, completedTurn(result.data[0]));
     }
     async readThreadActivity(threadId) {
         const result = nativeRecord(await this.request('thread/read', { threadId, includeTurns: false }));

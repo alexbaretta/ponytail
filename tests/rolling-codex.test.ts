@@ -110,3 +110,16 @@ test('review dispatch resumes the assigned native reviewer and observes its exac
   await rollingCodex.interruptTurn('thread-fixture', pending.turn.id);
   assert.equal((await rollingCodex.readTurn('thread-fixture', pending.turn.id)).status, 'interrupted');
 });
+
+// Traceability: verifies REQ-ROLLING-WORKERS
+test('initialization recovery reads exactly one original turn and rejects absent or ambiguous history',async testContext => {
+ const {root,rollingCodex} = await fixture(testContext);
+ const rollingNativeThread = await rollingCodex.startThread(root);
+ await assert.rejects(rollingCodex.readInitializationTurn(rollingNativeThread.thread.id),/absent or ambiguous/);
+ const rollingTurnStarted = await rollingCodex.startTurn(rollingNativeThread.thread.id,'completed');
+ await rollingCodex.waitForTurn(rollingNativeThread.thread.id,rollingTurnStarted.turn.id);
+ assert.equal((await rollingCodex.readInitializationTurn(rollingNativeThread.thread.id)).id,rollingTurnStarted.turn.id);
+ const laterRollingTurnStarted = await rollingCodex.startTurn(rollingNativeThread.thread.id,'completed');
+ await rollingCodex.waitForTurn(rollingNativeThread.thread.id,laterRollingTurnStarted.turn.id);
+ await assert.rejects(rollingCodex.readInitializationTurn(rollingNativeThread.thread.id),/absent or ambiguous/);
+});

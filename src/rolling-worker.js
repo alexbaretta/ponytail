@@ -14,6 +14,7 @@ exports.initializeRollingWorker = initializeRollingWorker;
 exports.observeRollingWorkerInitialization = observeRollingWorkerInitialization;
 exports.provisionRollingWorker = provisionRollingWorker;
 exports.attachRollingWorker = attachRollingWorker;
+exports.recoverRollingWorkerCreation = recoverRollingWorkerCreation;
 exports.buildRollingWorkerInstructions = buildRollingWorkerInstructions;
 exports.dispatchRollingWorker = dispatchRollingWorker;
 exports.readRollingWorkerStopV1 = readRollingWorkerStopV1;
@@ -82,6 +83,25 @@ async function provisionRollingWorker(rollingCampaignStore, rollingCodex, campai
 async function attachRollingWorker(rollingCampaignStore, rollingCodex, campaignId, actionId, generation, rollingWorkerInitialization, timeoutMs = 60000) {
     const rollingWorkerCreationV1 = await observeRollingWorkerInitialization(rollingCodex, rollingWorkerInitialization, timeoutMs);
     return rollingCampaignStore.completeWorkerCreation(campaignId, actionId, generation, rollingWorkerCreationV1);
+}
+async function recoverRollingWorkerCreation(rollingCampaignStore, rollingCodex, campaignId, actionId, generation) {
+    const rollingWorkerCreationInspection = await rollingCampaignStore.inspectWorkerCreation(campaignId, actionId, generation);
+    const rollingWorkerCreationRecoveryIdentity = { assignmentId: rollingWorkerCreationInspection.assignment.id,
+        actionId, generation, rootPath: rollingWorkerCreationInspection.worktree.rootPath };
+    const rollingWorkerCreationV1 = rollingWorkerCreationInspection.rollingWorkerCreationV1;
+    if (rollingWorkerCreationV1 === null)
+        return { ...rollingWorkerCreationRecoveryIdentity, state: 'unknown' };
+    const rollingNativeThread = await rollingCodex.resumeThread(rollingWorkerCreationV1.threadId, rollingWorkerCreationV1.rootPath);
+    requireWorker(JSON.stringify(identifyRollingWorkerCreation(rollingNativeThread, rollingWorkerCreationV1.rootPath)) === JSON.stringify(rollingWorkerCreationV1), 'recovered native worker differs from original receipt');
+    const rollingNativeTurn = rollingWorkerCreationInspection.action.state === 'COMPLETED' ? null
+        : await rollingCodex.readInitializationTurn(rollingWorkerCreationV1.threadId);
+    const rollingNativeThreadActivity = await rollingCodex.readThreadActivity(rollingWorkerCreationV1.threadId);
+    if (rollingNativeTurn?.status === 'inProgress' || rollingNativeThreadActivity.status === 'active')
+        return { ...rollingWorkerCreationRecoveryIdentity, state: 'active', rollingWorkerCreationV1, turnId: rollingNativeTurn?.id ?? null };
+    requireWorker(rollingNativeThreadActivity.status === 'idle' && (rollingNativeTurn === null || rollingNativeTurn.status === 'completed'), 'original initialization is not verified completed and idle; preserve its reservation');
+    (0, rolling_worktrees_js_1.validateRollingSessionMarker)(rollingWorkerCreationV1.rootPath, rollingWorkerCreationV1.sessionId);
+    const rollingSessionAttachment = await rollingCampaignStore.completeWorkerCreation(campaignId, actionId, generation, rollingWorkerCreationV1);
+    return { ...rollingWorkerCreationRecoveryIdentity, state: 'attached', rollingSessionAttachment };
 }
 function buildRollingWorkerInstructions(rollingWorkerContext) {
     const { obligation, requirements, binding, lease } = rollingWorkerContext;
