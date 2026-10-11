@@ -14,9 +14,9 @@ function dependencySprint(sprintById: ReadonlyMap<string, SprintV1 | SprintV2 | 
   return sprint;
 }
 // These predicates consume homogeneous arrays already established by readSprints.
-function isV1Sprints(sprints: readonly SprintV1[] | readonly SprintV2[] | readonly SprintV3[]): sprints is readonly SprintV1[] { return sprints[0]?.schemaVersion === 1; }
+export function isV1Sprints(sprints: readonly SprintV1[] | readonly SprintV2[] | readonly SprintV3[]): sprints is readonly SprintV1[] { return sprints[0]?.schemaVersion === 1; }
 function isV2Sprints(sprints: readonly SprintV1[] | readonly SprintV2[] | readonly SprintV3[]): sprints is readonly SprintV2[] { return sprints[0]?.schemaVersion === 2; }
-function isV3Sprints(sprints: readonly SprintV1[] | readonly SprintV2[] | readonly SprintV3[]): sprints is readonly SprintV3[] { return sprints[0]?.schemaVersion === 3; }
+export function isV3Sprints(sprints: readonly SprintV1[] | readonly SprintV2[] | readonly SprintV3[]): sprints is readonly SprintV3[] { return sprints[0]?.schemaVersion === 3; }
 
 export function selectPlanningReadySprints(sprints: readonly SprintV1[] | readonly SprintV2[] | readonly SprintV3[], sprintById: ReadonlyMap<string, SprintV1 | SprintV2 | SprintV3>): string[] {
   const sprint = sprints.find((candidate) => candidate.planning.status === 'STUB'

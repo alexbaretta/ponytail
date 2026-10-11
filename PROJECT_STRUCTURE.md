@@ -85,6 +85,9 @@ while project-wide management records remain under `pm/`.
 - `skills/plan-execution/scripts/tasklet-metadata.ts` owns physical V1–V4
   tasklet metadata readers and shared external dependency identities; its adjacent
   JavaScript runtime is compiler-generated.
+- `src/campaign-plan-contents.ts` owns typed sprint/tasklet content validation,
+  readiness, normalized records and closed-plan gates over portable operations;
+  its adjacent runtime is compiler-generated.
 - `src/campaign-dependencies.ts` owns plan and cross-plan tasklet validation;
   `skills/plan-execution/scripts/tasklet-statuses.ts` owns the shared heading parser.
   Their adjacent JavaScript files are compiler-generated.

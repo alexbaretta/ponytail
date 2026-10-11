@@ -8,6 +8,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SCHEMA_VERSION = exports.validateV3PathOwnership = exports.validatePathOwnership = exports.validateDependencies = exports.readSprints = exports.parseSprintFile = exports.SprintMetadataReaders = exports.METADATA_MARKER = void 0;
+exports.isV1Sprints = isV1Sprints;
+exports.isV3Sprints = isV3Sprints;
 exports.selectPlanningReadySprints = selectPlanningReadySprints;
 exports.selectPlanningReviewableSprints = selectPlanningReviewableSprints;
 exports.validateCheckpointOrder = validateCheckpointOrder;

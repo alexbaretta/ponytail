@@ -15,25 +15,8 @@ const { PLAN_METADATA_MARKER, CampaignPlanMetadataReaders, metadataBlocks,
   readPlanMetadataV1, readPlanMetadataV2, readManagedPlan, parsePlanSource } = require('./campaign-plan-metadata');
 const { scanPlanCandidates, listPlanSourceFiles, linkedPlanFiles } = require('./campaign-plan-sources');
 const { validateCampaignDependencies, validateExternalTaskletDependencies } = require('./campaign-dependencies');
+const { validatePlanContents } = require('./campaign-plan-contents');
 const { discoverCampaign, resolveCampaignRoot, resolveCampaignScope, validateCampaignReference } = require('./campaign-scope');
-const {
-  readSprints,
-  selectExecutionReviewableSprints,
-  selectExecutionRunnableSprints,
-  selectPlanningReadySprints,
-  selectPlanningReviewableSprints,
-  validateDependencies,
-  validatePathOwnership,
-  validateV3PathOwnership,
-} = require('../skills/plan-execution/scripts/ready-sprints.js');
-const {
-  parseTaskletStatuses,
-  rankedReadyTasklets,
-  selectObligationTasklets,
-  readTaskletGraph,
-  validateTaskletGraph,
-  effectiveDependencies,
-} = require('../skills/plan-execution/scripts/ready-tasklets.js');
 
 const REPORT_SCHEMA_VERSION = 1;
 const INVENTORY_SCHEMA_VERSION = 3;
@@ -75,97 +58,6 @@ function campaignGraph(repositoryRoot, input) {
 
 function increment(record, key) {
   record[key] = (record[key] ?? 0) + 1;
-}
-
-function validatePlanContents(plan, config, repositoryRoot) {
-  let sprints;
-  let sprintById;
-  let executionReady;
-  let reviewReady;
-  let planningReady;
-  let planningReviewReady;
-  try {
-    sprints = readSprints(plan.planDirectory);
-    sprintById = validateDependencies(sprints);
-    if (sprints[0].schemaVersion === 1) validatePathOwnership(sprints, sprintById);
-    if (sprints[0].schemaVersion === 3) validateV3PathOwnership(sprints, sprintById);
-    planningReady = selectPlanningReadySprints(sprints, sprintById);
-    planningReviewReady = selectPlanningReviewableSprints(sprints, sprintById);
-    executionReady = selectExecutionRunnableSprints(sprints, sprintById);
-    reviewReady = selectExecutionReviewableSprints(sprints, sprintById);
-  } catch (error) {
-    dataError('CAMPAIGN_SPRINT_INVALID', error.message, plan.id, plan.relativePlanFile);
-  }
-  const normalizedSprints = [];
-  const normalizedTasklets = [];
-  const taskletDependencies = [];
-  let runnableTasklets = null;
-  let reviewableSprint = null;
-  let obligationDocument = null;
-  if (plan.obligationDocument) {
-    try {
-      const { parseObligationDocument, inputDigest } = require('../skills/plan-execution/scripts/obligations');
-      inputDigest(repositoryRoot, plan.obligationDocument);
-      obligationDocument = parseObligationDocument(fs.readFileSync(path.join(repositoryRoot, plan.obligationDocument), 'utf8'));
-    } catch (error) { dataError('CAMPAIGN_OBLIGATION_INVALID', error.message, plan.id, plan.obligationDocument); }
-  }
-  const planningSprint = planningReady.length ? { sprintId: planningReady[0], planningStatus: 'STUB' } : null;
-  for (const sprint of sprints) {
-    let graph;
-    let statuses;
-    if (sprint.execution !== null || fs.existsSync(sprint.filePath.replace(/\.md$/, '.tasklets.json'))) {
-      try {
-        statuses = parseTaskletStatuses(sprint.filePath, undefined, sprint.execution === null && sprint.planning.status === 'STUB');
-        graph = readTaskletGraph(sprint.filePath);
-        const derived = validateTaskletGraph(graph, statuses);
-        if (executionReady.includes(sprint.id)) {
-          const taskletIds = obligationDocument
-            ? selectObligationTasklets(graph, statuses, derived, null, obligationDocument, repositoryRoot, plan.id).taskletIds
-            : rankedReadyTasklets(graph, statuses, derived, null).map(([id]) => id);
-          if (taskletIds.length > 0) runnableTasklets = { sprintId: sprint.id, taskletIds };
-        }
-        if ((reviewReady.includes(sprint.id) || planningReviewReady.includes(sprint.id)) && graph.tasklets.size > 0 && !reviewableSprint) {
-          reviewableSprint = { sprintId: sprint.id, taskletIds: [...graph.tasklets.keys()].sort() };
-        }
-      } catch (error) {
-        dataError('CAMPAIGN_TASKLET_INVALID', error.message, plan.id, path.relative(repositoryRoot, sprint.filePath).split(path.sep).join('/'));
-      }
-    }
-    const taskletCounts = { PENDING: 0, DONE: 0, ERROR: 0 };
-    for (const [id, tasklet] of [...(graph?.tasklets ?? [])].sort(([left], [right]) => left.localeCompare(right))) {
-      const status = statuses.get(id);
-      taskletDependencies.push({ id, sprintId: sprint.id, status: sprint.execution === null ? 'PENDING' : status,
-        dependsOn: effectiveDependencies(graph, id), externalDependsOn: graph.externalDependsOn?.get(id) ?? [] });
-      if (sprint.execution === null) continue;
-      increment(taskletCounts, status);
-      normalizedTasklets.push({
-        id,
-        planId: plan.id,
-        sprintId: sprint.id,
-        featureId: tasklet.feature ?? null,
-        status,
-        dependsOn: [...tasklet.depends_on].sort(),
-        plannedPaths: [...(tasklet.planned_paths ?? [])].sort(),
-      });
-    }
-    normalizedSprints.push({
-      id: sprint.id,
-      planId: plan.id,
-      planningStatus: sprint.planning.status,
-      executionStatus: sprint.execution?.status ?? null,
-      taskletCounts,
-      totalTasklets: sprint.execution === null ? 0 : statuses.size,
-    });
-  }
-  if (plan.lifecycle === config.lifecycle.roles.successfulCompletion) {
-    if (obligationDocument && !require('../skills/plan-execution/scripts/obligations').projectObligations(obligationDocument, repositoryRoot).complete) dataError('CAMPAIGN_OBLIGATION_INCOMPLETE', 'completed plan has unresolved obligations', plan.id, plan.obligationDocument);
-    const unfinishedSprint = normalizedSprints.find((sprint) => sprint.executionStatus !== 'DONE');
-    const unfinishedTasklet = normalizedTasklets.find((tasklet) => tasklet.status !== 'DONE');
-    if (unfinishedSprint || unfinishedTasklet) {
-      dataError('CAMPAIGN_PLAN_CLOSED_INCOMPLETE', 'completed plan contains unfinished sprint or tasklet state', plan.id, plan.relativePlanFile);
-    }
-  }
-  return { sprints: normalizedSprints, tasklets: normalizedTasklets, taskletDependencies, runnableTasklets, reviewableSprint, planningSprint };
 }
 
 function git(repositoryRoot, gitArguments, allowFailure = false) {

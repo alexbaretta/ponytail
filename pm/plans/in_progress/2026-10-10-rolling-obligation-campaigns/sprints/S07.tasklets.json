@@ -119,6 +119,12 @@
         "S07-F19"
       ],
       "validation_tasklet": "S07-F20-T09"
+    },
+    "S07-F21": {
+      "depends_on": [
+        "S07-F20"
+      ],
+      "validation_tasklet": "S07-F21-T07"
     }
   },
   "tasklets": {
@@ -2251,6 +2257,94 @@
       "affinity": [],
       "risk": "normal",
       "feature": "S07-F20",
+      "planned_paths": []
+    },
+    "S07-F21-T01": {
+      "depends_on": [],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F21",
+      "planned_paths": [
+        "src/campaign-plan-contents.ts"
+      ]
+    },
+    "S07-F21-T02": {
+      "depends_on": [
+        "S07-F21-T01"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F21",
+      "planned_paths": [
+        "src/campaign-plan-contents.ts"
+      ]
+    },
+    "S07-F21-T03": {
+      "depends_on": [
+        "S07-F21-T02"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F21",
+      "planned_paths": [
+        "src/campaign-plan-contents.ts"
+      ]
+    },
+    "S07-F21-T04": {
+      "depends_on": [
+        "S07-F21-T03"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F21",
+      "planned_paths": [
+        "src/campaign-plan-contents.ts"
+      ]
+    },
+    "S07-F21-T05": {
+      "depends_on": [
+        "S07-F21-T04"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F21",
+      "planned_paths": [
+        "tests/campaign-plan-contents.test.ts"
+      ]
+    },
+    "S07-F21-T06": {
+      "depends_on": [
+        "S07-F21-T05"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F21",
+      "planned_paths": [
+        "src/campaign-plan-contents.js",
+        "src/campaign-census.js",
+        "skills/plan-execution/scripts/ready-sprints.ts",
+        "skills/plan-execution/scripts/ready-sprints.js",
+        ".openclaw/skills/plan-execution/scripts/ready-sprints.ts",
+        ".openclaw/skills/plan-execution/scripts/ready-sprints.js",
+        "scripts/build-runtime.ts",
+        "AGENTS.md",
+        "PROJECT_STRUCTURE.md",
+        ".agents/config/project/traceability.json",
+        "pm/requirements/traceability.generated.md"
+      ]
+    },
+    "S07-F21-T07": {
+      "depends_on": [
+        "S07-F21-T01",
+        "S07-F21-T02",
+        "S07-F21-T03",
+        "S07-F21-T04",
+        "S07-F21-T05",
+        "S07-F21-T06"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F21",
       "planned_paths": []
     }
   },

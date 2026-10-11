@@ -1030,6 +1030,16 @@
       "class": "unit-test",
       "path": "tests/ready-sprints-cli.test.ts",
       "locator": "text"
+    },
+    {
+      "class": "implementation",
+      "path": "src/campaign-plan-contents.ts",
+      "locator": "text"
+    },
+    {
+      "class": "unit-test",
+      "path": "tests/campaign-plan-contents.test.ts",
+      "locator": "text"
     }
   ],
   "entities": [],
@@ -1221,6 +1231,10 @@
     {
       "path": ".openclaw/skills/plan-execution/scripts/ready-sprints.js",
       "sourcePath": "skills/plan-execution/scripts/ready-sprints.ts"
+    },
+    {
+      "path": "src/campaign-plan-contents.js",
+      "sourcePath": "src/campaign-plan-contents.ts"
     }
   ],
   "reverseViewPath": "pm/requirements/traceability.generated.md",
