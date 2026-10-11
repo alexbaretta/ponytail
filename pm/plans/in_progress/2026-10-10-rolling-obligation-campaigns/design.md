@@ -310,3 +310,25 @@ resource ownership to the allocation. Retirement supplies the same allocation
 identity and the authenticated worker identity. Failure retains the reservation
 for reconciliation; successful cleanup precedes marker removal and checkout
 release. Native cessation and generation revocation remain required separately.
+
+## Completion batches approved 2026-10-11
+
+Finish the already-started OBL-57 retirement boundary before starting the
+twelve remaining delivery obligations. Execute those obligations in exactly
+three groups of four, in this order:
+
+| Batch | Atomic obligations | Combined behavior |
+| --- | --- | --- |
+| 1 | OBL-58, OBL-59, OBL-60, OBL-61 | Publication counting, partial flush, mainline incorporation and exact-candidate full QA. |
+| 2 | OBL-62, OBL-63, OBL-64, OBL-65 | Publication reconciliation, capacity replenishment, coordinator decisions and typed campaign initialization. |
+| 3 | OBL-66, OBL-67, OBL-68, OBL-69 | Command registry/help, replacement of legacy dispatch, shared CLI/MCP operations and final closure gates. |
+
+The groups organize implementation and combined validation; they do not merge
+obligation identities or change canonical conditions, prerequisites, authority
+or discharge criteria. Keep each obligation's frozen assignment boundary and
+individual certificate assessment. Reuse shared passing evidence only while
+its relevant inputs remain unchanged. Complete implementation, integration,
+applicable QA and discharge assessment of a started group before starting the
+next group. Respect dependencies within each group; grouping does not authorize
+bypassing a prerequisite or publishing an unverified candidate. Run final
+repository acceptance after the last relevant edit.
