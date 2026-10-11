@@ -15329,6 +15329,43 @@
       },
       "assessor": "coordinator",
       "reason": "Frozen scope for starting the next eligible atomic obligation OBL-57; preserve all historical certificates and claim no discharge at this scope checkpoint."
+    },
+    {
+      "id": "CHECKPOINT-175",
+      "predecessorId": "CHECKPOINT-174",
+      "baselineId": "BASELINE-16",
+      "kind": "neutral",
+      "selectedIds": [
+        "OBL-57"
+      ],
+      "registeredIds": [],
+      "certificateIds": [],
+      "invalidatedIds": [],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": {
+        "obligationId": "OBL-57",
+        "operations": [
+          "inspect"
+        ],
+        "deliverable": "Record confirmed retirement defects and their focused passing regression proofs."
+      },
+      "assessor": "coordinator",
+      "reason": "Extend only the existing OBL-57 evidence boundary for mandatory debugging observations; no discharge or new delivery scope."
     }
   ]
 }
