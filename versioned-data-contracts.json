@@ -33,12 +33,12 @@
         "module": "src/rolling-campaign-store.ts",
         "readerRegistryExport": "RollingAssignmentScopeReaders"
       },
-      "currentVersion": "V1",
+      "currentVersion": "V2",
       "versions": [
-        "V1"
+        "V1", "V2"
       ],
       "supportedReadVersions": [
-        "V1"
+        "V1", "V2"
       ],
       "supportedDowngradeVersions": []
     },
@@ -49,12 +49,12 @@
         "module": "src/rolling-campaign-store.ts",
         "readerRegistryExport": "RollingExecutionConfigReaders"
       },
-      "currentVersion": "V1",
+      "currentVersion": "V2",
       "versions": [
-        "V1"
+        "V1", "V2"
       ],
       "supportedReadVersions": [
-        "V1"
+        "V1", "V2"
       ],
       "supportedDowngradeVersions": []
     },

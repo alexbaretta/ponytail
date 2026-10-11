@@ -20,6 +20,7 @@ const node_child_process_1 = require("node:child_process");
 const node_fs_1 = __importDefault(require("node:fs"));
 const node_path_1 = __importDefault(require("node:path"));
 const node_crypto_1 = __importDefault(require("node:crypto"));
+const node_util_1 = require("node:util");
 const obligations_js_1 = require("../skills/plan-execution/scripts/obligations.js");
 const obligation_binding_history_js_1 = require("../skills/plan-execution/scripts/obligation-binding-history.js");
 function requireRollingCondition(condition, message) {
@@ -219,7 +220,9 @@ function selectRollingAssignments(rollingGraph, assignments, maxActiveWorkers, e
                 continue;
             }
             if (resume && assignment && (JSON.stringify(assignment.plannedPaths) !== JSON.stringify(obligationEffectiveBinding.execution.plannedPaths)
-                || JSON.stringify(assignment.exclusiveResources) !== JSON.stringify(binding.exclusiveResources))) {
+                || JSON.stringify(assignment.exclusiveResources) !== JSON.stringify(binding.exclusiveResources)
+                || (assignment.lease ? !(0, node_util_1.isDeepStrictEqual)(assignment.lease.binding, obligationEffectiveBinding)
+                    || !(0, node_util_1.isDeepStrictEqual)(assignment.binding, binding) : obligationEffectiveBinding.revisionId !== null))) {
                 blocked.push({ obligationId: obligation.id, reason: 'scope_changed', prerequisites: [] });
                 continue;
             }

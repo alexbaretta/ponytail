@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "scopeId": "2026-10-10-rolling-obligation-campaigns",
+  "revisions": [
+    {
+      "id": "BIND-1",
+      "obligationId": "OBL-110",
+      "predecessorId": null,
+      "baselineId": "BASELINE-12",
+      "assessor": "coordinator",
+      "authority": [
+        "user-goal-2026-10-10-rolling-campaigns",
+        "user-goal-2026-10-10-static-language-existing-tsts",
+        "user-2026-10-10-normative-atomic-obligations"
+      ],
+      "reason": "Real PostgreSQL registration proved existing V1-only configuration and scope constraints reject the V2 records. Include the owning idempotent schema adapter in the same atomic store allocation repair.",
+      "dependsOn": [
+        "OBL-109"
+      ],
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "src/rolling-campaign-store.ts",
+          "src/rolling-campaign-store.js",
+          "src/rolling-campaign.ts",
+          "src/rolling-campaign.js",
+          "tests/rolling-campaign-store.test.ts",
+          "tests/rolling-campaign-store.integration.test.ts",
+          "versioned-data-contracts.json",
+          "pm/requirements/traceability.generated.md",
+          "scripts/project-index.sql"
+        ],
+        "operations": [
+          "edit",
+          "build",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "stored frozen lease allocation and retained-owner adoption"
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "stored-frozen-leases"
+        }
+      }
+    }
+  ]
+}

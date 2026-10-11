@@ -255,3 +255,9 @@ frozen lease and acceptance integration must precede typed fixture edit leases.
 ## Frozen lease contract prerequisite
 
 <a id="obl-109"></a>[OBL-109](obligations.json) owns portable lease issuance and operation enforcement as one independently verifiable contract boundary. BASELINE-11 freezes its paths before edits. This component is needed to finish the started fixture migrations; it does not substitute for live database allocation, worker delivery or candidate acceptance integration.
+
+## Stored lease integration prerequisite
+
+<a id="obl-110"></a>[OBL-110](obligations.json) owns PostgreSQL allocation and retained-owner adoption of frozen leases. BASELINE-12 freezes its paths before edits. Store only campaign execution configuration and frozen assignment state; coordinator files remain the authoritative graph. Preserve V1 physical readers and introduce V2 only for explicitly adopted binding-aware campaigns. Application worker delivery and candidate acceptance remain necessary integration work.
+
+OBL-110 scope amendment BIND-1 includes `scripts/project-index.sql` after the real PostgreSQL check proved the existing version constraints reject V2. The coordinator history is explicitly `binding-history.json`; its validated current projection owns this amended boundary while the historical obligation record is unchanged. The coordinator performs this bounded in-scope repair; no worker assignment through the unfinished application workflow is issued.

@@ -260,9 +260,14 @@ CREATE TABLE IF NOT EXISTS rolling_campaign_v1 (
   document_path text NOT NULL,
   bindings_path text NOT NULL,
   graph_digest text NOT NULL CHECK (graph_digest ~ '^[0-9a-f]{64}$'),
-  configuration_text text NOT NULL CHECK ((configuration_text::jsonb)->>'schemaVersion' = '1'),
+  configuration_text text NOT NULL,
   PRIMARY KEY (project_id, campaign_id)
 );
+ALTER TABLE rolling_campaign_v1
+  DROP CONSTRAINT IF EXISTS rolling_campaign_v1_configuration_text_check,
+  ADD CONSTRAINT rolling_campaign_v1_configuration_text_check
+  CHECK (COALESCE(jsonb_typeof((configuration_text::jsonb)->'schemaVersion') = 'number'
+    AND (configuration_text::jsonb)->>'schemaVersion' IN ('1','2'), false));
 
 CREATE TABLE IF NOT EXISTS rolling_worktree_v1 (
   project_id uuid NOT NULL REFERENCES rolling_pool_v1(project_id) ON DELETE CASCADE,
@@ -286,13 +291,18 @@ CREATE TABLE IF NOT EXISTS rolling_assignment_v1 (
   session_id text,
   activity_stopped boolean NOT NULL DEFAULT false,
   retired boolean NOT NULL DEFAULT false,
-  scope_text text NOT NULL CHECK ((scope_text::jsonb)->>'schemaVersion' = '1'),
+  scope_text text NOT NULL,
   blockers_text text NOT NULL DEFAULT '[]' CHECK (jsonb_typeof(blockers_text::jsonb)='array'),
   created_at timestamptz NOT NULL DEFAULT now(),
   FOREIGN KEY (project_id,campaign_id) REFERENCES rolling_campaign_v1(project_id,campaign_id) ON DELETE CASCADE,
   FOREIGN KEY (project_id,worktree_number) REFERENCES rolling_worktree_v1(project_id,number) ON DELETE CASCADE,
   CHECK (state <> 'INACTIVE' OR activity_stopped)
 );
+ALTER TABLE rolling_assignment_v1
+  DROP CONSTRAINT IF EXISTS rolling_assignment_v1_scope_text_check,
+  ADD CONSTRAINT rolling_assignment_v1_scope_text_check
+  CHECK (COALESCE(jsonb_typeof((scope_text::jsonb)->'schemaVersion') = 'number'
+    AND (scope_text::jsonb)->>'schemaVersion' IN ('1','2'), false));
 CREATE UNIQUE INDEX IF NOT EXISTS rolling_assignment_v1_obligation_owner
 ON rolling_assignment_v1 (project_id,campaign_id,obligation_id) WHERE state <> 'RELEASED';
 CREATE UNIQUE INDEX IF NOT EXISTS rolling_assignment_v1_worktree_owner

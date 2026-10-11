@@ -12,6 +12,7 @@ import { databaseOptions } from '../src/project-index-database.js';
 import { collectRollingGraph, type RollingProjectConfigV1, type RollingBindingsV1, type RollingBinding, type RollingGraph } from '../src/rolling-campaign.js';
 import { RollingCampaignStore, type RollingCampaignRegistration, type RollingAllocationResult, type RollingStoredAssignment, type RollingCampaignStatus } from '../src/rolling-campaign-store.js';
 import { inputDigest, parseObligationDocument, type ObligationDocumentV1, type ObligationBaseline, type Obligation, type ObligationCertificate, type ObligationCheckpoint } from '../skills/plan-execution/scripts/obligations.js';
+import type { ObligationBindingHistoryV1, ObligationBindingRevisionV1 } from '../skills/plan-execution/scripts/obligation-binding-history.js';
 
 // Traceability: verifies REQ-ROLLING-STATE
 // Traceability: verifies REQ-ROLLING-SCHEDULING
@@ -143,4 +144,84 @@ test('real PostgreSQL serializes allocation, retains suspended ownership and rel
   await rollingCampaignStore.acknowledgeAction('fixture', reactivatedRollingAllocationResult.actionId, reactivatedRollingAllocationResult.assignment.generation, 'COMPLETED', 'fixture resume acknowledgment');
   await assert.rejects(rollingCampaignStore.attachSession('fixture', firstRollingStoredAssignment.id, reactivatedRollingAllocationResult.assignment.generation, 'other-session'), /original session/);
   await rollingCampaignStore.attachSession('fixture', firstRollingStoredAssignment.id, reactivatedRollingAllocationResult.assignment.generation, 'fixture-session');
+  assert.equal((await rollingCampaignStore.status('fixture')).assignments.find(item => item.id === firstRollingStoredAssignment.id)?.lease, null);
+
+  // Traceability: verifies REQ-ROLLING-GRAPH
+  // Explicit V2 adoption shares this isolated project pool with the retained V1 owner.
+  const boundObligationDocumentV1: ObligationDocumentV1 = { ...obligationDocumentV1, scopeId: 'bound-fixture' };
+  fs.writeFileSync(path.join(root, 'bound-obligations.json'), JSON.stringify(boundObligationDocumentV1));
+  const boundRollingBindingsV1: RollingBindingsV1 = { schemaVersion: 1, bindings: [firstRollingBinding] };
+  fs.writeFileSync(path.join(root, 'bound-bindings.json'), JSON.stringify(boundRollingBindingsV1));
+  const firstObligationBindingRevisionV1: ObligationBindingRevisionV1 = { id: 'BIND-1', obligationId: firstRollingBinding.obligationId,
+    predecessorId: null, baselineId: fixtureObligationBaseline.id, assessor: 'coordinator', authority: fixtureObligationBaseline.authority.references,
+    reason: 'Bound fixture implementation', dependsOn: [], execution: { sprintId: null, taskletIds: [], plannedPaths: ['fixture/current.ts'],
+      operations: ['edit', 'test'], selection: ['focused fixture proof'], target: { identity: 'local', profile: 'fixture' } } };
+  const firstObligationBindingHistoryV1: ObligationBindingHistoryV1 = { schemaVersion: 1, scopeId: 'bound-fixture', revisions: [firstObligationBindingRevisionV1] };
+  fs.writeFileSync(path.join(root, 'history.json'), JSON.stringify(firstObligationBindingHistoryV1));
+  const boundRollingGraph = collectRollingGraph(root, 'bound-obligations.json', 'bound-bindings.json', 'history.json');
+  const boundRollingCampaignRegistration: RollingCampaignRegistration = { ...rollingCampaignRegistration, id: 'bound-fixture',
+    documentPath: 'bound-obligations.json', bindingsPath: 'bound-bindings.json', graphDigest: boundRollingGraph.digest,
+    configuration: { ...rollingCampaignRegistration.configuration, incrementRef: 'campaign/bound-fixture', maxActiveWorkers: 4 },
+    bindingHistory: { path: 'history.json', assessor: 'coordinator', authority: fixtureObligationBaseline.authority.references } };
+  await rollingCampaignStore.registerCampaign(boundRollingCampaignRegistration);
+  const boundAllocations: readonly RollingAllocationResult[] = await Promise.all(Array.from({ length: 4 }, () => rollingCampaignStore.allocate('bound-fixture', boundRollingGraph.digest)));
+  assert.equal(boundAllocations.filter(item => item.assignment !== null).length, 1);
+  const boundRollingAllocationResult = boundAllocations.find(item => item.assignment !== null);
+  assert.ok(boundRollingAllocationResult?.assignment?.lease && boundRollingAllocationResult.actionId && boundRollingAllocationResult.worktree);
+  const boundRollingStoredAssignment = boundRollingAllocationResult.assignment;
+  assert.equal(boundRollingStoredAssignment.lease?.binding.revisionId, 'BIND-1');
+  assert.equal(boundRollingStoredAssignment.lease?.graphDigest, boundRollingGraph.digest);
+  assert.deepEqual(boundRollingStoredAssignment.plannedPaths, ['fixture/current.ts']);
+  const frozen = JSON.stringify(boundRollingStoredAssignment.lease);
+  await rollingCampaignStore.acknowledgeAction('bound-fixture', boundRollingAllocationResult.actionId, boundRollingStoredAssignment.generation, 'STARTED');
+  await assert.rejects(rollingCampaignStore.retire('bound-fixture', boundRollingStoredAssignment.id, boundRollingStoredAssignment.generation, true), /outcome must be reconciled/);
+  await rollingCampaignStore.acknowledgeAction('bound-fixture', boundRollingAllocationResult.actionId, boundRollingStoredAssignment.generation, 'COMPLETED', 'bound start acknowledgment');
+  await rollingCampaignStore.attachSession('bound-fixture', boundRollingStoredAssignment.id, boundRollingStoredAssignment.generation, 'bound-session');
+  await rollingCampaignStore.assertOperation('bound-fixture', boundRollingStoredAssignment.id, boundRollingStoredAssignment.generation, boundRollingGraph.digest, 'edit', ['fixture/current.ts']);
+  await assert.rejects(rollingCampaignStore.assertOperation('bound-fixture', boundRollingStoredAssignment.id, boundRollingStoredAssignment.generation, boundRollingGraph.digest, 'edit', ['fixture/foreign.ts']), /outside frozen lease/);
+  const nextObligationBindingRevisionV1: ObligationBindingRevisionV1 = { ...firstObligationBindingRevisionV1, id: 'BIND-2', predecessorId: 'BIND-1',
+    reason: 'Revised operations with identical paths', execution: { ...firstObligationBindingRevisionV1.execution, operations: ['test'] } };
+  const nextObligationBindingHistoryV1: ObligationBindingHistoryV1 = { ...firstObligationBindingHistoryV1,
+    revisions: [...firstObligationBindingHistoryV1.revisions, nextObligationBindingRevisionV1] };
+  fs.writeFileSync(path.join(root, 'history.json'), JSON.stringify(nextObligationBindingHistoryV1));
+  const nextRollingGraph = collectRollingGraph(root, 'bound-obligations.json', 'bound-bindings.json', 'history.json');
+  await assert.rejects(rollingCampaignStore.assertOperation('bound-fixture', boundRollingStoredAssignment.id, boundRollingStoredAssignment.generation, boundRollingGraph.digest, 'test'), /stale coordinator graph/);
+  await rollingCampaignStore.reconcileGraph('bound-fixture', boundRollingGraph.digest, nextRollingGraph.digest);
+  assert.equal(JSON.stringify((await rollingCampaignStore.status('bound-fixture')).assignments[0]?.lease), frozen);
+  await assert.rejects(rollingCampaignStore.assertOperation('bound-fixture', boundRollingStoredAssignment.id, boundRollingStoredAssignment.generation, nextRollingGraph.digest, 'test'), /frozen binding differs/);
+  await assert.rejects(rollingCampaignStore.rebindLease('bound-fixture', boundRollingStoredAssignment.id, boundRollingStoredAssignment.generation, nextRollingGraph.digest), /stopped retained owner/);
+  await assert.rejects(rollingCampaignStore.suspend('bound-fixture', boundRollingStoredAssignment.id, boundRollingStoredAssignment.generation, false, ['OBL-1']), /stopped acknowledgment/);
+  await rollingCampaignStore.suspend('bound-fixture', boundRollingStoredAssignment.id, boundRollingStoredAssignment.generation, true, ['OBL-1']);
+  const blockedRollingAllocationResult = await rollingCampaignStore.allocate('bound-fixture', nextRollingGraph.digest);
+  assert.equal(blockedRollingAllocationResult.assignment, null);
+  assert.ok(blockedRollingAllocationResult.blocked?.some(item => item.reason === 'scope_changed'));
+  const rollingLeaseRenewal = await rollingCampaignStore.rebindLease('bound-fixture', boundRollingStoredAssignment.id, boundRollingStoredAssignment.generation, nextRollingGraph.digest);
+  assert.notEqual(rollingLeaseRenewal.generation, boundRollingStoredAssignment.generation);
+  assert.equal(rollingLeaseRenewal.lease.binding.revisionId, 'BIND-2');
+  await assert.rejects(rollingCampaignStore.rebindLease('bound-fixture', boundRollingStoredAssignment.id, boundRollingStoredAssignment.generation, nextRollingGraph.digest), /lease generation/);
+  const resumedBoundRollingAllocationResult = await rollingCampaignStore.allocate('bound-fixture', nextRollingGraph.digest);
+  assert.ok(resumedBoundRollingAllocationResult.assignment?.lease && resumedBoundRollingAllocationResult.actionId && resumedBoundRollingAllocationResult.worktree);
+  assert.equal(resumedBoundRollingAllocationResult.assignment.id, boundRollingStoredAssignment.id);
+  assert.equal(resumedBoundRollingAllocationResult.assignment.sessionId, 'bound-session');
+  assert.equal(resumedBoundRollingAllocationResult.worktree.number, boundRollingAllocationResult.worktree.number);
+  assert.notEqual(resumedBoundRollingAllocationResult.assignment.generation, rollingLeaseRenewal.generation);
+  assert.equal(resumedBoundRollingAllocationResult.assignment.lease.generation, resumedBoundRollingAllocationResult.assignment.generation);
+  await rollingCampaignStore.acknowledgeAction('bound-fixture', resumedBoundRollingAllocationResult.actionId, resumedBoundRollingAllocationResult.assignment.generation, 'STARTED');
+  await rollingCampaignStore.acknowledgeAction('bound-fixture', resumedBoundRollingAllocationResult.actionId, resumedBoundRollingAllocationResult.assignment.generation, 'COMPLETED', 'bound resume acknowledgment');
+  await assert.rejects(rollingCampaignStore.attachSession('bound-fixture', boundRollingStoredAssignment.id, resumedBoundRollingAllocationResult.assignment.generation, 'new-session'), /original session/);
+  await rollingCampaignStore.attachSession('bound-fixture', boundRollingStoredAssignment.id, resumedBoundRollingAllocationResult.assignment.generation, 'bound-session');
+  await rollingCampaignStore.assertOperation('bound-fixture', boundRollingStoredAssignment.id, resumedBoundRollingAllocationResult.assignment.generation, nextRollingGraph.digest, 'test');
+  await assert.rejects(rollingCampaignStore.assertOperation('bound-fixture', boundRollingStoredAssignment.id, resumedBoundRollingAllocationResult.assignment.generation, nextRollingGraph.digest, 'edit', ['fixture/current.ts']), /operation outside/);
+  for (const malformed of ['{"schemaVersion":3}', '{"schemaVersion":"2"}', '{"schemaVersion":null}', '{}']) {
+    await assert.rejects(pool.query('UPDATE ponytail_index.rolling_campaign_v1 SET configuration_text=$3 WHERE project_id=$1 AND campaign_id=$2',
+      [projectId, 'bound-fixture', malformed]), /configuration_text_check/);
+    await assert.rejects(pool.query('UPDATE ponytail_index.rolling_assignment_v1 SET scope_text=$3 WHERE project_id=$1 AND assignment_id=$2',
+      [projectId, boundRollingStoredAssignment.id, malformed]), /scope_text_check/);
+  }
+  assert.equal((await rollingCampaignStore.status('bound-fixture')).assignments[0]?.lease?.binding.revisionId, 'BIND-2');
+  execFileSync('git', ['-C', root, '-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.test', 'commit', '-q', '--allow-empty', '-m', 'unrelated graph input']);
+  const unrelatedRollingGraph = collectRollingGraph(root, 'bound-obligations.json', 'bound-bindings.json', 'history.json');
+  await rollingCampaignStore.reconcileGraph('bound-fixture', nextRollingGraph.digest, unrelatedRollingGraph.digest);
+  await rollingCampaignStore.assertOperation('bound-fixture', boundRollingStoredAssignment.id, resumedBoundRollingAllocationResult.assignment.generation, nextRollingGraph.digest, 'test');
+  await assert.rejects(rollingCampaignStore.assertOperation('bound-fixture', boundRollingStoredAssignment.id, resumedBoundRollingAllocationResult.assignment.generation, unrelatedRollingGraph.digest, 'test'), /wrong frozen graph identity/);
 });

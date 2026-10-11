@@ -5,9 +5,10 @@ import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import { isDeepStrictEqual } from 'node:util';
 import { parseObligationDocument, projectObligationScope, inputDigest,
   type ObligationDocumentV1, type ObligationProjection } from '../skills/plan-execution/scripts/obligations.js';
-import { parseObligationBindingHistory, type ObligationBindingHistoryV1, type ObligationEffectiveBinding } from '../skills/plan-execution/scripts/obligation-binding-history.js';
+import { parseObligationBindingHistory, type ObligationBindingHistoryV1, type ObligationEffectiveBinding, type ObligationLeaseV1 } from '../skills/plan-execution/scripts/obligation-binding-history.js';
 
 export type RollingArgv = readonly [string, ...string[]];
 export interface RollingMainline { readonly remote: string; readonly branch: string }
@@ -64,6 +65,8 @@ export interface RollingAssignment extends RollingOccupiedScope {
   readonly state: RollingAssignmentState;
   readonly blockers: readonly string[];
   readonly activityStopped: boolean;
+  readonly lease?: ObligationLeaseV1 | null;
+  readonly binding?: RollingBinding;
 }
 export interface RollingWorkerScope {
   readonly obligationId: string;
@@ -285,7 +288,9 @@ export function selectRollingAssignments(rollingGraph: RollingGraph, assignments
       continue;
     }
     if (resume && assignment && (JSON.stringify(assignment.plannedPaths) !== JSON.stringify(obligationEffectiveBinding.execution.plannedPaths)
-      || JSON.stringify(assignment.exclusiveResources) !== JSON.stringify(binding.exclusiveResources))) {
+      || JSON.stringify(assignment.exclusiveResources) !== JSON.stringify(binding.exclusiveResources)
+      || (assignment.lease ? !isDeepStrictEqual(assignment.lease.binding, obligationEffectiveBinding)
+        || !isDeepStrictEqual(assignment.binding, binding) : obligationEffectiveBinding.revisionId !== null))) {
       blocked.push({ obligationId: obligation.id, reason: 'scope_changed', prerequisites: [] });
       continue;
     }

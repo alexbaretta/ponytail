@@ -4,6 +4,10 @@ import crypto from 'node:crypto';
 import path from 'node:path';
 import { parse } from 'lossless-json';
 import type { Pool, PoolClient } from 'pg';
+import { isDeepStrictEqual } from 'node:util';
+import { readObligationLeaseV1, freezeObligationLease, assertObligationLeaseOperation,
+  type ObligationLeaseV1 } from '../skills/plan-execution/scripts/obligation-binding-history.js';
+import { relativePath } from '../skills/plan-execution/scripts/obligations.js';
 import { collectRollingGraph, selectRollingAssignments, resolveRollingConfiguration, readRollingResolvedConfiguration, readRollingBindingsV1,
   type RollingAssignment, type RollingAssignmentState, type RollingBinding, type RollingCampaignRequest,
   type RollingGraph, type RollingResolvedConfiguration, type RollingSchedulingBlock } from './rolling-campaign.js';
@@ -15,12 +19,32 @@ export interface RollingAssignmentScopeV1 {
   readonly binding: RollingBinding;
 }
 export interface RollingExecutionConfigV1 extends RollingResolvedConfiguration { readonly schemaVersion: 1 }
+export interface RollingBindingHistoryConfiguration {
+  readonly path: string;
+  readonly assessor: string;
+  readonly authority: readonly string[];
+}
+export interface RollingExecutionConfigV2 extends RollingResolvedConfiguration {
+  readonly schemaVersion: 2;
+  readonly bindingHistory: RollingBindingHistoryConfiguration;
+}
+// Discriminator: schemaVersion
+export type RollingExecutionConfig = RollingExecutionConfigV1 | RollingExecutionConfigV2;
+export interface RollingAssignmentScopeV2 {
+  readonly schemaVersion: 2;
+  readonly lease: ObligationLeaseV1;
+  readonly exclusiveResources: readonly string[];
+  readonly binding: RollingBinding;
+}
+// Discriminator: schemaVersion
+export type RollingAssignmentScope = RollingAssignmentScopeV1 | RollingAssignmentScopeV2;
 export interface RollingStoredAssignment extends RollingAssignment {
   readonly generation: string;
   readonly sessionId: string | null;
   readonly retired: boolean;
   readonly worktreeNumber: number;
   readonly binding: RollingBinding;
+  readonly lease: ObligationLeaseV1 | null;
 }
 interface RollingPoolRow { readonly managed_directory: string }
 interface RollingCampaignRow {
@@ -39,10 +63,12 @@ export interface RollingCampaignRegistration {
   readonly graphDigest: string;
   readonly managedDirectory: string;
   readonly configuration: RollingCampaignRequest;
+  readonly bindingHistory?: RollingBindingHistoryConfiguration;
 }
 export interface RollingCampaignRegistrationResult { readonly id: string; readonly graphDigest: string }
 export interface RollingGraphReconciliation { readonly graphDigest: string }
 export interface RollingAssignmentTransition { readonly id: string; readonly state: RollingAssignmentState }
+export interface RollingLeaseRenewal { readonly id: string; readonly generation: string; readonly lease: ObligationLeaseV1 }
 export interface RollingSessionAttachment { readonly id: string; readonly sessionId: string; readonly state: 'WORKING' }
 export interface RollingAssignmentRelease { readonly id: string; readonly generation: string }
 export interface RollingAllocatedWorktree { readonly number: number; readonly rootPath: string }
@@ -81,20 +107,25 @@ function readStateText(text: string): unknown {
   });
   return value;
 }
-function requireKeys(value: unknown, keys: readonly string[]): asserts value is Record<string, unknown> {
+function requireKeys(value: unknown, keys: readonly string[], schemaVersion: 1 | 2 = 1): asserts value is Record<string, unknown> {
   requireState(isRecord(value) && JSON.stringify(Object.keys(value).sort()) === JSON.stringify([...keys].sort()), 'invalid stored contract fields');
-  requireState(value.schemaVersion === 1, 'unsupported stored contract version');
+  requireState(value.schemaVersion === schemaVersion, 'unsupported stored contract version');
 }
 function isStringArray(value: unknown): value is readonly string[] { return Array.isArray(value) && value.every((item: unknown) => typeof item === 'string' && item.length > 0); }
-function isRollingAssignmentScopeV1(value: unknown): value is RollingAssignmentScopeV1 {
-  requireKeys(value, ['schemaVersion', 'plannedPaths', 'exclusiveResources', 'binding']);
-  const rollingBindingsV1 = readRollingBindingsV1({ schemaVersion: 1, bindings: [value.binding] });
+function storedBinding(value: unknown, exclusiveResources: unknown): RollingBinding {
+  const rollingBindingsV1 = readRollingBindingsV1({ schemaVersion: 1, bindings: [value] });
   const rollingBinding = rollingBindingsV1.bindings[0];
   requireState(rollingBinding, 'stored binding is missing');
+  requireState(isStringArray(exclusiveResources) && new Set(exclusiveResources).size === exclusiveResources.length, 'invalid stored exclusiveResources');
+  requireState(JSON.stringify(exclusiveResources) === JSON.stringify(rollingBinding.exclusiveResources), 'stored scope and binding resources differ');
+  return rollingBinding;
+}
+function isRollingAssignmentScopeV1(value: unknown): value is RollingAssignmentScopeV1 {
+  requireKeys(value, ['schemaVersion', 'plannedPaths', 'exclusiveResources', 'binding']);
+  storedBinding(value.binding, value.exclusiveResources);
   requireState(isStringArray(value.plannedPaths) && new Set(value.plannedPaths).size === value.plannedPaths.length, 'invalid stored plannedPaths');
-  requireState(isStringArray(value.exclusiveResources) && new Set(value.exclusiveResources).size === value.exclusiveResources.length, 'invalid stored exclusiveResources');
   requireState(value.plannedPaths.every(item => !path.isAbsolute(item) && !item.includes('\\') && item.split('/').every(part => part !== '' && part !== '.' && part !== '..')), 'invalid stored planned path');
-  requireState(JSON.stringify(value.exclusiveResources) === JSON.stringify(rollingBinding.exclusiveResources), 'stored scope and binding resources differ'); return true;
+  return true;
 }
 // Traceability: implements REQ-ROLLING-STATE
 export function readRollingAssignmentScopeV1(value: unknown): RollingAssignmentScopeV1 {
@@ -109,8 +140,48 @@ function isRollingExecutionConfigV1(value: unknown): value is RollingExecutionCo
 export function readRollingExecutionConfigV1(value: unknown): RollingExecutionConfigV1 {
   requireState(isRollingExecutionConfigV1(value), 'invalid stored execution configuration'); return value;
 }
-export const RollingAssignmentScopeReaders = { V1: readRollingAssignmentScopeV1 };
-export const RollingExecutionConfigReaders = { V1: readRollingExecutionConfigV1 };
+// Traceability: implements REQ-ROLLING-STATE
+export function readRollingAssignmentScopeV2(value: unknown): RollingAssignmentScopeV2 {
+  requireKeys(value, ['schemaVersion', 'lease', 'exclusiveResources', 'binding'], 2);
+  const obligationLeaseV1 = readObligationLeaseV1(value.lease);
+  const rollingBinding = storedBinding(value.binding, value.exclusiveResources);
+  requireState(rollingBinding.obligationId === obligationLeaseV1.binding.obligationId, 'stored lease and binding obligation differ');
+  return { schemaVersion: 2, lease: obligationLeaseV1, binding: rollingBinding, exclusiveResources: rollingBinding.exclusiveResources };
+}
+// Traceability: implements REQ-ROLLING-STATE
+export function readRollingExecutionConfigV2(value: unknown): RollingExecutionConfigV2 {
+  requireKeys(value, ['schemaVersion', 'mainline', 'incrementRef', 'maxActiveWorkers', 'publicationSize', 'bindingHistory'], 2);
+  requireState(isRecord(value.bindingHistory)
+    && JSON.stringify(Object.keys(value.bindingHistory).sort()) === JSON.stringify(['assessor', 'authority', 'path']), 'invalid binding history configuration');
+  relativePath(value.bindingHistory.path);
+  const assessor = stringColumn(value.bindingHistory.assessor, 'binding assessor');
+  requireState(isStringArray(value.bindingHistory.authority) && value.bindingHistory.authority.length > 0
+    && new Set(value.bindingHistory.authority).size === value.bindingHistory.authority.length, 'invalid binding authority');
+  const rollingResolvedConfiguration = readRollingResolvedConfiguration({ mainline: value.mainline, incrementRef: value.incrementRef,
+    maxActiveWorkers: value.maxActiveWorkers, publicationSize: value.publicationSize });
+  return { schemaVersion: 2, ...rollingResolvedConfiguration,
+    bindingHistory: { path: value.bindingHistory.path, assessor, authority: [...value.bindingHistory.authority] } };
+}
+export const RollingAssignmentScopeReaders = { V1: readRollingAssignmentScopeV1, V2: readRollingAssignmentScopeV2 };
+export const RollingExecutionConfigReaders = { V1: readRollingExecutionConfigV1, V2: readRollingExecutionConfigV2 };
+function executionConfiguration(text: string): RollingExecutionConfig {
+  const value = readStateText(text);
+  requireState(isRecord(value), 'invalid execution configuration');
+  switch (value.schemaVersion) {
+    case 1: return readRollingExecutionConfigV1(value);
+    case 2: return readRollingExecutionConfigV2(value);
+    default: throw new Error('rolling campaign: unsupported stored execution configuration');
+  }
+}
+function assignmentScope(text: string): RollingAssignmentScope {
+  const value = readStateText(text);
+  requireState(isRecord(value), 'invalid assignment scope');
+  switch (value.schemaVersion) {
+    case 1: return readRollingAssignmentScopeV1(value);
+    case 2: return readRollingAssignmentScopeV2(value);
+    default: throw new Error('rolling campaign: unsupported stored assignment scope');
+  }
+}
 
 function stringColumn(value: unknown, label: string): string {
   requireState(typeof value === 'string' && value.length > 0, `invalid database ${label}`); return value;
@@ -139,13 +210,17 @@ function readCampaign(value: unknown): RollingCampaignRow {
 }
 function readAssignment(value: unknown): RollingStoredAssignment {
   requireState(isRecord(value), 'assignment row is missing');
-  const rollingAssignmentScopeV1 = readRollingAssignmentScopeV1(readStateText(stringColumn(value.scope_text, 'scope text')));
+  const rollingAssignmentScope = assignmentScope(stringColumn(value.scope_text, 'scope text'));
+  const obligationLeaseV1 = rollingAssignmentScope.schemaVersion === 2 ? rollingAssignmentScope.lease : null;
+  requireState(obligationLeaseV1 === null || obligationLeaseV1.generation === value.generation
+    && obligationLeaseV1.scopeId === value.campaign_id && obligationLeaseV1.binding.obligationId === value.obligation_id, 'stored lease identity differs from assignment');
   const blockers = readStateText(stringColumn(value.blockers_text, 'blockers text'));
   requireState(isStringArray(blockers) && blockers.every(item => /^OBL-[1-9][0-9]*$/.test(item)), 'invalid stored blockers');
   return { id: stringColumn(value.assignment_id, 'assignment ID'), scopeId: stringColumn(value.campaign_id, 'campaign ID'), obligationId: stringColumn(value.obligation_id, 'obligation ID'),
     generation: stringColumn(value.generation, 'generation'), state: assignmentState(value.state), sessionId: nullableStringColumn(value.session_id, 'session ID'),
     activityStopped: booleanColumn(value.activity_stopped, 'activity stopped'), retired: booleanColumn(value.retired, 'retired'), worktreeNumber: worktreeNumber(value.worktree_number),
-    plannedPaths: rollingAssignmentScopeV1.plannedPaths, exclusiveResources: rollingAssignmentScopeV1.exclusiveResources, binding: rollingAssignmentScopeV1.binding, blockers };
+    plannedPaths: rollingAssignmentScope.schemaVersion === 1 ? rollingAssignmentScope.plannedPaths : rollingAssignmentScope.lease.binding.execution.plannedPaths,
+    exclusiveResources: rollingAssignmentScope.exclusiveResources, binding: rollingAssignmentScope.binding, lease: obligationLeaseV1, blockers };
 }
 function readWorktree(value: unknown): RollingStoredWorktree {
   requireState(isRecord(value), 'worktree row is missing');
@@ -186,9 +261,12 @@ export class RollingCampaignStore {
   }
 
   async registerCampaign(request: RollingCampaignRegistration): Promise<RollingCampaignRegistrationResult> {
-    const rollingGraph = collectRollingGraph(request.coordinatorRoot, request.documentPath, request.bindingsPath);
+    const rollingGraph = collectRollingGraph(request.coordinatorRoot, request.documentPath, request.bindingsPath, request.bindingHistory?.path);
     requireState(rollingGraph.digest === request.graphDigest && rollingGraph.document.scopeId === request.id, 'stale or mismatched coordinator graph');
     const rollingResolvedConfiguration = resolveRollingConfiguration(rollingGraph.projectConfiguration, request.configuration, null);
+    const rollingExecutionConfig: RollingExecutionConfig = request.bindingHistory === undefined
+      ? readRollingExecutionConfigV1({ schemaVersion: 1, ...rollingResolvedConfiguration })
+      : readRollingExecutionConfigV2({ schemaVersion: 2, ...rollingResolvedConfiguration, bindingHistory: request.bindingHistory });
     requireState(path.isAbsolute(request.managedDirectory), 'managed directory must be absolute');
     const poolClient = await this.pool.connect();
     try {
@@ -197,15 +275,20 @@ export class RollingCampaignStore {
       const pool = (await poolClient.query<Record<string, unknown>>('SELECT managed_directory FROM ponytail_index.rolling_pool_v1 WHERE project_id=$1 FOR UPDATE', [this.projectId])).rows[0];
       requireState(readPool(pool).managed_directory === request.managedDirectory, 'managed directory differs from project pool');
       await poolClient.query<Record<string, unknown>>('INSERT INTO ponytail_index.rolling_campaign_v1(project_id,campaign_id,coordinator_root,document_path,bindings_path,graph_digest,configuration_text) VALUES($1,$2,$3,$4,$5,$6,$7)',
-        [this.projectId, request.id, rollingGraph.coordinatorRoot, request.documentPath, request.bindingsPath, rollingGraph.digest, JSON.stringify(readRollingExecutionConfigV1({ schemaVersion: 1, ...rollingResolvedConfiguration }))]);
+        [this.projectId, request.id, rollingGraph.coordinatorRoot, request.documentPath, request.bindingsPath, rollingGraph.digest, JSON.stringify(rollingExecutionConfig)]);
       await poolClient.query<Record<string, unknown>>('COMMIT');
       return { id: request.id, graphDigest: rollingGraph.digest };
     } catch (error) { await poolClient.query<Record<string, unknown>>('ROLLBACK'); throw error; }
     finally { poolClient.release(); }
   }
 
+  private collectGraph(rollingCampaignRow: RollingCampaignRow): RollingGraph {
+    const rollingExecutionConfig = executionConfiguration(rollingCampaignRow.configuration_text);
+    return collectRollingGraph(rollingCampaignRow.coordinator_root, rollingCampaignRow.document_path, rollingCampaignRow.bindings_path,
+      rollingExecutionConfig.schemaVersion === 2 ? rollingExecutionConfig.bindingHistory.path : undefined);
+  }
   private graph(rollingCampaignRow: RollingCampaignRow, expectedDigest: string): RollingGraph {
-    const rollingGraph = collectRollingGraph(rollingCampaignRow.coordinator_root, rollingCampaignRow.document_path, rollingCampaignRow.bindings_path);
+    const rollingGraph = this.collectGraph(rollingCampaignRow);
     requireState(rollingGraph.digest === expectedDigest && rollingCampaignRow.graph_digest === expectedDigest, 'stale coordinator graph');
     requireState(rollingGraph.document.scopeId === rollingCampaignRow.campaign_id, 'campaign scope changed');
     return rollingGraph;
@@ -214,7 +297,7 @@ export class RollingCampaignStore {
   async reconcileGraph(campaignId: string, expectedDigest: string, nextDigest: string): Promise<RollingGraphReconciliation> {
     return this.transaction(campaignId, async (poolClient, rollingCampaignRow) => {
       requireState(rollingCampaignRow.graph_digest === expectedDigest, 'stale accepted graph');
-      const rollingGraph = collectRollingGraph(rollingCampaignRow.coordinator_root, rollingCampaignRow.document_path, rollingCampaignRow.bindings_path);
+      const rollingGraph = this.collectGraph(rollingCampaignRow);
       requireState(rollingGraph.digest === nextDigest && rollingGraph.document.scopeId === campaignId, 'stale proposed graph');
       await poolClient.query<Record<string, unknown>>('UPDATE ponytail_index.rolling_campaign_v1 SET graph_digest=$3 WHERE project_id=$1 AND campaign_id=$2', [this.projectId, campaignId, nextDigest]);
       return { graphDigest: nextDigest };
@@ -271,6 +354,57 @@ export class RollingCampaignStore {
     });
   }
 
+  private scope(rollingGraph: RollingGraph, rollingExecutionConfig: RollingExecutionConfig, generation: string,
+    obligationId: string, rollingBinding: RollingBinding, plannedPaths: readonly string[]): RollingAssignmentScope {
+    if (rollingExecutionConfig.schemaVersion === 1) return readRollingAssignmentScopeV1({ schemaVersion: 1,
+      plannedPaths, exclusiveResources: rollingBinding.exclusiveResources, binding: rollingBinding });
+    requireState(rollingGraph.bindingHistory, 'binding-aware campaign has no coordinator history');
+    const obligationLeaseV1 = freezeObligationLease(rollingGraph.document, rollingGraph.bindingHistory, {
+      obligationId, graphDigest: rollingGraph.digest, generation,
+      assessor: rollingExecutionConfig.bindingHistory.assessor, authority: rollingExecutionConfig.bindingHistory.authority });
+    return readRollingAssignmentScopeV2({ schemaVersion: 2, lease: obligationLeaseV1,
+      exclusiveResources: rollingBinding.exclusiveResources, binding: rollingBinding });
+  }
+
+  // Traceability: implements REQ-ROLLING-STATE
+  // Traceability: implements REQ-ROLLING-GRAPH
+  async assertOperation(campaignId: string, id: string, generation: string, graphDigest: string,
+    operation: string, changedPaths: readonly string[] = []): Promise<void> {
+    return this.transaction(campaignId, async (poolClient, rollingCampaignRow) => {
+      const rollingGraph = this.graph(rollingCampaignRow, rollingCampaignRow.graph_digest);
+      const rollingStoredAssignment = await this.assignment(poolClient, campaignId, id, generation);
+      requireState(rollingStoredAssignment.state === 'WORKING' && rollingStoredAssignment.sessionId
+        && !rollingStoredAssignment.activityStopped && rollingStoredAssignment.lease, 'operation requires an active frozen lease');
+      requireState(isDeepStrictEqual(rollingStoredAssignment.lease.binding, rollingGraph.effectiveBindings.get(rollingStoredAssignment.obligationId))
+        && isDeepStrictEqual(rollingStoredAssignment.binding, rollingGraph.bindings.find(item => item.obligationId === rollingStoredAssignment.obligationId)), 'frozen binding differs from coordinator scope');
+      requireState(rollingStoredAssignment.lease.binding.dependsOn.every(dependency => rollingGraph.projection.satisfiedIds.includes(dependency)),
+        'frozen prerequisites are unresolved');
+      assertObligationLeaseOperation(rollingStoredAssignment.lease, generation, graphDigest, operation, changedPaths);
+    });
+  }
+
+  // Traceability: implements REQ-ROLLING-STATE
+  // Traceability: implements REQ-ROLLING-SCHEDULING
+  async rebindLease(campaignId: string, id: string, generation: string, graphDigest: string): Promise<RollingLeaseRenewal> {
+    return this.transaction(campaignId, async (poolClient, rollingCampaignRow) => {
+      const rollingGraph = this.graph(rollingCampaignRow, graphDigest);
+      const rollingStoredAssignment = await this.assignment(poolClient, campaignId, id, generation);
+      requireState(rollingStoredAssignment.state === 'INACTIVE' && rollingStoredAssignment.activityStopped
+        && !rollingStoredAssignment.retired && rollingStoredAssignment.sessionId && rollingStoredAssignment.lease,
+      'lease rebinding requires a stopped retained owner');
+      await this.cancelActions(poolClient, id);
+      const rollingBinding = rollingGraph.bindings.find(item => item.obligationId === rollingStoredAssignment.obligationId);
+      requireState(rollingBinding, 'current obligation has no traceability binding');
+      const nextGeneration = crypto.randomUUID();
+      const rollingAssignmentScope = this.scope(rollingGraph, executionConfiguration(rollingCampaignRow.configuration_text), nextGeneration,
+        rollingStoredAssignment.obligationId, rollingBinding, rollingStoredAssignment.plannedPaths);
+      requireState(rollingAssignmentScope.schemaVersion === 2, 'legacy assignments cannot adopt amended leases');
+      await poolClient.query<Record<string, unknown>>('UPDATE ponytail_index.rolling_assignment_v1 SET generation=$2,scope_text=$3 WHERE assignment_id=$1',
+        [id, nextGeneration, JSON.stringify(rollingAssignmentScope)]);
+      return { id, generation: nextGeneration, lease: rollingAssignmentScope.lease };
+    });
+  }
+
   async allocate(campaignId: string, expectedDigest: string, release: RollingAssignmentRelease | null = null): Promise<RollingAllocationResult> {
     return this.transaction<RollingAllocationResult>(campaignId, async (poolClient, rollingCampaignRow, rollingPoolRow) => {
       const rollingGraph = this.graph(rollingCampaignRow, expectedDigest);
@@ -282,18 +416,19 @@ export class RollingCampaignStore {
         await poolClient.query<Record<string, unknown>>("UPDATE ponytail_index.rolling_worktree_v1 SET state='AVAILABLE' WHERE project_id=$1 AND number=$2", [this.projectId, row.worktreeNumber]);
       }
       const assignments = (await poolClient.query<Record<string, unknown>>("SELECT * FROM ponytail_index.rolling_assignment_v1 WHERE project_id=$1 AND state<>'RELEASED' ORDER BY created_at,assignment_id", [this.projectId])).rows.map(readAssignment);
-      const rollingExecutionConfigV1 = readRollingExecutionConfigV1(readStateText(rollingCampaignRow.configuration_text));
-      const rollingSchedulingResult = selectRollingAssignments(rollingGraph, assignments, rollingExecutionConfigV1.maxActiveWorkers, expectedDigest);
+      const rollingExecutionConfig = executionConfiguration(rollingCampaignRow.configuration_text);
+      const rollingSchedulingResult = selectRollingAssignments(rollingGraph, assignments, rollingExecutionConfig.maxActiveWorkers, expectedDigest);
       const selected = rollingSchedulingResult.selected[0];
-      if (!selected) return { assignment: null, reason: rollingSchedulingResult.activeCount >= rollingExecutionConfigV1.maxActiveWorkers ? 'capacity_reached' : 'no_ready_obligation', blocked: rollingSchedulingResult.blocked };
+      if (!selected) return { assignment: null, reason: rollingSchedulingResult.activeCount >= rollingExecutionConfig.maxActiveWorkers ? 'capacity_reached' : 'no_ready_obligation', blocked: rollingSchedulingResult.blocked };
       const generation = crypto.randomUUID();
+      const rollingAssignmentScope = this.scope(rollingGraph, rollingExecutionConfig, generation, selected.obligationId, selected.binding, selected.plannedPaths);
       let id = selected.assignmentId;
       let worktree: RollingStoredWorktree;
       if (id) {
         const assignment = assignments.find(item => item.id === id);
         requireState(assignment && assignment.sessionId, 'inactive assignment has no resumable session');
         worktree = readWorktree((await poolClient.query<Record<string, unknown>>('SELECT * FROM ponytail_index.rolling_worktree_v1 WHERE project_id=$1 AND number=$2', [this.projectId, assignment.worktreeNumber])).rows[0]);
-        await poolClient.query<Record<string, unknown>>("UPDATE ponytail_index.rolling_assignment_v1 SET generation=$2,state='RESERVED',activity_stopped=false,blockers_text='[]' WHERE assignment_id=$1", [id, generation]);
+        await poolClient.query<Record<string, unknown>>("UPDATE ponytail_index.rolling_assignment_v1 SET generation=$2,state='RESERVED',activity_stopped=false,blockers_text='[]',scope_text=$3 WHERE assignment_id=$1", [id, generation, JSON.stringify(rollingAssignmentScope)]);
       } else {
         const available = (await poolClient.query<Record<string, unknown>>("SELECT * FROM ponytail_index.rolling_worktree_v1 WHERE project_id=$1 AND state='AVAILABLE' ORDER BY number LIMIT 1", [this.projectId])).rows[0];
         if (available) worktree = readWorktree(available);
@@ -307,7 +442,7 @@ export class RollingCampaignStore {
         id = crypto.randomUUID();
         await poolClient.query<Record<string, unknown>>("INSERT INTO ponytail_index.rolling_assignment_v1(project_id,campaign_id,assignment_id,obligation_id,worktree_number,generation,state,scope_text) VALUES($1,$2,$3,$4,$5,$6,'RESERVED',$7)",
           [this.projectId, campaignId, id, selected.obligationId, worktree.number, generation,
-            JSON.stringify(readRollingAssignmentScopeV1({ schemaVersion: 1, plannedPaths: selected.plannedPaths, exclusiveResources: selected.exclusiveResources, binding: selected.binding }))]);
+            JSON.stringify(rollingAssignmentScope)]);
       }
       if (worktree.state !== 'PROVISIONING') await poolClient.query<Record<string, unknown>>("UPDATE ponytail_index.rolling_worktree_v1 SET state='RESERVED' WHERE project_id=$1 AND number=$2", [this.projectId, worktree.number]);
       const actionId = crypto.randomUUID();

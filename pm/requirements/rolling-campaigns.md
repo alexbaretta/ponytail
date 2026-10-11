@@ -119,3 +119,5 @@ Execution binding amendment contribution: [OBL-107](../plans/in_progress/2026-10
 Shared binding-aware selector contribution: [OBL-108](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-108), owned by REQ-ROLLING-GRAPH. Its canonical criterion is in the obligation document.
 
 Frozen execution lease contribution: [OBL-109](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-109), owned by REQ-ROLLING-GRAPH. Its canonical criterion is in the obligation document.
+
+Stored frozen lease contribution: [OBL-110](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-110), owned by REQ-ROLLING-GRAPH, REQ-ROLLING-STATE and REQ-ROLLING-SCHEDULING. Its canonical criterion is in the obligation document.
