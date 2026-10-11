@@ -208,18 +208,21 @@ function targetValue(value: unknown): ObligationTarget {
   exactKeys(value, ['identity', 'profile'], 'execution target');
   return { identity: stringValue(value.identity, 'target identity'), profile: stringValue(value.profile, 'target profile') };
 }
-function executionValue(value: unknown): ObligationExecution {
+export function readObligationExecution(value: unknown): ObligationExecution {
   exactKeys(value, ['sprintId', 'taskletIds', 'plannedPaths', 'operations', 'selection', 'target'], 'execution');
-  return { sprintId: nullableString(value.sprintId, 'execution sprintId'), taskletIds: uniqueStrings(value.taskletIds, 'taskletIds'),
+  const obligationExecution: ObligationExecution = { sprintId: nullableString(value.sprintId, 'execution sprintId'), taskletIds: uniqueStrings(value.taskletIds, 'taskletIds'),
     plannedPaths: uniqueStrings(value.plannedPaths, 'plannedPaths').map(pathValue), operations: uniqueStrings(value.operations, 'operations', true),
     selection: uniqueStrings(value.selection, 'execution selection'), target: value.target === null ? null : targetValue(value.target) };
+  requireCondition(obligationExecution.sprintId === null || /^S[0-9]+$/.test(obligationExecution.sprintId), 'invalid execution sprintId');
+  requireCondition(obligationExecution.taskletIds.every(id => /^S[0-9]+-F[0-9]+-T[0-9]+$/.test(id) && id.startsWith(`${obligationExecution.sprintId}-`)), 'tasklet binding requires its owning sprint');
+  return obligationExecution;
 }
 function obligationValue(value: unknown): Obligation {
   exactKeys(value, ['id', 'category', 'requirementIds', 'responsibilityId', 'condition', 'criterion', 'dependsOn', 'acceptanceGroups', 'supersedes', 'execution'], 'obligation');
   return { id: stringValue(value.id, 'obligation ID'), category: categoryValue(value.category), requirementIds: uniqueStrings(value.requirementIds, 'requirementIds'),
     responsibilityId: stringValue(value.responsibilityId, 'responsibilityId'), condition: stringValue(value.condition, 'condition'),
     criterion: stringValue(value.criterion, 'criterion'), dependsOn: uniqueStrings(value.dependsOn, 'dependsOn'),
-    acceptanceGroups: uniqueStrings(value.acceptanceGroups, 'acceptanceGroups', true), supersedes: nullableString(value.supersedes, 'supersedes'), execution: executionValue(value.execution) };
+    acceptanceGroups: uniqueStrings(value.acceptanceGroups, 'acceptanceGroups', true), supersedes: nullableString(value.supersedes, 'supersedes'), execution: readObligationExecution(value.execution) };
 }
 function baselineValue(value: unknown): ObligationBaseline {
   exactKeys(value, ['id', 'predecessorId', 'authority', 'requirements', 'obligationIds', 'inventoryIds'], 'baseline');
@@ -305,8 +308,6 @@ function isObligationDocumentV1(value: unknown): value is ObligationDocumentV1 {
     previousNumber = number;
     references(obligation.dependsOn, obligationIds, 'dependsOn');
     requireCondition(obligation.supersedes === null || (obligationIds.has(obligation.supersedes) && Number(obligation.supersedes.slice(4)) < number), 'supersedes must reference an earlier obligation');
-    requireCondition(obligation.execution.sprintId === null || /^S[0-9]+$/.test(obligation.execution.sprintId), 'invalid execution sprintId');
-    requireCondition(obligation.execution.taskletIds.every(id => /^S[0-9]+-F[0-9]+-T[0-9]+$/.test(id) && id.startsWith(`${obligation.execution.sprintId}-`)), 'tasklet binding requires its owning sprint');
   }
   const visiting = new Set<string>();
   const visited = new Set<string>();

@@ -7,6 +7,7 @@ import path from 'node:path';
 // Preserve established launch paths with compiler output from canonical TypeScript.
 const root = path.resolve(__dirname, '../..');
 const sources: readonly string[] = [
+  'src/obligation-binding-history.ts',
   'skills/plan-execution/scripts/obligations.ts',
   'src/rolling-campaign.ts',
   'src/rolling-worktrees.ts',

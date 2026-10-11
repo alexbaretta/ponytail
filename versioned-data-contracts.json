@@ -3,6 +3,18 @@
   "schemaVersion": 1,
   "families": [
     {
+      "id": "obligation-binding-history",
+      "implementation": {
+        "workspace": "ponytail",
+        "module": "src/obligation-binding-history.ts",
+        "readerRegistryExport": "ObligationBindingHistoryReaders"
+      },
+      "currentVersion": "V1",
+      "versions": ["V1"],
+      "supportedReadVersions": ["V1"],
+      "supportedDowngradeVersions": []
+    },
+    {
       "id": "rolling-assignment-scope",
       "implementation": {
         "workspace": "ponytail",

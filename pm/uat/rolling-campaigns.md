@@ -129,3 +129,9 @@ criterion in full, adding its necessary assertions before declaring discharge.
 Several Steps may contribute jointly; one passing contribution is not whole
 obligation or requirement acceptance. All runtime acceptance remains pending
 until adequate execution evidence is recorded.
+
+### Acceptance ROLL-BINDING-AMENDMENT
+
+Traceability: verifies REQ-ROLLING-GRAPH
+
+Demonstrates [OBL-107](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-107) through Step ROLL-BINDING-API: exercise the typed amendment boundary and observe its entire canonical criterion, including preserved identities/history and rejected invalid revisions. Selector, live lease and acceptance integration still require their application Arcs.

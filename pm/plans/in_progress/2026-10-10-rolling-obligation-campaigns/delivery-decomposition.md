@@ -230,3 +230,20 @@ not 30 completed deliveries.
 | <a id="obl-104"></a>[OBL-104](obligations.json) | skills/plan-execution/scripts/tasklet-graph.ts | Unassessed; inspection only |
 | <a id="obl-105"></a>[OBL-105](obligations.json) | skills/plan-execution/scripts/ready-tasklets.ts | Unassessed; inspection only |
 | <a id="obl-106"></a>[OBL-106](obligations.json) | skills/plan-execution/scripts/ready-tasklets.ts | Unassessed; inspection only |
+
+## Binding amendment component
+
+<a id="obl-107"></a>[OBL-107](obligations.json) owns the bounded binding-history component outcome. Its exact paths and operations are frozen in BASELINE-9 before source edits. Application selector, lease and acceptance integration remain required under the existing rolling outcomes; this component does not certify them.
+
+CERT-11 assesses the typed reader/amendment/projection component with six typed
+cases and seventeen historical V1 compatibility regressions. See the
+[component proof](evidence/binding-history-component.md). The independent
+physical binding-history V1 contract retains original obligation-document V1
+meanings; no current assignment permission is silently expanded.
+
+CERT-12 [renews the same 29 prior deliveries](evidence/binding-amendment-renewal.md)
+after the required source/configuration and baseline changes. Current compiler
+coverage is 82 canonical TypeScript paths (65 Ponytail, 17 existing TSTS).
+Earlier inspection tables and certificates are historical; use the canonical
+ledger's freshness projection for current satisfaction. Shared selector,
+frozen lease and acceptance integration must precede typed fixture edit leases.

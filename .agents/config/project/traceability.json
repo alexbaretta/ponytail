@@ -1095,6 +1095,16 @@
       "class": "unit-test",
       "path": "tests/campaign-invocation.test.ts",
       "locator": "text"
+    },
+    {
+      "class": "implementation",
+      "path": "src/obligation-binding-history.ts",
+      "locator": "text"
+    },
+    {
+      "class": "unit-test",
+      "path": "tests/obligation-binding-history.test.ts",
+      "locator": "text"
     }
   ],
   "entities": [],
@@ -1310,6 +1320,10 @@
     {
       "path": "src/campaign-invocation.js",
       "sourcePath": "src/campaign-invocation.ts"
+    },
+    {
+      "path": "src/obligation-binding-history.js",
+      "sourcePath": "src/obligation-binding-history.ts"
     }
   ],
   "reverseViewPath": "pm/requirements/traceability.generated.md",

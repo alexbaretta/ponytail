@@ -113,3 +113,5 @@ Replace the obsolete campaign dispatcher. Organize CLI into chapters with root,
 chapter and command usage describing arguments and behavior. Expose the same
 coordination operations through MCP without duplicate policy or scheduling.
 Keep historical inspection available and make live migration explicit.
+
+Execution binding amendment contribution: [OBL-107](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-107), owned by REQ-ROLLING-GRAPH. Canonical conditions and criteria remain in the obligation document.
