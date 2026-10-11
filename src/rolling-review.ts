@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See LICENSE in the project root.
 import { parse } from 'lossless-json';
 import { RollingCodex, type RollingNativeThread, type RollingTurnStarted, type RollingNativeTurn } from './rolling-codex.js';
+import type { RollingCampaignStore, RollingReviewDispatchAttached } from './rolling-campaign-store.js';
 
 export interface RollingReviewRequestV1 {
  readonly schemaVersion: 1;
@@ -105,13 +106,15 @@ export interface RollingReviewTurn {
 
 // Traceability: implements REQ-ROLLING-REVIEW
 export async function startRollingReviewTurn(rollingCodex: RollingCodex, rollingReviewRequestV1: RollingReviewRequestV1,
- reviewerThreadId: string, checkoutRoot: string): Promise<RollingReviewTurn> {
+ reviewerThreadId: string, checkoutRoot: string, instructions: string): Promise<RollingReviewTurn> {
+ requireReview(instructions.trim().length > 0, 'review requires authoritative scope instructions');
  const checkedRollingReviewRequestV1 = readRollingReviewRequestV1(rollingReviewRequestV1);
  const rollingNativeThread = await rollingCodex.resumeThread(reviewerThreadId, checkoutRoot);
  requireReview(rollingNativeThread.thread.sessionId === checkedRollingReviewRequestV1.reviewerSessionId, 'native session differs from assigned reviewer');
  const prompt = `Perform an adversarial review of this exact candidate. Read the project rules and applicable skills first.
 Review only: do not modify files, commits, branches or project state. Verify HEAD is ${checkedRollingReviewRequestV1.revision}; if it differs, report that the review cannot be completed.
 Inspect the complete change from ${checkedRollingReviewRequestV1.baseCommit} to ${checkedRollingReviewRequestV1.revision}, its approved obligation, requirements, acceptances, tests and retained proof. Seek correctness, regression, traceability and contract failures.
+Coordinator scope and retained evidence: ${instructions}
 Return your final message as a single JSON object without Markdown. Use schemaVersion 1, reviewId ${JSON.stringify(checkedRollingReviewRequestV1.id)}, revision ${JSON.stringify(checkedRollingReviewRequestV1.revision)}, reviewerSessionId ${JSON.stringify(checkedRollingReviewRequestV1.reviewerSessionId)}, completedAt as the current ISO timestamp, decision "accepted" or "rejected", and findings as an array of concrete findings. Rejection requires at least one finding. Never report acceptance without completing the review.
 Review request: ${JSON.stringify(checkedRollingReviewRequestV1)}`;
  const rollingTurnStarted = await rollingCodex.startTurn(rollingNativeThread.thread.id, prompt);
@@ -132,4 +135,32 @@ export async function observeRollingReviewTurn(rollingCodex: RollingCodex, rolli
  timeoutMs = 60000): Promise<RollingReviewOutcomeV1> {
  const rollingNativeTurn = await rollingCodex.waitForTurn(rollingReviewTurn.thread.thread.id, rollingReviewTurn.started.turn.id, timeoutMs);
  return readRollingReviewTurn(rollingReviewTurn, rollingNativeTurn);
+}
+
+// Traceability: implements REQ-ROLLING-REVIEW
+export async function dispatchRollingReview(rollingCampaignStore: RollingCampaignStore, rollingCodex: RollingCodex,
+ campaignId: string, reviewId: string, reviewerThreadId: string): Promise<RollingReviewDispatchAttached> {
+ const rollingReviewContext = await rollingCampaignStore.reviewContext(campaignId, reviewId);
+ requireReview(rollingReviewContext.review.outcome === null, 'review is already decided');
+ const rollingReviewDispatchStarted = await rollingCampaignStore.claimReviewDispatch(campaignId, reviewId, reviewerThreadId);
+ const rollingReviewTurn = await startRollingReviewTurn(rollingCodex, rollingReviewContext.review.request, reviewerThreadId, rollingReviewContext.rootPath,
+  JSON.stringify({ obligation: rollingReviewContext.obligation, binding: rollingReviewContext.binding, submission: rollingReviewContext.submission }));
+ return rollingCampaignStore.attachReviewDispatch(campaignId, reviewId, rollingReviewDispatchStarted.id,
+  rollingReviewTurn.thread.thread.sessionId, rollingReviewTurn.started.turn.id);
+}
+
+export async function collectRollingReview(rollingCampaignStore: RollingCampaignStore, rollingCodex: RollingCodex,
+ campaignId: string, reviewId: string, timeoutMs = 60000): Promise<RollingStoredReview> {
+ const rollingReviewContext = await rollingCampaignStore.reviewContext(campaignId, reviewId);
+ if (rollingReviewContext.review.outcome !== null) return rollingReviewContext.review;
+ const rollingReviewDispatch = await rollingCampaignStore.reviewDispatch(campaignId, reviewId);
+ requireReview(rollingReviewDispatch?.state === 'ATTACHED', 'review dispatch outcome is unknown; recover the original turn before collecting');
+ const rollingNativeThread = await rollingCodex.resumeThread(rollingReviewDispatch.reviewerThreadId, rollingReviewContext.rootPath);
+ requireReview(rollingNativeThread.thread.sessionId === rollingReviewContext.review.request.reviewerSessionId, 'native session differs from assigned reviewer');
+ let rollingNativeTurn = await rollingCodex.readTurn(rollingNativeThread.thread.id, rollingReviewDispatch.turnId);
+ if (rollingNativeTurn.status === 'inProgress') rollingNativeTurn = await rollingCodex.waitForTurn(rollingNativeThread.thread.id, rollingReviewDispatch.turnId, timeoutMs);
+ const rollingReviewTurn: RollingReviewTurn = { request: rollingReviewContext.review.request, thread: rollingNativeThread,
+  started: { turn: { id: rollingReviewDispatch.turnId } } };
+ const rollingReviewOutcomeV1 = readRollingReviewTurn(rollingReviewTurn, rollingNativeTurn);
+ return rollingCampaignStore.recordReviewOutcome(campaignId, reviewId, rollingNativeThread.thread.sessionId, rollingReviewOutcomeV1);
 }

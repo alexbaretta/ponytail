@@ -15,15 +15,18 @@ import { inputDigest, parseObligationDocument, type ObligationDocumentV1, type O
 import type { ObligationBindingHistoryV1, ObligationBindingRevisionV1 } from '../skills/plan-execution/scripts/obligation-binding-history.js';
 import type { ObligationEvidence } from '../skills/plan-execution/scripts/obligations.js';
 import type { RollingWorkerSubmissionV1 } from '../src/rolling-worker-submission.js';
-import type { RollingReviewOutcomeV1 } from '../src/rolling-review.js';
+import { dispatchRollingReview, collectRollingReview, type RollingReviewOutcomeV1 } from '../src/rolling-review.js';
+import { RollingCodex } from '../src/rolling-codex.js';
 import { acceptBoundCheckpoint, type ObligationCertificateBindingV1, type ObligationCertificateSubmission,
   type ObligationCertificateBindingRequest } from '../skills/plan-execution/scripts/obligation-certificate-bindings.js';
 
 // Traceability: verifies REQ-ROLLING-STATE
 // Traceability: verifies REQ-ROLLING-SCHEDULING
-const reviewDecisions: readonly RollingReviewOutcomeV1['decision'][] = ['accepted', 'rejected'];
-for (const reviewDecision of reviewDecisions) {
-test(`real PostgreSQL serializes allocation, retains ownership and persists ${reviewDecision} review`, async t => {
+interface ReviewScenario { readonly decision: RollingReviewOutcomeV1['decision']; readonly native: boolean }
+const reviewScenarios: readonly ReviewScenario[] = [{ decision: 'accepted', native: false }, { decision: 'rejected', native: false }, { decision: 'accepted', native: true }];
+for (const reviewScenario of reviewScenarios) {
+const reviewDecision = reviewScenario.decision;
+test(`real PostgreSQL serializes allocation, retains ownership and persists ${reviewScenario.native ? 'native application' : reviewDecision} review`, async t => {
   const repositoryRoot = path.resolve(__dirname, '../..');
   const pool: Pool = new Pool(databaseOptions(repositoryRoot));
   const projectId = crypto.randomUUID();
@@ -299,18 +302,41 @@ test(`real PostgreSQL serializes allocation, retains ownership and persists ${re
   assert.deepEqual(await foreignRollingCampaignStore.submissions('bound-fixture', submissionRollingStoredAssignment.id), []);
 
   // Traceability: verifies REQ-ROLLING-REVIEW
-  // Durable boundary proof; native reviewer dispatch remains an application gate.
+  // The native application case uses a controlled protocol process, not a live model.
+  const reviewerSessionId = reviewScenario.native ? 'session-fixture' : 'reviewer-session';
   await assert.rejects(rollingCampaignStore.requestReview('bound-fixture', submissionRollingStoredAssignment.id,
     submissionRollingStoredAssignment.generation, revision, rollingWorkerSubmissionV1.sessionId), /own submission/);
   await assert.rejects(rollingCampaignStore.requestReview('bound-fixture', submissionRollingStoredAssignment.id,
     submissionRollingStoredAssignment.generation, 'f'.repeat(40), 'reviewer-session'), /no validated worker submission/);
   const reviewRequests = await Promise.all(Array.from({ length: 4 }, () => rollingCampaignStore.requestReview('bound-fixture',
-    submissionRollingStoredAssignment.id, submissionRollingStoredAssignment.generation, revision, 'reviewer-session')));
+    submissionRollingStoredAssignment.id, submissionRollingStoredAssignment.generation, revision, reviewerSessionId)));
   const rollingStoredReview = reviewRequests[0];
   assert.ok(rollingStoredReview);
   assert.ok(reviewRequests.every(item => item.request.id === rollingStoredReview.request.id && item.outcome === null));
   assert.equal((await rollingCampaignStore.reviews('bound-fixture', submissionRollingStoredAssignment.id)).length, 1);
   assert.equal(rollingStoredReview.request.baseCommit, rollingWorkerSubmissionV1.baseCommit);
+  const rollingReviewContext = await rollingCampaignStore.reviewContext('bound-fixture', rollingStoredReview.request.id);
+  assert.equal(rollingReviewContext.rootPath, workerRoot);
+  assert.equal(rollingReviewContext.obligation.id, firstRollingBinding.obligationId);
+  assert.deepEqual(rollingReviewContext.binding, submissionRollingStoredAssignment.binding);
+  assert.deepEqual(rollingReviewContext.submission, storedSubmissions[0]);
+  if (reviewScenario.native) {
+    const rollingCodex: RollingCodex = new RollingCodex({ executable: process.execPath,
+      argv: [path.join(__dirname, 'fixtures/rolling-codex-server.js')] });
+    try {
+      await rollingCodex.initialize();
+      const rollingReviewDispatchAttached = await dispatchRollingReview(rollingCampaignStore, rollingCodex, 'bound-fixture', rollingStoredReview.request.id, 'thread-fixture');
+      await assert.rejects(dispatchRollingReview(rollingCampaignStore, rollingCodex, 'bound-fixture', rollingStoredReview.request.id, 'thread-fixture'), /already claimed/);
+      assert.equal(rollingReviewDispatchAttached.state, 'ATTACHED');
+      const restartedRollingCampaignStore: RollingCampaignStore = new RollingCampaignStore(pool, projectId);
+      const result = await collectRollingReview(restartedRollingCampaignStore, rollingCodex, 'bound-fixture', rollingStoredReview.request.id);
+      assert.equal(result.outcome?.decision, 'accepted');
+      assert.equal(result.outcome?.revision, revision);
+      assert.equal(result.outcome?.reviewerSessionId, reviewerSessionId);
+      assert.deepEqual(await collectRollingReview(restartedRollingCampaignStore, rollingCodex, 'bound-fixture', rollingStoredReview.request.id), result);
+      assert.equal((await rollingCampaignStore.status('bound-fixture')).assignments[0]?.state, 'INTEGRATING');
+    } finally { await rollingCodex.close(); }
+  } else {
   assert.equal(await rollingCampaignStore.reviewDispatch('bound-fixture', rollingStoredReview.request.id), null);
   const dispatchClaims = await Promise.allSettled(Array.from({ length: 4 }, () => rollingCampaignStore.claimReviewDispatch('bound-fixture', rollingStoredReview.request.id, 'reviewer-thread')));
   const claimed = dispatchClaims.find(item => item.status === 'fulfilled');
@@ -320,6 +346,10 @@ test(`real PostgreSQL serializes allocation, retains ownership and persists ${re
   const restartedRollingCampaignStore: RollingCampaignStore = new RollingCampaignStore(pool, projectId);
   assert.deepEqual(await restartedRollingCampaignStore.reviewDispatch('bound-fixture', rollingStoredReview.request.id), claimed.value);
   await assert.rejects(restartedRollingCampaignStore.claimReviewDispatch('bound-fixture', rollingStoredReview.request.id, 'reviewer-thread'), /already claimed/);
+  const unusedRollingCodex: RollingCodex = new RollingCodex({ executable: process.execPath, argv: [path.join(__dirname, 'fixtures/rolling-codex-server.js')] });
+  try {
+    await assert.rejects(collectRollingReview(restartedRollingCampaignStore, unusedRollingCodex, 'bound-fixture', rollingStoredReview.request.id), /outcome is unknown/);
+  } finally { await unusedRollingCodex.close(); }
   await assert.rejects(rollingCampaignStore.attachReviewDispatch('bound-fixture', rollingStoredReview.request.id, 'wrong-dispatch', 'reviewer-session', 'review-turn'), /dispatch identity/);
   await assert.rejects(rollingCampaignStore.attachReviewDispatch('bound-fixture', rollingStoredReview.request.id, claimed.value.id, 'other-reviewer', 'review-turn'), /native session differs/);
   const attachments = await Promise.all(Array.from({ length: 4 }, () => rollingCampaignStore.attachReviewDispatch('bound-fixture', rollingStoredReview.request.id, claimed.value.id, 'reviewer-session', 'review-turn')));
@@ -351,6 +381,7 @@ test(`real PostgreSQL serializes allocation, retains ownership and persists ${re
   assert.deepEqual((await rollingCampaignStore.reviews('bound-fixture', submissionRollingStoredAssignment.id))[0]?.outcome, rollingReviewOutcomeV1);
   assert.deepEqual(await foreignRollingCampaignStore.reviews('bound-fixture', submissionRollingStoredAssignment.id), []);
   assert.ok(!collectRollingGraph(root, 'bound-obligations.json', 'bound-bindings.json', 'history.json').projection.satisfiedIds.includes(firstRollingBinding.obligationId));
+  }
 
   // Traceability: verifies REQ-ROLLING-GRAPH
   // This fixture reconciles Git and certificate inputs; it does not replace adversarial review or production publication.

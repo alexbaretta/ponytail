@@ -11,7 +11,7 @@ import { parseRollingWorkerSubmission, readRollingWorkerSubmissionV1, validateRo
   type RollingWorkerSubmissionV1 } from './rolling-worker-submission.js';
 import { readObligationLeaseV1, freezeObligationLease, assertObligationLeaseOperation,
   type ObligationLeaseV1 } from '../skills/plan-execution/scripts/obligation-binding-history.js';
-import { relativePath } from '../skills/plan-execution/scripts/obligations.js';
+import { relativePath, type Obligation } from '../skills/plan-execution/scripts/obligations.js';
 import { readRollingReviewRequestV1, readRollingReviewOutcomeV1, parseRollingReviewRequest, parseRollingReviewOutcome,
   validateRollingReviewOutcome, type RollingReviewRequestV1, type RollingReviewOutcomeV1, type RollingStoredReview } from './rolling-review.js';
 import { collectRollingGraph, selectRollingAssignments, resolveRollingConfiguration, readRollingResolvedConfiguration, readRollingBindingsV1,
@@ -79,6 +79,8 @@ export interface RollingSessionAttachment { readonly id: string; readonly sessio
 export interface RollingAssignmentRelease { readonly id: string; readonly generation: string }
 export interface RollingSubmissionReceipt { readonly assignmentId: string; readonly generation: string; readonly revision: string; readonly state: 'REVIEW' }
 export interface RollingStoredSubmission { readonly submission: RollingWorkerSubmissionV1; readonly lease: ObligationLeaseV1 }
+export interface RollingReviewCandidate { readonly rootPath: string; readonly obligation: Obligation; readonly binding: RollingBinding; readonly submission: RollingStoredSubmission }
+export interface RollingReviewContext extends RollingReviewCandidate { readonly review: RollingStoredReview }
 interface RollingReviewDispatchIdentity { readonly id: string; readonly reviewerThreadId: string }
 export interface RollingReviewDispatchStarted extends RollingReviewDispatchIdentity { readonly state: 'STARTED' }
 export interface RollingReviewDispatchAttached extends RollingReviewDispatchIdentity { readonly state: 'ATTACHED'; readonly turnId: string }
@@ -511,6 +513,36 @@ export class RollingCampaignStore {
     });
   }
 
+  async reviewContext(campaignId: string, reviewId: string): Promise<RollingReviewContext> {
+    return this.transaction(campaignId, async (poolClient, rollingCampaignRow) => {
+      const row = (await poolClient.query<Record<string, unknown>>('SELECT request_text,outcome_text FROM ponytail_index.rolling_review_v1 WHERE project_id=$1 AND campaign_id=$2 AND review_id=$3', [this.projectId, campaignId, reviewId])).rows[0];
+      requireState(row, 'review request is missing');
+      const rollingReviewRequestV1 = parseRollingReviewRequest(stringColumn(row.request_text, 'review request'));
+      const text = nullableStringColumn(row.outcome_text, 'review outcome');
+      const rollingReviewOutcomeV1 = text === null ? null : parseRollingReviewOutcome(text);
+      if (rollingReviewOutcomeV1) validateRollingReviewOutcome(rollingReviewRequestV1, rollingReviewOutcomeV1);
+      const rollingReviewCandidate = await this.validateReviewCandidate(poolClient, rollingCampaignRow, rollingReviewRequestV1);
+      return { review: { request: rollingReviewRequestV1, outcome: rollingReviewOutcomeV1 }, ...rollingReviewCandidate };
+    });
+  }
+
+  private async validateReviewCandidate(poolClient: PoolClient, rollingCampaignRow: RollingCampaignRow, rollingReviewRequestV1: RollingReviewRequestV1): Promise<RollingReviewCandidate> {
+    const rollingStoredAssignment = await this.assignment(poolClient, rollingReviewRequestV1.campaignId, rollingReviewRequestV1.assignmentId, rollingReviewRequestV1.generation);
+    requireState(rollingStoredAssignment.activityStopped && !rollingStoredAssignment.retired, 'review candidate requires a stopped retained worker');
+    const rollingGraph = this.graph(rollingCampaignRow, rollingCampaignRow.graph_digest);
+    this.currentLease(rollingStoredAssignment, rollingGraph);
+    const obligation = rollingGraph.document.obligations.find(item => item.id === rollingStoredAssignment.obligationId);
+    requireState(obligation, 'review obligation is absent from coordinator scope');
+    const submission = (await poolClient.query<Record<string, unknown>>('SELECT submission_text,lease_text FROM ponytail_index.rolling_submission_v1 WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3 AND generation=$4 AND revision=$5',
+      [this.projectId, rollingReviewRequestV1.campaignId, rollingReviewRequestV1.assignmentId, rollingReviewRequestV1.generation, rollingReviewRequestV1.revision])).rows[0];
+    requireState(submission, 'reviewed candidate has no retained submission');
+    const rollingStoredWorktree = readWorktree((await poolClient.query<Record<string, unknown>>('SELECT * FROM ponytail_index.rolling_worktree_v1 WHERE project_id=$1 AND number=$2', [this.projectId, rollingStoredAssignment.worktreeNumber])).rows[0]);
+    const rollingStoredSubmission: RollingStoredSubmission = { lease: readObligationLeaseV1(readStateText(stringColumn(submission.lease_text, 'submission lease'))),
+      submission: parseRollingWorkerSubmission(stringColumn(submission.submission_text, 'submission')) };
+    validateRollingWorkerSubmission(rollingStoredWorktree.rootPath, rollingStoredSubmission.lease, rollingStoredSubmission.submission);
+    return { rootPath: rollingStoredWorktree.rootPath, obligation, binding: rollingStoredAssignment.binding, submission: rollingStoredSubmission };
+  }
+
   async reviewDispatch(campaignId: string, reviewId: string): Promise<RollingReviewDispatch | null> {
     const row = (await this.pool.query<Record<string, unknown>>('SELECT dispatch_id,reviewer_thread_id,state,turn_id FROM ponytail_index.rolling_review_dispatch_v1 WHERE project_id=$1 AND campaign_id=$2 AND review_id=$3', [this.projectId, campaignId, reviewId])).rows[0];
     if (!row) return null;
@@ -549,12 +581,7 @@ export class RollingCampaignStore {
       }
       const rollingStoredAssignment = await this.assignment(poolClient, campaignId, rollingReviewRequestV1.assignmentId, rollingReviewRequestV1.generation);
       requireState(rollingStoredAssignment.state === 'REVIEW' && rollingStoredAssignment.activityStopped && !rollingStoredAssignment.retired, 'candidate is no longer awaiting review');
-      this.currentLease(rollingStoredAssignment, this.graph(rollingCampaignRow, rollingCampaignRow.graph_digest));
-      const submission = (await poolClient.query<Record<string, unknown>>('SELECT submission_text,lease_text FROM ponytail_index.rolling_submission_v1 WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3 AND generation=$4 AND revision=$5',
-        [this.projectId, campaignId, rollingReviewRequestV1.assignmentId, rollingReviewRequestV1.generation, rollingReviewRequestV1.revision])).rows[0];
-      requireState(submission, 'reviewed candidate has no retained submission');
-      const rollingStoredWorktree = readWorktree((await poolClient.query<Record<string, unknown>>('SELECT * FROM ponytail_index.rolling_worktree_v1 WHERE project_id=$1 AND number=$2', [this.projectId, rollingStoredAssignment.worktreeNumber])).rows[0]);
-      validateRollingWorkerSubmission(rollingStoredWorktree.rootPath, readObligationLeaseV1(readStateText(stringColumn(submission.lease_text, 'submission lease'))), parseRollingWorkerSubmission(stringColumn(submission.submission_text, 'submission')));
+      await this.validateReviewCandidate(poolClient, rollingCampaignRow, rollingReviewRequestV1);
       await poolClient.query<Record<string, unknown>>('UPDATE ponytail_index.rolling_review_v1 SET outcome_text=$4 WHERE project_id=$1 AND campaign_id=$2 AND review_id=$3', [this.projectId, campaignId, reviewId, JSON.stringify(checkedRollingReviewOutcomeV1)]);
       await poolClient.query<Record<string, unknown>>('UPDATE ponytail_index.rolling_assignment_v1 SET state=$2 WHERE assignment_id=$1', [rollingReviewRequestV1.assignmentId, checkedRollingReviewOutcomeV1.decision === 'accepted' ? 'INTEGRATING' : 'REWORK']);
       return { request: rollingReviewRequestV1, outcome: checkedRollingReviewOutcomeV1 };

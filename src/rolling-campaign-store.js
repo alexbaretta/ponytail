@@ -415,6 +415,34 @@ class RollingCampaignStore {
             return { id, reviewerThreadId, state: 'STARTED' };
         });
     }
+    async reviewContext(campaignId, reviewId) {
+        return this.transaction(campaignId, async (poolClient, rollingCampaignRow) => {
+            const row = (await poolClient.query('SELECT request_text,outcome_text FROM ponytail_index.rolling_review_v1 WHERE project_id=$1 AND campaign_id=$2 AND review_id=$3', [this.projectId, campaignId, reviewId])).rows[0];
+            requireState(row, 'review request is missing');
+            const rollingReviewRequestV1 = (0, rolling_review_js_1.parseRollingReviewRequest)(stringColumn(row.request_text, 'review request'));
+            const text = nullableStringColumn(row.outcome_text, 'review outcome');
+            const rollingReviewOutcomeV1 = text === null ? null : (0, rolling_review_js_1.parseRollingReviewOutcome)(text);
+            if (rollingReviewOutcomeV1)
+                (0, rolling_review_js_1.validateRollingReviewOutcome)(rollingReviewRequestV1, rollingReviewOutcomeV1);
+            const rollingReviewCandidate = await this.validateReviewCandidate(poolClient, rollingCampaignRow, rollingReviewRequestV1);
+            return { review: { request: rollingReviewRequestV1, outcome: rollingReviewOutcomeV1 }, ...rollingReviewCandidate };
+        });
+    }
+    async validateReviewCandidate(poolClient, rollingCampaignRow, rollingReviewRequestV1) {
+        const rollingStoredAssignment = await this.assignment(poolClient, rollingReviewRequestV1.campaignId, rollingReviewRequestV1.assignmentId, rollingReviewRequestV1.generation);
+        requireState(rollingStoredAssignment.activityStopped && !rollingStoredAssignment.retired, 'review candidate requires a stopped retained worker');
+        const rollingGraph = this.graph(rollingCampaignRow, rollingCampaignRow.graph_digest);
+        this.currentLease(rollingStoredAssignment, rollingGraph);
+        const obligation = rollingGraph.document.obligations.find(item => item.id === rollingStoredAssignment.obligationId);
+        requireState(obligation, 'review obligation is absent from coordinator scope');
+        const submission = (await poolClient.query('SELECT submission_text,lease_text FROM ponytail_index.rolling_submission_v1 WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3 AND generation=$4 AND revision=$5', [this.projectId, rollingReviewRequestV1.campaignId, rollingReviewRequestV1.assignmentId, rollingReviewRequestV1.generation, rollingReviewRequestV1.revision])).rows[0];
+        requireState(submission, 'reviewed candidate has no retained submission');
+        const rollingStoredWorktree = readWorktree((await poolClient.query('SELECT * FROM ponytail_index.rolling_worktree_v1 WHERE project_id=$1 AND number=$2', [this.projectId, rollingStoredAssignment.worktreeNumber])).rows[0]);
+        const rollingStoredSubmission = { lease: (0, obligation_binding_history_js_1.readObligationLeaseV1)(readStateText(stringColumn(submission.lease_text, 'submission lease'))),
+            submission: (0, rolling_worker_submission_js_1.parseRollingWorkerSubmission)(stringColumn(submission.submission_text, 'submission')) };
+        (0, rolling_worker_submission_js_1.validateRollingWorkerSubmission)(rollingStoredWorktree.rootPath, rollingStoredSubmission.lease, rollingStoredSubmission.submission);
+        return { rootPath: rollingStoredWorktree.rootPath, obligation, binding: rollingStoredAssignment.binding, submission: rollingStoredSubmission };
+    }
     async reviewDispatch(campaignId, reviewId) {
         const row = (await this.pool.query('SELECT dispatch_id,reviewer_thread_id,state,turn_id FROM ponytail_index.rolling_review_dispatch_v1 WHERE project_id=$1 AND campaign_id=$2 AND review_id=$3', [this.projectId, campaignId, reviewId])).rows[0];
         if (!row)
@@ -455,11 +483,7 @@ class RollingCampaignStore {
             }
             const rollingStoredAssignment = await this.assignment(poolClient, campaignId, rollingReviewRequestV1.assignmentId, rollingReviewRequestV1.generation);
             requireState(rollingStoredAssignment.state === 'REVIEW' && rollingStoredAssignment.activityStopped && !rollingStoredAssignment.retired, 'candidate is no longer awaiting review');
-            this.currentLease(rollingStoredAssignment, this.graph(rollingCampaignRow, rollingCampaignRow.graph_digest));
-            const submission = (await poolClient.query('SELECT submission_text,lease_text FROM ponytail_index.rolling_submission_v1 WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3 AND generation=$4 AND revision=$5', [this.projectId, campaignId, rollingReviewRequestV1.assignmentId, rollingReviewRequestV1.generation, rollingReviewRequestV1.revision])).rows[0];
-            requireState(submission, 'reviewed candidate has no retained submission');
-            const rollingStoredWorktree = readWorktree((await poolClient.query('SELECT * FROM ponytail_index.rolling_worktree_v1 WHERE project_id=$1 AND number=$2', [this.projectId, rollingStoredAssignment.worktreeNumber])).rows[0]);
-            (0, rolling_worker_submission_js_1.validateRollingWorkerSubmission)(rollingStoredWorktree.rootPath, (0, obligation_binding_history_js_1.readObligationLeaseV1)(readStateText(stringColumn(submission.lease_text, 'submission lease'))), (0, rolling_worker_submission_js_1.parseRollingWorkerSubmission)(stringColumn(submission.submission_text, 'submission')));
+            await this.validateReviewCandidate(poolClient, rollingCampaignRow, rollingReviewRequestV1);
             await poolClient.query('UPDATE ponytail_index.rolling_review_v1 SET outcome_text=$4 WHERE project_id=$1 AND campaign_id=$2 AND review_id=$3', [this.projectId, campaignId, reviewId, JSON.stringify(checkedRollingReviewOutcomeV1)]);
             await poolClient.query('UPDATE ponytail_index.rolling_assignment_v1 SET state=$2 WHERE assignment_id=$1', [rollingReviewRequestV1.assignmentId, checkedRollingReviewOutcomeV1.decision === 'accepted' ? 'INTEGRATING' : 'REWORK']);
             return { request: rollingReviewRequestV1, outcome: checkedRollingReviewOutcomeV1 };

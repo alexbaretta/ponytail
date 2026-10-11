@@ -78,8 +78,9 @@ test('review dispatch resumes the assigned native reviewer and observes its exac
   const { root, rollingCodex } = await fixture(testContext);
   const rollingReviewRequestV1: RollingReviewRequestV1 = { schemaVersion: 1, id: 'review-fixture', campaignId: 'campaign',
     assignmentId: 'assignment', generation: 'generation', baseCommit: 'a'.repeat(40), revision: 'b'.repeat(40), reviewerSessionId: 'session-fixture' };
-  await assert.rejects(startRollingReviewTurn(rollingCodex, { ...rollingReviewRequestV1, reviewerSessionId: 'other' }, 'thread-fixture', root), /native session differs/);
-  const rollingReviewTurn = await startRollingReviewTurn(rollingCodex, rollingReviewRequestV1, 'thread-fixture', root);
+  await assert.rejects(startRollingReviewTurn(rollingCodex, rollingReviewRequestV1, 'thread-fixture', root, ''), /authoritative scope/);
+  await assert.rejects(startRollingReviewTurn(rollingCodex, { ...rollingReviewRequestV1, reviewerSessionId: 'other' }, 'thread-fixture', root, 'Protocol fixture only.'), /native session differs/);
+  const rollingReviewTurn = await startRollingReviewTurn(rollingCodex, rollingReviewRequestV1, 'thread-fixture', root, 'Protocol fixture only.');
   const rollingReviewOutcomeV1 = await observeRollingReviewTurn(rollingCodex, rollingReviewTurn);
   assert.equal(rollingReviewOutcomeV1.reviewId, rollingReviewRequestV1.id);
   assert.equal(rollingReviewOutcomeV1.revision, rollingReviewRequestV1.revision);
