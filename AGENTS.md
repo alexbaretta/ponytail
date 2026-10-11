@@ -76,8 +76,8 @@ services. `PROJECT_STRUCTURE.md` is authoritative for that boundary.
   TSTS retains lossless numeric values. Focused proof:
   `node --test tsts/dist/test/lossless-json.test.js`, `node --test
   tests/obligations.test.js tests/obligation-execution.test.js`.
-  Rolling configuration focused proof: `node --test tests/rolling-campaign.test.js
-  tests/rolling-campaign.integration.test.js`.
+  Rolling configuration focused proof: `node --test dist/tests/rolling-campaign.test.js
+  dist/tests/rolling-campaign.integration.test.js`.
 - Unit-test command families:
   - Node focused: `node --test [--test-name-pattern=<pattern>] <test-files>`.
   - Node full: `npm test`.

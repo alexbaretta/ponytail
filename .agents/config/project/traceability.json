@@ -803,7 +803,7 @@
     },
     {
       "class": "unit-test",
-      "path": "tests/rolling-campaign.test.js",
+      "path": "tests/rolling-campaign.test.ts",
       "locator": "text"
     },
     {
@@ -813,7 +813,7 @@
     },
     {
       "class": "integration-test",
-      "path": "tests/rolling-campaign.integration.test.js",
+      "path": "tests/rolling-campaign.integration.test.ts",
       "locator": "text"
     },
     {
