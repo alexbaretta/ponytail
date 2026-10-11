@@ -990,6 +990,11 @@
       "class": "unit-test",
       "path": "tests/tasklet-graph.test.ts",
       "locator": "text"
+    },
+    {
+      "class": "unit-test",
+      "path": "tests/tasklet-selection.test.ts",
+      "locator": "text"
     }
   ],
   "entities": [],

@@ -89,6 +89,12 @@
         "S07-F14"
       ],
       "validation_tasklet": "S07-F15-T07"
+    },
+    "S07-F16": {
+      "depends_on": [
+        "S07-F15"
+      ],
+      "validation_tasklet": "S07-F16-T07"
     }
   },
   "tasklets": {
@@ -1745,6 +1751,93 @@
       "affinity": [],
       "risk": "normal",
       "feature": "S07-F15",
+      "planned_paths": []
+    },
+    "S07-F16-T01": {
+      "depends_on": [],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F16",
+      "planned_paths": [
+        "skills/plan-execution/scripts/tasklet-graph.ts"
+      ]
+    },
+    "S07-F16-T02": {
+      "depends_on": [
+        "S07-F16-T01"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F16",
+      "planned_paths": [
+        "skills/plan-execution/scripts/tasklet-graph.ts"
+      ]
+    },
+    "S07-F16-T03": {
+      "depends_on": [
+        "S07-F16-T02"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F16",
+      "planned_paths": [
+        "skills/plan-execution/scripts/tasklet-graph.ts"
+      ]
+    },
+    "S07-F16-T04": {
+      "depends_on": [
+        "S07-F16-T03"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F16",
+      "planned_paths": [
+        "skills/plan-execution/scripts/tasklet-graph.ts"
+      ]
+    },
+    "S07-F16-T05": {
+      "depends_on": [
+        "S07-F16-T04"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F16",
+      "planned_paths": [
+        "tests/tasklet-selection.test.ts"
+      ]
+    },
+    "S07-F16-T06": {
+      "depends_on": [
+        "S07-F16-T05"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F16",
+      "planned_paths": [
+        "skills/plan-execution/scripts/tasklet-graph.js",
+        "skills/plan-execution/scripts/ready-tasklets.js",
+        "scripts/build-runtime.ts",
+        "AGENTS.md",
+        "PROJECT_STRUCTURE.md",
+        ".agents/config/project/traceability.json",
+        "pm/requirements/traceability.generated.md",
+        ".openclaw/skills/plan-execution/scripts/tasklet-graph.ts",
+        ".openclaw/skills/plan-execution/scripts/tasklet-graph.js",
+        ".openclaw/skills/plan-execution/scripts/ready-tasklets.js"
+      ]
+    },
+    "S07-F16-T07": {
+      "depends_on": [
+        "S07-F16-T01",
+        "S07-F16-T02",
+        "S07-F16-T03",
+        "S07-F16-T04",
+        "S07-F16-T05",
+        "S07-F16-T06"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F16",
       "planned_paths": []
     }
   },

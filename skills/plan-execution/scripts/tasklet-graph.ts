@@ -119,3 +119,87 @@ export function validateTaskletGraph(graph: TaskletGraphV1 | TaskletGraphV2 | Ta
   const unfinishedDescendants = new Map([...ids].map((id) => [id, [...graphValue(descendants, id)].filter((descendant) => statuses.get(descendant) === 'PENDING').length]));
   return { reverse, descendants, depth, unfinishedDescendants };
 }
+
+export interface TaskletRankingCriteria {
+  readonly risk: 'normal' | 'high';
+  readonly affinity_overlap: number;
+  readonly unfinished_descendants: number;
+  readonly remaining_depth: number;
+}
+export interface TaskletBatch { readonly tasklets: string[]; readonly planned_paths: string[] }
+export const MAX_BATCH_TASKLETS = 16;
+
+export function rankedReadyTasklets(graph: TaskletGraphV1 | TaskletGraphV2 | TaskletGraphV3 | TaskletGraphV4, statuses: ReadonlyMap<string, TaskletStatus>, taskletGraphDerivation: TaskletGraphDerivation, lastTasklet: string | null): readonly (readonly [string, TaskletRankingCriteria])[] {
+  if (lastTasklet !== null && (!statuses.has(lastTasklet) || statuses.get(lastTasklet) !== 'DONE')) fail(`last completed tasklet must be a known [DONE] tasklet: ${lastTasklet}`);
+  const ready = [...graph.tasklets.keys()].filter((id) => statuses.get(id) === 'PENDING' && effectiveDependencies(graph, id).every((dependency) => statuses.get(dependency) === 'DONE'));
+  if (ready.length === 0) {
+    if ([...statuses.values()].every((status) => status === 'DONE')) return [];
+    fail('unfinished tasklet graph has no ready tasklet');
+  }
+  const overlap = (id: string): number => {
+    if (lastTasklet === null) return 0;
+    const prior = new Set(graphValue(graph.tasklets, lastTasklet).affinity);
+    return graphValue(graph.tasklets, id).affinity.filter((tag) => prior.has(tag)).length;
+  };
+  ready.sort((left, right) => {
+    const leftTaskletValue = graphValue(graph.tasklets, left); const rightTaskletValue = graphValue(graph.tasklets, right);
+    return Number(rightTaskletValue.risk === 'high') - Number(leftTaskletValue.risk === 'high') || overlap(right) - overlap(left) || graphValue(taskletGraphDerivation.unfinishedDescendants, right) - graphValue(taskletGraphDerivation.unfinishedDescendants, left) || graphValue(taskletGraphDerivation.depth, right) - graphValue(taskletGraphDerivation.depth, left) || left.localeCompare(right);
+  });
+  return ready.map((id): readonly [string, TaskletRankingCriteria] => [id, { risk: graphValue(graph.tasklets, id).risk, affinity_overlap: overlap(id), unfinished_descendants: graphValue(taskletGraphDerivation.unfinishedDescendants, id), remaining_depth: graphValue(taskletGraphDerivation.depth, id) }]);
+}
+
+export function selectNextTasklet(graph: TaskletGraphV1 | TaskletGraphV2 | TaskletGraphV3 | TaskletGraphV4, statuses: ReadonlyMap<string, TaskletStatus>, taskletGraphDerivation: TaskletGraphDerivation, lastTasklet: string | null = null): { readonly next: null } | { readonly next: string; readonly criteria: TaskletRankingCriteria } {
+  const ranked = rankedReadyTasklets(graph, statuses, taskletGraphDerivation, lastTasklet);
+  if (ranked.length === 0) return { next: null };
+  const first = ranked[0];
+  if (first === undefined) fail('ranked tasklet selection lacks its first result');
+  return { next: first[0], criteria: first[1] };
+}
+
+export function selectReadyTasklets(graph: TaskletGraphV1 | TaskletGraphV2 | TaskletGraphV3 | TaskletGraphV4, statuses: ReadonlyMap<string, TaskletStatus>, taskletGraphDerivation: TaskletGraphDerivation, lastTasklet: string | null = null): { readonly next: null } | { readonly next: string; readonly criteria: TaskletRankingCriteria } | { readonly next: readonly [string]; readonly criteria: Readonly<Record<string, TaskletRankingCriteria>> } | { readonly next: readonly [TaskletBatch]; readonly criteria: Readonly<Record<string, TaskletRankingCriteria>> } {
+  if (graph.schemaVersion === 1) return selectNextTasklet(graph, statuses, taskletGraphDerivation, lastTasklet);
+  if (graph.schemaVersion === 3 || graph.schemaVersion === 4) return selectReadyTaskletBatch(graph, statuses, taskletGraphDerivation, lastTasklet);
+  const ranked = rankedReadyTasklets(graph, statuses, taskletGraphDerivation, lastTasklet);
+  if (ranked.length === 0) return { next: null };
+  const first = ranked[0];
+  if (first === undefined) fail('ranked tasklet selection lacks its first result');
+  const [id, taskletRankingCriteria] = first;
+  return { next: [id], criteria: { [id]: taskletRankingCriteria } };
+}
+
+export function selectReadyTaskletBatch(graph: TaskletGraphV2 | TaskletGraphV3 | TaskletGraphV4, statuses: ReadonlyMap<string, TaskletStatus>, taskletGraphDerivation: TaskletGraphDerivation, lastTasklet: string | null = null): { readonly next: null } | { readonly next: readonly [TaskletBatch]; readonly criteria: Readonly<Record<string, TaskletRankingCriteria>> } {
+  const ranked = rankedReadyTasklets(graph, statuses, taskletGraphDerivation, lastTasklet);
+  if (ranked.length === 0) return { next: null };
+  const validationTasklets = new Set([...graph.features.values()].map(({ validation_tasklet: id }) => id));
+  const first = ranked[0];
+  if (first === undefined) fail('ranked tasklet selection lacks its first result');
+  const [root, rootTaskletRankingCriteria] = first;
+  const taskletBatch: TaskletBatch = {
+    tasklets: [root],
+    planned_paths: [...graphValue(graph.tasklets, root).planned_paths],
+  };
+  const criteria: Record<string, TaskletRankingCriteria> = { [root]: rootTaskletRankingCriteria };
+  const completed = new Set([...statuses].filter(([, status]) => status === 'DONE').map(([id]) => id));
+  completed.add(root);
+  while (taskletBatch.tasklets.length < MAX_BATCH_TASKLETS) {
+    const next = [...graph.tasklets.keys()].filter((id) => {
+      if (statuses.get(id) !== 'PENDING' || completed.has(id) || validationTasklets.has(id)) return false;
+      const dependencies = effectiveDependencies(graph, id);
+      return dependencies.some((dependency) => completed.has(dependency) && taskletBatch.tasklets.includes(dependency))
+        && dependencies.every((dependency) => completed.has(dependency));
+    }).sort((left, right) => left.localeCompare(right))[0];
+    if (!next) break;
+    taskletBatch.tasklets.push(next);
+    completed.add(next);
+    for (const candidate of graphValue(graph.tasklets, next).planned_paths) {
+      if (!taskletBatch.planned_paths.includes(candidate)) taskletBatch.planned_paths.push(candidate);
+    }
+    criteria[next] = {
+      risk: graphValue(graph.tasklets, next).risk,
+      affinity_overlap: 0,
+      unfinished_descendants: graphValue(taskletGraphDerivation.unfinishedDescendants, next),
+      remaining_depth: graphValue(taskletGraphDerivation.depth, next),
+    };
+  }
+  return { next: [taskletBatch], criteria };
+}
