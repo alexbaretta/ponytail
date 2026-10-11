@@ -12,7 +12,7 @@ import { parseRollingWorkerSubmission, readRollingWorkerSubmissionV1, validateRo
 import { readObligationLeaseV1, freezeObligationLease, assertObligationLeaseOperation,
   type ObligationLeaseV1 } from '../skills/plan-execution/scripts/obligation-binding-history.js';
 import { relativePath, type Obligation } from '../skills/plan-execution/scripts/obligations.js';
-import { buildRollingWorkerInstructions, readRollingWorkerCreationV1, parseRollingWorkerCreation, type RollingWorkerCreationV1, type RollingWorkerContext } from './rolling-worker.js';
+import { readRollingWorkerStopV1, parseRollingWorkerStop, type RollingWorkerStopV1, buildRollingWorkerInstructions, readRollingWorkerCreationV1, parseRollingWorkerCreation, type RollingWorkerCreationV1, type RollingWorkerContext } from './rolling-worker.js';
 import { validateRollingSessionMarker } from './rolling-worktrees.js';
 import { readRollingReviewRequestV1, readRollingReviewOutcomeV1, parseRollingReviewRequest, parseRollingReviewOutcome,
   validateRollingReviewOutcome, type RollingReviewRequestV1, type RollingReviewOutcomeV1, type RollingStoredReview } from './rolling-review.js';
@@ -766,6 +766,79 @@ export class RollingCampaignStore {
     });
   }
 
+  private async attachedWorkerIdentity(poolClient:PoolClient,campaignId:string,
+    rollingStoredAssignment:RollingStoredAssignment):Promise<RollingWorkerCreationV1> {
+    requireState(rollingStoredAssignment.sessionId && !rollingStoredAssignment.retired,'worker has no retained session identity');
+    const id = rollingStoredAssignment.id;
+    const generation = rollingStoredAssignment.generation;
+    const row = (await poolClient.query<Record<string, unknown>>(
+      "SELECT result_text FROM ponytail_index.rolling_action_v1 WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3 AND generation=$4 AND kind='START_WORKER' AND state='COMPLETED'",
+      [this.projectId,campaignId,id,generation])).rows[0];
+    requireState(row, 'worker has no completed native creation');
+    const rollingWorkerCreationV1 = parseRollingWorkerCreation(stringColumn(row.result_text,'worker creation receipt'));
+    requireState(rollingWorkerCreationV1.sessionId === rollingStoredAssignment.sessionId, 'creation receipt differs from attached worker');
+    const rollingStoredWorktree = readWorktree((await poolClient.query<Record<string, unknown>>(
+      'SELECT * FROM ponytail_index.rolling_worktree_v1 WHERE project_id=$1 AND number=$2',
+      [this.projectId,rollingStoredAssignment.worktreeNumber])).rows[0]);
+    requireState(rollingStoredWorktree.rootPath === rollingWorkerCreationV1.rootPath
+      && fs.realpathSync(rollingWorkerCreationV1.rootPath) === rollingWorkerCreationV1.rootPath, 'creation checkout differs from assignment');
+    validateRollingSessionMarker(rollingWorkerCreationV1.rootPath,rollingWorkerCreationV1.sessionId);
+    return rollingWorkerCreationV1;
+  }
+
+  // Traceability: implements REQ-ROLLING-WORKERS
+  async workerIdentity(campaignId:string,id:string,generation:string):Promise<RollingWorkerCreationV1> {
+    return this.transaction(campaignId,async poolClient =>
+      this.attachedWorkerIdentity(poolClient,campaignId,await this.assignment(poolClient,campaignId,id,generation)));
+  }
+
+  // Traceability: implements REQ-ROLLING-STATE
+  async workerStop(campaignId:string,id:string,generation:string):Promise<RollingWorkerStopV1 | null> {
+    return this.workerStopValue(this.pool,campaignId,id,generation);
+  }
+
+  private async workerStopValue(poolOrPoolClient:Pool | PoolClient,campaignId:string,id:string,
+    generation:string):Promise<RollingWorkerStopV1 | null> {
+    const row = (await poolOrPoolClient.query<Record<string,unknown>>(
+      'SELECT observation_text FROM ponytail_index.rolling_worker_stop_v1 WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3 AND generation=$4',
+      [this.projectId,campaignId,id,generation])).rows[0];
+    return row ? parseRollingWorkerStop(stringColumn(row.observation_text,'worker stop observation')) : null;
+  }
+
+  // Traceability: implements REQ-ROLLING-WORKERS
+  // Traceability: implements REQ-ROLLING-STATE
+  // Traceability: implements REQ-ROLLING-SCHEDULING
+  async suspendObservedWorker(campaignId:string,id:string,generation:string,rollingWorkerStopV1:RollingWorkerStopV1,
+    blockers:readonly string[]):Promise<RollingAssignmentTransition> {
+    const checkedRollingWorkerStopV1 = readRollingWorkerStopV1(rollingWorkerStopV1);
+    requireState(checkedRollingWorkerStopV1.campaignId === campaignId && checkedRollingWorkerStopV1.assignmentId === id
+      && checkedRollingWorkerStopV1.generation === generation,'stop observation differs from assignment');
+    requireState(blockers.length > 0 && blockers.every(item => /^OBL-[1-9][0-9]*$/u.test(item))
+      && new Set(blockers).size === blockers.length,'suspension requires unique obligation blockers');
+    return this.transaction<RollingAssignmentTransition>(campaignId,async poolClient => {
+      const rollingStoredAssignment = await this.assignment(poolClient,campaignId,id,generation);
+      requireState(rollingStoredAssignment.state === 'WORKING' || rollingStoredAssignment.state === 'INACTIVE','worker is not eligible for suspension');
+      const rollingWorkerCreationV1 = await this.attachedWorkerIdentity(poolClient,campaignId,rollingStoredAssignment);
+      requireState(checkedRollingWorkerStopV1.threadId === rollingWorkerCreationV1.threadId
+        && checkedRollingWorkerStopV1.sessionId === rollingWorkerCreationV1.sessionId,'stop observation differs from attached native worker');
+      const dispatch = (await poolClient.query<Record<string,unknown>>(
+        'SELECT state,turn_id FROM ponytail_index.rolling_worker_dispatch_v1 WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3 AND generation=$4',
+        [this.projectId,campaignId,id,generation])).rows[0];
+      requireState(dispatch ? dispatch.state === 'ATTACHED' && dispatch.turn_id === checkedRollingWorkerStopV1.turn?.id
+        : checkedRollingWorkerStopV1.turn === null,'stop observation differs from known worker turn');
+      await this.cancelActions(poolClient,id);
+      const existing = await this.workerStopValue(poolClient,campaignId,id,generation);
+      if (existing) requireState(isDeepStrictEqual(existing,{...checkedRollingWorkerStopV1,observedAt:existing.observedAt}),
+        'stop observation checkpoint is immutable');
+      else await poolClient.query<Record<string,unknown>>(
+        'INSERT INTO ponytail_index.rolling_worker_stop_v1(project_id,campaign_id,assignment_id,generation,observation_text) VALUES($1,$2,$3,$4,$5)',
+        [this.projectId,campaignId,id,generation,JSON.stringify(checkedRollingWorkerStopV1)]);
+      await poolClient.query<Record<string,unknown>>("UPDATE ponytail_index.rolling_assignment_v1 SET state='INACTIVE',activity_stopped=true,blockers_text=$4 WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3",
+        [this.projectId,campaignId,id,JSON.stringify(blockers)]);
+      return {id,state:'INACTIVE'};
+    });
+  }
+
   // Traceability: implements REQ-ROLLING-WORKERS
   async workerContext(campaignId: string, id: string, generation: string): Promise<RollingWorkerContext> {
     return this.transaction(campaignId,(poolClient,rollingCampaignRow) => this.workerContextValue(poolClient,rollingCampaignRow,id,generation));
@@ -779,18 +852,7 @@ export class RollingCampaignStore {
     requireState(rollingStoredAssignment.state === 'WORKING' && !rollingStoredAssignment.activityStopped
       && !rollingStoredAssignment.retired && rollingStoredAssignment.sessionId, 'worker instructions require an active attached session');
     const obligationLeaseV1 = this.currentLease(rollingStoredAssignment,rollingGraph);
-    const row = (await poolClient.query<Record<string, unknown>>(
-      "SELECT result_text FROM ponytail_index.rolling_action_v1 WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3 AND generation=$4 AND kind='START_WORKER' AND state='COMPLETED'",
-      [this.projectId,campaignId,id,generation])).rows[0];
-    requireState(row, 'worker has no completed native creation');
-    const rollingWorkerCreationV1 = parseRollingWorkerCreation(stringColumn(row.result_text,'worker creation receipt'));
-    requireState(rollingWorkerCreationV1.sessionId === rollingStoredAssignment.sessionId, 'creation receipt differs from attached worker');
-    const rollingStoredWorktree = readWorktree((await poolClient.query<Record<string, unknown>>(
-      'SELECT * FROM ponytail_index.rolling_worktree_v1 WHERE project_id=$1 AND number=$2',
-      [this.projectId,rollingStoredAssignment.worktreeNumber])).rows[0]);
-    requireState(rollingStoredWorktree.rootPath === rollingWorkerCreationV1.rootPath
-      && fs.realpathSync(rollingWorkerCreationV1.rootPath) === rollingWorkerCreationV1.rootPath, 'creation checkout differs from assignment');
-    validateRollingSessionMarker(rollingWorkerCreationV1.rootPath,rollingWorkerCreationV1.sessionId);
+    const rollingWorkerCreationV1 = await this.attachedWorkerIdentity(poolClient,campaignId,rollingStoredAssignment);
     const obligation = rollingGraph.document.obligations.find(item => item.id === rollingStoredAssignment.obligationId);
     const obligationBaseline = rollingGraph.document.baselines.at(-1);
     requireState(obligation && obligationBaseline, 'worker obligation or baseline is missing');

@@ -8,7 +8,7 @@ import test from 'node:test';
 import { execFileSync } from 'node:child_process';
 import { RollingCodex, type RollingNativeThread } from '../src/rolling-codex.js';
 import { readRollingWorkerCreationV1, parseRollingWorkerCreation, identifyRollingWorkerCreation,
- buildRollingWorkerInstructions, type RollingWorkerContext, initializeRollingWorker, observeRollingWorkerInitialization, type RollingWorkerCreationV1 } from '../src/rolling-worker.js';
+ readRollingWorkerStopV1, parseRollingWorkerStop, type RollingWorkerStopV1, buildRollingWorkerInstructions, type RollingWorkerContext, initializeRollingWorker, observeRollingWorkerInitialization, type RollingWorkerCreationV1 } from '../src/rolling-worker.js';
 import { validateRollingSessionMarker, requireRollingSessionMarkerAbsent } from '../src/rolling-worktrees.js';
 
 // Traceability: verifies REQ-ROLLING-STATE
@@ -83,4 +83,21 @@ test('worker instructions retain exact obligation, requirement, acceptance step,
  assert.ok(instructions.includes('When submitting code changes, fetch the configured campaign branch'));
  assert.throws(() => buildRollingWorkerInstructions({...rollingWorkerContext,requirements:[]}),/requirement references/);
  assert.throws(() => buildRollingWorkerInstructions({...rollingWorkerContext,binding:{...rollingWorkerContext.binding,obligationId:'OBL-2'}}),/frozen obligation/);
+});
+
+// Traceability: verifies REQ-ROLLING-WORKERS
+// Traceability: verifies REQ-ROLLING-STATE
+test('stop observations retain native idle identity, exact stopped turn and dirty checkout checkpoint', () => {
+ const rollingWorkerStopV1:RollingWorkerStopV1 = {schemaVersion:1,campaignId:'fixture',assignmentId:'assignment',generation:'generation',
+  threadId:'thread',sessionId:'session',observedAt:'2026-10-11T13:00:00Z',nativeStatus:'idle',turn:{id:'turn',status:'interrupted'},
+  checkpoint:{revision:'a'.repeat(40),gitStatus:'?? unfinished.ts\n'}};
+ assert.deepEqual(parseRollingWorkerStop(JSON.stringify(rollingWorkerStopV1)),rollingWorkerStopV1);
+ assert.deepEqual(readRollingWorkerStopV1({...rollingWorkerStopV1,turn:null}).turn,null);
+ for (const value of [null, {...rollingWorkerStopV1,extra:true}, {...rollingWorkerStopV1,schemaVersion:2},
+  {...rollingWorkerStopV1,nativeStatus:'active'}, {...rollingWorkerStopV1,nativeStatus:'notLoaded'},
+  {...rollingWorkerStopV1,turn:{id:'turn',status:'inProgress'}}, {...rollingWorkerStopV1,turn:{id:'turn',status:'completed',extra:true}},
+  {...rollingWorkerStopV1,checkpoint:{...rollingWorkerStopV1.checkpoint,gitStatus:'?? unfinished.ts\0'}},
+  {...rollingWorkerStopV1,observedAt:'unknown'}, {...rollingWorkerStopV1,checkpoint:{revision:'short',gitStatus:''}},
+  {...rollingWorkerStopV1,sessionId:'foreign\nsession'}]) assert.throws(() => readRollingWorkerStopV1(value));
+ assert.throws(() => parseRollingWorkerStop(JSON.stringify(rollingWorkerStopV1).replace('"schemaVersion":1','"schemaVersion":1.0')));
 });

@@ -33,6 +33,7 @@ function send(value: unknown): void { process.stdout.write(`${JSON.stringify(val
 const lines = readline.createInterface({ input: process.stdin });
 let initialized = false;
 let turnCount = 0;
+let externallyActive = false;
 const turns = new Map<string, RollingNativeTurn>();
 lines.on('line', line => {
   const parsed: unknown = JSON.parse(line);
@@ -54,6 +55,13 @@ lines.on('line', line => {
       instructionSources: [`${cwd}/AGENTS.md`]
     };
     result = fixtureThreadResult;
+  } else if (method === 'fixture-activity') {
+    if (typeof params.active !== 'boolean') throw new Error('fixture activity must be boolean');
+    externallyActive = params.active;
+  } else if (method === 'thread/read') {
+    const threadId = text(params.threadId);
+    result = {thread:{id:threadId === 'wrong-activity' ? 'thread-fixture' : threadId,
+      status:{type:threadId === 'unsupported-activity' ? 'unknown' : externallyActive || [...turns.values()].some(turn => turn.status === 'inProgress') ? 'active' : 'idle'}}};
   } else if (method === 'turn/start') {
     const turnId = `turn-${++turnCount}`;
     if (!Array.isArray(params.input)) throw new Error('missing turn input');

@@ -21,6 +21,11 @@ export interface RollingNativeThread {
   readonly model: string | null;
 }
 
+export interface RollingNativeThreadActivity {
+  readonly threadId: string;
+  readonly status: 'idle' | 'active' | 'notLoaded' | 'systemError';
+}
+
 export interface RollingNativeItem {
   readonly type: string;
   readonly text: string | null;
@@ -142,7 +147,7 @@ export class RollingCodex extends EventEmitter<RollingCodexEvents> {
   private sequence = 0;
   private readonly pending = new Map<string, RollingPendingRequest>();
   private readonly completedTurns = new Map<string, RollingNativeTurn>();
-  private readonly activeTurns = new Map<string, string>();
+  private readonly activeTurns = new Map<string, string | null>();
   private ready = false;
   private failure: { readonly cause: unknown } | null = null;
   private readonly childProcess: ChildProcessWithoutNullStreams;
@@ -297,6 +302,23 @@ export class RollingCodex extends EventEmitter<RollingCodexEvents> {
       }
     } while (cursor !== null);
     throw new Error('rolling Codex: assigned turn is absent from native history');
+  }
+
+  async readThreadActivity(threadId: string): Promise<RollingNativeThreadActivity> {
+    const result = nativeRecord(await this.request('thread/read', {threadId,includeTurns:false}));
+    const thread = nativeRecord(result.thread);
+    requireProtocol(thread.id === threadId,'native activity differs from requested thread');
+    const status = nativeString(nativeRecord(thread.status).type,'native thread activity');
+    switch (status) {
+      case 'active':
+        if (!this.activeTurns.has(threadId)) this.activeTurns.set(threadId,null);
+        return {threadId,status};
+      case 'idle':
+        if (this.activeTurns.get(threadId) === null) this.activeTurns.delete(threadId);
+        return {threadId,status};
+      case 'notLoaded': case 'systemError': return {threadId,status};
+      default: throw new Error('rolling Codex: unsupported native thread activity');
+    }
   }
 
   waitForTurn(threadId: string, turnId: string, timeoutMs = 60000): Promise<RollingNativeTurn> {

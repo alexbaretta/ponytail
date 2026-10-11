@@ -3,13 +3,14 @@
 import path from 'node:path';
 import fs from 'node:fs';
 import { parse } from 'lossless-json';
+import { spawnSync } from 'node:child_process';
 import { RollingCodex, type RollingNativeThread, type RollingTurnStarted } from './rolling-codex.js';
 import { validateRollingSessionMarker, requireRollingSessionMarkerAbsent, provisionRollingWorktree } from './rolling-worktrees.js';
 
 import type { Obligation, ObligationRequirement } from '../skills/plan-execution/scripts/obligations.js';
 import type { ObligationLeaseV1 } from '../skills/plan-execution/scripts/obligation-binding-history.js';
 import type { RollingBinding, RollingProjectConfigV1, RollingResolvedConfiguration } from './rolling-campaign.js';
-import type { RollingCampaignStore, RollingSessionAttachment, RollingWorkerDispatchAttached } from './rolling-campaign-store.js';
+import type { RollingCampaignStore, RollingSessionAttachment, RollingWorkerDispatchAttached, RollingAssignmentTransition } from './rolling-campaign-store.js';
 
 export interface RollingWorkerCreationV1 {
  readonly schemaVersion: 1;
@@ -136,4 +137,85 @@ export async function dispatchRollingWorker(rollingCampaignStore: RollingCampaig
  requireWorker(rollingNativeThread.thread.sessionId === rollingWorkerContext.rollingWorkerCreationV1.sessionId, 'resumed worker differs from attached session');
  const rollingTurnStarted = await rollingCodex.startTurn(rollingNativeThread.thread.id,instructions);
  return rollingCampaignStore.attachWorkerDispatch(campaignId,assignmentId,generation,rollingWorkerDispatchStarted.id,rollingTurnStarted.turn.id);
+}
+
+export interface RollingWorkerStoppedTurn {readonly id: string;readonly status:'completed' | 'failed' | 'interrupted'}
+export interface RollingWorkerStopV1 {
+ readonly schemaVersion:1;
+ readonly campaignId:string;
+ readonly assignmentId:string;
+ readonly generation:string;
+ readonly threadId:string;
+ readonly sessionId:string;
+ readonly observedAt:string;
+ readonly nativeStatus:'idle';
+ readonly turn:RollingWorkerStoppedTurn | null;
+ readonly checkpoint:{readonly revision:string;readonly gitStatus:string};
+}
+function isStopRecord(value:unknown):value is Record<string,unknown> {
+ return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+function stopFields(value:unknown, names:readonly string[]):Record<string,unknown> {
+ requireWorker(isStopRecord(value),'stop observation must be a record');
+ requireWorker(Object.keys(value).sort().join(',') === [...names].sort().join(','),'invalid stop observation fields');
+ return value;
+}
+function stoppedTurn(value:unknown):RollingWorkerStoppedTurn {
+ const record = stopFields(value,['id','status']);
+ const id = identity(record.id);
+ switch(record.status) {
+  case 'completed': case 'failed': case 'interrupted': return {id,status:record.status};
+  default: throw new Error('rolling worker: observed turn is not stopped');
+ }
+}
+// Traceability: implements REQ-ROLLING-WORKERS
+// Traceability: implements REQ-ROLLING-STATE
+export function readRollingWorkerStopV1(value:unknown):RollingWorkerStopV1 {
+ const record = stopFields(value,['schemaVersion','campaignId','assignmentId','generation','threadId','sessionId','observedAt','nativeStatus','turn','checkpoint']);
+ requireWorker(record.schemaVersion === 1 && record.nativeStatus === 'idle','stop requires supported version and observed native idle state');
+ const observedAt = identity(record.observedAt);
+ requireWorker(/^\d{4}-\d{2}-\d{2}T/u.test(observedAt) && Number.isFinite(Date.parse(observedAt)),'invalid activity observation timestamp');
+ const checkpoint = stopFields(record.checkpoint,['revision','gitStatus']);
+ requireWorker(typeof checkpoint.revision === 'string' && /^(?:[a-f0-9]{40}|[a-f0-9]{64})$/u.test(checkpoint.revision)
+  && typeof checkpoint.gitStatus === 'string' && !checkpoint.gitStatus.includes('\0'),'invalid retained checkout checkpoint');
+ return {schemaVersion:1,campaignId:identity(record.campaignId),assignmentId:identity(record.assignmentId),generation:identity(record.generation),
+  threadId:identity(record.threadId),sessionId:identity(record.sessionId),observedAt,nativeStatus:'idle',
+  turn:record.turn === null ? null : stoppedTurn(record.turn),checkpoint:{revision:checkpoint.revision,gitStatus:checkpoint.gitStatus}};
+}
+export function parseRollingWorkerStop(text:string):RollingWorkerStopV1 {
+ return readRollingWorkerStopV1(parse(text,null,token => {requireWorker(token === '1','invalid stop numeric token');return 1;}));
+}
+export const RollingWorkerStopReaders = {V1:readRollingWorkerStopV1};
+
+// Traceability: implements REQ-ROLLING-WORKERS
+// Traceability: implements REQ-ROLLING-SCHEDULING
+export async function suspendRollingWorker(rollingCampaignStore:RollingCampaignStore,rollingCodex:RollingCodex,
+ campaignId:string,assignmentId:string,generation:string,blockers:readonly string[],timeoutMs = 60000):Promise<RollingAssignmentTransition> {
+ const rollingWorkerCreationV1 = await rollingCampaignStore.workerIdentity(campaignId,assignmentId,generation);
+ const rollingWorkerDispatch = await rollingCampaignStore.workerDispatch(campaignId,assignmentId,generation);
+ if (rollingWorkerDispatch !== null && rollingWorkerDispatch.state !== 'ATTACHED') throw new Error('rolling worker: unknown worker dispatch must be reconciled before suspension');
+ const rollingNativeThread = await rollingCodex.resumeThread(rollingWorkerCreationV1.threadId,rollingWorkerCreationV1.rootPath);
+ requireWorker(rollingNativeThread.thread.sessionId === rollingWorkerCreationV1.sessionId,'native worker differs from attached session');
+ let turn:RollingWorkerStoppedTurn | null = null;
+ if (rollingWorkerDispatch) {
+  requireWorker(rollingWorkerDispatch.threadId === rollingNativeThread.thread.id,'dispatch differs from original worker');
+  let rollingNativeTurn = await rollingCodex.readTurn(rollingNativeThread.thread.id,rollingWorkerDispatch.turnId);
+  if (rollingNativeTurn.status === 'inProgress') {
+   await rollingCodex.interruptTurn(rollingNativeThread.thread.id,rollingWorkerDispatch.turnId);
+   rollingNativeTurn = await rollingCodex.waitForTurn(rollingNativeThread.thread.id,rollingWorkerDispatch.turnId,timeoutMs);
+  }
+  turn = stoppedTurn({id:rollingNativeTurn.id,status:rollingNativeTurn.status});
+ }
+ const rollingNativeThreadActivity = await rollingCodex.readThreadActivity(rollingNativeThread.thread.id);
+ requireWorker(rollingNativeThreadActivity.status === 'idle','native worker is not known idle; preserve its active slot');
+ function git(argv:readonly string[]):string {
+  const result = spawnSync('git',['-C',rollingWorkerCreationV1.rootPath,...argv],{encoding:'utf8'});
+  requireWorker(!result.error && result.status === 0,result.error?.message || result.stderr.trim() || 'cannot checkpoint retained checkout');
+  return result.stdout;
+ }
+ requireWorker(git(['rev-parse','--show-toplevel']).trim() === rollingWorkerCreationV1.rootPath,'retained checkout identity differs');
+ const rollingWorkerStopV1 = readRollingWorkerStopV1({schemaVersion:1,campaignId,assignmentId,generation,
+  threadId:rollingNativeThread.thread.id,sessionId:rollingNativeThread.thread.sessionId,observedAt:new Date().toISOString(),nativeStatus:'idle',turn,
+  checkpoint:{revision:git(['rev-parse','HEAD']).trim(),gitStatus:git(['status','--porcelain=v1','--untracked-files=all'])}});
+ return rollingCampaignStore.suspendObservedWorker(campaignId,assignmentId,generation,rollingWorkerStopV1,blockers);
 }

@@ -93,3 +93,9 @@ test('live worker provisioning binds the reserved checkout and persists its actu
 // Traceability: verifies REQ-ROLLING-WORKERS
 test('live attached worker receives exact obligation, traceability, frozen lease and QA instructions',
  t => runRollingWorkerScenario(t, 'native', 'instructions'));
+
+// Traceability: verifies REQ-ROLLING-WORKERS
+// Traceability: verifies REQ-ROLLING-SCHEDULING
+// Traceability: verifies REQ-ROLLING-STATE
+test('live worker suspension observes idle native activity and retains its dirty checkout while freeing capacity',
+ t => runRollingWorkerScenario(t, 'native', 'suspension'));

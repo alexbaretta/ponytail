@@ -36,6 +36,14 @@ test('native protocol binds checkout and session, preserves numbers and observes
   await rollingCodex.waitForTurn(started.thread.id, first.turn.id);
   const resumed = await rollingCodex.resumeThread(started.thread.id, root);
   assert.equal(resumed.thread.sessionId, started.thread.sessionId);
+  assert.deepEqual(await rollingCodex.readThreadActivity(started.thread.id),{threadId:started.thread.id,status:'idle'});
+  await assert.rejects(rollingCodex.readThreadActivity('wrong-activity'),/differs from requested thread/);
+  await assert.rejects(rollingCodex.readThreadActivity('unsupported-activity'),/unsupported native thread activity/);
+  await rollingCodex.request('fixture-activity',{active:true});
+  assert.equal((await rollingCodex.readThreadActivity(started.thread.id)).status,'active');
+  await assert.rejects(rollingCodex.close(),/observe terminal turns/);
+  await rollingCodex.request('fixture-activity',{active:false});
+  assert.equal((await rollingCodex.readThreadActivity(started.thread.id)).status,'idle');
   await assert.rejects(rollingCodex.resumeThread('wrong-thread', root),
     (cause: unknown) => cause instanceof RollingNativeResponseError && cause.nativeResult !== undefined);
   for (const status of ['completed', 'failed', 'interrupted']) {
@@ -51,6 +59,7 @@ test('native protocol binds checkout and session, preserves numbers and observes
   assert.equal((await answer).method, 'approval/answered');
   await assert.rejects(rollingCodex.request('explode', {}), /fixture failure/);
   const pending = await rollingCodex.startTurn(started.thread.id, 'pending');
+  assert.equal((await rollingCodex.readThreadActivity(started.thread.id)).status,'active');
   await assert.rejects(rollingCodex.close(), /observe terminal turns/);
   await rollingCodex.interruptTurn(started.thread.id, pending.turn.id);
   assert.equal((await rollingCodex.waitForTurn(started.thread.id, pending.turn.id)).status, 'interrupted');

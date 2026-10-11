@@ -272,6 +272,25 @@ class RollingCodex extends node_events_1.EventEmitter {
         } while (cursor !== null);
         throw new Error('rolling Codex: assigned turn is absent from native history');
     }
+    async readThreadActivity(threadId) {
+        const result = nativeRecord(await this.request('thread/read', { threadId, includeTurns: false }));
+        const thread = nativeRecord(result.thread);
+        requireProtocol(thread.id === threadId, 'native activity differs from requested thread');
+        const status = nativeString(nativeRecord(thread.status).type, 'native thread activity');
+        switch (status) {
+            case 'active':
+                if (!this.activeTurns.has(threadId))
+                    this.activeTurns.set(threadId, null);
+                return { threadId, status };
+            case 'idle':
+                if (this.activeTurns.get(threadId) === null)
+                    this.activeTurns.delete(threadId);
+                return { threadId, status };
+            case 'notLoaded':
+            case 'systemError': return { threadId, status };
+            default: throw new Error('rolling Codex: unsupported native thread activity');
+        }
+    }
     waitForTurn(threadId, turnId, timeoutMs = 60000) {
         const rollingNativeTurn = this.completedTurns.get(threadId);
         if (rollingNativeTurn?.id === turnId)

@@ -6,7 +6,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.RollingWorkerCreationReaders = void 0;
+exports.RollingWorkerStopReaders = exports.RollingWorkerCreationReaders = void 0;
 exports.readRollingWorkerCreationV1 = readRollingWorkerCreationV1;
 exports.parseRollingWorkerCreation = parseRollingWorkerCreation;
 exports.identifyRollingWorkerCreation = identifyRollingWorkerCreation;
@@ -16,9 +16,13 @@ exports.provisionRollingWorker = provisionRollingWorker;
 exports.attachRollingWorker = attachRollingWorker;
 exports.buildRollingWorkerInstructions = buildRollingWorkerInstructions;
 exports.dispatchRollingWorker = dispatchRollingWorker;
+exports.readRollingWorkerStopV1 = readRollingWorkerStopV1;
+exports.parseRollingWorkerStop = parseRollingWorkerStop;
+exports.suspendRollingWorker = suspendRollingWorker;
 const node_path_1 = __importDefault(require("node:path"));
 const node_fs_1 = __importDefault(require("node:fs"));
 const lossless_json_1 = require("lossless-json");
+const node_child_process_1 = require("node:child_process");
 const rolling_worktrees_js_1 = require("./rolling-worktrees.js");
 function requireWorker(condition, message) {
     if (!condition)
@@ -100,4 +104,68 @@ async function dispatchRollingWorker(rollingCampaignStore, rollingCodex, campaig
     requireWorker(rollingNativeThread.thread.sessionId === rollingWorkerContext.rollingWorkerCreationV1.sessionId, 'resumed worker differs from attached session');
     const rollingTurnStarted = await rollingCodex.startTurn(rollingNativeThread.thread.id, instructions);
     return rollingCampaignStore.attachWorkerDispatch(campaignId, assignmentId, generation, rollingWorkerDispatchStarted.id, rollingTurnStarted.turn.id);
+}
+function isStopRecord(value) {
+    return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+function stopFields(value, names) {
+    requireWorker(isStopRecord(value), 'stop observation must be a record');
+    requireWorker(Object.keys(value).sort().join(',') === [...names].sort().join(','), 'invalid stop observation fields');
+    return value;
+}
+function stoppedTurn(value) {
+    const record = stopFields(value, ['id', 'status']);
+    const id = identity(record.id);
+    switch (record.status) {
+        case 'completed':
+        case 'failed':
+        case 'interrupted': return { id, status: record.status };
+        default: throw new Error('rolling worker: observed turn is not stopped');
+    }
+}
+function readRollingWorkerStopV1(value) {
+    const record = stopFields(value, ['schemaVersion', 'campaignId', 'assignmentId', 'generation', 'threadId', 'sessionId', 'observedAt', 'nativeStatus', 'turn', 'checkpoint']);
+    requireWorker(record.schemaVersion === 1 && record.nativeStatus === 'idle', 'stop requires supported version and observed native idle state');
+    const observedAt = identity(record.observedAt);
+    requireWorker(/^\d{4}-\d{2}-\d{2}T/u.test(observedAt) && Number.isFinite(Date.parse(observedAt)), 'invalid activity observation timestamp');
+    const checkpoint = stopFields(record.checkpoint, ['revision', 'gitStatus']);
+    requireWorker(typeof checkpoint.revision === 'string' && /^(?:[a-f0-9]{40}|[a-f0-9]{64})$/u.test(checkpoint.revision)
+        && typeof checkpoint.gitStatus === 'string' && !checkpoint.gitStatus.includes('\0'), 'invalid retained checkout checkpoint');
+    return { schemaVersion: 1, campaignId: identity(record.campaignId), assignmentId: identity(record.assignmentId), generation: identity(record.generation),
+        threadId: identity(record.threadId), sessionId: identity(record.sessionId), observedAt, nativeStatus: 'idle',
+        turn: record.turn === null ? null : stoppedTurn(record.turn), checkpoint: { revision: checkpoint.revision, gitStatus: checkpoint.gitStatus } };
+}
+function parseRollingWorkerStop(text) {
+    return readRollingWorkerStopV1((0, lossless_json_1.parse)(text, null, token => { requireWorker(token === '1', 'invalid stop numeric token'); return 1; }));
+}
+exports.RollingWorkerStopReaders = { V1: readRollingWorkerStopV1 };
+async function suspendRollingWorker(rollingCampaignStore, rollingCodex, campaignId, assignmentId, generation, blockers, timeoutMs = 60000) {
+    const rollingWorkerCreationV1 = await rollingCampaignStore.workerIdentity(campaignId, assignmentId, generation);
+    const rollingWorkerDispatch = await rollingCampaignStore.workerDispatch(campaignId, assignmentId, generation);
+    if (rollingWorkerDispatch !== null && rollingWorkerDispatch.state !== 'ATTACHED')
+        throw new Error('rolling worker: unknown worker dispatch must be reconciled before suspension');
+    const rollingNativeThread = await rollingCodex.resumeThread(rollingWorkerCreationV1.threadId, rollingWorkerCreationV1.rootPath);
+    requireWorker(rollingNativeThread.thread.sessionId === rollingWorkerCreationV1.sessionId, 'native worker differs from attached session');
+    let turn = null;
+    if (rollingWorkerDispatch) {
+        requireWorker(rollingWorkerDispatch.threadId === rollingNativeThread.thread.id, 'dispatch differs from original worker');
+        let rollingNativeTurn = await rollingCodex.readTurn(rollingNativeThread.thread.id, rollingWorkerDispatch.turnId);
+        if (rollingNativeTurn.status === 'inProgress') {
+            await rollingCodex.interruptTurn(rollingNativeThread.thread.id, rollingWorkerDispatch.turnId);
+            rollingNativeTurn = await rollingCodex.waitForTurn(rollingNativeThread.thread.id, rollingWorkerDispatch.turnId, timeoutMs);
+        }
+        turn = stoppedTurn({ id: rollingNativeTurn.id, status: rollingNativeTurn.status });
+    }
+    const rollingNativeThreadActivity = await rollingCodex.readThreadActivity(rollingNativeThread.thread.id);
+    requireWorker(rollingNativeThreadActivity.status === 'idle', 'native worker is not known idle; preserve its active slot');
+    function git(argv) {
+        const result = (0, node_child_process_1.spawnSync)('git', ['-C', rollingWorkerCreationV1.rootPath, ...argv], { encoding: 'utf8' });
+        requireWorker(!result.error && result.status === 0, result.error?.message || result.stderr.trim() || 'cannot checkpoint retained checkout');
+        return result.stdout;
+    }
+    requireWorker(git(['rev-parse', '--show-toplevel']).trim() === rollingWorkerCreationV1.rootPath, 'retained checkout identity differs');
+    const rollingWorkerStopV1 = readRollingWorkerStopV1({ schemaVersion: 1, campaignId, assignmentId, generation,
+        threadId: rollingNativeThread.thread.id, sessionId: rollingNativeThread.thread.sessionId, observedAt: new Date().toISOString(), nativeStatus: 'idle', turn,
+        checkpoint: { revision: git(['rev-parse', 'HEAD']).trim(), gitStatus: git(['status', '--porcelain=v1', '--untracked-files=all']) } });
+    return rollingCampaignStore.suspendObservedWorker(campaignId, assignmentId, generation, rollingWorkerStopV1, blockers);
 }

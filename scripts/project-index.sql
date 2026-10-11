@@ -419,6 +419,22 @@ CREATE TABLE IF NOT EXISTS rolling_worker_dispatch_v1 (
   CHECK ((state='STARTED' AND turn_id IS NULL) OR (state='ATTACHED' AND turn_id IS NOT NULL AND turn_id <> ''))
 );
 
+CREATE TABLE IF NOT EXISTS rolling_worker_stop_v1 (
+  project_id uuid NOT NULL,
+  campaign_id text NOT NULL,
+  assignment_id uuid NOT NULL,
+  generation uuid NOT NULL,
+  observation_text text NOT NULL CHECK ((observation_text::jsonb->>'schemaVersion' = '1'
+    AND observation_text::jsonb->>'nativeStatus' = 'idle'
+    AND observation_text::jsonb->>'campaignId' = campaign_id
+    AND observation_text::jsonb->>'assignmentId' = assignment_id::text
+    AND observation_text::jsonb->>'generation' = generation::text) IS TRUE),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (project_id,campaign_id,assignment_id,generation),
+  FOREIGN KEY (project_id,campaign_id,assignment_id)
+    REFERENCES rolling_assignment_v1(project_id,campaign_id,assignment_id) ON DELETE CASCADE
+);
+
 CREATE OR REPLACE FUNCTION register_project(
   requested_project_id uuid,
   requested_project_name text
