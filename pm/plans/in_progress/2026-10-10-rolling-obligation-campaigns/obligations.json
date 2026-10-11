@@ -5426,6 +5426,46 @@
       },
       "reason": "Inspect and execute existing typed native protocol and live start/resume proof; stop at OBL-41–43 component discharge.",
       "assessor": "coordinator"
+    },
+    {
+      "id": "CHECKPOINT-19",
+      "predecessorId": "CHECKPOINT-18",
+      "baselineId": "BASELINE-8",
+      "kind": "neutral",
+      "selectedIds": [
+        "OBL-70",
+        "OBL-71"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "CERT-10"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": {
+        "obligationId": "OBL-70",
+        "operations": [
+          "inspect"
+        ],
+        "deliverable": "Inspect actual strict TypeScript program coverage, compiler evidence identity and unchanged TSTS application; stop at OBL-70/71 foundation assessment."
+      },
+      "reason": "Discharge two existing started foundation conditions without introducing new scope or substituting them for the remaining language migration.",
+      "assessor": "coordinator"
     }
   ]
 }

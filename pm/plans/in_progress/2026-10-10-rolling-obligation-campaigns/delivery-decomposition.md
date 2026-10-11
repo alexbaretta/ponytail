@@ -116,9 +116,15 @@ not certify any remaining handwritten operation or complete the language invento
 
 | Canonical obligation | Evidence boundary | Assessment |
 | --- | --- | --- |
-| <a id="obl-70"></a>[OBL-70](obligations.json) | Configured strict root build and compiler configuration review | Build evidence available; assess complete inputs |
-| <a id="obl-71"></a>[OBL-71](obligations.json) | Configured unchanged TSTS and directory coverage review | Checker evidence available; assess complete inputs |
+| <a id="obl-70"></a>[OBL-70](obligations.json) | Configured strict root build and compiler configuration review | CERT-10: complete coverage and bypass inspection; consult current freshness |
+| <a id="obl-71"></a>[OBL-71](obligations.json) | Configured unchanged TSTS and directory coverage review | CERT-10: complete two-program coverage and unchanged checker; consult current freshness |
 | <a id="obl-72"></a>[OBL-72](obligations.json) | Root build, runtime materialization check and emitted-runtime proofs | Runtime evidence available; assess complete inputs |
+
+The [foundation assessment](evidence/static-foundation-assessment.md) covers all
+80 currently owned TypeScript source/test paths (63 Ponytail and 17 existing
+TSTS). It does not establish completion of the remaining handwritten executable
+language migration. OBL-72 remains unresolved because the current materializer
+does not establish checked ownership of every retained runtime entrypoint.
 
 ## Registered language operation migrations
 
