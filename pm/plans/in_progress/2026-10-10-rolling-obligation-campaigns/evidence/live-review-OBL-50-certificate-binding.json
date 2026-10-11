@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "certificateId": "CERT-62",
+  "lease": {
+    "schemaVersion": 1,
+    "scopeId": "2026-10-10-rolling-obligation-campaigns",
+    "baselineId": "BASELINE-14",
+    "graphDigest": "946842cd009f800add4ef3ad8abf1cb033a3cbc4408b20d0c22c99212b2fa7ca",
+    "generation": "standalone-review-runtime-2026-10-11",
+    "assessor": "coordinator",
+    "authority": [
+      "user-goal-2026-10-10-rolling-campaigns",
+      "user-goal-2026-10-10-static-language-existing-tsts",
+      "user-2026-10-10-normative-atomic-obligations"
+    ],
+    "binding": {
+      "obligationId": "OBL-50",
+      "revisionId": "BIND-37",
+      "dependsOn": [
+        "OBL-112"
+      ],
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "src/rolling-review.ts",
+          "src/rolling-review.js",
+          "src/rolling-campaign-store.ts",
+          "src/rolling-campaign-store.js",
+          "tests/rolling-review.test.ts",
+          "tests/rolling-campaign-store.integration.test.ts",
+          "scripts/project-index.sql",
+          "scripts/build-runtime.ts",
+          "versioned-data-contracts.json",
+          "AGENTS.md",
+          ".agents/config/project/traceability.json",
+          "pm/requirements/traceability.generated.md",
+          "tests/fixtures/rolling-codex-server.ts",
+          "tests/rolling-codex.test.ts",
+          "src/rolling-codex.ts",
+          "tests/rolling-codex.integration.ts",
+          "src/rolling-codex.js"
+        ],
+        "operations": [
+          "inspect",
+          "edit",
+          "build",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "Review the exact candidate adversarially and persist the assigned reviewer identity."
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "rolling-review-OBL-50"
+        }
+      }
+    }
+  },
+  "revision": "6a182a22f889ce0fddb8311ad328f9bb697fb385",
+  "proof": [
+    {
+      "operation": "test",
+      "certificateEvidenceIndex": 0,
+      "submissionEvidenceIndex": 0
+    }
+  ]
+}
