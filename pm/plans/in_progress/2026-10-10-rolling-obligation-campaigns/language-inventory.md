@@ -363,6 +363,60 @@ The existing TSTS compiler/checker subtree is retained and exercised rather than
 - [tsts/test/unused-code.test.ts](../../../../tsts/test/unused-code.test.ts)
 - [tsts/test/versioned-data-contracts.test.ts](../../../../tsts/test/versioned-data-contracts.test.ts)
 
+## Inspected core operation boundaries
+
+This refinement uses source and typed test inspection at `3111a23`. The rows
+below are candidate registration boundaries, not new obligation declarations or
+certificates. Register their canonical conditions in the ledger before assignment;
+do not count the rows as discharged work. Existing typed implementations require
+assessment just as remaining migrations do.
+
+| Independently consumed outcome | Canonical source boundary | Existing proof boundary |
+| --- | --- | --- |
+| Read physical V1 plan metadata without changing its historical meaning | `src/campaign-plan-metadata.ts`: `readPlanMetadataV1` | `tests/campaign-plan-metadata.test.ts`: physical readers |
+| Read physical V2 plan metadata, including normalized dependency declarations | Same owner: `readPlanMetadataV2` | Same physical-reader proof |
+| Read physical V3 plan metadata with safe obligation-document identity | Same owner: `readPlanMetadataV3` | Physical-reader and unsafe-path proof |
+| Load a selected managed plan through its declared physical reader | Same owner: `readManagedPlan`, `parsePlanSource` | Selected-file dispatch and supplied-source parsing proof |
+| Enumerate source files in lexical order for source consumers | `src/campaign-plan-sources.ts`: `listPlanSourceFiles` | `tests/campaign-plan-sources.test.ts`: lexical listing |
+| Discover parsed candidates in configured lifecycle order with physical root confinement | Same owner: `scanPlanCandidates` | Lifecycle ordering and unsafe-root rejection proof |
+| Resolve linked member plan files to existing physical paths | Same owner: `linkedPlanFiles` | Directory, fragment and physical-path link proof |
+| Resolve explicit or active plan selection with missing/ambiguous diagnostics | `src/campaign-scope.ts`: `resolveInputPlan` | `tests/campaign-scope.test.ts`: active/explicit selection and diagnostics |
+| Resolve campaign membership and ancestry with parent/link/cycle constraints | Same owner: `readAncestors`, `discoverCampaign` | Complete campaign scope and ancestry proof |
+| Validate the plan dependency DAG | `src/campaign-dependencies.ts`: `validateCampaignDependencies` | `tests/campaign-dependencies.test.ts`: missing members and cycles |
+| Validate cross-plan tasklet gates against current contents and committed HEAD | Same owner: `validateExternalTaskletDependencies` | Committed/current DONE agreement, missing targets and cycles |
+| Read historical physical V1 input records without admitting them to the active queue | `src/plan-input-queue.ts`: `readV1`, active queue reader | `tests/plan-input-queue.test.ts`: exact V1 and retired consumption |
+| Read physical campaign-scoped V2 input records | Same owner: `readV2` | Exact durable V2 producer contract |
+| Enqueue campaign input with durable identity and producer metadata | Same owner: `enqueue` | Shared producer contract; concurrency assessment still required |
+| List campaign input in deterministic receipt/identity order | Same owner: `entries` | Shared producer and lifecycle proof; assess exact ordering coverage |
+| Claim queued input or resume the current in-progress input | Same owner: `claim` | Critical-section/resumption proof; assess process-level contention separately |
+| Complete claimed input with existing durable PM record references | Same owner: `complete` | Completion and required PM evidence proof |
+| Parse plan-input command syntax into checked lifecycle commands | `src/plan-input-command.ts`: `parseCli` | `tests/plan-input-command.test.ts`: prompts and lifecycle grammar |
+
+Physical version readers remain separate because each is an independently
+consumed historical contract. Selected-file and supplied-text entrypoints share
+one dispatch outcome here; a second wrapper does not create another atom.
+Lexical source enumeration and lifecycle-ordered parsed discovery differ in
+observable ordering and consumption, so neither is merely a helper of the other.
+Membership combines ancestry and descendant discovery into one complete scope
+result; parent-link checking is part of that outcome, not an extra delivered unit.
+
+Do not separately register error constructors, record-ID extraction, metadata
+block extraction, queue path construction, enqueue locks, immutable type
+declarations or reader registries. They support the outcomes above. Root/scope
+wrappers require caller inspection before claiming additional independent scope.
+The table identifies available test boundaries, not adequate proof of every
+criterion: a test named “critical section” alone does not establish concurrent
+process safety, and shared queue tests do not automatically prove every ordering
+or failure condition.
+
+The existing formatter, listing, activation and census grammar remain OBL-73–76;
+do not register their wrappers again. Rolling engine outcomes remain OBL-22–69;
+reconcile their checked-contract evidence with those IDs rather than duplicate
+each as a second language-migration outcome. Compiler, TSTS and runtime
+materialization remain OBL-70–72. Next inspection covers portable obligation,
+sprint and tasklet selectors, report projection, coordinator input ownership,
+and retained index/worktree/host operations before the remaining untyped tools.
+
 ## Registration and completion boundary
 
 The owner census is now explicit; the atomic outcome inventory is still incomplete.

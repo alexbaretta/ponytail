@@ -139,6 +139,11 @@ launchers, embedded Python/shell/Node programs, host launch fragments and
 benchmark handler/subject distinctions. This replaces the stale 188-candidate
 inspection count. It is not an obligation denominator: operation boundaries,
 class methods and template consumers still require canonical reconciliation.
+Its [inspected core operation boundaries](language-inventory.md#inspected-core-operation-boundaries)
+distinguish physical readers, selection, discovery, dependency validation and
+queue lifecycle outcomes from their supporting declarations and wrappers.
+These candidates need canonical registration and evidence assessment; they are
+not an additional completion count.
 Include completed migrations as well as remaining operations. S07 records
 existing bounded migration evidence; its feature/tasklet counts cannot
 substitute for the outcome decomposition.
