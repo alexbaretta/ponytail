@@ -132,13 +132,16 @@ An independently consumed QA tool or host boundary can have its own outcome.
 An obsolete operation can instead be removed when its removal is within the
 approved replacement scope and its callers/commands are reconciled.
 
-The source inventory currently identifies 188 canonical executable candidates
-after excluding generated mirrors and the already typed TSTS subtree. This is
-an inspection inventory, not 188 obligations or a completeness claim: embedded
-executable templates, source ownership, generated mappings and operation
-boundaries still require inspection. Include completed migrations as well as
-remaining operations. S07 records existing bounded migration evidence; its
-feature/tasklet counts cannot substitute for the outcome decomposition.
+The [current source inventory](language-inventory.md) explicitly partitions
+the tracked executable paths into canonical owners, generated adjacent runtimes,
+OpenClaw resources and the existing TSTS subtree. It also identifies extensionless
+launchers, embedded Python/shell/Node programs, host launch fragments and
+benchmark handler/subject distinctions. This replaces the stale 188-candidate
+inspection count. It is not an obligation denominator: operation boundaries,
+class methods and template consumers still require canonical reconciliation.
+Include completed migrations as well as remaining operations. S07 records
+existing bounded migration evidence; its feature/tasklet counts cannot
+substitute for the outcome decomposition.
 
 Before activating implementation assignments or a completion denominator:
 

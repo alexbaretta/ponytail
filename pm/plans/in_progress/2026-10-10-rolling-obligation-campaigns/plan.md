@@ -99,6 +99,13 @@ The [delivery decomposition](delivery-decomposition.md) records candidate
 outcomes and the evidence boundaries inspected so far. It is a planning input
 to the next explicit ledger baseline, not an alternative satisfaction registry.
 
+The [owned executable inventory](language-inventory.md) records the current
+canonical source, generated-runtime, OpenClaw and TSTS partitions, public
+boundaries and embedded-program/host-launch ownership. It closes the missing
+path census without claiming that the atomic outcome inventory is complete.
+Reconcile its behavioral boundaries into canonical obligations before treating
+source counts, existing typed modules or test fixtures as delivered outcomes.
+
 Keep inventory checks and requirement-wide final acceptance gates in their
 own readouts. Their discharge remains mandatory for campaign closure, but
 mixing them with delivery obligations does not measure work completion. A
