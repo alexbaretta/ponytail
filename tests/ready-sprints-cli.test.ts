@@ -39,12 +39,16 @@ test('generated sprint CLI preserves planning, execution and completion JSON', t
   const executionCommand = spawnSync(process.execPath, [tool, 'execution', root], { encoding: 'utf8' });
   assert.equal(executionCommand.status, 0, executionCommand.stderr);
   assert.equal(executionCommand.stdout, '["S01"]\n');
+  assert.equal(fs.readFileSync(file, 'utf8'), source(executionSprintMetadataV3));
+  assert.equal(fs.readFileSync(path.join(directory, 'S01.tasklets.json'), 'utf8'), JSON.stringify(taskletMetadataV3));
   const completedSprintMetadataV3: SprintMetadataV3 = { ...executionSprintMetadataV3,
     execution: { status: 'DONE', depends_on: [], tasklets_reviewed: true } };
   fs.writeFileSync(file, source(completedSprintMetadataV3));
   const completedCommand = spawnSync(process.execPath, [tool, 'execution', root], { encoding: 'utf8' });
   assert.equal(completedCommand.status, 0, completedCommand.stderr);
   assert.equal(completedCommand.stdout, '[]\n');
+  assert.equal(fs.readFileSync(file, 'utf8'), source(completedSprintMetadataV3));
+  assert.equal(fs.readFileSync(path.join(directory, 'S01.tasklets.json'), 'utf8'), JSON.stringify(taskletMetadataV3));
 });
 
 test('native sprint CLI preserves grammar error output and exit status', () => {

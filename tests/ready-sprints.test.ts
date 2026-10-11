@@ -111,6 +111,33 @@ test('V2 execution selects only the earliest reviewed checkpoint and rejects adv
  assert.throws(() => validateCheckpointOrder([checkpoint('S01'), checkpoint('S02', 'IN_PROGRESS')]), /advanced before unfinished predecessor/);
 });
 
+test('planning starts only after approved prerequisites and preserves blocked and eligible inputs', () => {
+ const prerequisiteSprintV3: SprintV3 = { ...sprint('S01'), planning: { status: 'READY_FOR_REVIEW', depends_on: [], scope_roots: ['src'] }, execution: null };
+ const dependentSprintV3: SprintV3 = { ...sprint('S02'), planning: { status: 'STUB', depends_on: ['S01'], scope_roots: ['src'] }, execution: null };
+ const blocked: readonly SprintV3[] = [prerequisiteSprintV3, dependentSprintV3];
+ const blockedBefore = JSON.stringify(blocked);
+ assert.deepEqual(selectPlanningReadySprints(blocked, validateDependencies(blocked)), []);
+ assert.equal(JSON.stringify(blocked), blockedBefore);
+ const approvedSprintV3: SprintV3 = { ...prerequisiteSprintV3, planning: { ...prerequisiteSprintV3.planning, status: 'APPROVED' } };
+ const eligible: readonly SprintV3[] = [approvedSprintV3, dependentSprintV3];
+ const eligibleBefore = JSON.stringify(eligible);
+ assert.deepEqual(selectPlanningReadySprints(eligible, validateDependencies(eligible)), ['S02']);
+ assert.equal(JSON.stringify(eligible), eligibleBefore);
+});
+
+test('all sprint selectors preserve canonical readonly fixture values', () => {
+ const sprints: readonly SprintV3[] = [sprint('S01', 'DONE'), sprint('S02', 'PENDING', ['S01'], false)];
+ const sprintById: ReadonlyMap<string, SprintV3> = validateDependencies(sprints);
+ const before = JSON.stringify(sprints);
+ for (const selector of [selectPlanningReadySprints, selectPlanningReviewableSprints, selectExecutionReadySprints,
+  selectExecutionRunnableSprints, selectExecutionReviewableSprints]) {
+  selector(sprints, sprintById);
+  assert.equal(JSON.stringify(sprints), before);
+  assert.equal(sprintById.get('S01'), sprints[0]);
+  assert.equal(sprintById.get('S02'), sprints[1]);
+ }
+});
+
 test('V3 execution selects the earliest reviewed dependency-ready sprint and rejects advanced dependencies', () => {
  const sprints: readonly SprintV3[] = [sprint('S01', 'DONE'), sprint('S02', 'PENDING', ['S01']), sprint('S03', 'PENDING', ['S01']), sprint('S04', 'PENDING', ['S02'], false)];
  assert.deepEqual(selectExecutionReadySprints(sprints, validateDependencies(sprints)), ['S02']);

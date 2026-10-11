@@ -477,6 +477,252 @@
           "profile": "typed-sprint-paths-OBL-89"
         }
       }
+    },
+    {
+      "id": "BIND-12",
+      "obligationId": "OBL-90",
+      "predecessorId": null,
+      "baselineId": "BASELINE-14",
+      "assessor": "coordinator",
+      "authority": [
+        "user-goal-2026-10-10-rolling-campaigns",
+        "user-goal-2026-10-10-static-language-existing-tsts",
+        "user-2026-10-10-normative-atomic-obligations"
+      ],
+      "reason": "Complete the started sprint selector and CLI proof with approved-prerequisite and non-mutation observations; use the already-converted typed fixture owner and preserve original identity, condition and criterion.",
+      "dependsOn": [
+        "OBL-112"
+      ],
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "skills/plan-execution/scripts/ready-sprints.ts",
+          "skills/plan-execution/scripts/ready-sprints.js",
+          "tests/ready-sprints-cli.test.ts",
+          "tests/ready-sprints.test.ts"
+        ],
+        "operations": [
+          "inspect",
+          "edit",
+          "build",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "Select a dependency-ready sprint for planning through a checked static implementation preserving the approved portable behavior and historical contract meanings."
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "typed-sprint-selectors-OBL-90"
+        }
+      }
+    },
+    {
+      "id": "BIND-13",
+      "obligationId": "OBL-91",
+      "predecessorId": null,
+      "baselineId": "BASELINE-14",
+      "assessor": "coordinator",
+      "authority": [
+        "user-goal-2026-10-10-rolling-campaigns",
+        "user-goal-2026-10-10-static-language-existing-tsts",
+        "user-2026-10-10-normative-atomic-obligations"
+      ],
+      "reason": "Complete the started sprint selector and CLI proof with approved-prerequisite and non-mutation observations; use the already-converted typed fixture owner and preserve original identity, condition and criterion.",
+      "dependsOn": [
+        "OBL-112"
+      ],
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "skills/plan-execution/scripts/ready-sprints.ts",
+          "skills/plan-execution/scripts/ready-sprints.js",
+          "tests/ready-sprints-cli.test.ts",
+          "tests/ready-sprints.test.ts"
+        ],
+        "operations": [
+          "inspect",
+          "edit",
+          "build",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "Select a detailed sprint for planning review through a checked static implementation preserving the approved portable behavior and historical contract meanings."
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "typed-sprint-selectors-OBL-91"
+        }
+      }
+    },
+    {
+      "id": "BIND-14",
+      "obligationId": "OBL-92",
+      "predecessorId": null,
+      "baselineId": "BASELINE-14",
+      "assessor": "coordinator",
+      "authority": [
+        "user-goal-2026-10-10-rolling-campaigns",
+        "user-goal-2026-10-10-static-language-existing-tsts",
+        "user-2026-10-10-normative-atomic-obligations"
+      ],
+      "reason": "Complete the started sprint selector and CLI proof with approved-prerequisite and non-mutation observations; use the already-converted typed fixture owner and preserve original identity, condition and criterion.",
+      "dependsOn": [
+        "OBL-112"
+      ],
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "skills/plan-execution/scripts/ready-sprints.ts",
+          "skills/plan-execution/scripts/ready-sprints.js",
+          "tests/ready-sprints-cli.test.ts",
+          "tests/ready-sprints.test.ts"
+        ],
+        "operations": [
+          "inspect",
+          "edit",
+          "build",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "Select a sprint eligible to begin execution under its physical version rules through a checked static implementation preserving the approved portable behavior and historical contract meanings."
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "typed-sprint-selectors-OBL-92"
+        }
+      }
+    },
+    {
+      "id": "BIND-15",
+      "obligationId": "OBL-93",
+      "predecessorId": null,
+      "baselineId": "BASELINE-14",
+      "assessor": "coordinator",
+      "authority": [
+        "user-goal-2026-10-10-rolling-campaigns",
+        "user-goal-2026-10-10-static-language-existing-tsts",
+        "user-2026-10-10-normative-atomic-obligations"
+      ],
+      "reason": "Complete the started sprint selector and CLI proof with approved-prerequisite and non-mutation observations; use the already-converted typed fixture owner and preserve original identity, condition and criterion.",
+      "dependsOn": [
+        "OBL-112"
+      ],
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "skills/plan-execution/scripts/ready-sprints.ts",
+          "skills/plan-execution/scripts/ready-sprints.js",
+          "tests/ready-sprints-cli.test.ts",
+          "tests/ready-sprints.test.ts"
+        ],
+        "operations": [
+          "inspect",
+          "edit",
+          "build",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "Resume started V3 execution without relaxing start/review gates through a checked static implementation preserving the approved portable behavior and historical contract meanings."
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "typed-sprint-selectors-OBL-93"
+        }
+      }
+    },
+    {
+      "id": "BIND-16",
+      "obligationId": "OBL-94",
+      "predecessorId": null,
+      "baselineId": "BASELINE-14",
+      "assessor": "coordinator",
+      "authority": [
+        "user-goal-2026-10-10-rolling-campaigns",
+        "user-goal-2026-10-10-static-language-existing-tsts",
+        "user-2026-10-10-normative-atomic-obligations"
+      ],
+      "reason": "Complete the started sprint selector and CLI proof with approved-prerequisite and non-mutation observations; use the already-converted typed fixture owner and preserve original identity, condition and criterion.",
+      "dependsOn": [
+        "OBL-112"
+      ],
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "skills/plan-execution/scripts/ready-sprints.ts",
+          "skills/plan-execution/scripts/ready-sprints.js",
+          "tests/ready-sprints-cli.test.ts",
+          "tests/ready-sprints.test.ts"
+        ],
+        "operations": [
+          "inspect",
+          "edit",
+          "build",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "Select V3 tasklets for execution review before starting through a checked static implementation preserving the approved portable behavior and historical contract meanings."
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "typed-sprint-selectors-OBL-94"
+        }
+      }
+    },
+    {
+      "id": "BIND-17",
+      "obligationId": "OBL-95",
+      "predecessorId": null,
+      "baselineId": "BASELINE-14",
+      "assessor": "coordinator",
+      "authority": [
+        "user-goal-2026-10-10-rolling-campaigns",
+        "user-goal-2026-10-10-static-language-existing-tsts",
+        "user-2026-10-10-normative-atomic-obligations"
+      ],
+      "reason": "Complete the started sprint selector and CLI proof with approved-prerequisite and non-mutation observations; use the already-converted typed fixture owner and preserve original identity, condition and criterion.",
+      "dependsOn": [
+        "OBL-112"
+      ],
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "skills/plan-execution/scripts/ready-sprints.ts",
+          "skills/plan-execution/scripts/ready-sprints.js",
+          "tests/ready-sprints-cli.test.ts",
+          "tests/ready-sprints.test.ts"
+        ],
+        "operations": [
+          "inspect",
+          "edit",
+          "build",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "Execute sprint-selection CLI modes with exact JSON and error exits through a checked static implementation preserving the approved portable behavior and historical contract meanings."
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "typed-sprint-selectors-OBL-95"
+        }
+      }
     }
   ]
 }
