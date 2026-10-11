@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Alex Baretta. All rights reserved.
 // Licensed under the MIT License. See LICENSE in the project root.
 import crypto from 'node:crypto';
-import {readRollingIncrementClaimV1,readRollingIncrementRebaseV1,verifyRollingIncrementRebase,prepareRollingIncrementRebase,readRollingIncrementPublicationV1,reconcileRollingIncrementPublication,publishRollingIncrement,verifyRollingIncrementLocalIntegration,fastForwardRollingIncrement,type RollingIncrementClaimV1,type RollingIncrementRebaseV1,type RollingFastRebaseResult,type RollingIncrementPublicationV1,type RollingIncrementPublicationResult,type RollingIncrementPushStarted} from './rolling-integration.js';
+import {readRollingIncrementClaimV1,readRollingIncrementRebaseV1,verifyRollingIncrementRebase,prepareRollingIncrementRebase,readRollingIncrementPublicationV1,reconcileRollingIncrementPublication,publishRollingIncrement,verifyRollingIncrementLocalIntegration,fastForwardRollingIncrement,verifyRollingIncrementConflictInspection,type RollingIncrementConflictInspection,type RollingIncrementClaimV1,type RollingIncrementRebaseV1,type RollingFastRebaseResult,type RollingIncrementPublicationV1,type RollingIncrementPublicationResult,type RollingIncrementPushStarted} from './rolling-integration.js';
 import path from 'node:path';
 import { parse } from 'lossless-json';
 import type { Pool, PoolClient } from 'pg';
@@ -682,6 +682,57 @@ export class RollingCampaignStore {
       await poolClient.query('UPDATE ponytail_index.rolling_increment_v1 SET state=$4,rebase_text=$5,candidate_revision=$6 WHERE project_id=$1 AND campaign_id=$2 AND review_id=$3',
         [this.projectId,campaignId,reviewId,rollingFastRebaseResult.state === 'REBASED' ? 'REBASED' : 'CONFLICT',JSON.stringify(rollingIncrementRebaseV1),
           rollingFastRebaseResult.state === 'REBASED' ? rollingFastRebaseResult.revision : null]);
+      return rollingIncrementRebaseV1;
+    });
+  }
+
+  // Traceability: implements REQ-ROLLING-REVIEW
+  async beginIncrementContinuation(campaignId: string,reviewId: string,rollingIncrementConflictInspection: RollingIncrementConflictInspection): Promise<RollingIncrementRebaseV1> {
+    return this.transaction(campaignId,async (poolClient,rollingCampaignRow)=> {
+      const row = (await poolClient.query<Record<string,unknown>>('SELECT claim_text,state,rebase_text FROM ponytail_index.rolling_increment_v1 WHERE project_id=$1 AND campaign_id=$2 AND review_id=$3',[this.projectId,campaignId,reviewId])).rows[0];
+      requireState(row && row.state === 'CONFLICT','increment is not awaiting conflict inspection');
+      const rollingIncrementClaimV1 = readRollingIncrementClaimV1(readStateText(stringColumn(row.claim_text,'increment claim')));
+      await this.validateIncrementClaim(poolClient,rollingCampaignRow,rollingIncrementClaimV1);
+      const rollingIncrementRebaseV1 = readRollingIncrementRebaseV1(readStateText(stringColumn(row.rebase_text,'increment conflict')));
+      requireState(rollingIncrementRebaseV1.result?.state === 'TEXTUAL_CONFLICT','recorded conflict is missing');
+      verifyRollingIncrementConflictInspection(rollingIncrementClaimV1.rootPath,rollingIncrementRebaseV1.result,rollingIncrementConflictInspection);
+      const inserted = await poolClient.query('INSERT INTO ponytail_index.rolling_increment_continuation_v1(project_id,campaign_id,increment_id,original_commit,inspection_reference,conflict_text) VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT DO NOTHING RETURNING original_commit',
+        [this.projectId,campaignId,rollingIncrementClaimV1.id,rollingIncrementConflictInspection.originalCommit,rollingIncrementConflictInspection.reference,JSON.stringify(rollingIncrementRebaseV1)]);
+      requireState(inserted.rowCount === 1,'continuation already started; recover its recorded intent');
+      return rollingIncrementRebaseV1;
+    });
+  }
+
+  // Traceability: implements REQ-ROLLING-REVIEW
+  async incrementConflictInspection(campaignId: string,reviewId: string,originalCommit: string): Promise<RollingIncrementConflictInspection | null> {
+    const row = (await this.pool.query<Record<string,unknown>>('SELECT c.original_commit,c.inspection_reference FROM ponytail_index.rolling_increment_continuation_v1 c JOIN ponytail_index.rolling_increment_v1 i USING(project_id,campaign_id,increment_id) WHERE i.project_id=$1 AND i.campaign_id=$2 AND i.review_id=$3 AND c.original_commit=$4',
+      [this.projectId,campaignId,reviewId,originalCommit])).rows[0];
+    return row ? {originalCommit:stringColumn(row.original_commit,'inspected original commit'),reference:stringColumn(row.inspection_reference,'semantic inspection reference')} : null;
+  }
+
+  // Traceability: implements REQ-ROLLING-REVIEW
+  async recordIncrementContinuation(campaignId: string,reviewId: string,rollingIncrementConflictInspection: RollingIncrementConflictInspection,rollingFastRebaseResult: RollingFastRebaseResult): Promise<RollingIncrementRebaseV1> {
+    return this.transaction(campaignId,async (poolClient,rollingCampaignRow)=> {
+      const row = (await poolClient.query<Record<string,unknown>>('SELECT claim_text,state,rebase_text FROM ponytail_index.rolling_increment_v1 WHERE project_id=$1 AND campaign_id=$2 AND review_id=$3',[this.projectId,campaignId,reviewId])).rows[0];
+      requireState(row,'increment is missing');
+      const rollingIncrementClaimV1 = readRollingIncrementClaimV1(readStateText(stringColumn(row.claim_text,'increment claim')));
+      await this.validateIncrementClaim(poolClient,rollingCampaignRow,rollingIncrementClaimV1);
+      const continuation = (await poolClient.query<Record<string,unknown>>('SELECT inspection_reference,conflict_text,result_text FROM ponytail_index.rolling_increment_continuation_v1 WHERE project_id=$1 AND campaign_id=$2 AND increment_id=$3 AND original_commit=$4',
+        [this.projectId,campaignId,rollingIncrementClaimV1.id,rollingIncrementConflictInspection.originalCommit])).rows[0];
+      requireState(continuation && continuation.inspection_reference === rollingIncrementConflictInspection.reference,'continuation differs from recorded inspection intent');
+      const previousRollingIncrementRebaseV1 = readRollingIncrementRebaseV1(readStateText(stringColumn(continuation.conflict_text,'original conflict')));
+      const rollingIncrementRebaseV1 = readRollingIncrementRebaseV1({...previousRollingIncrementRebaseV1,result:rollingFastRebaseResult});
+      if (continuation.result_text !== null) {
+        const recordedRollingIncrementRebaseV1 = readRollingIncrementRebaseV1(readStateText(stringColumn(continuation.result_text,'continuation result')));
+        requireState(isDeepStrictEqual(recordedRollingIncrementRebaseV1,rollingIncrementRebaseV1),'continuation result is immutable');
+        return recordedRollingIncrementRebaseV1;
+      }
+      requireState(row.state === 'CONFLICT' && isDeepStrictEqual(readRollingIncrementRebaseV1(readStateText(stringColumn(row.rebase_text,'current conflict'))),previousRollingIncrementRebaseV1),'increment no longer owns this conflict');
+      verifyRollingIncrementRebase(rollingIncrementClaimV1.rootPath,rollingFastRebaseResult);
+      await poolClient.query('UPDATE ponytail_index.rolling_increment_continuation_v1 SET result_text=$5 WHERE project_id=$1 AND campaign_id=$2 AND increment_id=$3 AND original_commit=$4',
+        [this.projectId,campaignId,rollingIncrementClaimV1.id,rollingIncrementConflictInspection.originalCommit,JSON.stringify(rollingIncrementRebaseV1)]);
+      await poolClient.query('UPDATE ponytail_index.rolling_increment_v1 SET state=$4,rebase_text=$5,candidate_revision=$6 WHERE project_id=$1 AND campaign_id=$2 AND review_id=$3',
+        [this.projectId,campaignId,reviewId,rollingFastRebaseResult.state === 'REBASED' ? 'REBASED' : 'CONFLICT',JSON.stringify(rollingIncrementRebaseV1),rollingFastRebaseResult.state === 'REBASED' ? rollingFastRebaseResult.revision : null]);
       return rollingIncrementRebaseV1;
     });
   }

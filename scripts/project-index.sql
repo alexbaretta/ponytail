@@ -417,6 +417,24 @@ CREATE TABLE IF NOT EXISTS rolling_increment_proof_v1 (
     REFERENCES rolling_increment_v1(project_id,campaign_id,increment_id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS rolling_increment_continuation_v1 (
+  project_id uuid NOT NULL,
+  campaign_id text NOT NULL,
+  increment_id uuid NOT NULL,
+  original_commit text NOT NULL CHECK (original_commit ~ '^([a-f0-9]{40}|[a-f0-9]{64})$'),
+  inspection_reference text NOT NULL CHECK (length(btrim(inspection_reference)) > 0),
+  conflict_text text NOT NULL CHECK (COALESCE((conflict_text::jsonb)->>'schemaVersion'='1'
+    AND (conflict_text::jsonb)->>'incrementId'=increment_id::text
+    AND (conflict_text::jsonb)->'result'->>'state'='TEXTUAL_CONFLICT'
+    AND (conflict_text::jsonb)->'result'->>'originalCommit'=original_commit, false)),
+  result_text text CHECK (result_text IS NULL OR COALESCE((result_text::jsonb)->>'schemaVersion'='1'
+    AND (result_text::jsonb)->>'incrementId'=increment_id::text, false)),
+  started_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (project_id,campaign_id,increment_id,original_commit),
+  FOREIGN KEY (project_id,campaign_id,increment_id)
+    REFERENCES rolling_increment_v1(project_id,campaign_id,increment_id) ON DELETE CASCADE
+);
+
 CREATE TABLE IF NOT EXISTS rolling_increment_delivery_v1 (
   project_id uuid NOT NULL,
   campaign_id text NOT NULL,

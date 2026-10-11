@@ -10,6 +10,7 @@ exports.RollingIncrementPublicationReaders = exports.RollingIncrementRebaseReade
 exports.prepareRollingIncrementRebase = prepareRollingIncrementRebase;
 exports.rebasePreparedRollingIncrement = rebasePreparedRollingIncrement;
 exports.fastRebaseRollingIncrement = fastRebaseRollingIncrement;
+exports.verifyRollingIncrementConflictInspection = verifyRollingIncrementConflictInspection;
 exports.continueFastRebaseRollingIncrement = continueFastRebaseRollingIncrement;
 exports.reconcileRollingIncrementPublication = reconcileRollingIncrementPublication;
 exports.publishRollingIncrement = publishRollingIncrement;
@@ -89,7 +90,7 @@ function fastRebaseRollingIncrement(rollingReviewedIncrement) {
     const rollingFastRebaseIdentity = prepareRollingIncrementRebase(rollingReviewedIncrement);
     return rebasePreparedRollingIncrement(rollingReviewedIncrement.rootPath, rollingFastRebaseIdentity);
 }
-function continueFastRebaseRollingIncrement(rootPath, rollingFastRebaseConflict, rollingIncrementConflictInspection) {
+function verifyRollingIncrementConflictInspection(rootPath, rollingFastRebaseConflict, rollingIncrementConflictInspection) {
     requireIntegration(rollingIncrementConflictInspection.reference.trim().length > 0, 'textual conflict requires a recorded semantic inspection');
     requireIntegration(rollingIncrementConflictInspection.originalCommit === rollingFastRebaseConflict.originalCommit
         && git(rootPath, ['rev-parse', 'REBASE_HEAD']).trim() === rollingFastRebaseConflict.originalCommit, 'semantic inspection differs from the current conflicting commit');
@@ -101,6 +102,9 @@ function continueFastRebaseRollingIncrement(rootPath, rollingFastRebaseConflict,
         requireIntegration(node_fs_1.default.readFileSync(rebasePath, 'utf8').trim() === expected, 'retained rebase differs from inspected integration');
     }
     requireIntegration(git(rootPath, ['diff', '--name-only', '--diff-filter=U', '-z']).length === 0, 'textual conflicts remain unresolved');
+}
+function continueFastRebaseRollingIncrement(rootPath, rollingFastRebaseConflict, rollingIncrementConflictInspection) {
+    verifyRollingIncrementConflictInspection(rootPath, rollingFastRebaseConflict, rollingIncrementConflictInspection);
     const spawnSyncReturns = gitResult(rootPath, ['rebase', '--continue'], { ...process.env, GIT_EDITOR: 'true', GIT_TERMINAL_PROMPT: '0' });
     return rebaseResult(rootPath, { reviewedRevision: rollingFastRebaseConflict.reviewedRevision,
         reviewedBase: rollingFastRebaseConflict.reviewedBase, integrationBase: rollingFastRebaseConflict.integrationBase }, spawnSyncReturns);

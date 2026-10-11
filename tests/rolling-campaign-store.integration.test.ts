@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Alex Baretta. All rights reserved.
 // Licensed under the MIT License. See LICENSE in the project root.
 import assert from 'node:assert/strict';
-import {rebasePreparedRollingIncrement,publishRollingIncrement,fastForwardRollingIncrement} from '../src/rolling-integration.js';
+import {rebasePreparedRollingIncrement,continueFastRebaseRollingIncrement,publishRollingIncrement,fastForwardRollingIncrement} from '../src/rolling-integration.js';
 import test, { type TestContext } from 'node:test';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
@@ -67,7 +67,7 @@ test('native code fixture approvals permit exact shell-wrapped commands only for
 
 // Traceability: verifies REQ-ROLLING-STATE
 // Traceability: verifies REQ-ROLLING-SCHEDULING
-export interface ReviewScenario { readonly decision: RollingReviewOutcomeV1['decision']; readonly mode: 'manual' | 'protocol' | 'native'; readonly replaceLostReviewer?: boolean; readonly automaticPublication?: boolean }
+export interface ReviewScenario { readonly decision: RollingReviewOutcomeV1['decision']; readonly mode: 'manual' | 'protocol' | 'native'; readonly replaceLostReviewer?: boolean; readonly automaticPublication?: boolean; readonly conflictContinuation?: boolean }
 function declineReviewApprovals(rollingCodex: RollingCodex): void {
   rollingCodex.on('serverRequest', message => rollingCodex.respondToServer(message.id, { decision: 'decline' }));
 }
@@ -543,6 +543,14 @@ export async function runRollingReviewScenario(t: TestContext, reviewScenario: R
     execFileSync('git',['clone','--bare','-q',root,remoteRoot]);
     execFileSync('git',['-C',remoteRoot,'update-ref','refs/heads/campaign/bound-fixture',baseCommit]);
     execFileSync('git',['-C',root,'remote','add','origin',remoteRoot]);
+    if (reviewScenario.conflictContinuation) {
+      const upstreamRoot = path.join(root,'managed','upstream-conflict');
+      execFileSync('git',['clone','-q','--branch','campaign/bound-fixture',remoteRoot,upstreamRoot]);
+      fs.writeFileSync(path.join(upstreamRoot,'fixture/current.ts'),'export const value: number = 1; // upstream context\n');
+      execFileSync('git',['-C',upstreamRoot,'add','fixture/current.ts']);
+      execFileSync('git',['-C',upstreamRoot,'-c','user.name=Fixture','-c','user.email=fixture@example.test','commit','-q','-m','Upstream context']);
+      execFileSync('git',['-C',upstreamRoot,'push','-q','origin','HEAD:refs/heads/campaign/bound-fixture']);
+    }
     const attempts = await Promise.allSettled(Array.from({length:4},()=>rollingCampaignStore.beginIncrementRebase('bound-fixture',rollingStoredReview.request.id)));
     assert.equal(attempts.filter(attempt=>attempt.status === 'fulfilled').length,1);
     assert.equal(attempts.filter(attempt=>attempt.status === 'rejected').length,3);
@@ -556,6 +564,34 @@ export async function runRollingReviewScenario(t: TestContext, reviewScenario: R
     assert.deepEqual(await rollingCampaignStore.recordIncrementRebase('bound-fixture',rollingStoredReview.request.id,rollingFastRebaseResult),recordedRollingIncrementRebaseV1);
     assert.deepEqual(await rollingCampaignStore.incrementRebase('bound-fixture',rollingStoredReview.request.id),recordedRollingIncrementRebaseV1);
     await assert.rejects(rollingCampaignStore.recordIncrementRebase('bound-fixture',rollingStoredReview.request.id,{...rollingFastRebaseResult,integrationBase:'f'.repeat(40)}),/differs from recorded intent/);
+    if (reviewScenario.conflictContinuation) {
+      assert.ok(rollingFastRebaseResult.state === 'TEXTUAL_CONFLICT');
+      const rollingIncrementConflictInspection = {originalCommit:rollingFastRebaseResult.originalCommit,reference:'fixture inspection: retain reviewed value and upstream context'};
+      await assert.rejects(rollingCampaignStore.beginIncrementContinuation('bound-fixture',rollingStoredReview.request.id,rollingIncrementConflictInspection),/unresolved/);
+      fs.writeFileSync(path.join(workerRoot,'fixture/current.ts'),'export const value: number = 2; // upstream context\n');
+      execFileSync('git',['-C',workerRoot,'add','fixture/current.ts']);
+      await assert.rejects(rollingCampaignStore.beginIncrementContinuation('bound-fixture',rollingStoredReview.request.id,{...rollingIncrementConflictInspection,reference:''}),/semantic inspection/);
+      const continuations = await Promise.allSettled(Array.from({length:4},()=>rollingCampaignStore.beginIncrementContinuation('bound-fixture',rollingStoredReview.request.id,rollingIncrementConflictInspection)));
+      assert.equal(continuations.filter(item=>item.status === 'fulfilled').length,1);
+      assert.equal(continuations.filter(item=>item.status === 'rejected').length,3);
+      assert.deepEqual(await restartedRollingCampaignStore.incrementConflictInspection('bound-fixture',rollingStoredReview.request.id,rollingIncrementConflictInspection.originalCommit),rollingIncrementConflictInspection);
+      assert.equal(await foreignRollingCampaignStore.incrementConflictInspection('bound-fixture',rollingStoredReview.request.id,rollingIncrementConflictInspection.originalCommit),null);
+      const continuedRollingFastRebaseResult = continueFastRebaseRollingIncrement(workerRoot,rollingFastRebaseResult,rollingIncrementConflictInspection);
+      assert.ok(continuedRollingFastRebaseResult.state === 'REBASED');
+      await assert.rejects(restartedRollingCampaignStore.recordIncrementContinuation('bound-fixture',rollingStoredReview.request.id,{...rollingIncrementConflictInspection,reference:'different inspection'},continuedRollingFastRebaseResult),/recorded inspection intent/);
+      const continuationResults = await Promise.all(Array.from({length:4},()=>restartedRollingCampaignStore.recordIncrementContinuation('bound-fixture',rollingStoredReview.request.id,rollingIncrementConflictInspection,continuedRollingFastRebaseResult)));
+      assert.ok(continuationResults.every(result=>JSON.stringify(result.result) === JSON.stringify(continuedRollingFastRebaseResult)));
+      assert.deepEqual((await rollingCampaignStore.incrementRebase('bound-fixture',rollingStoredReview.request.id))?.result,continuedRollingFastRebaseResult);
+      const history = (await pool.query<Record<string,unknown>>('SELECT conflict_text,result_text,inspection_reference FROM ponytail_index.rolling_increment_continuation_v1 WHERE project_id=$1',[projectId])).rows;
+      assert.equal(history.length,1);
+      assert.equal(history[0]?.conflict_text,JSON.stringify(recordedRollingIncrementRebaseV1));
+      assert.equal(history[0]?.result_text,JSON.stringify(continuationResults[0]));
+      assert.equal(history[0]?.inspection_reference,rollingIncrementConflictInspection.reference);
+      assert.equal(fs.readFileSync(path.join(workerRoot,'fixture/current.ts'),'utf8'),'export const value: number = 2; // upstream context\n');
+      await assert.rejects(rollingCampaignStore.beginIncrementPush('bound-fixture',rollingStoredReview.request.id),/fresh QA/);
+      await assert.rejects(rollingCampaignStore.recordIncrementProof('bound-fixture',rollingStoredReview.request.id,rollingWorkerSubmissionV1),/another integration candidate/);
+      return;
+    }
     assert.equal((await pool.query<Record<string,unknown>>('SELECT state FROM ponytail_index.rolling_increment_v1 WHERE project_id=$1',[projectId])).rows[0]?.state,'REBASED');
     await assert.rejects(rollingCampaignStore.beginIncrementPush('bound-fixture',rollingStoredReview.request.id),/fresh QA/);
     await assert.rejects(rollingCampaignStore.recordIncrementProof('bound-fixture',rollingStoredReview.request.id,{...rollingWorkerSubmissionV1,revision:'f'.repeat(40)}),/another integration candidate/);
@@ -1355,3 +1391,7 @@ test('submission collection binds terminal idle actor and exact passing candidat
 // Traceability: verifies REQ-ROLLING-PUBLICATION
  test('real PostgreSQL automatically publishes the reviewed increment through one coordinator operation',
  t=>runRollingReviewScenario(t,{decision:'accepted',mode:'manual',automaticPublication:true}));
+
+// Traceability: verifies REQ-ROLLING-REVIEW
+test('real PostgreSQL retains inspected conflict continuation across restart without duplicate replay',
+ t=>runRollingReviewScenario(t,{decision:'accepted',mode:'manual',conflictContinuation:true}));

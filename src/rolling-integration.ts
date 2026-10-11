@@ -116,8 +116,8 @@ export function fastRebaseRollingIncrement(rollingReviewedIncrement: RollingRevi
 }
 
 // Traceability: implements REQ-ROLLING-REVIEW
-export function continueFastRebaseRollingIncrement(rootPath: string,rollingFastRebaseConflict: RollingFastRebaseConflict,
- rollingIncrementConflictInspection: RollingIncrementConflictInspection): RollingFastRebaseResult {
+export function verifyRollingIncrementConflictInspection(rootPath: string,rollingFastRebaseConflict: RollingFastRebaseConflict,
+ rollingIncrementConflictInspection: RollingIncrementConflictInspection): void {
  requireIntegration(rollingIncrementConflictInspection.reference.trim().length > 0,'textual conflict requires a recorded semantic inspection');
  requireIntegration(rollingIncrementConflictInspection.originalCommit === rollingFastRebaseConflict.originalCommit
   && git(rootPath,['rev-parse','REBASE_HEAD']).trim() === rollingFastRebaseConflict.originalCommit,
@@ -129,6 +129,12 @@ export function continueFastRebaseRollingIncrement(rootPath: string,rollingFastR
   requireIntegration(fs.readFileSync(rebasePath,'utf8').trim() === expected,'retained rebase differs from inspected integration');
  }
  requireIntegration(git(rootPath,['diff','--name-only','--diff-filter=U','-z']).length === 0,'textual conflicts remain unresolved');
+}
+
+// Traceability: implements REQ-ROLLING-REVIEW
+export function continueFastRebaseRollingIncrement(rootPath: string,rollingFastRebaseConflict: RollingFastRebaseConflict,
+ rollingIncrementConflictInspection: RollingIncrementConflictInspection): RollingFastRebaseResult {
+ verifyRollingIncrementConflictInspection(rootPath,rollingFastRebaseConflict,rollingIncrementConflictInspection);
  const spawnSyncReturns = gitResult(rootPath,['rebase','--continue'],{...process.env,GIT_EDITOR:'true',GIT_TERMINAL_PROMPT:'0'});
  return rebaseResult(rootPath,{reviewedRevision:rollingFastRebaseConflict.reviewedRevision,
   reviewedBase:rollingFastRebaseConflict.reviewedBase,integrationBase:rollingFastRebaseConflict.integrationBase},spawnSyncReturns);
