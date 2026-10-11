@@ -26,6 +26,13 @@ const rolling_worker_js_1 = require("./rolling-worker.js");
 const rolling_worktrees_js_1 = require("./rolling-worktrees.js");
 const rolling_review_js_1 = require("./rolling-review.js");
 const rolling_campaign_js_1 = require("./rolling-campaign.js");
+function readWorkerRetirement(row) {
+    const rollingWorkerRetirementV1 = (0, rolling_worker_js_1.readRollingWorkerRetirementV1)(readStateText(stringColumn(row.context_text, 'retirement context')));
+    const state = row.state;
+    requireState(state === 'PREPARED' || state === 'NOTIFYING' || state === 'NOTIFIED' || state === 'ARCHIVING' || state === 'ARCHIVED' || state === 'CLEANED', 'invalid retirement state');
+    const turnId = row.turn_id === null ? null : stringColumn(row.turn_id, 'retirement turn');
+    return { rollingWorkerRetirementV1, state, turnId };
+}
 function requireState(condition, message) {
     if (!condition)
         throw new Error(`rolling campaign: ${message}`);
@@ -280,10 +287,80 @@ class RollingCampaignStore {
     async retire(campaignId, id, generation, stopped) {
         requireState(stopped === true, 'retirement requires stopped acknowledgment');
         return this.transaction(campaignId, async (poolClient) => {
-            await this.assignment(poolClient, campaignId, id, generation);
+            const rollingStoredAssignment = await this.assignment(poolClient, campaignId, id, generation);
             await this.cancelActions(poolClient, id);
+            requireState(rollingStoredAssignment.sessionId === null, 'attached worker requires observed native retirement');
             await poolClient.query("UPDATE ponytail_index.rolling_assignment_v1 SET state='RETIRING',activity_stopped=true,retired=true WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3", [this.projectId, campaignId, id]);
             return { id, state: 'RETIRING' };
+        });
+    }
+    async retirementValue(poolOrPoolClient, campaignId, id, generation) {
+        const row = (await poolOrPoolClient.query('SELECT context_text,state,turn_id FROM ponytail_index.rolling_worker_retirement_v1 WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3 AND generation=$4', [this.projectId, campaignId, id, generation])).rows[0];
+        return row ? readWorkerRetirement(row) : null;
+    }
+    async workerRetirement(campaignId, id, generation) {
+        return this.retirementValue(this.pool, campaignId, id, generation);
+    }
+    async prepareWorkerRetirement(campaignId, id, generation, rollingWorkerStopV1) {
+        const checkedRollingWorkerStopV1 = (0, rolling_worker_js_1.readRollingWorkerStopV1)(rollingWorkerStopV1);
+        requireState(checkedRollingWorkerStopV1.campaignId === campaignId && checkedRollingWorkerStopV1.assignmentId === id
+            && checkedRollingWorkerStopV1.generation === generation && checkedRollingWorkerStopV1.checkpoint.gitStatus === '', 'retirement requires a clean original worker stop');
+        return this.transaction(campaignId, async (poolClient, rollingCampaignRow) => {
+            const rollingStoredAssignment = await this.assignment(poolClient, campaignId, id, generation);
+            const existing = await this.retirementValue(poolClient, campaignId, id, generation);
+            if (existing)
+                return existing;
+            requireState(rollingStoredAssignment.state === 'INTEGRATING' && rollingStoredAssignment.activityStopped && !rollingStoredAssignment.retired, 'retirement requires stopped integrated ownership');
+            const rollingWorkerCreationV1 = await this.attachedWorkerIdentity(poolClient, campaignId, rollingStoredAssignment);
+            requireState(checkedRollingWorkerStopV1.threadId === rollingWorkerCreationV1.threadId && checkedRollingWorkerStopV1.sessionId === rollingWorkerCreationV1.sessionId, 'retirement observation differs from original worker');
+            const dispatch = (await poolClient.query('SELECT state,turn_id FROM ponytail_index.rolling_worker_dispatch_v1 WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3 AND generation=$4', [this.projectId, campaignId, id, generation])).rows[0];
+            requireState(dispatch ? dispatch.state === 'ATTACHED' && dispatch.turn_id === checkedRollingWorkerStopV1.turn?.id
+                : checkedRollingWorkerStopV1.turn === null, 'retirement differs from known worker dispatch');
+            await this.cancelActions(poolClient, id);
+            const incrementRows = (await poolClient.query("SELECT i.candidate_revision FROM ponytail_index.rolling_increment_v1 i JOIN ponytail_index.rolling_review_v1 r USING(project_id,campaign_id,review_id) WHERE i.project_id=$1 AND i.campaign_id=$2 AND r.assignment_id=$3 AND r.generation=$4 AND i.state='PUBLISHED'", [this.projectId, campaignId, id, generation])).rows;
+            requireState(incrementRows.length === 1 && incrementRows[0], 'retirement requires a uniquely published increment');
+            const resourceRows = (await poolClient.query("SELECT generation FROM ponytail_index.rolling_action_v1 WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3 AND kind='START_WORKER' AND state='COMPLETED'", [this.projectId, campaignId, id])).rows;
+            requireState(resourceRows.length === 1 && resourceRows[0], 'retirement resource allocation is ambiguous');
+            const rollingWorkerRetirementV1 = (0, rolling_worker_js_1.readRollingWorkerRetirementV1)({ schemaVersion: 1, campaignId, assignmentId: id, generation,
+                resourceGeneration: stringColumn(resourceRows[0].generation, 'resource allocation generation'), number: rollingStoredAssignment.worktreeNumber,
+                rootPath: rollingWorkerCreationV1.rootPath, coordinatorRoot: rollingCampaignRow.coordinator_root,
+                threadId: rollingWorkerCreationV1.threadId, sessionId: rollingWorkerCreationV1.sessionId,
+                integratedRevision: stringColumn(incrementRows[0].candidate_revision, 'published revision') });
+            await poolClient.query('INSERT INTO ponytail_index.rolling_worker_retirement_v1(project_id,campaign_id,assignment_id,generation,context_text,state) VALUES($1,$2,$3,$4,$5,\'PREPARED\')', [this.projectId, campaignId, id, generation, JSON.stringify(rollingWorkerRetirementV1)]);
+            await poolClient.query("UPDATE ponytail_index.rolling_assignment_v1 SET state='RETIRING',activity_stopped=true,retired=true WHERE assignment_id=$1", [id]);
+            return { rollingWorkerRetirementV1, state: 'PREPARED', turnId: null };
+        });
+    }
+    async advanceWorkerRetirement(campaignId, id, generation, expected, next, turnId = null) {
+        requireState(expected === 'PREPARED' && next === 'NOTIFYING' || expected === 'NOTIFYING' && next === 'NOTIFYING' && turnId !== null
+            || expected === 'NOTIFYING' && next === 'NOTIFIED' || expected === 'NOTIFIED' && next === 'ARCHIVING'
+            || expected === 'ARCHIVING' && next === 'ARCHIVED', 'invalid retirement transition');
+        if (turnId !== null)
+            requireState(turnId.length > 0 && turnId.trim() === turnId && !/[\0\r\n]/u.test(turnId), 'invalid retirement turn');
+        return this.transaction(campaignId, async (poolClient) => {
+            const rollingStoredAssignment = await this.assignment(poolClient, campaignId, id, generation);
+            requireState(rollingStoredAssignment.state === 'RETIRING' && rollingStoredAssignment.retired, 'retirement ownership is not revoked');
+            const rollingWorkerRetirement = await this.retirementValue(poolClient, campaignId, id, generation);
+            requireState(rollingWorkerRetirement && rollingWorkerRetirement.state === expected, 'retirement stage changed; inspect its retained outcome');
+            if (turnId !== null)
+                requireState(rollingWorkerRetirement.turnId === null || rollingWorkerRetirement.turnId === turnId, 'retirement notification identity changed');
+            const retainedTurnId = turnId ?? rollingWorkerRetirement.turnId;
+            requireState(next === 'NOTIFYING' || retainedTurnId !== null, 'retirement notification has no known turn');
+            await poolClient.query('UPDATE ponytail_index.rolling_worker_retirement_v1 SET state=$5,turn_id=$6 WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3 AND generation=$4', [this.projectId, campaignId, id, generation, next, retainedTurnId]);
+            return { ...rollingWorkerRetirement, state: next, turnId: retainedTurnId };
+        });
+    }
+    async cleanupWorkerRetirement(campaignId, id, generation) {
+        return this.transaction(campaignId, async (poolClient) => {
+            const rollingStoredAssignment = await this.assignment(poolClient, campaignId, id, generation);
+            requireState(rollingStoredAssignment.state === 'RETIRING' && rollingStoredAssignment.retired, 'retirement ownership is not revoked');
+            const rollingWorkerRetirement = await this.retirementValue(poolClient, campaignId, id, generation);
+            requireState(rollingWorkerRetirement && (rollingWorkerRetirement.state === 'ARCHIVED' || rollingWorkerRetirement.state === 'CLEANED'), 'retirement requires acknowledged native archival before cleanup');
+            if (rollingWorkerRetirement.state === 'CLEANED')
+                return rollingWorkerRetirement;
+            (0, rolling_worktrees_js_1.cleanupRollingWorktree)(rollingWorkerRetirement.rollingWorkerRetirementV1.coordinatorRoot, rollingWorkerRetirement.rollingWorkerRetirementV1);
+            await poolClient.query("UPDATE ponytail_index.rolling_worker_retirement_v1 SET state='CLEANED' WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3 AND generation=$4", [this.projectId, campaignId, id, generation]);
+            return { ...rollingWorkerRetirement, state: 'CLEANED' };
         });
     }
     async attachSession(campaignId, id, generation, sessionId) {
@@ -871,6 +948,10 @@ class RollingCampaignStore {
             if (release) {
                 const row = await this.assignment(poolClient, campaignId, release.id, release.generation);
                 requireState(row.state === 'RETIRING' && row.retired && row.activityStopped, 'checkout owner must retire before release');
+                if (row.sessionId !== null) {
+                    const rollingWorkerRetirement = await this.retirementValue(poolClient, campaignId, row.id, row.generation);
+                    requireState(rollingWorkerRetirement?.state === 'CLEANED', 'attached checkout requires completed native retirement and owned-resource cleanup');
+                }
                 await this.cancelActions(poolClient, row.id);
                 await poolClient.query("UPDATE ponytail_index.rolling_assignment_v1 SET state='RELEASED' WHERE assignment_id=$1", [row.id]);
                 await poolClient.query("UPDATE ponytail_index.rolling_worktree_v1 SET state='AVAILABLE' WHERE project_id=$1 AND number=$2", [this.projectId, row.worktreeNumber]);

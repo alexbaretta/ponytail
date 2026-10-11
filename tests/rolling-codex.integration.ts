@@ -11,6 +11,7 @@ import test from 'node:test';
 import crypto from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { RollingCodex } from '../src/rolling-codex.js';
+import {buildRollingRetirementInstructions, type RollingWorkerRetirementV1} from '../src/rolling-worker.js';
 import { runRollingReviewScenario, runRollingWorkerScenario } from './rolling-campaign-store.integration.test.js';
 
 function declineApprovals(rollingCodex: RollingCodex): void {
@@ -123,3 +124,45 @@ test('live worker implements and semantically rebases its exact candidate before
 // Traceability: verifies REQ-ROLLING-REVIEW
 test('live rejected candidate returns to its original worker and is accepted by its original reviewer after correction and semantic rebase',
  t => runRollingWorkerScenario(t,'native','code',true));
+
+// Traceability: verifies REQ-ROLLING-WORKERS
+test('live worker acknowledges retirement, becomes idle and reconciles archival of the same actor',async t => {
+ const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(),'rolling-native-retirement-')));
+ execFileSync('git',['init','-q',root]);
+ fs.writeFileSync(path.join(root,'AGENTS.md'),'Do not edit files or run commands. Reply briefly to the given notification.\n');
+ const rollingCodex = await RollingCodex.connect({executable:'env',argv:['-u','NODE_TEST_CONTEXT','codex','app-server','--listen','stdio://']});
+ declineApprovals(rollingCodex);
+ let threadId:string | null = null, activeTurnId:string | null = null, archived = false;
+ t.after(async()=> {
+  try {
+   if (threadId !== null && !archived) {
+    if (activeTurnId !== null) {
+     const turn = await rollingCodex.readTurn(threadId,activeTurnId);
+     if (turn.status === 'inProgress') {await rollingCodex.interruptTurn(threadId,activeTurnId);await rollingCodex.waitForTurn(threadId,activeTurnId);}
+    }
+    assert.equal((await rollingCodex.readThreadActivity(threadId)).status,'idle');
+    await rollingCodex.archiveThread(threadId);
+   }
+   fs.rmSync(root,{recursive:true,force:true});
+  } finally {await rollingCodex.close();}
+ });
+ const rollingNativeThread = await rollingCodex.startThread(root);threadId = rollingNativeThread.thread.id;
+ const initialization = await rollingCodex.startTurn(threadId,'Acknowledge this verification worker initialization. Do not edit files or run commands.');
+ activeTurnId = initialization.turn.id;
+ assert.equal((await rollingCodex.waitForTurn(threadId,activeTurnId)).status,'completed');activeTurnId = null;
+ assert.equal((await rollingCodex.readThreadActivity(threadId)).status,'idle');
+ const rollingWorkerRetirementV1:RollingWorkerRetirementV1 = {schemaVersion:1,campaignId:'native-retirement-fixture',
+  assignmentId:crypto.randomUUID(),generation:crypto.randomUUID(),resourceGeneration:crypto.randomUUID(),number:101,
+  rootPath:root,coordinatorRoot:root,threadId,sessionId:rollingNativeThread.thread.sessionId,integratedRevision:'a'.repeat(40)};
+ const notification = await rollingCodex.startTurn(threadId,buildRollingRetirementInstructions(rollingWorkerRetirementV1));
+ activeTurnId = notification.turn.id;
+ const rollingNativeTurn = await rollingCodex.waitForTurn(threadId,activeTurnId);
+ assert.equal(rollingNativeTurn.status,'completed');activeTurnId = null;
+ assert.ok(rollingNativeTurn.items.some(item=>item.type === 'agentMessage' && item.text?.trim()));
+ assert.equal((await rollingCodex.readThreadActivity(threadId)).status,'idle');
+ assert.equal(await rollingCodex.isThreadArchived(threadId,root),false);
+ await rollingCodex.archiveThread(threadId);archived = true;
+ assert.equal(await rollingCodex.isThreadArchived(threadId,root),true);
+ assert.equal(execFileSync('git',['-C',root,'status','--porcelain'],{encoding:'utf8'}),'?? AGENTS.md\n');
+ t.diagnostic(`native retirement thread=${threadId}; session=${rollingNativeThread.thread.sessionId}; terminal notification=${notification.turn.id}; idle verified; archived inventory confirms the exact actor without another turn`);
+});

@@ -6,7 +6,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.RollingWorkerResumptionReaders = exports.RollingWorkerStopReaders = exports.RollingWorkerCreationReaders = void 0;
+exports.RollingWorkerRetirementReaders = exports.RollingWorkerResumptionReaders = exports.RollingWorkerStopReaders = exports.RollingWorkerCreationReaders = void 0;
 exports.readRollingWorkerCreationV1 = readRollingWorkerCreationV1;
 exports.parseRollingWorkerCreation = parseRollingWorkerCreation;
 exports.identifyRollingWorkerCreation = identifyRollingWorkerCreation;
@@ -22,8 +22,11 @@ exports.readRollingWorkerStopV1 = readRollingWorkerStopV1;
 exports.parseRollingWorkerStop = parseRollingWorkerStop;
 exports.readRollingWorkerResumptionV1 = readRollingWorkerResumptionV1;
 exports.parseRollingWorkerResumption = parseRollingWorkerResumption;
+exports.readRollingWorkerRetirementV1 = readRollingWorkerRetirementV1;
 exports.resumeRollingWorker = resumeRollingWorker;
 exports.suspendRollingWorker = suspendRollingWorker;
+exports.buildRollingRetirementInstructions = buildRollingRetirementInstructions;
+exports.retireRollingWorker = retireRollingWorker;
 const node_path_1 = __importDefault(require("node:path"));
 const node_fs_1 = __importDefault(require("node:fs"));
 const lossless_json_1 = require("lossless-json");
@@ -217,6 +220,23 @@ function parseRollingWorkerResumption(text) {
     return readRollingWorkerResumptionV1((0, lossless_json_1.parse)(text, null, token => { requireWorker(token === '1', 'invalid resumption numeric token'); return 1; }));
 }
 exports.RollingWorkerResumptionReaders = { V1: readRollingWorkerResumptionV1 };
+function readRollingWorkerRetirementV1(value) {
+    const record = stopFields(value, ['schemaVersion', 'campaignId', 'assignmentId', 'generation', 'resourceGeneration', 'number',
+        'rootPath', 'coordinatorRoot', 'threadId', 'sessionId', 'integratedRevision']);
+    requireWorker(record.schemaVersion === 1, 'invalid retirement version');
+    requireWorker(typeof record.number === 'number' && Number.isSafeInteger(record.number) && record.number >= 101, 'invalid retirement checkout number');
+    const assignmentId = identity(record.assignmentId), generation = identity(record.generation), resourceGeneration = identity(record.resourceGeneration);
+    for (const id of [assignmentId, generation, resourceGeneration])
+        requireWorker(/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/u.test(id), 'invalid retirement UUID');
+    const rootPath = identity(record.rootPath), coordinatorRoot = identity(record.coordinatorRoot);
+    for (const root of [rootPath, coordinatorRoot])
+        requireWorker(node_path_1.default.isAbsolute(root) && node_path_1.default.normalize(root) === root, 'invalid retirement root');
+    const integratedRevision = identity(record.integratedRevision);
+    requireWorker(/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/u.test(integratedRevision), 'invalid retirement integration revision');
+    return { schemaVersion: 1, campaignId: identity(record.campaignId), assignmentId, generation, resourceGeneration, number: record.number,
+        rootPath, coordinatorRoot, threadId: identity(record.threadId), sessionId: identity(record.sessionId), integratedRevision };
+}
+exports.RollingWorkerRetirementReaders = { V1: readRollingWorkerRetirementV1 };
 async function resumeRollingWorker(rollingCampaignStore, rollingCodex, campaignId, actionId, generation) {
     const rollingWorkerResumptionV1 = await rollingCampaignStore.claimWorkerResumption(campaignId, actionId, generation);
     const rollingWorkerCreationV1 = rollingWorkerResumptionV1.rollingWorkerCreationV1;
@@ -228,10 +248,14 @@ async function resumeRollingWorker(rollingCampaignStore, rollingCodex, campaignI
     return rollingCampaignStore.completeWorkerResumption(campaignId, actionId, generation, rollingWorkerResumptionV1);
 }
 async function suspendRollingWorker(rollingCampaignStore, rollingCodex, campaignId, assignmentId, generation, blockers, timeoutMs = 60000) {
+    const rollingWorkerStopV1 = await observeRollingWorkerStop(rollingCampaignStore, rollingCodex, campaignId, assignmentId, generation, timeoutMs);
+    return rollingCampaignStore.suspendObservedWorker(campaignId, assignmentId, generation, rollingWorkerStopV1, blockers);
+}
+async function observeRollingWorkerStop(rollingCampaignStore, rollingCodex, campaignId, assignmentId, generation, timeoutMs) {
     const rollingWorkerCreationV1 = await rollingCampaignStore.workerIdentity(campaignId, assignmentId, generation);
     const rollingWorkerDispatch = await rollingCampaignStore.workerDispatch(campaignId, assignmentId, generation);
     if (rollingWorkerDispatch !== null && rollingWorkerDispatch.state !== 'ATTACHED')
-        throw new Error('rolling worker: unknown worker dispatch must be reconciled before suspension');
+        throw new Error('rolling worker: unknown worker dispatch must be reconciled before stopping ownership');
     const rollingNativeThread = await rollingCodex.resumeThread(rollingWorkerCreationV1.threadId, rollingWorkerCreationV1.rootPath);
     requireWorker(rollingNativeThread.thread.sessionId === rollingWorkerCreationV1.sessionId, 'native worker differs from attached session');
     let turn = null;
@@ -255,5 +279,46 @@ async function suspendRollingWorker(rollingCampaignStore, rollingCodex, campaign
     const rollingWorkerStopV1 = readRollingWorkerStopV1({ schemaVersion: 1, campaignId, assignmentId, generation,
         threadId: rollingNativeThread.thread.id, sessionId: rollingNativeThread.thread.sessionId, observedAt: new Date().toISOString(), nativeStatus: 'idle', turn,
         checkpoint: { revision: git(['rev-parse', 'HEAD']).trim(), gitStatus: git(['status', '--porcelain=v1', '--untracked-files=all']) } });
-    return rollingCampaignStore.suspendObservedWorker(campaignId, assignmentId, generation, rollingWorkerStopV1, blockers);
+    return rollingWorkerStopV1;
+}
+function buildRollingRetirementInstructions(rollingWorkerRetirementV1) {
+    const checkedRollingWorkerRetirementV1 = readRollingWorkerRetirementV1(rollingWorkerRetirementV1);
+    return 'Your Ponytail assignment has ended. Its generation is revoked. Do not edit files, run commands, send messages to other sessions or begin further work. Acknowledge this notification and finish the turn. The coordinator will archive this worker and no longer send or expect worker messages.\n'
+        + `Retired assignment: ${checkedRollingWorkerRetirementV1.assignmentId}; generation: ${checkedRollingWorkerRetirementV1.generation}.`;
+}
+async function retireRollingWorker(rollingCampaignStore, rollingCodex, campaignId, assignmentId, generation, timeoutMs = 60000) {
+    let rollingWorkerRetirement = await rollingCampaignStore.workerRetirement(campaignId, assignmentId, generation);
+    if (rollingWorkerRetirement === null) {
+        const rollingWorkerStopV1 = await observeRollingWorkerStop(rollingCampaignStore, rollingCodex, campaignId, assignmentId, generation, timeoutMs);
+        rollingWorkerRetirement = await rollingCampaignStore.prepareWorkerRetirement(campaignId, assignmentId, generation, rollingWorkerStopV1);
+    }
+    if (rollingWorkerRetirement.state === 'CLEANED')
+        return rollingWorkerRetirement;
+    const { rollingWorkerRetirementV1 } = rollingWorkerRetirement;
+    if (rollingWorkerRetirement.state === 'PREPARED') {
+        const rollingNativeThreadActivity = await rollingCodex.readThreadActivity(rollingWorkerRetirementV1.threadId);
+        requireWorker(rollingNativeThreadActivity.status === 'idle', 'retiring worker is not known idle; preserve its reservation');
+        rollingWorkerRetirement = await rollingCampaignStore.advanceWorkerRetirement(campaignId, assignmentId, generation, 'PREPARED', 'NOTIFYING');
+        const rollingTurnStarted = await rollingCodex.startTurn(rollingWorkerRetirementV1.threadId, buildRollingRetirementInstructions(rollingWorkerRetirementV1));
+        rollingWorkerRetirement = await rollingCampaignStore.advanceWorkerRetirement(campaignId, assignmentId, generation, 'NOTIFYING', 'NOTIFYING', rollingTurnStarted.turn.id);
+    }
+    if (rollingWorkerRetirement.state === 'NOTIFYING') {
+        requireWorker(rollingWorkerRetirement.turnId !== null, 'retirement notification outcome is unknown; reconcile its original native turn before continuing');
+        let rollingNativeTurn = await rollingCodex.readTurn(rollingWorkerRetirementV1.threadId, rollingWorkerRetirement.turnId);
+        if (rollingNativeTurn.status === 'inProgress')
+            rollingNativeTurn = await rollingCodex.waitForTurn(rollingWorkerRetirementV1.threadId, rollingWorkerRetirement.turnId, timeoutMs);
+        requireWorker(rollingNativeTurn.status === 'completed', 'retirement notification has not completed; preserve its reservation');
+        const rollingNativeThreadActivity = await rollingCodex.readThreadActivity(rollingWorkerRetirementV1.threadId);
+        requireWorker(rollingNativeThreadActivity.status === 'idle', 'retirement notification worker is not known idle');
+        rollingWorkerRetirement = await rollingCampaignStore.advanceWorkerRetirement(campaignId, assignmentId, generation, 'NOTIFYING', 'NOTIFIED');
+    }
+    if (rollingWorkerRetirement.state === 'NOTIFIED')
+        rollingWorkerRetirement =
+            await rollingCampaignStore.advanceWorkerRetirement(campaignId, assignmentId, generation, 'NOTIFIED', 'ARCHIVING');
+    if (rollingWorkerRetirement.state === 'ARCHIVING') {
+        if (!await rollingCodex.isThreadArchived(rollingWorkerRetirementV1.threadId, rollingWorkerRetirementV1.rootPath))
+            await rollingCodex.archiveThread(rollingWorkerRetirementV1.threadId);
+        rollingWorkerRetirement = await rollingCampaignStore.advanceWorkerRetirement(campaignId, assignmentId, generation, 'ARCHIVING', 'ARCHIVED');
+    }
+    return rollingCampaignStore.cleanupWorkerRetirement(campaignId, assignmentId, generation);
 }

@@ -33,6 +33,11 @@ function send(value: unknown): void { process.stdout.write(`${JSON.stringify(val
 const lines = readline.createInterface({ input: process.stdin });
 let initialized = false;
 let turnCount = 0;
+let archiveRefused = false;
+let archiveAcknowledgementLost = false;
+let archiveCount = 0;
+let archivedRoot:string | null = null;
+let foreignArchiveRoot = false;
 let externallyActive = false;
 let terminalDuringHistoryRead = false;
 const turns = new Map<string, RollingNativeTurn>();
@@ -51,11 +56,36 @@ lines.on('line', line => {
       send({ id: message.id, error: { code: -32600, message: 'no rollout found before the first turn' } }); return;
     }
     const cwd = text(params.cwd);
+    archivedRoot = cwd;
     const fixtureThreadResult: FixtureThreadResult = {
       thread: { id: 'thread-fixture', sessionId: 'session-fixture' }, cwd,
       instructionSources: [`${cwd}/AGENTS.md`]
     };
     result = fixtureThreadResult;
+  } else if (method === 'fixture-archive-refuse') {
+    if (typeof params.refused !== 'boolean') throw new Error('fixture archive refusal requires a boolean');
+    archiveRefused = params.refused;
+  } else if (method === 'fixture-archive-lost-ack') {
+    archiveAcknowledgementLost = true;
+  } else if (method === 'fixture-archive-foreign-root') {
+    foreignArchiveRoot = true;
+  } else if (method === 'fixture-archive-count') {
+    result = {count:archiveCount};
+  } else if (method === 'thread/list') {
+    if (params.archived !== true || params.cwd !== archivedRoot) throw new Error('archive inventory requires its exact checkout filter');
+    if (archiveCount === 0) result = {data:[],nextCursor:null};
+    else if (foreignArchiveRoot) result = {data:[{id:'thread-fixture',cwd:'/foreign'}],nextCursor:null};
+    else if (params.cursor === null) result = {data:[{id:'other-thread',cwd:archivedRoot}],nextCursor:'archive-next'};
+    else {
+      if (params.cursor !== 'archive-next') throw new Error('unexpected archive inventory cursor');
+      result = {data:[{id:'thread-fixture',cwd:archivedRoot}],nextCursor:null};
+    }
+  } else if (method === 'thread/archive') {
+    if (params.threadId !== 'thread-fixture' || externallyActive || [...turns.values()].some(turn=>turn.status === 'inProgress')) throw new Error('archive fixture requires the original idle actor');
+    if (archiveRefused) {send({id:message.id,error:{code:-32603,message:'fixture archival refused'}});return;}
+    if (archiveCount !== 0) {send({id:message.id,error:{code:-32600,message:'no rollout found for archived thread'}});return;}
+    archiveCount++;
+    if (archiveAcknowledgementLost) {archiveAcknowledgementLost = false;send({id:message.id,error:{code:-32603,message:'fixture lost archive acknowledgement'}});return;}
   } else if (method === 'fixture-terminal-during-history-read') {
     terminalDuringHistoryRead = true;
   } else if (method === 'fixture-activity') {
@@ -72,7 +102,11 @@ lines.on('line', line => {
     turns.set(turnId, { id: turnId, status: prompt === 'pending' ? 'inProgress' : prompt, items: [] });
     result = { turn: { id: turnId } };
     send({ method: 'turn/started', params: { threadId: params.threadId, turn: { id: turnId } } });
-    if (prompt.startsWith('Execute the assigned atomic obligation')) {
+    if (prompt.startsWith('Your Ponytail assignment has ended.')) {
+      const rollingNativeTurn:RollingNativeTurn = {id:turnId,status:'completed',items:[{type:'agentMessage',text:'Assignment ended.'}]};
+      turns.set(turnId,rollingNativeTurn);
+      send({method:'turn/completed',params:{threadId:params.threadId,turn:rollingNativeTurn}});
+    } else if (prompt.startsWith('Execute the assigned atomic obligation')) {
       const rollingNativeTurn: RollingNativeTurn = {id:turnId,status:'completed',
         items:[{type:'agentMessage',text:`Worker instructions digest: ${crypto.createHash('sha256').update(prompt).digest('hex')}`}]};
       turns.set(turnId,rollingNativeTurn);

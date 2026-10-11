@@ -307,9 +307,30 @@ owned resources, preserving the retained Git checkout, user-owned work and
 reusable build caches. Setup exposes `PONYTAIL_WORKTREE_GENERATION` alongside
 its existing worktree number and physical roots so project tooling can bind
 resource ownership to the allocation. Retirement supplies the same allocation
-identity and the authenticated worker identity. Failure retains the reservation
-for reconciliation; successful cleanup precedes marker removal and checkout
-release. Native cessation and generation revocation remain required separately.
+identity and the authenticated worker identity. `PONYTAIL_WORKTREE_GENERATION`
+retains the original setup allocation generation, while
+`PONYTAIL_ASSIGNMENT_GENERATION` identifies the current assignment generation;
+resuming a worker does not transfer its resources to a new setup identity.
+Failure retains the reservation for reconciliation; successful cleanup precedes
+marker removal and checkout release.
+
+The worker retirement V1 journal retains that exact original native actor,
+resource allocation and published integration revision. After observing the
+original turn terminal and worker idle, preparation revokes assignment authority
+and retains checkout ownership in `RETIRING`. A journaled notification tells the
+worker that coordination has ended. Its known completed turn and idle activity
+precede archival; an archival acknowledgement precedes project cleanup. Only
+`CLEANED` attached ownership can be released by the atomic release-and-allocate
+operation. A lost notification creation acknowledgement remains `NOTIFYING`
+without a turn identity and requires reconciliation of that original turn;
+never dispatch a replacement blindly. Cleanup retries retain the same ownership
+context and do not send another worker notification. Native archival is not idempotent. Archive recovery first queries the native
+archived inventory filtered to the exact physical checkout, including every
+supported native source kind, then matches the original thread identity.
+Native creation through App Server does not imply an `appServer` source tag;
+the installed desktop runtime records these workers as `vscode`. An observed archived actor
+satisfies a lost acknowledgement; otherwise archive that same revoked actor.
+Failures or unknown outcomes preserve the reservation. Cleanup retains checkout contents and reusable build caches.
 
 ## Completion batches approved 2026-10-11
 

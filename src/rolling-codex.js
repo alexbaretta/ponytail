@@ -333,6 +333,26 @@ class RollingCodex extends node_events_1.EventEmitter {
         this.completedTurns.delete(threadId);
         return result;
     }
+    async isThreadArchived(threadId, rootPath) {
+        requireProtocol(threadId.length > 0 && node_path_1.default.isAbsolute(rootPath) && node_fs_1.default.realpathSync(rootPath) === rootPath, 'archive observation requires its original actor and physical checkout');
+        let cursor = null;
+        const cursors = new Set();
+        for (;;) {
+            const result = nativeRecord(await this.request('thread/list', { archived: true, cwd: rootPath, sourceKinds: ['cli', 'vscode', 'exec', 'appServer', 'subAgent', 'subAgentReview', 'subAgentCompact', 'subAgentThreadSpawn', 'subAgentOther', 'unknown'], cursor, limit: 100 }));
+            requireProtocol(Array.isArray(result.data), 'archive inventory is not a page');
+            for (const value of result.data) {
+                const thread = nativeRecord(value);
+                requireProtocol(nativeString(thread.cwd, 'archived checkout') === rootPath, 'archive inventory escaped the assigned checkout');
+                if (nativeString(thread.id, 'archived actor') === threadId)
+                    return true;
+            }
+            if (result.nextCursor === null)
+                return false;
+            cursor = nativeString(result.nextCursor, 'archive inventory cursor');
+            requireProtocol(!cursors.has(cursor), 'archive inventory cursor repeated');
+            cursors.add(cursor);
+        }
+    }
     async close() {
         requireProtocol(this.failure || this.activeTurns.size === 0, `interrupt and observe terminal turns before closing the owned App Server; unresolved activity ${JSON.stringify([...this.activeTurns])}`);
         this.childProcess.stdin.end();

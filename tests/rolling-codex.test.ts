@@ -144,3 +144,18 @@ test('initialization recovery reads exactly one original turn and rejects absent
  await rollingCodex.waitForTurn(rollingNativeThread.thread.id,laterRollingTurnStarted.turn.id);
  await assert.rejects(rollingCodex.readInitializationTurn(rollingNativeThread.thread.id),/absent or ambiguous/);
 });
+
+// Traceability: verifies REQ-ROLLING-WORKERS
+test('archive recovery uses paginated exact-checkout inventory and rejects an escaped physical root',async testContext => {
+ const {root,rollingCodex} = await fixture(testContext);
+ const rollingNativeThread = await rollingCodex.startThread(root);
+ const threadId = rollingNativeThread.thread.id;
+ assert.equal(await rollingCodex.isThreadArchived(threadId,root),false);
+ const rollingTurnStarted = await rollingCodex.startTurn(threadId,'completed');
+ await rollingCodex.waitForTurn(threadId,rollingTurnStarted.turn.id);
+ await rollingCodex.archiveThread(threadId);
+ assert.equal(await rollingCodex.isThreadArchived(threadId,root),true);
+ await assert.rejects(rollingCodex.archiveThread(threadId),/no rollout found/);
+ await rollingCodex.request('fixture-archive-foreign-root',{});
+ await assert.rejects(rollingCodex.isThreadArchived(threadId,root),/escaped the assigned checkout/);
+});

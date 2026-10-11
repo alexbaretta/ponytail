@@ -7,7 +7,7 @@ import path from 'node:path';
 import test from 'node:test';
 import { execFileSync } from 'node:child_process';
 import { RollingCodex, type RollingNativeThread } from '../src/rolling-codex.js';
-import { readRollingWorkerCreationV1, parseRollingWorkerCreation, identifyRollingWorkerCreation,
+import { readRollingWorkerRetirementV1, type RollingWorkerRetirementV1, readRollingWorkerCreationV1, parseRollingWorkerCreation, identifyRollingWorkerCreation,
  readRollingWorkerResumptionV1, parseRollingWorkerResumption, type RollingWorkerResumptionV1, readRollingWorkerStopV1, parseRollingWorkerStop, type RollingWorkerStopV1, buildRollingWorkerInstructions, type RollingWorkerContext, initializeRollingWorker, observeRollingWorkerInitialization, type RollingWorkerCreationV1 } from '../src/rolling-worker.js';
 import { validateRollingSessionMarker, requireRollingSessionMarkerAbsent } from '../src/rolling-worktrees.js';
 import { parseRollingWorkerSubmission, type RollingWorkerSubmissionV1 } from '../src/rolling-worker-submission.js';
@@ -147,4 +147,19 @@ test('resumption receipt retains original native identity and an exact refreshed
   {...rollingWorkerResumptionV1,baseCommit:'short'},{...rollingWorkerResumptionV1,rollingWorkerCreationV1:{...rollingWorkerResumptionV1.rollingWorkerCreationV1,extra:true}}])
   assert.throws(() => readRollingWorkerResumptionV1(value));
  assert.throws(() => parseRollingWorkerResumption(JSON.stringify(rollingWorkerResumptionV1).replace('"schemaVersion":1','"schemaVersion":1.0')));
+});
+
+// Traceability: verifies REQ-ROLLING-WORKERS
+test('retirement contract distinguishes original resource allocation from the revoked assignment generation',() => {
+ const rollingWorkerRetirementV1:RollingWorkerRetirementV1 = {schemaVersion:1,campaignId:'fixture',
+  assignmentId:'00000000-0000-0000-0000-000000000001',generation:'00000000-0000-0000-0000-000000000002',
+  resourceGeneration:'00000000-0000-0000-0000-000000000003',number:101,rootPath:'/fixture/managed/101',coordinatorRoot:'/fixture',
+  threadId:'thread',sessionId:'session',integratedRevision:'a'.repeat(40)};
+ const serialized:unknown = JSON.parse(JSON.stringify(rollingWorkerRetirementV1));
+ assert.deepEqual(readRollingWorkerRetirementV1(serialized),rollingWorkerRetirementV1);
+ for (const value of [null,{...rollingWorkerRetirementV1,schemaVersion:2},{...rollingWorkerRetirementV1,extra:true},
+  {...rollingWorkerRetirementV1,number:100},{...rollingWorkerRetirementV1,number:101.5},
+  {...rollingWorkerRetirementV1,resourceGeneration:'unknown'}, {...rollingWorkerRetirementV1,rootPath:'../101'},
+  {...rollingWorkerRetirementV1,coordinatorRoot:'/fixture/../other'}, {...rollingWorkerRetirementV1,integratedRevision:'short'},
+  {...rollingWorkerRetirementV1,sessionId:'session\nforeign'}]) assert.throws(()=>readRollingWorkerRetirementV1(value));
 });

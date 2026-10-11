@@ -526,6 +526,25 @@ CREATE TABLE IF NOT EXISTS rolling_worker_stop_v1 (
     REFERENCES rolling_assignment_v1(project_id,campaign_id,assignment_id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS rolling_worker_retirement_v1 (
+  project_id uuid NOT NULL,
+  campaign_id text NOT NULL,
+  assignment_id uuid NOT NULL,
+  generation uuid NOT NULL,
+  context_text text NOT NULL CHECK ((context_text::jsonb->>'schemaVersion' = '1'
+    AND context_text::jsonb->>'campaignId' = campaign_id
+    AND context_text::jsonb->>'assignmentId' = assignment_id::text
+    AND context_text::jsonb->>'generation' = generation::text) IS TRUE),
+  state text NOT NULL CHECK (state IN ('PREPARED','NOTIFYING','NOTIFIED','ARCHIVING','ARCHIVED','CLEANED')),
+  turn_id text,
+  CHECK ((state = 'PREPARED' AND turn_id IS NULL) OR state = 'NOTIFYING'
+    OR (state IN ('NOTIFIED','ARCHIVING','ARCHIVED','CLEANED') AND turn_id IS NOT NULL)),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (project_id,campaign_id,assignment_id,generation),
+  FOREIGN KEY (project_id,campaign_id,assignment_id)
+    REFERENCES rolling_assignment_v1(project_id,campaign_id,assignment_id) ON DELETE CASCADE
+);
+
 CREATE OR REPLACE FUNCTION register_project(
   requested_project_id uuid,
   requested_project_name text

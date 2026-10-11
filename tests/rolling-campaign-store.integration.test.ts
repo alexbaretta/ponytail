@@ -9,15 +9,16 @@ import os from 'node:os';
 import path from 'node:path';
 import { execFileSync,spawnSync } from 'node:child_process';
 import { Pool } from 'pg';
+import { stringify } from 'lossless-json';
 import { databaseOptions } from '../src/project-index-database.js';
-import { collectRollingGraph, type RollingProjectConfigV1, type RollingBindingsV1, type RollingBinding, type RollingGraph } from '../src/rolling-campaign.js';
+import { collectRollingGraph, type RollingPhysicalProjectConfig, type RollingProjectConfigV1, type RollingBindingsV1, type RollingBinding, type RollingGraph } from '../src/rolling-campaign.js';
 import { RollingCampaignStore, type RollingCampaignRegistration, type RollingAllocationResult, type RollingWorkerDispatchAttached, type RollingReviewDispatchAttached, type RollingSessionAttachment, type RollingStoredAssignment, type RollingCampaignStatus } from '../src/rolling-campaign-store.js';
 import { inputDigest, parseObligationDocument, type ObligationDocumentV1, type ObligationBaseline, type Obligation, type ObligationCertificate, type ObligationCheckpoint } from '../skills/plan-execution/scripts/obligations.js';
 import type { ObligationBindingHistoryV1, ObligationBindingRevisionV1 } from '../skills/plan-execution/scripts/obligation-binding-history.js';
 import type { ObligationEvidence } from '../skills/plan-execution/scripts/obligations.js';
 import type { RollingWorkerSubmissionV1,RollingSubmissionProof } from '../src/rolling-worker-submission.js';
 import { readRollingReviewRequestV1,readRollingReviewOutcomeV1,dispatchRollingReview, collectRollingReview, type RollingReviewOutcomeV1 } from '../src/rolling-review.js';
-import { provisionRollingWorker, attachRollingWorker, suspendRollingWorker, collectRollingWorkerSubmission, recoverRollingWorkerCreation, observeRollingWorkerInitialization, resumeRollingWorker, parseRollingWorkerResumption, dispatchRollingWorker, buildRollingWorkerInstructions, type RollingWorkerInitialization } from '../src/rolling-worker.js';
+import { retireRollingWorker, provisionRollingWorker, attachRollingWorker, suspendRollingWorker, collectRollingWorkerSubmission, recoverRollingWorkerCreation, observeRollingWorkerInitialization, resumeRollingWorker, parseRollingWorkerResumption, dispatchRollingWorker, buildRollingWorkerInstructions, type RollingWorkerInitialization } from '../src/rolling-worker.js';
 import { RollingCodex, RollingObservationTimeout, type RollingNativeTurn, type RollingNativeThread, type RollingNativeServerRequest } from '../src/rolling-codex.js';
 import { acceptBoundCheckpoint, type ObligationCertificateBindingV1, type ObligationCertificateSubmission,
   type ObligationCertificateBindingRequest } from '../skills/plan-execution/scripts/obligation-certificate-bindings.js';
@@ -838,7 +839,7 @@ async function observeRollingWorkerTurn(t: TestContext, rollingCodex: RollingCod
   }
 }
 
-export async function runRollingWorkerScenario(t: TestContext, mode: 'protocol' | 'native', operation: 'attachment' | 'instructions' | 'suspension' | 'resumption' | 'recovery' | 'collection' | 'code', rework = false, integrationRepair = false): Promise<void> {
+export async function runRollingWorkerScenario(t: TestContext, mode: 'protocol' | 'native', operation: 'attachment' | 'instructions' | 'suspension' | 'resumption' | 'recovery' | 'collection' | 'code', rework = false, integrationRepair = false, retirement = false): Promise<void> {
   assert.ok(!integrationRepair || mode === 'protocol' && operation === 'collection');
   assert.ok(!rework || mode === 'native' && operation === 'code', 'correction Arc requires the real native code worker');
   const repositoryRoot = path.resolve(__dirname, '../..');
@@ -897,7 +898,10 @@ export async function runRollingWorkerScenario(t: TestContext, mode: 'protocol' 
   fs.mkdirSync(path.join(root,'.agents/config/project'),{recursive:true});
   const rollingProjectConfigV1: RollingProjectConfigV1 = {schemaVersion:1,mainline:{remote:'origin',branch:'main'},
     managedWorktrees:{directory:'managed',anchor:'main'},maxActiveWorkers:1,publicationSize:1,setupCommands:[],qa:{focused:integrationRepair ? [[process.execPath,'--test','--test-reporter=tap','fixture.test.ts']] : operation === 'code' ? [['npm','run','build'],['node','--test','--test-reporter=tap','fixture.test.ts']] : operation !== 'attachment' ? [['node','--test','fixture.test.ts']] : [],publication:[['node','--test']]}};
-  fs.writeFileSync(path.join(root,'.agents/config/project/rolling-campaigns.json'),JSON.stringify(rollingProjectConfigV1));
+  const rollingPhysicalProjectConfig:RollingPhysicalProjectConfig = retirement
+    ? {...rollingProjectConfigV1,schemaVersion:2,retirementCommands:[[process.execPath,path.join(__dirname,'fixtures/rolling-worktree-cleanup.js')]]}
+    : rollingProjectConfigV1;
+  fs.writeFileSync(path.join(root,'.agents/config/project/rolling-campaigns.json'),JSON.stringify(rollingPhysicalProjectConfig));
   fs.writeFileSync(path.join(root,'.gitignore'),`/managed/\n/session_id.txt\n/origin.git/\n${operation === 'collection' || operation === 'code' ? '/tmp/\n/upstream/\n/node_modules\n' : ''}`);
   if (operation === 'code') {
     fs.writeFileSync(path.join(root,'package.json'),JSON.stringify({name:'rolling-native-code-fixture',private:true,type:'module',
@@ -1329,6 +1333,49 @@ export async function runRollingWorkerScenario(t: TestContext, mode: 'protocol' 
       assert.equal(retainedReviews.length,2);
       assert.ok(retainedReviews.every(review=>review.outcome?.decision === 'accepted' && review.request.reviewerSessionId === 'original-reviewer'));
       assert.equal((await pool.query<Record<string,unknown>>('SELECT count(*)::integer AS count FROM ponytail_index.rolling_increment_delivery_v1 WHERE project_id=$1 AND increment_id=$2',[projectId,repairedClaim.id])).rows[0]?.count,1);
+      if (retirement) {
+        const assignmentId = repairAllocation.assignment.id, retirementGeneration = repairAllocation.assignment.generation;
+        await assert.rejects(rollingCampaignStore.retire('worker-fixture',assignmentId,retirementGeneration,true),/observed native retirement/);
+        const excludePath = execFileSync('git',['-C',rootPath,'rev-parse','--git-path','info/exclude'],{encoding:'utf8'}).trim();
+        fs.mkdirSync(path.dirname(path.resolve(rootPath,excludePath)),{recursive:true});
+        fs.appendFileSync(path.resolve(rootPath,excludePath),'\n/owned-resource.txt\n/cleanup-refuse.txt\n/retained-cache.txt\n');
+        fs.writeFileSync(path.join(rootPath,'owned-resource.txt'),generation);
+        fs.writeFileSync(path.join(rootPath,'retained-cache.txt'),'reuse build cache');
+        fs.writeFileSync(path.join(rootPath,'cleanup-refuse.txt'),'retain ownership');
+        await rollingCodex.request('fixture-archive-refuse',{refused:true});
+        await assert.rejects(retireRollingWorker(rollingCampaignStore,rollingCodex,'worker-fixture',assignmentId,retirementGeneration),/archival refused/);
+        assert.equal((await rollingCampaignStore.workerRetirement('worker-fixture',assignmentId,retirementGeneration))?.state,'ARCHIVING');
+        assert.ok(fs.existsSync(path.join(rootPath,'session_id.txt')));
+        assert.ok(fs.existsSync(path.join(rootPath,'owned-resource.txt')));
+        await rollingCodex.request('fixture-archive-refuse',{refused:false});
+        await rollingCodex.request('fixture-archive-lost-ack',{});
+        await assert.rejects(retireRollingWorker(rollingCampaignStore,rollingCodex,'worker-fixture',assignmentId,retirementGeneration),/lost archive acknowledgement/);
+        assert.equal((await rollingCampaignStore.workerRetirement('worker-fixture',assignmentId,retirementGeneration))?.state,'ARCHIVING');
+        assert.ok(fs.existsSync(path.join(rootPath,'owned-resource.txt')));
+        await assert.rejects(retireRollingWorker(rollingCampaignStore,rollingCodex,'worker-fixture',assignmentId,retirementGeneration),/cleanup failed/);
+        const failedRetirement = await rollingCampaignStore.workerRetirement('worker-fixture',assignmentId,retirementGeneration);
+        assert.equal(failedRetirement?.state,'ARCHIVED');assert.ok(failedRetirement?.turnId);
+        assert.equal(failedRetirement.rollingWorkerRetirementV1.resourceGeneration,generation);
+        assert.notEqual(failedRetirement.rollingWorkerRetirementV1.resourceGeneration,retirementGeneration);
+        assert.ok(fs.existsSync(path.join(rootPath,'session_id.txt')));
+        const retirementGraph = collectRollingGraph(root,'obligations.json','bindings.json','history.json');
+        const previousDigest = (await rollingCampaignStore.status('worker-fixture')).graphDigest;
+        await rollingCampaignStore.reconcileGraph('worker-fixture',previousDigest,retirementGraph.digest);
+        await assert.rejects(rollingCampaignStore.allocate('worker-fixture',retirementGraph.digest,{id:assignmentId,generation:retirementGeneration}),/completed native retirement/);
+        await assert.rejects(rollingCampaignStore.workerContext('worker-fixture',assignmentId,retirementGeneration),/active attached session/);
+        fs.unlinkSync(path.join(rootPath,'cleanup-refuse.txt'));
+        const restartedRetirementStore = new RollingCampaignStore(pool,projectId);
+        const completedRetirement = await retireRollingWorker(restartedRetirementStore,rollingCodex,'worker-fixture',assignmentId,retirementGeneration);
+        assert.equal(completedRetirement.state,'CLEANED');assert.equal(completedRetirement.turnId,failedRetirement.turnId);
+        assert.equal(stringify(await rollingCodex.request('fixture-archive-count',{})),'{"count":1}');
+        assert.equal(fs.existsSync(path.join(rootPath,'session_id.txt')),false);
+        assert.equal(fs.existsSync(path.join(rootPath,'owned-resource.txt')),false);
+        assert.equal(fs.readFileSync(path.join(rootPath,'retained-cache.txt'),'utf8'),'reuse build cache');
+        assert.equal(execFileSync('git',['-C',rootPath,'rev-parse','HEAD'],{encoding:'utf8'}).trim(),repairedRevision);
+        await restartedRetirementStore.allocate('worker-fixture',retirementGraph.digest,{id:assignmentId,generation:retirementGeneration});
+        assert.equal((await restartedRetirementStore.status('worker-fixture')).assignments.find(item=>item.id === assignmentId)?.state,'RELEASED');
+        assert.equal((await retireRollingWorker(restartedRetirementStore,rollingCodex,'worker-fixture',assignmentId,retirementGeneration)).state,'CLEANED');
+      }
       return;
     }
     // Traceability: verifies REQ-ROLLING-REVIEW
@@ -1562,3 +1609,8 @@ test('substantive integration repair retains worker and reviewer through fresh p
 // Traceability: verifies REQ-ROLLING-GRAPH
 test('integrated certificate assessment uses retained published proof and serializes accepted record publication',
  t=>runRollingReviewScenario(t,{decision:'accepted',mode:'manual',integratedCertificates:true}));
+
+// Traceability: verifies REQ-ROLLING-WORKERS
+// Traceability: verifies REQ-ROLLING-STATE
+test('worker retirement revokes native ownership and fences checkout release through restartable cleanup',
+ t=>runRollingWorkerScenario(t,'protocol','collection',false,true,true));
