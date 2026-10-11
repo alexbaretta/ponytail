@@ -22,6 +22,11 @@ those bindings; do not interpret an empty dependency list as a completed review
 of dependencies or permission for unrestricted implementation. Remaining language
 outcomes must also be registered before their work is assigned.
 
+The [binding-revision prerequisite](design.md#stable-identities-and-revised-execution-bindings)
+records the observed V1 immutability constraint and the shared amendment contract.
+Implement that contract before promoting an inspected outcome to an edit lease;
+do not create duplicate obligation IDs merely to change assignment permissions.
+
 The evidence column identifies a real executable boundary, not a claim that all
 required evidence is adequate or fresh. `Available` means the cited proof was
 inspected and passed in the typed test family on 2026-10-10 at revision

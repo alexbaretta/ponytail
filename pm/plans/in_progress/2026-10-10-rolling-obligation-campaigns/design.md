@@ -179,6 +179,55 @@ Mainline publication, deployment and human acceptance are separate contracts.
 
 ## Interfaces and replacement
 
+### Stable identities and revised execution bindings
+
+Inspection of the portable V1 document and the rolling graph reader identifies
+an implementation prerequisite: `acceptCheckpoint` preserves whole obligation
+records, including `dependsOn` and `execution`, while rolling selection currently
+reads paths from that immutable execution field. The inspection-only records in
+BASELINE-8 therefore cannot become edit assignments by changing their existing
+objects. Changing an assignment must not create another counted obligation or
+rewrite historical checkpoint meaning.
+
+Introduce an explicit versioned binding history before assigning those outcomes.
+The obligation's canonical identity, condition and discharge criterion remain
+stable. A binding revision names its obligation ID, predecessor revision,
+authorizing coordinator, reason, prerequisite IDs, exact permitted paths and
+operations, proof selection and target. Conditions and criteria are referenced,
+not copied into binding records. The current binding is derived from accepted
+revision history. Every assignment freezes that revision and graph digest;
+changing the current binding does not expand an already issued lease.
+
+The coordinator's files own current prerequisite/binding declarations and their
+accepted history; PostgreSQL stores assignment state and frozen revision
+references. Do not introduce a second mutable graph in PostgreSQL. Refresh must
+validate identity, references, acyclicity, declared path boundaries and authority
+before making a revision schedulable. A dependency discovered by a worker is a
+proposal until reconciled in those coordinator files. A newly blocked lease
+follows the existing suspend/reactivate policy and capacity accounting.
+
+Historical physical V1 readers retain their existing meanings. Use a new
+physical contract for binding revisions rather than adding fields to V1 readers
+or mutating old obligation records during projection. The adopted portable
+selector, rolling allocator and acceptance path must consume the same effective
+binding projection. Until implemented, V1 inspection-only bindings remain
+inspection-only; a Markdown assignment cannot silently override the machine
+contract. The amendment operation is a bounded local repair within the already
+approved planning/assignment scope, not a new requirement for users to reapprove
+every routine code change.
+
+Required proof cases: unchanged obligation IDs/counts across a binding amendment;
+exact immutable historical replay; rejected stale predecessor, unauthorized
+revision, missing prerequisite or cycle; no widening of a live frozen lease;
+deterministic suspension/resumption after dependency change; shared effective
+binding across portable and rolling selectors; rejection of edits outside the
+frozen revision; and acceptance against the actual revision's evidence inputs.
+Only then bind the sprint-test migration to its relevant registered outcomes,
+with the typed test path, deleted handwritten test, configuration and generated
+traceability paths explicitly frozen before source edits.
+
+### Shared CLI and MCP application layer
+
 One application operation layer serves CLI and MCP, as required by
 REQ-ROLLING-INTERFACES. MCP parity is approved scope, not an optional replacement
 for the CLI. Root help lists
