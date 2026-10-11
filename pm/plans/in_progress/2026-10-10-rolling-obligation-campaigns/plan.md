@@ -58,7 +58,7 @@ and no retrospective rewrite of closed plan evidence.
 | Sprint | Deliverable | State |
 | --- | --- | --- |
 | S01 | Activated requirements/UAT, execution design, starting evidence and atomic implementation records | Done |
-| S02 | [Configuration and graph](sprints/S02.md) | In progress |
+| S02 | [Configuration and graph](sprints/S02.md) | Done |
 | S03 | PostgreSQL execution ownership, transactions, indexes and recoverable action records | Pending |
 | S04 | Ponytail worktree pool, direct Codex adapter, suspension/reactivation and review lifecycle | Pending |
 | S05 | Increment integration, publication batches and QA evidence on exact revisions | Pending |

@@ -591,10 +591,10 @@ Requirement: [pm/requirements/obligation-execution.md](obligation-execution.md)
 
 Requirement: [pm/requirements/rolling-campaigns.md](rolling-campaigns.md)
 
-- implementation: implements [src/rolling-campaign.js:20](../../src/rolling-campaign.js#L20)
-- implementation: implements [src/rolling-campaign.js:56](../../src/rolling-campaign.js#L56)
-- implementation: implements [src/rolling-campaign.js:67](../../src/rolling-campaign.js#L67)
-- implementation: implements [src/rolling-campaign.js:84](../../src/rolling-campaign.js#L84)
+- implementation: implements [src/rolling-campaign.js:22](../../src/rolling-campaign.js#L22)
+- implementation: implements [src/rolling-campaign.js:58](../../src/rolling-campaign.js#L58)
+- implementation: implements [src/rolling-campaign.js:202](../../src/rolling-campaign.js#L202)
+- implementation: implements [src/rolling-campaign.js:219](../../src/rolling-campaign.js#L219)
 - unit-test: verifies [tests/rolling-campaign.test.js:16](../../tests/rolling-campaign.test.js#L16)
 - unit-test: verifies [tests/rolling-campaign.test.js:28](../../tests/rolling-campaign.test.js#L28)
 - unit-test: verifies [tests/rolling-campaign.test.js:50](../../tests/rolling-campaign.test.js#L50)
@@ -608,6 +608,10 @@ Requirement: [pm/requirements/rolling-campaigns.md](rolling-campaigns.md)
 
 Requirement: [pm/requirements/rolling-campaigns.md](rolling-campaigns.md)
 
+- implementation: implements [src/rolling-campaign.js:69](../../src/rolling-campaign.js#L69)
+- implementation: implements [src/rolling-campaign.js:116](../../src/rolling-campaign.js#L116)
+- unit-test: verifies [tests/rolling-campaign.test.js:134](../../tests/rolling-campaign.test.js#L134)
+- integration-test: verifies [tests/rolling-campaign.integration.test.js:54](../../tests/rolling-campaign.integration.test.js#L54)
 - uat: verifies [pm/uat/rolling-campaigns.md:29](../../pm/uat/rolling-campaigns.md#L29)
 - plan: plans-implementation [pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/plan.md:99](../../pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/plan.md#L99)
 
@@ -615,6 +619,11 @@ Requirement: [pm/requirements/rolling-campaigns.md](rolling-campaigns.md)
 
 Requirement: [pm/requirements/rolling-campaigns.md](rolling-campaigns.md)
 
+- implementation: implements [src/rolling-campaign.js:148](../../src/rolling-campaign.js#L148)
+- unit-test: verifies [tests/rolling-campaign.test.js:153](../../tests/rolling-campaign.test.js#L153)
+- unit-test: verifies [tests/rolling-campaign.test.js:171](../../tests/rolling-campaign.test.js#L171)
+- unit-test: verifies [tests/rolling-campaign.test.js:191](../../tests/rolling-campaign.test.js#L191)
+- integration-test: verifies [tests/rolling-campaign.integration.test.js:55](../../tests/rolling-campaign.integration.test.js#L55)
 - uat: verifies [pm/uat/rolling-campaigns.md:42](../../pm/uat/rolling-campaigns.md#L42)
 - plan: plans-implementation [pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/plan.md:100](../../pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/plan.md#L100)
 

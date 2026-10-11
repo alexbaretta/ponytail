@@ -3,6 +3,22 @@
   "schemaVersion": 1,
   "families": [
     {
+      "id": "rolling-execution-bindings",
+      "implementation": {
+        "workspace": "ponytail",
+        "module": "src/rolling-campaign.js",
+        "readerRegistryExport": "RollingBindingsReaders"
+      },
+      "currentVersion": "V1",
+      "versions": [
+        "V1"
+      ],
+      "supportedReadVersions": [
+        "V1"
+      ],
+      "supportedDowngradeVersions": []
+    },
+    {
       "id": "rolling-project-configuration",
       "implementation": {
         "workspace": "ponytail",
