@@ -19,8 +19,9 @@ it does not create requirements, convert observations into intended behavior,
 or replace explicit release authorization.
 
 Shared terms use the [Ponytail glossary](../plan-execution/references/glossary.md).
-An acceptance is the atomic condition recorded in the configured UAT root. Its
-Arc supplies actors, prerequisites, ordered actions and observations proving it.
+An acceptance is the atomic observable condition recorded in the configured UAT
+root, expressed in terms of identified atomic obligations. Its Arc supplies
+actors, prerequisites, ordered actions and observations proving it.
 A condition alone does not establish coverage.
 ## Project Configuration Contract
 
@@ -59,6 +60,9 @@ release preparation or test execution after implementation activation.
   the requirement or clarification creates or changes acceptance behavior.
 - Link the Arc to the exact requirement identifier or stable anchor while
   preserving its approval state.
+- Identify the atomic obligation IDs each acceptance demonstrates, linking
+  their canonical conditions and discharge criteria. Identify the proving Step
+  when a specific Step supplies the observation; include necessary predecessors.
 - When the host configures `requirements-traceability`, keep that link as the
   Arc's canonical `verifies` annotation and generate requirement-oriented
   reverse links instead of maintaining another mapping.
@@ -84,10 +88,12 @@ index. Create the root with its first substantive content, not as a placeholder.
 Use the canonical Suite/Arc/Step definitions in the glossary; execution
 semantics remain owned by `production-test-boundaries`.
 
-One acceptance states the whole atomic requirement's observable compliance.
-Multiple Arcs may demonstrate it when each independently proves the whole
-requirement. If distinct procedures are jointly necessary, apply requirements'
-controlled split process rather than credit fragments as complete coverage.
+One acceptance states an atomic observable condition over named obligations.
+Multiple acceptances or procedures may jointly establish an obligation; each
+must identify its contribution, and the complete discharge criterion must be
+demonstrated before claiming satisfaction. A requirement's acceptance rolls up
+all applicable obligations. Do not credit one passing Step as whole-obligation
+or whole-requirement proof unless it establishes that complete condition.
 Execution profile, manual versus automated operation and target environment
 are attributes of an Arc, not reasons to duplicate that Arc.
 
@@ -95,6 +101,7 @@ Each Arc records:
 
 - the requirement identifiers or stable anchors it covers and their approval
   state;
+- acceptance and obligation IDs, with the Steps demonstrating their conditions;
 - actor, prerequisites, and owned test data;
 - ordered Steps and expected observable outcomes;
 - applicable manual and automated execution profiles;

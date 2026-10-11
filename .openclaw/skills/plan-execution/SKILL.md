@@ -35,6 +35,12 @@ additional satisfaction flags. Preserve identity across moves, reassignment and
 unchanged rebaselines; changed condition meanings get explicit successor IDs.
 
 Tasklets remain atomic implementation steps where decomposition is useful.
+Every active plan expresses its scope through atomic obligation IDs
+under the glossary's criterion, each with canonical condition, discharge proof,
+prerequisites and responsibility boundary. Requirements and acceptances identify
+the same obligations. Reject a broad feature or whole-codebase gate presented
+as an atomic delivery item. Preserve such gates as acceptance rollups; decompose
+their delivery scope without dropping responsibilities or rewriting history.
 An obligation may require several tasklets or reuse adequate evidence without
 an edit. A bounded inspection or no-edit assessment need not have a tasklet graph;
 its configured execution binding still needs authority and exact permitted paths.
@@ -68,6 +74,9 @@ the complete reconciled change-set; intermediate edits are not transitions.
 Integration source repair must restore traceability and affected unit correctness
 before accepting a C2 decrease. Preserve the existing focused/feature/sprint/final
 QA cadence; tasklet counts are operational information, not acceptance progress.
+Report work completion using the glossary's atomic delivery count, separately
+from the six-coordinate proof inventory and final acceptance gates. Neither
+tasklet DONE nor a broad gate's unresolved status measures delivered work.
 
 Neutral preparation leaves the vector unchanged and names one obligation, a finite
 operation/inspection set, deliverable and stop result. Exhaust that episode before

@@ -95,7 +95,10 @@ These rules remain active at every compaction level, including `off`:
   tests, but still require applicable syntax, schema, link, generator, or
   comparable structural checks.
 - Use the `plan-execution` skill's `references/glossary.md` as the canonical
-  shared vocabulary. Apply that skill's obligation-centered acceptance when
+  shared vocabulary and atomicity contract. Express requirements,
+  acceptances, plans and assignments through identified atomic obligations;
+  keep canonical conditions and discharge criteria in one owner. Apply that
+  skill's obligation-centered acceptance when
   the project has adopted its configured operations; preserve legacy selectors
   until adoption. Do not equate finished edits with discharged obligations.
 - When a project configures `requirements-traceability`, keep its canonical

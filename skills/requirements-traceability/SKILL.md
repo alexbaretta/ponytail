@@ -159,7 +159,8 @@ Traceability: supports REQ-OBLIGATION-DISCHARGE
 
 For a frozen approved baseline, assess these upstream certificates:
 
-- T1: adequate linked plain-English UAT proves the entire atomic requirement.
+- T1: adequate linked plain-English acceptances demonstrate each atomic
+  obligation's complete condition; requirement coverage rolls up all its obligations.
 - T2: a selectable executable integration Arc implements the required UAT actions,
   observations and lifecycle through the real product path.
 - T3: truthful annotations resolve acceptance responsibilities to actual stable
@@ -173,11 +174,18 @@ behavioral adequacy or passing execution. Planned units, empty tests and passing
 substitute paths cannot discharge proof. Keep the annotations above as the sole
 relationship source; certificate assessments reference them without another map.
 
-Count responsibilities, not diagnostics: one T1 per atomic requirement, one T2
+Count responsibilities, not diagnostics: one T1 per atomic obligation, one T2
 per required UAT Arc, one T3 per acceptance Step/assertion responsibility, and one
 T4 per independently testable unit/responsibility. Optional redundant proof is not
 mandatory merely because it exists. Tests can discharge several responsibilities
 only when each is adequately asserted. Unit proof need not duplicate integration.
+Keep approved requirement annotations as the canonical artifact relationships.
+Their adequacy assessment must identify the atomic obligations demonstrated,
+including exact acceptance and Arc/Step references; requirement-level linkage
+alone does not establish coverage of every obligation. Use the canonical
+obligation references rather than introducing parallel relationship annotations.
+Preserve historical certificate meanings; apply the new decomposition through
+an explicit successor baseline rather than changing past T1 counts in place.
 
 Inventory review must examine requirements, acceptance observations, executable
 selection/lifecycle, actual implementation/support, unit proof and required

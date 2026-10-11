@@ -25,15 +25,28 @@ proposals until a stakeholder approves them as requirements. Do not convert
 them into active scope merely because they would make the product more useful,
 elegant, uniform, extensible, or future-proof.
 
-## Baselines and atomic requirements
+## Baselines and atomic obligations
 
 Shared terms use the [Ponytail glossary](../plan-execution/references/glossary.md).
 For obligation execution, freeze selected approved IDs, canonical sources,
 meanings and exact input identities. A scope move, deferral or decomposition
 cannot remove an approved responsibility. Unknown coverage remains unresolved.
-Each atomic requirement admits an independently complete acceptance procedure;
-if distinct procedures are jointly necessary, propose a controlled requirement
-split. Several ordered Steps in one Arc do not require splitting.
+Express every approved requirement as an identified set of atomic
+obligations under the glossary's atomicity criterion. State or link their
+canonical conditions and discharge criteria; do not leave the approved scope
+only in a broad feature description. Preserve requirement IDs and provenance
+when decomposing their obligations. Necessary product and engineering conditions
+must all remain represented, including prerequisites and required failure behavior.
+
+Reconcile acceptances to those obligation IDs, with observations and Arc/Step
+demonstrations sufficient for each complete condition. Distinct procedures may
+jointly establish an obligation; their number does not require a requirement
+split. Split an obligation when its outcomes are independently verifiable and
+integrable. A requirement-wide statement of completion is a rollup over its
+obligations, not one atomic work item. Preserve historical meanings and migrate
+active adopted scope through an explicit baseline amendment.
+Reconcile existing active requirements before their next assignment or acceptance;
+historical physical-reader compatibility does not waive this contract.
 
 An approved, implementation-activated FEAT or CHNG starts a successor baseline.
 Preserve its predecessor, authority, reason, superseded meanings and unresolved

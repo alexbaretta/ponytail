@@ -1,13 +1,12 @@
-#!/usr/bin/env node
 // Copyright (c) 2026 Alex Baretta. All rights reserved.
 // Licensed under the MIT License. See LICENSE in the project root.
 
-const assert = require('node:assert/strict');
-const fs = require('node:fs');
-const path = require('node:path');
-const test = require('node:test');
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import test from 'node:test';
 
-const root = path.join(__dirname, '..');
+const root = path.join(__dirname, '../..');
 const uat = fs.readFileSync(
   path.join(root, 'skills', 'user-acceptance-testing', 'SKILL.md'),
   'utf8',
@@ -30,7 +29,10 @@ test('requirements preserve provenance and stakeholder conflict resolution', () 
 
 test('UAT derives release evidence from approved requirements', () => {
   assert.match(uat, /UAT derives expected outcomes from approved requirements/);
-  assert.match(uat, /Multiple Arcs may demonstrate it when each independently proves the whole/);
+  assert.match(uat, /atomic observable condition over named obligations/);
+  assert.match(uat, /Multiple acceptances or procedures may jointly establish an obligation/);
+  assert.match(uat, /complete discharge criterion must be/);
+  assert.match(uat, /Do not credit one passing Step as whole-obligation/);
   assert.match(uat, /are attributes of an Arc, not reasons to duplicate that Arc/);
   assert.match(uat, /Candidate and observed requirements may support explicitly exploratory Arcs/);
   assert.match(uat, /Passing UAT means the recorded acceptance selection passed/);

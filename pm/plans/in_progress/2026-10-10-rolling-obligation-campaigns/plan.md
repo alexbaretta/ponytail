@@ -89,17 +89,11 @@ applicable focused QA. Keep outcomes at comparable granularity; decompose a
 whole-feature or whole-codebase responsibility before counting it as a unit of
 work. Use outcome obligations rather than tasklet, file or commit counts.
 
-For this campaign, an atomic delivery obligation establishes the smallest
-independently verifiable functional condition that can be integrated as a
-coherent change. It names one meaningful outcome, has an independent verdict
-after its declared prerequisites, and can land without an unfinished sibling
-making the repository invalid. Split it whenever a smaller part can be verified
-and integrated while the remainder stays outstanding and still yields a
-meaningful result. Required implementation, tests, configuration and traceability
-for that outcome belong together. File, declaration, test and elapsed-time
-counts do not define atomicity. A mandatory engineering property, such as typed
-execution of one bounded operation with preserved behavior, is also a functional
-condition. Independent integration does not require a separate publication.
+Apply the normative [glossary atomicity contract](../../../../skills/plan-execution/references/glossary.md#atomicity-and-expression).
+The stakeholder approved its application to requirements, acceptances and other
+delivery records on 2026-10-10. Requirement gates in this campaign roll up atomic
+obligations; every adopted successor baseline and assignment must reference
+their canonical identities and complete discharge criteria.
 
 The [delivery decomposition](delivery-decomposition.md) records candidate
 outcomes and the evidence boundaries inspected so far. It is a planning input

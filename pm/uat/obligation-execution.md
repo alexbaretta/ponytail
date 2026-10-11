@@ -42,6 +42,50 @@ its applicable observations; unit proofs additionally cover failure/skip/target,
 authority, dependency and immutable historical physical-reader boundaries.
 Final execution evidence is recorded in the approved plan acceptance record.
 
+## GLOSSARY-ATOMICITY
+
+Traceability: verifies REQ-PONYTAIL-GLOSSARY
+
+Policy acceptance Arc for the stakeholder's atomicity amendment. This is a
+plain-English review of agent instructions, not an automated claim that a
+schema checker can determine semantic atomicity. Actor: authorized coordinator
+or reviewer. Prerequisites: approved multi-outcome requirement, its proposed
+obligation decomposition and linked acceptance/plan records. Profile: local
+policy review; no cloud or production effects.
+
+1. **Acceptance ATOMICITY-DEFINITION** demonstrates
+   [OBL-GLOSSARY-ATOMICITY](../requirements/obligation-execution.md#obl-glossary-atomicity).
+   Read the canonical glossary and its generated host copies. Apply its criterion
+   to a broad scheduling capability: separate independent capacity selection,
+   inactive-session priority and conflicting-scope outcomes. Reject splitting
+   implementation, its test and its traceability into separate functional
+   obligations. Observe one definition and identical generated resources.
+2. **Acceptance ATOMICITY-REQUIREMENTS** demonstrates
+   [OBL-GLOSSARY-REQUIREMENTS](../requirements/obligation-execution.md#obl-glossary-requirements).
+   Apply the requirements skill to the approved multi-outcome requirement.
+   Observe stable obligation IDs and canonical condition/criterion references
+   that preserve every approved outcome and its provenance. Reject a broad
+   feature label presented as the only atomic obligation.
+3. **Acceptance ATOMICITY-ACCEPTANCES** demonstrates
+   [OBL-GLOSSARY-ACCEPTANCES](../requirements/obligation-execution.md#obl-glossary-acceptances).
+   Apply the UAT skill to the decomposition. Observe obligation-specific
+   expected results and proving Steps, including necessary predecessors. Present
+   only one part of a joint demonstration; observe that complete discharge is
+   withheld while its other required condition remains unverified.
+4. **Acceptance ATOMICITY-EXECUTION** demonstrates
+   [OBL-GLOSSARY-EXECUTION](../requirements/obligation-execution.md#obl-glossary-execution).
+   Follow one obligation through requirement, acceptance, plan, worker assignment,
+   implementation/test references and certificate assessment. Observe the same
+   identity and canonical condition owner throughout. Inspect reporting: inventory
+   and final gates are separate from atomic delivery counts. Decompose a historical
+   broad gate; observe preserved history and an explicit successor baseline rather
+   than a retroactively improved percentage.
+
+Source/generated checks support Step 1; the remaining Steps require semantic
+review of the stated policy and scoped records. Record review observations and
+unverified scope explicitly. Existing executable obligation lifecycle proof
+does not by itself prove these new policy conditions.
+
 ## OBL-IDENTITY
 
 Traceability: verifies REQ-OBLIGATION-IDENTITY
@@ -378,4 +422,3 @@ Traceability: verifies REQ-REPAIR-PLAN-STARTING-GATE
 
 This instruction-only condition uses the configured policy integration selection;
 its scoped unit disposition does not waive future executable runtime behavior.
-
