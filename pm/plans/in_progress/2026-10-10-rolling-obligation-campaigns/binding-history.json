@@ -1074,6 +1074,102 @@
           "profile": "typed-tasklet-graph-OBL-104"
         }
       }
+    },
+    {
+      "id": "BIND-26",
+      "obligationId": "OBL-105",
+      "predecessorId": null,
+      "baselineId": "BASELINE-14",
+      "assessor": "coordinator",
+      "authority": [
+        "user-goal-2026-10-10-rolling-campaigns",
+        "user-goal-2026-10-10-static-language-existing-tsts",
+        "user-2026-10-10-normative-atomic-obligations"
+      ],
+      "reason": "Finish already-started adopted tasklet selector outcomes by moving their legacy cases to checked TypeScript and converting their canonical shared fixture. Preserve unrelated legacy ledger tests and all original conditions and criteria.",
+      "dependsOn": [
+        "OBL-112"
+      ],
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "skills/plan-execution/scripts/ready-tasklets.ts",
+          "skills/plan-execution/scripts/ready-tasklets.js",
+          "tests/ready-tasklets-cli.test.ts",
+          "tests/obligation-execution.test.js",
+          "tests/obligation-tasklet-execution.test.ts",
+          "tests/helpers/obligation-fixture.ts",
+          "tests/helpers/obligation-fixture.js",
+          "scripts/build-runtime.ts",
+          "AGENTS.md",
+          ".agents/config/project/traceability.json",
+          "pm/requirements/traceability.generated.md"
+        ],
+        "operations": [
+          "inspect",
+          "edit",
+          "build",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "Select subordinate tasklets within the selected obligation's frozen ownership through a checked static implementation preserving the approved portable behavior and historical contract meanings."
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "typed-obligation-tasklets-OBL-105"
+        }
+      }
+    },
+    {
+      "id": "BIND-27",
+      "obligationId": "OBL-106",
+      "predecessorId": null,
+      "baselineId": "BASELINE-14",
+      "assessor": "coordinator",
+      "authority": [
+        "user-goal-2026-10-10-rolling-campaigns",
+        "user-goal-2026-10-10-static-language-existing-tsts",
+        "user-2026-10-10-normative-atomic-obligations"
+      ],
+      "reason": "Finish already-started adopted tasklet selector outcomes by moving their legacy cases to checked TypeScript and converting their canonical shared fixture. Preserve unrelated legacy ledger tests and all original conditions and criteria.",
+      "dependsOn": [
+        "OBL-112"
+      ],
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "skills/plan-execution/scripts/ready-tasklets.ts",
+          "skills/plan-execution/scripts/ready-tasklets.js",
+          "tests/ready-tasklets-cli.test.ts",
+          "tests/obligation-execution.test.js",
+          "tests/obligation-tasklet-execution.test.ts",
+          "tests/helpers/obligation-fixture.ts",
+          "tests/helpers/obligation-fixture.js",
+          "scripts/build-runtime.ts",
+          "AGENTS.md",
+          ".agents/config/project/traceability.json",
+          "pm/requirements/traceability.generated.md"
+        ],
+        "operations": [
+          "inspect",
+          "edit",
+          "build",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "Execute tasklet-selection CLI with adopted document requirements and exact completion output through a checked static implementation preserving the approved portable behavior and historical contract meanings."
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "typed-obligation-tasklets-OBL-106"
+        }
+      }
     }
   ]
 }

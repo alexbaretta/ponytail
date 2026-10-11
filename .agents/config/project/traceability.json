@@ -782,6 +782,11 @@
       "locator": "text"
     },
     {
+      "class": "unit-test",
+      "path": "tests/obligation-tasklet-execution.test.ts",
+      "locator": "text"
+    },
+    {
       "class": "integration-test",
       "path": "tests/obligation-execution.integration.test.js",
       "locator": "text"
@@ -1139,6 +1144,10 @@
   ],
   "entities": [],
   "generatedArtifacts": [
+    {
+      "path": "tests/helpers/obligation-fixture.js",
+      "sourcePath": "tests/helpers/obligation-fixture.ts"
+    },
     {
       "path": ".openclaw/skills/requirements-traceability/SKILL.md",
       "sourcePath": "skills/requirements-traceability/SKILL.md"

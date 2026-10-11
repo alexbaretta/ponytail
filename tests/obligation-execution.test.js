@@ -13,22 +13,6 @@ const { newLedger, readLedgerV9, withLedgerLock, ledgerPath } = require('../src/
 
 const { git, fixture } = require('./helpers/obligation-fixture');
 
-// Traceability: verifies REQ-OBLIGATION-PRIORITY
-// Traceability: verifies REQ-OBLIGATION-ASSIGNMENT
-// Traceability: verifies REQ-OBLIGATION-COMPATIBILITY
-test('adopted plan binds explicit scope and selects only subordinate tasklets within its paths', t => {
-  const {root,documentPath,planPath,planText,sprintPath,document} = fixture(t);
-  assert.equal(parsePlanSource(root,planPath,'in_progress',planText).obligationDocument,documentPath);
-  const graph = readTaskletGraph(path.join(root,sprintPath));
-  const statuses = parseTaskletStatuses(path.join(root,sprintPath));
-  const selection = selectObligationTasklets(graph,statuses,validateTaskletGraph(graph,statuses),null,document,root,'pilot');
-  assert.deepEqual(selection.taskletIds,['S01-F01-T01']);
-  assert.deepEqual(selection.plannedPaths,['src.txt']);
-  assert.equal(campaignGraph(root,'pilot').plans[0].runnableTasklets.sprintId,'S01');
-  document.obligations[0].execution.plannedPaths=[];
-  assert.throws(()=>selectObligationTasklets(graph,statuses,validateTaskletGraph(graph,statuses),null,document,root,'pilot'),/exceeds obligation paths/);
-});
-
 // Traceability: verifies REQ-OBLIGATION-COMPATIBILITY
 test('ledger V9 retains exact empty legacy acceptance rather than inferring satisfaction', t => {
   const {root} = fixture(t);
@@ -158,24 +142,6 @@ test('generated skill rendering preserves vocabulary and never copies canonical 
   assert.ok(render('requirements-traceability').includes(['Traceability:', 'implements', 'REQ-STABLE-ID', 'from endpoint GET-orders'].join(' ')));
 });
 
-// Traceability: verifies REQ-OBLIGATION-PRIORITY
-// Traceability: verifies REQ-OBLIGATION-COMPATIBILITY
-test('canonical tasklet CLI honors adopted metadata and DONE edits leave acceptance unresolved',t=>{
-  const {root,sprintPath,documentPath}=fixture(t);
-  const script=path.join(__dirname,'../skills/plan-execution/scripts/ready-tasklets.js');
-  assert.notEqual(spawnSync(process.execPath,[script,path.join(root,sprintPath)]).status,0);
-  const invoke=()=>spawnSync(process.execPath,[script,path.join(root,sprintPath),'--obligations',path.join(root,documentPath),'--root',root],{encoding:'utf8'});
-  const result=invoke();
-  assert.equal(result.status,0,result.stderr);
-  assert.equal(JSON.parse(result.stdout).selectedId,'OBL-1');
-  assert.deepEqual(JSON.parse(result.stdout).taskletIds,['S01-F01-T01']);
-  fs.writeFileSync(path.join(root,sprintPath),fs.readFileSync(path.join(root,sprintPath),'utf8').replaceAll('### [ ]','### [DONE]'));
-  const finished=JSON.parse(invoke().stdout);
-  assert.equal(finished.projection.complete,false);
-  assert.equal(finished.selectedId,'OBL-1');
-  assert.deepEqual(finished.taskletIds,[]);
-});
-
 const { renewObligationAssignment, writeHostObservation, publishObligationCheckpoint }=require('../src/campaign-orchestration');
 // Traceability: verifies REQ-OBLIGATION-IDENTITY
 // Traceability: verifies REQ-OBLIGATION-ASSIGNMENT
@@ -204,18 +170,4 @@ test('retained worker renews a bounded no-edit lease while preserving IDs and fr
   assert.equal(bindings.length,2);
   assert.deepEqual(bindings[0],oldBinding);
   assert.throws(()=>withLedgerLock(root,'pilot',environment,ledger=>renewObligationAssignment(campaignGraph(root,'pilot'),ledger,assignment.id,environment)),/no renewal/);
-});
-
-// Traceability: verifies REQ-OBLIGATION-PRIORITY
-// Traceability: verifies REQ-OBLIGATION-DISCHARGE
-test('no-edit assessment remains selectable while subordinate edit tasks are pending', t => {
-  const { root, sprintPath, document } = fixture(t);
-  document.obligations[0].execution.taskletIds = [];
-  document.obligations[0].execution.plannedPaths = [];
-  const graph = readTaskletGraph(path.join(root, sprintPath));
-  const statuses = parseTaskletStatuses(path.join(root, sprintPath));
-  const selection = selectObligationTasklets(graph, statuses, validateTaskletGraph(graph, statuses), null, document, root, 'pilot');
-  assert.equal(selection.selectedId, 'OBL-1');
-  assert.deepEqual(selection.taskletIds, []);
-  assert.deepEqual(selection.plannedPaths, []);
 });
