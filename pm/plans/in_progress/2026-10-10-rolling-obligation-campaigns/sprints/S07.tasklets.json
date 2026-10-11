@@ -41,6 +41,12 @@
         "S07-F06"
       ],
       "validation_tasklet": "S07-F07-T05"
+    },
+    "S07-F08": {
+      "depends_on": [
+        "S07-F07"
+      ],
+      "validation_tasklet": "S07-F08-T08"
     }
   },
   "tasklets": {
@@ -887,6 +893,104 @@
       "affinity": [],
       "risk": "normal",
       "feature": "S07-F07",
+      "planned_paths": []
+    },
+    "S07-F08-T01": {
+      "depends_on": [],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F08",
+      "planned_paths": [
+        "src/campaign-configuration.ts"
+      ]
+    },
+    "S07-F08-T02": {
+      "depends_on": [
+        "S07-F08-T01"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F08",
+      "planned_paths": [
+        "src/campaign-configuration.ts"
+      ]
+    },
+    "S07-F08-T03": {
+      "depends_on": [
+        "S07-F08-T02"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F08",
+      "planned_paths": [
+        "src/campaign-configuration.ts"
+      ]
+    },
+    "S07-F08-T04": {
+      "depends_on": [
+        "S07-F08-T03"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F08",
+      "planned_paths": [
+        "src/campaign-configuration.ts"
+      ]
+    },
+    "S07-F08-T05": {
+      "depends_on": [
+        "S07-F08-T04"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F08",
+      "planned_paths": [
+        "src/campaign-configuration.ts"
+      ]
+    },
+    "S07-F08-T06": {
+      "depends_on": [
+        "S07-F08-T05"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F08",
+      "planned_paths": [
+        "tests/campaign-configuration.test.ts",
+        "tests/campaign-census.test.js"
+      ]
+    },
+    "S07-F08-T07": {
+      "depends_on": [
+        "S07-F08-T06"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F08",
+      "planned_paths": [
+        "src/campaign-configuration.js",
+        "src/campaign-census.js",
+        "scripts/build-runtime.ts",
+        "versioned-data-contracts.json",
+        "AGENTS.md",
+        "PROJECT_STRUCTURE.md",
+        ".agents/config/project/traceability.json",
+        "pm/requirements/traceability.generated.md"
+      ]
+    },
+    "S07-F08-T08": {
+      "depends_on": [
+        "S07-F08-T01",
+        "S07-F08-T02",
+        "S07-F08-T03",
+        "S07-F08-T04",
+        "S07-F08-T05",
+        "S07-F08-T06",
+        "S07-F08-T07"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F08",
       "planned_paths": []
     }
   },

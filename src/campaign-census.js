@@ -9,6 +9,8 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
+const { CampaignError, dataError, toolError, exactKeys, CampaignManagementConfigReaders,
+  readManagementConfigV1, readManagementConfig } = require('./campaign-configuration');
 const {
   readSprints,
   selectExecutionReviewableSprints,
@@ -28,12 +30,10 @@ const {
   effectiveDependencies,
 } = require('../skills/plan-execution/scripts/ready-tasklets.js');
 
-const MANAGEMENT_CONFIG_PATH = '.agents/config/project/management.json';
 const PLAN_METADATA_MARKER = 'ponytail-plan-campaign';
 const PLAN_SCHEMA_VERSION = 2;
 const REPORT_SCHEMA_VERSION = 1;
 const INVENTORY_SCHEMA_VERSION = 3;
-const LIFECYCLE_ROLES = ['initial', 'activeWork', 'successfulCompletion', 'deferred', 'rejected'];
 const CAMPAIGN_STATUSES = ['active', 'pending', 'closed', 'deferred', 'rejected'];
 const REPORT_TABLE_FLAGS = Object.freeze({
   '--summary-table': ['summaryTable', true],
@@ -43,103 +43,6 @@ const REPORT_TABLE_FLAGS = Object.freeze({
   '--sprint-table': ['sprintTable', true],
   '--no-sprint-table': ['sprintTable', false],
 });
-
-class CampaignError extends Error {
-  constructor(status, code, message, recordId = null, relativePath = null) {
-    super(message);
-    this.status = status;
-    this.code = code;
-    this.recordId = recordId;
-    this.relativePath = relativePath;
-  }
-}
-
-function dataError(code, message, recordId = null, relativePath = null) {
-  throw new CampaignError(1, code, message, recordId, relativePath);
-}
-
-function toolError(code, message, relativePath = null) {
-  throw new CampaignError(2, code, message, null, relativePath);
-}
-
-function exactKeys(value, expected, label, fail = dataError) {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    fail('CAMPAIGN_SCHEMA', `${label} must be an object`);
-  }
-  const actual = Object.keys(value).sort();
-  const wanted = [...expected].sort();
-  if (actual.length !== wanted.length || actual.some((key, index) => key !== wanted[index])) {
-    fail('CAMPAIGN_SCHEMA', `${label} must contain exactly: ${wanted.join(', ')}`);
-  }
-}
-
-function relativePath(value, label) {
-  if (typeof value !== 'string' || !value || value.includes('\0') || path.isAbsolute(value) || value.includes('\\') || /[*?{}]/.test(value)) {
-    dataError('CAMPAIGN_CONFIG_PATH', `${label} must be an exact relative path without glob syntax`);
-  }
-  if (value.split('/').some((segment) => !segment || segment === '.' || segment === '..')) {
-    dataError('CAMPAIGN_CONFIG_PATH', `${label} contains an invalid path segment`);
-  }
-  return value;
-}
-
-function readManagementConfigV1(value) {
-  exactKeys(value, ['schemaVersion', 'managementRoot', 'planRoot', 'lifecycle', 'legacyPlanLayout'], 'management configuration');
-  if (value.schemaVersion !== 1) dataError('CAMPAIGN_CONFIG_VERSION', `unsupported management configuration version: ${value.schemaVersion}`);
-  const managementRoot = relativePath(value.managementRoot, 'managementRoot');
-  const planRoot = relativePath(value.planRoot, 'planRoot');
-  if (planRoot !== managementRoot && !planRoot.startsWith(`${managementRoot}/`)) {
-    dataError('CAMPAIGN_CONFIG_PATH', 'planRoot must be within managementRoot');
-  }
-  exactKeys(value.lifecycle, ['directories', 'roles'], 'lifecycle configuration');
-  if (!Array.isArray(value.lifecycle.directories)
-    || value.lifecycle.directories.some((directory) => typeof directory !== 'string' || !/^[a-z][a-z0-9_]*$/.test(directory))
-    || new Set(value.lifecycle.directories).size !== value.lifecycle.directories.length
-    || value.lifecycle.directories.length === 0) {
-    dataError('CAMPAIGN_CONFIG_LIFECYCLE', 'lifecycle.directories must contain unique status directory names');
-  }
-  exactKeys(value.lifecycle.roles, LIFECYCLE_ROLES, 'lifecycle roles');
-  const roleDirectories = LIFECYCLE_ROLES.map((role) => value.lifecycle.roles[role]);
-  if (roleDirectories.some((directory) => !value.lifecycle.directories.includes(directory))
-    || new Set(roleDirectories).size !== roleDirectories.length) {
-    dataError('CAMPAIGN_CONFIG_LIFECYCLE', 'lifecycle roles must map bijectively to configured directories');
-  }
-  if (!['flat', 'none'].includes(value.legacyPlanLayout)) {
-    dataError('CAMPAIGN_CONFIG_LEGACY', 'legacyPlanLayout must be flat or none');
-  }
-  return {
-    schemaVersion: 1,
-    managementRoot,
-    planRoot,
-    lifecycle: {
-      directories: [...value.lifecycle.directories],
-      roles: { ...value.lifecycle.roles },
-    },
-    legacyPlanLayout: value.legacyPlanLayout,
-  };
-}
-
-const CampaignManagementConfigReaders = Object.freeze({ V1: readManagementConfigV1 });
-
-function parseJsonFile(filePath, code) {
-  try {
-    return JSON.parse(fs.readFileSync(filePath, 'utf8'));
-  } catch (error) {
-    if (error instanceof SyntaxError) dataError(code, `${filePath} is not valid JSON: ${error.message}`);
-    toolError('CAMPAIGN_IO', `cannot read ${filePath}: ${error.message}`);
-  }
-}
-
-function readManagementConfig(repositoryRoot) {
-  const filePath = path.join(repositoryRoot, MANAGEMENT_CONFIG_PATH);
-  if (!fs.existsSync(filePath) || fs.lstatSync(filePath).isSymbolicLink() || !fs.statSync(filePath).isFile()) {
-    toolError('CAMPAIGN_CONFIG_MISSING', `missing or unsafe management configuration: ${MANAGEMENT_CONFIG_PATH}`, MANAGEMENT_CONFIG_PATH);
-  }
-  const value = parseJsonFile(filePath, 'CAMPAIGN_CONFIG_JSON');
-  const reader = CampaignManagementConfigReaders[`V${value.schemaVersion}`];
-  if (!reader) dataError('CAMPAIGN_CONFIG_VERSION', `unsupported management configuration version: ${value.schemaVersion}`, null, MANAGEMENT_CONFIG_PATH);
-  return reader(value);
-}
 
 function metadataBlocks(text) {
   const marker = new RegExp(`^<!--\\s*${PLAN_METADATA_MARKER}\\s*$([\\s\\S]*?)^-->\\s*$`, 'gm');

@@ -326,7 +326,7 @@
       "id": "campaign-management-config",
       "implementation": {
         "workspace": "ponytail",
-        "module": "src/campaign-census.js",
+        "module": "src/campaign-configuration.ts",
         "readerRegistryExport": "CampaignManagementConfigReaders"
       },
       "currentVersion": "V1",

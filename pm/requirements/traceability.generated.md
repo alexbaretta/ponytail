@@ -61,9 +61,9 @@ Requirement: [pm/requirements/requirements-traceability.md](requirements-traceab
 
 Requirement: [pm/requirements/index.md](index.md)
 
-- implementation: implements [src/campaign-census.js:1202](../../src/campaign-census.js#L1202)
+- implementation: implements [src/campaign-census.js:1105](../../src/campaign-census.js#L1105)
 - unit-test: verifies [tests/campaign-census-format.test.js:11](../../tests/campaign-census-format.test.js#L11)
-- integration-test: verifies [tests/campaign-census.test.js:626](../../tests/campaign-census.test.js#L626)
+- integration-test: verifies [tests/campaign-census.test.js:606](../../tests/campaign-census.test.js#L606)
 - uat: verifies [pm/uat/index.md:45](../../pm/uat/index.md#L45)
 
 ## REQ-PLAN-INPUT-QUEUE
@@ -160,14 +160,14 @@ Requirement: [pm/requirements/campaign-orchestration.md](campaign-orchestration.
 
 - implementation: supports [hooks/plan-input.js:6](../../hooks/plan-input.js#L6)
 - implementation: implements [skills/plan-execution/scripts/ready-sprints.js:272](../../skills/plan-execution/scripts/ready-sprints.js#L272)
-- implementation: implements [src/campaign-census.js:912](../../src/campaign-census.js#L912)
+- implementation: implements [src/campaign-census.js:815](../../src/campaign-census.js#L815)
 - implementation: implements [src/campaign-orchestration.js:7](../../src/campaign-orchestration.js#L7)
 - implementation: implements [src/campaign-orchestration.js:1016](../../src/campaign-orchestration.js#L1016)
 - implementation: implements [src/campaign-orchestration.js:2322](../../src/campaign-orchestration.js#L2322)
 - implementation: implements [src/campaign-orchestration.js:2881](../../src/campaign-orchestration.js#L2881)
 - unit-test: verifies [tests/campaign-orchestration.test.js:7](../../tests/campaign-orchestration.test.js#L7)
 - unit-test: verifies [tests/ready-sprints.test.js:44](../../tests/ready-sprints.test.js#L44)
-- integration-test: verifies [tests/campaign-census.test.js:742](../../tests/campaign-census.test.js#L742)
+- integration-test: verifies [tests/campaign-census.test.js:722](../../tests/campaign-census.test.js#L722)
 - integration-test: verifies [tests/plan-input-hooks.test.js:88](../../tests/plan-input-hooks.test.js#L88)
 - integration-test: verifies [tests/plan-input-hooks.test.js:121](../../tests/plan-input-hooks.test.js#L121)
 - integration-test: verifies [tests/project-validation.test.js:126](../../tests/project-validation.test.js#L126)
@@ -564,7 +564,7 @@ Requirement: [pm/requirements/obligation-execution.md](obligation-execution.md)
 - implementation: implements [skills/plan-execution/scripts/obligations.ts:285](../../skills/plan-execution/scripts/obligations.ts#L285)
 - implementation: implements [skills/plan-execution/scripts/obligations.ts:643](../../skills/plan-execution/scripts/obligations.ts#L643)
 - implementation: supports [skills/plan-execution/SKILL.md:37](../../skills/plan-execution/SKILL.md#L37)
-- implementation: implements [src/campaign-census.js:242](../../src/campaign-census.js#L242)
+- implementation: implements [src/campaign-census.js:145](../../src/campaign-census.js#L145)
 - implementation: implements [src/campaign-orchestration.js:555](../../src/campaign-orchestration.js#L555)
 - implementation: implements [src/campaign-orchestration.js:584](../../src/campaign-orchestration.js#L584)
 - implementation: implements [src/campaign-orchestration.js:888](../../src/campaign-orchestration.js#L888)

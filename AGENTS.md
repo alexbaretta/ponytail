@@ -87,6 +87,7 @@ services. `PROJECT_STRUCTURE.md` is authoritative for that boundary.
 - Rolling checkout focused proof: `node --test tests/rolling-worktrees.test.js
   tests/rolling-worktrees.integration.test.js`; all Git worktrees belong to
   disposable test repositories.
+- Campaign configuration focused proof: `node --test dist/tests/campaign-configuration.test.js tests/campaign-census.test.js tests/campaign-census-format.test.js`.
 - Plan-input queue focused proof: `node --test dist/tests/plan-input-queue.test.js dist/tests/plan-input-command.test.js tests/plan-input.test.js tests/plan-input-hooks.test.js`; the CLI/hook tests still await language migration.
 - Project database options focused proof: `node --test dist/tests/project-index-database.test.js`.
 - Rolling campaign store focused proof: `node --test dist/tests/rolling-campaign-store.test.js

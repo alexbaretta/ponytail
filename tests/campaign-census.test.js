@@ -270,26 +270,6 @@ test('intent-only STUB with empty tasklet metadata is valid, but detailed sprint
   assert.equal(captureError(() => campaignGraph(root, 'intent')).code, 'CAMPAIGN_TASKLET_INVALID');
 });
 
-test('management configuration reader requires one exact safe V1 contract', () => {
-  const valid = {
-    schemaVersion: 1,
-    managementRoot: 'pm',
-    planRoot: 'pm/plans',
-    lifecycle: {
-      directories: ['open', 'in_progress', 'closed', 'deferred', 'rejected'],
-      roles: { initial: 'open', activeWork: 'in_progress', successfulCompletion: 'closed', deferred: 'deferred', rejected: 'rejected' },
-    },
-    legacyPlanLayout: 'flat',
-  };
-  assert.deepEqual(readManagementConfigV1(valid), valid);
-  assert.equal(captureError(() => readManagementConfigV1({ ...valid, extra: true })).code, 'CAMPAIGN_SCHEMA');
-  assert.equal(captureError(() => readManagementConfigV1({ ...valid, planRoot: '../plans' })).code, 'CAMPAIGN_CONFIG_PATH');
-  assert.equal(captureError(() => readManagementConfigV1({
-    ...valid,
-    lifecycle: { ...valid.lifecycle, roles: { ...valid.lifecycle.roles, rejected: 'deferred' } },
-  })).code, 'CAMPAIGN_CONFIG_LIFECYCLE');
-});
-
 test('lists plan sources without parsing and exposes canonical source parsing', () => {
   const root = repository();
   const valid = plan(root, 'open', '2026-09-29-valid');

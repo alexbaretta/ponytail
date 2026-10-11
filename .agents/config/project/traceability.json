@@ -910,6 +910,16 @@
       "class": "unit-test",
       "path": "tests/plan-input-command.test.ts",
       "locator": "text"
+    },
+    {
+      "class": "implementation",
+      "path": "src/campaign-configuration.ts",
+      "locator": "text"
+    },
+    {
+      "class": "unit-test",
+      "path": "tests/campaign-configuration.test.ts",
+      "locator": "text"
     }
   ],
   "entities": [],
@@ -997,6 +1007,10 @@
     {
       "path": "src/plan-input-command.js",
       "sourcePath": "src/plan-input-command.ts"
+    },
+    {
+      "path": "src/campaign-configuration.js",
+      "sourcePath": "src/campaign-configuration.ts"
     }
   ],
   "reverseViewPath": "pm/requirements/traceability.generated.md",
