@@ -41,6 +41,9 @@ lines.on('line', line => {
   if (method === 'initialize') result = { userAgent: 'fixture' };
   else if (!initialized) throw new Error('handshake missing');
   else if (method === 'thread/start' || method === 'thread/resume') {
+    if (method === 'thread/resume' && turnCount === 0) {
+      send({ id: message.id, error: { code: -32600, message: 'no rollout found before the first turn' } }); return;
+    }
     const cwd = text(params.cwd);
     const fixtureThreadResult: FixtureThreadResult = {
       thread: { id: 'thread-fixture', sessionId: 'session-fixture' }, cwd,

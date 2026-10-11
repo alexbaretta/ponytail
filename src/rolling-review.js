@@ -79,10 +79,10 @@ function validateRollingReviewOutcome(rollingReviewRequestV1, rollingReviewOutco
         && rollingReviewOutcomeV1.revision === rollingReviewRequestV1.revision
         && rollingReviewOutcomeV1.reviewerSessionId === rollingReviewRequestV1.reviewerSessionId, 'outcome differs from assigned candidate or reviewer');
 }
-async function startRollingReviewTurn(rollingCodex, rollingReviewRequestV1, reviewerThreadId, checkoutRoot, instructions) {
+async function startRollingReviewTurn(rollingCodex, rollingReviewRequestV1, rollingNativeThread, checkoutRoot, instructions) {
     requireReview(instructions.trim().length > 0, 'review requires authoritative scope instructions');
     const checkedRollingReviewRequestV1 = readRollingReviewRequestV1(rollingReviewRequestV1);
-    const rollingNativeThread = await rollingCodex.resumeThread(reviewerThreadId, checkoutRoot);
+    requireReview(rollingNativeThread.cwd === checkoutRoot, 'native reviewer differs from designated checkout');
     requireReview(rollingNativeThread.thread.sessionId === checkedRollingReviewRequestV1.reviewerSessionId, 'native session differs from assigned reviewer');
     const prompt = `Perform an adversarial review of this exact candidate. Read the project rules and applicable skills first.
 Review only: do not modify files, commits, branches or project state. Verify HEAD is ${checkedRollingReviewRequestV1.revision}; if it differs, report that the review cannot be completed.
@@ -106,11 +106,11 @@ async function observeRollingReviewTurn(rollingCodex, rollingReviewTurn, timeout
     const rollingNativeTurn = await rollingCodex.waitForTurn(rollingReviewTurn.thread.thread.id, rollingReviewTurn.started.turn.id, timeoutMs);
     return readRollingReviewTurn(rollingReviewTurn, rollingNativeTurn);
 }
-async function dispatchRollingReview(rollingCampaignStore, rollingCodex, campaignId, reviewId, reviewerThreadId) {
+async function dispatchRollingReview(rollingCampaignStore, rollingCodex, campaignId, reviewId, rollingNativeThread) {
     const rollingReviewContext = await rollingCampaignStore.reviewContext(campaignId, reviewId);
     requireReview(rollingReviewContext.review.outcome === null, 'review is already decided');
-    const rollingReviewDispatchStarted = await rollingCampaignStore.claimReviewDispatch(campaignId, reviewId, reviewerThreadId);
-    const rollingReviewTurn = await startRollingReviewTurn(rollingCodex, rollingReviewContext.review.request, reviewerThreadId, rollingReviewContext.rootPath, JSON.stringify({ obligation: rollingReviewContext.obligation, binding: rollingReviewContext.binding, submission: rollingReviewContext.submission }));
+    const rollingReviewDispatchStarted = await rollingCampaignStore.claimReviewDispatch(campaignId, reviewId, rollingNativeThread.thread.id);
+    const rollingReviewTurn = await startRollingReviewTurn(rollingCodex, rollingReviewContext.review.request, rollingNativeThread, rollingReviewContext.rootPath, JSON.stringify({ obligation: rollingReviewContext.obligation, binding: rollingReviewContext.binding, submission: rollingReviewContext.submission }));
     return rollingCampaignStore.attachReviewDispatch(campaignId, reviewId, rollingReviewDispatchStarted.id, rollingReviewTurn.thread.thread.sessionId, rollingReviewTurn.started.turn.id);
 }
 async function collectRollingReview(rollingCampaignStore, rollingCodex, campaignId, reviewId, timeoutMs = 60000) {

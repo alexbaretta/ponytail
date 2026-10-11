@@ -16,7 +16,7 @@ import type { ObligationBindingHistoryV1, ObligationBindingRevisionV1 } from '..
 import type { ObligationEvidence } from '../skills/plan-execution/scripts/obligations.js';
 import type { RollingWorkerSubmissionV1 } from '../src/rolling-worker-submission.js';
 import { dispatchRollingReview, collectRollingReview, type RollingReviewOutcomeV1 } from '../src/rolling-review.js';
-import { RollingCodex } from '../src/rolling-codex.js';
+import { RollingCodex, type RollingNativeThread } from '../src/rolling-codex.js';
 import { acceptBoundCheckpoint, type ObligationCertificateBindingV1, type ObligationCertificateSubmission,
   type ObligationCertificateBindingRequest } from '../skills/plan-execution/scripts/obligation-certificate-bindings.js';
 
@@ -34,6 +34,7 @@ export async function runRollingReviewScenario(t: TestContext, reviewScenario: R
   const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'rolling-store-')));
   let liveRollingCodex: RollingCodex | null = null;
   let liveReviewerThreadId: string | null = null;
+  let liveRollingNativeThread: RollingNativeThread | null = null;
   let liveReviewId: string | null = null;
   t.after(async () => {
     try {
@@ -333,6 +334,7 @@ export async function runRollingReviewScenario(t: TestContext, reviewScenario: R
     declineReviewApprovals(liveRollingCodex);
     liveRollingCodex.on('diagnostic', message => t.diagnostic(message.trim()));
     const rollingNativeThread = await liveRollingCodex.startThread(workerRoot);
+    liveRollingNativeThread = rollingNativeThread;
     liveReviewerThreadId = rollingNativeThread.thread.id;
     reviewerSessionId = rollingNativeThread.thread.sessionId;
   }
@@ -365,9 +367,11 @@ export async function runRollingReviewScenario(t: TestContext, reviewScenario: R
     }
     try {
       if (reviewScenario.mode === 'protocol') await rollingCodex.initialize();
+      const rollingNativeThread = reviewScenario.mode === 'native' ? liveRollingNativeThread : await rollingCodex.startThread(workerRoot);
+      assert.ok(rollingNativeThread);
       liveReviewId = reviewScenario.mode === 'native' ? rollingStoredReview.request.id : null;
-      const rollingReviewDispatchAttached = await dispatchRollingReview(rollingCampaignStore, rollingCodex, 'bound-fixture', rollingStoredReview.request.id, reviewerThreadId);
-      await assert.rejects(dispatchRollingReview(rollingCampaignStore, rollingCodex, 'bound-fixture', rollingStoredReview.request.id, reviewerThreadId), /already claimed/);
+      const rollingReviewDispatchAttached = await dispatchRollingReview(rollingCampaignStore, rollingCodex, 'bound-fixture', rollingStoredReview.request.id, rollingNativeThread);
+      await assert.rejects(dispatchRollingReview(rollingCampaignStore, rollingCodex, 'bound-fixture', rollingStoredReview.request.id, rollingNativeThread), /already claimed/);
       assert.equal(rollingReviewDispatchAttached.state, 'ATTACHED');
       let collectingRollingCodex: RollingCodex = rollingCodex;
       if (reviewScenario.mode === 'native') {
