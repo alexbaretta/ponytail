@@ -14805,6 +14805,43 @@
       },
       "assessor": "coordinator",
       "reason": "Discharge started atomic push recovery without renewing stale prior evidence or closing other delivery/acceptance gates."
+    },
+    {
+      "id": "CHECKPOINT-161",
+      "predecessorId": "CHECKPOINT-160",
+      "baselineId": "BASELINE-16",
+      "kind": "neutral",
+      "selectedIds": [
+        "OBL-54"
+      ],
+      "registeredIds": [],
+      "certificateIds": [],
+      "invalidatedIds": [],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": {
+        "obligationId": "OBL-54",
+        "operations": [
+          "inspect"
+        ],
+        "deliverable": "Inspect and register the OBL-54 publication proof packet paths; stop after finite assessment scope reconciliation."
+      },
+      "assessor": "coordinator",
+      "reason": "Required proof-packet ownership for completing started OBL-54; preserve all historical certificates and claim no discharge at this scope checkpoint."
     }
   ]
 }
