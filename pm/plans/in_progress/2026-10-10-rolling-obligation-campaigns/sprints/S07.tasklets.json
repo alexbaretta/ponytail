@@ -101,6 +101,12 @@
         "S07-F16"
       ],
       "validation_tasklet": "S07-F17-T07"
+    },
+    "S07-F18": {
+      "depends_on": [
+        "S07-F17"
+      ],
+      "validation_tasklet": "S07-F18-T08"
     }
   },
   "tasklets": {
@@ -1929,6 +1935,106 @@
       "affinity": [],
       "risk": "normal",
       "feature": "S07-F17",
+      "planned_paths": []
+    },
+    "S07-F18-T01": {
+      "depends_on": [],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F18",
+      "planned_paths": [
+        "skills/plan-execution/scripts/sprint-metadata.ts"
+      ]
+    },
+    "S07-F18-T02": {
+      "depends_on": [
+        "S07-F18-T01"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F18",
+      "planned_paths": [
+        "skills/plan-execution/scripts/sprint-metadata.ts"
+      ]
+    },
+    "S07-F18-T03": {
+      "depends_on": [
+        "S07-F18-T02"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F18",
+      "planned_paths": [
+        "skills/plan-execution/scripts/sprint-metadata.ts"
+      ]
+    },
+    "S07-F18-T04": {
+      "depends_on": [
+        "S07-F18-T03"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F18",
+      "planned_paths": [
+        "skills/plan-execution/scripts/sprint-metadata.ts"
+      ]
+    },
+    "S07-F18-T05": {
+      "depends_on": [
+        "S07-F18-T04"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F18",
+      "planned_paths": [
+        "skills/plan-execution/scripts/sprint-metadata.ts"
+      ]
+    },
+    "S07-F18-T06": {
+      "depends_on": [
+        "S07-F18-T05"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F18",
+      "planned_paths": [
+        "tests/sprint-metadata.test.ts"
+      ]
+    },
+    "S07-F18-T07": {
+      "depends_on": [
+        "S07-F18-T06"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F18",
+      "planned_paths": [
+        "skills/plan-execution/scripts/sprint-metadata.js",
+        "skills/plan-execution/scripts/ready-sprints.js",
+        "scripts/build-runtime.ts",
+        "versioned-data-contracts.json",
+        "AGENTS.md",
+        "PROJECT_STRUCTURE.md",
+        ".agents/config/project/traceability.json",
+        "pm/requirements/traceability.generated.md",
+        ".openclaw/skills/plan-execution/scripts/sprint-metadata.ts",
+        ".openclaw/skills/plan-execution/scripts/sprint-metadata.js",
+        ".openclaw/skills/plan-execution/scripts/ready-sprints.js"
+      ]
+    },
+    "S07-F18-T08": {
+      "depends_on": [
+        "S07-F18-T01",
+        "S07-F18-T02",
+        "S07-F18-T03",
+        "S07-F18-T04",
+        "S07-F18-T05",
+        "S07-F18-T06",
+        "S07-F18-T07"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F18",
       "planned_paths": []
     }
   },

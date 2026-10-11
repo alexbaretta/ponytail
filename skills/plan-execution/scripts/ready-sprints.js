@@ -4,118 +4,12 @@
  * Licensed under the MIT License. See LICENSE in the project root.
  */
 
-const fs = require('node:fs');
 const path = require('node:path');
 const { readTaskletGraph } = require('./ready-tasklets.js');
 
-const METADATA_MARKER = 'ponytail-plan-sprint';
+const { METADATA_MARKER, SprintMetadataReaders, parseSprintFile, readSprints } = require('./sprint-metadata');
 const SCHEMA_VERSION = 3;
-const PLANNING_STATUSES = new Set(['STUB', 'PLANNING', 'READY_FOR_REVIEW', 'APPROVED', 'ERROR']);
-const EXECUTION_STATUSES = new Set(['PENDING', 'IN_PROGRESS', 'READY_FOR_REVIEW', 'DONE', 'ERROR']);
-
 function fail(message) { throw new Error(message); }
-
-function exactKeys(value, expected, label) {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) fail(`${label} must be an object`);
-  const actual = Object.keys(value).sort();
-  const wanted = [...expected].sort();
-  if (actual.length !== wanted.length || actual.some((key, index) => key !== wanted[index])) fail(`${label} must contain exactly: ${wanted.join(', ')}`);
-}
-
-function strings(value, label) {
-  if (!Array.isArray(value) || value.some((item) => typeof item !== 'string' || item.length === 0)) fail(`${label} must be an array of nonempty strings`);
-  if (new Set(value).size !== value.length) fail(`${label} must not contain duplicates`);
-  return value;
-}
-
-function relativePath(value, label) {
-  if (typeof value !== 'string' || !value || value.includes('\\') || /[*?{}]/.test(value)) fail(`${label} must be a relative path without glob syntax`);
-  const segments = value.split('/');
-  if (segments.some((segment) => !segment || segment === '.' || segment === '..')) fail(`${label} contains an invalid path segment`);
-  return value;
-}
-
-function metadataBlock(filePath, text) {
-  const marker = new RegExp(`^<!--\\s*${METADATA_MARKER}\\s*$([\\s\\S]*?)^-->\\s*$`, 'gm');
-  const blocks = [...text.matchAll(marker)];
-  if (blocks.length !== 1) fail(`${filePath} must contain exactly one ${METADATA_MARKER} metadata block`);
-  try { return JSON.parse(blocks[0][1]); } catch (error) { fail(`${filePath} metadata is not valid JSON: ${error.message}`); }
-}
-
-function commonMetadata(filePath, metadata, schemaVersion, executionKeys) {
-  exactKeys(metadata, ['schemaVersion', 'id', 'planning', 'execution'], 'sprint metadata');
-  if (metadata.schemaVersion !== schemaVersion) fail(`${filePath} has unsupported schemaVersion: ${metadata.schemaVersion}`);
-  const expectedId = path.basename(filePath, '.md');
-  if (metadata.id !== expectedId) fail(`${filePath} metadata id must be ${expectedId}`);
-  exactKeys(metadata.planning, ['status', 'depends_on', 'scope_roots'], 'planning metadata');
-  if (!PLANNING_STATUSES.has(metadata.planning.status)) fail(`${filePath} has invalid planning status`);
-  const planning = {
-    status: metadata.planning.status,
-    depends_on: strings(metadata.planning.depends_on, 'planning.depends_on'),
-    scope_roots: strings(metadata.planning.scope_roots, 'planning.scope_roots').map((value) => relativePath(value, 'scope root')),
-  };
-  let execution = null;
-  if (metadata.execution !== null) {
-    exactKeys(metadata.execution, executionKeys, 'execution metadata');
-    if (!EXECUTION_STATUSES.has(metadata.execution.status)) fail(`${filePath} has invalid execution status`);
-    execution = {
-      status: metadata.execution.status,
-      depends_on: strings(metadata.execution.depends_on, 'execution.depends_on'),
-    };
-    if (executionKeys.includes('planned_paths')) execution.planned_paths = strings(metadata.execution.planned_paths, 'execution.planned_paths').map((value) => relativePath(value, 'planned path'));
-  }
-  return { schemaVersion, id: metadata.id, planning, execution, filePath };
-}
-
-function readSprintMetadataV1(filePath, metadata) {
-  return commonMetadata(filePath, metadata, 1, ['status', 'depends_on', 'planned_paths']);
-}
-
-function readSprintMetadataV2(filePath, metadata) {
-  const sprint = commonMetadata(filePath, metadata, 2, ['status', 'depends_on', 'tasklets_reviewed']);
-  if (metadata.execution !== null) {
-    if (typeof metadata.execution.tasklets_reviewed !== 'boolean') fail(`${filePath} execution.tasklets_reviewed must be Boolean`);
-    sprint.execution.tasklets_reviewed = metadata.execution.tasklets_reviewed;
-  }
-  return sprint;
-}
-
-function readSprintMetadataV3(filePath, metadata) {
-  const sprint = commonMetadata(filePath, metadata, 3, ['status', 'depends_on', 'tasklets_reviewed']);
-  if (metadata.execution !== null) {
-    if (typeof metadata.execution.tasklets_reviewed !== 'boolean') fail(`${filePath} execution.tasklets_reviewed must be Boolean`);
-    sprint.execution.tasklets_reviewed = metadata.execution.tasklets_reviewed;
-  }
-  return sprint;
-}
-
-const SprintMetadataReaders = Object.freeze({ V1: readSprintMetadataV1, V2: readSprintMetadataV2, V3: readSprintMetadataV3 });
-
-function parseSprintFile(filePath, text = fs.readFileSync(filePath, 'utf8')) {
-  const metadata = metadataBlock(filePath, text);
-  const reader = SprintMetadataReaders[`V${metadata.schemaVersion}`];
-  if (!reader) fail(`${filePath} has unsupported schemaVersion: ${metadata.schemaVersion}`);
-  return reader(filePath, metadata);
-}
-
-function readSprints(planDirectory) {
-  const sprintDirectory = path.join(planDirectory, 'sprints');
-  if (!fs.existsSync(sprintDirectory) || !fs.statSync(sprintDirectory).isDirectory()) fail(`sprint directory does not exist: ${sprintDirectory}`);
-  const files = fs.readdirSync(sprintDirectory).filter((name) => /^S\d+\.md$/.test(name) && fs.statSync(path.join(sprintDirectory, name)).isFile()).sort((a, b) => Number(a.slice(1, -3)) - Number(b.slice(1, -3)));
-  if (files.length === 0) fail(`no SNN.md sprint files found in ${sprintDirectory}`);
-  const sprints = files.map((name) => parseSprintFile(path.join(sprintDirectory, name)));
-  const ids = new Set();
-  const ordinals = new Set();
-  for (const sprint of sprints) {
-    if (ids.has(sprint.id)) fail(`duplicate sprint id: ${sprint.id}`);
-    ids.add(sprint.id);
-    const ordinal = Number(sprint.id.slice(1));
-    if (ordinals.has(ordinal)) fail(`duplicate numeric sprint order: ${ordinal}`);
-    ordinals.add(ordinal);
-  }
-  if (new Set(sprints.map(({ schemaVersion }) => schemaVersion)).size !== 1) fail('plan must not mix physical sprint schema versions');
-  return sprints;
-}
 
 function validateGraph(sprints, lifecycle) {
   const map = new Map(sprints.map((sprint) => [sprint.id, sprint]));

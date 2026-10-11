@@ -490,7 +490,7 @@
       "id": "parallel-sprint-metadata",
       "implementation": {
         "workspace": "ponytail",
-        "module": "skills/plan-execution/scripts/ready-sprints.js",
+        "module": "skills/plan-execution/scripts/sprint-metadata.ts",
         "readerRegistryExport": "SprintMetadataReaders"
       },
       "currentVersion": "V3",

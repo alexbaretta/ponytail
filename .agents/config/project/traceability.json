@@ -1005,6 +1005,16 @@
       "class": "unit-test",
       "path": "tests/ready-tasklets-cli.test.ts",
       "locator": "text"
+    },
+    {
+      "class": "implementation",
+      "path": "skills/plan-execution/scripts/sprint-metadata.ts",
+      "locator": "text"
+    },
+    {
+      "class": "unit-test",
+      "path": "tests/sprint-metadata.test.ts",
+      "locator": "text"
     }
   ],
   "entities": [],
@@ -1160,6 +1170,18 @@
     {
       "path": ".openclaw/skills/plan-execution/scripts/ready-tasklets.ts",
       "sourcePath": "skills/plan-execution/scripts/ready-tasklets.ts"
+    },
+    {
+      "path": "skills/plan-execution/scripts/sprint-metadata.js",
+      "sourcePath": "skills/plan-execution/scripts/sprint-metadata.ts"
+    },
+    {
+      "path": ".openclaw/skills/plan-execution/scripts/sprint-metadata.ts",
+      "sourcePath": "skills/plan-execution/scripts/sprint-metadata.ts"
+    },
+    {
+      "path": ".openclaw/skills/plan-execution/scripts/sprint-metadata.js",
+      "sourcePath": "skills/plan-execution/scripts/sprint-metadata.ts"
     }
   ],
   "reverseViewPath": "pm/requirements/traceability.generated.md",

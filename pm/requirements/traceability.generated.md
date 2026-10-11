@@ -159,7 +159,7 @@ Requirement: [pm/requirements/repository-text-index.md](repository-text-index.md
 Requirement: [pm/requirements/campaign-orchestration.md](campaign-orchestration.md)
 
 - implementation: supports [hooks/plan-input.js:6](../../hooks/plan-input.js#L6)
-- implementation: implements [skills/plan-execution/scripts/ready-sprints.js:272](../../skills/plan-execution/scripts/ready-sprints.js#L272)
+- implementation: implements [skills/plan-execution/scripts/ready-sprints.js:166](../../skills/plan-execution/scripts/ready-sprints.js#L166)
 - implementation: implements [src/campaign-census.js:350](../../src/campaign-census.js#L350)
 - implementation: implements [src/campaign-orchestration.js:7](../../src/campaign-orchestration.js#L7)
 - implementation: implements [src/campaign-orchestration.js:1016](../../src/campaign-orchestration.js#L1016)
