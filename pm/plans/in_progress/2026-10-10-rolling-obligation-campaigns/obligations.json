@@ -12842,6 +12842,45 @@
       },
       "assessor": "coordinator",
       "reason": "Discharge the started exact worker-submission obligation after prior proof renewal."
+    },
+    {
+      "id": "CHECKPOINT-121",
+      "predecessorId": "CHECKPOINT-120",
+      "baselineId": "BASELINE-15",
+      "kind": "neutral",
+      "selectedIds": [
+        "OBL-72"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "CERT-85"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": {
+        "obligationId": "OBL-72",
+        "operations": [
+          "inspect"
+        ],
+        "deliverable": "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/runtime-materialization-assessment.md"
+      },
+      "assessor": "coordinator",
+      "reason": "Complete the already-started runtime materialization obligation through bounded no-edit inspection and actual proof."
     }
   ]
 }
