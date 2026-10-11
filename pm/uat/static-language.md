@@ -52,3 +52,14 @@ the generated typed owner. Observe all five normalized lifecycle filters, active
 membership precedence and unchanged output. Verify invalid inventory rejection,
 strict build and unchanged TSTS. This demonstrates listing only; activation,
 dispatch replacement and whole-language acceptance remain open.
+
+### Acceptance STATIC-CAMPAIGN-ACTIVATION
+
+Demonstrates
+[OBL-75](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-75)
+through STATIC-RUNTIME. Activate a pending campaign through the generated typed
+owner and existing CLI. Observe the move, canonical status, internal and external
+relative links with suffixes, unchanged absolute/URL/anchor links and symlink
+exclusion. A failed write must restore the directory and original Markdown bytes.
+Check existing-destination and invalid-status errors and already-active behavior.
+Strict build and unchanged TSTS must pass; this proves activation only.

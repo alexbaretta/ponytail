@@ -161,6 +161,12 @@
         "S07-F26"
       ],
       "validation_tasklet": "S07-F27-T04"
+    },
+    "S07-F28": {
+      "depends_on": [
+        "S07-F27"
+      ],
+      "validation_tasklet": "S07-F28-T10"
     }
   },
   "tasklets": {
@@ -2682,6 +2688,121 @@
       "affinity": [],
       "risk": "normal",
       "feature": "S07-F27",
+      "planned_paths": []
+    },
+    "S07-F28-T01": {
+      "depends_on": [],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F28",
+      "planned_paths": [
+        "src/campaign-activation.ts"
+      ]
+    },
+    "S07-F28-T02": {
+      "depends_on": [
+        "S07-F28-T01"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F28",
+      "planned_paths": [
+        "src/campaign-activation.ts"
+      ]
+    },
+    "S07-F28-T03": {
+      "depends_on": [
+        "S07-F28-T02"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F28",
+      "planned_paths": [
+        "src/campaign-activation.ts"
+      ]
+    },
+    "S07-F28-T04": {
+      "depends_on": [
+        "S07-F28-T03"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F28",
+      "planned_paths": [
+        "src/campaign-activation.ts"
+      ]
+    },
+    "S07-F28-T05": {
+      "depends_on": [
+        "S07-F28-T04"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F28",
+      "planned_paths": [
+        "src/campaign-activation.ts"
+      ]
+    },
+    "S07-F28-T06": {
+      "depends_on": [
+        "S07-F28-T05"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F28",
+      "planned_paths": [
+        "src/campaign-activation.ts"
+      ]
+    },
+    "S07-F28-T07": {
+      "depends_on": [
+        "S07-F28-T06"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F28",
+      "planned_paths": [
+        "src/campaign-activation.ts"
+      ]
+    },
+    "S07-F28-T08": {
+      "depends_on": [],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F28",
+      "planned_paths": [
+        "tests/campaign-activation.test.ts"
+      ]
+    },
+    "S07-F28-T09": {
+      "depends_on": [],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F28",
+      "planned_paths": [
+        "src/campaign-census.js",
+        "src/campaign-activation.js",
+        "scripts/build-runtime.ts",
+        "pm/requirements/traceability.generated.md",
+        "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/campaign-activation.md",
+        ".agents/config/project/traceability.json"
+      ]
+    },
+    "S07-F28-T10": {
+      "depends_on": [
+        "S07-F28-T01",
+        "S07-F28-T02",
+        "S07-F28-T03",
+        "S07-F28-T04",
+        "S07-F28-T05",
+        "S07-F28-T06",
+        "S07-F28-T07",
+        "S07-F28-T08",
+        "S07-F28-T09"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F28",
       "planned_paths": []
     }
   },

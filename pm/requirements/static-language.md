@@ -48,3 +48,7 @@ presentation. It is one bounded operation, not the remaining migration scope.
 [OBL-74](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-74)
 references the canonical typed campaign listing condition and its discharge
 criterion, including configured lifecycle normalization and active membership.
+
+[OBL-75](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-75)
+references the canonical typed activation condition, including link preservation,
+precondition errors and rollback after a failed move/write episode.

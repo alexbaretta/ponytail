@@ -110,8 +110,9 @@ not certify any remaining handwritten operation or complete the language invento
 
 | Canonical obligation | Evidence boundary | Assessment |
 | --- | --- | --- |
-| <a id="obl-73"></a>[OBL-73](obligations.json) | Typed inventory formatter and existing census CLI proof | Certificate CERT-2 renews CERT-1; see canonical ledger freshness projection |
-| <a id="obl-74"></a>[OBL-74](obligations.json) | Typed campaign listing and existing census CLI proof | Certificate CERT-2; see canonical ledger freshness projection |
+| <a id="obl-73"></a>[OBL-73](obligations.json) | Typed inventory formatter and existing census CLI proof | Certificate CERT-3 renews prior proof; see canonical ledger freshness projection |
+| <a id="obl-74"></a>[OBL-74](obligations.json) | Typed campaign listing and existing census CLI proof | Certificate CERT-3; see canonical ledger freshness projection |
+| <a id="obl-75"></a>[OBL-75](obligations.json) | Typed activation move/link/rollback proof and census CLI | Certificate CERT-3; see canonical ledger freshness projection |
 
 ## Remaining decomposition before baseline activation
 

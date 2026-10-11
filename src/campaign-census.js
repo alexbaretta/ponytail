@@ -15,6 +15,7 @@ const { CampaignPlanMetadataReaders, metadataBlocks,
   readPlanMetadataV1, readPlanMetadataV2, parsePlanSource } = require('./campaign-plan-metadata');
 const { listPlanSourceFiles, linkedPlanFiles } = require('./campaign-plan-sources');
 const { campaignGraph } = require('./campaign-graph');
+const { activateCampaign } = require('./campaign-activation');
 const { buildReport, readCampaignReportV1, humanReport } = require('./campaign-report');
 const { listCampaigns, humanInventory, buildRepositoryInventory, campaignDiagnostic, readCampaignReportV2, readCampaignReportV3, CampaignReportReaders } = require('./campaign-inventory');
 const { discoverCampaign, resolveCampaignRoot, resolveCampaignScope } = require('./campaign-scope');
@@ -28,94 +29,6 @@ const REPORT_TABLE_FLAGS = Object.freeze({
   '--sprint-table': ['sprintTable', true],
   '--no-sprint-table': ['sprintTable', false],
 });
-
-function markdownFiles(directory) {
-  const files = [];
-  for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
-    const entryPath = path.join(directory, entry.name);
-    if (entry.isSymbolicLink()) continue;
-    if (entry.isDirectory()) files.push(...markdownFiles(entryPath));
-    else if (entry.isFile() && entry.name.endsWith('.md')) files.push(entryPath);
-  }
-  return files;
-}
-
-function pathWithin(filePath, directory) {
-  const relative = path.relative(directory, filePath);
-  return relative === '' || (!relative.startsWith(`..${path.sep}`) && relative !== '..' && !path.isAbsolute(relative));
-}
-
-function movedPath(filePath, sourceDirectory, destinationDirectory) {
-  return pathWithin(filePath, sourceDirectory)
-    ? path.join(destinationDirectory, path.relative(sourceDirectory, filePath))
-    : filePath;
-}
-
-function rewriteMovedLinks(text, sourceFile, destinationFile, sourceDirectory, destinationDirectory) {
-  return text.replace(/\]\(([^)]+)\)/g, (match, destination) => {
-    if (!destination || destination.startsWith('#') || /^[a-z][a-z0-9+.-]*:/i.test(destination) || path.isAbsolute(destination)) return match;
-    const suffixIndex = destination.search(/[?#]/);
-    const linkPath = suffixIndex === -1 ? destination : destination.slice(0, suffixIndex);
-    const suffix = suffixIndex === -1 ? '' : destination.slice(suffixIndex);
-    const target = path.resolve(path.dirname(sourceFile), linkPath);
-    const movedTarget = movedPath(target, sourceDirectory, destinationDirectory);
-    if (sourceFile === destinationFile && target === movedTarget) return match;
-    let relative = path.relative(path.dirname(destinationFile), movedTarget).split(path.sep).join('/');
-    if (!relative.startsWith('.')) relative = `./${relative}`;
-    return `](${relative}${suffix})`;
-  });
-}
-
-function activateCampaign(repositoryRoot, config, input) {
-  const graph = campaignGraph(repositoryRoot, input);
-  const rootPlan = graph.plans.find(({ id }) => id === graph.campaignId);
-  const status = graph.plans.some(({ lifecycle }) => lifecycle === config.lifecycle.roles.activeWork)
-    ? 'active'
-    : ({
-      [config.lifecycle.roles.initial]: 'pending',
-      [config.lifecycle.roles.successfulCompletion]: 'closed',
-      [config.lifecycle.roles.deferred]: 'deferred',
-      [config.lifecycle.roles.rejected]: 'rejected',
-    })[rootPlan.lifecycle];
-  if (status === 'active') return { rootPlanId: graph.campaignId, activated: false };
-  if (status !== 'pending') {
-    dataError('CAMPAIGN_ACTIVATE_STATUS', `campaign ${graph.campaignId} is ${status}; only pending campaigns can be activated`, graph.campaignId, rootPlan.path);
-  }
-
-  const rootPlanFile = path.join(repositoryRoot, rootPlan.path);
-  const sourceDirectory = path.dirname(rootPlanFile);
-  const destinationDirectory = path.join(repositoryRoot, config.planRoot, config.lifecycle.roles.activeWork, graph.campaignId);
-  if (fs.existsSync(destinationDirectory)) toolError('CAMPAIGN_ACTIVATE_DESTINATION', `campaign activation destination already exists: ${path.relative(repositoryRoot, destinationDirectory)}`);
-  const files = markdownFiles(path.join(repositoryRoot, config.managementRoot));
-  const changes = files.map((sourceFile) => {
-    const destinationFile = movedPath(sourceFile, sourceDirectory, destinationDirectory);
-    let text = fs.readFileSync(sourceFile, 'utf8');
-    if (sourceFile === rootPlanFile) {
-      const statusPattern = /^- \*\*Status:\*\* `[^`]+`$/gm;
-      const matches = [...text.matchAll(statusPattern)];
-      if (matches.length !== 1) dataError('CAMPAIGN_PLAN_STATUS', 'campaign root must contain exactly one canonical status field', graph.campaignId, rootPlan.path);
-      text = text.replace(statusPattern, `- **Status:** \`${config.lifecycle.roles.activeWork}\``);
-    }
-    return {
-      sourceFile,
-      destinationFile,
-      original: fs.readFileSync(sourceFile, 'utf8'),
-      text: rewriteMovedLinks(text, sourceFile, destinationFile, sourceDirectory, destinationDirectory),
-    };
-  });
-
-  fs.mkdirSync(path.dirname(destinationDirectory), { recursive: true });
-  fs.renameSync(sourceDirectory, destinationDirectory);
-  try {
-    for (const change of changes) fs.writeFileSync(change.destinationFile, change.text);
-    buildReport(repositoryRoot, config, graph.campaignId);
-  } catch (error) {
-    fs.renameSync(destinationDirectory, sourceDirectory);
-    for (const change of changes) fs.writeFileSync(change.sourceFile, change.original);
-    throw error;
-  }
-  return { rootPlanId: graph.campaignId, activated: true };
-}
 
 function repositoryRoot() {
   const result = spawnSync('git', ['rev-parse', '--show-toplevel'], { encoding: 'utf8' });
