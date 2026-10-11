@@ -773,7 +773,7 @@
     },
     {
       "class": "unit-test",
-      "path": "tests/obligations.test.js",
+      "path": "tests/obligations.test.ts",
       "locator": "text"
     },
     {
