@@ -592,6 +592,13 @@ class RollingCampaignStore {
             return { claim: rollingIncrementClaimV1, revision: rollingWorkerSubmissionV1.revision };
         });
     }
+    async publishIncrement(campaignId, reviewId) {
+        const rollingIncrementPushStarted = await this.beginIncrementPush(campaignId, reviewId);
+        (0, rolling_integration_js_1.fastForwardRollingIncrement)(rollingIncrementPushStarted.claim.coordinatorRoot, rollingIncrementPushStarted.claim.target.branch, rollingIncrementPushStarted.revision);
+        const rollingIncrementPublicationResult = (0, rolling_integration_js_1.publishRollingIncrement)({ rootPath: rollingIncrementPushStarted.claim.rootPath,
+            target: rollingIncrementPushStarted.claim.target, revision: rollingIncrementPushStarted.revision });
+        return this.recordIncrementPublication(campaignId, reviewId, rollingIncrementPublicationResult);
+    }
     async recordIncrementPublication(campaignId, reviewId, rollingIncrementPublicationResult) {
         return this.transaction(campaignId, async (poolClient) => {
             const row = (await poolClient.query('SELECT claim_text,state,candidate_revision,publication_text FROM ponytail_index.rolling_increment_v1 WHERE project_id=$1 AND campaign_id=$2 AND review_id=$3', [this.projectId, campaignId, reviewId])).rows[0];

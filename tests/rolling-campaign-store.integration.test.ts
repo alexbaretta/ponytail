@@ -67,10 +67,18 @@ test('native code fixture approvals permit exact shell-wrapped commands only for
 
 // Traceability: verifies REQ-ROLLING-STATE
 // Traceability: verifies REQ-ROLLING-SCHEDULING
-export interface ReviewScenario { readonly decision: RollingReviewOutcomeV1['decision']; readonly mode: 'manual' | 'protocol' | 'native'; readonly replaceLostReviewer?: boolean }
+export interface ReviewScenario { readonly decision: RollingReviewOutcomeV1['decision']; readonly mode: 'manual' | 'protocol' | 'native'; readonly replaceLostReviewer?: boolean; readonly automaticPublication?: boolean }
 function declineReviewApprovals(rollingCodex: RollingCodex): void {
   rollingCodex.on('serverRequest', message => rollingCodex.respondToServer(message.id, { decision: 'decline' }));
 }
+function prepareCoordinatorIncrementCheckout(root: string,branch: string): void {
+  const untrackedPaths = execFileSync('git',['-C',root,'ls-files','--others','--exclude-standard','-z'],{encoding:'utf8'}).split('\0').filter(relative=>relative.length > 0);
+  // Exclude only this disposable fixture's management records. Production
+  // publication requires a clean configured checkout without this fixture step.
+  fs.appendFileSync(path.join(root,'.git/info/exclude'),untrackedPaths.map(relative=>`/${relative}`).join('\n')+'\n');
+  execFileSync('git',['-C',root,'switch','-q',branch]);
+}
+
 export async function runRollingReviewScenario(t: TestContext, reviewScenario: ReviewScenario): Promise<void> {
   const reviewDecision = reviewScenario.decision;
   const repositoryRoot = path.resolve(__dirname, '../..');
@@ -564,6 +572,19 @@ export async function runRollingReviewScenario(t: TestContext, reviewScenario: R
     fs.appendFileSync(path.join(workerRoot,'proof.txt'),'stale proof output');
     await assert.rejects(rollingCampaignStore.beginIncrementPush('bound-fixture',rollingStoredReview.request.id),/stale focused input/);
     fs.writeFileSync(path.join(workerRoot,'proof.txt'),priorProofText);
+    if (reviewScenario.automaticPublication) {
+      prepareCoordinatorIncrementCheckout(root,'campaign/bound-fixture');
+      const publications = await Promise.allSettled(Array.from({length:4},()=>rollingCampaignStore.publishIncrement('bound-fixture',rollingStoredReview.request.id)));
+      assert.equal(publications.filter(publication=>publication.status === 'fulfilled').length,1);
+      assert.equal(publications.filter(publication=>publication.status === 'rejected').length,3);
+      const fulfilledPublication = publications.find(publication=>publication.status === 'fulfilled');assert.ok(fulfilledPublication?.status === 'fulfilled');
+      assert.equal(fulfilledPublication.value.result.state,'PUBLISHED');
+      assert.equal(execFileSync('git',['-C',root,'rev-parse','HEAD'],{encoding:'utf8'}).trim(),revision);
+      assert.equal(execFileSync('git',['-C',remoteRoot,'rev-parse','refs/heads/campaign/bound-fixture'],{encoding:'utf8'}).trim(),revision);
+      assert.deepEqual(await restartedRollingCampaignStore.observeIncrementPublication('bound-fixture',rollingStoredReview.request.id),fulfilledPublication.value);
+      assert.equal((await pool.query<Record<string,unknown>>('SELECT count(*)::integer AS count FROM ponytail_index.rolling_increment_delivery_v1 WHERE project_id=$1',[projectId])).rows[0]?.count,1);
+      return;
+    }
     const pushes = await Promise.allSettled(Array.from({length:4},()=>rollingCampaignStore.beginIncrementPush('bound-fixture',rollingStoredReview.request.id)));
     assert.equal(pushes.filter(push=>push.status === 'fulfilled').length,1);
     assert.equal(pushes.filter(push=>push.status === 'rejected').length,3);
@@ -573,11 +594,7 @@ export async function runRollingReviewScenario(t: TestContext, reviewScenario: R
       {state:'UNCONFIRMED',revision,reason:'Fixture lost the push response; observe the remote before retrying.'});
     assert.equal(unknownRollingIncrementPublicationV1.result.state,'UNCONFIRMED');
     assert.equal((await pool.query<Record<string,unknown>>('SELECT count(*)::integer AS count FROM ponytail_index.rolling_increment_delivery_v1 WHERE project_id=$1',[projectId])).rows[0]?.count,0);
-    const untrackedPaths = execFileSync('git',['-C',root,'ls-files','--others','--exclude-standard','-z'],{encoding:'utf8'}).split('\0').filter(relative=>relative.length > 0);
-    // Only this disposable fixture's untracked management records are excluded;
-    // the production coordinator requires a genuinely clean configured checkout.
-    fs.appendFileSync(path.join(root,'.git/info/exclude'),untrackedPaths.map(relative=>`/${relative}`).join('\n')+'\n');
-    execFileSync('git',['-C',root,'switch','-q','campaign/bound-fixture']);
+    prepareCoordinatorIncrementCheckout(root,'campaign/bound-fixture');
     fastForwardRollingIncrement(root,'campaign/bound-fixture',revision);
     const rejectionHook = path.join(remoteRoot,'hooks/pre-receive');
     fs.writeFileSync(rejectionHook,'#!/bin/sh\necho "fixture policy rejection" >&2\nexit 1\n',{mode:0o755});
@@ -1334,3 +1351,7 @@ test('worker creation recovery retains uncertain ownership and attaches original
 // Traceability: verifies REQ-ROLLING-STATE
 test('submission collection binds terminal idle actor and exact passing candidate before review',
  t => runRollingWorkerScenario(t,'protocol','collection'));
+
+// Traceability: verifies REQ-ROLLING-PUBLICATION
+ test('real PostgreSQL automatically publishes the reviewed increment through one coordinator operation',
+ t=>runRollingReviewScenario(t,{decision:'accepted',mode:'manual',automaticPublication:true}));
