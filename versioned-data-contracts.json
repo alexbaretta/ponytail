@@ -6,7 +6,7 @@
       "id": "obligation-binding-history",
       "implementation": {
         "workspace": "ponytail",
-        "module": "src/obligation-binding-history.ts",
+        "module": "skills/plan-execution/scripts/obligation-binding-history.ts",
         "readerRegistryExport": "ObligationBindingHistoryReaders"
       },
       "currentVersion": "V1",

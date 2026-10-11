@@ -21,6 +21,7 @@ const node_fs_1 = __importDefault(require("node:fs"));
 const node_path_1 = __importDefault(require("node:path"));
 const node_crypto_1 = __importDefault(require("node:crypto"));
 const obligations_js_1 = require("../skills/plan-execution/scripts/obligations.js");
+const obligation_binding_history_js_1 = require("../skills/plan-execution/scripts/obligation-binding-history.js");
 function requireRollingCondition(condition, message) {
     if (!condition)
         throw new Error(`rolling campaign: ${message}`);
@@ -129,19 +130,19 @@ function readRollingCoordinatorRoot(coordinatorRoot) {
     requireRollingCondition(repository.status === 0 && node_fs_1.default.realpathSync(repository.stdout.trim()) === root, 'coordinator root must identify the exact Git checkout');
     return root;
 }
-function collectRollingGraph(coordinatorRoot, documentPath, bindingsPath) {
+function collectRollingGraph(coordinatorRoot, documentPath, bindingsPath, bindingHistoryPath) {
     const root = readRollingCoordinatorRoot(coordinatorRoot);
     const head = (0, node_child_process_1.spawnSync)('git', ['-C', root, 'rev-parse', 'HEAD'], { encoding: 'utf8' });
     requireRollingCondition(head.status === 0, 'coordinator must have a committed HEAD');
     const texts = [];
-    for (const relative of [documentPath, bindingsPath, '.agents/config/project/rolling-campaigns.json']) {
+    for (const relative of [documentPath, bindingsPath, '.agents/config/project/rolling-campaigns.json', ...(bindingHistoryPath === undefined ? [] : [bindingHistoryPath])]) {
         requireRollingCondition(typeof relative === 'string' && !node_path_1.default.isAbsolute(relative)
             && relative.split('/').every(component => component && component !== '.' && component !== '..') && !relative.includes('\\'), 'graph input must be repository-relative');
         const file = node_path_1.default.join(root, relative);
         requireRollingCondition(node_fs_1.default.lstatSync(file).isFile() && node_fs_1.default.realpathSync(file) === file, 'graph input must be a regular file without symlink ancestors');
         texts.push(node_fs_1.default.readFileSync(file, 'utf8'));
     }
-    const [documentText, bindingsText, configurationText] = texts;
+    const [documentText, bindingsText, configurationText, historyText] = texts;
     requireRollingCondition(documentText !== undefined && bindingsText !== undefined && configurationText !== undefined, 'graph input texts are missing');
     const document = (0, obligations_js_1.parseObligationDocument)(documentText);
     const bindings = readRollingBindingsV1((0, lossless_json_1.parse)(bindingsText, null, token => {
@@ -149,15 +150,19 @@ function collectRollingGraph(coordinatorRoot, documentPath, bindingsPath) {
         return 1;
     }));
     const projectConfiguration = parseRollingProjectConfig(configurationText);
-    const projection = (0, obligations_js_1.projectObligations)(document, root);
+    const bindingHistory = historyText === undefined ? null : (0, obligation_binding_history_js_1.parseObligationBindingHistory)(historyText);
+    const obligationScopeProjection = (0, obligations_js_1.projectObligationScope)(document, root, bindingHistory === null ? undefined : bindingHistory);
+    const projection = obligationScopeProjection.projection;
     const obligationIds = new Set(document.obligations.map(item => item.id));
     requireRollingCondition(bindings.bindings.every(binding => obligationIds.has(binding.obligationId)), 'binding references an unknown obligation');
     const obligationBaseline = document.baselines.at(-1);
     requireRollingCondition(obligationBaseline, 'graph has no current baseline');
     const inputs = new Set(obligationBaseline.requirements.map(item => item.path));
-    for (const certificate of document.certificates)
+    const acceptedCertificateIds = new Set(projection.assessments.map(assessment => assessment.id));
+    for (const certificate of document.certificates.filter(certificate => acceptedCertificateIds.has(certificate.id))) {
         for (const input of certificate.inputs)
             inputs.add(input.path);
+    }
     const inputDigests = [...inputs].sort().map((relative) => {
         try {
             return [relative, (0, obligations_js_1.inputDigest)(root, relative)];
@@ -166,10 +171,11 @@ function collectRollingGraph(coordinatorRoot, documentPath, bindingsPath) {
             return [relative, null];
         }
     });
-    const digest = node_crypto_1.default.createHash('sha256').update(JSON.stringify([root, head.stdout.trim(), documentPath, bindingsPath, texts, inputDigests])).digest('hex');
+    const digest = node_crypto_1.default.createHash('sha256').update(JSON.stringify([root, head.stdout.trim(), documentPath, bindingsPath, texts, inputDigests,
+        ...(bindingHistoryPath === undefined ? [] : [bindingHistoryPath])])).digest('hex');
     const unavailableInputs = inputDigests.filter(([, digest]) => digest === null).map(([relative]) => relative);
     return { coordinatorRoot: root, head: head.stdout.trim(), digest, document,
-        bindings: bindings.bindings, projection, projectConfiguration, unavailableInputs };
+        bindings: bindings.bindings, projection, bindingHistory, effectiveBindings: obligationScopeProjection.bindings, projectConfiguration, unavailableInputs };
 }
 function selectRollingAssignments(rollingGraph, assignments, maxActiveWorkers, expectedDigest) {
     requireRollingCondition(rollingGraph.digest === expectedDigest, 'stale coordinator graph');
@@ -205,17 +211,19 @@ function selectRollingAssignments(rollingGraph, assignments, maxActiveWorkers, e
             if (resume ? assignment?.state !== 'INACTIVE' : assignment !== undefined)
                 continue;
             const binding = bindings.get(obligation.id);
-            const prerequisites = [...obligation.dependsOn, ...(assignment?.blockers ?? [])].filter(id => !satisfied.has(id));
+            const obligationEffectiveBinding = rollingGraph.effectiveBindings.get(obligation.id);
+            requireRollingCondition(obligationEffectiveBinding, `missing effective binding: ${obligation.id}`);
+            const prerequisites = [...obligationEffectiveBinding.dependsOn, ...(assignment?.blockers ?? [])].filter(id => !satisfied.has(id));
             if (prerequisites.length || !binding) {
                 blocked.push({ obligationId: obligation.id, reason: binding ? 'prerequisites' : 'missing_binding', prerequisites });
                 continue;
             }
-            if (resume && assignment && (JSON.stringify(assignment.plannedPaths) !== JSON.stringify(obligation.execution.plannedPaths)
+            if (resume && assignment && (JSON.stringify(assignment.plannedPaths) !== JSON.stringify(obligationEffectiveBinding.execution.plannedPaths)
                 || JSON.stringify(assignment.exclusiveResources) !== JSON.stringify(binding.exclusiveResources))) {
                 blocked.push({ obligationId: obligation.id, reason: 'scope_changed', prerequisites: [] });
                 continue;
             }
-            const plannedPaths = resume && assignment ? assignment.plannedPaths : obligation.execution.plannedPaths;
+            const plannedPaths = resume && assignment ? assignment.plannedPaths : obligationEffectiveBinding.execution.plannedPaths;
             const exclusiveResources = resume && assignment ? assignment.exclusiveResources : binding.exclusiveResources;
             const conflicts = occupied.filter(other => (plannedPaths.some(left => other.plannedPaths.some(right => left === right || left.startsWith(`${right}/`) || right.startsWith(`${left}/`)))
                 || exclusiveResources.some(resource => other.exclusiveResources.includes(resource))));

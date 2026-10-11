@@ -1298,6 +1298,191 @@
         "OBL-19",
         "OBL-20"
       ]
+    },
+    {
+      "id": "BASELINE-10",
+      "predecessorId": "BASELINE-9",
+      "authority": {
+        "references": [
+          "user-goal-2026-10-10-rolling-campaigns",
+          "user-goal-2026-10-10-static-language-existing-tsts",
+          "user-2026-10-10-normative-atomic-obligations"
+        ],
+        "assessors": [
+          "coordinator"
+        ]
+      },
+      "requirements": [
+        {
+          "id": "REQ-ROLLING-CONFIGURATION",
+          "path": "pm/requirements/rolling-campaigns.md",
+          "digest": "460d4c42ef16ff2cce25a7df9658b57374ef3677d1060fd30118ba599004c4bb"
+        },
+        {
+          "id": "REQ-ROLLING-GRAPH",
+          "path": "pm/requirements/rolling-campaigns.md",
+          "digest": "460d4c42ef16ff2cce25a7df9658b57374ef3677d1060fd30118ba599004c4bb"
+        },
+        {
+          "id": "REQ-ROLLING-SCHEDULING",
+          "path": "pm/requirements/rolling-campaigns.md",
+          "digest": "460d4c42ef16ff2cce25a7df9658b57374ef3677d1060fd30118ba599004c4bb"
+        },
+        {
+          "id": "REQ-ROLLING-STATE",
+          "path": "pm/requirements/rolling-campaigns.md",
+          "digest": "460d4c42ef16ff2cce25a7df9658b57374ef3677d1060fd30118ba599004c4bb"
+        },
+        {
+          "id": "REQ-ROLLING-WORKERS",
+          "path": "pm/requirements/rolling-campaigns.md",
+          "digest": "460d4c42ef16ff2cce25a7df9658b57374ef3677d1060fd30118ba599004c4bb"
+        },
+        {
+          "id": "REQ-ROLLING-REVIEW",
+          "path": "pm/requirements/rolling-campaigns.md",
+          "digest": "460d4c42ef16ff2cce25a7df9658b57374ef3677d1060fd30118ba599004c4bb"
+        },
+        {
+          "id": "REQ-ROLLING-PUBLICATION",
+          "path": "pm/requirements/rolling-campaigns.md",
+          "digest": "460d4c42ef16ff2cce25a7df9658b57374ef3677d1060fd30118ba599004c4bb"
+        },
+        {
+          "id": "REQ-ROLLING-INTERFACES",
+          "path": "pm/requirements/rolling-campaigns.md",
+          "digest": "460d4c42ef16ff2cce25a7df9658b57374ef3677d1060fd30118ba599004c4bb"
+        },
+        {
+          "id": "REQ-PONYTAIL-STATIC-LANGUAGE",
+          "path": "pm/requirements/static-language.md",
+          "digest": "de0467513b642259377cd9cbfb9c15d310c6e58681490f57bbaab32147358a8a"
+        }
+      ],
+      "obligationIds": [
+        "OBL-1",
+        "OBL-2",
+        "OBL-3",
+        "OBL-4",
+        "OBL-5",
+        "OBL-6",
+        "OBL-7",
+        "OBL-8",
+        "OBL-9",
+        "OBL-10",
+        "OBL-11",
+        "OBL-12",
+        "OBL-13",
+        "OBL-14",
+        "OBL-15",
+        "OBL-16",
+        "OBL-17",
+        "OBL-18",
+        "OBL-19",
+        "OBL-20",
+        "OBL-21",
+        "OBL-22",
+        "OBL-23",
+        "OBL-24",
+        "OBL-25",
+        "OBL-26",
+        "OBL-27",
+        "OBL-28",
+        "OBL-29",
+        "OBL-30",
+        "OBL-31",
+        "OBL-32",
+        "OBL-33",
+        "OBL-34",
+        "OBL-35",
+        "OBL-36",
+        "OBL-37",
+        "OBL-38",
+        "OBL-39",
+        "OBL-40",
+        "OBL-41",
+        "OBL-42",
+        "OBL-43",
+        "OBL-44",
+        "OBL-45",
+        "OBL-46",
+        "OBL-47",
+        "OBL-48",
+        "OBL-49",
+        "OBL-50",
+        "OBL-51",
+        "OBL-52",
+        "OBL-53",
+        "OBL-54",
+        "OBL-55",
+        "OBL-56",
+        "OBL-57",
+        "OBL-58",
+        "OBL-59",
+        "OBL-60",
+        "OBL-61",
+        "OBL-62",
+        "OBL-63",
+        "OBL-64",
+        "OBL-65",
+        "OBL-66",
+        "OBL-67",
+        "OBL-68",
+        "OBL-69",
+        "OBL-70",
+        "OBL-71",
+        "OBL-72",
+        "OBL-73",
+        "OBL-74",
+        "OBL-75",
+        "OBL-76",
+        "OBL-77",
+        "OBL-78",
+        "OBL-79",
+        "OBL-80",
+        "OBL-81",
+        "OBL-82",
+        "OBL-83",
+        "OBL-84",
+        "OBL-85",
+        "OBL-86",
+        "OBL-87",
+        "OBL-88",
+        "OBL-89",
+        "OBL-90",
+        "OBL-91",
+        "OBL-92",
+        "OBL-93",
+        "OBL-94",
+        "OBL-95",
+        "OBL-96",
+        "OBL-97",
+        "OBL-98",
+        "OBL-99",
+        "OBL-100",
+        "OBL-101",
+        "OBL-102",
+        "OBL-103",
+        "OBL-104",
+        "OBL-105",
+        "OBL-106",
+        "OBL-107",
+        "OBL-108"
+      ],
+      "inventoryIds": [
+        "OBL-1",
+        "OBL-2",
+        "OBL-3",
+        "OBL-4",
+        "OBL-5",
+        "OBL-6",
+        "OBL-15",
+        "OBL-16",
+        "OBL-17",
+        "OBL-18",
+        "OBL-19",
+        "OBL-20"
+      ]
     }
   ],
   "obligations": [
@@ -4460,6 +4645,62 @@
           "profile": "binding-history-component"
         }
       }
+    },
+    {
+      "id": "OBL-108",
+      "category": "gate",
+      "requirementIds": [
+        "REQ-ROLLING-GRAPH"
+      ],
+      "responsibilityId": "shared-effective-binding-selection",
+      "condition": "Explicit binding-aware portable and rolling selector queries derive readiness and bounded paths from the same coordinator-authorized current binding projection while preserving historical document and query meanings.",
+      "criterion": "Typed portable CLI and real Git graph proof demonstrate current prerequisite/path projection, coordinator-only history input identity, rejected stale/foreign/invalid histories and retained legacy behavior without rewriting historical records. Strict build, unchanged TSTS, runtime/resource mirrors and traceability mappings pass. This query outcome does not authorize a live amended lease or bind candidate acceptance; those remain separate required integration work.",
+      "dependsOn": [
+        "OBL-107"
+      ],
+      "acceptanceGroups": [
+        "ROLL-BINDING-SELECT"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "src/obligation-binding-history.ts",
+          "src/obligation-binding-history.js",
+          "skills/plan-execution/scripts/obligation-binding-history.ts",
+          "skills/plan-execution/scripts/obligation-binding-history.js",
+          ".openclaw/skills/plan-execution/scripts/obligation-binding-history.ts",
+          ".openclaw/skills/plan-execution/scripts/obligation-binding-history.js",
+          "skills/plan-execution/scripts/obligations.ts",
+          "skills/plan-execution/scripts/obligations.js",
+          ".openclaw/skills/plan-execution/scripts/obligations.ts",
+          ".openclaw/skills/plan-execution/scripts/obligations.js",
+          "src/rolling-campaign.ts",
+          "src/rolling-campaign.js",
+          "tests/obligation-binding-history.test.ts",
+          "tests/binding-selectors.integration.test.ts",
+          "tests/rolling-campaign.test.ts",
+          "scripts/build-runtime.ts",
+          "versioned-data-contracts.json",
+          ".agents/config/project/traceability.json",
+          "pm/requirements/traceability.generated.md"
+        ],
+        "operations": [
+          "edit",
+          "build",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "shared current-binding selector queries"
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "binding-selector-integration"
+        }
+      }
     }
   ],
   "certificates": [],
@@ -5980,6 +6221,260 @@
         "deliverable": "Reassess the same previously completed 29 deliveries after the required binding-history component changes; stop at current-input renewal."
       },
       "reason": "Reassess the same previously completed 29 deliveries after the required binding-history component changes; stop at current-input renewal.",
+      "assessor": "coordinator"
+    },
+    {
+      "id": "CHECKPOINT-24",
+      "predecessorId": "CHECKPOINT-23",
+      "baselineId": "BASELINE-10",
+      "kind": "rebaseline",
+      "selectedIds": [],
+      "registeredIds": [
+        "OBL-1",
+        "OBL-2",
+        "OBL-3",
+        "OBL-4",
+        "OBL-5",
+        "OBL-6",
+        "OBL-7",
+        "OBL-8",
+        "OBL-9",
+        "OBL-10",
+        "OBL-11",
+        "OBL-12",
+        "OBL-13",
+        "OBL-14",
+        "OBL-15",
+        "OBL-16",
+        "OBL-17",
+        "OBL-18",
+        "OBL-19",
+        "OBL-20",
+        "OBL-21",
+        "OBL-22",
+        "OBL-23",
+        "OBL-24",
+        "OBL-25",
+        "OBL-26",
+        "OBL-27",
+        "OBL-28",
+        "OBL-29",
+        "OBL-30",
+        "OBL-31",
+        "OBL-32",
+        "OBL-33",
+        "OBL-34",
+        "OBL-35",
+        "OBL-36",
+        "OBL-37",
+        "OBL-38",
+        "OBL-39",
+        "OBL-40",
+        "OBL-41",
+        "OBL-42",
+        "OBL-43",
+        "OBL-44",
+        "OBL-45",
+        "OBL-46",
+        "OBL-47",
+        "OBL-48",
+        "OBL-49",
+        "OBL-50",
+        "OBL-51",
+        "OBL-52",
+        "OBL-53",
+        "OBL-54",
+        "OBL-55",
+        "OBL-56",
+        "OBL-57",
+        "OBL-58",
+        "OBL-59",
+        "OBL-60",
+        "OBL-61",
+        "OBL-62",
+        "OBL-63",
+        "OBL-64",
+        "OBL-65",
+        "OBL-66",
+        "OBL-67",
+        "OBL-68",
+        "OBL-69",
+        "OBL-70",
+        "OBL-71",
+        "OBL-72",
+        "OBL-73",
+        "OBL-74",
+        "OBL-75",
+        "OBL-76",
+        "OBL-77",
+        "OBL-78",
+        "OBL-79",
+        "OBL-80",
+        "OBL-81",
+        "OBL-82",
+        "OBL-83",
+        "OBL-84",
+        "OBL-85",
+        "OBL-86",
+        "OBL-87",
+        "OBL-88",
+        "OBL-89",
+        "OBL-90",
+        "OBL-91",
+        "OBL-92",
+        "OBL-93",
+        "OBL-94",
+        "OBL-95",
+        "OBL-96",
+        "OBL-97",
+        "OBL-98",
+        "OBL-99",
+        "OBL-100",
+        "OBL-101",
+        "OBL-102",
+        "OBL-103",
+        "OBL-104",
+        "OBL-105",
+        "OBL-106",
+        "OBL-107",
+        "OBL-108"
+      ],
+      "certificateIds": [],
+      "invalidatedIds": [
+        "CERT-11",
+        "CERT-12"
+      ],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": null,
+      "reason": "Register only the shared selector prerequisite needed before started fixture migrations can receive amended leases; preserve all earlier identities and assessments and refresh conservative affected evidence.",
+      "assessor": "coordinator"
+    },
+    {
+      "id": "CHECKPOINT-25",
+      "predecessorId": "CHECKPOINT-24",
+      "baselineId": "BASELINE-10",
+      "kind": "neutral",
+      "selectedIds": [
+        "OBL-107",
+        "OBL-108"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "CERT-13"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": {
+        "obligationId": "OBL-108",
+        "operations": [
+          "edit",
+          "build",
+          "test",
+          "check",
+          "assess"
+        ],
+        "deliverable": "Renew the immutable binding-history component on its relocated portable owner and discharge shared binding-aware selector queries with complete current typed/Git/CLI, historical compatibility, generated-resource and unchanged-TSTS evidence. No live amended lease or candidate acceptance is inferred."
+      },
+      "reason": "Renew the immutable binding-history component on its relocated portable owner and discharge shared binding-aware selector queries with complete current typed/Git/CLI, historical compatibility, generated-resource and unchanged-TSTS evidence. No live amended lease or candidate acceptance is inferred.",
+      "assessor": "coordinator"
+    },
+    {
+      "id": "CHECKPOINT-26",
+      "predecessorId": "CHECKPOINT-25",
+      "baselineId": "BASELINE-10",
+      "kind": "neutral",
+      "selectedIds": [
+        "OBL-22",
+        "OBL-23",
+        "OBL-24",
+        "OBL-25",
+        "OBL-26",
+        "OBL-27",
+        "OBL-28",
+        "OBL-29",
+        "OBL-30",
+        "OBL-31",
+        "OBL-32",
+        "OBL-33",
+        "OBL-34",
+        "OBL-35",
+        "OBL-36",
+        "OBL-37",
+        "OBL-38",
+        "OBL-39",
+        "OBL-40",
+        "OBL-41",
+        "OBL-42",
+        "OBL-43",
+        "OBL-70",
+        "OBL-71",
+        "OBL-73",
+        "OBL-74",
+        "OBL-75",
+        "OBL-76",
+        "OBL-101"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "CERT-14"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": {
+        "obligationId": "OBL-76",
+        "operations": [
+          "test",
+          "check",
+          "assess"
+        ],
+        "deliverable": "Renew the same 29 previously completed atomic deliveries against current shared selector and resource ownership inputs. Existing 57-test Git/PostgreSQL/component proof and the complete native restart/resume workflow pass, with current strict compilation and unchanged TSTS. All other outcomes remain unresolved."
+      },
+      "reason": "Renew the same 29 previously completed atomic deliveries against current shared selector and resource ownership inputs. Existing 57-test Git/PostgreSQL/component proof and the complete native restart/resume workflow pass, with current strict compilation and unchanged TSTS. All other outcomes remain unresolved.",
       "assessor": "coordinator"
     }
   ]

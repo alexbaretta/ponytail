@@ -14,6 +14,7 @@ exports.parseObligationDocument = parseObligationDocument;
 exports.inputDigest = inputDigest;
 exports.freshCertificate = freshCertificate;
 exports.projectObligations = projectObligations;
+exports.projectObligationScope = projectObligationScope;
 exports.compareVectors = compareVectors;
 exports.selectObligation = selectObligation;
 exports.acceptCheckpoint = acceptCheckpoint;
@@ -23,6 +24,7 @@ const node_path_1 = __importDefault(require("node:path"));
 const node_crypto_1 = __importDefault(require("node:crypto"));
 const node_util_1 = require("node:util");
 const lossless_json_1 = require("lossless-json");
+const obligation_binding_history_js_1 = require("./obligation-binding-history.js");
 const COORDINATES = ['T1', 'T2', 'T3', 'T4', 'C1', 'C2'];
 function requireCondition(condition, message) {
     if (!condition)
@@ -370,7 +372,14 @@ function freshCertificate(obligationDocument, baseline, certificate, root) {
     }
     return { fresh: reasons.length === 0, reasons };
 }
-function projectBaseline(obligationDocument, baseline, accepted, root) {
+function prerequisites(obligation, bindings) {
+    if (bindings === undefined)
+        return obligation.dependsOn;
+    const obligationEffectiveBinding = bindings.get(obligation.id);
+    requireCondition(obligationEffectiveBinding, `missing effective binding: ${obligation.id}`);
+    return obligationEffectiveBinding.dependsOn;
+}
+function projectBaseline(obligationDocument, baseline, accepted, root, bindings) {
     const satisfied = new Set();
     const assessments = [];
     for (const certificate of obligationDocument.certificates.filter(certificate => accepted.has(certificate.id))) {
@@ -385,7 +394,7 @@ function projectBaseline(obligationDocument, baseline, accepted, root) {
     while (changed) {
         changed = false;
         for (const obligation of obligations) {
-            if (satisfied.has(obligation.id) && obligation.dependsOn.some(id => !satisfied.has(id))) {
+            if (satisfied.has(obligation.id) && prerequisites(obligation, bindings).some(id => !satisfied.has(id))) {
                 satisfied.delete(obligation.id);
                 changed = true;
             }
@@ -399,9 +408,14 @@ function projectBaseline(obligationDocument, baseline, accepted, root) {
         complete: obligationVector.every(count => count === 0) && gates.length === 0 };
 }
 function projectObligations(obligationDocument, root) {
+    return projectObligationScope(obligationDocument, root).projection;
+}
+function projectObligationScope(obligationDocument, root, obligationBindingHistoryV1) {
     readObligationDocumentV1(obligationDocument);
     const replay = replayHistory(obligationDocument);
-    return projectBaseline(obligationDocument, replay.baseline, replay.accepted, root);
+    const bindings = (0, obligation_binding_history_js_1.projectObligationBindings)(obligationDocument, obligationBindingHistoryV1 === undefined
+        ? { schemaVersion: 1, scopeId: obligationDocument.scopeId, revisions: [] } : obligationBindingHistoryV1);
+    return { projection: projectBaseline(obligationDocument, replay.baseline, replay.accepted, root, bindings), bindings };
 }
 function compareVectors(before, after) {
     vector(before);
@@ -415,13 +429,14 @@ function compareVectors(before, after) {
     }
     return 0;
 }
-function selectObligation(obligationDocument, root) {
-    const projection = projectObligations(obligationDocument, root);
+function selectObligation(obligationDocument, root, obligationBindingHistoryV1) {
+    const obligationScopeProjection = projectObligationScope(obligationDocument, root, obligationBindingHistoryV1);
+    const projection = obligationScopeProjection.projection;
     const category = COORDINATES[projection.vector.findIndex(count => count > 0)];
     if (!category)
         return { category: null, selectedId: null, blockedIds: projection.gates, projection };
     const unresolved = obligationDocument.obligations.filter(obligation => projection.unresolvedIds.includes(obligation.id) && obligation.category === category);
-    const eligible = unresolved.filter(obligation => obligation.dependsOn.every(id => projection.satisfiedIds.includes(id)));
+    const eligible = unresolved.filter(obligation => prerequisites(obligation, obligationScopeProjection.bindings).every(id => projection.satisfiedIds.includes(id)));
     return { category, selectedId: eligible[0]?.id ?? null,
         blockedIds: unresolved.filter(obligation => !eligible.includes(obligation)).map(obligation => obligation.id), projection };
 }
@@ -558,14 +573,23 @@ function acceptCheckpoint(previous, candidate, root) {
 }
 function main(argv) {
     const [operation, documentPath, root, ...extra] = argv;
-    if (!operation || !['validate', 'status', 'select'].includes(operation) || !documentPath || !root || extra.length) {
-        process.stderr.write('Usage: obligations.js <validate|status|select> <document-path> <repository-root>\n');
+    const [flag, bindingHistoryPath, ...trailing] = extra;
+    if (!operation || !['validate', 'status', 'select'].includes(operation) || !documentPath || !root
+        || extra.length > 0 && (flag !== '--binding-history' || !bindingHistoryPath || trailing.length > 0)) {
+        process.stderr.write('Usage: obligations.js <validate|status|select> <document-path> <repository-root> [--binding-history <relative-path>]\n');
         return 2;
     }
     let text;
+    let historyText;
     try {
         text = node_fs_1.default.readFileSync(documentPath, 'utf8');
-        node_fs_1.default.realpathSync(root);
+        const repositoryRoot = node_fs_1.default.realpathSync(root);
+        if (bindingHistoryPath !== undefined) {
+            relativePath(bindingHistoryPath);
+            const file = node_path_1.default.join(repositoryRoot, bindingHistoryPath);
+            requireCondition(node_fs_1.default.lstatSync(file).isFile() && node_fs_1.default.realpathSync(file) === file, 'binding history must be a regular coordinator file without symlink ancestors');
+            historyText = node_fs_1.default.readFileSync(file, 'utf8');
+        }
     }
     catch (error) {
         process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
@@ -573,7 +597,9 @@ function main(argv) {
     }
     try {
         const obligationDocument = parseObligationDocument(text);
-        const result = operation === 'select' ? selectObligation(obligationDocument, root) : projectObligations(obligationDocument, root);
+        const obligationBindingHistoryV1 = historyText === undefined ? undefined : (0, obligation_binding_history_js_1.parseObligationBindingHistory)(historyText);
+        const result = operation === 'select' ? selectObligation(obligationDocument, root, obligationBindingHistoryV1)
+            : projectObligationScope(obligationDocument, root, obligationBindingHistoryV1).projection;
         process.stdout.write(`${JSON.stringify(result)}\n`);
         return 0;
     }

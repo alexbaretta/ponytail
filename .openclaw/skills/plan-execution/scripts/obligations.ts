@@ -6,6 +6,8 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { isDeepStrictEqual } from 'node:util';
 import { parse } from 'lossless-json';
+import { parseObligationBindingHistory, projectObligationBindings,
+  type ObligationBindingHistoryV1, type ObligationEffectiveBinding } from './obligation-binding-history.js';
 
 export type ObligationCoordinate = 'T1' | 'T2' | 'T3' | 'T4' | 'C1' | 'C2';
 export type ObligationCategory = ObligationCoordinate | 'gate';
@@ -108,6 +110,10 @@ export interface ObligationDocumentV1 {
   readonly checkpoints: readonly ObligationCheckpoint[];
 }
 export interface ObligationAssessment { readonly id: string; readonly valid: boolean; readonly reasons: readonly string[] }
+export interface ObligationScopeProjection {
+  readonly projection: ObligationProjection;
+  readonly bindings: ReadonlyMap<string, ObligationEffectiveBinding>;
+}
 export interface ObligationProjection {
   readonly baselineId: string;
   readonly vector: ObligationVector;
@@ -442,7 +448,14 @@ export function freshCertificate(obligationDocument: ObligationDocumentV1, basel
   return { fresh: reasons.length === 0, reasons };
 }
 
-function projectBaseline(obligationDocument: ObligationDocumentV1, baseline: ObligationBaseline, accepted: ReadonlySet<string>, root: string | null): ObligationProjection {
+function prerequisites(obligation: Obligation, bindings: ReadonlyMap<string, ObligationEffectiveBinding> | undefined): readonly string[] {
+  if (bindings === undefined) return obligation.dependsOn;
+  const obligationEffectiveBinding = bindings.get(obligation.id);
+  requireCondition(obligationEffectiveBinding, `missing effective binding: ${obligation.id}`);
+  return obligationEffectiveBinding.dependsOn;
+}
+function projectBaseline(obligationDocument: ObligationDocumentV1, baseline: ObligationBaseline, accepted: ReadonlySet<string>, root: string | null,
+  bindings?: ReadonlyMap<string, ObligationEffectiveBinding>): ObligationProjection {
   const satisfied = new Set<string>();
   const assessments: ObligationAssessment[] = [];
   for (const certificate of obligationDocument.certificates.filter(certificate => accepted.has(certificate.id))) {
@@ -456,7 +469,7 @@ function projectBaseline(obligationDocument: ObligationDocumentV1, baseline: Obl
   while (changed) {
     changed = false;
     for (const obligation of obligations) {
-      if (satisfied.has(obligation.id) && obligation.dependsOn.some(id => !satisfied.has(id))) {
+      if (satisfied.has(obligation.id) && prerequisites(obligation, bindings).some(id => !satisfied.has(id))) {
         satisfied.delete(obligation.id);
         changed = true;
       }
@@ -470,9 +483,15 @@ function projectBaseline(obligationDocument: ObligationDocumentV1, baseline: Obl
     complete: obligationVector.every(count => count === 0) && gates.length === 0 };
 }
 export function projectObligations(obligationDocument: ObligationDocumentV1, root: string): ObligationProjection {
+  return projectObligationScope(obligationDocument, root).projection;
+}
+export function projectObligationScope(obligationDocument: ObligationDocumentV1, root: string,
+  obligationBindingHistoryV1?: ObligationBindingHistoryV1): ObligationScopeProjection {
   readObligationDocumentV1(obligationDocument);
   const replay = replayHistory(obligationDocument);
-  return projectBaseline(obligationDocument, replay.baseline, replay.accepted, root);
+  const bindings = projectObligationBindings(obligationDocument, obligationBindingHistoryV1 === undefined
+    ? { schemaVersion: 1, scopeId: obligationDocument.scopeId, revisions: [] } : obligationBindingHistoryV1);
+  return { projection: projectBaseline(obligationDocument, replay.baseline, replay.accepted, root, bindings), bindings };
 }
 export function compareVectors(before: ObligationVector, after: ObligationVector): number {
   vector(before);
@@ -485,12 +504,14 @@ export function compareVectors(before: ObligationVector, after: ObligationVector
   }
   return 0;
 }
-export function selectObligation(obligationDocument: ObligationDocumentV1, root: string): ObligationSelection {
-  const projection = projectObligations(obligationDocument, root);
+export function selectObligation(obligationDocument: ObligationDocumentV1, root: string,
+  obligationBindingHistoryV1?: ObligationBindingHistoryV1): ObligationSelection {
+  const obligationScopeProjection = projectObligationScope(obligationDocument, root, obligationBindingHistoryV1);
+  const projection = obligationScopeProjection.projection;
   const category = COORDINATES[projection.vector.findIndex(count => count > 0)];
   if (!category) return { category: null, selectedId: null, blockedIds: projection.gates, projection };
   const unresolved = obligationDocument.obligations.filter(obligation => projection.unresolvedIds.includes(obligation.id) && obligation.category === category);
-  const eligible = unresolved.filter(obligation => obligation.dependsOn.every(id => projection.satisfiedIds.includes(id)));
+  const eligible = unresolved.filter(obligation => prerequisites(obligation, obligationScopeProjection.bindings).every(id => projection.satisfiedIds.includes(id)));
   return { category, selectedId: eligible[0]?.id ?? null,
     blockedIds: unresolved.filter(obligation => !eligible.includes(obligation)).map(obligation => obligation.id), projection };
 }
@@ -621,16 +642,30 @@ export function acceptCheckpoint(previous: ObligationDocumentV1, candidate: Obli
 }
 export function main(argv: readonly string[]): number {
   const [operation, documentPath, root, ...extra] = argv;
-  if (!operation || !['validate', 'status', 'select'].includes(operation) || !documentPath || !root || extra.length) {
-    process.stderr.write('Usage: obligations.js <validate|status|select> <document-path> <repository-root>\n');
+  const [flag, bindingHistoryPath, ...trailing] = extra;
+  if (!operation || !['validate', 'status', 'select'].includes(operation) || !documentPath || !root
+    || extra.length > 0 && (flag !== '--binding-history' || !bindingHistoryPath || trailing.length > 0)) {
+    process.stderr.write('Usage: obligations.js <validate|status|select> <document-path> <repository-root> [--binding-history <relative-path>]\n');
     return 2;
   }
-  let text;
-  try { text = fs.readFileSync(documentPath, 'utf8'); fs.realpathSync(root); }
+  let text: string;
+  let historyText: string | undefined;
+  try {
+    text = fs.readFileSync(documentPath, 'utf8');
+    const repositoryRoot = fs.realpathSync(root);
+    if (bindingHistoryPath !== undefined) {
+      relativePath(bindingHistoryPath);
+      const file = path.join(repositoryRoot, bindingHistoryPath);
+      requireCondition(fs.lstatSync(file).isFile() && fs.realpathSync(file) === file, 'binding history must be a regular coordinator file without symlink ancestors');
+      historyText = fs.readFileSync(file, 'utf8');
+    }
+  }
   catch (error) { process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`); return 2; }
   try {
     const obligationDocument = parseObligationDocument(text);
-    const result = operation === 'select' ? selectObligation(obligationDocument, root) : projectObligations(obligationDocument, root);
+    const obligationBindingHistoryV1 = historyText === undefined ? undefined : parseObligationBindingHistory(historyText);
+    const result = operation === 'select' ? selectObligation(obligationDocument, root, obligationBindingHistoryV1)
+      : projectObligationScope(obligationDocument, root, obligationBindingHistoryV1).projection;
     process.stdout.write(`${JSON.stringify(result)}\n`);
     return 0;
   } catch (error) {

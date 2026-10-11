@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Alex Baretta. All rights reserved.
 // Licensed under the MIT License. See LICENSE in the project root.
 import assert from 'node:assert/strict';
+import { projectObligationBindings } from '../skills/plan-execution/scripts/obligation-binding-history.js';
 import test from 'node:test';
 import { readRollingProjectConfigV1, parseRollingProjectConfig, resolveRollingConfiguration,
   readRollingBindingsV1, selectRollingAssignments, type RollingProjectConfigV1, type RollingCampaignRequest,
@@ -121,6 +122,7 @@ function schedulingGraph(): RollingGraph {
       requirements: [{ id: 'REQ-FIXTURE', path: 'requirement.md', digest: 'a'.repeat(64) }],
       obligationIds: obligations.map(item => item.id), inventoryIds: ['OBL-1', 'OBL-2', 'OBL-3', 'OBL-4', 'OBL-5', 'OBL-6'] }], certificates: [], checkpoints: [] };
   return { coordinatorRoot: '/fixture', head: 'a'.repeat(40), digest: 'current', unavailableInputs: [], document: obligationDocumentV1,
+    bindingHistory: null, effectiveBindings: projectObligationBindings(obligationDocumentV1, { schemaVersion: 1, scopeId: obligationDocumentV1.scopeId, revisions: [] }),
     projection: { baselineId: 'B1', vector: [1, 1, 3, 1, 1, 1], satisfiedIds: [], unresolvedIds: obligations.map(item => item.id), gates: [], assessments: [], complete: false },
     projectConfiguration: projectConfiguration(), bindings: ['OBL-2', 'OBL-3', 'OBL-10', 'OBL-11'].map(id => executionBinding(id)) };
 }

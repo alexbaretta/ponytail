@@ -1098,12 +1098,17 @@
     },
     {
       "class": "implementation",
-      "path": "src/obligation-binding-history.ts",
+      "path": "skills/plan-execution/scripts/obligation-binding-history.ts",
       "locator": "text"
     },
     {
       "class": "unit-test",
       "path": "tests/obligation-binding-history.test.ts",
+      "locator": "text"
+    },
+    {
+      "class": "integration-test",
+      "path": "tests/binding-selectors.integration.test.ts",
       "locator": "text"
     }
   ],
@@ -1322,8 +1327,16 @@
       "sourcePath": "src/campaign-invocation.ts"
     },
     {
-      "path": "src/obligation-binding-history.js",
-      "sourcePath": "src/obligation-binding-history.ts"
+      "path": "skills/plan-execution/scripts/obligation-binding-history.js",
+      "sourcePath": "skills/plan-execution/scripts/obligation-binding-history.ts"
+    },
+    {
+      "path": ".openclaw/skills/plan-execution/scripts/obligation-binding-history.ts",
+      "sourcePath": "skills/plan-execution/scripts/obligation-binding-history.ts"
+    },
+    {
+      "path": ".openclaw/skills/plan-execution/scripts/obligation-binding-history.js",
+      "sourcePath": "skills/plan-execution/scripts/obligation-binding-history.js"
     }
   ],
   "reverseViewPath": "pm/requirements/traceability.generated.md",

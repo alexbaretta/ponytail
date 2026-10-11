@@ -135,3 +135,9 @@ until adequate execution evidence is recorded.
 Traceability: verifies REQ-ROLLING-GRAPH
 
 Demonstrates [OBL-107](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-107) through Step ROLL-BINDING-API: exercise the typed amendment boundary and observe its entire canonical criterion, including preserved identities/history and rejected invalid revisions. Selector, live lease and acceptance integration still require their application Arcs.
+
+### Acceptance ROLL-BINDING-SELECT
+
+Traceability: verifies REQ-ROLLING-GRAPH
+
+Step ROLL-BINDING-QUERY demonstrates [OBL-108](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-108): query portable and rolling selection against an explicitly identified coordinator binding history, observe its complete declared criterion, then amend that history and reject the obsolete graph identity. Live lease and candidate acceptance integration remain required.

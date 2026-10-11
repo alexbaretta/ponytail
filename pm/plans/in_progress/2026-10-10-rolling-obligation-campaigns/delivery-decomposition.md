@@ -247,3 +247,7 @@ coverage is 82 canonical TypeScript paths (65 Ponytail, 17 existing TSTS).
 Earlier inspection tables and certificates are historical; use the canonical
 ledger's freshness projection for current satisfaction. Shared selector,
 frozen lease and acceptance integration must precede typed fixture edit leases.
+
+## Shared binding-aware query prerequisite
+
+<a id="obl-108"></a>[OBL-108](obligations.json) owns shared current-binding query projection. BASELINE-10 freezes its paths before edits. Move the generic history owner into the portable skill resources so copied skills are self-contained; retain its identity and physical meaning. This query-only outcome does not authorize amended live leases or candidate acceptance.

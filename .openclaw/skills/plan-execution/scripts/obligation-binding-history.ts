@@ -3,7 +3,7 @@
 import { isDeepStrictEqual } from 'node:util';
 import { parse } from 'lossless-json';
 import { readObligationDocumentV1, readObligationExecution,
-  type ObligationBaseline, type ObligationDocumentV1, type ObligationExecution } from '../skills/plan-execution/scripts/obligations.js';
+  type ObligationBaseline, type ObligationDocumentV1, type ObligationExecution } from './obligations.js';
 
 export interface ObligationBindingRevisionV1 {
   readonly id: string;
@@ -61,9 +61,6 @@ function isObligationBindingHistoryV1(value: unknown): value is ObligationBindin
   requireBinding(new Set(revisions.map(revision => revision.id)).size === revisions.length, 'duplicate revision identity');
   return true;
 }
-
-// Traceability: implements REQ-ROLLING-GRAPH
-// Traceability: implements REQ-PONYTAIL-STATIC-LANGUAGE
 export function readObligationBindingHistoryV1(value: unknown): ObligationBindingHistoryV1 {
   requireBinding(isObligationBindingHistoryV1(value), 'invalid history V1');
   return { schemaVersion: 1, scopeId: value.scopeId, revisions: value.revisions.map(readObligationBindingRevisionV1) };
@@ -99,8 +96,6 @@ function validateGraph(obligationBaseline: ObligationBaseline, bindings: Readonl
   }
   obligationBaseline.obligationIds.forEach(visit);
 }
-
-// Traceability: implements REQ-ROLLING-GRAPH
 export function projectObligationBindings(obligationDocumentV1: ObligationDocumentV1, obligationBindingHistoryV1: ObligationBindingHistoryV1): ReadonlyMap<string, ObligationEffectiveBinding> {
   readObligationDocumentV1(obligationDocumentV1);
   const checkedObligationBindingHistoryV1 = readObligationBindingHistoryV1(obligationBindingHistoryV1);
@@ -131,8 +126,6 @@ export function projectObligationBindings(obligationDocumentV1: ObligationDocume
     return [id, obligationEffectiveBinding];
   }));
 }
-
-// Traceability: implements REQ-ROLLING-GRAPH
 export function acceptObligationBindingRevision(obligationDocumentV1: ObligationDocumentV1, previousObligationBindingHistoryV1: ObligationBindingHistoryV1,
   candidateObligationBindingHistoryV1: ObligationBindingHistoryV1, expectedPredecessorId: string | null): ObligationBindingHistoryV1 {
   projectObligationBindings(obligationDocumentV1, previousObligationBindingHistoryV1);

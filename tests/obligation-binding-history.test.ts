@@ -7,7 +7,7 @@ import test from 'node:test';
 import { parseObligationDocument, readObligationDocumentV1,
   type ObligationDocumentV1 } from '../skills/plan-execution/scripts/obligations.js';
 import { acceptObligationBindingRevision, parseObligationBindingHistory, projectObligationBindings, readObligationBindingHistoryV1,
-  type ObligationBindingHistoryV1, type ObligationBindingRevisionV1 } from '../src/obligation-binding-history.js';
+  type ObligationBindingHistoryV1, type ObligationBindingRevisionV1 } from '../skills/plan-execution/scripts/obligation-binding-history.js';
 
 function document(): ObligationDocumentV1 {
   const root = path.join(__dirname, '..', '..');

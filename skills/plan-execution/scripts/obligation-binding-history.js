@@ -1,6 +1,6 @@
 // Copyright (c) 2026 Alex Baretta. All rights reserved.
 // Licensed under the MIT License. See LICENSE in the project root.
-// Generated from src/obligation-binding-history.ts by npm run build.
+// Generated from skills/plan-execution/scripts/obligation-binding-history.ts by npm run build.
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ObligationBindingHistoryReaders = void 0;
@@ -10,7 +10,7 @@ exports.projectObligationBindings = projectObligationBindings;
 exports.acceptObligationBindingRevision = acceptObligationBindingRevision;
 const node_util_1 = require("node:util");
 const lossless_json_1 = require("lossless-json");
-const obligations_js_1 = require("../skills/plan-execution/scripts/obligations.js");
+const obligations_js_1 = require("./obligations.js");
 function requireBinding(condition, message) {
     if (!condition)
         throw new Error(`obligation binding: ${message}`);

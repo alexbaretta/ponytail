@@ -5,8 +5,9 @@ import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import { parseObligationDocument, projectObligations, inputDigest,
+import { parseObligationDocument, projectObligationScope, inputDigest,
   type ObligationDocumentV1, type ObligationProjection } from '../skills/plan-execution/scripts/obligations.js';
+import { parseObligationBindingHistory, type ObligationBindingHistoryV1, type ObligationEffectiveBinding } from '../skills/plan-execution/scripts/obligation-binding-history.js';
 
 export type RollingArgv = readonly [string, ...string[]];
 export interface RollingMainline { readonly remote: string; readonly branch: string }
@@ -50,6 +51,8 @@ export interface RollingGraph {
   readonly document: ObligationDocumentV1;
   readonly bindings: readonly RollingBinding[];
   readonly projection: ObligationProjection;
+  readonly bindingHistory: ObligationBindingHistoryV1 | null;
+  readonly effectiveBindings: ReadonlyMap<string, ObligationEffectiveBinding>;
   readonly projectConfiguration: RollingProjectConfigV1;
   readonly unavailableInputs: readonly string[];
 }
@@ -199,19 +202,19 @@ function readRollingCoordinatorRoot(coordinatorRoot: string): string {
 }
 
 // Traceability: implements REQ-ROLLING-GRAPH
-export function collectRollingGraph(coordinatorRoot: string, documentPath: string, bindingsPath: string): RollingGraph {
+export function collectRollingGraph(coordinatorRoot: string, documentPath: string, bindingsPath: string, bindingHistoryPath?: string): RollingGraph {
   const root = readRollingCoordinatorRoot(coordinatorRoot);
   const head = spawnSync('git', ['-C', root, 'rev-parse', 'HEAD'], { encoding: 'utf8' });
   requireRollingCondition(head.status === 0, 'coordinator must have a committed HEAD');
   const texts = [];
-  for (const relative of [documentPath, bindingsPath, '.agents/config/project/rolling-campaigns.json']) {
+  for (const relative of [documentPath, bindingsPath, '.agents/config/project/rolling-campaigns.json', ...(bindingHistoryPath === undefined ? [] : [bindingHistoryPath])]) {
     requireRollingCondition(typeof relative === 'string' && !path.isAbsolute(relative)
       && relative.split('/').every(component => component && component !== '.' && component !== '..') && !relative.includes('\\'), 'graph input must be repository-relative');
     const file = path.join(root, relative);
     requireRollingCondition(fs.lstatSync(file).isFile() && fs.realpathSync(file) === file, 'graph input must be a regular file without symlink ancestors');
     texts.push(fs.readFileSync(file, 'utf8'));
   }
-  const [documentText, bindingsText, configurationText] = texts;
+  const [documentText, bindingsText, configurationText, historyText] = texts;
   requireRollingCondition(documentText !== undefined && bindingsText !== undefined && configurationText !== undefined, 'graph input texts are missing');
   const document = parseObligationDocument(documentText);
   const bindings = readRollingBindingsV1(parse(bindingsText, null, token => {
@@ -219,21 +222,27 @@ export function collectRollingGraph(coordinatorRoot: string, documentPath: strin
     return 1;
   }));
   const projectConfiguration = parseRollingProjectConfig(configurationText);
-  const projection = projectObligations(document, root);
+  const bindingHistory = historyText === undefined ? null : parseObligationBindingHistory(historyText);
+  const obligationScopeProjection = projectObligationScope(document, root, bindingHistory === null ? undefined : bindingHistory);
+  const projection = obligationScopeProjection.projection;
   const obligationIds = new Set(document.obligations.map(item => item.id));
   requireRollingCondition(bindings.bindings.every(binding => obligationIds.has(binding.obligationId)), 'binding references an unknown obligation');
   const obligationBaseline = document.baselines.at(-1);
   requireRollingCondition(obligationBaseline, 'graph has no current baseline');
   const inputs = new Set(obligationBaseline.requirements.map(item => item.path));
-  for (const certificate of document.certificates) for (const input of certificate.inputs) inputs.add(input.path);
+  const acceptedCertificateIds = new Set(projection.assessments.map(assessment => assessment.id));
+  for (const certificate of document.certificates.filter(certificate => acceptedCertificateIds.has(certificate.id))) {
+    for (const input of certificate.inputs) inputs.add(input.path);
+  }
   const inputDigests = [...inputs].sort().map((relative): readonly [string, string | null] => {
     try { return [relative, inputDigest(root, relative)]; }
     catch { return [relative, null]; }
   });
-  const digest = crypto.createHash('sha256').update(JSON.stringify([root, head.stdout.trim(), documentPath, bindingsPath, texts, inputDigests])).digest('hex');
+  const digest = crypto.createHash('sha256').update(JSON.stringify([root, head.stdout.trim(), documentPath, bindingsPath, texts, inputDigests,
+    ...(bindingHistoryPath === undefined ? [] : [bindingHistoryPath])])).digest('hex');
   const unavailableInputs = inputDigests.filter(([, digest]) => digest === null).map(([relative]) => relative);
   return { coordinatorRoot: root, head: head.stdout.trim(), digest, document,
-    bindings: bindings.bindings, projection, projectConfiguration, unavailableInputs };
+    bindings: bindings.bindings, projection, bindingHistory, effectiveBindings: obligationScopeProjection.bindings, projectConfiguration, unavailableInputs };
 }
 
 // Traceability: implements REQ-ROLLING-SCHEDULING
@@ -268,17 +277,19 @@ export function selectRollingAssignments(rollingGraph: RollingGraph, assignments
     const assignment = live.find(item => item.scopeId === rollingGraph.document.scopeId && item.obligationId === obligation.id);
     if (resume ? assignment?.state !== 'INACTIVE' : assignment !== undefined) continue;
     const binding = bindings.get(obligation.id);
-    const prerequisites = [...obligation.dependsOn, ...(assignment?.blockers ?? [])].filter(id => !satisfied.has(id));
+    const obligationEffectiveBinding = rollingGraph.effectiveBindings.get(obligation.id);
+    requireRollingCondition(obligationEffectiveBinding, `missing effective binding: ${obligation.id}`);
+    const prerequisites = [...obligationEffectiveBinding.dependsOn, ...(assignment?.blockers ?? [])].filter(id => !satisfied.has(id));
     if (prerequisites.length || !binding) {
       blocked.push({ obligationId: obligation.id, reason: binding ? 'prerequisites' : 'missing_binding', prerequisites });
       continue;
     }
-    if (resume && assignment && (JSON.stringify(assignment.plannedPaths) !== JSON.stringify(obligation.execution.plannedPaths)
+    if (resume && assignment && (JSON.stringify(assignment.plannedPaths) !== JSON.stringify(obligationEffectiveBinding.execution.plannedPaths)
       || JSON.stringify(assignment.exclusiveResources) !== JSON.stringify(binding.exclusiveResources))) {
       blocked.push({ obligationId: obligation.id, reason: 'scope_changed', prerequisites: [] });
       continue;
     }
-    const plannedPaths = resume && assignment ? assignment.plannedPaths : obligation.execution.plannedPaths;
+    const plannedPaths = resume && assignment ? assignment.plannedPaths : obligationEffectiveBinding.execution.plannedPaths;
     const exclusiveResources = resume && assignment ? assignment.exclusiveResources : binding.exclusiveResources;
     const conflicts = occupied.filter(other => (
       plannedPaths.some(left => other.plannedPaths.some(right => left === right || left.startsWith(`${right}/`) || right.startsWith(`${left}/`)))
