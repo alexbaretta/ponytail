@@ -1,5 +1,6 @@
 // Copyright (c) 2026 Alex Baretta. All rights reserved.
 // Licensed under the MIT License. See LICENSE in the project root.
+import type {RollingIncrementRepair} from './rolling-integration.js';
 import path from 'node:path';
 import fs from 'node:fs';
 import { parse } from 'lossless-json';
@@ -146,6 +147,7 @@ export interface RollingWorkerContext {
  readonly qa: RollingProjectConfigV1['qa'];
  readonly baseCommit: string;
  readonly rejectedReview: RollingReviewRejectedV1 | null;
+ readonly incrementRepair: RollingIncrementRepair | null;
 }
 
 // Traceability: implements REQ-ROLLING-WORKERS
@@ -178,6 +180,7 @@ export function buildRollingWorkerInstructions(rollingWorkerContext: RollingWork
   + 'When submitting code changes, fetch the configured campaign branch and perform a full semantic rebase commit by commit, refresh affected evidence, retain the exact candidate SHA and base, and stop activity. '
   + 'Git mutations in this linked checkout write shared repository metadata outside the checkout. Request sandbox escalation for each authorized Git mutation before its first execution (sandbox_permissions=require_escalated). Keep the lease and authorized command scope binding. '
   + 'Return the candidate and evidence to the coordinator for adversarial review; never publish to mainline yourself. '
+  + (rollingWorkerContext.incrementRepair === null ? '' : `Substantive integration repair is required. Preserve and inspect the retained conflicting checkout and original replay identities before changing it. Resolve the recorded findings within the frozen paths, perform a fresh full semantic rebase against the campaign branch, and refresh all applicable focused QA. Submit the corrected candidate for fresh review by the original reviewer. Repair inspection and original conflict: ${JSON.stringify(rollingWorkerContext.incrementRepair)}\n`)
   + (rollingWorkerContext.rejectedReview === null ? '' : `Correct every finding from the original reviewer before resubmission. Rejected review: ${JSON.stringify(rollingWorkerContext.rejectedReview)}\n`)
   + 'For code submissions, the final message must be only strict JSON, without Markdown fences or surrounding prose. '
   + 'Use exactly the physical record keys shown in the outline, at every level. Do not add stoppedAt, timestamp, status, blocker, validation or any other field to a successful submission. Keep actual timestamps in evidence.startedAt and evidence.completedAt only. '

@@ -401,8 +401,11 @@ ALTER TABLE rolling_increment_v1 ADD COLUMN IF NOT EXISTS publication_text text
   CHECK (publication_text IS NULL OR COALESCE(jsonb_typeof((publication_text::jsonb)->'schemaVersion')='number'
     AND (publication_text::jsonb)->>'schemaVersion'='1'
     AND (publication_text::jsonb)->>'incrementId'=increment_id::text, false));
-CREATE UNIQUE INDEX IF NOT EXISTS rolling_increment_v1_active_campaign
-ON rolling_increment_v1 (project_id,campaign_id) WHERE state <> 'PUBLISHED';
+ALTER TABLE rolling_increment_v1 ADD COLUMN IF NOT EXISTS repair_reference text
+  CHECK (repair_reference IS NULL OR length(btrim(repair_reference)) > 0);
+DROP INDEX IF EXISTS rolling_increment_v1_active_campaign;
+CREATE UNIQUE INDEX IF NOT EXISTS rolling_increment_v1_active_campaign_v2
+ON rolling_increment_v1 (project_id,campaign_id) WHERE state <> 'PUBLISHED' AND repair_reference IS NULL;
 
 CREATE TABLE IF NOT EXISTS rolling_increment_proof_v1 (
   project_id uuid NOT NULL,

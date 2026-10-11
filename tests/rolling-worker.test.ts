@@ -73,9 +73,17 @@ test('worker instructions retain exact obligation, requirement, acceptance step,
    binding:{obligationId:'OBL-1',revisionId:'BIND-1',dependsOn:[],execution:{sprintId:null,taskletIds:[],plannedPaths:['fixture.ts'],
     operations:['inspect','edit','test'],selection:['focused fixture'],target:{identity:'local',profile:'fixture'}}}},
   configuration:{mainline:{remote:'origin',branch:'main'},incrementRef:'campaign/fixture',maxActiveWorkers:1,publicationSize:1},
-  baseCommit:'c'.repeat(40),rejectedReview:null,
+  baseCommit:'c'.repeat(40),rejectedReview:null,incrementRepair:null,
   qa:{focused:[['node','--test','fixture.test.ts']],publication:[['npm','test']]}
  };
+ const repairRollingWorkerContext: RollingWorkerContext = {...rollingWorkerContext,incrementRepair:{reference:'Inspect conflicting contract',
+  rebase:{schemaVersion:1,incrementId:'increment',reviewedRevision:'d'.repeat(40),reviewedBase:'c'.repeat(40),integrationBase:'e'.repeat(40),
+   result:{state:'TEXTUAL_CONFLICT',reviewedRevision:'d'.repeat(40),reviewedBase:'c'.repeat(40),integrationBase:'e'.repeat(40),originalCommit:'d'.repeat(40),conflictedPaths:['fixture.ts']}}}};
+ const repairInstructions = buildRollingWorkerInstructions(repairRollingWorkerContext);
+ assert.ok(repairInstructions.includes('Substantive integration repair is required'));
+ assert.ok(repairInstructions.includes('fresh full semantic rebase'));
+ assert.ok(repairInstructions.includes('fresh review by the original reviewer'));
+ assert.ok(repairInstructions.includes(JSON.stringify(repairRollingWorkerContext.incrementRepair)));
  const instructions = buildRollingWorkerInstructions(rollingWorkerContext);
  const marker = 'Worker responsibility: ';
  const received: unknown = JSON.parse(instructions.slice(instructions.lastIndexOf(marker)+marker.length));

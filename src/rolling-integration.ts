@@ -33,6 +33,10 @@ export interface RollingIncrementConflictInspection {
  readonly originalCommit: string;
  readonly reference: string;
 }
+export interface RollingIncrementRepair {
+ readonly rebase: RollingIncrementRebaseV1;
+ readonly reference: string;
+}
 // Discriminator: state
 export type RollingFastRebaseResult = RollingFastRebaseReady | RollingFastRebaseConflict;
 

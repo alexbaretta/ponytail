@@ -67,7 +67,7 @@ test('native code fixture approvals permit exact shell-wrapped commands only for
 
 // Traceability: verifies REQ-ROLLING-STATE
 // Traceability: verifies REQ-ROLLING-SCHEDULING
-export interface ReviewScenario { readonly decision: RollingReviewOutcomeV1['decision']; readonly mode: 'manual' | 'protocol' | 'native'; readonly replaceLostReviewer?: boolean; readonly automaticPublication?: boolean; readonly conflictContinuation?: boolean }
+export interface ReviewScenario { readonly decision: RollingReviewOutcomeV1['decision']; readonly mode: 'manual' | 'protocol' | 'native'; readonly replaceLostReviewer?: boolean; readonly automaticPublication?: boolean; readonly conflictContinuation?: boolean; readonly conflictRepair?: boolean }
 function declineReviewApprovals(rollingCodex: RollingCodex): void {
   rollingCodex.on('serverRequest', message => rollingCodex.respondToServer(message.id, { decision: 'decline' }));
 }
@@ -543,7 +543,7 @@ export async function runRollingReviewScenario(t: TestContext, reviewScenario: R
     execFileSync('git',['clone','--bare','-q',root,remoteRoot]);
     execFileSync('git',['-C',remoteRoot,'update-ref','refs/heads/campaign/bound-fixture',baseCommit]);
     execFileSync('git',['-C',root,'remote','add','origin',remoteRoot]);
-    if (reviewScenario.conflictContinuation) {
+    if (reviewScenario.conflictContinuation || reviewScenario.conflictRepair) {
       const upstreamRoot = path.join(root,'managed','upstream-conflict');
       execFileSync('git',['clone','-q','--branch','campaign/bound-fixture',remoteRoot,upstreamRoot]);
       fs.writeFileSync(path.join(upstreamRoot,'fixture/current.ts'),'export const value: number = 1; // upstream context\n');
@@ -564,9 +564,23 @@ export async function runRollingReviewScenario(t: TestContext, reviewScenario: R
     assert.deepEqual(await rollingCampaignStore.recordIncrementRebase('bound-fixture',rollingStoredReview.request.id,rollingFastRebaseResult),recordedRollingIncrementRebaseV1);
     assert.deepEqual(await rollingCampaignStore.incrementRebase('bound-fixture',rollingStoredReview.request.id),recordedRollingIncrementRebaseV1);
     await assert.rejects(rollingCampaignStore.recordIncrementRebase('bound-fixture',rollingStoredReview.request.id,{...rollingFastRebaseResult,integrationBase:'f'.repeat(40)}),/differs from recorded intent/);
-    if (reviewScenario.conflictContinuation) {
+    if (reviewScenario.conflictContinuation || reviewScenario.conflictRepair) {
       assert.ok(rollingFastRebaseResult.state === 'TEXTUAL_CONFLICT');
       const rollingIncrementConflictInspection = {originalCommit:rollingFastRebaseResult.originalCommit,reference:'fixture inspection: retain reviewed value and upstream context'};
+      if (reviewScenario.conflictRepair) {
+        await assert.rejects(rollingCampaignStore.requestIncrementRepair('bound-fixture',rollingStoredReview.request.id,''),/inspection reference/);
+        const repairResults = await Promise.all(Array.from({length:4},()=>rollingCampaignStore.requestIncrementRepair('bound-fixture',rollingStoredReview.request.id,'Substantive conflicting contract; return to original worker and reviewer')));
+        assert.ok(repairResults.every(result=>JSON.stringify(result) === JSON.stringify(repairResults[0])));
+        assert.deepEqual(await restartedRollingCampaignStore.requestIncrementRepair('bound-fixture',rollingStoredReview.request.id,repairResults[0]?.reference ?? ''),repairResults[0]);
+        assert.equal((await rollingCampaignStore.status('bound-fixture')).assignments[0]?.state,'REWORK');
+        await assert.rejects(rollingCampaignStore.requestIncrementRepair('bound-fixture',rollingStoredReview.request.id,'different repair'),/retry differs/);
+        await assert.rejects(rollingCampaignStore.beginIncrementContinuation('bound-fixture',rollingStoredReview.request.id,rollingIncrementConflictInspection),/integrating ownership/);
+        assert.deepEqual(await rollingCampaignStore.incrementRebase('bound-fixture',rollingStoredReview.request.id),recordedRollingIncrementRebaseV1);
+        assert.equal((await rollingCampaignStore.reviews('bound-fixture',submissionRollingStoredAssignment.id))[0]?.outcome?.decision,'accepted');
+        assert.equal(execFileSync('git',['-C',workerRoot,'rev-parse','REBASE_HEAD'],{encoding:'utf8'}).trim(),rollingFastRebaseResult.originalCommit);
+        assert.equal((await pool.query<Record<string,unknown>>('SELECT count(*)::integer AS count FROM ponytail_index.rolling_increment_delivery_v1 WHERE project_id=$1',[projectId])).rows[0]?.count,0);
+        return;
+      }
       await assert.rejects(rollingCampaignStore.beginIncrementContinuation('bound-fixture',rollingStoredReview.request.id,rollingIncrementConflictInspection),/unresolved/);
       fs.writeFileSync(path.join(workerRoot,'fixture/current.ts'),'export const value: number = 2; // upstream context\n');
       execFileSync('git',['-C',workerRoot,'add','fixture/current.ts']);
@@ -1395,3 +1409,7 @@ test('submission collection binds terminal idle actor and exact passing candidat
 // Traceability: verifies REQ-ROLLING-REVIEW
 test('real PostgreSQL retains inspected conflict continuation across restart without duplicate replay',
  t=>runRollingReviewScenario(t,{decision:'accepted',mode:'manual',conflictContinuation:true}));
+
+// Traceability: verifies REQ-ROLLING-REVIEW
+test('real PostgreSQL routes substantive integration conflicts to retained worker without changing accepted review',
+ t=>runRollingReviewScenario(t,{decision:'accepted',mode:'manual',conflictRepair:true}));

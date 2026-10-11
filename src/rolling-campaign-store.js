@@ -395,18 +395,18 @@ class RollingCampaignStore {
                 return { request: rollingReviewRequestV1, outcome: text === null ? null : (0, rolling_review_js_1.parseRollingReviewOutcome)(text) };
             }
             requireState(rollingStoredAssignment.state === 'REVIEW', 'assignment is not awaiting review');
-            const previous = (await poolClient.query('SELECT request_text,outcome_text FROM ponytail_index.rolling_review_v1 WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3 AND replacement_text IS NULL ORDER BY created_at DESC,review_id DESC LIMIT 1', [this.projectId, campaignId, id])).rows[0];
+            const previous = (await poolClient.query('SELECT r.request_text,r.outcome_text,i.repair_reference FROM ponytail_index.rolling_review_v1 r LEFT JOIN ponytail_index.rolling_increment_v1 i USING(project_id,campaign_id,review_id) WHERE r.project_id=$1 AND r.campaign_id=$2 AND r.assignment_id=$3 AND r.replacement_text IS NULL ORDER BY r.created_at DESC,r.review_id DESC LIMIT 1', [this.projectId, campaignId, id])).rows[0];
             if (previous) {
                 const previousRollingReviewRequestV1 = (0, rolling_review_js_1.parseRollingReviewRequest)(stringColumn(previous.request_text, 'previous review request'));
                 const previousOutcome = nullableStringColumn(previous.outcome_text, 'previous review outcome');
                 if (rollingReviewerLoss === null) {
-                    requireState(previousOutcome !== null && (0, rolling_review_js_1.parseRollingReviewOutcome)(previousOutcome).decision === 'rejected', 'corrected submission requires a decided rejected review');
+                    requireState(previousOutcome !== null && ((0, rolling_review_js_1.parseRollingReviewOutcome)(previousOutcome).decision === 'rejected' || previous.repair_reference !== null), 'corrected submission requires a rejected review or recorded integration repair');
                     requireState(previousRollingReviewRequestV1.reviewerSessionId === reviewerSessionId, 'corrected submission must retain its original reviewer');
                 }
                 else {
                     requireState(previousRollingReviewRequestV1.id === rollingReviewerLoss.reviewId, 'only the latest unreplaced reviewer may be replaced');
                     requireState(previousRollingReviewRequestV1.reviewerSessionId !== reviewerSessionId, 'replacement requires a different reviewer');
-                    requireState(previousOutcome === null || (0, rolling_review_js_1.parseRollingReviewOutcome)(previousOutcome).decision === 'rejected', 'accepted review cannot be replaced');
+                    requireState(previousOutcome === null || (0, rolling_review_js_1.parseRollingReviewOutcome)(previousOutcome).decision === 'rejected' || previous.repair_reference !== null, 'accepted review cannot be replaced without recorded integration repair');
                     if (previousOutcome === null)
                         requireState(previousRollingReviewRequestV1.generation === generation && previousRollingReviewRequestV1.revision === revision, 'pending replacement must retain its exact candidate');
                 }
@@ -550,6 +550,27 @@ class RollingCampaignStore {
             await poolClient.query('UPDATE ponytail_index.rolling_increment_v1 SET state=$4,rebase_text=$5,candidate_revision=$6 WHERE project_id=$1 AND campaign_id=$2 AND review_id=$3', [this.projectId, campaignId, reviewId, rollingFastRebaseResult.state === 'REBASED' ? 'REBASED' : 'CONFLICT', JSON.stringify(rollingIncrementRebaseV1),
                 rollingFastRebaseResult.state === 'REBASED' ? rollingFastRebaseResult.revision : null]);
             return rollingIncrementRebaseV1;
+        });
+    }
+    async requestIncrementRepair(campaignId, reviewId, reference) {
+        requireState(reference.trim().length > 0, 'substantive repair requires an inspection reference');
+        return this.transaction(campaignId, async (poolClient, rollingCampaignRow) => {
+            const row = (await poolClient.query('SELECT claim_text,state,rebase_text,repair_reference FROM ponytail_index.rolling_increment_v1 WHERE project_id=$1 AND campaign_id=$2 AND review_id=$3', [this.projectId, campaignId, reviewId])).rows[0];
+            requireState(row && row.state === 'CONFLICT', 'substantive repair requires a retained textual conflict');
+            const rollingIncrementClaimV1 = (0, rolling_integration_js_1.readRollingIncrementClaimV1)(readStateText(stringColumn(row.claim_text, 'increment claim')));
+            const rollingIncrementRebaseV1 = (0, rolling_integration_js_1.readRollingIncrementRebaseV1)(readStateText(stringColumn(row.rebase_text, 'increment conflict')));
+            requireState(rollingIncrementRebaseV1.result?.state === 'TEXTUAL_CONFLICT', 'recorded conflict is missing');
+            if (row.repair_reference !== null) {
+                requireState(row.repair_reference === reference, 'repair retry differs from recorded inspection');
+                return { rebase: rollingIncrementRebaseV1, reference };
+            }
+            await this.validateIncrementClaim(poolClient, rollingCampaignRow, rollingIncrementClaimV1);
+            (0, rolling_integration_js_1.verifyRollingIncrementRebase)(rollingIncrementClaimV1.rootPath, rollingIncrementRebaseV1.result);
+            const continuation = (await poolClient.query('SELECT original_commit FROM ponytail_index.rolling_increment_continuation_v1 WHERE project_id=$1 AND campaign_id=$2 AND increment_id=$3 AND original_commit=$4', [this.projectId, campaignId, rollingIncrementClaimV1.id, rollingIncrementRebaseV1.result.originalCommit])).rows;
+            requireState(continuation.length === 0, 'conflict continuation already owns this commit; reconcile it first');
+            await poolClient.query('UPDATE ponytail_index.rolling_increment_v1 SET repair_reference=$4 WHERE project_id=$1 AND campaign_id=$2 AND review_id=$3', [this.projectId, campaignId, reviewId, reference]);
+            await poolClient.query("UPDATE ponytail_index.rolling_assignment_v1 SET state='REWORK' WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3 AND generation=$4", [this.projectId, campaignId, rollingIncrementClaimV1.assignmentId, rollingIncrementClaimV1.generation]);
+            return { rebase: rollingIncrementRebaseV1, reference };
         });
     }
     async beginIncrementContinuation(campaignId, reviewId, rollingIncrementConflictInspection) {
@@ -1032,13 +1053,14 @@ class RollingCampaignStore {
         const obligation = rollingGraph.document.obligations.find(item => item.id === rollingStoredAssignment.obligationId);
         const obligationBaseline = rollingGraph.document.baselines.at(-1);
         requireState(obligation && obligationBaseline, 'worker obligation or baseline is missing');
-        const previousReview = (await poolClient.query('SELECT outcome_text FROM ponytail_index.rolling_review_v1 WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3 AND replacement_text IS NULL ORDER BY created_at DESC,review_id DESC LIMIT 1', [this.projectId, campaignId, id])).rows[0];
+        const previousReview = (await poolClient.query('SELECT r.outcome_text,i.repair_reference,i.rebase_text FROM ponytail_index.rolling_review_v1 r LEFT JOIN ponytail_index.rolling_increment_v1 i USING(project_id,campaign_id,review_id) WHERE r.project_id=$1 AND r.campaign_id=$2 AND r.assignment_id=$3 AND r.replacement_text IS NULL ORDER BY r.created_at DESC,r.review_id DESC LIMIT 1', [this.projectId, campaignId, id])).rows[0];
         const previousOutcome = previousReview ? nullableStringColumn(previousReview.outcome_text, 'previous review outcome') : null;
         const rollingReviewOutcomeV1 = previousOutcome === null ? null : (0, rolling_review_js_1.parseRollingReviewOutcome)(previousOutcome);
         return { assignmentId: id, rollingWorkerCreationV1, obligation, requirements: obligationBaseline.requirements.filter(item => obligation.requirementIds.includes(item.id)),
             binding: rollingStoredAssignment.binding, lease: obligationLeaseV1, configuration: executionConfiguration(rollingCampaignRow.configuration_text),
             qa: rollingGraph.projectConfiguration.qa, baseCommit: this.campaignBase(rollingCampaignRow),
-            rejectedReview: rollingReviewOutcomeV1?.decision === 'rejected' ? rollingReviewOutcomeV1 : null };
+            rejectedReview: rollingReviewOutcomeV1?.decision === 'rejected' ? rollingReviewOutcomeV1 : null,
+            incrementRepair: previousReview && previousReview.repair_reference !== null ? { reference: stringColumn(previousReview.repair_reference, 'repair inspection reference'), rebase: (0, rolling_integration_js_1.readRollingIncrementRebaseV1)(readStateText(stringColumn(previousReview.rebase_text, 'repair conflict'))) } : null };
     }
     async claimWorkerDispatch(campaignId, id, generation, instructions) {
         requireState(instructions.trim().length > 0, 'worker instructions are empty');
