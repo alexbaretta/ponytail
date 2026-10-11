@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-10-11-certificate_fixture_refusal_boundary",
+  "recorded_at": "2026-10-11T14:59:05-07:00",
+  "source_references": [
+    "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/obligations.json#OBL-56"
+  ],
+  "context": {
+    "languages": [
+      "typescript"
+    ],
+    "frameworks": [],
+    "components": [
+      "integrated certificate assessment fixture"
+    ],
+    "affected_boundaries": [
+      "portable document authority reader and coordinator assessment"
+    ],
+    "code_references": [
+      "tests/rolling-campaign-store.integration.test.ts"
+    ]
+  },
+  "observed_behavior": "The invalid worker-assessor case failed its expected-error assertion despite correctly refusing the candidate.",
+  "expected_behavior": "The fixture recognizes the canonical authority refusal and confirms the accepted record remains unchanged.",
+  "causal_mechanism": "The portable document reader rejected the unauthorized assessor before the later coordinator-specific check; the fixture matched only the later error wording.",
+  "anti_pattern": {
+    "structural_description": "An invalid-input fixture assumes a downstream rejection layer even though canonical parsing owns an earlier mandatory refusal.",
+    "why_it_fails": "A correct trust-boundary refusal is incorrectly reported as a product failure."
+  },
+  "correct_pattern": {
+    "required_invariant": "Invalid inputs are refused at the earliest canonical owner without weakening any later gate.",
+    "implementation_description": "Assert the reader authority refusal and unchanged accepted record, then continue the same complete assessment Arc."
+  },
+  "applicability_conditions": [
+    "A test crosses a canonical reader with mandatory authority validation before a narrower orchestration check."
+  ],
+  "known_non_matches": [],
+  "confirmation_evidence": [
+    "The first run reported checkpoint assessor lacks authority; no accepted-file write occurred.",
+    "Aligning the assertion with that canonical refusal makes the full PostgreSQL assessment Arc pass, including stale inputs, concurrent retries and lost database graph-update recovery."
+  ],
+  "regression_proofs": [
+    "tests/rolling-campaign-store.integration.test.ts: integrated certificate assessment uses retained published proof and serializes accepted record publication"
+  ]
+}

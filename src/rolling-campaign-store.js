@@ -21,6 +21,7 @@ const node_child_process_1 = require("node:child_process");
 const rolling_worker_submission_js_1 = require("./rolling-worker-submission.js");
 const obligation_binding_history_js_1 = require("../skills/plan-execution/scripts/obligation-binding-history.js");
 const obligations_js_1 = require("../skills/plan-execution/scripts/obligations.js");
+const obligation_certificate_bindings_js_1 = require("../skills/plan-execution/scripts/obligation-certificate-bindings.js");
 const rolling_worker_js_1 = require("./rolling-worker.js");
 const rolling_worktrees_js_1 = require("./rolling-worktrees.js");
 const rolling_review_js_1 = require("./rolling-review.js");
@@ -683,6 +684,61 @@ class RollingCampaignStore {
             await poolClient.query('UPDATE ponytail_index.rolling_increment_v1 SET state=$4,publication_text=$5,remote_revision=$6 WHERE project_id=$1 AND campaign_id=$2 AND review_id=$3', [this.projectId, campaignId, reviewId, rollingIncrementPublicationResult.state, JSON.stringify(rollingIncrementPublicationV1),
                 rollingIncrementPublicationResult.state === 'UNCONFIRMED' ? null : rollingIncrementPublicationResult.remoteRevision]);
             return rollingIncrementPublicationV1;
+        });
+    }
+    async acceptIncrementCertificates(campaignId, reviewId, candidatePath, bindingPaths) {
+        return this.transaction(campaignId, async (poolClient, rollingCampaignRow) => {
+            const row = (await poolClient.query('SELECT claim_text,state,candidate_revision,proof_text FROM ponytail_index.rolling_increment_v1 WHERE project_id=$1 AND campaign_id=$2 AND review_id=$3', [this.projectId, campaignId, reviewId])).rows[0];
+            requireState(row && row.state === 'PUBLISHED' && row.proof_text !== null, 'certificate assessment requires a published reviewed increment');
+            const rollingIncrementClaimV1 = (0, rolling_integration_js_1.readRollingIncrementClaimV1)(readStateText(stringColumn(row.claim_text, 'increment claim')));
+            const rollingStoredAssignment = await this.assignment(poolClient, campaignId, rollingIncrementClaimV1.assignmentId, rollingIncrementClaimV1.generation);
+            requireState(rollingStoredAssignment.state === 'INTEGRATING' && rollingStoredAssignment.activityStopped && !rollingStoredAssignment.retired, 'certificate assessment requires stopped retained integration ownership');
+            const rollingGraph = this.collectGraph(rollingCampaignRow);
+            const obligationLeaseV1 = this.currentLease(rollingStoredAssignment, rollingGraph);
+            const rollingExecutionConfig = executionConfiguration(rollingCampaignRow.configuration_text);
+            requireState(rollingExecutionConfig.schemaVersion === 2 && rollingGraph.bindingHistory, 'certificate assessment requires adopted binding history');
+            const rollingWorkerSubmissionV1 = (0, rolling_worker_submission_js_1.parseRollingWorkerSubmission)(stringColumn(row.proof_text, 'integrated proof'));
+            requireState(rollingWorkerSubmissionV1.revision === row.candidate_revision, 'retained proof differs from published candidate');
+            (0, rolling_integration_js_1.verifyRollingIncrementLocalIntegration)(rollingCampaignRow.coordinator_root, rollingIncrementClaimV1.target.branch, rollingWorkerSubmissionV1.revision);
+            const documentPath = rollingCampaignRow.document_path;
+            (0, obligations_js_1.relativePath)(candidatePath);
+            requireState(candidatePath !== documentPath, 'candidate must be separate from the accepted document');
+            (0, obligations_js_1.inputDigest)(rollingCampaignRow.coordinator_root, candidatePath);
+            const candidateObligationDocumentV1 = (0, obligations_js_1.parseObligationDocument)(node_fs_1.default.readFileSync(node_path_1.default.join(rollingCampaignRow.coordinator_root, candidatePath), 'utf8'));
+            const obligationCheckpoint = candidateObligationDocumentV1.checkpoints.at(-1);
+            requireState(obligationCheckpoint && obligationCheckpoint.assessor === rollingExecutionConfig.bindingHistory.assessor
+                && obligationCheckpoint.selectedIds.length === 1 && obligationCheckpoint.selectedIds[0] === rollingStoredAssignment.obligationId, 'assessment must identify the authorized coordinator and exact assigned obligation');
+            requireState(obligationCheckpoint.certificateIds.length > 0, 'assessment requires a discharge certificate');
+            for (const certificateId of obligationCheckpoint.certificateIds) {
+                const obligationCertificate = candidateObligationDocumentV1.certificates.find(certificate => certificate.id === certificateId);
+                requireState(obligationCertificate && obligationCertificate.obligationIds.length === 1
+                    && obligationCertificate.obligationIds[0] === rollingStoredAssignment.obligationId, 'certificate exceeds assigned obligation');
+                requireState(obligationCertificate.inputs.every(input => input.path !== documentPath), 'accepted document cannot certify its own bytes');
+            }
+            const obligationCertificateSubmission = { lease: obligationLeaseV1, revision: rollingWorkerSubmissionV1.revision,
+                operations: rollingWorkerSubmissionV1.proof.map(proof => proof.operation), evidence: rollingWorkerSubmissionV1.proof.map(proof => proof.evidence) };
+            const obligationCertificateBindingRequests = bindingPaths.map(bindingPath => { (0, obligations_js_1.relativePath)(bindingPath); return { path: bindingPath, submission: obligationCertificateSubmission }; });
+            const previousObligationDocumentV1 = (0, node_util_1.isDeepStrictEqual)(rollingGraph.document, candidateObligationDocumentV1)
+                ? { ...rollingGraph.document, checkpoints: rollingGraph.document.checkpoints.slice(0, -1),
+                    certificates: rollingGraph.document.certificates.filter(certificate => !obligationCheckpoint.certificateIds.includes(certificate.id)) }
+                : rollingGraph.document;
+            const documentDigest = (0, obligations_js_1.inputDigest)(rollingCampaignRow.coordinator_root, documentPath);
+            const acceptedObligationDocumentV1 = (0, obligation_certificate_bindings_js_1.acceptBoundCheckpoint)(previousObligationDocumentV1, candidateObligationDocumentV1, rollingCampaignRow.coordinator_root, rollingGraph.bindingHistory, obligationCertificateBindingRequests);
+            if (!(0, node_util_1.isDeepStrictEqual)(rollingGraph.document, acceptedObligationDocumentV1)) {
+                const temporaryPath = node_path_1.default.join(rollingCampaignRow.coordinator_root, `${documentPath}.${node_crypto_1.default.randomUUID()}.tmp`);
+                node_fs_1.default.writeFileSync(temporaryPath, JSON.stringify(acceptedObligationDocumentV1, null, 2) + '\n', { flag: 'wx', mode: 0o600 });
+                try {
+                    requireState((0, obligations_js_1.inputDigest)(rollingCampaignRow.coordinator_root, documentPath) === documentDigest, 'accepted document changed during assessment');
+                    node_fs_1.default.renameSync(temporaryPath, node_path_1.default.join(rollingCampaignRow.coordinator_root, documentPath));
+                }
+                finally {
+                    if (node_fs_1.default.existsSync(temporaryPath))
+                        node_fs_1.default.unlinkSync(temporaryPath);
+                }
+            }
+            const acceptedRollingGraph = this.collectGraph(rollingCampaignRow);
+            await poolClient.query('UPDATE ponytail_index.rolling_campaign_v1 SET graph_digest=$3 WHERE project_id=$1 AND campaign_id=$2', [this.projectId, campaignId, acceptedRollingGraph.digest]);
+            return acceptedObligationDocumentV1;
         });
     }
     async observeIncrementPublication(campaignId, reviewId) {

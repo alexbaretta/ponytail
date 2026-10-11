@@ -67,7 +67,7 @@ test('native code fixture approvals permit exact shell-wrapped commands only for
 
 // Traceability: verifies REQ-ROLLING-STATE
 // Traceability: verifies REQ-ROLLING-SCHEDULING
-export interface ReviewScenario { readonly decision: RollingReviewOutcomeV1['decision']; readonly mode: 'manual' | 'protocol' | 'native'; readonly replaceLostReviewer?: boolean; readonly automaticPublication?: boolean; readonly conflictContinuation?: boolean; readonly conflictRepair?: boolean }
+export interface ReviewScenario { readonly decision: RollingReviewOutcomeV1['decision']; readonly mode: 'manual' | 'protocol' | 'native'; readonly replaceLostReviewer?: boolean; readonly automaticPublication?: boolean; readonly conflictContinuation?: boolean; readonly conflictRepair?: boolean; readonly integratedCertificates?: boolean }
 function declineReviewApprovals(rollingCodex: RollingCodex): void {
   rollingCodex.on('serverRequest', message => rollingCodex.respondToServer(message.id, { decision: 'decline' }));
 }
@@ -81,6 +81,7 @@ function prepareCoordinatorIncrementCheckout(root: string,branch: string): void 
 
 export async function runRollingReviewScenario(t: TestContext, reviewScenario: ReviewScenario): Promise<void> {
   const reviewDecision = reviewScenario.decision;
+  let integratedRollingWorkerSubmissionV1: RollingWorkerSubmissionV1 | null = null;
   const repositoryRoot = path.resolve(__dirname, '../..');
   const pool: Pool = new Pool(databaseOptions(repositoryRoot));
   const projectId = crypto.randomUUID();
@@ -235,7 +236,7 @@ export async function runRollingReviewScenario(t: TestContext, reviewScenario: R
   // Explicit V2 adoption shares this isolated project pool with the retained V1 owner.
   const boundObligationDocumentV1: ObligationDocumentV1 = { ...obligationDocumentV1, scopeId: 'bound-fixture',
     obligations: reviewScenario.mode === 'native' ? obligationDocumentV1.obligations.map(item => item.id === firstRollingBinding.obligationId
-      ? { ...item, condition: 'The exported value in fixture/current.ts must remain exactly 1.',
+      ? { ...item, condition: reviewScenario.integratedCertificates ? 'The bound TypeScript fixture remains syntactically valid with source proof for the exact integrated revision.' : 'The exported value in fixture/current.ts must remain exactly 1.',
         criterion: 'Inspect the exact candidate diff and establish that the exported value remains 1.' } : item) : obligationDocumentV1.obligations };
   fs.writeFileSync(path.join(root, 'bound-obligations.json'), JSON.stringify(boundObligationDocumentV1));
   const boundRollingBindingsV1: RollingBindingsV1 = { schemaVersion: 1, bindings: [firstRollingBinding] };
@@ -616,6 +617,7 @@ export async function runRollingReviewScenario(t: TestContext, reviewScenario: R
     const refreshedRollingWorkerSubmissionV1: RollingWorkerSubmissionV1 = {...rollingWorkerSubmissionV1,proof:rollingWorkerSubmissionV1.proof.map((proof): RollingSubmissionProof => ({...proof,
       evidence:{...proof.evidence,startedAt:refreshedProofStartedAt,completedAt:refreshedProofCompletedAt}}))};
     assert.deepEqual(await rollingCampaignStore.recordIncrementProof('bound-fixture',rollingStoredReview.request.id,refreshedRollingWorkerSubmissionV1),refreshedRollingWorkerSubmissionV1);
+    integratedRollingWorkerSubmissionV1 = refreshedRollingWorkerSubmissionV1;
     assert.equal((await pool.query<Record<string,unknown>>('SELECT count(*)::integer AS count FROM ponytail_index.rolling_increment_proof_v1 WHERE project_id=$1',[projectId])).rows[0]?.count,2);
 
     const priorProofText = fs.readFileSync(path.join(workerRoot,'proof.txt'),'utf8');
@@ -702,9 +704,11 @@ export async function runRollingReviewScenario(t: TestContext, reviewScenario: R
   assert.ok(rollingStoredSubmission);
   execFileSync('git', ['-C', root, 'merge', '-q', '--ff-only', revision]);
   fs.copyFileSync(path.join(workerRoot, 'proof.txt'), path.join(root, 'proof.txt'));
+  const certificateRollingWorkerSubmissionV1 = reviewScenario.integratedCertificates ? integratedRollingWorkerSubmissionV1 : rollingStoredSubmission.submission;
+  assert.ok(certificateRollingWorkerSubmissionV1);
   const obligationCertificateSubmission: ObligationCertificateSubmission = { lease: rollingStoredSubmission.lease,
-    revision: rollingStoredSubmission.submission.revision, operations: rollingStoredSubmission.submission.proof.map(item => item.operation),
-    evidence: rollingStoredSubmission.submission.proof.map(item => item.evidence) };
+    revision: certificateRollingWorkerSubmissionV1.revision, operations: certificateRollingWorkerSubmissionV1.proof.map(item => item.operation),
+    evidence: certificateRollingWorkerSubmissionV1.proof.map(item => item.evidence) };
   const obligationCertificateBindingV1: ObligationCertificateBindingV1 = { schemaVersion: 1, certificateId: 'CERT-bound-candidate',
     lease: rollingStoredSubmission.lease, revision: rollingStoredSubmission.submission.revision,
     proof: [{ operation: 'check', certificateEvidenceIndex: 0, submissionEvidenceIndex: 0 }] };
@@ -727,6 +731,34 @@ export async function runRollingReviewScenario(t: TestContext, reviewScenario: R
     submission: { ...obligationCertificateSubmission, revision: 'f'.repeat(40) } };
   assert.throws(() => acceptBoundCheckpoint(boundObligationDocumentV1, candidateBoundObligationDocumentV1, root,
     submissionObligationBindingHistoryV1, [forgedObligationCertificateBindingRequest]), /retained submission/);
+  if (reviewScenario.integratedCertificates) {
+    const candidatePath = 'candidate-certificate.json';
+    fs.writeFileSync(path.join(root,candidatePath),JSON.stringify(candidateBoundObligationDocumentV1));
+    const previousDocumentText = fs.readFileSync(path.join(root,'bound-obligations.json'),'utf8');
+    await assert.rejects(rollingCampaignStore.acceptIncrementCertificates('bound-fixture',crypto.randomUUID(),candidatePath,['certificate-binding.json']),/published reviewed increment/);
+    await assert.rejects(rollingCampaignStore.acceptIncrementCertificates('bound-fixture',rollingStoredReview.request.id,'bound-obligations.json',['certificate-binding.json']),/separate from the accepted document/);
+    const forgedCandidate = {...candidateBoundObligationDocumentV1,checkpoints:[...boundObligationDocumentV1.checkpoints,{...boundObligationCheckpoint,assessor:'worker'}]};
+    fs.writeFileSync(path.join(root,candidatePath),JSON.stringify(forgedCandidate));
+    await assert.rejects(rollingCampaignStore.acceptIncrementCertificates('bound-fixture',rollingStoredReview.request.id,candidatePath,['certificate-binding.json']),/assessor.*authority/);
+    fs.writeFileSync(path.join(root,candidatePath),JSON.stringify(candidateBoundObligationDocumentV1));
+    const sourceText = fs.readFileSync(path.join(root,'fixture/current.ts'),'utf8');
+    fs.appendFileSync(path.join(root,'fixture/current.ts'),'// stale integrated input\n');
+    await assert.rejects(rollingCampaignStore.acceptIncrementCertificates('bound-fixture',rollingStoredReview.request.id,candidatePath,['certificate-binding.json']),/changed input/);
+    fs.writeFileSync(path.join(root,'fixture/current.ts'),sourceText);
+    assert.equal(fs.readFileSync(path.join(root,'bound-obligations.json'),'utf8'),previousDocumentText);
+    const previousGraphDigest = (await rollingCampaignStore.status('bound-fixture')).graphDigest;
+    const acceptedDocuments = await Promise.all(Array.from({length:4},()=>rollingCampaignStore.acceptIncrementCertificates('bound-fixture',rollingStoredReview.request.id,candidatePath,['certificate-binding.json'])));
+    for (const acceptedObligationDocumentV1 of acceptedDocuments) assert.deepEqual(acceptedObligationDocumentV1,candidateBoundObligationDocumentV1);
+    // Model a lost database update after the canonical file checkpoint landed.
+    await pool.query('UPDATE ponytail_index.rolling_campaign_v1 SET graph_digest=$3 WHERE project_id=$1 AND campaign_id=$2',[projectId,'bound-fixture',previousGraphDigest]);
+    assert.equal((await rollingCampaignStore.status('bound-fixture')).graphDigest,previousGraphDigest);
+    assert.deepEqual(await new RollingCampaignStore(pool,projectId).acceptIncrementCertificates('bound-fixture',rollingStoredReview.request.id,candidatePath,['certificate-binding.json']),candidateBoundObligationDocumentV1);
+    const acceptedRollingGraph = collectRollingGraph(root,'bound-obligations.json','bound-bindings.json','history.json');
+    assert.ok(acceptedRollingGraph.projection.satisfiedIds.includes(firstRollingBinding.obligationId));
+    assert.equal((await rollingCampaignStore.status('bound-fixture')).graphDigest,acceptedRollingGraph.digest);
+    assert.equal(acceptedRollingGraph.document.checkpoints.filter(checkpoint=>checkpoint.id === boundObligationCheckpoint.id).length,1);
+    return;
+  }
   const acceptedBoundObligationDocumentV1 = acceptBoundCheckpoint(boundObligationDocumentV1, candidateBoundObligationDocumentV1, root,
     submissionObligationBindingHistoryV1, [obligationCertificateBindingRequest]);
   assert.deepEqual(acceptedBoundObligationDocumentV1.obligations, boundObligationDocumentV1.obligations);
@@ -1500,3 +1532,7 @@ test('real PostgreSQL routes substantive integration conflicts to retained worke
 // Traceability: verifies REQ-ROLLING-PUBLICATION
 test('substantive integration repair retains worker and reviewer through fresh proof and publication',
  t=>runRollingWorkerScenario(t,'protocol','collection',false,true));
+
+// Traceability: verifies REQ-ROLLING-GRAPH
+test('integrated certificate assessment uses retained published proof and serializes accepted record publication',
+ t=>runRollingReviewScenario(t,{decision:'accepted',mode:'manual',integratedCertificates:true}));
