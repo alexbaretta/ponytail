@@ -5310,6 +5310,81 @@
       },
       "reason": "Discharge existing component outcomes before adding new scope, preserving all unresolved native/application and completeness responsibilities.",
       "assessor": "coordinator"
+    },
+    {
+      "id": "CHECKPOINT-16",
+      "predecessorId": "CHECKPOINT-15",
+      "baselineId": "BASELINE-8",
+      "kind": "disturbance",
+      "selectedIds": [],
+      "registeredIds": [],
+      "certificateIds": [],
+      "invalidatedIds": [
+        "CERT-5"
+      ],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": null,
+      "reason": "The approved completion-priority policy amendment changed twelve conservative CERT-5 inputs; record loss of freshness without rewriting history or hiding unresolved gates.",
+      "assessor": "coordinator"
+    },
+    {
+      "id": "CHECKPOINT-17",
+      "predecessorId": "CHECKPOINT-16",
+      "baselineId": "BASELINE-8",
+      "kind": "neutral",
+      "selectedIds": [
+        "OBL-73",
+        "OBL-74",
+        "OBL-75",
+        "OBL-76"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "CERT-8"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": {
+        "obligationId": "OBL-76",
+        "operations": [
+          "test",
+          "check",
+          "assess"
+        ],
+        "deliverable": "Renew existing started migration outcomes after policy input changes; stop at no-edit reassessment on current inputs."
+      },
+      "reason": "Renew existing started migration outcomes after policy input changes; stop at no-edit reassessment on current inputs.",
+      "assessor": "coordinator"
     }
   ]
 }
