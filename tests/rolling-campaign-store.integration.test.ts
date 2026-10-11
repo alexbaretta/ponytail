@@ -10,14 +10,14 @@ import { execFileSync } from 'node:child_process';
 import { Pool } from 'pg';
 import { databaseOptions } from '../src/project-index-database.js';
 import { collectRollingGraph, type RollingProjectConfigV1, type RollingBindingsV1, type RollingBinding, type RollingGraph } from '../src/rolling-campaign.js';
-import { RollingCampaignStore, type RollingCampaignRegistration, type RollingAllocationResult, type RollingStoredAssignment, type RollingCampaignStatus } from '../src/rolling-campaign-store.js';
+import { RollingCampaignStore, type RollingCampaignRegistration, type RollingAllocationResult, type RollingWorkerDispatchAttached, type RollingStoredAssignment, type RollingCampaignStatus } from '../src/rolling-campaign-store.js';
 import { inputDigest, parseObligationDocument, type ObligationDocumentV1, type ObligationBaseline, type Obligation, type ObligationCertificate, type ObligationCheckpoint } from '../skills/plan-execution/scripts/obligations.js';
 import type { ObligationBindingHistoryV1, ObligationBindingRevisionV1 } from '../skills/plan-execution/scripts/obligation-binding-history.js';
 import type { ObligationEvidence } from '../skills/plan-execution/scripts/obligations.js';
 import type { RollingWorkerSubmissionV1 } from '../src/rolling-worker-submission.js';
 import { dispatchRollingReview, collectRollingReview, type RollingReviewOutcomeV1 } from '../src/rolling-review.js';
 import { provisionRollingWorker, attachRollingWorker, dispatchRollingWorker, buildRollingWorkerInstructions, type RollingWorkerInitialization } from '../src/rolling-worker.js';
-import { RollingCodex, type RollingNativeThread } from '../src/rolling-codex.js';
+import { RollingCodex, RollingObservationTimeout, type RollingNativeTurn, type RollingNativeThread } from '../src/rolling-codex.js';
 import { acceptBoundCheckpoint, type ObligationCertificateBindingV1, type ObligationCertificateSubmission,
   type ObligationCertificateBindingRequest } from '../skills/plan-execution/scripts/obligation-certificate-bindings.js';
 
@@ -496,22 +496,50 @@ for (const reviewScenario of reviewScenarios) {
 
 // Traceability: verifies REQ-ROLLING-WORKERS
 // Traceability: verifies REQ-ROLLING-STATE
-export async function runRollingWorkerProvisionScenario(t: TestContext, mode: 'protocol' | 'native'): Promise<void> {
+function connectRollingWorkerCodex(): Promise<RollingCodex> {
+  // Node's test-runner metadata belongs to this harness, not the native worker.
+  return RollingCodex.connect({executable:'env',argv:['-u','NODE_TEST_CONTEXT','codex','app-server','--listen','stdio://']});
+}
+
+async function observeRollingWorkerTurn(t: TestContext, rollingCodex: RollingCodex, threadId: string,
+  turnId: string): Promise<RollingNativeTurn> {
+  for (;;) {
+    try {return await rollingCodex.waitForTurn(threadId,turnId);}
+    catch (cause) {
+      if (!(cause instanceof RollingObservationTimeout)) throw cause;
+      const rollingNativeTurn = await rollingCodex.readTurn(threadId,turnId);
+      if (rollingNativeTurn.status !== 'inProgress') return rollingNativeTurn;
+      t.diagnostic(`worker turn remains active: thread=${threadId}; turn=${turnId}; continue observing the same handle`);
+    }
+  }
+}
+
+export async function runRollingWorkerScenario(t: TestContext, mode: 'protocol' | 'native', operation: 'attachment' | 'instructions'): Promise<void> {
   const repositoryRoot = path.resolve(__dirname, '../..');
   const pool = new Pool(databaseOptions(repositoryRoot));
   const projectId = crypto.randomUUID();
   const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'rolling-worker-store-')));
   const rollingCampaignStore = new RollingCampaignStore(pool, projectId);
-  let rollingCodex = mode === 'native' ? await RollingCodex.connect()
+  let rollingCodex = mode === 'native' ? await connectRollingWorkerCodex()
     : new RollingCodex({executable:process.execPath,argv:[path.join(__dirname,'fixtures/rolling-codex-server.js')]});
   let rollingWorkerInitialization: RollingWorkerInitialization | null = null;
   let provisioningStarted = false;
+  let instructionDispatchStarted = false;
+  let rollingWorkerDispatchAttached: RollingWorkerDispatchAttached | null = null;
   let cleanupSafe = false;
   t.after(async () => {
     try {
       if (mode === 'native' && provisioningStarted) {
         assert.ok(rollingWorkerInitialization, 'unknown worker creation retains its checkout and database reservation');
         const {rollingWorkerCreationV1,rollingTurnStarted} = rollingWorkerInitialization;
+        if (instructionDispatchStarted) {
+          assert.ok(rollingWorkerDispatchAttached,'unknown instruction dispatch retains its checkout and worker');
+          const instructionTurn = await rollingCodex.readTurn(rollingWorkerDispatchAttached.threadId,rollingWorkerDispatchAttached.turnId);
+          if (instructionTurn.status === 'inProgress') {
+            await rollingCodex.interruptTurn(rollingWorkerDispatchAttached.threadId,rollingWorkerDispatchAttached.turnId);
+            await rollingCodex.waitForTurn(rollingWorkerDispatchAttached.threadId,rollingWorkerDispatchAttached.turnId);
+          }
+        }
         const rollingNativeTurn = await rollingCodex.readTurn(rollingWorkerCreationV1.threadId,rollingTurnStarted.turn.id);
         if (rollingNativeTurn.status === 'inProgress') {
           await rollingCodex.interruptTurn(rollingWorkerCreationV1.threadId,rollingTurnStarted.turn.id);
@@ -527,31 +555,51 @@ export async function runRollingWorkerProvisionScenario(t: TestContext, mode: 'p
   execFileSync('git',['init','-q',root]);
   fs.mkdirSync(path.join(root,'.agents/config/project'),{recursive:true});
   const rollingProjectConfigV1: RollingProjectConfigV1 = {schemaVersion:1,mainline:{remote:'origin',branch:'main'},
-    managedWorktrees:{directory:'managed',anchor:'main'},maxActiveWorkers:1,publicationSize:1,setupCommands:[],qa:{focused:[],publication:[['node','--test']]}};
+    managedWorktrees:{directory:'managed',anchor:'main'},maxActiveWorkers:1,publicationSize:1,setupCommands:[],qa:{focused:operation === 'instructions' ? [['node','--test','fixture.test.ts']] : [],publication:[['node','--test']]}};
   fs.writeFileSync(path.join(root,'.agents/config/project/rolling-campaigns.json'),JSON.stringify(rollingProjectConfigV1));
-  fs.writeFileSync(path.join(root,'.gitignore'),'/managed/\n/session_id.txt\n');
+  fs.writeFileSync(path.join(root,'.gitignore'),'/managed/\n/session_id.txt\n/origin.git/\n');
   const sourceObligationDocumentV1 = parseObligationDocument(fs.readFileSync(path.join(repositoryRoot,
     'pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/obligations.json'),'utf8'));
   const originalObligationBaseline = sourceObligationDocumentV1.baselines[0];assert.ok(originalObligationBaseline);
+  const fixtureRequirementText = '# Worker responsibility fixture\n\nInspect the fixture value and report the assigned requirement, acceptance, Arc/step, implementation, unit/integration, lease, path and QA references. Preserve the source files.\n';
   const obligationBaseline: ObligationBaseline = {...originalObligationBaseline,
-    requirements:originalObligationBaseline.requirements.map(item => ({...item,digest:inputDigest(repositoryRoot,item.path)}))};
+    requirements:originalObligationBaseline.requirements.map(item => ({...item,digest:operation === 'instructions'
+      ? crypto.createHash('sha256').update(fixtureRequirementText).digest('hex') : inputDigest(repositoryRoot,item.path)}))};
   const obligationDocumentV1: ObligationDocumentV1 = {...sourceObligationDocumentV1,scopeId:'worker-fixture',baselines:[obligationBaseline],
-    obligations:sourceObligationDocumentV1.obligations.filter(item => obligationBaseline.obligationIds.includes(item.id)),certificates:[],checkpoints:[]};
+    obligations:sourceObligationDocumentV1.obligations.filter(item => obligationBaseline.obligationIds.includes(item.id)).map((item,index) =>
+      operation === 'instructions' && index === 1 ? {...item,
+        condition:'Inspect fixture.ts and establish that its exported value remains 1. Run the configured focused fixture QA. In the final report identify every assigned requirement ID, acceptance ID, Arc/step IDs, implementation ID, unit/integration IDs and selections, permitted paths, lease generation and target. Do not modify files.',
+        criterion:'Read-only fixture inspection and passing focused QA with the exact worker responsibility references in the final report.'} : item),
+    certificates:[],checkpoints:[]};
   fs.mkdirSync(path.join(root,'pm/requirements'),{recursive:true});
-  fs.copyFileSync(path.join(repositoryRoot,'pm/requirements/rolling-campaigns.md'),path.join(root,'pm/requirements/rolling-campaigns.md'));
+  if (operation === 'instructions') {
+    fs.writeFileSync(path.join(root,'pm/requirements/rolling-campaigns.md'),fixtureRequirementText);
+    fs.writeFileSync(path.join(root,'fixture.ts'),'export const value: number = 1;\n');
+    fs.writeFileSync(path.join(root,'fixture.test.ts'),"import test from 'node:test';\nimport assert from 'node:assert/strict';\nimport { value } from './fixture.ts';\ntest('fixture unit', () => assert.equal(value, 1));\ntest('fixture integration', () => assert.equal(Number.isSafeInteger(value), true));\n");
+  } else fs.copyFileSync(path.join(repositoryRoot,'pm/requirements/rolling-campaigns.md'),path.join(root,'pm/requirements/rolling-campaigns.md'));
   fs.writeFileSync(path.join(root,'obligations.json'),JSON.stringify(obligationDocumentV1));
   const obligation = obligationDocumentV1.obligations[1];assert.ok(obligation);
-  const rollingBinding: RollingBinding = {obligationId:obligation.id,implementationIds:[],sourcePaths:[],acceptances:[],unitTests:[],integrationTests:[],exclusiveResources:[]};
+  const rollingBinding: RollingBinding = {obligationId:obligation.id,
+    implementationIds:operation === 'instructions' ? ['IMPL-FIXTURE'] : [],sourcePaths:operation === 'instructions' ? ['fixture.ts'] : [],
+    acceptances:operation === 'instructions' ? [{id:'ACCEPT-FIXTURE',arcId:'ARC-FIXTURE',stepId:'STEP-FIXTURE'}] : [],
+    unitTests:operation === 'instructions' ? [{id:'UNIT-FIXTURE',path:'fixture.test.ts',selection:['fixture unit']}] : [],
+    integrationTests:operation === 'instructions' ? [{id:'INTEGRATION-FIXTURE',path:'fixture.test.ts',selection:['fixture integration']}] : [],exclusiveResources:[]};
   const rollingBindingsV1: RollingBindingsV1 = {schemaVersion:1,bindings:[rollingBinding]};
   fs.writeFileSync(path.join(root,'bindings.json'),JSON.stringify(rollingBindingsV1));
   const obligationBindingRevisionV1: ObligationBindingRevisionV1 = {id:'BIND-1',obligationId:obligation.id,predecessorId:null,
     baselineId:obligationBaseline.id,assessor:'coordinator',authority:obligationBaseline.authority.references,reason:'Isolated worker attachment',dependsOn:[],
-    execution:{sprintId:null,taskletIds:[],plannedPaths:['fixture.ts'],operations:['edit','test'],selection:['fixture'],target:{identity:'local',profile:'fixture'}}};
+    execution:{sprintId:null,taskletIds:[],plannedPaths:operation === 'instructions' ? ['fixture.ts','fixture.test.ts','pm/requirements/rolling-campaigns.md'] : ['fixture.ts'],
+      operations:operation === 'instructions' ? ['inspect','test'] : ['edit','test'],selection:operation === 'instructions' ? ['fixture unit','fixture integration'] : ['fixture'],target:{identity:'local',profile:'fixture'}}};
   const obligationBindingHistoryV1: ObligationBindingHistoryV1 = {schemaVersion:1,scopeId:'worker-fixture',revisions:[obligationBindingRevisionV1]};
   fs.writeFileSync(path.join(root,'history.json'),JSON.stringify(obligationBindingHistoryV1));
   execFileSync('git',['-C',root,'add','.']);
   execFileSync('git',['-C',root,'-c','user.name=Fixture','-c','user.email=fixture@example.test','commit','-q','-m','worker base']);
   execFileSync('git',['-C',root,'branch','campaign/worker-fixture']);
+  if (operation === 'instructions' && mode === 'native') {
+    const origin = path.join(root,'origin.git');
+    execFileSync('git',['clone','--bare','-q',root,origin]);
+    execFileSync('git',['-C',root,'remote','add','origin',origin]);
+  }
   const rollingGraph = collectRollingGraph(root,'obligations.json','bindings.json','history.json');
   await pool.query('INSERT INTO ponytail_index.project_v1(project_id,project_name) VALUES($1,$2)',[projectId,`worker-${projectId}`]);
   await rollingCampaignStore.registerCampaign({id:'worker-fixture',coordinatorRoot:root,documentPath:'obligations.json',bindingsPath:'bindings.json',
@@ -582,15 +630,28 @@ export async function runRollingWorkerProvisionScenario(t: TestContext, mode: 'p
   assert.deepEqual(await rollingCampaignStore.completeWorkerCreation('worker-fixture',rollingAllocationResult.actionId,generation,
     rollingWorkerInitialization.rollingWorkerCreationV1),rollingSessionAttachment);
   assert.equal(execFileSync('git',['-C',rollingAllocationResult.worktree.rootPath,'status','--porcelain'],{encoding:'utf8'}),'');
-  if (mode === 'protocol') {
+  if (operation === 'instructions') {
     const rollingWorkerContext = await rollingCampaignStore.workerContext('worker-fixture',rollingAllocationResult.assignment.id,generation);
     assert.equal(rollingWorkerContext.obligation.id,obligation.id);
     assert.deepEqual(rollingWorkerContext.lease,rollingAllocationResult.assignment.lease);
     assert.deepEqual(rollingWorkerContext.qa,rollingProjectConfigV1.qa);
-    const rollingWorkerDispatchAttached = await dispatchRollingWorker(rollingCampaignStore,rollingCodex,'worker-fixture',rollingAllocationResult.assignment.id,generation);
-    const rollingNativeTurn = await rollingCodex.waitForTurn(rollingWorkerDispatchAttached.threadId,rollingWorkerDispatchAttached.turnId);
+    instructionDispatchStarted = true;
+    rollingWorkerDispatchAttached = await dispatchRollingWorker(rollingCampaignStore,rollingCodex,'worker-fixture',rollingAllocationResult.assignment.id,generation);
+    assert.equal(rollingWorkerDispatchAttached.threadId,rollingWorkerInitialization.rollingWorkerCreationV1.threadId);
+    const rollingNativeTurn = await observeRollingWorkerTurn(t,rollingCodex,rollingWorkerDispatchAttached.threadId,rollingWorkerDispatchAttached.turnId);
     assert.equal(rollingNativeTurn.status,'completed');
-    assert.equal(rollingNativeTurn.items.at(-1)?.text,`Worker instructions digest: ${crypto.createHash('sha256').update(buildRollingWorkerInstructions(rollingWorkerContext)).digest('hex')}`);
+    assert.equal(execFileSync('git',['-C',rollingAllocationResult.worktree.rootPath,'status','--porcelain'],{encoding:'utf8'}),'');
+    assert.equal(execFileSync('git',['-C',rollingAllocationResult.worktree.rootPath,'rev-parse','HEAD'],{encoding:'utf8'}).trim(),rollingGraph.head);
+    const finalText = rollingNativeTurn.items.filter(item => item.type === 'agentMessage').at(-1)?.text;
+    assert.ok(finalText);
+    if (mode === 'protocol') assert.equal(finalText,`Worker instructions digest: ${crypto.createHash('sha256').update(buildRollingWorkerInstructions(rollingWorkerContext)).digest('hex')}`);
+    else {
+      for (const expected of [...obligation.requirementIds,'IMPL-FIXTURE','ACCEPT-FIXTURE','ARC-FIXTURE','STEP-FIXTURE','UNIT-FIXTURE',
+        'INTEGRATION-FIXTURE','fixture unit','fixture integration',...rollingWorkerContext.lease.binding.execution.plannedPaths,generation]) assert.ok(finalText.includes(expected),finalText);
+      const target = rollingWorkerContext.lease.binding.execution.target;assert.ok(target);
+      assert.ok(finalText.includes(target.identity) && finalText.includes(target.profile),finalText);
+      t.diagnostic(`worker instruction turn=${rollingWorkerDispatchAttached.turnId}; thread=${rollingWorkerDispatchAttached.threadId}; final=${finalText}`);
+    }
     assert.deepEqual(await new RollingCampaignStore(pool,projectId).workerDispatch('worker-fixture',rollingAllocationResult.assignment.id,generation),rollingWorkerDispatchAttached);
     // Simulate a lost turn-attachment receipt: native activity is known to this
     // fixture but its durable dispatch remains STARTED and cannot be abandoned.
@@ -609,7 +670,7 @@ export async function runRollingWorkerProvisionScenario(t: TestContext, mode: 'p
   if (mode === 'native') {
     const {rollingWorkerCreationV1,rollingTurnStarted} = rollingWorkerInitialization;
     await rollingCodex.close();
-    rollingCodex = await RollingCodex.connect();
+    rollingCodex = await connectRollingWorkerCodex();
     rollingCodex.on('serverRequest',message => rollingCodex.respondToServer(message.id,{decision:'decline'}));
     const rollingNativeThread = await rollingCodex.resumeThread(rollingWorkerCreationV1.threadId,rollingWorkerCreationV1.rootPath);
     assert.equal(rollingNativeThread.thread.sessionId,rollingSessionAttachment.sessionId);
@@ -617,6 +678,12 @@ export async function runRollingWorkerProvisionScenario(t: TestContext, mode: 'p
     assert.equal((await rollingCodex.readTurn(rollingNativeThread.thread.id,rollingTurnStarted.turn.id)).status,'completed');
     const restartedRollingCampaignStore = new RollingCampaignStore(pool,projectId);
     assert.equal((await restartedRollingCampaignStore.status('worker-fixture')).assignments[0]?.sessionId,rollingNativeThread.thread.sessionId);
+    if (rollingWorkerDispatchAttached) {
+      assert.deepEqual(await restartedRollingCampaignStore.workerDispatch('worker-fixture',rollingAllocationResult.assignment.id,generation),rollingWorkerDispatchAttached);
+      const recoveredInstructionTurn = await rollingCodex.readTurn(rollingNativeThread.thread.id,rollingWorkerDispatchAttached.turnId);
+      assert.equal(recoveredInstructionTurn.status,'completed');
+      assert.equal(recoveredInstructionTurn.id,rollingWorkerDispatchAttached.turnId);
+    }
     t.diagnostic(`worker native thread=${rollingNativeThread.thread.id}; session=${rollingNativeThread.thread.sessionId}; checkout=${rollingNativeThread.cwd}; attachment recovered after restart; model=${rollingNativeThread.model}`);
   }
 }
@@ -624,4 +691,4 @@ export async function runRollingWorkerProvisionScenario(t: TestContext, mode: 'p
 // Traceability: verifies REQ-ROLLING-WORKERS
 // Traceability: verifies REQ-ROLLING-STATE
 test('worker provisioning fences creation and atomically attaches the native identity and ignored marker',
- t => runRollingWorkerProvisionScenario(t, 'protocol'));
+ t => runRollingWorkerScenario(t, 'protocol', 'instructions'));

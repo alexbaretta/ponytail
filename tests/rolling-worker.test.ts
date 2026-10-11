@@ -79,6 +79,8 @@ test('worker instructions retain exact obligation, requirement, acceptance step,
  assert.deepEqual(received,rollingWorkerContext);
  assert.ok(instructions.includes('publication QA belongs to the coordinator publication gate'));
  assert.ok(instructions.includes('coordinator graph is authoritative'));
+ assert.ok(instructions.includes('For a no-edit obligation, return fresh inspection and proof'));
+ assert.ok(instructions.includes('When submitting code changes, fetch the configured campaign branch'));
  assert.throws(() => buildRollingWorkerInstructions({...rollingWorkerContext,requirements:[]}),/requirement references/);
  assert.throws(() => buildRollingWorkerInstructions({...rollingWorkerContext,binding:{...rollingWorkerContext.binding,obligationId:'OBL-2'}}),/frozen obligation/);
 });

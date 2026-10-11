@@ -85,10 +85,10 @@ function buildRollingWorkerInstructions(rollingWorkerContext) {
         + 'The coordinator graph is authoritative; the frozen lease below owns current prerequisites, permitted paths, operations, proof selection and target. '
         + 'The obligation owns the canonical condition and discharge criterion. Its historical execution field does not override this frozen lease. '
         + 'Use the exact requirement references, acceptance arc and step references, implementation IDs, source paths, unit and integration selections below. '
-        + 'Implement only this obligation within the lease. Run configured focused QA and the referenced focused arcs; publication QA belongs to the coordinator publication gate. '
+        + 'Establish only this obligation within the lease. For a no-edit obligation, return fresh inspection and proof without inventing a code change or Git rebase. Run configured focused QA and the referenced focused arcs; publication QA belongs to the coordinator publication gate. '
         + 'Preserve static typing and project build-impact rules. Report newly discovered prerequisites to the coordinator; do not silently change the authoritative graph. '
         + 'If blocked, stop activity and report the blocker while retaining the checkout. Delivery is proposed discharge, not acceptance. '
-        + 'Before submission, fetch the configured campaign branch and perform a full semantic rebase commit by commit, refresh affected evidence, retain the exact candidate SHA and base, and stop activity. '
+        + 'When submitting code changes, fetch the configured campaign branch and perform a full semantic rebase commit by commit, refresh affected evidence, retain the exact candidate SHA and base, and stop activity. '
         + 'Return the candidate and evidence to the coordinator for adversarial review; never publish to mainline yourself.\n'
         + `Worker responsibility: ${JSON.stringify(rollingWorkerContext)}`;
 }

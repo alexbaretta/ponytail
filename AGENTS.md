@@ -117,7 +117,10 @@ services. `PROJECT_STRUCTURE.md` is authoritative for that boundary.
   isolated project records in the existing local PostgreSQL database. Includes
   exact-candidate adversarial rejection and persisted decision recovery after
   App Server restart, plus allocation-to-native-worker attachment and same-session
-  recovery. Ordinary focused tests use the controlled protocol fixture.
+  recovery and exact obligation/traceability/lease/QA instruction delivery to the
+  original session. The native worker harness removes inherited Node test-runner
+  metadata; model and permissions remain configured by the host. Ordinary focused
+  tests use the controlled protocol fixture.
 - Rolling worker attachment focused proof: `node --test dist/tests/rolling-worker.test.js
   dist/tests/rolling-campaign-store.integration.test.js`; actual native provisioning
   uses the explicit live native acceptance command above.

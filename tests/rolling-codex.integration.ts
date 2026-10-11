@@ -11,7 +11,7 @@ import test from 'node:test';
 import crypto from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { RollingCodex } from '../src/rolling-codex.js';
-import { runRollingReviewScenario, runRollingWorkerProvisionScenario } from './rolling-campaign-store.integration.test.js';
+import { runRollingReviewScenario, runRollingWorkerScenario } from './rolling-campaign-store.integration.test.js';
 
 function declineApprovals(rollingCodex: RollingCodex): void {
   rollingCodex.on('serverRequest', message => rollingCodex.respondToServer(message.id, { decision: 'decline' }));
@@ -88,4 +88,8 @@ test('native App Server starts and resumes the same session in the designated ex
 // Traceability: verifies REQ-ROLLING-WORKERS
 // Traceability: verifies REQ-ROLLING-STATE
 test('live worker provisioning binds the reserved checkout and persists its actual native session after restart',
- t => runRollingWorkerProvisionScenario(t, 'native'));
+ t => runRollingWorkerScenario(t, 'native', 'attachment'));
+
+// Traceability: verifies REQ-ROLLING-WORKERS
+test('live attached worker receives exact obligation, traceability, frozen lease and QA instructions',
+ t => runRollingWorkerScenario(t, 'native', 'instructions'));
