@@ -12315,6 +12315,533 @@
       "preparation": null,
       "assessor": "coordinator",
       "reason": "Activate the stakeholder correction limiting prospective language mandates to our Codex plan-execution code and supporting tests/tooling. Retain every registered atomic outcome and completed translation. Preserve all historical conditions, baselines and certificates; renew affected evidence before new discharge. This scope correction adds no completion."
+    },
+    {
+      "id": "CHECKPOINT-109",
+      "predecessorId": "CHECKPOINT-108",
+      "baselineId": "BASELINE-15",
+      "kind": "neutral",
+      "selectedIds": [
+        "OBL-107",
+        "OBL-22",
+        "OBL-23",
+        "OBL-24",
+        "OBL-25",
+        "OBL-26",
+        "OBL-27",
+        "OBL-28",
+        "OBL-29",
+        "OBL-30",
+        "OBL-31",
+        "OBL-32",
+        "OBL-33",
+        "OBL-34",
+        "OBL-35",
+        "OBL-36",
+        "OBL-37",
+        "OBL-38",
+        "OBL-39",
+        "OBL-40",
+        "OBL-41",
+        "OBL-42",
+        "OBL-43",
+        "OBL-70",
+        "OBL-71",
+        "OBL-73",
+        "OBL-74",
+        "OBL-75",
+        "OBL-76",
+        "OBL-101"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "CERT-73"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": {
+        "obligationId": "OBL-107",
+        "operations": [
+          "assess"
+        ],
+        "deliverable": "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/worker-submission-clean-renewal.md"
+      },
+      "assessor": "coordinator",
+      "reason": "Complete current-prerequisite-ordered renewal before discharging started submission work."
+    },
+    {
+      "id": "CHECKPOINT-110",
+      "predecessorId": "CHECKPOINT-109",
+      "baselineId": "BASELINE-15",
+      "kind": "neutral",
+      "selectedIds": [
+        "OBL-108"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "CERT-74"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": {
+        "obligationId": "OBL-108",
+        "operations": [
+          "assess"
+        ],
+        "deliverable": "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/worker-submission-clean-renewal.md"
+      },
+      "assessor": "coordinator",
+      "reason": "Complete current-prerequisite-ordered renewal before discharging started submission work."
+    },
+    {
+      "id": "CHECKPOINT-111",
+      "predecessorId": "CHECKPOINT-110",
+      "baselineId": "BASELINE-15",
+      "kind": "neutral",
+      "selectedIds": [
+        "OBL-109"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "CERT-75"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": {
+        "obligationId": "OBL-109",
+        "operations": [
+          "assess"
+        ],
+        "deliverable": "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/worker-submission-clean-renewal.md"
+      },
+      "assessor": "coordinator",
+      "reason": "Complete current-prerequisite-ordered renewal before discharging started submission work."
+    },
+    {
+      "id": "CHECKPOINT-112",
+      "predecessorId": "CHECKPOINT-111",
+      "baselineId": "BASELINE-15",
+      "kind": "neutral",
+      "selectedIds": [
+        "OBL-110"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "CERT-76"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": {
+        "obligationId": "OBL-110",
+        "operations": [
+          "assess"
+        ],
+        "deliverable": "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/worker-submission-clean-renewal.md"
+      },
+      "assessor": "coordinator",
+      "reason": "Complete current-prerequisite-ordered renewal before discharging started submission work."
+    },
+    {
+      "id": "CHECKPOINT-113",
+      "predecessorId": "CHECKPOINT-112",
+      "baselineId": "BASELINE-15",
+      "kind": "neutral",
+      "selectedIds": [
+        "OBL-111"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "CERT-77"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": {
+        "obligationId": "OBL-111",
+        "operations": [
+          "assess"
+        ],
+        "deliverable": "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/worker-submission-clean-renewal.md"
+      },
+      "assessor": "coordinator",
+      "reason": "Complete current-prerequisite-ordered renewal before discharging started submission work."
+    },
+    {
+      "id": "CHECKPOINT-114",
+      "predecessorId": "CHECKPOINT-113",
+      "baselineId": "BASELINE-15",
+      "kind": "neutral",
+      "selectedIds": [
+        "OBL-112"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "CERT-78"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": {
+        "obligationId": "OBL-112",
+        "operations": [
+          "assess"
+        ],
+        "deliverable": "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/worker-submission-clean-renewal.md"
+      },
+      "assessor": "coordinator",
+      "reason": "Complete current-prerequisite-ordered renewal before discharging started submission work."
+    },
+    {
+      "id": "CHECKPOINT-115",
+      "predecessorId": "CHECKPOINT-114",
+      "baselineId": "BASELINE-15",
+      "kind": "neutral",
+      "selectedIds": [
+        "OBL-83",
+        "OBL-84",
+        "OBL-85",
+        "OBL-86",
+        "OBL-87",
+        "OBL-88",
+        "OBL-89",
+        "OBL-90",
+        "OBL-91",
+        "OBL-92",
+        "OBL-93",
+        "OBL-94",
+        "OBL-95",
+        "OBL-96",
+        "OBL-97",
+        "OBL-98",
+        "OBL-99",
+        "OBL-100",
+        "OBL-102",
+        "OBL-103",
+        "OBL-104",
+        "OBL-105",
+        "OBL-106",
+        "OBL-77",
+        "OBL-78",
+        "OBL-79",
+        "OBL-80",
+        "OBL-81",
+        "OBL-82",
+        "OBL-50",
+        "OBL-44"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "CERT-79"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": {
+        "obligationId": "OBL-83",
+        "operations": [
+          "inspect"
+        ],
+        "deliverable": "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/worker-submission-clean-renewal.md"
+      },
+      "assessor": "coordinator",
+      "reason": "Complete current-prerequisite-ordered renewal before discharging started submission work."
+    },
+    {
+      "id": "CHECKPOINT-116",
+      "predecessorId": "CHECKPOINT-115",
+      "baselineId": "BASELINE-15",
+      "kind": "neutral",
+      "selectedIds": [
+        "OBL-45"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "CERT-80"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": {
+        "obligationId": "OBL-45",
+        "operations": [
+          "inspect"
+        ],
+        "deliverable": "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/worker-submission-clean-renewal.md"
+      },
+      "assessor": "coordinator",
+      "reason": "Complete current-prerequisite-ordered renewal before discharging started submission work."
+    },
+    {
+      "id": "CHECKPOINT-117",
+      "predecessorId": "CHECKPOINT-116",
+      "baselineId": "BASELINE-15",
+      "kind": "neutral",
+      "selectedIds": [
+        "OBL-46"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "CERT-81"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": {
+        "obligationId": "OBL-46",
+        "operations": [
+          "inspect"
+        ],
+        "deliverable": "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/worker-submission-clean-renewal.md"
+      },
+      "assessor": "coordinator",
+      "reason": "Complete current-prerequisite-ordered renewal before discharging started submission work."
+    },
+    {
+      "id": "CHECKPOINT-118",
+      "predecessorId": "CHECKPOINT-117",
+      "baselineId": "BASELINE-15",
+      "kind": "neutral",
+      "selectedIds": [
+        "OBL-47"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "CERT-82"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": {
+        "obligationId": "OBL-47",
+        "operations": [
+          "inspect"
+        ],
+        "deliverable": "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/worker-submission-clean-renewal.md"
+      },
+      "assessor": "coordinator",
+      "reason": "Complete current-prerequisite-ordered renewal before discharging started submission work."
+    },
+    {
+      "id": "CHECKPOINT-119",
+      "predecessorId": "CHECKPOINT-118",
+      "baselineId": "BASELINE-15",
+      "kind": "neutral",
+      "selectedIds": [
+        "OBL-48"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "CERT-83"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": {
+        "obligationId": "OBL-48",
+        "operations": [
+          "inspect"
+        ],
+        "deliverable": "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/worker-submission-clean-renewal.md"
+      },
+      "assessor": "coordinator",
+      "reason": "Complete current-prerequisite-ordered renewal before discharging started submission work."
+    },
+    {
+      "id": "CHECKPOINT-120",
+      "predecessorId": "CHECKPOINT-119",
+      "baselineId": "BASELINE-15",
+      "kind": "neutral",
+      "selectedIds": [
+        "OBL-49"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "CERT-84"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": {
+        "obligationId": "OBL-49",
+        "operations": [
+          "inspect"
+        ],
+        "deliverable": "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/worker-submission-clean-renewal.md"
+      },
+      "assessor": "coordinator",
+      "reason": "Discharge the started exact worker-submission obligation after prior proof renewal."
     }
   ]
 }

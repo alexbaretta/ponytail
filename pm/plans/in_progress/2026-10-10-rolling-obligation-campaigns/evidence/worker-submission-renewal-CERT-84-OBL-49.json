@@ -1,0 +1,82 @@
+{
+  "schemaVersion": 1,
+  "certificateId": "CERT-84",
+  "lease": {
+    "schemaVersion": 1,
+    "scopeId": "2026-10-10-rolling-obligation-campaigns",
+    "baselineId": "BASELINE-15",
+    "graphDigest": "a960e6c7e0affd4a840b9a4dbe94b5ff8ec762c073bc181b3206d9c3de7faeae",
+    "generation": "standalone-source-assessment-CERT-84-OBL-49",
+    "assessor": "coordinator",
+    "authority": [
+      "user-goal-2026-10-10-rolling-campaigns",
+      "user-goal-2026-10-10-static-language-existing-tsts",
+      "user-2026-10-10-normative-atomic-obligations",
+      "user-2026-10-11-language-scope-our-code-preserve-translations"
+    ],
+    "binding": {
+      "obligationId": "OBL-49",
+      "revisionId": "BIND-46",
+      "dependsOn": [
+        "OBL-48"
+      ],
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "src/rolling-worker.ts",
+          "src/rolling-worker.js",
+          "src/rolling-codex.ts",
+          "src/rolling-codex.js",
+          "tests/rolling-codex.test.ts",
+          "src/rolling-worktrees.ts",
+          "src/rolling-worktrees.js",
+          "src/rolling-worker-submission.ts",
+          "src/rolling-worker-submission.js",
+          "src/rolling-campaign-store.ts",
+          "src/rolling-campaign-store.js",
+          "tests/rolling-worker.test.ts",
+          "tests/rolling-worker-submission.test.ts",
+          "tests/rolling-campaign-store.integration.test.ts",
+          "tests/rolling-codex.integration.ts",
+          "tests/fixtures/rolling-codex-server.ts",
+          "tests/fixtures/rolling-rebase-editor.ts",
+          "scripts/project-index.sql",
+          "scripts/build-runtime.ts",
+          "versioned-data-contracts.json",
+          "AGENTS.md",
+          ".agents/config/project/traceability.json",
+          "pm/requirements/traceability.generated.md"
+        ],
+        "operations": [
+          "inspect",
+          "edit",
+          "build",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "Worker submission Git Arc"
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "rolling-worker-submission-OBL-49"
+        }
+      }
+    }
+  },
+  "revision": "159be5cc426ae80770ad2ecfb522342497708b6d",
+  "proof": [
+    {
+      "operation": "test",
+      "certificateEvidenceIndex": 0,
+      "submissionEvidenceIndex": 0
+    },
+    {
+      "operation": "test",
+      "certificateEvidenceIndex": 1,
+      "submissionEvidenceIndex": 1
+    }
+  ]
+}

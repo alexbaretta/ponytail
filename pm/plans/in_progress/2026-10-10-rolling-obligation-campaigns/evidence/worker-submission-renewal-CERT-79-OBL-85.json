@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "certificateId": "CERT-79",
+  "lease": {
+    "schemaVersion": 1,
+    "scopeId": "2026-10-10-rolling-obligation-campaigns",
+    "baselineId": "BASELINE-15",
+    "graphDigest": "c3fb9520059fa0f5633613682e15c42501dc6adf4d8a8f41b33c224b673492b5",
+    "generation": "standalone-source-assessment-CERT-79-OBL-85",
+    "assessor": "coordinator",
+    "authority": [
+      "user-goal-2026-10-10-rolling-campaigns",
+      "user-goal-2026-10-10-static-language-existing-tsts",
+      "user-2026-10-10-normative-atomic-obligations",
+      "user-2026-10-11-language-scope-our-code-preserve-translations"
+    ],
+    "binding": {
+      "obligationId": "OBL-85",
+      "revisionId": "BIND-6",
+      "dependsOn": [
+        "OBL-112"
+      ],
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "skills/plan-execution/scripts/sprint-metadata.ts",
+          "skills/plan-execution/scripts/sprint-metadata.js",
+          "tests/sprint-metadata.test.ts"
+        ],
+        "operations": [
+          "inspect",
+          "edit",
+          "build",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "Read physical V3 sprint metadata through a checked static implementation preserving the approved portable behavior and historical contract meanings."
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "typed-sprint-owner-OBL-85"
+        }
+      }
+    }
+  },
+  "revision": "159be5cc426ae80770ad2ecfb522342497708b6d",
+  "proof": [
+    {
+      "operation": "test",
+      "certificateEvidenceIndex": 4,
+      "submissionEvidenceIndex": 0
+    },
+    {
+      "operation": "test",
+      "certificateEvidenceIndex": 5,
+      "submissionEvidenceIndex": 1
+    }
+  ]
+}
