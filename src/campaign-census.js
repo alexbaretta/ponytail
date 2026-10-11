@@ -14,8 +14,9 @@ const { CampaignError, dataError, toolError, exactKeys, CampaignManagementConfig
 const { PLAN_METADATA_MARKER, CampaignPlanMetadataReaders, metadataBlocks,
   readPlanMetadataV1, readPlanMetadataV2, readManagedPlan, parsePlanSource } = require('./campaign-plan-metadata');
 const { scanPlanCandidates, listPlanSourceFiles, linkedPlanFiles } = require('./campaign-plan-sources');
-const { validateCampaignDependencies, validateExternalTaskletDependencies } = require('./campaign-dependencies');
+const { validateCampaignDependencies } = require('./campaign-dependencies');
 const { validatePlanContents } = require('./campaign-plan-contents');
+const { campaignGraph } = require('./campaign-graph');
 const { discoverCampaign, resolveCampaignRoot, resolveCampaignScope, validateCampaignReference } = require('./campaign-scope');
 
 const REPORT_SCHEMA_VERSION = 1;
@@ -29,32 +30,6 @@ const REPORT_TABLE_FLAGS = Object.freeze({
   '--sprint-table': ['sprintTable', true],
   '--no-sprint-table': ['sprintTable', false],
 });
-
-function campaignGraph(repositoryRoot, input) {
-  const canonicalRepositoryRoot = fs.realpathSync(repositoryRoot);
-  const config = readManagementConfig(canonicalRepositoryRoot);
-  const campaign = discoverCampaign(canonicalRepositoryRoot, config, input);
-  validateCampaignDependencies(campaign.plans);
-  const contents = new Map(campaign.plans.map((plan) => [plan.id, validatePlanContents(plan, config, canonicalRepositoryRoot)]));
-  const { blockedSprints, prerequisites } = validateExternalTaskletDependencies(canonicalRepositoryRoot, campaign.plans, contents);
-  return {
-    campaignId: campaign.root.id,
-    submittedPlanId: campaign.selected.id,
-    obligationDocument: campaign.root.obligationDocument ?? null,
-    externalPrerequisites: prerequisites,
-    plans: campaign.plans.map((plan) => ({
-      id: plan.id,
-      parentPlanId: plan.parentPlanId,
-      dependsOn: [...plan.dependsOn],
-      lifecycle: plan.lifecycle,
-      path: plan.relativePlanFile,
-      runnableTasklets: blockedSprints.has(`${plan.id}\0${contents.get(plan.id).runnableTasklets?.sprintId}`) ? null : contents.get(plan.id).runnableTasklets,
-      reviewableSprint: blockedSprints.has(`${plan.id}\0${contents.get(plan.id).reviewableSprint?.sprintId}`) ? null : contents.get(plan.id).reviewableSprint,
-      planningSprint: contents.get(plan.id).planningSprint,
-    })),
-    lifecycle: { ...config.lifecycle.roles },
-  };
-}
 
 function increment(record, key) {
   record[key] = (record[key] ?? 0) + 1;

@@ -20,6 +20,7 @@ const sources: readonly string[] = [
   'src/campaign-plan-sources.ts',
   'src/campaign-scope.ts',
   'src/campaign-plan-contents.ts',
+  'src/campaign-graph.ts',
   'src/campaign-dependencies.ts',
   'skills/plan-execution/scripts/tasklet-statuses.ts',
   'skills/plan-execution/scripts/tasklet-metadata.ts',
