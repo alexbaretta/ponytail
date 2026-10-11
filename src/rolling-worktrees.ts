@@ -4,14 +4,14 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { parseRollingProjectConfig, type RollingProjectConfigV1 } from './rolling-campaign.js';
+import { parseRollingProjectConfig, type RollingProjectConfigV2 } from './rolling-campaign.js';
 
 export interface RollingWorktreeLease { readonly number: number; readonly rootPath: string; readonly generation: string }
 export interface RollingManagedDirectory {
   readonly directory: string;
   readonly mainRoot: string;
   readonly worktrees: readonly string[];
-  readonly configuration: RollingProjectConfigV1;
+  readonly configuration: RollingProjectConfigV2;
 }
 export interface RollingMarkerIgnoreResult { readonly changed: boolean }
 export interface RollingProvisionedWorktree {
@@ -47,7 +47,7 @@ export function readRollingPhysicalDirectory(directory: string): string {
   return path.join(fs.realpathSync(ancestor), ...suffix);
 }
 
-function readConfiguration(root: string): RollingProjectConfigV1 {
+function readConfiguration(root: string): RollingProjectConfigV2 {
   const file = path.join(root, '.agents/config/project/rolling-campaigns.json');
   requireCheckout(statIfPresent(file)?.isFile() && fs.realpathSync(file) === file,
     `missing regular project configuration in ${root}`);
@@ -140,7 +140,7 @@ export function provisionRollingWorktree(coordinatorRoot: string, lease: Rolling
     git(coordinatorRoot, ['worktree', 'add', '-b', branch, worktreeRoot, baseCommit]);
   }
   const env = { ...process.env, PONYTAIL_WORKTREE_NUMBER: String(lease.number),
-    PONYTAIL_WORKTREE_ROOT: worktreeRoot, PONYTAIL_MAIN_WORKTREE_ROOT: pool.mainRoot };
+    PONYTAIL_WORKTREE_ROOT: worktreeRoot, PONYTAIL_MAIN_WORKTREE_ROOT: pool.mainRoot, PONYTAIL_WORKTREE_GENERATION: lease.generation };
   for (const argv of pool.configuration.setupCommands) {
     const result = spawnSync(argv[0], argv.slice(1), { cwd: worktreeRoot, env, encoding: 'utf8' });
     requireCheckout(!result.error && result.status === 0,

@@ -21,6 +21,12 @@ export interface RollingProjectConfigV1 {
   readonly setupCommands: readonly RollingArgv[];
   readonly qa: { readonly focused: readonly RollingArgv[]; readonly publication: readonly RollingArgv[] };
 }
+export interface RollingProjectConfigV2 extends Omit<RollingProjectConfigV1,'schemaVersion'> {
+  readonly schemaVersion: 2;
+  readonly retirementCommands: readonly RollingArgv[] | null;
+}
+// Discriminator: schemaVersion
+export type RollingPhysicalProjectConfig = RollingProjectConfigV1 | RollingProjectConfigV2;
 export interface RollingCampaignRequest {
   readonly mainline: RollingMainline | null;
   readonly incrementRef: string;
@@ -54,7 +60,7 @@ export interface RollingGraph {
   readonly projection: ObligationProjection;
   readonly bindingHistory: ObligationBindingHistoryV1 | null;
   readonly effectiveBindings: ReadonlyMap<string, ObligationEffectiveBinding>;
-  readonly projectConfiguration: RollingProjectConfigV1;
+  readonly projectConfiguration: RollingProjectConfigV2;
   readonly unavailableInputs: readonly string[];
 }
 export type RollingAssignmentState = 'RESERVED' | 'PROVISIONING' | 'ATTACHING' | 'WORKING' | 'REVIEW' | 'REWORK' | 'INTEGRATING' | 'RETIRING' | 'INACTIVE' | 'RELEASED';
@@ -145,13 +151,58 @@ export function readRollingProjectConfigV1(value: unknown): RollingProjectConfig
   requireRollingCondition(isRollingProjectConfigV1(value), 'invalid project configuration'); return value;
 }
 // Traceability: implements REQ-ROLLING-CONFIGURATION
-export function parseRollingProjectConfig(text: string): RollingProjectConfigV1 {
-  return readRollingProjectConfigV1(parse(text, null, token => {
+// Traceability: implements REQ-ROLLING-CONFIGURATION
+// Traceability: implements REQ-ROLLING-WORKERS
+function isRollingProjectConfigV2(value: unknown): value is RollingProjectConfigV2 {
+  requireRollingRecord(value,['schemaVersion','mainline','managedWorktrees','maxActiveWorkers','publicationSize','setupCommands','qa','retirementCommands'],'project configuration V2');
+  requireRollingCondition(value.schemaVersion === 2,'unsupported project configuration version');
+  requireRollingCondition(value.mainline === null || isRollingMainline(value.mainline),'invalid mainline');
+  requireRollingRecord(value.managedWorktrees,['directory','anchor'],'managed worktrees');
+  requireRollingCondition(value.managedWorktrees.anchor === 'main','managed directory anchor must be main');
+  requireRollingCondition(typeof value.managedWorktrees.directory === 'string' && value.managedWorktrees.directory.trim() === value.managedWorktrees.directory && value.managedWorktrees.directory.length > 0,'managed directory must be nonempty');
+  for (const key of ['maxActiveWorkers','publicationSize']) requireRollingCondition(value[key] === null || isRollingPositiveInteger(value[key]),`${key} must be null or a positive safe integer`);
+  requireRollingRecord(value.qa,['focused','publication'],'QA');
+  const commandGroups: readonly (readonly [string,unknown])[] = [['setupCommands',value.setupCommands],['focused QA',value.qa.focused],['publication QA',value.qa.publication]];
+  for (const [label,commands] of commandGroups) {
+    requireRollingCondition(Array.isArray(commands) && commands.every(isRollingArgv),`${label} commands must be nonempty executable argument arrays`);
+  }
+  requireRollingCondition(Array.isArray(value.qa.publication) && value.qa.publication.length > 0,'publication QA must be configured');
+  requireRollingCondition(value.retirementCommands === null || Array.isArray(value.retirementCommands) && value.retirementCommands.every(isRollingArgv),'retirement commands must be null or executable argument arrays');
+  return true;
+}
+
+// Traceability: implements REQ-ROLLING-CONFIGURATION
+export function readRollingProjectConfigV2(value: unknown): RollingProjectConfigV2 {
+  requireRollingCondition(isRollingProjectConfigV2(value),'invalid project configuration');return value;
+}
+
+function readRollingPhysicalProjectConfig(value: unknown): RollingPhysicalProjectConfig {
+  requireRollingCondition(isRollingRecord(value),'project configuration must be a record');
+  switch (value.schemaVersion) {
+    case 1: return readRollingProjectConfigV1(value);
+    case 2: return readRollingProjectConfigV2(value);
+    default: throw new Error('rolling campaign: unsupported project configuration version');
+  }
+}
+function unreachableRollingProjectConfig(rollingPhysicalProjectConfig: never): never {
+  throw new Error(`rolling campaign: unsupported project configuration ${JSON.stringify(rollingPhysicalProjectConfig)}`);
+}
+// Traceability: implements REQ-ROLLING-CONFIGURATION
+export function normalizeRollingProjectConfig(rollingPhysicalProjectConfig: RollingPhysicalProjectConfig): RollingProjectConfigV2 {
+  switch (rollingPhysicalProjectConfig.schemaVersion) {
+    case 1: return {...rollingPhysicalProjectConfig,schemaVersion:2,retirementCommands:null};
+    case 2: return rollingPhysicalProjectConfig;
+  }
+  return unreachableRollingProjectConfig(rollingPhysicalProjectConfig);
+}
+
+export function parseRollingProjectConfig(text: string): RollingProjectConfigV2 {
+  return normalizeRollingProjectConfig(readRollingPhysicalProjectConfig(parse(text, null, token => {
     requireRollingCondition(/^(0|[1-9][0-9]*)$/.test(token) && Number.isSafeInteger(Number(token)), `unsupported JSON number token: ${token}`);
     return Number(token);
-  }));
+  })));
 }
-export const RollingProjectConfigReaders = { V1: readRollingProjectConfigV1 };
+export const RollingProjectConfigReaders = { V1: readRollingProjectConfigV1,V2:readRollingProjectConfigV2 };
 
 function isRollingAcceptanceReference(value: unknown): value is RollingAcceptanceReference {
   requireRollingRecord(value, ['id', 'arcId', 'stepId'], 'acceptance reference');
@@ -313,14 +364,14 @@ export function selectRollingAssignments(rollingGraph: RollingGraph, assignments
 }
 
 // Traceability: implements REQ-ROLLING-CONFIGURATION
-export function resolveRollingConfiguration(rollingProjectConfig: RollingProjectConfigV1, request: RollingCampaignRequest, gitDefaultBranch: string | null): RollingResolvedConfiguration {
-  readRollingProjectConfigV1(rollingProjectConfig);
+export function resolveRollingConfiguration(rollingPhysicalProjectConfig: RollingPhysicalProjectConfig, request: RollingCampaignRequest, gitDefaultBranch: string | null): RollingResolvedConfiguration {
+  const rollingProjectConfigV2 = normalizeRollingProjectConfig(readRollingPhysicalProjectConfig(rollingPhysicalProjectConfig));
   requireRollingRecord(request, ['mainline', 'incrementRef', 'maxActiveWorkers', 'publicationSize'], 'campaign request');
-  const mainline = request.mainline ?? rollingProjectConfig.mainline
+  const mainline = request.mainline ?? rollingProjectConfigV2.mainline
     ?? { remote: 'origin', branch: gitDefaultBranch };
-  const maxActiveWorkers = request.maxActiveWorkers ?? rollingProjectConfig.maxActiveWorkers ?? 10;
-  const publicationSize = request.publicationSize ?? rollingProjectConfig.publicationSize ?? 1;
-  readRollingProjectConfigV1({ ...rollingProjectConfig, mainline, maxActiveWorkers, publicationSize });
+  const maxActiveWorkers = request.maxActiveWorkers ?? rollingProjectConfigV2.maxActiveWorkers ?? 10;
+  const publicationSize = request.publicationSize ?? rollingProjectConfigV2.publicationSize ?? 1;
+  readRollingProjectConfigV2({ ...rollingProjectConfigV2, mainline, maxActiveWorkers, publicationSize });
   return readRollingResolvedConfiguration({ mainline: { ...mainline }, incrementRef: request.incrementRef, maxActiveWorkers, publicationSize });
 }
 

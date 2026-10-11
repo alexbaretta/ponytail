@@ -129,7 +129,7 @@ function provisionRollingWorktree(coordinatorRoot, lease, baseCommit) {
         git(coordinatorRoot, ['worktree', 'add', '-b', branch, worktreeRoot, baseCommit]);
     }
     const env = { ...process.env, PONYTAIL_WORKTREE_NUMBER: String(lease.number),
-        PONYTAIL_WORKTREE_ROOT: worktreeRoot, PONYTAIL_MAIN_WORKTREE_ROOT: pool.mainRoot };
+        PONYTAIL_WORKTREE_ROOT: worktreeRoot, PONYTAIL_MAIN_WORKTREE_ROOT: pool.mainRoot, PONYTAIL_WORKTREE_GENERATION: lease.generation };
     for (const argv of pool.configuration.setupCommands) {
         const result = (0, node_child_process_1.spawnSync)(argv[0], argv.slice(1), { cwd: worktreeRoot, env, encoding: 'utf8' });
         requireCheckout(!result.error && result.status === 0, `setup failed in retained checkout ${worktreeRoot}: ${result.error?.message || result.stderr.trim() || argv[0]}`);

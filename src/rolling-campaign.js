@@ -8,6 +8,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.RollingBindingsReaders = exports.RollingProjectConfigReaders = void 0;
 exports.readRollingProjectConfigV1 = readRollingProjectConfigV1;
+exports.readRollingProjectConfigV2 = readRollingProjectConfigV2;
+exports.normalizeRollingProjectConfig = normalizeRollingProjectConfig;
 exports.parseRollingProjectConfig = parseRollingProjectConfig;
 exports.readRollingBindingsV1 = readRollingBindingsV1;
 exports.collectRollingGraph = collectRollingGraph;
@@ -74,13 +76,53 @@ function readRollingProjectConfigV1(value) {
     requireRollingCondition(isRollingProjectConfigV1(value), 'invalid project configuration');
     return value;
 }
+function isRollingProjectConfigV2(value) {
+    requireRollingRecord(value, ['schemaVersion', 'mainline', 'managedWorktrees', 'maxActiveWorkers', 'publicationSize', 'setupCommands', 'qa', 'retirementCommands'], 'project configuration V2');
+    requireRollingCondition(value.schemaVersion === 2, 'unsupported project configuration version');
+    requireRollingCondition(value.mainline === null || isRollingMainline(value.mainline), 'invalid mainline');
+    requireRollingRecord(value.managedWorktrees, ['directory', 'anchor'], 'managed worktrees');
+    requireRollingCondition(value.managedWorktrees.anchor === 'main', 'managed directory anchor must be main');
+    requireRollingCondition(typeof value.managedWorktrees.directory === 'string' && value.managedWorktrees.directory.trim() === value.managedWorktrees.directory && value.managedWorktrees.directory.length > 0, 'managed directory must be nonempty');
+    for (const key of ['maxActiveWorkers', 'publicationSize'])
+        requireRollingCondition(value[key] === null || isRollingPositiveInteger(value[key]), `${key} must be null or a positive safe integer`);
+    requireRollingRecord(value.qa, ['focused', 'publication'], 'QA');
+    const commandGroups = [['setupCommands', value.setupCommands], ['focused QA', value.qa.focused], ['publication QA', value.qa.publication]];
+    for (const [label, commands] of commandGroups) {
+        requireRollingCondition(Array.isArray(commands) && commands.every(isRollingArgv), `${label} commands must be nonempty executable argument arrays`);
+    }
+    requireRollingCondition(Array.isArray(value.qa.publication) && value.qa.publication.length > 0, 'publication QA must be configured');
+    requireRollingCondition(value.retirementCommands === null || Array.isArray(value.retirementCommands) && value.retirementCommands.every(isRollingArgv), 'retirement commands must be null or executable argument arrays');
+    return true;
+}
+function readRollingProjectConfigV2(value) {
+    requireRollingCondition(isRollingProjectConfigV2(value), 'invalid project configuration');
+    return value;
+}
+function readRollingPhysicalProjectConfig(value) {
+    requireRollingCondition(isRollingRecord(value), 'project configuration must be a record');
+    switch (value.schemaVersion) {
+        case 1: return readRollingProjectConfigV1(value);
+        case 2: return readRollingProjectConfigV2(value);
+        default: throw new Error('rolling campaign: unsupported project configuration version');
+    }
+}
+function unreachableRollingProjectConfig(rollingPhysicalProjectConfig) {
+    throw new Error(`rolling campaign: unsupported project configuration ${JSON.stringify(rollingPhysicalProjectConfig)}`);
+}
+function normalizeRollingProjectConfig(rollingPhysicalProjectConfig) {
+    switch (rollingPhysicalProjectConfig.schemaVersion) {
+        case 1: return { ...rollingPhysicalProjectConfig, schemaVersion: 2, retirementCommands: null };
+        case 2: return rollingPhysicalProjectConfig;
+    }
+    return unreachableRollingProjectConfig(rollingPhysicalProjectConfig);
+}
 function parseRollingProjectConfig(text) {
-    return readRollingProjectConfigV1((0, lossless_json_1.parse)(text, null, token => {
+    return normalizeRollingProjectConfig(readRollingPhysicalProjectConfig((0, lossless_json_1.parse)(text, null, token => {
         requireRollingCondition(/^(0|[1-9][0-9]*)$/.test(token) && Number.isSafeInteger(Number(token)), `unsupported JSON number token: ${token}`);
         return Number(token);
-    }));
+    })));
 }
-exports.RollingProjectConfigReaders = { V1: readRollingProjectConfigV1 };
+exports.RollingProjectConfigReaders = { V1: readRollingProjectConfigV1, V2: readRollingProjectConfigV2 };
 function isRollingAcceptanceReference(value) {
     requireRollingRecord(value, ['id', 'arcId', 'stepId'], 'acceptance reference');
     requireRollingCondition(typeof value.id === 'string' && value.id.length > 0 && typeof value.arcId === 'string' && value.arcId.length > 0
@@ -248,14 +290,14 @@ function selectRollingAssignments(rollingGraph, assignments, maxActiveWorkers, e
     return { digest: rollingGraph.digest, activeCount: live.filter(item => item.state !== 'INACTIVE').length,
         availableCapacity: capacity, selected, blocked };
 }
-function resolveRollingConfiguration(rollingProjectConfig, request, gitDefaultBranch) {
-    readRollingProjectConfigV1(rollingProjectConfig);
+function resolveRollingConfiguration(rollingPhysicalProjectConfig, request, gitDefaultBranch) {
+    const rollingProjectConfigV2 = normalizeRollingProjectConfig(readRollingPhysicalProjectConfig(rollingPhysicalProjectConfig));
     requireRollingRecord(request, ['mainline', 'incrementRef', 'maxActiveWorkers', 'publicationSize'], 'campaign request');
-    const mainline = request.mainline ?? rollingProjectConfig.mainline
+    const mainline = request.mainline ?? rollingProjectConfigV2.mainline
         ?? { remote: 'origin', branch: gitDefaultBranch };
-    const maxActiveWorkers = request.maxActiveWorkers ?? rollingProjectConfig.maxActiveWorkers ?? 10;
-    const publicationSize = request.publicationSize ?? rollingProjectConfig.publicationSize ?? 1;
-    readRollingProjectConfigV1({ ...rollingProjectConfig, mainline, maxActiveWorkers, publicationSize });
+    const maxActiveWorkers = request.maxActiveWorkers ?? rollingProjectConfigV2.maxActiveWorkers ?? 10;
+    const publicationSize = request.publicationSize ?? rollingProjectConfigV2.publicationSize ?? 1;
+    readRollingProjectConfigV2({ ...rollingProjectConfigV2, mainline, maxActiveWorkers, publicationSize });
     return readRollingResolvedConfiguration({ mainline: { ...mainline }, incrementRef: request.incrementRef, maxActiveWorkers, publicationSize });
 }
 function isRollingResolvedConfiguration(value) {

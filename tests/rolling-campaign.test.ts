@@ -3,8 +3,8 @@
 import assert from 'node:assert/strict';
 import { projectObligationBindings } from '../skills/plan-execution/scripts/obligation-binding-history.js';
 import test from 'node:test';
-import { readRollingProjectConfigV1, parseRollingProjectConfig, resolveRollingConfiguration,
-  readRollingBindingsV1, selectRollingAssignments, type RollingProjectConfigV1, type RollingCampaignRequest,
+import { readRollingProjectConfigV1,readRollingProjectConfigV2,normalizeRollingProjectConfig, parseRollingProjectConfig, resolveRollingConfiguration,
+  readRollingBindingsV1, selectRollingAssignments, type RollingProjectConfigV1,type RollingProjectConfigV2, type RollingCampaignRequest,
   type RollingBinding, type RollingBindingsV1, type RollingGraph, type RollingAssignment,
   type RollingResolvedConfiguration, type RollingSchedulingResult } from '../src/rolling-campaign.js';
 import type { Obligation, ObligationCategory, ObligationDocumentV1 } from '../skills/plan-execution/scripts/obligations.js';
@@ -21,7 +21,7 @@ function projectConfiguration(): RollingProjectConfigV1 {
 test('project configuration preserves explicit targets, main-root paths and executable argv', () => {
   let rollingProjectConfigV1: RollingProjectConfigV1 = { ...projectConfiguration(),
     setupCommands: [['node', '--version', '$HOME; `literal`', '']] };
-  assert.deepEqual(parseRollingProjectConfig(JSON.stringify(rollingProjectConfigV1)), rollingProjectConfigV1);
+  assert.deepEqual(parseRollingProjectConfig(JSON.stringify(rollingProjectConfigV1)), normalizeRollingProjectConfig(rollingProjectConfigV1));
   rollingProjectConfigV1 = { ...rollingProjectConfigV1, mainline: null,
     managedWorktrees: { directory: '/Users/example/project/managed_worktrees', anchor: 'main' },
     maxActiveWorkers: 10, publicationSize: 1 };
@@ -57,7 +57,7 @@ test('capacity and publication limits reject unsafe values before JSON conversio
       assert.throws(() => readRollingProjectConfigV1(invalidInput), /positive safe integer/);
     }
     const rollingProjectConfigV1: RollingProjectConfigV1 = { ...projectConfiguration(), [key]: Number.MAX_SAFE_INTEGER };
-    assert.deepEqual(parseRollingProjectConfig(JSON.stringify(rollingProjectConfigV1)), rollingProjectConfigV1);
+    assert.deepEqual(parseRollingProjectConfig(JSON.stringify(rollingProjectConfigV1)), normalizeRollingProjectConfig(rollingProjectConfigV1));
     for (const token of ['9007199254740993', '9007199254740992', '1.1', '1e309', '-1']) {
       const text = JSON.stringify(projectConfiguration()).replace(`"${key}":null`, `"${key}":${token}`);
       assert.throws(() => parseRollingProjectConfig(text), /unsupported JSON number token/);
@@ -124,7 +124,7 @@ function schedulingGraph(): RollingGraph {
   return { coordinatorRoot: '/fixture', head: 'a'.repeat(40), digest: 'current', unavailableInputs: [], document: obligationDocumentV1,
     bindingHistory: null, effectiveBindings: projectObligationBindings(obligationDocumentV1, { schemaVersion: 1, scopeId: obligationDocumentV1.scopeId, revisions: [] }),
     projection: { baselineId: 'B1', vector: [1, 1, 3, 1, 1, 1], satisfiedIds: [], unresolvedIds: obligations.map(item => item.id), gates: [], assessments: [], complete: false },
-    projectConfiguration: projectConfiguration(), bindings: ['OBL-2', 'OBL-3', 'OBL-10', 'OBL-11'].map(id => executionBinding(id)) };
+    projectConfiguration: normalizeRollingProjectConfig(projectConfiguration()), bindings: ['OBL-2', 'OBL-3', 'OBL-10', 'OBL-11'].map(id => executionBinding(id)) };
 }
 
 // Traceability: verifies REQ-ROLLING-GRAPH
@@ -195,4 +195,22 @@ test('scope changes require reconciliation and foreign campaign owners still con
   assert.equal(sharedRollingSchedulingResult.activeCount, 1);
   assert.equal(sharedRollingSchedulingResult.blocked.find(item => 'obligationId' in item && item.obligationId === 'OBL-3')?.reason, 'conflict');
   assert.deepEqual(sharedRollingSchedulingResult.selected.map(item => item.obligationId), ['OBL-11']);
+});
+
+// Traceability: verifies REQ-ROLLING-CONFIGURATION
+// Traceability: verifies REQ-ROLLING-WORKERS
+test('V2 cleanup declaration preserves V1 physical meanings and normalizes unknown retirement safely',()=> {
+ const rollingProjectConfigV1 = projectConfiguration();
+ const rollingProjectConfigV2: RollingProjectConfigV2 = {...rollingProjectConfigV1,schemaVersion:2,
+  retirementCommands:[['node','cleanup.ts','literal; argument']]};
+ assert.equal(readRollingProjectConfigV1(rollingProjectConfigV1),rollingProjectConfigV1);
+ assert.throws(()=>readRollingProjectConfigV1(rollingProjectConfigV2),/exactly/);
+ assert.equal(readRollingProjectConfigV2(rollingProjectConfigV2),rollingProjectConfigV2);
+ assert.deepEqual(parseRollingProjectConfig(JSON.stringify(rollingProjectConfigV2)),rollingProjectConfigV2);
+ assert.equal(parseRollingProjectConfig(JSON.stringify(rollingProjectConfigV1)).retirementCommands,null);
+ assert.deepEqual(readRollingProjectConfigV2({...rollingProjectConfigV2,retirementCommands:[]}).retirementCommands,[]);
+ for (const retirementCommands of ['cleanup', ['node cleanup.ts'],[[]],[['']],[[42]]]) {
+  const invalidInput:unknown = {...rollingProjectConfigV2,retirementCommands};
+  assert.throws(()=>readRollingProjectConfigV2(invalidInput),/retirement commands/);
+ }
 });

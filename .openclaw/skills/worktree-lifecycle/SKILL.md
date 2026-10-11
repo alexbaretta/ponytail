@@ -35,7 +35,7 @@ whether it is:
 Do not infer abandonment from silence, an observation timeout, a stale status
 message, or an inaccessible task. Poll the owning task or inspect its current
 authoritative state. Do not remove an active or explicitly retained worktree.
-For a Ponytail campaign, retain the session/worktree pair indefinitely, even
+For the deprecated parallel campaign scheduler, retain the session/worktree pair indefinitely, even
 after integration and successful plan closure. Logical assignment completion
 does not prove the session will never be needed again. Reuse the first safe
 inactive pair; do not archive the chat, delete the checkout, or release its
@@ -43,6 +43,25 @@ resource claim to obtain capacity. The pool limit is fifteen worker slots per
 user-owned top-level Codex project, independently of other projects sharing
 the same main worktree. Wait at capacity rather than creating a sixteenth pair.
 Historical scheduler cleanup actions are not retirement authority.
+
+Adopted rolling campaigns use a project-owned numbered checkout pool and the
+campaign's configured worker limit. After integrated obligation acceptance,
+observe the owning native worker's terminal turn and idle activity, inform it
+that coordination has ended, and archive that worker. Revoke its assignment
+before releasing the checkout. Preserve the Git checkout and reusable build
+caches; a completed worker and an available checkout are different resources.
+Run the project's declared retirement commands for that exact owner and verify
+resource cleanup before removing its ignored session marker and making the
+checkout available. Unknown activity, unresolved external actions, dirty or
+unintegrated work, or incomplete cleanup retains the claim for reconciliation.
+
+Rolling project configuration V2 declares `retirementCommands`. Each executable
+argument array runs from the assigned checkout and must idempotently release
+and verify only resources owned by that assignment, using its declared owner
+identity. An empty array explicitly declares no additional project cleanup;
+`null`, including normalized historical V1 configuration, declares no cleanup
+contract and cannot authorize checkout reuse. Configuration normalization does
+not infer resource absence from an empty setup command list.
 
 If a retained worker's checkout disappears, that worker invokes `ponytail
 worktree recover <attachment-token>` from an existing neutral directory and

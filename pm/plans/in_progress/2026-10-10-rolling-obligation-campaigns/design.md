@@ -295,3 +295,18 @@ readers do not change meaning; additional durable fields require a successor
 physical version. Scheduling diagnostics retain unresolved proof and exact
 blocking edges. Graph hashing includes authoritative document bytes and
 configuration, not worker-local copies or merely timestamps.
+
+## Explicit retirement cleanup contract
+
+Rolling project configuration V2 adds nullable `retirementCommands`, an array
+of executable argv arrays. Historical V1 readers retain their original meanings;
+normalization into V2 uses `null` for the absent cleanup contract. `null` never
+means no resources. An explicit empty array declares no additional project
+cleanup. Commands must idempotently release and verify the exact assignment's
+owned resources, preserving the retained Git checkout, user-owned work and
+reusable build caches. Setup exposes `PONYTAIL_WORKTREE_GENERATION` alongside
+its existing worktree number and physical roots so project tooling can bind
+resource ownership to the allocation. Retirement supplies the same allocation
+identity and the authenticated worker identity. Failure retains the reservation
+for reconciliation; successful cleanup precedes marker removal and checkout
+release. Native cessation and generation revocation remain required separately.
