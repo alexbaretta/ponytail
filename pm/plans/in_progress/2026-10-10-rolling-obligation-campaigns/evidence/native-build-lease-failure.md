@@ -15,4 +15,10 @@ The exact failed run is retained in
 [native build lease output](native-build-lease-failure.txt). This was the
 diagnostic run begun before the terminal-history race correction and cannot
 establish native acceptance of that correction. The corrected code fixture
-requires its focused native rerun before assessment. OBL-52 remains pending.
+then passed its focused native rerun; the final clean native suite passed
+20/20 with zero failures, skips or cancellations. The accepted assessment is
+retained in [native reviewer recovery renewal](native-reviewer-recovery-clean-renewal.md).
+OBL-52 was discharged at CHECKPOINT-153.
+
+Canonical observation:
+[worker build lease mismatch](../../../../debugging-pattern-observations/2026-10-11-worker_build_lease_mismatch.json).

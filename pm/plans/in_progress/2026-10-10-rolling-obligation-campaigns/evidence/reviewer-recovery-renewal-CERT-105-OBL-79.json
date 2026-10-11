@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 1,
+  "certificateId": "CERT-105",
+  "lease": {
+    "schemaVersion": 1,
+    "scopeId": "2026-10-10-rolling-obligation-campaigns",
+    "baselineId": "BASELINE-16",
+    "graphDigest": "bd9ada1b53ceddea1d0b2a2ef67753d459eaf0b3561a716ae361df04f0d6521c",
+    "generation": "standalone-reviewer-recovery-assessment-CERT-105-OBL-79",
+    "assessor": "coordinator",
+    "authority": [
+      "user-goal-2026-10-10-rolling-campaigns",
+      "user-goal-2026-10-10-static-language-existing-tsts",
+      "user-2026-10-10-normative-atomic-obligations",
+      "user-2026-10-11-language-scope-our-code-preserve-translations"
+    ],
+    "binding": {
+      "obligationId": "OBL-79",
+      "revisionId": "BIND-30",
+      "dependsOn": [
+        "OBL-112"
+      ],
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "skills/plan-execution/scripts/obligations.ts",
+          "skills/plan-execution/scripts/obligations.js",
+          "tests/obligations.test.js",
+          "tests/obligations.test.ts",
+          "AGENTS.md",
+          ".agents/config/project/traceability.json",
+          "pm/requirements/traceability.generated.md"
+        ],
+        "operations": [
+          "inspect",
+          "edit",
+          "build",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "Project accepted obligation satisfaction and reopen stale/dependency-invalid proof through a checked static implementation preserving the approved portable behavior and historical contract meanings."
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "typed-portable-obligations-OBL-79"
+        }
+      }
+    }
+  },
+  "revision": "b9b118b507209d2c869c187453b18284f43b0ebc",
+  "proof": [
+    {
+      "operation": "test",
+      "certificateEvidenceIndex": 50,
+      "submissionEvidenceIndex": 0
+    },
+    {
+      "operation": "test",
+      "certificateEvidenceIndex": 51,
+      "submissionEvidenceIndex": 1
+    }
+  ]
+}

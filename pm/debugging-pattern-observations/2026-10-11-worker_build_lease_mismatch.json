@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-10-11-worker_build_lease_mismatch",
+  "recorded_at": "2026-10-11T12:33:55-07:00",
+  "source_references": ["commit:b9b118b", "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/native-build-lease-failure.md"],
+  "context": {
+    "languages": ["typescript"],
+    "frameworks": [],
+    "components": ["native code worker fixture", "obligation execution binding"],
+    "affected_boundaries": ["configured build QA and frozen worker authority"],
+    "code_references": ["tests/rolling-campaign-store.integration.test.ts", "src/rolling-worker-submission.ts"]
+  },
+  "observed_behavior": "A native worker completed the configured build and supplied build evidence, but submission correctly rejected the operation as outside its frozen lease.",
+  "expected_behavior": "A fixture that requires a build grants build authority in its execution binding; a worker can submit actual passing build evidence within that authority.",
+  "causal_mechanism": "The code fixture configured an affected TypeScript build target while its execution binding allowed only inspect, edit and test. Actual build evidence was therefore rejected by the production lease validator.",
+  "anti_pattern": {
+    "structural_description": "Test execution configuration and test execution authority declared inconsistent operation sets.",
+    "why_it_fails": "Correct worker behavior crosses an authority boundary that the fixture forgot to grant."
+  },
+  "correct_pattern": {
+    "required_invariant": "Configured mandatory QA operations are included in the fixture's authorized execution operations.",
+    "implementation_description": "Add build to the code fixture binding, preserving production operation validation and all non-code fixture permissions."
+  },
+  "applicability_conditions": ["Build-impact reports an affected target and the worker supplies build evidence."],
+  "known_non_matches": ["An unconfigured or unauthorized build remains outside the worker lease.", "Read-only fixture assignments retain their narrower permissions."],
+  "confirmation_evidence": ["The retained 19/20 native diagnostic run fails at validateRollingWorkerSubmission with operation outside frozen lease.", "After the fixture correction, the focused native code submission Arc passes with zero failures, skips or cancellations, including semantic rebase and submission persistence."],
+  "regression_proofs": ["tests/rolling-codex.integration.ts: live worker implements and semantically rebases its exact candidate before submission", "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/native-reviewer-recovery-clean-renewal.md"]
+}

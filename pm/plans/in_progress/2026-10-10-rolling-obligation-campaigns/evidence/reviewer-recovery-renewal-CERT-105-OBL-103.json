@@ -1,0 +1,64 @@
+{
+  "schemaVersion": 1,
+  "certificateId": "CERT-105",
+  "lease": {
+    "schemaVersion": 1,
+    "scopeId": "2026-10-10-rolling-obligation-campaigns",
+    "baselineId": "BASELINE-16",
+    "graphDigest": "bd9ada1b53ceddea1d0b2a2ef67753d459eaf0b3561a716ae361df04f0d6521c",
+    "generation": "standalone-reviewer-recovery-assessment-CERT-105-OBL-103",
+    "assessor": "coordinator",
+    "authority": [
+      "user-goal-2026-10-10-rolling-campaigns",
+      "user-goal-2026-10-10-static-language-existing-tsts",
+      "user-2026-10-10-normative-atomic-obligations",
+      "user-2026-10-11-language-scope-our-code-preserve-translations"
+    ],
+    "binding": {
+      "obligationId": "OBL-103",
+      "revisionId": "BIND-24",
+      "dependsOn": [
+        "OBL-112"
+      ],
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "skills/plan-execution/scripts/tasklet-graph.ts",
+          "skills/plan-execution/scripts/tasklet-graph.js",
+          "tests/tasklet-graph.test.ts",
+          "tests/tasklet-selection.test.ts",
+          "tests/ready-tasklets.test.ts"
+        ],
+        "operations": [
+          "inspect",
+          "edit",
+          "build",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "Select one eligible tasklet using deterministic ranking and prior affinity through a checked static implementation preserving the approved portable behavior and historical contract meanings."
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "typed-tasklet-graph-OBL-103"
+        }
+      }
+    }
+  },
+  "revision": "b9b118b507209d2c869c187453b18284f43b0ebc",
+  "proof": [
+    {
+      "operation": "test",
+      "certificateEvidenceIndex": 38,
+      "submissionEvidenceIndex": 0
+    },
+    {
+      "operation": "test",
+      "certificateEvidenceIndex": 39,
+      "submissionEvidenceIndex": 1
+    }
+  ]
+}

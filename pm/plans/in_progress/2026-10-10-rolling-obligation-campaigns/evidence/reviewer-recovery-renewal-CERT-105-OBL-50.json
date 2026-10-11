@@ -1,0 +1,76 @@
+{
+  "schemaVersion": 1,
+  "certificateId": "CERT-105",
+  "lease": {
+    "schemaVersion": 1,
+    "scopeId": "2026-10-10-rolling-obligation-campaigns",
+    "baselineId": "BASELINE-16",
+    "graphDigest": "bd9ada1b53ceddea1d0b2a2ef67753d459eaf0b3561a716ae361df04f0d6521c",
+    "generation": "standalone-reviewer-recovery-assessment-CERT-105-OBL-50",
+    "assessor": "coordinator",
+    "authority": [
+      "user-goal-2026-10-10-rolling-campaigns",
+      "user-goal-2026-10-10-static-language-existing-tsts",
+      "user-2026-10-10-normative-atomic-obligations",
+      "user-2026-10-11-language-scope-our-code-preserve-translations"
+    ],
+    "binding": {
+      "obligationId": "OBL-50",
+      "revisionId": "BIND-37",
+      "dependsOn": [
+        "OBL-112"
+      ],
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "src/rolling-review.ts",
+          "src/rolling-review.js",
+          "src/rolling-campaign-store.ts",
+          "src/rolling-campaign-store.js",
+          "tests/rolling-review.test.ts",
+          "tests/rolling-campaign-store.integration.test.ts",
+          "scripts/project-index.sql",
+          "scripts/build-runtime.ts",
+          "versioned-data-contracts.json",
+          "AGENTS.md",
+          ".agents/config/project/traceability.json",
+          "pm/requirements/traceability.generated.md",
+          "tests/fixtures/rolling-codex-server.ts",
+          "tests/rolling-codex.test.ts",
+          "src/rolling-codex.ts",
+          "tests/rolling-codex.integration.ts",
+          "src/rolling-codex.js"
+        ],
+        "operations": [
+          "inspect",
+          "edit",
+          "build",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "Review the exact candidate adversarially and persist the assigned reviewer identity."
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "rolling-review-OBL-50"
+        }
+      }
+    }
+  },
+  "revision": "b9b118b507209d2c869c187453b18284f43b0ebc",
+  "proof": [
+    {
+      "operation": "test",
+      "certificateEvidenceIndex": 58,
+      "submissionEvidenceIndex": 0
+    },
+    {
+      "operation": "test",
+      "certificateEvidenceIndex": 59,
+      "submissionEvidenceIndex": 1
+    }
+  ]
+}

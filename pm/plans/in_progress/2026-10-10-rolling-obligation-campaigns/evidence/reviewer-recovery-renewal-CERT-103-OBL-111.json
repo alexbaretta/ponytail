@@ -1,0 +1,73 @@
+{
+  "schemaVersion": 1,
+  "certificateId": "CERT-103",
+  "lease": {
+    "schemaVersion": 1,
+    "scopeId": "2026-10-10-rolling-obligation-campaigns",
+    "baselineId": "BASELINE-16",
+    "graphDigest": "8d52b4e497b4541966f5bef8c423f420237d1cbba55e09648a3a2d6150d59ad9",
+    "generation": "standalone-reviewer-recovery-assessment-CERT-103-OBL-111",
+    "assessor": "coordinator",
+    "authority": [
+      "user-goal-2026-10-10-rolling-campaigns",
+      "user-goal-2026-10-10-static-language-existing-tsts",
+      "user-2026-10-10-normative-atomic-obligations",
+      "user-2026-10-11-language-scope-our-code-preserve-translations"
+    ],
+    "binding": {
+      "obligationId": "OBL-111",
+      "revisionId": "BIND-3",
+      "dependsOn": [
+        "OBL-110"
+      ],
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "src/rolling-worker-submission.ts",
+          "src/rolling-worker-submission.js",
+          "src/rolling-campaign-store.ts",
+          "src/rolling-campaign-store.js",
+          "skills/plan-execution/scripts/obligations.ts",
+          "skills/plan-execution/scripts/obligations.js",
+          "tests/rolling-worker-submission.test.ts",
+          "tests/rolling-campaign-store.integration.test.ts",
+          "scripts/project-index.sql",
+          "scripts/build-runtime.ts",
+          "versioned-data-contracts.json",
+          "pm/requirements/traceability.generated.md",
+          ".agents/config/project/traceability.json",
+          ".openclaw/skills/plan-execution/scripts/obligations.ts",
+          ".openclaw/skills/plan-execution/scripts/obligations.js"
+        ],
+        "operations": [
+          "edit",
+          "build",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "frozen worker submission and durable review transition"
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "frozen-worker-submission"
+        }
+      }
+    }
+  },
+  "revision": "b9b118b507209d2c869c187453b18284f43b0ebc",
+  "proof": [
+    {
+      "operation": "test",
+      "certificateEvidenceIndex": 0,
+      "submissionEvidenceIndex": 0
+    },
+    {
+      "operation": "test",
+      "certificateEvidenceIndex": 1,
+      "submissionEvidenceIndex": 1
+    }
+  ]
+}
