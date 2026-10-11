@@ -7,7 +7,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 
-const TASKLET_STATUSES = new Set([' ', 'DONE', 'ERROR']);
+const { parseTaskletStatuses } = require('./tasklet-statuses');
 const RISK_VALUES = new Set(['normal', 'high']);
 const SCHEMA_VERSION = 4;
 const MAX_BATCH_TASKLETS = 16;
@@ -35,22 +35,6 @@ function relativePaths(value, label) {
     if (candidate.split('/').some((segment) => !segment || segment === '.' || segment === '..')) fail(`${label} contains an invalid path segment`);
   }
   return value;
-}
-
-function parseTaskletStatuses(sprintFile, text = fs.readFileSync(sprintFile, 'utf8'), allowEmpty = false) {
-  const statuses = new Map();
-  const heading = /^### \[( |DONE|ERROR)\] Tasklet (S\d+-F\d+-T\d+): .+$/;
-  for (const line of text.split(/\r?\n/)) {
-    if (!line.startsWith('###') || !line.includes('Tasklet')) continue;
-    const match = line.match(heading);
-    if (!match) fail(`${sprintFile} contains a malformed tasklet heading: ${line}`);
-    const id = match[2];
-    if (statuses.has(id)) fail(`duplicate tasklet heading: ${id}`);
-    if (!TASKLET_STATUSES.has(match[1])) fail(`invalid tasklet status: ${id}`);
-    statuses.set(id, match[1] === ' ' ? 'PENDING' : match[1]);
-  }
-  if (statuses.size === 0 && !allowEmpty) fail(`${sprintFile} contains no tasklet headings`);
-  return statuses;
 }
 
 function taskletValue(id, value, expected, includePaths = false) {

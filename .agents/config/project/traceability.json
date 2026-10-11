@@ -950,6 +950,26 @@
       "class": "unit-test",
       "path": "tests/campaign-scope.test.ts",
       "locator": "text"
+    },
+    {
+      "class": "implementation",
+      "path": "src/campaign-dependencies.ts",
+      "locator": "text"
+    },
+    {
+      "class": "implementation",
+      "path": "skills/plan-execution/scripts/tasklet-statuses.ts",
+      "locator": "text"
+    },
+    {
+      "class": "unit-test",
+      "path": "tests/campaign-dependencies.test.ts",
+      "locator": "text"
+    },
+    {
+      "class": "unit-test",
+      "path": "tests/tasklet-statuses.test.ts",
+      "locator": "text"
     }
   ],
   "entities": [],
@@ -1053,6 +1073,22 @@
     {
       "path": "src/campaign-scope.js",
       "sourcePath": "src/campaign-scope.ts"
+    },
+    {
+      "path": "src/campaign-dependencies.js",
+      "sourcePath": "src/campaign-dependencies.ts"
+    },
+    {
+      "path": "skills/plan-execution/scripts/tasklet-statuses.js",
+      "sourcePath": "skills/plan-execution/scripts/tasklet-statuses.ts"
+    },
+    {
+      "path": ".openclaw/skills/plan-execution/scripts/tasklet-statuses.ts",
+      "sourcePath": "skills/plan-execution/scripts/tasklet-statuses.ts"
+    },
+    {
+      "path": ".openclaw/skills/plan-execution/scripts/tasklet-statuses.js",
+      "sourcePath": "skills/plan-execution/scripts/tasklet-statuses.ts"
     }
   ],
   "reverseViewPath": "pm/requirements/traceability.generated.md",
