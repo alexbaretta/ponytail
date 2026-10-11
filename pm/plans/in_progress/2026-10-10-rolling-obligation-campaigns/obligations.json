@@ -5385,6 +5385,47 @@
       },
       "reason": "Renew existing started migration outcomes after policy input changes; stop at no-edit reassessment on current inputs.",
       "assessor": "coordinator"
+    },
+    {
+      "id": "CHECKPOINT-18",
+      "predecessorId": "CHECKPOINT-17",
+      "baselineId": "BASELINE-8",
+      "kind": "neutral",
+      "selectedIds": [
+        "OBL-41",
+        "OBL-42",
+        "OBL-43"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "CERT-9"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": {
+        "obligationId": "OBL-41",
+        "operations": [
+          "inspect"
+        ],
+        "deliverable": "Inspect and execute existing typed native protocol and live start/resume proof; stop at OBL-41–43 component discharge."
+      },
+      "reason": "Inspect and execute existing typed native protocol and live start/resume proof; stop at OBL-41–43 component discharge.",
+      "assessor": "coordinator"
     }
   ]
 }

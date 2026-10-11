@@ -38,8 +38,11 @@ their complete component criteria, through the current 14-test typed unit,
 real PostgreSQL and Git worktree selection. See the
 [per-obligation observations and output](evidence/rolling-core-assessment.md).
 The `Available` entries below retain the earlier inspection boundary; current
-satisfaction comes from the canonical ledger freshness projection. OBL-41–69
-remain uncertified and require their declared native/application proof.
+satisfaction comes from the canonical ledger freshness projection. CERT-9
+assesses OBL-41–43 through five typed protocol tests and a current live native
+start/resume workflow. See the
+[native transport observations and output](evidence/native-transport-assessment.md).
+OBL-44–69 remain uncertified and require their declared application proof.
 
 ## Rolling outcomes
 
@@ -69,9 +72,9 @@ merely because separate tests can exercise them.
 | <a id="obl-38"></a>[OBL-38](obligations.json) | Git worktree Arc | Available |
 | <a id="obl-39"></a>[OBL-39](obligations.json) | Git worktree Arc | Available |
 | <a id="obl-40"></a>[OBL-40](obligations.json) | Git worktree Arc | Available |
-| <a id="obl-41"></a>[OBL-41](obligations.json) | `tests/rolling-codex.test.ts`; separate native smoke required | Protocol proof available; reassess live evidence |
-| <a id="obl-42"></a>[OBL-42](obligations.json) | `tests/rolling-codex.test.ts` | Available |
-| <a id="obl-43"></a>[OBL-43](obligations.json) | `tests/rolling-codex.test.ts` | Available |
+| <a id="obl-41"></a>[OBL-41](obligations.json) | `tests/rolling-codex.test.ts`; `tests/rolling-codex.integration.ts` | Assessed by CERT-9; consult current freshness |
+| <a id="obl-42"></a>[OBL-42](obligations.json) | `tests/rolling-codex.test.ts` | Assessed by CERT-9; consult current freshness |
+| <a id="obl-43"></a>[OBL-43](obligations.json) | `tests/rolling-codex.test.ts` | Assessed by CERT-9; consult current freshness |
 | <a id="obl-44"></a>[OBL-44](obligations.json) | Application provisioning Arc | Required |
 | <a id="obl-45"></a>[OBL-45](obligations.json) | Application worker-start Arc | Required |
 | <a id="obl-46"></a>[OBL-46](obligations.json) | Application suspension Arc with activity evidence | Required |
