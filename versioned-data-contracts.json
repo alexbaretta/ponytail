@@ -350,7 +350,7 @@
       "id": "campaign-census-report",
       "implementation": {
         "workspace": "ponytail",
-        "module": "src/campaign-census.js",
+        "module": "src/campaign-inventory.ts",
         "readerRegistryExport": "CampaignReportReaders"
       },
       "currentVersion": "V3",

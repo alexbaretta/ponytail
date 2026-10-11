@@ -143,6 +143,12 @@
         "S07-F23"
       ],
       "validation_tasklet": "S07-F24-T04"
+    },
+    "S07-F25": {
+      "depends_on": [
+        "S07-F24"
+      ],
+      "validation_tasklet": "S07-F25-T06"
     }
   },
   "tasklets": {
@@ -2508,6 +2514,78 @@
       "affinity": [],
       "risk": "normal",
       "feature": "S07-F24",
+      "planned_paths": []
+    },
+    "S07-F25-T01": {
+      "depends_on": [],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F25",
+      "planned_paths": [
+        "src/campaign-inventory.ts",
+        "src/campaign-report.ts"
+      ]
+    },
+    "S07-F25-T02": {
+      "depends_on": [
+        "S07-F25-T01"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F25",
+      "planned_paths": [
+        "src/campaign-inventory.ts",
+        "src/campaign-plan-metadata.ts",
+        "src/campaign-census.js"
+      ]
+    },
+    "S07-F25-T03": {
+      "depends_on": [],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F25",
+      "planned_paths": [
+        "tests/campaign-inventory.test.ts",
+        "tests/plan-execution-serial.test.ts",
+        "tests/plan-execution-serial.test.js"
+      ]
+    },
+    "S07-F25-T04": {
+      "depends_on": [],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F25",
+      "planned_paths": [
+        "src/campaign-inventory.js",
+        "src/campaign-report.js",
+        "src/campaign-plan-metadata.js",
+        "scripts/build-runtime.ts",
+        "versioned-data-contracts.json"
+      ]
+    },
+    "S07-F25-T05": {
+      "depends_on": [],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F25",
+      "planned_paths": [
+        "AGENTS.md",
+        "PROJECT_STRUCTURE.md",
+        ".agents/config/project/traceability.json",
+        "pm/requirements/traceability.generated.md"
+      ]
+    },
+    "S07-F25-T06": {
+      "depends_on": [
+        "S07-F25-T01",
+        "S07-F25-T02",
+        "S07-F25-T03",
+        "S07-F25-T04",
+        "S07-F25-T05"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S07-F25",
       "planned_paths": []
     }
   },

@@ -35,6 +35,14 @@ export interface CampaignReportV1 {
     readonly sprints: readonly CampaignReportSprintRecord[]; readonly tasklets: readonly CampaignTaskletRecord[] };
   readonly totals: CampaignReportTotals;
 }
+export function validateCampaignRepositoryIdentity(value: unknown, label = 'campaign report repository'): asserts value is CampaignRepositoryIdentity {
+  exactKeys(value, ['root', 'worktree', 'commit', 'branch', 'detached', 'clean'], label);
+  if (value.root !== '.' || value.worktree !== '.' || typeof value.commit !== 'string'
+    || !(typeof value.branch === 'string' || value.branch === null)
+    || typeof value.detached !== 'boolean' || typeof value.clean !== 'boolean') {
+    dataError('CAMPAIGN_REPORT_SCHEMA', `${label} contains invalid values`);
+  }
+}
 function isCount(value: unknown): value is number { return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0; }
 function validCountMap(value: unknown): value is Record<string, number> {
   return value !== null && typeof value === 'object' && !Array.isArray(value) && Object.values(value).every(isCount);
@@ -151,17 +159,13 @@ function validateCampaignReportV1(value: unknown): asserts value is CampaignRepo
   exactKeys(value, ['schemaVersion', 'valid', 'invocation', 'repository', 'campaign', 'totals'], 'campaign report');
   if (value.schemaVersion !== 1 || value.valid !== true) dataError('CAMPAIGN_REPORT_SCHEMA', 'invalid V1 campaign report envelope');
   exactKeys(value.invocation, ['command', 'input'], 'campaign report invocation');
-  exactKeys(value.repository, ['root', 'worktree', 'commit', 'branch', 'detached', 'clean'], 'campaign report repository');
+  validateCampaignRepositoryIdentity(value.repository);
   exactKeys(value.campaign, ['rootPlanId', 'plans', 'sprints', 'tasklets'], 'campaign report campaign');
   exactKeys(value.totals, ['plans', 'plansByLifecycle', 'sprints', 'incompleteSprints', 'sprintsByPlanningStatus', 'sprintsByExecutionStatus', 'incompleteSprintsByPlanningStatus', 'incompleteSprintsByExecutionStatus', 'tasklets', 'taskletsByStatus', 'doneTasklets', 'taskletCompletionPercentage'], 'campaign report totals');
   if (!Array.isArray(value.campaign.plans) || !Array.isArray(value.campaign.sprints) || !Array.isArray(value.campaign.tasklets)) {
     dataError('CAMPAIGN_REPORT_SCHEMA', 'campaign report records must be arrays');
   }
   if (value.invocation.command !== 'report' || typeof value.invocation.input !== 'string'
-    || value.repository.root !== '.' || value.repository.worktree !== '.'
-    || typeof value.repository.commit !== 'string'
-    || !(typeof value.repository.branch === 'string' || value.repository.branch === null)
-    || typeof value.repository.detached !== 'boolean' || typeof value.repository.clean !== 'boolean'
     || typeof value.campaign.rootPlanId !== 'string') {
     dataError('CAMPAIGN_REPORT_SCHEMA', 'campaign report envelope contains invalid values');
   }

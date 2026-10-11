@@ -2,21 +2,26 @@
 // Copyright (c) Ponytail contributors.
 // Licensed under the MIT License. See LICENSE in the project root.
 
-const assert = require('node:assert/strict');
-const fs = require('node:fs');
-const path = require('node:path');
-const test = require('node:test');
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import test from 'node:test';
+import versionedContracts from '../versioned-data-contracts.json';
+import { SprintMetadataReaders } from '../skills/plan-execution/scripts/sprint-metadata.js';
+import { TaskletMetadataReaders } from '../skills/plan-execution/scripts/tasklet-metadata.js';
+import { CampaignReportReaders } from '../src/campaign-inventory.js';
 
-const root = path.join(__dirname, '..');
+interface PhysicalReaderOwner {
+  readonly module: string; readonly readerRegistryExport: string;
+  readonly readers: typeof SprintMetadataReaders | typeof TaskletMetadataReaders | typeof CampaignReportReaders;
+}
+
+
+const root = path.join(__dirname, '../..');
 const skill = fs.readFileSync(
   path.join(root, 'skills', 'plan-execution', 'SKILL.md'),
   'utf8',
 );
-const versionedContracts = JSON.parse(fs.readFileSync(
-  path.join(root, 'versioned-data-contracts.json'),
-  'utf8',
-));
-
 test('serial policy preserves atomic batch and convergence boundaries', () => {
   assert.match(skill, /one type definition, class\s+envelope, method or function, controller endpoint[\s\S]*focused fixture, or validation gate/);
   assert.match(skill, /more than\s+1,000 new lines requires the executing agent to split it or record why/);
@@ -70,9 +75,10 @@ test('sandbox-blocked journaling requires explicit persistent-rule authorization
 });
 
 test('orchestration metadata retains every immutable reader', () => {
-  const expected = new Map([
-    ['parallel-sprint-metadata', 'skills/plan-execution/scripts/ready-sprints.js'],
-    ['parallel-tasklet-scheduling-metadata', 'skills/plan-execution/scripts/ready-tasklets.js'],
+  const expected = new Map<string, PhysicalReaderOwner>([
+    ['parallel-sprint-metadata', { module: 'skills/plan-execution/scripts/sprint-metadata.ts', readerRegistryExport: 'SprintMetadataReaders', readers: SprintMetadataReaders }],
+    ['parallel-tasklet-scheduling-metadata', { module: 'skills/plan-execution/scripts/tasklet-metadata.ts', readerRegistryExport: 'TaskletMetadataReaders', readers: TaskletMetadataReaders }],
+    ['campaign-census-report', { module: 'src/campaign-inventory.ts', readerRegistryExport: 'CampaignReportReaders', readers: CampaignReportReaders }],
   ]);
   const families = versionedContracts.families.filter(({ id }) => expected.has(id));
   assert.equal(families.length, expected.size);
@@ -82,12 +88,13 @@ test('orchestration metadata retains every immutable reader', () => {
     assert.deepEqual(family.versions, versions);
     assert.deepEqual(family.supportedReadVersions, versions);
     assert.deepEqual(family.supportedDowngradeVersions, []);
-    assert.equal(family.implementation.module, expected.get(family.id));
-    const implementation = require(path.join(root, family.implementation.module));
-    const readers = implementation[family.implementation.readerRegistryExport];
-    assert.deepEqual(Object.keys(readers), family.supportedReadVersions);
-    for (const version of family.supportedReadVersions) {
-      assert.equal(typeof readers[version], 'function');
+    const physicalReaderOwner = expected.get(family.id);
+    assert.ok(physicalReaderOwner);
+    assert.equal(family.implementation.module, physicalReaderOwner.module);
+    assert.equal(family.implementation.readerRegistryExport, physicalReaderOwner.readerRegistryExport);
+    assert.deepEqual(Object.keys(physicalReaderOwner.readers), family.supportedReadVersions);
+    for (const reader of Object.values(physicalReaderOwner.readers)) {
+      assert.equal(typeof reader, 'function');
     }
   }
 });

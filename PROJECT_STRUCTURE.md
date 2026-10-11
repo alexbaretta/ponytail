@@ -88,7 +88,11 @@ while project-wide management records remain under `pm/`.
 - `src/campaign-report.ts` owns typed V1 report construction, unknown input
   validation, human table presentation and Git repository identity; its adjacent
   runtime is generated.
-  The inventory V2/V3 reader registry remains in `src/campaign-census.js`.
+- `src/campaign-inventory.ts` owns typed V2/V3 inventory validation and
+  repository-wide campaign construction, with the complete physical report
+  reader registry; its adjacent runtime is generated. Invalid metadata IDs
+  remain unknown diagnostic data while valid plan and repository fields are
+  checked against their typed contracts.
 - `src/campaign-graph.ts` owns typed campaign graph projection and prerequisite
   blocking over validated plan contents; its adjacent runtime is generated.
 - `src/campaign-plan-contents.ts` owns typed sprint/tasklet content validation,

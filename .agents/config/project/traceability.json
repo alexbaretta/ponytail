@@ -1060,6 +1060,21 @@
       "class": "unit-test",
       "path": "tests/campaign-report.test.ts",
       "locator": "text"
+    },
+    {
+      "class": "implementation",
+      "path": "src/campaign-inventory.ts",
+      "locator": "text"
+    },
+    {
+      "class": "unit-test",
+      "path": "tests/campaign-inventory.test.ts",
+      "locator": "text"
+    },
+    {
+      "class": "unit-test",
+      "path": "tests/plan-execution-serial.test.ts",
+      "locator": "text"
     }
   ],
   "entities": [],
@@ -1263,6 +1278,10 @@
     {
       "path": "src/campaign-report.js",
       "sourcePath": "src/campaign-report.ts"
+    },
+    {
+      "path": "src/campaign-inventory.js",
+      "sourcePath": "src/campaign-inventory.ts"
     }
   ],
   "reverseViewPath": "pm/requirements/traceability.generated.md",

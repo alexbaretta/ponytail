@@ -31,7 +31,7 @@ export interface CampaignPlanV2 extends CampaignPlanFields { readonly schemaVers
 export interface CampaignPlanV3 extends CampaignPlanFields { readonly schemaVersion: 3; readonly obligationDocument: string }
 
 function isRecord(value: unknown): value is Record<string, unknown> { return value !== null && typeof value === 'object' && !Array.isArray(value); }
-function candidateRecordId(campaignPlanCandidate: CampaignPlanCandidate): unknown {
+export function candidateRecordId(campaignPlanCandidate: CampaignPlanCandidate): unknown {
   return isRecord(campaignPlanCandidate.metadata) ? campaignPlanCandidate.metadata.id ?? null : null;
 }
 export function metadataBlocks(text: string): string[] {

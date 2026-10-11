@@ -78,6 +78,8 @@ services. `PROJECT_STRUCTURE.md` is authoritative for that boundary.
   tests/obligations.test.js tests/obligation-execution.test.js`.
   Rolling configuration focused proof: `node --test dist/tests/rolling-campaign.test.js
   dist/tests/rolling-campaign.integration.test.js`.
+- Campaign inventory focused proof: `node --test dist/tests/campaign-inventory.test.js
+  dist/tests/campaign-report.test.js dist/tests/plan-execution-serial.test.js tests/campaign-census.test.js`.
 - Campaign report focused proof: `node --test dist/tests/campaign-report.test.js
   dist/tests/campaign-graph.test.js tests/campaign-census.test.js`.
 - Campaign graph focused proof: `node --test dist/tests/campaign-graph.test.js

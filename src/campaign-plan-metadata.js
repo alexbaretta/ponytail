@@ -7,6 +7,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.CampaignPlanMetadataReaders = exports.PLAN_METADATA_MARKER = void 0;
+exports.candidateRecordId = candidateRecordId;
 exports.metadataBlocks = metadataBlocks;
 exports.parseCandidate = parseCandidate;
 exports.readPlanMetadataV1 = readPlanMetadataV1;

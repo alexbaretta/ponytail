@@ -61,7 +61,7 @@ Requirement: [pm/requirements/requirements-traceability.md](requirements-traceab
 
 Requirement: [pm/requirements/index.md](index.md)
 
-- implementation: implements [src/campaign-report.ts:241](../../src/campaign-report.ts#L241)
+- implementation: implements [src/campaign-report.ts:245](../../src/campaign-report.ts#L245)
 - unit-test: verifies [tests/campaign-census-format.test.js:11](../../tests/campaign-census-format.test.js#L11)
 - integration-test: verifies [tests/campaign-census.test.js:606](../../tests/campaign-census.test.js#L606)
 - uat: verifies [pm/uat/index.md:45](../../pm/uat/index.md#L45)
@@ -160,7 +160,7 @@ Requirement: [pm/requirements/campaign-orchestration.md](campaign-orchestration.
 
 - implementation: supports [hooks/plan-input.js:6](../../hooks/plan-input.js#L6)
 - implementation: implements [skills/plan-execution/scripts/ready-sprints.ts:80](../../skills/plan-execution/scripts/ready-sprints.ts#L80)
-- implementation: implements [src/campaign-census.js:44](../../src/campaign-census.js#L44)
+- implementation: implements [src/campaign-inventory.ts:104](../../src/campaign-inventory.ts#L104)
 - implementation: implements [src/campaign-orchestration.js:7](../../src/campaign-orchestration.js#L7)
 - implementation: implements [src/campaign-orchestration.js:1016](../../src/campaign-orchestration.js#L1016)
 - implementation: implements [src/campaign-orchestration.js:2322](../../src/campaign-orchestration.js#L2322)

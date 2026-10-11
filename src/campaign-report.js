@@ -6,6 +6,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.validateCampaignRepositoryIdentity = validateCampaignRepositoryIdentity;
 exports.repositoryIdentity = repositoryIdentity;
 exports.buildReport = buildReport;
 exports.readCampaignReportV1 = readCampaignReportV1;
@@ -16,6 +17,14 @@ const campaign_configuration_js_1 = require("./campaign-configuration.js");
 const campaign_scope_js_1 = require("./campaign-scope.js");
 const campaign_dependencies_js_1 = require("./campaign-dependencies.js");
 const campaign_plan_contents_js_1 = require("./campaign-plan-contents.js");
+function validateCampaignRepositoryIdentity(value, label = 'campaign report repository') {
+    (0, campaign_configuration_js_1.exactKeys)(value, ['root', 'worktree', 'commit', 'branch', 'detached', 'clean'], label);
+    if (value.root !== '.' || value.worktree !== '.' || typeof value.commit !== 'string'
+        || !(typeof value.branch === 'string' || value.branch === null)
+        || typeof value.detached !== 'boolean' || typeof value.clean !== 'boolean') {
+        (0, campaign_configuration_js_1.dataError)('CAMPAIGN_REPORT_SCHEMA', `${label} contains invalid values`);
+    }
+}
 function isCount(value) { return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0; }
 function validCountMap(value) {
     return value !== null && typeof value === 'object' && !Array.isArray(value) && Object.values(value).every(isCount);
@@ -131,17 +140,13 @@ function validateCampaignReportV1(value) {
     if (value.schemaVersion !== 1 || value.valid !== true)
         (0, campaign_configuration_js_1.dataError)('CAMPAIGN_REPORT_SCHEMA', 'invalid V1 campaign report envelope');
     (0, campaign_configuration_js_1.exactKeys)(value.invocation, ['command', 'input'], 'campaign report invocation');
-    (0, campaign_configuration_js_1.exactKeys)(value.repository, ['root', 'worktree', 'commit', 'branch', 'detached', 'clean'], 'campaign report repository');
+    validateCampaignRepositoryIdentity(value.repository);
     (0, campaign_configuration_js_1.exactKeys)(value.campaign, ['rootPlanId', 'plans', 'sprints', 'tasklets'], 'campaign report campaign');
     (0, campaign_configuration_js_1.exactKeys)(value.totals, ['plans', 'plansByLifecycle', 'sprints', 'incompleteSprints', 'sprintsByPlanningStatus', 'sprintsByExecutionStatus', 'incompleteSprintsByPlanningStatus', 'incompleteSprintsByExecutionStatus', 'tasklets', 'taskletsByStatus', 'doneTasklets', 'taskletCompletionPercentage'], 'campaign report totals');
     if (!Array.isArray(value.campaign.plans) || !Array.isArray(value.campaign.sprints) || !Array.isArray(value.campaign.tasklets)) {
         (0, campaign_configuration_js_1.dataError)('CAMPAIGN_REPORT_SCHEMA', 'campaign report records must be arrays');
     }
     if (value.invocation.command !== 'report' || typeof value.invocation.input !== 'string'
-        || value.repository.root !== '.' || value.repository.worktree !== '.'
-        || typeof value.repository.commit !== 'string'
-        || !(typeof value.repository.branch === 'string' || value.repository.branch === null)
-        || typeof value.repository.detached !== 'boolean' || typeof value.repository.clean !== 'boolean'
         || typeof value.campaign.rootPlanId !== 'string') {
         (0, campaign_configuration_js_1.dataError)('CAMPAIGN_REPORT_SCHEMA', 'campaign report envelope contains invalid values');
     }
