@@ -494,6 +494,80 @@ node --test \
   tests/ready-sprints.test.js tests/ready-tasklets.test.js
 ```
 
+## Retained indexing and worktree boundaries
+
+Inspection basis: `aab2b80`. The following retained operations are part of the
+language scope independently of the new campaign controller. This is an
+operation map for canonical registration, not permission to change contracts.
+
+| Outcome boundary | Current owner | Proof/assessment boundary |
+| --- | --- | --- |
+| Read physical traceability index storage V1 | `src/project-index.js`: `ProjectIndexStorageReaders` | `tests/project-index.test.js`: malformed durable cache payloads |
+| Read physical plan index storage V1 | Same owner: `PlanIndexStorageReaders` | Plan cache reuse and invalid record tests |
+| Read exact index, search, validation and plan graph result contracts | Same owner: five result-reader registries | Register each physical contract separately; result production alone does not prove rejection behavior |
+| Collect canonical traceability entities/relationships from current Git inputs | Same owner: `collectTraceabilityProjection` | Exact Git state, normalized content and renamed/deleted inputs |
+| Collect plan hierarchy, prospective planning entities and obligation identities | Same owner: `collectPlanProjection`, `parsePlanIndexObligations` | Plan hierarchy, planning-only sprints, invalid/stranded members and adopted identities; assess subdivision of parsing outcomes |
+| Publish complete traceability/plan generations transactionally with immutable parse reuse | Same owner: `publishTraceabilityGeneration`, `indexProject` | Parameterized statements, cache reuse, rollback and contention; reconcile the two corpora as separate consumers |
+| Query fresh traceability entities with bound filters | Same owner: `searchTraceability` | Exact generation and stale-query rejection |
+| Validate directional traceability cardinality within explicit entity/plan/campaign scopes | Same owner: `validateTraceability` | Directional gaps, prospective-role exclusions and exact closure |
+| Search fresh plan records with bound filters | Same owner: `searchPlans` | Fresh plan generation and stale-plan rejection |
+| Query plan ancestors, descendants, roots and stranded records | Same owner: `queryPlanGraph` | Fresh graph query proof; assess each independently consumed query before registration |
+| Incrementally index Git history without rereading indexed blobs | Same owner: `prepareGitCommitBatch`, history ingestion | Commit preparation/cache tests and repository-text integration proof |
+| Publish a stable worktree overlay | Same owner: overlay collection/publication | Repository-text integration proof; source stability and transaction acceptance required |
+| Resume interrupted history indexing from committed checkpoints with bounded workers/transactions | Same owner: `refreshRepositoryTextIndex` | Cancellation/restart integration proof; worker failures are part of this outcome |
+| Query repository text by ref, commit, history and path selectors | Same owner: `grepRepository` | Exact selector grammar and repository-text integration proof |
+| Report index progress and terminate cancellation with CLI status 130 | Same owner: progress reporter and CLI interruption handling | Cumulative totals, late snapshots, zero commits, interrupted lines and TTY output |
+| Execute index/query CLI chapters with their existing usage, serialization and exits | Same owner: `run` and argument parsers | Preserve `search`, `traceability` and `plan` operation grammar; each retained command needs transport assessment |
+| Read physical worktree lifecycle configuration V1 | `src/worktree-reclamation.js`: configuration reader | `tests/worktree-reclamation.test.js`: exact configuration |
+| Read physical claim, adapter request/result and reclamation result V1 contracts | Same owner: four contract readers | Exact requests, ambiguous claims and result rendering; register independently consumed contracts separately |
+| Inspect project-owned reclamation claims without reclaiming in dry-run mode | Same owner: `runReclamation` | `tests/worktree-reclamation-cli.test.js`: inventory and dry-run behavior |
+| Reclaim only adapter-authorized abandoned claims, fenced by identity/generation | Same owner: `runReclamation`, result verification | Reused claim identity, malformed output and retained resources |
+| Serialize reclamation within one project without coupling different projects | Same owner: lifecycle lock | Independent maintenance process tests |
+| Execute reclamation CLI grammar and human/JSON results | Same owner: parser, formatter, `main` | Exact command result and untrusted adapter CLI tests |
+| Read exact historical worker recovery V1 and V2 records | `src/worker-worktrees.js`: `WorkerRecoveryReaders` | `tests/worker-worktrees.test.js`: immutable V1 and recovery results; assess each physical reader |
+| Recover the original checkout with authenticated source/branch/path identity | Same owner: `recoverCheckout` | Missing checkout/registration, symlink, occupied branch, lock and unavailable source tests |
+| Restore legacy replacement provenance to its original checkout without losing committed state | Same owner: `recoverLegacyCheckout` | Legacy replacement recovery and enrollment tests |
+| Upgrade an authenticated retained worker to an integrated revision with resumable intent | Same owner: `upgradeCheckout` | Every durable prefix, owning project integration, dirty/unintegrated targets and ignored collision tests |
+
+Database connection options already have a checked owner in
+`src/project-index-database.ts`. Its configuration rejection/default semantics
+need their own evidence assessment, not a duplicate implementation in the index
+migration. Hashing, SQL parameter construction, Git execution, cache normalization
+and output printers accompany their consumer; exporting them does not establish
+an independent atom. The indexing rows still require subdivision where one row
+names multiple independently consumed contracts, query operations or corpora.
+
+On 2026-10-10, `node --test tests/project-index.test.js
+tests/worktree-reclamation.test.js` passed 33 tests with zero failures,
+cancellations or skips on `aab2b80` plus this prose-only change. This selection
+does not execute the separate reclamation CLI/process or worker recovery Arcs,
+nor does its injected database proof establish a live PostgreSQL integration
+pass. Those distinctions remain part of each obligation's evidence assessment.
+
+## Legacy campaign replacement boundary
+
+The design authorizes replacing the tasklet-centered campaign chapter and native
+worker allocation, not deleting all serialized history or recovery. Inspection
+of `src/campaign-orchestration.js` exposes these distinct responsibilities:
+
+| Existing surface | Migration disposition |
+| --- | --- |
+| Tasklet scheduling, planning/review dispatch, ready-action selection and host action advancement | Replace with OBL-44–69 application operations; do not implement a second typed tasklet campaign controller |
+| Ledger V1–V9, action V1–V6, completed-action versions, ready-action/status versions and delivery/binding readers | Inventory every registered physical version and caller before retaining typed readers or explicitly retiring consumption; preserve immutable historical meanings |
+| Obligation checkpoint publication and bounded lease renewal | Reconcile portable acceptance and new campaign adapters; preserve predecessor/authority/path fences, with one canonical acceptance operation |
+| Original worker attachment, authentication, recovery and upgrade bindings | Retain required recovery responsibilities until explicit migration proves ownership transfer; controller replacement is not checkout abandonment |
+| Reservations, retry fencing, blocker reports and retirement audit | Map required recovery/unknown-outcome safeguards to rolling allocation and recovery; do not carry obsolete action mechanics into the new controller |
+| Plugin-backed coordinator identity lookup | Remove from the required rolling path; native coordination must establish campaign ownership without `plan-input-coordinators.json` in plugin data |
+| Campaign status/help and chapter routing | Replace tasklet command vocabulary with the approved shared CLI/MCP operation contract; preserve explicit diagnostics for retired entrypoints |
+
+`coordinatorBinding` currently reads plugin-local `plan-input-coordinators.json`;
+the remaining legacy path therefore cannot substantiate plugin independence.
+The existing typed native transport alone does not establish that the application
+never calls that lookup. Closure requires inspecting the final dependency/call
+graph and exercising worker start/recovery with plugin configuration absent.
+No historical version is silently remapped to a new ledger, and no legacy
+recovery worktree is deleted by this inspection.
+
 ## Registration and completion boundary
 
 The owner census is now explicit; the atomic outcome inventory is still incomplete.
