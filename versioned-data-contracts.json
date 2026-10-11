@@ -3,6 +3,22 @@
   "schemaVersion": 1,
   "families": [
     {
+      "id": "rolling-project-configuration",
+      "implementation": {
+        "workspace": "ponytail",
+        "module": "src/rolling-campaign.js",
+        "readerRegistryExport": "RollingProjectConfigReaders"
+      },
+      "currentVersion": "V1",
+      "versions": [
+        "V1"
+      ],
+      "supportedReadVersions": [
+        "V1"
+      ],
+      "supportedDowngradeVersions": []
+    },
+    {
       "id": "plan-obligation-document",
       "implementation": {
         "workspace": "ponytail",

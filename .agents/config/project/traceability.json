@@ -791,6 +791,26 @@
       "class": "uat",
       "path": "pm/uat/rolling-campaigns.md",
       "locator": "text"
+    },
+    {
+      "class": "implementation",
+      "path": "src/rolling-campaign.js",
+      "locator": "text"
+    },
+    {
+      "class": "unit-test",
+      "path": "tests/rolling-campaign.test.js",
+      "locator": "text"
+    },
+    {
+      "class": "plan",
+      "path": "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/sprints/S02.md",
+      "locator": "text"
+    },
+    {
+      "class": "integration-test",
+      "path": "tests/rolling-campaign.integration.test.js",
+      "locator": "text"
     }
   ],
   "entities": [],

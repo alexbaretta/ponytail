@@ -79,6 +79,10 @@ while project-wide management records remain under `pm/`.
   reservations. `src/worker-worktrees.js` owns exact-path Git reconstruction
   and checkpointed pre-attachment upgrades from authenticated main-worktree
   provenance, independently of host tools.
+  `src/rolling-campaign.js` owns the new rolling execution configuration and
+  independently testable graph/scheduling boundary. Its project configuration
+  is `.agents/config/project/rolling-campaigns.json`; existing campaign dispatch
+  remains legacy until the replacement operation layer is integrated.
   `src/worktree-reclamation.js` owns the versioned
   project lifecycle-adapter contracts, project-scoped reclamation lock,
   deterministic claim selection, generation fencing, and verified cleanup

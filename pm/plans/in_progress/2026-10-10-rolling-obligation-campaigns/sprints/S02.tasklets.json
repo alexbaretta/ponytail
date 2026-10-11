@@ -1,0 +1,102 @@
+{
+  "schemaVersion": 4,
+  "sprint": "S02",
+  "features": {
+    "S02-F01": {
+      "depends_on": [],
+      "validation_tasklet": "S02-F01-T05"
+    }
+  },
+  "tasklets": {
+    "S02-F01-T01": {
+      "depends_on": [],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S02-F01",
+      "planned_paths": [
+        "src/rolling-campaign.js",
+        "tests/rolling-campaign.test.js",
+        "versioned-data-contracts.json",
+        ".agents/config/project/traceability.json",
+        "pm/requirements/traceability.generated.md",
+        "AGENTS.md",
+        "PROJECT_STRUCTURE.md"
+      ]
+    },
+    "S02-F01-T02": {
+      "depends_on": [
+        "S02-F01-T01"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S02-F01",
+      "planned_paths": [
+        "src/rolling-campaign.js",
+        "tests/rolling-campaign.test.js",
+        "versioned-data-contracts.json",
+        ".agents/config/project/traceability.json",
+        "pm/requirements/traceability.generated.md"
+      ]
+    },
+    "S02-F01-T03": {
+      "depends_on": [
+        "S02-F01-T06"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S02-F01",
+      "planned_paths": [
+        "src/rolling-campaign.js",
+        "tests/rolling-campaign.test.js",
+        "versioned-data-contracts.json",
+        ".agents/config/project/traceability.json",
+        "pm/requirements/traceability.generated.md"
+      ]
+    },
+    "S02-F01-T04": {
+      "depends_on": [
+        "S02-F01-T03"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S02-F01",
+      "planned_paths": [
+        "src/rolling-campaign.js",
+        "tests/rolling-campaign.test.js",
+        "versioned-data-contracts.json",
+        ".agents/config/project/traceability.json",
+        "pm/requirements/traceability.generated.md"
+      ]
+    },
+    "S02-F01-T05": {
+      "depends_on": [
+        "S02-F01-T01",
+        "S02-F01-T02",
+        "S02-F01-T03",
+        "S02-F01-T04",
+        "S02-F01-T06"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S02-F01",
+      "planned_paths": []
+    },
+    "S02-F01-T06": {
+      "depends_on": [
+        "S02-F01-T02"
+      ],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S02-F01",
+      "planned_paths": [
+        "src/rolling-campaign.js",
+        "tests/rolling-campaign.integration.test.js",
+        ".agents/config/project/traceability.json",
+        "pm/requirements/traceability.generated.md",
+        "AGENTS.md",
+        "PROJECT_STRUCTURE.md"
+      ]
+    }
+  },
+  "external_depends_on": {}
+}
