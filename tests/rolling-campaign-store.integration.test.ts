@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Alex Baretta. All rights reserved.
 // Licensed under the MIT License. See LICENSE in the project root.
 import assert from 'node:assert/strict';
+import {rebasePreparedRollingIncrement} from '../src/rolling-integration.js';
 import test, { type TestContext } from 'node:test';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
@@ -530,6 +531,25 @@ export async function runRollingReviewScenario(t: TestContext, reviewScenario: R
     assert.deepEqual(await restartedRollingCampaignStore.claimIncrement('bound-fixture',rollingStoredReview.request.id),rollingIncrementClaimV1);
     fs.unlinkSync(path.join(workerRoot,'integration-in-progress.txt'));
     assert.equal((await pool.query<Record<string,unknown>>('SELECT count(*)::integer AS count FROM ponytail_index.rolling_increment_v1 WHERE project_id=$1',[projectId])).rows[0]?.count,1);
+    const remoteRoot = path.join(root,'managed','increment-remote.git');
+    execFileSync('git',['clone','--bare','-q',root,remoteRoot]);
+    execFileSync('git',['-C',remoteRoot,'update-ref','refs/heads/campaign/bound-fixture',baseCommit]);
+    execFileSync('git',['-C',root,'remote','add','origin',remoteRoot]);
+    const attempts = await Promise.allSettled(Array.from({length:4},()=>rollingCampaignStore.beginIncrementRebase('bound-fixture',rollingStoredReview.request.id)));
+    assert.equal(attempts.filter(attempt=>attempt.status === 'fulfilled').length,1);
+    assert.equal(attempts.filter(attempt=>attempt.status === 'rejected').length,3);
+    const fulfilledAttempt = attempts.find(attempt=>attempt.status === 'fulfilled');assert.ok(fulfilledAttempt?.status === 'fulfilled');
+    const rollingIncrementRebaseV1 = fulfilledAttempt.value;
+    assert.equal(rollingIncrementRebaseV1.result,null);
+    assert.deepEqual(await restartedRollingCampaignStore.incrementRebase('bound-fixture',rollingStoredReview.request.id),rollingIncrementRebaseV1);
+    const rollingFastRebaseResult = rebasePreparedRollingIncrement(workerRoot,rollingIncrementRebaseV1);
+    const recordedRollingIncrementRebaseV1 = await restartedRollingCampaignStore.recordIncrementRebase('bound-fixture',rollingStoredReview.request.id,rollingFastRebaseResult);
+    assert.deepEqual(recordedRollingIncrementRebaseV1.result,rollingFastRebaseResult);
+    assert.deepEqual(await rollingCampaignStore.recordIncrementRebase('bound-fixture',rollingStoredReview.request.id,rollingFastRebaseResult),recordedRollingIncrementRebaseV1);
+    assert.deepEqual(await rollingCampaignStore.incrementRebase('bound-fixture',rollingStoredReview.request.id),recordedRollingIncrementRebaseV1);
+    await assert.rejects(rollingCampaignStore.recordIncrementRebase('bound-fixture',rollingStoredReview.request.id,{...rollingFastRebaseResult,integrationBase:'f'.repeat(40)}),/differs from recorded intent/);
+    assert.equal((await pool.query<Record<string,unknown>>('SELECT state FROM ponytail_index.rolling_increment_v1 WHERE project_id=$1',[projectId])).rows[0]?.state,'REBASED');
+
   } else await assert.rejects(rollingCampaignStore.claimIncrement('bound-fixture',rollingStoredReview.request.id),/accepted review/);
   const changedRollingReviewOutcomeV1: RollingReviewOutcomeV1 = reviewDecision === 'accepted'
     ? { ...rollingReviewOutcomeV1, decision: 'rejected', findings: ['Changed verdict.'] }

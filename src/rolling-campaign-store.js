@@ -486,10 +486,7 @@ class RollingCampaignStore {
             if (existing) {
                 const rollingIncrementClaimV1 = (0, rolling_integration_js_1.readRollingIncrementClaimV1)(readStateText(stringColumn(existing.claim_text, 'increment claim')));
                 requireState(rollingIncrementClaimV1.campaignId === campaignId && rollingIncrementClaimV1.reviewId === reviewId, 'stored claim identity differs');
-                const rollingStoredAssignment = await this.assignment(poolClient, campaignId, rollingIncrementClaimV1.assignmentId, rollingIncrementClaimV1.generation);
-                requireState(rollingStoredAssignment.state === 'INTEGRATING' && rollingStoredAssignment.activityStopped && !rollingStoredAssignment.retired, 'increment requires stopped retained integrating ownership');
-                requireState(rollingIncrementClaimV1.graphDigest === rollingCampaignRow.graph_digest, 'integration claim graph is stale');
-                this.currentLease(rollingStoredAssignment, this.graph(rollingCampaignRow, rollingCampaignRow.graph_digest));
+                await this.validateIncrementClaim(poolClient, rollingCampaignRow, rollingIncrementClaimV1);
                 return rollingIncrementClaimV1;
             }
             const row = (await poolClient.query('SELECT request_text,outcome_text,replacement_text FROM ponytail_index.rolling_review_v1 WHERE project_id=$1 AND campaign_id=$2 AND review_id=$3', [this.projectId, campaignId, reviewId])).rows[0];
@@ -509,6 +506,50 @@ class RollingCampaignStore {
                 reviewedRevision: rollingReviewRequestV1.revision, reviewedBase: rollingReviewRequestV1.baseCommit });
             await poolClient.query('INSERT INTO ponytail_index.rolling_increment_v1(project_id,campaign_id,review_id,increment_id,claim_text,state) VALUES($1,$2,$3,$4,$5,\'CLAIMED\')', [this.projectId, campaignId, reviewId, rollingIncrementClaimV1.id, JSON.stringify(rollingIncrementClaimV1)]);
             return rollingIncrementClaimV1;
+        });
+    }
+    async validateIncrementClaim(poolClient, rollingCampaignRow, rollingIncrementClaimV1) {
+        const rollingStoredAssignment = await this.assignment(poolClient, rollingCampaignRow.campaign_id, rollingIncrementClaimV1.assignmentId, rollingIncrementClaimV1.generation);
+        requireState(rollingStoredAssignment.state === 'INTEGRATING' && rollingStoredAssignment.activityStopped && !rollingStoredAssignment.retired, 'increment requires stopped retained integrating ownership');
+        requireState(rollingIncrementClaimV1.graphDigest === rollingCampaignRow.graph_digest, 'integration claim graph is stale');
+        this.currentLease(rollingStoredAssignment, this.graph(rollingCampaignRow, rollingCampaignRow.graph_digest));
+    }
+    async beginIncrementRebase(campaignId, reviewId) {
+        return this.transaction(campaignId, async (poolClient, rollingCampaignRow) => {
+            const row = (await poolClient.query('SELECT claim_text,state FROM ponytail_index.rolling_increment_v1 WHERE project_id=$1 AND campaign_id=$2 AND review_id=$3', [this.projectId, campaignId, reviewId])).rows[0];
+            requireState(row && row.state === 'CLAIMED', 'rebase already started; recover its recorded intent');
+            const rollingIncrementClaimV1 = (0, rolling_integration_js_1.readRollingIncrementClaimV1)(readStateText(stringColumn(row.claim_text, 'increment claim')));
+            await this.validateIncrementClaim(poolClient, rollingCampaignRow, rollingIncrementClaimV1);
+            const rollingFastRebaseIdentity = (0, rolling_integration_js_1.prepareRollingIncrementRebase)({ rootPath: rollingIncrementClaimV1.rootPath, target: rollingIncrementClaimV1.target,
+                revision: rollingIncrementClaimV1.reviewedRevision, baseCommit: rollingIncrementClaimV1.reviewedBase });
+            const rollingIncrementRebaseV1 = (0, rolling_integration_js_1.readRollingIncrementRebaseV1)({ schemaVersion: 1, incrementId: rollingIncrementClaimV1.id, ...rollingFastRebaseIdentity, result: null });
+            await poolClient.query('UPDATE ponytail_index.rolling_increment_v1 SET state=\'REBASING\',rebase_text=$4 WHERE project_id=$1 AND campaign_id=$2 AND review_id=$3', [this.projectId, campaignId, reviewId, JSON.stringify(rollingIncrementRebaseV1)]);
+            return rollingIncrementRebaseV1;
+        });
+    }
+    async incrementRebase(campaignId, reviewId) {
+        const row = (await this.pool.query('SELECT rebase_text FROM ponytail_index.rolling_increment_v1 WHERE project_id=$1 AND campaign_id=$2 AND review_id=$3', [this.projectId, campaignId, reviewId])).rows[0];
+        if (!row || row.rebase_text === null)
+            return null;
+        return (0, rolling_integration_js_1.readRollingIncrementRebaseV1)(readStateText(stringColumn(row.rebase_text, 'increment rebase')));
+    }
+    async recordIncrementRebase(campaignId, reviewId, rollingFastRebaseResult) {
+        return this.transaction(campaignId, async (poolClient, rollingCampaignRow) => {
+            const row = (await poolClient.query('SELECT claim_text,state,rebase_text FROM ponytail_index.rolling_increment_v1 WHERE project_id=$1 AND campaign_id=$2 AND review_id=$3', [this.projectId, campaignId, reviewId])).rows[0];
+            requireState(row && row.rebase_text !== null, 'increment has no recorded rebase intent');
+            const rollingIncrementClaimV1 = (0, rolling_integration_js_1.readRollingIncrementClaimV1)(readStateText(stringColumn(row.claim_text, 'increment claim')));
+            await this.validateIncrementClaim(poolClient, rollingCampaignRow, rollingIncrementClaimV1);
+            const previousRollingIncrementRebaseV1 = (0, rolling_integration_js_1.readRollingIncrementRebaseV1)(readStateText(stringColumn(row.rebase_text, 'increment rebase')));
+            const rollingIncrementRebaseV1 = (0, rolling_integration_js_1.readRollingIncrementRebaseV1)({ ...previousRollingIncrementRebaseV1, result: rollingFastRebaseResult });
+            if (previousRollingIncrementRebaseV1.result !== null) {
+                requireState((0, node_util_1.isDeepStrictEqual)(previousRollingIncrementRebaseV1, rollingIncrementRebaseV1), 'recorded rebase result is immutable');
+                return previousRollingIncrementRebaseV1;
+            }
+            requireState(row.state === 'REBASING', 'increment is not awaiting rebase observation');
+            (0, rolling_integration_js_1.verifyRollingIncrementRebase)(rollingIncrementClaimV1.rootPath, rollingFastRebaseResult);
+            await poolClient.query('UPDATE ponytail_index.rolling_increment_v1 SET state=$4,rebase_text=$5,candidate_revision=$6 WHERE project_id=$1 AND campaign_id=$2 AND review_id=$3', [this.projectId, campaignId, reviewId, rollingFastRebaseResult.state === 'REBASED' ? 'REBASED' : 'CONFLICT', JSON.stringify(rollingIncrementRebaseV1),
+                rollingFastRebaseResult.state === 'REBASED' ? rollingFastRebaseResult.revision : null]);
+            return rollingIncrementRebaseV1;
         });
     }
     async validateReviewCandidate(poolClient, rollingCampaignRow, rollingReviewRequestV1) {

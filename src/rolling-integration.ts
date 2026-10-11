@@ -14,7 +14,7 @@ export interface RollingReviewedIncrement {
  readonly revision: string;
  readonly baseCommit: string;
 }
-interface RollingFastRebaseIdentity {
+export interface RollingFastRebaseIdentity {
  readonly reviewedRevision: string;
  readonly reviewedBase: string;
  readonly integrationBase: string;
@@ -74,7 +74,7 @@ function rebaseResult(rootPath: string,rollingFastRebaseIdentity: RollingFastReb
 }
 
 // Traceability: implements REQ-ROLLING-REVIEW
-export function fastRebaseRollingIncrement(rollingReviewedIncrement: RollingReviewedIncrement): RollingFastRebaseResult {
+export function prepareRollingIncrementRebase(rollingReviewedIncrement: RollingReviewedIncrement): RollingFastRebaseIdentity {
  const {rootPath,revision,baseCommit} = rollingReviewedIncrement;
  const rollingIncrementTarget = rollingReviewedIncrement.target;
  commit(revision);commit(baseCommit);
@@ -91,12 +91,28 @@ export function fastRebaseRollingIncrement(rollingReviewedIncrement: RollingRevi
  git(rootPath,['fetch','--no-tags','--',rollingIncrementTarget.remote,`refs/heads/${rollingIncrementTarget.branch}:${remoteRef}`]);
  const integrationBase = commit(git(rootPath,['rev-parse',`${remoteRef}^{commit}`]).trim());
  git(rootPath,['merge-base','--is-ancestor',baseCommit,integrationBase]);
- const rollingFastRebaseIdentity: RollingFastRebaseIdentity = {reviewedRevision:revision,reviewedBase:baseCommit,integrationBase};
+ return {reviewedRevision:revision,reviewedBase:baseCommit,integrationBase};
+}
+
+// Traceability: implements REQ-ROLLING-REVIEW
+export function rebasePreparedRollingIncrement(rootPath: string,rollingFastRebaseIdentity: RollingFastRebaseIdentity): RollingFastRebaseResult {
+ const {reviewedRevision,reviewedBase,integrationBase} = rollingFastRebaseIdentity;
+ commit(reviewedRevision);commit(reviewedBase);commit(integrationBase);
+ requireIntegration(git(rootPath,['rev-parse','HEAD']).trim() === reviewedRevision,'checkout changed after rebase preparation');
+ requireIntegration(git(rootPath,['status','--porcelain=v1','-z','--untracked-files=all']).length === 0,'prepared rebase checkout is not clean');
+ git(rootPath,['symbolic-ref','--quiet','HEAD']);
+ git(rootPath,['merge-base','--is-ancestor',reviewedBase,integrationBase]);
  // The approved fast-rebase exception performs an interactive replay without
  // edit stops for clean commits. Textual conflicts retain the rebase for review.
- const spawnSyncReturns = gitResult(rootPath,['rebase','-i','--no-autostash','--no-autosquash','--no-update-refs','--onto',integrationBase,baseCommit],
+ const spawnSyncReturns = gitResult(rootPath,['rebase','-i','--no-autostash','--no-autosquash','--no-update-refs','--onto',integrationBase,reviewedBase],
   {...process.env,GIT_SEQUENCE_EDITOR:'true',GIT_TERMINAL_PROMPT:'0'});
- return rebaseResult(rootPath,rollingFastRebaseIdentity,spawnSyncReturns);
+ return rebaseResult(rootPath,{reviewedRevision,reviewedBase,integrationBase},spawnSyncReturns);
+}
+
+// Traceability: implements REQ-ROLLING-REVIEW
+export function fastRebaseRollingIncrement(rollingReviewedIncrement: RollingReviewedIncrement): RollingFastRebaseResult {
+ const rollingFastRebaseIdentity = prepareRollingIncrementRebase(rollingReviewedIncrement);
+ return rebasePreparedRollingIncrement(rollingReviewedIncrement.rootPath,rollingFastRebaseIdentity);
 }
 
 // Traceability: implements REQ-ROLLING-REVIEW
@@ -251,3 +267,74 @@ export function readRollingIncrementClaimV1(value: unknown): RollingIncrementCla
   target:{branch:claimIdentity(target.branch),remote:claimIdentity(target.remote)},reviewedRevision,reviewedBase};
 }
 export const RollingIncrementClaimReaders = {V1:readRollingIncrementClaimV1};
+
+export interface RollingIncrementRebaseV1 extends RollingFastRebaseIdentity {
+ readonly schemaVersion: 1;
+ readonly incrementId: string;
+ readonly result: RollingFastRebaseResult | null;
+}
+
+function isRecord(value: unknown): value is Record<string,unknown> {
+ return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+function record(value: unknown,names: readonly string[]): Record<string,unknown> {
+ requireIntegration(isRecord(value),'rebase record must be an object');
+ requireIntegration(Object.keys(value).sort().join('\0') === [...names].sort().join('\0'),'invalid rebase record fields');
+ return value;
+}
+function recordCommit(value: unknown): string {
+ requireIntegration(typeof value === 'string','commit identity must be a string');
+ return commit(value);
+}
+// Traceability: implements REQ-ROLLING-PUBLICATION
+export function readRollingIncrementRebaseV1(value: unknown): RollingIncrementRebaseV1 {
+ const rebaseRecord = record(value,['schemaVersion','incrementId','reviewedRevision','reviewedBase','integrationBase','result']);
+ requireIntegration(rebaseRecord.schemaVersion === 1,'unsupported rebase record version');
+ requireIntegration(typeof rebaseRecord.incrementId === 'string' && rebaseRecord.incrementId.trim().length > 0,'invalid increment identity');
+ const rollingFastRebaseIdentity: RollingFastRebaseIdentity = {reviewedRevision:recordCommit(rebaseRecord.reviewedRevision),
+  reviewedBase:recordCommit(rebaseRecord.reviewedBase),integrationBase:recordCommit(rebaseRecord.integrationBase)};
+ let result: RollingFastRebaseResult | null = null;
+ if (rebaseRecord.result !== null) {
+  requireIntegration(isRecord(rebaseRecord.result),'invalid rebase result');
+  switch (rebaseRecord.result.state) {
+   case 'REBASED': {
+    const resultRecord = record(rebaseRecord.result,['state','reviewedRevision','reviewedBase','integrationBase','revision','proofRefreshRequired']);
+    requireIntegration(typeof resultRecord.proofRefreshRequired === 'boolean','invalid proof refresh flag');
+    const revision = recordCommit(resultRecord.revision);
+    requireIntegration(resultRecord.proofRefreshRequired === (revision !== rollingFastRebaseIdentity.reviewedRevision
+     || rollingFastRebaseIdentity.integrationBase !== rollingFastRebaseIdentity.reviewedBase),'proof refresh differs from actual candidate identity');
+    result = {...rollingFastRebaseIdentity,state:'REBASED',revision,proofRefreshRequired:resultRecord.proofRefreshRequired};
+    break;
+   }
+   case 'TEXTUAL_CONFLICT': {
+    const resultRecord = record(rebaseRecord.result,['state','reviewedRevision','reviewedBase','integrationBase','originalCommit','conflictedPaths']);
+    requireIntegration(Array.isArray(resultRecord.conflictedPaths) && resultRecord.conflictedPaths.length > 0,'missing textual conflict paths');
+    const conflictedPaths = resultRecord.conflictedPaths.map((value: unknown)=> {
+     requireIntegration(typeof value === 'string' && value.length > 0 && !value.includes('\0'),'invalid conflict path');return value;
+    });
+    result = {...rollingFastRebaseIdentity,state:'TEXTUAL_CONFLICT',originalCommit:recordCommit(resultRecord.originalCommit),conflictedPaths};
+    break;
+   }
+   default: throw new Error('rolling integration: unsupported rebase result state');
+  }
+  requireIntegration(rebaseRecord.result.reviewedRevision === rollingFastRebaseIdentity.reviewedRevision
+   && rebaseRecord.result.reviewedBase === rollingFastRebaseIdentity.reviewedBase && rebaseRecord.result.integrationBase === rollingFastRebaseIdentity.integrationBase,
+   'rebase result differs from recorded intent');
+ }
+ return {schemaVersion:1,incrementId:rebaseRecord.incrementId,...rollingFastRebaseIdentity,result};
+}
+export const RollingIncrementRebaseReaders = {V1:readRollingIncrementRebaseV1};
+
+// Traceability: implements REQ-ROLLING-PUBLICATION
+export function verifyRollingIncrementRebase(rootPath: string,rollingFastRebaseResult: RollingFastRebaseResult): void {
+ if (rollingFastRebaseResult.state === 'REBASED') {
+  git(rootPath,['symbolic-ref','--quiet','HEAD']);
+  requireIntegration(git(rootPath,['rev-parse','HEAD']).trim() === rollingFastRebaseResult.revision,'rebase result differs from checkout');
+  git(rootPath,['merge-base','--is-ancestor',rollingFastRebaseResult.integrationBase,rollingFastRebaseResult.revision]);
+  requireIntegration(git(rootPath,['status','--porcelain=v1','-z','--untracked-files=all']).length === 0,'rebased checkout is not clean');
+ } else {
+  requireIntegration(git(rootPath,['rev-parse','REBASE_HEAD']).trim() === rollingFastRebaseResult.originalCommit,'conflict result differs from checkout');
+  const conflictedPaths = git(rootPath,['diff','--name-only','--diff-filter=U','-z']).split('\0').filter(value=>value.length > 0);
+  requireIntegration(JSON.stringify(conflictedPaths) === JSON.stringify(rollingFastRebaseResult.conflictedPaths),'conflict paths differ from checkout');
+ }
+}

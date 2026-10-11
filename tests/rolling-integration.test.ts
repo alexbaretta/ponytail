@@ -6,7 +6,7 @@ import path from 'node:path';
 import {execFileSync} from 'node:child_process';
 import assert from 'node:assert/strict';
 import test,{type TestContext} from 'node:test';
-import {fastRebaseRollingIncrement,continueFastRebaseRollingIncrement,publishRollingIncrement,reconcileRollingIncrementPublication,fastForwardRollingIncrement,readRollingIncrementClaimV1,type RollingReviewedIncrement} from '../src/rolling-integration.js';
+import {fastRebaseRollingIncrement,continueFastRebaseRollingIncrement,publishRollingIncrement,reconcileRollingIncrementPublication,fastForwardRollingIncrement,readRollingIncrementClaimV1,readRollingIncrementRebaseV1,prepareRollingIncrementRebase,rebasePreparedRollingIncrement,type RollingReviewedIncrement} from '../src/rolling-integration.js';
 
 interface RollingIntegrationFixture {
  readonly root: string;
@@ -195,5 +195,28 @@ test('integration claim reader freezes exact V1 fields and rejects malformed per
   {...rollingIncrementClaimV1,rootPath:'relative'},{...rollingIncrementClaimV1,graphDigest:'stale'},
   {...rollingIncrementClaimV1,reviewedRevision:'not-a-commit'},{...rollingIncrementClaimV1,target:{remote:'origin',branch:'increment',extra:true}}]) {
   assert.throws(()=>readRollingIncrementClaimV1(invalid),/rolling integration/);
+ }
+});
+
+// Traceability: verifies REQ-ROLLING-PUBLICATION
+test('prepared rebase records exact inputs before replay and refuses changed candidate state',testContext=> {
+ const rollingIntegrationFixture = fixture(testContext,false);
+ const rollingReviewedIncrement = rollingIntegrationFixture.rollingReviewedIncrement;
+ const rollingFastRebaseIdentity = prepareRollingIncrementRebase(rollingReviewedIncrement);
+ assert.equal(git(rollingReviewedIncrement.rootPath,['rev-parse','HEAD']),rollingReviewedIncrement.revision);
+ const rollingIncrementRebaseV1 = readRollingIncrementRebaseV1({schemaVersion:1,incrementId:'increment',...rollingFastRebaseIdentity,result:null});
+ assert.equal(rollingIncrementRebaseV1.result,null);
+ const changedPath = path.join(rollingReviewedIncrement.rootPath,'changed-after-intent.txt');
+ fs.writeFileSync(changedPath,'Preserve changes');
+ assert.throws(()=>rebasePreparedRollingIncrement(rollingReviewedIncrement.rootPath,rollingIncrementRebaseV1),/not clean/);
+ fs.rmSync(changedPath);
+ const rollingFastRebaseResult = rebasePreparedRollingIncrement(rollingReviewedIncrement.rootPath,rollingIncrementRebaseV1);
+ assert.ok(rollingFastRebaseResult.state === 'REBASED');
+ const completedRollingIncrementRebaseV1 = {...rollingIncrementRebaseV1,result:rollingFastRebaseResult};
+ assert.deepEqual(readRollingIncrementRebaseV1(completedRollingIncrementRebaseV1),completedRollingIncrementRebaseV1);
+ for (const invalid of [{...completedRollingIncrementRebaseV1,schemaVersion:2},{...completedRollingIncrementRebaseV1,extra:true},
+  {...completedRollingIncrementRebaseV1,result:{...rollingFastRebaseResult,proofRefreshRequired:false}},
+  {...completedRollingIncrementRebaseV1,result:{...rollingFastRebaseResult,integrationBase:'a'.repeat(40)}}]) {
+  assert.throws(()=>readRollingIncrementRebaseV1(invalid),/rolling integration/);
  }
 });

@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-10-11-rebase_intent_metadata_leak",
+  "recorded_at": "2026-10-11T13:40:49-07:00",
+  "source_references": [
+    "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/obligations.json#OBL-53"
+  ],
+  "context": {
+    "languages": [
+      "typescript"
+    ],
+    "frameworks": [],
+    "components": [
+      "rolling increment rebase"
+    ],
+    "affected_boundaries": [
+      "persisted rebase intent to Git result"
+    ],
+    "code_references": [
+      "src/rolling-integration.ts",
+      "tests/rolling-integration.test.ts",
+      "tests/rolling-campaign-store.integration.test.ts"
+    ]
+  },
+  "observed_behavior": "Replay supplied with a persisted intent returned schemaVersion, incrementId and result metadata inside its result; the exact V1 reader rejected the extra fields.",
+  "expected_behavior": "Replay returns only the defined rebase identity and outcome fields regardless of additional intent metadata on its input.",
+  "causal_mechanism": "TypeScript permits a structurally wider intent record as RollingFastRebaseIdentity. rebasePreparedRollingIncrement passed that object to rebaseResult, whose object spread copied its runtime metadata into the outcome.",
+  "anti_pattern": {
+    "structural_description": "Spreading a structurally typed input across an exact output contract boundary.",
+    "why_it_fails": "Static structural compatibility does not strip extra runtime fields."
+  },
+  "correct_pattern": {
+    "required_invariant": "The output contains only fields owned by its exact contract.",
+    "implementation_description": "Project the three defined identity fields before constructing the replay outcome. Preserve exact reader rejection of unknown fields."
+  },
+  "applicability_conditions": [
+    "A caller supplies a wider persisted intent to the structurally typed replay input."
+  ],
+  "known_non_matches": [
+    "The original entry point passed a three-field identity and already produced the defined shape."
+  ],
+  "confirmation_evidence": [
+    "The existing entry point tests passed while the new persisted-intent replay and PostgreSQL restart fixture both failed with invalid rebase record fields.",
+    "Projecting the identity fields makes both regressions pass: ten component tests and three focused PostgreSQL scenarios, with zero failures or skips."
+  ],
+  "regression_proofs": [
+    "tests/rolling-integration.test.ts: prepared rebase records exact inputs before replay and refuses changed candidate state",
+    "tests/rolling-campaign-store.integration.test.ts: real PostgreSQL serializes allocation, retains ownership and persists accepted review"
+  ]
+}

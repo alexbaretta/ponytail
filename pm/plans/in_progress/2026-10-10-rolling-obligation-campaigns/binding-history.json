@@ -2699,6 +2699,162 @@
           "profile": "increment-integration"
         }
       }
+    },
+    {
+      "id": "BIND-58",
+      "obligationId": "OBL-53",
+      "predecessorId": "BIND-55",
+      "baselineId": "BASELINE-16",
+      "assessor": "coordinator",
+      "authority": [
+        "user-goal-2026-10-10-rolling-campaigns",
+        "user-goal-2026-10-10-static-language-existing-tsts",
+        "user-2026-10-10-normative-atomic-obligations",
+        "user-2026-10-11-language-scope-our-code-preserve-translations"
+      ],
+      "reason": "Record the confirmed rebase-intent metadata leak and its passing regression as required by debugging, within the existing OBL-53–55 batch.",
+      "dependsOn": [],
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "src/rolling-integration.ts",
+          "src/rolling-integration.js",
+          "src/rolling-campaign-store.ts",
+          "src/rolling-campaign-store.js",
+          "scripts/project-index.sql",
+          "scripts/build-runtime.ts",
+          "versioned-data-contracts.json",
+          "tests/rolling-integration.test.ts",
+          "tests/rolling-integration.integration.test.ts",
+          "tests/rolling-campaign-store.integration.test.ts",
+          "pm/uat/rolling-campaigns.md",
+          "pm/requirements/traceability.generated.md",
+          "skills/semantic-rebase/SKILL.md",
+          ".openclaw/skills/semantic-rebase/SKILL.md",
+          ".agents/config/project/traceability.json",
+          "pm/debugging-pattern-observations/2026-10-11-rebase_intent_metadata_leak.json"
+        ],
+        "operations": [
+          "inspect",
+          "edit",
+          "build",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "Apply the intentional fast-rebase policy after accepted review, with semantic inspection triggered by textual conflict."
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "increment-integration"
+        }
+      }
+    },
+    {
+      "id": "BIND-59",
+      "obligationId": "OBL-54",
+      "predecessorId": "BIND-56",
+      "baselineId": "BASELINE-16",
+      "assessor": "coordinator",
+      "authority": [
+        "user-goal-2026-10-10-rolling-campaigns",
+        "user-goal-2026-10-10-static-language-existing-tsts",
+        "user-2026-10-10-normative-atomic-obligations",
+        "user-2026-10-11-language-scope-our-code-preserve-translations"
+      ],
+      "reason": "Record the confirmed rebase-intent metadata leak and its passing regression as required by debugging, within the existing OBL-53–55 batch.",
+      "dependsOn": [],
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "src/rolling-integration.ts",
+          "src/rolling-integration.js",
+          "src/rolling-campaign-store.ts",
+          "src/rolling-campaign-store.js",
+          "scripts/project-index.sql",
+          "scripts/build-runtime.ts",
+          "versioned-data-contracts.json",
+          "tests/rolling-integration.test.ts",
+          "tests/rolling-integration.integration.test.ts",
+          "tests/rolling-campaign-store.integration.test.ts",
+          "pm/uat/rolling-campaigns.md",
+          "pm/requirements/traceability.generated.md",
+          "skills/semantic-rebase/SKILL.md",
+          ".openclaw/skills/semantic-rebase/SKILL.md",
+          ".agents/config/project/traceability.json",
+          "pm/debugging-pattern-observations/2026-10-11-rebase_intent_metadata_leak.json"
+        ],
+        "operations": [
+          "inspect",
+          "edit",
+          "build",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "Fast-forward and normally push a reviewed increment, recording delivery only after remote containment is verified."
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "increment-integration"
+        }
+      }
+    },
+    {
+      "id": "BIND-60",
+      "obligationId": "OBL-55",
+      "predecessorId": "BIND-57",
+      "baselineId": "BASELINE-16",
+      "assessor": "coordinator",
+      "authority": [
+        "user-goal-2026-10-10-rolling-campaigns",
+        "user-goal-2026-10-10-static-language-existing-tsts",
+        "user-2026-10-10-normative-atomic-obligations",
+        "user-2026-10-11-language-scope-our-code-preserve-translations"
+      ],
+      "reason": "Record the confirmed rebase-intent metadata leak and its passing regression as required by debugging, within the existing OBL-53–55 batch.",
+      "dependsOn": [],
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "src/rolling-integration.ts",
+          "src/rolling-integration.js",
+          "src/rolling-campaign-store.ts",
+          "src/rolling-campaign-store.js",
+          "scripts/project-index.sql",
+          "scripts/build-runtime.ts",
+          "versioned-data-contracts.json",
+          "tests/rolling-integration.test.ts",
+          "tests/rolling-integration.integration.test.ts",
+          "tests/rolling-campaign-store.integration.test.ts",
+          "pm/uat/rolling-campaigns.md",
+          "pm/requirements/traceability.generated.md",
+          "skills/semantic-rebase/SKILL.md",
+          ".openclaw/skills/semantic-rebase/SKILL.md",
+          ".agents/config/project/traceability.json",
+          "pm/debugging-pattern-observations/2026-10-11-rebase_intent_metadata_leak.json"
+        ],
+        "operations": [
+          "inspect",
+          "edit",
+          "build",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "Reconcile rejected or uncertain increment pushes without force or duplicate delivery."
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "increment-integration"
+        }
+      }
     }
   ]
 }

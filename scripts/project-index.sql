@@ -389,6 +389,10 @@ CREATE TABLE IF NOT EXISTS rolling_increment_v1 (
   FOREIGN KEY (project_id,campaign_id,review_id)
     REFERENCES rolling_review_v1(project_id,campaign_id,review_id) ON DELETE CASCADE
 );
+ALTER TABLE rolling_increment_v1 ADD COLUMN IF NOT EXISTS rebase_text text
+  CHECK (rebase_text IS NULL OR COALESCE(jsonb_typeof((rebase_text::jsonb)->'schemaVersion')='number'
+    AND (rebase_text::jsonb)->>'schemaVersion'='1'
+    AND (rebase_text::jsonb)->>'incrementId'=increment_id::text, false));
 CREATE UNIQUE INDEX IF NOT EXISTS rolling_increment_v1_active_campaign
 ON rolling_increment_v1 (project_id,campaign_id) WHERE state <> 'PUBLISHED';
 
