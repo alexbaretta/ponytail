@@ -3,6 +3,18 @@
   "schemaVersion": 1,
   "families": [
     {
+      "id": "rolling-worker-submission",
+      "implementation": {
+        "workspace": "ponytail",
+        "module": "src/rolling-worker-submission.ts",
+        "readerRegistryExport": "RollingWorkerSubmissionReaders"
+      },
+      "currentVersion": "V1",
+      "versions": ["V1"],
+      "supportedReadVersions": ["V1"],
+      "supportedDowngradeVersions": []
+    },
+    {
       "id": "obligation-execution-lease",
       "implementation": {
         "workspace": "ponytail",

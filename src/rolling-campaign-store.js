@@ -15,6 +15,9 @@ const node_crypto_1 = __importDefault(require("node:crypto"));
 const node_path_1 = __importDefault(require("node:path"));
 const lossless_json_1 = require("lossless-json");
 const node_util_1 = require("node:util");
+const node_fs_1 = __importDefault(require("node:fs"));
+const node_child_process_1 = require("node:child_process");
+const rolling_worker_submission_js_1 = require("./rolling-worker-submission.js");
 const obligation_binding_history_js_1 = require("../skills/plan-execution/scripts/obligation-binding-history.js");
 const obligations_js_1 = require("../skills/plan-execution/scripts/obligations.js");
 const rolling_campaign_js_1 = require("./rolling-campaign.js");
@@ -308,11 +311,55 @@ class RollingCampaignStore {
             const rollingStoredAssignment = await this.assignment(poolClient, campaignId, id, generation);
             requireState(rollingStoredAssignment.state === 'WORKING' && rollingStoredAssignment.sessionId
                 && !rollingStoredAssignment.activityStopped && rollingStoredAssignment.lease, 'operation requires an active frozen lease');
-            requireState((0, node_util_1.isDeepStrictEqual)(rollingStoredAssignment.lease.binding, rollingGraph.effectiveBindings.get(rollingStoredAssignment.obligationId))
-                && (0, node_util_1.isDeepStrictEqual)(rollingStoredAssignment.binding, rollingGraph.bindings.find(item => item.obligationId === rollingStoredAssignment.obligationId)), 'frozen binding differs from coordinator scope');
-            requireState(rollingStoredAssignment.lease.binding.dependsOn.every(dependency => rollingGraph.projection.satisfiedIds.includes(dependency)), 'frozen prerequisites are unresolved');
+            this.currentLease(rollingStoredAssignment, rollingGraph);
             (0, obligation_binding_history_js_1.assertObligationLeaseOperation)(rollingStoredAssignment.lease, generation, graphDigest, operation, changedPaths);
         });
+    }
+    currentLease(rollingStoredAssignment, rollingGraph) {
+        const obligationLeaseV1 = rollingStoredAssignment.lease;
+        requireState(obligationLeaseV1 && (0, node_util_1.isDeepStrictEqual)(obligationLeaseV1.binding, rollingGraph.effectiveBindings.get(rollingStoredAssignment.obligationId))
+            && (0, node_util_1.isDeepStrictEqual)(rollingStoredAssignment.binding, rollingGraph.bindings.find(item => item.obligationId === rollingStoredAssignment.obligationId)), 'frozen binding differs from coordinator scope');
+        requireState(obligationLeaseV1.binding.dependsOn.every(dependency => rollingGraph.projection.satisfiedIds.includes(dependency)), 'frozen prerequisites are unresolved');
+        return obligationLeaseV1;
+    }
+    async submit(campaignId, id, generation, rollingWorkerSubmissionV1) {
+        const checkedRollingWorkerSubmissionV1 = (0, rolling_worker_submission_js_1.readRollingWorkerSubmissionV1)(rollingWorkerSubmissionV1);
+        requireState(checkedRollingWorkerSubmissionV1.campaignId === campaignId && checkedRollingWorkerSubmissionV1.assignmentId === id
+            && checkedRollingWorkerSubmissionV1.generation === generation, 'submission differs from requested assignment');
+        return this.transaction(campaignId, async (poolClient, rollingCampaignRow) => {
+            const rollingGraph = this.graph(rollingCampaignRow, rollingCampaignRow.graph_digest);
+            const rollingStoredAssignment = await this.assignment(poolClient, campaignId, id, generation);
+            requireState(rollingStoredAssignment.sessionId === checkedRollingWorkerSubmissionV1.sessionId && !rollingStoredAssignment.retired, 'submission differs from attached session');
+            const obligationLeaseV1 = this.currentLease(rollingStoredAssignment, rollingGraph);
+            const existing = (await poolClient.query('SELECT submission_text,lease_text FROM ponytail_index.rolling_submission_v1 WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3 AND generation=$4 AND revision=$5', [this.projectId, campaignId, id, generation, checkedRollingWorkerSubmissionV1.revision])).rows[0];
+            if (existing) {
+                requireState((0, node_util_1.isDeepStrictEqual)((0, rolling_worker_submission_js_1.parseRollingWorkerSubmission)(stringColumn(existing.submission_text, 'submission')), checkedRollingWorkerSubmissionV1)
+                    && (0, node_util_1.isDeepStrictEqual)((0, obligation_binding_history_js_1.readObligationLeaseV1)(readStateText(stringColumn(existing.lease_text, 'submission lease'))), obligationLeaseV1), 'replayed submission differs from immutable result');
+                requireState(rollingStoredAssignment.state === 'REVIEW' && rollingStoredAssignment.activityStopped, 'submission is no longer awaiting review');
+                return { assignmentId: id, generation, revision: checkedRollingWorkerSubmissionV1.revision, state: 'REVIEW' };
+            }
+            requireState(rollingStoredAssignment.state === 'WORKING' && !rollingStoredAssignment.activityStopped, 'only an active attached worker may submit');
+            await this.cancelActions(poolClient, id);
+            const rollingStoredWorktree = readWorktree((await poolClient.query('SELECT * FROM ponytail_index.rolling_worktree_v1 WHERE project_id=$1 AND number=$2', [this.projectId, rollingStoredAssignment.worktreeNumber])).rows[0]);
+            function commonDirectory(root) {
+                const result = (0, node_child_process_1.spawnSync)('git', ['-C', root, 'rev-parse', '--path-format=absolute', '--git-common-dir'], { encoding: 'utf8' });
+                requireState(!result.error && result.status === 0, result.error?.message || result.stderr.trim() || 'invalid Git checkout');
+                return node_fs_1.default.realpathSync(result.stdout.trim());
+            }
+            requireState(commonDirectory(rollingStoredWorktree.rootPath) === commonDirectory(rollingCampaignRow.coordinator_root), 'worker repository differs from coordinator');
+            const rollingExecutionConfig = executionConfiguration(rollingCampaignRow.configuration_text);
+            const base = (0, node_child_process_1.spawnSync)('git', ['-C', rollingCampaignRow.coordinator_root, 'rev-parse', `refs/heads/${rollingExecutionConfig.incrementRef}^{commit}`], { encoding: 'utf8' });
+            requireState(!base.error && base.status === 0 && base.stdout.trim() === checkedRollingWorkerSubmissionV1.baseCommit, 'submission base differs from current coordinator increment');
+            (0, rolling_worker_submission_js_1.validateRollingWorkerSubmission)(rollingStoredWorktree.rootPath, obligationLeaseV1, checkedRollingWorkerSubmissionV1);
+            await poolClient.query('INSERT INTO ponytail_index.rolling_submission_v1(project_id,campaign_id,assignment_id,generation,revision,submission_text,lease_text) VALUES($1,$2,$3,$4,$5,$6,$7)', [this.projectId, campaignId, id, generation, checkedRollingWorkerSubmissionV1.revision, JSON.stringify(checkedRollingWorkerSubmissionV1), JSON.stringify(obligationLeaseV1)]);
+            await poolClient.query("UPDATE ponytail_index.rolling_assignment_v1 SET state='REVIEW',activity_stopped=true WHERE assignment_id=$1", [id]);
+            return { assignmentId: id, generation, revision: checkedRollingWorkerSubmissionV1.revision, state: 'REVIEW' };
+        });
+    }
+    async submissions(campaignId, id) {
+        const rows = (await this.pool.query('SELECT submission_text,lease_text FROM ponytail_index.rolling_submission_v1 WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3 ORDER BY created_at,revision', [this.projectId, campaignId, id])).rows;
+        return rows.map(row => ({ submission: (0, rolling_worker_submission_js_1.parseRollingWorkerSubmission)(stringColumn(row.submission_text, 'submission')),
+            lease: (0, obligation_binding_history_js_1.readObligationLeaseV1)(readStateText(stringColumn(row.lease_text, 'submission lease'))) }));
     }
     async rebindLease(campaignId, id, generation, graphDigest) {
         return this.transaction(campaignId, async (poolClient, rollingCampaignRow) => {

@@ -135,6 +135,19 @@ checks, fetches the campaign branch, performs full semantic rebase commit by
 commit, refreshes affected evidence and submits the exact candidate SHA/base.
 Candidate certificates do not mutate accepted coordinator records.
 
+The frozen submission boundary retains the exact candidate and proof in
+PostgreSQL, separately from certificates. Submission requires the attached
+session's stopped acknowledgment, its registered checkout and ignored marker,
+the current coordinator increment as base, a clean linear branch, and evidence
+whose revision and inputs match that candidate and frozen target/selection.
+Check every commit's changed paths, including rename sources and deletions;
+an out-of-scope change followed by a revert must not disappear from enforcement.
+An exact retry returns the original immutable receipt; a changed payload for
+that receipt is rejected. Entering REVIEW retains checkout/obligation ownership
+and establishes neither adversarial approval nor discharge. This check does
+not prove the worker's full semantic rebase or replace subsequent review,
+integration, publication and certificate assessment.
+
 ## Review and increment integration
 
 Assign an adversarial reviewer to the exact candidate and reuse that reviewer

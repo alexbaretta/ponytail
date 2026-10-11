@@ -822,6 +822,16 @@
       "locator": "text"
     },
     {
+      "class": "implementation",
+      "path": "src/rolling-worker-submission.ts",
+      "locator": "text"
+    },
+    {
+      "class": "unit-test",
+      "path": "tests/rolling-worker-submission.test.ts",
+      "locator": "text"
+    },
+    {
       "class": "unit-test",
       "path": "tests/rolling-campaign-store.test.ts",
       "locator": "text"
@@ -1185,6 +1195,10 @@
     {
       "path": "src/rolling-campaign-store.js",
       "sourcePath": "src/rolling-campaign-store.ts"
+    },
+    {
+      "path": "src/rolling-worker-submission.js",
+      "sourcePath": "src/rolling-worker-submission.ts"
     },
     {
       "path": "src/project-index-database.js",

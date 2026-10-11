@@ -155,3 +155,11 @@ Traceability: verifies REQ-ROLLING-STATE
 Traceability: verifies REQ-ROLLING-SCHEDULING
 
 Step ROLL-STORE-REVISION demonstrates [OBL-110](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-110): allocate against explicit coordinator binding history, amend it, reject old permissions, acknowledge cessation, adopt the new revision and resume the original session with a new generation. V1 records retain their meanings. Worker delivery and candidate acceptance still require application integration.
+
+### Acceptance ROLL-SUBMISSION
+
+Traceability: verifies REQ-ROLLING-GRAPH
+Traceability: verifies REQ-ROLLING-STATE
+Traceability: verifies REQ-ROLLING-WORKERS
+
+Step ROLL-WORKER-SUBMIT demonstrates [OBL-111](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-111): submit an actual isolated Git candidate from its stopped retained owner, reject foreign changes and stale evidence, persist it atomically in PostgreSQL and replay the exact submission without duplicate review records. Submission alone leaves obligation acceptance unresolved.

@@ -5,6 +5,10 @@ import path from 'node:path';
 import { parse } from 'lossless-json';
 import type { Pool, PoolClient } from 'pg';
 import { isDeepStrictEqual } from 'node:util';
+import fs from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { parseRollingWorkerSubmission, readRollingWorkerSubmissionV1, validateRollingWorkerSubmission,
+  type RollingWorkerSubmissionV1 } from './rolling-worker-submission.js';
 import { readObligationLeaseV1, freezeObligationLease, assertObligationLeaseOperation,
   type ObligationLeaseV1 } from '../skills/plan-execution/scripts/obligation-binding-history.js';
 import { relativePath } from '../skills/plan-execution/scripts/obligations.js';
@@ -71,6 +75,8 @@ export interface RollingAssignmentTransition { readonly id: string; readonly sta
 export interface RollingLeaseRenewal { readonly id: string; readonly generation: string; readonly lease: ObligationLeaseV1 }
 export interface RollingSessionAttachment { readonly id: string; readonly sessionId: string; readonly state: 'WORKING' }
 export interface RollingAssignmentRelease { readonly id: string; readonly generation: string }
+export interface RollingSubmissionReceipt { readonly assignmentId: string; readonly generation: string; readonly revision: string; readonly state: 'REVIEW' }
+export interface RollingStoredSubmission { readonly submission: RollingWorkerSubmissionV1; readonly lease: ObligationLeaseV1 }
 export interface RollingAllocatedWorktree { readonly number: number; readonly rootPath: string }
 export interface RollingAllocationResult {
   readonly assignment: RollingStoredAssignment | null;
@@ -375,12 +381,68 @@ export class RollingCampaignStore {
       const rollingStoredAssignment = await this.assignment(poolClient, campaignId, id, generation);
       requireState(rollingStoredAssignment.state === 'WORKING' && rollingStoredAssignment.sessionId
         && !rollingStoredAssignment.activityStopped && rollingStoredAssignment.lease, 'operation requires an active frozen lease');
-      requireState(isDeepStrictEqual(rollingStoredAssignment.lease.binding, rollingGraph.effectiveBindings.get(rollingStoredAssignment.obligationId))
-        && isDeepStrictEqual(rollingStoredAssignment.binding, rollingGraph.bindings.find(item => item.obligationId === rollingStoredAssignment.obligationId)), 'frozen binding differs from coordinator scope');
-      requireState(rollingStoredAssignment.lease.binding.dependsOn.every(dependency => rollingGraph.projection.satisfiedIds.includes(dependency)),
-        'frozen prerequisites are unresolved');
+      this.currentLease(rollingStoredAssignment, rollingGraph);
       assertObligationLeaseOperation(rollingStoredAssignment.lease, generation, graphDigest, operation, changedPaths);
     });
+  }
+
+  private currentLease(rollingStoredAssignment: RollingStoredAssignment, rollingGraph: RollingGraph): ObligationLeaseV1 {
+    const obligationLeaseV1 = rollingStoredAssignment.lease;
+    requireState(obligationLeaseV1 && isDeepStrictEqual(obligationLeaseV1.binding, rollingGraph.effectiveBindings.get(rollingStoredAssignment.obligationId))
+      && isDeepStrictEqual(rollingStoredAssignment.binding, rollingGraph.bindings.find(item => item.obligationId === rollingStoredAssignment.obligationId)),
+    'frozen binding differs from coordinator scope');
+    requireState(obligationLeaseV1.binding.dependsOn.every(dependency => rollingGraph.projection.satisfiedIds.includes(dependency)), 'frozen prerequisites are unresolved');
+    return obligationLeaseV1;
+  }
+
+  // Traceability: implements REQ-ROLLING-STATE
+  // Traceability: implements REQ-ROLLING-WORKERS
+  async submit(campaignId: string, id: string, generation: string, rollingWorkerSubmissionV1: RollingWorkerSubmissionV1): Promise<RollingSubmissionReceipt> {
+    const checkedRollingWorkerSubmissionV1 = readRollingWorkerSubmissionV1(rollingWorkerSubmissionV1);
+    requireState(checkedRollingWorkerSubmissionV1.campaignId === campaignId && checkedRollingWorkerSubmissionV1.assignmentId === id
+      && checkedRollingWorkerSubmissionV1.generation === generation, 'submission differs from requested assignment');
+    return this.transaction(campaignId, async (poolClient, rollingCampaignRow) => {
+      const rollingGraph = this.graph(rollingCampaignRow, rollingCampaignRow.graph_digest);
+      const rollingStoredAssignment = await this.assignment(poolClient, campaignId, id, generation);
+      requireState(rollingStoredAssignment.sessionId === checkedRollingWorkerSubmissionV1.sessionId && !rollingStoredAssignment.retired,
+        'submission differs from attached session');
+      const obligationLeaseV1 = this.currentLease(rollingStoredAssignment, rollingGraph);
+      const existing = (await poolClient.query<Record<string, unknown>>('SELECT submission_text,lease_text FROM ponytail_index.rolling_submission_v1 WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3 AND generation=$4 AND revision=$5',
+        [this.projectId, campaignId, id, generation, checkedRollingWorkerSubmissionV1.revision])).rows[0];
+      if (existing) {
+        requireState(isDeepStrictEqual(parseRollingWorkerSubmission(stringColumn(existing.submission_text, 'submission')), checkedRollingWorkerSubmissionV1)
+          && isDeepStrictEqual(readObligationLeaseV1(readStateText(stringColumn(existing.lease_text, 'submission lease'))), obligationLeaseV1),
+        'replayed submission differs from immutable result');
+        requireState(rollingStoredAssignment.state === 'REVIEW' && rollingStoredAssignment.activityStopped, 'submission is no longer awaiting review');
+        return { assignmentId: id, generation, revision: checkedRollingWorkerSubmissionV1.revision, state: 'REVIEW' };
+      }
+      requireState(rollingStoredAssignment.state === 'WORKING' && !rollingStoredAssignment.activityStopped, 'only an active attached worker may submit');
+      await this.cancelActions(poolClient, id);
+      const rollingStoredWorktree = readWorktree((await poolClient.query<Record<string, unknown>>('SELECT * FROM ponytail_index.rolling_worktree_v1 WHERE project_id=$1 AND number=$2',
+        [this.projectId, rollingStoredAssignment.worktreeNumber])).rows[0]);
+      function commonDirectory(root: string): string {
+        const result = spawnSync('git', ['-C', root, 'rev-parse', '--path-format=absolute', '--git-common-dir'], { encoding: 'utf8' });
+        requireState(!result.error && result.status === 0, result.error?.message || result.stderr.trim() || 'invalid Git checkout');
+        return fs.realpathSync(result.stdout.trim());
+      }
+      requireState(commonDirectory(rollingStoredWorktree.rootPath) === commonDirectory(rollingCampaignRow.coordinator_root), 'worker repository differs from coordinator');
+      const rollingExecutionConfig = executionConfiguration(rollingCampaignRow.configuration_text);
+      const base = spawnSync('git', ['-C', rollingCampaignRow.coordinator_root, 'rev-parse', `refs/heads/${rollingExecutionConfig.incrementRef}^{commit}`], { encoding: 'utf8' });
+      requireState(!base.error && base.status === 0 && base.stdout.trim() === checkedRollingWorkerSubmissionV1.baseCommit,
+        'submission base differs from current coordinator increment');
+      validateRollingWorkerSubmission(rollingStoredWorktree.rootPath, obligationLeaseV1, checkedRollingWorkerSubmissionV1);
+      await poolClient.query<Record<string, unknown>>('INSERT INTO ponytail_index.rolling_submission_v1(project_id,campaign_id,assignment_id,generation,revision,submission_text,lease_text) VALUES($1,$2,$3,$4,$5,$6,$7)',
+        [this.projectId, campaignId, id, generation, checkedRollingWorkerSubmissionV1.revision, JSON.stringify(checkedRollingWorkerSubmissionV1), JSON.stringify(obligationLeaseV1)]);
+      await poolClient.query<Record<string, unknown>>("UPDATE ponytail_index.rolling_assignment_v1 SET state='REVIEW',activity_stopped=true WHERE assignment_id=$1", [id]);
+      return { assignmentId: id, generation, revision: checkedRollingWorkerSubmissionV1.revision, state: 'REVIEW' };
+    });
+  }
+
+  async submissions(campaignId: string, id: string): Promise<readonly RollingStoredSubmission[]> {
+    const rows = (await this.pool.query<Record<string, unknown>>('SELECT submission_text,lease_text FROM ponytail_index.rolling_submission_v1 WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3 ORDER BY created_at,revision',
+      [this.projectId, campaignId, id])).rows;
+    return rows.map(row => ({ submission: parseRollingWorkerSubmission(stringColumn(row.submission_text, 'submission')),
+      lease: readObligationLeaseV1(readStateText(stringColumn(row.lease_text, 'submission lease'))) }));
   }
 
   // Traceability: implements REQ-ROLLING-STATE

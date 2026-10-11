@@ -312,6 +312,24 @@ ON rolling_assignment_v1 (project_id,campaign_id,state,created_at);
 CREATE UNIQUE INDEX IF NOT EXISTS rolling_assignment_v1_identity
 ON rolling_assignment_v1 (project_id,campaign_id,assignment_id);
 
+CREATE TABLE IF NOT EXISTS rolling_submission_v1 (
+  project_id uuid NOT NULL,
+  campaign_id text NOT NULL,
+  assignment_id uuid NOT NULL,
+  generation uuid NOT NULL,
+  revision text NOT NULL CHECK (revision ~ '^([a-f0-9]{40}|[a-f0-9]{64})$'),
+  submission_text text NOT NULL CHECK (COALESCE(jsonb_typeof((submission_text::jsonb)->'schemaVersion')='number'
+    AND (submission_text::jsonb)->>'schemaVersion'='1', false)),
+  lease_text text NOT NULL CHECK (COALESCE(jsonb_typeof((lease_text::jsonb)->'schemaVersion')='number'
+    AND (lease_text::jsonb)->>'schemaVersion'='1', false)),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (project_id,campaign_id,assignment_id,generation,revision),
+  FOREIGN KEY (project_id,campaign_id,assignment_id)
+    REFERENCES rolling_assignment_v1(project_id,campaign_id,assignment_id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS rolling_submission_v1_assignment_history
+ON rolling_submission_v1 (project_id,campaign_id,assignment_id,created_at,revision);
+
 CREATE TABLE IF NOT EXISTS rolling_action_v1 (
   project_id uuid NOT NULL,
   campaign_id text NOT NULL,

@@ -261,3 +261,11 @@ frozen lease and acceptance integration must precede typed fixture edit leases.
 <a id="obl-110"></a>[OBL-110](obligations.json) owns PostgreSQL allocation and retained-owner adoption of frozen leases. BASELINE-12 freezes its paths before edits. Store only campaign execution configuration and frozen assignment state; coordinator files remain the authoritative graph. Preserve V1 physical readers and introduce V2 only for explicitly adopted binding-aware campaigns. Application worker delivery and candidate acceptance remain necessary integration work.
 
 OBL-110 scope amendment BIND-1 includes `scripts/project-index.sql` after the real PostgreSQL check proved the existing version constraints reject V2. The coordinator history is explicitly `binding-history.json`; its validated current projection owns this amended boundary while the historical obligation record is unchanged. The coordinator performs this bounded in-scope repair; no worker assignment through the unfinished application workflow is issued.
+
+## Frozen worker submission prerequisite
+
+<a id="obl-111"></a>[OBL-111](obligations.json) owns candidate submission against a stored frozen lease. BASELINE-13 freezes the source, SQL and focused proof boundary before edits. This is necessary to finish the already-started typed proof migrations through the amended execution workflow. The submission stores the exact candidate, stopped session, frozen lease and evidence; review, publication and certificate acceptance remain separate required outcomes.
+
+Final OBL-111 audit invalidated CERT-17 in CHECKPOINT-33 after finding the new artifacts absent from explicit traceability configuration. BIND-2 adds `.agents/config/project/traceability.json` to the same obligation scope before its bounded coordinator repair. Original obligation and certificate records remain immutable; completion requires corrected classification, generated mapping/view and fresh reassessment.
+
+OBL-111 BIND-3 additionally freezes the two existing generated OpenClaw obligation source/runtime copies. The canonical generator synchronizes them after the evidence-reader source rename; this remains part of the same withdrawn-assessment repair, before fresh reassessment.

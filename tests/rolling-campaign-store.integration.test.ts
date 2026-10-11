@@ -13,6 +13,8 @@ import { collectRollingGraph, type RollingProjectConfigV1, type RollingBindingsV
 import { RollingCampaignStore, type RollingCampaignRegistration, type RollingAllocationResult, type RollingStoredAssignment, type RollingCampaignStatus } from '../src/rolling-campaign-store.js';
 import { inputDigest, parseObligationDocument, type ObligationDocumentV1, type ObligationBaseline, type Obligation, type ObligationCertificate, type ObligationCheckpoint } from '../skills/plan-execution/scripts/obligations.js';
 import type { ObligationBindingHistoryV1, ObligationBindingRevisionV1 } from '../skills/plan-execution/scripts/obligation-binding-history.js';
+import type { ObligationEvidence } from '../skills/plan-execution/scripts/obligations.js';
+import type { RollingWorkerSubmissionV1 } from '../src/rolling-worker-submission.js';
 
 // Traceability: verifies REQ-ROLLING-STATE
 // Traceability: verifies REQ-ROLLING-SCHEDULING
@@ -224,4 +226,70 @@ test('real PostgreSQL serializes allocation, retains suspended ownership and rel
   await rollingCampaignStore.reconcileGraph('bound-fixture', nextRollingGraph.digest, unrelatedRollingGraph.digest);
   await rollingCampaignStore.assertOperation('bound-fixture', boundRollingStoredAssignment.id, resumedBoundRollingAllocationResult.assignment.generation, nextRollingGraph.digest, 'test');
   await assert.rejects(rollingCampaignStore.assertOperation('bound-fixture', boundRollingStoredAssignment.id, resumedBoundRollingAllocationResult.assignment.generation, unrelatedRollingGraph.digest, 'test'), /wrong frozen graph identity/);
+
+  // A real reserved Git worktree supplies a candidate; external session acknowledgments above remain synthetic.
+  fs.writeFileSync(path.join(root, '.gitignore'), 'session_id.txt\nproof.txt\nmanaged/\n');
+  fs.mkdirSync(path.join(root, 'fixture'), { recursive: true });
+  fs.writeFileSync(path.join(root, 'fixture/current.ts'), 'export const value: number = 1;\n');
+  execFileSync('git', ['-C', root, 'add', '--', '.gitignore', 'fixture/current.ts']);
+  execFileSync('git', ['-C', root, '-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.test', 'commit', '-q', '-m', 'submission fixture base']);
+  const baseCommit = execFileSync('git', ['-C', root, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
+  execFileSync('git', ['-C', root, 'update-ref', 'refs/heads/campaign/bound-fixture', baseCommit]);
+  const submissionObligationBindingRevisionV1: ObligationBindingRevisionV1 = { ...nextObligationBindingRevisionV1, id: 'BIND-3', predecessorId: 'BIND-2',
+    reason: 'Permit bounded submission fixture changes and focused syntax check', execution: { ...nextObligationBindingRevisionV1.execution, operations: ['edit', 'test', 'check'] } };
+  const submissionObligationBindingHistoryV1: ObligationBindingHistoryV1 = { ...nextObligationBindingHistoryV1,
+    revisions: [...nextObligationBindingHistoryV1.revisions, submissionObligationBindingRevisionV1] };
+  fs.writeFileSync(path.join(root, 'history.json'), JSON.stringify(submissionObligationBindingHistoryV1));
+  const submissionRollingGraph = collectRollingGraph(root, 'bound-obligations.json', 'bound-bindings.json', 'history.json');
+  await rollingCampaignStore.reconcileGraph('bound-fixture', unrelatedRollingGraph.digest, submissionRollingGraph.digest);
+  await rollingCampaignStore.suspend('bound-fixture', boundRollingStoredAssignment.id, resumedBoundRollingAllocationResult.assignment.generation, true, ['OBL-1']);
+  await rollingCampaignStore.rebindLease('bound-fixture', boundRollingStoredAssignment.id, resumedBoundRollingAllocationResult.assignment.generation, submissionRollingGraph.digest);
+  const submissionRollingAllocationResult = await rollingCampaignStore.allocate('bound-fixture', submissionRollingGraph.digest);
+  assert.ok(submissionRollingAllocationResult.assignment?.lease && submissionRollingAllocationResult.worktree && submissionRollingAllocationResult.actionId);
+  const submissionRollingStoredAssignment = submissionRollingAllocationResult.assignment;
+  await rollingCampaignStore.acknowledgeAction('bound-fixture', submissionRollingAllocationResult.actionId, submissionRollingStoredAssignment.generation, 'STARTED');
+  await rollingCampaignStore.acknowledgeAction('bound-fixture', submissionRollingAllocationResult.actionId, submissionRollingStoredAssignment.generation, 'COMPLETED', 'fixture worker attached for submission');
+  await rollingCampaignStore.attachSession('bound-fixture', submissionRollingStoredAssignment.id, submissionRollingStoredAssignment.generation, 'bound-session');
+  const workerRoot = submissionRollingAllocationResult.worktree.rootPath;
+  execFileSync('git', ['-C', root, 'worktree', 'add', '-q', '-b', 'fixture-worker', workerRoot, baseCommit]);
+  fs.writeFileSync(path.join(workerRoot, 'session_id.txt'), 'bound-session\n');
+  fs.writeFileSync(path.join(workerRoot, 'fixture/current.ts'), 'export const value: number = 2;\n');
+  execFileSync('git', ['-C', workerRoot, 'add', '--', 'fixture/current.ts']);
+  execFileSync('git', ['-C', workerRoot, '-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.test', 'commit', '-q', '-m', 'bounded submission fixture']);
+  const revision = execFileSync('git', ['-C', workerRoot, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
+  const checkOutput = execFileSync(process.execPath, ['--check', path.join(workerRoot, 'fixture/current.ts')], { encoding: 'utf8' });
+  fs.writeFileSync(path.join(workerRoot, 'proof.txt'), `${checkOutput}Node syntax check exited 0\n`);
+  const submissionObligationEvidence: ObligationEvidence = { command: 'node --check fixture/current.ts', selection: ['focused fixture proof'],
+    target: { identity: 'local', profile: 'fixture', verification: 'proof.txt' }, revision, dirty: false,
+    startedAt: new Date().toISOString(), completedAt: new Date().toISOString(), outcome: 'pass', skips: 0, failures: 0,
+    inputs: ['fixture/current.ts', 'proof.txt'].map(relative => ({ path: relative, digest: inputDigest(workerRoot, relative) })), outputPath: 'proof.txt', finalization: 'pass' };
+  const rollingWorkerSubmissionV1: RollingWorkerSubmissionV1 = { schemaVersion: 1, campaignId: 'bound-fixture', assignmentId: submissionRollingStoredAssignment.id,
+    generation: submissionRollingStoredAssignment.generation, sessionId: 'bound-session', graphDigest: submissionRollingGraph.digest,
+    revision, baseCommit, stopped: true, proof: [{ operation: 'check', evidence: submissionObligationEvidence }] };
+  await assert.rejects(rollingCampaignStore.submit('bound-fixture', submissionRollingStoredAssignment.id, 'stale-generation', rollingWorkerSubmissionV1), /requested assignment/);
+  const foreignRollingWorkerSubmissionV1: RollingWorkerSubmissionV1 = { ...rollingWorkerSubmissionV1, sessionId: 'foreign-session' };
+  await assert.rejects(rollingCampaignStore.submit('bound-fixture', submissionRollingStoredAssignment.id, submissionRollingStoredAssignment.generation, foreignRollingWorkerSubmissionV1), /attached session/);
+  const concealedRollingWorkerSubmissionV1: RollingWorkerSubmissionV1 = { ...rollingWorkerSubmissionV1, baseCommit: revision };
+  await assert.rejects(rollingCampaignStore.submit('bound-fixture', submissionRollingStoredAssignment.id, submissionRollingStoredAssignment.generation, concealedRollingWorkerSubmissionV1), /current coordinator increment/);
+  fs.writeFileSync(path.join(workerRoot, 'unexpected.ts'), 'export const unexpected: number = 1;\n');
+  await assert.rejects(rollingCampaignStore.submit('bound-fixture', submissionRollingStoredAssignment.id, submissionRollingStoredAssignment.generation, rollingWorkerSubmissionV1), /dirty/);
+  fs.unlinkSync(path.join(workerRoot, 'unexpected.ts'));
+  assert.equal((await rollingCampaignStore.status('bound-fixture')).assignments[0]?.state, 'WORKING');
+  assert.deepEqual(await rollingCampaignStore.submissions('bound-fixture', submissionRollingStoredAssignment.id), []);
+  const receipts = await Promise.all(Array.from({ length: 4 }, () => rollingCampaignStore.submit('bound-fixture', submissionRollingStoredAssignment.id,
+    submissionRollingStoredAssignment.generation, rollingWorkerSubmissionV1)));
+  assert.ok(receipts.every(item => item.state === 'REVIEW' && item.revision === revision));
+  const storedSubmissions = await rollingCampaignStore.submissions('bound-fixture', submissionRollingStoredAssignment.id);
+  assert.equal(storedSubmissions.length, 1);
+  assert.deepEqual(storedSubmissions[0]?.submission, rollingWorkerSubmissionV1);
+  assert.deepEqual(storedSubmissions[0]?.lease, submissionRollingStoredAssignment.lease);
+  const submittedRollingCampaignStatus = await rollingCampaignStore.status('bound-fixture');
+  assert.equal(submittedRollingCampaignStatus.assignments[0]?.state, 'REVIEW');
+  assert.equal(submittedRollingCampaignStatus.assignments[0]?.activityStopped, true);
+  assert.ok(!collectRollingGraph(root, 'bound-obligations.json', 'bound-bindings.json', 'history.json').projection.satisfiedIds.includes(firstRollingBinding.obligationId));
+  const differentRollingWorkerSubmissionV1: RollingWorkerSubmissionV1 = { ...rollingWorkerSubmissionV1,
+    proof: [{ operation: 'check', evidence: { ...submissionObligationEvidence, command: 'different command' } }] };
+  await assert.rejects(rollingCampaignStore.submit('bound-fixture', submissionRollingStoredAssignment.id, submissionRollingStoredAssignment.generation, differentRollingWorkerSubmissionV1), /immutable result/);
+  const foreignRollingCampaignStore: RollingCampaignStore = new RollingCampaignStore(pool, crypto.randomUUID());
+  assert.deepEqual(await foreignRollingCampaignStore.submissions('bound-fixture', submissionRollingStoredAssignment.id), []);
 });

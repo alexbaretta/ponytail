@@ -10,6 +10,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.ObligationDocumentReaders = void 0;
 exports.relativePath = relativePath;
 exports.readObligationExecution = readObligationExecution;
+exports.readObligationEvidence = readObligationEvidence;
 exports.readObligationDocumentV1 = readObligationDocumentV1;
 exports.parseObligationDocument = parseObligationDocument;
 exports.inputDigest = inputDigest;
@@ -161,7 +162,7 @@ function timestampValue(value, label) {
     requireCondition(/^\d{4}-\d{2}-\d{2}T.*(?:Z|[+-]\d{2}:\d{2})$/.test(timestamp) && Number.isFinite(Date.parse(timestamp)), `${label} must be an ISO timestamp with offset`);
     return timestamp;
 }
-function evidenceValue(value) {
+function readObligationEvidence(value) {
     exactKeys(value, ['command', 'selection', 'target', 'revision', 'dirty', 'startedAt', 'completedAt', 'outcome', 'skips', 'failures', 'inputs', 'outputPath', 'finalization'], 'execution evidence');
     exactKeys(value.target, ['identity', 'profile', 'verification'], 'evidence target');
     const startedAt = timestampValue(value.startedAt, 'startedAt');
@@ -179,7 +180,7 @@ function certificateValue(value) {
     return { id: stringValue(value.id, 'certificate ID'), obligationIds, inputs: inputs(value.inputs, 'certificate inputs'),
         artifacts: uniqueStrings(value.artifacts, 'certificate artifacts', true).map(pathValue), assessor: stringValue(value.assessor, 'certificate assessor'),
         authority: uniqueStrings(value.authority, 'certificate authority', true), adequate: booleanValue(value.adequate, 'adequate'), reason: stringValue(value.reason, 'certificate rationale'),
-        disposition: value.disposition === null ? null : dispositionValue(value.disposition), evidence: arrayValue(value.evidence, 'evidence').map(evidenceValue), inventoryIds: uniqueStrings(value.inventoryIds, 'certificate inventoryIds') };
+        disposition: value.disposition === null ? null : dispositionValue(value.disposition), evidence: arrayValue(value.evidence, 'evidence').map(readObligationEvidence), inventoryIds: uniqueStrings(value.inventoryIds, 'certificate inventoryIds') };
 }
 function preparationValue(value) {
     exactKeys(value, ['obligationId', 'operations', 'deliverable'], 'preparation');

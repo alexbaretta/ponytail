@@ -46,6 +46,106 @@
           "profile": "stored-frozen-leases"
         }
       }
+    },
+    {
+      "id": "BIND-2",
+      "obligationId": "OBL-111",
+      "predecessorId": null,
+      "baselineId": "BASELINE-13",
+      "assessor": "coordinator",
+      "authority": [
+        "user-goal-2026-10-10-rolling-campaigns",
+        "user-goal-2026-10-10-static-language-existing-tsts",
+        "user-2026-10-10-normative-atomic-obligations"
+      ],
+      "reason": "Declare the canonical traceability configuration needed to classify new submission artifacts and map generated runtime.",
+      "dependsOn": [
+        "OBL-110"
+      ],
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "src/rolling-worker-submission.ts",
+          "src/rolling-worker-submission.js",
+          "src/rolling-campaign-store.ts",
+          "src/rolling-campaign-store.js",
+          "skills/plan-execution/scripts/obligations.ts",
+          "skills/plan-execution/scripts/obligations.js",
+          "tests/rolling-worker-submission.test.ts",
+          "tests/rolling-campaign-store.integration.test.ts",
+          "scripts/project-index.sql",
+          "scripts/build-runtime.ts",
+          "versioned-data-contracts.json",
+          "pm/requirements/traceability.generated.md",
+          ".agents/config/project/traceability.json"
+        ],
+        "operations": [
+          "edit",
+          "build",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "frozen worker submission and durable review transition"
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "frozen-worker-submission"
+        }
+      }
+    },
+    {
+      "id": "BIND-3",
+      "obligationId": "OBL-111",
+      "predecessorId": "BIND-2",
+      "baselineId": "BASELINE-13",
+      "assessor": "coordinator",
+      "authority": [
+        "user-goal-2026-10-10-rolling-campaigns",
+        "user-goal-2026-10-10-static-language-existing-tsts",
+        "user-2026-10-10-normative-atomic-obligations"
+      ],
+      "reason": "Synchronize the existing generated OpenClaw portable source/runtime copies after exporting the canonical evidence reader.",
+      "dependsOn": [
+        "OBL-110"
+      ],
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "src/rolling-worker-submission.ts",
+          "src/rolling-worker-submission.js",
+          "src/rolling-campaign-store.ts",
+          "src/rolling-campaign-store.js",
+          "skills/plan-execution/scripts/obligations.ts",
+          "skills/plan-execution/scripts/obligations.js",
+          "tests/rolling-worker-submission.test.ts",
+          "tests/rolling-campaign-store.integration.test.ts",
+          "scripts/project-index.sql",
+          "scripts/build-runtime.ts",
+          "versioned-data-contracts.json",
+          "pm/requirements/traceability.generated.md",
+          ".agents/config/project/traceability.json",
+          ".openclaw/skills/plan-execution/scripts/obligations.ts",
+          ".openclaw/skills/plan-execution/scripts/obligations.js"
+        ],
+        "operations": [
+          "edit",
+          "build",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "frozen worker submission and durable review transition"
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "frozen-worker-submission"
+        }
+      }
     }
   ]
 }
