@@ -8,6 +8,7 @@ import test, { type TestContext } from 'node:test';
 import { stringify } from 'lossless-json';
 import { RollingCodex, RollingNativeResponseError, RollingObservationTimeout,
   RollingUnknownOutcome, type RollingNativeNotification } from '../src/rolling-codex.js';
+import { startRollingReviewTurn, observeRollingReviewTurn, type RollingReviewRequestV1 } from '../src/rolling-review.js';
 
 interface RollingProtocolFixture {
   readonly root: string;
@@ -69,4 +70,19 @@ test('lost or malformed responses reject all affected pending operations', async
     const { rollingCodex } = await fixture(childTestContext);
     await assert.rejects(rollingCodex.request(method, {}), (cause: unknown) => cause instanceof RollingUnknownOutcome);
   });
+});
+
+// Traceability: verifies REQ-ROLLING-REVIEW
+test('review dispatch resumes the assigned native reviewer and observes its exact final decision', async testContext => {
+  const { root, rollingCodex } = await fixture(testContext);
+  const rollingReviewRequestV1: RollingReviewRequestV1 = { schemaVersion: 1, id: 'review-fixture', campaignId: 'campaign',
+    assignmentId: 'assignment', generation: 'generation', baseCommit: 'a'.repeat(40), revision: 'b'.repeat(40), reviewerSessionId: 'session-fixture' };
+  await assert.rejects(startRollingReviewTurn(rollingCodex, { ...rollingReviewRequestV1, reviewerSessionId: 'other' }, 'thread-fixture', root), /native session differs/);
+  const rollingReviewTurn = await startRollingReviewTurn(rollingCodex, rollingReviewRequestV1, 'thread-fixture', root);
+  const rollingReviewOutcomeV1 = await observeRollingReviewTurn(rollingCodex, rollingReviewTurn);
+  assert.equal(rollingReviewOutcomeV1.reviewId, rollingReviewRequestV1.id);
+  assert.equal(rollingReviewOutcomeV1.revision, rollingReviewRequestV1.revision);
+  assert.equal(rollingReviewOutcomeV1.reviewerSessionId, rollingReviewRequestV1.reviewerSessionId);
+  assert.equal(rollingReviewOutcomeV1.decision, 'accepted');
+  assert.deepEqual(await observeRollingReviewTurn(rollingCodex, rollingReviewTurn), rollingReviewOutcomeV1);
 });

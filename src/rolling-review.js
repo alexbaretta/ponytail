@@ -9,6 +9,9 @@ exports.readRollingReviewOutcomeV1 = readRollingReviewOutcomeV1;
 exports.parseRollingReviewRequest = parseRollingReviewRequest;
 exports.parseRollingReviewOutcome = parseRollingReviewOutcome;
 exports.validateRollingReviewOutcome = validateRollingReviewOutcome;
+exports.startRollingReviewTurn = startRollingReviewTurn;
+exports.readRollingReviewTurn = readRollingReviewTurn;
+exports.observeRollingReviewTurn = observeRollingReviewTurn;
 const lossless_json_1 = require("lossless-json");
 function requireReview(condition, message) {
     if (!condition)
@@ -73,4 +76,29 @@ function validateRollingReviewOutcome(rollingReviewRequestV1, rollingReviewOutco
     requireReview(rollingReviewOutcomeV1.reviewId === rollingReviewRequestV1.id
         && rollingReviewOutcomeV1.revision === rollingReviewRequestV1.revision
         && rollingReviewOutcomeV1.reviewerSessionId === rollingReviewRequestV1.reviewerSessionId, 'outcome differs from assigned candidate or reviewer');
+}
+async function startRollingReviewTurn(rollingCodex, rollingReviewRequestV1, reviewerThreadId, checkoutRoot) {
+    const checkedRollingReviewRequestV1 = readRollingReviewRequestV1(rollingReviewRequestV1);
+    const rollingNativeThread = await rollingCodex.resumeThread(reviewerThreadId, checkoutRoot);
+    requireReview(rollingNativeThread.thread.sessionId === checkedRollingReviewRequestV1.reviewerSessionId, 'native session differs from assigned reviewer');
+    const prompt = `Perform an adversarial review of this exact candidate. Read the project rules and applicable skills first.
+Review only: do not modify files, commits, branches or project state. Verify HEAD is ${checkedRollingReviewRequestV1.revision}; if it differs, report that the review cannot be completed.
+Inspect the complete change from ${checkedRollingReviewRequestV1.baseCommit} to ${checkedRollingReviewRequestV1.revision}, its approved obligation, requirements, acceptances, tests and retained proof. Seek correctness, regression, traceability and contract failures.
+Return your final message as a single JSON object without Markdown. Use schemaVersion 1, reviewId ${JSON.stringify(checkedRollingReviewRequestV1.id)}, revision ${JSON.stringify(checkedRollingReviewRequestV1.revision)}, reviewerSessionId ${JSON.stringify(checkedRollingReviewRequestV1.reviewerSessionId)}, completedAt as the current ISO timestamp, decision "accepted" or "rejected", and findings as an array of concrete findings. Rejection requires at least one finding. Never report acceptance without completing the review.
+Review request: ${JSON.stringify(checkedRollingReviewRequestV1)}`;
+    const rollingTurnStarted = await rollingCodex.startTurn(rollingNativeThread.thread.id, prompt);
+    return { request: checkedRollingReviewRequestV1, thread: rollingNativeThread, started: rollingTurnStarted };
+}
+function readRollingReviewTurn(rollingReviewTurn, rollingNativeTurn) {
+    requireReview(rollingReviewTurn.thread.thread.sessionId === rollingReviewTurn.request.reviewerSessionId, 'native session differs from assigned reviewer');
+    requireReview(rollingNativeTurn.id === rollingReviewTurn.started.turn.id && rollingNativeTurn.status === 'completed', 'review turn is not the assigned completed turn');
+    const message = rollingNativeTurn.items.filter(item => item.type === 'agentMessage').at(-1);
+    requireReview(message?.text !== undefined && message.text !== null, 'completed review lacks a final decision');
+    const rollingReviewOutcomeV1 = parseRollingReviewOutcome(message.text);
+    validateRollingReviewOutcome(rollingReviewTurn.request, rollingReviewOutcomeV1);
+    return rollingReviewOutcomeV1;
+}
+async function observeRollingReviewTurn(rollingCodex, rollingReviewTurn, timeoutMs = 60000) {
+    const rollingNativeTurn = await rollingCodex.waitForTurn(rollingReviewTurn.thread.thread.id, rollingReviewTurn.started.turn.id, timeoutMs);
+    return readRollingReviewTurn(rollingReviewTurn, rollingNativeTurn);
 }

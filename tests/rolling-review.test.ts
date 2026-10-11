@@ -3,7 +3,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { readRollingReviewRequestV1, readRollingReviewOutcomeV1, parseRollingReviewRequest, parseRollingReviewOutcome,
- validateRollingReviewOutcome, RollingReviewRequestReaders, RollingReviewOutcomeReaders,
+ validateRollingReviewOutcome, RollingReviewRequestReaders, RollingReviewOutcomeReaders, readRollingReviewTurn, type RollingReviewTurn,
  type RollingReviewRequestV1, type RollingReviewAcceptedV1, type RollingReviewRejectedV1 } from '../src/rolling-review.js';
 function request(): RollingReviewRequestV1 {
  return { schemaVersion: 1, id: 'review', campaignId: 'campaign', assignmentId: 'assignment', generation: 'generation',
@@ -26,6 +26,20 @@ test('physical V1 requests and decisions retain exact immutable candidate and re
   validateRollingReviewOutcome(rollingReviewRequestV1, outcome);
  }
  assert.equal(JSON.stringify({ rollingReviewRequestV1, rollingReviewAcceptedV1, rollingReviewRejectedV1 }), original);
+});
+
+// Traceability: verifies REQ-ROLLING-REVIEW
+test('review completion requires the exact terminal turn and validated final message', () => {
+ const rollingReviewTurn: RollingReviewTurn = { request: request(),
+  thread: { thread: { id: 'thread', sessionId: 'reviewer' }, cwd: '/fixture', instructionSources: [], model: null },
+  started: { turn: { id: 'turn' } } };
+ const rollingNativeTurn = { id: 'turn', status: 'completed', items: [{ type: 'agentMessage', text: JSON.stringify(accepted()) }] };
+ assert.deepEqual(readRollingReviewTurn(rollingReviewTurn, rollingNativeTurn), accepted());
+ for (const status of ['failed', 'interrupted', 'inProgress']) assert.throws(() => readRollingReviewTurn(rollingReviewTurn, { ...rollingNativeTurn, status }), /assigned completed/);
+ assert.throws(() => readRollingReviewTurn(rollingReviewTurn, { ...rollingNativeTurn, id: 'other' }), /assigned completed/);
+ assert.throws(() => readRollingReviewTurn(rollingReviewTurn, { ...rollingNativeTurn, items: [] }), /lacks a final decision/);
+ assert.throws(() => readRollingReviewTurn(rollingReviewTurn, { ...rollingNativeTurn, items: [{ type: 'agentMessage', text: JSON.stringify({ ...accepted(), revision: 'c'.repeat(40) }) }] }), /differs from assigned/);
+ assert.throws(() => readRollingReviewTurn(rollingReviewTurn, { ...rollingNativeTurn, items: [...rollingNativeTurn.items, { type: 'agentMessage', text: 'No decision.' }] }));
 });
 
 test('unknown contract fields, malformed identities, revisions and unfounded rejection fail at the boundary', () => {

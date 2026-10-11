@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Alex Baretta. All rights reserved.
 // Licensed under the MIT License. See LICENSE in the project root.
 import readline from 'node:readline';
+import { parseRollingReviewRequest, type RollingReviewOutcomeV1 } from '../../src/rolling-review.js';
 
 interface FixtureThreadResult {
   readonly thread: { readonly id: string; readonly sessionId: string };
@@ -50,7 +51,15 @@ lines.on('line', line => {
     const prompt = text(record(params.input[0]).text);
     result = { turn: { id: turnId } };
     send({ method: 'turn/started', params: { threadId: params.threadId, turn: { id: turnId } } });
-    if (prompt !== 'pending') send({ method: 'turn/completed', params: {
+    if (prompt.startsWith('Perform an adversarial review')) {
+      const marker = 'Review request: ';
+      const rollingReviewRequestV1 = parseRollingReviewRequest(prompt.slice(prompt.lastIndexOf(marker) + marker.length));
+      const rollingReviewOutcomeV1: RollingReviewOutcomeV1 = { schemaVersion: 1, reviewId: rollingReviewRequestV1.id,
+        revision: rollingReviewRequestV1.revision, reviewerSessionId: rollingReviewRequestV1.reviewerSessionId,
+        completedAt: '2026-10-11T10:00:00Z', decision: 'accepted', findings: [] };
+      send({ method: 'turn/completed', params: { threadId: params.threadId, turn: { id: turnId, status: 'completed',
+        items: [{ type: 'agentMessage', text: 'Review in progress.' }, { type: 'agentMessage', text: JSON.stringify(rollingReviewOutcomeV1) }] } } });
+    } else if (prompt !== 'pending') send({ method: 'turn/completed', params: {
       threadId: params.threadId, turn: { id: turnId, status: prompt, items: [] }
     } });
   } else if (method === 'turn/interrupt') {
