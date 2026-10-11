@@ -71,6 +71,23 @@ test('native protocol binds checkout and session, preserves numbers and observes
 });
 
 // Traceability: verifies REQ-ROLLING-WORKERS
+test('terminal notifications supersede an earlier in-progress history response',async testContext => {
+ const {root,rollingCodex} = await fixture(testContext);
+ const rollingNativeThread = await rollingCodex.startThread(root);
+ const rollingTurnStarted = await rollingCodex.startTurn(rollingNativeThread.thread.id,'pending');
+ let closed = false;
+ try {
+  await rollingCodex.request('fixture-terminal-during-history-read',{});
+  assert.equal((await rollingCodex.readTurn(rollingNativeThread.thread.id,rollingTurnStarted.turn.id)).status,'completed');
+  assert.equal((await rollingCodex.waitForTurn(rollingNativeThread.thread.id,rollingTurnStarted.turn.id)).status,'completed');
+  await rollingCodex.close();
+  closed = true;
+ } finally {
+  if (!closed) await rollingCodex.readTurn(rollingNativeThread.thread.id,rollingTurnStarted.turn.id);
+ }
+});
+
+// Traceability: verifies REQ-ROLLING-WORKERS
 test('timeouts retain unknown outcome and late responses do not trigger a retry', async testContext => {
   const { rollingCodex } = await fixture(testContext);
   rollingCodex.requestTimeoutMs = 20;

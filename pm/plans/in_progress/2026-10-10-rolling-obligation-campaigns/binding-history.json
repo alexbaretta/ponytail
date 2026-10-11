@@ -2347,6 +2347,58 @@
           "profile": "reviewer-recovery"
         }
       }
+    },
+    {
+      "id": "BIND-51",
+      "obligationId": "OBL-52",
+      "predecessorId": "BIND-50",
+      "baselineId": "BASELINE-16",
+      "assessor": "coordinator",
+      "authority": [
+        "user-goal-2026-10-10-rolling-campaigns",
+        "user-goal-2026-10-10-static-language-existing-tsts",
+        "user-2026-10-10-normative-atomic-obligations",
+        "user-2026-10-11-language-scope-our-code-preserve-translations"
+      ],
+      "reason": "Test whether an in-progress history response processed after a terminal notification restores stale activity. Extend the finite diagnostic scope to the protocol fixture for deterministic response ordering; preserve the close safety gate and change behavior only after the causal mechanism is reproduced.",
+      "dependsOn": [],
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "src/rolling-campaign-store.ts",
+          "src/rolling-campaign-store.js",
+          "src/rolling-review.ts",
+          "src/rolling-review.js",
+          "scripts/project-index.sql",
+          "versioned-data-contracts.json",
+          "tests/rolling-review.test.ts",
+          "tests/rolling-campaign-store.integration.test.ts",
+          "tests/rolling-codex.integration.ts",
+          "pm/requirements/rolling-campaigns.md",
+          "pm/uat/rolling-campaigns.md",
+          "pm/requirements/traceability.generated.md",
+          "src/rolling-codex.ts",
+          "src/rolling-codex.js",
+          "tests/rolling-codex.test.ts",
+          "tests/fixtures/rolling-codex-server.ts"
+        ],
+        "operations": [
+          "inspect",
+          "edit",
+          "build",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "lost reviewer replacement and fresh exact-candidate review"
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "reviewer-recovery"
+        }
+      }
     }
   ]
 }

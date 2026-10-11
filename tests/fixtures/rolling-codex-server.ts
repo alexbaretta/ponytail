@@ -34,6 +34,7 @@ const lines = readline.createInterface({ input: process.stdin });
 let initialized = false;
 let turnCount = 0;
 let externallyActive = false;
+let terminalDuringHistoryRead = false;
 const turns = new Map<string, RollingNativeTurn>();
 lines.on('line', line => {
   const parsed: unknown = JSON.parse(line);
@@ -55,6 +56,8 @@ lines.on('line', line => {
       instructionSources: [`${cwd}/AGENTS.md`]
     };
     result = fixtureThreadResult;
+  } else if (method === 'fixture-terminal-during-history-read') {
+    terminalDuringHistoryRead = true;
   } else if (method === 'fixture-activity') {
     if (typeof params.active !== 'boolean') throw new Error('fixture activity must be boolean');
     externallyActive = params.active;
@@ -107,6 +110,17 @@ lines.on('line', line => {
     const history = [...turns.values()].reverse();
     const offset = params.cursor === null ? 0 : Number(text(params.cursor));
     result = { data: history.slice(offset, offset + 1), nextCursor: offset + 1 < history.length ? String(offset + 1) : null };
+    if (terminalDuringHistoryRead) {
+      terminalDuringHistoryRead = false;
+      const previousTurn = history[0];
+      if (!previousTurn || previousTurn.status !== 'inProgress') throw new Error('race fixture requires an active turn');
+      const rollingNativeTurn: RollingNativeTurn = {...previousTurn,status:'completed'};
+      turns.set(rollingNativeTurn.id,rollingNativeTurn);
+      // Both messages arrive in one chunk: resolving the history promise queues
+      // its continuation, then the terminal notification supersedes the snapshot.
+      process.stdout.write(`${JSON.stringify({id:message.id,result})}\n${JSON.stringify({method:'turn/completed',params:{threadId:params.threadId,turn:rollingNativeTurn}})}\n`);
+      return;
+    }
   } else if (method === 'approval') {
     send({ id: 'approval-id', method: 'item/commandExecution/requestApproval', params: { threadId: 'thread-fixture' } });
   } else if (method === 'explode') {

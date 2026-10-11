@@ -264,8 +264,12 @@ class RollingCodex extends node_events_1.EventEmitter {
         throw new Error('rolling Codex: assigned turn is absent from native history');
     }
     observeNativeTurn(threadId, rollingNativeTurn) {
-        if (rollingNativeTurn.status === 'inProgress')
+        if (rollingNativeTurn.status === 'inProgress') {
+            const completedRollingNativeTurn = this.completedTurns.get(threadId);
+            if (completedRollingNativeTurn?.id === rollingNativeTurn.id)
+                return completedRollingNativeTurn;
             this.activeTurns.set(threadId, rollingNativeTurn.id);
+        }
         else {
             requireProtocol(['completed', 'failed', 'interrupted'].includes(rollingNativeTurn.status), 'unsupported persisted turn status');
             this.completedTurns.set(threadId, rollingNativeTurn);

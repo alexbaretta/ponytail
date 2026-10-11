@@ -1,0 +1,21 @@
+✖ terminal notifications supersede an earlier in-progress history response (44.669333ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 94.121584
+
+✖ failing tests:
+
+test at tmp/binding-selectors/stale-response-dist/tests/rolling-codex.test.js:65:25
+✖ terminal notifications supersede an earlier in-progress history response (44.669333ms)
+  Error: rolling Codex: interrupt and observe terminal turns before closing the owned App Server; unresolved activity [["thread-fixture","turn-1"]]
+      at requireProtocol (/Users/alex/git/ctosclub/ponytail/tmp/binding-selectors/stale-response-dist/src/rolling-codex.js:50:15)
+      at RollingCodex.close (/Users/alex/git/ctosclub/ponytail/tmp/binding-selectors/stale-response-dist/src/rolling-codex.js:330:9)
+      at TestContext.<anonymous> (/Users/alex/git/ctosclub/ponytail/tmp/binding-selectors/stale-response-dist/tests/rolling-codex.test.js:73:28)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1208:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3)

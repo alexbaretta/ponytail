@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-10-11-terminal_history_response_race",
+  "recorded_at": "2026-10-11T12:21:15-07:00",
+  "source_references": ["pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/obligations.json#OBL-52"],
+  "context": {
+    "languages": ["typescript"],
+    "frameworks": [],
+    "components": ["RollingCodex"],
+    "affected_boundaries": ["native history response and terminal notification ordering"],
+    "code_references": ["src/rolling-codex.ts", "tests/rolling-codex.test.ts", "tests/fixtures/rolling-codex-server.ts"]
+  },
+  "observed_behavior": "Closing the adapter refused with a tracked active turn even after its terminal notification and successful terminal observation.",
+  "expected_behavior": "A stale in-progress history snapshot cannot reactivate the same turn after an observed terminal transition.",
+  "causal_mechanism": "The response promise resolves, a terminal notification is processed in the same input chunk, then the history response continuation calls observeNativeTurn with its earlier in-progress snapshot and restores activeTurns. waitForTurn returns the cached completion without removing that restored activity.",
+  "anti_pattern": {
+    "structural_description": "An asynchronous snapshot unconditionally overwrites later lifecycle evidence for the same identity.",
+    "why_it_fails": "Promise continuation order differs from the order in which the underlying server state was observed."
+  },
+  "correct_pattern": {
+    "required_invariant": "Observed terminal state supersedes an earlier in-progress snapshot for the identical turn.",
+    "implementation_description": "Before tracking an in-progress history result, return an already observed terminal result for the same turn identity. Preserve active tracking for a different turn and preserve the shutdown ownership gate."
+  },
+  "applicability_conditions": ["A terminal notification is processed before the continuation for a prior in-progress history response."],
+  "known_non_matches": ["A different turn remains active.", "Unknown active thread ownership has not been observed idle."],
+  "confirmation_evidence": ["The deterministic fixture sends a stale history response and terminal notification in one chunk. Before repair, close rejects with unresolved activity for turn-1; after repair, the history read returns completed and close succeeds."],
+  "regression_proofs": ["tests/rolling-codex.test.ts: terminal notifications supersede an earlier in-progress history response", "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/native-history-race-before.txt", "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/native-history-race-after.txt"]
+}

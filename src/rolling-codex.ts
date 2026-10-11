@@ -298,7 +298,11 @@ export class RollingCodex extends EventEmitter<RollingCodexEvents> {
   }
 
   private observeNativeTurn(threadId:string,rollingNativeTurn:RollingNativeTurn):RollingNativeTurn {
-    if (rollingNativeTurn.status === 'inProgress') this.activeTurns.set(threadId,rollingNativeTurn.id);
+    if (rollingNativeTurn.status === 'inProgress') {
+      const completedRollingNativeTurn = this.completedTurns.get(threadId);
+      if (completedRollingNativeTurn?.id === rollingNativeTurn.id) return completedRollingNativeTurn;
+      this.activeTurns.set(threadId,rollingNativeTurn.id);
+    }
     else {
       requireProtocol(['completed','failed','interrupted'].includes(rollingNativeTurn.status),'unsupported persisted turn status');
       this.completedTurns.set(threadId,rollingNativeTurn);

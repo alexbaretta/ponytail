@@ -1,0 +1,17 @@
+✔ native protocol binds checkout and session, preserves numbers and observes completed/failed/interrupted turns (48.22125ms)
+✔ terminal notifications supersede an earlier in-progress history response (40.713417ms)
+✔ timeouts retain unknown outcome and late responses do not trigger a retry (165.367ms)
+▶ lost or malformed responses reject all affected pending operations
+  ✔ drop (48.708958ms)
+  ✔ malformed (39.304458ms)
+✔ lost or malformed responses reject all affected pending operations (88.488333ms)
+✔ review dispatch resumes the assigned native reviewer and observes its exact final decision (44.0875ms)
+✔ initialization recovery reads exactly one original turn and rejects absent or ambiguous history (41.599875ms)
+ℹ tests 8
+ℹ suites 0
+ℹ pass 8
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 473.601708

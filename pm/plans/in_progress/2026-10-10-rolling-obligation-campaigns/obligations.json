@@ -13933,6 +13933,43 @@
       },
       "assessor": "coordinator",
       "reason": "Diagnose the close safety failure within the amended finite scope. Prior freshness invalidation is already recorded; this preparation discovers no new condition and awards no discharge."
+    },
+    {
+      "id": "CHECKPOINT-140",
+      "predecessorId": "CHECKPOINT-139",
+      "baselineId": "BASELINE-16",
+      "kind": "neutral",
+      "selectedIds": [
+        "OBL-52"
+      ],
+      "registeredIds": [],
+      "certificateIds": [],
+      "invalidatedIds": [],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": {
+        "obligationId": "OBL-52",
+        "operations": [
+          "inspect"
+        ],
+        "deliverable": "tests/rolling-codex.test.ts"
+      },
+      "assessor": "coordinator",
+      "reason": "Diagnose the close safety failure within the amended finite scope. Prior freshness invalidation is already recorded; this preparation discovers no new condition and awards no discharge."
     }
   ]
 }
