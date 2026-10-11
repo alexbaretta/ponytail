@@ -131,6 +131,7 @@ function buildRollingWorkerInstructions(rollingWorkerContext) {
         + 'Preserve static typing and project build-impact rules. Report newly discovered prerequisites to the coordinator; do not silently change the authoritative graph. '
         + 'If blocked, stop activity and report the blocker while retaining the checkout. Delivery is proposed discharge, not acceptance. '
         + 'When submitting code changes, fetch the configured campaign branch and perform a full semantic rebase commit by commit, refresh affected evidence, retain the exact candidate SHA and base, and stop activity. '
+        + 'Git mutations in this linked checkout write shared repository metadata outside the checkout. Request sandbox escalation for each authorized Git mutation before its first execution (sandbox_permissions=require_escalated). Keep the lease and authorized command scope binding. '
         + 'Return the candidate and evidence to the coordinator for adversarial review; never publish to mainline yourself. '
         + (rollingWorkerContext.rejectedReview === null ? '' : `Correct every finding from the original reviewer before resubmission. Rejected review: ${JSON.stringify(rollingWorkerContext.rejectedReview)}\n`)
         + 'For code submissions, the final message must be only strict JSON, without Markdown fences or surrounding prose. '

@@ -84,6 +84,7 @@ test('worker instructions retain exact obligation, requirement, acceptance step,
  assert.ok(instructions.includes('coordinator graph is authoritative'));
  assert.ok(instructions.includes('For a no-edit obligation, return fresh inspection and proof'));
  assert.ok(instructions.includes('When submitting code changes, fetch the configured campaign branch'));
+ assert.ok(instructions.includes('Request sandbox escalation for each authorized Git mutation before its first execution (sandbox_permissions=require_escalated).'));
  const correctedRollingWorkerContext: RollingWorkerContext = { ...rollingWorkerContext,
   rejectedReview: { schemaVersion:1,reviewId:'review',revision:'a'.repeat(40),reviewerSessionId:'original-reviewer',
    completedAt:'2026-10-11T17:00:00.000Z',decision:'rejected',findings:['fixture.ts:1: Correct the missing failure path.'] } };
