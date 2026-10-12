@@ -4281,6 +4281,262 @@
           "profile": "publication-batch"
         }
       }
+    },
+    {
+      "id": "BIND-86",
+      "obligationId": "OBL-58",
+      "predecessorId": "BIND-82",
+      "baselineId": "BASELINE-16",
+      "assessor": "coordinator",
+      "authority": [
+        "user-goal-2026-10-10-rolling-campaigns",
+        "user-goal-2026-10-10-static-language-existing-tsts",
+        "user-2026-10-10-normative-atomic-obligations",
+        "user-2026-10-11-language-scope-our-code-preserve-translations"
+      ],
+      "reason": "Synchronize the publication component with the canonical runtime generator, structure owner and traceability configuration; preserve the approved first group and its separate criteria.",
+      "dependsOn": [],
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "scripts/build-runtime.ts",
+          "PROJECT_STRUCTURE.md",
+          ".agents/config/project/traceability.json",
+          "src/rolling-publication.ts",
+          "src/rolling-publication.js",
+          "src/rolling-campaign-store.ts",
+          "src/rolling-campaign-store.js",
+          "src/rolling-campaign.ts",
+          "src/rolling-campaign.js",
+          "src/rolling-integration.ts",
+          "src/rolling-integration.js",
+          "tests/rolling-publication.test.ts",
+          "tests/rolling-publication.integration.test.ts",
+          "tests/rolling-campaign-store.integration.test.ts",
+          "tests/fixtures/rolling-publication-qa.ts",
+          "scripts/project-index.sql",
+          "versioned-data-contracts.json",
+          "pm/requirements/traceability.generated.md",
+          "pm/uat/rolling-campaigns.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/design.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/publication-batch-OBL-58.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/publication-batch-OBL-58-certificate-binding.json",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/publication-batch-OBL-59.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/publication-batch-OBL-59-certificate-binding.json",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/publication-batch-OBL-60.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/publication-batch-OBL-60-certificate-binding.json",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/publication-batch-OBL-61.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/publication-batch-OBL-61-certificate-binding.json"
+        ],
+        "operations": [
+          "inspect",
+          "edit",
+          "build",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "Freeze publication at M accepted increments; resubmissions and bookkeeping do not increment the count."
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "publication-batch"
+        }
+      }
+    },
+    {
+      "id": "BIND-87",
+      "obligationId": "OBL-59",
+      "predecessorId": "BIND-83",
+      "baselineId": "BASELINE-16",
+      "assessor": "coordinator",
+      "authority": [
+        "user-goal-2026-10-10-rolling-campaigns",
+        "user-goal-2026-10-10-static-language-existing-tsts",
+        "user-2026-10-10-normative-atomic-obligations",
+        "user-2026-10-11-language-scope-our-code-preserve-translations"
+      ],
+      "reason": "Synchronize the publication component with the canonical runtime generator, structure owner and traceability configuration; preserve the approved first group and its separate criteria.",
+      "dependsOn": [],
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "scripts/build-runtime.ts",
+          "PROJECT_STRUCTURE.md",
+          ".agents/config/project/traceability.json",
+          "src/rolling-publication.ts",
+          "src/rolling-publication.js",
+          "src/rolling-campaign-store.ts",
+          "src/rolling-campaign-store.js",
+          "src/rolling-campaign.ts",
+          "src/rolling-campaign.js",
+          "src/rolling-integration.ts",
+          "src/rolling-integration.js",
+          "tests/rolling-publication.test.ts",
+          "tests/rolling-publication.integration.test.ts",
+          "tests/rolling-campaign-store.integration.test.ts",
+          "tests/fixtures/rolling-publication-qa.ts",
+          "scripts/project-index.sql",
+          "versioned-data-contracts.json",
+          "pm/requirements/traceability.generated.md",
+          "pm/uat/rolling-campaigns.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/design.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/publication-batch-OBL-58.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/publication-batch-OBL-58-certificate-binding.json",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/publication-batch-OBL-59.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/publication-batch-OBL-59-certificate-binding.json",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/publication-batch-OBL-60.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/publication-batch-OBL-60-certificate-binding.json",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/publication-batch-OBL-61.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/publication-batch-OBL-61-certificate-binding.json"
+        ],
+        "operations": [
+          "inspect",
+          "edit",
+          "build",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "Flush a nonempty partial publication batch at explicit flush, completion or quiescence."
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "publication-batch"
+        }
+      }
+    },
+    {
+      "id": "BIND-88",
+      "obligationId": "OBL-60",
+      "predecessorId": "BIND-84",
+      "baselineId": "BASELINE-16",
+      "assessor": "coordinator",
+      "authority": [
+        "user-goal-2026-10-10-rolling-campaigns",
+        "user-goal-2026-10-10-static-language-existing-tsts",
+        "user-2026-10-10-normative-atomic-obligations",
+        "user-2026-10-11-language-scope-our-code-preserve-translations"
+      ],
+      "reason": "Synchronize the publication component with the canonical runtime generator, structure owner and traceability configuration; preserve the approved first group and its separate criteria.",
+      "dependsOn": [],
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "scripts/build-runtime.ts",
+          "PROJECT_STRUCTURE.md",
+          ".agents/config/project/traceability.json",
+          "src/rolling-publication.ts",
+          "src/rolling-publication.js",
+          "src/rolling-campaign-store.ts",
+          "src/rolling-campaign-store.js",
+          "src/rolling-campaign.ts",
+          "src/rolling-campaign.js",
+          "src/rolling-integration.ts",
+          "src/rolling-integration.js",
+          "tests/rolling-publication.test.ts",
+          "tests/rolling-publication.integration.test.ts",
+          "tests/rolling-campaign-store.integration.test.ts",
+          "tests/fixtures/rolling-publication-qa.ts",
+          "scripts/project-index.sql",
+          "versioned-data-contracts.json",
+          "pm/requirements/traceability.generated.md",
+          "pm/uat/rolling-campaigns.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/design.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/publication-batch-OBL-58.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/publication-batch-OBL-58-certificate-binding.json",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/publication-batch-OBL-59.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/publication-batch-OBL-59-certificate-binding.json",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/publication-batch-OBL-60.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/publication-batch-OBL-60-certificate-binding.json",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/publication-batch-OBL-61.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/publication-batch-OBL-61-certificate-binding.json"
+        ],
+        "operations": [
+          "inspect",
+          "edit",
+          "build",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "Incorporate fresh mainline into the publication candidate while preserving published campaign history."
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "publication-batch"
+        }
+      }
+    },
+    {
+      "id": "BIND-89",
+      "obligationId": "OBL-61",
+      "predecessorId": "BIND-85",
+      "baselineId": "BASELINE-16",
+      "assessor": "coordinator",
+      "authority": [
+        "user-goal-2026-10-10-rolling-campaigns",
+        "user-goal-2026-10-10-static-language-existing-tsts",
+        "user-2026-10-10-normative-atomic-obligations",
+        "user-2026-10-11-language-scope-our-code-preserve-translations"
+      ],
+      "reason": "Synchronize the publication component with the canonical runtime generator, structure owner and traceability configuration; preserve the approved first group and its separate criteria.",
+      "dependsOn": [],
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "scripts/build-runtime.ts",
+          "PROJECT_STRUCTURE.md",
+          ".agents/config/project/traceability.json",
+          "src/rolling-publication.ts",
+          "src/rolling-publication.js",
+          "src/rolling-campaign-store.ts",
+          "src/rolling-campaign-store.js",
+          "src/rolling-campaign.ts",
+          "src/rolling-campaign.js",
+          "src/rolling-integration.ts",
+          "src/rolling-integration.js",
+          "tests/rolling-publication.test.ts",
+          "tests/rolling-publication.integration.test.ts",
+          "tests/rolling-campaign-store.integration.test.ts",
+          "tests/fixtures/rolling-publication-qa.ts",
+          "scripts/project-index.sql",
+          "versioned-data-contracts.json",
+          "pm/requirements/traceability.generated.md",
+          "pm/uat/rolling-campaigns.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/design.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/publication-batch-OBL-58.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/publication-batch-OBL-58-certificate-binding.json",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/publication-batch-OBL-59.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/publication-batch-OBL-59-certificate-binding.json",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/publication-batch-OBL-60.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/publication-batch-OBL-60-certificate-binding.json",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/publication-batch-OBL-61.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/publication-batch-OBL-61-certificate-binding.json"
+        ],
+        "operations": [
+          "inspect",
+          "edit",
+          "build",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "Prevent mainline publication unless all required full QA passes on the exact candidate."
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "publication-batch"
+        }
+      }
     }
   ]
 }

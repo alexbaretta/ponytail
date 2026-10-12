@@ -15445,6 +15445,46 @@
       },
       "assessor": "coordinator",
       "reason": "OBL-57 is discharged. Begin the first user-approved group of four, OBL-58 through OBL-61; no delivery claimed by this scope checkpoint."
+    },
+    {
+      "id": "CHECKPOINT-178",
+      "predecessorId": "CHECKPOINT-177",
+      "baselineId": "BASELINE-16",
+      "kind": "neutral",
+      "selectedIds": [
+        "OBL-58",
+        "OBL-59",
+        "OBL-60",
+        "OBL-61"
+      ],
+      "registeredIds": [],
+      "certificateIds": [],
+      "invalidatedIds": [],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": {
+        "obligationId": "OBL-58",
+        "operations": [
+          "inspect"
+        ],
+        "deliverable": "Include canonical runtime generation and explicit artifact classifications for the already-started publication component."
+      },
+      "assessor": "coordinator",
+      "reason": "Extend the existing first publication group only for canonical generator and artifact-classification synchronization; no new delivery scope or discharge claimed."
     }
   ]
 }
