@@ -15944,6 +15944,40 @@
       },
       "assessor": "coordinator",
       "reason": "Discharge the final approved group of four through distinct current interface and closure certificates; retain historical assessments and leave whole-campaign freshness and final rollup acceptance open."
+    },
+    {
+      "id": "CHECKPOINT-190",
+      "predecessorId": "CHECKPOINT-189",
+      "baselineId": "BASELINE-16",
+      "kind": "disturbance",
+      "selectedIds": [],
+      "registeredIds": [],
+      "certificateIds": [],
+      "invalidatedIds": [
+        "CERT-129",
+        "CERT-130",
+        "CERT-131",
+        "CERT-132"
+      ],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": null,
+      "assessor": "coordinator",
+      "reason": "Reopen the final four shared-input assessments for the direct CLI cancellation correction found in final audit; retain the original proof and require successor verification."
     }
   ]
 }

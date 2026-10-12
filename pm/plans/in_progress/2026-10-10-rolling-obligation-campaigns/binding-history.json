@@ -6437,6 +6437,202 @@
           "profile": "interface-batch"
         }
       }
+    },
+    {
+      "id": "BIND-114",
+      "obligationId": "OBL-66",
+      "predecessorId": "BIND-110",
+      "baselineId": "BASELINE-16",
+      "assessor": "coordinator",
+      "authority": [
+        "user-goal-2026-10-10-rolling-campaigns",
+        "user-goal-2026-10-10-static-language-existing-tsts",
+        "user-2026-10-10-normative-atomic-obligations",
+        "user-2026-10-11-language-scope-our-code-preserve-translations"
+      ],
+      "reason": "Narrow final followup to preserving direct CLI cancellation exit status and its durable regression proof.",
+      "dependsOn": [],
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "src/rolling-operations.ts",
+          "src/rolling-operations.js",
+          "tests/rolling-cli.integration.test.ts",
+          ".agents/config/project/traceability.json",
+          "pm/requirements/traceability.generated.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/cancellation-followup-OBL-66.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/cancellation-followup-OBL-66-certificate-binding.json",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/cancellation-followup-OBL-67.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/cancellation-followup-OBL-67-certificate-binding.json",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/cancellation-followup-OBL-68.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/cancellation-followup-OBL-68-certificate-binding.json",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/cancellation-followup-OBL-69.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/cancellation-followup-OBL-69-certificate-binding.json"
+        ],
+        "operations": [
+          "inspect",
+          "edit",
+          "build",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "Expose chapter/command usage with argument, precondition, mutation and result descriptions from one registry."
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "cancellation-followup"
+        }
+      }
+    },
+    {
+      "id": "BIND-115",
+      "obligationId": "OBL-67",
+      "predecessorId": "BIND-111",
+      "baselineId": "BASELINE-16",
+      "assessor": "coordinator",
+      "authority": [
+        "user-goal-2026-10-10-rolling-campaigns",
+        "user-goal-2026-10-10-static-language-existing-tsts",
+        "user-2026-10-10-normative-atomic-obligations",
+        "user-2026-10-11-language-scope-our-code-preserve-translations"
+      ],
+      "reason": "Narrow final followup to preserving direct CLI cancellation exit status and its durable regression proof.",
+      "dependsOn": [],
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "src/rolling-operations.ts",
+          "src/rolling-operations.js",
+          "tests/rolling-cli.integration.test.ts",
+          ".agents/config/project/traceability.json",
+          "pm/requirements/traceability.generated.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/cancellation-followup-OBL-66.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/cancellation-followup-OBL-66-certificate-binding.json",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/cancellation-followup-OBL-67.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/cancellation-followup-OBL-67-certificate-binding.json",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/cancellation-followup-OBL-68.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/cancellation-followup-OBL-68-certificate-binding.json",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/cancellation-followup-OBL-69.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/cancellation-followup-OBL-69-certificate-binding.json"
+        ],
+        "operations": [
+          "inspect",
+          "edit",
+          "build",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "Replace legacy plugin-based campaign dispatch while preserving explicit historical inspection boundaries."
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "cancellation-followup"
+        }
+      }
+    },
+    {
+      "id": "BIND-116",
+      "obligationId": "OBL-68",
+      "predecessorId": "BIND-112",
+      "baselineId": "BASELINE-16",
+      "assessor": "coordinator",
+      "authority": [
+        "user-goal-2026-10-10-rolling-campaigns",
+        "user-goal-2026-10-10-static-language-existing-tsts",
+        "user-2026-10-10-normative-atomic-obligations",
+        "user-2026-10-11-language-scope-our-code-preserve-translations"
+      ],
+      "reason": "Narrow final followup to preserving direct CLI cancellation exit status and its durable regression proof.",
+      "dependsOn": [],
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "src/rolling-operations.ts",
+          "src/rolling-operations.js",
+          "tests/rolling-cli.integration.test.ts",
+          ".agents/config/project/traceability.json",
+          "pm/requirements/traceability.generated.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/cancellation-followup-OBL-66.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/cancellation-followup-OBL-66-certificate-binding.json",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/cancellation-followup-OBL-67.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/cancellation-followup-OBL-67-certificate-binding.json",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/cancellation-followup-OBL-68.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/cancellation-followup-OBL-68-certificate-binding.json",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/cancellation-followup-OBL-69.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/cancellation-followup-OBL-69-certificate-binding.json"
+        ],
+        "operations": [
+          "inspect",
+          "edit",
+          "build",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "Expose the same fenced typed campaign operations and schemas through MCP and CLI."
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "cancellation-followup"
+        }
+      }
+    },
+    {
+      "id": "BIND-117",
+      "obligationId": "OBL-69",
+      "predecessorId": "BIND-113",
+      "baselineId": "BASELINE-16",
+      "assessor": "coordinator",
+      "authority": [
+        "user-goal-2026-10-10-rolling-campaigns",
+        "user-goal-2026-10-10-static-language-existing-tsts",
+        "user-2026-10-10-normative-atomic-obligations",
+        "user-2026-10-11-language-scope-our-code-preserve-translations"
+      ],
+      "reason": "Narrow final followup to preserving direct CLI cancellation exit status and its durable regression proof.",
+      "dependsOn": [],
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "src/rolling-operations.ts",
+          "src/rolling-operations.js",
+          "tests/rolling-cli.integration.test.ts",
+          ".agents/config/project/traceability.json",
+          "pm/requirements/traceability.generated.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/cancellation-followup-OBL-66.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/cancellation-followup-OBL-66-certificate-binding.json",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/cancellation-followup-OBL-67.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/cancellation-followup-OBL-67-certificate-binding.json",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/cancellation-followup-OBL-68.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/cancellation-followup-OBL-68-certificate-binding.json",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/cancellation-followup-OBL-69.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/cancellation-followup-OBL-69-certificate-binding.json"
+        ],
+        "operations": [
+          "inspect",
+          "edit",
+          "build",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "Refuse campaign closure until all owned delivery obligations and final acceptance gates have fresh adequate evidence."
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "cancellation-followup"
+        }
+      }
     }
   ]
 }
