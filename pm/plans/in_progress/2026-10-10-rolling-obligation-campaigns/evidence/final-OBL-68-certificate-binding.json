@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "certificateId": "CERT-231",
+  "certificateId": "CERT-272",
   "lease": {
     "schemaVersion": 1,
     "scopeId": "2026-10-10-rolling-obligation-campaigns",
     "baselineId": "BASELINE-16",
-    "graphDigest": "05bbe884e6ff7fc7c22140fe5571505c370492f2ae235cff023d10be03c25c67",
-    "generation": "standalone-interface-closure-CERT-231",
+    "graphDigest": "3a0a9c50cfd2e550e4414e2707bfa1bbc4bb6f70114c70660a1d65c7666d0d1a",
+    "generation": "documentary-renewal-CERT-272",
     "assessor": "coordinator",
     "authority": [
       "user-goal-2026-10-10-rolling-campaigns",
@@ -47,32 +47,12 @@
       }
     }
   },
-  "revision": "abb8b16ab596b587fd64a85fbc8f67d17939edc7",
+  "revision": "808d3df6b1f963edbdbb0d0038cac41c05edf235",
   "proof": [
     {
-      "operation": "test",
+      "operation": "check",
       "certificateEvidenceIndex": 0,
       "submissionEvidenceIndex": 0
-    },
-    {
-      "operation": "test",
-      "certificateEvidenceIndex": 1,
-      "submissionEvidenceIndex": 1
-    },
-    {
-      "operation": "test",
-      "certificateEvidenceIndex": 2,
-      "submissionEvidenceIndex": 2
-    },
-    {
-      "operation": "check",
-      "certificateEvidenceIndex": 3,
-      "submissionEvidenceIndex": 3
-    },
-    {
-      "operation": "check",
-      "certificateEvidenceIndex": 4,
-      "submissionEvidenceIndex": 4
     }
   ]
 }

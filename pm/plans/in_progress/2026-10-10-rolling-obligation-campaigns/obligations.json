@@ -20158,6 +20158,753 @@
       },
       "assessor": "coordinator",
       "reason": "Renew current evidence for this started delivery obligation in dependency order without changing source, obligation conditions or dependency semantics."
+    },
+    {
+      "id": "CHECKPOINT-295",
+      "predecessorId": "CHECKPOINT-294",
+      "baselineId": "BASELINE-16",
+      "kind": "disturbance",
+      "selectedIds": [],
+      "registeredIds": [],
+      "certificateIds": [],
+      "invalidatedIds": [
+        "CERT-142",
+        "CERT-143",
+        "CERT-144",
+        "CERT-145",
+        "CERT-146",
+        "CERT-147",
+        "CERT-148",
+        "CERT-149",
+        "CERT-150",
+        "CERT-151",
+        "CERT-152",
+        "CERT-153",
+        "CERT-154",
+        "CERT-155",
+        "CERT-156",
+        "CERT-157",
+        "CERT-158",
+        "CERT-159",
+        "CERT-160",
+        "CERT-161",
+        "CERT-162",
+        "CERT-163",
+        "CERT-170",
+        "CERT-171",
+        "CERT-172",
+        "CERT-173",
+        "CERT-174",
+        "CERT-175",
+        "CERT-213",
+        "CERT-218",
+        "CERT-214",
+        "CERT-215",
+        "CERT-216",
+        "CERT-217",
+        "CERT-219",
+        "CERT-220",
+        "CERT-221",
+        "CERT-222",
+        "CERT-223",
+        "CERT-224",
+        "CERT-225",
+        "CERT-226",
+        "CERT-227",
+        "CERT-228",
+        "CERT-229",
+        "CERT-230",
+        "CERT-231",
+        "CERT-232",
+        "CERT-176",
+        "CERT-177",
+        "CERT-178",
+        "CERT-179",
+        "CERT-180",
+        "CERT-181",
+        "CERT-182",
+        "CERT-183",
+        "CERT-184",
+        "CERT-185",
+        "CERT-186",
+        "CERT-187",
+        "CERT-188",
+        "CERT-189",
+        "CERT-190",
+        "CERT-191",
+        "CERT-192",
+        "CERT-193",
+        "CERT-194",
+        "CERT-195",
+        "CERT-196",
+        "CERT-197",
+        "CERT-198",
+        "CERT-199",
+        "CERT-200",
+        "CERT-201",
+        "CERT-202",
+        "CERT-203",
+        "CERT-204",
+        "CERT-205",
+        "CERT-206",
+        "CERT-207",
+        "CERT-208",
+        "CERT-209",
+        "CERT-210",
+        "CERT-211",
+        "CERT-212",
+        "CERT-164",
+        "CERT-165",
+        "CERT-166",
+        "CERT-167",
+        "CERT-168",
+        "CERT-169"
+      ],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": null,
+      "assessor": "coordinator",
+      "reason": "Correct README commands that advertised retired campaign dispatch. README is explicitly hashed by these certificates; invalidate them honestly, preserve history and renew unchanged behavioral proof after inspecting exact source/configuration/runtime equality."
+    },
+    {
+      "id": "CHECKPOINT-296",
+      "predecessorId": "CHECKPOINT-295",
+      "baselineId": "BASELINE-16",
+      "kind": "neutral",
+      "selectedIds": [
+        "OBL-22",
+        "OBL-23",
+        "OBL-24",
+        "OBL-25",
+        "OBL-26",
+        "OBL-27",
+        "OBL-28",
+        "OBL-29",
+        "OBL-30",
+        "OBL-31",
+        "OBL-32",
+        "OBL-33",
+        "OBL-34",
+        "OBL-35",
+        "OBL-36",
+        "OBL-37",
+        "OBL-38",
+        "OBL-39",
+        "OBL-40",
+        "OBL-41",
+        "OBL-42",
+        "OBL-43",
+        "OBL-51",
+        "OBL-52",
+        "OBL-53",
+        "OBL-54",
+        "OBL-55",
+        "OBL-56",
+        "OBL-57",
+        "OBL-58",
+        "OBL-59",
+        "OBL-60",
+        "OBL-61",
+        "OBL-62",
+        "OBL-63",
+        "OBL-64",
+        "OBL-65",
+        "OBL-66",
+        "OBL-67",
+        "OBL-68",
+        "OBL-69",
+        "OBL-70",
+        "OBL-71",
+        "OBL-72",
+        "OBL-73",
+        "OBL-74",
+        "OBL-75",
+        "OBL-76",
+        "OBL-101",
+        "OBL-107"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "CERT-233",
+        "CERT-234",
+        "CERT-235",
+        "CERT-236",
+        "CERT-237",
+        "CERT-238",
+        "CERT-239",
+        "CERT-240",
+        "CERT-241",
+        "CERT-242",
+        "CERT-243",
+        "CERT-244",
+        "CERT-245",
+        "CERT-246",
+        "CERT-247",
+        "CERT-248",
+        "CERT-249",
+        "CERT-250",
+        "CERT-251",
+        "CERT-252",
+        "CERT-253",
+        "CERT-254",
+        "CERT-255",
+        "CERT-256",
+        "CERT-257",
+        "CERT-258",
+        "CERT-259",
+        "CERT-260",
+        "CERT-261",
+        "CERT-262",
+        "CERT-263",
+        "CERT-264",
+        "CERT-265",
+        "CERT-266",
+        "CERT-267",
+        "CERT-268",
+        "CERT-269",
+        "CERT-270",
+        "CERT-271",
+        "CERT-272",
+        "CERT-273",
+        "CERT-274",
+        "CERT-275",
+        "CERT-276",
+        "CERT-277",
+        "CERT-278",
+        "CERT-279",
+        "CERT-280",
+        "CERT-281",
+        "CERT-282"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": {
+        "obligationId": "OBL-22",
+        "operations": [
+          "inspect"
+        ],
+        "deliverable": "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/final-OBL-22.md"
+      },
+      "assessor": "coordinator",
+      "reason": "Renew started gates in dependency order after one documentary correction; unchanged executable inputs reuse retained passing proof, and every accepted predecessor is preserved."
+    },
+    {
+      "id": "CHECKPOINT-297",
+      "predecessorId": "CHECKPOINT-296",
+      "baselineId": "BASELINE-16",
+      "kind": "neutral",
+      "selectedIds": [
+        "OBL-108"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "CERT-283"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": {
+        "obligationId": "OBL-108",
+        "operations": [
+          "check"
+        ],
+        "deliverable": "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/final-OBL-108.md"
+      },
+      "assessor": "coordinator",
+      "reason": "Renew started gates in dependency order after one documentary correction; unchanged executable inputs reuse retained passing proof, and every accepted predecessor is preserved."
+    },
+    {
+      "id": "CHECKPOINT-298",
+      "predecessorId": "CHECKPOINT-297",
+      "baselineId": "BASELINE-16",
+      "kind": "neutral",
+      "selectedIds": [
+        "OBL-109"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "CERT-284"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": {
+        "obligationId": "OBL-109",
+        "operations": [
+          "check"
+        ],
+        "deliverable": "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/final-OBL-109.md"
+      },
+      "assessor": "coordinator",
+      "reason": "Renew started gates in dependency order after one documentary correction; unchanged executable inputs reuse retained passing proof, and every accepted predecessor is preserved."
+    },
+    {
+      "id": "CHECKPOINT-299",
+      "predecessorId": "CHECKPOINT-298",
+      "baselineId": "BASELINE-16",
+      "kind": "neutral",
+      "selectedIds": [
+        "OBL-110"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "CERT-285"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": {
+        "obligationId": "OBL-110",
+        "operations": [
+          "check"
+        ],
+        "deliverable": "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/final-OBL-110.md"
+      },
+      "assessor": "coordinator",
+      "reason": "Renew started gates in dependency order after one documentary correction; unchanged executable inputs reuse retained passing proof, and every accepted predecessor is preserved."
+    },
+    {
+      "id": "CHECKPOINT-300",
+      "predecessorId": "CHECKPOINT-299",
+      "baselineId": "BASELINE-16",
+      "kind": "neutral",
+      "selectedIds": [
+        "OBL-111"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "CERT-286"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": {
+        "obligationId": "OBL-111",
+        "operations": [
+          "check"
+        ],
+        "deliverable": "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/final-OBL-111.md"
+      },
+      "assessor": "coordinator",
+      "reason": "Renew started gates in dependency order after one documentary correction; unchanged executable inputs reuse retained passing proof, and every accepted predecessor is preserved."
+    },
+    {
+      "id": "CHECKPOINT-301",
+      "predecessorId": "CHECKPOINT-300",
+      "baselineId": "BASELINE-16",
+      "kind": "neutral",
+      "selectedIds": [
+        "OBL-112"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "CERT-287"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": {
+        "obligationId": "OBL-112",
+        "operations": [
+          "check"
+        ],
+        "deliverable": "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/final-OBL-112.md"
+      },
+      "assessor": "coordinator",
+      "reason": "Renew started gates in dependency order after one documentary correction; unchanged executable inputs reuse retained passing proof, and every accepted predecessor is preserved."
+    },
+    {
+      "id": "CHECKPOINT-302",
+      "predecessorId": "CHECKPOINT-301",
+      "baselineId": "BASELINE-16",
+      "kind": "neutral",
+      "selectedIds": [
+        "OBL-44",
+        "OBL-50",
+        "OBL-77",
+        "OBL-78",
+        "OBL-79",
+        "OBL-80",
+        "OBL-81",
+        "OBL-82",
+        "OBL-83",
+        "OBL-84",
+        "OBL-85",
+        "OBL-86",
+        "OBL-87",
+        "OBL-88",
+        "OBL-89",
+        "OBL-90",
+        "OBL-91",
+        "OBL-92",
+        "OBL-93",
+        "OBL-94",
+        "OBL-95",
+        "OBL-96",
+        "OBL-97",
+        "OBL-98",
+        "OBL-99",
+        "OBL-100",
+        "OBL-102",
+        "OBL-103",
+        "OBL-104",
+        "OBL-105",
+        "OBL-106"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "CERT-288",
+        "CERT-289",
+        "CERT-290",
+        "CERT-291",
+        "CERT-292",
+        "CERT-293",
+        "CERT-294",
+        "CERT-295",
+        "CERT-296",
+        "CERT-297",
+        "CERT-298",
+        "CERT-299",
+        "CERT-300",
+        "CERT-301",
+        "CERT-302",
+        "CERT-303",
+        "CERT-304",
+        "CERT-305",
+        "CERT-306",
+        "CERT-307",
+        "CERT-308",
+        "CERT-309",
+        "CERT-310",
+        "CERT-311",
+        "CERT-312",
+        "CERT-313",
+        "CERT-314",
+        "CERT-315",
+        "CERT-316",
+        "CERT-317",
+        "CERT-318"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": {
+        "obligationId": "OBL-44",
+        "operations": [
+          "inspect"
+        ],
+        "deliverable": "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/final-OBL-44.md"
+      },
+      "assessor": "coordinator",
+      "reason": "Renew started gates in dependency order after one documentary correction; unchanged executable inputs reuse retained passing proof, and every accepted predecessor is preserved."
+    },
+    {
+      "id": "CHECKPOINT-303",
+      "predecessorId": "CHECKPOINT-302",
+      "baselineId": "BASELINE-16",
+      "kind": "neutral",
+      "selectedIds": [
+        "OBL-45"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "CERT-319"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": {
+        "obligationId": "OBL-45",
+        "operations": [
+          "inspect"
+        ],
+        "deliverable": "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/final-OBL-45.md"
+      },
+      "assessor": "coordinator",
+      "reason": "Renew started gates in dependency order after one documentary correction; unchanged executable inputs reuse retained passing proof, and every accepted predecessor is preserved."
+    },
+    {
+      "id": "CHECKPOINT-304",
+      "predecessorId": "CHECKPOINT-303",
+      "baselineId": "BASELINE-16",
+      "kind": "neutral",
+      "selectedIds": [
+        "OBL-46"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "CERT-320"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": {
+        "obligationId": "OBL-46",
+        "operations": [
+          "inspect"
+        ],
+        "deliverable": "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/final-OBL-46.md"
+      },
+      "assessor": "coordinator",
+      "reason": "Renew started gates in dependency order after one documentary correction; unchanged executable inputs reuse retained passing proof, and every accepted predecessor is preserved."
+    },
+    {
+      "id": "CHECKPOINT-305",
+      "predecessorId": "CHECKPOINT-304",
+      "baselineId": "BASELINE-16",
+      "kind": "neutral",
+      "selectedIds": [
+        "OBL-47"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "CERT-321"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": {
+        "obligationId": "OBL-47",
+        "operations": [
+          "inspect"
+        ],
+        "deliverable": "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/final-OBL-47.md"
+      },
+      "assessor": "coordinator",
+      "reason": "Renew started gates in dependency order after one documentary correction; unchanged executable inputs reuse retained passing proof, and every accepted predecessor is preserved."
+    },
+    {
+      "id": "CHECKPOINT-306",
+      "predecessorId": "CHECKPOINT-305",
+      "baselineId": "BASELINE-16",
+      "kind": "neutral",
+      "selectedIds": [
+        "OBL-48"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "CERT-322"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": {
+        "obligationId": "OBL-48",
+        "operations": [
+          "inspect"
+        ],
+        "deliverable": "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/final-OBL-48.md"
+      },
+      "assessor": "coordinator",
+      "reason": "Renew started gates in dependency order after one documentary correction; unchanged executable inputs reuse retained passing proof, and every accepted predecessor is preserved."
+    },
+    {
+      "id": "CHECKPOINT-307",
+      "predecessorId": "CHECKPOINT-306",
+      "baselineId": "BASELINE-16",
+      "kind": "neutral",
+      "selectedIds": [
+        "OBL-49"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "CERT-323"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": {
+        "obligationId": "OBL-49",
+        "operations": [
+          "inspect"
+        ],
+        "deliverable": "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/final-OBL-49.md"
+      },
+      "assessor": "coordinator",
+      "reason": "Renew started gates in dependency order after one documentary correction; unchanged executable inputs reuse retained passing proof, and every accepted predecessor is preserved."
     }
   ]
 }

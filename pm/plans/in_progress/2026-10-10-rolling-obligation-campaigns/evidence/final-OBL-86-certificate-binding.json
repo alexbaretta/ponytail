@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "certificateId": "CERT-192",
+  "certificateId": "CERT-299",
   "lease": {
     "schemaVersion": 1,
     "scopeId": "2026-10-10-rolling-obligation-campaigns",
     "baselineId": "BASELINE-16",
-    "graphDigest": "1471cddb8ba03ec7281d9debc7c7a08bbe9f69783b19a19e7eb8d22b70ad65b3",
-    "generation": "standalone-sprint-readers-CERT-192",
+    "graphDigest": "3a0a9c50cfd2e550e4414e2707bfa1bbc4bb6f70114c70660a1d65c7666d0d1a",
+    "generation": "documentary-renewal-CERT-299",
     "assessor": "coordinator",
     "authority": [
       "user-goal-2026-10-10-rolling-campaigns",
@@ -49,22 +49,12 @@
       }
     }
   },
-  "revision": "8bc2cf231f0895abf5c0dfc7da9ebf6c8e448f8a",
+  "revision": "808d3df6b1f963edbdbb0d0038cac41c05edf235",
   "proof": [
     {
-      "operation": "test",
+      "operation": "check",
       "certificateEvidenceIndex": 0,
       "submissionEvidenceIndex": 0
-    },
-    {
-      "operation": "test",
-      "certificateEvidenceIndex": 1,
-      "submissionEvidenceIndex": 1
-    },
-    {
-      "operation": "check",
-      "certificateEvidenceIndex": 2,
-      "submissionEvidenceIndex": 2
     }
   ]
 }

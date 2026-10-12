@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "certificateId": "CERT-161",
+  "certificateId": "CERT-252",
   "lease": {
     "schemaVersion": 1,
     "scopeId": "2026-10-10-rolling-obligation-campaigns",
     "baselineId": "BASELINE-16",
-    "graphDigest": "0c38d685b315f911519668cc192e923e2c313d86a030c9c6ef5bf5b479a9e3c5",
-    "generation": "standalone-worker-boundaries-CERT-161",
+    "graphDigest": "3a0a9c50cfd2e550e4414e2707bfa1bbc4bb6f70114c70660a1d65c7666d0d1a",
+    "generation": "documentary-renewal-CERT-252",
     "assessor": "coordinator",
     "authority": [
       "user-goal-2026-10-10-rolling-campaigns",
@@ -47,27 +47,12 @@
       }
     }
   },
-  "revision": "d237877cebac100b0deb996f3015cfe4d0186ee2",
+  "revision": "808d3df6b1f963edbdbb0d0038cac41c05edf235",
   "proof": [
     {
-      "operation": "test",
+      "operation": "check",
       "certificateEvidenceIndex": 0,
       "submissionEvidenceIndex": 0
-    },
-    {
-      "operation": "test",
-      "certificateEvidenceIndex": 1,
-      "submissionEvidenceIndex": 1
-    },
-    {
-      "operation": "test",
-      "certificateEvidenceIndex": 2,
-      "submissionEvidenceIndex": 2
-    },
-    {
-      "operation": "check",
-      "certificateEvidenceIndex": 3,
-      "submissionEvidenceIndex": 3
     }
   ]
 }
