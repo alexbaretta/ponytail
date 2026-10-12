@@ -16023,6 +16023,82 @@
       },
       "assessor": "coordinator",
       "reason": "Renew the four shared-input assessments after the proven direct CLI cancellation correction; preserve invalidated CERT-129 through CERT-132 and leave whole-campaign final freshness and rollup acceptance open."
+    },
+    {
+      "id": "CHECKPOINT-192",
+      "predecessorId": "CHECKPOINT-191",
+      "baselineId": "BASELINE-16",
+      "kind": "neutral",
+      "selectedIds": [
+        "OBL-22",
+        "OBL-110"
+      ],
+      "registeredIds": [],
+      "certificateIds": [],
+      "invalidatedIds": [],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": {
+        "obligationId": "OBL-22",
+        "operations": [
+          "inspect"
+        ],
+        "deliverable": "Latest-only writer audit and exact two-contract correction scope"
+      },
+      "assessor": "coordinator",
+      "reason": "Complete the started configuration and stored-scope outcomes under the normative latest-only serialization constraint before final rollup acceptance."
+    },
+    {
+      "id": "CHECKPOINT-193",
+      "predecessorId": "CHECKPOINT-192",
+      "baselineId": "BASELINE-16",
+      "kind": "neutral",
+      "selectedIds": [
+        "OBL-22",
+        "OBL-110"
+      ],
+      "registeredIds": [],
+      "certificateIds": [],
+      "invalidatedIds": [],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": {
+        "obligationId": "OBL-22",
+        "operations": [
+          "inspect"
+        ],
+        "deliverable": "Include the real interface configuration expectation in the exact latest-contract correction scope"
+      },
+      "assessor": "coordinator",
+      "reason": "Complete the started configuration and stored-scope outcomes under the normative latest-only serialization constraint before final rollup acceptance."
     }
   ]
 }

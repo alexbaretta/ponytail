@@ -6633,6 +6633,216 @@
           "profile": "cancellation-followup"
         }
       }
+    },
+    {
+      "id": "BIND-118",
+      "obligationId": "OBL-22",
+      "predecessorId": null,
+      "baselineId": "BASELINE-16",
+      "assessor": "coordinator",
+      "authority": [
+        "user-goal-2026-10-10-rolling-campaigns",
+        "user-goal-2026-10-10-static-language-existing-tsts",
+        "user-2026-10-10-normative-atomic-obligations",
+        "user-2026-10-11-language-scope-our-code-preserve-translations"
+      ],
+      "reason": "Final audit found execution configuration and assignment scope writers emitting historical V1; introduce immutable V3/current normalization and latest-only serialization without changing legacy readers or approved operational behavior.",
+      "dependsOn": [],
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "src/rolling-campaign-store.ts",
+          "src/rolling-campaign-store.js",
+          "scripts/project-index.sql",
+          "versioned-data-contracts.json",
+          "tests/rolling-operations.test.ts",
+          "tests/rolling-campaign-store.test.ts",
+          "tests/rolling-campaign-store.integration.test.ts",
+          ".agents/config/project/traceability.json",
+          "pm/requirements/traceability.generated.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/design.md",
+          "pm/uat/rolling-campaigns.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/latest-contracts-OBL-22.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/latest-contracts-OBL-22-certificate-binding.json",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/latest-contracts-OBL-110.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/latest-contracts-OBL-110-certificate-binding.json"
+        ],
+        "operations": [
+          "inspect",
+          "edit",
+          "build",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "Resolve and retain the campaign publication target using explicit, project, then Git defaults."
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "latest-contracts"
+        }
+      }
+    },
+    {
+      "id": "BIND-119",
+      "obligationId": "OBL-110",
+      "predecessorId": "BIND-1",
+      "baselineId": "BASELINE-16",
+      "assessor": "coordinator",
+      "authority": [
+        "user-goal-2026-10-10-rolling-campaigns",
+        "user-goal-2026-10-10-static-language-existing-tsts",
+        "user-2026-10-10-normative-atomic-obligations",
+        "user-2026-10-11-language-scope-our-code-preserve-translations"
+      ],
+      "reason": "Final audit found execution configuration and assignment scope writers emitting historical V1; introduce immutable V3/current normalization and latest-only serialization without changing legacy readers or approved operational behavior.",
+      "dependsOn": [
+        "OBL-109"
+      ],
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "src/rolling-campaign-store.ts",
+          "src/rolling-campaign-store.js",
+          "scripts/project-index.sql",
+          "versioned-data-contracts.json",
+          "tests/rolling-operations.test.ts",
+          "tests/rolling-campaign-store.test.ts",
+          "tests/rolling-campaign-store.integration.test.ts",
+          ".agents/config/project/traceability.json",
+          "pm/requirements/traceability.generated.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/design.md",
+          "pm/uat/rolling-campaigns.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/latest-contracts-OBL-22.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/latest-contracts-OBL-22-certificate-binding.json",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/latest-contracts-OBL-110.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/latest-contracts-OBL-110-certificate-binding.json"
+        ],
+        "operations": [
+          "inspect",
+          "edit",
+          "build",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "Explicit binding-aware rolling campaigns persist frozen coordinator-authorized execution leases in PostgreSQL allocation state, fence changed scope and stale generations, and require a stopped retained owner before adopting a revised binding and resuming its original session."
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "latest-contracts"
+        }
+      }
+    },
+    {
+      "id": "BIND-120",
+      "obligationId": "OBL-22",
+      "predecessorId": "BIND-118",
+      "baselineId": "BASELINE-16",
+      "assessor": "coordinator",
+      "authority": [
+        "user-goal-2026-10-10-rolling-campaigns",
+        "user-goal-2026-10-10-static-language-existing-tsts",
+        "user-2026-10-10-normative-atomic-obligations",
+        "user-2026-10-11-language-scope-our-code-preserve-translations"
+      ],
+      "reason": "Final audit found execution configuration and assignment scope writers emitting historical V1; introduce immutable V3/current normalization and latest-only serialization without changing legacy readers or approved operational behavior.",
+      "dependsOn": [],
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "src/rolling-campaign-store.ts",
+          "src/rolling-campaign-store.js",
+          "scripts/project-index.sql",
+          "versioned-data-contracts.json",
+          "tests/rolling-operations.integration.test.ts",
+          "tests/rolling-operations.test.ts",
+          "tests/rolling-campaign-store.test.ts",
+          "tests/rolling-campaign-store.integration.test.ts",
+          ".agents/config/project/traceability.json",
+          "pm/requirements/traceability.generated.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/design.md",
+          "pm/uat/rolling-campaigns.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/latest-contracts-OBL-22.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/latest-contracts-OBL-22-certificate-binding.json",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/latest-contracts-OBL-110.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/latest-contracts-OBL-110-certificate-binding.json"
+        ],
+        "operations": [
+          "inspect",
+          "edit",
+          "build",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "Resolve and retain the campaign publication target using explicit, project, then Git defaults."
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "latest-contracts"
+        }
+      }
+    },
+    {
+      "id": "BIND-121",
+      "obligationId": "OBL-110",
+      "predecessorId": "BIND-119",
+      "baselineId": "BASELINE-16",
+      "assessor": "coordinator",
+      "authority": [
+        "user-goal-2026-10-10-rolling-campaigns",
+        "user-goal-2026-10-10-static-language-existing-tsts",
+        "user-2026-10-10-normative-atomic-obligations",
+        "user-2026-10-11-language-scope-our-code-preserve-translations"
+      ],
+      "reason": "Final audit found execution configuration and assignment scope writers emitting historical V1; introduce immutable V3/current normalization and latest-only serialization without changing legacy readers or approved operational behavior.",
+      "dependsOn": [
+        "OBL-109"
+      ],
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "src/rolling-campaign-store.ts",
+          "src/rolling-campaign-store.js",
+          "scripts/project-index.sql",
+          "versioned-data-contracts.json",
+          "tests/rolling-operations.integration.test.ts",
+          "tests/rolling-operations.test.ts",
+          "tests/rolling-campaign-store.test.ts",
+          "tests/rolling-campaign-store.integration.test.ts",
+          ".agents/config/project/traceability.json",
+          "pm/requirements/traceability.generated.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/design.md",
+          "pm/uat/rolling-campaigns.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/latest-contracts-OBL-22.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/latest-contracts-OBL-22-certificate-binding.json",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/latest-contracts-OBL-110.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/latest-contracts-OBL-110-certificate-binding.json"
+        ],
+        "operations": [
+          "inspect",
+          "edit",
+          "build",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "Explicit binding-aware rolling campaigns persist frozen coordinator-authorized execution leases in PostgreSQL allocation state, fence changed scope and stale generations, and require a stopped retained owner before adopting a revised binding and resuming its original session."
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "latest-contracts"
+        }
+      }
     }
   ]
 }
