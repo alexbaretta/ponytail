@@ -221,3 +221,17 @@ Traceability: plans-implementation REQ-ROLLING-WORKERS from plan 2026-10-10-roll
 Traceability: plans-implementation REQ-ROLLING-REVIEW from plan 2026-10-10-rolling-obligation-campaigns
 Traceability: plans-implementation REQ-ROLLING-PUBLICATION from plan 2026-10-10-rolling-obligation-campaigns
 Traceability: plans-implementation REQ-ROLLING-INTERFACES from plan 2026-10-10-rolling-obligation-campaigns
+
+## Final delivery checkpoint — 2026-10-12
+
+BASELINE-16 / CHECKPOINT-294 records fresh discharge of all 91 registered
+atomic delivery obligations (OBL-22 through OBL-112). The canonical
+[obligation document](obligations.json) remains the satisfaction authority;
+this is a dated checkpoint, not another status registry. The historical
+reconciliation snapshots above retain their original meanings.
+
+The 12 proof-inventory records and nine requirement rollups remain pending.
+The complete native acceptance Suite is running from clean revision
+`a1cc7dc74f8b897062d238d177290ea35bf8894b`; its result is not yet acceptance.
+Final requirement-by-requirement audit and the successful-completion lifecycle
+transition remain required. Delivery discharge alone does not close this plan.
