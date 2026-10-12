@@ -409,3 +409,33 @@ receipts cannot authorize the refreshed candidate. An unchanged remote can retai
 the same candidate revision while still requiring a new QA attempt. Restart
 synchronization and late receipt safety retain the campaign's later work.
 
+## Shared coordinator operations
+
+`RollingCampaignOperations` owns initialization, reconciliation, status,
+next-action projection and replenishment for the CLI and MCP adapters.
+The generated `src/rolling-operations.js` executable exercises the shared
+operations directly for initialization/reconciliation acceptance. The next group
+owns chapter help, replacement of the installed legacy campaign route and MCP
+registration; these are not established by the direct operation Arc.
+Initialization validates the physical worktree pool and resolves the campaign's
+settings, fetches mainline and creates or safely fast-forwards the campaign
+branch. Only a base already equal to published mainline may create the initial
+remote branch. Existing extra campaign commits require remote containment;
+initialization cannot publish unreviewed local work. Repeated registration is
+idempotent only for the same retained inputs.
+
+A coordinator snapshot is read under the project ownership lock. It includes
+the accepted and observed graph digests, project-wide capacity assessment,
+campaign assignments, fenced pending actions, retained reviews and outstanding
+publication state. Changed authoritative inputs yield a reconcile decision
+before any work suggestion. Next actions identify the applicable operation and
+its exact retained identities; publication recovery and started work precede
+new replenishment. Prerequisite and scope-conflict explanations come from the
+canonical scheduler.
+
+Event and periodic replenishment invoke the same reconciliation and allocation
+path. Each allocation reserves ownership transactionally; concurrent calls and
+restarts cannot duplicate a live obligation. An optional completed-worker release
+is processed atomically with the first allocation. Stopped inactive sessions free
+capacity while retaining their checkout, and unblocked retained sessions are
+selected before new obligations.

@@ -1175,6 +1175,21 @@
       "class": "integration-test",
       "path": "tests/binding-selectors.integration.test.ts",
       "locator": "text"
+    },
+    {
+      "class": "implementation",
+      "path": "src/rolling-operations.ts",
+      "locator": "text"
+    },
+    {
+      "class": "unit-test",
+      "path": "tests/rolling-operations.test.ts",
+      "locator": "text"
+    },
+    {
+      "class": "integration-test",
+      "path": "tests/rolling-operations.integration.test.ts",
+      "locator": "text"
     }
   ],
   "entities": [],
@@ -1442,6 +1457,10 @@
     {
       "path": ".openclaw/skills/plan-execution/scripts/obligation-binding-history.js",
       "sourcePath": "skills/plan-execution/scripts/obligation-binding-history.js"
+    },
+    {
+      "path": "src/rolling-operations.js",
+      "sourcePath": "src/rolling-operations.ts"
     }
   ],
   "reverseViewPath": "pm/requirements/traceability.generated.md",

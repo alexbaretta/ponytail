@@ -136,6 +136,8 @@ while project-wide management records remain under `pm/`.
   selection, nonempty partial-flush policy, history-preserving mainline candidate
   preparation and exact-candidate full QA validation. Its shipped `.js` entrypoint is
   compiler output materialized by `scripts/build-runtime.ts`.
+  `src/rolling-operations.ts` owns shared typed campaign initialization,
+  coordinator decisions and event/periodic replenishment.
   `src/rolling-campaign-store.ts` owns transactional PostgreSQL campaign,
   checkout and assignment leases and durable external-action intents.
   Its tables and indexes use the existing `scripts/project-index.sql` setup.

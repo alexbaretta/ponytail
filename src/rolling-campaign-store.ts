@@ -22,7 +22,7 @@ import { readRollingReviewRequestV1, readRollingReviewOutcomeV1, parseRollingRev
   type RollingReviewReplacementV1, type RollingReviewerLoss, type RollingStoredReview } from './rolling-review.js';
 import { collectRollingGraph, selectRollingAssignments, resolveRollingConfiguration, readRollingResolvedConfiguration, readRollingBindingsV1,
   type RollingAssignment, type RollingAssignmentState, type RollingBinding, type RollingCampaignRequest,
-  type RollingArgv, type RollingGraph, type RollingResolvedConfiguration, type RollingSchedulingBlock } from './rolling-campaign.js';
+  type RollingArgv, type RollingGraph, type RollingResolvedConfiguration, type RollingSchedulingBlock, type RollingSchedulingResult } from './rolling-campaign.js';
 
 export interface RollingAssignmentScopeV1 {
   readonly schemaVersion: 1;
@@ -132,6 +132,22 @@ export interface RollingAllocationResult {
   readonly blocked?: readonly RollingSchedulingBlock[];
 }
 export interface RollingCampaignStatus { readonly graphDigest: string; readonly assignments: readonly RollingStoredAssignment[] }
+export type RollingPublicationState = 'FROZEN' | 'PREPARING' | 'CONFLICT' | 'CANDIDATE' | 'QA_RUNNING' | 'QA_FAILED' | 'QA_PASSED' | 'PUSHING' | 'PUBLISHED' | 'REBASE_REQUIRED' | 'PUSH_REJECTED' | 'UNCONFIRMED';
+export interface RollingPublicationStatus {
+  readonly claim: RollingPublicationBatchClaimV1;
+  readonly state: RollingPublicationState;
+  readonly qaId: string | null;
+  readonly publicationId: string | null;
+  readonly pendingRefreshId: string | null;
+}
+export interface RollingCoordinatorSnapshot extends RollingCampaignStatus {
+  readonly observedGraphDigest: string;
+  readonly configuration: RollingExecutionConfig;
+  readonly scheduling: RollingSchedulingResult;
+  readonly actions: readonly RollingAction[];
+  readonly reviews: readonly RollingStoredReview[];
+  readonly publications: readonly RollingPublicationStatus[];
+}
 export type RollingActionState = 'PENDING' | 'STARTED' | 'COMPLETED' | 'CANCELLED';
 export type RollingActionKind = 'START_WORKER' | 'RESUME_WORKER';
 export interface RollingAction {
@@ -207,18 +223,21 @@ export function readRollingAssignmentScopeV2(value: unknown): RollingAssignmentS
   return { schemaVersion: 2, lease: obligationLeaseV1, binding: rollingBinding, exclusiveResources: rollingBinding.exclusiveResources };
 }
 // Traceability: implements REQ-ROLLING-STATE
+export function readRollingBindingHistoryConfiguration(value:unknown):RollingBindingHistoryConfiguration {
+  requireState(isRecord(value) && JSON.stringify(Object.keys(value).sort()) === JSON.stringify(['assessor','authority','path']), 'invalid binding history configuration');
+  relativePath(value.path);
+  const assessor = stringColumn(value.assessor,'binding assessor');
+  requireState(isStringArray(value.authority) && value.authority.length > 0 && new Set(value.authority).size === value.authority.length,'invalid binding authority');
+  return {path:value.path,assessor,authority:[...value.authority]};
+}
+// Traceability: implements REQ-ROLLING-STATE
 export function readRollingExecutionConfigV2(value: unknown): RollingExecutionConfigV2 {
   requireKeys(value, ['schemaVersion', 'mainline', 'incrementRef', 'maxActiveWorkers', 'publicationSize', 'bindingHistory'], 2);
-  requireState(isRecord(value.bindingHistory)
-    && JSON.stringify(Object.keys(value.bindingHistory).sort()) === JSON.stringify(['assessor', 'authority', 'path']), 'invalid binding history configuration');
-  relativePath(value.bindingHistory.path);
-  const assessor = stringColumn(value.bindingHistory.assessor, 'binding assessor');
-  requireState(isStringArray(value.bindingHistory.authority) && value.bindingHistory.authority.length > 0
-    && new Set(value.bindingHistory.authority).size === value.bindingHistory.authority.length, 'invalid binding authority');
+  const rollingBindingHistoryConfiguration = readRollingBindingHistoryConfiguration(value.bindingHistory);
   const rollingResolvedConfiguration = readRollingResolvedConfiguration({ mainline: value.mainline, incrementRef: value.incrementRef,
     maxActiveWorkers: value.maxActiveWorkers, publicationSize: value.publicationSize });
   return { schemaVersion: 2, ...rollingResolvedConfiguration,
-    bindingHistory: { path: value.bindingHistory.path, assessor, authority: [...value.bindingHistory.authority] } };
+    bindingHistory:rollingBindingHistoryConfiguration };
 }
 export const RollingAssignmentScopeReaders = { V1: readRollingAssignmentScopeV1, V2: readRollingAssignmentScopeV2 };
 export const RollingExecutionConfigReaders = { V1: readRollingExecutionConfigV1, V2: readRollingExecutionConfigV2 };
@@ -246,6 +265,19 @@ function stringColumn(value: unknown, label: string): string {
 }
 function nullableStringColumn(value: unknown, label: string): string | null { return value === null ? null : stringColumn(value, label); }
 function booleanColumn(value: unknown, label: string): boolean { requireState(typeof value === 'boolean', `invalid database ${label}`); return value; }
+function publicationState(value: unknown): RollingPublicationState {
+  switch (value) {
+    case 'FROZEN': case 'PREPARING': case 'CONFLICT': case 'CANDIDATE': case 'QA_RUNNING': case 'QA_FAILED': case 'QA_PASSED': case 'PUSHING': case 'PUBLISHED': case 'REBASE_REQUIRED': case 'PUSH_REJECTED': case 'UNCONFIRMED': return value;
+    default: throw new Error('rolling campaign: invalid database publication state');
+  }
+}
+function readStoredReview(row: Record<string,unknown>): RollingStoredReview {
+  const text = nullableStringColumn(row.outcome_text, 'review outcome');
+  const rollingReviewRequestV1 = parseRollingReviewRequest(stringColumn(row.request_text, 'review request'));
+  const rollingReviewOutcomeV1 = text === null ? null : parseRollingReviewOutcome(text);
+  if (rollingReviewOutcomeV1) validateRollingReviewOutcome(rollingReviewRequestV1, rollingReviewOutcomeV1);
+  return { request: rollingReviewRequestV1, outcome: rollingReviewOutcomeV1 };
+}
 function worktreeNumber(value: unknown): number {
   requireState(typeof value === 'number' || typeof value === 'string' && /^(0|[1-9][0-9]*)$/.test(value), 'invalid database worktree number');
   const number = Number(value);
@@ -332,8 +364,12 @@ export class RollingCampaignStore {
       await poolClient.query<Record<string, unknown>>('INSERT INTO ponytail_index.rolling_pool_v1(project_id,managed_directory) VALUES($1,$2) ON CONFLICT DO NOTHING', [this.projectId, request.managedDirectory]);
       const pool = (await poolClient.query<Record<string, unknown>>('SELECT managed_directory FROM ponytail_index.rolling_pool_v1 WHERE project_id=$1 FOR UPDATE', [this.projectId])).rows[0];
       requireState(readPool(pool).managed_directory === request.managedDirectory, 'managed directory differs from project pool');
-      await poolClient.query<Record<string, unknown>>('INSERT INTO ponytail_index.rolling_campaign_v1(project_id,campaign_id,coordinator_root,document_path,bindings_path,graph_digest,configuration_text) VALUES($1,$2,$3,$4,$5,$6,$7)',
+      await poolClient.query<Record<string, unknown>>('INSERT INTO ponytail_index.rolling_campaign_v1(project_id,campaign_id,coordinator_root,document_path,bindings_path,graph_digest,configuration_text) VALUES($1,$2,$3,$4,$5,$6,$7) ON CONFLICT (project_id,campaign_id) DO NOTHING',
         [this.projectId, request.id, rollingGraph.coordinatorRoot, request.documentPath, request.bindingsPath, rollingGraph.digest, JSON.stringify(rollingExecutionConfig)]);
+      const registeredRollingCampaignRow = readCampaign((await poolClient.query<Record<string,unknown>>('SELECT * FROM ponytail_index.rolling_campaign_v1 WHERE project_id=$1 AND campaign_id=$2',[this.projectId,request.id])).rows[0]);
+      requireState(registeredRollingCampaignRow.coordinator_root === rollingGraph.coordinatorRoot && registeredRollingCampaignRow.document_path === request.documentPath
+        && registeredRollingCampaignRow.bindings_path === request.bindingsPath && registeredRollingCampaignRow.graph_digest === rollingGraph.digest
+        && isDeepStrictEqual(executionConfiguration(registeredRollingCampaignRow.configuration_text),rollingExecutionConfig),'campaign is already initialized with different inputs; reconcile its retained state');
       await poolClient.query<Record<string, unknown>>('COMMIT');
       return { id: request.id, graphDigest: rollingGraph.digest };
     } catch (error) { await poolClient.query<Record<string, unknown>>('ROLLBACK'); throw error; }
@@ -359,6 +395,17 @@ export class RollingCampaignStore {
       requireState(rollingGraph.digest === nextDigest && rollingGraph.document.scopeId === campaignId, 'stale proposed graph');
       await poolClient.query<Record<string, unknown>>('UPDATE ponytail_index.rolling_campaign_v1 SET graph_digest=$3 WHERE project_id=$1 AND campaign_id=$2', [this.projectId, campaignId, nextDigest]);
       return { graphDigest: nextDigest };
+    });
+  }
+
+  // Traceability: implements REQ-ROLLING-INTERFACES
+  // Traceability: implements REQ-ROLLING-GRAPH
+  async reconcileCoordinator(campaignId: string): Promise<RollingGraphReconciliation> {
+    return this.transaction(campaignId, async (poolClient,rollingCampaignRow) => {
+      const rollingGraph = this.collectGraph(rollingCampaignRow);
+      requireState(rollingGraph.document.scopeId === campaignId,'campaign scope changed');
+      await poolClient.query('UPDATE ponytail_index.rolling_campaign_v1 SET graph_digest=$3 WHERE project_id=$1 AND campaign_id=$2',[this.projectId,campaignId,rollingGraph.digest]);
+      return {graphDigest:rollingGraph.digest};
     });
   }
 
@@ -671,13 +718,7 @@ export class RollingCampaignStore {
 
   async reviews(campaignId: string, id: string): Promise<readonly RollingStoredReview[]> {
     const rows = (await this.pool.query<Record<string, unknown>>('SELECT request_text,outcome_text FROM ponytail_index.rolling_review_v1 WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3 ORDER BY created_at,review_id', [this.projectId, campaignId, id])).rows;
-    return rows.map(row => {
-      const text = nullableStringColumn(row.outcome_text, 'review outcome');
-      const rollingReviewRequestV1 = parseRollingReviewRequest(stringColumn(row.request_text, 'review request'));
-      const rollingReviewOutcomeV1 = text === null ? null : parseRollingReviewOutcome(text);
-      if (rollingReviewOutcomeV1) validateRollingReviewOutcome(rollingReviewRequestV1, rollingReviewOutcomeV1);
-      return { request: rollingReviewRequestV1, outcome: rollingReviewOutcomeV1 };
-    });
+    return rows.map(readStoredReview);
   }
 
   async claimReviewDispatch(campaignId: string, reviewId: string, reviewerThreadId: string): Promise<RollingReviewDispatchStarted> {
@@ -1558,6 +1599,25 @@ export class RollingCampaignStore {
   async status(campaignId: string): Promise<RollingCampaignStatus> {
     return this.transaction(campaignId, async (poolClient, rollingCampaignRow) => ({ graphDigest: rollingCampaignRow.graph_digest,
       assignments: (await poolClient.query<Record<string, unknown>>('SELECT * FROM ponytail_index.rolling_assignment_v1 WHERE project_id=$1 AND campaign_id=$2 ORDER BY created_at,assignment_id', [this.projectId, campaignId])).rows.map(readAssignment) }));
+  }
+
+  // Traceability: implements REQ-ROLLING-STATE
+  // Traceability: implements REQ-ROLLING-INTERFACES
+  async coordinatorSnapshot(campaignId: string): Promise<RollingCoordinatorSnapshot> {
+    return this.transaction(campaignId,async (poolClient,rollingCampaignRow) => {
+      const rollingGraph = this.collectGraph(rollingCampaignRow);
+      const rollingExecutionConfig = executionConfiguration(rollingCampaignRow.configuration_text);
+      const assignments = (await poolClient.query<Record<string,unknown>>('SELECT * FROM ponytail_index.rolling_assignment_v1 WHERE project_id=$1 ORDER BY created_at,assignment_id',[this.projectId])).rows.map(readAssignment);
+      const actions = (await poolClient.query<Record<string,unknown>>("SELECT * FROM ponytail_index.rolling_action_v1 WHERE project_id=$1 AND campaign_id=$2 AND state IN ('PENDING','STARTED') ORDER BY created_at,action_id",[this.projectId,campaignId])).rows.map(value => {const {resultText,...rollingAction} = readAction(value); return rollingAction;});
+      const reviews = (await poolClient.query<Record<string,unknown>>("SELECT r.request_text,r.outcome_text FROM ponytail_index.rolling_review_v1 r JOIN ponytail_index.rolling_assignment_v1 a USING(project_id,campaign_id,assignment_id) WHERE r.project_id=$1 AND r.campaign_id=$2 AND r.replacement_text IS NULL AND a.state IN ('REVIEW','REWORK','INTEGRATING') ORDER BY r.created_at,r.review_id",[this.projectId,campaignId])).rows.map(readStoredReview);
+      const publications = (await poolClient.query<Record<string,unknown>>("SELECT * FROM ponytail_index.rolling_publication_batch_v1 WHERE project_id=$1 AND campaign_id=$2 AND (state<>'PUBLISHED' OR synchronized_revision IS NULL) ORDER BY created_at,batch_id",[this.projectId,campaignId])).rows.map((row):RollingPublicationStatus => ({
+        claim:readRollingPublicationBatchClaimV1(readStateText(stringColumn(row.claim_text,'publication claim'))),state:publicationState(row.state),
+        qaId:nullableStringColumn(row.qa_id,'publication QA'),publicationId:nullableStringColumn(row.publication_id,'publication observation'),pendingRefreshId:nullableStringColumn(row.pending_refresh_id,'pending mainline refresh')
+      }));
+      return {graphDigest:rollingCampaignRow.graph_digest,observedGraphDigest:rollingGraph.digest,configuration:rollingExecutionConfig,
+        assignments:assignments.filter(assignment=>assignment.scopeId === campaignId),
+        scheduling:selectRollingAssignments(rollingGraph,assignments,rollingExecutionConfig.maxActiveWorkers,rollingGraph.digest),actions,reviews,publications};
+    });
   }
 
   async nextActions(campaignId: string): Promise<readonly RollingAction[]> {

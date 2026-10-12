@@ -15,6 +15,7 @@ exports.parseRollingProjectConfig = parseRollingProjectConfig;
 exports.readRollingBindingsV1 = readRollingBindingsV1;
 exports.collectRollingGraph = collectRollingGraph;
 exports.selectRollingAssignments = selectRollingAssignments;
+exports.readRollingCampaignRequest = readRollingCampaignRequest;
 exports.resolveRollingConfiguration = resolveRollingConfiguration;
 exports.readRollingResolvedConfiguration = readRollingResolvedConfiguration;
 exports.loadRollingConfiguration = loadRollingConfiguration;
@@ -291,9 +292,17 @@ function selectRollingAssignments(rollingGraph, assignments, maxActiveWorkers, e
     return { digest: rollingGraph.digest, activeCount: live.filter(item => item.state !== 'INACTIVE').length,
         availableCapacity: capacity, selected, blocked };
 }
+function readRollingCampaignRequest(value) {
+    requireRollingRecord(value, ['mainline', 'incrementRef', 'maxActiveWorkers', 'publicationSize'], 'campaign request');
+    requireRollingCondition(value.mainline === null || isRollingMainline(value.mainline), 'invalid campaign mainline');
+    requireRollingCondition(typeof value.incrementRef === 'string' && !value.incrementRef.startsWith('-') && (0, node_child_process_1.spawnSync)('git', ['check-ref-format', `refs/heads/${value.incrementRef}`]).status === 0, 'invalid campaign increment branch');
+    requireRollingCondition(value.maxActiveWorkers === null || isRollingPositiveInteger(value.maxActiveWorkers), 'invalid campaign capacity');
+    requireRollingCondition(value.publicationSize === null || isRollingPositiveInteger(value.publicationSize), 'invalid campaign publication size');
+    return { mainline: value.mainline, incrementRef: value.incrementRef, maxActiveWorkers: value.maxActiveWorkers, publicationSize: value.publicationSize };
+}
 function resolveRollingConfiguration(rollingPhysicalProjectConfig, request, gitDefaultBranch) {
     const rollingProjectConfigV2 = normalizeRollingProjectConfig(readRollingPhysicalProjectConfig(rollingPhysicalProjectConfig));
-    requireRollingRecord(request, ['mainline', 'incrementRef', 'maxActiveWorkers', 'publicationSize'], 'campaign request');
+    readRollingCampaignRequest(request);
     const mainline = request.mainline ?? rollingProjectConfigV2.mainline
         ?? { remote: 'origin', branch: gitDefaultBranch };
     const maxActiveWorkers = request.maxActiveWorkers ?? rollingProjectConfigV2.maxActiveWorkers ?? 10;

@@ -18,6 +18,7 @@ const sources: readonly string[] = [
   'src/rolling-review.ts',
   'src/rolling-integration.ts',
   'src/rolling-publication.ts',
+  'src/rolling-operations.ts',
   'src/rolling-worker.ts',
   'src/rolling-codex.ts',
   'src/project-index-database.ts',

@@ -364,9 +364,18 @@ export function selectRollingAssignments(rollingGraph: RollingGraph, assignments
 }
 
 // Traceability: implements REQ-ROLLING-CONFIGURATION
+// Traceability: implements REQ-ROLLING-CONFIGURATION
+export function readRollingCampaignRequest(value:unknown):RollingCampaignRequest {
+  requireRollingRecord(value,['mainline','incrementRef','maxActiveWorkers','publicationSize'],'campaign request');
+  requireRollingCondition(value.mainline === null || isRollingMainline(value.mainline),'invalid campaign mainline');
+  requireRollingCondition(typeof value.incrementRef === 'string' && !value.incrementRef.startsWith('-') && spawnSync('git',['check-ref-format',`refs/heads/${value.incrementRef}`]).status === 0,'invalid campaign increment branch');
+  requireRollingCondition(value.maxActiveWorkers === null || isRollingPositiveInteger(value.maxActiveWorkers),'invalid campaign capacity');
+  requireRollingCondition(value.publicationSize === null || isRollingPositiveInteger(value.publicationSize),'invalid campaign publication size');
+  return {mainline:value.mainline,incrementRef:value.incrementRef,maxActiveWorkers:value.maxActiveWorkers,publicationSize:value.publicationSize};
+}
 export function resolveRollingConfiguration(rollingPhysicalProjectConfig: RollingPhysicalProjectConfig, request: RollingCampaignRequest, gitDefaultBranch: string | null): RollingResolvedConfiguration {
   const rollingProjectConfigV2 = normalizeRollingProjectConfig(readRollingPhysicalProjectConfig(rollingPhysicalProjectConfig));
-  requireRollingRecord(request, ['mainline', 'incrementRef', 'maxActiveWorkers', 'publicationSize'], 'campaign request');
+  readRollingCampaignRequest(request);
   const mainline = request.mainline ?? rollingProjectConfigV2.mainline
     ?? { remote: 'origin', branch: gitDefaultBranch };
   const maxActiveWorkers = request.maxActiveWorkers ?? rollingProjectConfigV2.maxActiveWorkers ?? 10;

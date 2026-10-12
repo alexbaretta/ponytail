@@ -113,6 +113,11 @@ Traceability: verifies REQ-ROLLING-INTERFACES
    its scope and arguments/behavior without requiring knowledge of old commands.
 2. **Step INTERFACE-PARITY:** Acceptance contribution to [OBL-65](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-65), [OBL-68](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-68). Execute equivalent CLI and MCP coordination actions.
    Results and fencing agree because both invoke the same operation layer.
+   The OBL-65 contribution initializes and reconciles a disposable campaign
+   through the real CLI entrypoint and compares its results with the typed
+   application operations. Confirm mainline/default resolution, idempotent
+   registration and preservation of unreviewed local work. The additional OBL-68
+   contribution compares these same fenced operations through MCP.
 3. **Step INTERFACE-LEGACY:** Acceptance contribution to [OBL-67](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-67). Inspect an old campaign. It is not dispatched or
    silently migrated by the replacement scheduler.
 

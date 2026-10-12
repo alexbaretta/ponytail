@@ -412,6 +412,7 @@ export async function runRollingReviewScenario(t: TestContext, reviewScenario: R
   assert.ok(rollingStoredReview);
   for (const review of reviewRequests) assert.deepEqual(review,rollingStoredReview);
   assert.equal(rollingStoredReview.outcome,null);
+  assert.ok((await rollingCampaignStore.coordinatorSnapshot('bound-fixture')).reviews.some(review=>review.request.id === rollingStoredReview?.request.id && review.outcome === null));
   assert.equal((await rollingCampaignStore.reviews('bound-fixture', submissionRollingStoredAssignment.id)).length, 1);
   assert.equal(rollingStoredReview.request.baseCommit, rollingWorkerSubmissionV1.baseCommit);
   if (reviewScenario.replaceLostReviewer) {
@@ -539,6 +540,9 @@ export async function runRollingReviewScenario(t: TestContext, reviewScenario: R
     rollingStoredReview.request.id, reviewerSessionId, rollingReviewOutcomeV1)));
   assert.ok(decisions.every(item => JSON.stringify(item.outcome) === JSON.stringify(rollingReviewOutcomeV1)));
   assert.equal((await rollingCampaignStore.status('bound-fixture')).assignments[0]?.state, reviewDecision === 'accepted' ? 'INTEGRATING' : 'REWORK');
+  const reviewedRollingCoordinatorSnapshot = await rollingCampaignStore.coordinatorSnapshot('bound-fixture');
+  assert.equal(reviewedRollingCoordinatorSnapshot.assignments.find(assignment=>assignment.id === submissionRollingStoredAssignment.id)?.state,reviewDecision === 'accepted' ? 'INTEGRATING' : 'REWORK');
+  assert.deepEqual(reviewedRollingCoordinatorSnapshot.reviews.find(review=>review.request.id === rollingStoredReview?.request.id)?.outcome,rollingReviewOutcomeV1);
   if (reviewDecision === 'accepted') {
     const claims = await Promise.all(Array.from({length:4},()=>rollingCampaignStore.claimIncrement('bound-fixture',rollingStoredReview.request.id)));
     const rollingIncrementClaimV1 = claims[0];assert.ok(rollingIncrementClaimV1);
@@ -726,6 +730,7 @@ export async function runRollingReviewScenario(t: TestContext, reviewScenario: R
     assert.deepEqual(recoveredRollingMainlineCandidateV1,rollingMainlineCandidateV1);
     await restartedPublicationStore.recordMainlineCandidate('bound-fixture',firstClaim.claim.id,recoveredRollingMainlineCandidateV1);
     await restartedPublicationStore.recordMainlineCandidate('bound-fixture',firstClaim.claim.id,rollingMainlineCandidateV1);
+    assert.equal((await restartedPublicationStore.coordinatorSnapshot('bound-fixture')).publications[0]?.state,'CANDIDATE');
     const configurationPath = path.join(root,'.agents/config/project/rolling-campaigns.json');
     const passingConfiguration = parseRollingProjectConfig(fs.readFileSync(configurationPath,'utf8'));
     fs.writeFileSync(configurationPath,JSON.stringify({...passingConfiguration,qa:{...passingConfiguration.qa,publication:[['false']]}}));
@@ -810,6 +815,7 @@ export async function runRollingReviewScenario(t: TestContext, reviewScenario: R
       await assert.rejects(restartedPublicationStore.claimIncrement('bound-fixture',crypto.randomUUID()),/publication owns the coordinator checkout/);
       const synchronizedRollingIncrementPublicationResult = await new RollingCampaignStore(pool,projectId).synchronizePublishedCampaign('bound-fixture',firstClaim.claim.id);
       assert.equal(synchronizedRollingIncrementPublicationResult.state,'PUBLISHED');
+      assert.deepEqual((await restartedPublicationStore.coordinatorSnapshot('bound-fixture')).publications,[]);
       assert.deepEqual(await restartedPublicationStore.synchronizePublishedCampaign('bound-fixture',firstClaim.claim.id),synchronizedRollingIncrementPublicationResult);
       assert.equal(execFileSync('git',['-C',root,'symbolic-ref','--short','HEAD'],{encoding:'utf8'}).trim(),'campaign/bound-fixture');
       assert.equal((await pool.query<Record<string,unknown>>('SELECT count(*)::integer AS count FROM ponytail_index.rolling_mainline_publication_v1 WHERE project_id=$1',[projectId])).rows[0]?.count,mainlinePublication === 'unavailable' ? 4 : mainlinePublication === 'race' || mainlinePublication === 'rejected' ? 2 : 1);

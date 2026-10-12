@@ -827,6 +827,18 @@
       "versions": ["V1"],
       "supportedReadVersions": ["V1"],
       "supportedDowngradeVersions": []
+    },
+    {
+      "id": "rolling-campaign-initialization",
+      "implementation": {
+        "workspace": "ponytail",
+        "module": "src/rolling-operations.ts",
+        "readerRegistryExport": "RollingCampaignInitializationReaders"
+      },
+      "currentVersion": "V1",
+      "versions": ["V1"],
+      "supportedReadVersions": ["V1"],
+      "supportedDowngradeVersions": []
     }
   ]
 }

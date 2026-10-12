@@ -10,6 +10,7 @@ exports.RollingCampaignStore = exports.RollingExecutionConfigReaders = exports.R
 exports.readRollingAssignmentScopeV1 = readRollingAssignmentScopeV1;
 exports.readRollingExecutionConfigV1 = readRollingExecutionConfigV1;
 exports.readRollingAssignmentScopeV2 = readRollingAssignmentScopeV2;
+exports.readRollingBindingHistoryConfiguration = readRollingBindingHistoryConfiguration;
 exports.readRollingExecutionConfigV2 = readRollingExecutionConfigV2;
 const node_crypto_1 = __importDefault(require("node:crypto"));
 const rolling_publication_js_1 = require("./rolling-publication.js");
@@ -89,18 +90,20 @@ function readRollingAssignmentScopeV2(value) {
     requireState(rollingBinding.obligationId === obligationLeaseV1.binding.obligationId, 'stored lease and binding obligation differ');
     return { schemaVersion: 2, lease: obligationLeaseV1, binding: rollingBinding, exclusiveResources: rollingBinding.exclusiveResources };
 }
+function readRollingBindingHistoryConfiguration(value) {
+    requireState(isRecord(value) && JSON.stringify(Object.keys(value).sort()) === JSON.stringify(['assessor', 'authority', 'path']), 'invalid binding history configuration');
+    (0, obligations_js_1.relativePath)(value.path);
+    const assessor = stringColumn(value.assessor, 'binding assessor');
+    requireState(isStringArray(value.authority) && value.authority.length > 0 && new Set(value.authority).size === value.authority.length, 'invalid binding authority');
+    return { path: value.path, assessor, authority: [...value.authority] };
+}
 function readRollingExecutionConfigV2(value) {
     requireKeys(value, ['schemaVersion', 'mainline', 'incrementRef', 'maxActiveWorkers', 'publicationSize', 'bindingHistory'], 2);
-    requireState(isRecord(value.bindingHistory)
-        && JSON.stringify(Object.keys(value.bindingHistory).sort()) === JSON.stringify(['assessor', 'authority', 'path']), 'invalid binding history configuration');
-    (0, obligations_js_1.relativePath)(value.bindingHistory.path);
-    const assessor = stringColumn(value.bindingHistory.assessor, 'binding assessor');
-    requireState(isStringArray(value.bindingHistory.authority) && value.bindingHistory.authority.length > 0
-        && new Set(value.bindingHistory.authority).size === value.bindingHistory.authority.length, 'invalid binding authority');
+    const rollingBindingHistoryConfiguration = readRollingBindingHistoryConfiguration(value.bindingHistory);
     const rollingResolvedConfiguration = (0, rolling_campaign_js_1.readRollingResolvedConfiguration)({ mainline: value.mainline, incrementRef: value.incrementRef,
         maxActiveWorkers: value.maxActiveWorkers, publicationSize: value.publicationSize });
     return { schemaVersion: 2, ...rollingResolvedConfiguration,
-        bindingHistory: { path: value.bindingHistory.path, assessor, authority: [...value.bindingHistory.authority] } };
+        bindingHistory: rollingBindingHistoryConfiguration };
 }
 exports.RollingAssignmentScopeReaders = { V1: readRollingAssignmentScopeV1, V2: readRollingAssignmentScopeV2 };
 exports.RollingExecutionConfigReaders = { V1: readRollingExecutionConfigV1, V2: readRollingExecutionConfigV2 };
@@ -128,6 +131,31 @@ function stringColumn(value, label) {
 }
 function nullableStringColumn(value, label) { return value === null ? null : stringColumn(value, label); }
 function booleanColumn(value, label) { requireState(typeof value === 'boolean', `invalid database ${label}`); return value; }
+function publicationState(value) {
+    switch (value) {
+        case 'FROZEN':
+        case 'PREPARING':
+        case 'CONFLICT':
+        case 'CANDIDATE':
+        case 'QA_RUNNING':
+        case 'QA_FAILED':
+        case 'QA_PASSED':
+        case 'PUSHING':
+        case 'PUBLISHED':
+        case 'REBASE_REQUIRED':
+        case 'PUSH_REJECTED':
+        case 'UNCONFIRMED': return value;
+        default: throw new Error('rolling campaign: invalid database publication state');
+    }
+}
+function readStoredReview(row) {
+    const text = nullableStringColumn(row.outcome_text, 'review outcome');
+    const rollingReviewRequestV1 = (0, rolling_review_js_1.parseRollingReviewRequest)(stringColumn(row.request_text, 'review request'));
+    const rollingReviewOutcomeV1 = text === null ? null : (0, rolling_review_js_1.parseRollingReviewOutcome)(text);
+    if (rollingReviewOutcomeV1)
+        (0, rolling_review_js_1.validateRollingReviewOutcome)(rollingReviewRequestV1, rollingReviewOutcomeV1);
+    return { request: rollingReviewRequestV1, outcome: rollingReviewOutcomeV1 };
+}
 function worktreeNumber(value) {
     requireState(typeof value === 'number' || typeof value === 'string' && /^(0|[1-9][0-9]*)$/.test(value), 'invalid database worktree number');
     const number = Number(value);
@@ -231,7 +259,11 @@ class RollingCampaignStore {
             await poolClient.query('INSERT INTO ponytail_index.rolling_pool_v1(project_id,managed_directory) VALUES($1,$2) ON CONFLICT DO NOTHING', [this.projectId, request.managedDirectory]);
             const pool = (await poolClient.query('SELECT managed_directory FROM ponytail_index.rolling_pool_v1 WHERE project_id=$1 FOR UPDATE', [this.projectId])).rows[0];
             requireState(readPool(pool).managed_directory === request.managedDirectory, 'managed directory differs from project pool');
-            await poolClient.query('INSERT INTO ponytail_index.rolling_campaign_v1(project_id,campaign_id,coordinator_root,document_path,bindings_path,graph_digest,configuration_text) VALUES($1,$2,$3,$4,$5,$6,$7)', [this.projectId, request.id, rollingGraph.coordinatorRoot, request.documentPath, request.bindingsPath, rollingGraph.digest, JSON.stringify(rollingExecutionConfig)]);
+            await poolClient.query('INSERT INTO ponytail_index.rolling_campaign_v1(project_id,campaign_id,coordinator_root,document_path,bindings_path,graph_digest,configuration_text) VALUES($1,$2,$3,$4,$5,$6,$7) ON CONFLICT (project_id,campaign_id) DO NOTHING', [this.projectId, request.id, rollingGraph.coordinatorRoot, request.documentPath, request.bindingsPath, rollingGraph.digest, JSON.stringify(rollingExecutionConfig)]);
+            const registeredRollingCampaignRow = readCampaign((await poolClient.query('SELECT * FROM ponytail_index.rolling_campaign_v1 WHERE project_id=$1 AND campaign_id=$2', [this.projectId, request.id])).rows[0]);
+            requireState(registeredRollingCampaignRow.coordinator_root === rollingGraph.coordinatorRoot && registeredRollingCampaignRow.document_path === request.documentPath
+                && registeredRollingCampaignRow.bindings_path === request.bindingsPath && registeredRollingCampaignRow.graph_digest === rollingGraph.digest
+                && (0, node_util_1.isDeepStrictEqual)(executionConfiguration(registeredRollingCampaignRow.configuration_text), rollingExecutionConfig), 'campaign is already initialized with different inputs; reconcile its retained state');
             await poolClient.query('COMMIT');
             return { id: request.id, graphDigest: rollingGraph.digest };
         }
@@ -260,6 +292,14 @@ class RollingCampaignStore {
             requireState(rollingGraph.digest === nextDigest && rollingGraph.document.scopeId === campaignId, 'stale proposed graph');
             await poolClient.query('UPDATE ponytail_index.rolling_campaign_v1 SET graph_digest=$3 WHERE project_id=$1 AND campaign_id=$2', [this.projectId, campaignId, nextDigest]);
             return { graphDigest: nextDigest };
+        });
+    }
+    async reconcileCoordinator(campaignId) {
+        return this.transaction(campaignId, async (poolClient, rollingCampaignRow) => {
+            const rollingGraph = this.collectGraph(rollingCampaignRow);
+            requireState(rollingGraph.document.scopeId === campaignId, 'campaign scope changed');
+            await poolClient.query('UPDATE ponytail_index.rolling_campaign_v1 SET graph_digest=$3 WHERE project_id=$1 AND campaign_id=$2', [this.projectId, campaignId, rollingGraph.digest]);
+            return { graphDigest: rollingGraph.digest };
         });
     }
     async assignment(poolClient, campaignId, id, generation) {
@@ -519,14 +559,7 @@ class RollingCampaignStore {
     }
     async reviews(campaignId, id) {
         const rows = (await this.pool.query('SELECT request_text,outcome_text FROM ponytail_index.rolling_review_v1 WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3 ORDER BY created_at,review_id', [this.projectId, campaignId, id])).rows;
-        return rows.map(row => {
-            const text = nullableStringColumn(row.outcome_text, 'review outcome');
-            const rollingReviewRequestV1 = (0, rolling_review_js_1.parseRollingReviewRequest)(stringColumn(row.request_text, 'review request'));
-            const rollingReviewOutcomeV1 = text === null ? null : (0, rolling_review_js_1.parseRollingReviewOutcome)(text);
-            if (rollingReviewOutcomeV1)
-                (0, rolling_review_js_1.validateRollingReviewOutcome)(rollingReviewRequestV1, rollingReviewOutcomeV1);
-            return { request: rollingReviewRequestV1, outcome: rollingReviewOutcomeV1 };
-        });
+        return rows.map(readStoredReview);
     }
     async claimReviewDispatch(campaignId, reviewId, reviewerThreadId) {
         requireState(reviewerThreadId.length > 0 && reviewerThreadId.trim() === reviewerThreadId && !/[\0\r\n]/u.test(reviewerThreadId), 'invalid reviewer thread identity');
@@ -1309,6 +1342,22 @@ class RollingCampaignStore {
     async status(campaignId) {
         return this.transaction(campaignId, async (poolClient, rollingCampaignRow) => ({ graphDigest: rollingCampaignRow.graph_digest,
             assignments: (await poolClient.query('SELECT * FROM ponytail_index.rolling_assignment_v1 WHERE project_id=$1 AND campaign_id=$2 ORDER BY created_at,assignment_id', [this.projectId, campaignId])).rows.map(readAssignment) }));
+    }
+    async coordinatorSnapshot(campaignId) {
+        return this.transaction(campaignId, async (poolClient, rollingCampaignRow) => {
+            const rollingGraph = this.collectGraph(rollingCampaignRow);
+            const rollingExecutionConfig = executionConfiguration(rollingCampaignRow.configuration_text);
+            const assignments = (await poolClient.query('SELECT * FROM ponytail_index.rolling_assignment_v1 WHERE project_id=$1 ORDER BY created_at,assignment_id', [this.projectId])).rows.map(readAssignment);
+            const actions = (await poolClient.query("SELECT * FROM ponytail_index.rolling_action_v1 WHERE project_id=$1 AND campaign_id=$2 AND state IN ('PENDING','STARTED') ORDER BY created_at,action_id", [this.projectId, campaignId])).rows.map(value => { const { resultText, ...rollingAction } = readAction(value); return rollingAction; });
+            const reviews = (await poolClient.query("SELECT r.request_text,r.outcome_text FROM ponytail_index.rolling_review_v1 r JOIN ponytail_index.rolling_assignment_v1 a USING(project_id,campaign_id,assignment_id) WHERE r.project_id=$1 AND r.campaign_id=$2 AND r.replacement_text IS NULL AND a.state IN ('REVIEW','REWORK','INTEGRATING') ORDER BY r.created_at,r.review_id", [this.projectId, campaignId])).rows.map(readStoredReview);
+            const publications = (await poolClient.query("SELECT * FROM ponytail_index.rolling_publication_batch_v1 WHERE project_id=$1 AND campaign_id=$2 AND (state<>'PUBLISHED' OR synchronized_revision IS NULL) ORDER BY created_at,batch_id", [this.projectId, campaignId])).rows.map((row) => ({
+                claim: (0, rolling_publication_js_1.readRollingPublicationBatchClaimV1)(readStateText(stringColumn(row.claim_text, 'publication claim'))), state: publicationState(row.state),
+                qaId: nullableStringColumn(row.qa_id, 'publication QA'), publicationId: nullableStringColumn(row.publication_id, 'publication observation'), pendingRefreshId: nullableStringColumn(row.pending_refresh_id, 'pending mainline refresh')
+            }));
+            return { graphDigest: rollingCampaignRow.graph_digest, observedGraphDigest: rollingGraph.digest, configuration: rollingExecutionConfig,
+                assignments: assignments.filter(assignment => assignment.scopeId === campaignId),
+                scheduling: (0, rolling_campaign_js_1.selectRollingAssignments)(rollingGraph, assignments, rollingExecutionConfig.maxActiveWorkers, rollingGraph.digest), actions, reviews, publications };
+        });
     }
     async nextActions(campaignId) {
         const rows = (await this.pool.query("SELECT * FROM ponytail_index.rolling_action_v1 WHERE project_id=$1 AND campaign_id=$2 AND state IN ('PENDING','STARTED') ORDER BY created_at,action_id", [this.projectId, campaignId])).rows;
