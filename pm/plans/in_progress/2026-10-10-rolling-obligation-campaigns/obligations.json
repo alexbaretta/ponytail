@@ -18403,6 +18403,240 @@
       },
       "assessor": "coordinator",
       "reason": "Renew current evidence for this started delivery obligation in dependency order without changing source, obligation conditions or dependency semantics."
+    },
+    {
+      "id": "CHECKPOINT-250",
+      "predecessorId": "CHECKPOINT-249",
+      "baselineId": "BASELINE-16",
+      "kind": "neutral",
+      "selectedIds": [
+        "OBL-82"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "CERT-188"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": {
+        "obligationId": "OBL-82",
+        "operations": [
+          "inspect"
+        ],
+        "deliverable": "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/final-OBL-82.md"
+      },
+      "assessor": "coordinator",
+      "reason": "Renew current evidence for this started delivery obligation in dependency order without changing source, obligation conditions or dependency semantics."
+    },
+    {
+      "id": "CHECKPOINT-251",
+      "predecessorId": "CHECKPOINT-250",
+      "baselineId": "BASELINE-16",
+      "kind": "neutral",
+      "selectedIds": [
+        "OBL-83"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "CERT-189"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": {
+        "obligationId": "OBL-83",
+        "operations": [
+          "inspect"
+        ],
+        "deliverable": "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/final-OBL-83.md"
+      },
+      "assessor": "coordinator",
+      "reason": "Renew current evidence for this started delivery obligation in dependency order without changing source, obligation conditions or dependency semantics."
+    },
+    {
+      "id": "CHECKPOINT-252",
+      "predecessorId": "CHECKPOINT-251",
+      "baselineId": "BASELINE-16",
+      "kind": "neutral",
+      "selectedIds": [
+        "OBL-84"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "CERT-190"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": {
+        "obligationId": "OBL-84",
+        "operations": [
+          "inspect"
+        ],
+        "deliverable": "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/final-OBL-84.md"
+      },
+      "assessor": "coordinator",
+      "reason": "Renew current evidence for this started delivery obligation in dependency order without changing source, obligation conditions or dependency semantics."
+    },
+    {
+      "id": "CHECKPOINT-253",
+      "predecessorId": "CHECKPOINT-252",
+      "baselineId": "BASELINE-16",
+      "kind": "neutral",
+      "selectedIds": [
+        "OBL-85"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "CERT-191"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": {
+        "obligationId": "OBL-85",
+        "operations": [
+          "inspect"
+        ],
+        "deliverable": "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/final-OBL-85.md"
+      },
+      "assessor": "coordinator",
+      "reason": "Renew current evidence for this started delivery obligation in dependency order without changing source, obligation conditions or dependency semantics."
+    },
+    {
+      "id": "CHECKPOINT-254",
+      "predecessorId": "CHECKPOINT-253",
+      "baselineId": "BASELINE-16",
+      "kind": "neutral",
+      "selectedIds": [
+        "OBL-86"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "CERT-192"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": {
+        "obligationId": "OBL-86",
+        "operations": [
+          "inspect"
+        ],
+        "deliverable": "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/final-OBL-86.md"
+      },
+      "assessor": "coordinator",
+      "reason": "Renew current evidence for this started delivery obligation in dependency order without changing source, obligation conditions or dependency semantics."
+    },
+    {
+      "id": "CHECKPOINT-255",
+      "predecessorId": "CHECKPOINT-254",
+      "baselineId": "BASELINE-16",
+      "kind": "neutral",
+      "selectedIds": [
+        "OBL-87"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "CERT-193"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": {
+        "obligationId": "OBL-87",
+        "operations": [
+          "inspect"
+        ],
+        "deliverable": "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/final-OBL-87.md"
+      },
+      "assessor": "coordinator",
+      "reason": "Renew current evidence for this started delivery obligation in dependency order without changing source, obligation conditions or dependency semantics."
     }
   ]
 }

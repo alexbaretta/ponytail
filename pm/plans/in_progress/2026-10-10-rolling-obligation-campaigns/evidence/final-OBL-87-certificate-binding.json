@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "certificateId": "CERT-193",
+  "lease": {
+    "schemaVersion": 1,
+    "scopeId": "2026-10-10-rolling-obligation-campaigns",
+    "baselineId": "BASELINE-16",
+    "graphDigest": "1471cddb8ba03ec7281d9debc7c7a08bbe9f69783b19a19e7eb8d22b70ad65b3",
+    "generation": "standalone-sprint-readers-CERT-193",
+    "assessor": "coordinator",
+    "authority": [
+      "user-goal-2026-10-10-rolling-campaigns",
+      "user-goal-2026-10-10-static-language-existing-tsts",
+      "user-2026-10-10-normative-atomic-obligations",
+      "user-2026-10-11-language-scope-our-code-preserve-translations"
+    ],
+    "binding": {
+      "obligationId": "OBL-87",
+      "revisionId": "BIND-211",
+      "dependsOn": [
+        "OBL-112"
+      ],
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/final-acceptance.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/final-audit.json",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/design.md",
+          "pm/uat/rolling-campaigns.md",
+          "pm/requirements/traceability.generated.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/final-OBL-87.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/final-OBL-87-certificate-binding.json"
+        ],
+        "operations": [
+          "inspect",
+          "edit",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "Validate sprint dependency identity and acyclicity through a checked static implementation preserving the approved portable behavior and historical contract meanings."
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "final-acceptance"
+        }
+      }
+    }
+  },
+  "revision": "8bc2cf231f0895abf5c0dfc7da9ebf6c8e448f8a",
+  "proof": [
+    {
+      "operation": "test",
+      "certificateEvidenceIndex": 0,
+      "submissionEvidenceIndex": 0
+    },
+    {
+      "operation": "test",
+      "certificateEvidenceIndex": 1,
+      "submissionEvidenceIndex": 1
+    },
+    {
+      "operation": "check",
+      "certificateEvidenceIndex": 2,
+      "submissionEvidenceIndex": 2
+    }
+  ]
+}
