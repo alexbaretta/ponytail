@@ -499,6 +499,21 @@ export function projectObligations(obligationDocument: ObligationDocumentV1, roo
   return projectObligationScope(obligationDocument, root).projection;
 }
 
+export interface ObligationHistoricalAcceptance {
+  readonly baselineId: string;
+  readonly checkpointId: string | null;
+  readonly complete: boolean;
+}
+
+// Traceability: implements REQ-ROLLING-STATE
+// Historical acceptance is not current-input authorization for active work.
+export function projectObligationHistoricalAcceptance(obligationDocument: ObligationDocumentV1): ObligationHistoricalAcceptance {
+  readObligationDocumentV1(obligationDocument);
+  const replay = replayHistory(obligationDocument);
+  return { baselineId: replay.baseline.id, checkpointId: obligationDocument.checkpoints.at(-1)?.id ?? null,
+    complete: projectBaseline(obligationDocument, replay.baseline, replay.accepted, null).complete };
+}
+
 // Traceability: implements REQ-ROLLING-GRAPH
 export function projectObligationScope(obligationDocument: ObligationDocumentV1, root: string,
   obligationBindingHistoryV1?: ObligationBindingHistoryV1): ObligationScopeProjection {

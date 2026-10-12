@@ -120,7 +120,7 @@ function validatePlanContents(campaignPlan, campaignManagementConfigV1, reposito
         });
     }
     if (campaignPlan.lifecycle === campaignManagementConfigV1.lifecycle.roles.successfulCompletion) {
-        if (obligationDocumentV1 && !(0, obligations_js_1.projectObligations)(obligationDocumentV1, repositoryRoot).complete)
+        if (obligationDocumentV1 && !(0, obligations_js_1.projectObligationHistoricalAcceptance)(obligationDocumentV1).complete)
             (0, campaign_configuration_js_1.dataError)('CAMPAIGN_OBLIGATION_INCOMPLETE', 'completed plan has unresolved obligations', campaignPlan.id, obligationDocumentPath);
         const unfinishedSprint = normalizedSprints.find((sprint) => sprint.executionStatus !== 'DONE');
         const unfinishedTasklet = normalizedTasklets.find((tasklet) => tasklet.status !== 'DONE');

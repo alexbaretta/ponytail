@@ -16,6 +16,7 @@ exports.parseObligationDocument = parseObligationDocument;
 exports.inputDigest = inputDigest;
 exports.freshCertificate = freshCertificate;
 exports.projectObligations = projectObligations;
+exports.projectObligationHistoricalAcceptance = projectObligationHistoricalAcceptance;
 exports.projectObligationScope = projectObligationScope;
 exports.compareVectors = compareVectors;
 exports.selectObligation = selectObligation;
@@ -411,6 +412,12 @@ function projectBaseline(obligationDocument, baseline, accepted, root, bindings)
 }
 function projectObligations(obligationDocument, root) {
     return projectObligationScope(obligationDocument, root).projection;
+}
+function projectObligationHistoricalAcceptance(obligationDocument) {
+    readObligationDocumentV1(obligationDocument);
+    const replay = replayHistory(obligationDocument);
+    return { baselineId: replay.baseline.id, checkpointId: obligationDocument.checkpoints.at(-1)?.id ?? null,
+        complete: projectBaseline(obligationDocument, replay.baseline, replay.accepted, null).complete };
 }
 function projectObligationScope(obligationDocument, root, obligationBindingHistoryV1) {
     readObligationDocumentV1(obligationDocument);

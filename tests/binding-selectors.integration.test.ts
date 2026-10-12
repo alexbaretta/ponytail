@@ -1,5 +1,6 @@
 // Copyright (c) 2026 Alex Baretta. All rights reserved.
 // Licensed under the MIT License. See LICENSE in the project root.
+import {readRollingObligationFixtureSource} from './helpers/rolling-obligation-source.js';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -18,8 +19,7 @@ test('portable and rolling queries share explicit coordinator bindings and prese
   execFileSync('git', ['init', '-q', root]);
   execFileSync('git', ['-C', root, '-c', 'user.name=Binding proof', '-c', 'user.email=proof@example.invalid',
     'commit', '-q', '--allow-empty', '-m', 'isolated binding query']);
-  const sourceObligationDocumentV1 = parseObligationDocument(fs.readFileSync(path.join(repositoryRoot,
-    'pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/obligations.json'), 'utf8'));
+  const sourceObligationDocumentV1 = readRollingObligationFixtureSource('history');
   // Fixed immutable history prefix keeps this proof independent of its later certificates.
   const checkpointIndex = sourceObligationDocumentV1.checkpoints.findIndex(item => item.id === 'CHECKPOINT-24');
   assert.ok(checkpointIndex >= 0);

@@ -237,3 +237,9 @@ HEAD. Collection must reach REVIEW in PostgreSQL, retain the same candidate
 and replay idempotently after a store restart. A prose final report does not
 establish this acceptance. This adds no requirement for an artificial code
 change or rebase on an inspection-only obligation.
+
+### Acceptance ROLL-HISTORICAL-PLAN
+
+Traceability: verifies REQ-ROLLING-STATE
+
+Demonstrates [OBL-113](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-113). Establish fresh complete acceptance and DONE sprint/tasklet state in a disposable adopted plan. Move its directory to the configured successful-completion state and repair the manifest locator. Historical inspection preserves the accepted checkpoint and completed state without rewriting old certificate paths or digests. Current-input inspection still reports relocated or changed evidence as stale. Incomplete or invalidated accepted history cannot close a plan. Fixture-only consumers must remain independent of the active campaign's mutable location.

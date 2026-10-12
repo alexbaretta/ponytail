@@ -13,7 +13,7 @@ import { parseTaskletStatuses, type TaskletStatus } from '../skills/plan-executi
 import { readTaskletGraph, type TaskletGraphV1, type TaskletGraphV2, type TaskletGraphV3, type TaskletGraphV4 } from '../skills/plan-execution/scripts/tasklet-metadata.js';
 import { validateTaskletGraph, rankedReadyTasklets, effectiveDependencies } from '../skills/plan-execution/scripts/tasklet-graph.js';
 import { selectObligationTasklets } from '../skills/plan-execution/scripts/ready-tasklets.js';
-import { parseObligationDocument, inputDigest, projectObligations, type ObligationDocumentV1 } from '../skills/plan-execution/scripts/obligations.js';
+import { parseObligationDocument, inputDigest, projectObligationHistoricalAcceptance, type ObligationDocumentV1 } from '../skills/plan-execution/scripts/obligations.js';
 
 export interface CampaignTaskletCounts { PENDING: number; DONE: number; ERROR: number }
 export interface CampaignSprintRecord {
@@ -127,7 +127,7 @@ export function validatePlanContents(campaignPlan: CampaignPlanV1 | CampaignPlan
     });
   }
   if (campaignPlan.lifecycle === campaignManagementConfigV1.lifecycle.roles.successfulCompletion) {
-    if (obligationDocumentV1 && !projectObligations(obligationDocumentV1, repositoryRoot).complete) dataError('CAMPAIGN_OBLIGATION_INCOMPLETE', 'completed plan has unresolved obligations', campaignPlan.id, obligationDocumentPath);
+    if (obligationDocumentV1 && !projectObligationHistoricalAcceptance(obligationDocumentV1).complete) dataError('CAMPAIGN_OBLIGATION_INCOMPLETE', 'completed plan has unresolved obligations', campaignPlan.id, obligationDocumentPath);
     const unfinishedSprint = normalizedSprints.find((sprint) => sprint.executionStatus !== 'DONE');
     const unfinishedTasklet = normalizedTasklets.find((tasklet) => tasklet.status !== 'DONE');
     if (unfinishedSprint || unfinishedTasklet) {

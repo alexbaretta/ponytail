@@ -1,7 +1,7 @@
 {
   "status": "in_progress",
   "sourceRevision": "808d3df6b1f963edbdbb0d0038cac41c05edf235",
-  "deliveryObligationCount": 91,
+  "deliveryObligationCount": 92,
   "currentAssessedDeliveryIds": [
     "OBL-22",
     "OBL-23",
@@ -114,7 +114,7 @@
     "OBL-44",
     "OBL-45"
   ],
-  "currentAssessmentStatus": "all_91_delivery_conditions_current_after_documentary_renewal",
+  "currentAssessmentStatus": "final_reassessment_pending_after_archive_correction",
   "documentationRepair": {
     "path": "README.md",
     "confirmedGap": "Installed-tools table advertised four retired campaign commands as live commands.",
@@ -466,5 +466,24 @@
     "observation": "Completed adopted plans are currently checked against mutable current inputs. Moving this plan would also relocate evidence paths preserved in immutable historical certificates.",
     "nextProof": "Exercise accepted historical state across the required status-directory move before claiming closure; keep active-plan freshness enforcement unchanged.",
     "fixtureDependency": "Six test sources currently read this active campaign document directly. Their historical fixture boundary must survive the lifecycle transition."
+  },
+  "archiveCorrection": {
+    "obligationId": "OBL-113",
+    "baselineId": "BASELINE-17",
+    "checkpointId": "CHECKPOINT-308",
+    "failureProof": "tmp/archive-boundary-before.log",
+    "focusedProof": "tmp/archive-correction-fixtures-final.log",
+    "bindingQueryProof": "tmp/archive-correction-binding-query.log",
+    "fullRepositoryQa": {
+      "output": "tmp/archive-correction-full-core.log",
+      "exitCode": 0,
+      "passed": 897,
+      "failures": 0
+    },
+    "tsts": {
+      "files": 1453,
+      "violations": 0
+    },
+    "nativeSuiteAfterFinalEdit": "pending"
   }
 }

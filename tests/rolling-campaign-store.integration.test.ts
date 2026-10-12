@@ -1,5 +1,6 @@
 // Copyright (c) 2026 Alex Baretta. All rights reserved.
 // Licensed under the MIT License. See LICENSE in the project root.
+import {readRollingObligationFixtureSource} from './helpers/rolling-obligation-source.js';
 import assert from 'node:assert/strict';
 import {readRollingIncrementClaimV1,rebasePreparedRollingIncrement,continueFastRebaseRollingIncrement,publishRollingIncrement,fastForwardRollingIncrement} from '../src/rolling-integration.js';
 import test, { type TestContext } from 'node:test';
@@ -124,8 +125,7 @@ export async function runRollingReviewScenario(t: TestContext, reviewScenario: R
     publicationSize: reviewScenario.publicationBatch === 'threshold' ? 1 : reviewScenario.publicationBatch || reviewScenario.publicationFlush ? 2 : 1, setupCommands: [], qa: { focused: [], publication: reviewScenario.publicationBatch ? [['env','-u','NODE_TEST_CONTEXT',process.execPath,'--test','fixture/full.test.ts']] : [['node', '--test']] },
   };
   fs.writeFileSync(path.join(root, '.agents/config/project/rolling-campaigns.json'), JSON.stringify(rollingProjectConfigV1));
-  const source = path.join(repositoryRoot, 'pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/obligations.json');
-  let obligationDocumentV1: ObligationDocumentV1 = parseObligationDocument(fs.readFileSync(source, 'utf8'));
+  let obligationDocumentV1: ObligationDocumentV1 = readRollingObligationFixtureSource();
   // This isolated Arc uses the original rolling baseline, not migration responsibilities.
   const sourceObligationBaseline: ObligationBaseline | undefined = obligationDocumentV1.baselines[0];
   assert.ok(sourceObligationBaseline);
@@ -1101,8 +1101,7 @@ export async function runRollingWorkerScenario(t: TestContext, mode: 'protocol' 
     fs.writeFileSync(path.join(root,'ponytail.json'),JSON.stringify({version:2,buildImpact:{version:2,globalInputs:[],adapters:[{type:'typescript',
       targets:[{name:'fixture',buildCommand:'npm run build',tsconfig:'tsconfig.json',configurationInputs:[],additionalInputs:[]}]}]}}));
   }
-  const sourceObligationDocumentV1 = parseObligationDocument(fs.readFileSync(path.join(repositoryRoot,
-    'pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/obligations.json'),'utf8'));
+  const sourceObligationDocumentV1 = readRollingObligationFixtureSource();
   const originalObligationBaseline = sourceObligationDocumentV1.baselines[0];assert.ok(originalObligationBaseline);
   let fixtureRequirementText = operation === 'code'
     ? `# Worker code fixture\n\nChange the exported fixture value to 2 and update the unit expectation. Preserve the integration invariant. Commit only fixture.ts and fixture.test.ts. Then freshly fetch origin campaign/worker-fixture and perform an interactive semantic rebase, stopping after ${rework ? 'each of its two replayed commits' : 'its single replayed commit'} to inspect the patch in the new base and run focused QA before continuing. The project already configures a checked sequence editor to mark ${rework ? 'every commit' : 'the commit'} for an edit stop: use ordinary git rebase -i with that editor, without an editor override or terminal interaction. Retain the original pre-rebase commit SHA in ignored tmp/original-commit.txt and actual rebase output plus the semantic inspection in ignored tmp/semantic-rebase.txt. Use ignored tmp/focused.txt for the actual final focused test output, with --test-reporter=tap. Return only strict submission JSON with fresh evidence and hashes covering both source files and the retained outputs.\n`

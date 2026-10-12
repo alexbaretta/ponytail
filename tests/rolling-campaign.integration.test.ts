@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Alex Baretta. All rights reserved.
 // Licensed under the MIT License. See LICENSE in the project root.
 
+import {readRollingObligationFixtureSource} from './helpers/rolling-obligation-source.js';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import fs from 'node:fs';
@@ -67,8 +68,7 @@ test('coordinator files alone determine graph identity, dependency changes and a
     qa: { focused: [], publication: [['node', '--test']] } };
   fs.writeFileSync(path.join(directory, 'rolling-campaigns.json'), JSON.stringify(rollingProjectConfigV1));
   const repositoryRoot = path.resolve(__dirname, '../..');
-  const source = path.join(repositoryRoot, 'pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/obligations.json');
-  let obligationDocumentV1: ObligationDocumentV1 = parseObligationDocument(fs.readFileSync(source, 'utf8'));
+  let obligationDocumentV1: ObligationDocumentV1 = readRollingObligationFixtureSource();
   // This isolated graph has no repository implementation evidence or history.
   obligationDocumentV1 = { ...obligationDocumentV1, certificates: [], checkpoints: [] };
   fs.mkdirSync(path.join(root, 'pm/requirements'), { recursive: true });

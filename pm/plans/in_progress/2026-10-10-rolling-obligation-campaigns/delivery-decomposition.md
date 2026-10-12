@@ -286,3 +286,7 @@ OBL-111 BIND-3 additionally freezes the two existing generated OpenClaw obligati
 ## Bound certificate acceptance prerequisite
 
 <a id="obl-112"></a>[OBL-112](obligations.json) owns the portable additional acceptance fence for amended execution bindings. BASELINE-14 declares canonical configuration and generated host copies before edits. Preserve every historical V1 constraint; a binding amendment cannot waive existing criteria. The worker submission remains an immutable operational record, the certificate binding is a hashed coordinator artifact, and the canonical document remains the certificate/checkpoint owner. Review/publication and live CLI/MCP orchestration remain separate required work.
+
+## Archive compatibility discovered during final closure
+
+<a id="obl-113"></a>[OBL-113](obligations.json) is the bounded historical-plan inspection correction required by the configured successful-completion move. Its provenance is the normative plan-execution lifecycle contract and the failing typed filesystem probe recorded in `tmp/archive-boundary-before.log`. It adds one delivery obligation; the existing 91 identities and meanings remain unchanged. Current-input freshness remains mandatory for active work.

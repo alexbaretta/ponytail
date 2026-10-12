@@ -1,5 +1,6 @@
 // Copyright (c) 2026 Alex Baretta. All rights reserved.
 // Licensed under the MIT License. See LICENSE in the project root.
+import {readRollingObligationFixtureSource} from './helpers/rolling-obligation-source.js';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -99,8 +100,7 @@ test('physical lease reader retains exact V1 and rejects malformed identities an
 
 function document(): ObligationDocumentV1 {
   const root = path.join(__dirname, '..', '..');
-  const originalObligationDocumentV1 = parseObligationDocument(fs.readFileSync(path.join(root,
-    'pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/obligations.json'), 'utf8'));
+  const originalObligationDocumentV1 = readRollingObligationFixtureSource();
   const obligationBaseline = originalObligationDocumentV1.baselines.at(-1);
   if (!obligationBaseline) throw new Error('fixture baseline missing');
   return readObligationDocumentV1({ ...originalObligationDocumentV1,

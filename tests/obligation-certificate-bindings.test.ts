@@ -1,5 +1,6 @@
 // Copyright (c) 2026 Alex Baretta. All rights reserved.
 // Licensed under the MIT License. See LICENSE in the project root.
+import {readRollingObligationFixtureSource} from './helpers/rolling-obligation-source.js';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -23,8 +24,7 @@ interface CertificateBindingFixture {
 function fixture(): CertificateBindingFixture {
   const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'bound-certificate-')));
   const repositoryRoot = path.resolve(__dirname, '../..');
-  const sourceObligationDocumentV1 = parseObligationDocument(fs.readFileSync(path.join(repositoryRoot,
-    'pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/obligations.json'), 'utf8'));
+  const sourceObligationDocumentV1 = readRollingObligationFixtureSource();
   const originalObligationBaseline = sourceObligationDocumentV1.baselines[0];
   assert.ok(originalObligationBaseline);
   for (const requirement of originalObligationBaseline.requirements) {

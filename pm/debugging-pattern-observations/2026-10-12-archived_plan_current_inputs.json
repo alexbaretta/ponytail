@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-10-12-archived_plan_current_inputs",
+  "recorded_at": "2026-10-12T04:33:58.312747-07:00",
+  "source_references": [
+    "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/plan.md",
+    "tmp/archive-boundary-before.log",
+    "tmp/archive-boundary-after.log"
+  ],
+  "context": {
+    "languages": [
+      "typescript"
+    ],
+    "frameworks": [
+      "node:test"
+    ],
+    "components": [
+      "adopted plan content validation"
+    ],
+    "affected_boundaries": [
+      "completed plan history",
+      "status-directory relocation",
+      "active input freshness"
+    ],
+    "code_references": [
+      "src/campaign-plan-contents.ts",
+      "skills/plan-execution/scripts/obligations.ts",
+      "tests/campaign-plan-contents.test.ts"
+    ]
+  },
+  "observed_behavior": "A freshly completed adopted plan became invalid after its status-directory move because the completed-plan validator rechecked historical certificate paths against the current filesystem.",
+  "expected_behavior": "Completed plans retain accepted historical state across the required lifecycle move; active work continues to require fresh current inputs.",
+  "causal_mechanism": "The completed-plan branch used the mutable current-input projection instead of replaying the already accepted historical checkpoint chain. Relocation removed the old evidence paths without changing accepted history.",
+  "anti_pattern": {
+    "structural_description": "A historical inspection boundary is evaluated using a live authorization predicate.",
+    "why_it_fails": "A legitimate namespace move is misclassified as unfinished accepted work."
+  },
+  "correct_pattern": {
+    "required_invariant": "Historical acceptance and current-input authorization are distinct typed results; current freshness remains enforced for live work.",
+    "implementation_description": "Reuse canonical checkpoint replay and accepted projection for a narrow historical result; use it only for completed-plan validation. Preserve the current-input projection unchanged and decouple fixture sources from the active plan locator."
+  },
+  "applicability_conditions": [
+    "Completed records contain an accepted obligation checkpoint chain.",
+    "Evidence paths can relocate during the configured successful-completion transition."
+  ],
+  "known_non_matches": [
+    "Active current-input projection correctly reports relocated proof as stale.",
+    "Incomplete or invalidated accepted history remains incomplete."
+  ],
+  "confirmation_evidence": [
+    "tmp/archive-boundary-before.log: Fresh completion succeeded before relocation; completed-plan validation threw CAMPAIGN_OBLIGATION_INCOMPLETE after relocation.",
+    "tmp/archive-correction-focused.log: Three focused typed plan-content tests passed, including historical completion after relocation, stale current inputs and rejection of invalidated history."
+  ],
+  "regression_proofs": [
+    "tests/campaign-plan-contents.test.ts: accepted plan history survives a status directory move",
+    "tmp/archive-correction-focused.log: three cases passed",
+    "tmp/archive-boundary-after.log: identical one-variable filesystem probe passed"
+  ]
+}
