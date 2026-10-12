@@ -461,7 +461,7 @@
     "historyPreserved": true
   },
   "lifecycleClosureInspection": {
-    "status": "incomplete",
+    "status": "regression_passed; final lifecycle transition pending",
     "source": "src/campaign-plan-contents.ts:130",
     "observation": "Completed adopted plans are currently checked against mutable current inputs. Moving this plan would also relocate evidence paths preserved in immutable historical certificates.",
     "nextProof": "Exercise accepted historical state across the required status-directory move before claiming closure; keep active-plan freshness enforcement unchanged.",
@@ -484,7 +484,16 @@
       "files": 1453,
       "violations": 0
     },
-    "nativeSuiteAfterFinalEdit": "pending"
+    "nativeSuiteAfterFinalEdit": {
+      "output": "tmp/archive-correction-final-native-suite.log",
+      "sourceRevision": "080d86afe185a765722c5475e2eab65b471318dc",
+      "initiallyClean": true,
+      "exitCode": 0,
+      "passed": 12,
+      "failures": 0,
+      "skips": 0,
+      "cancelled": 0
+    }
   },
   "finalScopeInspection": [
     {
@@ -588,5 +597,12 @@
       "evidence": "Fresh-before-move, accepted-after-move, stale-current-input and invalidated-history regressions passed."
     }
   ],
-  "finalScopeInspectionDoesNotReplaceCanonicalAnnotations": true
+  "finalScopeInspectionDoesNotReplaceCanonicalAnnotations": true,
+  "fullRepositoryQaProvenance": {
+    "headAtInvocation": "45f4b27",
+    "dirtyStagedInputs": true,
+    "sameFinalSourceCommittedAs": "080d86afe185a765722c5475e2eab65b471318dc",
+    "passed": 897,
+    "exitCode": 0
+  }
 }
