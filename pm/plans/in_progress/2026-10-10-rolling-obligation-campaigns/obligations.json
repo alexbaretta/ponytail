@@ -16138,6 +16138,123 @@
       },
       "assessor": "coordinator",
       "reason": "Renew the started binding, selector and frozen lease prerequisite chain without source edits before accepting latest-contract corrections."
+    },
+    {
+      "id": "CHECKPOINT-195",
+      "predecessorId": "CHECKPOINT-194",
+      "baselineId": "BASELINE-16",
+      "kind": "neutral",
+      "selectedIds": [
+        "OBL-107"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "CERT-137"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": {
+        "obligationId": "OBL-107",
+        "operations": [
+          "check"
+        ],
+        "deliverable": "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/prerequisite-renewal-OBL-107.md"
+      },
+      "assessor": "coordinator",
+      "reason": "Renew current evidence for this started prerequisite in dependency order without changing source, obligation conditions or dependency semantics."
+    },
+    {
+      "id": "CHECKPOINT-196",
+      "predecessorId": "CHECKPOINT-195",
+      "baselineId": "BASELINE-16",
+      "kind": "neutral",
+      "selectedIds": [
+        "OBL-108"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "CERT-138"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": {
+        "obligationId": "OBL-108",
+        "operations": [
+          "check"
+        ],
+        "deliverable": "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/prerequisite-renewal-OBL-108.md"
+      },
+      "assessor": "coordinator",
+      "reason": "Renew current evidence for this started prerequisite in dependency order without changing source, obligation conditions or dependency semantics."
+    },
+    {
+      "id": "CHECKPOINT-197",
+      "predecessorId": "CHECKPOINT-196",
+      "baselineId": "BASELINE-16",
+      "kind": "neutral",
+      "selectedIds": [
+        "OBL-109"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "CERT-139"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": {
+        "obligationId": "OBL-109",
+        "operations": [
+          "check"
+        ],
+        "deliverable": "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/prerequisite-renewal-OBL-109.md"
+      },
+      "assessor": "coordinator",
+      "reason": "Renew current evidence for this started prerequisite in dependency order without changing source, obligation conditions or dependency semantics."
     }
   ]
 }
