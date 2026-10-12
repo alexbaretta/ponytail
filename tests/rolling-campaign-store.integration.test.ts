@@ -1741,7 +1741,16 @@ export async function runRollingWorkerScenario(t: TestContext, mode: 'protocol' 
     rollingWorkerDispatchAttached = await dispatchRollingWorker(rollingCampaignStore,rollingCodex,'worker-fixture',rollingAllocationResult.assignment.id,resumedGeneration);
     const resumedRollingNativeTurn = await observeRollingWorkerTurn(t,rollingCodex,rollingWorkerDispatchAttached.threadId,rollingWorkerDispatchAttached.turnId);
     assert.equal(resumedRollingNativeTurn.status,'completed');
-    if (mode === 'native') assert.ok(resumedRollingNativeTurn.items.filter(item => item.type === 'agentMessage').at(-1)?.text?.includes(resumedGeneration));
+    if (mode === 'native') {
+      const resumedFinalText=resumedRollingNativeTurn.items.filter(item => item.type === 'agentMessage').at(-1)?.text;
+      assert.ok(resumedFinalText);
+      // This Arc deliberately retains out-of-lease unfinished work and the old
+      // HEAD. Resumption refreshes responsibility; it cannot certify clean QA.
+      assert.ok(resumedFinalText.includes(refreshedBase),resumedFinalText);
+      assert.ok(resumedFinalText.includes('unfinished.ts'),resumedFinalText);
+      assert.throws(()=>parseRollingWorkerSubmission(resumedFinalText));
+      assert.equal(execFileSync('git',['-C',resumedRollingAllocationResult.worktree.rootPath,'rev-parse','HEAD'],{encoding:'utf8'}).trim(),rollingGraph.head);
+    }
     assert.equal(rollingWorkerDispatchAttached.threadId,rollingWorkerInitialization.rollingWorkerCreationV1.threadId);
     assert.equal(fs.readFileSync(path.join(resumedRollingAllocationResult.worktree.rootPath,'unfinished.ts'),'utf8'),'export const unfinished: number = 7;\n');
     t.diagnostic(`worker resumption thread=${rollingWorkerDispatchAttached.threadId}; session=${resumedRollingSessionAttachment.sessionId}; checkout=101; base=${refreshedBase}; generation=${resumedGeneration}; fresh instructions completed before new allocation`);

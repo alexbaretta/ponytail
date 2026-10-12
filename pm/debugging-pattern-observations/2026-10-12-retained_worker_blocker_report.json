@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-10-12-retained_worker_blocker_report",
+  "recorded_at": "2026-10-12T00:03:39-07:00",
+  "source_references": [
+    "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/plan.md",
+    "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/final-acceptance.md"
+  ],
+  "context": {
+    "languages": [
+      "typescript"
+    ],
+    "frameworks": [
+      "node:test"
+    ],
+    "components": [
+      "native retained-worker resumption fixture"
+    ],
+    "affected_boundaries": [
+      "refreshed responsibility",
+      "blocked worker report"
+    ],
+    "code_references": [
+      "tests/rolling-campaign-store.integration.test.ts"
+    ]
+  },
+  "observed_behavior": "The resumed native worker truthfully reported its refreshed base and retained out-of-lease unfinished work, but the test failed because its final message omitted the generation ID.",
+  "expected_behavior": "A retained dirty worker can resume responsibility and report a blocker without claiming successful clean submission or discarding its checkpoint.",
+  "causal_mechanism": "The fixture treated an incidental generation substring in a freeform blocker report as a required acknowledgement, although generation and identity are established by the durable resumption and dispatch receipts.",
+  "anti_pattern": {
+    "structural_description": "A phase-specific integration assertion imposes a success-message convention on a valid blocked outcome.",
+    "why_it_fails": "Correct preservation and refusal are reported as a failure because permitted human-readable diagnostics omit an unrelated token."
+  },
+  "correct_pattern": {
+    "required_invariant": "Resumption proof distinguishes restored responsibility from discharge and retains dirty work without manufacturing clean proof.",
+    "implementation_description": "Keep exact session, generation, lease, dispatch and persisted resumption checks; verify the actual refreshed-base and protected-path blocker facts, reject a successful submission interpretation, and assert the original HEAD and unfinished file remain unchanged."
+  },
+  "applicability_conditions": [
+    "A native lifecycle Arc intentionally retains dirty out-of-lease work.",
+    "The worker is permitted to report a blocker rather than submit successful structured proof."
+  ],
+  "known_non_matches": [
+    "A successful clean no-edit obligation must still submit exact physical V1 JSON."
+  ],
+  "confirmation_evidence": [
+    "The twelve-case native Suite passed eleven cases and failed only the generation substring assertion.",
+    "Reading the exact retained native turn showed a correct refreshed-base and unfinished.ts blocker report.",
+    "The corrected focused native resumption Arc passed with zero skips or cancellations and preserved the original owner and checkout."
+  ],
+  "regression_proofs": [
+    "tests/rolling-codex.integration.ts: live worker resumption restores its original native session with refreshed scope and campaign base",
+    "tests/rolling-campaign-store.integration.test.ts: native resumed blocker facts and unchanged HEAD assertions"
+  ]
+}

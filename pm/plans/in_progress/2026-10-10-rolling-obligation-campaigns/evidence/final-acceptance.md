@@ -1218,3 +1218,100 @@ eight copies matched; version validation reports all seven files at 4.8.4.
 Runtime generation checks and traceability validation (855 relationships) pass.
 The corrected native no-edit focused Arc has passed; final clean-revision
 native acceptance and current certificate assessment remain outstanding.
+
+## Native suite on 5df2c29: retained-work resumption assertion
+
+The explicit twelve-case native Suite finished with eleven passes, one failure,
+zero skips and zero cancellations (terminal exit 1). The eleven passing cases
+include real no-edit collection, code implementation and semantic rebase,
+original-worker/original-reviewer correction, and retirement. The failure was
+the resumption fixture's final-message generation substring assertion.
+
+The retained native turn instead truthfully reported the refreshed base and
+out-of-lease unfinished work. Its exact final message was:
+
+```text
+Blocked: this checkout remains at `010c6faa9fed369340e2234bb1650637b6b9eeb6`, rather than assigned base `df97bca55ae6668078b1d5ee00e222dcc35a73e7`, and contains untracked `unfinished.ts` outside the lease. Local records also lack BIND-3 and accepted OBL-1 prerequisite evidence.
+
+Stopped and retained the checkout without changes or fresh QA. Coordinator reconciliation is required before clean evidence can be submitted.
+
+2026-10-11T23:47:29-07:00
+```
+
+The fixture deliberately preserves that dirty checkout at its old HEAD.
+Successful resumption refreshes responsibility without inventing clean proof
+or discarding this work. The corrected assertion therefore checks the actual
+refreshed base and unfinished path in the blocker report, rejects interpreting
+it as a successful submission, and verifies that HEAD remains unchanged.
+The original session, renewed generation, authoritative lease, persisted
+resumption and retained file assertions remain intact. No production behavior
+or submission protocol is changed by this fixture correction.
+
+The remaining Suite cases used already-loaded modules from the clean starting
+revision; only this resumption assertion was edited while the Suite ran. Their
+original revision and result are retained rather than represented as a new
+complete successful Suite invocation. Log: `tmp/noedit-final-native-suite.log`.
+The focused corrected resumption run remains pending.
+
+## Corrected retained-work resumption proof
+
+The focused `live worker resumption restores` native selection exited 0:
+one pass, zero failures, skips and cancellations. It exercised the actual
+original worker, refreshed responsibility and retained dirty checkout. This
+ran on task-owned dirty test/evidence inputs based on 5df2c29, with unchanged
+production source. The original Suite's eleven successful outcomes and its
+failed invocation remain recorded under their actual starting revision.
+
+~~~text
+✔ live worker resumption restores its original native session with refreshed scope and campaign base (104349.37125ms)
+ℹ {"timestamp":"2026-10-12T06:58:24.797405Z","level":"WARN","fields":{"message":"ignoring interface.icon_small: icon path with '..' must resolve under plugin assets/"},"target":"codex_skills::interface"}
+{"timestamp":"2026-10-12T06:58:24.797448Z","level":"WARN","fields":{"message":"ignoring interface.icon_large: icon path with '..' must resolve under plugin assets/"},"target":"codex_skills::interface"}
+ℹ native lifecycle thread/status/changed; thread=01a12ee7-c97b-79b2-b41e-99fc129296d8; turn=null; activity={"type":"active","activeFlags":[]}
+ℹ native lifecycle turn/started; thread=01a12ee7-c97b-79b2-b41e-99fc129296d8; turn={"id":"01a12ee7-ca1c-7281-ba7d-5b7aa93a33d0","status":"inProgress"}; activity=null
+ℹ native lifecycle thread/status/changed; thread=01a12ee7-c97b-79b2-b41e-99fc129296d8; turn=null; activity={"type":"idle"}
+ℹ native lifecycle turn/completed; thread=01a12ee7-c97b-79b2-b41e-99fc129296d8; turn={"id":"01a12ee7-ca1c-7281-ba7d-5b7aa93a33d0","status":"completed"}; activity=null
+ℹ native lifecycle thread/status/changed; thread=01a12ee7-c97b-79b2-b41e-99fc129296d8; turn=null; activity={"type":"active","activeFlags":[]}
+ℹ native lifecycle turn/started; thread=01a12ee7-c97b-79b2-b41e-99fc129296d8; turn={"id":"01a12ee8-053a-79e1-b282-e8083cb62bf5","status":"inProgress"}; activity=null
+ℹ worker turn remains active: thread=01a12ee7-c97b-79b2-b41e-99fc129296d8; turn=01a12ee8-053a-79e1-b282-e8083cb62bf5; continue observing the same handle
+ℹ native lifecycle thread/status/changed; thread=01a12ee7-c97b-79b2-b41e-99fc129296d8; turn=null; activity={"type":"idle"}
+ℹ native lifecycle turn/completed; thread=01a12ee7-c97b-79b2-b41e-99fc129296d8; turn={"id":"01a12ee8-053a-79e1-b282-e8083cb62bf5","status":"completed"}; activity=null
+ℹ worker instruction turn=01a12ee8-053a-79e1-b282-e8083cb62bf5; thread=01a12ee7-c97b-79b2-b41e-99fc129296d8; final={"schemaVersion":1,"campaignId":"worker-fixture","assignmentId":"5be8c0db-520c-4e55-909c-286a3067bce3","generation":"0f4b9849-35ec-4d5d-905c-062e9bca4e56","sessionId":"01a12ee7-c97b-79b2-b41e-99fc129296d8","graphDigest":"84eea5c9b37234cff195ba589116e2eb17c71af56a17ef5085400b7defce4b62","revision":"8a30b75e9ea8a2d917a0e9735c42698596b0732c","baseCommit":"8a30b75e9ea8a2d917a0e9735c42698596b0732c","stopped":true,"proof":[{"operation":"test","evidence":{"command":"node --test fixture.test.ts","selection":["fixture unit","fixture integration"],"target":{"identity":"local","profile":"fixture","verification":"tmp/verification.json"},"revision":"8a30b75e9ea8a2d917a0e9735c42698596b0732c","dirty":false,"startedAt":"2026-10-11T23:59:32.531629-07:00","completedAt":"2026-10-11T23:59:32.638334-07:00","outcome":"pass","skips":0,"failures":0,"inputs":[{"path":"fixture.ts","digest":"65d570a60297d35424dbd6002fd49adebc1ba796119a76c0344eef768080d073"},{"path":"fixture.test.ts","digest":"ff91dd23a8591ebd4f1db54ac03e52577aa369ea9a282de07eb7d3e54a0244a5"},{"path":"pm/requirements/rolling-campaigns.md","digest":"7259dad587a8117e4c6e4f365736dac8157f9eb3cfaa2b9e62f7960b0c1d96a7"},{"path":".agents/config/project/rolling-campaigns.json","digest":"483357dc3ead996e301a3f35a8b83e8c2e7bd80c047bdf8ecaf95e41ca204af5"},{"path":"bindings.json","digest":"69e3d95c4bdc6c806d2106a55059f7d2454c132be0b935b4c4d08876d05926e3"},{"path":"obligations.json","digest":"53ddee9fd8f9b2ff1b04abe3a9039e84ca26ffbb2ce022db73e8475939ce242e"},{"path":"history.json","digest":"093a67b9f2abdbf6ceb44168ca1e1be906be27793293d3997fec1203eacc74a7"},{"path":"tmp/responsibility.txt","digest":"0ec4d2ef5e4a5403c89c7570eca9efab51b63f21d76cbc1a46e6dbd55dda3d32"},{"path":"tmp/focused.txt","digest":"5618c921f808564dfd2948bc529985684c9a326898f94d107128461b4e6b573f"},{"path":"tmp/verification.json","digest":"a9827230880c32b89db272a772f6fa7af3b46896571439c174b98c2c25f22d77"}],"outputPath":"tmp/focused.txt","finalization":"pass"}}]}
+ℹ worker suspension thread=01a12ee7-c97b-79b2-b41e-99fc129296d8; session=01a12ee7-c97b-79b2-b41e-99fc129296d8; native=idle; retained checkout=101 with dirty checkpoint; retained for reactivation
+ℹ native lifecycle thread/status/changed; thread=01a12ee7-c97b-79b2-b41e-99fc129296d8; turn=null; activity={"type":"active","activeFlags":[]}
+ℹ native lifecycle turn/started; thread=01a12ee7-c97b-79b2-b41e-99fc129296d8; turn={"id":"01a12ee9-14f0-7fc0-af81-69027a4e2027","status":"inProgress"}; activity=null
+ℹ native lifecycle thread/status/changed; thread=01a12ee7-c97b-79b2-b41e-99fc129296d8; turn=null; activity={"type":"idle"}
+ℹ native lifecycle turn/completed; thread=01a12ee7-c97b-79b2-b41e-99fc129296d8; turn={"id":"01a12ee9-14f0-7fc0-af81-69027a4e2027","status":"completed"}; activity=null
+ℹ worker resumption thread=01a12ee7-c97b-79b2-b41e-99fc129296d8; session=01a12ee7-c97b-79b2-b41e-99fc129296d8; checkout=101; base=d8700be965788632cb3d06cc50ce733d6f80e250; generation=d8af1bfa-3d63-4010-9343-35f3e89af616; fresh instructions completed before new allocation
+ℹ native lifecycle thread/status/changed; thread=01a12ee7-c97b-79b2-b41e-99fc129296d8; turn=null; activity={"type":"idle"}
+ℹ worker native thread=01a12ee7-c97b-79b2-b41e-99fc129296d8; session=01a12ee7-c97b-79b2-b41e-99fc129296d8; checkout=/private/var/folders/yv/v_v6t2lj1nz4ypl2bpp_ytqm0000gp/T/rolling-worker-store-D0Kox6/managed/101; attachment recovered after restart; model=gpt-6.1-sol
+ℹ native lifecycle thread/status/changed; thread=01a12ee7-c97b-79b2-b41e-99fc129296d8; turn=null; activity={"type":"notLoaded"}
+ℹ tests 1
+ℹ suites 0
+ℹ pass 1
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 104494.302042
+~~~
+
+Confirmed incident: [retained-worker blocker report observation](../../../../debugging-pattern-observations/2026-10-12-retained_worker_blocker_report.json).
+Its canonical JSON Schema validation passes. BIND-240/CHECKPOINT-203 adds only
+this required observation path to the existing bounded OBL-111 scope.
+
+## Final core acceptance after retained-work assertion correction
+
+`npm test` exited 0 after the final relevant native fixture edit. All five
+Node families passed: 544 core, 245 typed, 23 extension, 4 MCP, and 80 TSTS
+tests (896 total), with zero failures, skips or cancellations. The final
+unchanged TSTS gate checked 1,266 tracked files without violations.
+The required observation was staged before this invocation.
+
+Log: `tmp/rolling-final-core-after-retained-resumption.log`. This invocation
+ran on the actual task-owned test, generated traceability and PM changes based
+on 5df2c29. Its result is not represented as a clean-source invocation at that
+older revision. A subsequent commit preserves the same relevant input bytes;
+its passing results may be reused with that provenance. The explicit native
+Suite's eleven passing cases and the corrected focused resumption pass remain
+separate original invocations, not a fictional all-green Suite execution.
+Current individual certificate assessment and lifecycle closure remain pending.
