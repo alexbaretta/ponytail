@@ -107,10 +107,16 @@ test('real Git freshness detects committed, staged, unstaged and missing inputs 
   assert.equal(result.status, 0, result.stderr);
  };
  fs.writeFileSync(path.join(root,'unrelated.txt'),'original');
+ fs.mkdirSync(path.join(root,'src'));
+ fs.writeFileSync(path.join(root,'src/input.ts'),'export const input = 1;');
  git(['init','-q']); git(['add','.']);
  git(['-c','user.name=Fixture','-c','user.email=fixture@example.test','commit','-qm','Verified inputs']);
- const certificate: ObligationCertificate = {...obligationCertificate, inputs:createObligationGitInputs(root,['requirement.md','proof.txt'])};
+ const certificate: ObligationCertificate = {...obligationCertificate, inputs:createObligationGitInputs(root,['requirement.md','proof.txt','src'])};
  const fresh = () => freshCertificate(obligationDocumentV1,baseline(obligationDocumentV1),certificate,root).fresh;
+ assert.equal(fresh(),true);
+ fs.writeFileSync(path.join(root,'src/new.ts'),'export const added = 2;');
+ assert.equal(fresh(),false,'new untracked source inside an assessed directory invalidates proof');
+ fs.unlinkSync(path.join(root,'src/new.ts'));
  assert.equal(fresh(),true);
  fs.writeFileSync(path.join(root,'unrelated.txt'),'unrelated change');
  assert.equal(fresh(),true);

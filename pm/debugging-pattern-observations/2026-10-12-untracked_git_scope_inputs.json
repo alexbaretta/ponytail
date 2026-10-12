@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-10-12-untracked_git_scope_inputs",
+  "recorded_at": "2026-10-12T12:14:18-07:00",
+  "source_references": ["commit:b625817", "tmp/certificate-repair/phase2-untracked-before.log", "tmp/certificate-repair/phase2-untracked-after.log"],
+  "context": {
+    "languages": ["typescript"],
+    "frameworks": ["node:test"],
+    "components": ["Git certificate freshness"],
+    "affected_boundaries": ["verified directory scope and current source inputs"],
+    "code_references": ["skills/plan-execution/scripts/obligations.ts", "tests/obligations.test.ts"]
+  },
+  "observed_behavior": "Adding an untracked source file inside a verified Git directory scope left its certificate fresh.",
+  "expected_behavior": "New untracked source inputs inside the verified scope invalidate the certificate.",
+  "causal_mechanism": "Git diff compares tracked content. A directory can exist at the verified revision while new untracked files beneath it remain invisible to both working-tree and index diffs.",
+  "anti_pattern": {
+    "structural_description": "A tracked-content comparison is used as a complete enumeration of current directory inputs.",
+    "why_it_fails": "New source files may affect execution without changing tracked files."
+  },
+  "correct_pattern": {
+    "required_invariant": "Freshness covers tracked changes and newly introduced nonignored files in the declared scope.",
+    "implementation_description": "Alongside Git diffs, query Git ls-files for untracked nonignored scoped paths; fail closed on query errors."
+  },
+  "applicability_conditions": ["A verification scope includes a tracked directory.", "A new nonignored source file appears inside that scope."],
+  "known_non_matches": ["Changes outside the declared scope do not invalidate scoped proof."],
+  "confirmation_evidence": ["The focused real-Git test passed before introducing a scoped untracked file, then incorrectly returned fresh; removing the file restores freshness. The same test passes after adding the Git untracked-file query."],
+  "regression_proofs": ["tests/obligations.test.ts: real Git freshness detects committed, staged, unstaged and missing inputs while allowing unrelated changes"]
+}

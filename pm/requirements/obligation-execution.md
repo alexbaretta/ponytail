@@ -181,7 +181,8 @@ Ponytail must reuse unchanged relevant input evidence and reject stale, failing,
 
 For new campaign certificates, record the tested Git revision and relevant
 tracked input paths, not file-hash manifests. Use Git comparisons to detect
-committed, staged and unstaged changes. Reject inputs absent from the tested
+committed, staged and unstaged changes, including new untracked source files
+inside an assessed directory scope. Reject inputs absent from the tested
 revision. Historical hash records remain readable; new campaign acceptance
 must reject them. Retained command logs may be ignored files and are evidence
 outputs rather than tracked source inputs.

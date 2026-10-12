@@ -434,6 +434,9 @@ export function gitInputReasons(root: string, obligationGitInputs: ObligationGit
     if (result.status === 1) reasons.push('changed Git inputs');
     else if (result.status !== 0) reasons.push('Git input comparison failed');
   }
+  const spawnSyncReturns = git(['ls-files', '--others', '--exclude-standard', '-z', '--', ...obligationGitInputs.paths]);
+  if (spawnSyncReturns.status !== 0) reasons.push('Git untracked input comparison failed');
+  else if (spawnSyncReturns.stdout.length > 0) reasons.push('new untracked Git inputs');
   return reasons;
 }
 

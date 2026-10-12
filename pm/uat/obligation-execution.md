@@ -358,7 +358,8 @@ Traceability: verifies REQ-OBLIGATION-FRESHNESS
    through rebaseline; observe retained IDs, predecessor and unresolved history.
    Reject duplicate obligation identity and verify rejected writes preserve bytes.
 7. For a new campaign certificate, inspect the Git revision and relevant tracked
-   paths. Verify that committed, staged and unstaged changes invalidate proof,
+   paths. Verify that committed, staged, unstaged and new untracked scoped
+   source changes invalidate proof,
    unrelated changes do not, and new acceptance rejects historical hash manifests.
    Exercise `dist/tests/obligations.test.js`,
    `dist/tests/rolling-worker-submission.test.js`, and the named
