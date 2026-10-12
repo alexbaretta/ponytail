@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {projectRollingCoordinatorActions,parseRollingCampaignInitialization,readRollingCampaignInitializationV1,type RollingCampaignInitializationV1} from '../src/rolling-operations.js';
 import type {RollingCoordinatorSnapshot,RollingAction,RollingPublicationStatus,RollingStoredAssignment,RollingWorkerDispatchAttached,RollingWorkerDispatchStarted,RollingStoredWorkerDispatch,RollingReviewDispatchStarted,RollingReviewDispatchAttached,RollingStoredReviewDispatch,RollingAssignmentRelease,RollingStoredIncrement} from '../src/rolling-campaign-store.js';
+import type {RollingPublicationFrozen,RollingPublicationTrigger} from '../src/rolling-publication.js';
 import type {RollingIncrementClaimV1,RollingIncrementPublicationV1} from '../src/rolling-integration.js';
 import type {RollingStoredReview,RollingReviewRequestV1} from '../src/rolling-review.js';
 import type {RollingWorkerSelection,RollingBinding,RollingSchedulingBlock} from '../src/rolling-campaign.js';
@@ -12,8 +13,8 @@ function snapshot():RollingCoordinatorSnapshot {
  const rollingBinding:RollingBinding = {obligationId:'OBL-1',implementationIds:[],sourcePaths:['src/current.ts'],acceptances:[],unitTests:[],integrationTests:[],exclusiveResources:[]};
  const rollingWorkerSelection:RollingWorkerSelection = {kind:'start_worker',assignmentId:null,obligationId:'OBL-1',plannedPaths:['src/current.ts'],exclusiveResources:[],binding:rollingBinding};
  const rollingSchedulingBlock:RollingSchedulingBlock = {reason:'prerequisites',obligationId:'OBL-2',prerequisites:['OBL-1']};
- return {closure:null,graphDigest:'a'.repeat(64),observedGraphDigest:'a'.repeat(64),configuration:{schemaVersion:3,bindingHistory:null,mainline:{remote:'origin',branch:'main'},incrementRef:'campaign/proof',maxActiveWorkers:2,publicationSize:1},
-  assignments:[],actions:[],reviews:[],workerDispatches:[],reviewDispatches:[],releasableAssignments:[],publications:[],increments:[],scheduling:{digest:'a'.repeat(64),activeCount:0,availableCapacity:1,selected:[rollingWorkerSelection],blocked:[rollingSchedulingBlock]}};
+ return {obligationProjection:{baselineId:'B1',vector:[1,1,1,1,1,1],satisfiedIds:[],unresolvedIds:['OBL-1','OBL-2'],gates:['OBL-2'],assessments:[],complete:false},closure:null,graphDigest:'a'.repeat(64),observedGraphDigest:'a'.repeat(64),configuration:{schemaVersion:3,bindingHistory:null,mainline:{remote:'origin',branch:'main'},incrementRef:'campaign/proof',maxActiveWorkers:2,publicationSize:1},
+  assignments:[],actions:[],reviews:[],workerDispatches:[],reviewDispatches:[],releasableAssignments:[],publications:[],increments:[],publicationReadiness:{state:'WAITING',reason:'empty',count:0},scheduling:{digest:'a'.repeat(64),activeCount:0,availableCapacity:1,selected:[rollingWorkerSelection],blocked:[rollingSchedulingBlock]}};
 }
 
 // Traceability: verifies REQ-ROLLING-INTERFACES
@@ -185,4 +186,41 @@ test('published delivery requests current certificate acceptance before worker r
  const pendingRollingStoredIncrement:RollingStoredIncrement={...rollingStoredIncrement,state:'UNCONFIRMED',publication:null};
  const pendingRollingCoordinatorSnapshot:RollingCoordinatorSnapshot={...rollingCoordinatorSnapshot,increments:[pendingRollingStoredIncrement]};
  assert.deepEqual(projectRollingCoordinatorActions(pendingRollingCoordinatorSnapshot).decisions[0],{kind:'assignment',command:'integrate',assignment:rollingStoredAssignment});
+});
+
+// Traceability: verifies REQ-ROLLING-INTERFACES
+// Traceability: verifies REQ-ROLLING-PUBLICATION
+test('ready publication selections supply the exact threshold or partial-flush command',()=> {
+ const triggers:readonly RollingPublicationTrigger[]=['threshold','completion','quiescence'];
+ for (const trigger of triggers) {
+  const rollingPublicationFrozen:RollingPublicationFrozen={state:'FROZEN',trigger,increments:[{id:'00000000-0000-0000-0000-000000000001',revision:'a'.repeat(40)}],campaignRevision:'a'.repeat(40)};
+  const rollingCoordinatorSnapshot:RollingCoordinatorSnapshot={...snapshot(),publicationReadiness:rollingPublicationFrozen};
+  assert.deepEqual(projectRollingCoordinatorActions(rollingCoordinatorSnapshot).decisions[0],{kind:'publication-freeze',command:'freeze-publication',selection:rollingPublicationFrozen,flush:trigger === 'threshold' ? null : trigger});
+ }
+});
+
+// Traceability: verifies REQ-ROLLING-INTERFACES
+// Traceability: verifies REQ-ROLLING-PUBLICATION
+test('publication blockers and below-threshold waiting never invent a freeze action',()=> {
+ const reasons:readonly ('publication_owned' | 'integration_active' | 'certificate_acceptance')[]=['publication_owned','integration_active','certificate_acceptance'];
+ for (const reason of reasons) {
+  const rollingCoordinatorSnapshot:RollingCoordinatorSnapshot={...snapshot(),publicationReadiness:{state:'BLOCKED',reason,ownerCampaignId:'pilot'}};
+  assert.ok(!projectRollingCoordinatorActions(rollingCoordinatorSnapshot).decisions.some(decision=>decision.kind === 'publication-freeze'));
+ }
+ const rollingCoordinatorSnapshot:RollingCoordinatorSnapshot={...snapshot(),publicationReadiness:{state:'WAITING',reason:'below_threshold',count:1}};
+ assert.ok(!projectRollingCoordinatorActions(rollingCoordinatorSnapshot).decisions.some(decision=>decision.kind === 'publication-freeze'));
+});
+
+// Traceability: verifies REQ-ROLLING-INTERFACES
+// Traceability: verifies REQ-ROLLING-STATE
+test('coordinator suggests final closure only after fresh scope, released owners and publication drain',()=> {
+ const rollingCoordinatorSnapshot:RollingCoordinatorSnapshot={...snapshot(),obligationProjection:{baselineId:'B1',vector:[0,0,0,0,0,0],satisfiedIds:['OBL-1','OBL-2'],unresolvedIds:[],gates:[],assessments:[],complete:true},scheduling:{...snapshot().scheduling,selected:[]}};
+ assert.deepEqual(projectRollingCoordinatorActions(rollingCoordinatorSnapshot).decisions,[{kind:'closure',command:'close'}]);
+ const unresolvedRollingCoordinatorSnapshot:RollingCoordinatorSnapshot={...rollingCoordinatorSnapshot,obligationProjection:{...rollingCoordinatorSnapshot.obligationProjection,complete:false,unresolvedIds:['OBL-1']}};
+ assert.ok(!projectRollingCoordinatorActions(unresolvedRollingCoordinatorSnapshot).decisions.some(decision=>decision.kind === 'closure'));
+ const workingRollingStoredAssignment:RollingStoredAssignment=workingAssignment();
+ const ownedRollingCoordinatorSnapshot:RollingCoordinatorSnapshot={...rollingCoordinatorSnapshot,assignments:[workingRollingStoredAssignment]};
+ assert.ok(!projectRollingCoordinatorActions(ownedRollingCoordinatorSnapshot).decisions.some(decision=>decision.kind === 'closure'));
+ const partialRollingCoordinatorSnapshot:RollingCoordinatorSnapshot={...rollingCoordinatorSnapshot,publicationReadiness:{state:'WAITING',reason:'below_threshold',count:1}};
+ assert.ok(!projectRollingCoordinatorActions(partialRollingCoordinatorSnapshot).decisions.some(decision=>decision.kind === 'closure'));
 });

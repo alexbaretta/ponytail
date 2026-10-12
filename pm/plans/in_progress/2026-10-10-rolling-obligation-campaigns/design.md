@@ -532,3 +532,26 @@ while certificate assessment is unresolved, and requests `retire-worker` only
 once that obligation has current accepted evidence. This is a derived projection,
 not a new database completion flag. Candidate documents and binding packets
 remain coordinator assessments, validated by the existing acceptance boundary.
+
+## Final coordinator publication readiness and closure audit
+
+The coherent snapshot exposes the canonical file-based obligation projection
+and a read-only publication readiness preview. Batch claims and previews share
+one delivery reader, Git ancestry ordering implementation, and publication-lane
+query. The existing pure batch selector owns threshold and partial-flush policy.
+A FROZEN readiness selection is a proposed prefix, not a persisted claim; only
+`freeze-publication` claims ownership and receipt membership.
+
+Automatic next-actions projects the exact freeze command and nullable flush
+argument. Active publication ownership, unfinished integration, and current
+retained certificate acceptance take precedence. Below-threshold work waits
+while development remains runnable; completion or quiescence flushes a partial
+prefix using the same selector. Preview neither writes a batch nor changes Git.
+Explicit flush remains an operator action through the existing command.
+
+After fresh canonical scope completion, owner release, action reconciliation,
+and publication drain, next-actions suggests `close`. The existing closure
+operation independently verifies clean configured checkout, current remote
+containment and immutable closure receipt. A closure suggestion is not a claim
+that those final external observations already succeeded. Closed campaigns
+produce no further scheduling decisions.

@@ -1016,3 +1016,91 @@ existing publication owners before final OBL-64 assessment.
 ℹ duration_ms 6935.070125
 
 ~~~
+
+## OBL-64 publication readiness and closure decision evidence
+
+The source audit established that next-actions only projected existing publication
+claims, leaving the coordinator to infer initial freeze and partial-flush readiness.
+The bounded repair reuses the actual batch selector, delivery reader and Git
+ordering path. Preview is read-only. Current publication ownership, active
+integration and retained certificate acceptance prevent another automatic claim.
+Threshold and partial completion/quiescence selections provide exact command
+arguments. The final decision exposes closure only after canonical scope and
+owned work/publication are resolved; actual closure retains all existing checks.
+
+Seventeen focused unit tests and two real PostgreSQL/CLI/MCP scenarios pass with
+zero failures, skips or cancellations. The database scenario proves no preview
+mutation, actual claim agreement, retained ownership and successful closure after
+its projected next action. Six existing publication integration scenarios pass:
+concurrent shared partial claims, completion/quiescence partial flushes, configured
+M, normal mainline publication and upstream-race recovery. Unchanged TSTS checks
+1,264 files without violations. These task-dirty focused results precede final
+clean-tree QA and certificate acceptance; they do not declare campaign closure.
+
+### Batch and closure focused unit result
+
+~~~text
+✔ CLI initialization preserves its physical V1 contract and rejects rounded integers or undeclared fields (9.051292ms)
+✔ coordinator decisions require reconciliation before suggesting work from a changed authoritative graph (0.269625ms)
+✔ next actions retain exact fenced identities and prerequisite explanations before replenishment (0.1155ms)
+✔ unknown publication is observed before worker replenishment and never suggested as a push retry (0.118458ms)
+✔ attached working worker receives an executable next action before new allocations (0.10325ms)
+✔ rejected work stops its original worker before resume-first replenishment (0.08275ms)
+✔ known worker instruction is collected and unknown creation keeps its original ownership (0.123041ms)
+✔ pending original attachment is observed before worker dispatch and stopped workers are not restarted (0.150292ms)
+✔ new review request is dispatched before attempting to inspect its nonexistent turn (0.094833ms)
+✔ review decisions observe known turns and preserve uncertain original dispatch ownership (0.152ms)
+✔ retired unassigned checkout is released even when no obligation is unblocked (0.106375ms)
+✔ attached retirement requires current cleanup eligibility before releasing its checkout (0.095708ms)
+✔ published accepted increment retires instead of repeating integration (0.11275ms)
+✔ published delivery requests current certificate acceptance before worker retirement (0.086833ms)
+✔ ready publication selections supply the exact threshold or partial-flush command (0.088209ms)
+✔ publication blockers and below-threshold waiting never invent a freeze action (0.546625ms)
+✔ coordinator suggests final closure only after fresh scope, released owners and publication drain (0.094833ms)
+ℹ tests 17
+ℹ suites 0
+ℹ pass 17
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 81.506708
+
+~~~
+### Batch and closure PostgreSQL/adapter result
+
+~~~text
+✔ shared operations initialize defaults and reconcile event/periodic contention without duplicate allocations (6420.434917ms)
+✔ closure requires fresh evidence, persists an immutable receipt and fences later mutations (1113.400458ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 2
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 7601.59575
+
+~~~
+### Existing publication integration regression
+
+~~~text
+✔ publication batch freezes one shared partial claim across concurrent requests and restart (11203.835333ms)
+✔ publication partial flush follows verified completion state (9880.052083ms)
+✔ publication partial flush follows verified quiescence state (9640.365833ms)
+✔ publication threshold uses configured M and persists one claim without counting acknowledgement retries (9361.914084ms)
+✔ mainline normal publication retains one observation and synchronizes the campaign after restart (11466.524666ms)
+Switched to a new branch 'main'
+To /private/var/folders/yv/v_v6t2lj1nz4ypl2bpp_ytqm0000gp/T/rolling-store-m1iPtw/managed/increment-remote.git
+   0a688c2..108612e  main -> main
+✔ mainline race publication retains one observation and synchronizes the campaign after restart (14087.669666ms)
+ℹ tests 6
+ℹ suites 0
+ℹ pass 6
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 65858.506125
+
+~~~

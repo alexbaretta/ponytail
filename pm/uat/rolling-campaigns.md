@@ -141,6 +141,11 @@ Traceability: verifies REQ-ROLLING-INTERFACES
    PUBLISHED receipt. Reject a published flag with no confirmed receipt. Require
    current bound certificate acceptance before retirement, and do not suggest
    integration again for a published current-generation result.
+   Preview an eligible publication prefix and confirm no batch or Git mutation
+   occurs. Follow the exact threshold/completion/quiescence freeze suggestion;
+   retained lane ownership or unfinished acceptance prevents a duplicate claim.
+   Once fresh scope, owners, actions and publication are resolved, the next
+   action is close; closure still performs its own external verification.
 
 
 ## Arc ROLL-CLOSE: Close only verified campaign scope

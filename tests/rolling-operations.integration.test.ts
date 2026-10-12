@@ -204,6 +204,7 @@ test('shared operations initialize defaults and reconcile event/periodic content
  const rollingIncrementClaimV1:RollingIncrementClaimV1={schemaVersion:1,id:crypto.randomUUID(),campaignId:'pilot',reviewId:rollingReviewRequestV1.id,assignmentId:firstRollingStoredAssignment.id,generation:firstRollingStoredAssignment.generation,graphDigest:staleRollingCoordinatorActions.snapshot.graphDigest,rootPath:root,coordinatorRoot:root,target:{remote:'origin',branch:'campaign/pilot'},reviewedRevision:candidateRevision,reviewedBase:candidateRevision};
  await pool.query("INSERT INTO ponytail_index.rolling_increment_v1(project_id,campaign_id,review_id,increment_id,claim_text,state,candidate_revision) VALUES($1,$2,$3,$4,$5,'UNCONFIRMED',$6)",[projectId,'pilot',rollingReviewRequestV1.id,rollingIncrementClaimV1.id,JSON.stringify(rollingIncrementClaimV1),candidateRevision]);
  assert.ok((await rollingCampaignOperations.nextActions('pilot')).decisions.some(decision=>decision.kind === 'assignment' && decision.command === 'integrate' && decision.assignment.id === firstRollingStoredAssignment.id));
+ assert.deepEqual((await rollingCampaignOperations.status('pilot')).publicationReadiness,{state:'BLOCKED',reason:'integration_active',ownerCampaignId:'pilot'});
  await pool.query("UPDATE ponytail_index.rolling_increment_v1 SET state='PUBLISHED' WHERE project_id=$1 AND campaign_id=$2 AND review_id=$3",[projectId,'pilot',rollingReviewRequestV1.id]);
  await assert.rejects(rollingCampaignOperations.status('pilot'),/confirmed original receipt/);
  const rollingIncrementPublicationV1:RollingIncrementPublicationV1={schemaVersion:1,incrementId:rollingIncrementClaimV1.id,result:{state:'PUBLISHED',revision:candidateRevision,remoteRevision:candidateRevision}};
@@ -212,6 +213,25 @@ test('shared operations initialize defaults and reconcile event/periodic content
  assert.deepEqual(publishedRollingCoordinatorActions.snapshot.increments,[{claim:rollingIncrementClaimV1,state:'PUBLISHED',publication:rollingIncrementPublicationV1,obligationSatisfied:false}]);
  assert.ok(publishedRollingCoordinatorActions.decisions.some(decision=>decision.kind === 'acceptance' && decision.increment.claim.reviewId === rollingReviewRequestV1.id));
  assert.ok(!publishedRollingCoordinatorActions.decisions.some(decision=>decision.kind === 'assignment' && decision.command === 'integrate' && decision.assignment.id === firstRollingStoredAssignment.id));
+ assert.deepEqual(publishedRollingCoordinatorActions.snapshot.publicationReadiness,{state:'BLOCKED',reason:'certificate_acceptance',ownerCampaignId:'pilot'});
+ await pool.query("INSERT INTO ponytail_index.rolling_increment_delivery_v1(project_id,campaign_id,increment_id,revision,remote_revision) VALUES($1,$2,$3,$4,$4)",[projectId,'pilot',rollingIncrementClaimV1.id,candidateRevision]);
+ // Model an already released original owner; the retained delivery still owns
+ // publication membership. Restore the fixture owner after testing this phase.
+ await pool.query("UPDATE ponytail_index.rolling_assignment_v1 SET state='RELEASED',retired=true WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3",[projectId,'pilot',firstRollingStoredAssignment.id]);
+ const previewRevision=git(root,['rev-parse','HEAD']);
+ const readyRollingCoordinatorActions=await rollingCampaignOperations.nextActions('pilot');
+ assert.deepEqual(readyRollingCoordinatorActions.snapshot.publicationReadiness,{state:'FROZEN',trigger:'threshold',increments:[{id:rollingIncrementClaimV1.id,revision:candidateRevision}],campaignRevision:candidateRevision});
+ assert.equal(git(root,['rev-parse','HEAD']),previewRevision);
+ assert.equal((await pool.query<Record<string,unknown>>('SELECT count(*)::integer AS count FROM ponytail_index.rolling_publication_batch_v1 WHERE project_id=$1',[projectId])).rows[0]?.count,0);
+ assert.ok(readyRollingCoordinatorActions.decisions.some(decision=>decision.kind === 'publication-freeze' && decision.flush === null));
+ await verifyMcpParity(root,rollingCampaignOperations);
+ const rollingPublicationBatchClaimResult=await rollingCampaignStore.claimPublicationBatch('pilot',readyRollingCoordinatorActions.snapshot.graphDigest);
+ assert.equal(rollingPublicationBatchClaimResult.state,'CLAIMED');
+ const ownedRollingCoordinatorActions=await rollingCampaignOperations.nextActions('pilot');
+ assert.deepEqual(ownedRollingCoordinatorActions.snapshot.publicationReadiness,{state:'BLOCKED',reason:'publication_owned',ownerCampaignId:'pilot'});
+ assert.ok(!ownedRollingCoordinatorActions.decisions.some(decision=>decision.kind === 'publication-freeze'));
+ await pool.query('DELETE FROM ponytail_index.rolling_publication_batch_v1 WHERE project_id=$1 AND campaign_id=$2',[projectId,'pilot']);
+ await pool.query("UPDATE ponytail_index.rolling_assignment_v1 SET state='INTEGRATING',retired=false WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3",[projectId,'pilot',firstRollingStoredAssignment.id]);
  await verifyMcpParity(root,rollingCampaignOperations);
  await pool.query("DELETE FROM ponytail_index.rolling_submission_v1 WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3",[projectId,'pilot',firstRollingStoredAssignment.id]);
  await pool.query("UPDATE ponytail_index.rolling_assignment_v1 SET state='WORKING',activity_stopped=false WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3",[projectId,'pilot',firstRollingStoredAssignment.id]);
@@ -306,6 +326,7 @@ test('closure requires fresh evidence, persists an immutable receipt and fences 
  fs.writeFileSync(path.join(root,proofPath),'Changed certificate input');
  await assert.rejects(rollingCampaignOperations.execute('close',{campaign:'pilot'}),/fresh|stale/);
  fs.writeFileSync(path.join(root,proofPath),originalProof);
+ assert.ok((await rollingCampaignOperations.nextActions('pilot')).decisions.some(decision=>decision.kind === 'closure'));
  const rollingOperationResponse = await rollingCampaignOperations.execute('close',{campaign:'pilot'});
  assert.equal(rollingOperationResponse.command,'close');
  assert.deepEqual(await rollingCampaignOperations.execute('close',{campaign:'pilot'}),rollingOperationResponse);

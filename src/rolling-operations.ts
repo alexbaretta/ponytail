@@ -15,6 +15,7 @@ import {git,gitResult,publishRollingIncrement,reconcileRollingIncrementPublicati
 import {RollingCodex} from './rolling-codex.js';
 import {provisionRollingWorker,attachRollingWorker,recoverRollingWorkerCreation,resumeRollingWorker,dispatchRollingWorker,collectRollingWorkerSubmission,suspendRollingWorker,retireRollingWorker} from './rolling-worker.js';
 import {dispatchRollingReview,collectRollingReview} from './rolling-review.js';
+import type {RollingPublicationFrozen,RollingPublicationTrigger} from './rolling-publication.js';
 import {prepareRollingMainline,mergeRollingMainline,observeRollingMainlineCandidate,runRollingPublicationQa,prepareRollingMainlineRefresh,mergeRollingMainlineRefresh,observeRollingMainlineRefresh,type RollingMainlineCandidateV1,type RollingMainlineRefreshResultV1} from './rolling-publication.js';
 import {rollingCommandDefinitions,rollingCampaignHelp,isRollingCommandName,type RollingCommandName} from './rolling-cli-registry.js';
 
@@ -111,11 +112,13 @@ export interface RollingWorkerSuspensionDecision {readonly kind:'worker-suspensi
 export interface RollingWorkerDispatchBlockedDecision {readonly kind:'blocked-worker-dispatch';readonly reason:'instruction_turn_unknown';readonly assignment:RollingStoredAssignment;readonly dispatch:RollingWorkerDispatchStarted;}
 export interface RollingReviewDispatchBlockedDecision {readonly kind:'blocked-review-dispatch';readonly reason:'instruction_turn_unknown';readonly review:RollingStoredReview;readonly dispatch:RollingReviewDispatchStarted;}
 export interface RollingPublicationDecision {readonly kind:'publication';readonly command:'prepare-publication' | 'observe-preparation' | 'observe-refresh' | 'inspect-publication-conflict' | 'run-publication-qa' | 'observe-publication-qa' | 'publish-mainline' | 'observe-mainline' | 'refresh-mainline' | 'synchronize-campaign';readonly publication:RollingPublicationStatus;}
+export interface RollingClosureDecision {readonly kind:'closure';readonly command:'close';}
+export interface RollingPublicationFreezeDecision {readonly kind:'publication-freeze';readonly command:'freeze-publication';readonly selection:RollingPublicationFrozen;readonly flush:Exclude<RollingPublicationTrigger,'threshold'> | null;}
 export interface RollingIncrementAcceptanceDecision {readonly kind:'acceptance';readonly command:'accept';readonly assignment:RollingStoredAssignment;readonly increment:RollingStoredIncrement;}
 export interface RollingReleaseDecision {readonly kind:'release';readonly command:'replenish';readonly release:RollingAssignmentRelease;readonly graphDigest:string;}
 export interface RollingReplenishDecision {readonly kind:'replenish';readonly graphDigest:string;}
 // Discriminator: kind
-export type RollingCoordinatorDecision = RollingReconcileDecision | RollingWorkerDecision | RollingReviewDecision | RollingAssignmentDecision | RollingPublicationDecision | RollingReplenishDecision | RollingWorkerSuspensionDecision | RollingWorkerDispatchBlockedDecision | RollingReviewDispatchBlockedDecision | RollingReleaseDecision | RollingIncrementAcceptanceDecision;
+export type RollingCoordinatorDecision = RollingReconcileDecision | RollingWorkerDecision | RollingReviewDecision | RollingAssignmentDecision | RollingPublicationDecision | RollingReplenishDecision | RollingWorkerSuspensionDecision | RollingWorkerDispatchBlockedDecision | RollingReviewDispatchBlockedDecision | RollingReleaseDecision | RollingIncrementAcceptanceDecision | RollingPublicationFreezeDecision | RollingClosureDecision;
 export interface RollingCoordinatorActions {readonly snapshot:RollingCoordinatorSnapshot;readonly decisions:readonly RollingCoordinatorDecision[];}
 
 function publicationCommand(rollingPublicationStatus:RollingPublicationStatus):RollingPublicationDecision['command'] {
@@ -175,7 +178,11 @@ export function projectRollingCoordinatorActions(rollingCoordinatorSnapshot:Roll
    decisions.push({kind:'assignment',command:rollingStoredAssignment.state === 'REVIEW' ? 'request-review' : rollingStoredAssignment.state === 'INTEGRATING' ? 'integrate' : 'retire-worker',assignment:rollingStoredAssignment});
  }
  for (const action of rollingCoordinatorSnapshot.actions) decisions.push({kind:'worker',command:action.kind === 'START_WORKER' ? action.state === 'PENDING' ? 'provision-worker' : 'recover-worker' : action.state === 'PENDING' ? 'resume-worker' : 'observe-resumption',action});
+ if (rollingCoordinatorSnapshot.publicationReadiness.state === 'FROZEN') decisions.push({kind:'publication-freeze',command:'freeze-publication',selection:rollingCoordinatorSnapshot.publicationReadiness,flush:rollingCoordinatorSnapshot.publicationReadiness.trigger === 'threshold' ? null : rollingCoordinatorSnapshot.publicationReadiness.trigger});
  if (rollingCoordinatorSnapshot.scheduling.selected.length > 0) decisions.push({kind:'replenish',graphDigest:rollingCoordinatorSnapshot.graphDigest});
+ if (rollingCoordinatorSnapshot.obligationProjection.complete && rollingCoordinatorSnapshot.assignments.every(assignment=>assignment.state === 'RELEASED')
+  && rollingCoordinatorSnapshot.actions.length === 0 && rollingCoordinatorSnapshot.publications.length === 0
+  && rollingCoordinatorSnapshot.publicationReadiness.state === 'WAITING' && rollingCoordinatorSnapshot.publicationReadiness.reason === 'empty') decisions.push({kind:'closure',command:'close'});
  return {snapshot:rollingCoordinatorSnapshot,decisions};
 }
 

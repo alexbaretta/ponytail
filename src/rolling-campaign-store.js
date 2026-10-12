@@ -681,14 +681,37 @@ class RollingCampaignStore {
             return { review: { request: rollingReviewRequestV1, outcome: rollingReviewOutcomeV1 }, ...rollingReviewCandidate };
         });
     }
+    async publicationLane(poolClient, rollingCampaignRow) {
+        const publication = (await poolClient.query("SELECT campaign_id FROM ponytail_index.rolling_publication_batch_v1 WHERE project_id=$1 AND coordinator_root=$2 AND (state<>'PUBLISHED' OR synchronized_revision IS NULL) LIMIT 1", [this.projectId, rollingCampaignRow.coordinator_root])).rows[0];
+        const integration = (await poolClient.query("SELECT i.campaign_id FROM ponytail_index.rolling_increment_v1 i JOIN ponytail_index.rolling_campaign_v1 c USING(project_id,campaign_id) WHERE i.project_id=$1 AND c.coordinator_root=$2 AND i.state<>'PUBLISHED' AND i.repair_reference IS NULL ORDER BY i.created_at,i.increment_id LIMIT 1", [this.projectId, rollingCampaignRow.coordinator_root])).rows[0];
+        return { publicationCampaignId: publication ? stringColumn(publication.campaign_id, 'publication owner') : null, integrationCampaignId: integration ? stringColumn(integration.campaign_id, 'integration owner') : null };
+    }
+    async orderedAcceptedIncrements(poolClient, rollingCampaignRow, rollingExecutionConfigV3) {
+        const rows = (await poolClient.query('SELECT d.increment_id,d.revision FROM ponytail_index.rolling_increment_delivery_v1 d LEFT JOIN ponytail_index.rolling_publication_member_v1 m USING(project_id,campaign_id,increment_id) WHERE d.project_id=$1 AND d.campaign_id=$2 AND m.increment_id IS NULL', [this.projectId, rollingCampaignRow.campaign_id])).rows;
+        const rollingAcceptedIncrements = rows.map(row => ({ id: stringColumn(row.increment_id, 'accepted increment ID'), revision: stringColumn(row.revision, 'accepted increment revision') }));
+        const map = new Map();
+        if (rollingAcceptedIncrements.length > 0) {
+            const history = (0, node_child_process_1.spawnSync)('git', ['-C', rollingCampaignRow.coordinator_root, 'rev-list', '--topo-order', '--reverse', `refs/heads/${rollingExecutionConfigV3.incrementRef}^{commit}`], { encoding: 'utf8' });
+            requireState(!history.error && history.status === 0, 'cannot order publication receipts by campaign history');
+            for (const [index, revision] of history.stdout.trim().split('\n').entries())
+                map.set(revision, index);
+        }
+        requireState(rollingAcceptedIncrements.every(item => map.has(item.revision)), 'accepted increment is outside the retained campaign history');
+        return [...rollingAcceptedIncrements].sort((left, right) => {
+            const leftOrdinal = map.get(left.revision), rightOrdinal = map.get(right.revision);
+            requireState(leftOrdinal !== undefined && rightOrdinal !== undefined, 'publication receipt ancestry changed');
+            return leftOrdinal - rightOrdinal || left.id.localeCompare(right.id);
+        });
+    }
     async claimPublicationBatch(campaignId, expectedDigest, flush = null) {
         return this.transaction(campaignId, async (poolClient, rollingCampaignRow) => {
             const rollingGraph = this.graph(rollingCampaignRow, expectedDigest);
             const existing = (await poolClient.query("SELECT claim_text FROM ponytail_index.rolling_publication_batch_v1 WHERE project_id=$1 AND campaign_id=$2 AND (state<>'PUBLISHED' OR synchronized_revision IS NULL)", [this.projectId, campaignId])).rows[0];
             if (existing)
                 return { state: 'CLAIMED', claim: (0, rolling_publication_js_1.readRollingPublicationBatchClaimV1)(readStateText(stringColumn(existing.claim_text, 'publication claim'))) };
-            const activeIncrements = (await poolClient.query("SELECT i.increment_id FROM ponytail_index.rolling_increment_v1 i JOIN ponytail_index.rolling_campaign_v1 c USING(project_id,campaign_id) WHERE i.project_id=$1 AND c.coordinator_root=$2 AND i.state<>'PUBLISHED' AND i.repair_reference IS NULL", [this.projectId, rollingCampaignRow.coordinator_root])).rows;
-            requireState(activeIncrements.length === 0, 'finish the active increment before freezing mainline publication');
+            const rollingPublicationLane = await this.publicationLane(poolClient, rollingCampaignRow);
+            requireState(rollingPublicationLane.publicationCampaignId === null, 'mainline publication checkout is owned by another campaign');
+            requireState(rollingPublicationLane.integrationCampaignId === null, 'finish the active increment before freezing mainline publication');
             const rollingExecutionConfigV3 = parseRollingExecutionConfig(rollingCampaignRow.configuration_text);
             if (flush === 'completion')
                 requireState(rollingGraph.bindings.every(binding => rollingGraph.projection.satisfiedIds.includes(binding.obligationId)), 'completion flush requires all bound delivery obligations to be satisfied');
@@ -697,21 +720,7 @@ class RollingCampaignStore {
                 const rollingSchedulingResult = (0, rolling_campaign_js_1.selectRollingAssignments)(rollingGraph, assignments, rollingExecutionConfigV3.maxActiveWorkers, expectedDigest);
                 requireState(rollingSchedulingResult.activeCount === 0 && rollingSchedulingResult.selected.length === 0, 'quiescence flush requires no active or immediately schedulable work');
             }
-            const rows = (await poolClient.query('SELECT d.increment_id,d.revision FROM ponytail_index.rolling_increment_delivery_v1 d LEFT JOIN ponytail_index.rolling_publication_member_v1 m USING(project_id,campaign_id,increment_id) WHERE d.project_id=$1 AND d.campaign_id=$2 AND m.increment_id IS NULL', [this.projectId, campaignId])).rows;
-            const rollingAcceptedIncrements = rows.map(row => ({ id: stringColumn(row.increment_id, 'accepted increment ID'), revision: stringColumn(row.revision, 'accepted increment revision') }));
-            const map = new Map();
-            if (rollingAcceptedIncrements.length > 0) {
-                const history = (0, node_child_process_1.spawnSync)('git', ['-C', rollingCampaignRow.coordinator_root, 'rev-list', '--topo-order', '--reverse', `refs/heads/${rollingExecutionConfigV3.incrementRef}^{commit}`], { encoding: 'utf8' });
-                requireState(!history.error && history.status === 0, 'cannot order publication receipts by campaign history');
-                for (const [index, revision] of history.stdout.trim().split('\n').entries())
-                    map.set(revision, index);
-            }
-            requireState(rollingAcceptedIncrements.every(item => map.has(item.revision)), 'accepted increment is outside the retained campaign history');
-            const orderedRollingAcceptedIncrements = [...rollingAcceptedIncrements].sort((left, right) => {
-                const leftOrdinal = map.get(left.revision), rightOrdinal = map.get(right.revision);
-                requireState(leftOrdinal !== undefined && rightOrdinal !== undefined, 'publication receipt ancestry changed');
-                return leftOrdinal - rightOrdinal || left.id.localeCompare(right.id);
-            });
+            const orderedRollingAcceptedIncrements = await this.orderedAcceptedIncrements(poolClient, rollingCampaignRow, rollingExecutionConfigV3);
             const rollingPublicationSelection = (0, rolling_publication_js_1.selectRollingPublicationBatch)(orderedRollingAcceptedIncrements, rollingExecutionConfigV3.publicationSize, flush);
             if (rollingPublicationSelection.state === 'WAITING')
                 return rollingPublicationSelection;
@@ -1461,10 +1470,25 @@ class RollingCampaignStore {
                 claim: (0, rolling_publication_js_1.readRollingPublicationBatchClaimV1)(readStateText(stringColumn(row.claim_text, 'publication claim'))), state: publicationState(row.state),
                 qaId: nullableStringColumn(row.qa_id, 'publication QA'), publicationId: nullableStringColumn(row.publication_id, 'publication observation'), pendingRefreshId: nullableStringColumn(row.pending_refresh_id, 'pending mainline refresh')
             }));
-            return { graphDigest: rollingCampaignRow.graph_digest, observedGraphDigest: rollingGraph.digest, configuration: rollingExecutionConfigV3,
+            const rollingSchedulingResult = (0, rolling_campaign_js_1.selectRollingAssignments)(rollingGraph, assignments, rollingExecutionConfigV3.maxActiveWorkers, rollingGraph.digest);
+            const rollingPublicationLane = await this.publicationLane(poolClient, rollingCampaignRow);
+            let rollingPublicationReadiness;
+            if (rollingPublicationLane.publicationCampaignId !== null)
+                rollingPublicationReadiness = { state: 'BLOCKED', reason: 'publication_owned', ownerCampaignId: rollingPublicationLane.publicationCampaignId };
+            else if (rollingPublicationLane.integrationCampaignId !== null)
+                rollingPublicationReadiness = { state: 'BLOCKED', reason: 'integration_active', ownerCampaignId: rollingPublicationLane.integrationCampaignId };
+            else if (increments.some(increment => increment.state === 'PUBLISHED' && !increment.obligationSatisfied))
+                rollingPublicationReadiness = { state: 'BLOCKED', reason: 'certificate_acceptance', ownerCampaignId: campaignId };
+            else {
+                const orderedRollingAcceptedIncrements = await this.orderedAcceptedIncrements(poolClient, rollingCampaignRow, rollingExecutionConfigV3);
+                const flush = rollingGraph.bindings.every(binding => rollingGraph.projection.satisfiedIds.includes(binding.obligationId)) ? 'completion'
+                    : rollingSchedulingResult.activeCount === 0 && rollingSchedulingResult.selected.length === 0 ? 'quiescence' : null;
+                rollingPublicationReadiness = (0, rolling_publication_js_1.selectRollingPublicationBatch)(orderedRollingAcceptedIncrements, rollingExecutionConfigV3.publicationSize, flush);
+            }
+            return { obligationProjection: rollingGraph.projection, graphDigest: rollingCampaignRow.graph_digest, observedGraphDigest: rollingGraph.digest, configuration: rollingExecutionConfigV3,
                 closure: rollingCampaignRow.closure_text === null ? null : readRollingCampaignClosureV1(readStateText(rollingCampaignRow.closure_text)),
                 assignments: assignments.filter(assignment => assignment.scopeId === campaignId),
-                scheduling: (0, rolling_campaign_js_1.selectRollingAssignments)(rollingGraph, assignments, rollingExecutionConfigV3.maxActiveWorkers, rollingGraph.digest), actions, reviews, workerDispatches, reviewDispatches, releasableAssignments, publications, increments };
+                scheduling: rollingSchedulingResult, actions, reviews, workerDispatches, reviewDispatches, releasableAssignments, publications, increments, publicationReadiness: rollingPublicationReadiness };
         }, true);
     }
     async closeCampaign(campaignId) {

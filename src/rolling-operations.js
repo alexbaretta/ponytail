@@ -175,8 +175,14 @@ function projectRollingCoordinatorActions(rollingCoordinatorSnapshot) {
     }
     for (const action of rollingCoordinatorSnapshot.actions)
         decisions.push({ kind: 'worker', command: action.kind === 'START_WORKER' ? action.state === 'PENDING' ? 'provision-worker' : 'recover-worker' : action.state === 'PENDING' ? 'resume-worker' : 'observe-resumption', action });
+    if (rollingCoordinatorSnapshot.publicationReadiness.state === 'FROZEN')
+        decisions.push({ kind: 'publication-freeze', command: 'freeze-publication', selection: rollingCoordinatorSnapshot.publicationReadiness, flush: rollingCoordinatorSnapshot.publicationReadiness.trigger === 'threshold' ? null : rollingCoordinatorSnapshot.publicationReadiness.trigger });
     if (rollingCoordinatorSnapshot.scheduling.selected.length > 0)
         decisions.push({ kind: 'replenish', graphDigest: rollingCoordinatorSnapshot.graphDigest });
+    if (rollingCoordinatorSnapshot.obligationProjection.complete && rollingCoordinatorSnapshot.assignments.every(assignment => assignment.state === 'RELEASED')
+        && rollingCoordinatorSnapshot.actions.length === 0 && rollingCoordinatorSnapshot.publications.length === 0
+        && rollingCoordinatorSnapshot.publicationReadiness.state === 'WAITING' && rollingCoordinatorSnapshot.publicationReadiness.reason === 'empty')
+        decisions.push({ kind: 'closure', command: 'close' });
     return { snapshot: rollingCoordinatorSnapshot, decisions };
 }
 class RollingCampaignOperations {

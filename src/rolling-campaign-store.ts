@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Alex Baretta. All rights reserved.
 // Licensed under the MIT License. See LICENSE in the project root.
 import crypto from 'node:crypto';
-import {readRollingMainlineRefreshIntentV1,readRollingMainlineRefreshPreparationV1,readRollingMainlineRefreshResultV1,type RollingMainlineRefreshIntentV1,type RollingMainlineRefreshPreparationV1,type RollingMainlineRefreshResultV1,synchronizeRollingCampaign,readRollingMainlinePublicationV1,type RollingMainlinePublicationV1,readRollingMainlinePreparationV1,readRollingMainlineCandidateV1,readRollingPublicationQaV1,parseRollingPublicationQa,readRollingPublicationQaJobV1,verifyRollingMainlineCandidate,verifyRollingPublicationQa,type RollingMainlinePreparationV1,type RollingMainlineCandidateV1,type RollingPublicationQaV1,type RollingPublicationQaJobV1,selectRollingPublicationBatch,readRollingPublicationBatchClaimV1,type RollingPublicationBatchClaimV1,type RollingPublicationWaiting,type RollingPublicationTrigger,type RollingAcceptedIncrement} from './rolling-publication.js';
+import {readRollingMainlineRefreshIntentV1,readRollingMainlineRefreshPreparationV1,readRollingMainlineRefreshResultV1,type RollingMainlineRefreshIntentV1,type RollingMainlineRefreshPreparationV1,type RollingMainlineRefreshResultV1,synchronizeRollingCampaign,readRollingMainlinePublicationV1,type RollingMainlinePublicationV1,readRollingMainlinePreparationV1,readRollingMainlineCandidateV1,readRollingPublicationQaV1,parseRollingPublicationQa,readRollingPublicationQaJobV1,verifyRollingMainlineCandidate,verifyRollingPublicationQa,type RollingMainlinePreparationV1,type RollingMainlineCandidateV1,type RollingPublicationQaV1,type RollingPublicationQaJobV1,selectRollingPublicationBatch,readRollingPublicationBatchClaimV1,type RollingPublicationBatchClaimV1,type RollingPublicationWaiting,type RollingPublicationTrigger,type RollingAcceptedIncrement,type RollingPublicationSelection} from './rolling-publication.js';
 import {git,readRollingIncrementClaimV1,readRollingIncrementRebaseV1,verifyRollingIncrementRebase,prepareRollingIncrementRebase,readRollingIncrementPublicationV1,reconcileRollingIncrementPublication,publishRollingIncrement,verifyRollingIncrementLocalIntegration,fastForwardRollingIncrement,verifyRollingIncrementConflictInspection,type RollingIncrementConflictInspection,type RollingIncrementRepair,type RollingIncrementClaimV1,type RollingIncrementRebaseV1,type RollingFastRebaseResult,type RollingIncrementPublicationV1,type RollingIncrementPublicationResult,type RollingIncrementPushStarted} from './rolling-integration.js';
 import path from 'node:path';
 import { parse } from 'lossless-json';
@@ -13,7 +13,7 @@ import { parseRollingWorkerSubmission, readRollingWorkerSubmissionV1, validateRo
   type RollingWorkerSubmissionV1 } from './rolling-worker-submission.js';
 import { readObligationLeaseV1, freezeObligationLease, assertObligationLeaseOperation,
   type ObligationLeaseV1 } from '../skills/plan-execution/scripts/obligation-binding-history.js';
-import { relativePath,parseObligationDocument,inputDigest,type ObligationDocumentV1, type Obligation } from '../skills/plan-execution/scripts/obligations.js';
+import { relativePath,parseObligationDocument,inputDigest,type ObligationDocumentV1,type ObligationProjection, type Obligation } from '../skills/plan-execution/scripts/obligations.js';
 import {acceptBoundCheckpoint,type ObligationCertificateBindingRequest,type ObligationCertificateSubmission} from '../skills/plan-execution/scripts/obligation-certificate-bindings.js';
 import { readRollingWorkerRetirementV1, type RollingWorkerRetirementV1, readRollingWorkerResumptionV1, parseRollingWorkerResumption, type RollingWorkerResumptionV1, readRollingWorkerStopV1, parseRollingWorkerStop, type RollingWorkerStopV1, buildRollingWorkerInstructions, readRollingWorkerCreationV1, parseRollingWorkerCreation, type RollingWorkerCreationV1, type RollingWorkerContext } from './rolling-worker.js';
 import { cleanupRollingWorktree, validateRollingSessionMarker } from './rolling-worktrees.js';
@@ -177,10 +177,14 @@ export interface RollingPublicationContext {
  readonly refreshIntent:RollingMainlineRefreshIntentV1 | null;readonly refreshPreparation:RollingMainlineRefreshPreparationV1 | null;readonly refreshResult:RollingMainlineRefreshResultV1 | null;
 }
 export type RollingIncrementState='CLAIMED' | 'REBASING' | 'CONFLICT' | 'REBASED' | 'PUSHING' | 'PUBLISHED' | 'REBASE_REQUIRED' | 'PUSH_REJECTED' | 'UNCONFIRMED';
+export interface RollingPublicationReadinessBlocked {readonly state:'BLOCKED';readonly reason:'publication_owned' | 'integration_active' | 'certificate_acceptance';readonly ownerCampaignId:string}
+export type RollingPublicationReadiness=RollingPublicationSelection | RollingPublicationReadinessBlocked;
+interface RollingPublicationLane {readonly publicationCampaignId:string | null;readonly integrationCampaignId:string | null}
 export interface RollingStoredIncrement {readonly claim:RollingIncrementClaimV1;readonly state:RollingIncrementState;readonly publication:RollingIncrementPublicationV1 | null;readonly obligationSatisfied:boolean}
 export interface RollingStoredReviewDispatch {readonly reviewId:string;readonly dispatch:RollingReviewDispatch}
 export interface RollingStoredWorkerDispatch {readonly assignmentId:string;readonly generation:string;readonly dispatch:RollingWorkerDispatch}
 export interface RollingCoordinatorSnapshot extends RollingCampaignStatus {
+  readonly obligationProjection:ObligationProjection;
   readonly closure:RollingCampaignClosureV1 | null;
   readonly observedGraphDigest: string;
   readonly configuration: RollingExecutionConfigV3;
@@ -192,6 +196,7 @@ export interface RollingCoordinatorSnapshot extends RollingCampaignStatus {
   readonly releasableAssignments:readonly RollingAssignmentRelease[];
   readonly publications: readonly RollingPublicationStatus[];
   readonly increments:readonly RollingStoredIncrement[];
+  readonly publicationReadiness:RollingPublicationReadiness;
 }
 export type RollingActionState = 'PENDING' | 'STARTED' | 'COMPLETED' | 'CANCELLED';
 export type RollingActionKind = 'START_WORKER' | 'RESUME_WORKER';
@@ -852,6 +857,33 @@ export class RollingCampaignStore {
     });
   }
 
+  private async publicationLane(poolClient:PoolClient,rollingCampaignRow:RollingCampaignRow):Promise<RollingPublicationLane> {
+    const publication=(await poolClient.query<Record<string,unknown>>("SELECT campaign_id FROM ponytail_index.rolling_publication_batch_v1 WHERE project_id=$1 AND coordinator_root=$2 AND (state<>'PUBLISHED' OR synchronized_revision IS NULL) LIMIT 1",[this.projectId,rollingCampaignRow.coordinator_root])).rows[0];
+    const integration=(await poolClient.query<Record<string,unknown>>("SELECT i.campaign_id FROM ponytail_index.rolling_increment_v1 i JOIN ponytail_index.rolling_campaign_v1 c USING(project_id,campaign_id) WHERE i.project_id=$1 AND c.coordinator_root=$2 AND i.state<>'PUBLISHED' AND i.repair_reference IS NULL ORDER BY i.created_at,i.increment_id LIMIT 1",[this.projectId,rollingCampaignRow.coordinator_root])).rows[0];
+    return {publicationCampaignId:publication ? stringColumn(publication.campaign_id,'publication owner') : null,integrationCampaignId:integration ? stringColumn(integration.campaign_id,'integration owner') : null};
+  }
+
+  private async orderedAcceptedIncrements(poolClient:PoolClient,rollingCampaignRow:RollingCampaignRow,rollingExecutionConfigV3:RollingExecutionConfigV3):Promise<readonly RollingAcceptedIncrement[]> {
+    const rows = (await poolClient.query<Record<string,unknown>>(
+      'SELECT d.increment_id,d.revision FROM ponytail_index.rolling_increment_delivery_v1 d LEFT JOIN ponytail_index.rolling_publication_member_v1 m USING(project_id,campaign_id,increment_id) WHERE d.project_id=$1 AND d.campaign_id=$2 AND m.increment_id IS NULL',
+      [this.projectId,rollingCampaignRow.campaign_id])).rows;
+    const rollingAcceptedIncrements:readonly RollingAcceptedIncrement[] = rows.map(row=>({id:stringColumn(row.increment_id,'accepted increment ID'),revision:stringColumn(row.revision,'accepted increment revision')}));
+    // Transaction timestamps are not Git ancestry. Build the prefix from the
+    // frozen campaign history, including multiple receipts for the same commit.
+    const map = new Map<string,number>();
+    if (rollingAcceptedIncrements.length > 0) {
+      const history = spawnSync('git',['-C',rollingCampaignRow.coordinator_root,'rev-list','--topo-order','--reverse',`refs/heads/${rollingExecutionConfigV3.incrementRef}^{commit}`],{encoding:'utf8'});
+      requireState(!history.error && history.status === 0,'cannot order publication receipts by campaign history');
+      for (const [index,revision] of history.stdout.trim().split('\n').entries()) map.set(revision,index);
+    }
+    requireState(rollingAcceptedIncrements.every(item=>map.has(item.revision)),'accepted increment is outside the retained campaign history');
+    return [...rollingAcceptedIncrements].sort((left,right)=> {
+      const leftOrdinal = map.get(left.revision), rightOrdinal = map.get(right.revision);
+      requireState(leftOrdinal !== undefined && rightOrdinal !== undefined,'publication receipt ancestry changed');
+      return leftOrdinal-rightOrdinal || left.id.localeCompare(right.id);
+    });
+  }
+
   // Traceability: implements REQ-ROLLING-PUBLICATION
   async claimPublicationBatch(campaignId:string,expectedDigest:string,
     flush:Exclude<RollingPublicationTrigger,'threshold'> | null = null):Promise<RollingPublicationBatchClaimResult> {
@@ -861,10 +893,9 @@ export class RollingCampaignStore {
         "SELECT claim_text FROM ponytail_index.rolling_publication_batch_v1 WHERE project_id=$1 AND campaign_id=$2 AND (state<>'PUBLISHED' OR synchronized_revision IS NULL)",
         [this.projectId,campaignId])).rows[0];
       if (existing) return {state:'CLAIMED',claim:readRollingPublicationBatchClaimV1(readStateText(stringColumn(existing.claim_text,'publication claim')))};
-      const activeIncrements = (await poolClient.query<Record<string,unknown>>(
-        "SELECT i.increment_id FROM ponytail_index.rolling_increment_v1 i JOIN ponytail_index.rolling_campaign_v1 c USING(project_id,campaign_id) WHERE i.project_id=$1 AND c.coordinator_root=$2 AND i.state<>'PUBLISHED' AND i.repair_reference IS NULL",
-        [this.projectId,rollingCampaignRow.coordinator_root])).rows;
-      requireState(activeIncrements.length === 0,'finish the active increment before freezing mainline publication');
+      const rollingPublicationLane=await this.publicationLane(poolClient,rollingCampaignRow);
+      requireState(rollingPublicationLane.publicationCampaignId === null,'mainline publication checkout is owned by another campaign');
+      requireState(rollingPublicationLane.integrationCampaignId === null,'finish the active increment before freezing mainline publication');
       const rollingExecutionConfigV3 = parseRollingExecutionConfig(rollingCampaignRow.configuration_text);
       if (flush === 'completion') requireState(rollingGraph.bindings.every(binding=>rollingGraph.projection.satisfiedIds.includes(binding.obligationId)),
         'completion flush requires all bound delivery obligations to be satisfied');
@@ -875,24 +906,7 @@ export class RollingCampaignStore {
         requireState(rollingSchedulingResult.activeCount === 0 && rollingSchedulingResult.selected.length === 0,
           'quiescence flush requires no active or immediately schedulable work');
       }
-      const rows = (await poolClient.query<Record<string,unknown>>(
-        'SELECT d.increment_id,d.revision FROM ponytail_index.rolling_increment_delivery_v1 d LEFT JOIN ponytail_index.rolling_publication_member_v1 m USING(project_id,campaign_id,increment_id) WHERE d.project_id=$1 AND d.campaign_id=$2 AND m.increment_id IS NULL',
-        [this.projectId,campaignId])).rows;
-      const rollingAcceptedIncrements:readonly RollingAcceptedIncrement[] = rows.map(row=>({id:stringColumn(row.increment_id,'accepted increment ID'),revision:stringColumn(row.revision,'accepted increment revision')}));
-      // Transaction timestamps are not Git ancestry. Build the prefix from the
-      // frozen campaign history, including multiple receipts for the same commit.
-      const map = new Map<string,number>();
-      if (rollingAcceptedIncrements.length > 0) {
-        const history = spawnSync('git',['-C',rollingCampaignRow.coordinator_root,'rev-list','--topo-order','--reverse',`refs/heads/${rollingExecutionConfigV3.incrementRef}^{commit}`],{encoding:'utf8'});
-        requireState(!history.error && history.status === 0,'cannot order publication receipts by campaign history');
-        for (const [index,revision] of history.stdout.trim().split('\n').entries()) map.set(revision,index);
-      }
-      requireState(rollingAcceptedIncrements.every(item=>map.has(item.revision)),'accepted increment is outside the retained campaign history');
-      const orderedRollingAcceptedIncrements = [...rollingAcceptedIncrements].sort((left,right)=> {
-        const leftOrdinal = map.get(left.revision), rightOrdinal = map.get(right.revision);
-        requireState(leftOrdinal !== undefined && rightOrdinal !== undefined,'publication receipt ancestry changed');
-        return leftOrdinal-rightOrdinal || left.id.localeCompare(right.id);
-      });
+      const orderedRollingAcceptedIncrements = await this.orderedAcceptedIncrements(poolClient,rollingCampaignRow,rollingExecutionConfigV3);
       const rollingPublicationSelection = selectRollingPublicationBatch(orderedRollingAcceptedIncrements,rollingExecutionConfigV3.publicationSize,flush);
       if (rollingPublicationSelection.state === 'WAITING') return rollingPublicationSelection;
       const rollingPublicationBatchClaimV1 = readRollingPublicationBatchClaimV1({schemaVersion:1,id:crypto.randomUUID(),campaignId,
@@ -1737,10 +1751,22 @@ export class RollingCampaignStore {
         claim:readRollingPublicationBatchClaimV1(readStateText(stringColumn(row.claim_text,'publication claim'))),state:publicationState(row.state),
         qaId:nullableStringColumn(row.qa_id,'publication QA'),publicationId:nullableStringColumn(row.publication_id,'publication observation'),pendingRefreshId:nullableStringColumn(row.pending_refresh_id,'pending mainline refresh')
       }));
-      return {graphDigest:rollingCampaignRow.graph_digest,observedGraphDigest:rollingGraph.digest,configuration:rollingExecutionConfigV3,
+      const rollingSchedulingResult=selectRollingAssignments(rollingGraph,assignments,rollingExecutionConfigV3.maxActiveWorkers,rollingGraph.digest);
+      const rollingPublicationLane=await this.publicationLane(poolClient,rollingCampaignRow);
+      let rollingPublicationReadiness:RollingPublicationReadiness;
+      if (rollingPublicationLane.publicationCampaignId !== null) rollingPublicationReadiness={state:'BLOCKED',reason:'publication_owned',ownerCampaignId:rollingPublicationLane.publicationCampaignId};
+      else if (rollingPublicationLane.integrationCampaignId !== null) rollingPublicationReadiness={state:'BLOCKED',reason:'integration_active',ownerCampaignId:rollingPublicationLane.integrationCampaignId};
+      else if (increments.some(increment=>increment.state === 'PUBLISHED' && !increment.obligationSatisfied)) rollingPublicationReadiness={state:'BLOCKED',reason:'certificate_acceptance',ownerCampaignId:campaignId};
+      else {
+        const orderedRollingAcceptedIncrements=await this.orderedAcceptedIncrements(poolClient,rollingCampaignRow,rollingExecutionConfigV3);
+        const flush=rollingGraph.bindings.every(binding=>rollingGraph.projection.satisfiedIds.includes(binding.obligationId)) ? 'completion'
+          : rollingSchedulingResult.activeCount === 0 && rollingSchedulingResult.selected.length === 0 ? 'quiescence' : null;
+        rollingPublicationReadiness=selectRollingPublicationBatch(orderedRollingAcceptedIncrements,rollingExecutionConfigV3.publicationSize,flush);
+      }
+      return {obligationProjection:rollingGraph.projection,graphDigest:rollingCampaignRow.graph_digest,observedGraphDigest:rollingGraph.digest,configuration:rollingExecutionConfigV3,
         closure:rollingCampaignRow.closure_text === null ? null : readRollingCampaignClosureV1(readStateText(rollingCampaignRow.closure_text)),
         assignments:assignments.filter(assignment=>assignment.scopeId === campaignId),
-        scheduling:selectRollingAssignments(rollingGraph,assignments,rollingExecutionConfigV3.maxActiveWorkers,rollingGraph.digest),actions,reviews,workerDispatches,reviewDispatches,releasableAssignments,publications,increments};
+        scheduling:rollingSchedulingResult,actions,reviews,workerDispatches,reviewDispatches,releasableAssignments,publications,increments,publicationReadiness:rollingPublicationReadiness};
     },true);
   }
 
