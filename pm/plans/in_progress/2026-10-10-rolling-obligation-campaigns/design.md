@@ -401,6 +401,11 @@ synchronization retains both its local and observed remote revisions. A later
 request returns that immutable receipt without checking out, merging, pushing or
 changing newer campaign work. Failure or unknown outcome retains the reservation.
 
-The initial OBL-62 increment establishes normal push, lost-acknowledgement
-observation, restart synchronization and late-receipt safety. Divergent mainline
-races and changed-input QA refresh remain required before OBL-62 discharge.
+Mainline recovery covers normal push, lost acknowledgement, unavailable remote,
+explicit rejection and divergent mainline races. Refresh intents and preparations
+are retained before Git work, and accepted refresh results select the current
+candidate explicitly. A refresh clears the current QA identity; historical QA
+receipts cannot authorize the refreshed candidate. An unchanged remote can retain
+the same candidate revision while still requiring a new QA attempt. Restart
+synchronization and late receipt safety retain the campaign's later work.
+

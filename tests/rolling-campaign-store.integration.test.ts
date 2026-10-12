@@ -81,7 +81,7 @@ function prepareCoordinatorIncrementCheckout(root: string,branch: string): void 
   execFileSync('git',['-C',root,'switch','-q',branch]);
 }
 
-export async function runRollingReviewScenario(t: TestContext, reviewScenario: ReviewScenario, mainlinePublication:'normal' | 'lost_ack' | 'race' | null = null): Promise<void> {
+export async function runRollingReviewScenario(t: TestContext, reviewScenario: ReviewScenario, mainlinePublication:'normal' | 'lost_ack' | 'race' | 'unavailable' | 'rejected' | null = null): Promise<void> {
   assert.ok(!(reviewScenario.automaticPublication && (reviewScenario.publicationBatch || reviewScenario.publicationFlush || reviewScenario.integratedCertificates)),
     'the short automatic-increment Arc cannot stand in for later publication or certificate phases');
   const reviewDecision = reviewScenario.decision;
@@ -748,7 +748,8 @@ export async function runRollingReviewScenario(t: TestContext, reviewScenario: R
     fs.writeFileSync(configurationPath,JSON.stringify({...passingConfiguration,qa:{...passingConfiguration.qa,publication:[['false']]}}));
     await assert.rejects(restartedPublicationStore.beginMainlinePush('bound-fixture',firstClaim.claim.id),/stale|all required/);
     fs.writeFileSync(configurationPath,JSON.stringify(passingConfiguration));
-    if (mainlinePublication === 'race') {
+    if (mainlinePublication === 'race' || mainlinePublication === 'unavailable' || mainlinePublication === 'rejected') {
+      if (mainlinePublication === 'race') {
       const racingRoot = path.join(root,'managed','racing-mainline');
       execFileSync('git',['clone','-q',remoteRoot,racingRoot]);
       execFileSync('git',['-C',racingRoot,'switch','main']);
@@ -757,6 +758,20 @@ export async function runRollingReviewScenario(t: TestContext, reviewScenario: R
       execFileSync('git',['-C',racingRoot,'-c','user.name=Fixture','-c','user.email=fixture@example.test','commit','-qm','racing mainline change']);
       execFileSync('git',['-C',racingRoot,'push','origin','main']);
       assert.equal((await restartedPublicationStore.publishMainline('bound-fixture',firstClaim.claim.id)).result.state,'REBASE_REQUIRED');
+      } else if (mainlinePublication === 'unavailable') {
+        const unavailableRemoteRoot = `${remoteRoot}.unavailable`;
+        fs.renameSync(remoteRoot,unavailableRemoteRoot);
+        try {
+          assert.equal((await restartedPublicationStore.publishMainline('bound-fixture',firstClaim.claim.id)).result.state,'UNCONFIRMED');
+          assert.equal((await new RollingCampaignStore(pool,projectId).observeMainlinePublication('bound-fixture',firstClaim.claim.id)).result.state,'UNCONFIRMED');
+          await assert.rejects(restartedPublicationStore.beginMainlineRefresh('bound-fixture',firstClaim.claim.id),/observe the original push outcome/);
+        } finally { fs.renameSync(unavailableRemoteRoot,remoteRoot); }
+        assert.equal((await restartedPublicationStore.observeMainlinePublication('bound-fixture',firstClaim.claim.id)).result.state,'REBASE_REQUIRED');
+      } else {
+        fs.writeFileSync(rejectionHook,'#!/bin/sh\nexit 1\n',{mode:0o755});
+        try { assert.equal((await restartedPublicationStore.publishMainline('bound-fixture',firstClaim.claim.id)).result.state,'PUSH_REJECTED'); }
+        finally { fs.rmSync(rejectionHook); }
+      }
       const rollingMainlineRefreshIntentV1 = await restartedPublicationStore.beginMainlineRefresh('bound-fixture',firstClaim.claim.id);
       assert.deepEqual(await restartedPublicationStore.beginMainlineRefresh('bound-fixture',firstClaim.claim.id),rollingMainlineRefreshIntentV1);
       const rollingMainlineRefreshPreparationV1 = prepareRollingMainlineRefresh(rollingPublicationBatchClaimV1,rollingMainlineRefreshIntentV1);
@@ -764,7 +779,8 @@ export async function runRollingReviewScenario(t: TestContext, reviewScenario: R
       const rollingMainlineRefreshResultV1 = mergeRollingMainlineRefresh(rollingPublicationBatchClaimV1,rollingMainlineRefreshPreparationV1);
       const recoveredRollingMainlineRefreshResultV1 = observeRollingMainlineRefresh(rollingPublicationBatchClaimV1,rollingMainlineRefreshPreparationV1);
       assert.deepEqual(recoveredRollingMainlineRefreshResultV1,rollingMainlineRefreshResultV1);
-      assert.notEqual(rollingMainlineRefreshResultV1.candidate.revision,rollingMainlineCandidateV1.revision);
+      if (mainlinePublication === 'race') assert.notEqual(rollingMainlineRefreshResultV1.candidate.revision,rollingMainlineCandidateV1.revision);
+      else assert.equal(rollingMainlineRefreshResultV1.candidate.revision,rollingMainlineCandidateV1.revision);
       await new RollingCampaignStore(pool,projectId).recordMainlineRefresh('bound-fixture',firstClaim.claim.id,recoveredRollingMainlineRefreshResultV1);
       await assert.rejects(restartedPublicationStore.beginMainlinePush('bound-fixture',firstClaim.claim.id),/full publication QA/);
       assert.deepEqual(await restartedPublicationStore.recordPublicationQa('bound-fixture',firstClaim.claim.id,passingRollingPublicationQaV1),passingRollingPublicationQaV1);
@@ -775,7 +791,7 @@ export async function runRollingReviewScenario(t: TestContext, reviewScenario: R
       assert.equal(refreshedRollingPublicationQaV1.outcome,'PASS');
       await restartedPublicationStore.recordPublicationQa('bound-fixture',firstClaim.claim.id,refreshedRollingPublicationQaV1);
       assert.equal((await restartedPublicationStore.publishMainline('bound-fixture',firstClaim.claim.id)).result.state,'PUBLISHED');
-      assert.ok(fs.existsSync(path.join(root,'racing-mainline.txt')));
+      if (mainlinePublication === 'race') assert.ok(fs.existsSync(path.join(root,'racing-mainline.txt')));
     } else if (mainlinePublication === 'normal') {
       assert.equal((await restartedPublicationStore.publishMainline('bound-fixture',firstClaim.claim.id)).result.state,'PUBLISHED');
     } else {
@@ -796,7 +812,7 @@ export async function runRollingReviewScenario(t: TestContext, reviewScenario: R
       assert.equal(synchronizedRollingIncrementPublicationResult.state,'PUBLISHED');
       assert.deepEqual(await restartedPublicationStore.synchronizePublishedCampaign('bound-fixture',firstClaim.claim.id),synchronizedRollingIncrementPublicationResult);
       assert.equal(execFileSync('git',['-C',root,'symbolic-ref','--short','HEAD'],{encoding:'utf8'}).trim(),'campaign/bound-fixture');
-      assert.equal((await pool.query<Record<string,unknown>>('SELECT count(*)::integer AS count FROM ponytail_index.rolling_mainline_publication_v1 WHERE project_id=$1',[projectId])).rows[0]?.count,mainlinePublication === 'race' ? 2 : 1);
+      assert.equal((await pool.query<Record<string,unknown>>('SELECT count(*)::integer AS count FROM ponytail_index.rolling_mainline_publication_v1 WHERE project_id=$1',[projectId])).rows[0]?.count,mainlinePublication === 'unavailable' ? 4 : mainlinePublication === 'race' || mainlinePublication === 'rejected' ? 2 : 1);
       fs.writeFileSync(path.join(root,'later-campaign-work.txt'),'Preserve later work when a completed synchronization receipt is requested.\n');
       execFileSync('git',['-C',root,'add','later-campaign-work.txt']);
       execFileSync('git',['-C',root,'-c','user.name=Fixture','-c','user.email=fixture@example.test','commit','-qm','later campaign work']);
@@ -1760,5 +1776,5 @@ test('publication threshold uses configured M and persists one claim without cou
  t=>runRollingReviewScenario(t,{decision:'accepted',mode:'manual',publicationBatch:'threshold'}));
 
 // Traceability: verifies REQ-ROLLING-PUBLICATION
-for (const mainlinePublication of ['normal','lost_ack','race'] as const) test(`mainline ${mainlinePublication} publication retains one observation and synchronizes the campaign after restart`,
+for (const mainlinePublication of ['normal','lost_ack','race','unavailable','rejected'] as const) test(`mainline ${mainlinePublication} publication retains one observation and synchronizes the campaign after restart`,
  t=>runRollingReviewScenario(t,{decision:'accepted',mode:'manual',publicationBatch:'partial'},mainlinePublication));
