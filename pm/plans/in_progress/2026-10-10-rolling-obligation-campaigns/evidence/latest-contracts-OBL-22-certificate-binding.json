@@ -1,0 +1,123 @@
+{
+  "schemaVersion": 1,
+  "certificateId": "CERT-140",
+  "lease": {
+    "schemaVersion": 1,
+    "scopeId": "2026-10-10-rolling-obligation-campaigns",
+    "baselineId": "BASELINE-16",
+    "graphDigest": "6c97747b05c01e26d9570b252c42a68ec559725efc9a2efd319d414eb56fbddd",
+    "generation": "standalone-publication-batch-CERT-140",
+    "assessor": "coordinator",
+    "authority": [
+      "user-goal-2026-10-10-rolling-campaigns",
+      "user-goal-2026-10-10-static-language-existing-tsts",
+      "user-2026-10-10-normative-atomic-obligations",
+      "user-2026-10-11-language-scope-our-code-preserve-translations"
+    ],
+    "binding": {
+      "obligationId": "OBL-22",
+      "revisionId": "BIND-120",
+      "dependsOn": [],
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "src/rolling-campaign-store.ts",
+          "src/rolling-campaign-store.js",
+          "scripts/project-index.sql",
+          "versioned-data-contracts.json",
+          "tests/rolling-operations.integration.test.ts",
+          "tests/rolling-operations.test.ts",
+          "tests/rolling-campaign-store.test.ts",
+          "tests/rolling-campaign-store.integration.test.ts",
+          ".agents/config/project/traceability.json",
+          "pm/requirements/traceability.generated.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/design.md",
+          "pm/uat/rolling-campaigns.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/latest-contracts-OBL-22.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/latest-contracts-OBL-22-certificate-binding.json",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/latest-contracts-OBL-110.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/latest-contracts-OBL-110-certificate-binding.json"
+        ],
+        "operations": [
+          "inspect",
+          "edit",
+          "build",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "Resolve and retain the campaign publication target using explicit, project, then Git defaults."
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "latest-contracts"
+        }
+      }
+    }
+  },
+  "revision": "ff5bb07fa70e982208ec52975108b6638e2a6fa0",
+  "proof": [
+    {
+      "operation": "test",
+      "certificateEvidenceIndex": 0,
+      "submissionEvidenceIndex": 0
+    },
+    {
+      "operation": "test",
+      "certificateEvidenceIndex": 1,
+      "submissionEvidenceIndex": 1
+    },
+    {
+      "operation": "test",
+      "certificateEvidenceIndex": 2,
+      "submissionEvidenceIndex": 2
+    },
+    {
+      "operation": "check",
+      "certificateEvidenceIndex": 3,
+      "submissionEvidenceIndex": 3
+    },
+    {
+      "operation": "check",
+      "certificateEvidenceIndex": 4,
+      "submissionEvidenceIndex": 4
+    },
+    {
+      "operation": "check",
+      "certificateEvidenceIndex": 5,
+      "submissionEvidenceIndex": 5
+    },
+    {
+      "operation": "check",
+      "certificateEvidenceIndex": 6,
+      "submissionEvidenceIndex": 6
+    },
+    {
+      "operation": "check",
+      "certificateEvidenceIndex": 7,
+      "submissionEvidenceIndex": 7
+    },
+    {
+      "operation": "check",
+      "certificateEvidenceIndex": 8,
+      "submissionEvidenceIndex": 8
+    },
+    {
+      "operation": "check",
+      "certificateEvidenceIndex": 9,
+      "submissionEvidenceIndex": 9
+    },
+    {
+      "operation": "check",
+      "certificateEvidenceIndex": 10,
+      "submissionEvidenceIndex": 10
+    },
+    {
+      "operation": "check",
+      "certificateEvidenceIndex": 11,
+      "submissionEvidenceIndex": 11
+    }
+  ]
+}
