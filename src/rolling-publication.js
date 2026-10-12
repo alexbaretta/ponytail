@@ -15,6 +15,7 @@ exports.readRollingPublicationQaV1 = readRollingPublicationQaV1;
 exports.parseRollingPublicationQa = parseRollingPublicationQa;
 exports.prepareRollingMainline = prepareRollingMainline;
 exports.mergeRollingMainline = mergeRollingMainline;
+exports.observeRollingMainlineCandidate = observeRollingMainlineCandidate;
 exports.verifyRollingMainlineCandidate = verifyRollingMainlineCandidate;
 exports.runRollingPublicationQa = runRollingPublicationQa;
 exports.verifyRollingPublicationQa = verifyRollingPublicationQa;
@@ -168,8 +169,13 @@ function mergeRollingMainline(rollingPublicationBatchClaimV1, rollingMainlinePre
         && (0, rolling_integration_js_1.git)(rootPath, ['rev-parse', 'HEAD']).trim() === checkedRollingMainlinePreparationV1.sourceRevision, 'campaign checkout changed after publication preparation');
     (0, rolling_integration_js_1.git)(rootPath, ['checkout', '-b', publicationBranch(checkedRollingPublicationBatchClaimV1.id).slice('refs/heads/'.length), checkedRollingPublicationBatchClaimV1.campaignRevision]);
     (0, rolling_integration_js_1.git)(rootPath, ['merge', '--no-edit', '--no-ff', checkedRollingMainlinePreparationV1.mainlineRevision]);
-    const rollingMainlineCandidateV1 = readRollingMainlineCandidateV1({ ...checkedRollingMainlinePreparationV1, revision: (0, rolling_integration_js_1.git)(rootPath, ['rev-parse', 'HEAD']).trim() });
-    verifyRollingMainlineCandidate(checkedRollingPublicationBatchClaimV1, rollingMainlineCandidateV1);
+    return observeRollingMainlineCandidate(checkedRollingPublicationBatchClaimV1, checkedRollingMainlinePreparationV1);
+}
+function observeRollingMainlineCandidate(rollingPublicationBatchClaimV1, rollingMainlinePreparationV1) {
+    const checkedRollingMainlinePreparationV1 = readRollingMainlinePreparationV1(rollingMainlinePreparationV1);
+    const rollingMainlineCandidateV1 = readRollingMainlineCandidateV1({ ...checkedRollingMainlinePreparationV1,
+        revision: (0, rolling_integration_js_1.git)(checkedRollingMainlinePreparationV1.rootPath, ['rev-parse', 'HEAD']).trim() });
+    verifyRollingMainlineCandidate(rollingPublicationBatchClaimV1, rollingMainlineCandidateV1);
     return rollingMainlineCandidateV1;
 }
 function verifyRollingMainlineCandidate(rollingPublicationBatchClaimV1, rollingMainlineCandidateV1) {

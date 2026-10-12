@@ -227,8 +227,17 @@ export function mergeRollingMainline(rollingPublicationBatchClaimV1:RollingPubli
  // A merge preserves every already published campaign commit; never replay or
  // rewrite the campaign branch. Textual conflicts remain in this owned branch.
  git(rootPath,['merge','--no-edit','--no-ff',checkedRollingMainlinePreparationV1.mainlineRevision]);
- const rollingMainlineCandidateV1 = readRollingMainlineCandidateV1({...checkedRollingMainlinePreparationV1,revision:git(rootPath,['rev-parse','HEAD']).trim()});
- verifyRollingMainlineCandidate(checkedRollingPublicationBatchClaimV1,rollingMainlineCandidateV1);
+ return observeRollingMainlineCandidate(checkedRollingPublicationBatchClaimV1,checkedRollingMainlinePreparationV1);
+}
+// Traceability: implements REQ-ROLLING-PUBLICATION
+// Observe the original journaled merge after a lost acknowledgement. Do not
+// recreate its branch or repeat a merge whose outcome has not been reconciled.
+export function observeRollingMainlineCandidate(rollingPublicationBatchClaimV1:RollingPublicationBatchClaimV1,
+ rollingMainlinePreparationV1:RollingMainlinePreparationV1):RollingMainlineCandidateV1 {
+ const checkedRollingMainlinePreparationV1 = readRollingMainlinePreparationV1(rollingMainlinePreparationV1);
+ const rollingMainlineCandidateV1 = readRollingMainlineCandidateV1({...checkedRollingMainlinePreparationV1,
+  revision:git(checkedRollingMainlinePreparationV1.rootPath,['rev-parse','HEAD']).trim()});
+ verifyRollingMainlineCandidate(rollingPublicationBatchClaimV1,rollingMainlineCandidateV1);
  return rollingMainlineCandidateV1;
 }
 // Traceability: implements REQ-ROLLING-PUBLICATION

@@ -8,7 +8,7 @@ import crypto from 'node:crypto';
 import test from 'node:test';
 import {execFileSync} from 'node:child_process';
 import {git} from '../src/rolling-integration.js';
-import {prepareRollingMainline,mergeRollingMainline,runRollingPublicationQa,verifyRollingPublicationQa,
+import {prepareRollingMainline,mergeRollingMainline,observeRollingMainlineCandidate,runRollingPublicationQa,verifyRollingPublicationQa,
  type RollingPublicationBatchClaimV1} from '../src/rolling-publication.js';
 import type {RollingArgv} from '../src/rolling-campaign.js';
 
@@ -48,7 +48,9 @@ test('mainline candidate preserves published campaign history and requires compl
  assert.equal(git(coordinatorRoot,['status','--porcelain']),'','fixture must be clean before publication');
  const rollingMainlinePreparationV1 = prepareRollingMainline(rollingPublicationBatchClaimV1);
  assert.equal(rollingMainlinePreparationV1.mainlineRevision,mainlineRevision);assert.equal(rollingMainlinePreparationV1.sourceRevision,sourceRevision);
+ assert.throws(()=>observeRollingMainlineCandidate(rollingPublicationBatchClaimV1,rollingMainlinePreparationV1),/checkout changed/);
  const rollingMainlineCandidateV1 = mergeRollingMainline(rollingPublicationBatchClaimV1,rollingMainlinePreparationV1);
+ assert.deepEqual(observeRollingMainlineCandidate(rollingPublicationBatchClaimV1,rollingMainlinePreparationV1),rollingMainlineCandidateV1);
  assert.equal(git(coordinatorRoot,['rev-parse','campaign/fixture']).trim(),sourceRevision);
  assert.equal(git(root,['--git-dir',remoteRoot,'rev-parse','campaign/fixture']).trim(),sourceRevision);
  assert.equal(fs.existsSync(path.join(coordinatorRoot,'next.txt')),false);
@@ -66,4 +68,34 @@ test('mainline candidate preserves published campaign history and requires compl
  fs.writeFileSync(path.join(coordinatorRoot,'value.ts'),'export const value:number = 3;\n');
  assert.throws(()=>verifyRollingPublicationQa(rollingPublicationBatchClaimV1,rollingMainlineCandidateV1,passingRollingPublicationQaV1,'c'.repeat(64),requiredCommands),/work to preserve/);
  assert.equal(git(root,['--git-dir',remoteRoot,'rev-parse','main']).trim(),mainlineRevision,'QA never pushes the mainline');
+});
+
+// Traceability: verifies REQ-ROLLING-PUBLICATION
+test('conflicting mainline preserves the publication branch, merge state and published campaign refs',testContext=> {
+ const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(),'rolling-publication-conflict-')));
+ testContext.after(()=>fs.rmSync(root,{recursive:true,force:true}));
+ const coordinatorRoot = path.join(root,'coordinator'),remoteRoot = path.join(root,'origin.git'),upstreamRoot = path.join(root,'upstream');
+ fs.mkdirSync(coordinatorRoot);execFileSync('git',['init','-q','-b','main',coordinatorRoot]);
+ git(coordinatorRoot,['config','user.name','Fixture']);git(coordinatorRoot,['config','user.email','fixture@example.test']);
+ fs.writeFileSync(path.join(coordinatorRoot,'value.ts'),'export const value:number = 1;\n');
+ git(coordinatorRoot,['add','.']);git(coordinatorRoot,['commit','-qm','base']);
+ execFileSync('git',['clone','--bare','-q',coordinatorRoot,remoteRoot]);git(coordinatorRoot,['remote','add','origin',remoteRoot]);
+ git(coordinatorRoot,['switch','-c','campaign/conflict']);
+ fs.writeFileSync(path.join(coordinatorRoot,'value.ts'),'export const value:number = 2;\n');
+ git(coordinatorRoot,['add','.']);git(coordinatorRoot,['commit','-qm','accepted campaign behavior']);
+ const campaignRevision = git(coordinatorRoot,['rev-parse','HEAD']).trim();git(coordinatorRoot,['push','origin','campaign/conflict']);
+ execFileSync('git',['clone','-q',remoteRoot,upstreamRoot]);git(upstreamRoot,['config','user.name','Fixture']);git(upstreamRoot,['config','user.email','fixture@example.test']);
+ fs.writeFileSync(path.join(upstreamRoot,'value.ts'),'export const value:number = 3;\n');
+ git(upstreamRoot,['add','.']);git(upstreamRoot,['commit','-qm','conflicting mainline behavior']);git(upstreamRoot,['push','origin','main']);
+ const rollingPublicationBatchClaimV1:RollingPublicationBatchClaimV1 = {schemaVersion:1,id:crypto.randomUUID(),campaignId:'conflict',rootPath:coordinatorRoot,
+  incrementRef:'campaign/conflict',target:{remote:'origin',branch:'main'},graphDigest:'a'.repeat(64),configurationDigest:'b'.repeat(64),publicationSize:1,
+  trigger:'threshold',increments:[{id:crypto.randomUUID(),revision:campaignRevision}],campaignRevision};
+ const rollingMainlinePreparationV1 = prepareRollingMainline(rollingPublicationBatchClaimV1);
+ assert.throws(()=>mergeRollingMainline(rollingPublicationBatchClaimV1,rollingMainlinePreparationV1));
+ assert.equal(git(coordinatorRoot,['diff','--name-only','--diff-filter=U']).trim(),'value.ts');
+ assert.equal(git(coordinatorRoot,['rev-parse','MERGE_HEAD']).trim(),rollingMainlinePreparationV1.mainlineRevision);
+ assert.equal(git(coordinatorRoot,['rev-parse','campaign/conflict']).trim(),campaignRevision);
+ assert.equal(git(root,['--git-dir',remoteRoot,'rev-parse','campaign/conflict']).trim(),campaignRevision);
+ assert.throws(()=>observeRollingMainlineCandidate(rollingPublicationBatchClaimV1,rollingMainlinePreparationV1),/work to preserve/);
+ assert.ok(fs.readFileSync(path.join(coordinatorRoot,'value.ts'),'utf8').includes('<<<<<<<'));
 });

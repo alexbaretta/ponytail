@@ -10,7 +10,7 @@ import path from 'node:path';
 import { execFileSync,spawnSync } from 'node:child_process';
 import { Pool } from 'pg';
 import { stringify } from 'lossless-json';
-import {prepareRollingMainline,mergeRollingMainline,runRollingPublicationQa} from '../src/rolling-publication.js';
+import {prepareRollingMainline,mergeRollingMainline,observeRollingMainlineCandidate,runRollingPublicationQa} from '../src/rolling-publication.js';
 import { databaseOptions } from '../src/project-index-database.js';
 import { collectRollingGraph, parseRollingProjectConfig,type RollingPhysicalProjectConfig, type RollingProjectConfigV1, type RollingBindingsV1, type RollingBinding, type RollingGraph } from '../src/rolling-campaign.js';
 import { RollingCampaignStore, type RollingCampaignRegistration, type RollingAllocationResult, type RollingWorkerDispatchAttached, type RollingReviewDispatchAttached, type RollingSessionAttachment, type RollingStoredAssignment, type RollingCampaignStatus } from '../src/rolling-campaign-store.js';
@@ -69,7 +69,7 @@ test('native code fixture approvals permit exact shell-wrapped commands only for
 
 // Traceability: verifies REQ-ROLLING-STATE
 // Traceability: verifies REQ-ROLLING-SCHEDULING
-export interface ReviewScenario { readonly decision: RollingReviewOutcomeV1['decision']; readonly mode: 'manual' | 'protocol' | 'native'; readonly replaceLostReviewer?: boolean; readonly automaticPublication?: boolean; readonly conflictContinuation?: boolean; readonly conflictRepair?: boolean; readonly integratedCertificates?: boolean; readonly publicationBatch?: boolean }
+export interface ReviewScenario { readonly decision: RollingReviewOutcomeV1['decision']; readonly mode: 'manual' | 'protocol' | 'native'; readonly replaceLostReviewer?: boolean; readonly automaticPublication?: boolean; readonly conflictContinuation?: boolean; readonly conflictRepair?: boolean; readonly integratedCertificates?: boolean; readonly publicationBatch?:'threshold' | 'partial'; readonly publicationFlush?:'completion' | 'quiescence' }
 function declineReviewApprovals(rollingCodex: RollingCodex): void {
   rollingCodex.on('serverRequest', message => rollingCodex.respondToServer(message.id, { decision: 'decline' }));
 }
@@ -119,7 +119,7 @@ export async function runRollingReviewScenario(t: TestContext, reviewScenario: R
   const rollingProjectConfigV1: RollingProjectConfigV1 = {
     schemaVersion: 1, mainline: { remote: 'origin', branch: 'main' },
     managedWorktrees: { directory: 'managed', anchor: 'main' }, maxActiveWorkers: 1,
-    publicationSize: reviewScenario.publicationBatch ? 2 : 1, setupCommands: [], qa: { focused: [], publication: reviewScenario.publicationBatch ? [['env','-u','NODE_TEST_CONTEXT',process.execPath,'--test','fixture/full.test.ts']] : [['node', '--test']] },
+    publicationSize: reviewScenario.publicationBatch === 'threshold' ? 1 : reviewScenario.publicationBatch || reviewScenario.publicationFlush ? 2 : 1, setupCommands: [], qa: { focused: [], publication: reviewScenario.publicationBatch ? [['env','-u','NODE_TEST_CONTEXT',process.execPath,'--test','fixture/full.test.ts']] : [['node', '--test']] },
   };
   fs.writeFileSync(path.join(root, '.agents/config/project/rolling-campaigns.json'), JSON.stringify(rollingProjectConfigV1));
   const source = path.join(repositoryRoot, 'pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/obligations.json');
@@ -147,7 +147,7 @@ export async function runRollingReviewScenario(t: TestContext, reviewScenario: R
   const rollingCampaignStore: RollingCampaignStore = new RollingCampaignStore(pool, projectId);
   const rollingCampaignRegistration: RollingCampaignRegistration = { id: 'fixture', coordinatorRoot: root, documentPath: 'obligations.json',
     bindingsPath: 'bindings.json', graphDigest: graphRollingGraph.digest, managedDirectory: path.join(root, 'managed'),
-    configuration: { mainline: { remote: 'origin', branch: 'main' }, incrementRef: 'campaign/fixture', maxActiveWorkers: 1, publicationSize: reviewScenario.publicationBatch ? 2 : 1 } };
+    configuration: { mainline: { remote: 'origin', branch: 'main' }, incrementRef: 'campaign/fixture', maxActiveWorkers: 1, publicationSize: reviewScenario.publicationBatch === 'threshold' ? 1 : reviewScenario.publicationBatch || reviewScenario.publicationFlush ? 2 : 1 } };
   await rollingCampaignStore.registerCampaign(rollingCampaignRegistration);
   const allocations: readonly RollingAllocationResult[] = await Promise.all(Array.from({ length: 4 }, () => rollingCampaignStore.allocate('fixture', graphRollingGraph.digest)));
   const allocated: readonly RollingAllocationResult[] = allocations.filter(item => item.assignment);
@@ -698,16 +698,17 @@ export async function runRollingReviewScenario(t: TestContext, reviewScenario: R
     const currentRollingGraph = collectRollingGraph(root,'bound-obligations.json','bound-bindings.json','history.json');
     const currentDigest = (await rollingCampaignStore.status('bound-fixture')).graphDigest;
     if (currentDigest !== currentRollingGraph.digest) await rollingCampaignStore.reconcileGraph('bound-fixture',currentDigest,currentRollingGraph.digest);
-    assert.deepEqual(await rollingCampaignStore.claimPublicationBatch('bound-fixture',currentRollingGraph.digest),{state:'WAITING',reason:'below_threshold',count:1});
+    if (reviewScenario.publicationBatch === 'partial') assert.deepEqual(await rollingCampaignStore.claimPublicationBatch('bound-fixture',currentRollingGraph.digest),{state:'WAITING',reason:'below_threshold',count:1});
     await assert.rejects(rollingCampaignStore.claimPublicationBatch('bound-fixture',currentRollingGraph.digest,'completion'),/bound delivery obligations/);
-    const claims = await Promise.all(Array.from({length:4},()=>rollingCampaignStore.claimPublicationBatch('bound-fixture',currentRollingGraph.digest,'explicit_flush')));
+    const claims = await Promise.all(Array.from({length:4},()=>rollingCampaignStore.claimPublicationBatch('bound-fixture',currentRollingGraph.digest,reviewScenario.publicationBatch === 'partial' ? 'explicit_flush' : null)));
     const firstClaim = claims[0];assert.ok(firstClaim && firstClaim.state === 'CLAIMED');
-    assert.equal(firstClaim.claim.trigger,'explicit_flush');assert.equal(firstClaim.claim.publicationSize,2);
+    assert.equal(firstClaim.claim.trigger,reviewScenario.publicationBatch === 'partial' ? 'explicit_flush' : 'threshold');assert.equal(firstClaim.claim.publicationSize,reviewScenario.publicationBatch === 'partial' ? 2 : 1);
     assert.equal(firstClaim.claim.increments.length,1);
     assert.ok(claims.every(item=>item.state === 'CLAIMED' && item.claim.id === firstClaim.claim.id));
     assert.deepEqual(await new RollingCampaignStore(pool,projectId).claimPublicationBatch('bound-fixture',currentRollingGraph.digest),firstClaim);
     assert.equal((await pool.query<Record<string,unknown>>('SELECT count(*)::integer AS count FROM ponytail_index.rolling_publication_member_v1 WHERE project_id=$1',[projectId])).rows[0]?.count,1);
     assert.equal((await pool.query<Record<string,unknown>>('SELECT count(*)::integer AS count FROM ponytail_index.rolling_publication_batch_v1 WHERE project_id=$1',[projectId])).rows[0]?.count,1);
+    if (reviewScenario.publicationBatch === 'threshold') return;
     await assert.rejects(rollingCampaignStore.claimIncrement('bound-fixture',crypto.randomUUID()),/publication owns the coordinator checkout/);
     await assert.rejects(rollingCampaignStore.beginMainlinePush('bound-fixture',firstClaim.claim.id),/full publication QA/);
     execFileSync('git',['-C',remoteRoot,'update-ref','refs/heads/main',baseCommit]);
@@ -716,7 +717,9 @@ export async function runRollingReviewScenario(t: TestContext, reviewScenario: R
     await rollingCampaignStore.recordMainlinePreparation('bound-fixture',firstClaim.claim.id,rollingMainlinePreparationV1);
     const rollingMainlineCandidateV1 = mergeRollingMainline(rollingPublicationBatchClaimV1,rollingMainlinePreparationV1);
     const restartedPublicationStore = new RollingCampaignStore(pool,projectId);
-    await restartedPublicationStore.recordMainlineCandidate('bound-fixture',firstClaim.claim.id,rollingMainlineCandidateV1);
+    const recoveredRollingMainlineCandidateV1 = observeRollingMainlineCandidate(rollingPublicationBatchClaimV1,rollingMainlinePreparationV1);
+    assert.deepEqual(recoveredRollingMainlineCandidateV1,rollingMainlineCandidateV1);
+    await restartedPublicationStore.recordMainlineCandidate('bound-fixture',firstClaim.claim.id,recoveredRollingMainlineCandidateV1);
     await restartedPublicationStore.recordMainlineCandidate('bound-fixture',firstClaim.claim.id,rollingMainlineCandidateV1);
     const configurationPath = path.join(root,'.agents/config/project/rolling-campaigns.json');
     const passingConfiguration = parseRollingProjectConfig(fs.readFileSync(configurationPath,'utf8'));
@@ -839,6 +842,19 @@ export async function runRollingReviewScenario(t: TestContext, reviewScenario: R
     assert.ok(acceptedRollingGraph.projection.satisfiedIds.includes(firstRollingBinding.obligationId));
     assert.equal((await rollingCampaignStore.status('bound-fixture')).graphDigest,acceptedRollingGraph.digest);
     assert.equal(acceptedRollingGraph.document.checkpoints.filter(checkpoint=>checkpoint.id === boundObligationCheckpoint.id).length,1);
+    if (reviewScenario.publicationFlush) {
+      if (reviewScenario.publicationFlush === 'quiescence') {
+        // Controlled host acknowledgements stop the fixture's retained workers;
+        // the native cessation boundary is exercised by its separate live Arc.
+        await rollingCampaignStore.suspend('fixture',reactivatedRollingAllocationResult.assignment.id,reactivatedRollingAllocationResult.assignment.generation,true,['OBL-1']);
+        await rollingCampaignStore.suspend('bound-fixture',submissionRollingStoredAssignment.id,submissionRollingStoredAssignment.generation,true,['OBL-1']);
+      }
+      const rollingPublicationBatchClaimResult = await rollingCampaignStore.claimPublicationBatch('bound-fixture',acceptedRollingGraph.digest,reviewScenario.publicationFlush);
+      assert.ok(rollingPublicationBatchClaimResult.state === 'CLAIMED');
+      assert.equal(rollingPublicationBatchClaimResult.claim.trigger,reviewScenario.publicationFlush);
+      assert.equal(rollingPublicationBatchClaimResult.claim.increments.length,1);
+      assert.equal(rollingPublicationBatchClaimResult.claim.publicationSize,2);
+    }
     return;
   }
   const acceptedBoundObligationDocumentV1 = acceptBoundCheckpoint(boundObligationDocumentV1, candidateBoundObligationDocumentV1, root,
@@ -1672,4 +1688,12 @@ test('worker retirement revokes native ownership and fences checkout release thr
 
 // Traceability: verifies REQ-ROLLING-PUBLICATION
 test('publication batch freezes one shared partial claim across concurrent requests and restart',
- t=>runRollingReviewScenario(t,{decision:'accepted',mode:'manual',automaticPublication:true,publicationBatch:true}));
+ t=>runRollingReviewScenario(t,{decision:'accepted',mode:'manual',automaticPublication:true,publicationBatch:'partial'}));
+
+// Traceability: verifies REQ-ROLLING-PUBLICATION
+for (const publicationFlush of ['completion','quiescence'] as const) test(`publication partial flush follows verified ${publicationFlush} state`,
+ t=>runRollingReviewScenario(t,{decision:'accepted',mode:'manual',integratedCertificates:true,publicationFlush}));
+
+// Traceability: verifies REQ-ROLLING-PUBLICATION
+test('publication threshold uses configured M and persists one claim without counting acknowledgement retries',
+ t=>runRollingReviewScenario(t,{decision:'accepted',mode:'manual',automaticPublication:true,publicationBatch:'threshold'}));
