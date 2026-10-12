@@ -107,10 +107,8 @@ Installed shell tools:
 | Tool | Purpose |
 | --- | --- |
 | `ponytail register\|unregister\|list-projects\|bless[-worktree]\|blessed[-worktree]\|register-component\|unregister-component\|list-components\|register-dependency\|unregister-dependency\|list-dependencies\|detect-components\|pre-commit\|validate\|qa\|update-permissions\|update-skills\|update` | Register, unregister, and list repositories; select worktree configuration; manage components and dependencies; install pre-commit QA; run local QA; and update Codex configuration |
-| `ponytail campaign validate <plan-name-or-path>` | Fail-fast validation of the campaign containing the supplied managed plan |
-| `ponytail campaign report [<plan-name-or-path>] [--json] [--[no-]summary-table] [--[no-]plan-table] [--[no-]sprint-table]` | Report the selected or uniquely active campaign's census |
-| `ponytail campaign list [--active\|--pending\|--closed\|--deferred\|--rejected]` | List campaigns in one normalized lifecycle status; active is the default |
-| `ponytail campaign activate <plan-name-or-path>` | Resolve a campaign root through parent links and activate a pending campaign |
+| `ponytail campaign <command> [arguments]` | Coordinate rolling obligation campaigns; use `campaign --help` for commands and `campaign <command> --help` for arguments and behavior |
+| `ponytail campaign legacy --command <validate\|report\|list\|status\|reservation-audit> [--arguments <JSON-array>]` | Explicit read-only inspection of historical campaign records |
 | `ponytail worktree reclaim [--dry-run] [--json]` | Inventory and reclaim worktree claims that the invoking project's lifecycle adapter proves abandoned |
 | `ponytail pm pdf <collection\|all> [--output-dir <path>]` | Render configured linked Markdown collections as PDFs using Pandoc and XeLaTeX |
 | `audit_pm.sh [--fix] [--dryrun]` | Audit PM structure and preview or fix missing date prefixes |
@@ -119,6 +117,12 @@ Installed shell tools:
 | `bug_stats.sh [date]` | Count bugs by lifecycle state on or after a date |
 | `condense_codex_rules.sh --project root [--dry-run\|--check\|--restore]` | Low-level isolated Codex command-policy compiler |
 | `project_journal.sh init\|start\|run_command\|over ...` | Initialize or record long-lived-plan telemetry in PostgreSQL |
+
+Rolling campaigns use Ponytail-managed Git checkouts and direct Codex App Server
+sessions. Campaign execution requires no Ponytail plugin; MCP is an optional
+transport for the same coordination operations. Commands use named arguments:
+`ponytail campaign status --campaign <id>` and
+`ponytail campaign next-actions --campaign <id>`.
 
 The `issue-tracking` skill defines configurable issue types and shared
 issue/plan statuses. The `requirements` skill maintains a linked Markdown web

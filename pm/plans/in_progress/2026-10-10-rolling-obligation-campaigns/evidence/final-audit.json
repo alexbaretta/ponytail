@@ -113,5 +113,16 @@
     "OBL-112",
     "OBL-44",
     "OBL-45"
-  ]
+  ],
+  "currentAssessmentStatus": "renewal_required_after_documentation_reconciliation",
+  "documentationRepair": {
+    "path": "README.md",
+    "confirmedGap": "Installed-tools table advertised four retired campaign commands as live commands.",
+    "repair": "Document the rolling campaign help, explicit read-only legacy inspection, named arguments and direct native sessions without a Ponytail plugin.",
+    "proof": [
+      "tmp/final-readme-campaign-help.log",
+      "tmp/final-readme-legacy-help.log"
+    ],
+    "certificateEffect": "Existing certificates explicitly hash README.md. Preserve historical records and renew assessment of unchanged implementation after the corrected documentary input is committed."
+  }
 }
