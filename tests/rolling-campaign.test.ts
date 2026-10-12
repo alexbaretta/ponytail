@@ -92,11 +92,11 @@ test('campaign resolution rejects invalid targets, missing defaults and invalid 
   for (const branch of ['has space', '../master', 'release..next', 'main.lock', '-master']) {
     assert.throws(() => resolveRollingConfiguration(rollingProjectConfigV1, {
       ...rollingCampaignRequest, mainline: { remote: 'origin', branch } }, 'master'), /invalid mainline/);
-    assert.throws(() => resolveRollingConfiguration(rollingProjectConfigV1, { ...rollingCampaignRequest, incrementRef: branch }, 'master'), /invalid increment/);
+    assert.throws(() => resolveRollingConfiguration(rollingProjectConfigV1, { ...rollingCampaignRequest, incrementRef: branch }, 'master'), /invalid campaign increment branch/);
   }
   assert.throws(() => resolveRollingConfiguration(rollingProjectConfigV1, { ...rollingCampaignRequest, incrementRef: 'main' }, 'master'), /must differ/);
-  assert.throws(() => resolveRollingConfiguration(rollingProjectConfigV1, { ...rollingCampaignRequest, maxActiveWorkers: 0 }, 'master'), /positive safe integer/);
-  assert.throws(() => resolveRollingConfiguration(rollingProjectConfigV1, { ...rollingCampaignRequest, publicationSize: 1.1 }, 'master'), /positive safe integer/);
+  assert.throws(() => resolveRollingConfiguration(rollingProjectConfigV1, { ...rollingCampaignRequest, maxActiveWorkers: 0 }, 'master'), /invalid campaign capacity/);
+  assert.throws(() => resolveRollingConfiguration(rollingProjectConfigV1, { ...rollingCampaignRequest, publicationSize: 1.1 }, 'master'), /invalid campaign publication size/);
   rollingProjectConfigV1 = { ...rollingProjectConfigV1, mainline: null };
   assert.throws(() => resolveRollingConfiguration(rollingProjectConfigV1, rollingCampaignRequest, null), /invalid mainline branch/);
 });

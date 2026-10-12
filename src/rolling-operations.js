@@ -11,10 +11,12 @@ exports.readRollingCampaignInitializationV1 = readRollingCampaignInitializationV
 exports.parseRollingCampaignInitialization = parseRollingCampaignInitialization;
 exports.projectRollingCoordinatorActions = projectRollingCoordinatorActions;
 exports.withRollingCampaignOperations = withRollingCampaignOperations;
+exports.executeRollingCommand = executeRollingCommand;
 exports.runRollingOperationCli = runRollingOperationCli;
 const node_fs_1 = __importDefault(require("node:fs"));
 const node_path_1 = __importDefault(require("node:path"));
 const pg_1 = require("pg");
+const node_child_process_1 = require("node:child_process");
 const lossless_json_1 = require("lossless-json");
 const project_index_database_js_1 = require("./project-index-database.js");
 const obligations_js_1 = require("../skills/plan-execution/scripts/obligations.js");
@@ -22,6 +24,11 @@ const rolling_campaign_js_1 = require("./rolling-campaign.js");
 const rolling_worktrees_js_1 = require("./rolling-worktrees.js");
 const rolling_campaign_store_js_1 = require("./rolling-campaign-store.js");
 const rolling_integration_js_1 = require("./rolling-integration.js");
+const rolling_codex_js_1 = require("./rolling-codex.js");
+const rolling_worker_js_1 = require("./rolling-worker.js");
+const rolling_review_js_1 = require("./rolling-review.js");
+const rolling_publication_js_1 = require("./rolling-publication.js");
+const rolling_cli_registry_js_1 = require("./rolling-cli-registry.js");
 function isRecord(value) { return value !== null && typeof value === 'object' && !Array.isArray(value); }
 function record(value) {
     if (!isRecord(value))
@@ -43,12 +50,51 @@ exports.RollingCampaignInitializationReaders = { V1: readRollingCampaignInitiali
 function readJson(text) {
     return (0, lossless_json_1.parse)(text, null, token => {
         const number = Number(token);
-        if (!/^(0|[1-9][0-9]*)$/u.test(token) || !Number.isSafeInteger(number))
-            throw new Error('rolling campaign: JSON numbers must be exact nonnegative safe integers');
+        if (!/^(0|-?[1-9][0-9]*)$/u.test(token) || !Number.isSafeInteger(number))
+            throw new Error('rolling campaign: JSON numbers must be exact safe integers');
         return number;
     });
 }
 function parseRollingCampaignInitialization(text) { return readRollingCampaignInitializationV1(readJson(text)); }
+function stringField(input, name) {
+    const value = input[name];
+    if (typeof value !== 'string' || value.trim() !== value || value.length === 0 || value.includes('\0'))
+        throw new Error(`rolling campaign: ${name} must be a nonempty string`);
+    return value;
+}
+function stringArray(value) {
+    if (!Array.isArray(value) || !value.every((item) => typeof item === 'string' && item.length > 0))
+        throw new Error('rolling campaign: expected a string array');
+    return value;
+}
+class RollingLegacyInspectionError extends Error {
+    exitCode;
+    constructor(exitCode, message) {
+        super(message);
+        this.exitCode = exitCode;
+    }
+}
+function readRollingCommandInput(command, value) {
+    const input = record(value);
+    const definition = rolling_cli_registry_js_1.rollingCommandDefinitions.find(item => item.name === command);
+    if (!definition || Object.keys(input).some(key => !definition.fields.some(field => field.name === key)))
+        throw new Error('rolling campaign: undeclared command arguments');
+    for (const field of definition.fields)
+        if (field.required && input[field.name] === undefined)
+            throw new Error(`rolling campaign: required argument ${field.name} is missing`);
+    return input;
+}
+function inspectRollingLegacy(root, value) {
+    const input = readRollingCommandInput('legacy', value);
+    const inspection = stringField(input, 'command');
+    if (!['validate', 'report', 'list', 'status', 'reservation-audit'].includes(inspection))
+        throw new Error('rolling campaign: legacy dispatch and mutation are retired; only explicit inspection is supported');
+    const arguments_ = input.arguments === undefined ? [] : stringArray(input.arguments);
+    const result = (0, node_child_process_1.spawnSync)(process.execPath, [node_path_1.default.join(__dirname, 'campaign-census.js'), inspection, ...arguments_], { cwd: root, encoding: 'utf8' });
+    if (result.error || result.status !== 0)
+        throw new RollingLegacyInspectionError(result.status ?? 1, result.error?.message || result.stderr.trim() || 'historical campaign inspection failed');
+    return result.stdout;
+}
 function publicationCommand(rollingPublicationStatus) {
     switch (rollingPublicationStatus.state) {
         case 'FROZEN': return 'prepare-publication';
@@ -66,6 +112,8 @@ function publicationCommand(rollingPublicationStatus) {
     }
 }
 function projectRollingCoordinatorActions(rollingCoordinatorSnapshot) {
+    if (rollingCoordinatorSnapshot.closure !== null)
+        return { snapshot: rollingCoordinatorSnapshot, decisions: [] };
     if (rollingCoordinatorSnapshot.graphDigest !== rollingCoordinatorSnapshot.observedGraphDigest)
         return { snapshot: rollingCoordinatorSnapshot,
             decisions: [{ kind: 'reconcile', expectedDigest: rollingCoordinatorSnapshot.graphDigest, observedDigest: rollingCoordinatorSnapshot.observedGraphDigest }] };
@@ -87,11 +135,15 @@ function projectRollingCoordinatorActions(rollingCoordinatorSnapshot) {
 }
 class RollingCampaignOperations {
     rollingCampaignStore;
-    constructor(rollingCampaignStore) {
+    root;
+    constructor(rollingCampaignStore, root) {
         this.rollingCampaignStore = rollingCampaignStore;
+        this.root = root;
     }
     async initialize(rollingCampaignInitializationV1) {
         readRollingCampaignInitializationV1(rollingCampaignInitializationV1);
+        if (node_fs_1.default.realpathSync(rollingCampaignInitializationV1.coordinatorRoot) !== node_fs_1.default.realpathSync(this.root))
+            throw new Error('rolling campaign: initialization root differs from the invoking project');
         const { coordinatorRoot, documentPath, bindingsPath, bindingHistory } = rollingCampaignInitializationV1;
         const rollingResolvedConfiguration = (0, rolling_campaign_js_1.loadRollingConfiguration)(coordinatorRoot, rollingCampaignInitializationV1.configuration);
         if ((0, rolling_integration_js_1.git)(coordinatorRoot, ['status', '--porcelain']).trim() !== '')
@@ -131,6 +183,146 @@ class RollingCampaignOperations {
     reconcile(campaignId) { return this.rollingCampaignStore.reconcileCoordinator(campaignId); }
     status(campaignId) { return this.rollingCampaignStore.coordinatorSnapshot(campaignId); }
     async nextActions(campaignId) { return projectRollingCoordinatorActions(await this.status(campaignId)); }
+    async native(signal, operation) {
+        const rollingCodex = await rolling_codex_js_1.RollingCodex.connect({ cwd: this.root });
+        let cancellation = null;
+        const abort = () => { cancellation ??= rollingCodex.interruptOwnedTurns(); };
+        signal?.addEventListener('abort', abort, { once: true });
+        rollingCodex.on('serverRequest', request => rollingCodex.respondToServer(request.id, { decision: 'decline' }));
+        try {
+            if (signal?.aborted)
+                throw new Error('rolling campaign: operation interrupted');
+            return await operation(rollingCodex);
+        }
+        finally {
+            try {
+                if (cancellation !== null)
+                    await cancellation;
+                await rollingCodex.waitForObservedTurns(3600000);
+                if (cancellation !== null)
+                    await cancellation;
+            }
+            finally {
+                signal?.removeEventListener('abort', abort);
+                await rollingCodex.close();
+            }
+        }
+    }
+    async preparePublication(campaignId, batchId) {
+        let rollingPublicationContext = await this.rollingCampaignStore.publicationContext(campaignId, batchId);
+        if (rollingPublicationContext.candidate !== null)
+            return rollingPublicationContext.candidate;
+        if (rollingPublicationContext.preparation === null) {
+            const rollingPublicationBatchClaimV1 = await this.rollingCampaignStore.beginMainlinePreparation(campaignId, batchId);
+            await this.rollingCampaignStore.recordMainlinePreparation(campaignId, batchId, (0, rolling_publication_js_1.prepareRollingMainline)(rollingPublicationBatchClaimV1));
+            rollingPublicationContext = await this.rollingCampaignStore.publicationContext(campaignId, batchId);
+        }
+        if (rollingPublicationContext.preparation === null)
+            throw new Error('rolling campaign: publication preparation remains unresolved');
+        const rollingMainlineCandidateV1 = (0, rolling_integration_js_1.git)(rollingPublicationContext.claim.rootPath, ['symbolic-ref', 'HEAD']).trim() === `refs/heads/${rollingPublicationContext.claim.incrementRef}`
+            ? (0, rolling_publication_js_1.mergeRollingMainline)(rollingPublicationContext.claim, rollingPublicationContext.preparation)
+            : (0, rolling_publication_js_1.observeRollingMainlineCandidate)(rollingPublicationContext.claim, rollingPublicationContext.preparation);
+        return this.rollingCampaignStore.recordMainlineCandidate(campaignId, batchId, rollingMainlineCandidateV1);
+    }
+    async refreshPublication(campaignId, batchId, observe) {
+        let rollingPublicationContext = await this.rollingCampaignStore.publicationContext(campaignId, batchId);
+        if (observe && rollingPublicationContext.refreshResult !== null)
+            return rollingPublicationContext.refreshResult;
+        const rollingMainlineRefreshIntentV1 = observe ? rollingPublicationContext.refreshIntent : await this.rollingCampaignStore.beginMainlineRefresh(campaignId, batchId);
+        if (rollingMainlineRefreshIntentV1 === null)
+            throw new Error('rolling campaign: refresh has no original retained intent');
+        rollingPublicationContext = await this.rollingCampaignStore.publicationContext(campaignId, batchId);
+        if (rollingPublicationContext.refreshPreparation === null) {
+            const rollingMainlineRefreshPreparationV1 = (0, rolling_publication_js_1.prepareRollingMainlineRefresh)(rollingPublicationContext.claim, rollingMainlineRefreshIntentV1);
+            await this.rollingCampaignStore.recordMainlineRefreshPreparation(campaignId, batchId, rollingMainlineRefreshPreparationV1);
+            rollingPublicationContext = await this.rollingCampaignStore.publicationContext(campaignId, batchId);
+        }
+        if (rollingPublicationContext.refreshPreparation === null)
+            throw new Error('rolling campaign: original refresh preparation is unresolved');
+        const rollingMainlineRefreshResultV1 = (0, rolling_integration_js_1.git)(rollingPublicationContext.claim.rootPath, ['rev-parse', 'HEAD']).trim() === rollingPublicationContext.refreshPreparation.previousCandidate.revision
+            ? (0, rolling_publication_js_1.mergeRollingMainlineRefresh)(rollingPublicationContext.claim, rollingPublicationContext.refreshPreparation)
+            : (0, rolling_publication_js_1.observeRollingMainlineRefresh)(rollingPublicationContext.claim, rollingPublicationContext.refreshPreparation);
+        return this.rollingCampaignStore.recordMainlineRefresh(campaignId, batchId, rollingMainlineRefreshResultV1);
+    }
+    async execute(command, value, signal) {
+        if (command === 'legacy')
+            return { command, result: inspectRollingLegacy(this.root, value) };
+        const input = readRollingCommandInput(command, value);
+        const timeoutMs = 3600000;
+        switch (command) {
+            case 'init': return { command, result: await this.initialize(readRollingCampaignInitializationV1(input.request)) };
+            case 'reconcile': return { command, result: await this.reconcile(stringField(input, 'campaign')) };
+            case 'status': return { command, result: await this.status(stringField(input, 'campaign')) };
+            case 'next-actions': return { command, result: await this.nextActions(stringField(input, 'campaign')) };
+            case 'replenish': {
+                const trigger = input.trigger ?? 'periodic';
+                if (trigger !== 'event' && trigger !== 'periodic')
+                    throw new Error('rolling campaign: trigger must be event or periodic');
+                let rollingAssignmentRelease = null;
+                if (input.release !== undefined) {
+                    const release = record(input.release);
+                    if (Object.keys(release).some(key => !['id', 'generation'].includes(key)))
+                        throw new Error('rolling campaign: undeclared release fields');
+                    rollingAssignmentRelease = { id: stringField(release, 'id'), generation: stringField(release, 'generation') };
+                }
+                return { command, result: await this.replenish(stringField(input, 'campaign'), trigger, rollingAssignmentRelease) };
+            }
+            case 'provision-worker': return { command, result: await this.native(signal, async (rollingCodex) => {
+                    const campaignId = stringField(input, 'campaign'), actionId = stringField(input, 'action'), generation = stringField(input, 'generation');
+                    const rollingWorkerInitialization = await (0, rolling_worker_js_1.provisionRollingWorker)(this.rollingCampaignStore, rollingCodex, campaignId, actionId, generation);
+                    return (0, rolling_worker_js_1.attachRollingWorker)(this.rollingCampaignStore, rollingCodex, campaignId, actionId, generation, rollingWorkerInitialization, timeoutMs);
+                }) };
+            case 'recover-worker': return { command, result: await this.native(signal, rollingCodex => (0, rolling_worker_js_1.recoverRollingWorkerCreation)(this.rollingCampaignStore, rollingCodex, stringField(input, 'campaign'), stringField(input, 'action'), stringField(input, 'generation'))) };
+            case 'resume-worker':
+            case 'observe-resumption': return { command, result: await this.native(signal, rollingCodex => (0, rolling_worker_js_1.resumeRollingWorker)(this.rollingCampaignStore, rollingCodex, stringField(input, 'campaign'), stringField(input, 'action'), stringField(input, 'generation'))) };
+            case 'dispatch-worker': return { command, result: await this.native(signal, async (rollingCodex) => {
+                    const campaignId = stringField(input, 'campaign'), assignmentId = stringField(input, 'assignment'), generation = stringField(input, 'generation');
+                    await (0, rolling_worker_js_1.dispatchRollingWorker)(this.rollingCampaignStore, rollingCodex, campaignId, assignmentId, generation);
+                    return (0, rolling_worker_js_1.collectRollingWorkerSubmission)(this.rollingCampaignStore, rollingCodex, campaignId, assignmentId, generation, timeoutMs);
+                }) };
+            case 'collect-submission': return { command, result: await this.native(signal, rollingCodex => (0, rolling_worker_js_1.collectRollingWorkerSubmission)(this.rollingCampaignStore, rollingCodex, stringField(input, 'campaign'), stringField(input, 'assignment'), stringField(input, 'generation'), timeoutMs)) };
+            case 'suspend-worker': return { command, result: await this.native(signal, rollingCodex => (0, rolling_worker_js_1.suspendRollingWorker)(this.rollingCampaignStore, rollingCodex, stringField(input, 'campaign'), stringField(input, 'assignment'), stringField(input, 'generation'), stringArray(input.blockers), timeoutMs)) };
+            case 'retire-worker': return { command, result: await this.native(signal, rollingCodex => (0, rolling_worker_js_1.retireRollingWorker)(this.rollingCampaignStore, rollingCodex, stringField(input, 'campaign'), stringField(input, 'assignment'), stringField(input, 'generation'), timeoutMs)) };
+            case 'request-review': return { command, result: await this.rollingCampaignStore.requestReview(stringField(input, 'campaign'), stringField(input, 'assignment'), stringField(input, 'generation'), stringField(input, 'revision'), stringField(input, 'reviewer')) };
+            case 'dispatch-review': return { command, result: await this.native(signal, async (rollingCodex) => {
+                    const campaignId = stringField(input, 'campaign'), reviewId = stringField(input, 'review');
+                    const rollingReviewContext = await this.rollingCampaignStore.reviewContext(campaignId, reviewId);
+                    const rollingNativeThread = await rollingCodex.resumeThread(stringField(input, 'thread'), rollingReviewContext.rootPath);
+                    await (0, rolling_review_js_1.dispatchRollingReview)(this.rollingCampaignStore, rollingCodex, campaignId, reviewId, rollingNativeThread);
+                    return (0, rolling_review_js_1.collectRollingReview)(this.rollingCampaignStore, rollingCodex, campaignId, reviewId, timeoutMs);
+                }) };
+            case 'inspect-review': return { command, result: await this.native(signal, rollingCodex => (0, rolling_review_js_1.collectRollingReview)(this.rollingCampaignStore, rollingCodex, stringField(input, 'campaign'), stringField(input, 'review'), timeoutMs)) };
+            case 'integrate': return { command, result: await this.rollingCampaignStore.publishIncrement(stringField(input, 'campaign'), stringField(input, 'review')) };
+            case 'accept': return { command, result: await this.rollingCampaignStore.acceptIncrementCertificates(stringField(input, 'campaign'), stringField(input, 'review'), stringField(input, 'candidate'), stringArray(input.bindings)) };
+            case 'freeze-publication': {
+                const campaignId = stringField(input, 'campaign');
+                const rollingGraphReconciliation = await this.reconcile(campaignId);
+                const flush = input.flush ?? null;
+                if (flush !== null && flush !== 'explicit_flush' && flush !== 'completion' && flush !== 'quiescence')
+                    throw new Error('rolling campaign: invalid publication flush trigger');
+                return { command, result: await this.rollingCampaignStore.claimPublicationBatch(campaignId, rollingGraphReconciliation.graphDigest, flush) };
+            }
+            case 'prepare-publication':
+            case 'observe-preparation': return { command, result: await this.preparePublication(stringField(input, 'campaign'), stringField(input, 'batch')) };
+            case 'inspect-publication-conflict':
+            case 'observe-publication-qa': return { command, result: await this.rollingCampaignStore.publicationContext(stringField(input, 'campaign'), stringField(input, 'batch')) };
+            case 'run-publication-qa': {
+                const campaignId = stringField(input, 'campaign'), batchId = stringField(input, 'batch');
+                const rollingPublicationQaJobV1 = await this.rollingCampaignStore.beginPublicationQa(campaignId, batchId);
+                const rollingPublicationContext = await this.rollingCampaignStore.publicationContext(campaignId, batchId);
+                if (rollingPublicationContext.candidate === null)
+                    throw new Error('rolling campaign: QA has no verified candidate');
+                const rollingPublicationQaV1 = (0, rolling_publication_js_1.runRollingPublicationQa)(rollingPublicationContext.claim, rollingPublicationContext.candidate, rollingPublicationQaJobV1.id, rollingPublicationQaJobV1.configurationDigest, rollingPublicationQaJobV1.commands);
+                return { command, result: await this.rollingCampaignStore.recordPublicationQa(campaignId, batchId, rollingPublicationQaV1) };
+            }
+            case 'publish-mainline': return { command, result: await this.rollingCampaignStore.publishMainline(stringField(input, 'campaign'), stringField(input, 'batch')) };
+            case 'observe-mainline': return { command, result: await this.rollingCampaignStore.observeMainlinePublication(stringField(input, 'campaign'), stringField(input, 'batch')) };
+            case 'refresh-mainline':
+            case 'observe-refresh': return { command, result: await this.refreshPublication(stringField(input, 'campaign'), stringField(input, 'batch'), command === 'observe-refresh') };
+            case 'synchronize-campaign': return { command, result: await this.rollingCampaignStore.synchronizePublishedCampaign(stringField(input, 'campaign'), stringField(input, 'batch')) };
+            case 'close': return { command, result: await this.rollingCampaignStore.closeCampaign(stringField(input, 'campaign')) };
+        }
+    }
     async replenish(campaignId, trigger, rollingAssignmentRelease = null) {
         const rollingGraphReconciliation = await this.reconcile(campaignId);
         const initialRollingCoordinatorSnapshot = await this.status(campaignId);
@@ -152,40 +344,65 @@ async function withRollingCampaignOperations(root, operation) {
         throw new Error('rolling campaign: invoking project journal has no valid V1 identity');
     const pool = new pg_1.Pool((0, project_index_database_js_1.databaseOptions)(root));
     try {
-        return await operation(new RollingCampaignOperations(new rolling_campaign_store_js_1.RollingCampaignStore(pool, project.projectId)));
+        return await operation(new RollingCampaignOperations(new rolling_campaign_store_js_1.RollingCampaignStore(pool, project.projectId), root));
     }
     finally {
         await pool.end();
     }
 }
+async function executeRollingCommand(root, command, value, signal) {
+    if (command === 'legacy')
+        return { command, result: inspectRollingLegacy(node_fs_1.default.realpathSync(root), value) };
+    return withRollingCampaignOperations(root, rollingCampaignOperations => rollingCampaignOperations.execute(command, value, signal));
+}
 async function runRollingOperationCli(argv) {
-    const [command, argument] = argv;
+    const [command, ...arguments_] = argv;
     if (command === undefined || command === '--help') {
-        process.stdout.write('Usage: rolling-operations <init request.json|reconcile campaign|status campaign|next-actions campaign|replenish campaign>\n');
+        process.stdout.write((0, rolling_cli_registry_js_1.rollingCampaignHelp)());
         return;
     }
-    if (argv.length !== 2 || argument === undefined || argument.trim() === '')
-        throw new Error('rolling campaign: command requires exactly one request path or campaign ID');
-    const root = node_fs_1.default.realpathSync(process.cwd());
-    const result = await withRollingCampaignOperations(root, async (rollingCampaignOperations) => {
-        switch (command) {
-            case 'init': {
-                const rollingCampaignInitializationV1 = parseRollingCampaignInitialization(node_fs_1.default.readFileSync(argument, 'utf8'));
-                if (node_fs_1.default.realpathSync(rollingCampaignInitializationV1.coordinatorRoot) !== root)
-                    throw new Error('rolling campaign: initialization root differs from the invoking project');
-                return rollingCampaignOperations.initialize(rollingCampaignInitializationV1);
-            }
-            case 'reconcile': return rollingCampaignOperations.reconcile(argument);
-            case 'status': return rollingCampaignOperations.status(argument);
-            case 'next-actions': return rollingCampaignOperations.nextActions(argument);
-            case 'replenish': return rollingCampaignOperations.replenish(argument, 'periodic');
-            default: throw new Error(`rolling campaign: unknown operation ${command}`);
+    if (!(0, rolling_cli_registry_js_1.isRollingCommandName)(command))
+        throw new Error(`rolling campaign: unknown command ${command}`);
+    if (arguments_.length === 1 && arguments_[0] === '--help') {
+        process.stdout.write((0, rolling_cli_registry_js_1.rollingCampaignHelp)(command));
+        return;
+    }
+    const definition = rolling_cli_registry_js_1.rollingCommandDefinitions.find(item => item.name === command);
+    if (!definition)
+        throw new Error('rolling campaign: missing command definition');
+    const input = {};
+    let jsonOutput = false;
+    for (let index = 0; index < arguments_.length; index++) {
+        const flag = arguments_[index];
+        if (flag === '--json') {
+            if (jsonOutput)
+                throw new Error('rolling campaign: repeated --json');
+            jsonOutput = true;
+            continue;
         }
-    });
-    process.stdout.write(JSON.stringify(result) + '\n');
+        const field = definition.fields.find(item => `--${item.name}` === flag);
+        if (!field || Object.hasOwn(input, field.name))
+            throw new Error(`rolling campaign: unknown or repeated argument ${flag}`);
+        const value = arguments_[++index];
+        if (value === undefined || value.startsWith('--'))
+            throw new Error(`rolling campaign: missing value for ${flag}`);
+        input[field.name] = field.kind === 'json' ? readJson(value.startsWith('@') ? node_fs_1.default.readFileSync(value.slice(1), 'utf8') : value) : value;
+    }
+    const abortController = new AbortController();
+    const cancel = () => abortController.abort();
+    process.once('SIGINT', cancel);
+    try {
+        const rollingOperationResponse = await executeRollingCommand(node_fs_1.default.realpathSync(process.cwd()), command, input, abortController.signal);
+        process.stdout.write(JSON.stringify(rollingOperationResponse) + '\n');
+    }
+    finally {
+        process.removeListener('SIGINT', cancel);
+        if (abortController.signal.aborted)
+            process.exitCode = 130;
+    }
 }
 if (require.main === module)
     runRollingOperationCli(process.argv.slice(2)).catch((error) => {
         process.stderr.write((error instanceof Error ? error.message : String(error)) + '\n');
-        process.exitCode = 1;
+        process.exitCode = error instanceof RollingLegacyInspectionError ? error.exitCode : 1;
     });

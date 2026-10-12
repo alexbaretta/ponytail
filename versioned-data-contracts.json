@@ -839,6 +839,14 @@
       "versions": ["V1"],
       "supportedReadVersions": ["V1"],
       "supportedDowngradeVersions": []
+    },
+    {
+      "id": "rolling-campaign-closure",
+      "implementation": {"workspace": "ponytail", "module": "src/rolling-campaign-store.ts", "readerRegistryExport": "RollingCampaignClosureReaders"},
+      "currentVersion": "V1",
+      "versions": ["V1"],
+      "supportedReadVersions": ["V1"],
+      "supportedDowngradeVersions": []
     }
   ]
 }

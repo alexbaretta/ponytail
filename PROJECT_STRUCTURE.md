@@ -130,14 +130,20 @@ while project-wide management records remain under `pm/`.
   provenance, independently of host tools.
   `src/rolling-campaign.ts` owns the new rolling execution configuration and
   independently testable graph/scheduling boundary. Its project configuration
-  is `.agents/config/project/rolling-campaigns.json`; existing campaign dispatch
-  remains legacy until the replacement operation layer is integrated.
+  is `.agents/config/project/rolling-campaigns.json`. The installed campaign
+  chapter routes to the rolling operation layer; historical readers are available
+  through explicit read-only `campaign legacy` inspection.
   `src/rolling-publication.ts` owns accepted-increment publication batch
   selection, nonempty partial-flush policy, history-preserving mainline candidate
   preparation and exact-candidate full QA validation. Its shipped `.js` entrypoint is
   compiler output materialized by `scripts/build-runtime.ts`.
   `src/rolling-operations.ts` owns shared typed campaign initialization,
-  coordinator decisions and event/periodic replenishment.
+  coordinator decisions, event/periodic replenishment, native worker/reviewer
+  execution and publication operations. `src/rolling-cli-registry.ts` owns
+  the command names, fields and help used by CLI and MCP.
+  `ponytail-mcp/rolling.ts` registers those operations over stdio, with an
+  explicit invoking project root. Its entrypoint is `ponytail-mcp/index.ts`;
+  their `.js` files are compiler output from the runtime generator.
   `src/rolling-campaign-store.ts` owns transactional PostgreSQL campaign,
   checkout and assignment leases and durable external-action intents.
   Its tables and indexes use the existing `scripts/project-index.sql` setup.

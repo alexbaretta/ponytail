@@ -6,7 +6,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.RollingCampaignStore = exports.RollingExecutionConfigReaders = exports.RollingAssignmentScopeReaders = void 0;
+exports.RollingCampaignStore = exports.RollingExecutionConfigReaders = exports.RollingAssignmentScopeReaders = exports.RollingCampaignClosureReaders = void 0;
+exports.readRollingCampaignClosureV1 = readRollingCampaignClosureV1;
 exports.readRollingAssignmentScopeV1 = readRollingAssignmentScopeV1;
 exports.readRollingExecutionConfigV1 = readRollingExecutionConfigV1;
 exports.readRollingAssignmentScopeV2 = readRollingAssignmentScopeV2;
@@ -28,6 +29,19 @@ const rolling_worker_js_1 = require("./rolling-worker.js");
 const rolling_worktrees_js_1 = require("./rolling-worktrees.js");
 const rolling_review_js_1 = require("./rolling-review.js");
 const rolling_campaign_js_1 = require("./rolling-campaign.js");
+function readRollingCampaignClosureV1(value) {
+    requireKeys(value, ['schemaVersion', 'id', 'campaignId', 'graphDigest', 'revision', 'campaignRemoteRevision', 'mainlineRevision']);
+    const id = stringColumn(value.id, 'closure ID');
+    requireState(/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/u.test(id), 'invalid closure ID');
+    const campaignId = stringColumn(value.campaignId, 'closure campaign');
+    const graphDigest = stringColumn(value.graphDigest, 'closure graph');
+    requireState(/^[a-f0-9]{64}$/u.test(graphDigest), 'invalid closure graph');
+    const revision = stringColumn(value.revision, 'closure revision'), campaignRemoteRevision = stringColumn(value.campaignRemoteRevision, 'closure campaign remote'), mainlineRevision = stringColumn(value.mainlineRevision, 'closure mainline');
+    for (const commit of [revision, campaignRemoteRevision, mainlineRevision])
+        requireState(/^([a-f0-9]{40}|[a-f0-9]{64})$/u.test(commit), 'invalid closure commit');
+    return { schemaVersion: 1, id, campaignId, graphDigest, revision, campaignRemoteRevision, mainlineRevision };
+}
+exports.RollingCampaignClosureReaders = { V1: readRollingCampaignClosureV1 };
 function readWorkerRetirement(row) {
     const rollingWorkerRetirementV1 = (0, rolling_worker_js_1.readRollingWorkerRetirementV1)(readStateText(stringColumn(row.context_text, 'retirement context')));
     const state = row.state;
@@ -185,7 +199,7 @@ function readCampaign(value) {
     requireState(isRecord(value), 'campaign is not registered');
     return { campaign_id: stringColumn(value.campaign_id, 'campaign ID'), coordinator_root: stringColumn(value.coordinator_root, 'coordinator root'),
         document_path: stringColumn(value.document_path, 'document path'), bindings_path: stringColumn(value.bindings_path, 'bindings path'),
-        graph_digest: stringColumn(value.graph_digest, 'graph digest'), configuration_text: stringColumn(value.configuration_text, 'configuration text') };
+        graph_digest: stringColumn(value.graph_digest, 'graph digest'), configuration_text: stringColumn(value.configuration_text, 'configuration text'), closure_text: nullableStringColumn(value.closure_text, 'campaign closure') };
 }
 function readAssignment(value) {
     requireState(isRecord(value), 'assignment row is missing');
@@ -225,14 +239,15 @@ class RollingCampaignStore {
         this.pool = pool;
         this.projectId = projectId;
     }
-    async transaction(campaignId, operation) {
+    async transaction(campaignId, operation, allowClosed = false) {
         const poolClient = await this.pool.connect();
         try {
             await poolClient.query('BEGIN');
             const pool = (await poolClient.query('SELECT * FROM ponytail_index.rolling_pool_v1 WHERE project_id=$1 FOR UPDATE', [this.projectId])).rows[0];
             const rollingPoolRow = readPool(pool);
-            const campaign = (await poolClient.query('SELECT * FROM ponytail_index.rolling_campaign_v1 WHERE project_id=$1 AND campaign_id=$2 FOR UPDATE', [this.projectId, campaignId])).rows[0];
+            const campaign = (await poolClient.query('SELECT c.*, (SELECT receipt_text FROM ponytail_index.rolling_campaign_closure_v1 r WHERE r.project_id=c.project_id AND r.campaign_id=c.campaign_id) AS closure_text FROM ponytail_index.rolling_campaign_v1 c WHERE c.project_id=$1 AND c.campaign_id=$2 FOR UPDATE', [this.projectId, campaignId])).rows[0];
             const rollingCampaignRow = readCampaign(campaign);
+            requireState(allowClosed || rollingCampaignRow.closure_text === null, 'campaign is closed; scheduling and mutations are refused');
             const result = await operation(poolClient, rollingCampaignRow, rollingPoolRow);
             await poolClient.query('COMMIT');
             return result;
@@ -260,7 +275,8 @@ class RollingCampaignStore {
             const pool = (await poolClient.query('SELECT managed_directory FROM ponytail_index.rolling_pool_v1 WHERE project_id=$1 FOR UPDATE', [this.projectId])).rows[0];
             requireState(readPool(pool).managed_directory === request.managedDirectory, 'managed directory differs from project pool');
             await poolClient.query('INSERT INTO ponytail_index.rolling_campaign_v1(project_id,campaign_id,coordinator_root,document_path,bindings_path,graph_digest,configuration_text) VALUES($1,$2,$3,$4,$5,$6,$7) ON CONFLICT (project_id,campaign_id) DO NOTHING', [this.projectId, request.id, rollingGraph.coordinatorRoot, request.documentPath, request.bindingsPath, rollingGraph.digest, JSON.stringify(rollingExecutionConfig)]);
-            const registeredRollingCampaignRow = readCampaign((await poolClient.query('SELECT * FROM ponytail_index.rolling_campaign_v1 WHERE project_id=$1 AND campaign_id=$2', [this.projectId, request.id])).rows[0]);
+            const registeredRollingCampaignRow = readCampaign((await poolClient.query('SELECT c.*, (SELECT receipt_text FROM ponytail_index.rolling_campaign_closure_v1 r WHERE r.project_id=c.project_id AND r.campaign_id=c.campaign_id) AS closure_text FROM ponytail_index.rolling_campaign_v1 c WHERE c.project_id=$1 AND c.campaign_id=$2', [this.projectId, request.id])).rows[0]);
+            requireState(registeredRollingCampaignRow.closure_text === null, 'campaign is closed');
             requireState(registeredRollingCampaignRow.coordinator_root === rollingGraph.coordinatorRoot && registeredRollingCampaignRow.document_path === request.documentPath
                 && registeredRollingCampaignRow.bindings_path === request.bindingsPath && registeredRollingCampaignRow.graph_digest === rollingGraph.digest
                 && (0, node_util_1.isDeepStrictEqual)(executionConfiguration(registeredRollingCampaignRow.configuration_text), rollingExecutionConfig), 'campaign is already initialized with different inputs; reconcile its retained state');
@@ -641,6 +657,21 @@ class RollingCampaignStore {
         const row = (await poolClient.query('SELECT claim_text FROM ponytail_index.rolling_publication_batch_v1 WHERE project_id=$1 AND campaign_id=$2 AND batch_id=$3', [this.projectId, campaignId, id])).rows[0];
         requireState(row, 'publication batch is missing');
         return (0, rolling_publication_js_1.readRollingPublicationBatchClaimV1)(readStateText(stringColumn(row.claim_text, 'publication claim')));
+    }
+    async publicationContext(campaignId, id) {
+        return this.transaction(campaignId, async (poolClient) => {
+            const row = (await poolClient.query('SELECT p.preparation_text,c.candidate_text,q.job_text,q.result_text AS qa_text,r.intent_text AS refresh_intent,r.preparation_text AS refresh_preparation,r.result_text AS refresh_result FROM ponytail_index.rolling_publication_batch_v1 b LEFT JOIN ponytail_index.rolling_publication_preparation_v1 p USING(project_id,campaign_id,batch_id) LEFT JOIN ponytail_index.rolling_publication_candidate_v1 c USING(project_id,campaign_id,batch_id) LEFT JOIN ponytail_index.rolling_publication_qa_v1 q ON q.project_id=b.project_id AND q.campaign_id=b.campaign_id AND q.batch_id=b.batch_id AND q.qa_id=b.qa_id LEFT JOIN ponytail_index.rolling_mainline_refresh_v1 r ON r.project_id=b.project_id AND r.campaign_id=b.campaign_id AND r.batch_id=b.batch_id AND r.refresh_id=CASE WHEN b.pending_refresh_id IS NULL THEN b.refresh_id ELSE b.pending_refresh_id END WHERE b.project_id=$1 AND b.campaign_id=$2 AND b.batch_id=$3', [this.projectId, campaignId, id])).rows[0];
+            requireState(row, 'publication batch is missing');
+            const preparation = nullableStringColumn(row.preparation_text, 'publication preparation');
+            const job = nullableStringColumn(row.job_text, 'QA job'), qa = nullableStringColumn(row.qa_text, 'QA result');
+            const refreshIntent = nullableStringColumn(row.refresh_intent, 'refresh intent'), refreshPreparation = nullableStringColumn(row.refresh_preparation, 'refresh preparation'), refreshResult = nullableStringColumn(row.refresh_result, 'refresh result');
+            return { claim: await this.publicationClaim(poolClient, campaignId, id), preparation: preparation === null ? null : (0, rolling_publication_js_1.readRollingMainlinePreparationV1)(readStateText(preparation)),
+                candidate: row.candidate_text === null ? null : await this.publicationCandidate(poolClient, campaignId, id),
+                qaJob: job === null ? null : (0, rolling_publication_js_1.readRollingPublicationQaJobV1)(readStateText(job)), qa: qa === null ? null : (0, rolling_publication_js_1.parseRollingPublicationQa)(qa),
+                refreshIntent: refreshIntent === null ? null : (0, rolling_publication_js_1.readRollingMainlineRefreshIntentV1)(readStateText(refreshIntent)),
+                refreshPreparation: refreshPreparation === null ? null : (0, rolling_publication_js_1.readRollingMainlineRefreshPreparationV1)(readStateText(refreshPreparation)),
+                refreshResult: refreshResult === null ? null : (0, rolling_publication_js_1.readRollingMainlineRefreshResultV1)(readStateText(refreshResult)) };
+        }, true);
     }
     async beginMainlinePreparation(campaignId, id) {
         return this.transaction(campaignId, async (poolClient) => {
@@ -1341,7 +1372,7 @@ class RollingCampaignStore {
     }
     async status(campaignId) {
         return this.transaction(campaignId, async (poolClient, rollingCampaignRow) => ({ graphDigest: rollingCampaignRow.graph_digest,
-            assignments: (await poolClient.query('SELECT * FROM ponytail_index.rolling_assignment_v1 WHERE project_id=$1 AND campaign_id=$2 ORDER BY created_at,assignment_id', [this.projectId, campaignId])).rows.map(readAssignment) }));
+            assignments: (await poolClient.query('SELECT * FROM ponytail_index.rolling_assignment_v1 WHERE project_id=$1 AND campaign_id=$2 ORDER BY created_at,assignment_id', [this.projectId, campaignId])).rows.map(readAssignment) }), true);
     }
     async coordinatorSnapshot(campaignId) {
         return this.transaction(campaignId, async (poolClient, rollingCampaignRow) => {
@@ -1355,9 +1386,40 @@ class RollingCampaignStore {
                 qaId: nullableStringColumn(row.qa_id, 'publication QA'), publicationId: nullableStringColumn(row.publication_id, 'publication observation'), pendingRefreshId: nullableStringColumn(row.pending_refresh_id, 'pending mainline refresh')
             }));
             return { graphDigest: rollingCampaignRow.graph_digest, observedGraphDigest: rollingGraph.digest, configuration: rollingExecutionConfig,
+                closure: rollingCampaignRow.closure_text === null ? null : readRollingCampaignClosureV1(readStateText(rollingCampaignRow.closure_text)),
                 assignments: assignments.filter(assignment => assignment.scopeId === campaignId),
                 scheduling: (0, rolling_campaign_js_1.selectRollingAssignments)(rollingGraph, assignments, rollingExecutionConfig.maxActiveWorkers, rollingGraph.digest), actions, reviews, publications };
-        });
+        }, true);
+    }
+    async closeCampaign(campaignId) {
+        return this.transaction(campaignId, async (poolClient, rollingCampaignRow) => {
+            if (rollingCampaignRow.closure_text !== null)
+                return readRollingCampaignClosureV1(readStateText(rollingCampaignRow.closure_text));
+            const rollingGraph = this.graph(rollingCampaignRow, rollingCampaignRow.graph_digest);
+            requireState(rollingGraph.projection.unresolvedIds.length === 0, `closure requires fresh adequate evidence: ${rollingGraph.projection.unresolvedIds.join(', ')}`);
+            const owners = (await poolClient.query("SELECT EXISTS(SELECT 1 FROM ponytail_index.rolling_assignment_v1 WHERE project_id=$1 AND campaign_id=$2 AND state<>'RELEASED') AS present", [this.projectId, campaignId])).rows[0];
+            requireState(owners && owners.present === false, 'closure requires every original worker owner retired and released');
+            const actions = (await poolClient.query("SELECT EXISTS(SELECT 1 FROM ponytail_index.rolling_action_v1 WHERE project_id=$1 AND campaign_id=$2 AND state IN ('PENDING','STARTED')) AS present", [this.projectId, campaignId])).rows[0];
+            requireState(actions && actions.present === false, 'closure requires reconciled action outcomes');
+            const publications = (await poolClient.query("SELECT EXISTS(SELECT 1 FROM ponytail_index.rolling_publication_batch_v1 WHERE project_id=$1 AND campaign_id=$2 AND (state<>'PUBLISHED' OR synchronized_revision IS NULL)) OR EXISTS(SELECT 1 FROM ponytail_index.rolling_increment_delivery_v1 d LEFT JOIN ponytail_index.rolling_publication_member_v1 m USING(project_id,campaign_id,increment_id) WHERE d.project_id=$1 AND d.campaign_id=$2 AND m.increment_id IS NULL) AS present", [this.projectId, campaignId])).rows[0];
+            requireState(publications && publications.present === false, 'closure requires all accepted increments published and synchronized');
+            const rollingExecutionConfig = executionConfiguration(rollingCampaignRow.configuration_text);
+            const rootPath = rollingCampaignRow.coordinator_root;
+            requireState((0, rolling_integration_js_1.git)(rootPath, ['status', '--porcelain=v1', '-z', '--untracked-files=all']).length === 0, 'closure requires a clean coordinator checkout');
+            requireState((0, rolling_integration_js_1.git)(rootPath, ['symbolic-ref', 'HEAD']).trim() === `refs/heads/${rollingExecutionConfig.incrementRef}`, 'closure requires the configured campaign checkout');
+            const revision = (0, rolling_integration_js_1.git)(rootPath, ['rev-parse', 'HEAD']).trim();
+            const rollingIncrementPublicationResult = (0, rolling_integration_js_1.reconcileRollingIncrementPublication)({ rootPath, target: { remote: rollingExecutionConfig.mainline.remote, branch: rollingExecutionConfig.incrementRef }, revision });
+            requireState(rollingIncrementPublicationResult.state === 'PUBLISHED', 'closure requires observed campaign remote containment');
+            const mainlineRef = `refs/remotes/${rollingExecutionConfig.mainline.remote}/${rollingExecutionConfig.mainline.branch}`;
+            (0, rolling_integration_js_1.git)(rootPath, ['fetch', '--no-tags', '--', rollingExecutionConfig.mainline.remote, `refs/heads/${rollingExecutionConfig.mainline.branch}:${mainlineRef}`]);
+            const mainlineRevision = (0, rolling_integration_js_1.git)(rootPath, ['rev-parse', `${mainlineRef}^{commit}`]).trim();
+            const deliveries = (await poolClient.query('SELECT revision FROM ponytail_index.rolling_increment_delivery_v1 WHERE project_id=$1 AND campaign_id=$2', [this.projectId, campaignId])).rows;
+            for (const delivery of deliveries)
+                (0, rolling_integration_js_1.git)(rootPath, ['merge-base', '--is-ancestor', stringColumn(delivery.revision, 'delivered increment'), mainlineRevision]);
+            const rollingCampaignClosureV1 = readRollingCampaignClosureV1({ schemaVersion: 1, id: node_crypto_1.default.randomUUID(), campaignId, graphDigest: rollingGraph.digest, revision, campaignRemoteRevision: rollingIncrementPublicationResult.remoteRevision, mainlineRevision });
+            await poolClient.query('INSERT INTO ponytail_index.rolling_campaign_closure_v1(project_id,campaign_id,receipt_text) VALUES($1,$2,$3)', [this.projectId, campaignId, JSON.stringify(rollingCampaignClosureV1)]);
+            return rollingCampaignClosureV1;
+        }, true);
     }
     async nextActions(campaignId) {
         const rows = (await this.pool.query("SELECT * FROM ponytail_index.rolling_action_v1 WHERE project_id=$1 AND campaign_id=$2 AND state IN ('PENDING','STARTED') ORDER BY created_at,action_id", [this.projectId, campaignId])).rows;

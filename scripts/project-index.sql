@@ -263,6 +263,15 @@ CREATE TABLE IF NOT EXISTS rolling_campaign_v1 (
   configuration_text text NOT NULL,
   PRIMARY KEY (project_id, campaign_id)
 );
+CREATE TABLE IF NOT EXISTS rolling_campaign_closure_v1 (
+  project_id uuid NOT NULL,
+  campaign_id text NOT NULL,
+  receipt_text text NOT NULL,
+  PRIMARY KEY (project_id,campaign_id),
+  FOREIGN KEY (project_id,campaign_id) REFERENCES rolling_campaign_v1(project_id,campaign_id) ON DELETE CASCADE,
+  CHECK (COALESCE((receipt_text::jsonb)->>'schemaVersion'='1'
+    AND (receipt_text::jsonb)->>'campaignId'=campaign_id,false))
+);
 ALTER TABLE rolling_campaign_v1
   DROP CONSTRAINT IF EXISTS rolling_campaign_v1_configuration_text_check,
   ADD CONSTRAINT rolling_campaign_v1_configuration_text_check

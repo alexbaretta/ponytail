@@ -5,14 +5,71 @@ import test from 'node:test';
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import {spawnSync} from 'node:child_process';
+import {spawn,spawnSync} from 'node:child_process';
+import {createInterface} from 'node:readline';
 import {Pool} from 'pg';
 import {databaseOptions} from '../src/project-index-database.js';
 import {fixture,git} from './helpers/obligation-fixture.js';
 import {RollingCampaignStore} from '../src/rolling-campaign-store.js';
 import {RollingCampaignOperations,type RollingCampaignInitializationV1,type RollingReplenishment} from '../src/rolling-operations.js';
 import type {RollingProjectConfigV1,RollingBindingsV1} from '../src/rolling-campaign.js';
-import {acceptCheckpoint,inputDigest,type ObligationCertificate,type ObligationCheckpoint,type ObligationDocumentV1,type Obligation} from '../skills/plan-execution/scripts/obligations.js';
+import {acceptCheckpoint,inputDigest,type ObligationCertificate,type ObligationCheckpoint,type ObligationDocumentV1,type Obligation,type ObligationVector} from '../skills/plan-execution/scripts/obligations.js';
+import {rollingCommandDefinitions} from '../src/rolling-cli-registry.js';
+
+// Traceability: verifies REQ-ROLLING-INTERFACES
+async function verifyMcpParity(root:string,rollingCampaignOperations:RollingCampaignOperations):Promise<void> {
+ const childProcess = spawn(process.execPath,[path.join(process.cwd(),'ponytail-mcp/index.js')],{cwd:root,stdio:['pipe','pipe','pipe']});
+ let stderr = '';
+ childProcess.stderr.setEncoding('utf8').on('data',(text:string)=>{stderr+=text;});
+ const interface_ = createInterface({input:childProcess.stdout});
+ const pending = new Map<number,{resolve:(value:unknown)=>void;reject:(error:Error)=>void}>();
+ interface_.on('line',line=> {
+  const value:unknown = JSON.parse(line);
+  if (value !== null && typeof value === 'object' && 'id' in value && typeof value.id === 'number') {
+   const request = pending.get(value.id);
+   if (request) {pending.delete(value.id);request.resolve(value);}
+  }
+ });
+ childProcess.on('exit',()=> {for (const request of pending.values()) request.reject(new Error(`MCP exited: ${stderr}`));pending.clear();});
+ let id = 0;
+ async function request(method:string,params:unknown):Promise<unknown> {
+  const requestId = ++id;
+  return new Promise((resolve,reject)=> {
+   const timeout = setTimeout(()=> {pending.delete(requestId);reject(new Error(`MCP request timed out: ${method}; ${stderr}`));},15000);
+   pending.set(requestId,{resolve:value=>{clearTimeout(timeout);resolve(value);},reject:error=>{clearTimeout(timeout);reject(error);}});
+   childProcess.stdin.write(JSON.stringify({jsonrpc:'2.0',id:requestId,method,params})+'\n');
+  });
+ }
+ try {
+  const initialized:unknown = await request('initialize',{protocolVersion:'2024-11-05',capabilities:{},clientInfo:{name:'ponytail-parity-proof',version:'1'}});
+  assert.ok(initialized !== null && typeof initialized === 'object' && 'result' in initialized);
+  childProcess.stdin.write(JSON.stringify({jsonrpc:'2.0',method:'notifications/initialized'})+'\n');
+  const listed:unknown = await request('tools/list',{});
+  assert.ok(listed !== null && typeof listed === 'object' && 'result' in listed);
+  const result = listed.result;
+  assert.ok(result !== null && typeof result === 'object' && 'tools' in result && Array.isArray(result.tools));
+  for (const rollingCommandDefinition of rollingCommandDefinitions) {
+   const tool:unknown = result.tools.find((tool:unknown)=>tool !== null && typeof tool === 'object' && 'name' in tool && tool.name === `ponytail_campaign_${rollingCommandDefinition.name.replaceAll('-','_')}`);
+   assert.ok(tool !== null && typeof tool === 'object' && 'inputSchema' in tool);
+   const inputSchema = tool.inputSchema;
+   assert.ok(inputSchema !== null && typeof inputSchema === 'object' && 'required' in inputSchema && Array.isArray(inputSchema.required));
+   for (const field of rollingCommandDefinition.fields) assert.equal(inputSchema.required.includes(field.name),field.required,`${rollingCommandDefinition.name}: ${field.name} required schema parity`);
+  }
+  for (const command of ['status','reconcile'] as const) {
+   const response:unknown = await request('tools/call',{name:`ponytail_campaign_${command}`,arguments:{root,campaign:'pilot'}});
+   assert.ok(response !== null && typeof response === 'object' && 'result' in response);
+   const called = response.result;
+   assert.ok(called !== null && typeof called === 'object' && 'content' in called && Array.isArray(called.content));
+   const content:unknown = called.content[0];
+   assert.ok(content !== null && typeof content === 'object' && 'text' in content && typeof content.text === 'string');
+   const observed:unknown = JSON.parse(content.text);
+   assert.deepEqual(observed,await rollingCampaignOperations.execute(command,{campaign:'pilot'}));
+  }
+ } finally {
+  interface_.close();childProcess.stdin.end();childProcess.kill();
+  if (childProcess.exitCode === null && childProcess.signalCode === null) await new Promise<void>(resolve=>childProcess.once('exit',()=>resolve()));
+ }
+}
 
 // Traceability: verifies REQ-ROLLING-INTERFACES
 // Traceability: verifies REQ-ROLLING-STATE
@@ -45,19 +102,21 @@ test('shared operations initialize defaults and reconcile event/periodic content
  fs.mkdirSync(path.dirname(remoteRoot),{recursive:true});
  git(root,['clone','--bare',root,remoteRoot]);git(root,['remote','add','origin',remoteRoot]);
  const rollingCampaignStore = new RollingCampaignStore(pool,projectId);
- const rollingCampaignOperations = new RollingCampaignOperations(rollingCampaignStore);
+ const rollingCampaignOperations = new RollingCampaignOperations(rollingCampaignStore,root);
  const rollingCampaignInitializationV1:RollingCampaignInitializationV1 = {schemaVersion:1,coordinatorRoot:root,documentPath:obligationFixture.documentPath,bindingsPath:'bindings.json',bindingHistory:null,
   configuration:{mainline:null,incrementRef:'campaign/pilot',maxActiveWorkers:null,publicationSize:null}};
  const rollingCampaignRegistrationResult = await rollingCampaignOperations.initialize(rollingCampaignInitializationV1);
  assert.equal(rollingCampaignRegistrationResult.id,'pilot');
  assert.deepEqual(await rollingCampaignOperations.initialize(rollingCampaignInitializationV1),rollingCampaignRegistrationResult);
+ await verifyMcpParity(root,rollingCampaignOperations);
+ await assert.rejects(rollingCampaignOperations.execute('close',{campaign:'pilot'}),/fresh adequate evidence/);
  const initializationPath = path.join(root,'managed','initialization.json');
  fs.writeFileSync(initializationPath,JSON.stringify(rollingCampaignInitializationV1));
  const cli = path.join(process.cwd(),'src/rolling-operations.js');
- const initializedSpawnSyncReturns = spawnSync(process.execPath,[cli,'init',initializationPath],{cwd:root,encoding:'utf8'});
+ const initializedSpawnSyncReturns = spawnSync(process.execPath,[cli,'init','--request',`@${initializationPath}`],{cwd:root,encoding:'utf8'});
  assert.equal(initializedSpawnSyncReturns.status,0,initializedSpawnSyncReturns.stderr);
  const initializedCliResult:unknown = JSON.parse(initializedSpawnSyncReturns.stdout);
- assert.deepEqual(initializedCliResult,rollingCampaignRegistrationResult);
+ assert.deepEqual(initializedCliResult,{command:'init',result:rollingCampaignRegistrationResult});
  assert.equal(git(root,['branch','--show-current']),'campaign/pilot');
  assert.equal(git(remoteRoot,['rev-parse','refs/heads/campaign/pilot']),git(root,['rev-parse','HEAD']));
  git(root,['switch','-c','campaign/unreviewed']);
@@ -75,7 +134,7 @@ test('shared operations initialize defaults and reconcile event/periodic content
  assert.deepEqual(initialRollingCoordinatorSnapshot.configuration,{schemaVersion:1,mainline:{remote:'origin',branch:'main'},incrementRef:'campaign/pilot',maxActiveWorkers:2,publicationSize:1});
  const rollingReplenishments:readonly RollingReplenishment[] = await Promise.all(Array.from({length:4},(_,index)=>rollingCampaignOperations.replenish('pilot',index%2 === 0 ? 'event' : 'periodic')));
  assert.equal(rollingReplenishments.reduce((count,item)=>count+item.allocations.length,0),2);
- const reservedRollingCoordinatorSnapshot = await new RollingCampaignOperations(new RollingCampaignStore(pool,projectId)).status('pilot');
+ const reservedRollingCoordinatorSnapshot = await new RollingCampaignOperations(new RollingCampaignStore(pool,projectId),root).status('pilot');
  assert.equal(reservedRollingCoordinatorSnapshot.assignments.length,2);
  assert.equal(new Set(reservedRollingCoordinatorSnapshot.assignments.map(item=>item.obligationId)).size,2);
  assert.equal(reservedRollingCoordinatorSnapshot.scheduling.activeCount,2);
@@ -111,13 +170,59 @@ test('shared operations initialize defaults and reconcile event/periodic content
  assert.equal(changedRollingCoordinatorActions.decisions[0]?.kind,'reconcile');
  assert.equal(changedRollingCoordinatorActions.decisions.length,1);
  await rollingCampaignOperations.reconcile('pilot');
- const reconciledSpawnSyncReturns = spawnSync(process.execPath,[cli,'reconcile','pilot'],{cwd:root,encoding:'utf8'});
+ const reconciledSpawnSyncReturns = spawnSync(process.execPath,[cli,'reconcile','--campaign','pilot'],{cwd:root,encoding:'utf8'});
  assert.equal(reconciledSpawnSyncReturns.status,0,reconciledSpawnSyncReturns.stderr);
  const reconciledCliResult:unknown = JSON.parse(reconciledSpawnSyncReturns.stdout);
- assert.deepEqual(reconciledCliResult,await rollingCampaignOperations.reconcile('pilot'));
+ assert.deepEqual(reconciledCliResult,{command:'reconcile',result:await rollingCampaignOperations.reconcile('pilot')});
  const reconciledRollingCoordinatorActions = await rollingCampaignOperations.nextActions('pilot');
  assert.equal(reconciledRollingCoordinatorActions.snapshot.graphDigest,reconciledRollingCoordinatorActions.snapshot.observedGraphDigest);
  assert.ok(reconciledRollingCoordinatorActions.decisions.every(item=>item.kind !== 'reconcile'));
- const foreignRollingCampaignOperations = new RollingCampaignOperations(new RollingCampaignStore(pool,crypto.randomUUID()));
+ const foreignRollingCampaignOperations = new RollingCampaignOperations(new RollingCampaignStore(pool,crypto.randomUUID()),root);
  await assert.rejects(foreignRollingCampaignOperations.status('pilot'));
+});
+
+// Traceability: verifies REQ-ROLLING-INTERFACES
+// Traceability: verifies REQ-ROLLING-STATE
+test('closure requires fresh evidence, persists an immutable receipt and fences later mutations',async testContext=> {
+ const obligationFixture = fixture(testContext);
+ const {root,documentPath,proofPath} = obligationFixture;
+ let acceptedObligationDocumentV1:ObligationDocumentV1 = obligationFixture.document;
+ const vectors:readonly ObligationVector[] = [[0,1,1,1,1,1],[0,0,1,1,1,1],[0,0,0,1,1,1],[0,0,0,0,1,1],[0,0,0,0,0,1],[0,0,0,0,0,0]];
+ for (const [index,obligation] of obligationFixture.document.obligations.entries()) {
+  const previous = acceptedObligationDocumentV1.checkpoints.at(-1),after = vectors[index];assert.ok(previous && after);
+  const obligationCertificate:ObligationCertificate = {id:`CERT-${index+1}`,obligationIds:[obligation.id],
+   inputs:['requirement.md',proofPath].map(relative=>({path:relative,digest:inputDigest(root,relative)})),artifacts:[proofPath],
+   assessor:'coordinator',authority:['approved-CHNG'],adequate:true,reason:'Complete inspected fixture inventory',disposition:null,evidence:[],inventoryIds:[]};
+  const obligationCheckpoint:ObligationCheckpoint = {id:`CP${index+2}`,predecessorId:previous.id,baselineId:'B1',kind:'productive',selectedIds:[obligation.id],
+   registeredIds:[],certificateIds:[obligationCertificate.id],invalidatedIds:[],before:previous.after,after,preparation:null,assessor:'coordinator',reason:'Accept the earliest unresolved fixture inventory'};
+  acceptedObligationDocumentV1 = acceptCheckpoint(acceptedObligationDocumentV1,{...acceptedObligationDocumentV1,certificates:[...acceptedObligationDocumentV1.certificates,obligationCertificate],checkpoints:[...acceptedObligationDocumentV1.checkpoints,obligationCheckpoint]},root);
+ }
+ fs.writeFileSync(path.join(root,documentPath),JSON.stringify(acceptedObligationDocumentV1));
+ const pool = new Pool(databaseOptions(process.cwd()));
+ const projectId = crypto.randomUUID();
+ testContext.after(async()=> {try {await pool.query('DELETE FROM ponytail_index.project_v1 WHERE project_id=$1',[projectId]);} finally {await pool.end();}});
+ await pool.query('INSERT INTO ponytail_index.project_v1(project_id,project_name) VALUES($1,$2)',[projectId,`closure-${projectId}`]);
+ const rollingProjectConfigV1:RollingProjectConfigV1 = {schemaVersion:1,mainline:{remote:'origin',branch:'main'},managedWorktrees:{directory:'managed',anchor:'main'},maxActiveWorkers:2,publicationSize:1,setupCommands:[],qa:{focused:[],publication:[['node','--test']]}};
+ const rollingBindingsV1:RollingBindingsV1 = {schemaVersion:1,bindings:[]};
+ fs.writeFileSync(path.join(root,'.agents/config/project/rolling-campaigns.json'),JSON.stringify(rollingProjectConfigV1));
+ fs.writeFileSync(path.join(root,'bindings.json'),JSON.stringify(rollingBindingsV1));
+ fs.appendFileSync(path.join(root,'.gitignore'),'managed/\n');
+ git(root,['add','.']);git(root,['commit','-m','Complete closure fixture inventories']);
+ const remoteRoot = path.join(root,'managed/origin.git');fs.mkdirSync(path.dirname(remoteRoot),{recursive:true});
+ git(root,['clone','--bare',root,remoteRoot]);git(root,['remote','add','origin',remoteRoot]);
+ const rollingCampaignOperations = new RollingCampaignOperations(new RollingCampaignStore(pool,projectId),root);
+ const rollingCampaignInitializationV1:RollingCampaignInitializationV1 = {schemaVersion:1,coordinatorRoot:root,documentPath,bindingsPath:'bindings.json',bindingHistory:null,configuration:{mainline:null,incrementRef:'campaign/pilot',maxActiveWorkers:null,publicationSize:null}};
+ await rollingCampaignOperations.initialize(rollingCampaignInitializationV1);
+ const originalProof = fs.readFileSync(path.join(root,proofPath),'utf8');
+ fs.writeFileSync(path.join(root,proofPath),'Changed certificate input');
+ await assert.rejects(rollingCampaignOperations.execute('close',{campaign:'pilot'}),/fresh|stale/);
+ fs.writeFileSync(path.join(root,proofPath),originalProof);
+ const rollingOperationResponse = await rollingCampaignOperations.execute('close',{campaign:'pilot'});
+ assert.equal(rollingOperationResponse.command,'close');
+ assert.deepEqual(await rollingCampaignOperations.execute('close',{campaign:'pilot'}),rollingOperationResponse);
+ const rollingCoordinatorSnapshot = await rollingCampaignOperations.status('pilot');
+ assert.notEqual(rollingCoordinatorSnapshot.closure,null);
+ assert.deepEqual((await rollingCampaignOperations.nextActions('pilot')).decisions,[]);
+ await assert.rejects(rollingCampaignOperations.replenish('pilot','periodic'),/closed/);
+ await assert.rejects(rollingCampaignOperations.initialize(rollingCampaignInitializationV1),/closed/);
 });

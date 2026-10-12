@@ -1190,6 +1190,26 @@
       "class": "integration-test",
       "path": "tests/rolling-operations.integration.test.ts",
       "locator": "text"
+    },
+    {
+      "class": "implementation",
+      "path": "src/rolling-cli-registry.ts",
+      "locator": "text"
+    },
+    {
+      "class": "implementation",
+      "path": "ponytail-mcp/index.ts",
+      "locator": "text"
+    },
+    {
+      "class": "implementation",
+      "path": "ponytail-mcp/rolling.ts",
+      "locator": "text"
+    },
+    {
+      "class": "unit-test",
+      "path": "tests/rolling-cli-registry.test.ts",
+      "locator": "text"
     }
   ],
   "entities": [],
@@ -1461,6 +1481,18 @@
     {
       "path": "src/rolling-operations.js",
       "sourcePath": "src/rolling-operations.ts"
+    },
+    {
+      "path": "src/rolling-cli-registry.js",
+      "sourcePath": "src/rolling-cli-registry.ts"
+    },
+    {
+      "path": "ponytail-mcp/index.js",
+      "sourcePath": "ponytail-mcp/index.ts"
+    },
+    {
+      "path": "ponytail-mcp/rolling.js",
+      "sourcePath": "ponytail-mcp/rolling.ts"
     }
   ],
   "reverseViewPath": "pm/requirements/traceability.generated.md",

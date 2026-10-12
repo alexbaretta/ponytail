@@ -686,15 +686,15 @@ test('ponytail dispatches campaign reporting through the production module', () 
     sourceRoot: fs.realpathSync(sourceRoot),
     projects: [{ root: fs.realpathSync(root), blessedWorktree: fs.realpathSync(root) }],
   }, null, 2)}\n`);
-  const result = spawnSync(ponytailCli, ['campaign', 'validate', '2026-09-24-dispatch'], {
+  const result = spawnSync(ponytailCli, ['campaign','legacy','--command','validate','--arguments',JSON.stringify(['2026-09-24-dispatch'])], {
     cwd: root,
     encoding: 'utf8',
     env: { ...process.env, HOME: home, PATH: `${path.dirname(process.execPath)}:/usr/bin:/bin` },
   });
   assert.equal(result.status, 0, result.stderr);
-  assert.equal(result.stdout, 'valid: 2026-09-24-dispatch (1 plans, 1 sprints, 1 tasklets)\n');
+  assert.equal(JSON.parse(result.stdout).result, 'valid: 2026-09-24-dispatch (1 plans, 1 sprints, 1 tasklets)\n');
 
-  const nameFileResult = spawnSync(ponytailCli, ['campaign', 'validate', '2026-09-24-dispatch/plan.md'], {
+  const nameFileResult = spawnSync(ponytailCli, ['campaign','legacy','--command','validate','--arguments',JSON.stringify(['2026-09-24-dispatch/plan.md'])], {
     cwd: root,
     encoding: 'utf8',
     env: { ...process.env, HOME: home, PATH: `${path.dirname(process.execPath)}:/usr/bin:/bin` },
@@ -702,7 +702,7 @@ test('ponytail dispatches campaign reporting through the production module', () 
   assert.equal(nameFileResult.status, 0, nameFileResult.stderr);
   assert.equal(nameFileResult.stdout, result.stdout);
 
-  const missing = spawnSync(ponytailCli, ['campaign', 'validate', '2026-09-24-missing'], {
+  const missing = spawnSync(ponytailCli, ['campaign','legacy','--command','validate','--arguments',JSON.stringify(['2026-09-24-missing'])], {
     cwd: root,
     encoding: 'utf8',
     env: { ...process.env, HOME: home, PATH: `${path.dirname(process.execPath)}:/usr/bin:/bin` },
@@ -711,16 +711,16 @@ test('ponytail dispatches campaign reporting through the production module', () 
   assert.equal(missing.stdout, '');
   assert.match(missing.stderr, /^error CAMPAIGN_INPUT:/);
 
-  const inferred = spawnSync(ponytailCli, ['campaign', 'report'], {
+  const inferred = spawnSync(ponytailCli, ['campaign','legacy','--command','report'], {
     cwd: root,
     encoding: 'utf8',
     env: { ...process.env, HOME: home, PATH: `${path.dirname(process.execPath)}:/usr/bin:/bin` },
   });
   assert.equal(inferred.status, 0, inferred.stderr);
-  assert.match(inferred.stdout, /Active campaigns: 2026-09-24-dispatch \(2026-09-24-dispatch\)/);
+  assert.match(JSON.parse(inferred.stdout).result, /Active campaigns: 2026-09-24-dispatch \(2026-09-24-dispatch\)/);
 
   // Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
-  const status = spawnSync(ponytailCli, ['campaign', 'status', '2026-09-24-dispatch', '--json'], {
+  const status = spawnSync(ponytailCli, ['campaign','legacy','--command','status','--arguments',JSON.stringify(['2026-09-24-dispatch','--json'])], {
     cwd: root,
     encoding: 'utf8',
     env: {
@@ -732,10 +732,10 @@ test('ponytail dispatches campaign reporting through the production module', () 
     },
   });
   assert.equal(status.status, 0, status.stderr);
-  assert.equal(JSON.parse(status.stdout).campaignId, '2026-09-24-dispatch');
+  assert.equal(JSON.parse(JSON.parse(status.stdout).result).campaignId, '2026-09-24-dispatch');
 
   fs.writeFileSync(selected, fs.readFileSync(selected, 'utf8').replace('"schemaVersion": 1', '"schemaVersion": 99'));
-  const failure = spawnSync(ponytailCli, ['campaign', 'report', selected, '--json'], {
+  const failure = spawnSync(ponytailCli, ['campaign','legacy','--command','report','--arguments',JSON.stringify([selected,'--json'])], {
     cwd: root,
     encoding: 'utf8',
     env: { ...process.env, HOME: home, PATH: `${path.dirname(process.execPath)}:/usr/bin:/bin` },

@@ -48,14 +48,14 @@ function project(policy = {}) {
 }
 
 function environment(home, additions = {}) {
-  return { ...process.env, HOME: home, PATH: '/usr/bin:/bin', ...additions };
+  return { ...process.env, HOME: home, PATH: `/usr/bin:/bin:${path.dirname(process.execPath)}`, ...additions };
 }
 
 function pluginEnvironment(home) {
   const bin = path.join(home, 'plugin-bin');
   fs.mkdirSync(bin);
   fs.writeFileSync(path.join(bin, 'codex'), '#!/bin/sh\nprintf "%s\\n" "$*" >> "$HOME/plugin-commands"\nprintf "{}\\n"\n', { mode: 0o755 });
-  return { PATH: `${bin}:/usr/bin:/bin` };
+  return { PATH: `${bin}:/usr/bin:/bin:${path.dirname(process.execPath)}` };
 }
 
 function run(home, command, arguments = [], options = {}) {

@@ -414,9 +414,20 @@ synchronization and late receipt safety retain the campaign's later work.
 `RollingCampaignOperations` owns initialization, reconciliation, status,
 next-action projection and replenishment for the CLI and MCP adapters.
 The generated `src/rolling-operations.js` executable exercises the shared
-operations directly for initialization/reconciliation acceptance. The next group
-owns chapter help, replacement of the installed legacy campaign route and MCP
-registration; these are not established by the direct operation Arc.
+operations directly. `src/rolling-cli-registry.ts` defines command names,
+fields, preconditions, mutations and result descriptions. The installed
+`ponytail campaign` route uses that executable. Flags use `--<field> <value>`;
+JSON fields accept JSON literals or `@file`. The response envelope is
+`{command, result}`. `campaign legacy --command <reader> --arguments <JSON>`
+permits only validate, report, list, status and reservation-audit inspection.
+Legacy scheduling and plugin dispatch cannot run through this chapter.
+
+The optional MCP stdio adapter registers the same commands and delegates to
+`RollingCampaignOperations.execute`. Calls supply an absolute project root;
+project identity is loaded from that root's journal. Native execution uses
+Codex App Server directly. CLI/MCP parity is exercised against the same
+PostgreSQL fixture through real stdio calls, including reconciliation mutation.
+Successful closure and final campaign acceptance remain separate proof gates.
 Initialization validates the physical worktree pool and resolves the campaign's
 settings, fetches mainline and creates or safely fast-forwards the campaign
 branch. Only a base already equal to published mainline may create the initial

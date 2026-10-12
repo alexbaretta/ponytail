@@ -3,6 +3,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import {Pool} from 'pg';
+import {spawnSync} from 'node:child_process';
 import {parse} from 'lossless-json';
 import {databaseOptions} from './project-index-database.js';
 import {relativePath} from '../skills/plan-execution/scripts/obligations.js';
@@ -11,6 +12,11 @@ import {resolveRollingManagedDirectory} from './rolling-worktrees.js';
 import {RollingCampaignStore,readRollingBindingHistoryConfiguration,type RollingBindingHistoryConfiguration,type RollingCampaignRegistration,type RollingCampaignRegistrationResult,type RollingGraphReconciliation,type RollingCoordinatorSnapshot,type RollingAllocationResult,type RollingAction,type RollingStoredAssignment,type RollingPublicationStatus,type RollingAssignmentRelease} from './rolling-campaign-store.js';
 import type {RollingStoredReview} from './rolling-review.js';
 import {git,gitResult,publishRollingIncrement,reconcileRollingIncrementPublication,type RollingIncrementPublication} from './rolling-integration.js';
+import {RollingCodex} from './rolling-codex.js';
+import {provisionRollingWorker,attachRollingWorker,recoverRollingWorkerCreation,resumeRollingWorker,dispatchRollingWorker,collectRollingWorkerSubmission,suspendRollingWorker,retireRollingWorker} from './rolling-worker.js';
+import {dispatchRollingReview,collectRollingReview} from './rolling-review.js';
+import {prepareRollingMainline,mergeRollingMainline,observeRollingMainlineCandidate,runRollingPublicationQa,prepareRollingMainlineRefresh,mergeRollingMainlineRefresh,observeRollingMainlineRefresh,type RollingMainlineCandidateV1,type RollingMainlineRefreshResultV1} from './rolling-publication.js';
+import {rollingCommandDefinitions,rollingCampaignHelp,isRollingCommandName,type RollingCommandName} from './rolling-cli-registry.js';
 
 export interface RollingCampaignInitializationV1 {
  readonly schemaVersion:1;
@@ -38,11 +44,59 @@ export const RollingCampaignInitializationReaders = {V1:readRollingCampaignIniti
 function readJson(text:string):unknown {
  return parse(text,null,token=> {
   const number = Number(token);
-  if (!/^(0|[1-9][0-9]*)$/u.test(token) || !Number.isSafeInteger(number)) throw new Error('rolling campaign: JSON numbers must be exact nonnegative safe integers');
+  if (!/^(0|-?[1-9][0-9]*)$/u.test(token) || !Number.isSafeInteger(number)) throw new Error('rolling campaign: JSON numbers must be exact safe integers');
   return number;
  });
 }
 export function parseRollingCampaignInitialization(text:string):RollingCampaignInitializationV1 {return readRollingCampaignInitializationV1(readJson(text));}
+function stringField(input:Record<string,unknown>,name:string):string {
+ const value = input[name];
+ if (typeof value !== 'string' || value.trim() !== value || value.length === 0 || value.includes('\0')) throw new Error(`rolling campaign: ${name} must be a nonempty string`);
+ return value;
+}
+function stringArray(value:unknown):readonly string[] {
+ if (!Array.isArray(value) || !value.every((item:unknown)=>typeof item === 'string' && item.length > 0)) throw new Error('rolling campaign: expected a string array');
+ return value;
+}
+class RollingLegacyInspectionError extends Error {
+ constructor(readonly exitCode:number,message:string) {super(message);}
+}
+function readRollingCommandInput(command:RollingCommandName,value:unknown):Record<string,unknown> {
+ const input = record(value);
+ const definition = rollingCommandDefinitions.find(item=>item.name === command);
+ if (!definition || Object.keys(input).some(key=>!definition.fields.some(field=>field.name === key))) throw new Error('rolling campaign: undeclared command arguments');
+ for (const field of definition.fields) if (field.required && input[field.name] === undefined) throw new Error(`rolling campaign: required argument ${field.name} is missing`);
+ return input;
+}
+function inspectRollingLegacy(root:string,value:unknown):string {
+ const input = readRollingCommandInput('legacy',value);
+ const inspection = stringField(input,'command');
+ if (!['validate','report','list','status','reservation-audit'].includes(inspection)) throw new Error('rolling campaign: legacy dispatch and mutation are retired; only explicit inspection is supported');
+ const arguments_ = input.arguments === undefined ? [] : stringArray(input.arguments);
+ const result = spawnSync(process.execPath,[path.join(__dirname,'campaign-census.js'),inspection,...arguments_],{cwd:root,encoding:'utf8'});
+ if (result.error || result.status !== 0) throw new RollingLegacyInspectionError(result.status ?? 1,result.error?.message || result.stderr.trim() || 'historical campaign inspection failed');
+ return result.stdout;
+}
+export interface RollingOperationResults {
+ init:RollingCampaignRegistrationResult;reconcile:RollingGraphReconciliation;status:RollingCoordinatorSnapshot;'next-actions':RollingCoordinatorActions;replenish:RollingReplenishment;
+ 'provision-worker':Awaited<ReturnType<typeof attachRollingWorker>>;'recover-worker':Awaited<ReturnType<typeof recoverRollingWorkerCreation>>;
+ 'resume-worker':Awaited<ReturnType<typeof resumeRollingWorker>>;'observe-resumption':Awaited<ReturnType<typeof resumeRollingWorker>>;
+ 'dispatch-worker':Awaited<ReturnType<typeof collectRollingWorkerSubmission>>;'collect-submission':Awaited<ReturnType<typeof collectRollingWorkerSubmission>>;
+ 'suspend-worker':Awaited<ReturnType<typeof suspendRollingWorker>>;'retire-worker':Awaited<ReturnType<typeof retireRollingWorker>>;
+ 'request-review':Awaited<ReturnType<RollingCampaignStore['requestReview']>>;'dispatch-review':Awaited<ReturnType<typeof collectRollingReview>>;'inspect-review':Awaited<ReturnType<typeof collectRollingReview>>;
+ integrate:Awaited<ReturnType<RollingCampaignStore['publishIncrement']>>;accept:Awaited<ReturnType<RollingCampaignStore['acceptIncrementCertificates']>>;
+ 'freeze-publication':Awaited<ReturnType<RollingCampaignStore['claimPublicationBatch']>>;
+ 'prepare-publication':RollingMainlineCandidateV1;'observe-preparation':RollingMainlineCandidateV1;
+ 'inspect-publication-conflict':Awaited<ReturnType<RollingCampaignStore['publicationContext']>>;
+ 'run-publication-qa':Awaited<ReturnType<RollingCampaignStore['recordPublicationQa']>>;
+ 'observe-publication-qa':Awaited<ReturnType<RollingCampaignStore['publicationContext']>>;
+ 'publish-mainline':Awaited<ReturnType<RollingCampaignStore['publishMainline']>>;'observe-mainline':Awaited<ReturnType<RollingCampaignStore['observeMainlinePublication']>>;
+ 'refresh-mainline':RollingMainlineRefreshResultV1;'observe-refresh':RollingMainlineRefreshResultV1;
+ 'synchronize-campaign':Awaited<ReturnType<RollingCampaignStore['synchronizePublishedCampaign']>>;
+ close:Awaited<ReturnType<RollingCampaignStore['closeCampaign']>>;legacy:string;
+}
+// Discriminator: command
+export type RollingOperationResponse = {[Command in keyof RollingOperationResults]:{readonly command:Command;readonly result:RollingOperationResults[Command]}}[keyof RollingOperationResults];
 export interface RollingReplenishment {
  readonly trigger:'event' | 'periodic';
  readonly graphDigest:string;
@@ -76,6 +130,7 @@ function publicationCommand(rollingPublicationStatus:RollingPublicationStatus):R
 // Traceability: implements REQ-ROLLING-STATE
 // Traceability: implements REQ-ROLLING-INTERFACES
 export function projectRollingCoordinatorActions(rollingCoordinatorSnapshot:RollingCoordinatorSnapshot):RollingCoordinatorActions {
+ if (rollingCoordinatorSnapshot.closure !== null) return {snapshot:rollingCoordinatorSnapshot,decisions:[]};
  if (rollingCoordinatorSnapshot.graphDigest !== rollingCoordinatorSnapshot.observedGraphDigest) return {snapshot:rollingCoordinatorSnapshot,
   decisions:[{kind:'reconcile',expectedDigest:rollingCoordinatorSnapshot.graphDigest,observedDigest:rollingCoordinatorSnapshot.observedGraphDigest}]};
  const decisions:RollingCoordinatorDecision[] = [];
@@ -91,11 +146,12 @@ export function projectRollingCoordinatorActions(rollingCoordinatorSnapshot:Roll
 // Traceability: implements REQ-ROLLING-INTERFACES
 // Both transports invoke this layer; it never allocates through a Codex plugin.
 export class RollingCampaignOperations {
- constructor(private readonly rollingCampaignStore:RollingCampaignStore) {}
+ constructor(private readonly rollingCampaignStore:RollingCampaignStore,private readonly root:string) {}
 
  // Traceability: implements REQ-ROLLING-CONFIGURATION
  async initialize(rollingCampaignInitializationV1:RollingCampaignInitializationV1):Promise<RollingCampaignRegistrationResult> {
   readRollingCampaignInitializationV1(rollingCampaignInitializationV1);
+  if (fs.realpathSync(rollingCampaignInitializationV1.coordinatorRoot) !== fs.realpathSync(this.root)) throw new Error('rolling campaign: initialization root differs from the invoking project');
   const {coordinatorRoot,documentPath,bindingsPath,bindingHistory} = rollingCampaignInitializationV1;
   const rollingResolvedConfiguration = loadRollingConfiguration(coordinatorRoot,rollingCampaignInitializationV1.configuration);
   if (git(coordinatorRoot,['status','--porcelain']).trim() !== '') throw new Error('rolling campaign: initialization requires a clean coordinator checkout');
@@ -131,6 +187,125 @@ export class RollingCampaignOperations {
  status(campaignId:string):Promise<RollingCoordinatorSnapshot> { return this.rollingCampaignStore.coordinatorSnapshot(campaignId); }
  async nextActions(campaignId:string):Promise<RollingCoordinatorActions> { return projectRollingCoordinatorActions(await this.status(campaignId)); }
 
+ private async native<Result>(signal:AbortSignal | undefined,operation:(rollingCodex:RollingCodex)=>Promise<Result>):Promise<Result> {
+  const rollingCodex = await RollingCodex.connect({cwd:this.root});
+  let cancellation:Promise<void> | null = null;
+  const abort = ():void=> {cancellation ??= rollingCodex.interruptOwnedTurns();};
+  signal?.addEventListener('abort',abort,{once:true});
+  // Project-owned Codex policy authorizes routine commands. The adapter cannot
+  // invent authorization for an additional native approval request.
+  rollingCodex.on('serverRequest',request=>rollingCodex.respondToServer(request.id,{decision:'decline'}));
+  try {
+   if (signal?.aborted) throw new Error('rolling campaign: operation interrupted');
+   return await operation(rollingCodex);
+  } finally {
+   try {
+    if (cancellation !== null) await cancellation;
+    await rollingCodex.waitForObservedTurns(3600000);
+    if (cancellation !== null) await cancellation;
+   } finally {signal?.removeEventListener('abort',abort);await rollingCodex.close();}
+  }
+ }
+
+ private async preparePublication(campaignId:string,batchId:string):Promise<RollingMainlineCandidateV1> {
+  let rollingPublicationContext = await this.rollingCampaignStore.publicationContext(campaignId,batchId);
+  if (rollingPublicationContext.candidate !== null) return rollingPublicationContext.candidate;
+  if (rollingPublicationContext.preparation === null) {
+   const rollingPublicationBatchClaimV1 = await this.rollingCampaignStore.beginMainlinePreparation(campaignId,batchId);
+   await this.rollingCampaignStore.recordMainlinePreparation(campaignId,batchId,prepareRollingMainline(rollingPublicationBatchClaimV1));
+   rollingPublicationContext = await this.rollingCampaignStore.publicationContext(campaignId,batchId);
+  }
+  if (rollingPublicationContext.preparation === null) throw new Error('rolling campaign: publication preparation remains unresolved');
+  const rollingMainlineCandidateV1 = git(rollingPublicationContext.claim.rootPath,['symbolic-ref','HEAD']).trim() === `refs/heads/${rollingPublicationContext.claim.incrementRef}`
+   ? mergeRollingMainline(rollingPublicationContext.claim,rollingPublicationContext.preparation)
+   : observeRollingMainlineCandidate(rollingPublicationContext.claim,rollingPublicationContext.preparation);
+  return this.rollingCampaignStore.recordMainlineCandidate(campaignId,batchId,rollingMainlineCandidateV1);
+ }
+
+ private async refreshPublication(campaignId:string,batchId:string,observe:boolean):Promise<RollingMainlineRefreshResultV1> {
+  let rollingPublicationContext = await this.rollingCampaignStore.publicationContext(campaignId,batchId);
+  if (observe && rollingPublicationContext.refreshResult !== null) return rollingPublicationContext.refreshResult;
+  const rollingMainlineRefreshIntentV1 = observe ? rollingPublicationContext.refreshIntent : await this.rollingCampaignStore.beginMainlineRefresh(campaignId,batchId);
+  if (rollingMainlineRefreshIntentV1 === null) throw new Error('rolling campaign: refresh has no original retained intent');
+  rollingPublicationContext = await this.rollingCampaignStore.publicationContext(campaignId,batchId);
+  if (rollingPublicationContext.refreshPreparation === null) {
+   const rollingMainlineRefreshPreparationV1 = prepareRollingMainlineRefresh(rollingPublicationContext.claim,rollingMainlineRefreshIntentV1);
+   await this.rollingCampaignStore.recordMainlineRefreshPreparation(campaignId,batchId,rollingMainlineRefreshPreparationV1);
+   rollingPublicationContext = await this.rollingCampaignStore.publicationContext(campaignId,batchId);
+  }
+  if (rollingPublicationContext.refreshPreparation === null) throw new Error('rolling campaign: original refresh preparation is unresolved');
+  const rollingMainlineRefreshResultV1 = git(rollingPublicationContext.claim.rootPath,['rev-parse','HEAD']).trim() === rollingPublicationContext.refreshPreparation.previousCandidate.revision
+   ? mergeRollingMainlineRefresh(rollingPublicationContext.claim,rollingPublicationContext.refreshPreparation)
+   : observeRollingMainlineRefresh(rollingPublicationContext.claim,rollingPublicationContext.refreshPreparation);
+  return this.rollingCampaignStore.recordMainlineRefresh(campaignId,batchId,rollingMainlineRefreshResultV1);
+ }
+
+ // Traceability: implements REQ-ROLLING-INTERFACES
+ async execute(command:RollingCommandName,value:unknown,signal?:AbortSignal):Promise<RollingOperationResponse> {
+  if (command === 'legacy') return {command,result:inspectRollingLegacy(this.root,value)};
+  const input = readRollingCommandInput(command,value);
+  const timeoutMs = 3600000;
+  switch (command) {
+   case 'init': return {command,result:await this.initialize(readRollingCampaignInitializationV1(input.request))};
+   case 'reconcile': return {command,result:await this.reconcile(stringField(input,'campaign'))};
+   case 'status': return {command,result:await this.status(stringField(input,'campaign'))};
+   case 'next-actions': return {command,result:await this.nextActions(stringField(input,'campaign'))};
+   case 'replenish': {
+    const trigger = input.trigger ?? 'periodic';
+    if (trigger !== 'event' && trigger !== 'periodic') throw new Error('rolling campaign: trigger must be event or periodic');
+    let rollingAssignmentRelease:RollingAssignmentRelease | null = null;
+    if (input.release !== undefined) {const release = record(input.release);if (Object.keys(release).some(key=>!['id','generation'].includes(key))) throw new Error('rolling campaign: undeclared release fields');rollingAssignmentRelease={id:stringField(release,'id'),generation:stringField(release,'generation')};}
+    return {command,result:await this.replenish(stringField(input,'campaign'),trigger,rollingAssignmentRelease)};
+   }
+   case 'provision-worker': return {command,result:await this.native(signal,async rollingCodex=> {
+    const campaignId = stringField(input,'campaign'),actionId = stringField(input,'action'),generation = stringField(input,'generation');
+    const rollingWorkerInitialization = await provisionRollingWorker(this.rollingCampaignStore,rollingCodex,campaignId,actionId,generation);
+    return attachRollingWorker(this.rollingCampaignStore,rollingCodex,campaignId,actionId,generation,rollingWorkerInitialization,timeoutMs);
+   })};
+   case 'recover-worker': return {command,result:await this.native(signal,rollingCodex=>recoverRollingWorkerCreation(this.rollingCampaignStore,rollingCodex,stringField(input,'campaign'),stringField(input,'action'),stringField(input,'generation')))};
+   case 'resume-worker': case 'observe-resumption': return {command,result:await this.native(signal,rollingCodex=>resumeRollingWorker(this.rollingCampaignStore,rollingCodex,stringField(input,'campaign'),stringField(input,'action'),stringField(input,'generation')))};
+   case 'dispatch-worker': return {command,result:await this.native(signal,async rollingCodex=> {
+    const campaignId = stringField(input,'campaign'),assignmentId = stringField(input,'assignment'),generation = stringField(input,'generation');
+    await dispatchRollingWorker(this.rollingCampaignStore,rollingCodex,campaignId,assignmentId,generation);
+    return collectRollingWorkerSubmission(this.rollingCampaignStore,rollingCodex,campaignId,assignmentId,generation,timeoutMs);
+   })};
+   case 'collect-submission': return {command,result:await this.native(signal,rollingCodex=>collectRollingWorkerSubmission(this.rollingCampaignStore,rollingCodex,stringField(input,'campaign'),stringField(input,'assignment'),stringField(input,'generation'),timeoutMs))};
+   case 'suspend-worker': return {command,result:await this.native(signal,rollingCodex=>suspendRollingWorker(this.rollingCampaignStore,rollingCodex,stringField(input,'campaign'),stringField(input,'assignment'),stringField(input,'generation'),stringArray(input.blockers),timeoutMs))};
+   case 'retire-worker': return {command,result:await this.native(signal,rollingCodex=>retireRollingWorker(this.rollingCampaignStore,rollingCodex,stringField(input,'campaign'),stringField(input,'assignment'),stringField(input,'generation'),timeoutMs))};
+   case 'request-review': return {command,result:await this.rollingCampaignStore.requestReview(stringField(input,'campaign'),stringField(input,'assignment'),stringField(input,'generation'),stringField(input,'revision'),stringField(input,'reviewer'))};
+   case 'dispatch-review': return {command,result:await this.native(signal,async rollingCodex=> {
+    const campaignId = stringField(input,'campaign'),reviewId = stringField(input,'review');
+    const rollingReviewContext = await this.rollingCampaignStore.reviewContext(campaignId,reviewId);
+    const rollingNativeThread = await rollingCodex.resumeThread(stringField(input,'thread'),rollingReviewContext.rootPath);
+    await dispatchRollingReview(this.rollingCampaignStore,rollingCodex,campaignId,reviewId,rollingNativeThread);
+    return collectRollingReview(this.rollingCampaignStore,rollingCodex,campaignId,reviewId,timeoutMs);
+   })};
+   case 'inspect-review': return {command,result:await this.native(signal,rollingCodex=>collectRollingReview(this.rollingCampaignStore,rollingCodex,stringField(input,'campaign'),stringField(input,'review'),timeoutMs))};
+   case 'integrate': return {command,result:await this.rollingCampaignStore.publishIncrement(stringField(input,'campaign'),stringField(input,'review'))};
+   case 'accept': return {command,result:await this.rollingCampaignStore.acceptIncrementCertificates(stringField(input,'campaign'),stringField(input,'review'),stringField(input,'candidate'),stringArray(input.bindings))};
+   case 'freeze-publication': {
+    const campaignId = stringField(input,'campaign');const rollingGraphReconciliation = await this.reconcile(campaignId);
+    const flush = input.flush ?? null;if (flush !== null && flush !== 'explicit_flush' && flush !== 'completion' && flush !== 'quiescence') throw new Error('rolling campaign: invalid publication flush trigger');
+    return {command,result:await this.rollingCampaignStore.claimPublicationBatch(campaignId,rollingGraphReconciliation.graphDigest,flush)};
+   }
+   case 'prepare-publication': case 'observe-preparation': return {command,result:await this.preparePublication(stringField(input,'campaign'),stringField(input,'batch'))};
+   case 'inspect-publication-conflict': case 'observe-publication-qa': return {command,result:await this.rollingCampaignStore.publicationContext(stringField(input,'campaign'),stringField(input,'batch'))};
+   case 'run-publication-qa': {
+    const campaignId = stringField(input,'campaign'),batchId = stringField(input,'batch');
+    const rollingPublicationQaJobV1 = await this.rollingCampaignStore.beginPublicationQa(campaignId,batchId);
+    const rollingPublicationContext = await this.rollingCampaignStore.publicationContext(campaignId,batchId);
+    if (rollingPublicationContext.candidate === null) throw new Error('rolling campaign: QA has no verified candidate');
+    const rollingPublicationQaV1 = runRollingPublicationQa(rollingPublicationContext.claim,rollingPublicationContext.candidate,rollingPublicationQaJobV1.id,rollingPublicationQaJobV1.configurationDigest,rollingPublicationQaJobV1.commands);
+    return {command,result:await this.rollingCampaignStore.recordPublicationQa(campaignId,batchId,rollingPublicationQaV1)};
+   }
+   case 'publish-mainline': return {command,result:await this.rollingCampaignStore.publishMainline(stringField(input,'campaign'),stringField(input,'batch'))};
+   case 'observe-mainline': return {command,result:await this.rollingCampaignStore.observeMainlinePublication(stringField(input,'campaign'),stringField(input,'batch'))};
+   case 'refresh-mainline': case 'observe-refresh': return {command,result:await this.refreshPublication(stringField(input,'campaign'),stringField(input,'batch'),command === 'observe-refresh')};
+   case 'synchronize-campaign': return {command,result:await this.rollingCampaignStore.synchronizePublishedCampaign(stringField(input,'campaign'),stringField(input,'batch'))};
+   case 'close': return {command,result:await this.rollingCampaignStore.closeCampaign(stringField(input,'campaign'))};
+  }
+ }
+
  // Traceability: implements REQ-ROLLING-SCHEDULING
  // A missed event and the periodic poll run the same fenced allocation path.
  async replenish(campaignId:string,trigger:RollingReplenishment['trigger'],rollingAssignmentRelease:RollingAssignmentRelease | null = null):Promise<RollingReplenishment> {
@@ -152,35 +327,43 @@ export async function withRollingCampaignOperations<Result>(root:string,operatio
  const project = record(journal);
  if (project.schemaVersion !== 1 || typeof project.projectId !== 'string' || !/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/u.test(project.projectId)) throw new Error('rolling campaign: invoking project journal has no valid V1 identity');
  const pool = new Pool(databaseOptions(root));
- try {return await operation(new RollingCampaignOperations(new RollingCampaignStore(pool,project.projectId)));}
+ try {return await operation(new RollingCampaignOperations(new RollingCampaignStore(pool,project.projectId),root));}
  finally {await pool.end();}
 }
 
 // Traceability: implements REQ-ROLLING-INTERFACES
+export async function executeRollingCommand(root:string,command:RollingCommandName,value:unknown,signal?:AbortSignal):Promise<RollingOperationResponse> {
+ if (command === 'legacy') return {command,result:inspectRollingLegacy(fs.realpathSync(root),value)};
+ return withRollingCampaignOperations(root,rollingCampaignOperations=>rollingCampaignOperations.execute(command,value,signal));
+}
+
+// Traceability: implements REQ-ROLLING-INTERFACES
 export async function runRollingOperationCli(argv:readonly string[]):Promise<void> {
- const [command,argument] = argv;
- if (command === undefined || command === '--help') {
-  process.stdout.write('Usage: rolling-operations <init request.json|reconcile campaign|status campaign|next-actions campaign|replenish campaign>\n');
-  return;
+ const [command,...arguments_] = argv;
+ if (command === undefined || command === '--help') {process.stdout.write(rollingCampaignHelp());return;}
+ if (!isRollingCommandName(command)) throw new Error(`rolling campaign: unknown command ${command}`);
+ if (arguments_.length === 1 && arguments_[0] === '--help') {process.stdout.write(rollingCampaignHelp(command));return;}
+ const definition = rollingCommandDefinitions.find(item=>item.name === command);
+ if (!definition) throw new Error('rolling campaign: missing command definition');
+ const input:Record<string,unknown> = {};
+ let jsonOutput = false;
+ for (let index=0;index<arguments_.length;index++) {
+  const flag = arguments_[index];
+  if (flag === '--json') {if (jsonOutput) throw new Error('rolling campaign: repeated --json');jsonOutput=true;continue;}
+  const field = definition.fields.find(item=>`--${item.name}` === flag);
+  if (!field || Object.hasOwn(input,field.name)) throw new Error(`rolling campaign: unknown or repeated argument ${flag}`);
+  const value = arguments_[++index];
+  if (value === undefined || value.startsWith('--')) throw new Error(`rolling campaign: missing value for ${flag}`);
+  input[field.name] = field.kind === 'json' ? readJson(value.startsWith('@') ? fs.readFileSync(value.slice(1),'utf8') : value) : value;
  }
- if (argv.length !== 2 || argument === undefined || argument.trim() === '') throw new Error('rolling campaign: command requires exactly one request path or campaign ID');
- const root = fs.realpathSync(process.cwd());
- const result = await withRollingCampaignOperations(root,async rollingCampaignOperations=> {
-  switch (command) {
-   case 'init': {
-    const rollingCampaignInitializationV1 = parseRollingCampaignInitialization(fs.readFileSync(argument,'utf8'));
-    if (fs.realpathSync(rollingCampaignInitializationV1.coordinatorRoot) !== root) throw new Error('rolling campaign: initialization root differs from the invoking project');
-    return rollingCampaignOperations.initialize(rollingCampaignInitializationV1);
-   }
-   case 'reconcile': return rollingCampaignOperations.reconcile(argument);
-   case 'status': return rollingCampaignOperations.status(argument);
-   case 'next-actions': return rollingCampaignOperations.nextActions(argument);
-   case 'replenish': return rollingCampaignOperations.replenish(argument,'periodic');
-   default: throw new Error(`rolling campaign: unknown operation ${command}`);
-  }
- });
- process.stdout.write(JSON.stringify(result)+'\n');
+ const abortController = new AbortController();
+ const cancel = ():void=>abortController.abort();
+ process.once('SIGINT',cancel);
+ try {
+  const rollingOperationResponse = await executeRollingCommand(fs.realpathSync(process.cwd()),command,input,abortController.signal);
+  process.stdout.write(JSON.stringify(rollingOperationResponse)+'\n');
+ } finally {process.removeListener('SIGINT',cancel);if (abortController.signal.aborted) process.exitCode=130;}
 }
 if (require.main === module) runRollingOperationCli(process.argv.slice(2)).catch((error:unknown)=> {
- process.stderr.write((error instanceof Error ? error.message : String(error))+'\n');process.exitCode=1;
+ process.stderr.write((error instanceof Error ? error.message : String(error))+'\n');process.exitCode=error instanceof RollingLegacyInspectionError ? error.exitCode : 1;
 });

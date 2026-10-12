@@ -116,11 +116,11 @@ class RollingCodex extends node_events_1.EventEmitter {
             throw cause;
         }
     }
-    constructor({ executable = 'codex', argv = ['app-server', '--listen', 'stdio://'], requestTimeoutMs = 30000 } = {}) {
+    constructor({ executable = 'codex', argv = ['app-server', '--listen', 'stdio://'], requestTimeoutMs = 30000, cwd } = {}) {
         super();
         requireProtocol(Number.isSafeInteger(requestTimeoutMs) && requestTimeoutMs > 0, 'invalid request timeout');
         this.requestTimeoutMs = requestTimeoutMs;
-        this.childProcess = (0, node_child_process_1.spawn)(executable, argv, { stdio: ['pipe', 'pipe', 'pipe'] });
+        this.childProcess = (0, node_child_process_1.spawn)(executable, argv, { stdio: ['pipe', 'pipe', 'pipe'], cwd });
         this.closed = new Promise(resolve => this.childProcess.once('close', () => resolve()));
         this.childProcess.on('error', cause => this.disconnect(cause));
         this.childProcess.once('close', code => this.disconnect(new Error(`Codex App Server closed (${code})`)));
@@ -351,6 +351,19 @@ class RollingCodex extends node_events_1.EventEmitter {
             cursor = nativeString(result.nextCursor, 'archive inventory cursor');
             requireProtocol(!cursors.has(cursor), 'archive inventory cursor repeated');
             cursors.add(cursor);
+        }
+    }
+    async interruptOwnedTurns() {
+        for (const [threadId, turnId] of [...this.activeTurns]) {
+            requireProtocol(turnId !== null, 'active native turn identity is unknown; retain the original session');
+            await this.interruptTurn(threadId, turnId);
+            await this.waitForTurn(threadId, turnId);
+        }
+    }
+    async waitForObservedTurns(timeoutMs) {
+        for (const [threadId, turnId] of [...this.activeTurns]) {
+            requireProtocol(turnId !== null, 'active native turn identity is unknown; retain the original session');
+            await this.waitForTurn(threadId, turnId, timeoutMs);
         }
     }
     async close() {

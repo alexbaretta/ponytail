@@ -19,11 +19,12 @@ policy belongs in `skills/ponytail/SKILL.md`; do not duplicate it here.
 - Obligation operations: plan campaign V3 explicitly names the canonical
   repository-relative `obligation_document`. Portable inspection:
   `node skills/plan-execution/scripts/obligations.js <validate|status|select>
-  <document-path> <repository-root>`. Campaign projection:
-  `ponytail campaign obligation-status <campaign> --json`; coordinator publication:
-  `ponytail campaign obligation-accept <campaign> --candidate <relative-path> --json`;
-  retained idle worker renewal: `ponytail campaign obligation-assign <campaign>
-  --assignment <assignment-id> --json`. Adopted subordinate selection uses
+  <document-path> <repository-root>`. Rolling campaign inspection:
+  `ponytail campaign status --campaign <id>`; coordinator certificate publication:
+  `ponytail campaign accept --campaign <id> --review <review-id>
+  --candidate <relative-path> --bindings <JSON-array>`. Retained inactive worker
+  reactivation uses `resume-worker` with its action ID and generation.
+  Adopted subordinate selection uses
   `ready-tasklets.js <sprint.md> [last-id] --obligations <document> --root <root>`.
   Legacy plan/sprint/tasklet readers remain supported. Shared vocabulary:
   `skills/plan-execution/references/glossary.md`.
@@ -157,34 +158,21 @@ services. `PROJECT_STRUCTURE.md` is authoritative for that boundary.
 - Full-text index maintenance: `ponytail search update-index [-j <n_workers>]
   [-n <commits_per_db_transaction>]`; query:
   `ponytail search query <text>` with optional ref, commit, history, and path selectors.
-- Campaign coordination: `ponytail campaign status [<campaign>] --json`,
-  `ponytail campaign reservation-audit [<campaign>] --json` for a read-only
-  per-slot creation, activity, Git-integration, and release-objection report,
-  `ponytail campaign retry-dispatch <campaign> <original-action-id>
-  --authorization <non-secret-human-authorization-reference> --json` for explicit
-  fenced retry of an unprovisioned STARTED creation with unknown outcome,
-  `ponytail campaign report-blocker <campaign> --result <json>` for scoped
-  coordinator-reported host refusals and their resolution,
-  `ponytail campaign ready-actions [<campaign>] --json`,
-  `ponytail campaign runnable-plans [<campaign>] --json` for the exact
-  dependency-and-tasklet-ready summary,
-  `ponytail campaign tasklet-prerequisites [<campaign>] --json` for integrated
-  cross-plan tasklet gates, `ponytail campaign schedule-ready
-  [<campaign>] --json` for deterministic batch dispatch reservations,
-  `ponytail campaign schedule-review-ready [<campaign>] --json` for
-  authenticated review-only reuse of idle same-campaign workers,
-  `ponytail campaign schedule-planning-ready [<campaign>] --json` for
-  authenticated initial-STUB planning on an idle same-campaign worker,
-  `ponytail campaign reconcile <campaign> --json` for pre-existing active plans,
-  `ponytail campaign observe <campaign> --snapshot <json>`, `ponytail campaign
-  advance [<campaign>] --json`, and `ponytail campaign action-result <campaign>
-  <action-id> --result <json>`, and `ponytail campaign retire-worktree <campaign>
-  <action-id> --json` for project-owned cleanup after the original worker chat
-  is archived; authenticated workers record merge-ready
-  revisions with `ponytail campaign deliver <campaign> --result <json>`. The
-  deprecated coordinator workflow is isolated in
-  `skills/parallel-plan-scheduler/SKILL.md`; ordinary plan execution does not
-  require it.
+- Campaign coordination: `ponytail campaign --help` lists the canonical
+  rolling commands; `ponytail campaign <command> --help` describes arguments,
+  preconditions, mutations and results. Commands use named flags and return
+  `{command, result}` JSON. Initialization: `ponytail campaign init --request
+  @<request.json>`; status: `ponytail campaign status --campaign <id>`;
+  coordinator decisions: `ponytail campaign next-actions --campaign <id>`;
+  graph reconciliation: `ponytail campaign reconcile --campaign <id>`;
+  allocation: `ponytail campaign replenish --campaign <id> [--release <JSON>]`.
+  The canonical command registry is `src/rolling-cli-registry.ts`; CLI and the
+  optional `ponytail-mcp/rolling.ts` adapter invoke the shared typed operations
+  in `src/rolling-operations.ts`. Native sessions use Codex App Server directly;
+  no Ponytail plugin is required. Historical inspection is explicit through
+  `ponytail campaign legacy --command <validate|report|list|status|reservation-audit>
+  [--arguments <JSON-array>]`. Legacy scheduling/dispatch is retired from this
+  chapter; historical persisted records and their readers remain intact.
 - Project initialization and registration: `ponytail register`; removal:
   `ponytail unregister <repository-root>`; listing: `ponytail list-projects`.
 - Worktree selection: `ponytail bless[-worktree]`; display it with `ponytail

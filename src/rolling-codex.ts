@@ -9,6 +9,7 @@ import { parse, stringify } from 'lossless-json';
 import { version } from '../package.json';
 
 export interface RollingCodexOptions {
+  readonly cwd?:string;
   readonly executable?: string;
   readonly argv?: readonly string[];
   readonly requestTimeoutMs?: number;
@@ -160,11 +161,11 @@ export class RollingCodex extends EventEmitter<RollingCodexEvents> {
     catch (cause) { await rollingCodex.close(); throw cause; }
   }
 
-  constructor({ executable = 'codex', argv = ['app-server', '--listen', 'stdio://'], requestTimeoutMs = 30000 }: RollingCodexOptions = {}) {
+  constructor({ executable = 'codex', argv = ['app-server', '--listen', 'stdio://'], requestTimeoutMs = 30000,cwd }: RollingCodexOptions = {}) {
     super();
     requireProtocol(Number.isSafeInteger(requestTimeoutMs) && requestTimeoutMs > 0, 'invalid request timeout');
     this.requestTimeoutMs = requestTimeoutMs;
-    this.childProcess = spawn(executable, argv, { stdio: ['pipe', 'pipe', 'pipe'] });
+    this.childProcess = spawn(executable, argv, { stdio: ['pipe', 'pipe', 'pipe'],cwd });
     this.closed = new Promise(resolve => this.childProcess.once('close', () => resolve()));
     this.childProcess.on('error', cause => this.disconnect(cause));
     this.childProcess.once('close', code => this.disconnect(new Error(`Codex App Server closed (${code})`)));
@@ -380,6 +381,21 @@ export class RollingCodex extends EventEmitter<RollingCodexEvents> {
       cursor = nativeString(result.nextCursor,'archive inventory cursor');
       requireProtocol(!cursors.has(cursor),'archive inventory cursor repeated');
       cursors.add(cursor);
+    }
+  }
+
+  // Traceability: implements REQ-CLI-INTERRUPTION
+  async interruptOwnedTurns():Promise<void> {
+    for (const [threadId,turnId] of [...this.activeTurns]) {
+      requireProtocol(turnId !== null,'active native turn identity is unknown; retain the original session');
+      await this.interruptTurn(threadId,turnId);
+      await this.waitForTurn(threadId,turnId);
+    }
+  }
+  async waitForObservedTurns(timeoutMs:number):Promise<void> {
+    for (const [threadId,turnId] of [...this.activeTurns]) {
+      requireProtocol(turnId !== null,'active native turn identity is unknown; retain the original session');
+      await this.waitForTurn(threadId,turnId,timeoutMs);
     }
   }
 

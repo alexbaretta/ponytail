@@ -662,26 +662,7 @@ def print_usage():
   ponytail plan-input claim <plan> [--json]
   ponytail plan-input complete <plan> <id> --record <pm-path>...
   ponytail pm pdf <collection|all> [--output-dir <path>]
-  ponytail campaign validate <plan-name-or-path>
-  ponytail campaign validate --all [--json]
-  ponytail campaign report [<plan-name-or-path>] [--json] [--[no-]summary-table] [--[no-]plan-table] [--[no-]sprint-table]
-  ponytail campaign list [--active|--pending|--closed|--deferred|--rejected]
-  ponytail campaign activate <plan-name-or-path>
-  ponytail campaign status [<campaign>] [--json]
-  ponytail campaign ready-actions [<campaign>] [--json]
-  ponytail campaign runnable-plans [<campaign>] [--json]
-  ponytail campaign tasklet-prerequisites [<campaign>] [--json]
-  ponytail campaign schedule-ready [<campaign>] [--json]
-  ponytail campaign schedule-review-ready [<campaign>] [--json]
-  ponytail campaign schedule-planning-ready [<campaign>] [--json]
-  ponytail campaign report-blocker <campaign> --result <json>
-  ponytail campaign observe <campaign> --snapshot <json>
-  ponytail campaign advance [<campaign>] [--json]
-  ponytail campaign reconcile <campaign> [--json]
-  ponytail campaign action-result <campaign> <action-id> --result <json>
-  ponytail campaign retire-worktree <campaign> <action-id> [--json]
-  ponytail campaign attach <token>
-  ponytail campaign deliver <campaign> --result <json>
+  ponytail campaign <command> [arguments] (see campaign --help)
   ponytail worktree reclaim [--dry-run] [--json]
   ponytail worktree recover <attachment-token>
   ponytail worktree upgrade <attachment-token> --revision <commit>
@@ -819,7 +800,7 @@ def run():
         except OSError as error:
             raise ProjectError(f"PM CLI could not start: {error}", 2) from error
     if operation == "campaign":
-        campaign_cli = source_root / "src/campaign-census.js"
+        campaign_cli = source_root / "src/rolling-operations.js"
         if not campaign_cli.is_file():
             raise ProjectError(f"campaign CLI source is unavailable: {campaign_cli}", 2)
         try:
@@ -847,7 +828,7 @@ def run():
             raise ProjectError(f"project index CLI could not start: {error}", 2) from error
     if operation in {"-h", "--help", "help"}:
         print_usage()
-        return 0
+        return run_cli(["node", str(source_root / "src/rolling-operations.js"), "--help"], cwd=root)
     if operation == "validate":
         if arguments == ["--all"]:
             validate_all_projects(config)
