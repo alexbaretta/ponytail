@@ -484,3 +484,18 @@ After verified cessation, normal `replenish` reserves the original inactive owne
 before allocating new work, and `resume-worker` refreshes the same session's
 scope/generation. Direct dispatch from REWORK is invalid and is not suggested.
 The CLI and MCP share these decisions and the same immutable stored receipts.
+
+## Final coordinator review decision audit
+
+The same coherent snapshot includes instruction receipts for unresolved,
+unreplaced reviews. A new request with no receipt receives `dispatch-review`;
+an attached original review turn receives `inspect-review`. A started receipt
+without a known turn reports `instruction_turn_unknown`, retaining the request,
+reviewer thread and dispatch identity. Earlier review IDs cannot substitute for
+the current request's receipt. Verdicts and replaced requests retain their
+historical records and do not create another dispatch suggestion.
+
+This projection schedules a designated review request. The coordinator supplies
+the actual native reviewer thread identity to `dispatch-review`; the operation
+verifies it against the retained reviewer session. The projector does not infer
+a thread ID from a session ID.

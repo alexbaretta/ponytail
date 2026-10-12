@@ -548,10 +548,10 @@ instruction receipts are typed fixture data, not a claim of native execution.
 These runs had the task's uncommitted repair changes and are focused validation,
 not clean-candidate bound certificate evidence.
 
-Current source audit still requires review dispatch state to distinguish a new
+The source audit at `ca94bca` still required review dispatch state to distinguish a new
 review request from a known instruction turn: the current projector suggests
 `inspect-review` for all pending verdicts, even before review dispatch is claimed.
-This is an unresolved OBL-64 responsibility; this worker repair alone does not
+That was an unresolved OBL-64 responsibility; that worker repair alone did not
 discharge OBL-64 or the final interface requirement.
 
 ### Failing-first reproduction
@@ -574,7 +574,7 @@ test at dist/tests/rolling-operations.test.js:50:25
 ✖ attached working worker receives an executable next action before new allocations (1.485834ms)
   AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
   + actual - expected
-  
+
     [
       {
   -     assignment: {
@@ -613,7 +613,7 @@ test at dist/tests/rolling-operations.test.js:50:25
         kind: 'replenish'
       }
     ]
-  
+
       at TestContext.<anonymous> (/Users/alex/git/ctosclub/ponytail/dist/tests/rolling-operations.test.js:53:22)
       at Test.runInAsyncScope (node:async_hooks:227:14)
       at Test.run (node:internal/test_runner/test:1201:25)
@@ -632,7 +632,7 @@ test at dist/tests/rolling-operations.test.js:55:25
   AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
   + actual - expected
   ... Skipped lines
-  
+
     [
       {
         assignment: {
@@ -650,7 +650,7 @@ test at dist/tests/rolling-operations.test.js:55:25
         graphDigest: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
         kind: 'replenish'
       }
-  
+
       at TestContext.<anonymous> (/Users/alex/git/ctosclub/ponytail/dist/tests/rolling-operations.test.js:58:22)
       at Test.runInAsyncScope (node:async_hooks:227:14)
       at Test.run (node:internal/test_runner/test:1201:25)
@@ -711,5 +711,103 @@ test at dist/tests/rolling-operations.test.js:55:25
 > node skills/requirements-traceability/scripts/check-traceability.js --config .agents/config/project/traceability.json --write
 
 Traceability checked 835 relationships: no violations found.
+
+~~~
+
+## OBL-64 review decision repair evidence
+
+A fresh typed request with no retained instruction receipt reproduced the wrong
+inspect-review suggestion. The bounded followup now distinguishes fresh dispatch,
+known original-turn observation, and unknown creation without replacing ownership.
+Ten focused unit tests and two real PostgreSQL/CLI/MCP scenarios pass. PostgreSQL
+submission/request/receipt fixtures are explicitly typed fixture inputs; they
+establish the actual snapshot and decision paths, not native execution.
+
+Final workflow audit and clean-tree whole-campaign evidence renewal remain
+pending. One remaining audit item is retirement-to-release projection: a CLEANED
+retained owner must produce a fenced release/replenishment action, whereas the
+current next-action projection still repeats retire-worker. The retirement
+operation and allocation release gate exist; their current receipt must be made
+visible to the coordinator decision projection before OBL-64 can be discharged.
+
+### Review failing-first reproduction
+
+~~~text
+✖ new review request is dispatched before attempting to inspect its nonexistent turn (1.45475ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 62.100791
+
+✖ failing tests:
+
+test at dist/tests/rolling-operations.test.js:85:25
+✖ new review request is dispatched before attempting to inspect its nonexistent turn (1.45475ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+
+    {
+  +   command: 'inspect-review',
+  -   command: 'dispatch-review',
+      kind: 'review',
+      review: {
+        outcome: null,
+        request: {
+          assignmentId: 'worker',
+
+      at TestContext.<anonymous> (/Users/alex/git/ctosclub/ponytail/dist/tests/rolling-operations.test.js:88:22)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1201:25)
+      at Test.start (node:internal/test_runner/test:1096:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:385:17) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: { kind: 'review', command: 'inspect-review', review: { request: [Object], outcome: null } },
+    expected: { kind: 'review', command: 'dispatch-review', review: { request: [Object], outcome: null } },
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+~~~
+### Review focused unit result
+
+~~~text
+✔ CLI initialization preserves its physical V1 contract and rejects rounded integers or undeclared fields (7.855ms)
+✔ coordinator decisions require reconciliation before suggesting work from a changed authoritative graph (0.219583ms)
+✔ next actions retain exact fenced identities and prerequisite explanations before replenishment (0.106459ms)
+✔ unknown publication is observed before worker replenishment and never suggested as a push retry (0.10575ms)
+✔ attached working worker receives an executable next action before new allocations (0.111167ms)
+✔ rejected work stops its original worker before resume-first replenishment (0.080959ms)
+✔ known worker instruction is collected and unknown creation keeps its original ownership (0.119834ms)
+✔ pending original attachment is observed before worker dispatch and stopped workers are not restarted (0.137292ms)
+✔ new review request is dispatched before attempting to inspect its nonexistent turn (0.108666ms)
+✔ review decisions observe known turns and preserve uncertain original dispatch ownership (0.168416ms)
+ℹ tests 10
+ℹ suites 0
+ℹ pass 10
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 71.512583
+
+~~~
+### Review PostgreSQL and adapter result
+
+~~~text
+✔ shared operations initialize defaults and reconcile event/periodic contention without duplicate allocations (4648.842667ms)
+✔ closure requires fresh evidence, persists an immutable receipt and fences later mutations (1098.347125ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 2
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 5813.357167
 
 ~~~

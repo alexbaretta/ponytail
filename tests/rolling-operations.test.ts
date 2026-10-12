@@ -3,7 +3,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {projectRollingCoordinatorActions,parseRollingCampaignInitialization,readRollingCampaignInitializationV1,type RollingCampaignInitializationV1} from '../src/rolling-operations.js';
-import type {RollingCoordinatorSnapshot,RollingAction,RollingPublicationStatus,RollingStoredAssignment,RollingWorkerDispatchAttached,RollingWorkerDispatchStarted,RollingStoredWorkerDispatch} from '../src/rolling-campaign-store.js';
+import type {RollingCoordinatorSnapshot,RollingAction,RollingPublicationStatus,RollingStoredAssignment,RollingWorkerDispatchAttached,RollingWorkerDispatchStarted,RollingStoredWorkerDispatch,RollingReviewDispatchStarted,RollingReviewDispatchAttached,RollingStoredReviewDispatch} from '../src/rolling-campaign-store.js';
+import type {RollingStoredReview,RollingReviewRequestV1} from '../src/rolling-review.js';
 import type {RollingWorkerSelection,RollingBinding,RollingSchedulingBlock} from '../src/rolling-campaign.js';
 
 function snapshot():RollingCoordinatorSnapshot {
@@ -11,7 +12,7 @@ function snapshot():RollingCoordinatorSnapshot {
  const rollingWorkerSelection:RollingWorkerSelection = {kind:'start_worker',assignmentId:null,obligationId:'OBL-1',plannedPaths:['src/current.ts'],exclusiveResources:[],binding:rollingBinding};
  const rollingSchedulingBlock:RollingSchedulingBlock = {reason:'prerequisites',obligationId:'OBL-2',prerequisites:['OBL-1']};
  return {closure:null,graphDigest:'a'.repeat(64),observedGraphDigest:'a'.repeat(64),configuration:{schemaVersion:3,bindingHistory:null,mainline:{remote:'origin',branch:'main'},incrementRef:'campaign/proof',maxActiveWorkers:2,publicationSize:1},
-  assignments:[],actions:[],reviews:[],workerDispatches:[],publications:[],scheduling:{digest:'a'.repeat(64),activeCount:0,availableCapacity:1,selected:[rollingWorkerSelection],blocked:[rollingSchedulingBlock]}};
+  assignments:[],actions:[],reviews:[],workerDispatches:[],reviewDispatches:[],publications:[],scheduling:{digest:'a'.repeat(64),activeCount:0,availableCapacity:1,selected:[rollingWorkerSelection],blocked:[rollingSchedulingBlock]}};
 }
 
 // Traceability: verifies REQ-ROLLING-INTERFACES
@@ -104,4 +105,32 @@ test('pending original attachment is observed before worker dispatch and stopped
  assert.ok(!projectRollingCoordinatorActions(rollingCoordinatorSnapshot).decisions.some(decision=>decision.kind === 'assignment'));
  const stoppedRollingCoordinatorSnapshot:RollingCoordinatorSnapshot={...rollingCoordinatorSnapshot,actions:[],assignments:[{...rollingStoredAssignment,activityStopped:true}]};
  assert.ok(!projectRollingCoordinatorActions(stoppedRollingCoordinatorSnapshot).decisions.some(decision=>decision.kind === 'assignment'));
+});
+
+function pendingReview():RollingStoredReview {
+ const rollingReviewRequestV1:RollingReviewRequestV1={schemaVersion:1,id:'review',campaignId:'pilot',assignmentId:'worker',generation:'generation',baseCommit:'a'.repeat(40),revision:'b'.repeat(40),reviewerSessionId:'reviewer'};
+ return {request:rollingReviewRequestV1,outcome:null};
+}
+
+// Traceability: verifies REQ-ROLLING-INTERFACES
+// Traceability: verifies REQ-ROLLING-REVIEW
+test('new review request is dispatched before attempting to inspect its nonexistent turn',()=> {
+ const rollingStoredReview:RollingStoredReview=pendingReview();
+ const rollingCoordinatorSnapshot:RollingCoordinatorSnapshot={...snapshot(),reviews:[rollingStoredReview]};
+ assert.deepEqual(projectRollingCoordinatorActions(rollingCoordinatorSnapshot).decisions[0],{kind:'review',command:'dispatch-review',review:rollingStoredReview});
+});
+
+// Traceability: verifies REQ-ROLLING-INTERFACES
+// Traceability: verifies REQ-ROLLING-REVIEW
+test('review decisions observe known turns and preserve uncertain original dispatch ownership',()=> {
+ const rollingStoredReview:RollingStoredReview=pendingReview();
+ const rollingReviewDispatchStarted:RollingReviewDispatchStarted={id:'dispatch',reviewerThreadId:'reviewer-thread',state:'STARTED'};
+ const rollingStoredReviewDispatch:RollingStoredReviewDispatch={reviewId:rollingStoredReview.request.id,dispatch:rollingReviewDispatchStarted};
+ const rollingCoordinatorSnapshot:RollingCoordinatorSnapshot={...snapshot(),reviews:[rollingStoredReview],reviewDispatches:[rollingStoredReviewDispatch]};
+ assert.deepEqual(projectRollingCoordinatorActions(rollingCoordinatorSnapshot).decisions[0],{kind:'blocked-review-dispatch',reason:'instruction_turn_unknown',review:rollingStoredReview,dispatch:rollingReviewDispatchStarted});
+ const rollingReviewDispatchAttached:RollingReviewDispatchAttached={...rollingReviewDispatchStarted,state:'ATTACHED',turnId:'original-turn'};
+ const attachedRollingCoordinatorSnapshot:RollingCoordinatorSnapshot={...rollingCoordinatorSnapshot,reviewDispatches:[{...rollingStoredReviewDispatch,dispatch:rollingReviewDispatchAttached}]};
+ assert.deepEqual(projectRollingCoordinatorActions(attachedRollingCoordinatorSnapshot).decisions[0],{kind:'review',command:'inspect-review',review:rollingStoredReview});
+ const foreignRollingCoordinatorSnapshot:RollingCoordinatorSnapshot={...attachedRollingCoordinatorSnapshot,reviewDispatches:[{...rollingStoredReviewDispatch,reviewId:'earlier-review'}]};
+ assert.deepEqual(projectRollingCoordinatorActions(foreignRollingCoordinatorSnapshot).decisions[0],{kind:'review',command:'dispatch-review',review:rollingStoredReview});
 });

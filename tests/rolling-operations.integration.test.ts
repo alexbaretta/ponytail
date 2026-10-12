@@ -10,10 +10,13 @@ import {createInterface} from 'node:readline';
 import {Pool} from 'pg';
 import {databaseOptions} from '../src/project-index-database.js';
 import {fixture,git} from './helpers/obligation-fixture.js';
-import {RollingCampaignStore,type RollingExecutionConfigV3,type RollingWorkerDispatchStarted,type RollingWorkerDispatchAttached} from '../src/rolling-campaign-store.js';
+import {RollingCampaignStore,type RollingExecutionConfigV3,type RollingWorkerDispatchStarted,type RollingWorkerDispatchAttached,type RollingReviewDispatchStarted,type RollingReviewDispatchAttached} from '../src/rolling-campaign-store.js';
 import {RollingCampaignOperations,type RollingCampaignInitializationV1,type RollingReplenishment} from '../src/rolling-operations.js';
 import type {RollingProjectConfigV1,RollingBindingsV1} from '../src/rolling-campaign.js';
 import {acceptCheckpoint,inputDigest,type ObligationCertificate,type ObligationCheckpoint,type ObligationDocumentV1,type Obligation,type ObligationVector} from '../skills/plan-execution/scripts/obligations.js';
+import {freezeObligationLease,type ObligationBindingHistoryV1} from '../skills/plan-execution/scripts/obligation-binding-history.js';
+import type {RollingWorkerSubmissionV1} from '../src/rolling-worker-submission.js';
+import type {RollingReviewRequestV1} from '../src/rolling-review.js';
 import {rollingCommandDefinitions} from '../src/rolling-cli-registry.js';
 
 // Traceability: verifies REQ-ROLLING-INTERFACES
@@ -168,6 +171,33 @@ test('shared operations initialize defaults and reconcile event/periodic content
  assert.deepEqual(staleRollingCoordinatorActions.snapshot.workerDispatches,[]);
  assert.ok(staleRollingCoordinatorActions.decisions.some(decision=>decision.kind === 'assignment' && decision.command === 'dispatch-worker' && decision.assignment.id === firstRollingStoredAssignment.id));
  await pool.query("DELETE FROM ponytail_index.rolling_worker_dispatch_v1 WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3",[projectId,'pilot',firstRollingStoredAssignment.id]);
+ // Exact typed submission/request fixtures establish relational snapshot inputs;
+ // their receipt states exercise the real database without claiming native execution.
+ const obligationBindingHistoryV1:ObligationBindingHistoryV1={schemaVersion:1,scopeId:'pilot',revisions:[]};
+ const currentObligationBaseline=obligationFixture.document.baselines.at(-1);assert.ok(currentObligationBaseline);
+ const obligationLeaseV1=freezeObligationLease(obligationFixture.document,obligationBindingHistoryV1,{obligationId:firstRollingStoredAssignment.obligationId,graphDigest:staleRollingCoordinatorActions.snapshot.graphDigest,generation:firstRollingStoredAssignment.generation,assessor:'coordinator',authority:currentObligationBaseline.authority.references});
+ const candidateRevision=git(root,['rev-parse','HEAD']);
+ const observedAt=new Date().toISOString();
+ const rollingWorkerSubmissionV1:RollingWorkerSubmissionV1={schemaVersion:1,campaignId:'pilot',assignmentId:firstRollingStoredAssignment.id,generation:firstRollingStoredAssignment.generation,sessionId:'session-fixture',graphDigest:staleRollingCoordinatorActions.snapshot.graphDigest,revision:candidateRevision,baseCommit:candidateRevision,stopped:true,
+  proof:[{operation:'inspect',evidence:{command:'snapshot-fixture',selection:['relational snapshot fixture'],target:{identity:'isolated-local',profile:'database-snapshot-fixture',verification:'requirement.md'},revision:candidateRevision,dirty:false,startedAt:observedAt,completedAt:observedAt,outcome:'pass',skips:0,failures:0,inputs:[{path:'requirement.md',digest:inputDigest(root,'requirement.md')}],outputPath:'requirement.md',finalization:'pass'}}]};
+ await pool.query("INSERT INTO ponytail_index.rolling_submission_v1(project_id,campaign_id,assignment_id,generation,revision,submission_text,lease_text) VALUES($1,$2,$3,$4,$5,$6,$7)",[projectId,'pilot',firstRollingStoredAssignment.id,firstRollingStoredAssignment.generation,candidateRevision,JSON.stringify(rollingWorkerSubmissionV1),JSON.stringify(obligationLeaseV1)]);
+ const rollingReviewRequestV1:RollingReviewRequestV1={schemaVersion:1,id:crypto.randomUUID(),campaignId:'pilot',assignmentId:firstRollingStoredAssignment.id,generation:firstRollingStoredAssignment.generation,baseCommit:candidateRevision,revision:candidateRevision,reviewerSessionId:'reviewer-fixture'};
+ await pool.query("INSERT INTO ponytail_index.rolling_review_v1(project_id,campaign_id,review_id,assignment_id,generation,revision,request_text) VALUES($1,$2,$3,$4,$5,$6,$7)",[projectId,'pilot',rollingReviewRequestV1.id,firstRollingStoredAssignment.id,firstRollingStoredAssignment.generation,candidateRevision,JSON.stringify(rollingReviewRequestV1)]);
+ await pool.query("UPDATE ponytail_index.rolling_assignment_v1 SET state='REVIEW',activity_stopped=true WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3",[projectId,'pilot',firstRollingStoredAssignment.id]);
+ assert.ok((await rollingCampaignOperations.nextActions('pilot')).decisions.some(decision=>decision.kind === 'review' && decision.command === 'dispatch-review' && decision.review.request.id === rollingReviewRequestV1.id));
+ const rollingReviewDispatchStarted:RollingReviewDispatchStarted={id:crypto.randomUUID(),reviewerThreadId:'reviewer-thread-fixture',state:'STARTED'};
+ await pool.query("INSERT INTO ponytail_index.rolling_review_dispatch_v1(project_id,campaign_id,review_id,dispatch_id,reviewer_thread_id,state) VALUES($1,$2,$3,$4,$5,$6)",[projectId,'pilot',rollingReviewRequestV1.id,rollingReviewDispatchStarted.id,rollingReviewDispatchStarted.reviewerThreadId,rollingReviewDispatchStarted.state]);
+ const unknownReviewRollingCoordinatorActions=await rollingCampaignOperations.nextActions('pilot');
+ assert.deepEqual(unknownReviewRollingCoordinatorActions.snapshot.reviewDispatches,[{reviewId:rollingReviewRequestV1.id,dispatch:rollingReviewDispatchStarted}]);
+ assert.ok(unknownReviewRollingCoordinatorActions.decisions.some(decision=>decision.kind === 'blocked-review-dispatch' && decision.review.request.id === rollingReviewRequestV1.id));
+ const rollingReviewDispatchAttached:RollingReviewDispatchAttached={...rollingReviewDispatchStarted,state:'ATTACHED',turnId:'retained-review-turn'};
+ await pool.query("UPDATE ponytail_index.rolling_review_dispatch_v1 SET state=$4,turn_id=$5 WHERE project_id=$1 AND campaign_id=$2 AND review_id=$3",[projectId,'pilot',rollingReviewRequestV1.id,rollingReviewDispatchAttached.state,rollingReviewDispatchAttached.turnId]);
+ const attachedReviewRollingCoordinatorActions=await rollingCampaignOperations.nextActions('pilot');
+ assert.deepEqual(attachedReviewRollingCoordinatorActions.snapshot.reviewDispatches,[{reviewId:rollingReviewRequestV1.id,dispatch:rollingReviewDispatchAttached}]);
+ assert.ok(attachedReviewRollingCoordinatorActions.decisions.some(decision=>decision.kind === 'review' && decision.command === 'inspect-review' && decision.review.request.id === rollingReviewRequestV1.id));
+ await verifyMcpParity(root,rollingCampaignOperations);
+ await pool.query("DELETE FROM ponytail_index.rolling_submission_v1 WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3",[projectId,'pilot',firstRollingStoredAssignment.id]);
+ await pool.query("UPDATE ponytail_index.rolling_assignment_v1 SET state='WORKING',activity_stopped=false WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3",[projectId,'pilot',firstRollingStoredAssignment.id]);
  await rollingCampaignStore.suspend('pilot',firstRollingStoredAssignment.id,firstRollingStoredAssignment.generation,true,['OBL-7']);
  const inactiveRollingCoordinatorSnapshot = await rollingCampaignOperations.status('pilot');
  assert.equal(inactiveRollingCoordinatorSnapshot.scheduling.activeCount,1);

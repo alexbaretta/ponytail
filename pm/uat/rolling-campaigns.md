@@ -123,6 +123,16 @@ Traceability: verifies REQ-ROLLING-INTERFACES
    contribution compares these same fenced operations through MCP.
 3. **Step INTERFACE-LEGACY:** Acceptance contribution to [OBL-67](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-67). Inspect an old campaign. It is not dispatched or
    silently migrated by the replacement scheduler.
+4. **Step INTERFACE-DECISIONS:** Acceptance contribution to
+   [OBL-64](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-64).
+   Inspect worker and review requests before instruction dispatch, after a
+   retained STARTED creation with unknown turn identity, and after ATTACHED
+   receipt acknowledgement. The shared operations return dispatch only before
+   creation, original-turn observation only with a known turn, and retained
+   ownership with an explicit unresolved reason for uncertain creation. Verify
+   generation/request fences, pending attachment priority, and suspension before
+   rejected-work resumption through PostgreSQL and both adapters.
+
 
 ## Arc ROLL-CLOSE: Close only verified campaign scope
 

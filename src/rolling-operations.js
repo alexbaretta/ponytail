@@ -120,9 +120,22 @@ function projectRollingCoordinatorActions(rollingCoordinatorSnapshot) {
     const decisions = [];
     for (const publication of rollingCoordinatorSnapshot.publications)
         decisions.push({ kind: 'publication', command: publicationCommand(publication), publication });
-    for (const review of rollingCoordinatorSnapshot.reviews)
-        if (review.outcome === null)
-            decisions.push({ kind: 'review', command: 'inspect-review', review });
+    for (const rollingStoredReview of rollingCoordinatorSnapshot.reviews)
+        if (rollingStoredReview.outcome === null) {
+            const rollingReviewDispatch = rollingCoordinatorSnapshot.reviewDispatches.find(rollingStoredReviewDispatch => rollingStoredReviewDispatch.reviewId === rollingStoredReview.request.id)?.dispatch;
+            switch (rollingReviewDispatch?.state) {
+                case undefined:
+                    decisions.push({ kind: 'review', command: 'dispatch-review', review: rollingStoredReview });
+                    break;
+                case 'ATTACHED':
+                    decisions.push({ kind: 'review', command: 'inspect-review', review: rollingStoredReview });
+                    break;
+                case 'STARTED':
+                    decisions.push({ kind: 'blocked-review-dispatch', reason: 'instruction_turn_unknown', review: rollingStoredReview, dispatch: rollingReviewDispatch });
+                    break;
+                default: rollingReviewDispatch;
+            }
+        }
     for (const rollingStoredAssignment of rollingCoordinatorSnapshot.assignments) {
         if (rollingCoordinatorSnapshot.actions.some(rollingAction => rollingAction.assignmentId === rollingStoredAssignment.id && rollingAction.generation === rollingStoredAssignment.generation))
             continue;
