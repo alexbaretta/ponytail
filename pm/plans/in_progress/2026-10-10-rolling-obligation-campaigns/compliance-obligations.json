@@ -1414,6 +1414,1572 @@
       }
     }
   ],
-  "certificates": [],
-  "checkpoints": []
+  "certificates": [
+    {
+      "id": "CERT-COMPLIANCE-OBL-123",
+      "obligationIds": [
+        "OBL-123"
+      ],
+      "inputs": {
+        "schemaVersion": 2,
+        "revision": "977bc44bcf53e94db29f65199513ef57e6734eca",
+        "paths": [
+          "src",
+          "skills",
+          "tests",
+          "scripts",
+          "cli",
+          "ponytail-mcp",
+          "pi-extension",
+          "tsts",
+          "package.json",
+          "package-lock.json",
+          "tsconfig.json",
+          "tsts.json",
+          "ponytail.json",
+          ".agents/config/project/traceability.json",
+          "pm/requirements/rolling-campaigns.md",
+          "pm/uat/rolling-campaigns.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/compliance-audit.md"
+        ]
+      },
+      "artifacts": [
+        "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/compliance-audit.md"
+      ],
+      "assessor": "coordinator",
+      "authority": [
+        "stakeholder:2026-10-12-campaign-compliance"
+      ],
+      "adequate": true,
+      "reason": "Assessed complete criterion for OBL-123; see bounded compliance audit",
+      "disposition": null,
+      "evidence": [],
+      "inventoryIds": [
+        "OBL-130",
+        "OBL-131",
+        "OBL-132",
+        "OBL-133",
+        "OBL-134",
+        "OBL-135",
+        "OBL-136",
+        "OBL-137",
+        "OBL-138",
+        "OBL-139"
+      ]
+    },
+    {
+      "id": "CERT-COMPLIANCE-OBL-130",
+      "obligationIds": [
+        "OBL-130"
+      ],
+      "inputs": {
+        "schemaVersion": 2,
+        "revision": "977bc44bcf53e94db29f65199513ef57e6734eca",
+        "paths": [
+          "src",
+          "skills",
+          "tests",
+          "scripts",
+          "cli",
+          "ponytail-mcp",
+          "pi-extension",
+          "tsts",
+          "package.json",
+          "package-lock.json",
+          "tsconfig.json",
+          "tsts.json",
+          "ponytail.json",
+          ".agents/config/project/traceability.json",
+          "pm/requirements/rolling-campaigns.md",
+          "pm/uat/rolling-campaigns.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/compliance-audit.md"
+        ]
+      },
+      "artifacts": [
+        "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/compliance-audit.md"
+      ],
+      "assessor": "coordinator",
+      "authority": [
+        "stakeholder:2026-10-12-campaign-compliance"
+      ],
+      "adequate": true,
+      "reason": "Assessed complete criterion for OBL-130; see bounded compliance audit",
+      "disposition": null,
+      "evidence": [],
+      "inventoryIds": []
+    },
+    {
+      "id": "CERT-COMPLIANCE-OBL-131",
+      "obligationIds": [
+        "OBL-131"
+      ],
+      "inputs": {
+        "schemaVersion": 2,
+        "revision": "977bc44bcf53e94db29f65199513ef57e6734eca",
+        "paths": [
+          "src",
+          "skills",
+          "tests",
+          "scripts",
+          "cli",
+          "ponytail-mcp",
+          "pi-extension",
+          "tsts",
+          "package.json",
+          "package-lock.json",
+          "tsconfig.json",
+          "tsts.json",
+          "ponytail.json",
+          ".agents/config/project/traceability.json",
+          "pm/requirements/rolling-campaigns.md",
+          "pm/uat/rolling-campaigns.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/compliance-audit.md"
+        ]
+      },
+      "artifacts": [
+        "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/compliance-audit.md"
+      ],
+      "assessor": "coordinator",
+      "authority": [
+        "stakeholder:2026-10-12-campaign-compliance"
+      ],
+      "adequate": true,
+      "reason": "Assessed complete criterion for OBL-131; see bounded compliance audit",
+      "disposition": null,
+      "evidence": [],
+      "inventoryIds": []
+    },
+    {
+      "id": "CERT-COMPLIANCE-OBL-132",
+      "obligationIds": [
+        "OBL-132"
+      ],
+      "inputs": {
+        "schemaVersion": 2,
+        "revision": "977bc44bcf53e94db29f65199513ef57e6734eca",
+        "paths": [
+          "src",
+          "skills",
+          "tests",
+          "scripts",
+          "cli",
+          "ponytail-mcp",
+          "pi-extension",
+          "tsts",
+          "package.json",
+          "package-lock.json",
+          "tsconfig.json",
+          "tsts.json",
+          "ponytail.json",
+          ".agents/config/project/traceability.json",
+          "pm/requirements/rolling-campaigns.md",
+          "pm/uat/rolling-campaigns.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/compliance-audit.md"
+        ]
+      },
+      "artifacts": [
+        "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/compliance-audit.md"
+      ],
+      "assessor": "coordinator",
+      "authority": [
+        "stakeholder:2026-10-12-campaign-compliance"
+      ],
+      "adequate": true,
+      "reason": "Assessed complete criterion for OBL-132; see bounded compliance audit",
+      "disposition": null,
+      "evidence": [],
+      "inventoryIds": []
+    },
+    {
+      "id": "CERT-COMPLIANCE-OBL-133",
+      "obligationIds": [
+        "OBL-133"
+      ],
+      "inputs": {
+        "schemaVersion": 2,
+        "revision": "977bc44bcf53e94db29f65199513ef57e6734eca",
+        "paths": [
+          "src",
+          "skills",
+          "tests",
+          "scripts",
+          "cli",
+          "ponytail-mcp",
+          "pi-extension",
+          "tsts",
+          "package.json",
+          "package-lock.json",
+          "tsconfig.json",
+          "tsts.json",
+          "ponytail.json",
+          ".agents/config/project/traceability.json",
+          "pm/requirements/rolling-campaigns.md",
+          "pm/uat/rolling-campaigns.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/compliance-audit.md"
+        ]
+      },
+      "artifacts": [
+        "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/compliance-audit.md"
+      ],
+      "assessor": "coordinator",
+      "authority": [
+        "stakeholder:2026-10-12-campaign-compliance"
+      ],
+      "adequate": true,
+      "reason": "Assessed complete criterion for OBL-133; see bounded compliance audit",
+      "disposition": null,
+      "evidence": [],
+      "inventoryIds": []
+    },
+    {
+      "id": "CERT-COMPLIANCE-OBL-134",
+      "obligationIds": [
+        "OBL-134"
+      ],
+      "inputs": {
+        "schemaVersion": 2,
+        "revision": "977bc44bcf53e94db29f65199513ef57e6734eca",
+        "paths": [
+          "src",
+          "skills",
+          "tests",
+          "scripts",
+          "cli",
+          "ponytail-mcp",
+          "pi-extension",
+          "tsts",
+          "package.json",
+          "package-lock.json",
+          "tsconfig.json",
+          "tsts.json",
+          "ponytail.json",
+          ".agents/config/project/traceability.json",
+          "pm/requirements/rolling-campaigns.md",
+          "pm/uat/rolling-campaigns.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/compliance-audit.md"
+        ]
+      },
+      "artifacts": [
+        "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/compliance-audit.md"
+      ],
+      "assessor": "coordinator",
+      "authority": [
+        "stakeholder:2026-10-12-campaign-compliance"
+      ],
+      "adequate": true,
+      "reason": "Assessed complete criterion for OBL-134; see bounded compliance audit",
+      "disposition": null,
+      "evidence": [],
+      "inventoryIds": []
+    },
+    {
+      "id": "CERT-COMPLIANCE-OBL-135",
+      "obligationIds": [
+        "OBL-135"
+      ],
+      "inputs": {
+        "schemaVersion": 2,
+        "revision": "977bc44bcf53e94db29f65199513ef57e6734eca",
+        "paths": [
+          "src",
+          "skills",
+          "tests",
+          "scripts",
+          "cli",
+          "ponytail-mcp",
+          "pi-extension",
+          "tsts",
+          "package.json",
+          "package-lock.json",
+          "tsconfig.json",
+          "tsts.json",
+          "ponytail.json",
+          ".agents/config/project/traceability.json",
+          "pm/requirements/rolling-campaigns.md",
+          "pm/uat/rolling-campaigns.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/compliance-audit.md"
+        ]
+      },
+      "artifacts": [
+        "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/compliance-audit.md"
+      ],
+      "assessor": "coordinator",
+      "authority": [
+        "stakeholder:2026-10-12-campaign-compliance"
+      ],
+      "adequate": true,
+      "reason": "Assessed complete criterion for OBL-135; see bounded compliance audit",
+      "disposition": null,
+      "evidence": [],
+      "inventoryIds": []
+    },
+    {
+      "id": "CERT-COMPLIANCE-OBL-136",
+      "obligationIds": [
+        "OBL-136"
+      ],
+      "inputs": {
+        "schemaVersion": 2,
+        "revision": "977bc44bcf53e94db29f65199513ef57e6734eca",
+        "paths": [
+          "src",
+          "skills",
+          "tests",
+          "scripts",
+          "cli",
+          "ponytail-mcp",
+          "pi-extension",
+          "tsts",
+          "package.json",
+          "package-lock.json",
+          "tsconfig.json",
+          "tsts.json",
+          "ponytail.json",
+          ".agents/config/project/traceability.json",
+          "pm/requirements/rolling-campaigns.md",
+          "pm/uat/rolling-campaigns.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/compliance-audit.md"
+        ]
+      },
+      "artifacts": [
+        "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/compliance-audit.md"
+      ],
+      "assessor": "coordinator",
+      "authority": [
+        "stakeholder:2026-10-12-campaign-compliance"
+      ],
+      "adequate": true,
+      "reason": "Assessed complete criterion for OBL-136; see bounded compliance audit",
+      "disposition": null,
+      "evidence": [],
+      "inventoryIds": []
+    },
+    {
+      "id": "CERT-COMPLIANCE-OBL-137",
+      "obligationIds": [
+        "OBL-137"
+      ],
+      "inputs": {
+        "schemaVersion": 2,
+        "revision": "977bc44bcf53e94db29f65199513ef57e6734eca",
+        "paths": [
+          "src",
+          "skills",
+          "tests",
+          "scripts",
+          "cli",
+          "ponytail-mcp",
+          "pi-extension",
+          "tsts",
+          "package.json",
+          "package-lock.json",
+          "tsconfig.json",
+          "tsts.json",
+          "ponytail.json",
+          ".agents/config/project/traceability.json",
+          "pm/requirements/rolling-campaigns.md",
+          "pm/uat/rolling-campaigns.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/compliance-audit.md"
+        ]
+      },
+      "artifacts": [
+        "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/compliance-audit.md"
+      ],
+      "assessor": "coordinator",
+      "authority": [
+        "stakeholder:2026-10-12-campaign-compliance"
+      ],
+      "adequate": true,
+      "reason": "Assessed complete criterion for OBL-137; see bounded compliance audit",
+      "disposition": null,
+      "evidence": [],
+      "inventoryIds": []
+    },
+    {
+      "id": "CERT-COMPLIANCE-OBL-138",
+      "obligationIds": [
+        "OBL-138"
+      ],
+      "inputs": {
+        "schemaVersion": 2,
+        "revision": "977bc44bcf53e94db29f65199513ef57e6734eca",
+        "paths": [
+          "src",
+          "skills",
+          "tests",
+          "scripts",
+          "cli",
+          "ponytail-mcp",
+          "pi-extension",
+          "tsts",
+          "package.json",
+          "package-lock.json",
+          "tsconfig.json",
+          "tsts.json",
+          "ponytail.json",
+          ".agents/config/project/traceability.json",
+          "pm/requirements/rolling-campaigns.md",
+          "pm/uat/rolling-campaigns.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/compliance-audit.md"
+        ]
+      },
+      "artifacts": [
+        "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/compliance-audit.md"
+      ],
+      "assessor": "coordinator",
+      "authority": [
+        "stakeholder:2026-10-12-campaign-compliance"
+      ],
+      "adequate": true,
+      "reason": "Assessed complete criterion for OBL-138; see bounded compliance audit",
+      "disposition": null,
+      "evidence": [],
+      "inventoryIds": []
+    },
+    {
+      "id": "CERT-COMPLIANCE-OBL-139",
+      "obligationIds": [
+        "OBL-139"
+      ],
+      "inputs": {
+        "schemaVersion": 2,
+        "revision": "977bc44bcf53e94db29f65199513ef57e6734eca",
+        "paths": [
+          "src",
+          "skills",
+          "tests",
+          "scripts",
+          "cli",
+          "ponytail-mcp",
+          "pi-extension",
+          "tsts",
+          "package.json",
+          "package-lock.json",
+          "tsconfig.json",
+          "tsts.json",
+          "ponytail.json",
+          ".agents/config/project/traceability.json",
+          "pm/requirements/rolling-campaigns.md",
+          "pm/uat/rolling-campaigns.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/compliance-audit.md"
+        ]
+      },
+      "artifacts": [
+        "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/compliance-audit.md"
+      ],
+      "assessor": "coordinator",
+      "authority": [
+        "stakeholder:2026-10-12-campaign-compliance"
+      ],
+      "adequate": true,
+      "reason": "Assessed complete criterion for OBL-139; see bounded compliance audit",
+      "disposition": null,
+      "evidence": [],
+      "inventoryIds": []
+    },
+    {
+      "id": "CERT-COMPLIANCE-OBL-124",
+      "obligationIds": [
+        "OBL-124"
+      ],
+      "inputs": {
+        "schemaVersion": 2,
+        "revision": "977bc44bcf53e94db29f65199513ef57e6734eca",
+        "paths": [
+          "src",
+          "skills",
+          "tests",
+          "scripts",
+          "cli",
+          "ponytail-mcp",
+          "pi-extension",
+          "tsts",
+          "package.json",
+          "package-lock.json",
+          "tsconfig.json",
+          "tsts.json",
+          "ponytail.json",
+          ".agents/config/project/traceability.json",
+          "pm/requirements/rolling-campaigns.md",
+          "pm/uat/rolling-campaigns.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/compliance-audit.md"
+        ]
+      },
+      "artifacts": [
+        "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/compliance-audit.md"
+      ],
+      "assessor": "coordinator",
+      "authority": [
+        "stakeholder:2026-10-12-campaign-compliance"
+      ],
+      "adequate": true,
+      "reason": "Assessed complete criterion for OBL-124; see bounded compliance audit",
+      "disposition": null,
+      "evidence": [],
+      "inventoryIds": [
+        "OBL-140",
+        "OBL-141"
+      ]
+    },
+    {
+      "id": "CERT-COMPLIANCE-OBL-140",
+      "obligationIds": [
+        "OBL-140"
+      ],
+      "inputs": {
+        "schemaVersion": 2,
+        "revision": "977bc44bcf53e94db29f65199513ef57e6734eca",
+        "paths": [
+          "src",
+          "skills",
+          "tests",
+          "scripts",
+          "cli",
+          "ponytail-mcp",
+          "pi-extension",
+          "tsts",
+          "package.json",
+          "package-lock.json",
+          "tsconfig.json",
+          "tsts.json",
+          "ponytail.json",
+          ".agents/config/project/traceability.json",
+          "pm/requirements/rolling-campaigns.md",
+          "pm/uat/rolling-campaigns.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/compliance-audit.md"
+        ]
+      },
+      "artifacts": [
+        "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/compliance-audit.md"
+      ],
+      "assessor": "coordinator",
+      "authority": [
+        "stakeholder:2026-10-12-campaign-compliance"
+      ],
+      "adequate": true,
+      "reason": "Assessed complete criterion for OBL-140; see bounded compliance audit",
+      "disposition": null,
+      "evidence": [],
+      "inventoryIds": []
+    },
+    {
+      "id": "CERT-COMPLIANCE-OBL-141",
+      "obligationIds": [
+        "OBL-141"
+      ],
+      "inputs": {
+        "schemaVersion": 2,
+        "revision": "977bc44bcf53e94db29f65199513ef57e6734eca",
+        "paths": [
+          "src",
+          "skills",
+          "tests",
+          "scripts",
+          "cli",
+          "ponytail-mcp",
+          "pi-extension",
+          "tsts",
+          "package.json",
+          "package-lock.json",
+          "tsconfig.json",
+          "tsts.json",
+          "ponytail.json",
+          ".agents/config/project/traceability.json",
+          "pm/requirements/rolling-campaigns.md",
+          "pm/uat/rolling-campaigns.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/compliance-audit.md"
+        ]
+      },
+      "artifacts": [
+        "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/compliance-audit.md"
+      ],
+      "assessor": "coordinator",
+      "authority": [
+        "stakeholder:2026-10-12-campaign-compliance"
+      ],
+      "adequate": true,
+      "reason": "Assessed complete criterion for OBL-141; see bounded compliance audit",
+      "disposition": null,
+      "evidence": [],
+      "inventoryIds": []
+    },
+    {
+      "id": "CERT-COMPLIANCE-OBL-125",
+      "obligationIds": [
+        "OBL-125"
+      ],
+      "inputs": {
+        "schemaVersion": 2,
+        "revision": "977bc44bcf53e94db29f65199513ef57e6734eca",
+        "paths": [
+          "src",
+          "skills",
+          "tests",
+          "scripts",
+          "cli",
+          "ponytail-mcp",
+          "pi-extension",
+          "tsts",
+          "package.json",
+          "package-lock.json",
+          "tsconfig.json",
+          "tsts.json",
+          "ponytail.json",
+          ".agents/config/project/traceability.json",
+          "pm/requirements/rolling-campaigns.md",
+          "pm/uat/rolling-campaigns.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/compliance-audit.md"
+        ]
+      },
+      "artifacts": [
+        "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/compliance-audit.md"
+      ],
+      "assessor": "coordinator",
+      "authority": [
+        "stakeholder:2026-10-12-campaign-compliance"
+      ],
+      "adequate": true,
+      "reason": "Assessed complete criterion for OBL-125; see bounded compliance audit",
+      "disposition": null,
+      "evidence": [],
+      "inventoryIds": [
+        "OBL-142",
+        "OBL-143",
+        "OBL-144",
+        "OBL-145",
+        "OBL-146",
+        "OBL-147",
+        "OBL-148",
+        "OBL-149",
+        "OBL-150",
+        "OBL-151"
+      ]
+    },
+    {
+      "id": "CERT-COMPLIANCE-OBL-142",
+      "obligationIds": [
+        "OBL-142"
+      ],
+      "inputs": {
+        "schemaVersion": 2,
+        "revision": "977bc44bcf53e94db29f65199513ef57e6734eca",
+        "paths": [
+          "src",
+          "skills",
+          "tests",
+          "scripts",
+          "cli",
+          "ponytail-mcp",
+          "pi-extension",
+          "tsts",
+          "package.json",
+          "package-lock.json",
+          "tsconfig.json",
+          "tsts.json",
+          "ponytail.json",
+          ".agents/config/project/traceability.json",
+          "pm/requirements/rolling-campaigns.md",
+          "pm/uat/rolling-campaigns.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/compliance-audit.md"
+        ]
+      },
+      "artifacts": [
+        "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/compliance-audit.md"
+      ],
+      "assessor": "coordinator",
+      "authority": [
+        "stakeholder:2026-10-12-campaign-compliance"
+      ],
+      "adequate": true,
+      "reason": "Assessed complete criterion for OBL-142; see bounded compliance audit",
+      "disposition": null,
+      "evidence": [],
+      "inventoryIds": []
+    },
+    {
+      "id": "CERT-COMPLIANCE-OBL-143",
+      "obligationIds": [
+        "OBL-143"
+      ],
+      "inputs": {
+        "schemaVersion": 2,
+        "revision": "977bc44bcf53e94db29f65199513ef57e6734eca",
+        "paths": [
+          "src",
+          "skills",
+          "tests",
+          "scripts",
+          "cli",
+          "ponytail-mcp",
+          "pi-extension",
+          "tsts",
+          "package.json",
+          "package-lock.json",
+          "tsconfig.json",
+          "tsts.json",
+          "ponytail.json",
+          ".agents/config/project/traceability.json",
+          "pm/requirements/rolling-campaigns.md",
+          "pm/uat/rolling-campaigns.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/compliance-audit.md"
+        ]
+      },
+      "artifacts": [
+        "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/compliance-audit.md"
+      ],
+      "assessor": "coordinator",
+      "authority": [
+        "stakeholder:2026-10-12-campaign-compliance"
+      ],
+      "adequate": true,
+      "reason": "Assessed complete criterion for OBL-143; see bounded compliance audit",
+      "disposition": null,
+      "evidence": [],
+      "inventoryIds": []
+    },
+    {
+      "id": "CERT-COMPLIANCE-OBL-144",
+      "obligationIds": [
+        "OBL-144"
+      ],
+      "inputs": {
+        "schemaVersion": 2,
+        "revision": "977bc44bcf53e94db29f65199513ef57e6734eca",
+        "paths": [
+          "src",
+          "skills",
+          "tests",
+          "scripts",
+          "cli",
+          "ponytail-mcp",
+          "pi-extension",
+          "tsts",
+          "package.json",
+          "package-lock.json",
+          "tsconfig.json",
+          "tsts.json",
+          "ponytail.json",
+          ".agents/config/project/traceability.json",
+          "pm/requirements/rolling-campaigns.md",
+          "pm/uat/rolling-campaigns.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/compliance-audit.md"
+        ]
+      },
+      "artifacts": [
+        "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/compliance-audit.md"
+      ],
+      "assessor": "coordinator",
+      "authority": [
+        "stakeholder:2026-10-12-campaign-compliance"
+      ],
+      "adequate": true,
+      "reason": "Assessed complete criterion for OBL-144; see bounded compliance audit",
+      "disposition": null,
+      "evidence": [],
+      "inventoryIds": []
+    },
+    {
+      "id": "CERT-COMPLIANCE-OBL-145",
+      "obligationIds": [
+        "OBL-145"
+      ],
+      "inputs": {
+        "schemaVersion": 2,
+        "revision": "977bc44bcf53e94db29f65199513ef57e6734eca",
+        "paths": [
+          "src",
+          "skills",
+          "tests",
+          "scripts",
+          "cli",
+          "ponytail-mcp",
+          "pi-extension",
+          "tsts",
+          "package.json",
+          "package-lock.json",
+          "tsconfig.json",
+          "tsts.json",
+          "ponytail.json",
+          ".agents/config/project/traceability.json",
+          "pm/requirements/rolling-campaigns.md",
+          "pm/uat/rolling-campaigns.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/compliance-audit.md"
+        ]
+      },
+      "artifacts": [
+        "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/compliance-audit.md"
+      ],
+      "assessor": "coordinator",
+      "authority": [
+        "stakeholder:2026-10-12-campaign-compliance"
+      ],
+      "adequate": true,
+      "reason": "Assessed complete criterion for OBL-145; see bounded compliance audit",
+      "disposition": null,
+      "evidence": [],
+      "inventoryIds": []
+    },
+    {
+      "id": "CERT-COMPLIANCE-OBL-146",
+      "obligationIds": [
+        "OBL-146"
+      ],
+      "inputs": {
+        "schemaVersion": 2,
+        "revision": "977bc44bcf53e94db29f65199513ef57e6734eca",
+        "paths": [
+          "src",
+          "skills",
+          "tests",
+          "scripts",
+          "cli",
+          "ponytail-mcp",
+          "pi-extension",
+          "tsts",
+          "package.json",
+          "package-lock.json",
+          "tsconfig.json",
+          "tsts.json",
+          "ponytail.json",
+          ".agents/config/project/traceability.json",
+          "pm/requirements/rolling-campaigns.md",
+          "pm/uat/rolling-campaigns.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/compliance-audit.md"
+        ]
+      },
+      "artifacts": [
+        "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/compliance-audit.md"
+      ],
+      "assessor": "coordinator",
+      "authority": [
+        "stakeholder:2026-10-12-campaign-compliance"
+      ],
+      "adequate": true,
+      "reason": "Assessed complete criterion for OBL-146; see bounded compliance audit",
+      "disposition": null,
+      "evidence": [],
+      "inventoryIds": []
+    },
+    {
+      "id": "CERT-COMPLIANCE-OBL-147",
+      "obligationIds": [
+        "OBL-147"
+      ],
+      "inputs": {
+        "schemaVersion": 2,
+        "revision": "977bc44bcf53e94db29f65199513ef57e6734eca",
+        "paths": [
+          "src",
+          "skills",
+          "tests",
+          "scripts",
+          "cli",
+          "ponytail-mcp",
+          "pi-extension",
+          "tsts",
+          "package.json",
+          "package-lock.json",
+          "tsconfig.json",
+          "tsts.json",
+          "ponytail.json",
+          ".agents/config/project/traceability.json",
+          "pm/requirements/rolling-campaigns.md",
+          "pm/uat/rolling-campaigns.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/compliance-audit.md"
+        ]
+      },
+      "artifacts": [
+        "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/compliance-audit.md"
+      ],
+      "assessor": "coordinator",
+      "authority": [
+        "stakeholder:2026-10-12-campaign-compliance"
+      ],
+      "adequate": true,
+      "reason": "Assessed complete criterion for OBL-147; see bounded compliance audit",
+      "disposition": null,
+      "evidence": [],
+      "inventoryIds": []
+    },
+    {
+      "id": "CERT-COMPLIANCE-OBL-148",
+      "obligationIds": [
+        "OBL-148"
+      ],
+      "inputs": {
+        "schemaVersion": 2,
+        "revision": "977bc44bcf53e94db29f65199513ef57e6734eca",
+        "paths": [
+          "src",
+          "skills",
+          "tests",
+          "scripts",
+          "cli",
+          "ponytail-mcp",
+          "pi-extension",
+          "tsts",
+          "package.json",
+          "package-lock.json",
+          "tsconfig.json",
+          "tsts.json",
+          "ponytail.json",
+          ".agents/config/project/traceability.json",
+          "pm/requirements/rolling-campaigns.md",
+          "pm/uat/rolling-campaigns.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/compliance-audit.md"
+        ]
+      },
+      "artifacts": [
+        "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/compliance-audit.md"
+      ],
+      "assessor": "coordinator",
+      "authority": [
+        "stakeholder:2026-10-12-campaign-compliance"
+      ],
+      "adequate": true,
+      "reason": "Assessed complete criterion for OBL-148; see bounded compliance audit",
+      "disposition": null,
+      "evidence": [],
+      "inventoryIds": []
+    },
+    {
+      "id": "CERT-COMPLIANCE-OBL-149",
+      "obligationIds": [
+        "OBL-149"
+      ],
+      "inputs": {
+        "schemaVersion": 2,
+        "revision": "977bc44bcf53e94db29f65199513ef57e6734eca",
+        "paths": [
+          "src",
+          "skills",
+          "tests",
+          "scripts",
+          "cli",
+          "ponytail-mcp",
+          "pi-extension",
+          "tsts",
+          "package.json",
+          "package-lock.json",
+          "tsconfig.json",
+          "tsts.json",
+          "ponytail.json",
+          ".agents/config/project/traceability.json",
+          "pm/requirements/rolling-campaigns.md",
+          "pm/uat/rolling-campaigns.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/compliance-audit.md"
+        ]
+      },
+      "artifacts": [
+        "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/compliance-audit.md"
+      ],
+      "assessor": "coordinator",
+      "authority": [
+        "stakeholder:2026-10-12-campaign-compliance"
+      ],
+      "adequate": true,
+      "reason": "Assessed complete criterion for OBL-149; see bounded compliance audit",
+      "disposition": null,
+      "evidence": [],
+      "inventoryIds": []
+    },
+    {
+      "id": "CERT-COMPLIANCE-OBL-150",
+      "obligationIds": [
+        "OBL-150"
+      ],
+      "inputs": {
+        "schemaVersion": 2,
+        "revision": "977bc44bcf53e94db29f65199513ef57e6734eca",
+        "paths": [
+          "src",
+          "skills",
+          "tests",
+          "scripts",
+          "cli",
+          "ponytail-mcp",
+          "pi-extension",
+          "tsts",
+          "package.json",
+          "package-lock.json",
+          "tsconfig.json",
+          "tsts.json",
+          "ponytail.json",
+          ".agents/config/project/traceability.json",
+          "pm/requirements/rolling-campaigns.md",
+          "pm/uat/rolling-campaigns.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/compliance-audit.md"
+        ]
+      },
+      "artifacts": [
+        "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/compliance-audit.md"
+      ],
+      "assessor": "coordinator",
+      "authority": [
+        "stakeholder:2026-10-12-campaign-compliance"
+      ],
+      "adequate": true,
+      "reason": "Assessed complete criterion for OBL-150; see bounded compliance audit",
+      "disposition": null,
+      "evidence": [],
+      "inventoryIds": []
+    },
+    {
+      "id": "CERT-COMPLIANCE-OBL-151",
+      "obligationIds": [
+        "OBL-151"
+      ],
+      "inputs": {
+        "schemaVersion": 2,
+        "revision": "977bc44bcf53e94db29f65199513ef57e6734eca",
+        "paths": [
+          "src",
+          "skills",
+          "tests",
+          "scripts",
+          "cli",
+          "ponytail-mcp",
+          "pi-extension",
+          "tsts",
+          "package.json",
+          "package-lock.json",
+          "tsconfig.json",
+          "tsts.json",
+          "ponytail.json",
+          ".agents/config/project/traceability.json",
+          "pm/requirements/rolling-campaigns.md",
+          "pm/uat/rolling-campaigns.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/compliance-audit.md"
+        ]
+      },
+      "artifacts": [
+        "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/compliance-audit.md"
+      ],
+      "assessor": "coordinator",
+      "authority": [
+        "stakeholder:2026-10-12-campaign-compliance"
+      ],
+      "adequate": true,
+      "reason": "Assessed complete criterion for OBL-151; see bounded compliance audit",
+      "disposition": null,
+      "evidence": [],
+      "inventoryIds": []
+    },
+    {
+      "id": "CERT-COMPLIANCE-OBL-126",
+      "obligationIds": [
+        "OBL-126"
+      ],
+      "inputs": {
+        "schemaVersion": 2,
+        "revision": "977bc44bcf53e94db29f65199513ef57e6734eca",
+        "paths": [
+          "src",
+          "skills",
+          "tests",
+          "scripts",
+          "cli",
+          "ponytail-mcp",
+          "pi-extension",
+          "tsts",
+          "package.json",
+          "package-lock.json",
+          "tsconfig.json",
+          "tsts.json",
+          "ponytail.json",
+          ".agents/config/project/traceability.json",
+          "pm/requirements/rolling-campaigns.md",
+          "pm/uat/rolling-campaigns.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/compliance-audit.md"
+        ]
+      },
+      "artifacts": [
+        "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/compliance-audit.md"
+      ],
+      "assessor": "coordinator",
+      "authority": [
+        "stakeholder:2026-10-12-campaign-compliance"
+      ],
+      "adequate": true,
+      "reason": "Assessed complete criterion for OBL-126; see bounded compliance audit",
+      "disposition": null,
+      "evidence": [],
+      "inventoryIds": [
+        "OBL-152",
+        "OBL-153",
+        "OBL-154",
+        "OBL-155",
+        "OBL-156"
+      ]
+    },
+    {
+      "id": "CERT-COMPLIANCE-OBL-152",
+      "obligationIds": [
+        "OBL-152"
+      ],
+      "inputs": {
+        "schemaVersion": 2,
+        "revision": "977bc44bcf53e94db29f65199513ef57e6734eca",
+        "paths": [
+          "src",
+          "skills",
+          "tests",
+          "scripts",
+          "cli",
+          "ponytail-mcp",
+          "pi-extension",
+          "tsts",
+          "package.json",
+          "package-lock.json",
+          "tsconfig.json",
+          "tsts.json",
+          "ponytail.json",
+          ".agents/config/project/traceability.json",
+          "pm/requirements/rolling-campaigns.md",
+          "pm/uat/rolling-campaigns.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/compliance-audit.md"
+        ]
+      },
+      "artifacts": [
+        "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/compliance-audit.md"
+      ],
+      "assessor": "coordinator",
+      "authority": [
+        "stakeholder:2026-10-12-campaign-compliance"
+      ],
+      "adequate": true,
+      "reason": "Assessed complete criterion for OBL-152; see bounded compliance audit",
+      "disposition": null,
+      "evidence": [],
+      "inventoryIds": []
+    },
+    {
+      "id": "CERT-COMPLIANCE-OBL-153",
+      "obligationIds": [
+        "OBL-153"
+      ],
+      "inputs": {
+        "schemaVersion": 2,
+        "revision": "977bc44bcf53e94db29f65199513ef57e6734eca",
+        "paths": [
+          "src",
+          "skills",
+          "tests",
+          "scripts",
+          "cli",
+          "ponytail-mcp",
+          "pi-extension",
+          "tsts",
+          "package.json",
+          "package-lock.json",
+          "tsconfig.json",
+          "tsts.json",
+          "ponytail.json",
+          ".agents/config/project/traceability.json",
+          "pm/requirements/rolling-campaigns.md",
+          "pm/uat/rolling-campaigns.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/compliance-audit.md"
+        ]
+      },
+      "artifacts": [
+        "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/compliance-audit.md"
+      ],
+      "assessor": "coordinator",
+      "authority": [
+        "stakeholder:2026-10-12-campaign-compliance"
+      ],
+      "adequate": true,
+      "reason": "Assessed complete criterion for OBL-153; see bounded compliance audit",
+      "disposition": null,
+      "evidence": [],
+      "inventoryIds": []
+    },
+    {
+      "id": "CERT-COMPLIANCE-OBL-154",
+      "obligationIds": [
+        "OBL-154"
+      ],
+      "inputs": {
+        "schemaVersion": 2,
+        "revision": "977bc44bcf53e94db29f65199513ef57e6734eca",
+        "paths": [
+          "src",
+          "skills",
+          "tests",
+          "scripts",
+          "cli",
+          "ponytail-mcp",
+          "pi-extension",
+          "tsts",
+          "package.json",
+          "package-lock.json",
+          "tsconfig.json",
+          "tsts.json",
+          "ponytail.json",
+          ".agents/config/project/traceability.json",
+          "pm/requirements/rolling-campaigns.md",
+          "pm/uat/rolling-campaigns.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/compliance-audit.md"
+        ]
+      },
+      "artifacts": [
+        "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/compliance-audit.md"
+      ],
+      "assessor": "coordinator",
+      "authority": [
+        "stakeholder:2026-10-12-campaign-compliance"
+      ],
+      "adequate": true,
+      "reason": "Assessed complete criterion for OBL-154; see bounded compliance audit",
+      "disposition": null,
+      "evidence": [],
+      "inventoryIds": []
+    },
+    {
+      "id": "CERT-COMPLIANCE-OBL-155",
+      "obligationIds": [
+        "OBL-155"
+      ],
+      "inputs": {
+        "schemaVersion": 2,
+        "revision": "977bc44bcf53e94db29f65199513ef57e6734eca",
+        "paths": [
+          "src",
+          "skills",
+          "tests",
+          "scripts",
+          "cli",
+          "ponytail-mcp",
+          "pi-extension",
+          "tsts",
+          "package.json",
+          "package-lock.json",
+          "tsconfig.json",
+          "tsts.json",
+          "ponytail.json",
+          ".agents/config/project/traceability.json",
+          "pm/requirements/rolling-campaigns.md",
+          "pm/uat/rolling-campaigns.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/compliance-audit.md"
+        ]
+      },
+      "artifacts": [
+        "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/compliance-audit.md"
+      ],
+      "assessor": "coordinator",
+      "authority": [
+        "stakeholder:2026-10-12-campaign-compliance"
+      ],
+      "adequate": true,
+      "reason": "Assessed complete criterion for OBL-155; see bounded compliance audit",
+      "disposition": null,
+      "evidence": [],
+      "inventoryIds": []
+    },
+    {
+      "id": "CERT-COMPLIANCE-OBL-156",
+      "obligationIds": [
+        "OBL-156"
+      ],
+      "inputs": {
+        "schemaVersion": 2,
+        "revision": "977bc44bcf53e94db29f65199513ef57e6734eca",
+        "paths": [
+          "src",
+          "skills",
+          "tests",
+          "scripts",
+          "cli",
+          "ponytail-mcp",
+          "pi-extension",
+          "tsts",
+          "package.json",
+          "package-lock.json",
+          "tsconfig.json",
+          "tsts.json",
+          "ponytail.json",
+          ".agents/config/project/traceability.json",
+          "pm/requirements/rolling-campaigns.md",
+          "pm/uat/rolling-campaigns.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/compliance-audit.md"
+        ]
+      },
+      "artifacts": [
+        "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/compliance-audit.md"
+      ],
+      "assessor": "coordinator",
+      "authority": [
+        "stakeholder:2026-10-12-campaign-compliance"
+      ],
+      "adequate": true,
+      "reason": "Assessed complete criterion for OBL-156; see bounded compliance audit",
+      "disposition": null,
+      "evidence": [],
+      "inventoryIds": []
+    }
+  ],
+  "checkpoints": [
+    {
+      "id": "CP-COMPLIANCE-1",
+      "predecessorId": null,
+      "baselineId": "BASELINE-COMPLIANCE-1",
+      "kind": "initial",
+      "selectedIds": [],
+      "registeredIds": [
+        "OBL-114",
+        "OBL-115",
+        "OBL-116",
+        "OBL-117",
+        "OBL-118",
+        "OBL-119",
+        "OBL-120",
+        "OBL-121",
+        "OBL-122",
+        "OBL-123",
+        "OBL-124",
+        "OBL-125",
+        "OBL-126",
+        "OBL-127",
+        "OBL-128",
+        "OBL-129",
+        "OBL-130",
+        "OBL-131",
+        "OBL-132",
+        "OBL-133",
+        "OBL-134",
+        "OBL-135",
+        "OBL-136",
+        "OBL-137",
+        "OBL-138",
+        "OBL-139",
+        "OBL-140",
+        "OBL-141",
+        "OBL-142",
+        "OBL-143",
+        "OBL-144",
+        "OBL-145",
+        "OBL-146",
+        "OBL-147",
+        "OBL-148",
+        "OBL-149",
+        "OBL-150",
+        "OBL-151",
+        "OBL-152",
+        "OBL-153",
+        "OBL-154",
+        "OBL-155",
+        "OBL-156",
+        "OBL-157",
+        "OBL-158",
+        "OBL-159"
+      ],
+      "certificateIds": [],
+      "invalidatedIds": [],
+      "before": [
+        11,
+        3,
+        11,
+        6,
+        11,
+        3
+      ],
+      "after": [
+        11,
+        3,
+        11,
+        6,
+        11,
+        3
+      ],
+      "preparation": null,
+      "reason": "Observe complete bounded compliance scope",
+      "assessor": "coordinator"
+    },
+    {
+      "id": "CP-COMPLIANCE-2",
+      "predecessorId": "CP-COMPLIANCE-1",
+      "baselineId": "BASELINE-COMPLIANCE-1",
+      "kind": "productive",
+      "selectedIds": [
+        "OBL-123",
+        "OBL-130",
+        "OBL-131",
+        "OBL-132",
+        "OBL-133",
+        "OBL-134",
+        "OBL-135",
+        "OBL-136",
+        "OBL-137",
+        "OBL-138",
+        "OBL-139"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "CERT-COMPLIANCE-OBL-123",
+        "CERT-COMPLIANCE-OBL-130",
+        "CERT-COMPLIANCE-OBL-131",
+        "CERT-COMPLIANCE-OBL-132",
+        "CERT-COMPLIANCE-OBL-133",
+        "CERT-COMPLIANCE-OBL-134",
+        "CERT-COMPLIANCE-OBL-135",
+        "CERT-COMPLIANCE-OBL-136",
+        "CERT-COMPLIANCE-OBL-137",
+        "CERT-COMPLIANCE-OBL-138",
+        "CERT-COMPLIANCE-OBL-139"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        11,
+        3,
+        11,
+        6,
+        11,
+        3
+      ],
+      "after": [
+        0,
+        3,
+        11,
+        6,
+        11,
+        3
+      ],
+      "preparation": null,
+      "reason": "Accept assessed current responsibility and actual proof",
+      "assessor": "coordinator"
+    },
+    {
+      "id": "CP-COMPLIANCE-3",
+      "predecessorId": "CP-COMPLIANCE-2",
+      "baselineId": "BASELINE-COMPLIANCE-1",
+      "kind": "productive",
+      "selectedIds": [
+        "OBL-124",
+        "OBL-140",
+        "OBL-141"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "CERT-COMPLIANCE-OBL-124",
+        "CERT-COMPLIANCE-OBL-140",
+        "CERT-COMPLIANCE-OBL-141"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        0,
+        3,
+        11,
+        6,
+        11,
+        3
+      ],
+      "after": [
+        0,
+        0,
+        11,
+        6,
+        11,
+        3
+      ],
+      "preparation": null,
+      "reason": "Accept assessed current responsibility and actual proof",
+      "assessor": "coordinator"
+    },
+    {
+      "id": "CP-COMPLIANCE-4",
+      "predecessorId": "CP-COMPLIANCE-3",
+      "baselineId": "BASELINE-COMPLIANCE-1",
+      "kind": "productive",
+      "selectedIds": [
+        "OBL-125",
+        "OBL-142",
+        "OBL-143",
+        "OBL-144",
+        "OBL-145",
+        "OBL-146",
+        "OBL-147",
+        "OBL-148",
+        "OBL-149",
+        "OBL-150",
+        "OBL-151"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "CERT-COMPLIANCE-OBL-125",
+        "CERT-COMPLIANCE-OBL-142",
+        "CERT-COMPLIANCE-OBL-143",
+        "CERT-COMPLIANCE-OBL-144",
+        "CERT-COMPLIANCE-OBL-145",
+        "CERT-COMPLIANCE-OBL-146",
+        "CERT-COMPLIANCE-OBL-147",
+        "CERT-COMPLIANCE-OBL-148",
+        "CERT-COMPLIANCE-OBL-149",
+        "CERT-COMPLIANCE-OBL-150",
+        "CERT-COMPLIANCE-OBL-151"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        0,
+        0,
+        11,
+        6,
+        11,
+        3
+      ],
+      "after": [
+        0,
+        0,
+        0,
+        6,
+        11,
+        3
+      ],
+      "preparation": null,
+      "reason": "Accept assessed current responsibility and actual proof",
+      "assessor": "coordinator"
+    },
+    {
+      "id": "CP-COMPLIANCE-5",
+      "predecessorId": "CP-COMPLIANCE-4",
+      "baselineId": "BASELINE-COMPLIANCE-1",
+      "kind": "productive",
+      "selectedIds": [
+        "OBL-126",
+        "OBL-152",
+        "OBL-153",
+        "OBL-154",
+        "OBL-155",
+        "OBL-156"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "CERT-COMPLIANCE-OBL-126",
+        "CERT-COMPLIANCE-OBL-152",
+        "CERT-COMPLIANCE-OBL-153",
+        "CERT-COMPLIANCE-OBL-154",
+        "CERT-COMPLIANCE-OBL-155",
+        "CERT-COMPLIANCE-OBL-156"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        0,
+        0,
+        0,
+        6,
+        11,
+        3
+      ],
+      "after": [
+        0,
+        0,
+        0,
+        0,
+        11,
+        3
+      ],
+      "preparation": null,
+      "reason": "Accept assessed current responsibility and actual proof",
+      "assessor": "coordinator"
+    }
+  ]
 }
