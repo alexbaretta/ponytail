@@ -485,5 +485,108 @@
       "violations": 0
     },
     "nativeSuiteAfterFinalEdit": "pending"
-  }
+  },
+  "finalScopeInspection": [
+    {
+      "need": "Plan-owned target precedence, N=10 and M=1 defaults, and one physical pool",
+      "owners": [
+        "src/rolling-campaign.ts",
+        "tests/rolling-campaign.test.ts",
+        "tests/rolling-worktrees.integration.test.ts"
+      ],
+      "evidence": "Final repository QA: configuration, real Git and pool proofs passed."
+    },
+    {
+      "need": "Coordinator file authority, discovered dependency changes and exact traceability/step references",
+      "owners": [
+        "src/rolling-campaign.ts",
+        "skills/plan-execution/scripts/obligation-binding-history.ts",
+        "tests/binding-selectors.integration.test.ts"
+      ],
+      "evidence": "Final repository QA and focused real PostgreSQL query passed; requirement annotations remain canonical."
+    },
+    {
+      "need": "Completion-first and resume-first maximal compatible allocation with exclusive inactive ownership",
+      "owners": [
+        "src/rolling-campaign-store.ts",
+        "tests/rolling-campaign-store.integration.test.ts",
+        "tests/rolling-operations.integration.test.ts"
+      ],
+      "evidence": "Final PostgreSQL contention, suspension/resumption and event/periodic replenishment workflows passed."
+    },
+    {
+      "need": "Ponytail-owned numbered checkouts, setup and ignored native session marker; no plugin dependency",
+      "owners": [
+        "src/rolling-worktrees.ts",
+        "src/rolling-codex.ts",
+        "src/rolling-worker.ts"
+      ],
+      "evidence": "Direct native Suite running on final source; earlier actual Suite results retained with original provenance."
+    },
+    {
+      "need": "Exact candidate submission, adversarial reviewer identity, correction and replacement fencing",
+      "owners": [
+        "src/rolling-worker-submission.ts",
+        "src/rolling-review.ts",
+        "src/rolling-campaign-store.ts"
+      ],
+      "evidence": "Final component/PostgreSQL proof passed; final native exact-candidate reviewer and replacement cases passed so far."
+    },
+    {
+      "need": "Full worker semantic rebase and intentional coordinator fast-rebase exception",
+      "owners": [
+        "src/rolling-worker.ts",
+        "src/rolling-integration.ts",
+        "tests/rolling-integration.test.ts"
+      ],
+      "evidence": "Final real Git checks passed; final native implementation/correction cases still pending."
+    },
+    {
+      "need": "Verified normal pushes, publication batches and full-QA gates, partial flush, races and recovery",
+      "owners": [
+        "src/rolling-publication.ts",
+        "src/rolling-campaign-store.ts"
+      ],
+      "evidence": "All five final PostgreSQL mainline scenarios and required full-QA failure/staleness checks passed in repository QA."
+    },
+    {
+      "need": "Coherent DB decisions and one CLI/MCP registry with exact command contracts and retired dispatch",
+      "owners": [
+        "src/rolling-operations.ts",
+        "src/rolling-cli-registry.ts",
+        "ponytail-mcp/rolling.ts",
+        "README.md"
+      ],
+      "evidence": "Final real CLI/MCP application parity and all command-help checks passed; README matches new commands."
+    },
+    {
+      "need": "Strongly typed owned code, retained completed translations and unchanged TSTS",
+      "owners": [
+        "tsconfig.json",
+        "tsts.json",
+        "AGENTS.md",
+        "scripts/build-runtime.ts"
+      ],
+      "evidence": "Strict build, runtime integrity and final TSTS passed; no checker extension or further upstream migration."
+    },
+    {
+      "need": "Atomic vocabulary, requirements/acceptance identities and truthful discharge rather than edit counts",
+      "owners": [
+        "skills/plan-execution/references/glossary.md",
+        "pm/requirements/rolling-campaigns.md",
+        "pm/uat/rolling-campaigns.md"
+      ],
+      "evidence": "Canonical 92 delivery conditions retained/registered; final aggregate assessment remains pending."
+    },
+    {
+      "need": "Historical completed records across lifecycle moves without live authorization",
+      "owners": [
+        "skills/plan-execution/scripts/obligations.ts",
+        "src/campaign-plan-contents.ts",
+        "tests/campaign-plan-contents.test.ts"
+      ],
+      "evidence": "Fresh-before-move, accepted-after-move, stale-current-input and invalidated-history regressions passed."
+    }
+  ],
+  "finalScopeInspectionDoesNotReplaceCanonicalAnnotations": true
 }
