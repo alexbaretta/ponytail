@@ -73,12 +73,12 @@ and no retrospective rewrite of closed plan evidence.
 | Sprint | Deliverable | State |
 | --- | --- | --- |
 | S01 | Activated requirements/UAT, execution design, starting evidence and atomic implementation records | Done |
-| S02 | [Configuration and graph](sprints/S02.md) | Implementation verified; aggregate acceptance pending |
-| S03 | [PostgreSQL execution ownership](sprints/S03.md) | Implementation verified; aggregate acceptance pending |
-| S07 | [Static TypeScript migration](sprints/S07.md), scoped prospectively to our campaign code | Implementation verified; aggregate acceptance pending |
-| S04 | [Ponytail checkouts and direct Codex workers](sprints/S04.md) | Implementation verified; aggregate acceptance pending |
-| S05 | Increment integration, publication batches and QA evidence on exact revisions | Implementation verified; aggregate acceptance pending |
-| S06 | Chapter CLI/MCP, old dispatcher replacement, portable policy and final acceptance | Interfaces verified; aggregate acceptance pending |
+| S02 | [Configuration and graph](sprints/S02.md) | Done |
+| S03 | [PostgreSQL execution ownership](sprints/S03.md) | Done |
+| S07 | [Static TypeScript migration](sprints/S07.md), scoped prospectively to our campaign code | Done |
+| S04 | [Ponytail checkouts and direct Codex workers](sprints/S04.md) | Done |
+| S05 | Increment integration, publication batches and QA evidence on exact revisions | Done |
+| S06 | Chapter CLI/MCP, old dispatcher replacement, portable policy and final acceptance | Done |
 
 Current reconciliation, 2026-10-11: BASELINE-16 contains 91 atomic delivery
 obligations and 21 inventory/requirement rollups. All 91 delivery obligations
@@ -239,3 +239,7 @@ transition remain required. Delivery discharge alone does not close this plan.
 ## Final execution checkpoint — 2026-10-12
 
 BASELINE-17 registers 92 atomic delivery conditions, including the reproduced archive compatibility correction OBL-113. Full repository QA passed 897 tests; final clean-source native acceptance passed all 12 cases. Sprint execution records are reconciled to DONE from that actual proof. S05/S06 were prospective delivery groups implemented through the identified atomic obligations and recorded operation evidence, rather than additional registered sprint files. Final certificate/inventory/requirement assessment and the successful-completion directory transition remain pending; no completed-plan claim is made here.
+
+## Final acceptance — 2026-10-12
+
+BASELINE-17 / CHECKPOINT-327 accepts all 92 atomic delivery obligations and all 21 proof-inventory/requirement rollups. The six-coordinate proof vector is zero and no owned responsibility remains unresolved. CERT-324 through CERT-436 retain the final source, actual execution provenance and sealed evidence. All predecessor baselines, certificates and checkpoints are preserved. Full repository QA passed 897 tests; final clean-source native QA passed 12 cases; unchanged TSTS, generated runtime, traceability, rule-copy and version checks passed. The directory transition below will preserve this accepted historical record; current-input projection is not substituted for historical acceptance after relocation.

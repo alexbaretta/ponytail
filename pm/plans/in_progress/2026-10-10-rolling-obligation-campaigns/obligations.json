@@ -21389,6 +21389,899 @@
       "preparation": null,
       "assessor": "coordinator",
       "reason": "Final closure exposed a reproduced historical-inspection defect required by the normative plan lifecycle. Register one atomic correction with exact typed paths; preserve all prior conditions, certificates and checkpoints. Requirement/UAT reconciliation changes input identities and awards no discharge."
+    },
+    {
+      "id": "CHECKPOINT-309",
+      "predecessorId": "CHECKPOINT-308",
+      "baselineId": "BASELINE-17",
+      "kind": "neutral",
+      "selectedIds": [
+        "OBL-22",
+        "OBL-23",
+        "OBL-24",
+        "OBL-25",
+        "OBL-26",
+        "OBL-27",
+        "OBL-28",
+        "OBL-29",
+        "OBL-30",
+        "OBL-31",
+        "OBL-32",
+        "OBL-33",
+        "OBL-34",
+        "OBL-35",
+        "OBL-36",
+        "OBL-37",
+        "OBL-38",
+        "OBL-39",
+        "OBL-40",
+        "OBL-41",
+        "OBL-42",
+        "OBL-43",
+        "OBL-51",
+        "OBL-52",
+        "OBL-53",
+        "OBL-54",
+        "OBL-55",
+        "OBL-56",
+        "OBL-57",
+        "OBL-58",
+        "OBL-59",
+        "OBL-60",
+        "OBL-61",
+        "OBL-62",
+        "OBL-63",
+        "OBL-64",
+        "OBL-65",
+        "OBL-66",
+        "OBL-67",
+        "OBL-68",
+        "OBL-69",
+        "OBL-70",
+        "OBL-71",
+        "OBL-72",
+        "OBL-73",
+        "OBL-74",
+        "OBL-75",
+        "OBL-76",
+        "OBL-101",
+        "OBL-107",
+        "OBL-113"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "CERT-324",
+        "CERT-325",
+        "CERT-326",
+        "CERT-327",
+        "CERT-328",
+        "CERT-329",
+        "CERT-330",
+        "CERT-331",
+        "CERT-332",
+        "CERT-333",
+        "CERT-334",
+        "CERT-335",
+        "CERT-336",
+        "CERT-337",
+        "CERT-338",
+        "CERT-339",
+        "CERT-340",
+        "CERT-341",
+        "CERT-342",
+        "CERT-343",
+        "CERT-344",
+        "CERT-345",
+        "CERT-346",
+        "CERT-347",
+        "CERT-348",
+        "CERT-349",
+        "CERT-350",
+        "CERT-351",
+        "CERT-352",
+        "CERT-353",
+        "CERT-354",
+        "CERT-355",
+        "CERT-356",
+        "CERT-357",
+        "CERT-358",
+        "CERT-359",
+        "CERT-360",
+        "CERT-361",
+        "CERT-362",
+        "CERT-363",
+        "CERT-364",
+        "CERT-365",
+        "CERT-366",
+        "CERT-367",
+        "CERT-368",
+        "CERT-369",
+        "CERT-370",
+        "CERT-371",
+        "CERT-372",
+        "CERT-373",
+        "CERT-374"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": {
+        "obligationId": "OBL-22",
+        "operations": [
+          "inspect"
+        ],
+        "deliverable": "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/final-OBL-22.md"
+      },
+      "assessor": "coordinator",
+      "reason": "Accept started delivery or requirement gates on final reconciled source and actual passing executable proof."
+    },
+    {
+      "id": "CHECKPOINT-310",
+      "predecessorId": "CHECKPOINT-309",
+      "baselineId": "BASELINE-17",
+      "kind": "neutral",
+      "selectedIds": [
+        "OBL-108"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "CERT-375"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": {
+        "obligationId": "OBL-108",
+        "operations": [
+          "check"
+        ],
+        "deliverable": "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/final-OBL-108.md"
+      },
+      "assessor": "coordinator",
+      "reason": "Accept started delivery or requirement gates on final reconciled source and actual passing executable proof."
+    },
+    {
+      "id": "CHECKPOINT-311",
+      "predecessorId": "CHECKPOINT-310",
+      "baselineId": "BASELINE-17",
+      "kind": "neutral",
+      "selectedIds": [
+        "OBL-109"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "CERT-376"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": {
+        "obligationId": "OBL-109",
+        "operations": [
+          "check"
+        ],
+        "deliverable": "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/final-OBL-109.md"
+      },
+      "assessor": "coordinator",
+      "reason": "Accept started delivery or requirement gates on final reconciled source and actual passing executable proof."
+    },
+    {
+      "id": "CHECKPOINT-312",
+      "predecessorId": "CHECKPOINT-311",
+      "baselineId": "BASELINE-17",
+      "kind": "neutral",
+      "selectedIds": [
+        "OBL-110"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "CERT-377"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": {
+        "obligationId": "OBL-110",
+        "operations": [
+          "check"
+        ],
+        "deliverable": "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/final-OBL-110.md"
+      },
+      "assessor": "coordinator",
+      "reason": "Accept started delivery or requirement gates on final reconciled source and actual passing executable proof."
+    },
+    {
+      "id": "CHECKPOINT-313",
+      "predecessorId": "CHECKPOINT-312",
+      "baselineId": "BASELINE-17",
+      "kind": "neutral",
+      "selectedIds": [
+        "OBL-111"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "CERT-378"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": {
+        "obligationId": "OBL-111",
+        "operations": [
+          "check"
+        ],
+        "deliverable": "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/final-OBL-111.md"
+      },
+      "assessor": "coordinator",
+      "reason": "Accept started delivery or requirement gates on final reconciled source and actual passing executable proof."
+    },
+    {
+      "id": "CHECKPOINT-314",
+      "predecessorId": "CHECKPOINT-313",
+      "baselineId": "BASELINE-17",
+      "kind": "neutral",
+      "selectedIds": [
+        "OBL-112"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "CERT-379"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": {
+        "obligationId": "OBL-112",
+        "operations": [
+          "check"
+        ],
+        "deliverable": "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/final-OBL-112.md"
+      },
+      "assessor": "coordinator",
+      "reason": "Accept started delivery or requirement gates on final reconciled source and actual passing executable proof."
+    },
+    {
+      "id": "CHECKPOINT-315",
+      "predecessorId": "CHECKPOINT-314",
+      "baselineId": "BASELINE-17",
+      "kind": "neutral",
+      "selectedIds": [
+        "OBL-44",
+        "OBL-50",
+        "OBL-77",
+        "OBL-78",
+        "OBL-79",
+        "OBL-80",
+        "OBL-81",
+        "OBL-82",
+        "OBL-83",
+        "OBL-84",
+        "OBL-85",
+        "OBL-86",
+        "OBL-87",
+        "OBL-88",
+        "OBL-89",
+        "OBL-90",
+        "OBL-91",
+        "OBL-92",
+        "OBL-93",
+        "OBL-94",
+        "OBL-95",
+        "OBL-96",
+        "OBL-97",
+        "OBL-98",
+        "OBL-99",
+        "OBL-100",
+        "OBL-102",
+        "OBL-103",
+        "OBL-104",
+        "OBL-105",
+        "OBL-106"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "CERT-380",
+        "CERT-381",
+        "CERT-382",
+        "CERT-383",
+        "CERT-384",
+        "CERT-385",
+        "CERT-386",
+        "CERT-387",
+        "CERT-388",
+        "CERT-389",
+        "CERT-390",
+        "CERT-391",
+        "CERT-392",
+        "CERT-393",
+        "CERT-394",
+        "CERT-395",
+        "CERT-396",
+        "CERT-397",
+        "CERT-398",
+        "CERT-399",
+        "CERT-400",
+        "CERT-401",
+        "CERT-402",
+        "CERT-403",
+        "CERT-404",
+        "CERT-405",
+        "CERT-406",
+        "CERT-407",
+        "CERT-408",
+        "CERT-409",
+        "CERT-410"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": {
+        "obligationId": "OBL-44",
+        "operations": [
+          "inspect"
+        ],
+        "deliverable": "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/final-OBL-44.md"
+      },
+      "assessor": "coordinator",
+      "reason": "Accept started delivery or requirement gates on final reconciled source and actual passing executable proof."
+    },
+    {
+      "id": "CHECKPOINT-316",
+      "predecessorId": "CHECKPOINT-315",
+      "baselineId": "BASELINE-17",
+      "kind": "neutral",
+      "selectedIds": [
+        "OBL-45"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "CERT-411"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": {
+        "obligationId": "OBL-45",
+        "operations": [
+          "inspect"
+        ],
+        "deliverable": "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/final-OBL-45.md"
+      },
+      "assessor": "coordinator",
+      "reason": "Accept started delivery or requirement gates on final reconciled source and actual passing executable proof."
+    },
+    {
+      "id": "CHECKPOINT-317",
+      "predecessorId": "CHECKPOINT-316",
+      "baselineId": "BASELINE-17",
+      "kind": "neutral",
+      "selectedIds": [
+        "OBL-46"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "CERT-412"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": {
+        "obligationId": "OBL-46",
+        "operations": [
+          "inspect"
+        ],
+        "deliverable": "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/final-OBL-46.md"
+      },
+      "assessor": "coordinator",
+      "reason": "Accept started delivery or requirement gates on final reconciled source and actual passing executable proof."
+    },
+    {
+      "id": "CHECKPOINT-318",
+      "predecessorId": "CHECKPOINT-317",
+      "baselineId": "BASELINE-17",
+      "kind": "neutral",
+      "selectedIds": [
+        "OBL-47"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "CERT-413"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": {
+        "obligationId": "OBL-47",
+        "operations": [
+          "inspect"
+        ],
+        "deliverable": "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/final-OBL-47.md"
+      },
+      "assessor": "coordinator",
+      "reason": "Accept started delivery or requirement gates on final reconciled source and actual passing executable proof."
+    },
+    {
+      "id": "CHECKPOINT-319",
+      "predecessorId": "CHECKPOINT-318",
+      "baselineId": "BASELINE-17",
+      "kind": "neutral",
+      "selectedIds": [
+        "OBL-48"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "CERT-414"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": {
+        "obligationId": "OBL-48",
+        "operations": [
+          "inspect"
+        ],
+        "deliverable": "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/final-OBL-48.md"
+      },
+      "assessor": "coordinator",
+      "reason": "Accept started delivery or requirement gates on final reconciled source and actual passing executable proof."
+    },
+    {
+      "id": "CHECKPOINT-320",
+      "predecessorId": "CHECKPOINT-319",
+      "baselineId": "BASELINE-17",
+      "kind": "neutral",
+      "selectedIds": [
+        "OBL-49"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "CERT-415"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": {
+        "obligationId": "OBL-49",
+        "operations": [
+          "inspect"
+        ],
+        "deliverable": "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/final-OBL-49.md"
+      },
+      "assessor": "coordinator",
+      "reason": "Accept started delivery or requirement gates on final reconciled source and actual passing executable proof."
+    },
+    {
+      "id": "CHECKPOINT-321",
+      "predecessorId": "CHECKPOINT-320",
+      "baselineId": "BASELINE-17",
+      "kind": "productive",
+      "selectedIds": [
+        "OBL-1",
+        "OBL-15"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "CERT-416",
+        "CERT-417"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        0,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": null,
+      "assessor": "coordinator",
+      "reason": "Close the earliest complete inspected proof inventory with fresh final execution; preserve prior coordinates and history."
+    },
+    {
+      "id": "CHECKPOINT-322",
+      "predecessorId": "CHECKPOINT-321",
+      "baselineId": "BASELINE-17",
+      "kind": "productive",
+      "selectedIds": [
+        "OBL-2",
+        "OBL-16"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "CERT-418",
+        "CERT-419"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        0,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        0,
+        0,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": null,
+      "assessor": "coordinator",
+      "reason": "Close the earliest complete inspected proof inventory with fresh final execution; preserve prior coordinates and history."
+    },
+    {
+      "id": "CHECKPOINT-323",
+      "predecessorId": "CHECKPOINT-322",
+      "baselineId": "BASELINE-17",
+      "kind": "productive",
+      "selectedIds": [
+        "OBL-3",
+        "OBL-17"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "CERT-420",
+        "CERT-421"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        0,
+        0,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        0,
+        0,
+        0,
+        2,
+        2,
+        2
+      ],
+      "preparation": null,
+      "assessor": "coordinator",
+      "reason": "Close the earliest complete inspected proof inventory with fresh final execution; preserve prior coordinates and history."
+    },
+    {
+      "id": "CHECKPOINT-324",
+      "predecessorId": "CHECKPOINT-323",
+      "baselineId": "BASELINE-17",
+      "kind": "productive",
+      "selectedIds": [
+        "OBL-4",
+        "OBL-18"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "CERT-422",
+        "CERT-423"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        0,
+        0,
+        0,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        0,
+        0,
+        0,
+        0,
+        2,
+        2
+      ],
+      "preparation": null,
+      "assessor": "coordinator",
+      "reason": "Close the earliest complete inspected proof inventory with fresh final execution; preserve prior coordinates and history."
+    },
+    {
+      "id": "CHECKPOINT-325",
+      "predecessorId": "CHECKPOINT-324",
+      "baselineId": "BASELINE-17",
+      "kind": "productive",
+      "selectedIds": [
+        "OBL-5",
+        "OBL-19"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "CERT-424",
+        "CERT-425"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        0,
+        0,
+        0,
+        0,
+        2,
+        2
+      ],
+      "after": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        2
+      ],
+      "preparation": null,
+      "assessor": "coordinator",
+      "reason": "Close the earliest complete inspected proof inventory with fresh final execution; preserve prior coordinates and history."
+    },
+    {
+      "id": "CHECKPOINT-326",
+      "predecessorId": "CHECKPOINT-325",
+      "baselineId": "BASELINE-17",
+      "kind": "productive",
+      "selectedIds": [
+        "OBL-6",
+        "OBL-20"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "CERT-426",
+        "CERT-427"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        2
+      ],
+      "after": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "preparation": null,
+      "assessor": "coordinator",
+      "reason": "Close the earliest complete inspected proof inventory with fresh final execution; preserve prior coordinates and history."
+    },
+    {
+      "id": "CHECKPOINT-327",
+      "predecessorId": "CHECKPOINT-326",
+      "baselineId": "BASELINE-17",
+      "kind": "neutral",
+      "selectedIds": [
+        "OBL-7",
+        "OBL-8",
+        "OBL-9",
+        "OBL-10",
+        "OBL-11",
+        "OBL-12",
+        "OBL-13",
+        "OBL-14",
+        "OBL-21"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "CERT-428",
+        "CERT-429",
+        "CERT-430",
+        "CERT-431",
+        "CERT-432",
+        "CERT-433",
+        "CERT-434",
+        "CERT-435",
+        "CERT-436"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "after": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "preparation": {
+        "obligationId": "OBL-7",
+        "operations": [
+          "inspect"
+        ],
+        "deliverable": "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/final-OBL-7.md"
+      },
+      "assessor": "coordinator",
+      "reason": "Accept started delivery or requirement gates on final reconciled source and actual passing executable proof."
     }
   ]
 }

@@ -1,0 +1,74 @@
+{
+  "schemaVersion": 1,
+  "certificateId": "CERT-374",
+  "lease": {
+    "schemaVersion": 1,
+    "scopeId": "2026-10-10-rolling-obligation-campaigns",
+    "baselineId": "BASELINE-17",
+    "graphDigest": "a1ea43eadb4dbef8b8c398a52c57729a8df0d4ea70a5800db331387565d43242",
+    "generation": "final-source-CERT-374",
+    "assessor": "coordinator",
+    "authority": [
+      "user-goal-2026-10-10-rolling-campaigns",
+      "user-goal-2026-10-10-static-language-existing-tsts",
+      "user-2026-10-10-normative-atomic-obligations",
+      "user-2026-10-11-language-scope-our-code-preserve-translations"
+    ],
+    "binding": {
+      "obligationId": "OBL-113",
+      "revisionId": null,
+      "dependsOn": [],
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "skills/plan-execution/scripts/obligations.ts",
+          "skills/plan-execution/scripts/obligations.js",
+          ".openclaw/skills/plan-execution/scripts/obligations.ts",
+          ".openclaw/skills/plan-execution/scripts/obligations.js",
+          "src/campaign-plan-contents.ts",
+          "src/campaign-plan-contents.js",
+          "tests/campaign-plan-contents.test.ts",
+          "tests/obligations.test.ts",
+          "tests/helpers/rolling-obligation-source.ts",
+          "tests/fixtures/rolling-obligation-document.v1.json",
+          "tests/obligation-binding-history.test.ts",
+          "tests/obligation-certificate-bindings.test.ts",
+          "tests/rolling-campaign-store.integration.test.ts",
+          "tests/rolling-campaign.integration.test.ts",
+          "tests/binding-selectors.integration.test.ts",
+          "pm/debugging-pattern-observations/2026-10-12-archived_plan_current_inputs.json",
+          ".agents/config/project/traceability.json",
+          "pm/requirements/traceability.generated.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/final-acceptance.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/final-audit.json",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/final-OBL-113.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/final-OBL-113-certificate-binding.json"
+        ],
+        "operations": [
+          "inspect",
+          "edit",
+          "build",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "ROLL-HISTORICAL-PLAN"
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "archive-history"
+        }
+      }
+    }
+  },
+  "revision": "d54ffb13e157049fc27191db4804a517fd34773a",
+  "proof": [
+    {
+      "operation": "check",
+      "certificateEvidenceIndex": 0,
+      "submissionEvidenceIndex": 0
+    }
+  ]
+}

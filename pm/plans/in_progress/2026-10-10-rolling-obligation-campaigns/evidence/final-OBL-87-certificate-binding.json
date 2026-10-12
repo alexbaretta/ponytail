@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "certificateId": "CERT-300",
+  "certificateId": "CERT-392",
   "lease": {
     "schemaVersion": 1,
     "scopeId": "2026-10-10-rolling-obligation-campaigns",
-    "baselineId": "BASELINE-16",
-    "graphDigest": "3a0a9c50cfd2e550e4414e2707bfa1bbc4bb6f70114c70660a1d65c7666d0d1a",
-    "generation": "documentary-renewal-CERT-300",
+    "baselineId": "BASELINE-17",
+    "graphDigest": "a1ea43eadb4dbef8b8c398a52c57729a8df0d4ea70a5800db331387565d43242",
+    "generation": "final-source-CERT-392",
     "assessor": "coordinator",
     "authority": [
       "user-goal-2026-10-10-rolling-campaigns",
@@ -49,7 +49,7 @@
       }
     }
   },
-  "revision": "808d3df6b1f963edbdbb0d0038cac41c05edf235",
+  "revision": "d54ffb13e157049fc27191db4804a517fd34773a",
   "proof": [
     {
       "operation": "check",

@@ -1,5 +1,5 @@
 {
-  "status": "in_progress",
+  "status": "acceptance_complete; lifecycle_transition_pending",
   "sourceRevision": "808d3df6b1f963edbdbb0d0038cac41c05edf235",
   "deliveryObligationCount": 92,
   "currentAssessedDeliveryIds": [
@@ -93,7 +93,8 @@
     "OBL-109",
     "OBL-110",
     "OBL-111",
-    "OBL-112"
+    "OBL-112",
+    "OBL-113"
   ],
   "remainingAssessmentIsNotUnstartedImplementation": true,
   "authoritativeAcceptanceState": "../obligations.json",
@@ -103,7 +104,7 @@
     "observedOutcome": "Exactly one of four concurrent requests returns an allocation; three report capacity_reached. One original obligation/worktree pair remains persisted. The certificate reason's phrase same original allocation refers to that retained pair, not four successful allocation responses.",
     "proof": "Three selected real PostgreSQL allocation workflows passed with zero failures, skips or cancellations."
   },
-  "remainingWholeCampaignAudit": "Individual remaining conditions, final rollups and lifecycle closure must still be assessed; this partial audit does not establish campaign completion.",
+  "remainingWholeCampaignAudit": "Acceptance has passed; only the verified lifecycle move and final structural checks remain.",
   "attachmentPrerequisiteChain": [
     "OBL-107",
     "OBL-108",
@@ -114,7 +115,7 @@
     "OBL-44",
     "OBL-45"
   ],
-  "currentAssessmentStatus": "final_reassessment_pending_after_archive_correction",
+  "currentAssessmentStatus": "all_113_records_accepted_on_final_reconciled_inputs",
   "documentationRepair": {
     "path": "README.md",
     "confirmedGap": "Installed-tools table advertised four retired campaign commands as live commands.",
@@ -503,7 +504,8 @@
         "tests/rolling-campaign.test.ts",
         "tests/rolling-worktrees.integration.test.ts"
       ],
-      "evidence": "Final repository QA: configuration, real Git and pool proofs passed."
+      "evidence": "Final repository QA: configuration, real Git and pool proofs passed.",
+      "finalAcceptanceStatus": "covered_by_accepted_final_atomic_and_requirement_assessments"
     },
     {
       "need": "Coordinator file authority, discovered dependency changes and exact traceability/step references",
@@ -512,7 +514,8 @@
         "skills/plan-execution/scripts/obligation-binding-history.ts",
         "tests/binding-selectors.integration.test.ts"
       ],
-      "evidence": "Final repository QA and focused real PostgreSQL query passed; requirement annotations remain canonical."
+      "evidence": "Final repository QA and focused real PostgreSQL query passed; requirement annotations remain canonical.",
+      "finalAcceptanceStatus": "covered_by_accepted_final_atomic_and_requirement_assessments"
     },
     {
       "need": "Completion-first and resume-first maximal compatible allocation with exclusive inactive ownership",
@@ -521,7 +524,8 @@
         "tests/rolling-campaign-store.integration.test.ts",
         "tests/rolling-operations.integration.test.ts"
       ],
-      "evidence": "Final PostgreSQL contention, suspension/resumption and event/periodic replenishment workflows passed."
+      "evidence": "Final PostgreSQL contention, suspension/resumption and event/periodic replenishment workflows passed.",
+      "finalAcceptanceStatus": "covered_by_accepted_final_atomic_and_requirement_assessments"
     },
     {
       "need": "Ponytail-owned numbered checkouts, setup and ignored native session marker; no plugin dependency",
@@ -530,7 +534,8 @@
         "src/rolling-codex.ts",
         "src/rolling-worker.ts"
       ],
-      "evidence": "Direct native Suite running on final source; earlier actual Suite results retained with original provenance."
+      "evidence": "Direct native Suite running on final source; earlier actual Suite results retained with original provenance.",
+      "finalAcceptanceStatus": "covered_by_accepted_final_atomic_and_requirement_assessments"
     },
     {
       "need": "Exact candidate submission, adversarial reviewer identity, correction and replacement fencing",
@@ -539,7 +544,8 @@
         "src/rolling-review.ts",
         "src/rolling-campaign-store.ts"
       ],
-      "evidence": "Final component/PostgreSQL proof passed; final native exact-candidate reviewer and replacement cases passed so far."
+      "evidence": "Final component/PostgreSQL proof passed; final native exact-candidate reviewer and replacement cases passed so far.",
+      "finalAcceptanceStatus": "covered_by_accepted_final_atomic_and_requirement_assessments"
     },
     {
       "need": "Full worker semantic rebase and intentional coordinator fast-rebase exception",
@@ -548,7 +554,8 @@
         "src/rolling-integration.ts",
         "tests/rolling-integration.test.ts"
       ],
-      "evidence": "Final real Git checks passed; final native implementation/correction cases still pending."
+      "evidence": "Final real Git checks passed; final native implementation/correction cases still pending.",
+      "finalAcceptanceStatus": "covered_by_accepted_final_atomic_and_requirement_assessments"
     },
     {
       "need": "Verified normal pushes, publication batches and full-QA gates, partial flush, races and recovery",
@@ -556,7 +563,8 @@
         "src/rolling-publication.ts",
         "src/rolling-campaign-store.ts"
       ],
-      "evidence": "All five final PostgreSQL mainline scenarios and required full-QA failure/staleness checks passed in repository QA."
+      "evidence": "All five final PostgreSQL mainline scenarios and required full-QA failure/staleness checks passed in repository QA.",
+      "finalAcceptanceStatus": "covered_by_accepted_final_atomic_and_requirement_assessments"
     },
     {
       "need": "Coherent DB decisions and one CLI/MCP registry with exact command contracts and retired dispatch",
@@ -566,7 +574,8 @@
         "ponytail-mcp/rolling.ts",
         "README.md"
       ],
-      "evidence": "Final real CLI/MCP application parity and all command-help checks passed; README matches new commands."
+      "evidence": "Final real CLI/MCP application parity and all command-help checks passed; README matches new commands.",
+      "finalAcceptanceStatus": "covered_by_accepted_final_atomic_and_requirement_assessments"
     },
     {
       "need": "Strongly typed owned code, retained completed translations and unchanged TSTS",
@@ -576,7 +585,8 @@
         "AGENTS.md",
         "scripts/build-runtime.ts"
       ],
-      "evidence": "Strict build, runtime integrity and final TSTS passed; no checker extension or further upstream migration."
+      "evidence": "Strict build, runtime integrity and final TSTS passed; no checker extension or further upstream migration.",
+      "finalAcceptanceStatus": "covered_by_accepted_final_atomic_and_requirement_assessments"
     },
     {
       "need": "Atomic vocabulary, requirements/acceptance identities and truthful discharge rather than edit counts",
@@ -585,7 +595,8 @@
         "pm/requirements/rolling-campaigns.md",
         "pm/uat/rolling-campaigns.md"
       ],
-      "evidence": "Canonical 92 delivery conditions retained/registered; final aggregate assessment remains pending."
+      "evidence": "Canonical 92 delivery conditions retained/registered; final aggregate assessment remains pending.",
+      "finalAcceptanceStatus": "covered_by_accepted_final_atomic_and_requirement_assessments"
     },
     {
       "need": "Historical completed records across lifecycle moves without live authorization",
@@ -594,7 +605,8 @@
         "src/campaign-plan-contents.ts",
         "tests/campaign-plan-contents.test.ts"
       ],
-      "evidence": "Fresh-before-move, accepted-after-move, stale-current-input and invalidated-history regressions passed."
+      "evidence": "Fresh-before-move, accepted-after-move, stale-current-input and invalidated-history regressions passed.",
+      "finalAcceptanceStatus": "covered_by_accepted_final_atomic_and_requirement_assessments"
     }
   ],
   "finalScopeInspectionDoesNotReplaceCanonicalAnnotations": true,
@@ -604,5 +616,25 @@
     "sameFinalSourceCommittedAs": "080d86afe185a765722c5475e2eab65b471318dc",
     "passed": 897,
     "exitCode": 0
+  },
+  "finalAcceptance": {
+    "baselineId": "BASELINE-17",
+    "checkpointId": "CHECKPOINT-327",
+    "lastCertificateId": "CERT-436",
+    "delivery": 92,
+    "aggregate": 21,
+    "unresolved": 0,
+    "vector": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "completeBeforeLifecycleMove": true,
+    "proof": "tmp/final-acceptance-all.log",
+    "sealedEvidence": "final-acceptance.md",
+    "originalHistoryPreserved": true
   }
 }
