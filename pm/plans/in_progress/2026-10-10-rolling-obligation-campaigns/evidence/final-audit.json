@@ -459,5 +459,12 @@
     ],
     "inspectedChange": "Only README.md changed among declared source/configuration/runtime inputs before renewal; original executed proof retained and reused without relabeling its provenance.",
     "historyPreserved": true
+  },
+  "lifecycleClosureInspection": {
+    "status": "incomplete",
+    "source": "src/campaign-plan-contents.ts:130",
+    "observation": "Completed adopted plans are currently checked against mutable current inputs. Moving this plan would also relocate evidence paths preserved in immutable historical certificates.",
+    "nextProof": "Exercise accepted historical state across the required status-directory move before claiming closure; keep active-plan freshness enforcement unchanged.",
+    "fixtureDependency": "Six test sources currently read this active campaign document directly. Their historical fixture boundary must survive the lifecycle transition."
   }
 }
