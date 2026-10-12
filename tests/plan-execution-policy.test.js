@@ -28,13 +28,13 @@ test('campaign policy requires repository inventory and V2 direct dependencies',
   const policy = fs.readFileSync(path.join(__dirname, '..', 'skills', 'plan-execution', 'SKILL.md'), 'utf8');
   const generated = fs.readFileSync(path.join(__dirname, '..', '.openclaw', 'skills', 'plan-execution', 'SKILL.md'), 'utf8');
   assert.match(policy, /Legacy writers emit exactly `schemaVersion`, `id`,\n`parent_plan_id`, and `depends_on`/);
-  assert.match(policy, /ponytail campaign validate --all \[--json\]/);
+  assert.match(policy, /ponytail campaign legacy --command validate --arguments '\["--all","--json"\]'/);
   assert.match(policy, /no campaign block as unmanaged legacy data without inferred\nmembership regardless of its location/);
   assert.match(policy, /managed plan names an unmarked\nplan as its direct parent or dependency/);
   assert.match(policy, /P is\nstranded exactly when C lacks that reciprocal reference/);
   assert.match(policy, /multiple active campaign roots remain a\nvalid inventory/);
   assert.match(policy, /require an explicit campaign and report all\n+candidates/);
-  assert.match(generated, /ponytail campaign validate --all \[--json\]/);
+  assert.match(generated, /ponytail campaign legacy --command validate --arguments '\["--all","--json"\]'/);
   assert.match(generated, /no campaign block as unmanaged legacy data without inferred\nmembership regardless of its location/);
   assert.match(generated, /P is\nstranded exactly when C lacks that reciprocal reference/);
   assert.match(generated, /multiple active campaign roots remain a\nvalid inventory/);
