@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Alex Baretta. All rights reserved.
 // Licensed under the MIT License. See LICENSE in the project root.
 import crypto from 'node:crypto';
-import {synchronizeRollingCampaign,readRollingMainlinePublicationV1,type RollingMainlinePublicationV1,readRollingMainlinePreparationV1,readRollingMainlineCandidateV1,readRollingPublicationQaV1,parseRollingPublicationQa,readRollingPublicationQaJobV1,verifyRollingMainlineCandidate,verifyRollingPublicationQa,type RollingMainlinePreparationV1,type RollingMainlineCandidateV1,type RollingPublicationQaV1,type RollingPublicationQaJobV1,selectRollingPublicationBatch,readRollingPublicationBatchClaimV1,type RollingPublicationBatchClaimV1,type RollingPublicationWaiting,type RollingPublicationTrigger,type RollingAcceptedIncrement} from './rolling-publication.js';
+import {readRollingMainlineRefreshIntentV1,readRollingMainlineRefreshPreparationV1,readRollingMainlineRefreshResultV1,type RollingMainlineRefreshIntentV1,type RollingMainlineRefreshPreparationV1,type RollingMainlineRefreshResultV1,synchronizeRollingCampaign,readRollingMainlinePublicationV1,type RollingMainlinePublicationV1,readRollingMainlinePreparationV1,readRollingMainlineCandidateV1,readRollingPublicationQaV1,parseRollingPublicationQa,readRollingPublicationQaJobV1,verifyRollingMainlineCandidate,verifyRollingPublicationQa,type RollingMainlinePreparationV1,type RollingMainlineCandidateV1,type RollingPublicationQaV1,type RollingPublicationQaJobV1,selectRollingPublicationBatch,readRollingPublicationBatchClaimV1,type RollingPublicationBatchClaimV1,type RollingPublicationWaiting,type RollingPublicationTrigger,type RollingAcceptedIncrement} from './rolling-publication.js';
 import {git,readRollingIncrementClaimV1,readRollingIncrementRebaseV1,verifyRollingIncrementRebase,prepareRollingIncrementRebase,readRollingIncrementPublicationV1,reconcileRollingIncrementPublication,publishRollingIncrement,verifyRollingIncrementLocalIntegration,fastForwardRollingIncrement,verifyRollingIncrementConflictInspection,type RollingIncrementConflictInspection,type RollingIncrementRepair,type RollingIncrementClaimV1,type RollingIncrementRebaseV1,type RollingFastRebaseResult,type RollingIncrementPublicationV1,type RollingIncrementPublicationResult,type RollingIncrementPushStarted} from './rolling-integration.js';
 import path from 'node:path';
 import { parse } from 'lossless-json';
@@ -830,7 +830,7 @@ export class RollingCampaignStore {
   }
 
   private async publicationCandidate(poolClient:PoolClient,campaignId:string,id:string):Promise<RollingMainlineCandidateV1> {
-    const row = (await poolClient.query<Record<string,unknown>>('SELECT candidate_text FROM ponytail_index.rolling_publication_candidate_v1 WHERE project_id=$1 AND campaign_id=$2 AND batch_id=$3',[this.projectId,campaignId,id])).rows[0];
+    const row = (await poolClient.query<Record<string,unknown>>("SELECT CASE WHEN b.refresh_id IS NULL THEN c.candidate_text ELSE (r.result_text::jsonb->'candidate')::text END AS candidate_text FROM ponytail_index.rolling_publication_batch_v1 b JOIN ponytail_index.rolling_publication_candidate_v1 c USING(project_id,campaign_id,batch_id) LEFT JOIN ponytail_index.rolling_mainline_refresh_v1 r ON r.project_id=b.project_id AND r.campaign_id=b.campaign_id AND r.batch_id=b.batch_id AND r.refresh_id=b.refresh_id WHERE b.project_id=$1 AND b.campaign_id=$2 AND b.batch_id=$3",[this.projectId,campaignId,id])).rows[0];
     requireState(row,'publication has no retained candidate');
     return readRollingMainlineCandidateV1(readStateText(stringColumn(row.candidate_text,'mainline candidate')));
   }
@@ -911,6 +911,71 @@ export class RollingCampaignStore {
         rollingPublicationQaConfiguration.digest,rollingPublicationQaConfiguration.commands);
       await poolClient.query("UPDATE ponytail_index.rolling_publication_batch_v1 SET state='PUSHING' WHERE project_id=$1 AND campaign_id=$2 AND batch_id=$3",[this.projectId,campaignId,id]);
       return rollingMainlineCandidateV1;
+    });
+  }
+
+  // Traceability: implements REQ-ROLLING-PUBLICATION
+  async beginMainlineRefresh(campaignId:string,id:string):Promise<RollingMainlineRefreshIntentV1> {
+    return this.transaction(campaignId,async poolClient=> {
+      const row = (await poolClient.query<Record<string,unknown>>('SELECT state,pending_refresh_id FROM ponytail_index.rolling_publication_batch_v1 WHERE project_id=$1 AND campaign_id=$2 AND batch_id=$3',[this.projectId,campaignId,id])).rows[0];
+      requireState(row,'publication batch is missing');
+      if (row.pending_refresh_id !== null) {
+        requireState(row.state === 'PREPARING','pending refresh has lost publication ownership');
+        const pending = (await poolClient.query<Record<string,unknown>>('SELECT intent_text FROM ponytail_index.rolling_mainline_refresh_v1 WHERE project_id=$1 AND campaign_id=$2 AND batch_id=$3 AND refresh_id=$4',[this.projectId,campaignId,id,row.pending_refresh_id])).rows[0];
+        requireState(pending,'pending refresh intent is missing');
+        return readRollingMainlineRefreshIntentV1(readStateText(stringColumn(pending.intent_text,'refresh intent')));
+      }
+      requireState(row.state === 'REBASE_REQUIRED' || row.state === 'PUSH_REJECTED','observe the original push outcome before refreshing mainline');
+      const rollingMainlineCandidateV1 = await this.publicationCandidate(poolClient,campaignId,id);
+      verifyRollingMainlineCandidate(await this.publicationClaim(poolClient,campaignId,id),rollingMainlineCandidateV1);
+      const rollingMainlineRefreshIntentV1 = readRollingMainlineRefreshIntentV1({schemaVersion:1,id:crypto.randomUUID(),batchId:id,previousCandidate:rollingMainlineCandidateV1});
+      await poolClient.query('INSERT INTO ponytail_index.rolling_mainline_refresh_v1(project_id,campaign_id,batch_id,refresh_id,intent_text) VALUES($1,$2,$3,$4,$5)',
+        [this.projectId,campaignId,id,rollingMainlineRefreshIntentV1.id,JSON.stringify(rollingMainlineRefreshIntentV1)]);
+      await poolClient.query("UPDATE ponytail_index.rolling_publication_batch_v1 SET state='PREPARING',pending_refresh_id=$4 WHERE project_id=$1 AND campaign_id=$2 AND batch_id=$3",[this.projectId,campaignId,id,rollingMainlineRefreshIntentV1.id]);
+      return rollingMainlineRefreshIntentV1;
+    });
+  }
+
+  // Traceability: implements REQ-ROLLING-PUBLICATION
+  async recordMainlineRefreshPreparation(campaignId:string,id:string,rollingMainlineRefreshPreparationV1:RollingMainlineRefreshPreparationV1):Promise<RollingMainlineRefreshPreparationV1> {
+    const checkedRollingMainlineRefreshPreparationV1 = readRollingMainlineRefreshPreparationV1(rollingMainlineRefreshPreparationV1);
+    return this.transaction(campaignId,async poolClient=> {
+      requireState(checkedRollingMainlineRefreshPreparationV1.batchId === id,'refresh preparation belongs to another batch');
+      const row = (await poolClient.query<Record<string,unknown>>('SELECT r.intent_text,r.preparation_text,b.state,b.pending_refresh_id FROM ponytail_index.rolling_mainline_refresh_v1 r JOIN ponytail_index.rolling_publication_batch_v1 b USING(project_id,campaign_id,batch_id) WHERE r.project_id=$1 AND r.campaign_id=$2 AND r.batch_id=$3 AND r.refresh_id=$4',
+        [this.projectId,campaignId,id,checkedRollingMainlineRefreshPreparationV1.id])).rows[0];
+      requireState(row && row.state === 'PREPARING' && row.pending_refresh_id === checkedRollingMainlineRefreshPreparationV1.id,'refresh preparation has no current intent');
+      const rollingMainlineRefreshIntentV1 = readRollingMainlineRefreshIntentV1(readStateText(stringColumn(row.intent_text,'refresh intent')));
+      requireState(isDeepStrictEqual({...rollingMainlineRefreshIntentV1,mainlineRevision:checkedRollingMainlineRefreshPreparationV1.mainlineRevision},checkedRollingMainlineRefreshPreparationV1),'refresh preparation differs from its retained intent');
+      const rollingPublicationBatchClaimV1 = await this.publicationClaim(poolClient,campaignId,id);
+      verifyRollingMainlineCandidate(rollingPublicationBatchClaimV1,rollingMainlineRefreshIntentV1.previousCandidate);
+      requireState(git(rollingPublicationBatchClaimV1.rootPath,['rev-parse',`refs/remotes/${rollingPublicationBatchClaimV1.target.remote}/${rollingPublicationBatchClaimV1.target.branch}^{commit}`]).trim() === checkedRollingMainlineRefreshPreparationV1.mainlineRevision,'refresh preparation differs from the fetched target');
+      if (row.preparation_text !== null) requireState(isDeepStrictEqual(readRollingMainlineRefreshPreparationV1(readStateText(stringColumn(row.preparation_text,'refresh preparation'))),checkedRollingMainlineRefreshPreparationV1),'refresh preparation is immutable');
+      else await poolClient.query('UPDATE ponytail_index.rolling_mainline_refresh_v1 SET preparation_text=$5 WHERE project_id=$1 AND campaign_id=$2 AND batch_id=$3 AND refresh_id=$4',[this.projectId,campaignId,id,checkedRollingMainlineRefreshPreparationV1.id,JSON.stringify(checkedRollingMainlineRefreshPreparationV1)]);
+      return checkedRollingMainlineRefreshPreparationV1;
+    });
+  }
+
+  // Traceability: implements REQ-ROLLING-PUBLICATION
+  async recordMainlineRefresh(campaignId:string,id:string,rollingMainlineRefreshResultV1:RollingMainlineRefreshResultV1):Promise<RollingMainlineRefreshResultV1> {
+    const checkedRollingMainlineRefreshResultV1 = readRollingMainlineRefreshResultV1(rollingMainlineRefreshResultV1);
+    return this.transaction(campaignId,async poolClient=> {
+      requireState(checkedRollingMainlineRefreshResultV1.batchId === id,'refresh result belongs to another batch');
+      const row = (await poolClient.query<Record<string,unknown>>('SELECT r.preparation_text,r.result_text,b.state,b.pending_refresh_id FROM ponytail_index.rolling_mainline_refresh_v1 r JOIN ponytail_index.rolling_publication_batch_v1 b USING(project_id,campaign_id,batch_id) WHERE r.project_id=$1 AND r.campaign_id=$2 AND r.batch_id=$3 AND r.refresh_id=$4',
+        [this.projectId,campaignId,id,checkedRollingMainlineRefreshResultV1.id])).rows[0];
+      requireState(row && row.preparation_text !== null,'refresh result has no retained preparation');
+      if (row.result_text !== null) {
+        const previous = readRollingMainlineRefreshResultV1(readStateText(stringColumn(row.result_text,'refresh result')));
+        requireState(isDeepStrictEqual(previous,checkedRollingMainlineRefreshResultV1),'refresh result is immutable');return previous;
+      }
+      requireState(row.state === 'PREPARING' && row.pending_refresh_id === checkedRollingMainlineRefreshResultV1.id,'refresh result no longer owns this publication');
+      const rollingMainlineRefreshPreparationV1 = readRollingMainlineRefreshPreparationV1(readStateText(stringColumn(row.preparation_text,'refresh preparation')));
+      requireState(checkedRollingMainlineRefreshResultV1.candidate.sourceRevision === rollingMainlineRefreshPreparationV1.previousCandidate.sourceRevision
+        && checkedRollingMainlineRefreshResultV1.candidate.mainlineRevision === rollingMainlineRefreshPreparationV1.mainlineRevision,'refreshed candidate differs from its preparation');
+      verifyRollingMainlineCandidate(await this.publicationClaim(poolClient,campaignId,id),checkedRollingMainlineRefreshResultV1.candidate);
+      git(checkedRollingMainlineRefreshResultV1.candidate.rootPath,['merge-base','--is-ancestor',rollingMainlineRefreshPreparationV1.previousCandidate.revision,checkedRollingMainlineRefreshResultV1.candidate.revision]);
+      await poolClient.query('UPDATE ponytail_index.rolling_mainline_refresh_v1 SET result_text=$5 WHERE project_id=$1 AND campaign_id=$2 AND batch_id=$3 AND refresh_id=$4',[this.projectId,campaignId,id,checkedRollingMainlineRefreshResultV1.id,JSON.stringify(checkedRollingMainlineRefreshResultV1)]);
+      await poolClient.query("UPDATE ponytail_index.rolling_publication_batch_v1 SET state='CANDIDATE',refresh_id=$4,pending_refresh_id=NULL,qa_id=NULL WHERE project_id=$1 AND campaign_id=$2 AND batch_id=$3",[this.projectId,campaignId,id,checkedRollingMainlineRefreshResultV1.id]);
+      return checkedRollingMainlineRefreshResultV1;
     });
   }
 

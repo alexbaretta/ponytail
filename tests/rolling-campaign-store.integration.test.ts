@@ -10,7 +10,7 @@ import path from 'node:path';
 import { execFileSync,spawnSync } from 'node:child_process';
 import { Pool } from 'pg';
 import { stringify } from 'lossless-json';
-import {prepareRollingMainline,mergeRollingMainline,observeRollingMainlineCandidate,runRollingPublicationQa} from '../src/rolling-publication.js';
+import {prepareRollingMainlineRefresh,mergeRollingMainlineRefresh,observeRollingMainlineRefresh,prepareRollingMainline,mergeRollingMainline,observeRollingMainlineCandidate,runRollingPublicationQa} from '../src/rolling-publication.js';
 import { databaseOptions } from '../src/project-index-database.js';
 import { collectRollingGraph, parseRollingProjectConfig,type RollingPhysicalProjectConfig, type RollingProjectConfigV1, type RollingBindingsV1, type RollingBinding, type RollingGraph } from '../src/rolling-campaign.js';
 import { RollingCampaignStore, type RollingCampaignRegistration, type RollingAllocationResult, type RollingWorkerDispatchAttached, type RollingReviewDispatchAttached, type RollingSessionAttachment, type RollingStoredAssignment, type RollingCampaignStatus } from '../src/rolling-campaign-store.js';
@@ -81,7 +81,9 @@ function prepareCoordinatorIncrementCheckout(root: string,branch: string): void 
   execFileSync('git',['-C',root,'switch','-q',branch]);
 }
 
-export async function runRollingReviewScenario(t: TestContext, reviewScenario: ReviewScenario, mainlinePublication:'normal' | 'lost_ack' | null = null): Promise<void> {
+export async function runRollingReviewScenario(t: TestContext, reviewScenario: ReviewScenario, mainlinePublication:'normal' | 'lost_ack' | 'race' | null = null): Promise<void> {
+  assert.ok(!(reviewScenario.automaticPublication && (reviewScenario.publicationBatch || reviewScenario.publicationFlush || reviewScenario.integratedCertificates)),
+    'the short automatic-increment Arc cannot stand in for later publication or certificate phases');
   const reviewDecision = reviewScenario.decision;
   let integratedRollingWorkerSubmissionV1: RollingWorkerSubmissionV1 | null = null;
   const repositoryRoot = path.resolve(__dirname, '../..');
@@ -346,7 +348,9 @@ export async function runRollingReviewScenario(t: TestContext, reviewScenario: R
   const workerRoot = submissionRollingAllocationResult.worktree.rootPath;
   execFileSync('git', ['-C', root, 'worktree', 'add', '-q', '-b', 'fixture-worker', workerRoot, baseCommit]);
   fs.writeFileSync(path.join(workerRoot, 'session_id.txt'), 'bound-session\n');
-  fs.writeFileSync(path.join(workerRoot, 'fixture/current.ts'), 'export const value: number = 2;\n');
+  // Publication success uses an approved value; the older reviewer Arc deliberately supplies value 2.
+  fs.writeFileSync(path.join(workerRoot, 'fixture/current.ts'), reviewScenario.publicationBatch
+    ? 'export const value: number = 1; // approved publication candidate\n' : 'export const value: number = 2;\n');
   execFileSync('git', ['-C', workerRoot, 'add', '--', 'fixture/current.ts']);
   execFileSync('git', ['-C', workerRoot, '-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.test', 'commit', '-q', '-m', 'bounded submission fixture']);
   const revision = execFileSync('git', ['-C', workerRoot, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
@@ -692,6 +696,7 @@ export async function runRollingReviewScenario(t: TestContext, reviewScenario: R
     const deliveries = await Promise.all(Array.from({length:4},()=>rollingCampaignStore.recordIncrementPublication('bound-fixture',rollingStoredReview.request.id,rollingIncrementPublicationResult)));
     assert.ok(deliveries.every(delivery=>JSON.stringify(delivery) === JSON.stringify(deliveredRollingIncrementPublicationV1)));
     assert.equal((await pool.query<Record<string,unknown>>('SELECT count(*)::integer AS count FROM ponytail_index.rolling_increment_delivery_v1 WHERE project_id=$1',[projectId])).rows[0]?.count,1);
+    fs.rmSync(rejectionHook);
 
 
   if (reviewScenario.publicationBatch) {
@@ -743,7 +748,35 @@ export async function runRollingReviewScenario(t: TestContext, reviewScenario: R
     fs.writeFileSync(configurationPath,JSON.stringify({...passingConfiguration,qa:{...passingConfiguration.qa,publication:[['false']]}}));
     await assert.rejects(restartedPublicationStore.beginMainlinePush('bound-fixture',firstClaim.claim.id),/stale|all required/);
     fs.writeFileSync(configurationPath,JSON.stringify(passingConfiguration));
-    if (mainlinePublication === 'normal') {
+    if (mainlinePublication === 'race') {
+      const racingRoot = path.join(root,'managed','racing-mainline');
+      execFileSync('git',['clone','-q',remoteRoot,racingRoot]);
+      execFileSync('git',['-C',racingRoot,'switch','main']);
+      fs.writeFileSync(path.join(racingRoot,'racing-mainline.txt'),'Preserve this newly published mainline input.\n');
+      execFileSync('git',['-C',racingRoot,'add','racing-mainline.txt']);
+      execFileSync('git',['-C',racingRoot,'-c','user.name=Fixture','-c','user.email=fixture@example.test','commit','-qm','racing mainline change']);
+      execFileSync('git',['-C',racingRoot,'push','origin','main']);
+      assert.equal((await restartedPublicationStore.publishMainline('bound-fixture',firstClaim.claim.id)).result.state,'REBASE_REQUIRED');
+      const rollingMainlineRefreshIntentV1 = await restartedPublicationStore.beginMainlineRefresh('bound-fixture',firstClaim.claim.id);
+      assert.deepEqual(await restartedPublicationStore.beginMainlineRefresh('bound-fixture',firstClaim.claim.id),rollingMainlineRefreshIntentV1);
+      const rollingMainlineRefreshPreparationV1 = prepareRollingMainlineRefresh(rollingPublicationBatchClaimV1,rollingMainlineRefreshIntentV1);
+      await restartedPublicationStore.recordMainlineRefreshPreparation('bound-fixture',firstClaim.claim.id,rollingMainlineRefreshPreparationV1);
+      const rollingMainlineRefreshResultV1 = mergeRollingMainlineRefresh(rollingPublicationBatchClaimV1,rollingMainlineRefreshPreparationV1);
+      const recoveredRollingMainlineRefreshResultV1 = observeRollingMainlineRefresh(rollingPublicationBatchClaimV1,rollingMainlineRefreshPreparationV1);
+      assert.deepEqual(recoveredRollingMainlineRefreshResultV1,rollingMainlineRefreshResultV1);
+      assert.notEqual(rollingMainlineRefreshResultV1.candidate.revision,rollingMainlineCandidateV1.revision);
+      await new RollingCampaignStore(pool,projectId).recordMainlineRefresh('bound-fixture',firstClaim.claim.id,recoveredRollingMainlineRefreshResultV1);
+      await assert.rejects(restartedPublicationStore.beginMainlinePush('bound-fixture',firstClaim.claim.id),/full publication QA/);
+      assert.deepEqual(await restartedPublicationStore.recordPublicationQa('bound-fixture',firstClaim.claim.id,passingRollingPublicationQaV1),passingRollingPublicationQaV1);
+      await assert.rejects(restartedPublicationStore.beginMainlinePush('bound-fixture',firstClaim.claim.id),/full publication QA/);
+      const refreshedRollingPublicationQaJobV1 = await restartedPublicationStore.beginPublicationQa('bound-fixture',firstClaim.claim.id);
+      const refreshedRollingPublicationQaV1 = runRollingPublicationQa(rollingPublicationBatchClaimV1,rollingMainlineRefreshResultV1.candidate,
+        refreshedRollingPublicationQaJobV1.id,refreshedRollingPublicationQaJobV1.configurationDigest,refreshedRollingPublicationQaJobV1.commands);
+      assert.equal(refreshedRollingPublicationQaV1.outcome,'PASS');
+      await restartedPublicationStore.recordPublicationQa('bound-fixture',firstClaim.claim.id,refreshedRollingPublicationQaV1);
+      assert.equal((await restartedPublicationStore.publishMainline('bound-fixture',firstClaim.claim.id)).result.state,'PUBLISHED');
+      assert.ok(fs.existsSync(path.join(root,'racing-mainline.txt')));
+    } else if (mainlinePublication === 'normal') {
       assert.equal((await restartedPublicationStore.publishMainline('bound-fixture',firstClaim.claim.id)).result.state,'PUBLISHED');
     } else {
       assert.deepEqual(await restartedPublicationStore.beginMainlinePush('bound-fixture',firstClaim.claim.id),rollingMainlineCandidateV1);
@@ -763,7 +796,7 @@ export async function runRollingReviewScenario(t: TestContext, reviewScenario: R
       assert.equal(synchronizedRollingIncrementPublicationResult.state,'PUBLISHED');
       assert.deepEqual(await restartedPublicationStore.synchronizePublishedCampaign('bound-fixture',firstClaim.claim.id),synchronizedRollingIncrementPublicationResult);
       assert.equal(execFileSync('git',['-C',root,'symbolic-ref','--short','HEAD'],{encoding:'utf8'}).trim(),'campaign/bound-fixture');
-      assert.equal((await pool.query<Record<string,unknown>>('SELECT count(*)::integer AS count FROM ponytail_index.rolling_mainline_publication_v1 WHERE project_id=$1',[projectId])).rows[0]?.count,1);
+      assert.equal((await pool.query<Record<string,unknown>>('SELECT count(*)::integer AS count FROM ponytail_index.rolling_mainline_publication_v1 WHERE project_id=$1',[projectId])).rows[0]?.count,mainlinePublication === 'race' ? 2 : 1);
       fs.writeFileSync(path.join(root,'later-campaign-work.txt'),'Preserve later work when a completed synchronization receipt is requested.\n');
       execFileSync('git',['-C',root,'add','later-campaign-work.txt']);
       execFileSync('git',['-C',root,'-c','user.name=Fixture','-c','user.email=fixture@example.test','commit','-qm','later campaign work']);
@@ -891,7 +924,7 @@ export async function runRollingReviewScenario(t: TestContext, reviewScenario: R
   fs.writeFileSync(path.join(root, 'bound-obligations.json'), JSON.stringify(acceptedBoundObligationDocumentV1));
   const acceptedBoundRollingGraph = collectRollingGraph(root, 'bound-obligations.json', 'bound-bindings.json', 'history.json');
   assert.ok(acceptedBoundRollingGraph.projection.satisfiedIds.includes(firstRollingBinding.obligationId));
-  await rollingCampaignStore.reconcileGraph('bound-fixture', submissionRollingGraph.digest, acceptedBoundRollingGraph.digest);
+  await rollingCampaignStore.reconcileGraph('bound-fixture', (await rollingCampaignStore.status('bound-fixture')).graphDigest, acceptedBoundRollingGraph.digest);
   assert.equal((await rollingCampaignStore.status('bound-fixture')).assignments[0]?.state, reviewDecision === 'accepted' ? 'INTEGRATING' : 'REWORK');
   fs.writeFileSync(path.join(root, 'fixture/current.ts'), 'export const value: number = 3;\n');
   assert.throws(() => acceptBoundCheckpoint(boundObligationDocumentV1, candidateBoundObligationDocumentV1, root,
@@ -1716,7 +1749,7 @@ test('worker retirement revokes native ownership and fences checkout release thr
 
 // Traceability: verifies REQ-ROLLING-PUBLICATION
 test('publication batch freezes one shared partial claim across concurrent requests and restart',
- t=>runRollingReviewScenario(t,{decision:'accepted',mode:'manual',automaticPublication:true,publicationBatch:'partial'}));
+ t=>runRollingReviewScenario(t,{decision:'accepted',mode:'manual',publicationBatch:'partial'}));
 
 // Traceability: verifies REQ-ROLLING-PUBLICATION
 for (const publicationFlush of ['completion','quiescence'] as const) test(`publication partial flush follows verified ${publicationFlush} state`,
@@ -1724,8 +1757,8 @@ for (const publicationFlush of ['completion','quiescence'] as const) test(`publi
 
 // Traceability: verifies REQ-ROLLING-PUBLICATION
 test('publication threshold uses configured M and persists one claim without counting acknowledgement retries',
- t=>runRollingReviewScenario(t,{decision:'accepted',mode:'manual',automaticPublication:true,publicationBatch:'threshold'}));
+ t=>runRollingReviewScenario(t,{decision:'accepted',mode:'manual',publicationBatch:'threshold'}));
 
 // Traceability: verifies REQ-ROLLING-PUBLICATION
-for (const mainlinePublication of ['normal','lost_ack'] as const) test(`mainline ${mainlinePublication} publication retains one observation and synchronizes the campaign after restart`,
- t=>runRollingReviewScenario(t,{decision:'accepted',mode:'manual',automaticPublication:true,publicationBatch:'partial'},mainlinePublication));
+for (const mainlinePublication of ['normal','lost_ack','race'] as const) test(`mainline ${mainlinePublication} publication retains one observation and synchronizes the campaign after restart`,
+ t=>runRollingReviewScenario(t,{decision:'accepted',mode:'manual',publicationBatch:'partial'},mainlinePublication));

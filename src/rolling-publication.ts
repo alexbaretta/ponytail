@@ -350,3 +350,78 @@ export function synchronizeRollingCampaign(rollingPublicationBatchClaimV1:Rollin
  return publishRollingIncrement({rootPath,target:{remote:checkedRollingPublicationBatchClaimV1.target.remote,
   branch:checkedRollingPublicationBatchClaimV1.incrementRef},revision:synchronizedRevision});
 }
+
+export interface RollingMainlineRefreshIntentV1 {
+ readonly schemaVersion:1;
+ readonly id:string;
+ readonly batchId:string;
+ readonly previousCandidate:RollingMainlineCandidateV1;
+}
+export interface RollingMainlineRefreshPreparationV1 extends RollingMainlineRefreshIntentV1 {
+ readonly mainlineRevision:string;
+}
+export interface RollingMainlineRefreshResultV1 {
+ readonly schemaVersion:1;
+ readonly id:string;
+ readonly batchId:string;
+ readonly candidate:RollingMainlineCandidateV1;
+}
+// Traceability: implements REQ-ROLLING-PUBLICATION
+export function readRollingMainlineRefreshIntentV1(value:unknown):RollingMainlineRefreshIntentV1 {
+ const refresh = record(value,['schemaVersion','id','batchId','previousCandidate']);
+ requirePublication(refresh.schemaVersion === 1,'unsupported mainline refresh intent version');
+ const previousRollingMainlineCandidateV1 = readRollingMainlineCandidateV1(refresh.previousCandidate);
+ requirePublication(previousRollingMainlineCandidateV1.batchId === refresh.batchId,'refresh candidate belongs to a different batch');
+ return {schemaVersion:1,id:batchId(refresh.id),batchId:batchId(refresh.batchId),previousCandidate:previousRollingMainlineCandidateV1};
+}
+export const RollingMainlineRefreshIntentReaders = {V1:readRollingMainlineRefreshIntentV1};
+// Traceability: implements REQ-ROLLING-PUBLICATION
+export function readRollingMainlineRefreshPreparationV1(value:unknown):RollingMainlineRefreshPreparationV1 {
+ const preparation = record(value,['schemaVersion','id','batchId','previousCandidate','mainlineRevision']);
+ const rollingMainlineRefreshIntentV1 = readRollingMainlineRefreshIntentV1({schemaVersion:preparation.schemaVersion,id:preparation.id,
+  batchId:preparation.batchId,previousCandidate:preparation.previousCandidate});
+ return {...rollingMainlineRefreshIntentV1,mainlineRevision:commit(preparation.mainlineRevision)};
+}
+export const RollingMainlineRefreshPreparationReaders = {V1:readRollingMainlineRefreshPreparationV1};
+// Traceability: implements REQ-ROLLING-PUBLICATION
+export function readRollingMainlineRefreshResultV1(value:unknown):RollingMainlineRefreshResultV1 {
+ const result = record(value,['schemaVersion','id','batchId','candidate']);
+ requirePublication(result.schemaVersion === 1,'unsupported mainline refresh result version');
+ const rollingMainlineCandidateV1 = readRollingMainlineCandidateV1(result.candidate);
+ requirePublication(rollingMainlineCandidateV1.batchId === result.batchId,'refresh result belongs to a different batch');
+ return {schemaVersion:1,id:batchId(result.id),batchId:batchId(result.batchId),candidate:rollingMainlineCandidateV1};
+}
+export const RollingMainlineRefreshResultReaders = {V1:readRollingMainlineRefreshResultV1};
+// Traceability: implements REQ-ROLLING-PUBLICATION
+export function prepareRollingMainlineRefresh(rollingPublicationBatchClaimV1:RollingPublicationBatchClaimV1,
+ rollingMainlineRefreshIntentV1:RollingMainlineRefreshIntentV1):RollingMainlineRefreshPreparationV1 {
+ const checkedRollingMainlineRefreshIntentV1 = readRollingMainlineRefreshIntentV1(rollingMainlineRefreshIntentV1);
+ verifyRollingMainlineCandidate(rollingPublicationBatchClaimV1,checkedRollingMainlineRefreshIntentV1.previousCandidate);
+ const rootPath = rollingPublicationBatchClaimV1.rootPath;
+ const remoteRef = `refs/remotes/${rollingPublicationBatchClaimV1.target.remote}/${rollingPublicationBatchClaimV1.target.branch}`;
+ git(rootPath,['fetch','--no-tags','--',rollingPublicationBatchClaimV1.target.remote,`refs/heads/${rollingPublicationBatchClaimV1.target.branch}:${remoteRef}`]);
+ const mainlineRevision = commit(git(rootPath,['rev-parse',`${remoteRef}^{commit}`]).trim());
+ git(rootPath,['merge-base','--is-ancestor',checkedRollingMainlineRefreshIntentV1.previousCandidate.mainlineRevision,mainlineRevision]);
+ return readRollingMainlineRefreshPreparationV1({...checkedRollingMainlineRefreshIntentV1,mainlineRevision});
+}
+// Traceability: implements REQ-ROLLING-PUBLICATION
+export function mergeRollingMainlineRefresh(rollingPublicationBatchClaimV1:RollingPublicationBatchClaimV1,
+ rollingMainlineRefreshPreparationV1:RollingMainlineRefreshPreparationV1):RollingMainlineRefreshResultV1 {
+ const checkedRollingMainlineRefreshPreparationV1 = readRollingMainlineRefreshPreparationV1(rollingMainlineRefreshPreparationV1);
+ verifyRollingMainlineCandidate(rollingPublicationBatchClaimV1,checkedRollingMainlineRefreshPreparationV1.previousCandidate);
+ git(rollingPublicationBatchClaimV1.rootPath,['merge','--no-edit','--no-ff',checkedRollingMainlineRefreshPreparationV1.mainlineRevision]);
+ return observeRollingMainlineRefresh(rollingPublicationBatchClaimV1,checkedRollingMainlineRefreshPreparationV1);
+}
+// Traceability: implements REQ-ROLLING-PUBLICATION
+export function observeRollingMainlineRefresh(rollingPublicationBatchClaimV1:RollingPublicationBatchClaimV1,
+ rollingMainlineRefreshPreparationV1:RollingMainlineRefreshPreparationV1):RollingMainlineRefreshResultV1 {
+ const checkedRollingMainlineRefreshPreparationV1 = readRollingMainlineRefreshPreparationV1(rollingMainlineRefreshPreparationV1);
+ const rollingMainlineCandidateV1 = readRollingMainlineCandidateV1({schemaVersion:1,batchId:checkedRollingMainlineRefreshPreparationV1.batchId,
+  rootPath:checkedRollingMainlineRefreshPreparationV1.previousCandidate.rootPath,
+  sourceRevision:checkedRollingMainlineRefreshPreparationV1.previousCandidate.sourceRevision,
+  mainlineRevision:checkedRollingMainlineRefreshPreparationV1.mainlineRevision,
+  revision:git(rollingPublicationBatchClaimV1.rootPath,['rev-parse','HEAD']).trim()});
+ verifyRollingMainlineCandidate(rollingPublicationBatchClaimV1,rollingMainlineCandidateV1);
+ git(rollingPublicationBatchClaimV1.rootPath,['merge-base','--is-ancestor',checkedRollingMainlineRefreshPreparationV1.previousCandidate.revision,rollingMainlineCandidateV1.revision]);
+ return readRollingMainlineRefreshResultV1({schemaVersion:1,id:checkedRollingMainlineRefreshPreparationV1.id,batchId:checkedRollingMainlineRefreshPreparationV1.batchId,candidate:rollingMainlineCandidateV1});
+}

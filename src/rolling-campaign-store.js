@@ -659,7 +659,7 @@ class RollingCampaignStore {
         });
     }
     async publicationCandidate(poolClient, campaignId, id) {
-        const row = (await poolClient.query('SELECT candidate_text FROM ponytail_index.rolling_publication_candidate_v1 WHERE project_id=$1 AND campaign_id=$2 AND batch_id=$3', [this.projectId, campaignId, id])).rows[0];
+        const row = (await poolClient.query("SELECT CASE WHEN b.refresh_id IS NULL THEN c.candidate_text ELSE (r.result_text::jsonb->'candidate')::text END AS candidate_text FROM ponytail_index.rolling_publication_batch_v1 b JOIN ponytail_index.rolling_publication_candidate_v1 c USING(project_id,campaign_id,batch_id) LEFT JOIN ponytail_index.rolling_mainline_refresh_v1 r ON r.project_id=b.project_id AND r.campaign_id=b.campaign_id AND r.batch_id=b.batch_id AND r.refresh_id=b.refresh_id WHERE b.project_id=$1 AND b.campaign_id=$2 AND b.batch_id=$3", [this.projectId, campaignId, id])).rows[0];
         requireState(row, 'publication has no retained candidate');
         return (0, rolling_publication_js_1.readRollingMainlineCandidateV1)(readStateText(stringColumn(row.candidate_text, 'mainline candidate')));
     }
@@ -727,6 +727,65 @@ class RollingCampaignStore {
             (0, rolling_publication_js_1.verifyRollingPublicationQa)(await this.publicationClaim(poolClient, campaignId, id), rollingMainlineCandidateV1, rollingPublicationQaV1, rollingPublicationQaConfiguration.digest, rollingPublicationQaConfiguration.commands);
             await poolClient.query("UPDATE ponytail_index.rolling_publication_batch_v1 SET state='PUSHING' WHERE project_id=$1 AND campaign_id=$2 AND batch_id=$3", [this.projectId, campaignId, id]);
             return rollingMainlineCandidateV1;
+        });
+    }
+    async beginMainlineRefresh(campaignId, id) {
+        return this.transaction(campaignId, async (poolClient) => {
+            const row = (await poolClient.query('SELECT state,pending_refresh_id FROM ponytail_index.rolling_publication_batch_v1 WHERE project_id=$1 AND campaign_id=$2 AND batch_id=$3', [this.projectId, campaignId, id])).rows[0];
+            requireState(row, 'publication batch is missing');
+            if (row.pending_refresh_id !== null) {
+                requireState(row.state === 'PREPARING', 'pending refresh has lost publication ownership');
+                const pending = (await poolClient.query('SELECT intent_text FROM ponytail_index.rolling_mainline_refresh_v1 WHERE project_id=$1 AND campaign_id=$2 AND batch_id=$3 AND refresh_id=$4', [this.projectId, campaignId, id, row.pending_refresh_id])).rows[0];
+                requireState(pending, 'pending refresh intent is missing');
+                return (0, rolling_publication_js_1.readRollingMainlineRefreshIntentV1)(readStateText(stringColumn(pending.intent_text, 'refresh intent')));
+            }
+            requireState(row.state === 'REBASE_REQUIRED' || row.state === 'PUSH_REJECTED', 'observe the original push outcome before refreshing mainline');
+            const rollingMainlineCandidateV1 = await this.publicationCandidate(poolClient, campaignId, id);
+            (0, rolling_publication_js_1.verifyRollingMainlineCandidate)(await this.publicationClaim(poolClient, campaignId, id), rollingMainlineCandidateV1);
+            const rollingMainlineRefreshIntentV1 = (0, rolling_publication_js_1.readRollingMainlineRefreshIntentV1)({ schemaVersion: 1, id: node_crypto_1.default.randomUUID(), batchId: id, previousCandidate: rollingMainlineCandidateV1 });
+            await poolClient.query('INSERT INTO ponytail_index.rolling_mainline_refresh_v1(project_id,campaign_id,batch_id,refresh_id,intent_text) VALUES($1,$2,$3,$4,$5)', [this.projectId, campaignId, id, rollingMainlineRefreshIntentV1.id, JSON.stringify(rollingMainlineRefreshIntentV1)]);
+            await poolClient.query("UPDATE ponytail_index.rolling_publication_batch_v1 SET state='PREPARING',pending_refresh_id=$4 WHERE project_id=$1 AND campaign_id=$2 AND batch_id=$3", [this.projectId, campaignId, id, rollingMainlineRefreshIntentV1.id]);
+            return rollingMainlineRefreshIntentV1;
+        });
+    }
+    async recordMainlineRefreshPreparation(campaignId, id, rollingMainlineRefreshPreparationV1) {
+        const checkedRollingMainlineRefreshPreparationV1 = (0, rolling_publication_js_1.readRollingMainlineRefreshPreparationV1)(rollingMainlineRefreshPreparationV1);
+        return this.transaction(campaignId, async (poolClient) => {
+            requireState(checkedRollingMainlineRefreshPreparationV1.batchId === id, 'refresh preparation belongs to another batch');
+            const row = (await poolClient.query('SELECT r.intent_text,r.preparation_text,b.state,b.pending_refresh_id FROM ponytail_index.rolling_mainline_refresh_v1 r JOIN ponytail_index.rolling_publication_batch_v1 b USING(project_id,campaign_id,batch_id) WHERE r.project_id=$1 AND r.campaign_id=$2 AND r.batch_id=$3 AND r.refresh_id=$4', [this.projectId, campaignId, id, checkedRollingMainlineRefreshPreparationV1.id])).rows[0];
+            requireState(row && row.state === 'PREPARING' && row.pending_refresh_id === checkedRollingMainlineRefreshPreparationV1.id, 'refresh preparation has no current intent');
+            const rollingMainlineRefreshIntentV1 = (0, rolling_publication_js_1.readRollingMainlineRefreshIntentV1)(readStateText(stringColumn(row.intent_text, 'refresh intent')));
+            requireState((0, node_util_1.isDeepStrictEqual)({ ...rollingMainlineRefreshIntentV1, mainlineRevision: checkedRollingMainlineRefreshPreparationV1.mainlineRevision }, checkedRollingMainlineRefreshPreparationV1), 'refresh preparation differs from its retained intent');
+            const rollingPublicationBatchClaimV1 = await this.publicationClaim(poolClient, campaignId, id);
+            (0, rolling_publication_js_1.verifyRollingMainlineCandidate)(rollingPublicationBatchClaimV1, rollingMainlineRefreshIntentV1.previousCandidate);
+            requireState((0, rolling_integration_js_1.git)(rollingPublicationBatchClaimV1.rootPath, ['rev-parse', `refs/remotes/${rollingPublicationBatchClaimV1.target.remote}/${rollingPublicationBatchClaimV1.target.branch}^{commit}`]).trim() === checkedRollingMainlineRefreshPreparationV1.mainlineRevision, 'refresh preparation differs from the fetched target');
+            if (row.preparation_text !== null)
+                requireState((0, node_util_1.isDeepStrictEqual)((0, rolling_publication_js_1.readRollingMainlineRefreshPreparationV1)(readStateText(stringColumn(row.preparation_text, 'refresh preparation'))), checkedRollingMainlineRefreshPreparationV1), 'refresh preparation is immutable');
+            else
+                await poolClient.query('UPDATE ponytail_index.rolling_mainline_refresh_v1 SET preparation_text=$5 WHERE project_id=$1 AND campaign_id=$2 AND batch_id=$3 AND refresh_id=$4', [this.projectId, campaignId, id, checkedRollingMainlineRefreshPreparationV1.id, JSON.stringify(checkedRollingMainlineRefreshPreparationV1)]);
+            return checkedRollingMainlineRefreshPreparationV1;
+        });
+    }
+    async recordMainlineRefresh(campaignId, id, rollingMainlineRefreshResultV1) {
+        const checkedRollingMainlineRefreshResultV1 = (0, rolling_publication_js_1.readRollingMainlineRefreshResultV1)(rollingMainlineRefreshResultV1);
+        return this.transaction(campaignId, async (poolClient) => {
+            requireState(checkedRollingMainlineRefreshResultV1.batchId === id, 'refresh result belongs to another batch');
+            const row = (await poolClient.query('SELECT r.preparation_text,r.result_text,b.state,b.pending_refresh_id FROM ponytail_index.rolling_mainline_refresh_v1 r JOIN ponytail_index.rolling_publication_batch_v1 b USING(project_id,campaign_id,batch_id) WHERE r.project_id=$1 AND r.campaign_id=$2 AND r.batch_id=$3 AND r.refresh_id=$4', [this.projectId, campaignId, id, checkedRollingMainlineRefreshResultV1.id])).rows[0];
+            requireState(row && row.preparation_text !== null, 'refresh result has no retained preparation');
+            if (row.result_text !== null) {
+                const previous = (0, rolling_publication_js_1.readRollingMainlineRefreshResultV1)(readStateText(stringColumn(row.result_text, 'refresh result')));
+                requireState((0, node_util_1.isDeepStrictEqual)(previous, checkedRollingMainlineRefreshResultV1), 'refresh result is immutable');
+                return previous;
+            }
+            requireState(row.state === 'PREPARING' && row.pending_refresh_id === checkedRollingMainlineRefreshResultV1.id, 'refresh result no longer owns this publication');
+            const rollingMainlineRefreshPreparationV1 = (0, rolling_publication_js_1.readRollingMainlineRefreshPreparationV1)(readStateText(stringColumn(row.preparation_text, 'refresh preparation')));
+            requireState(checkedRollingMainlineRefreshResultV1.candidate.sourceRevision === rollingMainlineRefreshPreparationV1.previousCandidate.sourceRevision
+                && checkedRollingMainlineRefreshResultV1.candidate.mainlineRevision === rollingMainlineRefreshPreparationV1.mainlineRevision, 'refreshed candidate differs from its preparation');
+            (0, rolling_publication_js_1.verifyRollingMainlineCandidate)(await this.publicationClaim(poolClient, campaignId, id), checkedRollingMainlineRefreshResultV1.candidate);
+            (0, rolling_integration_js_1.git)(checkedRollingMainlineRefreshResultV1.candidate.rootPath, ['merge-base', '--is-ancestor', rollingMainlineRefreshPreparationV1.previousCandidate.revision, checkedRollingMainlineRefreshResultV1.candidate.revision]);
+            await poolClient.query('UPDATE ponytail_index.rolling_mainline_refresh_v1 SET result_text=$5 WHERE project_id=$1 AND campaign_id=$2 AND batch_id=$3 AND refresh_id=$4', [this.projectId, campaignId, id, checkedRollingMainlineRefreshResultV1.id, JSON.stringify(checkedRollingMainlineRefreshResultV1)]);
+            await poolClient.query("UPDATE ponytail_index.rolling_publication_batch_v1 SET state='CANDIDATE',refresh_id=$4,pending_refresh_id=NULL,qa_id=NULL WHERE project_id=$1 AND campaign_id=$2 AND batch_id=$3", [this.projectId, campaignId, id, checkedRollingMainlineRefreshResultV1.id]);
+            return checkedRollingMainlineRefreshResultV1;
         });
     }
     async mainlinePublication(campaignId, id) {

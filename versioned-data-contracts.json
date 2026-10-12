@@ -3,6 +3,30 @@
   "schemaVersion": 1,
   "families": [
     {
+      "id": "rolling-mainline-refresh-intent",
+      "implementation": {"workspace": "ponytail", "module": "src/rolling-publication.ts", "readerRegistryExport": "RollingMainlineRefreshIntentReaders"},
+      "currentVersion": "V1",
+      "versions": ["V1"],
+      "supportedReadVersions": ["V1"],
+      "supportedDowngradeVersions": []
+    },
+    {
+      "id": "rolling-mainline-refresh-preparation",
+      "implementation": {"workspace": "ponytail", "module": "src/rolling-publication.ts", "readerRegistryExport": "RollingMainlineRefreshPreparationReaders"},
+      "currentVersion": "V1",
+      "versions": ["V1"],
+      "supportedReadVersions": ["V1"],
+      "supportedDowngradeVersions": []
+    },
+    {
+      "id": "rolling-mainline-refresh-result",
+      "implementation": {"workspace": "ponytail", "module": "src/rolling-publication.ts", "readerRegistryExport": "RollingMainlineRefreshResultReaders"},
+      "currentVersion": "V1",
+      "versions": ["V1"],
+      "supportedReadVersions": ["V1"],
+      "supportedDowngradeVersions": []
+    },
+    {
       "id": "rolling-mainline-publication",
       "implementation": {"workspace": "ponytail", "module": "src/rolling-publication.ts", "readerRegistryExport": "RollingMainlinePublicationReaders"},
       "currentVersion": "V1",
