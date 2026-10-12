@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-10-11-noedit_submission_protocol",
+  "recorded_at": "2026-10-11T23:35:53-07:00",
+  "source_references": [
+    "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/plan.md",
+    "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/final-acceptance.md"
+  ],
+  "context": {
+    "languages": [
+      "typescript"
+    ],
+    "frameworks": [
+      "node:test"
+    ],
+    "components": [
+      "rolling worker submission"
+    ],
+    "affected_boundaries": [
+      "native worker final message",
+      "physical V1 submission collection"
+    ],
+    "code_references": [
+      "src/rolling-worker.ts:185",
+      "tests/rolling-codex.integration.ts"
+    ]
+  },
+  "observed_behavior": "A successful native inspection-only worker returned prose and submission collection failed at JSON parsing.",
+  "expected_behavior": "Every successful obligation submits physical V1 JSON with actual candidate and proof, including an unchanged candidate.",
+  "causal_mechanism": "The collector requires structured submissions for all successful workers, but the prompt explicitly required JSON only for code submissions. The no-edit path therefore followed its prose report instruction.",
+  "anti_pattern": {
+    "structural_description": "Producer instructions specialize a shared output protocol to a narrower execution class than the consumer accepts.",
+    "why_it_fails": "An otherwise successful producer emits an incompatible representation at the shared handoff."
+  },
+  "correct_pattern": {
+    "required_invariant": "Successful producer output conforms to the consumer protocol across every supported obligation class.",
+    "implementation_description": "The shared worker instructions require the existing exact V1 JSON for every successful obligation; inspection reports are retained evidence rather than the final wire message."
+  },
+  "applicability_conditions": [
+    "The same collector handles changed and unchanged candidates.",
+    "An agent-facing prompt determines the producer output representation."
+  ],
+  "known_non_matches": [
+    "Code-changing workers were already explicitly instructed to submit JSON."
+  ],
+  "confirmation_evidence": [
+    "The real native no-edit Arc failed with JSON value expected at the collector before the prompt correction.",
+    "The same Arc passed after the prompt correction, preserving unchanged HEAD, durable REVIEW and idempotent replay."
+  ],
+  "regression_proofs": [
+    "tests/rolling-codex.integration.ts: live no-edit worker submits actual inspection proof and reaches review without a code commit",
+    "tests/rolling-worker.test.ts: shared successful-submission instruction assertion"
+  ]
+}

@@ -166,3 +166,8 @@ test('live worker acknowledges retirement, becomes idle and reconciles archival 
  assert.equal(execFileSync('git',['-C',root,'status','--porcelain'],{encoding:'utf8'}),'?? AGENTS.md\n');
  t.diagnostic(`native retirement thread=${threadId}; session=${rollingNativeThread.thread.sessionId}; terminal notification=${notification.turn.id}; idle verified; archived inventory confirms the exact actor without another turn`);
 });
+
+// Traceability: verifies REQ-ROLLING-WORKERS
+// Traceability: verifies REQ-ROLLING-GRAPH
+test('live no-edit worker submits actual inspection proof and reaches review without a code commit',
+ t=>runRollingWorkerScenario(t,'native','inspection'));

@@ -182,7 +182,7 @@ export function buildRollingWorkerInstructions(rollingWorkerContext: RollingWork
   + 'Return the candidate and evidence to the coordinator for adversarial review; never publish to mainline yourself. '
   + (rollingWorkerContext.incrementRepair === null ? '' : `Substantive integration repair is required. Preserve and inspect the retained conflicting checkout and original replay identities before changing it. Resolve the recorded findings within the frozen paths, perform a fresh full semantic rebase against the campaign branch, and refresh all applicable focused QA. Submit the corrected candidate for fresh review by the original reviewer. Repair inspection and original conflict: ${JSON.stringify(rollingWorkerContext.incrementRepair)}\n`)
   + (rollingWorkerContext.rejectedReview === null ? '' : `Correct every finding from the original reviewer before resubmission. Rejected review: ${JSON.stringify(rollingWorkerContext.rejectedReview)}\n`)
-  + 'For code submissions, the final message must be only strict JSON, without Markdown fences or surrounding prose. '
+  + 'For every successful obligation, including a no-edit inspection, the final message must be only strict JSON, without Markdown fences or surrounding prose. '
   + 'Use exactly the physical record keys shown in the outline, at every level. Do not add stoppedAt, timestamp, status, blocker, validation or any other field to a successful submission. Keep actual timestamps in evidence.startedAt and evidence.completedAt only. '
   + 'Replace every placeholder and provide nonempty actual proof in the following typed submission outline; placeholders are not evidence. '
   + 'Each proof entry contains operation and evidence. Evidence contains command, selection, target (identity, profile, verification), revision, dirty, startedAt, completedAt, outcome, skips, failures, inputs (path, digest), outputPath and finalization. '
@@ -190,7 +190,7 @@ export function buildRollingWorkerInstructions(rollingWorkerContext: RollingWork
   + 'Use the frozen proof selection and target; hash every changed existing source plus test inputs and retained output with SHA-256, relative to this checkout. '
   + 'target.verification is a relative retained verification-file path, not a prose claim; include both that path and outputPath in the hashed inputs. '
   + 'Retain actual command output and ISO timestamps; only passing, finalized, clean evidence with zero skips and failures is eligible. '
-  + `Code submission outline: ${JSON.stringify(rollingWorkerSubmissionV1)}\n`
+  + `Submission outline: ${JSON.stringify(rollingWorkerSubmissionV1)}\n`
   + `Worker responsibility: ${JSON.stringify(rollingWorkerContext)}`;
 }
 

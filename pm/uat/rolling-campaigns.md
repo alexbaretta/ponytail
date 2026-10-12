@@ -227,3 +227,13 @@ cover working-worker dispatch, known-turn collection, uncertain creation,
 attachment/generation fences and suspension before rejected-work resumption.
 Current certificate assessment and all final rollups remain required; neither
 this Suite nor its execution commands bypass their adequacy and freshness gates.
+
+### No-edit submission demonstration
+
+Within acceptance ROLL-SUBMISSION, step ROLL-WORKER-SUBMIT also exercises a
+native inspection-only worker. It establishes fixture value 1, runs focused
+QA, retains actual output and submits physical V1 JSON with its unchanged
+HEAD. Collection must reach REVIEW in PostgreSQL, retain the same candidate
+and replay idempotently after a store restart. A prose final report does not
+establish this acceptance. This adds no requirement for an artificial code
+change or rebase on an inspection-only obligation.

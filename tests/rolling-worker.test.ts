@@ -99,7 +99,7 @@ test('worker instructions retain exact obligation, requirement, acceptance step,
  const correctedInstructions = buildRollingWorkerInstructions(correctedRollingWorkerContext);
  assert.ok(correctedInstructions.includes('Correct every finding from the original reviewer before resubmission.'));
  assert.ok(correctedInstructions.includes(JSON.stringify(correctedRollingWorkerContext.rejectedReview)));
- const outline = instructions.slice(instructions.indexOf('Code submission outline: ') + 'Code submission outline: '.length).split('\n')[0];
+ const outline = instructions.slice(instructions.indexOf('Submission outline: ') + 'Submission outline: '.length).split('\n')[0];
  assert.ok(outline);
  const submissionOutline:unknown = JSON.parse(outline);
  const expectedRollingWorkerSubmissionV1:RollingWorkerSubmissionV1 = {schemaVersion:1,campaignId:'fixture',assignmentId:'assignment',generation:'generation',
@@ -114,7 +114,7 @@ test('worker instructions retain exact obligation, requirement, acceptance step,
   .replaceAll('<relative verification file>','tmp/verification.json').replaceAll('<actual ISO timestamp>','2026-10-11T09:00:00Z')
   .replaceAll('<relative assessed input>','fixture.ts').replaceAll('<actual SHA-256>','e'.repeat(64))
   .replaceAll('<relative output file>','tmp/focused.txt')).proof[0]?.evidence.finalization,'pass');
- assert.ok(instructions.includes('final message must be only strict JSON'));
+ assert.ok(instructions.includes('For every successful obligation, including a no-edit inspection, the final message must be only strict JSON'));
  assert.ok(instructions.includes('Use exactly the physical record keys shown in the outline, at every level'));
  assert.throws(() => buildRollingWorkerInstructions({...rollingWorkerContext,requirements:[]}),/requirement references/);
  assert.throws(() => buildRollingWorkerInstructions({...rollingWorkerContext,binding:{...rollingWorkerContext.binding,obligationId:'OBL-2'}}),/frozen obligation/);

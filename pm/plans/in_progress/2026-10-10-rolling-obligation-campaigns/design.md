@@ -555,3 +555,18 @@ operation independently verifies clean configured checkout, current remote
 containment and immutable closure receipt. A closure suggestion is not a claim
 that those final external observations already succeeded. Closed campaigns
 produce no further scheduling decisions.
+
+## Successful no-edit worker submissions
+
+The retained worker submits the same physical V1 JSON record for every successful
+obligation, including an inspection that changes no tracked source and creates
+no commit. Its revision remains the actual unchanged HEAD, with fresh retained
+focused evidence. The collector validates that record and records REVIEW; it
+does not infer success from prose or invent an implementation commit. Blocked
+workers retain the existing blocker reporting path.
+
+The native no-edit Arc collects the actual worker turn, verifies the unchanged
+Git candidate, reads the persisted submission after a store restart, and
+replays collection idempotently. Reference-report fixture obligations retain
+their required traceability report as an ignored evidence file, while their
+final message conforms to the same successful submission protocol.

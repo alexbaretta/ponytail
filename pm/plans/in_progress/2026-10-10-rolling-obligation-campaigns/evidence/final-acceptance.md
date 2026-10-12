@@ -1104,3 +1104,117 @@ To /private/var/folders/yv/v_v6t2lj1nz4ypl2bpp_ytqm0000gp/T/rolling-store-m1iPtw
 ℹ duration_ms 65858.506125
 
 ~~~
+
+## OBL-111 actual no-edit submission regression
+
+The actual native inspection-only worker finished its unchanged candidate, but
+the collector rejected its prose final message at physical V1 JSON parsing.
+The successful-submission prompt applied JSON explicitly only to code changes.
+The correction applies that existing protocol to every successful obligation,
+including a no-edit inspection, without introducing a new physical record or
+an artificial code commit. The same real native collection Arc then passed.
+It retained actual QA output, persisted REVIEW, read the unchanged revision
+from PostgreSQL after restart and replayed collection idempotently.
+
+Both invocations ran against task-owned dirty test/source inputs based on
+162c89d, so these are focused regression results, not final clean-tree proofs.
+The subsequent older inspection-fixture report reconciliation was not loaded
+by this already-running probe. Full core and native acceptance of the final
+reconciled inputs remains required.
+
+Red command: `node --test --test-name-pattern='live no-edit worker'
+dist/tests/rolling-codex.integration.js`. Terminal exit 1, one failure.
+
+```text
+✖ live no-edit worker submits actual inspection proof and reaches review without a code commit (86366.080042ms)
+ℹ {"timestamp":"2026-10-12T06:27:14.698245Z","level":"WARN","fields":{"message":"ignoring interface.icon_small: icon path with '..' must resolve under plugin assets/"},"target":"codex_skills::interface"}
+ℹ {"timestamp":"2026-10-12T06:27:14.698293Z","level":"WARN","fields":{"message":"ignoring interface.icon_large: icon path with '..' must resolve under plugin assets/"},"target":"codex_skills::interface"}
+ℹ native lifecycle thread/status/changed; thread=01a12ecb-4056-7cd2-8554-759fab9ec4dc; turn=null; activity={"type":"active","activeFlags":[]}
+ℹ native lifecycle turn/started; thread=01a12ecb-4056-7cd2-8554-759fab9ec4dc; turn={"id":"01a12ecb-415f-7df1-aac3-970314f10aa3","status":"inProgress"}; activity=null
+ℹ native lifecycle thread/status/changed; thread=01a12ecb-4056-7cd2-8554-759fab9ec4dc; turn=null; activity={"type":"idle"}
+ℹ native lifecycle turn/completed; thread=01a12ecb-4056-7cd2-8554-759fab9ec4dc; turn={"id":"01a12ecb-415f-7df1-aac3-970314f10aa3","status":"completed"}; activity=null
+ℹ native lifecycle thread/status/changed; thread=01a12ecb-4056-7cd2-8554-759fab9ec4dc; turn=null; activity={"type":"active","activeFlags":[]}
+ℹ native lifecycle turn/started; thread=01a12ecb-4056-7cd2-8554-759fab9ec4dc; turn={"id":"01a12ecb-6725-7801-ba40-dc81da295829","status":"inProgress"}; activity=null
+ℹ worker turn remains active: thread=01a12ecb-4056-7cd2-8554-759fab9ec4dc; turn=01a12ecb-6725-7801-ba40-dc81da295829; continue observing the same handle
+ℹ native lifecycle thread/status/changed; thread=01a12ecb-4056-7cd2-8554-759fab9ec4dc; turn=null; activity={"type":"idle"}
+ℹ native lifecycle turn/completed; thread=01a12ecb-4056-7cd2-8554-759fab9ec4dc; turn={"id":"01a12ecb-6725-7801-ba40-dc81da295829","status":"completed"}; activity=null
+ℹ native lifecycle thread/status/changed; thread=01a12ecb-4056-7cd2-8554-759fab9ec4dc; turn=null; activity={"type":"notLoaded"}
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 86492.041958
+
+✖ failing tests:
+
+test at dist/tests/rolling-codex.integration.js:140:25
+✖ live no-edit worker submits actual inspection proof and reaches review without a code commit (86366.080042ms)
+  SyntaxError: JSON value expected but got 'P' at position 0
+      at /Users/alex/git/ctosclub/ponytail/node_modules/lossless-json/lib/umd/lossless-json.js:1:4233
+      at t.parse (/Users/alex/git/ctosclub/ponytail/node_modules/lossless-json/lib/umd/lossless-json.js:1:4279)
+      at parseRollingWorkerSubmission (/Users/alex/git/ctosclub/ponytail/dist/src/rolling-worker-submission.js:49:68)
+      at collectRollingWorkerSubmission (/Users/alex/git/ctosclub/ponytail/dist/src/rolling-worker.js:173:103)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async runRollingWorkerScenario (/Users/alex/git/ctosclub/ponytail/dist/tests/rolling-campaign-store.integration.test.js:1381:46)
+      at async Test.run (node:internal/test_runner/test:1208:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3)
+```
+
+Same selection after the prompt correction: terminal exit 0, one pass, zero
+failures, skips or cancellations.
+
+```text
+✔ live no-edit worker submits actual inspection proof and reaches review without a code commit (92523.416584ms)
+ℹ {"timestamp":"2026-10-12T06:31:34.766616Z","level":"WARN","fields":{"message":"ignoring interface.icon_small: icon path with '..' must resolve under plugin assets/"},"target":"codex_skills::interface"}
+{"timestamp":"2026-10-12T06:31:34.766659Z","level":"WARN","fields":{"message":"ignoring interface.icon_large: icon path with '..' must resolve under plugin assets/"},"target":"codex_skills::interface"}
+ℹ native lifecycle thread/status/changed; thread=01a12ecf-384c-7d62-9758-be415cb4d930; turn=null; activity={"type":"active","activeFlags":[]}
+ℹ native lifecycle turn/started; thread=01a12ecf-384c-7d62-9758-be415cb4d930; turn={"id":"01a12ecf-38ec-73c1-b36e-c4fd2d3c4cd6","status":"inProgress"}; activity=null
+ℹ native lifecycle thread/status/changed; thread=01a12ecf-384c-7d62-9758-be415cb4d930; turn=null; activity={"type":"idle"}
+ℹ native lifecycle turn/completed; thread=01a12ecf-384c-7d62-9758-be415cb4d930; turn={"id":"01a12ecf-38ec-73c1-b36e-c4fd2d3c4cd6","status":"completed"}; activity=null
+ℹ native lifecycle thread/status/changed; thread=01a12ecf-384c-7d62-9758-be415cb4d930; turn=null; activity={"type":"active","activeFlags":[]}
+ℹ native lifecycle turn/started; thread=01a12ecf-384c-7d62-9758-be415cb4d930; turn={"id":"01a12ecf-64fc-7f22-b040-3e5bcf3e9db2","status":"inProgress"}; activity=null
+ℹ {"timestamp":"2026-10-12T06:31:51.227863Z","level":"WARN","fields":{"message":"recorded sandbox violation: resource=filesystem backend=seatbelt reason=policy_denied path=unknown"},"target":"codex_sandboxing::violation"}
+ℹ worker turn remains active: thread=01a12ecf-384c-7d62-9758-be415cb4d930; turn=01a12ecf-64fc-7f22-b040-3e5bcf3e9db2; continue observing the same handle
+ℹ native lifecycle thread/status/changed; thread=01a12ecf-384c-7d62-9758-be415cb4d930; turn=null; activity={"type":"idle"}
+ℹ native lifecycle turn/completed; thread=01a12ecf-384c-7d62-9758-be415cb4d930; turn={"id":"01a12ecf-64fc-7f22-b040-3e5bcf3e9db2","status":"completed"}; activity=null
+ℹ native no-edit submission session=01a12ecf-384c-7d62-9758-be415cb4d930; turn=01a12ecf-64fc-7f22-b040-3e5bcf3e9db2; revision=420fc38307e02a26defed375963097d93447ea16; original candidate unchanged; REVIEW persisted after restart
+ℹ native lifecycle thread/status/changed; thread=01a12ecf-384c-7d62-9758-be415cb4d930; turn=null; activity={"type":"notLoaded"}
+ℹ tests 1
+ℹ suites 0
+ℹ pass 1
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 92659.457458
+```
+
+Strict build succeeded. Focused worker tests passed. Unchanged TSTS checked
+1,264 files with no violations. Traceability generation checked 855
+relationships with no violations.
+
+Confirmed causal incident: [no-edit submission protocol observation](../../../../debugging-pattern-observations/2026-10-11-noedit_submission_protocol.json).
+The observation passed the configured JSON Schema. BIND-239/CHECKPOINT-202
+adds only this required observation path to the existing OBL-111 repair scope.
+No successful discharge is inferred from that preparation checkpoint.
+
+## Core acceptance after the no-edit correction
+
+`npm test` executed all five Node unit families after the final relevant source
+and fixture edits: 544 + 245 + 23 + 4 + 80 = 896 passes, with zero failures,
+skips or cancellations. The command exited 1 only at its final TSTS invocation,
+which rejected the new observation's untracked Git state. After staging that
+validated record, the same final `npm run check:tsts` gate exited 0 and checked
+1,265 files without violations. No product or test input changed between those
+two invocations; the successful unit evidence is reused. The full command is
+not represented as having exited 0.
+
+Logs: `tmp/rolling-final-core-after-noedit.log` and
+`tmp/inspection-submission-final-tsts.log`. Rule-copy validation reports all
+eight copies matched; version validation reports all seven files at 4.8.4.
+Runtime generation checks and traceability validation (855 relationships) pass.
+The corrected native no-edit focused Arc has passed; final clean-revision
+native acceptance and current certificate assessment remain outstanding.
