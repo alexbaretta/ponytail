@@ -1210,6 +1210,11 @@
       "class": "unit-test",
       "path": "tests/rolling-cli-registry.test.ts",
       "locator": "text"
+    },
+    {
+      "class": "integration-test",
+      "path": "tests/rolling-cli.integration.test.ts",
+      "locator": "text"
     }
   ],
   "entities": [],

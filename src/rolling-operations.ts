@@ -365,5 +365,6 @@ export async function runRollingOperationCli(argv:readonly string[]):Promise<voi
  } finally {process.removeListener('SIGINT',cancel);if (abortController.signal.aborted) process.exitCode=130;}
 }
 if (require.main === module) runRollingOperationCli(process.argv.slice(2)).catch((error:unknown)=> {
+ if (process.exitCode === 130) return;
  process.stderr.write((error instanceof Error ? error.message : String(error))+'\n');process.exitCode=error instanceof RollingLegacyInspectionError ? error.exitCode : 1;
 });

@@ -403,6 +403,8 @@ async function runRollingOperationCli(argv) {
 }
 if (require.main === module)
     runRollingOperationCli(process.argv.slice(2)).catch((error) => {
+        if (process.exitCode === 130)
+            return;
         process.stderr.write((error instanceof Error ? error.message : String(error)) + '\n');
         process.exitCode = error instanceof RollingLegacyInspectionError ? error.exitCode : 1;
     });
