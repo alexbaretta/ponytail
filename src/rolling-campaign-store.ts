@@ -176,6 +176,8 @@ export interface RollingPublicationContext {
  readonly candidate:RollingMainlineCandidateV1 | null;readonly qaJob:RollingPublicationQaJobV1 | null;readonly qa:RollingPublicationQaV1 | null;
  readonly refreshIntent:RollingMainlineRefreshIntentV1 | null;readonly refreshPreparation:RollingMainlineRefreshPreparationV1 | null;readonly refreshResult:RollingMainlineRefreshResultV1 | null;
 }
+export type RollingIncrementState='CLAIMED' | 'REBASING' | 'CONFLICT' | 'REBASED' | 'PUSHING' | 'PUBLISHED' | 'REBASE_REQUIRED' | 'PUSH_REJECTED' | 'UNCONFIRMED';
+export interface RollingStoredIncrement {readonly claim:RollingIncrementClaimV1;readonly state:RollingIncrementState;readonly publication:RollingIncrementPublicationV1 | null;readonly obligationSatisfied:boolean}
 export interface RollingStoredReviewDispatch {readonly reviewId:string;readonly dispatch:RollingReviewDispatch}
 export interface RollingStoredWorkerDispatch {readonly assignmentId:string;readonly generation:string;readonly dispatch:RollingWorkerDispatch}
 export interface RollingCoordinatorSnapshot extends RollingCampaignStatus {
@@ -189,6 +191,7 @@ export interface RollingCoordinatorSnapshot extends RollingCampaignStatus {
   readonly reviewDispatches:readonly RollingStoredReviewDispatch[];
   readonly releasableAssignments:readonly RollingAssignmentRelease[];
   readonly publications: readonly RollingPublicationStatus[];
+  readonly increments:readonly RollingStoredIncrement[];
 }
 export type RollingActionState = 'PENDING' | 'STARTED' | 'COMPLETED' | 'CANCELLED';
 export type RollingActionKind = 'START_WORKER' | 'RESUME_WORKER';
@@ -357,6 +360,9 @@ function readStoredReview(row: Record<string,unknown>): RollingStoredReview {
   const rollingReviewOutcomeV1 = text === null ? null : parseRollingReviewOutcome(text);
   if (rollingReviewOutcomeV1) validateRollingReviewOutcome(rollingReviewRequestV1, rollingReviewOutcomeV1);
   return { request: rollingReviewRequestV1, outcome: rollingReviewOutcomeV1 };
+}
+function incrementState(value:unknown):RollingIncrementState {
+ switch(value) {case 'CLAIMED':case 'REBASING':case 'CONFLICT':case 'REBASED':case 'PUSHING':case 'PUBLISHED':case 'REBASE_REQUIRED':case 'PUSH_REJECTED':case 'UNCONFIRMED':return value;default:throw new Error('rolling campaign: invalid increment state');}
 }
 function readReviewDispatch(row:Record<string,unknown>):RollingReviewDispatch {
   const id = stringColumn(row.dispatch_id, 'review dispatch');
@@ -1720,6 +1726,13 @@ export class RollingCampaignStore {
       const workerDispatches=(await poolClient.query<Record<string,unknown>>("SELECT d.* FROM ponytail_index.rolling_worker_dispatch_v1 d JOIN ponytail_index.rolling_assignment_v1 a USING(project_id,campaign_id,assignment_id,generation) WHERE d.project_id=$1 AND d.campaign_id=$2 AND a.state<>'RELEASED' ORDER BY d.created_at,d.assignment_id",[this.projectId,campaignId])).rows.map((row):RollingStoredWorkerDispatch=>({assignmentId:stringColumn(row.assignment_id,'worker dispatch assignment'),generation:stringColumn(row.generation,'worker dispatch generation'),dispatch:readWorkerDispatch(row)}));
       const reviews = (await poolClient.query<Record<string,unknown>>("SELECT r.request_text,r.outcome_text FROM ponytail_index.rolling_review_v1 r JOIN ponytail_index.rolling_assignment_v1 a USING(project_id,campaign_id,assignment_id) WHERE r.project_id=$1 AND r.campaign_id=$2 AND r.replacement_text IS NULL AND a.state IN ('REVIEW','REWORK','INTEGRATING') ORDER BY r.created_at,r.review_id",[this.projectId,campaignId])).rows.map(readStoredReview);
       const reviewDispatches=(await poolClient.query<Record<string,unknown>>("SELECT d.* FROM ponytail_index.rolling_review_dispatch_v1 d JOIN ponytail_index.rolling_review_v1 r USING(project_id,campaign_id,review_id) JOIN ponytail_index.rolling_assignment_v1 a USING(project_id,campaign_id,assignment_id) WHERE d.project_id=$1 AND d.campaign_id=$2 AND r.outcome_text IS NULL AND r.replacement_text IS NULL AND a.state IN ('REVIEW','REWORK','INTEGRATING') ORDER BY d.created_at,d.review_id",[this.projectId,campaignId])).rows.map((row):RollingStoredReviewDispatch=>({reviewId:stringColumn(row.review_id,'review dispatch request'),dispatch:readReviewDispatch(row)}));
+      const increments=(await poolClient.query<Record<string,unknown>>("SELECT i.*,a.obligation_id FROM ponytail_index.rolling_increment_v1 i JOIN ponytail_index.rolling_review_v1 r USING(project_id,campaign_id,review_id) JOIN ponytail_index.rolling_assignment_v1 a USING(project_id,campaign_id,assignment_id,generation) WHERE i.project_id=$1 AND i.campaign_id=$2 AND i.repair_reference IS NULL AND a.state IN ('INTEGRATING','RETIRING') ORDER BY i.created_at,i.increment_id",[this.projectId,campaignId])).rows.map((row):RollingStoredIncrement=> {
+        const rollingIncrementClaimV1=readRollingIncrementClaimV1(readStateText(stringColumn(row.claim_text,'increment claim')));
+        const rollingIncrementState=incrementState(row.state);
+        const rollingIncrementPublicationV1=row.publication_text === null ? null : readRollingIncrementPublicationV1(readStateText(stringColumn(row.publication_text,'increment publication')));
+        requireState(rollingIncrementState !== 'PUBLISHED' || rollingIncrementPublicationV1?.result.state === 'PUBLISHED','published increment lacks its confirmed original receipt');
+        return {claim:rollingIncrementClaimV1,state:rollingIncrementState,publication:rollingIncrementPublicationV1,obligationSatisfied:rollingGraph.projection.satisfiedIds.includes(stringColumn(row.obligation_id,'increment obligation'))};
+      });
       const publications = (await poolClient.query<Record<string,unknown>>("SELECT * FROM ponytail_index.rolling_publication_batch_v1 WHERE project_id=$1 AND campaign_id=$2 AND (state<>'PUBLISHED' OR synchronized_revision IS NULL) ORDER BY created_at,batch_id",[this.projectId,campaignId])).rows.map((row):RollingPublicationStatus => ({
         claim:readRollingPublicationBatchClaimV1(readStateText(stringColumn(row.claim_text,'publication claim'))),state:publicationState(row.state),
         qaId:nullableStringColumn(row.qa_id,'publication QA'),publicationId:nullableStringColumn(row.publication_id,'publication observation'),pendingRefreshId:nullableStringColumn(row.pending_refresh_id,'pending mainline refresh')
@@ -1727,7 +1740,7 @@ export class RollingCampaignStore {
       return {graphDigest:rollingCampaignRow.graph_digest,observedGraphDigest:rollingGraph.digest,configuration:rollingExecutionConfigV3,
         closure:rollingCampaignRow.closure_text === null ? null : readRollingCampaignClosureV1(readStateText(rollingCampaignRow.closure_text)),
         assignments:assignments.filter(assignment=>assignment.scopeId === campaignId),
-        scheduling:selectRollingAssignments(rollingGraph,assignments,rollingExecutionConfigV3.maxActiveWorkers,rollingGraph.digest),actions,reviews,workerDispatches,reviewDispatches,releasableAssignments,publications};
+        scheduling:selectRollingAssignments(rollingGraph,assignments,rollingExecutionConfigV3.maxActiveWorkers,rollingGraph.digest),actions,reviews,workerDispatches,reviewDispatches,releasableAssignments,publications,increments};
     },true);
   }
 

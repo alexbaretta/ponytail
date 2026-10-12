@@ -949,3 +949,70 @@ retirement gate consumes the published receipt. Acceptance and publication-batch
 readiness must also be checked against actual stored receipts before final
 coordinator workflow discharge. No new product scope is introduced by this
 remaining audit of the already declared next-action responsibility.
+
+## OBL-64 increment decision repair evidence
+
+The source audit at `31fe1fd` established that publication retains INTEGRATING
+assignment state and stores PUBLISHED on the increment. The prior projector
+ignored that receipt and repeated integration. The initial isolated red scaffold
+lacked the new receipt metadata and is not credited as an adequate persisted
+publication reproducer. The completed exact typed fixtures and actual PostgreSQL
+receipt scenarios establish the relevant transition and its regression proof.
+
+Fourteen focused unit tests pass. Two PostgreSQL/CLI/MCP scenarios pass, including
+uncertain integration, refusal of a PUBLISHED flag without its confirmed original
+receipt, and a confirmed increment requesting current certificate acceptance
+rather than repeated integration. Unit proof covers subsequent retirement with
+fresh satisfaction and rejection of an older generation. The satisfaction value
+is derived from the existing canonical file projection; no separate completion
+flag is introduced. Receipt rows are typed fixture data; these checks establish
+real database/adapter paths without claiming native execution. Strict compilation
+and unchanged TSTS pass. These task-dirty focused checks do not replace clean-tree
+final QA or current bound certificates.
+
+Publication-batch readiness remains the next coordinator workflow audit item:
+inspect accepted unbatched deliveries, threshold/final-partial readiness, and
+existing publication owners before final OBL-64 assessment.
+
+### Increment focused unit result
+
+~~~text
+✔ CLI initialization preserves its physical V1 contract and rejects rounded integers or undeclared fields (8.561584ms)
+✔ coordinator decisions require reconciliation before suggesting work from a changed authoritative graph (0.2515ms)
+✔ next actions retain exact fenced identities and prerequisite explanations before replenishment (0.137416ms)
+✔ unknown publication is observed before worker replenishment and never suggested as a push retry (0.117167ms)
+✔ attached working worker receives an executable next action before new allocations (0.136ms)
+✔ rejected work stops its original worker before resume-first replenishment (0.118542ms)
+✔ known worker instruction is collected and unknown creation keeps its original ownership (0.1775ms)
+✔ pending original attachment is observed before worker dispatch and stopped workers are not restarted (0.163542ms)
+✔ new review request is dispatched before attempting to inspect its nonexistent turn (0.112ms)
+✔ review decisions observe known turns and preserve uncertain original dispatch ownership (0.169625ms)
+✔ retired unassigned checkout is released even when no obligation is unblocked (0.109917ms)
+✔ attached retirement requires current cleanup eligibility before releasing its checkout (0.094583ms)
+✔ published accepted increment retires instead of repeating integration (0.121834ms)
+✔ published delivery requests current certificate acceptance before worker retirement (0.083584ms)
+ℹ tests 14
+ℹ suites 0
+ℹ pass 14
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 81.171833
+
+~~~
+### Increment PostgreSQL and adapter result
+
+~~~text
+✔ shared operations initialize defaults and reconcile event/periodic contention without duplicate allocations (5806.802209ms)
+✔ closure requires fresh evidence, persists an immutable receipt and fences later mutations (1063.926708ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 2
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 6935.070125
+
+~~~

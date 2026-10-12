@@ -3,7 +3,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {projectRollingCoordinatorActions,parseRollingCampaignInitialization,readRollingCampaignInitializationV1,type RollingCampaignInitializationV1} from '../src/rolling-operations.js';
-import type {RollingCoordinatorSnapshot,RollingAction,RollingPublicationStatus,RollingStoredAssignment,RollingWorkerDispatchAttached,RollingWorkerDispatchStarted,RollingStoredWorkerDispatch,RollingReviewDispatchStarted,RollingReviewDispatchAttached,RollingStoredReviewDispatch,RollingAssignmentRelease} from '../src/rolling-campaign-store.js';
+import type {RollingCoordinatorSnapshot,RollingAction,RollingPublicationStatus,RollingStoredAssignment,RollingWorkerDispatchAttached,RollingWorkerDispatchStarted,RollingStoredWorkerDispatch,RollingReviewDispatchStarted,RollingReviewDispatchAttached,RollingStoredReviewDispatch,RollingAssignmentRelease,RollingStoredIncrement} from '../src/rolling-campaign-store.js';
+import type {RollingIncrementClaimV1,RollingIncrementPublicationV1} from '../src/rolling-integration.js';
 import type {RollingStoredReview,RollingReviewRequestV1} from '../src/rolling-review.js';
 import type {RollingWorkerSelection,RollingBinding,RollingSchedulingBlock} from '../src/rolling-campaign.js';
 
@@ -12,7 +13,7 @@ function snapshot():RollingCoordinatorSnapshot {
  const rollingWorkerSelection:RollingWorkerSelection = {kind:'start_worker',assignmentId:null,obligationId:'OBL-1',plannedPaths:['src/current.ts'],exclusiveResources:[],binding:rollingBinding};
  const rollingSchedulingBlock:RollingSchedulingBlock = {reason:'prerequisites',obligationId:'OBL-2',prerequisites:['OBL-1']};
  return {closure:null,graphDigest:'a'.repeat(64),observedGraphDigest:'a'.repeat(64),configuration:{schemaVersion:3,bindingHistory:null,mainline:{remote:'origin',branch:'main'},incrementRef:'campaign/proof',maxActiveWorkers:2,publicationSize:1},
-  assignments:[],actions:[],reviews:[],workerDispatches:[],reviewDispatches:[],releasableAssignments:[],publications:[],scheduling:{digest:'a'.repeat(64),activeCount:0,availableCapacity:1,selected:[rollingWorkerSelection],blocked:[rollingSchedulingBlock]}};
+  assignments:[],actions:[],reviews:[],workerDispatches:[],reviewDispatches:[],releasableAssignments:[],publications:[],increments:[],scheduling:{digest:'a'.repeat(64),activeCount:0,availableCapacity:1,selected:[rollingWorkerSelection],blocked:[rollingSchedulingBlock]}};
 }
 
 // Traceability: verifies REQ-ROLLING-INTERFACES
@@ -155,4 +156,33 @@ test('attached retirement requires current cleanup eligibility before releasing 
  assert.deepEqual(projectRollingCoordinatorActions(cleanedRollingCoordinatorSnapshot).decisions,[{kind:'release',command:'replenish',release:rollingAssignmentRelease,graphDigest:cleanedRollingCoordinatorSnapshot.graphDigest}]);
  const staleRollingCoordinatorSnapshot:RollingCoordinatorSnapshot={...cleanedRollingCoordinatorSnapshot,releasableAssignments:[{...rollingAssignmentRelease,generation:'previous-generation'}]};
  assert.deepEqual(projectRollingCoordinatorActions(staleRollingCoordinatorSnapshot).decisions,[{kind:'assignment',command:'retire-worker',assignment:rollingStoredAssignment}]);
+});
+
+// Traceability: verifies REQ-ROLLING-INTERFACES
+// Traceability: verifies REQ-ROLLING-REVIEW
+test('published accepted increment retires instead of repeating integration',()=> {
+ const rollingStoredAssignment:RollingStoredAssignment={...workingAssignment(),state:'INTEGRATING',activityStopped:true};
+ const rollingStoredIncrement:RollingStoredIncrement=publishedIncrement(rollingStoredAssignment,true);
+ const rollingCoordinatorSnapshot:RollingCoordinatorSnapshot={...snapshot(),assignments:[rollingStoredAssignment],increments:[rollingStoredIncrement]};
+ assert.deepEqual(projectRollingCoordinatorActions(rollingCoordinatorSnapshot).decisions[0],{kind:'assignment',command:'retire-worker',assignment:rollingStoredAssignment});
+});
+
+function publishedIncrement(rollingStoredAssignment:RollingStoredAssignment,obligationSatisfied:boolean):RollingStoredIncrement {
+ const rollingIncrementClaimV1:RollingIncrementClaimV1={schemaVersion:1,id:'increment',campaignId:rollingStoredAssignment.scopeId,reviewId:'review',assignmentId:rollingStoredAssignment.id,generation:rollingStoredAssignment.generation,graphDigest:'a'.repeat(64),rootPath:'/worker',coordinatorRoot:'/coordinator',target:{remote:'origin',branch:'campaign/pilot'},reviewedRevision:'b'.repeat(40),reviewedBase:'a'.repeat(40)};
+ const rollingIncrementPublicationV1:RollingIncrementPublicationV1={schemaVersion:1,incrementId:rollingIncrementClaimV1.id,result:{state:'PUBLISHED',revision:'b'.repeat(40),remoteRevision:'b'.repeat(40)}};
+ return {claim:rollingIncrementClaimV1,state:'PUBLISHED',publication:rollingIncrementPublicationV1,obligationSatisfied};
+}
+
+// Traceability: verifies REQ-ROLLING-INTERFACES
+// Traceability: verifies REQ-ROLLING-GRAPH
+test('published delivery requests current certificate acceptance before worker retirement',()=> {
+ const rollingStoredAssignment:RollingStoredAssignment={...workingAssignment(),state:'INTEGRATING',activityStopped:true};
+ const rollingStoredIncrement:RollingStoredIncrement=publishedIncrement(rollingStoredAssignment,false);
+ const rollingCoordinatorSnapshot:RollingCoordinatorSnapshot={...snapshot(),assignments:[rollingStoredAssignment],increments:[rollingStoredIncrement]};
+ assert.deepEqual(projectRollingCoordinatorActions(rollingCoordinatorSnapshot).decisions[0],{kind:'acceptance',command:'accept',assignment:rollingStoredAssignment,increment:rollingStoredIncrement});
+ const staleRollingCoordinatorSnapshot:RollingCoordinatorSnapshot={...rollingCoordinatorSnapshot,increments:[{...rollingStoredIncrement,claim:{...rollingStoredIncrement.claim,generation:'previous-generation'}}]};
+ assert.deepEqual(projectRollingCoordinatorActions(staleRollingCoordinatorSnapshot).decisions[0],{kind:'assignment',command:'integrate',assignment:rollingStoredAssignment});
+ const pendingRollingStoredIncrement:RollingStoredIncrement={...rollingStoredIncrement,state:'UNCONFIRMED',publication:null};
+ const pendingRollingCoordinatorSnapshot:RollingCoordinatorSnapshot={...rollingCoordinatorSnapshot,increments:[pendingRollingStoredIncrement]};
+ assert.deepEqual(projectRollingCoordinatorActions(pendingRollingCoordinatorSnapshot).decisions[0],{kind:'assignment',command:'integrate',assignment:rollingStoredAssignment});
 });

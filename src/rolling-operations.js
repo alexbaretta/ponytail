@@ -144,6 +144,14 @@ function projectRollingCoordinatorActions(rollingCoordinatorSnapshot) {
             decisions.push({ kind: 'release', command: 'replenish', release: rollingAssignmentRelease, graphDigest: rollingCoordinatorSnapshot.graphDigest });
             continue;
         }
+        const rollingStoredIncrement = rollingCoordinatorSnapshot.increments.find(increment => increment.claim.assignmentId === rollingStoredAssignment.id && increment.claim.generation === rollingStoredAssignment.generation);
+        if (rollingStoredAssignment.state === 'INTEGRATING' && rollingStoredIncrement?.state === 'PUBLISHED') {
+            if (rollingStoredIncrement.obligationSatisfied)
+                decisions.push({ kind: 'assignment', command: 'retire-worker', assignment: rollingStoredAssignment });
+            else
+                decisions.push({ kind: 'acceptance', command: 'accept', assignment: rollingStoredAssignment, increment: rollingStoredIncrement });
+            continue;
+        }
         if (rollingStoredAssignment.state === 'WORKING' && !rollingStoredAssignment.retired && !rollingStoredAssignment.activityStopped && rollingStoredAssignment.sessionId !== null) {
             const rollingWorkerDispatch = rollingCoordinatorSnapshot.workerDispatches.find(rollingStoredWorkerDispatch => rollingStoredWorkerDispatch.assignmentId === rollingStoredAssignment.id && rollingStoredWorkerDispatch.generation === rollingStoredAssignment.generation)?.dispatch;
             switch (rollingWorkerDispatch?.state) {

@@ -137,6 +137,10 @@ Traceability: verifies REQ-ROLLING-INTERFACES
    An unassigned retired reservation releases without a native receipt. Release
    succeeds with no ready obligation, and subsequent available work prefers
    resuming its retained original inactive session over creating a new worker.
+   For integrated work, distinguish an uncertain push from a confirmed original
+   PUBLISHED receipt. Reject a published flag with no confirmed receipt. Require
+   current bound certificate acceptance before retirement, and do not suggest
+   integration again for a published current-generation result.
 
 
 ## Arc ROLL-CLOSE: Close only verified campaign scope

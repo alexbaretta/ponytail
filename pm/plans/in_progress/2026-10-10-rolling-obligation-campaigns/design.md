@@ -516,3 +516,19 @@ unblocked inactive worker; remaining capacity is replenished transactionally.
 The selected checkout may differ from the released checkout. Until eligibility
 is established, next-actions retains the original retirement operation. The
 allocator rechecks ownership/cleanup while holding the project mutation lock.
+
+## Final coordinator increment decision audit
+
+Current-generation increment claims, lifecycle states and retained publication
+receipts are exposed in the coherent snapshot. A PUBLISHED state requires its
+confirmed original receipt. Uncertain/unpublished integration keeps the existing
+integration recovery path; an older assignment generation cannot substitute for
+the current increment.
+
+Publication alone does not discharge an obligation. For a published increment,
+next-actions derives current obligation satisfaction from the coordinator's
+canonical files. It requests `accept` with the retained claim/review identity
+while certificate assessment is unresolved, and requests `retire-worker` only
+once that obligation has current accepted evidence. This is a derived projection,
+not a new database completion flag. Candidate documents and binding packets
+remain coordinator assessments, validated by the existing acceptance boundary.

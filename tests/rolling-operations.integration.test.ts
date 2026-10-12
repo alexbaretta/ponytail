@@ -17,7 +17,8 @@ import {acceptCheckpoint,inputDigest,type ObligationCertificate,type ObligationC
 import {freezeObligationLease,type ObligationBindingHistoryV1} from '../skills/plan-execution/scripts/obligation-binding-history.js';
 import type {RollingWorkerSubmissionV1} from '../src/rolling-worker-submission.js';
 import type {RollingWorkerRetirementV1} from '../src/rolling-worker.js';
-import type {RollingReviewRequestV1} from '../src/rolling-review.js';
+import type {RollingIncrementClaimV1,RollingIncrementPublicationV1} from '../src/rolling-integration.js';
+import type {RollingReviewAcceptedV1,RollingReviewRequestV1} from '../src/rolling-review.js';
 import {rollingCommandDefinitions} from '../src/rolling-cli-registry.js';
 
 // Traceability: verifies REQ-ROLLING-INTERFACES
@@ -196,6 +197,21 @@ test('shared operations initialize defaults and reconcile event/periodic content
  const attachedReviewRollingCoordinatorActions=await rollingCampaignOperations.nextActions('pilot');
  assert.deepEqual(attachedReviewRollingCoordinatorActions.snapshot.reviewDispatches,[{reviewId:rollingReviewRequestV1.id,dispatch:rollingReviewDispatchAttached}]);
  assert.ok(attachedReviewRollingCoordinatorActions.decisions.some(decision=>decision.kind === 'review' && decision.command === 'inspect-review' && decision.review.request.id === rollingReviewRequestV1.id));
+ await verifyMcpParity(root,rollingCampaignOperations);
+ const rollingReviewAcceptedV1:RollingReviewAcceptedV1={schemaVersion:1,reviewId:rollingReviewRequestV1.id,revision:candidateRevision,reviewerSessionId:rollingReviewRequestV1.reviewerSessionId,completedAt:observedAt,decision:'accepted',findings:[]};
+ await pool.query("UPDATE ponytail_index.rolling_review_v1 SET outcome_text=$4 WHERE project_id=$1 AND campaign_id=$2 AND review_id=$3",[projectId,'pilot',rollingReviewRequestV1.id,JSON.stringify(rollingReviewAcceptedV1)]);
+ await pool.query("UPDATE ponytail_index.rolling_assignment_v1 SET state='INTEGRATING' WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3",[projectId,'pilot',firstRollingStoredAssignment.id]);
+ const rollingIncrementClaimV1:RollingIncrementClaimV1={schemaVersion:1,id:crypto.randomUUID(),campaignId:'pilot',reviewId:rollingReviewRequestV1.id,assignmentId:firstRollingStoredAssignment.id,generation:firstRollingStoredAssignment.generation,graphDigest:staleRollingCoordinatorActions.snapshot.graphDigest,rootPath:root,coordinatorRoot:root,target:{remote:'origin',branch:'campaign/pilot'},reviewedRevision:candidateRevision,reviewedBase:candidateRevision};
+ await pool.query("INSERT INTO ponytail_index.rolling_increment_v1(project_id,campaign_id,review_id,increment_id,claim_text,state,candidate_revision) VALUES($1,$2,$3,$4,$5,'UNCONFIRMED',$6)",[projectId,'pilot',rollingReviewRequestV1.id,rollingIncrementClaimV1.id,JSON.stringify(rollingIncrementClaimV1),candidateRevision]);
+ assert.ok((await rollingCampaignOperations.nextActions('pilot')).decisions.some(decision=>decision.kind === 'assignment' && decision.command === 'integrate' && decision.assignment.id === firstRollingStoredAssignment.id));
+ await pool.query("UPDATE ponytail_index.rolling_increment_v1 SET state='PUBLISHED' WHERE project_id=$1 AND campaign_id=$2 AND review_id=$3",[projectId,'pilot',rollingReviewRequestV1.id]);
+ await assert.rejects(rollingCampaignOperations.status('pilot'),/confirmed original receipt/);
+ const rollingIncrementPublicationV1:RollingIncrementPublicationV1={schemaVersion:1,incrementId:rollingIncrementClaimV1.id,result:{state:'PUBLISHED',revision:candidateRevision,remoteRevision:candidateRevision}};
+ await pool.query("UPDATE ponytail_index.rolling_increment_v1 SET publication_text=$4 WHERE project_id=$1 AND campaign_id=$2 AND review_id=$3",[projectId,'pilot',rollingReviewRequestV1.id,JSON.stringify(rollingIncrementPublicationV1)]);
+ const publishedRollingCoordinatorActions=await rollingCampaignOperations.nextActions('pilot');
+ assert.deepEqual(publishedRollingCoordinatorActions.snapshot.increments,[{claim:rollingIncrementClaimV1,state:'PUBLISHED',publication:rollingIncrementPublicationV1,obligationSatisfied:false}]);
+ assert.ok(publishedRollingCoordinatorActions.decisions.some(decision=>decision.kind === 'acceptance' && decision.increment.claim.reviewId === rollingReviewRequestV1.id));
+ assert.ok(!publishedRollingCoordinatorActions.decisions.some(decision=>decision.kind === 'assignment' && decision.command === 'integrate' && decision.assignment.id === firstRollingStoredAssignment.id));
  await verifyMcpParity(root,rollingCampaignOperations);
  await pool.query("DELETE FROM ponytail_index.rolling_submission_v1 WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3",[projectId,'pilot',firstRollingStoredAssignment.id]);
  await pool.query("UPDATE ponytail_index.rolling_assignment_v1 SET state='WORKING',activity_stopped=false WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3",[projectId,'pilot',firstRollingStoredAssignment.id]);
