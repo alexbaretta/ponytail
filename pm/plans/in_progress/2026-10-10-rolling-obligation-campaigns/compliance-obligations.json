@@ -91,6 +91,119 @@
         "OBL-127",
         "OBL-128"
       ]
+    },
+    {
+      "id": "BASELINE-COMPLIANCE-2",
+      "predecessorId": "BASELINE-COMPLIANCE-1",
+      "authority": {
+        "references": [
+          "stakeholder:2026-10-12-campaign-compliance"
+        ],
+        "assessors": [
+          "coordinator"
+        ]
+      },
+      "requirements": [
+        {
+          "id": "REQ-ROLLING-CLIENT-PROTOCOL",
+          "path": "pm/requirements/rolling-campaigns.md",
+          "digest": "2c5ee1cd6643ab24f952f1d0d6c2f7cb824f53e554d18232faea828f7780d29a"
+        },
+        {
+          "id": "REQ-ROLLING-INTERFACES",
+          "path": "pm/requirements/rolling-campaigns.md",
+          "digest": "2c5ee1cd6643ab24f952f1d0d6c2f7cb824f53e554d18232faea828f7780d29a"
+        },
+        {
+          "id": "REQ-ROLLING-GRAPH",
+          "path": "pm/requirements/rolling-campaigns.md",
+          "digest": "2c5ee1cd6643ab24f952f1d0d6c2f7cb824f53e554d18232faea828f7780d29a"
+        },
+        {
+          "id": "REQ-ROLLING-STATE",
+          "path": "pm/requirements/rolling-campaigns.md",
+          "digest": "2c5ee1cd6643ab24f952f1d0d6c2f7cb824f53e554d18232faea828f7780d29a"
+        },
+        {
+          "id": "REQ-ROLLING-REVIEW",
+          "path": "pm/requirements/rolling-campaigns.md",
+          "digest": "2c5ee1cd6643ab24f952f1d0d6c2f7cb824f53e554d18232faea828f7780d29a"
+        }
+      ],
+      "obligationIds": [
+        "OBL-114",
+        "OBL-115",
+        "OBL-116",
+        "OBL-117",
+        "OBL-118",
+        "OBL-119",
+        "OBL-120",
+        "OBL-121",
+        "OBL-122",
+        "OBL-123",
+        "OBL-124",
+        "OBL-125",
+        "OBL-126",
+        "OBL-127",
+        "OBL-128",
+        "OBL-129",
+        "OBL-130",
+        "OBL-131",
+        "OBL-132",
+        "OBL-133",
+        "OBL-134",
+        "OBL-135",
+        "OBL-136",
+        "OBL-137",
+        "OBL-138",
+        "OBL-139",
+        "OBL-140",
+        "OBL-141",
+        "OBL-142",
+        "OBL-143",
+        "OBL-144",
+        "OBL-145",
+        "OBL-146",
+        "OBL-147",
+        "OBL-148",
+        "OBL-149",
+        "OBL-150",
+        "OBL-151",
+        "OBL-152",
+        "OBL-153",
+        "OBL-154",
+        "OBL-155",
+        "OBL-156",
+        "OBL-157",
+        "OBL-158",
+        "OBL-159",
+        "OBL-160",
+        "OBL-161",
+        "OBL-162",
+        "OBL-163",
+        "OBL-164",
+        "OBL-165",
+        "OBL-166",
+        "OBL-167",
+        "OBL-168",
+        "OBL-169",
+        "OBL-170",
+        "OBL-171"
+      ],
+      "inventoryIds": [
+        "OBL-123",
+        "OBL-124",
+        "OBL-125",
+        "OBL-126",
+        "OBL-127",
+        "OBL-128",
+        "OBL-166",
+        "OBL-167",
+        "OBL-168",
+        "OBL-169",
+        "OBL-170",
+        "OBL-171"
+      ]
     }
   ],
   "obligations": [
@@ -1411,6 +1524,328 @@
           "identity": "local",
           "profile": "campaign-compliance"
         }
+      }
+    },
+    {
+      "id": "OBL-160",
+      "category": "C1",
+      "requirementIds": [
+        "REQ-ROLLING-REVIEW",
+        "REQ-ROLLING-INTERFACES"
+      ],
+      "responsibilityId": "reviewer-loss-api",
+      "condition": "Expose recorded reviewer-loss replacement through coordinator interfaces",
+      "criterion": "Exact validated loss record reaches the existing replacement transaction; original review remains immutable and fenced",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "ROLL-INTERFACE"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "src/rolling-cli-registry.ts",
+          "src/rolling-operations.ts",
+          "tests/rolling-operations.test.ts",
+          "tests/rolling-campaign-store.integration.test.ts",
+          "skills/plan-execution/references/rolling-campaigns.md"
+        ],
+        "operations": [
+          "node --test dist/tests/rolling-operations.test.js dist/tests/rolling-campaign-store.integration.test.js"
+        ],
+        "selection": [
+          "OBL-160"
+        ],
+        "target": {
+          "identity": "local",
+          "profile": "campaign-compliance"
+        }
+      }
+    },
+    {
+      "id": "OBL-161",
+      "category": "T1",
+      "requirementIds": [
+        "REQ-ROLLING-REVIEW",
+        "REQ-ROLLING-INTERFACES"
+      ],
+      "responsibilityId": "acceptance-reviewer-loss-api",
+      "condition": "Acceptance demonstrates complete reviewer-loss API behavior",
+      "criterion": "Inspect REVIEWER-LOSS-API observations against OBL-160",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "ROLL-INTERFACE"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-162",
+      "category": "T2",
+      "requirementIds": [
+        "REQ-ROLLING-REVIEW",
+        "REQ-ROLLING-INTERFACES"
+      ],
+      "responsibilityId": "executable-reviewer-loss-api",
+      "condition": "Reviewer-loss acceptance has a real selectable executable workflow",
+      "criterion": "Inspect shared-operation PostgreSQL and native replacement lifecycle assertions",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "ROLL-INTERFACE"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-163",
+      "category": "T3",
+      "requirementIds": [
+        "REQ-ROLLING-REVIEW",
+        "REQ-ROLLING-INTERFACES"
+      ],
+      "responsibilityId": "implementation-reviewer-loss-api",
+      "condition": "Canonical shared implementation realizes reviewer-loss recovery",
+      "criterion": "Inspect typed reader/registry/shared call and retained replacement transaction",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "ROLL-INTERFACE"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-164",
+      "category": "T4",
+      "requirementIds": [
+        "REQ-ROLLING-REVIEW",
+        "REQ-ROLLING-INTERFACES"
+      ],
+      "responsibilityId": "unit-reviewer-loss-api",
+      "condition": "Reviewer-loss input contract has independent proof",
+      "criterion": "Valid/absent records and malformed/missing/extra fields are covered",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "ROLL-INTERFACE"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-165",
+      "category": "C2",
+      "requirementIds": [
+        "REQ-ROLLING-REVIEW",
+        "REQ-ROLLING-INTERFACES"
+      ],
+      "responsibilityId": "run-reviewer-loss-api",
+      "condition": "Execute real coordinator API and native lost-reviewer replacement",
+      "criterion": "Public operations preserve/fence original actor and native replacement freshly reviews after restart",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "ROLL-INTERFACE"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "node --test dist/tests/rolling-operations.test.js dist/tests/rolling-campaign-store.integration.test.js"
+        ],
+        "selection": [
+          "OBL-165"
+        ],
+        "target": {
+          "identity": "local",
+          "profile": "campaign-compliance"
+        }
+      }
+    },
+    {
+      "id": "OBL-166",
+      "category": "T1",
+      "requirementIds": [
+        "REQ-ROLLING-REVIEW"
+      ],
+      "responsibilityId": "T1-reviewer-api-inventory",
+      "condition": "Inventory T1 responsibilities for public reviewer-loss recovery",
+      "criterion": "Inspect current reviewer-loss requirement, acceptance, source and proofs and enumerate all necessary current category members",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "ROLL-INTERFACE"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-167",
+      "category": "T2",
+      "requirementIds": [
+        "REQ-ROLLING-REVIEW"
+      ],
+      "responsibilityId": "T2-reviewer-api-inventory",
+      "condition": "Inventory T2 responsibilities for public reviewer-loss recovery",
+      "criterion": "Inspect current reviewer-loss requirement, acceptance, source and proofs and enumerate all necessary current category members",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "ROLL-INTERFACE"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-168",
+      "category": "T3",
+      "requirementIds": [
+        "REQ-ROLLING-REVIEW"
+      ],
+      "responsibilityId": "T3-reviewer-api-inventory",
+      "condition": "Inventory T3 responsibilities for public reviewer-loss recovery",
+      "criterion": "Inspect current reviewer-loss requirement, acceptance, source and proofs and enumerate all necessary current category members",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "ROLL-INTERFACE"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-169",
+      "category": "T4",
+      "requirementIds": [
+        "REQ-ROLLING-REVIEW"
+      ],
+      "responsibilityId": "T4-reviewer-api-inventory",
+      "condition": "Inventory T4 responsibilities for public reviewer-loss recovery",
+      "criterion": "Inspect current reviewer-loss requirement, acceptance, source and proofs and enumerate all necessary current category members",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "ROLL-INTERFACE"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-170",
+      "category": "C1",
+      "requirementIds": [
+        "REQ-ROLLING-REVIEW"
+      ],
+      "responsibilityId": "C1-reviewer-api-inventory",
+      "condition": "Inventory C1 responsibilities for public reviewer-loss recovery",
+      "criterion": "Inspect current reviewer-loss requirement, acceptance, source and proofs and enumerate all necessary current category members",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "ROLL-INTERFACE"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-171",
+      "category": "C2",
+      "requirementIds": [
+        "REQ-ROLLING-REVIEW"
+      ],
+      "responsibilityId": "C2-reviewer-api-inventory",
+      "condition": "Inventory C2 responsibilities for public reviewer-loss recovery",
+      "criterion": "Inspect current reviewer-loss requirement, acceptance, source and proofs and enumerate all necessary current category members",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "ROLL-INTERFACE"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
       }
     }
   ],
@@ -4121,6 +4556,94 @@
       ],
       "preparation": null,
       "reason": "Native correction exposed obsolete fixture hash requirements. The surgical fixture repair changes the broad test input scope; retain prior assessments but renew their Git-backed evidence before discharge.",
+      "assessor": "coordinator"
+    },
+    {
+      "id": "CP-COMPLIANCE-13",
+      "predecessorId": "CP-COMPLIANCE-12",
+      "baselineId": "BASELINE-COMPLIANCE-2",
+      "kind": "rebaseline",
+      "selectedIds": [],
+      "registeredIds": [
+        "OBL-114",
+        "OBL-115",
+        "OBL-116",
+        "OBL-117",
+        "OBL-118",
+        "OBL-119",
+        "OBL-120",
+        "OBL-121",
+        "OBL-122",
+        "OBL-123",
+        "OBL-124",
+        "OBL-125",
+        "OBL-126",
+        "OBL-127",
+        "OBL-128",
+        "OBL-129",
+        "OBL-130",
+        "OBL-131",
+        "OBL-132",
+        "OBL-133",
+        "OBL-134",
+        "OBL-135",
+        "OBL-136",
+        "OBL-137",
+        "OBL-138",
+        "OBL-139",
+        "OBL-140",
+        "OBL-141",
+        "OBL-142",
+        "OBL-143",
+        "OBL-144",
+        "OBL-145",
+        "OBL-146",
+        "OBL-147",
+        "OBL-148",
+        "OBL-149",
+        "OBL-150",
+        "OBL-151",
+        "OBL-152",
+        "OBL-153",
+        "OBL-154",
+        "OBL-155",
+        "OBL-156",
+        "OBL-157",
+        "OBL-158",
+        "OBL-159",
+        "OBL-160",
+        "OBL-161",
+        "OBL-162",
+        "OBL-163",
+        "OBL-164",
+        "OBL-165",
+        "OBL-166",
+        "OBL-167",
+        "OBL-168",
+        "OBL-169",
+        "OBL-170",
+        "OBL-171"
+      ],
+      "certificateIds": [],
+      "invalidatedIds": [],
+      "before": [
+        11,
+        3,
+        11,
+        6,
+        11,
+        3
+      ],
+      "after": [
+        13,
+        5,
+        13,
+        8,
+        13,
+        5
+      ],
+      "preparation": null,
+      "reason": "Expose the previously internal reviewer-loss recovery required by the existing approved coordinator contract; explicit scope and proof amendment.",
       "assessor": "coordinator"
     }
   ]

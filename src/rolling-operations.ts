@@ -10,7 +10,7 @@ import {relativePath} from '../skills/plan-execution/scripts/obligations.js';
 import {collectRollingGraph,loadRollingConfiguration,readRollingCampaignRequest,type RollingCampaignRequest} from './rolling-campaign.js';
 import {resolveRollingManagedDirectory} from './rolling-worktrees.js';
 import {RollingCampaignStore,readRollingBindingHistoryConfiguration,type RollingBindingHistoryConfiguration,type RollingCampaignRegistration,type RollingCampaignRegistrationResult,type RollingGraphReconciliation,type RollingCoordinatorSnapshot,type RollingAllocationResult,type RollingAction,type RollingStoredAssignment,type RollingPublicationStatus,type RollingAssignmentRelease,type RollingWorkerDispatchStarted,type RollingReviewDispatchStarted,type RollingStoredIncrement} from './rolling-campaign-store.js';
-import type {RollingStoredReview} from './rolling-review.js';
+import type {RollingStoredReview,RollingReviewerLoss} from './rolling-review.js';
 import {git,gitResult,publishRollingIncrement,reconcileRollingIncrementPublication,type RollingIncrementPublication} from './rolling-integration.js';
 import {RollingCodex} from './rolling-codex.js';
 import {provisionRollingWorker,attachRollingWorker,recoverRollingWorkerCreation,resumeRollingWorker,dispatchRollingWorker,collectRollingWorkerSubmission,suspendRollingWorker,retireRollingWorker} from './rolling-worker.js';
@@ -54,6 +54,14 @@ function stringField(input:Record<string,unknown>,name:string):string {
  const value = input[name];
  if (typeof value !== 'string' || value.trim() !== value || value.length === 0 || value.includes('\0')) throw new Error(`rolling campaign: ${name} must be a nonempty string`);
  return value;
+}
+// Traceability: implements REQ-ROLLING-REVIEW
+export function readRollingReviewerLoss(value:unknown):RollingReviewerLoss | null {
+ if (value === undefined) return null;
+ const rollingReviewerLossRecord = record(value);
+ if (Object.keys(rollingReviewerLossRecord).length !== 2 || !Object.hasOwn(rollingReviewerLossRecord,'reviewId')
+  || !Object.hasOwn(rollingReviewerLossRecord,'lossReference')) throw new Error('rolling campaign: invalid reviewer loss fields');
+ return {reviewId:stringField(rollingReviewerLossRecord,'reviewId'),lossReference:stringField(rollingReviewerLossRecord,'lossReference')};
 }
 function stringArray(value:unknown):readonly string[] {
  if (!Array.isArray(value) || !value.every((item:unknown)=>typeof item === 'string' && item.length > 0)) throw new Error('rolling campaign: expected a string array');
@@ -327,7 +335,7 @@ export class RollingCampaignOperations {
    case 'collect-submission': return {command,result:await this.native(signal,rollingCodex=>collectRollingWorkerSubmission(this.rollingCampaignStore,rollingCodex,stringField(input,'campaign'),stringField(input,'assignment'),stringField(input,'generation'),timeoutMs))};
    case 'suspend-worker': return {command,result:await this.native(signal,rollingCodex=>suspendRollingWorker(this.rollingCampaignStore,rollingCodex,stringField(input,'campaign'),stringField(input,'assignment'),stringField(input,'generation'),stringArray(input.blockers),timeoutMs))};
    case 'retire-worker': return {command,result:await this.native(signal,rollingCodex=>retireRollingWorker(this.rollingCampaignStore,rollingCodex,stringField(input,'campaign'),stringField(input,'assignment'),stringField(input,'generation'),timeoutMs))};
-   case 'request-review': return {command,result:await this.rollingCampaignStore.requestReview(stringField(input,'campaign'),stringField(input,'assignment'),stringField(input,'generation'),stringField(input,'revision'),stringField(input,'reviewer'))};
+   case 'request-review': return {command,result:await this.rollingCampaignStore.requestReview(stringField(input,'campaign'),stringField(input,'assignment'),stringField(input,'generation'),stringField(input,'revision'),stringField(input,'reviewer'),readRollingReviewerLoss(input.loss))};
    case 'dispatch-review': return {command,result:await this.native(signal,async rollingCodex=> {
     const campaignId = stringField(input,'campaign'),reviewId = stringField(input,'review');
     const rollingReviewContext = await this.rollingCampaignStore.reviewContext(campaignId,reviewId);

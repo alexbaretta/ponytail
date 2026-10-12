@@ -101,6 +101,11 @@ semantic conflicts when textual conflicts arise. Refresh required proof on
 changed inputs, push normally, and verify remote outcomes. Delivery does not
 by itself discharge obligations or establish mainline acceptance.
 
+OBL-160 requires loss-aware reviewer replacement through the shared coordinator
+API, CLI and MCP. Supply the original review ID and an explicit loss reference;
+retain the prior request/verdict, fence its actor and obtain fresh review from
+the replacement. An internal store method alone is insufficient.
+
 ## REQ-ROLLING-PUBLICATION: Fully validated publication batches
 
 **Atomic obligations:** [OBL-54](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-54), [OBL-55](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-55), [OBL-58](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-58), [OBL-59](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-59), [OBL-60](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-60), [OBL-61](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-61), [OBL-62](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-62). Their canonical conditions and discharge

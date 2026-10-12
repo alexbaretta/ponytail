@@ -195,6 +195,16 @@ Traceability: verifies REQ-ROLLING-INTERFACES
    action is close; closure still performs its own external verification.
 
 
+### Acceptance REVIEWER-LOSS-API (OBL-160)
+
+Through the shared coordinator API/CLI, call `request-review` with the existing
+assignment, current generation, exact candidate, replacement reviewer and
+`--loss '{"reviewId":"<lost-review-id>","lossReference":"<observed-loss-reference>"}'`.
+Malformed loss records fail before mutation. Concurrent identical requests return
+one replacement; conflicting retries fail. After restart, the original request
+and verdict remain immutable, its late dispatch/verdict are fenced, and the new
+native reviewer supplies a fresh verdict. A timeout alone is not a loss reference.
+
 ## Arc ROLL-CLOSE: Close only verified campaign scope
 
 Traceability: verifies REQ-ROLLING-STATE

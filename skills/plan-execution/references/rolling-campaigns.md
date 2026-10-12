@@ -109,6 +109,11 @@ assignment, generation, action, review and batch IDs. Do not infer or replace th
    `request-review`, `dispatch-review` and `inspect-review` for adversarial review.
    Rejected work returns to the original worker and original reviewer after
    correction and refreshed QA/rebase. Acceptance cannot transfer to another SHA.
+   If the reviewer is genuinely lost, retain its original review ID and observed
+   loss reference. Use `request-review --loss '{"reviewId":"<original-review>",
+   "lossReference":"<observed-loss-reference>"}'` with the replacement reviewer
+   identity. Ponytail retains/fences the original request and requires fresh review;
+   a timeout alone is not proof of loss.
 6. `integrate` performs the coordinator's fast rebase: inspect semantic conflicts
    when textual conflicts occur, preserving the deliberately shorter review window.
    Substantive conflicts return to the worker for full semantic repair and review.

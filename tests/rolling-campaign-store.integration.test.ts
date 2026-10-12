@@ -19,7 +19,7 @@ import { isObligationGitInputs, obligationInputPaths, createObligationGitInputs,
 import type { ObligationBindingHistoryV1, ObligationBindingRevisionV1 } from '../skills/plan-execution/scripts/obligation-binding-history.js';
 import type { ObligationEvidence } from '../skills/plan-execution/scripts/obligations.js';
 import { parseRollingWorkerSubmission, type RollingWorkerSubmissionV1, type RollingSubmissionProof } from '../src/rolling-worker-submission.js';
-import { readRollingReviewRequestV1,readRollingReviewOutcomeV1,dispatchRollingReview, collectRollingReview, type RollingReviewOutcomeV1 } from '../src/rolling-review.js';
+import { readRollingReviewRequestV1,readRollingReviewOutcomeV1,dispatchRollingReview, collectRollingReview, type RollingReviewOutcomeV1, type RollingStoredReview } from '../src/rolling-review.js';
 import { retireRollingWorker, provisionRollingWorker, attachRollingWorker, suspendRollingWorker, collectRollingWorkerSubmission, recoverRollingWorkerCreation, observeRollingWorkerInitialization, resumeRollingWorker, parseRollingWorkerResumption, dispatchRollingWorker, buildRollingWorkerInstructions, type RollingWorkerInitialization } from '../src/rolling-worker.js';
 import { RollingCodex, RollingObservationTimeout, type RollingNativeTurn, type RollingNativeThread, type RollingNativeServerRequest } from '../src/rolling-codex.js';
 import {RollingCampaignOperations} from '../src/rolling-operations.js';
@@ -470,7 +470,13 @@ export async function runRollingReviewScenario(t: TestContext, reviewScenario: R
       reviewerSessionId = liveRollingNativeThread.thread.sessionId;
     }
     const rollingReviewerLoss = { reviewId:originalRollingStoredReview.request.id, lossReference:`coordinator-observed loss of ${originalReviewerSessionId}; original actor removed from review scope` };
-    const replacing = () => rollingCampaignStore.requestReview('bound-fixture',submissionRollingStoredAssignment.id,submissionRollingStoredAssignment.generation,revision,reviewerSessionId,rollingReviewerLoss);
+    const replacing = async ():Promise<RollingStoredReview> => {
+      const rollingOperationResponse = await rollingCampaignOperations.execute('request-review',{campaign:'bound-fixture',
+        assignment:submissionRollingStoredAssignment.id,generation:submissionRollingStoredAssignment.generation,
+        revision,reviewer:reviewerSessionId,loss:rollingReviewerLoss});
+      assert.equal(rollingOperationResponse.command,'request-review');
+      return rollingOperationResponse.result;
+    };
     await assert.rejects(rollingCampaignStore.requestReview('bound-fixture',submissionRollingStoredAssignment.id,submissionRollingStoredAssignment.generation,revision,reviewerSessionId,{ ...rollingReviewerLoss,lossReference:'' }), /invalid identity/);
     assert.equal(await rollingCampaignStore.reviewReplacement('bound-fixture',originalRollingStoredReview.request.id),null);
     const replacements = await Promise.all([replacing(),replacing()]);

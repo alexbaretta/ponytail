@@ -25,6 +25,7 @@ database or duplicate repository file hashes as execution manifests.
 | OBL-121 | Worktree chapter and command help | Real CLI help lists reclaim/recover/upgrade and cannot reclaim, recover or upgrade a checkout | OBL-120 |
 | OBL-122 | Root utility command help | Every advertised utility has successful explanatory help; registration/setup commands remain inert | OBL-121 |
 | OBL-129 | Expose stopped-worker lease rebinding after graph amendments | Coordinator tooling renews the original inactive assignment against the current graph and returns its fenced generation; next-actions identifies required rebinding | OBL-115 |
+| OBL-160 | Expose recorded reviewer-loss replacement through coordinator interfaces | Exact typed loss record reaches the existing replacement transaction; CLI/MCP agree and original review is fenced/retained | None |
 
 Requirements: REQ-ROLLING-CLIENT-PROTOCOL, REQ-ROLLING-INTERFACES,
 REQ-ROLLING-GRAPH and REQ-ROLLING-STATE.
@@ -37,11 +38,15 @@ languages. Use canonical generators for exported copies. Verify real CLI and
 exported artifacts, not just registry strings. Final acceptance requires the
 configured full unit command, applicable integration evidence, TSTS, traceability,
 rule-copy/version checks and an item-by-item audit of all campaign requirements.
-Current remaining delivery count: 0/10 discharged. The bounded compliance
+Current remaining delivery count: 0/11 discharged after proof invalidation for
+the native fixture repair. The bounded compliance
 ledger also enumerates proof responsibilities OBL-130–158 (T1 acceptances,
 T2 executable Arcs, T3 implementation mapping, T4 independent proof and C2
 execution) and final gate OBL-159. These do not enlarge the ten-item delivery
-denominator. This correction must activate
+denominator. The subsequent public reviewer-loss audit adds OBL-160 as an
+eleventh delivery obligation under the existing review/interface requirements;
+OBL-161–165 are its acceptance, executable-Arc, mapping, unit and integration
+proof responsibilities. BASELINE-COMPLIANCE-2 records this required scope. This correction must activate
 its bounded current scope before implementation; the stripped former ledger is
 historical reference data, not an executable acceptance database.
 

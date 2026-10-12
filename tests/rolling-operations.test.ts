@@ -2,7 +2,7 @@
 // Licensed under the MIT License. See LICENSE in the project root.
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import {projectRollingCoordinatorActions,parseRollingCampaignInitialization,readRollingCampaignInitializationV1,type RollingCampaignInitializationV1} from '../src/rolling-operations.js';
+import {projectRollingCoordinatorActions,readRollingReviewerLoss,parseRollingCampaignInitialization,readRollingCampaignInitializationV1,type RollingCampaignInitializationV1} from '../src/rolling-operations.js';
 import type {RollingCoordinatorSnapshot,RollingAction,RollingPublicationStatus,RollingStoredAssignment,RollingWorkerDispatchAttached,RollingWorkerDispatchStarted,RollingStoredWorkerDispatch,RollingReviewDispatchStarted,RollingReviewDispatchAttached,RollingStoredReviewDispatch,RollingAssignmentRelease,RollingStoredIncrement} from '../src/rolling-campaign-store.js';
 import type {RollingPublicationFrozen,RollingPublicationTrigger} from '../src/rolling-publication.js';
 import type {RollingIncrementClaimV1,RollingIncrementPublicationV1} from '../src/rolling-integration.js';
@@ -240,4 +240,15 @@ test('coordinator suggests final closure only after fresh scope, released owners
  assert.ok(!projectRollingCoordinatorActions(ownedRollingCoordinatorSnapshot).decisions.some(decision=>decision.kind === 'closure'));
  const partialRollingCoordinatorSnapshot:RollingCoordinatorSnapshot={...rollingCoordinatorSnapshot,publicationReadiness:{state:'WAITING',reason:'below_threshold',count:1}};
  assert.ok(!projectRollingCoordinatorActions(partialRollingCoordinatorSnapshot).decisions.some(decision=>decision.kind === 'closure'));
+});
+
+// Traceability: verifies REQ-ROLLING-REVIEW
+test('OBL-160: reviewer loss is an explicit exact input contract',()=>{
+ assert.equal(readRollingReviewerLoss(undefined),null);
+ assert.deepEqual(readRollingReviewerLoss({reviewId:'original-review',lossReference:'observed original actor removal'}),
+  {reviewId:'original-review',lossReference:'observed original actor removal'});
+ const invalidInputs:readonly unknown[] = [null,[],{}, {reviewId:'original-review'},
+  {reviewId:'original-review',lossReference:''},{reviewId:' ',lossReference:'observed'},
+  {reviewId:'original-review',lossReference:'observed',retry:true}];
+ for (const input of invalidInputs) assert.throws(()=>readRollingReviewerLoss(input));
 });

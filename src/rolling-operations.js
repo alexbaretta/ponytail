@@ -9,6 +9,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.RollingCampaignOperations = exports.RollingCampaignInitializationReaders = void 0;
 exports.readRollingCampaignInitializationV1 = readRollingCampaignInitializationV1;
 exports.parseRollingCampaignInitialization = parseRollingCampaignInitialization;
+exports.readRollingReviewerLoss = readRollingReviewerLoss;
 exports.projectRollingCoordinatorActions = projectRollingCoordinatorActions;
 exports.withRollingCampaignOperations = withRollingCampaignOperations;
 exports.executeRollingCommand = executeRollingCommand;
@@ -61,6 +62,15 @@ function stringField(input, name) {
     if (typeof value !== 'string' || value.trim() !== value || value.length === 0 || value.includes('\0'))
         throw new Error(`rolling campaign: ${name} must be a nonempty string`);
     return value;
+}
+function readRollingReviewerLoss(value) {
+    if (value === undefined)
+        return null;
+    const rollingReviewerLossRecord = record(value);
+    if (Object.keys(rollingReviewerLossRecord).length !== 2 || !Object.hasOwn(rollingReviewerLossRecord, 'reviewId')
+        || !Object.hasOwn(rollingReviewerLossRecord, 'lossReference'))
+        throw new Error('rolling campaign: invalid reviewer loss fields');
+    return { reviewId: stringField(rollingReviewerLossRecord, 'reviewId'), lossReference: stringField(rollingReviewerLossRecord, 'lossReference') };
 }
 function stringArray(value) {
     if (!Array.isArray(value) || !value.every((item) => typeof item === 'string' && item.length > 0))
@@ -346,7 +356,7 @@ class RollingCampaignOperations {
             case 'collect-submission': return { command, result: await this.native(signal, rollingCodex => (0, rolling_worker_js_1.collectRollingWorkerSubmission)(this.rollingCampaignStore, rollingCodex, stringField(input, 'campaign'), stringField(input, 'assignment'), stringField(input, 'generation'), timeoutMs)) };
             case 'suspend-worker': return { command, result: await this.native(signal, rollingCodex => (0, rolling_worker_js_1.suspendRollingWorker)(this.rollingCampaignStore, rollingCodex, stringField(input, 'campaign'), stringField(input, 'assignment'), stringField(input, 'generation'), stringArray(input.blockers), timeoutMs)) };
             case 'retire-worker': return { command, result: await this.native(signal, rollingCodex => (0, rolling_worker_js_1.retireRollingWorker)(this.rollingCampaignStore, rollingCodex, stringField(input, 'campaign'), stringField(input, 'assignment'), stringField(input, 'generation'), timeoutMs)) };
-            case 'request-review': return { command, result: await this.rollingCampaignStore.requestReview(stringField(input, 'campaign'), stringField(input, 'assignment'), stringField(input, 'generation'), stringField(input, 'revision'), stringField(input, 'reviewer')) };
+            case 'request-review': return { command, result: await this.rollingCampaignStore.requestReview(stringField(input, 'campaign'), stringField(input, 'assignment'), stringField(input, 'generation'), stringField(input, 'revision'), stringField(input, 'reviewer'), readRollingReviewerLoss(input.loss)) };
             case 'dispatch-review': return { command, result: await this.native(signal, async (rollingCodex) => {
                     const campaignId = stringField(input, 'campaign'), reviewId = stringField(input, 'review');
                     const rollingReviewContext = await this.rollingCampaignStore.reviewContext(campaignId, reviewId);
