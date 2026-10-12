@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-10-11T18:16:52-07:00",
+  "source_references": [
+    "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/plan.md"
+  ],
+  "context": {
+    "languages": [
+      "typescript"
+    ],
+    "frameworks": [
+      "node:test"
+    ],
+    "components": [
+      "publication acceptance fixture"
+    ],
+    "affected_boundaries": [
+      "disposable Git checkout",
+      "configured full QA subprocess"
+    ],
+    "code_references": [
+      "tests/rolling-publication.integration.test.ts"
+    ]
+  },
+  "known_non_matches": [],
+  "observed_behavior": "Nested Node test commands exited zero but omitted the integration test; output reported recursive node:test execution and skipped files.",
+  "expected_behavior": "The configured fixture full-QA profile executes its actual unit and integration files and records their passing output.",
+  "causal_mechanism": "The subprocess inherited NODE_TEST_CONTEXT from the outer test harness, so Node classified its test command as recursive execution.",
+  "anti_pattern": {
+    "structural_description": "Letting test-runner control metadata leak into an independently executed acceptance fixture subprocess.",
+    "why_it_fails": "The child can return a successful exit status without executing the intended files."
+  },
+  "correct_pattern": {
+    "required_invariant": "Fixture subprocesses execute the real program path with test-runner control metadata removed at the harness boundary.",
+    "implementation_description": "The fixture declares env -u NODE_TEST_CONTEXT before its Node unit/integration commands and asserts the actual test-name output. Production QA continues to execute the configured argv profile without test-only branches."
+  },
+  "applicability_conditions": [
+    "An integration test runs a Node test command as a subprocess.",
+    "The parent harness exports NODE_TEST_CONTEXT."
+  ],
+  "confirmation_evidence": [
+    "The failed output assertion captured the recursive node:test warning despite exit zero.",
+    "The corrected profile executes the named combined mainline/campaign integration test and the real database fixture unit test."
+  ],
+  "regression_proofs": [
+    "tests/rolling-publication.integration.test.ts: mainline candidate preserves published campaign history and requires complete full QA on its exact merged tree",
+    "tests/rolling-campaign-store.integration.test.ts: publication batch freezes one shared partial claim across concurrent requests and restart"
+  ],
+  "observation_id": "2026-10-11-publication_nested_test_environment"
+}

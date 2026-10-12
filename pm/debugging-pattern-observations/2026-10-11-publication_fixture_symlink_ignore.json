@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-10-11T18:16:52-07:00",
+  "source_references": [
+    "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/plan.md"
+  ],
+  "context": {
+    "languages": [
+      "typescript"
+    ],
+    "frameworks": [
+      "node:test"
+    ],
+    "components": [
+      "publication acceptance fixture"
+    ],
+    "affected_boundaries": [
+      "disposable Git checkout",
+      "configured full QA subprocess"
+    ],
+    "code_references": [
+      "tests/rolling-publication.integration.test.ts"
+    ]
+  },
+  "known_non_matches": [],
+  "observed_behavior": "The publication fixture was rejected as dirty before mainline preparation; Git status reported untracked node_modules.",
+  "expected_behavior": "The fixture dependency link is ignored while ordinary user work remains protected by the clean-checkout precondition.",
+  "causal_mechanism": "The trailing slash in /node_modules/ matches a directory; the fixture used a symlink, which Git treats as a file entry.",
+  "anti_pattern": {
+    "structural_description": "Using a directory-only ignore pattern for a fixture resource whose physical kind is a symlink.",
+    "why_it_fails": "The intended resource remains untracked and makes the real preservation check correctly refuse publication."
+  },
+  "correct_pattern": {
+    "required_invariant": "Fixture ignore rules match the actual resource kind without weakening production preservation checks.",
+    "implementation_description": "Use /node_modules without the trailing slash and retain an explicit clean fixture precondition."
+  },
+  "applicability_conditions": [
+    "A fixture links dependencies by symlink.",
+    "Git ignores are directory-only while publication requires a clean checkout."
+  ],
+  "confirmation_evidence": [
+    "The bounded Git-status assertion reported exactly ?? node_modules before preparation.",
+    "After correcting the ignore pattern, the real Git/full-QA Arc passes without changing the production clean-checkout guard."
+  ],
+  "regression_proofs": [
+    "tests/rolling-publication.integration.test.ts: mainline candidate preserves published campaign history and requires complete full QA on its exact merged tree"
+  ],
+  "observation_id": "2026-10-11-publication_fixture_symlink_ignore"
+}
