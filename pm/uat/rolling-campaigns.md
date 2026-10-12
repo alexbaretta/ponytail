@@ -211,7 +211,7 @@ observations are minimum demonstrations: evaluate each referenced canonical
 criterion in full, adding its necessary assertions before declaring discharge.
 Several Steps may contribute jointly; one passing contribution is not whole
 obligation or requirement acceptance. Current satisfaction is derived from the
-canonical obligation document and its actual input hashes; retained historical
+canonical obligation document and its current Git input revisions/paths; retained historical
 runtime results do not establish freshness after relevant inputs change.
 
 ### Acceptance ROLL-BINDING-AMENDMENT

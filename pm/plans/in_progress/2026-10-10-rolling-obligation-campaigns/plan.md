@@ -37,7 +37,11 @@ languages. Use canonical generators for exported copies. Verify real CLI and
 exported artifacts, not just registry strings. Final acceptance requires the
 configured full unit command, applicable integration evidence, TSTS, traceability,
 rule-copy/version checks and an item-by-item audit of all campaign requirements.
-Current remaining delivery count: 0/10 discharged. This correction must activate
+Current remaining delivery count: 0/10 discharged. The bounded compliance
+ledger also enumerates proof responsibilities OBL-130–158 (T1 acceptances,
+T2 executable Arcs, T3 implementation mapping, T4 independent proof and C2
+execution) and final gate OBL-159. These do not enlarge the ten-item delivery
+denominator. This correction must activate
 its bounded current scope before implementation; the stripped former ledger is
 historical reference data, not an executable acceptance database.
 

@@ -51,7 +51,37 @@
         "OBL-126",
         "OBL-127",
         "OBL-128",
-        "OBL-129"
+        "OBL-129",
+        "OBL-130",
+        "OBL-131",
+        "OBL-132",
+        "OBL-133",
+        "OBL-134",
+        "OBL-135",
+        "OBL-136",
+        "OBL-137",
+        "OBL-138",
+        "OBL-139",
+        "OBL-140",
+        "OBL-141",
+        "OBL-142",
+        "OBL-143",
+        "OBL-144",
+        "OBL-145",
+        "OBL-146",
+        "OBL-147",
+        "OBL-148",
+        "OBL-149",
+        "OBL-150",
+        "OBL-151",
+        "OBL-152",
+        "OBL-153",
+        "OBL-154",
+        "OBL-155",
+        "OBL-156",
+        "OBL-157",
+        "OBL-158",
+        "OBL-159"
       ],
       "inventoryIds": [
         "OBL-123",
@@ -603,6 +633,779 @@
         ],
         "selection": [
           "OBL-129"
+        ],
+        "target": {
+          "identity": "local",
+          "profile": "campaign-compliance"
+        }
+      }
+    },
+    {
+      "id": "OBL-130",
+      "category": "T1",
+      "requirementIds": [
+        "REQ-ROLLING-CLIENT-PROTOCOL"
+      ],
+      "responsibilityId": "acceptance-OBL-114",
+      "condition": "Acceptance demonstrates the full condition of OBL-114",
+      "criterion": "Inspect the named acceptance and its observations against the complete criterion of OBL-114",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "ROLL-CLIENT-PROTOCOL"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-131",
+      "category": "T1",
+      "requirementIds": [
+        "REQ-ROLLING-CLIENT-PROTOCOL"
+      ],
+      "responsibilityId": "acceptance-OBL-115",
+      "condition": "Acceptance demonstrates the full condition of OBL-115",
+      "criterion": "Inspect the named acceptance and its observations against the complete criterion of OBL-115",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "ROLL-CLIENT-PROTOCOL"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-132",
+      "category": "T1",
+      "requirementIds": [
+        "REQ-ROLLING-CLIENT-PROTOCOL"
+      ],
+      "responsibilityId": "acceptance-OBL-116",
+      "condition": "Acceptance demonstrates the full condition of OBL-116",
+      "criterion": "Inspect the named acceptance and its observations against the complete criterion of OBL-116",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "ROLL-CLIENT-PROTOCOL"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-133",
+      "category": "T1",
+      "requirementIds": [
+        "REQ-ROLLING-INTERFACES"
+      ],
+      "responsibilityId": "acceptance-OBL-117",
+      "condition": "Acceptance demonstrates the full condition of OBL-117",
+      "criterion": "Inspect the named acceptance and its observations against the complete criterion of OBL-117",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "ROLL-CLI-HELP"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-134",
+      "category": "T1",
+      "requirementIds": [
+        "REQ-ROLLING-INTERFACES"
+      ],
+      "responsibilityId": "acceptance-OBL-118",
+      "condition": "Acceptance demonstrates the full condition of OBL-118",
+      "criterion": "Inspect the named acceptance and its observations against the complete criterion of OBL-118",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "ROLL-CLI-HELP"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-135",
+      "category": "T1",
+      "requirementIds": [
+        "REQ-ROLLING-INTERFACES"
+      ],
+      "responsibilityId": "acceptance-OBL-119",
+      "condition": "Acceptance demonstrates the full condition of OBL-119",
+      "criterion": "Inspect the named acceptance and its observations against the complete criterion of OBL-119",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "ROLL-CLI-HELP"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-136",
+      "category": "T1",
+      "requirementIds": [
+        "REQ-ROLLING-INTERFACES"
+      ],
+      "responsibilityId": "acceptance-OBL-120",
+      "condition": "Acceptance demonstrates the full condition of OBL-120",
+      "criterion": "Inspect the named acceptance and its observations against the complete criterion of OBL-120",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "ROLL-CLI-HELP"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-137",
+      "category": "T1",
+      "requirementIds": [
+        "REQ-ROLLING-INTERFACES"
+      ],
+      "responsibilityId": "acceptance-OBL-121",
+      "condition": "Acceptance demonstrates the full condition of OBL-121",
+      "criterion": "Inspect the named acceptance and its observations against the complete criterion of OBL-121",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "ROLL-CLI-HELP"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-138",
+      "category": "T1",
+      "requirementIds": [
+        "REQ-ROLLING-INTERFACES"
+      ],
+      "responsibilityId": "acceptance-OBL-122",
+      "condition": "Acceptance demonstrates the full condition of OBL-122",
+      "criterion": "Inspect the named acceptance and its observations against the complete criterion of OBL-122",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "ROLL-CLI-HELP"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-139",
+      "category": "T1",
+      "requirementIds": [
+        "REQ-ROLLING-GRAPH",
+        "REQ-ROLLING-STATE"
+      ],
+      "responsibilityId": "acceptance-OBL-129",
+      "condition": "Acceptance demonstrates the full condition of OBL-129",
+      "criterion": "Inspect the named acceptance and its observations against the complete criterion of OBL-129",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "ROLL-CLI-HELP"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-140",
+      "category": "T2",
+      "requirementIds": [
+        "REQ-ROLLING-CLIENT-PROTOCOL"
+      ],
+      "responsibilityId": "executable-ROLL-CLIENT-PROTOCOL",
+      "condition": "ROLL-CLIENT-PROTOCOL has an adequate executable real-path demonstration",
+      "criterion": "Inspect exported-resource, CLI, native and PostgreSQL selections and complete lifecycle assertions",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "ROLL-CLIENT-PROTOCOL"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-141",
+      "category": "T2",
+      "requirementIds": [
+        "REQ-ROLLING-INTERFACES",
+        "REQ-ROLLING-GRAPH",
+        "REQ-ROLLING-STATE"
+      ],
+      "responsibilityId": "executable-ROLL-CLI-HELP",
+      "condition": "ROLL-CLI-HELP has an adequate executable real-path demonstration",
+      "criterion": "Inspect exported-resource, CLI, native and PostgreSQL selections and complete lifecycle assertions",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "ROLL-CLI-HELP"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-142",
+      "category": "T3",
+      "requirementIds": [
+        "REQ-ROLLING-CLIENT-PROTOCOL"
+      ],
+      "responsibilityId": "implementation-OBL-114",
+      "condition": "Owned implementation establishes the acceptance responsibility of OBL-114",
+      "criterion": "Inspect actual source/support, canonical annotations and generated mappings for OBL-114",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "ROLL-CLIENT-PROTOCOL"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-143",
+      "category": "T3",
+      "requirementIds": [
+        "REQ-ROLLING-CLIENT-PROTOCOL"
+      ],
+      "responsibilityId": "implementation-OBL-115",
+      "condition": "Owned implementation establishes the acceptance responsibility of OBL-115",
+      "criterion": "Inspect actual source/support, canonical annotations and generated mappings for OBL-115",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "ROLL-CLIENT-PROTOCOL"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-144",
+      "category": "T3",
+      "requirementIds": [
+        "REQ-ROLLING-CLIENT-PROTOCOL"
+      ],
+      "responsibilityId": "implementation-OBL-116",
+      "condition": "Owned implementation establishes the acceptance responsibility of OBL-116",
+      "criterion": "Inspect actual source/support, canonical annotations and generated mappings for OBL-116",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "ROLL-CLIENT-PROTOCOL"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-145",
+      "category": "T3",
+      "requirementIds": [
+        "REQ-ROLLING-INTERFACES"
+      ],
+      "responsibilityId": "implementation-OBL-117",
+      "condition": "Owned implementation establishes the acceptance responsibility of OBL-117",
+      "criterion": "Inspect actual source/support, canonical annotations and generated mappings for OBL-117",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "ROLL-CLI-HELP"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-146",
+      "category": "T3",
+      "requirementIds": [
+        "REQ-ROLLING-INTERFACES"
+      ],
+      "responsibilityId": "implementation-OBL-118",
+      "condition": "Owned implementation establishes the acceptance responsibility of OBL-118",
+      "criterion": "Inspect actual source/support, canonical annotations and generated mappings for OBL-118",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "ROLL-CLI-HELP"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-147",
+      "category": "T3",
+      "requirementIds": [
+        "REQ-ROLLING-INTERFACES"
+      ],
+      "responsibilityId": "implementation-OBL-119",
+      "condition": "Owned implementation establishes the acceptance responsibility of OBL-119",
+      "criterion": "Inspect actual source/support, canonical annotations and generated mappings for OBL-119",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "ROLL-CLI-HELP"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-148",
+      "category": "T3",
+      "requirementIds": [
+        "REQ-ROLLING-INTERFACES"
+      ],
+      "responsibilityId": "implementation-OBL-120",
+      "condition": "Owned implementation establishes the acceptance responsibility of OBL-120",
+      "criterion": "Inspect actual source/support, canonical annotations and generated mappings for OBL-120",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "ROLL-CLI-HELP"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-149",
+      "category": "T3",
+      "requirementIds": [
+        "REQ-ROLLING-INTERFACES"
+      ],
+      "responsibilityId": "implementation-OBL-121",
+      "condition": "Owned implementation establishes the acceptance responsibility of OBL-121",
+      "criterion": "Inspect actual source/support, canonical annotations and generated mappings for OBL-121",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "ROLL-CLI-HELP"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-150",
+      "category": "T3",
+      "requirementIds": [
+        "REQ-ROLLING-INTERFACES"
+      ],
+      "responsibilityId": "implementation-OBL-122",
+      "condition": "Owned implementation establishes the acceptance responsibility of OBL-122",
+      "criterion": "Inspect actual source/support, canonical annotations and generated mappings for OBL-122",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "ROLL-CLI-HELP"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-151",
+      "category": "T3",
+      "requirementIds": [
+        "REQ-ROLLING-GRAPH",
+        "REQ-ROLLING-STATE"
+      ],
+      "responsibilityId": "implementation-OBL-129",
+      "condition": "Owned implementation establishes the acceptance responsibility of OBL-129",
+      "criterion": "Inspect actual source/support, canonical annotations and generated mappings for OBL-129",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "ROLL-CLI-HELP"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-152",
+      "category": "T4",
+      "requirementIds": [
+        "REQ-ROLLING-CLIENT-PROTOCOL"
+      ],
+      "responsibilityId": "actor-vocabulary",
+      "condition": "actor-vocabulary has adequate independent proof",
+      "criterion": "Inspect focused assertions and actual execution; integration covers the public operation boundary without redundant mocks",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "ROLL-CLIENT-PROTOCOL"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-153",
+      "category": "T4",
+      "requirementIds": [
+        "REQ-ROLLING-CLIENT-PROTOCOL"
+      ],
+      "responsibilityId": "coordinator-procedure",
+      "condition": "coordinator-procedure has adequate independent proof",
+      "criterion": "Inspect focused assertions and actual execution; integration covers the public operation boundary without redundant mocks",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "ROLL-CLIENT-PROTOCOL"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-154",
+      "category": "T4",
+      "requirementIds": [
+        "REQ-ROLLING-CLIENT-PROTOCOL"
+      ],
+      "responsibilityId": "worker-procedure",
+      "condition": "worker-procedure has adequate independent proof",
+      "criterion": "Inspect focused assertions and actual execution; integration covers the public operation boundary without redundant mocks",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "ROLL-CLIENT-PROTOCOL"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-155",
+      "category": "T4",
+      "requirementIds": [
+        "REQ-ROLLING-INTERFACES"
+      ],
+      "responsibilityId": "help-rendering",
+      "condition": "help-rendering has adequate independent proof",
+      "criterion": "Inspect focused assertions and actual execution; integration covers the public operation boundary without redundant mocks",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "ROLL-CLI-HELP"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-156",
+      "category": "T4",
+      "requirementIds": [
+        "REQ-ROLLING-STATE",
+        "REQ-ROLLING-GRAPH"
+      ],
+      "responsibilityId": "retained-worker-decisions",
+      "condition": "retained-worker-decisions has adequate independent proof",
+      "criterion": "Inspect focused assertions and actual execution; integration covers the public operation boundary without redundant mocks",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "ROLL-CLI-HELP"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-157",
+      "category": "C2",
+      "requirementIds": [
+        "REQ-ROLLING-CLIENT-PROTOCOL"
+      ],
+      "responsibilityId": "run-ROLL-CLIENT-PROTOCOL",
+      "condition": "Execute the required ROLL-CLIENT-PROTOCOL integration workflow",
+      "criterion": "Actual exported-resource and CLI observations pass; referenced native and PostgreSQL steps have current passing evidence",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "ROLL-CLIENT-PROTOCOL"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "node --test dist/tests/campaign-compliance.integration.test.js"
+        ],
+        "selection": [
+          "ROLL-CLIENT-PROTOCOL"
+        ],
+        "target": {
+          "identity": "local",
+          "profile": "campaign-compliance"
+        }
+      }
+    },
+    {
+      "id": "OBL-158",
+      "category": "C2",
+      "requirementIds": [
+        "REQ-ROLLING-INTERFACES",
+        "REQ-ROLLING-GRAPH",
+        "REQ-ROLLING-STATE"
+      ],
+      "responsibilityId": "run-ROLL-CLI-HELP",
+      "condition": "Execute the required ROLL-CLI-HELP integration workflow",
+      "criterion": "Actual exported-resource and CLI observations pass; referenced native and PostgreSQL steps have current passing evidence",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "ROLL-CLI-HELP"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "node --test dist/tests/campaign-compliance.integration.test.js"
+        ],
+        "selection": [
+          "ROLL-CLI-HELP"
+        ],
+        "target": {
+          "identity": "local",
+          "profile": "campaign-compliance"
+        }
+      }
+    },
+    {
+      "id": "OBL-159",
+      "category": "gate",
+      "requirementIds": [
+        "REQ-ROLLING-INTERFACES",
+        "REQ-ROLLING-STATE"
+      ],
+      "responsibilityId": "final-campaign-compliance",
+      "condition": "Final campaign functional compliance is proved",
+      "criterion": "Full configured QA, live applicable UAT, traceability/static checks and all original campaign requirements pass on the final relevant tree",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "ROLL-CLOSE"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [
+          "final-compliance"
         ],
         "target": {
           "identity": "local",
