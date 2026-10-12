@@ -624,7 +624,7 @@ Requirement: [pm/requirements/rolling-campaigns.md](rolling-campaigns.md)
 - unit-test: verifies [tests/rolling-operations.test.ts:21](../../tests/rolling-operations.test.ts#L21)
 - integration-test: verifies [tests/rolling-campaign.integration.test.ts:17](../../tests/rolling-campaign.integration.test.ts#L17)
 - uat: verifies [pm/uat/rolling-campaigns.md:20](../../pm/uat/rolling-campaigns.md#L20)
-- plan: plans-implementation [pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/plan.md:216](../../pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/plan.md#L216)
+- plan: plans-implementation [pm/plans/closed/2026-10-10-rolling-obligation-campaigns/plan.md:216](../../pm/plans/closed/2026-10-10-rolling-obligation-campaigns/plan.md#L216)
 
 ## REQ-ROLLING-GRAPH
 
@@ -680,7 +680,7 @@ Requirement: [pm/requirements/rolling-campaigns.md](rolling-campaigns.md)
 - uat: verifies [pm/uat/rolling-campaigns.md:190](../../pm/uat/rolling-campaigns.md#L190)
 - uat: verifies [pm/uat/rolling-campaigns.md:198](../../pm/uat/rolling-campaigns.md#L198)
 - uat: verifies [pm/uat/rolling-campaigns.md:206](../../pm/uat/rolling-campaigns.md#L206)
-- plan: plans-implementation [pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/plan.md:217](../../pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/plan.md#L217)
+- plan: plans-implementation [pm/plans/closed/2026-10-10-rolling-obligation-campaigns/plan.md:217](../../pm/plans/closed/2026-10-10-rolling-obligation-campaigns/plan.md#L217)
 
 ## REQ-ROLLING-SCHEDULING
 
@@ -705,7 +705,7 @@ Requirement: [pm/requirements/rolling-campaigns.md](rolling-campaigns.md)
 - integration-test: verifies [tests/rolling-operations.integration.test.ts:81](../../tests/rolling-operations.integration.test.ts#L81)
 - uat: verifies [pm/uat/rolling-campaigns.md:45](../../pm/uat/rolling-campaigns.md#L45)
 - uat: verifies [pm/uat/rolling-campaigns.md:192](../../pm/uat/rolling-campaigns.md#L192)
-- plan: plans-implementation [pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/plan.md:218](../../pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/plan.md#L218)
+- plan: plans-implementation [pm/plans/closed/2026-10-10-rolling-obligation-campaigns/plan.md:218](../../pm/plans/closed/2026-10-10-rolling-obligation-campaigns/plan.md#L218)
 
 ## REQ-ROLLING-STATE
 
@@ -762,7 +762,7 @@ Requirement: [pm/requirements/rolling-campaigns.md](rolling-campaigns.md)
 - uat: verifies [pm/uat/rolling-campaigns.md:191](../../pm/uat/rolling-campaigns.md#L191)
 - uat: verifies [pm/uat/rolling-campaigns.md:199](../../pm/uat/rolling-campaigns.md#L199)
 - uat: verifies [pm/uat/rolling-campaigns.md:243](../../pm/uat/rolling-campaigns.md#L243)
-- plan: plans-implementation [pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/plan.md:219](../../pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/plan.md#L219)
+- plan: plans-implementation [pm/plans/closed/2026-10-10-rolling-obligation-campaigns/plan.md:219](../../pm/plans/closed/2026-10-10-rolling-obligation-campaigns/plan.md#L219)
 
 ## REQ-ROLLING-WORKERS
 
@@ -831,7 +831,7 @@ Requirement: [pm/requirements/rolling-campaigns.md](rolling-campaigns.md)
 - integration-test: verifies [tests/rolling-worktrees.integration.test.ts:75](../../tests/rolling-worktrees.integration.test.ts#L75)
 - uat: verifies [pm/uat/rolling-campaigns.md:71](../../pm/uat/rolling-campaigns.md#L71)
 - uat: verifies [pm/uat/rolling-campaigns.md:200](../../pm/uat/rolling-campaigns.md#L200)
-- plan: plans-implementation [pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/plan.md:220](../../pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/plan.md#L220)
+- plan: plans-implementation [pm/plans/closed/2026-10-10-rolling-obligation-campaigns/plan.md:220](../../pm/plans/closed/2026-10-10-rolling-obligation-campaigns/plan.md#L220)
 
 ## REQ-ROLLING-REVIEW
 
@@ -874,7 +874,7 @@ Requirement: [pm/requirements/rolling-campaigns.md](rolling-campaigns.md)
 - integration-test: verifies [tests/rolling-codex.integration.ts:120](../../tests/rolling-codex.integration.ts#L120)
 - integration-test: verifies [tests/rolling-codex.integration.ts:124](../../tests/rolling-codex.integration.ts#L124)
 - uat: verifies [pm/uat/rolling-campaigns.md:84](../../pm/uat/rolling-campaigns.md#L84)
-- plan: plans-implementation [pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/plan.md:221](../../pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/plan.md#L221)
+- plan: plans-implementation [pm/plans/closed/2026-10-10-rolling-obligation-campaigns/plan.md:221](../../pm/plans/closed/2026-10-10-rolling-obligation-campaigns/plan.md#L221)
 
 ## REQ-ROLLING-PUBLICATION
 
@@ -960,7 +960,7 @@ Requirement: [pm/requirements/rolling-campaigns.md](rolling-campaigns.md)
 - integration-test: verifies [tests/rolling-publication.integration.test.ts:15](../../tests/rolling-publication.integration.test.ts#L15)
 - integration-test: verifies [tests/rolling-publication.integration.test.ts:73](../../tests/rolling-publication.integration.test.ts#L73)
 - uat: verifies [pm/uat/rolling-campaigns.md:100](../../pm/uat/rolling-campaigns.md#L100)
-- plan: plans-implementation [pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/plan.md:222](../../pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/plan.md#L222)
+- plan: plans-implementation [pm/plans/closed/2026-10-10-rolling-obligation-campaigns/plan.md:222](../../pm/plans/closed/2026-10-10-rolling-obligation-campaigns/plan.md#L222)
 
 ## REQ-ROLLING-INTERFACES
 
@@ -1006,7 +1006,7 @@ Requirement: [pm/requirements/rolling-campaigns.md](rolling-campaigns.md)
 - integration-test: verifies [tests/rolling-operations.integration.test.ts:293](../../tests/rolling-operations.integration.test.ts#L293)
 - uat: verifies [pm/uat/rolling-campaigns.md:113](../../pm/uat/rolling-campaigns.md#L113)
 - uat: verifies [pm/uat/rolling-campaigns.md:154](../../pm/uat/rolling-campaigns.md#L154)
-- plan: plans-implementation [pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/plan.md:223](../../pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/plan.md#L223)
+- plan: plans-implementation [pm/plans/closed/2026-10-10-rolling-obligation-campaigns/plan.md:223](../../pm/plans/closed/2026-10-10-rolling-obligation-campaigns/plan.md#L223)
 
 ## REQ-PONYTAIL-STATIC-LANGUAGE
 
@@ -1031,4 +1031,4 @@ Requirement: [pm/requirements/static-language.md](static-language.md)
 - unit-test: verifies [tests/rolling-codex.test.ts:28](../../tests/rolling-codex.test.ts#L28)
 - integration-test: verifies [tests/rolling-codex.integration.ts:30](../../tests/rolling-codex.integration.ts#L30)
 - uat: verifies [pm/uat/static-language.md:12](../../pm/uat/static-language.md#L12)
-- plan: plans-implementation [pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/sprints/S07.md:97](../../pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/sprints/S07.md#L97)
+- plan: plans-implementation [pm/plans/closed/2026-10-10-rolling-obligation-campaigns/sprints/S07.md:97](../../pm/plans/closed/2026-10-10-rolling-obligation-campaigns/sprints/S07.md#L97)

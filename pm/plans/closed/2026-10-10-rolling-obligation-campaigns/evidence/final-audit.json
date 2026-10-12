@@ -1,5 +1,5 @@
 {
-  "status": "acceptance_complete; lifecycle_transition_pending",
+  "status": "closed; complete",
   "sourceRevision": "808d3df6b1f963edbdbb0d0038cac41c05edf235",
   "deliveryObligationCount": 92,
   "currentAssessedDeliveryIds": [
@@ -104,7 +104,7 @@
     "observedOutcome": "Exactly one of four concurrent requests returns an allocation; three report capacity_reached. One original obligation/worktree pair remains persisted. The certificate reason's phrase same original allocation refers to that retained pair, not four successful allocation responses.",
     "proof": "Three selected real PostgreSQL allocation workflows passed with zero failures, skips or cancellations."
   },
-  "remainingWholeCampaignAudit": "Acceptance has passed; only the verified lifecycle move and final structural checks remain.",
+  "remainingWholeCampaignAudit": "None. Final acceptance, lifecycle transition, and structural checks passed.",
   "attachmentPrerequisiteChain": [
     "OBL-107",
     "OBL-108",
@@ -462,11 +462,16 @@
     "historyPreserved": true
   },
   "lifecycleClosureInspection": {
-    "status": "regression_passed; final lifecycle transition pending",
+    "status": "closed; verified",
     "source": "src/campaign-plan-contents.ts:130",
-    "observation": "Completed adopted plans are currently checked against mutable current inputs. Moving this plan would also relocate evidence paths preserved in immutable historical certificates.",
-    "nextProof": "Exercise accepted historical state across the required status-directory move before claiming closure; keep active-plan freshness enforcement unchanged.",
-    "fixtureDependency": "Six test sources currently read this active campaign document directly. Their historical fixture boundary must survive the lifecycle transition."
+    "historicalAcceptance": "BASELINE-17 / CHECKPOINT-327; all 92 delivery obligations and 21 aggregate gates accepted",
+    "evidenceIntegrity": "Ledger and all bound evidence bytes equal their pre-archive bytes at 526f562",
+    "campaignValidation": "Passed: 1 plan, 5 sprints, 247 tasklets",
+    "regression": "3 closure regression tests passed",
+    "traceability": "858 relationships; no violations",
+    "staticValidation": "TSTS checked 1497 staged files; no violations",
+    "diffCheck": "Passed",
+    "freshnessBoundary": "Closed plans use accepted history; active plans retain current-input freshness enforcement."
   },
   "archiveCorrection": {
     "obligationId": "OBL-113",
@@ -636,5 +641,6 @@
     "proof": "tmp/final-acceptance-all.log",
     "sealedEvidence": "final-acceptance.md",
     "originalHistoryPreserved": true
-  }
+  },
+  "lifecycleSource": "pm/plans/closed/2026-10-10-rolling-obligation-campaigns/plan.md"
 }

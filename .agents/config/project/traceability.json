@@ -793,7 +793,7 @@
     },
     {
       "class": "plan",
-      "path": "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/plan.md",
+      "path": "pm/plans/closed/2026-10-10-rolling-obligation-campaigns/plan.md",
       "locator": "text"
     },
     {
@@ -813,7 +813,7 @@
     },
     {
       "class": "plan",
-      "path": "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/sprints/S02.md",
+      "path": "pm/plans/closed/2026-10-10-rolling-obligation-campaigns/sprints/S02.md",
       "locator": "text"
     },
     {
@@ -883,7 +883,7 @@
     },
     {
       "class": "plan",
-      "path": "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/sprints/S03.md",
+      "path": "pm/plans/closed/2026-10-10-rolling-obligation-campaigns/sprints/S03.md",
       "locator": "text"
     },
     {
@@ -903,7 +903,7 @@
     },
     {
       "class": "plan",
-      "path": "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/sprints/S04.md",
+      "path": "pm/plans/closed/2026-10-10-rolling-obligation-campaigns/sprints/S04.md",
       "locator": "text"
     },
     {
@@ -922,7 +922,7 @@
       "locator": "text"
     },
     {
-      "path": "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/sprints/S07.md",
+      "path": "pm/plans/closed/2026-10-10-rolling-obligation-campaigns/sprints/S07.md",
       "locator": "text",
       "class": "plan"
     },
