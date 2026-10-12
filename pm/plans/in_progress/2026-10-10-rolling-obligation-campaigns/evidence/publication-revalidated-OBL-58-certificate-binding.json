@@ -1,0 +1,123 @@
+{
+  "schemaVersion": 1,
+  "certificateId": "CERT-121",
+  "lease": {
+    "schemaVersion": 1,
+    "scopeId": "2026-10-10-rolling-obligation-campaigns",
+    "baselineId": "BASELINE-16",
+    "graphDigest": "71b183c006a36f64d3e47284aa6200a2ad85eed160e632d85af7ff3459ab6299",
+    "generation": "standalone-publication-batch-CERT-121",
+    "assessor": "coordinator",
+    "authority": [
+      "user-goal-2026-10-10-rolling-campaigns",
+      "user-goal-2026-10-10-static-language-existing-tsts",
+      "user-2026-10-10-normative-atomic-obligations",
+      "user-2026-10-11-language-scope-our-code-preserve-translations"
+    ],
+    "binding": {
+      "obligationId": "OBL-58",
+      "revisionId": "BIND-98",
+      "dependsOn": [],
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "scripts/build-runtime.ts",
+          "PROJECT_STRUCTURE.md",
+          ".agents/config/project/traceability.json",
+          "pm/debugging-pattern-observations/2026-10-11-publication_fixture_symlink_ignore.json",
+          "pm/debugging-pattern-observations/2026-10-11-publication_nested_test_environment.json",
+          "src/rolling-publication.ts",
+          "src/rolling-publication.js",
+          "src/rolling-campaign-store.ts",
+          "src/rolling-campaign-store.js",
+          "src/rolling-campaign.ts",
+          "src/rolling-campaign.js",
+          "src/rolling-integration.ts",
+          "src/rolling-integration.js",
+          "tests/rolling-publication.test.ts",
+          "tests/rolling-publication.integration.test.ts",
+          "tests/rolling-campaign-store.integration.test.ts",
+          "tests/fixtures/rolling-publication-qa.ts",
+          "scripts/project-index.sql",
+          "versioned-data-contracts.json",
+          "pm/requirements/traceability.generated.md",
+          "pm/uat/rolling-campaigns.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/design.md",
+          "pm/debugging-pattern-observations/2026-10-11-publication_fixture_early_return.json",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/publication-revalidated-OBL-58.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/publication-revalidated-OBL-58-certificate-binding.json",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/publication-revalidated-OBL-59.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/publication-revalidated-OBL-59-certificate-binding.json",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/publication-revalidated-OBL-60.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/publication-revalidated-OBL-60-certificate-binding.json",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/publication-revalidated-OBL-61.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/publication-revalidated-OBL-61-certificate-binding.json"
+        ],
+        "operations": [
+          "inspect",
+          "edit",
+          "build",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "Freeze publication at M accepted increments; resubmissions and bookkeeping do not increment the count."
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "publication-batch"
+        }
+      }
+    }
+  },
+  "revision": "730a132313263df19a5465bdda3ae9bcdf1bd584",
+  "proof": [
+    {
+      "operation": "test",
+      "certificateEvidenceIndex": 0,
+      "submissionEvidenceIndex": 0
+    },
+    {
+      "operation": "test",
+      "certificateEvidenceIndex": 1,
+      "submissionEvidenceIndex": 1
+    },
+    {
+      "operation": "check",
+      "certificateEvidenceIndex": 2,
+      "submissionEvidenceIndex": 2
+    },
+    {
+      "operation": "check",
+      "certificateEvidenceIndex": 3,
+      "submissionEvidenceIndex": 3
+    },
+    {
+      "operation": "check",
+      "certificateEvidenceIndex": 4,
+      "submissionEvidenceIndex": 4
+    },
+    {
+      "operation": "check",
+      "certificateEvidenceIndex": 5,
+      "submissionEvidenceIndex": 5
+    },
+    {
+      "operation": "check",
+      "certificateEvidenceIndex": 6,
+      "submissionEvidenceIndex": 6
+    },
+    {
+      "operation": "check",
+      "certificateEvidenceIndex": 7,
+      "submissionEvidenceIndex": 7
+    },
+    {
+      "operation": "check",
+      "certificateEvidenceIndex": 8,
+      "submissionEvidenceIndex": 8
+    }
+  ]
+}
