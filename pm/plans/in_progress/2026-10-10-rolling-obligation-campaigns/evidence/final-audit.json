@@ -1,6 +1,6 @@
 {
   "status": "in_progress",
-  "sourceRevision": "ded30fbcdea0206445b33ff9080a9d080676a993",
+  "sourceRevision": "d237877cebac100b0deb996f3015cfe4d0186ee2",
   "deliveryObligationCount": 91,
   "currentAssessedDeliveryIds": [
     "OBL-22",
@@ -20,7 +20,11 @@
     "OBL-36",
     "OBL-37",
     "OBL-38",
-    "OBL-39"
+    "OBL-39",
+    "OBL-40",
+    "OBL-41",
+    "OBL-42",
+    "OBL-43"
   ],
   "remainingAssessmentIsNotUnstartedImplementation": true,
   "authoritativeAcceptanceState": "../obligations.json",
@@ -30,5 +34,15 @@
     "observedOutcome": "Exactly one of four concurrent requests returns an allocation; three report capacity_reached. One original obligation/worktree pair remains persisted. The certificate reason's phrase same original allocation refers to that retained pair, not four successful allocation responses.",
     "proof": "Three selected real PostgreSQL allocation workflows passed with zero failures, skips or cancellations."
   },
-  "remainingWholeCampaignAudit": "Individual remaining conditions, final rollups and lifecycle closure must still be assessed; this partial audit does not establish campaign completion."
+  "remainingWholeCampaignAudit": "Individual remaining conditions, final rollups and lifecycle closure must still be assessed; this partial audit does not establish campaign completion.",
+  "attachmentPrerequisiteChain": [
+    "OBL-107",
+    "OBL-108",
+    "OBL-109",
+    "OBL-110",
+    "OBL-111",
+    "OBL-112",
+    "OBL-44",
+    "OBL-45"
+  ]
 }
