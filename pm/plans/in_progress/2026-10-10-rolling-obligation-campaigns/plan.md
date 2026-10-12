@@ -38,8 +38,10 @@ languages. Use canonical generators for exported copies. Verify real CLI and
 exported artifacts, not just registry strings. Final acceptance requires the
 configured full unit command, applicable integration evidence, TSTS, traceability,
 rule-copy/version checks and an item-by-item audit of all campaign requirements.
-Current remaining delivery count: 0/11 discharged after proof invalidation for
-the native fixture repair. The bounded compliance
+Final atomic delivery count: **11/11 discharged** under
+BASELINE-COMPLIANCE-2, checkpoint CP-COMPLIANCE-25. All 58 delivery, proof,
+inventory and final-gate responsibilities are satisfied; the six-coordinate
+vector is zero and OBL-159 is discharged. The bounded compliance
 ledger also enumerates proof responsibilities OBL-130–158 (T1 acceptances,
 T2 executable Arcs, T3 implementation mapping, T4 independent proof and C2
 execution) and final gate OBL-159. These do not enlarge the ten-item delivery
