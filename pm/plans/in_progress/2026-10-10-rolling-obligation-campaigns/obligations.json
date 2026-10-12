@@ -15734,6 +15734,51 @@
       },
       "assessor": "coordinator",
       "reason": "Renew four invalidated publication assessments using corrected real component/database/Git proof; preserve all historical records and leave the other delivery and final acceptance gates open."
+    },
+    {
+      "id": "CHECKPOINT-185",
+      "predecessorId": "CHECKPOINT-184",
+      "baselineId": "BASELINE-16",
+      "kind": "neutral",
+      "selectedIds": [
+        "OBL-62",
+        "OBL-63",
+        "OBL-64",
+        "OBL-65"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "CERT-125",
+        "CERT-126",
+        "CERT-127",
+        "CERT-128"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": {
+        "obligationId": "OBL-62",
+        "operations": [
+          "inspect"
+        ],
+        "deliverable": "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/coordination-batch-OBL-62.md"
+      },
+      "assessor": "coordinator",
+      "reason": "Discharge the second approved group of four through distinct atomic certificates and shared current component, Git, PostgreSQL and CLI evidence; preserve history and leave the final four delivery gates open."
     }
   ]
 }

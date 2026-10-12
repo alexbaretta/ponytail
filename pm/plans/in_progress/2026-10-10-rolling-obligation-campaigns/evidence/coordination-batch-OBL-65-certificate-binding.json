@@ -1,0 +1,136 @@
+{
+  "schemaVersion": 1,
+  "certificateId": "CERT-128",
+  "lease": {
+    "schemaVersion": 1,
+    "scopeId": "2026-10-10-rolling-obligation-campaigns",
+    "baselineId": "BASELINE-16",
+    "graphDigest": "01bfbd36082dcef11416e59d38d946b3fe34bbe0f75ef28c04082cfa68cd1bb1",
+    "generation": "standalone-publication-batch-CERT-128",
+    "assessor": "coordinator",
+    "authority": [
+      "user-goal-2026-10-10-rolling-campaigns",
+      "user-goal-2026-10-10-static-language-existing-tsts",
+      "user-2026-10-10-normative-atomic-obligations",
+      "user-2026-10-11-language-scope-our-code-preserve-translations"
+    ],
+    "binding": {
+      "obligationId": "OBL-65",
+      "revisionId": "BIND-97",
+      "dependsOn": [],
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "src/rolling-publication.ts",
+          "src/rolling-publication.js",
+          "src/rolling-campaign-store.ts",
+          "src/rolling-campaign-store.js",
+          "src/rolling-campaign.ts",
+          "src/rolling-campaign.js",
+          "src/rolling-integration.ts",
+          "src/rolling-integration.js",
+          "src/rolling-operations.ts",
+          "src/rolling-operations.js",
+          "src/rolling-worker.ts",
+          "src/rolling-worker.js",
+          "src/rolling-review.ts",
+          "src/rolling-review.js",
+          "tests/rolling-publication.test.ts",
+          "tests/rolling-publication.integration.test.ts",
+          "tests/rolling-campaign-store.test.ts",
+          "tests/rolling-campaign-store.integration.test.ts",
+          "tests/rolling-campaign.test.ts",
+          "tests/rolling-operations.test.ts",
+          "tests/rolling-operations.integration.test.ts",
+          "tests/rolling-codex.integration.ts",
+          "tests/fixtures/rolling-codex-server.ts",
+          "scripts/project-index.sql",
+          "versioned-data-contracts.json",
+          "scripts/build-runtime.ts",
+          "PROJECT_STRUCTURE.md",
+          ".agents/config/project/traceability.json",
+          "pm/requirements/traceability.generated.md",
+          "pm/uat/rolling-campaigns.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/design.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/coordination-batch-OBL-62.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/coordination-batch-OBL-62-certificate-binding.json",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/coordination-batch-OBL-63.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/coordination-batch-OBL-63-certificate-binding.json",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/coordination-batch-OBL-64.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/coordination-batch-OBL-64-certificate-binding.json",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/coordination-batch-OBL-65.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/coordination-batch-OBL-65-certificate-binding.json"
+        ],
+        "operations": [
+          "inspect",
+          "edit",
+          "build",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "Initialize and reconcile a campaign through the shared typed application operation layer."
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "coordination-batch"
+        }
+      }
+    }
+  },
+  "revision": "3f2203fdf15a2bab98dc17a039fc7061e8cac378",
+  "proof": [
+    {
+      "operation": "test",
+      "certificateEvidenceIndex": 0,
+      "submissionEvidenceIndex": 0
+    },
+    {
+      "operation": "test",
+      "certificateEvidenceIndex": 1,
+      "submissionEvidenceIndex": 1
+    },
+    {
+      "operation": "check",
+      "certificateEvidenceIndex": 2,
+      "submissionEvidenceIndex": 2
+    },
+    {
+      "operation": "check",
+      "certificateEvidenceIndex": 3,
+      "submissionEvidenceIndex": 3
+    },
+    {
+      "operation": "check",
+      "certificateEvidenceIndex": 4,
+      "submissionEvidenceIndex": 4
+    },
+    {
+      "operation": "check",
+      "certificateEvidenceIndex": 5,
+      "submissionEvidenceIndex": 5
+    },
+    {
+      "operation": "check",
+      "certificateEvidenceIndex": 6,
+      "submissionEvidenceIndex": 6
+    },
+    {
+      "operation": "check",
+      "certificateEvidenceIndex": 7,
+      "submissionEvidenceIndex": 7
+    },
+    {
+      "operation": "check",
+      "certificateEvidenceIndex": 8,
+      "submissionEvidenceIndex": 8
+    },
+    {
+      "operation": "check",
+      "certificateEvidenceIndex": 9,
+      "submissionEvidenceIndex": 9
+    }
+  ]
+}
