@@ -16099,6 +16099,45 @@
       },
       "assessor": "coordinator",
       "reason": "Complete the started configuration and stored-scope outcomes under the normative latest-only serialization constraint before final rollup acceptance."
+    },
+    {
+      "id": "CHECKPOINT-194",
+      "predecessorId": "CHECKPOINT-193",
+      "baselineId": "BASELINE-16",
+      "kind": "neutral",
+      "selectedIds": [
+        "OBL-107",
+        "OBL-108",
+        "OBL-109"
+      ],
+      "registeredIds": [],
+      "certificateIds": [],
+      "invalidatedIds": [],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": {
+        "obligationId": "OBL-107",
+        "operations": [
+          "check"
+        ],
+        "deliverable": "Freeze no-edit renewal scope for binding, selector and lease prerequisites"
+      },
+      "assessor": "coordinator",
+      "reason": "Renew the started binding, selector and frozen lease prerequisite chain without source edits before accepting latest-contract corrections."
     }
   ]
 }

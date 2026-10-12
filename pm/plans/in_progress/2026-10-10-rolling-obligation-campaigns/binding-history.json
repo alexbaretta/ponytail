@@ -6843,6 +6843,130 @@
           "profile": "latest-contracts"
         }
       }
+    },
+    {
+      "id": "BIND-122",
+      "obligationId": "OBL-107",
+      "predecessorId": null,
+      "baselineId": "BASELINE-16",
+      "assessor": "coordinator",
+      "authority": [
+        "user-goal-2026-10-10-rolling-campaigns",
+        "user-goal-2026-10-10-static-language-existing-tsts",
+        "user-2026-10-10-normative-atomic-obligations",
+        "user-2026-10-11-language-scope-our-code-preserve-translations"
+      ],
+      "reason": "Renew stale prerequisite evidence for the existing append-only binding, shared selector and frozen lease contracts. Inspection, existing tests and certificate assessment only; no source edits or changes to obligation conditions or dependencies.",
+      "dependsOn": [],
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/prerequisite-renewal-OBL-107.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/prerequisite-renewal-OBL-107-certificate-binding.json",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/prerequisite-renewal-OBL-108.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/prerequisite-renewal-OBL-108-certificate-binding.json",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/prerequisite-renewal-OBL-109.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/prerequisite-renewal-OBL-109-certificate-binding.json"
+        ],
+        "operations": [
+          "inspect",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "An authorized append-only execution binding amendment changes current prerequisites and bounded permissions while preserving canonical obligation identities and historical bindings."
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "prerequisite-renewal"
+        }
+      }
+    },
+    {
+      "id": "BIND-123",
+      "obligationId": "OBL-108",
+      "predecessorId": null,
+      "baselineId": "BASELINE-16",
+      "assessor": "coordinator",
+      "authority": [
+        "user-goal-2026-10-10-rolling-campaigns",
+        "user-goal-2026-10-10-static-language-existing-tsts",
+        "user-2026-10-10-normative-atomic-obligations",
+        "user-2026-10-11-language-scope-our-code-preserve-translations"
+      ],
+      "reason": "Renew stale prerequisite evidence for the existing append-only binding, shared selector and frozen lease contracts. Inspection, existing tests and certificate assessment only; no source edits or changes to obligation conditions or dependencies.",
+      "dependsOn": [
+        "OBL-107"
+      ],
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/prerequisite-renewal-OBL-107.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/prerequisite-renewal-OBL-107-certificate-binding.json",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/prerequisite-renewal-OBL-108.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/prerequisite-renewal-OBL-108-certificate-binding.json",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/prerequisite-renewal-OBL-109.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/prerequisite-renewal-OBL-109-certificate-binding.json"
+        ],
+        "operations": [
+          "inspect",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "Explicit binding-aware portable and rolling selector queries derive readiness and bounded paths from the same coordinator-authorized current binding projection while preserving historical document and query meanings."
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "prerequisite-renewal"
+        }
+      }
+    },
+    {
+      "id": "BIND-124",
+      "obligationId": "OBL-109",
+      "predecessorId": null,
+      "baselineId": "BASELINE-16",
+      "assessor": "coordinator",
+      "authority": [
+        "user-goal-2026-10-10-rolling-campaigns",
+        "user-goal-2026-10-10-static-language-existing-tsts",
+        "user-2026-10-10-normative-atomic-obligations",
+        "user-2026-10-11-language-scope-our-code-preserve-translations"
+      ],
+      "reason": "Renew stale prerequisite evidence for the existing append-only binding, shared selector and frozen lease contracts. Inspection, existing tests and certificate assessment only; no source edits or changes to obligation conditions or dependencies.",
+      "dependsOn": [
+        "OBL-108"
+      ],
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/prerequisite-renewal-OBL-107.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/prerequisite-renewal-OBL-107-certificate-binding.json",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/prerequisite-renewal-OBL-108.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/prerequisite-renewal-OBL-108-certificate-binding.json",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/prerequisite-renewal-OBL-109.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/prerequisite-renewal-OBL-109-certificate-binding.json"
+        ],
+        "operations": [
+          "inspect",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "An authorized coordinator can issue a portable frozen obligation lease whose generation, graph identity, binding revision and bounded execution permissions remain fixed across later binding amendments."
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "prerequisite-renewal"
+        }
+      }
     }
   ]
 }
