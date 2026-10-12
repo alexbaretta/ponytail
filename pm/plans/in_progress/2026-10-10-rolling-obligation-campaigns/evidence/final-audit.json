@@ -1,6 +1,6 @@
 {
   "status": "in_progress",
-  "sourceRevision": "d237877cebac100b0deb996f3015cfe4d0186ee2",
+  "sourceRevision": "05122abc5c534589cb4702db76939621b973805f",
   "deliveryObligationCount": 91,
   "currentAssessedDeliveryIds": [
     "OBL-22",
@@ -24,7 +24,13 @@
     "OBL-40",
     "OBL-41",
     "OBL-42",
-    "OBL-43"
+    "OBL-43",
+    "OBL-107",
+    "OBL-108",
+    "OBL-109",
+    "OBL-110",
+    "OBL-111",
+    "OBL-112"
   ],
   "remainingAssessmentIsNotUnstartedImplementation": true,
   "authoritativeAcceptanceState": "../obligations.json",

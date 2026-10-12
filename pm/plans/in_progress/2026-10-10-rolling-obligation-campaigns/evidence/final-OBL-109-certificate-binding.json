@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "certificateId": "CERT-166",
+  "lease": {
+    "schemaVersion": 1,
+    "scopeId": "2026-10-10-rolling-obligation-campaigns",
+    "baselineId": "BASELINE-16",
+    "graphDigest": "28c1aa27bedb753460f83b1cecfdb23f9b56e55c735b96be69fee2911a98ec62",
+    "generation": "standalone-frozen-boundaries-CERT-166",
+    "assessor": "coordinator",
+    "authority": [
+      "user-goal-2026-10-10-rolling-campaigns",
+      "user-goal-2026-10-10-static-language-existing-tsts",
+      "user-2026-10-10-normative-atomic-obligations",
+      "user-2026-10-11-language-scope-our-code-preserve-translations"
+    ],
+    "binding": {
+      "obligationId": "OBL-109",
+      "revisionId": "BIND-233",
+      "dependsOn": [
+        "OBL-108"
+      ],
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/final-acceptance.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/final-audit.json",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/design.md",
+          "pm/uat/rolling-campaigns.md",
+          "pm/requirements/traceability.generated.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/final-OBL-109.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/final-OBL-109-certificate-binding.json"
+        ],
+        "operations": [
+          "inspect",
+          "edit",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "An authorized coordinator can issue a portable frozen obligation lease whose generation, graph identity, binding revision and bounded execution permissions remain fixed across later binding amendments."
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "final-acceptance"
+        }
+      }
+    }
+  },
+  "revision": "05122abc5c534589cb4702db76939621b973805f",
+  "proof": [
+    {
+      "operation": "test",
+      "certificateEvidenceIndex": 0,
+      "submissionEvidenceIndex": 0
+    },
+    {
+      "operation": "test",
+      "certificateEvidenceIndex": 1,
+      "submissionEvidenceIndex": 1
+    },
+    {
+      "operation": "check",
+      "certificateEvidenceIndex": 2,
+      "submissionEvidenceIndex": 2
+    }
+  ]
+}
