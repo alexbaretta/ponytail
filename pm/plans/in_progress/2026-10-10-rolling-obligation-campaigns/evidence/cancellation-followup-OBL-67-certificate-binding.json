@@ -1,0 +1,120 @@
+{
+  "schemaVersion": 1,
+  "certificateId": "CERT-134",
+  "lease": {
+    "schemaVersion": 1,
+    "scopeId": "2026-10-10-rolling-obligation-campaigns",
+    "baselineId": "BASELINE-16",
+    "graphDigest": "31880fe94e53976db52b675a89f6e8acdeeaaa3ee7da8c52d699f827d89dc9e4",
+    "generation": "standalone-publication-batch-CERT-134",
+    "assessor": "coordinator",
+    "authority": [
+      "user-goal-2026-10-10-rolling-campaigns",
+      "user-goal-2026-10-10-static-language-existing-tsts",
+      "user-2026-10-10-normative-atomic-obligations",
+      "user-2026-10-11-language-scope-our-code-preserve-translations"
+    ],
+    "binding": {
+      "obligationId": "OBL-67",
+      "revisionId": "BIND-115",
+      "dependsOn": [],
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "src/rolling-operations.ts",
+          "src/rolling-operations.js",
+          "tests/rolling-cli.integration.test.ts",
+          ".agents/config/project/traceability.json",
+          "pm/requirements/traceability.generated.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/cancellation-followup-OBL-66.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/cancellation-followup-OBL-66-certificate-binding.json",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/cancellation-followup-OBL-67.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/cancellation-followup-OBL-67-certificate-binding.json",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/cancellation-followup-OBL-68.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/cancellation-followup-OBL-68-certificate-binding.json",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/cancellation-followup-OBL-69.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/cancellation-followup-OBL-69-certificate-binding.json"
+        ],
+        "operations": [
+          "inspect",
+          "edit",
+          "build",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "Replace legacy plugin-based campaign dispatch while preserving explicit historical inspection boundaries."
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "cancellation-followup"
+        }
+      }
+    }
+  },
+  "revision": "67aef1f5daf057608e905cad82cb04e0e5a972fa",
+  "proof": [
+    {
+      "operation": "test",
+      "certificateEvidenceIndex": 0,
+      "submissionEvidenceIndex": 0
+    },
+    {
+      "operation": "test",
+      "certificateEvidenceIndex": 1,
+      "submissionEvidenceIndex": 1
+    },
+    {
+      "operation": "test",
+      "certificateEvidenceIndex": 2,
+      "submissionEvidenceIndex": 2
+    },
+    {
+      "operation": "check",
+      "certificateEvidenceIndex": 3,
+      "submissionEvidenceIndex": 3
+    },
+    {
+      "operation": "check",
+      "certificateEvidenceIndex": 4,
+      "submissionEvidenceIndex": 4
+    },
+    {
+      "operation": "check",
+      "certificateEvidenceIndex": 5,
+      "submissionEvidenceIndex": 5
+    },
+    {
+      "operation": "check",
+      "certificateEvidenceIndex": 6,
+      "submissionEvidenceIndex": 6
+    },
+    {
+      "operation": "check",
+      "certificateEvidenceIndex": 7,
+      "submissionEvidenceIndex": 7
+    },
+    {
+      "operation": "check",
+      "certificateEvidenceIndex": 8,
+      "submissionEvidenceIndex": 8
+    },
+    {
+      "operation": "check",
+      "certificateEvidenceIndex": 9,
+      "submissionEvidenceIndex": 9
+    },
+    {
+      "operation": "check",
+      "certificateEvidenceIndex": 10,
+      "submissionEvidenceIndex": 10
+    },
+    {
+      "operation": "check",
+      "certificateEvidenceIndex": 11,
+      "submissionEvidenceIndex": 11
+    }
+  ]
+}
