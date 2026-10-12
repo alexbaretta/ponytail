@@ -15570,6 +15570,46 @@
       },
       "assessor": "coordinator",
       "reason": "Discharge the first approved group of four through separate atomic certificates with shared fresh component/database/Git evidence; leave the other delivery and final acceptance gates open."
+    },
+    {
+      "id": "CHECKPOINT-181",
+      "predecessorId": "CHECKPOINT-180",
+      "baselineId": "BASELINE-16",
+      "kind": "neutral",
+      "selectedIds": [
+        "OBL-62",
+        "OBL-63",
+        "OBL-64",
+        "OBL-65"
+      ],
+      "registeredIds": [],
+      "certificateIds": [],
+      "invalidatedIds": [],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": {
+        "obligationId": "OBL-62",
+        "operations": [
+          "inspect"
+        ],
+        "deliverable": "Freeze the second approved four-obligation coordination batch, retaining separate discharge records."
+      },
+      "assessor": "coordinator",
+      "reason": "The first four-obligation batch is discharged. Begin the second approved batch OBL-62 through OBL-65; no new delivery claimed by this scope checkpoint."
     }
   ]
 }

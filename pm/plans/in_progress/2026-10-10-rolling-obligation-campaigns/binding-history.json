@@ -4801,6 +4801,306 @@
           "profile": "publication-batch"
         }
       }
+    },
+    {
+      "id": "BIND-94",
+      "obligationId": "OBL-62",
+      "predecessorId": null,
+      "baselineId": "BASELINE-16",
+      "assessor": "coordinator",
+      "authority": [
+        "user-goal-2026-10-10-rolling-campaigns",
+        "user-goal-2026-10-10-static-language-existing-tsts",
+        "user-2026-10-10-normative-atomic-obligations",
+        "user-2026-10-11-language-scope-our-code-preserve-translations"
+      ],
+      "reason": "Second approved group of four: implement publication race recovery, algorithmic replenishment and next actions, and shared typed initialization/reconciliation; preserve distinct atomic criteria.",
+      "dependsOn": [],
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "src/rolling-publication.ts",
+          "src/rolling-publication.js",
+          "src/rolling-campaign-store.ts",
+          "src/rolling-campaign-store.js",
+          "src/rolling-campaign.ts",
+          "src/rolling-campaign.js",
+          "src/rolling-integration.ts",
+          "src/rolling-integration.js",
+          "src/rolling-operations.ts",
+          "src/rolling-operations.js",
+          "src/rolling-worker.ts",
+          "src/rolling-worker.js",
+          "src/rolling-review.ts",
+          "src/rolling-review.js",
+          "tests/rolling-publication.test.ts",
+          "tests/rolling-publication.integration.test.ts",
+          "tests/rolling-campaign-store.test.ts",
+          "tests/rolling-campaign-store.integration.test.ts",
+          "tests/rolling-campaign.test.ts",
+          "tests/rolling-operations.test.ts",
+          "tests/rolling-operations.integration.test.ts",
+          "tests/rolling-codex.integration.ts",
+          "tests/fixtures/rolling-codex-server.ts",
+          "scripts/project-index.sql",
+          "versioned-data-contracts.json",
+          "scripts/build-runtime.ts",
+          "PROJECT_STRUCTURE.md",
+          ".agents/config/project/traceability.json",
+          "pm/requirements/traceability.generated.md",
+          "pm/uat/rolling-campaigns.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/design.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/coordination-batch-OBL-62.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/coordination-batch-OBL-62-certificate-binding.json",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/coordination-batch-OBL-63.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/coordination-batch-OBL-63-certificate-binding.json",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/coordination-batch-OBL-64.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/coordination-batch-OBL-64-certificate-binding.json",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/coordination-batch-OBL-65.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/coordination-batch-OBL-65-certificate-binding.json"
+        ],
+        "operations": [
+          "inspect",
+          "edit",
+          "build",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "Reconcile mainline push races and unknown outcomes, refresh changed-input proof and synchronize the campaign base."
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "coordination-batch"
+        }
+      }
+    },
+    {
+      "id": "BIND-95",
+      "obligationId": "OBL-63",
+      "predecessorId": null,
+      "baselineId": "BASELINE-16",
+      "assessor": "coordinator",
+      "authority": [
+        "user-goal-2026-10-10-rolling-campaigns",
+        "user-goal-2026-10-10-static-language-existing-tsts",
+        "user-2026-10-10-normative-atomic-obligations",
+        "user-2026-10-11-language-scope-our-code-preserve-translations"
+      ],
+      "reason": "Second approved group of four: implement publication race recovery, algorithmic replenishment and next actions, and shared typed initialization/reconciliation; preserve distinct atomic criteria.",
+      "dependsOn": [],
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "src/rolling-publication.ts",
+          "src/rolling-publication.js",
+          "src/rolling-campaign-store.ts",
+          "src/rolling-campaign-store.js",
+          "src/rolling-campaign.ts",
+          "src/rolling-campaign.js",
+          "src/rolling-integration.ts",
+          "src/rolling-integration.js",
+          "src/rolling-operations.ts",
+          "src/rolling-operations.js",
+          "src/rolling-worker.ts",
+          "src/rolling-worker.js",
+          "src/rolling-review.ts",
+          "src/rolling-review.js",
+          "tests/rolling-publication.test.ts",
+          "tests/rolling-publication.integration.test.ts",
+          "tests/rolling-campaign-store.test.ts",
+          "tests/rolling-campaign-store.integration.test.ts",
+          "tests/rolling-campaign.test.ts",
+          "tests/rolling-operations.test.ts",
+          "tests/rolling-operations.integration.test.ts",
+          "tests/rolling-codex.integration.ts",
+          "tests/fixtures/rolling-codex-server.ts",
+          "scripts/project-index.sql",
+          "versioned-data-contracts.json",
+          "scripts/build-runtime.ts",
+          "PROJECT_STRUCTURE.md",
+          ".agents/config/project/traceability.json",
+          "pm/requirements/traceability.generated.md",
+          "pm/uat/rolling-campaigns.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/design.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/coordination-batch-OBL-62.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/coordination-batch-OBL-62-certificate-binding.json",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/coordination-batch-OBL-63.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/coordination-batch-OBL-63-certificate-binding.json",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/coordination-batch-OBL-64.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/coordination-batch-OBL-64-certificate-binding.json",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/coordination-batch-OBL-65.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/coordination-batch-OBL-65-certificate-binding.json"
+        ],
+        "operations": [
+          "inspect",
+          "edit",
+          "build",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "Replenish capacity from events and periodic reconciliation without duplicating allocations."
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "coordination-batch"
+        }
+      }
+    },
+    {
+      "id": "BIND-96",
+      "obligationId": "OBL-64",
+      "predecessorId": null,
+      "baselineId": "BASELINE-16",
+      "assessor": "coordinator",
+      "authority": [
+        "user-goal-2026-10-10-rolling-campaigns",
+        "user-goal-2026-10-10-static-language-existing-tsts",
+        "user-2026-10-10-normative-atomic-obligations",
+        "user-2026-10-11-language-scope-our-code-preserve-translations"
+      ],
+      "reason": "Second approved group of four: implement publication race recovery, algorithmic replenishment and next actions, and shared typed initialization/reconciliation; preserve distinct atomic criteria.",
+      "dependsOn": [],
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "src/rolling-publication.ts",
+          "src/rolling-publication.js",
+          "src/rolling-campaign-store.ts",
+          "src/rolling-campaign-store.js",
+          "src/rolling-campaign.ts",
+          "src/rolling-campaign.js",
+          "src/rolling-integration.ts",
+          "src/rolling-integration.js",
+          "src/rolling-operations.ts",
+          "src/rolling-operations.js",
+          "src/rolling-worker.ts",
+          "src/rolling-worker.js",
+          "src/rolling-review.ts",
+          "src/rolling-review.js",
+          "tests/rolling-publication.test.ts",
+          "tests/rolling-publication.integration.test.ts",
+          "tests/rolling-campaign-store.test.ts",
+          "tests/rolling-campaign-store.integration.test.ts",
+          "tests/rolling-campaign.test.ts",
+          "tests/rolling-operations.test.ts",
+          "tests/rolling-operations.integration.test.ts",
+          "tests/rolling-codex.integration.ts",
+          "tests/fixtures/rolling-codex-server.ts",
+          "scripts/project-index.sql",
+          "versioned-data-contracts.json",
+          "scripts/build-runtime.ts",
+          "PROJECT_STRUCTURE.md",
+          ".agents/config/project/traceability.json",
+          "pm/requirements/traceability.generated.md",
+          "pm/uat/rolling-campaigns.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/design.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/coordination-batch-OBL-62.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/coordination-batch-OBL-62-certificate-binding.json",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/coordination-batch-OBL-63.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/coordination-batch-OBL-63-certificate-binding.json",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/coordination-batch-OBL-64.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/coordination-batch-OBL-64-certificate-binding.json",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/coordination-batch-OBL-65.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/coordination-batch-OBL-65-certificate-binding.json"
+        ],
+        "operations": [
+          "inspect",
+          "edit",
+          "build",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "Project exact next actions, prerequisite reasons and active/inactive/review/publication state for coordinator decisions."
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "coordination-batch"
+        }
+      }
+    },
+    {
+      "id": "BIND-97",
+      "obligationId": "OBL-65",
+      "predecessorId": null,
+      "baselineId": "BASELINE-16",
+      "assessor": "coordinator",
+      "authority": [
+        "user-goal-2026-10-10-rolling-campaigns",
+        "user-goal-2026-10-10-static-language-existing-tsts",
+        "user-2026-10-10-normative-atomic-obligations",
+        "user-2026-10-11-language-scope-our-code-preserve-translations"
+      ],
+      "reason": "Second approved group of four: implement publication race recovery, algorithmic replenishment and next actions, and shared typed initialization/reconciliation; preserve distinct atomic criteria.",
+      "dependsOn": [],
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "src/rolling-publication.ts",
+          "src/rolling-publication.js",
+          "src/rolling-campaign-store.ts",
+          "src/rolling-campaign-store.js",
+          "src/rolling-campaign.ts",
+          "src/rolling-campaign.js",
+          "src/rolling-integration.ts",
+          "src/rolling-integration.js",
+          "src/rolling-operations.ts",
+          "src/rolling-operations.js",
+          "src/rolling-worker.ts",
+          "src/rolling-worker.js",
+          "src/rolling-review.ts",
+          "src/rolling-review.js",
+          "tests/rolling-publication.test.ts",
+          "tests/rolling-publication.integration.test.ts",
+          "tests/rolling-campaign-store.test.ts",
+          "tests/rolling-campaign-store.integration.test.ts",
+          "tests/rolling-campaign.test.ts",
+          "tests/rolling-operations.test.ts",
+          "tests/rolling-operations.integration.test.ts",
+          "tests/rolling-codex.integration.ts",
+          "tests/fixtures/rolling-codex-server.ts",
+          "scripts/project-index.sql",
+          "versioned-data-contracts.json",
+          "scripts/build-runtime.ts",
+          "PROJECT_STRUCTURE.md",
+          ".agents/config/project/traceability.json",
+          "pm/requirements/traceability.generated.md",
+          "pm/uat/rolling-campaigns.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/design.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/coordination-batch-OBL-62.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/coordination-batch-OBL-62-certificate-binding.json",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/coordination-batch-OBL-63.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/coordination-batch-OBL-63-certificate-binding.json",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/coordination-batch-OBL-64.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/coordination-batch-OBL-64-certificate-binding.json",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/coordination-batch-OBL-65.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/coordination-batch-OBL-65-certificate-binding.json"
+        ],
+        "operations": [
+          "inspect",
+          "edit",
+          "build",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "Initialize and reconcile a campaign through the shared typed application operation layer."
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "coordination-batch"
+        }
+      }
     }
   ]
 }
