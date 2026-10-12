@@ -124,5 +124,228 @@
       "tmp/final-readme-legacy-help.log"
     ],
     "certificateEffect": "Existing certificates explicitly hash README.md. Preserve historical records and renew assessment of unchanged implementation after the corrected documentary input is committed."
-  }
+  },
+  "fullNativeSuite": {
+    "sourceRevision": "a1cc7dc74f8b897062d238d177290ea35bf8894b",
+    "sourceTreeInitiallyClean": true,
+    "command": "node --test '--test-name-pattern=^(live|native App Server)' dist/tests/rolling-codex.integration.js",
+    "startedAt": "2026-10-12T10:20:55.298227+00:00",
+    "completedAt": "2026-10-12T10:36:55.740194+00:00",
+    "exitCode": 0,
+    "passed": 12,
+    "failures": 0,
+    "skips": 0,
+    "cancelled": 0,
+    "cases": [
+      "live adversarial reviewer rejects the exact bad candidate and persists its decision after restart",
+      "live replacement reviewer freshly reviews the exact candidate after recorded original reviewer loss",
+      "native App Server starts and resumes the same session in the designated existing checkout",
+      "live worker provisioning binds the reserved checkout and persists its actual native session after restart",
+      "live attached worker receives exact obligation, traceability, frozen lease and QA instructions",
+      "live worker suspension observes idle native activity and retains its dirty checkout while freeing capacity",
+      "live worker resumption restores its original native session with refreshed scope and campaign base",
+      "live worker creation recovery attaches original initialization after coordinator and native connection restart",
+      "live worker implements and semantically rebases its exact candidate before submission",
+      "live rejected candidate returns to its original worker and is accepted by its original reviewer after correction and semantic rebase",
+      "live worker acknowledges retirement, becomes idle and reconciles archival of the same actor",
+      "live no-edit worker submits actual inspection proof and reaches review without a code commit"
+    ],
+    "documentationOnlyChangesDuringRun": [
+      "README.md",
+      "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/final-audit.json",
+      "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/plan.md"
+    ]
+  },
+  "requirementInspectionSnapshot": [
+    {
+      "requirementId": "REQ-ROLLING-CONFIGURATION",
+      "canonicalSource": "pm/requirements/rolling-campaigns.md",
+      "baselineId": "BASELINE-16",
+      "atomicObligationIds": [
+        "OBL-22",
+        "OBL-23",
+        "OBL-24",
+        "OBL-36",
+        "OBL-37"
+      ],
+      "aggregateAssessmentPending": true
+    },
+    {
+      "requirementId": "REQ-ROLLING-GRAPH",
+      "canonicalSource": "pm/requirements/rolling-campaigns.md",
+      "baselineId": "BASELINE-16",
+      "atomicObligationIds": [
+        "OBL-25",
+        "OBL-26",
+        "OBL-27",
+        "OBL-35",
+        "OBL-56",
+        "OBL-107",
+        "OBL-108",
+        "OBL-109",
+        "OBL-110",
+        "OBL-111",
+        "OBL-112"
+      ],
+      "aggregateAssessmentPending": true
+    },
+    {
+      "requirementId": "REQ-ROLLING-SCHEDULING",
+      "canonicalSource": "pm/requirements/rolling-campaigns.md",
+      "baselineId": "BASELINE-16",
+      "atomicObligationIds": [
+        "OBL-28",
+        "OBL-29",
+        "OBL-30",
+        "OBL-31",
+        "OBL-34",
+        "OBL-46",
+        "OBL-47",
+        "OBL-63",
+        "OBL-110"
+      ],
+      "aggregateAssessmentPending": true
+    },
+    {
+      "requirementId": "REQ-ROLLING-STATE",
+      "canonicalSource": "pm/requirements/rolling-campaigns.md",
+      "baselineId": "BASELINE-16",
+      "atomicObligationIds": [
+        "OBL-31",
+        "OBL-32",
+        "OBL-33",
+        "OBL-34",
+        "OBL-35",
+        "OBL-44",
+        "OBL-46",
+        "OBL-47",
+        "OBL-48",
+        "OBL-56",
+        "OBL-57",
+        "OBL-58",
+        "OBL-62",
+        "OBL-63",
+        "OBL-64",
+        "OBL-69",
+        "OBL-110",
+        "OBL-111"
+      ],
+      "aggregateAssessmentPending": true
+    },
+    {
+      "requirementId": "REQ-ROLLING-WORKERS",
+      "canonicalSource": "pm/requirements/rolling-campaigns.md",
+      "baselineId": "BASELINE-16",
+      "atomicObligationIds": [
+        "OBL-36",
+        "OBL-37",
+        "OBL-38",
+        "OBL-39",
+        "OBL-40",
+        "OBL-41",
+        "OBL-42",
+        "OBL-43",
+        "OBL-44",
+        "OBL-45",
+        "OBL-46",
+        "OBL-47",
+        "OBL-48",
+        "OBL-57",
+        "OBL-111"
+      ],
+      "aggregateAssessmentPending": true
+    },
+    {
+      "requirementId": "REQ-ROLLING-REVIEW",
+      "canonicalSource": "pm/requirements/rolling-campaigns.md",
+      "baselineId": "BASELINE-16",
+      "atomicObligationIds": [
+        "OBL-49",
+        "OBL-50",
+        "OBL-51",
+        "OBL-52",
+        "OBL-53",
+        "OBL-54",
+        "OBL-55",
+        "OBL-56"
+      ],
+      "aggregateAssessmentPending": true
+    },
+    {
+      "requirementId": "REQ-ROLLING-PUBLICATION",
+      "canonicalSource": "pm/requirements/rolling-campaigns.md",
+      "baselineId": "BASELINE-16",
+      "atomicObligationIds": [
+        "OBL-54",
+        "OBL-55",
+        "OBL-58",
+        "OBL-59",
+        "OBL-60",
+        "OBL-61",
+        "OBL-62"
+      ],
+      "aggregateAssessmentPending": true
+    },
+    {
+      "requirementId": "REQ-ROLLING-INTERFACES",
+      "canonicalSource": "pm/requirements/rolling-campaigns.md",
+      "baselineId": "BASELINE-16",
+      "atomicObligationIds": [
+        "OBL-63",
+        "OBL-64",
+        "OBL-65",
+        "OBL-66",
+        "OBL-67",
+        "OBL-68",
+        "OBL-69"
+      ],
+      "aggregateAssessmentPending": true
+    },
+    {
+      "requirementId": "REQ-PONYTAIL-STATIC-LANGUAGE",
+      "canonicalSource": "pm/requirements/static-language.md",
+      "baselineId": "BASELINE-16",
+      "atomicObligationIds": [
+        "OBL-70",
+        "OBL-71",
+        "OBL-72",
+        "OBL-73",
+        "OBL-74",
+        "OBL-75",
+        "OBL-76",
+        "OBL-77",
+        "OBL-78",
+        "OBL-79",
+        "OBL-80",
+        "OBL-81",
+        "OBL-82",
+        "OBL-83",
+        "OBL-84",
+        "OBL-85",
+        "OBL-86",
+        "OBL-87",
+        "OBL-88",
+        "OBL-89",
+        "OBL-90",
+        "OBL-91",
+        "OBL-92",
+        "OBL-93",
+        "OBL-94",
+        "OBL-95",
+        "OBL-96",
+        "OBL-97",
+        "OBL-98",
+        "OBL-99",
+        "OBL-100",
+        "OBL-101",
+        "OBL-102",
+        "OBL-103",
+        "OBL-104",
+        "OBL-105",
+        "OBL-106"
+      ],
+      "aggregateAssessmentPending": true
+    }
+  ],
+  "requirementInspectionSnapshotIsDerived": true
 }
