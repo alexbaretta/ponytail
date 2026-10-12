@@ -5101,6 +5101,274 @@
           "profile": "coordination-batch"
         }
       }
+    },
+    {
+      "id": "BIND-98",
+      "obligationId": "OBL-58",
+      "predecessorId": "BIND-90",
+      "baselineId": "BASELINE-16",
+      "assessor": "coordinator",
+      "authority": [
+        "user-goal-2026-10-10-rolling-campaigns",
+        "user-goal-2026-10-10-static-language-existing-tsts",
+        "user-2026-10-10-normative-atomic-obligations",
+        "user-2026-10-11-language-scope-our-code-preserve-translations"
+      ],
+      "reason": "Revalidate the reopened publication group using separate successor evidence and the confirmed early-return fixture regression.",
+      "dependsOn": [],
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "scripts/build-runtime.ts",
+          "PROJECT_STRUCTURE.md",
+          ".agents/config/project/traceability.json",
+          "pm/debugging-pattern-observations/2026-10-11-publication_fixture_symlink_ignore.json",
+          "pm/debugging-pattern-observations/2026-10-11-publication_nested_test_environment.json",
+          "src/rolling-publication.ts",
+          "src/rolling-publication.js",
+          "src/rolling-campaign-store.ts",
+          "src/rolling-campaign-store.js",
+          "src/rolling-campaign.ts",
+          "src/rolling-campaign.js",
+          "src/rolling-integration.ts",
+          "src/rolling-integration.js",
+          "tests/rolling-publication.test.ts",
+          "tests/rolling-publication.integration.test.ts",
+          "tests/rolling-campaign-store.integration.test.ts",
+          "tests/fixtures/rolling-publication-qa.ts",
+          "scripts/project-index.sql",
+          "versioned-data-contracts.json",
+          "pm/requirements/traceability.generated.md",
+          "pm/uat/rolling-campaigns.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/design.md",
+          "pm/debugging-pattern-observations/2026-10-11-publication_fixture_early_return.json",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/publication-revalidated-OBL-58.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/publication-revalidated-OBL-58-certificate-binding.json",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/publication-revalidated-OBL-59.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/publication-revalidated-OBL-59-certificate-binding.json",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/publication-revalidated-OBL-60.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/publication-revalidated-OBL-60-certificate-binding.json",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/publication-revalidated-OBL-61.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/publication-revalidated-OBL-61-certificate-binding.json"
+        ],
+        "operations": [
+          "inspect",
+          "edit",
+          "build",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "Freeze publication at M accepted increments; resubmissions and bookkeeping do not increment the count."
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "publication-batch"
+        }
+      }
+    },
+    {
+      "id": "BIND-99",
+      "obligationId": "OBL-59",
+      "predecessorId": "BIND-91",
+      "baselineId": "BASELINE-16",
+      "assessor": "coordinator",
+      "authority": [
+        "user-goal-2026-10-10-rolling-campaigns",
+        "user-goal-2026-10-10-static-language-existing-tsts",
+        "user-2026-10-10-normative-atomic-obligations",
+        "user-2026-10-11-language-scope-our-code-preserve-translations"
+      ],
+      "reason": "Revalidate the reopened publication group using separate successor evidence and the confirmed early-return fixture regression.",
+      "dependsOn": [],
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "scripts/build-runtime.ts",
+          "PROJECT_STRUCTURE.md",
+          ".agents/config/project/traceability.json",
+          "pm/debugging-pattern-observations/2026-10-11-publication_fixture_symlink_ignore.json",
+          "pm/debugging-pattern-observations/2026-10-11-publication_nested_test_environment.json",
+          "src/rolling-publication.ts",
+          "src/rolling-publication.js",
+          "src/rolling-campaign-store.ts",
+          "src/rolling-campaign-store.js",
+          "src/rolling-campaign.ts",
+          "src/rolling-campaign.js",
+          "src/rolling-integration.ts",
+          "src/rolling-integration.js",
+          "tests/rolling-publication.test.ts",
+          "tests/rolling-publication.integration.test.ts",
+          "tests/rolling-campaign-store.integration.test.ts",
+          "tests/fixtures/rolling-publication-qa.ts",
+          "scripts/project-index.sql",
+          "versioned-data-contracts.json",
+          "pm/requirements/traceability.generated.md",
+          "pm/uat/rolling-campaigns.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/design.md",
+          "pm/debugging-pattern-observations/2026-10-11-publication_fixture_early_return.json",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/publication-revalidated-OBL-58.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/publication-revalidated-OBL-58-certificate-binding.json",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/publication-revalidated-OBL-59.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/publication-revalidated-OBL-59-certificate-binding.json",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/publication-revalidated-OBL-60.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/publication-revalidated-OBL-60-certificate-binding.json",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/publication-revalidated-OBL-61.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/publication-revalidated-OBL-61-certificate-binding.json"
+        ],
+        "operations": [
+          "inspect",
+          "edit",
+          "build",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "Flush a nonempty partial publication batch at explicit flush, completion or quiescence."
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "publication-batch"
+        }
+      }
+    },
+    {
+      "id": "BIND-100",
+      "obligationId": "OBL-60",
+      "predecessorId": "BIND-92",
+      "baselineId": "BASELINE-16",
+      "assessor": "coordinator",
+      "authority": [
+        "user-goal-2026-10-10-rolling-campaigns",
+        "user-goal-2026-10-10-static-language-existing-tsts",
+        "user-2026-10-10-normative-atomic-obligations",
+        "user-2026-10-11-language-scope-our-code-preserve-translations"
+      ],
+      "reason": "Revalidate the reopened publication group using separate successor evidence and the confirmed early-return fixture regression.",
+      "dependsOn": [],
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "scripts/build-runtime.ts",
+          "PROJECT_STRUCTURE.md",
+          ".agents/config/project/traceability.json",
+          "pm/debugging-pattern-observations/2026-10-11-publication_fixture_symlink_ignore.json",
+          "pm/debugging-pattern-observations/2026-10-11-publication_nested_test_environment.json",
+          "src/rolling-publication.ts",
+          "src/rolling-publication.js",
+          "src/rolling-campaign-store.ts",
+          "src/rolling-campaign-store.js",
+          "src/rolling-campaign.ts",
+          "src/rolling-campaign.js",
+          "src/rolling-integration.ts",
+          "src/rolling-integration.js",
+          "tests/rolling-publication.test.ts",
+          "tests/rolling-publication.integration.test.ts",
+          "tests/rolling-campaign-store.integration.test.ts",
+          "tests/fixtures/rolling-publication-qa.ts",
+          "scripts/project-index.sql",
+          "versioned-data-contracts.json",
+          "pm/requirements/traceability.generated.md",
+          "pm/uat/rolling-campaigns.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/design.md",
+          "pm/debugging-pattern-observations/2026-10-11-publication_fixture_early_return.json",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/publication-revalidated-OBL-58.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/publication-revalidated-OBL-58-certificate-binding.json",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/publication-revalidated-OBL-59.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/publication-revalidated-OBL-59-certificate-binding.json",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/publication-revalidated-OBL-60.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/publication-revalidated-OBL-60-certificate-binding.json",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/publication-revalidated-OBL-61.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/publication-revalidated-OBL-61-certificate-binding.json"
+        ],
+        "operations": [
+          "inspect",
+          "edit",
+          "build",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "Incorporate fresh mainline into the publication candidate while preserving published campaign history."
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "publication-batch"
+        }
+      }
+    },
+    {
+      "id": "BIND-101",
+      "obligationId": "OBL-61",
+      "predecessorId": "BIND-93",
+      "baselineId": "BASELINE-16",
+      "assessor": "coordinator",
+      "authority": [
+        "user-goal-2026-10-10-rolling-campaigns",
+        "user-goal-2026-10-10-static-language-existing-tsts",
+        "user-2026-10-10-normative-atomic-obligations",
+        "user-2026-10-11-language-scope-our-code-preserve-translations"
+      ],
+      "reason": "Revalidate the reopened publication group using separate successor evidence and the confirmed early-return fixture regression.",
+      "dependsOn": [],
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "scripts/build-runtime.ts",
+          "PROJECT_STRUCTURE.md",
+          ".agents/config/project/traceability.json",
+          "pm/debugging-pattern-observations/2026-10-11-publication_fixture_symlink_ignore.json",
+          "pm/debugging-pattern-observations/2026-10-11-publication_nested_test_environment.json",
+          "src/rolling-publication.ts",
+          "src/rolling-publication.js",
+          "src/rolling-campaign-store.ts",
+          "src/rolling-campaign-store.js",
+          "src/rolling-campaign.ts",
+          "src/rolling-campaign.js",
+          "src/rolling-integration.ts",
+          "src/rolling-integration.js",
+          "tests/rolling-publication.test.ts",
+          "tests/rolling-publication.integration.test.ts",
+          "tests/rolling-campaign-store.integration.test.ts",
+          "tests/fixtures/rolling-publication-qa.ts",
+          "scripts/project-index.sql",
+          "versioned-data-contracts.json",
+          "pm/requirements/traceability.generated.md",
+          "pm/uat/rolling-campaigns.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/design.md",
+          "pm/debugging-pattern-observations/2026-10-11-publication_fixture_early_return.json",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/publication-revalidated-OBL-58.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/publication-revalidated-OBL-58-certificate-binding.json",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/publication-revalidated-OBL-59.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/publication-revalidated-OBL-59-certificate-binding.json",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/publication-revalidated-OBL-60.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/publication-revalidated-OBL-60-certificate-binding.json",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/publication-revalidated-OBL-61.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/publication-revalidated-OBL-61-certificate-binding.json"
+        ],
+        "operations": [
+          "inspect",
+          "edit",
+          "build",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "Prevent mainline publication unless all required full QA passes on the exact candidate."
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "publication-batch"
+        }
+      }
     }
   ]
 }

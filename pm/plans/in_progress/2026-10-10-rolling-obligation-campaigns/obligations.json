@@ -15649,6 +15649,46 @@
       "preparation": null,
       "assessor": "coordinator",
       "reason": "Reopen the first publication group: an automatic-increment fixture early return bypassed later batch and mainline assertions in some named scenarios. Prior green outputs do not prove the advertised database Arc. Preserve history, invalidate those assessments and completion-first revalidate the affected operations before continuing the second group."
+    },
+    {
+      "id": "CHECKPOINT-183",
+      "predecessorId": "CHECKPOINT-182",
+      "baselineId": "BASELINE-16",
+      "kind": "neutral",
+      "selectedIds": [
+        "OBL-58",
+        "OBL-59",
+        "OBL-60",
+        "OBL-61"
+      ],
+      "registeredIds": [],
+      "certificateIds": [],
+      "invalidatedIds": [],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": {
+        "obligationId": "OBL-58",
+        "operations": [
+          "inspect"
+        ],
+        "deliverable": "Revalidate actual publication phases after removing an incompatible harness early return; preserve invalidated historical evidence."
+      },
+      "assessor": "coordinator",
+      "reason": "Extend reopened publication bindings for successor evidence and the confirmed harness observation; no discharge claimed."
     }
   ]
 }
