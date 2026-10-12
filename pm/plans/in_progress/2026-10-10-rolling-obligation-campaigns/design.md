@@ -466,3 +466,21 @@ operational distinction without emitting historical wire versions or duplicating
 lease-owned paths. The existing PostgreSQL payload-version constraints admit
 V3 alongside the retained input versions; no campaign or assignment is silently
 migrated in storage.
+
+## Final coordinator worker decision audit
+
+The coherent PostgreSQL snapshot includes current-generation worker instruction
+receipts alongside assignments, creation/resumption actions, reviews and publication
+state. An attached working owner with no instruction receipt receives
+`dispatch-worker`; a known attached instruction turn receives `collect-submission`.
+A started receipt without a known turn reports `instruction_turn_unknown` and
+retains its original assignment and dispatch identity. It never suggests another
+instruction turn. Pending original attachment/resumption is observed first.
+Stopped and retired owners receive no new instruction suggestion.
+
+Rejected work receives `suspend-worker` with an empty blocker list, which the
+store permits only for returning rejected work (or its retained inactive replay).
+After verified cessation, normal `replenish` reserves the original inactive owner
+before allocating new work, and `resume-worker` refreshes the same session's
+scope/generation. Direct dispatch from REWORK is invalid and is not suggested.
+The CLI and MCP share these decisions and the same immutable stored receipts.

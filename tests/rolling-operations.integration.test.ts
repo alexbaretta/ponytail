@@ -10,7 +10,7 @@ import {createInterface} from 'node:readline';
 import {Pool} from 'pg';
 import {databaseOptions} from '../src/project-index-database.js';
 import {fixture,git} from './helpers/obligation-fixture.js';
-import {RollingCampaignStore,type RollingExecutionConfigV3} from '../src/rolling-campaign-store.js';
+import {RollingCampaignStore,type RollingExecutionConfigV3,type RollingWorkerDispatchStarted,type RollingWorkerDispatchAttached} from '../src/rolling-campaign-store.js';
 import {RollingCampaignOperations,type RollingCampaignInitializationV1,type RollingReplenishment} from '../src/rolling-operations.js';
 import type {RollingProjectConfigV1,RollingBindingsV1} from '../src/rolling-campaign.js';
 import {acceptCheckpoint,inputDigest,type ObligationCertificate,type ObligationCheckpoint,type ObligationDocumentV1,type Obligation,type ObligationVector} from '../skills/plan-execution/scripts/obligations.js';
@@ -146,6 +146,28 @@ test('shared operations initialize defaults and reconcile event/periodic content
  await rollingCampaignStore.acknowledgeAction('pilot',rollingAction.id,rollingAction.generation,'STARTED');
  await rollingCampaignStore.acknowledgeAction('pilot',rollingAction.id,rollingAction.generation,'COMPLETED','isolated stopped-session fixture');
  await rollingCampaignStore.attachSession('pilot',firstRollingStoredAssignment.id,firstRollingStoredAssignment.generation,'session-fixture');
+ const workingRollingCoordinatorActions=await rollingCampaignOperations.nextActions('pilot');
+ assert.ok(workingRollingCoordinatorActions.decisions.some(decision=>decision.kind === 'assignment' && decision.command === 'dispatch-worker' && decision.assignment.id === firstRollingStoredAssignment.id));
+ // Stored native receipts are fixture data here; this Arc exercises real PostgreSQL
+ // snapshot/decision boundaries, without claiming native turn execution.
+ const rollingWorkerDispatchStarted:RollingWorkerDispatchStarted={id:crypto.randomUUID(),threadId:'receipt-fixture',instructions:'bounded snapshot fixture',state:'STARTED'};
+ await pool.query("INSERT INTO ponytail_index.rolling_worker_dispatch_v1(project_id,campaign_id,assignment_id,generation,dispatch_id,thread_id,instructions_text,state) VALUES($1,$2,$3,$4,$5,$6,$7,$8)",
+  [projectId,'pilot',firstRollingStoredAssignment.id,firstRollingStoredAssignment.generation,rollingWorkerDispatchStarted.id,rollingWorkerDispatchStarted.threadId,rollingWorkerDispatchStarted.instructions,rollingWorkerDispatchStarted.state]);
+ const unknownRollingCoordinatorActions=await rollingCampaignOperations.nextActions('pilot');
+ assert.deepEqual(unknownRollingCoordinatorActions.snapshot.workerDispatches,[{assignmentId:firstRollingStoredAssignment.id,generation:firstRollingStoredAssignment.generation,dispatch:rollingWorkerDispatchStarted}]);
+ assert.ok(unknownRollingCoordinatorActions.decisions.some(decision=>decision.kind === 'blocked-worker-dispatch' && decision.assignment.id === firstRollingStoredAssignment.id));
+ const rollingWorkerDispatchAttached:RollingWorkerDispatchAttached={...rollingWorkerDispatchStarted,state:'ATTACHED',turnId:'retained-turn'};
+ await pool.query("UPDATE ponytail_index.rolling_worker_dispatch_v1 SET state=$4,turn_id=$5 WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3",
+  [projectId,'pilot',firstRollingStoredAssignment.id,rollingWorkerDispatchAttached.state,rollingWorkerDispatchAttached.turnId]);
+ const attachedRollingCoordinatorActions=await rollingCampaignOperations.nextActions('pilot');
+ assert.deepEqual(attachedRollingCoordinatorActions.snapshot.workerDispatches,[{assignmentId:firstRollingStoredAssignment.id,generation:firstRollingStoredAssignment.generation,dispatch:rollingWorkerDispatchAttached}]);
+ assert.ok(attachedRollingCoordinatorActions.decisions.some(decision=>decision.kind === 'assignment' && decision.command === 'collect-submission' && decision.assignment.id === firstRollingStoredAssignment.id));
+ await verifyMcpParity(root,rollingCampaignOperations);
+ await pool.query("UPDATE ponytail_index.rolling_worker_dispatch_v1 SET generation=$4 WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3",[projectId,'pilot',firstRollingStoredAssignment.id,crypto.randomUUID()]);
+ const staleRollingCoordinatorActions=await rollingCampaignOperations.nextActions('pilot');
+ assert.deepEqual(staleRollingCoordinatorActions.snapshot.workerDispatches,[]);
+ assert.ok(staleRollingCoordinatorActions.decisions.some(decision=>decision.kind === 'assignment' && decision.command === 'dispatch-worker' && decision.assignment.id === firstRollingStoredAssignment.id));
+ await pool.query("DELETE FROM ponytail_index.rolling_worker_dispatch_v1 WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3",[projectId,'pilot',firstRollingStoredAssignment.id]);
  await rollingCampaignStore.suspend('pilot',firstRollingStoredAssignment.id,firstRollingStoredAssignment.generation,true,['OBL-7']);
  const inactiveRollingCoordinatorSnapshot = await rollingCampaignOperations.status('pilot');
  assert.equal(inactiveRollingCoordinatorSnapshot.scheduling.activeCount,1);

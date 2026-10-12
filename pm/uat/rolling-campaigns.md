@@ -9,8 +9,11 @@ Licensed under the MIT License. See LICENSE in the project root.
 
 Actor: coordinator and independent workers. Prerequisites: isolated project
 fixtures, configured PostgreSQL roles, direct Codex session capability and no
-live campaign ownership. Expected outcomes below are required; automation and
-runtime evidence are pending implementation, not claimed passing.
+live campaign ownership. Expected outcomes below remain required. Automated
+component, PostgreSQL, CLI/MCP and native execution evidence now exists.
+Whole-campaign acceptance remains pending current certificate renewal and
+requirement/inventory rollups; a passing contribution does not discharge its
+entire requirement.
 
 ## Arc ROLL-CONFIG: Resolve and retain configuration
 
@@ -136,8 +139,9 @@ Every Step above identifies its contribution to atomic obligations. The existing
 observations are minimum demonstrations: evaluate each referenced canonical
 criterion in full, adding its necessary assertions before declaring discharge.
 Several Steps may contribute jointly; one passing contribution is not whole
-obligation or requirement acceptance. All runtime acceptance remains pending
-until adequate execution evidence is recorded.
+obligation or requirement acceptance. Current satisfaction is derived from the
+canonical obligation document and its actual input hashes; retained historical
+runtime results do not establish freshness after relevant inputs change.
 
 ### Acceptance ROLL-BINDING-AMENDMENT
 
@@ -178,3 +182,24 @@ Step ROLL-WORKER-SUBMIT demonstrates [OBL-111](../plans/in_progress/2026-10-10-r
 Traceability: verifies REQ-ROLLING-GRAPH
 
 Step ROLL-ACCEPT-BINDING demonstrates [OBL-112](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-112): read an actual retained PostgreSQL submission, reconcile its Git candidate in a disposable coordinator checkout, and accept only fresh proof for its frozen current binding. Reject stale or forged references, changed inputs and unmet current prerequisites while preserving legacy V1 meanings.
+
+## Recorded execution and remaining acceptance
+
+The component and integration selections are executable through the repository's
+configured Node commands after strict TypeScript compilation. The full clean-tree
+`npm test` run on `ff5bb07` passed 883 tests, including the PostgreSQL and actual
+CLI/MCP adapter cases; TSTS checked 1,253 files without violations. The explicit
+native selection `node --test --test-name-pattern='^(live|native App Server)'
+dist/tests/rolling-codex.integration.js` subsequently passed all 11 native cases.
+It established exact-checkout instruction loading/resumption, worker attachment,
+blocking/resumption/recovery, real implementation with semantic rebase, rejected
+work returned to the same worker/reviewer, replacement review, and retirement.
+It began on `dede454`, before the final OBL-64 projection repair, and is retained
+as evidence for that revision, rather than claimed as final current-tree proof.
+
+The [final evidence record](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/final-acceptance.md)
+retains that invocation and subsequent final verification. OBL-64 regressions
+cover working-worker dispatch, known-turn collection, uncertain creation,
+attachment/generation fences and suspension before rejected-work resumption.
+Current certificate assessment and all final rollups remain required; neither
+this Suite nor its execution commands bypass their adequacy and freshness gates.

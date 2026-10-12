@@ -3,7 +3,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {projectRollingCoordinatorActions,parseRollingCampaignInitialization,readRollingCampaignInitializationV1,type RollingCampaignInitializationV1} from '../src/rolling-operations.js';
-import type {RollingCoordinatorSnapshot,RollingAction,RollingPublicationStatus} from '../src/rolling-campaign-store.js';
+import type {RollingCoordinatorSnapshot,RollingAction,RollingPublicationStatus,RollingStoredAssignment,RollingWorkerDispatchAttached,RollingWorkerDispatchStarted,RollingStoredWorkerDispatch} from '../src/rolling-campaign-store.js';
 import type {RollingWorkerSelection,RollingBinding,RollingSchedulingBlock} from '../src/rolling-campaign.js';
 
 function snapshot():RollingCoordinatorSnapshot {
@@ -11,7 +11,7 @@ function snapshot():RollingCoordinatorSnapshot {
  const rollingWorkerSelection:RollingWorkerSelection = {kind:'start_worker',assignmentId:null,obligationId:'OBL-1',plannedPaths:['src/current.ts'],exclusiveResources:[],binding:rollingBinding};
  const rollingSchedulingBlock:RollingSchedulingBlock = {reason:'prerequisites',obligationId:'OBL-2',prerequisites:['OBL-1']};
  return {closure:null,graphDigest:'a'.repeat(64),observedGraphDigest:'a'.repeat(64),configuration:{schemaVersion:3,bindingHistory:null,mainline:{remote:'origin',branch:'main'},incrementRef:'campaign/proof',maxActiveWorkers:2,publicationSize:1},
-  assignments:[],actions:[],reviews:[],publications:[],scheduling:{digest:'a'.repeat(64),activeCount:0,availableCapacity:1,selected:[rollingWorkerSelection],blocked:[rollingSchedulingBlock]}};
+  assignments:[],actions:[],reviews:[],workerDispatches:[],publications:[],scheduling:{digest:'a'.repeat(64),activeCount:0,availableCapacity:1,selected:[rollingWorkerSelection],blocked:[rollingSchedulingBlock]}};
 }
 
 // Traceability: verifies REQ-ROLLING-INTERFACES
@@ -53,4 +53,55 @@ test('unknown publication is observed before worker replenishment and never sugg
   claim:{schemaVersion:1,id:'00000000-0000-0000-0000-000000000001',campaignId:'proof',rootPath:'/coordinator',incrementRef:'campaign/proof',target:{remote:'origin',branch:'main'},graphDigest:'a'.repeat(64),configurationDigest:'b'.repeat(64),publicationSize:1,trigger:'threshold',increments:[{id:'00000000-0000-0000-0000-000000000002',revision:'c'.repeat(40)}],campaignRevision:'c'.repeat(40)}};
  const rollingCoordinatorSnapshot:RollingCoordinatorSnapshot = {...snapshot(),publications:[rollingPublicationStatus]};
  assert.deepEqual(projectRollingCoordinatorActions(rollingCoordinatorSnapshot).decisions,[{kind:'publication',command:'observe-mainline',publication:rollingPublicationStatus},{kind:'replenish',graphDigest:rollingCoordinatorSnapshot.graphDigest}]);
+});
+
+function workingAssignment():RollingStoredAssignment {
+ const rollingBinding:RollingBinding={obligationId:'OBL-1',implementationIds:[],sourcePaths:['src/current.ts'],acceptances:[],unitTests:[],integrationTests:[],exclusiveResources:[]};
+ return {id:'worker',scopeId:'pilot',obligationId:'OBL-1',state:'WORKING',blockers:[],activityStopped:false,
+  plannedPaths:['src/current.ts'],exclusiveResources:[],generation:'generation',sessionId:'session',retired:false,worktreeNumber:101,binding:rollingBinding,lease:null};
+}
+
+// Traceability: verifies REQ-ROLLING-INTERFACES
+// Traceability: verifies REQ-ROLLING-WORKERS
+test('attached working worker receives an executable next action before new allocations',()=> {
+ const rollingStoredAssignment:RollingStoredAssignment=workingAssignment();
+ const rollingCoordinatorSnapshot:RollingCoordinatorSnapshot={...snapshot(),assignments:[rollingStoredAssignment]};
+ assert.deepEqual(projectRollingCoordinatorActions(rollingCoordinatorSnapshot).decisions,
+  [{kind:'assignment',command:'dispatch-worker',assignment:rollingStoredAssignment},{kind:'replenish',graphDigest:rollingCoordinatorSnapshot.graphDigest}]);
+});
+
+// Traceability: verifies REQ-ROLLING-INTERFACES
+// Traceability: verifies REQ-ROLLING-REVIEW
+test('rejected work stops its original worker before resume-first replenishment',()=> {
+ const rollingStoredAssignment:RollingStoredAssignment={...workingAssignment(),state:'REWORK',activityStopped:true};
+ const rollingCoordinatorSnapshot:RollingCoordinatorSnapshot={...snapshot(),assignments:[rollingStoredAssignment]};
+ assert.deepEqual(projectRollingCoordinatorActions(rollingCoordinatorSnapshot).decisions,
+  [{kind:'worker-suspension',command:'suspend-worker',assignment:rollingStoredAssignment,blockers:[]},{kind:'replenish',graphDigest:rollingCoordinatorSnapshot.graphDigest}]);
+});
+
+// Traceability: verifies REQ-ROLLING-INTERFACES
+// Traceability: verifies REQ-ROLLING-STATE
+test('known worker instruction is collected and unknown creation keeps its original ownership',()=> {
+ const rollingStoredAssignment:RollingStoredAssignment=workingAssignment();
+ const rollingWorkerDispatchAttached:RollingWorkerDispatchAttached={id:'dispatch',threadId:'thread',instructions:'bounded work',state:'ATTACHED',turnId:'turn'};
+ const rollingStoredWorkerDispatch:RollingStoredWorkerDispatch={assignmentId:rollingStoredAssignment.id,generation:rollingStoredAssignment.generation,dispatch:rollingWorkerDispatchAttached};
+ const rollingCoordinatorSnapshot:RollingCoordinatorSnapshot={...snapshot(),assignments:[rollingStoredAssignment],workerDispatches:[rollingStoredWorkerDispatch]};
+ assert.deepEqual(projectRollingCoordinatorActions(rollingCoordinatorSnapshot).decisions[0],{kind:'assignment',command:'collect-submission',assignment:rollingStoredAssignment});
+ const rollingWorkerDispatchStarted:RollingWorkerDispatchStarted={id:'dispatch',threadId:'thread',instructions:'bounded work',state:'STARTED'};
+ const unknownRollingCoordinatorSnapshot:RollingCoordinatorSnapshot={...rollingCoordinatorSnapshot,workerDispatches:[{...rollingStoredWorkerDispatch,dispatch:rollingWorkerDispatchStarted}]};
+ assert.deepEqual(projectRollingCoordinatorActions(unknownRollingCoordinatorSnapshot).decisions[0],{kind:'blocked-worker-dispatch',reason:'instruction_turn_unknown',assignment:rollingStoredAssignment,dispatch:rollingWorkerDispatchStarted});
+ const staleRollingCoordinatorSnapshot:RollingCoordinatorSnapshot={...rollingCoordinatorSnapshot,workerDispatches:[{...rollingStoredWorkerDispatch,generation:'old-generation'}]};
+ assert.deepEqual(projectRollingCoordinatorActions(staleRollingCoordinatorSnapshot).decisions[0],{kind:'assignment',command:'dispatch-worker',assignment:rollingStoredAssignment});
+});
+
+// Traceability: verifies REQ-ROLLING-INTERFACES
+// Traceability: verifies REQ-ROLLING-WORKERS
+test('pending original attachment is observed before worker dispatch and stopped workers are not restarted',()=> {
+ const rollingStoredAssignment:RollingStoredAssignment=workingAssignment();
+ const rollingAction:RollingAction={id:'action',assignmentId:rollingStoredAssignment.id,generation:rollingStoredAssignment.generation,kind:'START_WORKER',state:'STARTED'};
+ const rollingCoordinatorSnapshot:RollingCoordinatorSnapshot={...snapshot(),assignments:[rollingStoredAssignment],actions:[rollingAction]};
+ assert.equal(projectRollingCoordinatorActions(rollingCoordinatorSnapshot).decisions[0]?.kind,'worker');
+ assert.ok(!projectRollingCoordinatorActions(rollingCoordinatorSnapshot).decisions.some(decision=>decision.kind === 'assignment'));
+ const stoppedRollingCoordinatorSnapshot:RollingCoordinatorSnapshot={...rollingCoordinatorSnapshot,actions:[],assignments:[{...rollingStoredAssignment,activityStopped:true}]};
+ assert.ok(!projectRollingCoordinatorActions(stoppedRollingCoordinatorSnapshot).decisions.some(decision=>decision.kind === 'assignment'));
 });

@@ -212,6 +212,16 @@ function readStoredReview(row) {
         (0, rolling_review_js_1.validateRollingReviewOutcome)(rollingReviewRequestV1, rollingReviewOutcomeV1);
     return { request: rollingReviewRequestV1, outcome: rollingReviewOutcomeV1 };
 }
+function readWorkerDispatch(row) {
+    const rollingWorkerDispatchIdentity = { id: stringColumn(row.dispatch_id, 'worker dispatch'),
+        threadId: stringColumn(row.thread_id, 'worker thread'), instructions: stringColumn(row.instructions_text, 'worker instructions') };
+    if (row.state === 'STARTED') {
+        requireState(row.turn_id === null, 'started worker dispatch has a turn');
+        return { ...rollingWorkerDispatchIdentity, state: 'STARTED' };
+    }
+    requireState(row.state === 'ATTACHED', 'invalid worker dispatch state');
+    return { ...rollingWorkerDispatchIdentity, state: 'ATTACHED', turnId: stringColumn(row.turn_id, 'worker turn') };
+}
 function worktreeNumber(value) {
     requireState(typeof value === 'number' || typeof value === 'string' && /^(0|[1-9][0-9]*)$/.test(value), 'invalid database worktree number');
     const number = Number(value);
@@ -1419,6 +1429,7 @@ class RollingCampaignStore {
             const rollingExecutionConfigV3 = parseRollingExecutionConfig(rollingCampaignRow.configuration_text);
             const assignments = (await poolClient.query('SELECT * FROM ponytail_index.rolling_assignment_v1 WHERE project_id=$1 ORDER BY created_at,assignment_id', [this.projectId])).rows.map(readAssignment);
             const actions = (await poolClient.query("SELECT * FROM ponytail_index.rolling_action_v1 WHERE project_id=$1 AND campaign_id=$2 AND state IN ('PENDING','STARTED') ORDER BY created_at,action_id", [this.projectId, campaignId])).rows.map(value => { const { resultText, ...rollingAction } = readAction(value); return rollingAction; });
+            const workerDispatches = (await poolClient.query("SELECT d.* FROM ponytail_index.rolling_worker_dispatch_v1 d JOIN ponytail_index.rolling_assignment_v1 a USING(project_id,campaign_id,assignment_id,generation) WHERE d.project_id=$1 AND d.campaign_id=$2 AND a.state<>'RELEASED' ORDER BY d.created_at,d.assignment_id", [this.projectId, campaignId])).rows.map((row) => ({ assignmentId: stringColumn(row.assignment_id, 'worker dispatch assignment'), generation: stringColumn(row.generation, 'worker dispatch generation'), dispatch: readWorkerDispatch(row) }));
             const reviews = (await poolClient.query("SELECT r.request_text,r.outcome_text FROM ponytail_index.rolling_review_v1 r JOIN ponytail_index.rolling_assignment_v1 a USING(project_id,campaign_id,assignment_id) WHERE r.project_id=$1 AND r.campaign_id=$2 AND r.replacement_text IS NULL AND a.state IN ('REVIEW','REWORK','INTEGRATING') ORDER BY r.created_at,r.review_id", [this.projectId, campaignId])).rows.map(readStoredReview);
             const publications = (await poolClient.query("SELECT * FROM ponytail_index.rolling_publication_batch_v1 WHERE project_id=$1 AND campaign_id=$2 AND (state<>'PUBLISHED' OR synchronized_revision IS NULL) ORDER BY created_at,batch_id", [this.projectId, campaignId])).rows.map((row) => ({
                 claim: (0, rolling_publication_js_1.readRollingPublicationBatchClaimV1)(readStateText(stringColumn(row.claim_text, 'publication claim'))), state: publicationState(row.state),
@@ -1427,7 +1438,7 @@ class RollingCampaignStore {
             return { graphDigest: rollingCampaignRow.graph_digest, observedGraphDigest: rollingGraph.digest, configuration: rollingExecutionConfigV3,
                 closure: rollingCampaignRow.closure_text === null ? null : readRollingCampaignClosureV1(readStateText(rollingCampaignRow.closure_text)),
                 assignments: assignments.filter(assignment => assignment.scopeId === campaignId),
-                scheduling: (0, rolling_campaign_js_1.selectRollingAssignments)(rollingGraph, assignments, rollingExecutionConfigV3.maxActiveWorkers, rollingGraph.digest), actions, reviews, publications };
+                scheduling: (0, rolling_campaign_js_1.selectRollingAssignments)(rollingGraph, assignments, rollingExecutionConfigV3.maxActiveWorkers, rollingGraph.digest), actions, reviews, workerDispatches, publications };
         }, true);
     }
     async closeCampaign(campaignId) {
@@ -1677,14 +1688,7 @@ class RollingCampaignStore {
         const row = (await this.pool.query('SELECT * FROM ponytail_index.rolling_worker_dispatch_v1 WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3 AND generation=$4', [this.projectId, campaignId, id, generation])).rows[0];
         if (!row)
             return null;
-        const rollingWorkerDispatchIdentity = { id: stringColumn(row.dispatch_id, 'worker dispatch'),
-            threadId: stringColumn(row.thread_id, 'worker thread'), instructions: stringColumn(row.instructions_text, 'worker instructions') };
-        if (row.state === 'STARTED') {
-            requireState(row.turn_id === null, 'started worker dispatch has a turn');
-            return { ...rollingWorkerDispatchIdentity, state: 'STARTED' };
-        }
-        requireState(row.state === 'ATTACHED', 'invalid worker dispatch state');
-        return { ...rollingWorkerDispatchIdentity, state: 'ATTACHED', turnId: stringColumn(row.turn_id, 'worker turn') };
+        return readWorkerDispatch(row);
     }
     async attachWorkerDispatch(campaignId, id, generation, dispatchId, turnId) {
         requireState(turnId.trim().length > 0, 'worker turn identity is empty');

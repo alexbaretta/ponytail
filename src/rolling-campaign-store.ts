@@ -176,6 +176,7 @@ export interface RollingPublicationContext {
  readonly candidate:RollingMainlineCandidateV1 | null;readonly qaJob:RollingPublicationQaJobV1 | null;readonly qa:RollingPublicationQaV1 | null;
  readonly refreshIntent:RollingMainlineRefreshIntentV1 | null;readonly refreshPreparation:RollingMainlineRefreshPreparationV1 | null;readonly refreshResult:RollingMainlineRefreshResultV1 | null;
 }
+export interface RollingStoredWorkerDispatch {readonly assignmentId:string;readonly generation:string;readonly dispatch:RollingWorkerDispatch}
 export interface RollingCoordinatorSnapshot extends RollingCampaignStatus {
   readonly closure:RollingCampaignClosureV1 | null;
   readonly observedGraphDigest: string;
@@ -183,6 +184,7 @@ export interface RollingCoordinatorSnapshot extends RollingCampaignStatus {
   readonly scheduling: RollingSchedulingResult;
   readonly actions: readonly RollingAction[];
   readonly reviews: readonly RollingStoredReview[];
+  readonly workerDispatches:readonly RollingStoredWorkerDispatch[];
   readonly publications: readonly RollingPublicationStatus[];
 }
 export type RollingActionState = 'PENDING' | 'STARTED' | 'COMPLETED' | 'CANCELLED';
@@ -352,6 +354,13 @@ function readStoredReview(row: Record<string,unknown>): RollingStoredReview {
   const rollingReviewOutcomeV1 = text === null ? null : parseRollingReviewOutcome(text);
   if (rollingReviewOutcomeV1) validateRollingReviewOutcome(rollingReviewRequestV1, rollingReviewOutcomeV1);
   return { request: rollingReviewRequestV1, outcome: rollingReviewOutcomeV1 };
+}
+function readWorkerDispatch(row:Record<string,unknown>):RollingWorkerDispatch {
+  const rollingWorkerDispatchIdentity: RollingWorkerDispatchIdentity = {id:stringColumn(row.dispatch_id,'worker dispatch'),
+    threadId:stringColumn(row.thread_id,'worker thread'),instructions:stringColumn(row.instructions_text,'worker instructions')};
+  if (row.state === 'STARTED') {requireState(row.turn_id === null,'started worker dispatch has a turn');return {...rollingWorkerDispatchIdentity,state:'STARTED'};}
+  requireState(row.state === 'ATTACHED','invalid worker dispatch state');
+  return {...rollingWorkerDispatchIdentity,state:'ATTACHED',turnId:stringColumn(row.turn_id,'worker turn')};
 }
 function worktreeNumber(value: unknown): number {
   requireState(typeof value === 'number' || typeof value === 'string' && /^(0|[1-9][0-9]*)$/.test(value), 'invalid database worktree number');
@@ -1701,6 +1710,7 @@ export class RollingCampaignStore {
       const rollingExecutionConfigV3 = parseRollingExecutionConfig(rollingCampaignRow.configuration_text);
       const assignments = (await poolClient.query<Record<string,unknown>>('SELECT * FROM ponytail_index.rolling_assignment_v1 WHERE project_id=$1 ORDER BY created_at,assignment_id',[this.projectId])).rows.map(readAssignment);
       const actions = (await poolClient.query<Record<string,unknown>>("SELECT * FROM ponytail_index.rolling_action_v1 WHERE project_id=$1 AND campaign_id=$2 AND state IN ('PENDING','STARTED') ORDER BY created_at,action_id",[this.projectId,campaignId])).rows.map(value => {const {resultText,...rollingAction} = readAction(value); return rollingAction;});
+      const workerDispatches=(await poolClient.query<Record<string,unknown>>("SELECT d.* FROM ponytail_index.rolling_worker_dispatch_v1 d JOIN ponytail_index.rolling_assignment_v1 a USING(project_id,campaign_id,assignment_id,generation) WHERE d.project_id=$1 AND d.campaign_id=$2 AND a.state<>'RELEASED' ORDER BY d.created_at,d.assignment_id",[this.projectId,campaignId])).rows.map((row):RollingStoredWorkerDispatch=>({assignmentId:stringColumn(row.assignment_id,'worker dispatch assignment'),generation:stringColumn(row.generation,'worker dispatch generation'),dispatch:readWorkerDispatch(row)}));
       const reviews = (await poolClient.query<Record<string,unknown>>("SELECT r.request_text,r.outcome_text FROM ponytail_index.rolling_review_v1 r JOIN ponytail_index.rolling_assignment_v1 a USING(project_id,campaign_id,assignment_id) WHERE r.project_id=$1 AND r.campaign_id=$2 AND r.replacement_text IS NULL AND a.state IN ('REVIEW','REWORK','INTEGRATING') ORDER BY r.created_at,r.review_id",[this.projectId,campaignId])).rows.map(readStoredReview);
       const publications = (await poolClient.query<Record<string,unknown>>("SELECT * FROM ponytail_index.rolling_publication_batch_v1 WHERE project_id=$1 AND campaign_id=$2 AND (state<>'PUBLISHED' OR synchronized_revision IS NULL) ORDER BY created_at,batch_id",[this.projectId,campaignId])).rows.map((row):RollingPublicationStatus => ({
         claim:readRollingPublicationBatchClaimV1(readStateText(stringColumn(row.claim_text,'publication claim'))),state:publicationState(row.state),
@@ -1709,7 +1719,7 @@ export class RollingCampaignStore {
       return {graphDigest:rollingCampaignRow.graph_digest,observedGraphDigest:rollingGraph.digest,configuration:rollingExecutionConfigV3,
         closure:rollingCampaignRow.closure_text === null ? null : readRollingCampaignClosureV1(readStateText(rollingCampaignRow.closure_text)),
         assignments:assignments.filter(assignment=>assignment.scopeId === campaignId),
-        scheduling:selectRollingAssignments(rollingGraph,assignments,rollingExecutionConfigV3.maxActiveWorkers,rollingGraph.digest),actions,reviews,publications};
+        scheduling:selectRollingAssignments(rollingGraph,assignments,rollingExecutionConfigV3.maxActiveWorkers,rollingGraph.digest),actions,reviews,workerDispatches,publications};
     },true);
   }
 
@@ -2053,11 +2063,7 @@ export class RollingCampaignStore {
       'SELECT * FROM ponytail_index.rolling_worker_dispatch_v1 WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3 AND generation=$4',
       [this.projectId,campaignId,id,generation])).rows[0];
     if (!row) return null;
-    const rollingWorkerDispatchIdentity: RollingWorkerDispatchIdentity = {id:stringColumn(row.dispatch_id,'worker dispatch'),
-      threadId:stringColumn(row.thread_id,'worker thread'),instructions:stringColumn(row.instructions_text,'worker instructions')};
-    if (row.state === 'STARTED') {requireState(row.turn_id === null,'started worker dispatch has a turn');return {...rollingWorkerDispatchIdentity,state:'STARTED'};}
-    requireState(row.state === 'ATTACHED','invalid worker dispatch state');
-    return {...rollingWorkerDispatchIdentity,state:'ATTACHED',turnId:stringColumn(row.turn_id,'worker turn')};
+    return readWorkerDispatch(row);
   }
 
   // Traceability: implements REQ-ROLLING-WORKERS

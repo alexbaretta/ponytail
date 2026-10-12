@@ -123,10 +123,30 @@ function projectRollingCoordinatorActions(rollingCoordinatorSnapshot) {
     for (const review of rollingCoordinatorSnapshot.reviews)
         if (review.outcome === null)
             decisions.push({ kind: 'review', command: 'inspect-review', review });
-    for (const assignment of rollingCoordinatorSnapshot.assignments)
-        if (['REVIEW', 'REWORK', 'INTEGRATING', 'RETIRING'].includes(assignment.state)
-            && !rollingCoordinatorSnapshot.reviews.some(review => review.request.assignmentId === assignment.id && review.outcome === null))
-            decisions.push({ kind: 'assignment', command: assignment.state === 'REVIEW' ? 'request-review' : assignment.state === 'REWORK' ? 'dispatch-worker' : assignment.state === 'INTEGRATING' ? 'integrate' : 'retire-worker', assignment });
+    for (const rollingStoredAssignment of rollingCoordinatorSnapshot.assignments) {
+        if (rollingCoordinatorSnapshot.actions.some(rollingAction => rollingAction.assignmentId === rollingStoredAssignment.id && rollingAction.generation === rollingStoredAssignment.generation))
+            continue;
+        if (rollingStoredAssignment.state === 'WORKING' && !rollingStoredAssignment.retired && !rollingStoredAssignment.activityStopped && rollingStoredAssignment.sessionId !== null) {
+            const rollingWorkerDispatch = rollingCoordinatorSnapshot.workerDispatches.find(rollingStoredWorkerDispatch => rollingStoredWorkerDispatch.assignmentId === rollingStoredAssignment.id && rollingStoredWorkerDispatch.generation === rollingStoredAssignment.generation)?.dispatch;
+            switch (rollingWorkerDispatch?.state) {
+                case undefined:
+                    decisions.push({ kind: 'assignment', command: 'dispatch-worker', assignment: rollingStoredAssignment });
+                    break;
+                case 'ATTACHED':
+                    decisions.push({ kind: 'assignment', command: 'collect-submission', assignment: rollingStoredAssignment });
+                    break;
+                case 'STARTED':
+                    decisions.push({ kind: 'blocked-worker-dispatch', reason: 'instruction_turn_unknown', assignment: rollingStoredAssignment, dispatch: rollingWorkerDispatch });
+                    break;
+                default: rollingWorkerDispatch;
+            }
+        }
+        else if (rollingStoredAssignment.state === 'REWORK')
+            decisions.push({ kind: 'worker-suspension', command: 'suspend-worker', assignment: rollingStoredAssignment, blockers: [] });
+        else if (['REVIEW', 'INTEGRATING', 'RETIRING'].includes(rollingStoredAssignment.state)
+            && !rollingCoordinatorSnapshot.reviews.some(review => review.request.assignmentId === rollingStoredAssignment.id && review.outcome === null))
+            decisions.push({ kind: 'assignment', command: rollingStoredAssignment.state === 'REVIEW' ? 'request-review' : rollingStoredAssignment.state === 'INTEGRATING' ? 'integrate' : 'retire-worker', assignment: rollingStoredAssignment });
+    }
     for (const action of rollingCoordinatorSnapshot.actions)
         decisions.push({ kind: 'worker', command: action.kind === 'START_WORKER' ? action.state === 'PENDING' ? 'provision-worker' : 'recover-worker' : action.state === 'PENDING' ? 'resume-worker' : 'observe-resumption', action });
     if (rollingCoordinatorSnapshot.scheduling.selected.length > 0)
