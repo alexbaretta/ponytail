@@ -65,7 +65,7 @@ retains all 91 registered atomic delivery obligations and invalidates affected
 certificates for explicit renewal. This amendment awards no completion.
 
 - Plan ID: `2026-10-10-rolling-obligation-campaigns`
-- **Status:** `in_progress`
+- **Status:** `closed`
 - Management and component repository: Ponytail in the supplied checkout.
 - Implementation authority: stakeholder goal on 2026-10-10: "Finish
   documenting this campaign, the implement it. If possible, do away with the
@@ -82,7 +82,7 @@ certificates for explicit renewal. This amendment awards no completion.
 - Execution contract: [design](design.md).
 
 <!-- ponytail-plan-campaign
-{"schemaVersion":3,"id":"2026-10-10-rolling-obligation-campaigns","parent_plan_id":null,"depends_on":[],"obligation_document":"pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/compliance-obligations.json"}
+{"schemaVersion":3,"id":"2026-10-10-rolling-obligation-campaigns","parent_plan_id":null,"depends_on":[],"obligation_document":"pm/plans/closed/2026-10-10-rolling-obligation-campaigns/compliance-obligations.json"}
 -->
 
 ## Objective

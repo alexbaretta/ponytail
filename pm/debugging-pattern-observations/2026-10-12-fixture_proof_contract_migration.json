@@ -3,7 +3,7 @@
   "observation_id": "2026-10-12-fixture_proof_contract_migration",
   "recorded_at": "2026-10-12T14:31:40-07:00",
   "source_references": [
-    "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/native-git-proof-contract-failure.md",
+    "pm/plans/closed/2026-10-10-rolling-obligation-campaigns/evidence/native-git-proof-contract-failure.md",
     "commit:318d1a1"
   ],
   "context": {
