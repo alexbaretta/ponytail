@@ -15610,6 +15610,45 @@
       },
       "assessor": "coordinator",
       "reason": "The first four-obligation batch is discharged. Begin the second approved batch OBL-62 through OBL-65; no new delivery claimed by this scope checkpoint."
+    },
+    {
+      "id": "CHECKPOINT-182",
+      "predecessorId": "CHECKPOINT-181",
+      "baselineId": "BASELINE-16",
+      "kind": "disturbance",
+      "selectedIds": [
+        "OBL-58",
+        "OBL-59",
+        "OBL-60",
+        "OBL-61"
+      ],
+      "registeredIds": [],
+      "certificateIds": [],
+      "invalidatedIds": [
+        "CERT-117",
+        "CERT-118",
+        "CERT-119",
+        "CERT-120"
+      ],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": null,
+      "assessor": "coordinator",
+      "reason": "Reopen the first publication group: an automatic-increment fixture early return bypassed later batch and mainline assertions in some named scenarios. Prior green outputs do not prove the advertised database Arc. Preserve history, invalidate those assessments and completion-first revalidate the affected operations before continuing the second group."
     }
   ]
 }
