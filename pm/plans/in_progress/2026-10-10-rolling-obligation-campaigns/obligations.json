@@ -15819,6 +15819,86 @@
       },
       "assessor": "coordinator",
       "reason": "The first two approved groups are discharged. Begin the final group OBL-66 through OBL-69; no delivery or final acceptance claimed by this scope checkpoint."
+    },
+    {
+      "id": "CHECKPOINT-187",
+      "predecessorId": "CHECKPOINT-186",
+      "baselineId": "BASELINE-16",
+      "kind": "neutral",
+      "selectedIds": [
+        "OBL-66",
+        "OBL-67",
+        "OBL-68",
+        "OBL-69"
+      ],
+      "registeredIds": [],
+      "certificateIds": [],
+      "invalidatedIds": [],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": {
+        "obligationId": "OBL-66",
+        "operations": [
+          "inspect"
+        ],
+        "deliverable": "Extend the frozen final group to include the explicit historical CLI reader migration regression discovered during full acceptance."
+      },
+      "assessor": "coordinator",
+      "reason": "The first two approved groups are discharged. Begin the final group OBL-66 through OBL-69; no delivery or final acceptance claimed by this scope checkpoint."
+    },
+    {
+      "id": "CHECKPOINT-188",
+      "predecessorId": "CHECKPOINT-187",
+      "baselineId": "BASELINE-16",
+      "kind": "neutral",
+      "selectedIds": [
+        "OBL-66",
+        "OBL-67",
+        "OBL-68",
+        "OBL-69"
+      ],
+      "registeredIds": [],
+      "certificateIds": [],
+      "invalidatedIds": [],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": {
+        "obligationId": "OBL-66",
+        "operations": [
+          "inspect"
+        ],
+        "deliverable": "Extend the final group to repair the stale campaign request-validation message assertion found by full typed acceptance."
+      },
+      "assessor": "coordinator",
+      "reason": "The first two approved groups are discharged. Begin the final group OBL-66 through OBL-69; no delivery or final acceptance claimed by this scope checkpoint."
     }
   ]
 }
