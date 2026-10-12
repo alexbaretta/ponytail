@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-10-12-fixture_proof_contract_migration",
+  "recorded_at": "2026-10-12T14:31:40-07:00",
+  "source_references": [
+    "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/native-git-proof-contract-failure.md",
+    "commit:318d1a1"
+  ],
+  "context": {
+    "languages": [
+      "typescript"
+    ],
+    "frameworks": [
+      "node:test"
+    ],
+    "components": [
+      "native worker/reviewer fixture"
+    ],
+    "affected_boundaries": [
+      "test-owned requirements to latest worker proof contract"
+    ],
+    "code_references": [
+      "tests/rolling-campaign-store.integration.test.ts:1127"
+    ]
+  },
+  "observed_behavior": "The original reviewer rejected corrected, rebased and tested work because fixture requirements demanded hashes of sources and ignored logs.",
+  "expected_behavior": "A correct candidate with current Git revision/path evidence is accepted after fresh review; invalid candidates remain rejected.",
+  "causal_mechanism": "Production writers changed to Git-backed evidence while the independently authored fixture requirement retained the historical hash contract. The reviewer correctly enforced the obsolete fixture text.",
+  "anti_pattern": {
+    "structural_description": "A representation migration updated producers but left executable acceptance inputs describing the former representation.",
+    "why_it_fails": "The integration workflow enforces an obsolete contract against a valid latest writer."
+  },
+  "correct_pattern": {
+    "required_invariant": "Test-owned acceptance requirements agree with the current public evidence contract.",
+    "implementation_description": "Use tracked revision/path evidence, retain ignored outputs for inspection, and log the final review before asserting acceptance."
+  },
+  "applicability_conditions": [
+    "An integration actor reads fixture requirements as authoritative instructions.",
+    "The latest representation differs from the historical one preserved by readers."
+  ],
+  "known_non_matches": [
+    "Product collection accepted the corrected submission; malformed submission shape and unfinished rebase were not the rejection cause."
+  ],
+  "confirmation_evidence": [
+    "The retained original reviewer final verdict identified only missing source/output hashes.",
+    "The targeted native code/rebase and same-reviewer correction workflows both passed after changing the fixture requirement."
+  ],
+  "regression_proofs": [
+    "tests/rolling-codex.integration.ts: live rejected candidate returns to its original worker and is accepted by its original reviewer after correction and semantic rebase",
+    "tests/rolling-codex.integration.ts: live worker implements and semantically rebases its exact candidate before submission"
+  ]
+}
