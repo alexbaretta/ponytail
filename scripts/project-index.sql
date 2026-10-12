@@ -276,7 +276,7 @@ ALTER TABLE rolling_campaign_v1
   DROP CONSTRAINT IF EXISTS rolling_campaign_v1_configuration_text_check,
   ADD CONSTRAINT rolling_campaign_v1_configuration_text_check
   CHECK (COALESCE(jsonb_typeof((configuration_text::jsonb)->'schemaVersion') = 'number'
-    AND (configuration_text::jsonb)->>'schemaVersion' IN ('1','2'), false));
+    AND (configuration_text::jsonb)->>'schemaVersion' IN ('1','2','3'), false));
 
 CREATE TABLE IF NOT EXISTS rolling_worktree_v1 (
   project_id uuid NOT NULL REFERENCES rolling_pool_v1(project_id) ON DELETE CASCADE,
@@ -311,7 +311,7 @@ ALTER TABLE rolling_assignment_v1
   DROP CONSTRAINT IF EXISTS rolling_assignment_v1_scope_text_check,
   ADD CONSTRAINT rolling_assignment_v1_scope_text_check
   CHECK (COALESCE(jsonb_typeof((scope_text::jsonb)->'schemaVersion') = 'number'
-    AND (scope_text::jsonb)->>'schemaVersion' IN ('1','2'), false));
+    AND (scope_text::jsonb)->>'schemaVersion' IN ('1','2','3'), false));
 CREATE UNIQUE INDEX IF NOT EXISTS rolling_assignment_v1_obligation_owner
 ON rolling_assignment_v1 (project_id,campaign_id,obligation_id) WHERE state <> 'RELEASED';
 CREATE UNIQUE INDEX IF NOT EXISTS rolling_assignment_v1_worktree_owner

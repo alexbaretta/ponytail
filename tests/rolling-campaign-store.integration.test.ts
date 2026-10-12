@@ -13,7 +13,7 @@ import { stringify } from 'lossless-json';
 import {prepareRollingMainlineRefresh,mergeRollingMainlineRefresh,observeRollingMainlineRefresh,prepareRollingMainline,mergeRollingMainline,observeRollingMainlineCandidate,runRollingPublicationQa} from '../src/rolling-publication.js';
 import { databaseOptions } from '../src/project-index-database.js';
 import { collectRollingGraph, parseRollingProjectConfig,type RollingPhysicalProjectConfig, type RollingProjectConfigV1, type RollingBindingsV1, type RollingBinding, type RollingGraph } from '../src/rolling-campaign.js';
-import { RollingCampaignStore, type RollingCampaignRegistration, type RollingAllocationResult, type RollingWorkerDispatchAttached, type RollingReviewDispatchAttached, type RollingSessionAttachment, type RollingStoredAssignment, type RollingCampaignStatus } from '../src/rolling-campaign-store.js';
+import { RollingCampaignStore, type RollingCampaignRegistration, type RollingAllocationResult, type RollingWorkerDispatchAttached, type RollingReviewDispatchAttached, type RollingSessionAttachment, type RollingStoredAssignment, type RollingExecutionConfigV1, type RollingAssignmentScopeV1, type RollingExecutionConfigV2, type RollingAssignmentScopeV2, type RollingCampaignStatus } from '../src/rolling-campaign-store.js';
 import { inputDigest, parseObligationDocument, type ObligationDocumentV1, type ObligationBaseline, type Obligation, type ObligationCertificate, type ObligationCheckpoint } from '../skills/plan-execution/scripts/obligations.js';
 import type { ObligationBindingHistoryV1, ObligationBindingRevisionV1 } from '../skills/plan-execution/scripts/obligation-binding-history.js';
 import type { ObligationEvidence } from '../skills/plan-execution/scripts/obligations.js';
@@ -161,6 +161,22 @@ export async function runRollingReviewScenario(t: TestContext, reviewScenario: R
   assert.equal(firstAllocation.worktree.number, 101);
   assert.equal(allocations.filter(item => item.reason === 'capacity_reached').length, 3);
   const firstRollingStoredAssignment: RollingStoredAssignment = firstAllocation.assignment;
+  const physicalCampaignRow=(await pool.query<Record<string,unknown>>('SELECT configuration_text FROM ponytail_index.rolling_campaign_v1 WHERE project_id=$1 AND campaign_id=$2',[projectId,'fixture'])).rows[0];assert.ok(physicalCampaignRow && typeof physicalCampaignRow.configuration_text === 'string');
+  const physicalConfiguration:unknown=JSON.parse(physicalCampaignRow.configuration_text);assert.ok(physicalConfiguration !== null && typeof physicalConfiguration === 'object' && 'schemaVersion' in physicalConfiguration);assert.equal(physicalConfiguration.schemaVersion,3);
+  const physicalAssignmentRow=(await pool.query<Record<string,unknown>>('SELECT scope_text FROM ponytail_index.rolling_assignment_v1 WHERE project_id=$1 AND assignment_id=$2',[projectId,firstRollingStoredAssignment.id])).rows[0];assert.ok(physicalAssignmentRow && typeof physicalAssignmentRow.scope_text === 'string');
+  const physicalScope:unknown=JSON.parse(physicalAssignmentRow.scope_text);assert.ok(physicalScope !== null && typeof physicalScope === 'object' && 'schemaVersion' in physicalScope);assert.equal(physicalScope.schemaVersion,3);
+  const rollingCoordinatorSnapshot=await rollingCampaignStore.coordinatorSnapshot('fixture');
+  const rollingExecutionConfigV1:RollingExecutionConfigV1={schemaVersion:1,mainline:rollingCoordinatorSnapshot.configuration.mainline,incrementRef:rollingCoordinatorSnapshot.configuration.incrementRef,maxActiveWorkers:rollingCoordinatorSnapshot.configuration.maxActiveWorkers,publicationSize:rollingCoordinatorSnapshot.configuration.publicationSize};
+  const rollingAssignmentScopeV1:RollingAssignmentScopeV1={schemaVersion:1,plannedPaths:firstRollingStoredAssignment.plannedPaths,exclusiveResources:firstRollingStoredAssignment.exclusiveResources,binding:firstRollingStoredAssignment.binding};
+  const configurationBytes=JSON.stringify(rollingExecutionConfigV1),scopeBytes=JSON.stringify(rollingAssignmentScopeV1);
+  await pool.query('UPDATE ponytail_index.rolling_campaign_v1 SET configuration_text=$3 WHERE project_id=$1 AND campaign_id=$2',[projectId,'fixture',configurationBytes]);
+  await pool.query('UPDATE ponytail_index.rolling_assignment_v1 SET scope_text=$3 WHERE project_id=$1 AND assignment_id=$2',[projectId,firstRollingStoredAssignment.id,scopeBytes]);
+  assert.deepEqual((await rollingCampaignStore.coordinatorSnapshot('fixture')).configuration,rollingCoordinatorSnapshot.configuration);
+  assert.deepEqual((await rollingCampaignStore.status('fixture')).assignments[0],firstRollingStoredAssignment);
+  const preservedCampaignRow=(await pool.query<Record<string,unknown>>('SELECT configuration_text FROM ponytail_index.rolling_campaign_v1 WHERE project_id=$1 AND campaign_id=$2',[projectId,'fixture'])).rows[0];
+  const preservedAssignmentRow=(await pool.query<Record<string,unknown>>('SELECT scope_text FROM ponytail_index.rolling_assignment_v1 WHERE project_id=$1 AND assignment_id=$2',[projectId,firstRollingStoredAssignment.id])).rows[0];
+  assert.equal(preservedCampaignRow?.configuration_text,configurationBytes);assert.equal(preservedAssignmentRow?.scope_text,scopeBytes);
+
   await rollingCampaignStore.acknowledgeAction('fixture', firstAllocation.actionId, firstRollingStoredAssignment.generation, 'STARTED');
   await assert.rejects(rollingCampaignStore.retire('fixture', firstRollingStoredAssignment.id, firstRollingStoredAssignment.generation, true), /outcome must be reconciled/);
   assert.equal((await rollingCampaignStore.nextActions('fixture'))[0]?.state, 'STARTED');
@@ -237,7 +253,7 @@ export async function runRollingReviewScenario(t: TestContext, reviewScenario: R
   assert.equal((await rollingCampaignStore.status('fixture')).assignments.find(item => item.id === firstRollingStoredAssignment.id)?.lease, null);
 
   // Traceability: verifies REQ-ROLLING-GRAPH
-  // Explicit V2 adoption shares this isolated project pool with the retained V1 owner.
+  // Explicit leased execution shares the pool with the retained unleased owner.
   const boundObligationDocumentV1: ObligationDocumentV1 = { ...obligationDocumentV1, scopeId: 'bound-fixture',
     obligations: reviewScenario.mode === 'native' ? obligationDocumentV1.obligations.map(item => item.id === firstRollingBinding.obligationId
       ? { ...item, condition: reviewScenario.integratedCertificates ? 'The bound TypeScript fixture remains syntactically valid with source proof for the exact integrated revision.' : 'The exported value in fixture/current.ts must remain exactly 1.',
@@ -263,9 +279,28 @@ export async function runRollingReviewScenario(t: TestContext, reviewScenario: R
   assert.ok(boundRollingAllocationResult?.assignment?.lease && boundRollingAllocationResult.actionId && boundRollingAllocationResult.worktree);
   const boundRollingStoredAssignment = boundRollingAllocationResult.assignment;
   assert.equal(boundRollingStoredAssignment.lease?.binding.revisionId, 'BIND-1');
+  const boundScopeRow=(await pool.query<Record<string,unknown>>('SELECT scope_text FROM ponytail_index.rolling_assignment_v1 WHERE project_id=$1 AND assignment_id=$2',[projectId,boundRollingStoredAssignment.id])).rows[0];assert.ok(boundScopeRow && typeof boundScopeRow.scope_text === 'string');
+  const boundPhysicalScope:unknown=JSON.parse(boundScopeRow.scope_text);assert.ok(boundPhysicalScope !== null && typeof boundPhysicalScope === 'object' && 'schemaVersion' in boundPhysicalScope);assert.equal(boundPhysicalScope.schemaVersion,3);
+
   assert.equal(boundRollingStoredAssignment.lease?.graphDigest, boundRollingGraph.digest);
   assert.deepEqual(boundRollingStoredAssignment.plannedPaths, ['fixture/current.ts']);
   const frozen = JSON.stringify(boundRollingStoredAssignment.lease);
+  assert.ok(boundRollingStoredAssignment.lease);
+  const boundRollingCoordinatorSnapshot=await rollingCampaignStore.coordinatorSnapshot('bound-fixture');
+  assert.ok(boundRollingCoordinatorSnapshot.configuration.bindingHistory);
+  const rollingExecutionConfigV2:RollingExecutionConfigV2={schemaVersion:2,mainline:boundRollingCoordinatorSnapshot.configuration.mainline,incrementRef:boundRollingCoordinatorSnapshot.configuration.incrementRef,maxActiveWorkers:boundRollingCoordinatorSnapshot.configuration.maxActiveWorkers,publicationSize:boundRollingCoordinatorSnapshot.configuration.publicationSize,bindingHistory:boundRollingCoordinatorSnapshot.configuration.bindingHistory};
+  const rollingAssignmentScopeV2:RollingAssignmentScopeV2={schemaVersion:2,lease:boundRollingStoredAssignment.lease,binding:boundRollingStoredAssignment.binding,exclusiveResources:boundRollingStoredAssignment.exclusiveResources};
+  const boundConfigurationBytes=JSON.stringify(rollingExecutionConfigV2),boundScopeBytes=JSON.stringify(rollingAssignmentScopeV2);
+  const currentBoundCampaignRow=(await pool.query<Record<string,unknown>>('SELECT configuration_text FROM ponytail_index.rolling_campaign_v1 WHERE project_id=$1 AND campaign_id=$2',[projectId,'bound-fixture'])).rows[0];assert.ok(currentBoundCampaignRow && typeof currentBoundCampaignRow.configuration_text === 'string');
+  const currentBoundPhysicalConfiguration:unknown=JSON.parse(currentBoundCampaignRow.configuration_text);assert.ok(currentBoundPhysicalConfiguration !== null && typeof currentBoundPhysicalConfiguration === 'object' && 'schemaVersion' in currentBoundPhysicalConfiguration);assert.equal(currentBoundPhysicalConfiguration.schemaVersion,3);
+  await pool.query('UPDATE ponytail_index.rolling_campaign_v1 SET configuration_text=$3 WHERE project_id=$1 AND campaign_id=$2',[projectId,'bound-fixture',boundConfigurationBytes]);
+  await pool.query('UPDATE ponytail_index.rolling_assignment_v1 SET scope_text=$3 WHERE project_id=$1 AND assignment_id=$2',[projectId,boundRollingStoredAssignment.id,boundScopeBytes]);
+  assert.deepEqual((await rollingCampaignStore.coordinatorSnapshot('bound-fixture')).configuration,boundRollingCoordinatorSnapshot.configuration);
+  assert.deepEqual((await rollingCampaignStore.status('bound-fixture')).assignments[0],boundRollingStoredAssignment);
+  const preservedBoundCampaignRow=(await pool.query<Record<string,unknown>>('SELECT configuration_text FROM ponytail_index.rolling_campaign_v1 WHERE project_id=$1 AND campaign_id=$2',[projectId,'bound-fixture'])).rows[0];
+  const preservedBoundAssignmentRow=(await pool.query<Record<string,unknown>>('SELECT scope_text FROM ponytail_index.rolling_assignment_v1 WHERE project_id=$1 AND assignment_id=$2',[projectId,boundRollingStoredAssignment.id])).rows[0];
+  assert.equal(preservedBoundCampaignRow?.configuration_text,boundConfigurationBytes);assert.equal(preservedBoundAssignmentRow?.scope_text,boundScopeBytes);
+
   await rollingCampaignStore.acknowledgeAction('bound-fixture', boundRollingAllocationResult.actionId, boundRollingStoredAssignment.generation, 'STARTED');
   await assert.rejects(rollingCampaignStore.retire('bound-fixture', boundRollingStoredAssignment.id, boundRollingStoredAssignment.generation, true), /outcome must be reconciled/);
   await rollingCampaignStore.acknowledgeAction('bound-fixture', boundRollingAllocationResult.actionId, boundRollingStoredAssignment.generation, 'COMPLETED', 'bound start acknowledgment');
@@ -305,7 +340,7 @@ export async function runRollingReviewScenario(t: TestContext, reviewScenario: R
   await rollingCampaignStore.attachSession('bound-fixture', boundRollingStoredAssignment.id, resumedBoundRollingAllocationResult.assignment.generation, 'bound-session');
   await rollingCampaignStore.assertOperation('bound-fixture', boundRollingStoredAssignment.id, resumedBoundRollingAllocationResult.assignment.generation, nextRollingGraph.digest, 'test');
   await assert.rejects(rollingCampaignStore.assertOperation('bound-fixture', boundRollingStoredAssignment.id, resumedBoundRollingAllocationResult.assignment.generation, nextRollingGraph.digest, 'edit', ['fixture/current.ts']), /operation outside/);
-  for (const malformed of ['{"schemaVersion":3}', '{"schemaVersion":"2"}', '{"schemaVersion":null}', '{}']) {
+  for (const malformed of ['{"schemaVersion":4}', '{"schemaVersion":"2"}', '{"schemaVersion":null}', '{}']) {
     await assert.rejects(pool.query('UPDATE ponytail_index.rolling_campaign_v1 SET configuration_text=$3 WHERE project_id=$1 AND campaign_id=$2',
       [projectId, 'bound-fixture', malformed]), /configuration_text_check/);
     await assert.rejects(pool.query('UPDATE ponytail_index.rolling_assignment_v1 SET scope_text=$3 WHERE project_id=$1 AND assignment_id=$2',

@@ -450,3 +450,19 @@ restarts cannot duplicate a live obligation. An optional completed-worker releas
 is processed atomically with the first allocation. Stopped inactive sessions free
 capacity while retaining their checkout, and unblocked retained sessions are
 selected before new obligations.
+
+## Current store contract boundary
+
+Execution configuration and stored assignment scope use immutable V3 payloads
+for new writes. V1 and V2 exact readers retain their original schemas; the
+serialization boundary normalizes those inputs into V3 before business logic.
+Reading an old row leaves its bytes unchanged. The manifest declares V1/V2/V3
+read support, V3 current writes, and no downgrade writers.
+
+V3 configuration represents absent binding history explicitly as null. V3 scope
+uses an `execution.kind` discriminator: `unleased` retains declared paths;
+`leased` retains the complete frozen lease. This preserves the existing
+operational distinction without emitting historical wire versions or duplicating
+lease-owned paths. The existing PostgreSQL payload-version constraints admit
+V3 alongside the retained input versions; no campaign or assignment is silently
+migrated in storage.

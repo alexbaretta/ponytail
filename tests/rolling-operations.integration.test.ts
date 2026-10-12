@@ -10,7 +10,7 @@ import {createInterface} from 'node:readline';
 import {Pool} from 'pg';
 import {databaseOptions} from '../src/project-index-database.js';
 import {fixture,git} from './helpers/obligation-fixture.js';
-import {RollingCampaignStore} from '../src/rolling-campaign-store.js';
+import {RollingCampaignStore,type RollingExecutionConfigV3} from '../src/rolling-campaign-store.js';
 import {RollingCampaignOperations,type RollingCampaignInitializationV1,type RollingReplenishment} from '../src/rolling-operations.js';
 import type {RollingProjectConfigV1,RollingBindingsV1} from '../src/rolling-campaign.js';
 import {acceptCheckpoint,inputDigest,type ObligationCertificate,type ObligationCheckpoint,type ObligationDocumentV1,type Obligation,type ObligationVector} from '../skills/plan-execution/scripts/obligations.js';
@@ -131,7 +131,8 @@ test('shared operations initialize defaults and reconcile event/periodic content
  git(root,['switch','campaign/pilot']);
  assert.equal(git(root,['rev-parse','refs/heads/campaign/unreviewed']),unreviewedRevision);
  const initialRollingCoordinatorSnapshot = await rollingCampaignOperations.status('pilot');
- assert.deepEqual(initialRollingCoordinatorSnapshot.configuration,{schemaVersion:1,mainline:{remote:'origin',branch:'main'},incrementRef:'campaign/pilot',maxActiveWorkers:2,publicationSize:1});
+ const rollingExecutionConfigV3:RollingExecutionConfigV3={schemaVersion:3,mainline:{remote:'origin',branch:'main'},incrementRef:'campaign/pilot',maxActiveWorkers:2,publicationSize:1,bindingHistory:null};
+ assert.deepEqual(initialRollingCoordinatorSnapshot.configuration,rollingExecutionConfigV3);
  const rollingReplenishments:readonly RollingReplenishment[] = await Promise.all(Array.from({length:4},(_,index)=>rollingCampaignOperations.replenish('pilot',index%2 === 0 ? 'event' : 'periodic')));
  assert.equal(rollingReplenishments.reduce((count,item)=>count+item.allocations.length,0),2);
  const reservedRollingCoordinatorSnapshot = await new RollingCampaignOperations(new RollingCampaignStore(pool,projectId),root).status('pilot');

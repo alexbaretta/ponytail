@@ -3,8 +3,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { readRollingAssignmentScopeV1, readRollingExecutionConfigV1, readRollingAssignmentScopeV2, readRollingExecutionConfigV2,
-  RollingAssignmentScopeReaders, RollingExecutionConfigReaders,
-  type RollingAssignmentScopeV1, type RollingExecutionConfigV1, type RollingAssignmentScopeV2, type RollingExecutionConfigV2 } from '../src/rolling-campaign-store.js';
+  RollingAssignmentScopeReaders, RollingExecutionConfigReaders, readRollingExecutionConfigV3, readRollingAssignmentScopeV3, parseRollingExecutionConfig, parseRollingAssignmentScope,
+  type RollingAssignmentScopeV3, type RollingExecutionConfigV3, type RollingAssignmentScopeV1, type RollingExecutionConfigV1, type RollingAssignmentScopeV2, type RollingExecutionConfigV2 } from '../src/rolling-campaign-store.js';
 
 // Traceability: verifies REQ-ROLLING-STATE
 // Traceability: verifies REQ-PONYTAIL-STATIC-LANGUAGE
@@ -13,7 +13,7 @@ test('stored execution contracts reject unresolved values, altered scopes and un
     schemaVersion: 1, mainline: { remote: 'origin', branch: 'main' },
     incrementRef: 'campaign/proof', maxActiveWorkers: 10, publicationSize: 1
   };
-  assert.deepEqual(Object.keys(RollingExecutionConfigReaders), ['V1', 'V2']);
+  assert.deepEqual(Object.keys(RollingExecutionConfigReaders), ['V1', 'V2', 'V3']);
   const configurationInput: unknown = JSON.parse(JSON.stringify(rollingExecutionConfigV1));
   assert.deepEqual(readRollingExecutionConfigV1(configurationInput), rollingExecutionConfigV1);
   const invalidConfigurations: readonly unknown[] = [
@@ -29,7 +29,7 @@ test('stored execution contracts reject unresolved values, altered scopes and un
     binding: { obligationId: 'OBL-1', implementationIds: [], sourcePaths: [], acceptances: [],
       unitTests: [], integrationTests: [], exclusiveResources: ['database'] }
   };
-  assert.deepEqual(Object.keys(RollingAssignmentScopeReaders), ['V1', 'V2']);
+  assert.deepEqual(Object.keys(RollingAssignmentScopeReaders), ['V1', 'V2', 'V3']);
   const scopeInput: unknown = JSON.parse(JSON.stringify(rollingAssignmentScopeV1));
   assert.deepEqual(readRollingAssignmentScopeV1(scopeInput), rollingAssignmentScopeV1);
   const invalidScopes: readonly unknown[] = [
@@ -66,4 +66,38 @@ test('stored V2 contracts retain explicit coordinator history and the complete f
     { ...rollingAssignmentScopeV2, exclusiveResources: [] },
     { ...rollingAssignmentScopeV2, binding: { ...rollingAssignmentScopeV2.binding, obligationId: 'OBL-2' } }];
   for (const invalidScope of invalidScopes) assert.throws(() => readRollingAssignmentScopeV2(invalidScope));
+});
+
+
+// Traceability: verifies REQ-ROLLING-STATE
+// Traceability: verifies REQ-ROLLING-CONFIGURATION
+test('V3 configuration normalizes historical inputs without changing their bytes',()=> {
+ const rollingExecutionConfigV1:RollingExecutionConfigV1={schemaVersion:1,mainline:{remote:'origin',branch:'main'},incrementRef:'campaign/proof',maxActiveWorkers:10,publicationSize:1};
+ const rollingExecutionConfigV2:RollingExecutionConfigV2={...rollingExecutionConfigV1,schemaVersion:2,bindingHistory:{path:'history.json',assessor:'coordinator',authority:['approved scope']}};
+ const unleasedRollingExecutionConfigV3:RollingExecutionConfigV3={...rollingExecutionConfigV1,schemaVersion:3,bindingHistory:null};
+ const leasedRollingExecutionConfigV3:RollingExecutionConfigV3={...rollingExecutionConfigV2,schemaVersion:3};
+ for(const [physical,expected] of [[rollingExecutionConfigV1,unleasedRollingExecutionConfigV3],[rollingExecutionConfigV2,leasedRollingExecutionConfigV3]] as const) {
+  const bytes=JSON.stringify(physical);
+  assert.deepEqual(parseRollingExecutionConfig(bytes),expected);assert.equal(JSON.stringify(physical),bytes);
+ }
+ assert.deepEqual(readRollingExecutionConfigV3(unleasedRollingExecutionConfigV3),unleasedRollingExecutionConfigV3);
+ assert.deepEqual(parseRollingExecutionConfig(JSON.stringify(leasedRollingExecutionConfigV3)),leasedRollingExecutionConfigV3);
+ assert.throws(()=>readRollingExecutionConfigV3(rollingExecutionConfigV1));
+ assert.throws(()=>readRollingExecutionConfigV3({...unleasedRollingExecutionConfigV3,bindingHistory:undefined}));
+ assert.throws(()=>readRollingExecutionConfigV3({...unleasedRollingExecutionConfigV3,extra:true}));
+});
+
+// Traceability: verifies REQ-ROLLING-STATE
+// Traceability: verifies REQ-ROLLING-GRAPH
+test('V3 assignment execution is explicit and historical scopes normalize without widening authority',()=> {
+ const rollingAssignmentScopeV1:RollingAssignmentScopeV1={schemaVersion:1,plannedPaths:['src/current.ts'],exclusiveResources:[],binding:{obligationId:'OBL-1',implementationIds:[],sourcePaths:[],acceptances:[],unitTests:[],integrationTests:[],exclusiveResources:[]}};
+ const rollingAssignmentScopeV2:RollingAssignmentScopeV2={schemaVersion:2,binding:rollingAssignmentScopeV1.binding,exclusiveResources:[],lease:{schemaVersion:1,scopeId:'campaign',baselineId:'BASELINE-1',graphDigest:'a'.repeat(64),generation:'generation-1',assessor:'coordinator',authority:['approved scope'],binding:{obligationId:'OBL-1',revisionId:'BIND-1',dependsOn:[],execution:{sprintId:null,taskletIds:[],plannedPaths:['src/current.ts'],operations:['test'],selection:['focused'],target:null}}}};
+ const unleasedRollingAssignmentScopeV3:RollingAssignmentScopeV3={schemaVersion:3,binding:rollingAssignmentScopeV1.binding,exclusiveResources:[],execution:{kind:'unleased',plannedPaths:rollingAssignmentScopeV1.plannedPaths}};
+ const leasedRollingAssignmentScopeV3:RollingAssignmentScopeV3={schemaVersion:3,binding:rollingAssignmentScopeV2.binding,exclusiveResources:[],execution:{kind:'leased',lease:rollingAssignmentScopeV2.lease}};
+ for(const [physical,expected] of [[rollingAssignmentScopeV1,unleasedRollingAssignmentScopeV3],[rollingAssignmentScopeV2,leasedRollingAssignmentScopeV3]] as const) {
+  const bytes=JSON.stringify(physical);assert.deepEqual(parseRollingAssignmentScope(bytes),expected);assert.equal(JSON.stringify(physical),bytes);
+ }
+ assert.deepEqual(readRollingAssignmentScopeV3(unleasedRollingAssignmentScopeV3),unleasedRollingAssignmentScopeV3);
+ assert.deepEqual(parseRollingAssignmentScope(JSON.stringify(leasedRollingAssignmentScopeV3)),leasedRollingAssignmentScopeV3);
+ for(const execution of [{kind:'unknown'},{kind:'unleased',plannedPaths:['../escape']},{kind:'unleased',plannedPaths:['src/current.ts'],lease:rollingAssignmentScopeV2.lease},{kind:'leased',lease:rollingAssignmentScopeV2.lease,plannedPaths:[]}]) assert.throws(()=>readRollingAssignmentScopeV3({...leasedRollingAssignmentScopeV3,execution}));
 });
