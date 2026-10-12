@@ -7,6 +7,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.RollingBindingsReaders = exports.RollingProjectConfigReaders = void 0;
+exports.isRollingArgv = isRollingArgv;
 exports.readRollingProjectConfigV1 = readRollingProjectConfigV1;
 exports.readRollingProjectConfigV2 = readRollingProjectConfigV2;
 exports.normalizeRollingProjectConfig = normalizeRollingProjectConfig;

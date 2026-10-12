@@ -452,6 +452,75 @@ CREATE TABLE IF NOT EXISTS rolling_increment_delivery_v1 (
 CREATE INDEX IF NOT EXISTS rolling_increment_delivery_v1_campaign_order
 ON rolling_increment_delivery_v1(project_id,campaign_id,delivered_at,increment_id);
 
+-- Traceability: implements REQ-ROLLING-PUBLICATION
+CREATE TABLE IF NOT EXISTS rolling_publication_batch_v1 (
+  project_id uuid NOT NULL,
+  campaign_id text NOT NULL,
+  batch_id uuid NOT NULL,
+  coordinator_root text NOT NULL,
+  claim_text text NOT NULL CHECK ((claim_text::jsonb->>'schemaVersion' = '1'
+    AND claim_text::jsonb->>'id' = batch_id::text
+    AND claim_text::jsonb->>'campaignId' = campaign_id
+    AND claim_text::jsonb->>'rootPath' = coordinator_root) IS TRUE),
+  state text NOT NULL CHECK (state IN ('FROZEN','PREPARING','CONFLICT','CANDIDATE','QA_RUNNING','QA_FAILED','QA_PASSED',
+    'PUSHING','PUBLISHED','REBASE_REQUIRED','PUSH_REJECTED','UNCONFIRMED')),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY(project_id,campaign_id,batch_id),
+  FOREIGN KEY(project_id,campaign_id) REFERENCES rolling_campaign_v1(project_id,campaign_id) ON DELETE CASCADE
+);
+ALTER TABLE rolling_publication_batch_v1 ADD COLUMN IF NOT EXISTS qa_id uuid;
+CREATE UNIQUE INDEX IF NOT EXISTS rolling_publication_batch_v1_active_root
+ON rolling_publication_batch_v1(project_id,coordinator_root) WHERE state <> 'PUBLISHED';
+
+CREATE TABLE IF NOT EXISTS rolling_publication_member_v1 (
+  project_id uuid NOT NULL,
+  campaign_id text NOT NULL,
+  batch_id uuid NOT NULL,
+  increment_id uuid NOT NULL,
+  ordinal bigint NOT NULL CHECK (ordinal > 0),
+  PRIMARY KEY(project_id,campaign_id,increment_id),
+  UNIQUE(project_id,campaign_id,batch_id,ordinal),
+  FOREIGN KEY(project_id,campaign_id,batch_id)
+    REFERENCES rolling_publication_batch_v1(project_id,campaign_id,batch_id) ON DELETE CASCADE,
+  FOREIGN KEY(project_id,campaign_id,increment_id)
+    REFERENCES rolling_increment_delivery_v1(project_id,campaign_id,increment_id)
+);
+
+CREATE TABLE IF NOT EXISTS rolling_publication_preparation_v1 (
+  project_id uuid NOT NULL,
+  campaign_id text NOT NULL,
+  batch_id uuid NOT NULL,
+  preparation_text text NOT NULL CHECK ((preparation_text::jsonb->>'schemaVersion' = '1'
+    AND preparation_text::jsonb->>'batchId' = batch_id::text) IS TRUE),
+  PRIMARY KEY(project_id,campaign_id,batch_id),
+  FOREIGN KEY(project_id,campaign_id,batch_id)
+    REFERENCES rolling_publication_batch_v1(project_id,campaign_id,batch_id) ON DELETE CASCADE
+);
+CREATE TABLE IF NOT EXISTS rolling_publication_candidate_v1 (
+  project_id uuid NOT NULL,
+  campaign_id text NOT NULL,
+  batch_id uuid NOT NULL,
+  candidate_text text NOT NULL CHECK ((candidate_text::jsonb->>'schemaVersion' = '1'
+    AND candidate_text::jsonb->>'batchId' = batch_id::text) IS TRUE),
+  PRIMARY KEY(project_id,campaign_id,batch_id),
+  FOREIGN KEY(project_id,campaign_id,batch_id)
+    REFERENCES rolling_publication_batch_v1(project_id,campaign_id,batch_id) ON DELETE CASCADE
+);
+CREATE TABLE IF NOT EXISTS rolling_publication_qa_v1 (
+  project_id uuid NOT NULL,
+  campaign_id text NOT NULL,
+  batch_id uuid NOT NULL,
+  qa_id uuid NOT NULL,
+  job_text text NOT NULL CHECK ((job_text::jsonb->>'schemaVersion' = '1'
+    AND job_text::jsonb->>'batchId' = batch_id::text AND job_text::jsonb->>'id' = qa_id::text) IS TRUE),
+  result_text text CHECK (result_text IS NULL OR (result_text::jsonb->>'schemaVersion' = '1'
+    AND result_text::jsonb->>'batchId' = batch_id::text AND result_text::jsonb->>'id' = qa_id::text) IS TRUE),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY(project_id,campaign_id,batch_id,qa_id),
+  FOREIGN KEY(project_id,campaign_id,batch_id)
+    REFERENCES rolling_publication_batch_v1(project_id,campaign_id,batch_id) ON DELETE CASCADE
+);
+
 CREATE TABLE IF NOT EXISTS rolling_review_dispatch_v1 (
   project_id uuid NOT NULL,
   campaign_id text NOT NULL,

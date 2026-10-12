@@ -10,8 +10,9 @@ import path from 'node:path';
 import { execFileSync,spawnSync } from 'node:child_process';
 import { Pool } from 'pg';
 import { stringify } from 'lossless-json';
+import {prepareRollingMainline,mergeRollingMainline,runRollingPublicationQa} from '../src/rolling-publication.js';
 import { databaseOptions } from '../src/project-index-database.js';
-import { collectRollingGraph, type RollingPhysicalProjectConfig, type RollingProjectConfigV1, type RollingBindingsV1, type RollingBinding, type RollingGraph } from '../src/rolling-campaign.js';
+import { collectRollingGraph, parseRollingProjectConfig,type RollingPhysicalProjectConfig, type RollingProjectConfigV1, type RollingBindingsV1, type RollingBinding, type RollingGraph } from '../src/rolling-campaign.js';
 import { RollingCampaignStore, type RollingCampaignRegistration, type RollingAllocationResult, type RollingWorkerDispatchAttached, type RollingReviewDispatchAttached, type RollingSessionAttachment, type RollingStoredAssignment, type RollingCampaignStatus } from '../src/rolling-campaign-store.js';
 import { inputDigest, parseObligationDocument, type ObligationDocumentV1, type ObligationBaseline, type Obligation, type ObligationCertificate, type ObligationCheckpoint } from '../skills/plan-execution/scripts/obligations.js';
 import type { ObligationBindingHistoryV1, ObligationBindingRevisionV1 } from '../skills/plan-execution/scripts/obligation-binding-history.js';
@@ -68,7 +69,7 @@ test('native code fixture approvals permit exact shell-wrapped commands only for
 
 // Traceability: verifies REQ-ROLLING-STATE
 // Traceability: verifies REQ-ROLLING-SCHEDULING
-export interface ReviewScenario { readonly decision: RollingReviewOutcomeV1['decision']; readonly mode: 'manual' | 'protocol' | 'native'; readonly replaceLostReviewer?: boolean; readonly automaticPublication?: boolean; readonly conflictContinuation?: boolean; readonly conflictRepair?: boolean; readonly integratedCertificates?: boolean }
+export interface ReviewScenario { readonly decision: RollingReviewOutcomeV1['decision']; readonly mode: 'manual' | 'protocol' | 'native'; readonly replaceLostReviewer?: boolean; readonly automaticPublication?: boolean; readonly conflictContinuation?: boolean; readonly conflictRepair?: boolean; readonly integratedCertificates?: boolean; readonly publicationBatch?: boolean }
 function declineReviewApprovals(rollingCodex: RollingCodex): void {
   rollingCodex.on('serverRequest', message => rollingCodex.respondToServer(message.id, { decision: 'decline' }));
 }
@@ -118,7 +119,7 @@ export async function runRollingReviewScenario(t: TestContext, reviewScenario: R
   const rollingProjectConfigV1: RollingProjectConfigV1 = {
     schemaVersion: 1, mainline: { remote: 'origin', branch: 'main' },
     managedWorktrees: { directory: 'managed', anchor: 'main' }, maxActiveWorkers: 1,
-    publicationSize: 1, setupCommands: [], qa: { focused: [], publication: [['node', '--test']] },
+    publicationSize: reviewScenario.publicationBatch ? 2 : 1, setupCommands: [], qa: { focused: [], publication: reviewScenario.publicationBatch ? [['env','-u','NODE_TEST_CONTEXT',process.execPath,'--test','fixture/full.test.ts']] : [['node', '--test']] },
   };
   fs.writeFileSync(path.join(root, '.agents/config/project/rolling-campaigns.json'), JSON.stringify(rollingProjectConfigV1));
   const source = path.join(repositoryRoot, 'pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/obligations.json');
@@ -146,7 +147,7 @@ export async function runRollingReviewScenario(t: TestContext, reviewScenario: R
   const rollingCampaignStore: RollingCampaignStore = new RollingCampaignStore(pool, projectId);
   const rollingCampaignRegistration: RollingCampaignRegistration = { id: 'fixture', coordinatorRoot: root, documentPath: 'obligations.json',
     bindingsPath: 'bindings.json', graphDigest: graphRollingGraph.digest, managedDirectory: path.join(root, 'managed'),
-    configuration: { mainline: { remote: 'origin', branch: 'main' }, incrementRef: 'campaign/fixture', maxActiveWorkers: 1, publicationSize: 1 } };
+    configuration: { mainline: { remote: 'origin', branch: 'main' }, incrementRef: 'campaign/fixture', maxActiveWorkers: 1, publicationSize: reviewScenario.publicationBatch ? 2 : 1 } };
   await rollingCampaignStore.registerCampaign(rollingCampaignRegistration);
   const allocations: readonly RollingAllocationResult[] = await Promise.all(Array.from({ length: 4 }, () => rollingCampaignStore.allocate('fixture', graphRollingGraph.digest)));
   const allocated: readonly RollingAllocationResult[] = allocations.filter(item => item.assignment);
@@ -319,6 +320,10 @@ export async function runRollingReviewScenario(t: TestContext, reviewScenario: R
   fs.writeFileSync(path.join(root, '.gitignore'), 'session_id.txt\nproof.txt\nmanaged/\n');
   fs.mkdirSync(path.join(root, 'fixture'), { recursive: true });
   fs.writeFileSync(path.join(root, 'fixture/current.ts'), 'export const value: number = 1;\n');
+  if (reviewScenario.publicationBatch) {
+    fs.writeFileSync(path.join(root,'fixture/full.test.ts'),"import test from 'node:test';\nimport assert from 'node:assert/strict';\nimport {value} from './current.ts';\ntest('full fixture unit',()=>assert.equal(value,1));\n");
+    execFileSync('git',['-C',root,'add','fixture/full.test.ts']);
+  }
   execFileSync('git', ['-C', root, 'add', '--', '.gitignore', 'fixture/current.ts']);
   execFileSync('git', ['-C', root, '-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.test', 'commit', '-q', '-m', 'submission fixture base']);
   const baseCommit = execFileSync('git', ['-C', root, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
@@ -689,6 +694,56 @@ export async function runRollingReviewScenario(t: TestContext, reviewScenario: R
     assert.equal((await pool.query<Record<string,unknown>>('SELECT count(*)::integer AS count FROM ponytail_index.rolling_increment_delivery_v1 WHERE project_id=$1',[projectId])).rows[0]?.count,1);
 
 
+  if (reviewScenario.publicationBatch) {
+    const currentRollingGraph = collectRollingGraph(root,'bound-obligations.json','bound-bindings.json','history.json');
+    const currentDigest = (await rollingCampaignStore.status('bound-fixture')).graphDigest;
+    if (currentDigest !== currentRollingGraph.digest) await rollingCampaignStore.reconcileGraph('bound-fixture',currentDigest,currentRollingGraph.digest);
+    assert.deepEqual(await rollingCampaignStore.claimPublicationBatch('bound-fixture',currentRollingGraph.digest),{state:'WAITING',reason:'below_threshold',count:1});
+    await assert.rejects(rollingCampaignStore.claimPublicationBatch('bound-fixture',currentRollingGraph.digest,'completion'),/bound delivery obligations/);
+    const claims = await Promise.all(Array.from({length:4},()=>rollingCampaignStore.claimPublicationBatch('bound-fixture',currentRollingGraph.digest,'explicit_flush')));
+    const firstClaim = claims[0];assert.ok(firstClaim && firstClaim.state === 'CLAIMED');
+    assert.equal(firstClaim.claim.trigger,'explicit_flush');assert.equal(firstClaim.claim.publicationSize,2);
+    assert.equal(firstClaim.claim.increments.length,1);
+    assert.ok(claims.every(item=>item.state === 'CLAIMED' && item.claim.id === firstClaim.claim.id));
+    assert.deepEqual(await new RollingCampaignStore(pool,projectId).claimPublicationBatch('bound-fixture',currentRollingGraph.digest),firstClaim);
+    assert.equal((await pool.query<Record<string,unknown>>('SELECT count(*)::integer AS count FROM ponytail_index.rolling_publication_member_v1 WHERE project_id=$1',[projectId])).rows[0]?.count,1);
+    assert.equal((await pool.query<Record<string,unknown>>('SELECT count(*)::integer AS count FROM ponytail_index.rolling_publication_batch_v1 WHERE project_id=$1',[projectId])).rows[0]?.count,1);
+    await assert.rejects(rollingCampaignStore.claimIncrement('bound-fixture',crypto.randomUUID()),/publication owns the coordinator checkout/);
+    await assert.rejects(rollingCampaignStore.beginMainlinePush('bound-fixture',firstClaim.claim.id),/full publication QA/);
+    execFileSync('git',['-C',remoteRoot,'update-ref','refs/heads/main',baseCommit]);
+    const rollingPublicationBatchClaimV1 = await rollingCampaignStore.beginMainlinePreparation('bound-fixture',firstClaim.claim.id);
+    const rollingMainlinePreparationV1 = prepareRollingMainline(rollingPublicationBatchClaimV1);
+    await rollingCampaignStore.recordMainlinePreparation('bound-fixture',firstClaim.claim.id,rollingMainlinePreparationV1);
+    const rollingMainlineCandidateV1 = mergeRollingMainline(rollingPublicationBatchClaimV1,rollingMainlinePreparationV1);
+    const restartedPublicationStore = new RollingCampaignStore(pool,projectId);
+    await restartedPublicationStore.recordMainlineCandidate('bound-fixture',firstClaim.claim.id,rollingMainlineCandidateV1);
+    await restartedPublicationStore.recordMainlineCandidate('bound-fixture',firstClaim.claim.id,rollingMainlineCandidateV1);
+    const configurationPath = path.join(root,'.agents/config/project/rolling-campaigns.json');
+    const passingConfiguration = parseRollingProjectConfig(fs.readFileSync(configurationPath,'utf8'));
+    fs.writeFileSync(configurationPath,JSON.stringify({...passingConfiguration,qa:{...passingConfiguration.qa,publication:[['false']]}}));
+    const failedRollingPublicationQaJobV1 = await restartedPublicationStore.beginPublicationQa('bound-fixture',firstClaim.claim.id);
+    await assert.rejects(restartedPublicationStore.beginPublicationQa('bound-fixture',firstClaim.claim.id),/original QA attempt/);
+    const failedRollingPublicationQaV1 = runRollingPublicationQa(rollingPublicationBatchClaimV1,rollingMainlineCandidateV1,failedRollingPublicationQaJobV1.id,failedRollingPublicationQaJobV1.configurationDigest,failedRollingPublicationQaJobV1.commands);
+    assert.equal(failedRollingPublicationQaV1.outcome,'FAIL');
+    await restartedPublicationStore.recordPublicationQa('bound-fixture',firstClaim.claim.id,failedRollingPublicationQaV1);
+    await assert.rejects(restartedPublicationStore.beginMainlinePush('bound-fixture',firstClaim.claim.id),/full publication QA/);
+    fs.writeFileSync(configurationPath,JSON.stringify(passingConfiguration));
+    const passingRollingPublicationQaJobV1 = await restartedPublicationStore.beginPublicationQa('bound-fixture',firstClaim.claim.id);
+    assert.notEqual(passingRollingPublicationQaJobV1.id,failedRollingPublicationQaJobV1.id);
+    assert.deepEqual(await restartedPublicationStore.recordPublicationQa('bound-fixture',firstClaim.claim.id,failedRollingPublicationQaV1),failedRollingPublicationQaV1);
+    assert.equal((await pool.query<Record<string,unknown>>('SELECT state FROM ponytail_index.rolling_publication_batch_v1 WHERE project_id=$1',[projectId])).rows[0]?.state,'QA_RUNNING');
+    const passingRollingPublicationQaV1 = runRollingPublicationQa(rollingPublicationBatchClaimV1,rollingMainlineCandidateV1,passingRollingPublicationQaJobV1.id,passingRollingPublicationQaJobV1.configurationDigest,passingRollingPublicationQaJobV1.commands);
+    assert.equal(passingRollingPublicationQaV1.outcome,'PASS',JSON.stringify(passingRollingPublicationQaV1));
+    assert.ok(passingRollingPublicationQaV1.commands[0]?.output.includes('full fixture unit'));
+    await restartedPublicationStore.recordPublicationQa('bound-fixture',firstClaim.claim.id,passingRollingPublicationQaV1);
+    await restartedPublicationStore.recordPublicationQa('bound-fixture',firstClaim.claim.id,passingRollingPublicationQaV1);
+    fs.writeFileSync(configurationPath,JSON.stringify({...passingConfiguration,qa:{...passingConfiguration.qa,publication:[['false']]}}));
+    await assert.rejects(restartedPublicationStore.beginMainlinePush('bound-fixture',firstClaim.claim.id),/stale|all required/);
+    fs.writeFileSync(configurationPath,JSON.stringify(passingConfiguration));
+    assert.deepEqual(await restartedPublicationStore.beginMainlinePush('bound-fixture',firstClaim.claim.id),rollingMainlineCandidateV1);
+    assert.equal(execFileSync('git',['-C',remoteRoot,'rev-parse','refs/heads/main'],{encoding:'utf8'}).trim(),baseCommit,'the QA gate records intent; it does not push');
+
+  }
   } else await assert.rejects(rollingCampaignStore.claimIncrement('bound-fixture',rollingStoredReview.request.id),/accepted review/);
   const changedRollingReviewOutcomeV1: RollingReviewOutcomeV1 = reviewDecision === 'accepted'
     ? { ...rollingReviewOutcomeV1, decision: 'rejected', findings: ['Changed verdict.'] }
@@ -1614,3 +1669,7 @@ test('integrated certificate assessment uses retained published proof and serial
 // Traceability: verifies REQ-ROLLING-STATE
 test('worker retirement revokes native ownership and fences checkout release through restartable cleanup',
  t=>runRollingWorkerScenario(t,'protocol','collection',false,true,true));
+
+// Traceability: verifies REQ-ROLLING-PUBLICATION
+test('publication batch freezes one shared partial claim across concurrent requests and restart',
+ t=>runRollingReviewScenario(t,{decision:'accepted',mode:'manual',automaticPublication:true,publicationBatch:true}));

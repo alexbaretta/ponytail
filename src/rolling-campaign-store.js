@@ -12,6 +12,7 @@ exports.readRollingExecutionConfigV1 = readRollingExecutionConfigV1;
 exports.readRollingAssignmentScopeV2 = readRollingAssignmentScopeV2;
 exports.readRollingExecutionConfigV2 = readRollingExecutionConfigV2;
 const node_crypto_1 = __importDefault(require("node:crypto"));
+const rolling_publication_js_1 = require("./rolling-publication.js");
 const rolling_integration_js_1 = require("./rolling-integration.js");
 const node_path_1 = __importDefault(require("node:path"));
 const lossless_json_1 = require("lossless-json");
@@ -558,6 +559,176 @@ class RollingCampaignStore {
             return { review: { request: rollingReviewRequestV1, outcome: rollingReviewOutcomeV1 }, ...rollingReviewCandidate };
         });
     }
+    async claimPublicationBatch(campaignId, expectedDigest, flush = null) {
+        return this.transaction(campaignId, async (poolClient, rollingCampaignRow) => {
+            const rollingGraph = this.graph(rollingCampaignRow, expectedDigest);
+            const existing = (await poolClient.query("SELECT claim_text FROM ponytail_index.rolling_publication_batch_v1 WHERE project_id=$1 AND campaign_id=$2 AND state<>'PUBLISHED'", [this.projectId, campaignId])).rows[0];
+            if (existing)
+                return { state: 'CLAIMED', claim: (0, rolling_publication_js_1.readRollingPublicationBatchClaimV1)(readStateText(stringColumn(existing.claim_text, 'publication claim'))) };
+            const activeIncrements = (await poolClient.query("SELECT i.increment_id FROM ponytail_index.rolling_increment_v1 i JOIN ponytail_index.rolling_campaign_v1 c USING(project_id,campaign_id) WHERE i.project_id=$1 AND c.coordinator_root=$2 AND i.state<>'PUBLISHED' AND i.repair_reference IS NULL", [this.projectId, rollingCampaignRow.coordinator_root])).rows;
+            requireState(activeIncrements.length === 0, 'finish the active increment before freezing mainline publication');
+            const rollingExecutionConfig = executionConfiguration(rollingCampaignRow.configuration_text);
+            if (flush === 'completion')
+                requireState(rollingGraph.bindings.every(binding => rollingGraph.projection.satisfiedIds.includes(binding.obligationId)), 'completion flush requires all bound delivery obligations to be satisfied');
+            if (flush === 'quiescence') {
+                const assignments = (await poolClient.query("SELECT * FROM ponytail_index.rolling_assignment_v1 WHERE project_id=$1 AND state<>'RELEASED'", [this.projectId])).rows.map(readAssignment);
+                const rollingSchedulingResult = (0, rolling_campaign_js_1.selectRollingAssignments)(rollingGraph, assignments, rollingExecutionConfig.maxActiveWorkers, expectedDigest);
+                requireState(rollingSchedulingResult.activeCount === 0 && rollingSchedulingResult.selected.length === 0, 'quiescence flush requires no active or immediately schedulable work');
+            }
+            const rows = (await poolClient.query('SELECT d.increment_id,d.revision FROM ponytail_index.rolling_increment_delivery_v1 d LEFT JOIN ponytail_index.rolling_publication_member_v1 m USING(project_id,campaign_id,increment_id) WHERE d.project_id=$1 AND d.campaign_id=$2 AND m.increment_id IS NULL', [this.projectId, campaignId])).rows;
+            const rollingAcceptedIncrements = rows.map(row => ({ id: stringColumn(row.increment_id, 'accepted increment ID'), revision: stringColumn(row.revision, 'accepted increment revision') }));
+            const map = new Map();
+            if (rollingAcceptedIncrements.length > 0) {
+                const history = (0, node_child_process_1.spawnSync)('git', ['-C', rollingCampaignRow.coordinator_root, 'rev-list', '--topo-order', '--reverse', `refs/heads/${rollingExecutionConfig.incrementRef}^{commit}`], { encoding: 'utf8' });
+                requireState(!history.error && history.status === 0, 'cannot order publication receipts by campaign history');
+                for (const [index, revision] of history.stdout.trim().split('\n').entries())
+                    map.set(revision, index);
+            }
+            requireState(rollingAcceptedIncrements.every(item => map.has(item.revision)), 'accepted increment is outside the retained campaign history');
+            const orderedRollingAcceptedIncrements = [...rollingAcceptedIncrements].sort((left, right) => {
+                const leftOrdinal = map.get(left.revision), rightOrdinal = map.get(right.revision);
+                requireState(leftOrdinal !== undefined && rightOrdinal !== undefined, 'publication receipt ancestry changed');
+                return leftOrdinal - rightOrdinal || left.id.localeCompare(right.id);
+            });
+            const rollingPublicationSelection = (0, rolling_publication_js_1.selectRollingPublicationBatch)(orderedRollingAcceptedIncrements, rollingExecutionConfig.publicationSize, flush);
+            if (rollingPublicationSelection.state === 'WAITING')
+                return rollingPublicationSelection;
+            const rollingPublicationBatchClaimV1 = (0, rolling_publication_js_1.readRollingPublicationBatchClaimV1)({ schemaVersion: 1, id: node_crypto_1.default.randomUUID(), campaignId,
+                rootPath: rollingCampaignRow.coordinator_root, incrementRef: rollingExecutionConfig.incrementRef, target: rollingExecutionConfig.mainline,
+                graphDigest: rollingGraph.digest, configurationDigest: this.publicationConfigurationDigest(rollingExecutionConfig, rollingGraph),
+                publicationSize: rollingExecutionConfig.publicationSize, trigger: rollingPublicationSelection.trigger,
+                increments: rollingPublicationSelection.increments, campaignRevision: rollingPublicationSelection.campaignRevision });
+            await poolClient.query("INSERT INTO ponytail_index.rolling_publication_batch_v1(project_id,campaign_id,batch_id,coordinator_root,claim_text,state) VALUES($1,$2,$3,$4,$5,'FROZEN')", [this.projectId, campaignId, rollingPublicationBatchClaimV1.id, rollingCampaignRow.coordinator_root, JSON.stringify(rollingPublicationBatchClaimV1)]);
+            for (const [index, rollingAcceptedIncrement] of rollingPublicationBatchClaimV1.increments.entries())
+                await poolClient.query('INSERT INTO ponytail_index.rolling_publication_member_v1(project_id,campaign_id,batch_id,increment_id,ordinal) VALUES($1,$2,$3,$4,$5)', [this.projectId, campaignId, rollingPublicationBatchClaimV1.id, rollingAcceptedIncrement.id, index + 1]);
+            return { state: 'CLAIMED', claim: rollingPublicationBatchClaimV1 };
+        });
+    }
+    async publicationClaim(poolClient, campaignId, id) {
+        const row = (await poolClient.query('SELECT claim_text FROM ponytail_index.rolling_publication_batch_v1 WHERE project_id=$1 AND campaign_id=$2 AND batch_id=$3', [this.projectId, campaignId, id])).rows[0];
+        requireState(row, 'publication batch is missing');
+        return (0, rolling_publication_js_1.readRollingPublicationBatchClaimV1)(readStateText(stringColumn(row.claim_text, 'publication claim')));
+    }
+    async beginMainlinePreparation(campaignId, id) {
+        return this.transaction(campaignId, async (poolClient) => {
+            const rollingPublicationBatchClaimV1 = await this.publicationClaim(poolClient, campaignId, id);
+            const row = (await poolClient.query('SELECT state FROM ponytail_index.rolling_publication_batch_v1 WHERE project_id=$1 AND campaign_id=$2 AND batch_id=$3', [this.projectId, campaignId, id])).rows[0];
+            requireState(row && (row.state === 'FROZEN' || row.state === 'PREPARING'), 'publication is not eligible for preparation');
+            await poolClient.query("UPDATE ponytail_index.rolling_publication_batch_v1 SET state='PREPARING' WHERE project_id=$1 AND campaign_id=$2 AND batch_id=$3", [this.projectId, campaignId, id]);
+            return rollingPublicationBatchClaimV1;
+        });
+    }
+    async recordMainlinePreparation(campaignId, id, rollingMainlinePreparationV1) {
+        const checkedRollingMainlinePreparationV1 = (0, rolling_publication_js_1.readRollingMainlinePreparationV1)(rollingMainlinePreparationV1);
+        return this.transaction(campaignId, async (poolClient) => {
+            const rollingPublicationBatchClaimV1 = await this.publicationClaim(poolClient, campaignId, id);
+            requireState(checkedRollingMainlinePreparationV1.batchId === id && checkedRollingMainlinePreparationV1.rootPath === rollingPublicationBatchClaimV1.rootPath, 'mainline preparation differs from batch identity');
+            const row = (await poolClient.query('SELECT state FROM ponytail_index.rolling_publication_batch_v1 WHERE project_id=$1 AND campaign_id=$2 AND batch_id=$3', [this.projectId, campaignId, id])).rows[0];
+            requireState(row?.state === 'PREPARING', 'journal preparation before merging mainline');
+            requireState((0, rolling_integration_js_1.git)(rollingPublicationBatchClaimV1.rootPath, ['symbolic-ref', 'HEAD']).trim() === `refs/heads/${rollingPublicationBatchClaimV1.incrementRef}`
+                && (0, rolling_integration_js_1.git)(rollingPublicationBatchClaimV1.rootPath, ['rev-parse', 'HEAD']).trim() === checkedRollingMainlinePreparationV1.sourceRevision, 'mainline preparation source no longer owns its campaign checkout');
+            requireState((0, rolling_integration_js_1.git)(rollingPublicationBatchClaimV1.rootPath, ['rev-parse', `refs/remotes/${rollingPublicationBatchClaimV1.target.remote}/${rollingPublicationBatchClaimV1.target.branch}^{commit}`]).trim()
+                === checkedRollingMainlinePreparationV1.mainlineRevision, 'mainline preparation differs from its fetched target');
+            const previous = (await poolClient.query('SELECT preparation_text FROM ponytail_index.rolling_publication_preparation_v1 WHERE project_id=$1 AND campaign_id=$2 AND batch_id=$3', [this.projectId, campaignId, id])).rows[0];
+            if (previous)
+                requireState((0, node_util_1.isDeepStrictEqual)((0, rolling_publication_js_1.readRollingMainlinePreparationV1)(readStateText(stringColumn(previous.preparation_text, 'mainline preparation'))), checkedRollingMainlinePreparationV1), 'mainline preparation is immutable');
+            else
+                await poolClient.query('INSERT INTO ponytail_index.rolling_publication_preparation_v1(project_id,campaign_id,batch_id,preparation_text) VALUES($1,$2,$3,$4)', [this.projectId, campaignId, id, JSON.stringify(checkedRollingMainlinePreparationV1)]);
+            return checkedRollingMainlinePreparationV1;
+        });
+    }
+    async recordMainlineCandidate(campaignId, id, rollingMainlineCandidateV1) {
+        const checkedRollingMainlineCandidateV1 = (0, rolling_publication_js_1.readRollingMainlineCandidateV1)(rollingMainlineCandidateV1);
+        return this.transaction(campaignId, async (poolClient) => {
+            const rollingPublicationBatchClaimV1 = await this.publicationClaim(poolClient, campaignId, id);
+            (0, rolling_publication_js_1.verifyRollingMainlineCandidate)(rollingPublicationBatchClaimV1, checkedRollingMainlineCandidateV1);
+            const preparation = (await poolClient.query('SELECT preparation_text FROM ponytail_index.rolling_publication_preparation_v1 WHERE project_id=$1 AND campaign_id=$2 AND batch_id=$3', [this.projectId, campaignId, id])).rows[0];
+            requireState(preparation, 'candidate requires a retained preparation intent');
+            const rollingMainlinePreparationV1 = (0, rolling_publication_js_1.readRollingMainlinePreparationV1)(readStateText(stringColumn(preparation.preparation_text, 'mainline preparation')));
+            requireState((0, node_util_1.isDeepStrictEqual)({ ...rollingMainlinePreparationV1, revision: checkedRollingMainlineCandidateV1.revision }, checkedRollingMainlineCandidateV1), 'candidate differs from retained mainline preparation');
+            const existing = (await poolClient.query('SELECT candidate_text FROM ponytail_index.rolling_publication_candidate_v1 WHERE project_id=$1 AND campaign_id=$2 AND batch_id=$3', [this.projectId, campaignId, id])).rows[0];
+            if (existing)
+                requireState((0, node_util_1.isDeepStrictEqual)((0, rolling_publication_js_1.readRollingMainlineCandidateV1)(readStateText(stringColumn(existing.candidate_text, 'mainline candidate'))), checkedRollingMainlineCandidateV1), 'mainline candidate is immutable');
+            else {
+                const row = (await poolClient.query('SELECT state FROM ponytail_index.rolling_publication_batch_v1 WHERE project_id=$1 AND campaign_id=$2 AND batch_id=$3', [this.projectId, campaignId, id])).rows[0];
+                requireState(row?.state === 'PREPARING', 'candidate requires its journaled preparation');
+                await poolClient.query('INSERT INTO ponytail_index.rolling_publication_candidate_v1(project_id,campaign_id,batch_id,candidate_text) VALUES($1,$2,$3,$4)', [this.projectId, campaignId, id, JSON.stringify(checkedRollingMainlineCandidateV1)]);
+                await poolClient.query("UPDATE ponytail_index.rolling_publication_batch_v1 SET state='CANDIDATE' WHERE project_id=$1 AND campaign_id=$2 AND batch_id=$3", [this.projectId, campaignId, id]);
+            }
+            return checkedRollingMainlineCandidateV1;
+        });
+    }
+    async publicationCandidate(poolClient, campaignId, id) {
+        const row = (await poolClient.query('SELECT candidate_text FROM ponytail_index.rolling_publication_candidate_v1 WHERE project_id=$1 AND campaign_id=$2 AND batch_id=$3', [this.projectId, campaignId, id])).rows[0];
+        requireState(row, 'publication has no retained candidate');
+        return (0, rolling_publication_js_1.readRollingMainlineCandidateV1)(readStateText(stringColumn(row.candidate_text, 'mainline candidate')));
+    }
+    publicationConfigurationDigest(rollingExecutionConfig, rollingGraph) {
+        return node_crypto_1.default.createHash('sha256').update(JSON.stringify({ execution: rollingExecutionConfig, project: rollingGraph.projectConfiguration })).digest('hex');
+    }
+    publicationQaConfiguration(rollingCampaignRow) {
+        const rollingGraph = this.collectGraph(rollingCampaignRow);
+        const rollingExecutionConfig = executionConfiguration(rollingCampaignRow.configuration_text);
+        return { digest: this.publicationConfigurationDigest(rollingExecutionConfig, rollingGraph),
+            commands: rollingGraph.projectConfiguration.qa.publication };
+    }
+    async beginPublicationQa(campaignId, id) {
+        return this.transaction(campaignId, async (poolClient, rollingCampaignRow) => {
+            const rollingPublicationBatchClaimV1 = await this.publicationClaim(poolClient, campaignId, id);
+            const rollingMainlineCandidateV1 = await this.publicationCandidate(poolClient, campaignId, id);
+            (0, rolling_publication_js_1.verifyRollingMainlineCandidate)(rollingPublicationBatchClaimV1, rollingMainlineCandidateV1);
+            const row = (await poolClient.query('SELECT state FROM ponytail_index.rolling_publication_batch_v1 WHERE project_id=$1 AND campaign_id=$2 AND batch_id=$3', [this.projectId, campaignId, id])).rows[0];
+            requireState(row && (row.state === 'CANDIDATE' || row.state === 'QA_FAILED'), 'finish or reconcile the original QA attempt before starting another');
+            const rollingPublicationQaConfiguration = this.publicationQaConfiguration(rollingCampaignRow);
+            const rollingPublicationQaJobV1 = (0, rolling_publication_js_1.readRollingPublicationQaJobV1)({ schemaVersion: 1, id: node_crypto_1.default.randomUUID(), batchId: id,
+                revision: rollingMainlineCandidateV1.revision, configurationDigest: rollingPublicationQaConfiguration.digest, commands: rollingPublicationQaConfiguration.commands });
+            await poolClient.query('INSERT INTO ponytail_index.rolling_publication_qa_v1(project_id,campaign_id,batch_id,qa_id,job_text) VALUES($1,$2,$3,$4,$5)', [this.projectId, campaignId, id, rollingPublicationQaJobV1.id, JSON.stringify(rollingPublicationQaJobV1)]);
+            await poolClient.query("UPDATE ponytail_index.rolling_publication_batch_v1 SET state='QA_RUNNING',qa_id=$4 WHERE project_id=$1 AND campaign_id=$2 AND batch_id=$3", [this.projectId, campaignId, id, rollingPublicationQaJobV1.id]);
+            return rollingPublicationQaJobV1;
+        });
+    }
+    async recordPublicationQa(campaignId, id, rollingPublicationQaV1) {
+        const checkedRollingPublicationQaV1 = (0, rolling_publication_js_1.readRollingPublicationQaV1)(rollingPublicationQaV1);
+        return this.transaction(campaignId, async (poolClient, rollingCampaignRow) => {
+            requireState(checkedRollingPublicationQaV1.batchId === id, 'QA result differs from batch');
+            const row = (await poolClient.query('SELECT job_text,result_text FROM ponytail_index.rolling_publication_qa_v1 WHERE project_id=$1 AND campaign_id=$2 AND batch_id=$3 AND qa_id=$4', [this.projectId, campaignId, id, checkedRollingPublicationQaV1.id])).rows[0];
+            requireState(row, 'QA result has no original recorded job');
+            if (row.result_text !== null) {
+                const previous = (0, rolling_publication_js_1.parseRollingPublicationQa)(stringColumn(row.result_text, 'QA result'));
+                requireState((0, node_util_1.isDeepStrictEqual)(previous, checkedRollingPublicationQaV1), 'QA receipt is immutable');
+                return previous;
+            }
+            const rollingPublicationQaJobV1 = (0, rolling_publication_js_1.readRollingPublicationQaJobV1)(readStateText(stringColumn(row.job_text, 'QA job')));
+            requireState(checkedRollingPublicationQaV1.revision === rollingPublicationQaJobV1.revision
+                && checkedRollingPublicationQaV1.configurationDigest === rollingPublicationQaJobV1.configurationDigest
+                && checkedRollingPublicationQaV1.commands.length <= rollingPublicationQaJobV1.commands.length
+                && checkedRollingPublicationQaV1.commands.every((command, index) => (0, node_util_1.isDeepStrictEqual)(command.argv, rollingPublicationQaJobV1.commands[index])), 'QA result differs from its original command and input scope');
+            const batch = (await poolClient.query('SELECT state,qa_id FROM ponytail_index.rolling_publication_batch_v1 WHERE project_id=$1 AND campaign_id=$2 AND batch_id=$3', [this.projectId, campaignId, id])).rows[0];
+            requireState(batch?.state === 'QA_RUNNING' && batch.qa_id === checkedRollingPublicationQaV1.id, 'QA job no longer owns this publication');
+            if (checkedRollingPublicationQaV1.outcome === 'PASS') {
+                const rollingPublicationQaConfiguration = this.publicationQaConfiguration(rollingCampaignRow);
+                (0, rolling_publication_js_1.verifyRollingPublicationQa)(await this.publicationClaim(poolClient, campaignId, id), await this.publicationCandidate(poolClient, campaignId, id), checkedRollingPublicationQaV1, rollingPublicationQaConfiguration.digest, rollingPublicationQaConfiguration.commands);
+            }
+            await poolClient.query('UPDATE ponytail_index.rolling_publication_qa_v1 SET result_text=$5 WHERE project_id=$1 AND campaign_id=$2 AND batch_id=$3 AND qa_id=$4', [this.projectId, campaignId, id, checkedRollingPublicationQaV1.id, JSON.stringify(checkedRollingPublicationQaV1)]);
+            await poolClient.query('UPDATE ponytail_index.rolling_publication_batch_v1 SET state=$4 WHERE project_id=$1 AND campaign_id=$2 AND batch_id=$3', [this.projectId, campaignId, id, checkedRollingPublicationQaV1.outcome === 'PASS' ? 'QA_PASSED' : 'QA_FAILED']);
+            return checkedRollingPublicationQaV1;
+        });
+    }
+    async beginMainlinePush(campaignId, id) {
+        return this.transaction(campaignId, async (poolClient, rollingCampaignRow) => {
+            const batch = (await poolClient.query('SELECT state FROM ponytail_index.rolling_publication_batch_v1 WHERE project_id=$1 AND campaign_id=$2 AND batch_id=$3', [this.projectId, campaignId, id])).rows[0];
+            requireState(batch?.state === 'QA_PASSED', 'full publication QA must pass before mainline push');
+            const rows = (await poolClient.query("SELECT q.result_text FROM ponytail_index.rolling_publication_qa_v1 q JOIN ponytail_index.rolling_publication_batch_v1 b USING(project_id,campaign_id,batch_id) WHERE q.project_id=$1 AND q.campaign_id=$2 AND q.batch_id=$3 AND q.qa_id=b.qa_id AND q.result_text IS NOT NULL", [this.projectId, campaignId, id])).rows;
+            const row = rows[0];
+            requireState(row, 'publication lacks its complete QA receipt');
+            const rollingPublicationQaV1 = (0, rolling_publication_js_1.parseRollingPublicationQa)(stringColumn(row.result_text, 'QA result'));
+            const rollingMainlineCandidateV1 = await this.publicationCandidate(poolClient, campaignId, id);
+            const rollingPublicationQaConfiguration = this.publicationQaConfiguration(rollingCampaignRow);
+            (0, rolling_publication_js_1.verifyRollingPublicationQa)(await this.publicationClaim(poolClient, campaignId, id), rollingMainlineCandidateV1, rollingPublicationQaV1, rollingPublicationQaConfiguration.digest, rollingPublicationQaConfiguration.commands);
+            await poolClient.query("UPDATE ponytail_index.rolling_publication_batch_v1 SET state='PUSHING' WHERE project_id=$1 AND campaign_id=$2 AND batch_id=$3", [this.projectId, campaignId, id]);
+            return rollingMainlineCandidateV1;
+        });
+    }
     async claimIncrement(campaignId, reviewId) {
         return this.transaction(campaignId, async (poolClient, rollingCampaignRow) => {
             const existing = (await poolClient.query('SELECT claim_text FROM ponytail_index.rolling_increment_v1 WHERE project_id=$1 AND campaign_id=$2 AND review_id=$3', [this.projectId, campaignId, reviewId])).rows[0];
@@ -567,6 +738,8 @@ class RollingCampaignStore {
                 await this.validateIncrementClaim(poolClient, rollingCampaignRow, rollingIncrementClaimV1);
                 return rollingIncrementClaimV1;
             }
+            const activePublications = (await poolClient.query("SELECT batch_id FROM ponytail_index.rolling_publication_batch_v1 WHERE project_id=$1 AND coordinator_root=$2 AND state<>'PUBLISHED'", [this.projectId, rollingCampaignRow.coordinator_root])).rows;
+            requireState(activePublications.length === 0, 'mainline publication owns the coordinator checkout; finish it before claiming another increment');
             const row = (await poolClient.query('SELECT request_text,outcome_text,replacement_text FROM ponytail_index.rolling_review_v1 WHERE project_id=$1 AND campaign_id=$2 AND review_id=$3', [this.projectId, campaignId, reviewId])).rows[0];
             requireState(row && row.replacement_text === null && row.outcome_text !== null, 'increment requires an unreplaced decided review');
             const rollingReviewRequestV1 = (0, rolling_review_js_1.parseRollingReviewRequest)(stringColumn(row.request_text, 'review request'));

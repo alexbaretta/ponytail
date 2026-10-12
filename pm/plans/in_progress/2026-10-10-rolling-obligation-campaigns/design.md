@@ -353,3 +353,33 @@ applicable QA and discharge assessment of a started group before starting the
 next group. Respect dependencies within each group; grouping does not authorize
 bypassing a prerequisite or publishing an unverified candidate. Run final
 repository acceptance after the last relevant edit.
+
+## Publication batch transaction and QA boundary
+
+The first publication group reserves distinct accepted campaign delivery receipts
+under the existing project lock. Git ancestry determines their order; transaction
+timestamps do not define a history prefix. The immutable V1 claim freezes at most
+M receipts, their last campaign revision, the resolved target and input digests.
+Membership keys prevent retries or bookkeeping from counting a receipt twice.
+Completion flush requires every bound delivery obligation satisfied; quiescence
+requires neither active nor immediately schedulable work. Empty selections do not
+create publication claims. A partial unique index gives one active publication
+ownership of a coordinator checkout and new increment claims respect that owner.
+
+Preparation is journaled before external Git work. The fetched mainline revision
+and retained campaign head are recorded before creating the publication branch.
+That branch begins at the frozen prefix and merges fresh mainline; published
+campaign refs stay intact. A conflict or unknown result preserves the branch,
+reservation and preparation for reconciliation. Candidate acknowledgement verifies
+its physical checkout, exact revision and containment of all frozen receipts and
+mainline.
+
+Each full QA attempt has its own immutable V1 job identity and complete command
+profile derived from the reconciled candidate's current project configuration.
+The batch stores the current QA identity explicitly; timestamps never select the
+current attempt. Failed commands retain their output and prevent push. A completed
+old receipt cannot overwrite a newer running attempt. Passing proof must cover
+every configured command on the exact candidate with unchanged configuration;
+empty profiles, partial execution, stale proof and changed checkout inputs refuse
+push intent. Mainline push observation, race recovery and campaign synchronization
+remain the next publication obligation's responsibility.

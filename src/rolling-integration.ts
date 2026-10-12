@@ -44,13 +44,13 @@ function requireIntegration(condition: unknown,message: string): asserts conditi
  if (!condition) throw new Error(`rolling integration: ${message}`);
 }
 
-function gitResult(rootPath: string,argv: readonly string[],processEnv: NodeJS.ProcessEnv = {...process.env,GIT_TERMINAL_PROMPT:'0'}): SpawnSyncReturns<string> {
+export function gitResult(rootPath: string,argv: readonly string[],processEnv: NodeJS.ProcessEnv = {...process.env,GIT_TERMINAL_PROMPT:'0'}): SpawnSyncReturns<string> {
  const spawnSyncReturns = spawnSync('git',['-C',rootPath,...argv],{encoding:'utf8',env:processEnv});
  if (spawnSyncReturns.error) throw spawnSyncReturns.error;
  return spawnSyncReturns;
 }
 
-function git(rootPath: string,argv: readonly string[]): string {
+export function git(rootPath: string,argv: readonly string[]): string {
  const spawnSyncReturns = gitResult(rootPath,argv);
  requireIntegration(spawnSyncReturns.status === 0,spawnSyncReturns.stderr.trim() || `git ${argv[0]} failed`);
  return spawnSyncReturns.stdout;

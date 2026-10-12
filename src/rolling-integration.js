@@ -7,6 +7,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.RollingIncrementPublicationReaders = exports.RollingIncrementRebaseReaders = exports.RollingIncrementClaimReaders = void 0;
+exports.gitResult = gitResult;
+exports.git = git;
 exports.prepareRollingIncrementRebase = prepareRollingIncrementRebase;
 exports.rebasePreparedRollingIncrement = rebasePreparedRollingIncrement;
 exports.fastRebaseRollingIncrement = fastRebaseRollingIncrement;

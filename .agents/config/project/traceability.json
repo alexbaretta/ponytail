@@ -852,6 +852,11 @@
       "locator": "text"
     },
     {
+      "class": "integration-test",
+      "path": "tests/rolling-publication.integration.test.ts",
+      "locator": "text"
+    },
+    {
       "class": "unit-test",
       "path": "tests/rolling-integration.test.ts",
       "locator": "text"

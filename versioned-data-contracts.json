@@ -3,6 +3,46 @@
   "schemaVersion": 1,
   "families": [
     {
+      "id": "rolling-publication-qa-job",
+      "implementation": {"workspace": "ponytail", "module": "src/rolling-publication.ts", "readerRegistryExport": "RollingPublicationQaJobReaders"},
+      "currentVersion": "V1",
+      "versions": ["V1"],
+      "supportedReadVersions": ["V1"],
+      "supportedDowngradeVersions": []
+    },
+    {
+      "id": "rolling-mainline-preparation",
+      "implementation": {"workspace": "ponytail", "module": "src/rolling-publication.ts", "readerRegistryExport": "RollingMainlinePreparationReaders"},
+      "currentVersion": "V1",
+      "versions": ["V1"],
+      "supportedReadVersions": ["V1"],
+      "supportedDowngradeVersions": []
+    },
+    {
+      "id": "rolling-mainline-candidate",
+      "implementation": {"workspace": "ponytail", "module": "src/rolling-publication.ts", "readerRegistryExport": "RollingMainlineCandidateReaders"},
+      "currentVersion": "V1",
+      "versions": ["V1"],
+      "supportedReadVersions": ["V1"],
+      "supportedDowngradeVersions": []
+    },
+    {
+      "id": "rolling-publication-qa",
+      "implementation": {"workspace": "ponytail", "module": "src/rolling-publication.ts", "readerRegistryExport": "RollingPublicationQaReaders"},
+      "currentVersion": "V1",
+      "versions": ["V1"],
+      "supportedReadVersions": ["V1"],
+      "supportedDowngradeVersions": []
+    },
+    {
+      "id": "rolling-publication-batch-claim",
+      "implementation": {"workspace": "ponytail", "module": "src/rolling-publication.ts", "readerRegistryExport": "RollingPublicationBatchClaimReaders"},
+      "currentVersion": "V1",
+      "versions": ["V1"],
+      "supportedReadVersions": ["V1"],
+      "supportedDowngradeVersions": []
+    },
+    {
       "id": "rolling-increment-publication",
       "implementation": {"workspace": "ponytail", "module": "src/rolling-integration.ts", "readerRegistryExport": "RollingIncrementPublicationReaders"},
       "currentVersion": "V1",

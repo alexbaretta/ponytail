@@ -113,7 +113,7 @@ function requireRollingRecord(value: unknown, keys: readonly string[], label: st
 function isRollingStringArray(value: unknown): value is readonly string[] {
   return Array.isArray(value) && value.every((item: unknown) => typeof item === 'string' && item.length > 0);
 }
-function isRollingArgv(value: unknown): value is RollingArgv {
+export function isRollingArgv(value: unknown): value is RollingArgv {
   return Array.isArray(value) && typeof value[0] === 'string' && value[0].length > 0
     && value.every((argument: unknown) => typeof argument === 'string' && !argument.includes('\0'));
 }
