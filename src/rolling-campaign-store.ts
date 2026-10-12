@@ -187,6 +187,7 @@ export interface RollingCoordinatorSnapshot extends RollingCampaignStatus {
   readonly reviews: readonly RollingStoredReview[];
   readonly workerDispatches:readonly RollingStoredWorkerDispatch[];
   readonly reviewDispatches:readonly RollingStoredReviewDispatch[];
+  readonly releasableAssignments:readonly RollingAssignmentRelease[];
   readonly publications: readonly RollingPublicationStatus[];
 }
 export type RollingActionState = 'PENDING' | 'STARTED' | 'COMPLETED' | 'CANCELLED';
@@ -1714,6 +1715,7 @@ export class RollingCampaignStore {
       const rollingGraph = this.collectGraph(rollingCampaignRow);
       const rollingExecutionConfigV3 = parseRollingExecutionConfig(rollingCampaignRow.configuration_text);
       const assignments = (await poolClient.query<Record<string,unknown>>('SELECT * FROM ponytail_index.rolling_assignment_v1 WHERE project_id=$1 ORDER BY created_at,assignment_id',[this.projectId])).rows.map(readAssignment);
+      const releasableAssignments=(await poolClient.query<Record<string,unknown>>("SELECT a.assignment_id,a.generation FROM ponytail_index.rolling_assignment_v1 a LEFT JOIN ponytail_index.rolling_worker_retirement_v1 r USING(project_id,campaign_id,assignment_id,generation) WHERE a.project_id=$1 AND a.campaign_id=$2 AND a.state='RETIRING' AND a.retired AND a.activity_stopped AND (a.session_id IS NULL OR r.state='CLEANED') ORDER BY a.created_at,a.assignment_id",[this.projectId,campaignId])).rows.map((row):RollingAssignmentRelease=>({id:stringColumn(row.assignment_id,'release assignment'),generation:stringColumn(row.generation,'release generation')}));
       const actions = (await poolClient.query<Record<string,unknown>>("SELECT * FROM ponytail_index.rolling_action_v1 WHERE project_id=$1 AND campaign_id=$2 AND state IN ('PENDING','STARTED') ORDER BY created_at,action_id",[this.projectId,campaignId])).rows.map(value => {const {resultText,...rollingAction} = readAction(value); return rollingAction;});
       const workerDispatches=(await poolClient.query<Record<string,unknown>>("SELECT d.* FROM ponytail_index.rolling_worker_dispatch_v1 d JOIN ponytail_index.rolling_assignment_v1 a USING(project_id,campaign_id,assignment_id,generation) WHERE d.project_id=$1 AND d.campaign_id=$2 AND a.state<>'RELEASED' ORDER BY d.created_at,d.assignment_id",[this.projectId,campaignId])).rows.map((row):RollingStoredWorkerDispatch=>({assignmentId:stringColumn(row.assignment_id,'worker dispatch assignment'),generation:stringColumn(row.generation,'worker dispatch generation'),dispatch:readWorkerDispatch(row)}));
       const reviews = (await poolClient.query<Record<string,unknown>>("SELECT r.request_text,r.outcome_text FROM ponytail_index.rolling_review_v1 r JOIN ponytail_index.rolling_assignment_v1 a USING(project_id,campaign_id,assignment_id) WHERE r.project_id=$1 AND r.campaign_id=$2 AND r.replacement_text IS NULL AND a.state IN ('REVIEW','REWORK','INTEGRATING') ORDER BY r.created_at,r.review_id",[this.projectId,campaignId])).rows.map(readStoredReview);
@@ -1725,7 +1727,7 @@ export class RollingCampaignStore {
       return {graphDigest:rollingCampaignRow.graph_digest,observedGraphDigest:rollingGraph.digest,configuration:rollingExecutionConfigV3,
         closure:rollingCampaignRow.closure_text === null ? null : readRollingCampaignClosureV1(readStateText(rollingCampaignRow.closure_text)),
         assignments:assignments.filter(assignment=>assignment.scopeId === campaignId),
-        scheduling:selectRollingAssignments(rollingGraph,assignments,rollingExecutionConfigV3.maxActiveWorkers,rollingGraph.digest),actions,reviews,workerDispatches,reviewDispatches,publications};
+        scheduling:selectRollingAssignments(rollingGraph,assignments,rollingExecutionConfigV3.maxActiveWorkers,rollingGraph.digest),actions,reviews,workerDispatches,reviewDispatches,releasableAssignments,publications};
     },true);
   }
 

@@ -499,3 +499,20 @@ This projection schedules a designated review request. The coordinator supplies
 the actual native reviewer thread identity to `dispatch-review`; the operation
 verifies it against the retained reviewer session. The projector does not infer
 a thread ID from a session ID.
+
+## Final coordinator retirement handoff audit
+
+The coherent snapshot exposes release-eligible assignment IDs and current
+generations. Eligibility uses the allocator's existing contract: RETIRING,
+retired ownership and acknowledged stopped activity, with a current-generation
+CLEANED retirement receipt whenever a native session was attached. A receipt
+from an older generation or an ARCHIVED owner awaiting resource cleanup is
+insufficient. An unassigned retired reservation needs no native receipt.
+
+An eligible owner produces `replenish` with its exact release pair even when
+no obligation is currently unblocked. That operation atomically releases the
+checkout and selects the first compatible allocation, preferring a retained
+unblocked inactive worker; remaining capacity is replenished transactionally.
+The selected checkout may differ from the released checkout. Until eligibility
+is established, next-actions retains the original retirement operation. The
+allocator rechecks ownership/cleanup while holding the project mutation lock.

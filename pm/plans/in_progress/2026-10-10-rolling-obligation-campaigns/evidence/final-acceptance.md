@@ -724,11 +724,11 @@ submission/request/receipt fixtures are explicitly typed fixture inputs; they
 establish the actual snapshot and decision paths, not native execution.
 
 Final workflow audit and clean-tree whole-campaign evidence renewal remain
-pending. One remaining audit item is retirement-to-release projection: a CLEANED
+pending. The audit at `c5007d4` identified retirement-to-release projection: a CLEANED
 retained owner must produce a fenced release/replenishment action, whereas the
 current next-action projection still repeats retire-worker. The retirement
-operation and allocation release gate exist; their current receipt must be made
-visible to the coordinator decision projection before OBL-64 can be discharged.
+operation and allocation release gate exist; their current receipt needed to be made
+visible to the coordinator decision projection before OBL-64 could be discharged.
 
 ### Review failing-first reproduction
 
@@ -811,3 +811,141 @@ test at dist/tests/rolling-operations.test.js:85:25
 ℹ duration_ms 5813.357167
 
 ~~~
+
+## OBL-64 retirement-to-release projection evidence
+
+The failing-first test reproduced a repeated retire-worker suggestion for an
+eligible unassigned owner even when no obligation was unblocked. The bounded
+repair projects an exact release/replenishment pair from current database
+eligibility. Twelve unit tests pass. Two PostgreSQL/CLI/MCP scenarios pass,
+including stale generation exclusion, refusal while cleanup is only ARCHIVED,
+current CLEANED eligibility, and actual release followed by resume-first
+allocation of the original retained session. Lifecycle rows are explicitly typed
+fixture inputs; this proves real database/adapter operations, not native activity.
+Strict compilation, TSTS, runtime synchronization and structural checks apply.
+These task-dirty focused results do not replace clean-tree final acceptance.
+
+### Release failing-first reproduction
+
+~~~text
+✖ retired unassigned checkout is released even when no obligation is unblocked (1.725125ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 65.456
+
+✖ failing tests:
+
+test at dist/tests/rolling-operations.test.js:102:25
+✖ retired unassigned checkout is released even when no obligation is unblocked (1.725125ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+
+    [
+      {
+  +     assignment: {
+  +       activityStopped: true,
+  +       binding: {
+  +         acceptances: [],
+  +         exclusiveResources: [],
+  +         implementationIds: [],
+  +         integrationTests: [],
+  +         obligationId: 'OBL-1',
+  +         sourcePaths: [
+  +           'src/current.ts'
+  +         ],
+  +         unitTests: []
+  +       },
+  +       blockers: [],
+  +       exclusiveResources: [],
+  -     command: 'replenish',
+  -     graphDigest: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+  -     kind: 'release',
+  -     release: {
+          generation: 'generation',
+          id: 'worker',
+  +       lease: null,
+  +       obligationId: 'OBL-1',
+  +       plannedPaths: [
+  +         'src/current.ts'
+  +       ],
+  +       retired: true,
+  +       scopeId: 'pilot',
+  +       sessionId: null,
+  +       state: 'RETIRING',
+  +       worktreeNumber: 101
+        },
+  +     command: 'retire-worker',
+  +     kind: 'assignment'
+      }
+    ]
+
+      at TestContext.<anonymous> (/Users/alex/git/ctosclub/ponytail/dist/tests/rolling-operations.test.js:105:22)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1201:25)
+      at Test.start (node:internal/test_runner/test:1096:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:385:17) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [ { kind: 'assignment', command: 'retire-worker', assignment: [Object] } ],
+    expected: [ { kind: 'release', command: 'replenish', release: [Object], graphDigest: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' } ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+~~~
+### Release focused unit result
+
+~~~text
+✔ CLI initialization preserves its physical V1 contract and rejects rounded integers or undeclared fields (7.991458ms)
+✔ coordinator decisions require reconciliation before suggesting work from a changed authoritative graph (0.228709ms)
+✔ next actions retain exact fenced identities and prerequisite explanations before replenishment (0.119916ms)
+✔ unknown publication is observed before worker replenishment and never suggested as a push retry (0.115459ms)
+✔ attached working worker receives an executable next action before new allocations (0.09875ms)
+✔ rejected work stops its original worker before resume-first replenishment (0.081ms)
+✔ known worker instruction is collected and unknown creation keeps its original ownership (0.112458ms)
+✔ pending original attachment is observed before worker dispatch and stopped workers are not restarted (0.130833ms)
+✔ new review request is dispatched before attempting to inspect its nonexistent turn (0.091166ms)
+✔ review decisions observe known turns and preserve uncertain original dispatch ownership (0.153292ms)
+✔ retired unassigned checkout is released even when no obligation is unblocked (0.104042ms)
+✔ attached retirement requires current cleanup eligibility before releasing its checkout (0.092917ms)
+ℹ tests 12
+ℹ suites 0
+ℹ pass 12
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 71.039125
+
+~~~
+### Release PostgreSQL and adapter result
+
+~~~text
+✔ shared operations initialize defaults and reconcile event/periodic contention without duplicate allocations (5238.71325ms)
+✔ closure requires fresh evidence, persists an immutable receipt and fences later mutations (1089.1065ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 2
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 6392.854583
+
+~~~
+
+## Remaining coordinator workflow audit
+
+The retirement release projection is repaired, but this does not establish all
+of OBL-64. The next source audit must distinguish an INTEGRATING assignment's
+unpublished increment from a confirmed PUBLISHED receipt: the current projector
+uses assignment state alone and repeats integrate after publication, while the
+retirement gate consumes the published receipt. Acceptance and publication-batch
+readiness must also be checked against actual stored receipts before final
+coordinator workflow discharge. No new product scope is introduced by this
+remaining audit of the already declared next-action responsibility.

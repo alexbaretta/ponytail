@@ -139,6 +139,11 @@ function projectRollingCoordinatorActions(rollingCoordinatorSnapshot) {
     for (const rollingStoredAssignment of rollingCoordinatorSnapshot.assignments) {
         if (rollingCoordinatorSnapshot.actions.some(rollingAction => rollingAction.assignmentId === rollingStoredAssignment.id && rollingAction.generation === rollingStoredAssignment.generation))
             continue;
+        const rollingAssignmentRelease = rollingCoordinatorSnapshot.releasableAssignments.find(release => release.id === rollingStoredAssignment.id && release.generation === rollingStoredAssignment.generation);
+        if (rollingAssignmentRelease && rollingStoredAssignment.state === 'RETIRING' && rollingStoredAssignment.retired && rollingStoredAssignment.activityStopped) {
+            decisions.push({ kind: 'release', command: 'replenish', release: rollingAssignmentRelease, graphDigest: rollingCoordinatorSnapshot.graphDigest });
+            continue;
+        }
         if (rollingStoredAssignment.state === 'WORKING' && !rollingStoredAssignment.retired && !rollingStoredAssignment.activityStopped && rollingStoredAssignment.sessionId !== null) {
             const rollingWorkerDispatch = rollingCoordinatorSnapshot.workerDispatches.find(rollingStoredWorkerDispatch => rollingStoredWorkerDispatch.assignmentId === rollingStoredAssignment.id && rollingStoredWorkerDispatch.generation === rollingStoredAssignment.generation)?.dispatch;
             switch (rollingWorkerDispatch?.state) {

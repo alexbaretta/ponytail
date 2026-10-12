@@ -16,6 +16,7 @@ import type {RollingProjectConfigV1,RollingBindingsV1} from '../src/rolling-camp
 import {acceptCheckpoint,inputDigest,type ObligationCertificate,type ObligationCheckpoint,type ObligationDocumentV1,type Obligation,type ObligationVector} from '../skills/plan-execution/scripts/obligations.js';
 import {freezeObligationLease,type ObligationBindingHistoryV1} from '../skills/plan-execution/scripts/obligation-binding-history.js';
 import type {RollingWorkerSubmissionV1} from '../src/rolling-worker-submission.js';
+import type {RollingWorkerRetirementV1} from '../src/rolling-worker.js';
 import type {RollingReviewRequestV1} from '../src/rolling-review.js';
 import {rollingCommandDefinitions} from '../src/rolling-cli-registry.js';
 
@@ -198,6 +199,21 @@ test('shared operations initialize defaults and reconcile event/periodic content
  await verifyMcpParity(root,rollingCampaignOperations);
  await pool.query("DELETE FROM ponytail_index.rolling_submission_v1 WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3",[projectId,'pilot',firstRollingStoredAssignment.id]);
  await pool.query("UPDATE ponytail_index.rolling_assignment_v1 SET state='WORKING',activity_stopped=false WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3",[projectId,'pilot',firstRollingStoredAssignment.id]);
+ const rollingWorkerRetirementV1:RollingWorkerRetirementV1={schemaVersion:1,campaignId:'pilot',assignmentId:firstRollingStoredAssignment.id,generation:firstRollingStoredAssignment.generation,resourceGeneration:firstRollingStoredAssignment.generation,number:firstRollingStoredAssignment.worktreeNumber,rootPath:path.join(root,'managed',String(firstRollingStoredAssignment.worktreeNumber)),coordinatorRoot:root,threadId:'worker-thread-fixture',sessionId:'session-fixture',integratedRevision:candidateRevision};
+ await pool.query("UPDATE ponytail_index.rolling_assignment_v1 SET state='RETIRING',retired=true,activity_stopped=true WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3",[projectId,'pilot',firstRollingStoredAssignment.id]);
+ const previousRollingWorkerRetirementV1:RollingWorkerRetirementV1={...rollingWorkerRetirementV1,generation:crypto.randomUUID()};
+ await pool.query("INSERT INTO ponytail_index.rolling_worker_retirement_v1(project_id,campaign_id,assignment_id,generation,context_text,state,turn_id) VALUES($1,$2,$3,$4,$5,'CLEANED','retained-notification-turn')",[projectId,'pilot',firstRollingStoredAssignment.id,previousRollingWorkerRetirementV1.generation,JSON.stringify(previousRollingWorkerRetirementV1)]);
+ assert.deepEqual((await rollingCampaignOperations.status('pilot')).releasableAssignments,[]);
+ await pool.query("UPDATE ponytail_index.rolling_worker_retirement_v1 SET generation=$4,context_text=$5,state='ARCHIVED' WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3",[projectId,'pilot',firstRollingStoredAssignment.id,rollingWorkerRetirementV1.generation,JSON.stringify(rollingWorkerRetirementV1)]);
+ assert.deepEqual((await rollingCampaignOperations.status('pilot')).releasableAssignments,[]);
+ await assert.rejects(rollingCampaignStore.allocate('pilot',staleRollingCoordinatorActions.snapshot.graphDigest,{id:firstRollingStoredAssignment.id,generation:firstRollingStoredAssignment.generation}),/completed native retirement/);
+ await pool.query("UPDATE ponytail_index.rolling_worker_retirement_v1 SET state='CLEANED' WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3",[projectId,'pilot',firstRollingStoredAssignment.id]);
+ const cleanedRollingCoordinatorActions=await rollingCampaignOperations.nextActions('pilot');
+ assert.deepEqual(cleanedRollingCoordinatorActions.snapshot.releasableAssignments,[{id:firstRollingStoredAssignment.id,generation:firstRollingStoredAssignment.generation}]);
+ assert.ok(cleanedRollingCoordinatorActions.decisions.some(decision=>decision.kind === 'release' && decision.release.id === firstRollingStoredAssignment.id));
+ await verifyMcpParity(root,rollingCampaignOperations);
+ await pool.query("DELETE FROM ponytail_index.rolling_worker_retirement_v1 WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3",[projectId,'pilot',firstRollingStoredAssignment.id]);
+ await pool.query("UPDATE ponytail_index.rolling_assignment_v1 SET state='WORKING',retired=false,activity_stopped=false WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3",[projectId,'pilot',firstRollingStoredAssignment.id]);
  await rollingCampaignStore.suspend('pilot',firstRollingStoredAssignment.id,firstRollingStoredAssignment.generation,true,['OBL-7']);
  const inactiveRollingCoordinatorSnapshot = await rollingCampaignOperations.status('pilot');
  assert.equal(inactiveRollingCoordinatorSnapshot.scheduling.activeCount,1);
@@ -212,7 +228,11 @@ test('shared operations initialize defaults and reconcile event/periodic content
  const acceptedObligationDocumentV1 = acceptCheckpoint(initialObligationDocumentV1,{...initialObligationDocumentV1,certificates:[obligationCertificate],checkpoints:[...initialObligationDocumentV1.checkpoints,obligationCheckpoint]},root);
  fs.writeFileSync(path.join(root,obligationFixture.documentPath),JSON.stringify(acceptedObligationDocumentV1));
  await rollingCampaignStore.retire('pilot',replacementRollingStoredAssignment.id,replacementRollingStoredAssignment.generation,true);
- const resumedRollingReplenishment = await rollingCampaignOperations.replenish('pilot','periodic',{id:replacementRollingStoredAssignment.id,generation:replacementRollingStoredAssignment.generation});
+ await rollingCampaignOperations.reconcile('pilot');
+ const releaseRollingCoordinatorActions=await rollingCampaignOperations.nextActions('pilot');
+ const rollingReleaseDecision=releaseRollingCoordinatorActions.decisions.find(decision=>decision.kind === 'release');assert.ok(rollingReleaseDecision && rollingReleaseDecision.kind === 'release');
+ assert.deepEqual(rollingReleaseDecision.release,{id:replacementRollingStoredAssignment.id,generation:replacementRollingStoredAssignment.generation});
+ const resumedRollingReplenishment = await rollingCampaignOperations.replenish('pilot','periodic',rollingReleaseDecision.release);
  assert.equal(resumedRollingReplenishment.allocations.length,1);
  assert.equal(resumedRollingReplenishment.allocations[0]?.assignment?.id,firstRollingStoredAssignment.id);
  assert.equal(resumedRollingReplenishment.allocations[0]?.assignment?.sessionId,'session-fixture');

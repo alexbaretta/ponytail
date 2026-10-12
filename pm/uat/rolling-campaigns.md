@@ -132,6 +132,11 @@ Traceability: verifies REQ-ROLLING-INTERFACES
    ownership with an explicit unresolved reason for uncertain creation. Verify
    generation/request fences, pending attachment priority, and suspension before
    rejected-work resumption through PostgreSQL and both adapters.
+   After retirement, verify that stale-generation and ARCHIVED receipts retain
+   ownership, while a current CLEANED receipt produces an exact fenced release.
+   An unassigned retired reservation releases without a native receipt. Release
+   succeeds with no ready obligation, and subsequent available work prefers
+   resuming its retained original inactive session over creating a new worker.
 
 
 ## Arc ROLL-CLOSE: Close only verified campaign scope

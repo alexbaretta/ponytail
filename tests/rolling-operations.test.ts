@@ -3,7 +3,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {projectRollingCoordinatorActions,parseRollingCampaignInitialization,readRollingCampaignInitializationV1,type RollingCampaignInitializationV1} from '../src/rolling-operations.js';
-import type {RollingCoordinatorSnapshot,RollingAction,RollingPublicationStatus,RollingStoredAssignment,RollingWorkerDispatchAttached,RollingWorkerDispatchStarted,RollingStoredWorkerDispatch,RollingReviewDispatchStarted,RollingReviewDispatchAttached,RollingStoredReviewDispatch} from '../src/rolling-campaign-store.js';
+import type {RollingCoordinatorSnapshot,RollingAction,RollingPublicationStatus,RollingStoredAssignment,RollingWorkerDispatchAttached,RollingWorkerDispatchStarted,RollingStoredWorkerDispatch,RollingReviewDispatchStarted,RollingReviewDispatchAttached,RollingStoredReviewDispatch,RollingAssignmentRelease} from '../src/rolling-campaign-store.js';
 import type {RollingStoredReview,RollingReviewRequestV1} from '../src/rolling-review.js';
 import type {RollingWorkerSelection,RollingBinding,RollingSchedulingBlock} from '../src/rolling-campaign.js';
 
@@ -12,7 +12,7 @@ function snapshot():RollingCoordinatorSnapshot {
  const rollingWorkerSelection:RollingWorkerSelection = {kind:'start_worker',assignmentId:null,obligationId:'OBL-1',plannedPaths:['src/current.ts'],exclusiveResources:[],binding:rollingBinding};
  const rollingSchedulingBlock:RollingSchedulingBlock = {reason:'prerequisites',obligationId:'OBL-2',prerequisites:['OBL-1']};
  return {closure:null,graphDigest:'a'.repeat(64),observedGraphDigest:'a'.repeat(64),configuration:{schemaVersion:3,bindingHistory:null,mainline:{remote:'origin',branch:'main'},incrementRef:'campaign/proof',maxActiveWorkers:2,publicationSize:1},
-  assignments:[],actions:[],reviews:[],workerDispatches:[],reviewDispatches:[],publications:[],scheduling:{digest:'a'.repeat(64),activeCount:0,availableCapacity:1,selected:[rollingWorkerSelection],blocked:[rollingSchedulingBlock]}};
+  assignments:[],actions:[],reviews:[],workerDispatches:[],reviewDispatches:[],releasableAssignments:[],publications:[],scheduling:{digest:'a'.repeat(64),activeCount:0,availableCapacity:1,selected:[rollingWorkerSelection],blocked:[rollingSchedulingBlock]}};
 }
 
 // Traceability: verifies REQ-ROLLING-INTERFACES
@@ -133,4 +133,26 @@ test('review decisions observe known turns and preserve uncertain original dispa
  assert.deepEqual(projectRollingCoordinatorActions(attachedRollingCoordinatorSnapshot).decisions[0],{kind:'review',command:'inspect-review',review:rollingStoredReview});
  const foreignRollingCoordinatorSnapshot:RollingCoordinatorSnapshot={...attachedRollingCoordinatorSnapshot,reviewDispatches:[{...rollingStoredReviewDispatch,reviewId:'earlier-review'}]};
  assert.deepEqual(projectRollingCoordinatorActions(foreignRollingCoordinatorSnapshot).decisions[0],{kind:'review',command:'dispatch-review',review:rollingStoredReview});
+});
+
+// Traceability: verifies REQ-ROLLING-INTERFACES
+// Traceability: verifies REQ-ROLLING-SCHEDULING
+test('retired unassigned checkout is released even when no obligation is unblocked',()=> {
+ const rollingStoredAssignment:RollingStoredAssignment={...workingAssignment(),state:'RETIRING',retired:true,activityStopped:true,sessionId:null};
+ const rollingAssignmentRelease:RollingAssignmentRelease={id:rollingStoredAssignment.id,generation:rollingStoredAssignment.generation};
+ const rollingCoordinatorSnapshot:RollingCoordinatorSnapshot={...snapshot(),assignments:[rollingStoredAssignment],releasableAssignments:[rollingAssignmentRelease],scheduling:{...snapshot().scheduling,selected:[],availableCapacity:0}};
+ assert.deepEqual(projectRollingCoordinatorActions(rollingCoordinatorSnapshot).decisions,[{kind:'release',command:'replenish',release:{id:rollingStoredAssignment.id,generation:rollingStoredAssignment.generation},graphDigest:rollingCoordinatorSnapshot.graphDigest}]);
+});
+
+// Traceability: verifies REQ-ROLLING-INTERFACES
+// Traceability: verifies REQ-ROLLING-WORKERS
+test('attached retirement requires current cleanup eligibility before releasing its checkout',()=> {
+ const rollingStoredAssignment:RollingStoredAssignment={...workingAssignment(),state:'RETIRING',retired:true,activityStopped:true};
+ const rollingCoordinatorSnapshot:RollingCoordinatorSnapshot={...snapshot(),assignments:[rollingStoredAssignment],scheduling:{...snapshot().scheduling,selected:[]}};
+ assert.deepEqual(projectRollingCoordinatorActions(rollingCoordinatorSnapshot).decisions,[{kind:'assignment',command:'retire-worker',assignment:rollingStoredAssignment}]);
+ const rollingAssignmentRelease:RollingAssignmentRelease={id:rollingStoredAssignment.id,generation:rollingStoredAssignment.generation};
+ const cleanedRollingCoordinatorSnapshot:RollingCoordinatorSnapshot={...rollingCoordinatorSnapshot,releasableAssignments:[rollingAssignmentRelease]};
+ assert.deepEqual(projectRollingCoordinatorActions(cleanedRollingCoordinatorSnapshot).decisions,[{kind:'release',command:'replenish',release:rollingAssignmentRelease,graphDigest:cleanedRollingCoordinatorSnapshot.graphDigest}]);
+ const staleRollingCoordinatorSnapshot:RollingCoordinatorSnapshot={...cleanedRollingCoordinatorSnapshot,releasableAssignments:[{...rollingAssignmentRelease,generation:'previous-generation'}]};
+ assert.deepEqual(projectRollingCoordinatorActions(staleRollingCoordinatorSnapshot).decisions,[{kind:'assignment',command:'retire-worker',assignment:rollingStoredAssignment}]);
 });
