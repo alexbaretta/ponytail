@@ -1,6 +1,6 @@
 {
   "status": "in_progress",
-  "sourceRevision": "0df95beab8c9946f0211108c5dc035b36e45a0c4",
+  "sourceRevision": "0c0eda43c6a2c40ecc67c001d9d1bf1c73223df1",
   "deliveryObligationCount": 91,
   "currentAssessedDeliveryIds": [
     "OBL-22",
@@ -37,6 +37,12 @@
     "OBL-73",
     "OBL-74",
     "OBL-75",
+    "OBL-76",
+    "OBL-77",
+    "OBL-78",
+    "OBL-79",
+    "OBL-80",
+    "OBL-81",
     "OBL-107",
     "OBL-108",
     "OBL-109",
