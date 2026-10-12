@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "certificateId": "CERT-210",
+  "lease": {
+    "schemaVersion": 1,
+    "scopeId": "2026-10-10-rolling-obligation-campaigns",
+    "baselineId": "BASELINE-16",
+    "graphDigest": "d68cabc69cc88232313a1cb9bf934bb35fd6c298ccadebb840207c428665c224",
+    "generation": "standalone-tasklet-ownership-CERT-210",
+    "assessor": "coordinator",
+    "authority": [
+      "user-goal-2026-10-10-rolling-campaigns",
+      "user-goal-2026-10-10-static-language-existing-tsts",
+      "user-2026-10-10-normative-atomic-obligations",
+      "user-2026-10-11-language-scope-our-code-preserve-translations"
+    ],
+    "binding": {
+      "obligationId": "OBL-104",
+      "revisionId": "BIND-228",
+      "dependsOn": [
+        "OBL-112"
+      ],
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/final-acceptance.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/final-audit.json",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/design.md",
+          "pm/uat/rolling-campaigns.md",
+          "pm/requirements/traceability.generated.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/final-OBL-104.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/final-OBL-104-certificate-binding.json"
+        ],
+        "operations": [
+          "inspect",
+          "edit",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "Select a bounded ordered batch with an exact union of tasklet paths through a checked static implementation preserving the approved portable behavior and historical contract meanings."
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "final-acceptance"
+        }
+      }
+    }
+  },
+  "revision": "77e155d1e75be0a9a638e325133e4c582f35fa4f",
+  "proof": [
+    {
+      "operation": "test",
+      "certificateEvidenceIndex": 0,
+      "submissionEvidenceIndex": 0
+    },
+    {
+      "operation": "check",
+      "certificateEvidenceIndex": 1,
+      "submissionEvidenceIndex": 1
+    }
+  ]
+}
