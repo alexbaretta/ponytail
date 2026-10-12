@@ -1,0 +1,78 @@
+{
+  "schemaVersion": 1,
+  "certificateId": "CERT-228",
+  "lease": {
+    "schemaVersion": 1,
+    "scopeId": "2026-10-10-rolling-obligation-campaigns",
+    "baselineId": "BASELINE-16",
+    "graphDigest": "05bbe884e6ff7fc7c22140fe5571505c370492f2ae235cff023d10be03c25c67",
+    "generation": "standalone-interface-closure-CERT-228",
+    "assessor": "coordinator",
+    "authority": [
+      "user-goal-2026-10-10-rolling-campaigns",
+      "user-goal-2026-10-10-static-language-existing-tsts",
+      "user-2026-10-10-normative-atomic-obligations",
+      "user-2026-10-11-language-scope-our-code-preserve-translations"
+    ],
+    "binding": {
+      "obligationId": "OBL-65",
+      "revisionId": "BIND-189",
+      "dependsOn": [],
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/final-acceptance.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/final-audit.json",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/design.md",
+          "pm/uat/rolling-campaigns.md",
+          "pm/requirements/traceability.generated.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/final-OBL-65.md",
+          "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/final-OBL-65-certificate-binding.json"
+        ],
+        "operations": [
+          "inspect",
+          "edit",
+          "test",
+          "check",
+          "assess"
+        ],
+        "selection": [
+          "Initialize and reconcile a campaign through the shared typed application operation layer."
+        ],
+        "target": {
+          "identity": "ponytail-local-checkout",
+          "profile": "final-acceptance"
+        }
+      }
+    }
+  },
+  "revision": "abb8b16ab596b587fd64a85fbc8f67d17939edc7",
+  "proof": [
+    {
+      "operation": "test",
+      "certificateEvidenceIndex": 0,
+      "submissionEvidenceIndex": 0
+    },
+    {
+      "operation": "test",
+      "certificateEvidenceIndex": 1,
+      "submissionEvidenceIndex": 1
+    },
+    {
+      "operation": "test",
+      "certificateEvidenceIndex": 2,
+      "submissionEvidenceIndex": 2
+    },
+    {
+      "operation": "check",
+      "certificateEvidenceIndex": 3,
+      "submissionEvidenceIndex": 3
+    },
+    {
+      "operation": "check",
+      "certificateEvidenceIndex": 4,
+      "submissionEvidenceIndex": 4
+    }
+  ]
+}
