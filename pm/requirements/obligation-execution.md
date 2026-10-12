@@ -179,6 +179,16 @@ design recorded in commit `07780bd`, and activated issues
 
 Ponytail must reuse unchanged relevant input evidence and reject stale, failing, skipped or wrong-target proof.
 
+For new campaign certificates, record the tested Git revision and relevant
+tracked input paths, not file-hash manifests. Use Git comparisons to detect
+committed, staged and unstaged changes. Reject inputs absent from the tested
+revision. Historical hash records remain readable; new campaign acceptance
+must reject them. Retained command logs may be ignored files and are evidence
+outputs rather than tracked source inputs.
+
+This clarification was approved by the stakeholder's "Phase 2: go" on
+2026-10-12 after the certificate-history repair.
+
 Acceptance: [OBL-FRESHNESS](../uat/obligation-execution.md#obl-freshness).
 
 ## REQ-OBLIGATION-COMPATIBILITY: Obl Compatibility

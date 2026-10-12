@@ -5,7 +5,7 @@ import { validateRollingSessionMarker } from './rolling-worktrees.js';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { parse } from 'lossless-json';
-import { inputDigest, readObligationEvidence, type ObligationEvidence } from '../skills/plan-execution/scripts/obligations.js';
+import { inputDigest, readObligationEvidence, isObligationGitInputs, gitInputReasons, obligationInputCovers, type ObligationEvidence } from '../skills/plan-execution/scripts/obligations.js';
 import { assertObligationLeaseOperation, type ObligationLeaseV1 } from '../skills/plan-execution/scripts/obligation-binding-history.js';
 
 export interface RollingSubmissionProof {
@@ -105,6 +105,14 @@ export function validateRollingWorkerSubmission(root: string, obligationLeaseV1:
     requireSubmission(obligationEvidence.target.identity === obligationExecution.target.identity
       && obligationEvidence.target.profile === obligationExecution.target.profile
       && JSON.stringify(obligationEvidence.selection) === JSON.stringify(obligationExecution.selection), 'proof differs from frozen target or selection');
+    if (isObligationGitInputs(obligationEvidence.inputs)) {
+      requireSubmission(obligationEvidence.inputs.revision === rollingWorkerSubmissionV1.revision, 'Git inputs belong to another candidate');
+      requireSubmission(obligationInputCovers(obligationEvidence.inputs, obligationEvidence.target.verification), 'unassessed target verification');
+      requireSubmission(gitInputReasons(root, obligationEvidence.inputs).length === 0, 'stale focused Git inputs');
+      requireSubmission(fs.existsSync(path.join(root, obligationEvidence.outputPath)), 'missing focused proof output');
+      for (const changedPath of changedPaths) if (obligationInputCovers(obligationEvidence.inputs, changedPath)) assessed.add(changedPath);
+      continue;
+    }
     const inputs = new Map(obligationEvidence.inputs.map(input => [input.path, input.digest]));
     requireSubmission(inputs.has(obligationEvidence.outputPath) && inputs.has(obligationEvidence.target.verification), 'unassessed proof output or target verification');
     for (const input of obligationEvidence.inputs) {

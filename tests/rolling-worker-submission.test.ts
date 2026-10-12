@@ -6,7 +6,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
-import { inputDigest, type ObligationEvidence } from '../skills/plan-execution/scripts/obligations.js';
+import { isObligationGitInputs, createObligationGitInputs, inputDigest, type ObligationEvidence } from '../skills/plan-execution/scripts/obligations.js';
 import type { ObligationLeaseV1 } from '../skills/plan-execution/scripts/obligation-binding-history.js';
 import { readRollingWorkerSubmissionV1, parseRollingWorkerSubmission, validateRollingWorkerSubmission,
   RollingWorkerSubmissionReaders, type RollingWorkerSubmissionV1 } from '../src/rolling-worker-submission.js';
@@ -47,6 +47,25 @@ function fixture(): SubmissionFixture {
 }
 
 // Traceability: verifies REQ-ROLLING-WORKERS
+test('Git proof validates the actual candidate and keeps ignored output outside source inputs', t => {
+ const submissionFixture: SubmissionFixture = fixture();
+ t.after(() => fs.rmSync(submissionFixture.root, {recursive:true,force:true}));
+ const proof = submissionFixture.submission.proof[0]; assert.ok(proof);
+ const obligationEvidence: ObligationEvidence = {...proof.evidence,
+  target:{...proof.evidence.target,verification:'src/current.ts'},
+  inputs:createObligationGitInputs(submissionFixture.root,['src'])};
+ const rollingWorkerSubmissionV1: RollingWorkerSubmissionV1 = {...submissionFixture.submission,proof:[{...proof,evidence:obligationEvidence}]};
+ assert.deepEqual(validateRollingWorkerSubmission(submissionFixture.root,submissionFixture.lease,rollingWorkerSubmissionV1),
+  ['src/current.ts','src/deleted.ts','src/old.ts']);
+ assert.ok(!JSON.stringify(rollingWorkerSubmissionV1).includes('digest'));
+ const otherRevision: RollingWorkerSubmissionV1 = {...rollingWorkerSubmissionV1,proof:[{...proof,evidence:{...obligationEvidence,
+  inputs:{schemaVersion:2,revision:submissionFixture.submission.baseCommit,paths:['src/current.ts']}}}]};
+ assert.throws(()=>validateRollingWorkerSubmission(submissionFixture.root,submissionFixture.lease,otherRevision),/another candidate/);
+ fs.unlinkSync(path.join(submissionFixture.root,'proof.txt'));
+ assert.throws(()=>validateRollingWorkerSubmission(submissionFixture.root,submissionFixture.lease,rollingWorkerSubmissionV1),/missing focused proof output/);
+});
+
+// Traceability: verifies REQ-ROLLING-WORKERS
 // Traceability: verifies REQ-ROLLING-GRAPH
 test('submission enforces actual renamed and deleted paths and clean finalized candidate proof', t => {
   const submissionFixture: SubmissionFixture = fixture();
@@ -58,6 +77,7 @@ test('submission enforces actual renamed and deleted paths and clean finalized c
   assert.throws(() => validateRollingWorkerSubmission(submissionFixture.root, narrowObligationLeaseV1, submissionFixture.submission), /outside frozen lease: src\/deleted.ts/);
   const firstRollingSubmissionProof = submissionFixture.submission.proof[0];
   assert.ok(firstRollingSubmissionProof);
+  assert.ok(!isObligationGitInputs(firstRollingSubmissionProof.evidence.inputs));
   const invalidObligationEvidence: readonly ObligationEvidence[] = [
     { ...firstRollingSubmissionProof.evidence, dirty: true }, { ...firstRollingSubmissionProof.evidence, outcome: 'fail' },
     { ...firstRollingSubmissionProof.evidence, finalization: 'unavailable' }, { ...firstRollingSubmissionProof.evidence, skips: 1 },

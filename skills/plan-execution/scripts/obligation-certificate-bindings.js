@@ -64,7 +64,6 @@ function acceptBoundCheckpoint(previousObligationDocumentV1, candidateObligation
     const certificateResponsibilitySet = new Set();
     const certificateEvidenceMap = new Map();
     for (const obligationCertificateBindingRequest of obligationCertificateBindingRequests) {
-        const digest = (0, obligations_js_1.inputDigest)(root, obligationCertificateBindingRequest.path);
         const obligationCertificateBindingV1 = parseObligationCertificateBinding(node_fs_1.default.readFileSync(node_path_1.default.join(root, obligationCertificateBindingRequest.path), 'utf8'));
         const obligationCertificateSubmission = obligationCertificateBindingRequest.submission;
         requireCertificateBinding((0, node_util_1.isDeepStrictEqual)(obligationCertificateBindingV1.lease, obligationCertificateSubmission.lease)
@@ -86,7 +85,9 @@ function acceptBoundCheckpoint(previousObligationDocumentV1, candidateObligation
         requireCertificateBinding(!certificateResponsibilitySet.has(key), 'duplicate certificate responsibility binding');
         certificateResponsibilitySet.add(key);
         requireCertificateBinding(obligationCertificate.artifacts.includes(obligationCertificateBindingRequest.path)
-            && obligationCertificate.inputs.some(input => input.path === obligationCertificateBindingRequest.path && input.digest === digest), 'binding artifact is not assessed on its actual bytes');
+            && ((0, obligations_js_1.isObligationGitInputs)(obligationCertificate.inputs)
+                ? true
+                : obligationCertificate.inputs.some(input => input.path === obligationCertificateBindingRequest.path && input.digest === (0, obligations_js_1.inputDigest)(root, obligationCertificateBindingRequest.path))), 'binding artifact is not assessed on its actual bytes');
         const obligationExecution = obligationLeaseV1.binding.execution;
         requireCertificateBinding(obligationExecution.target && obligationExecution.selection.length > 0, 'binding has no proof target or selection');
         requireCertificateBinding(obligationCertificateBindingV1.proof.length === obligationCertificateSubmission.evidence.length, 'binding omits retained submission proof');

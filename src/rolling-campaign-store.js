@@ -1247,7 +1247,8 @@ class RollingCampaignStore {
                 const obligationCertificate = candidateObligationDocumentV1.certificates.find(certificate => certificate.id === certificateId);
                 requireState(obligationCertificate && obligationCertificate.obligationIds.length === 1
                     && obligationCertificate.obligationIds[0] === rollingStoredAssignment.obligationId, 'certificate exceeds assigned obligation');
-                requireState(obligationCertificate.inputs.every(input => input.path !== documentPath), 'accepted document cannot certify its own bytes');
+                requireState((0, obligations_js_1.isObligationGitInputs)(obligationCertificate.inputs) && obligationCertificate.evidence.every(evidence => (0, obligations_js_1.isObligationGitInputs)(evidence.inputs)), 'new campaign certificates require Git inputs; hash manifests are historical only');
+                requireState(!(0, obligations_js_1.obligationInputCovers)(obligationCertificate.inputs, documentPath), 'accepted document cannot certify its own bytes');
             }
             const obligationCertificateSubmission = { lease: obligationLeaseV1, revision: rollingWorkerSubmissionV1.revision,
                 operations: rollingWorkerSubmissionV1.proof.map(proof => proof.operation), evidence: rollingWorkerSubmissionV1.proof.map(proof => proof.evidence) };

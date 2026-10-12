@@ -109,6 +109,12 @@ services. `PROJECT_STRUCTURE.md` is authoritative for that boundary.
   - Node focused: `node --test [--test-name-pattern=<pattern>] <test-files>`.
   - Node full: `npm test`.
 - Rolling Codex protocol proof: `node --test dist/tests/rolling-codex.test.js`.
+- Git certificate focused proof: `node --test dist/tests/obligations.test.js
+  dist/tests/obligation-certificate-bindings.test.js
+  dist/tests/rolling-worker-submission.test.js dist/tests/rolling-worker.test.js`.
+  PostgreSQL acceptance proof: `node --test
+  --test-name-pattern="integrated certificate assessment"
+  dist/tests/rolling-campaign-store.integration.test.js`.
 - Rolling review focused proof: `node --test dist/tests/rolling-review.test.js
   dist/tests/rolling-codex.test.js dist/tests/rolling-campaign-store.test.js
   dist/tests/rolling-campaign-store.integration.test.js`.

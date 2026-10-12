@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { isDeepStrictEqual } from 'node:util';
 import { parse } from 'lossless-json';
-import { acceptCheckpoint, inputDigest, projectObligationScope,
+import { acceptCheckpoint, inputDigest, projectObligationScope, isObligationGitInputs,
   type ObligationDocumentV1, type ObligationEvidence } from './obligations.js';
 import { readObligationLeaseV1, assertObligationLeaseOperation,
   type ObligationLeaseV1, type ObligationBindingHistoryV1 } from './obligation-binding-history.js';
@@ -84,7 +84,6 @@ export function acceptBoundCheckpoint(previousObligationDocumentV1: ObligationDo
   const certificateResponsibilitySet = new Set<string>();
   const certificateEvidenceMap = new Map<string, Set<number>>();
   for (const obligationCertificateBindingRequest of obligationCertificateBindingRequests) {
-    const digest = inputDigest(root, obligationCertificateBindingRequest.path);
     const obligationCertificateBindingV1 = parseObligationCertificateBinding(fs.readFileSync(path.join(root, obligationCertificateBindingRequest.path), 'utf8'));
     const obligationCertificateSubmission = obligationCertificateBindingRequest.submission;
     requireCertificateBinding(isDeepStrictEqual(obligationCertificateBindingV1.lease, obligationCertificateSubmission.lease)
@@ -109,7 +108,9 @@ export function acceptBoundCheckpoint(previousObligationDocumentV1: ObligationDo
     requireCertificateBinding(!certificateResponsibilitySet.has(key), 'duplicate certificate responsibility binding');
     certificateResponsibilitySet.add(key);
     requireCertificateBinding(obligationCertificate.artifacts.includes(obligationCertificateBindingRequest.path)
-      && obligationCertificate.inputs.some(input => input.path === obligationCertificateBindingRequest.path && input.digest === digest),
+      && (isObligationGitInputs(obligationCertificate.inputs)
+        ? true
+        : obligationCertificate.inputs.some(input => input.path === obligationCertificateBindingRequest.path && input.digest === inputDigest(root, obligationCertificateBindingRequest.path))),
     'binding artifact is not assessed on its actual bytes');
     const obligationExecution = obligationLeaseV1.binding.execution;
     requireCertificateBinding(obligationExecution.target && obligationExecution.selection.length > 0, 'binding has no proof target or selection');

@@ -4,6 +4,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import { spawnSync } from 'node:child_process';
 import { isDeepStrictEqual } from 'node:util';
 import { parse } from 'lossless-json';
 import { parseObligationBindingHistory, projectObligationBindings,
@@ -16,6 +17,17 @@ export type ObligationEvidenceOutcome = 'pass' | 'fail' | 'unavailable';
 export type ObligationCheckpointKind = 'initial' | 'productive' | 'neutral' | 'disturbance' | 'rebaseline';
 
 export interface ObligationInput { readonly path: string; readonly digest: string }
+export interface ObligationGitInputs { readonly schemaVersion: 2; readonly revision: string; readonly paths: readonly string[] }
+export type ObligationInputs = readonly ObligationInput[] | ObligationGitInputs;
+export function isObligationGitInputs(value: ObligationInputs): value is ObligationGitInputs {
+  return 'schemaVersion' in value && value.schemaVersion === 2;
+}
+export function obligationInputPaths(value: ObligationInputs): readonly string[] {
+  return isObligationGitInputs(value) ? value.paths : value.map(input => input.path);
+}
+export function obligationInputCovers(value: ObligationInputs, relative: string): boolean {
+  return obligationInputPaths(value).some(scope => scope === relative || isObligationGitInputs(value) && relative.startsWith(`${scope}/`));
+}
 export interface ObligationRequirement extends ObligationInput { readonly id: string }
 export interface ObligationTarget { readonly identity: string; readonly profile: string }
 export interface ObligationEvidenceTarget extends ObligationTarget { readonly verification: string }
@@ -64,14 +76,14 @@ export interface ObligationEvidence {
   readonly outcome: ObligationEvidenceOutcome;
   readonly skips: number;
   readonly failures: number;
-  readonly inputs: readonly ObligationInput[];
+  readonly inputs: ObligationInputs;
   readonly outputPath: string;
   readonly finalization: ObligationEvidenceOutcome;
 }
 export interface ObligationCertificate {
   readonly id: string;
   readonly obligationIds: readonly string[];
-  readonly inputs: readonly ObligationInput[];
+  readonly inputs: ObligationInputs;
   readonly artifacts: readonly string[];
   readonly assessor: string;
   readonly authority: readonly string[];
@@ -178,7 +190,14 @@ function inputValue(value: unknown): ObligationInput {
   requireCondition(/^[a-f0-9]{64}$/.test(digest), 'input requires SHA-256 digests');
   return { path: pathValue(value.path), digest };
 }
-function inputs(value: unknown, label: string): readonly ObligationInput[] {
+function inputs(value: unknown, label: string): ObligationInputs {
+  if (isRecord(value)) {
+    exactKeys(value, ['schemaVersion', 'revision', 'paths'], label);
+    requireCondition(value.schemaVersion === 2, 'unsupported Git inputs version');
+    const revision = stringValue(value.revision, 'Git revision');
+    requireCondition(/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/.test(revision), 'Git inputs require a full commit ID');
+    return { schemaVersion: 2, revision, paths: uniqueStrings(value.paths, 'Git input paths', true).map(pathValue) };
+  }
   const obligationInputs = arrayValue(value, label).map(inputValue);
   requireCondition(obligationInputs.length > 0, `${label} requires a nonempty input manifest`);
   requireCondition(new Set(obligationInputs.map(item => item.path)).size === obligationInputs.length, `${label} must contain unique values`);
@@ -401,6 +420,33 @@ export function inputDigest(root: string, relative: string): string {
   return crypto.createHash('sha256').update(fs.readFileSync(inputPath)).digest('hex');
 }
 
+export function gitInputReasons(root: string, obligationGitInputs: ObligationGitInputs): readonly string[] {
+  const reasons: string[] = [];
+  const git = (args: readonly string[]) => spawnSync('git', ['--literal-pathspecs', '-C', root, ...args], {encoding: 'utf8'});
+  if (git(['cat-file', '-e', `${obligationGitInputs.revision}^{commit}`]).status !== 0) return ['unavailable Git verification revision'];
+  for (const relative of obligationGitInputs.paths) {
+    relativePath(relative);
+    if (git(['cat-file', '-e', `${obligationGitInputs.revision}:${relative}`]).status !== 0) reasons.push(`input absent from verified Git revision: ${relative}`);
+  }
+  for (const args of [['diff', '--quiet', obligationGitInputs.revision, '--', ...obligationGitInputs.paths],
+    ['diff', '--cached', '--quiet', obligationGitInputs.revision, '--', ...obligationGitInputs.paths]]) {
+    const result = git(args);
+    if (result.status === 1) reasons.push('changed Git inputs');
+    else if (result.status !== 0) reasons.push('Git input comparison failed');
+  }
+  return reasons;
+}
+
+export function createObligationGitInputs(root: string, paths: readonly string[]): ObligationGitInputs {
+  const result = spawnSync('git', ['-C', root, 'rev-parse', '--verify', 'HEAD^{commit}'], {encoding: 'utf8'});
+  requireCondition(result.status === 0, 'Git inputs require a committed HEAD');
+  const value = inputs({schemaVersion: 2, revision: result.stdout.trim(), paths}, 'Git inputs');
+  requireCondition(isObligationGitInputs(value), 'expected Git inputs');
+  const reasons = gitInputReasons(root, value);
+  requireCondition(reasons.length === 0, reasons.join('; '));
+  return value;
+}
+
 // Traceability: implements REQ-OBLIGATION-DISCHARGE
 // Traceability: implements REQ-OBLIGATION-FRESHNESS
 function certificateReasons(obligationDocument: ObligationDocumentV1, baseline: ObligationBaseline, certificate: ObligationCertificate): string[] {
@@ -408,12 +454,16 @@ function certificateReasons(obligationDocument: ObligationDocumentV1, baseline: 
   if (!certificate.adequate) reasons.push('adequacy assessment is negative');
   if (!baseline.authority.assessors.includes(certificate.assessor) || !certificate.authority.every(reference => baseline.authority.references.includes(reference))) reasons.push('assessment lacks baseline authority');
   if (!certificate.obligationIds.every(id => baseline.obligationIds.includes(id))) reasons.push('certificate covers obligations outside baseline');
-  const manifest = new Map(certificate.inputs.map(input => [input.path, input.digest]));
-  const requiredPaths = [...certificate.artifacts];
+  const gitInputs = isObligationGitInputs(certificate.inputs);
+  const obligationInputs = certificate.inputs;
+  const manifest = new Map(isObligationGitInputs(obligationInputs)
+    ? obligationInputs.paths.map(relative => [relative, obligationInputs.revision])
+    : obligationInputs.map(input => [input.path, input.digest]));
+  const requiredPaths = gitInputs ? [] : [...certificate.artifacts];
   const requirementIds = new Set(obligationDocument.obligations.filter(obligation => certificate.obligationIds.includes(obligation.id)).flatMap(obligation => obligation.requirementIds));
   for (const requirement of baseline.requirements.filter(requirement => requirementIds.has(requirement.id))) {
     requiredPaths.push(requirement.path);
-    if (manifest.get(requirement.path) !== requirement.digest) reasons.push(`baseline meaning not preserved: ${requirement.id}`);
+    if (!gitInputs && manifest.get(requirement.path) !== requirement.digest) reasons.push(`baseline meaning not preserved: ${requirement.id}`);
   }
   if (certificate.disposition && !certificate.disposition.authority.every(reference => baseline.authority.references.includes(reference))) reasons.push('disposition lacks authority');
   const executionRequired = certificate.obligationIds.some(id => {
@@ -423,7 +473,8 @@ function certificateReasons(obligationDocument: ObligationDocumentV1, baseline: 
   if (executionRequired && certificate.evidence.length === 0) reasons.push('execution proof is missing');
   for (const evidence of certificate.evidence) {
     if (evidence.outcome !== 'pass' || evidence.skips !== 0 || evidence.failures !== 0 || evidence.finalization !== 'pass') reasons.push('execution is failed, skipped, unavailable or not finalized');
-    requiredPaths.push(evidence.outputPath, evidence.target.verification);
+    requiredPaths.push(evidence.target.verification);
+    if (!gitInputs) requiredPaths.push(evidence.outputPath);
     for (const id of certificate.obligationIds) {
       const obligation = requireObligation(obligationDocument, id);
       if (['C1', 'C2'].includes(obligation.category) && !baseline.inventoryIds.includes(id)) {
@@ -431,12 +482,18 @@ function certificateReasons(obligationDocument: ObligationDocumentV1, baseline: 
         if (!execution.target || execution.target.identity !== evidence.target.identity || execution.target.profile !== evidence.target.profile || !execution.operations.includes(evidence.command) || JSON.stringify(execution.selection) !== JSON.stringify(evidence.selection) || execution.selection.length === 0) reasons.push(`wrong execution command, selection or target: ${id}`);
       }
     }
-    for (const input of evidence.inputs) {
-      requiredPaths.push(input.path);
-      if (manifest.get(input.path) !== input.digest) reasons.push(`evidence manifest disagrees: ${input.path}`);
+    if (isObligationGitInputs(evidence.inputs)) {
+      if (!gitInputs || evidence.revision !== evidence.inputs.revision || evidence.dirty) reasons.push('Git proof must identify its clean tested revision');
+      requiredPaths.push(...evidence.inputs.paths);
+    } else {
+      if (gitInputs) reasons.push('Git certificates require Git proof inputs');
+      for (const input of evidence.inputs) {
+        requiredPaths.push(input.path);
+        if (manifest.get(input.path) !== input.digest) reasons.push(`evidence manifest disagrees: ${input.path}`);
+      }
     }
   }
-  for (const relative of requiredPaths) if (!manifest.has(relative)) reasons.push(`unassessed artifact or evidence input: ${relative}`);
+  for (const relative of requiredPaths) if (!obligationInputCovers(certificate.inputs, relative)) reasons.push(`unassessed artifact or evidence input: ${relative}`);
   for (const id of certificate.obligationIds.filter(id => baseline.inventoryIds.includes(id))) {
     const category = requireObligation(obligationDocument, id).category;
     const inventoryIds = baseline.obligationIds.filter(member => requireObligation(obligationDocument, member).category === category && !baseline.inventoryIds.includes(member));
@@ -448,7 +505,12 @@ function certificateReasons(obligationDocument: ObligationDocumentV1, baseline: 
 
 export function freshCertificate(obligationDocument: ObligationDocumentV1, baseline: ObligationBaseline, certificate: ObligationCertificate, root: string): ObligationFreshness {
   const reasons = certificateReasons(obligationDocument, baseline, certificate);
-  for (const input of certificate.inputs) {
+  if (isObligationGitInputs(certificate.inputs)) {
+    reasons.push(...gitInputReasons(root, certificate.inputs));
+    for (const evidence of certificate.evidence) if (isObligationGitInputs(evidence.inputs)) reasons.push(...gitInputReasons(root, evidence.inputs));
+    for (const relative of [...certificate.artifacts, ...certificate.evidence.map(evidence => evidence.outputPath)])
+      if (!fs.existsSync(path.join(root, relative))) reasons.push(`unavailable evidence: ${relative}`);
+  } else for (const input of certificate.inputs) {
     try {
       if (inputDigest(root, input.path) !== input.digest) reasons.push(`changed input: ${input.path}`);
     } catch (error) {

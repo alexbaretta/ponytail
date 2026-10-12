@@ -205,8 +205,8 @@ function collectRollingGraph(coordinatorRoot, documentPath, bindingsPath, bindin
     const inputs = new Set(obligationBaseline.requirements.map(item => item.path));
     const acceptedCertificateIds = new Set(projection.assessments.map(assessment => assessment.id));
     for (const certificate of document.certificates.filter(certificate => acceptedCertificateIds.has(certificate.id))) {
-        for (const input of certificate.inputs)
-            inputs.add(input.path);
+        for (const relative of (0, obligations_js_1.obligationInputPaths)(certificate.inputs))
+            inputs.add(relative);
     }
     const inputDigests = [...inputs].sort().map((relative) => {
         try {

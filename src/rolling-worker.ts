@@ -166,7 +166,7 @@ export function buildRollingWorkerInstructions(rollingWorkerContext: RollingWork
    target:{...lease.binding.execution.target,verification:'<relative verification file>'},
    revision:'<actual final HEAD>',dirty:false,startedAt:'<actual ISO timestamp>',completedAt:'<actual ISO timestamp>',
    outcome:'pass',skips:0,failures:0,
-   inputs:[{path:'<relative assessed input>',digest:'<actual SHA-256>'}],
+   inputs:{schemaVersion:2,revision:'<actual final HEAD>',paths:['<relative tracked source or test input>']},
    outputPath:'<relative output file>',finalization:'pass'
   }}]
  };
@@ -185,10 +185,10 @@ export function buildRollingWorkerInstructions(rollingWorkerContext: RollingWork
   + 'For every successful obligation, including a no-edit inspection, the final message must be only strict JSON, without Markdown fences or surrounding prose. '
   + 'Use exactly the physical record keys shown in the outline, at every level. Do not add stoppedAt, timestamp, status, blocker, validation or any other field to a successful submission. Keep actual timestamps in evidence.startedAt and evidence.completedAt only. '
   + 'Replace every placeholder and provide nonempty actual proof in the following typed submission outline; placeholders are not evidence. '
-  + 'Each proof entry contains operation and evidence. Evidence contains command, selection, target (identity, profile, verification), revision, dirty, startedAt, completedAt, outcome, skips, failures, inputs (path, digest), outputPath and finalization. '
+  + 'Each proof entry contains operation and evidence. Evidence contains command, selection, target (identity, profile, verification), revision, dirty, startedAt, completedAt, outcome, skips, failures, inputs (schemaVersion: 2, revision, paths), outputPath and finalization. '
   + 'command is a string, not an argv array. finalization is the string "pass" for successful finalization, not an object. '
-  + 'Use the frozen proof selection and target; hash every changed existing source plus test inputs and retained output with SHA-256, relative to this checkout. '
-  + 'target.verification is a relative retained verification-file path, not a prose claim; include both that path and outputPath in the hashed inputs. '
+  + 'Use the frozen proof selection and target. inputs.revision must equal the tested final HEAD; paths lists the relevant tracked source and test inputs, relative to this checkout. Do not enumerate the repository or store file hashes. Git establishes whether these inputs changed. '
+  + 'target.verification is a relative tracked verification-file path included in inputs.paths, not a prose claim. Retain command output at outputPath; it may be an ignored log and is not a source input. '
   + 'Retain actual command output and ISO timestamps; only passing, finalized, clean evidence with zero skips and failures is eligible. '
   + `Submission outline: ${JSON.stringify(rollingWorkerSubmissionV1)}\n`
   + `Worker responsibility: ${JSON.stringify(rollingWorkerContext)}`;

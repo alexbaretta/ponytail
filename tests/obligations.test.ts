@@ -7,7 +7,7 @@ import path from 'node:path';
 import os from 'node:os';
 import { spawnSync } from 'node:child_process';
 import manifest from '../versioned-data-contracts.json';
-import { readObligationDocumentV1, parseObligationDocument, inputDigest, freshCertificate, projectObligations,
+import { readObligationDocumentV1, parseObligationDocument, inputDigest, freshCertificate, projectObligations, isObligationGitInputs, createObligationGitInputs,
  compareVectors, selectObligation, acceptCheckpoint, ObligationDocumentReaders, type ObligationDocumentV1,
  type Obligation, type ObligationCoordinate, type ObligationCertificate, type ObligationCheckpoint,
  type ObligationBaseline, type ObligationEvidence, type ObligationVector } from '../skills/plan-execution/scripts/obligations.js';
@@ -76,6 +76,58 @@ function dischargeCandidate(obligationDocumentV1: ObligationDocumentV1, obligati
   checkpoints: [...obligationDocumentV1.checkpoints, { ...successor(obligationDocumentV1), selectedIds: obligationCertificate.obligationIds,
    certificateIds: [obligationCertificate.id], after, registeredIds }] };
 }
+
+// Traceability: verifies REQ-OBLIGATION-FRESHNESS
+test('Git certificate serialization stores a revision and paths, without file hashes', testContext => {
+ const {root, obligationDocumentV1, obligationCertificate} = assessedFixture(testContext);
+ const git = (args: readonly string[]) => {
+  const result = spawnSync('git', ['-C', root, ...args], {encoding:'utf8'});
+  assert.equal(result.status, 0, result.stderr);
+ };
+ git(['init','-q']); git(['add','.']);
+ git(['-c','user.name=Fixture','-c','user.email=fixture@example.test','commit','-qm','Verified inputs']);
+ const certificate: ObligationCertificate = {...obligationCertificate, inputs:createObligationGitInputs(root,['requirement.md','proof.txt'])};
+ const initial = initialObservation(obligationDocumentV1,root);
+ const accepted = acceptCheckpoint(initial,dischargeCandidate(initial,certificate),root);
+ assert.equal(projectObligations(accepted,root).satisfiedIds.includes('OBL-1'),true);
+ assert.deepEqual(parseObligationDocument(JSON.stringify(accepted)).certificates,[certificate]);
+ assert.ok(!JSON.stringify(certificate).includes('digest'));
+ for (const inputs of [{schemaVersion:2,revision:'HEAD',paths:['proof.txt']},
+  {schemaVersion:2,revision:'a'.repeat(40),paths:[]},
+  {schemaVersion:2,revision:'a'.repeat(40),paths:['../proof.txt']},
+  {schemaVersion:3,revision:'a'.repeat(40),paths:['proof.txt']}])
+  assert.throws(()=>parseObligationDocument(JSON.stringify({...initial,certificates:[{...certificate,inputs}]})));
+});
+
+// Traceability: verifies REQ-OBLIGATION-FRESHNESS
+test('real Git freshness detects committed, staged, unstaged and missing inputs while allowing unrelated changes', testContext => {
+ const {root, obligationDocumentV1, obligationCertificate} = assessedFixture(testContext);
+ const git = (args: readonly string[]) => {
+  const result = spawnSync('git', ['-C', root, ...args], {encoding:'utf8'});
+  assert.equal(result.status, 0, result.stderr);
+ };
+ fs.writeFileSync(path.join(root,'unrelated.txt'),'original');
+ git(['init','-q']); git(['add','.']);
+ git(['-c','user.name=Fixture','-c','user.email=fixture@example.test','commit','-qm','Verified inputs']);
+ const certificate: ObligationCertificate = {...obligationCertificate, inputs:createObligationGitInputs(root,['requirement.md','proof.txt'])};
+ const fresh = () => freshCertificate(obligationDocumentV1,baseline(obligationDocumentV1),certificate,root).fresh;
+ assert.equal(fresh(),true);
+ fs.writeFileSync(path.join(root,'unrelated.txt'),'unrelated change');
+ assert.equal(fresh(),true);
+ fs.writeFileSync(path.join(root,'proof.txt'),'changed proof'); assert.equal(fresh(),false);
+ git(['add','proof.txt']); assert.equal(fresh(),false);
+ fs.writeFileSync(path.join(root,'proof.txt'),'inspected complete inventory');
+ assert.equal(fresh(),false,'staged changes cannot hide behind restored working bytes');
+ git(['restore','--staged','proof.txt']); assert.equal(fresh(),true);
+ fs.writeFileSync(path.join(root,'proof.txt'),'committed change'); git(['add','proof.txt']);
+ git(['-c','user.name=Fixture','-c','user.email=fixture@example.test','commit','-qm','Changed tested input']);
+ assert.equal(fresh(),false);
+ fs.writeFileSync(path.join(root,'untracked.txt'),'not committed');
+ assert.throws(()=>createObligationGitInputs(root,['untracked.txt']),/absent from verified Git revision/);
+ assert.equal(freshCertificate(obligationDocumentV1,baseline(obligationDocumentV1),{...certificate,
+  inputs:{schemaVersion:2,revision:'0'.repeat(40),paths:['proof.txt']}},root).fresh,false);
+ fs.unlinkSync(path.join(root,'proof.txt')); assert.equal(fresh(),false);
+});
 function register(obligationDocumentV1: ObligationDocumentV1, extraObligation: Obligation): ObligationDocumentV1 {
  return { ...updateBaseline(obligationDocumentV1, item => ({ ...item, obligationIds: [...item.obligationIds, extraObligation.id] })),
   obligations: [...obligationDocumentV1.obligations, extraObligation] };
@@ -124,6 +176,7 @@ test('owned JSON boundary rejects lossy number tokens before normalization', () 
 // Traceability: verifies REQ-OBLIGATION-DISCHARGE
 test('freshness requires scoped unchanged assessed inputs and adequate finalized proof', testContext => {
  const { root, obligationDocumentV1, obligationCertificate } = assessedFixture(testContext);
+ assert.ok(!isObligationGitInputs(obligationCertificate.inputs));
  const original = JSON.stringify({ obligationDocumentV1, obligationCertificate });
  assert.equal(freshCertificate(obligationDocumentV1, baseline(obligationDocumentV1), obligationCertificate, root).fresh, true);
  const rejected: readonly ObligationCertificate[] = [

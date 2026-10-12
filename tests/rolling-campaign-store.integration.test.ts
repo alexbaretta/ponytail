@@ -15,7 +15,7 @@ import {prepareRollingMainlineRefresh,mergeRollingMainlineRefresh,observeRolling
 import { databaseOptions } from '../src/project-index-database.js';
 import { collectRollingGraph, parseRollingProjectConfig,type RollingPhysicalProjectConfig, type RollingProjectConfigV1, type RollingBindingsV1, type RollingBinding, type RollingGraph } from '../src/rolling-campaign.js';
 import { RollingCampaignStore, type RollingCampaignRegistration, type RollingAllocationResult, type RollingWorkerDispatchAttached, type RollingReviewDispatchAttached, type RollingSessionAttachment, type RollingStoredAssignment, type RollingExecutionConfigV1, type RollingAssignmentScopeV1, type RollingExecutionConfigV2, type RollingAssignmentScopeV2, type RollingCampaignStatus } from '../src/rolling-campaign-store.js';
-import { inputDigest, parseObligationDocument, type ObligationDocumentV1, type ObligationBaseline, type Obligation, type ObligationCertificate, type ObligationCheckpoint } from '../skills/plan-execution/scripts/obligations.js';
+import { isObligationGitInputs, obligationInputPaths, createObligationGitInputs, inputDigest, parseObligationDocument, type ObligationDocumentV1, type ObligationBaseline, type Obligation, type ObligationCertificate, type ObligationCheckpoint } from '../skills/plan-execution/scripts/obligations.js';
 import type { ObligationBindingHistoryV1, ObligationBindingRevisionV1 } from '../skills/plan-execution/scripts/obligation-binding-history.js';
 import type { ObligationEvidence } from '../skills/plan-execution/scripts/obligations.js';
 import { parseRollingWorkerSubmission, type RollingWorkerSubmissionV1, type RollingSubmissionProof } from '../src/rolling-worker-submission.js';
@@ -361,7 +361,7 @@ export async function runRollingReviewScenario(t: TestContext, reviewScenario: R
     fs.writeFileSync(path.join(root,'fixture/full.test.ts'),"import test from 'node:test';\nimport assert from 'node:assert/strict';\nimport {value} from './current.ts';\ntest('full fixture unit',()=>assert.equal(value,1));\n");
     execFileSync('git',['-C',root,'add','fixture/full.test.ts']);
   }
-  execFileSync('git', ['-C', root, 'add', '--', '.gitignore', 'fixture/current.ts']);
+  execFileSync('git', ['-C', root, 'add', '-f', '--', '.gitignore', 'fixture/current.ts', ...fixtureObligationBaseline.requirements.map(requirement=>requirement.path)]);
   execFileSync('git', ['-C', root, '-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.test', 'commit', '-q', '-m', 'submission fixture base']);
   const baseCommit = execFileSync('git', ['-C', root, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
   execFileSync('git', ['-C', root, 'update-ref', 'refs/heads/campaign/bound-fixture', baseCommit]);
@@ -392,9 +392,9 @@ export async function runRollingReviewScenario(t: TestContext, reviewScenario: R
   const checkOutput = execFileSync(process.execPath, ['--check', path.join(workerRoot, 'fixture/current.ts')], { encoding: 'utf8' });
   fs.writeFileSync(path.join(workerRoot, 'proof.txt'), `${checkOutput}Node syntax check exited 0\n`);
   const submissionObligationEvidence: ObligationEvidence = { command: 'node --check fixture/current.ts', selection: ['focused fixture proof'],
-    target: { identity: 'local', profile: 'fixture', verification: 'proof.txt' }, revision, dirty: false,
+    target: { identity: 'local', profile: 'fixture', verification: 'fixture/current.ts' }, revision, dirty: false,
     startedAt: new Date().toISOString(), completedAt: new Date().toISOString(), outcome: 'pass', skips: 0, failures: 0,
-    inputs: ['fixture/current.ts', 'proof.txt'].map(relative => ({ path: relative, digest: inputDigest(workerRoot, relative) })), outputPath: 'proof.txt', finalization: 'pass' };
+    inputs: createObligationGitInputs(workerRoot, ['fixture/current.ts']), outputPath: 'proof.txt', finalization: 'pass' };
   const rollingWorkerSubmissionV1: RollingWorkerSubmissionV1 = { schemaVersion: 1, campaignId: 'bound-fixture', assignmentId: submissionRollingStoredAssignment.id,
     generation: submissionRollingStoredAssignment.generation, sessionId: 'bound-session', graphDigest: submissionRollingGraph.digest,
     revision, baseCommit, stopped: true, proof: [{ operation: 'check', evidence: submissionObligationEvidence }] };
@@ -669,10 +669,10 @@ export async function runRollingReviewScenario(t: TestContext, reviewScenario: R
     integratedRollingWorkerSubmissionV1 = refreshedRollingWorkerSubmissionV1;
     assert.equal((await pool.query<Record<string,unknown>>('SELECT count(*)::integer AS count FROM ponytail_index.rolling_increment_proof_v1 WHERE project_id=$1',[projectId])).rows[0]?.count,2);
 
-    const priorProofText = fs.readFileSync(path.join(workerRoot,'proof.txt'),'utf8');
-    fs.appendFileSync(path.join(workerRoot,'proof.txt'),'stale proof output');
-    await assert.rejects(rollingCampaignStore.beginIncrementPush('bound-fixture',rollingStoredReview.request.id),/stale focused input/);
-    fs.writeFileSync(path.join(workerRoot,'proof.txt'),priorProofText);
+    const priorSourceText = fs.readFileSync(path.join(workerRoot,'fixture/current.ts'),'utf8');
+    fs.appendFileSync(path.join(workerRoot,'fixture/current.ts'),'// stale tested source');
+    await assert.rejects(rollingCampaignStore.beginIncrementPush('bound-fixture',rollingStoredReview.request.id),/candidate checkout is dirty/);
+    fs.writeFileSync(path.join(workerRoot,'fixture/current.ts'),priorSourceText);
     if (reviewScenario.automaticPublication) {
       prepareCoordinatorIncrementCheckout(root,'campaign/bound-fixture');
       const publications = await Promise.allSettled(Array.from({length:4},()=>rollingCampaignStore.publishIncrement('bound-fixture',rollingStoredReview.request.id)));
@@ -707,9 +707,9 @@ export async function runRollingReviewScenario(t: TestContext, reviewScenario: R
     fs.writeFileSync(configurationPath,JSON.stringify({...rollingProjectConfigV1,qa:{...rollingProjectConfigV1.qa,focused:[['node','--check','new-required-selection.ts']]}}));
     await assert.rejects(restartedRollingCampaignStore.retryIncrementPush('bound-fixture',rollingStoredReview.request.id),/configured focused QA is missing/);
     fs.writeFileSync(configurationPath,priorConfigurationText);
-    fs.appendFileSync(path.join(workerRoot,'proof.txt'),'stale proof after push rejection');
-    await assert.rejects(restartedRollingCampaignStore.retryIncrementPush('bound-fixture',rollingStoredReview.request.id),/stale focused input/);
-    fs.writeFileSync(path.join(workerRoot,'proof.txt'),priorProofText);
+    fs.appendFileSync(path.join(workerRoot,'fixture/current.ts'),'// stale source after push rejection');
+    await assert.rejects(restartedRollingCampaignStore.retryIncrementPush('bound-fixture',rollingStoredReview.request.id),/candidate checkout is dirty/);
+    fs.writeFileSync(path.join(workerRoot,'fixture/current.ts'),priorSourceText);
     const unavailableRemoteRoot = `${remoteRoot}.unavailable`;
     fs.renameSync(remoteRoot,unavailableRemoteRoot);
     assert.equal((await restartedRollingCampaignStore.retryIncrementPush('bound-fixture',rollingStoredReview.request.id)).result.state,'UNCONFIRMED');
@@ -892,8 +892,8 @@ export async function runRollingReviewScenario(t: TestContext, reviewScenario: R
   fs.writeFileSync(path.join(root, 'certificate-binding.json'), JSON.stringify(obligationCertificateBindingV1));
   const obligationCertificateBindingRequest: ObligationCertificateBindingRequest = { path: 'certificate-binding.json', submission: obligationCertificateSubmission };
   const boundObligationCertificate: ObligationCertificate = { id: obligationCertificateBindingV1.certificateId,
-    obligationIds: [firstRollingBinding.obligationId], inputs: [...new Set([...fixtureObligationBaseline.requirements.map(item => item.path),
-      ...submissionObligationEvidence.inputs.map(item => item.path), 'certificate-binding.json'])].map(relative => ({ path: relative, digest: inputDigest(root, relative) })),
+    obligationIds: [firstRollingBinding.obligationId], inputs: createObligationGitInputs(root, [...new Set([...fixtureObligationBaseline.requirements.map(item => item.path),
+      ...obligationInputPaths(submissionObligationEvidence.inputs)])]),
     artifacts: ['certificate-binding.json'], assessor: 'coordinator', authority: fixtureObligationBaseline.authority.references,
     adequate: true, reason: 'Isolated stored-submission acceptance contract proof', disposition: null,
     evidence: obligationCertificateSubmission.evidence, inventoryIds: [] };
@@ -914,13 +914,28 @@ export async function runRollingReviewScenario(t: TestContext, reviewScenario: R
     const previousDocumentText = fs.readFileSync(path.join(root,'bound-obligations.json'),'utf8');
     await assert.rejects(rollingCampaignStore.acceptIncrementCertificates('bound-fixture',crypto.randomUUID(),candidatePath,['certificate-binding.json']),/published reviewed increment/);
     await assert.rejects(rollingCampaignStore.acceptIncrementCertificates('bound-fixture',rollingStoredReview.request.id,'bound-obligations.json',['certificate-binding.json']),/separate from the accepted document/);
+    const legacyObligationCertificate: ObligationCertificate = {...boundObligationCertificate,
+      inputs:[...new Set([...obligationInputPaths(boundObligationCertificate.inputs),'proof.txt','certificate-binding.json'])]
+        .map(relative=>({path:relative,digest:inputDigest(root,relative)})),
+      evidence:boundObligationCertificate.evidence.map(evidence=>({...evidence,
+        inputs:[...new Set([...obligationInputPaths(evidence.inputs),evidence.outputPath])]
+          .map(relative=>({path:relative,digest:inputDigest(root,relative)}))}))};
+    fs.writeFileSync(path.join(root,candidatePath),JSON.stringify({...candidateBoundObligationDocumentV1,
+      certificates:[...boundObligationDocumentV1.certificates,legacyObligationCertificate]}));
+    await assert.rejects(rollingCampaignStore.acceptIncrementCertificates('bound-fixture',rollingStoredReview.request.id,candidatePath,['certificate-binding.json']),/hash manifests are historical only/);
+    assert.ok(isObligationGitInputs(boundObligationCertificate.inputs));
+    const selfAssessingObligationCertificate: ObligationCertificate = {...boundObligationCertificate,
+      inputs:{...boundObligationCertificate.inputs,paths:[...boundObligationCertificate.inputs.paths,'bound-obligations.json']}};
+    fs.writeFileSync(path.join(root,candidatePath),JSON.stringify({...candidateBoundObligationDocumentV1,
+      certificates:[...boundObligationDocumentV1.certificates,selfAssessingObligationCertificate]}));
+    await assert.rejects(rollingCampaignStore.acceptIncrementCertificates('bound-fixture',rollingStoredReview.request.id,candidatePath,['certificate-binding.json']),/cannot certify its own bytes/);
     const forgedCandidate = {...candidateBoundObligationDocumentV1,checkpoints:[...boundObligationDocumentV1.checkpoints,{...boundObligationCheckpoint,assessor:'worker'}]};
     fs.writeFileSync(path.join(root,candidatePath),JSON.stringify(forgedCandidate));
     await assert.rejects(rollingCampaignStore.acceptIncrementCertificates('bound-fixture',rollingStoredReview.request.id,candidatePath,['certificate-binding.json']),/assessor.*authority/);
     fs.writeFileSync(path.join(root,candidatePath),JSON.stringify(candidateBoundObligationDocumentV1));
     const sourceText = fs.readFileSync(path.join(root,'fixture/current.ts'),'utf8');
     fs.appendFileSync(path.join(root,'fixture/current.ts'),'// stale integrated input\n');
-    await assert.rejects(rollingCampaignStore.acceptIncrementCertificates('bound-fixture',rollingStoredReview.request.id,candidatePath,['certificate-binding.json']),/changed input/);
+    await assert.rejects(rollingCampaignStore.acceptIncrementCertificates('bound-fixture',rollingStoredReview.request.id,candidatePath,['certificate-binding.json']),/changed.*inputs/);
     fs.writeFileSync(path.join(root,'fixture/current.ts'),sourceText);
     assert.equal(fs.readFileSync(path.join(root,'bound-obligations.json'),'utf8'),previousDocumentText);
     const assignedObligation = candidateBoundObligationDocumentV1.obligations.find(obligation=>obligation.id === firstRollingBinding.obligationId);
@@ -985,7 +1000,7 @@ export async function runRollingReviewScenario(t: TestContext, reviewScenario: R
   assert.equal((await rollingCampaignStore.status('bound-fixture')).assignments[0]?.state, reviewDecision === 'accepted' ? 'INTEGRATING' : 'REWORK');
   fs.writeFileSync(path.join(root, 'fixture/current.ts'), 'export const value: number = 3;\n');
   assert.throws(() => acceptBoundCheckpoint(boundObligationDocumentV1, candidateBoundObligationDocumentV1, root,
-    submissionObligationBindingHistoryV1, [obligationCertificateBindingRequest]), /changed input: fixture\/current.ts/);
+    submissionObligationBindingHistoryV1, [obligationCertificateBindingRequest]), /changed Git inputs/);
   assert.ok(!collectRollingGraph(root, 'bound-obligations.json', 'bound-bindings.json', 'history.json').projection.satisfiedIds.includes(firstRollingBinding.obligationId));
 }
 const reviewScenarios: readonly ReviewScenario[] = [{ decision: 'accepted', mode: 'manual' }, { decision: 'rejected', mode: 'manual' }, { decision: 'accepted', mode: 'protocol' }];
@@ -1523,7 +1538,7 @@ export async function runRollingWorkerScenario(t: TestContext, mode: 'protocol' 
       const repairedRollingWorkerSubmissionV1: RollingWorkerSubmissionV1 = {...rollingWorkerSubmissionV1,generation:repairAllocation.assignment.generation,
         graphDigest:repairRollingWorkerContext.lease.graphDigest,revision:repairedRevision,baseCommit:upstreamRevision,
         proof:[{operation:'test',evidence:{...obligationEvidence,revision:repairedRevision,startedAt:repairStartedAt,completedAt:repairCompletedAt,
-          inputs:obligationEvidence.inputs.map(input=>({path:input.path,digest:inputDigest(rootPath,input.path)}))}}]};
+          inputs:isObligationGitInputs(obligationEvidence.inputs) ? obligationEvidence.inputs : obligationEvidence.inputs.map(input=>({path:input.path,digest:inputDigest(rootPath,input.path)}))}}]};
       await rollingCampaignStore.submit('worker-fixture',repairAllocation.assignment.id,repairAllocation.assignment.generation,repairedRollingWorkerSubmissionV1);
       await assert.rejects(rollingCampaignStore.requestReview('worker-fixture',repairAllocation.assignment.id,repairAllocation.assignment.generation,repairedRevision,'different-reviewer'),/original reviewer/);
       const repairedReview = await rollingCampaignStore.requestReview('worker-fixture',repairAllocation.assignment.id,repairAllocation.assignment.generation,repairedRevision,'original-reviewer');

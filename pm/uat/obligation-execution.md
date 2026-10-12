@@ -357,6 +357,13 @@ Traceability: verifies REQ-OBLIGATION-FRESHNESS
 6. Reject an unauthorized baseline meaning edit. Activate the declared successor
    through rebaseline; observe retained IDs, predecessor and unresolved history.
    Reject duplicate obligation identity and verify rejected writes preserve bytes.
+7. For a new campaign certificate, inspect the Git revision and relevant tracked
+   paths. Verify that committed, staged and unstaged changes invalidate proof,
+   unrelated changes do not, and new acceptance rejects historical hash manifests.
+   Exercise `dist/tests/obligations.test.js`,
+   `dist/tests/rolling-worker-submission.test.js`, and the named
+   `integrated certificate assessment` PostgreSQL test in
+   `dist/tests/rolling-campaign-store.integration.test.js`.
 
 Executable Arc: `Suite obligation execution: Arc coordinated responsibility
 lifecycle through real CLI` in `tests/obligation-execution.integration.test.js`.

@@ -6,7 +6,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
-import { inputDigest, parseObligationDocument, type ObligationDocumentV1, type ObligationBaseline,
+import { isObligationGitInputs, obligationInputPaths, inputDigest, parseObligationDocument, type ObligationDocumentV1, type ObligationBaseline,
   type ObligationCertificate, type ObligationCheckpoint, type ObligationEvidence } from '../skills/plan-execution/scripts/obligations.js';
 import { freezeObligationLease, type ObligationLeaseV1, type ObligationBindingHistoryV1, type ObligationBindingRevisionV1 } from '../skills/plan-execution/scripts/obligation-binding-history.js';
 import { acceptBoundCheckpoint, readObligationCertificateBindingV1, parseObligationCertificateBinding,
@@ -54,7 +54,7 @@ function fixture(): CertificateBindingFixture {
     revision: obligationEvidence.revision, proof: [{ operation: 'check', certificateEvidenceIndex: 0, submissionEvidenceIndex: 0 }] };
   fs.writeFileSync(path.join(root, 'binding.json'), JSON.stringify(obligationCertificateBindingV1));
   const obligationCertificate: ObligationCertificate = { id: 'CERT-fixture', obligationIds: ['OBL-1'],
-    inputs: [...new Set([...obligationBaseline.requirements.map(item => item.path), ...obligationEvidence.inputs.map(item => item.path), 'binding.json'])]
+    inputs: [...new Set([...obligationBaseline.requirements.map(item => item.path), ...obligationInputPaths(obligationEvidence.inputs), 'binding.json'])]
       .map(relative => ({ path: relative, digest: inputDigest(root, relative) })), artifacts: ['binding.json'], assessor: 'coordinator', authority: obligationBaseline.authority.references,
     adequate: true, reason: 'Isolated acceptance contract fixture', disposition: null, evidence: [obligationEvidence], inventoryIds: [] };
   const productiveObligationCheckpoint: ObligationCheckpoint = { id: 'CP-accept', predecessorId: initialObligationCheckpoint.id, baselineId: obligationBaseline.id,
@@ -72,7 +72,7 @@ function candidateWithBinding(certificateBindingFixture: CertificateBindingFixtu
   obligationCertificateBindingV1: ObligationCertificateBindingV1): ObligationDocumentV1 {
   fs.writeFileSync(path.join(certificateBindingFixture.root, 'binding.json'), JSON.stringify(obligationCertificateBindingV1));
   return { ...certificateBindingFixture.candidate, certificates: certificateBindingFixture.candidate.certificates.map(item => ({ ...item,
-    inputs: item.inputs.map(input => input.path === 'binding.json' ? { ...input, digest: inputDigest(certificateBindingFixture.root, input.path) } : input) })) };
+    inputs: isObligationGitInputs(item.inputs) ? item.inputs : item.inputs.map(input => input.path === 'binding.json' ? { ...input, digest: inputDigest(certificateBindingFixture.root, input.path) } : input) })) };
 }
 
 // Traceability: verifies REQ-ROLLING-GRAPH

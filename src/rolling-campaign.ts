@@ -6,7 +6,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { isDeepStrictEqual } from 'node:util';
-import { parseObligationDocument, projectObligationScope, inputDigest,
+import { parseObligationDocument, projectObligationScope, inputDigest, obligationInputPaths,
   type ObligationDocumentV1, type ObligationProjection } from '../skills/plan-execution/scripts/obligations.js';
 import { parseObligationBindingHistory, type ObligationBindingHistoryV1, type ObligationEffectiveBinding, type ObligationLeaseV1 } from '../skills/plan-execution/scripts/obligation-binding-history.js';
 
@@ -286,7 +286,7 @@ export function collectRollingGraph(coordinatorRoot: string, documentPath: strin
   const inputs = new Set(obligationBaseline.requirements.map(item => item.path));
   const acceptedCertificateIds = new Set(projection.assessments.map(assessment => assessment.id));
   for (const certificate of document.certificates.filter(certificate => acceptedCertificateIds.has(certificate.id))) {
-    for (const input of certificate.inputs) inputs.add(input.path);
+    for (const relative of obligationInputPaths(certificate.inputs)) inputs.add(relative);
   }
   const inputDigests = [...inputs].sort().map((relative): readonly [string, string | null] => {
     try { return [relative, inputDigest(root, relative)]; }

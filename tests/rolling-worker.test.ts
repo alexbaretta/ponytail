@@ -107,12 +107,12 @@ test('worker instructions retain exact obligation, requirement, acceptance step,
   proof:[{operation:'test',evidence:{command:'<actual command string>',selection:['focused fixture'],
    target:{identity:'local',profile:'fixture',verification:'<relative verification file>'},revision:'<actual final HEAD>',dirty:false,
    startedAt:'<actual ISO timestamp>',completedAt:'<actual ISO timestamp>',outcome:'pass',skips:0,failures:0,
-   inputs:[{path:'<relative assessed input>',digest:'<actual SHA-256>'}],outputPath:'<relative output file>',finalization:'pass'}}]};
+   inputs:{schemaVersion:2,revision:'<actual final HEAD>',paths:['<relative tracked source or test input>']},outputPath:'<relative output file>',finalization:'pass'}}]};
  assert.deepEqual(submissionOutline,expectedRollingWorkerSubmissionV1);
  assert.deepEqual(parseRollingWorkerSubmission(outline
   .replaceAll('<actual final HEAD>','d'.repeat(40)).replaceAll('<actual command string>','node --test fixture.test.ts')
   .replaceAll('<relative verification file>','tmp/verification.json').replaceAll('<actual ISO timestamp>','2026-10-11T09:00:00Z')
-  .replaceAll('<relative assessed input>','fixture.ts').replaceAll('<actual SHA-256>','e'.repeat(64))
+  .replaceAll('<relative tracked source or test input>','fixture.ts')
   .replaceAll('<relative output file>','tmp/focused.txt')).proof[0]?.evidence.finalization,'pass');
  assert.ok(instructions.includes('For every successful obligation, including a no-edit inspection, the final message must be only strict JSON'));
  assert.ok(instructions.includes('Use exactly the physical record keys shown in the outline, at every level'));
