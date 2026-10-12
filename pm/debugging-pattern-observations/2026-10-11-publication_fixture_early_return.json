@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-10-11T19:03:49-07:00",
+  "source_references": [
+    "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/plan.md"
+  ],
+  "context": {
+    "languages": [
+      "typescript"
+    ],
+    "frameworks": [
+      "node:test"
+    ],
+    "components": [
+      "publication scenario harness"
+    ],
+    "affected_boundaries": [
+      "scenario selection",
+      "publication proof assessment"
+    ],
+    "code_references": [
+      "tests/rolling-campaign-store.integration.test.ts"
+    ]
+  },
+  "known_non_matches": [],
+  "observed_behavior": "Publication and mainline tests exited successfully before running their publication assertions.",
+  "expected_behavior": "Each selected scenario reaches and verifies its requested publication phases.",
+  "causal_mechanism": "The automaticPublication flag selected an earlier increment-only Arc with an unconditional return. Later publication scenarios also set this flag, bypassing the batch, full-QA and mainline phases.",
+  "anti_pattern": {
+    "structural_description": "Combining mutually exclusive scenario flags while an earlier phase terminates the shared harness.",
+    "why_it_fails": "A successful earlier phase is reported as proof of later phases that never executed."
+  },
+  "correct_pattern": {
+    "required_invariant": "Requested publication phases cannot coexist with the earlier terminating increment-only scenario.",
+    "implementation_description": "The harness rejects the incompatible flag combination; publication callers select the complete Arc. The disposable rejection hook is removed after its own assertions and subsequent reconciliation uses the current stored graph digest."
+  },
+  "applicability_conditions": [
+    "A shared integration harness has an early-return scenario.",
+    "Later-phase tests accidentally enable that scenario as well."
+  ],
+  "confirmation_evidence": [
+    "Removing the early return exposed a full-QA value mismatch, a retained fixture rejection hook and a stale graph digest.",
+    "After repairing the fixture boundaries, all seven selected real PostgreSQL publication/mainline tests execute successfully with zero skips."
+  ],
+  "regression_proofs": [
+    "tests/rolling-campaign-store.integration.test.ts: incompatible automatic increment/publication scenario assertion",
+    "tests/rolling-campaign-store.integration.test.ts: publication batch freezes one shared partial claim across concurrent requests and restart",
+    "tests/rolling-campaign-store.integration.test.ts: mainline race publication retains one observation and synchronizes the campaign after restart"
+  ],
+  "observation_id": "2026-10-11-publication_fixture_early_return"
+}
