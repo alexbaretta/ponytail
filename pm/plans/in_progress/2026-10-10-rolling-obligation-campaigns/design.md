@@ -383,3 +383,24 @@ every configured command on the exact candidate with unchanged configuration;
 empty profiles, partial execution, stale proof and changed checkout inputs refuse
 push intent. Mainline push observation, race recovery and campaign synchronization
 remain the next publication obligation's responsibility.
+
+## Mainline observation and campaign synchronization
+
+Mainline publication V1 observations retain immutable identities and use the
+existing canonical Git publication-result decoder. Push intent still requires
+complete current QA. Remote containment is freshly checked before publication
+accounting; a lost acknowledgement is observed without issuing another push.
+A published receipt is distinct from a synchronized campaign base. The active
+coordinator-root reservation remains held while synchronization is outstanding.
+
+Synchronization preserves the retained campaign branch and any unselected
+accepted history by merging the observed published mainline into that branch,
+then publishing the campaign ref through the ordinary non-force Git path. The
+coordinator graph is reprojected after acknowledged remote containment. Completed
+synchronization retains both its local and observed remote revisions. A later
+request returns that immutable receipt without checking out, merging, pushing or
+changing newer campaign work. Failure or unknown outcome retains the reservation.
+
+The initial OBL-62 increment establishes normal push, lost-acknowledgement
+observation, restart synchronization and late-receipt safety. Divergent mainline
+races and changed-input QA refresh remain required before OBL-62 discharge.

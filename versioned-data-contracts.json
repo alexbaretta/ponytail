@@ -3,6 +3,14 @@
   "schemaVersion": 1,
   "families": [
     {
+      "id": "rolling-mainline-publication",
+      "implementation": {"workspace": "ponytail", "module": "src/rolling-publication.ts", "readerRegistryExport": "RollingMainlinePublicationReaders"},
+      "currentVersion": "V1",
+      "versions": ["V1"],
+      "supportedReadVersions": ["V1"],
+      "supportedDowngradeVersions": []
+    },
+    {
       "id": "rolling-publication-qa-job",
       "implementation": {"workspace": "ponytail", "module": "src/rolling-publication.ts", "readerRegistryExport": "RollingPublicationQaJobReaders"},
       "currentVersion": "V1",

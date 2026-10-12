@@ -21,6 +21,7 @@ exports.readRollingIncrementClaimV1 = readRollingIncrementClaimV1;
 exports.readRollingIncrementRebaseV1 = readRollingIncrementRebaseV1;
 exports.verifyRollingIncrementRebase = verifyRollingIncrementRebase;
 exports.readRollingIncrementPublicationV1 = readRollingIncrementPublicationV1;
+exports.readRollingIncrementPublicationResult = readRollingIncrementPublicationResult;
 exports.verifyRollingIncrementLocalIntegration = verifyRollingIncrementLocalIntegration;
 const node_fs_1 = __importDefault(require("node:fs"));
 const node_path_1 = __importDefault(require("node:path"));
@@ -258,30 +259,33 @@ function readRollingIncrementPublicationV1(value) {
     const publicationRecord = record(value, ['schemaVersion', 'incrementId', 'result']);
     requireIntegration(publicationRecord.schemaVersion === 1, 'unsupported publication version');
     requireIntegration(typeof publicationRecord.incrementId === 'string' && publicationRecord.incrementId.trim().length > 0, 'invalid increment identity');
-    requireIntegration(isRecord(publicationRecord.result), 'invalid publication result');
+    return { schemaVersion: 1, incrementId: publicationRecord.incrementId, result: readRollingIncrementPublicationResult(publicationRecord.result) };
+}
+function readRollingIncrementPublicationResult(value) {
+    requireIntegration(isRecord(value), 'invalid publication result');
     let rollingIncrementPublicationResult;
-    switch (publicationRecord.result.state) {
+    switch (value.state) {
         case 'PUBLISHED':
         case 'REBASE_REQUIRED': {
-            const resultRecord = record(publicationRecord.result, ['state', 'revision', 'remoteRevision']);
-            rollingIncrementPublicationResult = { state: publicationRecord.result.state, revision: recordCommit(resultRecord.revision), remoteRevision: recordCommit(resultRecord.remoteRevision) };
+            const resultRecord = record(value, ['state', 'revision', 'remoteRevision']);
+            rollingIncrementPublicationResult = { state: value.state, revision: recordCommit(resultRecord.revision), remoteRevision: recordCommit(resultRecord.remoteRevision) };
             break;
         }
         case 'PUSH_REJECTED': {
-            const resultRecord = record(publicationRecord.result, ['state', 'revision', 'remoteRevision', 'reason']);
+            const resultRecord = record(value, ['state', 'revision', 'remoteRevision', 'reason']);
             requireIntegration(typeof resultRecord.reason === 'string' && resultRecord.reason.trim().length > 0, 'missing push rejection reason');
             rollingIncrementPublicationResult = { state: 'PUSH_REJECTED', revision: recordCommit(resultRecord.revision), remoteRevision: recordCommit(resultRecord.remoteRevision), reason: resultRecord.reason };
             break;
         }
         case 'UNCONFIRMED': {
-            const resultRecord = record(publicationRecord.result, ['state', 'revision', 'reason']);
+            const resultRecord = record(value, ['state', 'revision', 'reason']);
             requireIntegration(typeof resultRecord.reason === 'string' && resultRecord.reason.trim().length > 0, 'missing unknown-outcome reason');
             rollingIncrementPublicationResult = { state: 'UNCONFIRMED', revision: recordCommit(resultRecord.revision), reason: resultRecord.reason };
             break;
         }
         default: throw new Error('rolling integration: unsupported publication state');
     }
-    return { schemaVersion: 1, incrementId: publicationRecord.incrementId, result: rollingIncrementPublicationResult };
+    return rollingIncrementPublicationResult;
 }
 exports.RollingIncrementPublicationReaders = { V1: readRollingIncrementPublicationV1 };
 function verifyRollingIncrementLocalIntegration(rootPath, branch, revision) {

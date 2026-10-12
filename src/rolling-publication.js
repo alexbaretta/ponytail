@@ -6,7 +6,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.RollingPublicationQaJobReaders = exports.RollingPublicationQaReaders = exports.RollingMainlineCandidateReaders = exports.RollingMainlinePreparationReaders = exports.RollingPublicationBatchClaimReaders = void 0;
+exports.RollingMainlinePublicationReaders = exports.RollingPublicationQaJobReaders = exports.RollingPublicationQaReaders = exports.RollingMainlineCandidateReaders = exports.RollingMainlinePreparationReaders = exports.RollingPublicationBatchClaimReaders = void 0;
 exports.readRollingPublicationBatchClaimV1 = readRollingPublicationBatchClaimV1;
 exports.selectRollingPublicationBatch = selectRollingPublicationBatch;
 exports.readRollingMainlinePreparationV1 = readRollingMainlinePreparationV1;
@@ -20,6 +20,8 @@ exports.verifyRollingMainlineCandidate = verifyRollingMainlineCandidate;
 exports.runRollingPublicationQa = runRollingPublicationQa;
 exports.verifyRollingPublicationQa = verifyRollingPublicationQa;
 exports.readRollingPublicationQaJobV1 = readRollingPublicationQaJobV1;
+exports.readRollingMainlinePublicationV1 = readRollingMainlinePublicationV1;
+exports.synchronizeRollingCampaign = synchronizeRollingCampaign;
 const node_path_1 = __importDefault(require("node:path"));
 const node_fs_1 = __importDefault(require("node:fs"));
 const node_child_process_1 = require("node:child_process");
@@ -224,3 +226,38 @@ function readRollingPublicationQaJobV1(value) {
     return { schemaVersion: 1, id: batchId(job.id), batchId: batchId(job.batchId), revision: commit(job.revision), configurationDigest: job.configurationDigest, commands: job.commands };
 }
 exports.RollingPublicationQaJobReaders = { V1: readRollingPublicationQaJobV1 };
+function readRollingMainlinePublicationV1(value) {
+    const publication = record(value, ['schemaVersion', 'id', 'batchId', 'result']);
+    requirePublication(publication.schemaVersion === 1, 'unsupported mainline publication version');
+    return { schemaVersion: 1, id: batchId(publication.id), batchId: batchId(publication.batchId), result: (0, rolling_integration_js_1.readRollingIncrementPublicationResult)(publication.result) };
+}
+exports.RollingMainlinePublicationReaders = { V1: readRollingMainlinePublicationV1 };
+function synchronizeRollingCampaign(rollingPublicationBatchClaimV1, rollingMainlineCandidateV1, rollingMainlinePublicationV1) {
+    const checkedRollingPublicationBatchClaimV1 = readRollingPublicationBatchClaimV1(rollingPublicationBatchClaimV1);
+    const checkedRollingMainlineCandidateV1 = readRollingMainlineCandidateV1(rollingMainlineCandidateV1);
+    const checkedRollingMainlinePublicationV1 = readRollingMainlinePublicationV1(rollingMainlinePublicationV1);
+    requirePublication(checkedRollingMainlinePublicationV1.batchId === checkedRollingPublicationBatchClaimV1.id
+        && checkedRollingMainlinePublicationV1.result.state === 'PUBLISHED'
+        && checkedRollingMainlinePublicationV1.result.revision === checkedRollingMainlineCandidateV1.revision, 'campaign synchronization requires observed mainline publication');
+    const rootPath = checkedRollingPublicationBatchClaimV1.rootPath;
+    cleanPublicationCheckout(rootPath);
+    const campaignRef = `refs/heads/${checkedRollingPublicationBatchClaimV1.incrementRef}`;
+    const currentRef = (0, rolling_integration_js_1.git)(rootPath, ['symbolic-ref', 'HEAD']).trim();
+    if (currentRef === publicationBranch(checkedRollingPublicationBatchClaimV1.id)) {
+        verifyRollingMainlineCandidate(checkedRollingPublicationBatchClaimV1, checkedRollingMainlineCandidateV1);
+        (0, rolling_integration_js_1.git)(rootPath, ['switch', checkedRollingPublicationBatchClaimV1.incrementRef]);
+    }
+    else
+        requirePublication(currentRef === campaignRef, 'synchronization checkout is neither its retained candidate nor campaign');
+    const revision = commit((0, rolling_integration_js_1.git)(rootPath, ['rev-parse', 'HEAD']).trim());
+    (0, rolling_integration_js_1.git)(rootPath, ['merge-base', '--is-ancestor', checkedRollingMainlineCandidateV1.sourceRevision, revision]);
+    const containment = (0, rolling_integration_js_1.gitResult)(rootPath, ['merge-base', '--is-ancestor', checkedRollingMainlinePublicationV1.result.remoteRevision, revision]);
+    if (containment.status !== 0) {
+        requirePublication(containment.status === 1 && revision === checkedRollingMainlineCandidateV1.sourceRevision, 'campaign synchronization contains unexpected work; preserve it for reconciliation');
+        (0, rolling_integration_js_1.git)(rootPath, ['merge', '--no-edit', '--no-ff', checkedRollingMainlinePublicationV1.result.remoteRevision]);
+    }
+    const synchronizedRevision = commit((0, rolling_integration_js_1.git)(rootPath, ['rev-parse', 'HEAD']).trim());
+    cleanPublicationCheckout(rootPath);
+    return (0, rolling_integration_js_1.publishRollingIncrement)({ rootPath, target: { remote: checkedRollingPublicationBatchClaimV1.target.remote,
+            branch: checkedRollingPublicationBatchClaimV1.incrementRef }, revision: synchronizedRevision });
+}

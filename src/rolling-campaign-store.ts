@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Alex Baretta. All rights reserved.
 // Licensed under the MIT License. See LICENSE in the project root.
 import crypto from 'node:crypto';
-import {readRollingMainlinePreparationV1,readRollingMainlineCandidateV1,readRollingPublicationQaV1,parseRollingPublicationQa,readRollingPublicationQaJobV1,verifyRollingMainlineCandidate,verifyRollingPublicationQa,type RollingMainlinePreparationV1,type RollingMainlineCandidateV1,type RollingPublicationQaV1,type RollingPublicationQaJobV1,selectRollingPublicationBatch,readRollingPublicationBatchClaimV1,type RollingPublicationBatchClaimV1,type RollingPublicationWaiting,type RollingPublicationTrigger,type RollingAcceptedIncrement} from './rolling-publication.js';
+import {synchronizeRollingCampaign,readRollingMainlinePublicationV1,type RollingMainlinePublicationV1,readRollingMainlinePreparationV1,readRollingMainlineCandidateV1,readRollingPublicationQaV1,parseRollingPublicationQa,readRollingPublicationQaJobV1,verifyRollingMainlineCandidate,verifyRollingPublicationQa,type RollingMainlinePreparationV1,type RollingMainlineCandidateV1,type RollingPublicationQaV1,type RollingPublicationQaJobV1,selectRollingPublicationBatch,readRollingPublicationBatchClaimV1,type RollingPublicationBatchClaimV1,type RollingPublicationWaiting,type RollingPublicationTrigger,type RollingAcceptedIncrement} from './rolling-publication.js';
 import {git,readRollingIncrementClaimV1,readRollingIncrementRebaseV1,verifyRollingIncrementRebase,prepareRollingIncrementRebase,readRollingIncrementPublicationV1,reconcileRollingIncrementPublication,publishRollingIncrement,verifyRollingIncrementLocalIntegration,fastForwardRollingIncrement,verifyRollingIncrementConflictInspection,type RollingIncrementConflictInspection,type RollingIncrementRepair,type RollingIncrementClaimV1,type RollingIncrementRebaseV1,type RollingFastRebaseResult,type RollingIncrementPublicationV1,type RollingIncrementPublicationResult,type RollingIncrementPushStarted} from './rolling-integration.js';
 import path from 'node:path';
 import { parse } from 'lossless-json';
@@ -718,7 +718,7 @@ export class RollingCampaignStore {
     return this.transaction(campaignId,async (poolClient,rollingCampaignRow)=> {
       const rollingGraph = this.graph(rollingCampaignRow,expectedDigest);
       const existing = (await poolClient.query<Record<string,unknown>>(
-        "SELECT claim_text FROM ponytail_index.rolling_publication_batch_v1 WHERE project_id=$1 AND campaign_id=$2 AND state<>'PUBLISHED'",
+        "SELECT claim_text FROM ponytail_index.rolling_publication_batch_v1 WHERE project_id=$1 AND campaign_id=$2 AND (state<>'PUBLISHED' OR synchronized_revision IS NULL)",
         [this.projectId,campaignId])).rows[0];
       if (existing) return {state:'CLAIMED',claim:readRollingPublicationBatchClaimV1(readStateText(stringColumn(existing.claim_text,'publication claim')))};
       const activeIncrements = (await poolClient.query<Record<string,unknown>>(
@@ -915,6 +915,95 @@ export class RollingCampaignStore {
   }
 
   // Traceability: implements REQ-ROLLING-PUBLICATION
+  async mainlinePublication(campaignId:string,id:string):Promise<RollingMainlinePublicationV1 | null> {
+    const row = (await this.pool.query<Record<string,unknown>>(
+      'SELECT p.publication_text FROM ponytail_index.rolling_mainline_publication_v1 p JOIN ponytail_index.rolling_publication_batch_v1 b USING(project_id,campaign_id,batch_id) WHERE p.project_id=$1 AND p.campaign_id=$2 AND p.batch_id=$3 AND p.publication_id=b.publication_id',
+      [this.projectId,campaignId,id])).rows[0];
+    return row ? readRollingMainlinePublicationV1(readStateText(stringColumn(row.publication_text,'mainline publication'))) : null;
+  }
+
+  private async mainlinePushContext(campaignId:string,id:string):Promise<{readonly claim:RollingPublicationBatchClaimV1;readonly candidate:RollingMainlineCandidateV1}> {
+    return this.transaction(campaignId,async poolClient=> {
+      const row = (await poolClient.query<Record<string,unknown>>('SELECT state FROM ponytail_index.rolling_publication_batch_v1 WHERE project_id=$1 AND campaign_id=$2 AND batch_id=$3',[this.projectId,campaignId,id])).rows[0];
+      requireState(row && ['PUSHING','UNCONFIRMED','PUSH_REJECTED','REBASE_REQUIRED'].includes(stringColumn(row.state,'publication state')),
+        'mainline observation requires its retained push intent');
+      return {claim:await this.publicationClaim(poolClient,campaignId,id),candidate:await this.publicationCandidate(poolClient,campaignId,id)};
+    });
+  }
+
+  // Traceability: implements REQ-ROLLING-PUBLICATION
+  async recordMainlinePublication(campaignId:string,id:string,rollingIncrementPublicationResult:RollingIncrementPublicationResult):Promise<RollingMainlinePublicationV1> {
+    return this.transaction(campaignId,async poolClient=> {
+      const rollingPublicationBatchClaimV1 = await this.publicationClaim(poolClient,campaignId,id);
+      const rollingMainlineCandidateV1 = await this.publicationCandidate(poolClient,campaignId,id);
+      const rollingMainlinePublicationV1 = readRollingMainlinePublicationV1({schemaVersion:1,id:crypto.randomUUID(),batchId:id,result:rollingIncrementPublicationResult});
+      requireState(rollingMainlinePublicationV1.result.revision === rollingMainlineCandidateV1.revision,'mainline publication differs from its verified candidate');
+      const row = (await poolClient.query<Record<string,unknown>>('SELECT state FROM ponytail_index.rolling_publication_batch_v1 WHERE project_id=$1 AND campaign_id=$2 AND batch_id=$3',[this.projectId,campaignId,id])).rows[0];
+      requireState(row && ['PUSHING','UNCONFIRMED','PUSH_REJECTED','REBASE_REQUIRED'].includes(stringColumn(row.state,'publication state')),'mainline result has no retained push ownership');
+      if (rollingMainlinePublicationV1.result.state === 'PUBLISHED') {
+        const observed = reconcileRollingIncrementPublication({rootPath:rollingMainlineCandidateV1.rootPath,target:rollingPublicationBatchClaimV1.target,revision:rollingMainlineCandidateV1.revision});
+        requireState(observed.state === 'PUBLISHED' && observed.remoteRevision === rollingMainlinePublicationV1.result.remoteRevision,'mainline publication requires freshly observed remote containment');
+      }
+      await poolClient.query('INSERT INTO ponytail_index.rolling_mainline_publication_v1(project_id,campaign_id,batch_id,publication_id,publication_text) VALUES($1,$2,$3,$4,$5)',
+        [this.projectId,campaignId,id,rollingMainlinePublicationV1.id,JSON.stringify(rollingMainlinePublicationV1)]);
+      await poolClient.query('UPDATE ponytail_index.rolling_publication_batch_v1 SET state=$4,publication_id=$5 WHERE project_id=$1 AND campaign_id=$2 AND batch_id=$3',
+        [this.projectId,campaignId,id,rollingMainlinePublicationV1.result.state,rollingMainlinePublicationV1.id]);
+      return rollingMainlinePublicationV1;
+    });
+  }
+
+  // Traceability: implements REQ-ROLLING-PUBLICATION
+  async observeMainlinePublication(campaignId:string,id:string):Promise<RollingMainlinePublicationV1> {
+    const rollingMainlinePublicationV1 = await this.mainlinePublication(campaignId,id);
+    if (rollingMainlinePublicationV1?.result.state === 'PUBLISHED') return rollingMainlinePublicationV1;
+    const context = await this.mainlinePushContext(campaignId,id);
+    const rollingIncrementPublicationResult = reconcileRollingIncrementPublication({rootPath:context.candidate.rootPath,target:context.claim.target,revision:context.candidate.revision});
+    return this.recordMainlinePublication(campaignId,id,rollingIncrementPublicationResult);
+  }
+
+  // Traceability: implements REQ-ROLLING-PUBLICATION
+  async publishMainline(campaignId:string,id:string):Promise<RollingMainlinePublicationV1> {
+    const rollingMainlinePublicationV1 = await this.mainlinePublication(campaignId,id);
+    if (rollingMainlinePublicationV1?.result.state === 'PUBLISHED') return rollingMainlinePublicationV1;
+    const rollingMainlineCandidateV1 = await this.beginMainlinePush(campaignId,id);
+    const context = await this.mainlinePushContext(campaignId,id);
+    const rollingIncrementPublicationResult = publishRollingIncrement({rootPath:rollingMainlineCandidateV1.rootPath,target:context.claim.target,revision:rollingMainlineCandidateV1.revision});
+    return this.recordMainlinePublication(campaignId,id,rollingIncrementPublicationResult);
+  }
+
+  // Traceability: implements REQ-ROLLING-PUBLICATION
+  async synchronizePublishedCampaign(campaignId:string,id:string):Promise<RollingIncrementPublicationResult> {
+    const context = await this.transaction(campaignId,async poolClient=> {
+      const row = (await poolClient.query<Record<string,unknown>>('SELECT state,synchronized_revision,synchronized_remote_revision FROM ponytail_index.rolling_publication_batch_v1 WHERE project_id=$1 AND campaign_id=$2 AND batch_id=$3',[this.projectId,campaignId,id])).rows[0];
+      requireState(row?.state === 'PUBLISHED','campaign base cannot synchronize before mainline publication is observed');
+      return {claim:await this.publicationClaim(poolClient,campaignId,id),candidate:await this.publicationCandidate(poolClient,campaignId,id),
+        synchronizedRevision:nullableStringColumn(row.synchronized_revision,'synchronized campaign revision'),
+        synchronizedRemoteRevision:nullableStringColumn(row.synchronized_remote_revision,'observed synchronized remote revision')};
+    });
+    if (context.synchronizedRevision !== null) {
+      requireState(context.synchronizedRemoteRevision !== null,'completed synchronization has no observed remote receipt');
+      return {state:'PUBLISHED',revision:context.synchronizedRevision,remoteRevision:context.synchronizedRemoteRevision};
+    }
+    const rollingMainlinePublicationV1 = await this.mainlinePublication(campaignId,id);requireState(rollingMainlinePublicationV1,'mainline publication receipt is missing');
+    const rollingIncrementPublicationResult = synchronizeRollingCampaign(context.claim,context.candidate,rollingMainlinePublicationV1);
+    if (rollingIncrementPublicationResult.state !== 'PUBLISHED') return rollingIncrementPublicationResult;
+    return this.transaction(campaignId,async (poolClient,rollingCampaignRow)=> {
+      requireState(git(context.claim.rootPath,['symbolic-ref','HEAD']).trim() === `refs/heads/${context.claim.incrementRef}`
+        && git(context.claim.rootPath,['rev-parse','HEAD']).trim() === rollingIncrementPublicationResult.revision,
+        'synchronized campaign checkout changed; retain publication ownership');
+      const observed = reconcileRollingIncrementPublication({rootPath:context.claim.rootPath,target:{remote:context.claim.target.remote,branch:context.claim.incrementRef},revision:rollingIncrementPublicationResult.revision});
+      requireState(observed.state === 'PUBLISHED','campaign synchronization requires observed remote containment');
+      const row = (await poolClient.query<Record<string,unknown>>('SELECT synchronized_revision FROM ponytail_index.rolling_publication_batch_v1 WHERE project_id=$1 AND campaign_id=$2 AND batch_id=$3',[this.projectId,campaignId,id])).rows[0];
+      requireState(row && (row.synchronized_revision === null || row.synchronized_revision === rollingIncrementPublicationResult.revision),'synchronization receipt is immutable');
+      await poolClient.query('UPDATE ponytail_index.rolling_publication_batch_v1 SET synchronized_revision=$4,synchronized_remote_revision=$5 WHERE project_id=$1 AND campaign_id=$2 AND batch_id=$3',
+        [this.projectId,campaignId,id,rollingIncrementPublicationResult.revision,observed.remoteRevision]);
+      const rollingGraph = this.collectGraph(rollingCampaignRow);
+      await poolClient.query('UPDATE ponytail_index.rolling_campaign_v1 SET graph_digest=$3 WHERE project_id=$1 AND campaign_id=$2',[this.projectId,campaignId,rollingGraph.digest]);
+      return rollingIncrementPublicationResult;
+    });
+  }
+
+  // Traceability: implements REQ-ROLLING-PUBLICATION
   async claimIncrement(campaignId: string, reviewId: string): Promise<RollingIncrementClaimV1> {
     return this.transaction(campaignId, async (poolClient, rollingCampaignRow) => {
       const existing = (await poolClient.query<Record<string, unknown>>('SELECT claim_text FROM ponytail_index.rolling_increment_v1 WHERE project_id=$1 AND campaign_id=$2 AND review_id=$3', [this.projectId,campaignId,reviewId])).rows[0];
@@ -925,7 +1014,7 @@ export class RollingCampaignStore {
         return rollingIncrementClaimV1;
       }
       const activePublications = (await poolClient.query<Record<string,unknown>>(
-        "SELECT batch_id FROM ponytail_index.rolling_publication_batch_v1 WHERE project_id=$1 AND coordinator_root=$2 AND state<>'PUBLISHED'",
+        "SELECT batch_id FROM ponytail_index.rolling_publication_batch_v1 WHERE project_id=$1 AND coordinator_root=$2 AND (state<>'PUBLISHED' OR synchronized_revision IS NULL)",
         [this.projectId,rollingCampaignRow.coordinator_root])).rows;
       requireState(activePublications.length === 0,'mainline publication owns the coordinator checkout; finish it before claiming another increment');
       const row = (await poolClient.query<Record<string, unknown>>('SELECT request_text,outcome_text,replacement_text FROM ponytail_index.rolling_review_v1 WHERE project_id=$1 AND campaign_id=$2 AND review_id=$3', [this.projectId,campaignId,reviewId])).rows[0];

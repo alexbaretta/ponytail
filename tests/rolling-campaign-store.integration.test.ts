@@ -81,7 +81,7 @@ function prepareCoordinatorIncrementCheckout(root: string,branch: string): void 
   execFileSync('git',['-C',root,'switch','-q',branch]);
 }
 
-export async function runRollingReviewScenario(t: TestContext, reviewScenario: ReviewScenario): Promise<void> {
+export async function runRollingReviewScenario(t: TestContext, reviewScenario: ReviewScenario, mainlinePublication:'normal' | 'lost_ack' | null = null): Promise<void> {
   const reviewDecision = reviewScenario.decision;
   let integratedRollingWorkerSubmissionV1: RollingWorkerSubmissionV1 | null = null;
   const repositoryRoot = path.resolve(__dirname, '../..');
@@ -743,8 +743,36 @@ export async function runRollingReviewScenario(t: TestContext, reviewScenario: R
     fs.writeFileSync(configurationPath,JSON.stringify({...passingConfiguration,qa:{...passingConfiguration.qa,publication:[['false']]}}));
     await assert.rejects(restartedPublicationStore.beginMainlinePush('bound-fixture',firstClaim.claim.id),/stale|all required/);
     fs.writeFileSync(configurationPath,JSON.stringify(passingConfiguration));
-    assert.deepEqual(await restartedPublicationStore.beginMainlinePush('bound-fixture',firstClaim.claim.id),rollingMainlineCandidateV1);
-    assert.equal(execFileSync('git',['-C',remoteRoot,'rev-parse','refs/heads/main'],{encoding:'utf8'}).trim(),baseCommit,'the QA gate records intent; it does not push');
+    if (mainlinePublication === 'normal') {
+      assert.equal((await restartedPublicationStore.publishMainline('bound-fixture',firstClaim.claim.id)).result.state,'PUBLISHED');
+    } else {
+      assert.deepEqual(await restartedPublicationStore.beginMainlinePush('bound-fixture',firstClaim.claim.id),rollingMainlineCandidateV1);
+      assert.equal(execFileSync('git',['-C',remoteRoot,'rev-parse','refs/heads/main'],{encoding:'utf8'}).trim(),baseCommit,'the QA gate records intent; it does not push');
+      if (mainlinePublication === 'lost_ack') {
+        const rollingIncrementPublicationResult = publishRollingIncrement({rootPath:root,target:rollingPublicationBatchClaimV1.target,revision:rollingMainlineCandidateV1.revision});
+        assert.equal(rollingIncrementPublicationResult.state,'PUBLISHED');
+        assert.equal(await restartedPublicationStore.mainlinePublication('bound-fixture',firstClaim.claim.id),null);
+        const recoveredRollingMainlinePublicationV1 = await new RollingCampaignStore(pool,projectId).observeMainlinePublication('bound-fixture',firstClaim.claim.id);
+        assert.equal(recoveredRollingMainlinePublicationV1.result.state,'PUBLISHED');
+        assert.deepEqual(await restartedPublicationStore.observeMainlinePublication('bound-fixture',firstClaim.claim.id),recoveredRollingMainlinePublicationV1);
+      }
+    }
+    if (mainlinePublication !== null) {
+      await assert.rejects(restartedPublicationStore.claimIncrement('bound-fixture',crypto.randomUUID()),/publication owns the coordinator checkout/);
+      const synchronizedRollingIncrementPublicationResult = await new RollingCampaignStore(pool,projectId).synchronizePublishedCampaign('bound-fixture',firstClaim.claim.id);
+      assert.equal(synchronizedRollingIncrementPublicationResult.state,'PUBLISHED');
+      assert.deepEqual(await restartedPublicationStore.synchronizePublishedCampaign('bound-fixture',firstClaim.claim.id),synchronizedRollingIncrementPublicationResult);
+      assert.equal(execFileSync('git',['-C',root,'symbolic-ref','--short','HEAD'],{encoding:'utf8'}).trim(),'campaign/bound-fixture');
+      assert.equal((await pool.query<Record<string,unknown>>('SELECT count(*)::integer AS count FROM ponytail_index.rolling_mainline_publication_v1 WHERE project_id=$1',[projectId])).rows[0]?.count,1);
+      fs.writeFileSync(path.join(root,'later-campaign-work.txt'),'Preserve later work when a completed synchronization receipt is requested.\n');
+      execFileSync('git',['-C',root,'add','later-campaign-work.txt']);
+      execFileSync('git',['-C',root,'-c','user.name=Fixture','-c','user.email=fixture@example.test','commit','-qm','later campaign work']);
+      const laterRevision = execFileSync('git',['-C',root,'rev-parse','HEAD'],{encoding:'utf8'}).trim();
+      assert.deepEqual(await restartedPublicationStore.synchronizePublishedCampaign('bound-fixture',firstClaim.claim.id),synchronizedRollingIncrementPublicationResult);
+      assert.equal(execFileSync('git',['-C',root,'rev-parse','HEAD'],{encoding:'utf8'}).trim(),laterRevision);
+
+    }
+
 
   }
   } else await assert.rejects(rollingCampaignStore.claimIncrement('bound-fixture',rollingStoredReview.request.id),/accepted review/);
@@ -1697,3 +1725,7 @@ for (const publicationFlush of ['completion','quiescence'] as const) test(`publi
 // Traceability: verifies REQ-ROLLING-PUBLICATION
 test('publication threshold uses configured M and persists one claim without counting acknowledgement retries',
  t=>runRollingReviewScenario(t,{decision:'accepted',mode:'manual',automaticPublication:true,publicationBatch:'threshold'}));
+
+// Traceability: verifies REQ-ROLLING-PUBLICATION
+for (const mainlinePublication of ['normal','lost_ack'] as const) test(`mainline ${mainlinePublication} publication retains one observation and synchronizes the campaign after restart`,
+ t=>runRollingReviewScenario(t,{decision:'accepted',mode:'manual',automaticPublication:true,publicationBatch:'partial'},mainlinePublication));
