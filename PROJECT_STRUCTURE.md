@@ -132,6 +132,9 @@ while project-wide management records remain under `pm/`.
   independently testable graph/scheduling boundary. Its project configuration
   is `.agents/config/project/rolling-campaigns.json`; existing campaign dispatch
   remains legacy until the replacement operation layer is integrated.
+  `src/rolling-publication.ts` owns accepted-increment publication batch
+  selection and nonempty partial-flush policy. Its shipped `.js` entrypoint is
+  compiler output materialized by `scripts/build-runtime.ts`.
   `src/rolling-campaign-store.ts` owns transactional PostgreSQL campaign,
   checkout and assignment leases and durable external-action intents.
   Its tables and indexes use the existing `scripts/project-index.sql` setup.

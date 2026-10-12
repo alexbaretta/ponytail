@@ -842,6 +842,16 @@
       "locator": "text"
     },
     {
+      "class": "implementation",
+      "path": "src/rolling-publication.ts",
+      "locator": "text"
+    },
+    {
+      "class": "unit-test",
+      "path": "tests/rolling-publication.test.ts",
+      "locator": "text"
+    },
+    {
       "class": "unit-test",
       "path": "tests/rolling-integration.test.ts",
       "locator": "text"
@@ -1251,6 +1261,10 @@
     {
       "path": "src/rolling-integration.js",
       "sourcePath": "src/rolling-integration.ts"
+    },
+    {
+      "path": "src/rolling-publication.js",
+      "sourcePath": "src/rolling-publication.ts"
     },
     {
       "path": "src/rolling-codex.js",
