@@ -15899,6 +15899,51 @@
       },
       "assessor": "coordinator",
       "reason": "The first two approved groups are discharged. Begin the final group OBL-66 through OBL-69; no delivery or final acceptance claimed by this scope checkpoint."
+    },
+    {
+      "id": "CHECKPOINT-189",
+      "predecessorId": "CHECKPOINT-188",
+      "baselineId": "BASELINE-16",
+      "kind": "neutral",
+      "selectedIds": [
+        "OBL-66",
+        "OBL-67",
+        "OBL-68",
+        "OBL-69"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "CERT-129",
+        "CERT-130",
+        "CERT-131",
+        "CERT-132"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": {
+        "obligationId": "OBL-66",
+        "operations": [
+          "inspect"
+        ],
+        "deliverable": "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/interface-batch-OBL-66.md"
+      },
+      "assessor": "coordinator",
+      "reason": "Discharge the final approved group of four through distinct current interface and closure certificates; retain historical assessments and leave whole-campaign freshness and final rollup acceptance open."
     }
   ]
 }
