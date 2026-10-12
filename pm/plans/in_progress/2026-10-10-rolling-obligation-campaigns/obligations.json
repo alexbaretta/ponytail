@@ -19105,6 +19105,162 @@
       },
       "assessor": "coordinator",
       "reason": "Renew current evidence for this started delivery obligation in dependency order without changing source, obligation conditions or dependency semantics."
+    },
+    {
+      "id": "CHECKPOINT-268",
+      "predecessorId": "CHECKPOINT-267",
+      "baselineId": "BASELINE-16",
+      "kind": "neutral",
+      "selectedIds": [
+        "OBL-100"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "CERT-206"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": {
+        "obligationId": "OBL-100",
+        "operations": [
+          "inspect"
+        ],
+        "deliverable": "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/final-OBL-100.md"
+      },
+      "assessor": "coordinator",
+      "reason": "Renew current evidence for this started delivery obligation in dependency order without changing source, obligation conditions or dependency semantics."
+    },
+    {
+      "id": "CHECKPOINT-269",
+      "predecessorId": "CHECKPOINT-268",
+      "baselineId": "BASELINE-16",
+      "kind": "neutral",
+      "selectedIds": [
+        "OBL-101"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "CERT-207"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": {
+        "obligationId": "OBL-101",
+        "operations": [
+          "inspect"
+        ],
+        "deliverable": "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/final-OBL-101.md"
+      },
+      "assessor": "coordinator",
+      "reason": "Renew current evidence for this started delivery obligation in dependency order without changing source, obligation conditions or dependency semantics."
+    },
+    {
+      "id": "CHECKPOINT-270",
+      "predecessorId": "CHECKPOINT-269",
+      "baselineId": "BASELINE-16",
+      "kind": "neutral",
+      "selectedIds": [
+        "OBL-102"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "CERT-208"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": {
+        "obligationId": "OBL-102",
+        "operations": [
+          "inspect"
+        ],
+        "deliverable": "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/final-OBL-102.md"
+      },
+      "assessor": "coordinator",
+      "reason": "Renew current evidence for this started delivery obligation in dependency order without changing source, obligation conditions or dependency semantics."
+    },
+    {
+      "id": "CHECKPOINT-271",
+      "predecessorId": "CHECKPOINT-270",
+      "baselineId": "BASELINE-16",
+      "kind": "neutral",
+      "selectedIds": [
+        "OBL-103"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "CERT-209"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "after": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "preparation": {
+        "obligationId": "OBL-103",
+        "operations": [
+          "inspect"
+        ],
+        "deliverable": "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/evidence/final-OBL-103.md"
+      },
+      "assessor": "coordinator",
+      "reason": "Renew current evidence for this started delivery obligation in dependency order without changing source, obligation conditions or dependency semantics."
     }
   ]
 }
