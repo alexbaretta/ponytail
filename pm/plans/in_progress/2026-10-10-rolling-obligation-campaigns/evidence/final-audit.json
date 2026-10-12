@@ -1,0 +1,15 @@
+{
+  "status": "in_progress",
+  "sourceRevision": "50af3b16bfceb5257afa819cab08aaa9baadeda3",
+  "deliveryObligationCount": 91,
+  "currentAssessedDeliveryIds": ["OBL-22", "OBL-23", "OBL-24", "OBL-25", "OBL-26", "OBL-27", "OBL-28", "OBL-29", "OBL-30", "OBL-31", "OBL-32", "OBL-33"],
+  "remainingAssessmentIsNotUnstartedImplementation": true,
+  "authoritativeAcceptanceState": "../obligations.json",
+  "allocationContentionClarification": {
+    "obligationId": "OBL-31",
+    "source": "tests/rolling-campaign-store.integration.test.ts:154",
+    "observedOutcome": "Exactly one of four concurrent requests returns an allocation; three report capacity_reached. One original obligation/worktree pair remains persisted. The certificate reason's phrase same original allocation refers to that retained pair, not four successful allocation responses.",
+    "proof": "Three selected real PostgreSQL allocation workflows passed with zero failures, skips or cancellations."
+  },
+  "remainingWholeCampaignAudit": "Individual remaining conditions, final rollups and lifecycle closure must still be assessed; this partial audit does not establish campaign completion."
+}
