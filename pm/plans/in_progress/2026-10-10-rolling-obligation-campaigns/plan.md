@@ -73,12 +73,30 @@ and no retrospective rewrite of closed plan evidence.
 | Sprint | Deliverable | State |
 | --- | --- | --- |
 | S01 | Activated requirements/UAT, execution design, starting evidence and atomic implementation records | Done |
-| S02 | [Configuration and graph](sprints/S02.md) | Done |
-| S03 | [PostgreSQL execution ownership](sprints/S03.md) | Done |
-| S07 | [Static TypeScript migration](sprints/S07.md), inserted before continuing S04 | In progress |
-| S04 | [Ponytail checkouts and direct Codex workers](sprints/S04.md) | Pending continuation after S07; existing tasklets retained |
-| S05 | Increment integration, publication batches and QA evidence on exact revisions | Pending |
-| S06 | Chapter CLI/MCP, old dispatcher replacement, portable policy and final acceptance | Pending |
+| S02 | [Configuration and graph](sprints/S02.md) | Implementation recorded; final acceptance pending |
+| S03 | [PostgreSQL execution ownership](sprints/S03.md) | Implementation recorded; final acceptance pending |
+| S07 | [Static TypeScript migration](sprints/S07.md), scoped prospectively to our campaign code | Implementation recorded; final acceptance pending |
+| S04 | [Ponytail checkouts and direct Codex workers](sprints/S04.md) | Implementation recorded; final acceptance pending |
+| S05 | Increment integration, publication batches and QA evidence on exact revisions | Implementation recorded; final acceptance pending |
+| S06 | Chapter CLI/MCP, old dispatcher replacement, portable policy and final acceptance | Interfaces implemented; final acceptance in progress |
+
+Current reconciliation, 2026-10-11: BASELINE-16 contains 91 atomic delivery
+obligations and 21 inventory/requirement rollups. All 91 delivery obligations
+have historical accepted certificates; source corrections and binding amendments
+require current evidence renewal before final discharge. The last twelve delivery
+items were executed in the approved groups of four (OBL-58–61, OBL-62–65,
+OBL-66–69). The interface group includes a direct CLI cancellation regression.
+The final store-contract correction adds current V3 configuration and scope
+writers with immutable V1/V2 readers and normalization at the boundary.
+
+Clean-tree full acceptance on `ff5bb07` passed 883 Node tests with zero failures;
+unchanged TSTS checked 1,253 files, and traceability checked 827 relationships
+without violations. No product input changed in the following no-edit prerequisite
+renewal scope. These results are reusable QA evidence, not a declaration that
+the campaign is complete. Outstanding work is current certificate renewal in
+dependency order, requirement/inventory rollups, native evidence freshness and
+final documentation reconciliation. Historical sprint/tasklet records remain
+preserved; the states above describe implementation separately from acceptance.
 
 The active sprint's exact declarations, paths, invariants and focused proofs
 are recorded before source edits. Later sprint detail is refined from the
