@@ -115,6 +115,9 @@ services. `PROJECT_STRUCTURE.md` is authoritative for that boundary.
   PostgreSQL acceptance proof: `node --test
   --test-name-pattern="integrated certificate assessment"
   dist/tests/rolling-campaign-store.integration.test.js`.
+- Campaign client/help compliance proof: `node --test
+  dist/tests/campaign-compliance.test.js
+  dist/tests/campaign-compliance.integration.test.js tests/cli-tools.test.js`.
 - Rolling review focused proof: `node --test dist/tests/rolling-review.test.js
   dist/tests/rolling-codex.test.js dist/tests/rolling-campaign-store.test.js
   dist/tests/rolling-campaign-store.integration.test.js`.

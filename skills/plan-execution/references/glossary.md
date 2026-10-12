@@ -21,6 +21,8 @@ Generated host copies derive from this source.
 | Feature/story | Groups atomic obligations into a complete piece of functionality that could be released independently. |
 | Tasklet | An atomic implementation step toward discharge. |
 | Worker assignment | Gives a session bounded responsibility for selected obligations. |
+| Worker | An executing session responsible for autonomously establishing its assigned atomic obligations within the authorized lease and submitting adequate evidence. |
+| Coordinator | The authorized session owning a campaign's authoritative dependency graph, scheduling, adversarial-review requests, acceptance and publication through Ponytail tooling. |
 | Certificate | Establishes that an obligation is satisfied for identified inputs. |
 | Suite | A named set of related Arcs. |
 | Arc | A named ordered sequence of one or more Steps demonstrating acceptance. |

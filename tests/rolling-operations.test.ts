@@ -8,6 +8,7 @@ import type {RollingPublicationFrozen,RollingPublicationTrigger} from '../src/ro
 import type {RollingIncrementClaimV1,RollingIncrementPublicationV1} from '../src/rolling-integration.js';
 import type {RollingStoredReview,RollingReviewRequestV1} from '../src/rolling-review.js';
 import type {RollingWorkerSelection,RollingBinding,RollingSchedulingBlock} from '../src/rolling-campaign.js';
+import type {ObligationLeaseV1} from '../skills/plan-execution/scripts/obligation-binding-history.js';
 
 function snapshot():RollingCoordinatorSnapshot {
  const rollingBinding:RollingBinding = {obligationId:'OBL-1',implementationIds:[],sourcePaths:['src/current.ts'],acceptances:[],unitTests:[],integrationTests:[],exclusiveResources:[]};
@@ -63,6 +64,22 @@ function workingAssignment():RollingStoredAssignment {
  return {id:'worker',scopeId:'pilot',obligationId:'OBL-1',state:'WORKING',blockers:[],activityStopped:false,
   plannedPaths:['src/current.ts'],exclusiveResources:[],generation:'generation',sessionId:'session',retired:false,worktreeNumber:101,binding:rollingBinding,lease:null};
 }
+
+// Traceability: verifies REQ-ROLLING-GRAPH
+// Traceability: verifies REQ-ROLLING-INTERFACES
+test('OBL-129: stopped retained workers receive lease rebinding before new allocation',()=>{
+ const obligationLeaseV1:ObligationLeaseV1 = {schemaVersion:1,scopeId:'pilot',generation:'generation',
+  graphDigest:'a'.repeat(64),baselineId:'B1',assessor:'coordinator',authority:['approved'],binding:{obligationId:'OBL-1',revisionId:'BIND-2',dependsOn:[],
+   execution:{sprintId:null,taskletIds:[],plannedPaths:['src/current.ts'],operations:['edit','test'],selection:['focused'],target:{identity:'local',profile:'focused'}}}};
+ const rollingStoredAssignment:RollingStoredAssignment = {...workingAssignment(),state:'INACTIVE',activityStopped:true,lease:obligationLeaseV1};
+ const rollingCoordinatorSnapshot:RollingCoordinatorSnapshot = {...snapshot(),assignments:[rollingStoredAssignment],
+  scheduling:{...snapshot().scheduling,selected:[],blocked:[{reason:'scope_changed',obligationId:'OBL-1',prerequisites:[]}]}};
+ assert.deepEqual(projectRollingCoordinatorActions(rollingCoordinatorSnapshot).decisions,
+  [{kind:'worker-rebinding',command:'rebind-worker',assignment:rollingStoredAssignment}]);
+ const activeRollingCoordinatorSnapshot:RollingCoordinatorSnapshot = {...rollingCoordinatorSnapshot,
+  assignments:[{...rollingStoredAssignment,activityStopped:false}]};
+ assert.deepEqual(projectRollingCoordinatorActions(activeRollingCoordinatorSnapshot).decisions,[]);
+});
 
 // Traceability: verifies REQ-ROLLING-INTERFACES
 // Traceability: verifies REQ-ROLLING-WORKERS

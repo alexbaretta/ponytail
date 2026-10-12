@@ -641,56 +641,13 @@ def update_permissions(source_root, root, main_root, arguments):
     return run_cli([*command, *arguments])
 
 
-def print_usage():
-    print("""Usage:
-  ponytail register
-  ponytail unregister <repository-root>
-  ponytail list-projects
-  ponytail bless[-worktree]
-  ponytail blessed[-worktree]
-  ponytail register-component <name>
-  ponytail unregister-component <name>
-  ponytail list-components
-  ponytail register-dependency <project>
-  ponytail unregister-dependency <project>
-  ponytail list-dependencies
-  ponytail detect-components [--language typescript|javascript|auto]
-  ponytail plan-input <plan> -- <instruction>
-  ponytail plan-input coordinate <plan>
-  ponytail plan-input release <plan>
-  ponytail plan-input list <plan> [--json]
-  ponytail plan-input claim <plan> [--json]
-  ponytail plan-input complete <plan> <id> --record <pm-path>...
-  ponytail pm pdf <collection|all> [--output-dir <path>]
-  ponytail campaign <command> [arguments] (see campaign --help)
-  ponytail worktree reclaim [--dry-run] [--json]
-  ponytail worktree recover <attachment-token>
-  ponytail worktree upgrade <attachment-token> --revision <commit>
-  ponytail traceability index [--rebuild] [--json]
-  ponytail traceability search <query> [--kind <kind>] [--role <role>] [--requirement <id>] [--path <path>] [--json]
-  ponytail traceability validate [--plan <plan> | --campaign <plan>] [--json]
-  ponytail search update-index [-j <n_workers>] [-n <commits_per_db_transaction>]
-  ponytail search query <text> [--ref <ref> | --commit <commit-id> | --history <ref-or-commit>] [--path <path>] [-i|--ignore-case]
-  ponytail plan search <query> [--lifecycle <lifecycle>] [--kind <kind>] [--plan <plan>] [--json]
-  ponytail plan descendants <plan> [--direct] [--json]
-  ponytail plan ancestors <plan> [--json]
-  ponytail plan roots [--json]
-  ponytail plan stranded [--json]
-  ponytail pre-commit
-  ponytail validate [--all]
-  ponytail qa [references]
-  ponytail update-permissions [permission options]
-  ponytail update-skills [Codex installer options]
-  ponytail update
-
-All commands require a Git worktree. Register and unregister may run before registration.
-validate checks setup only; qa runs local checks, never integration suites.
-Exit statuses: 1 invalid setup/command, 2 no Git worktree, 3 unregistered, 4 QA findings, 130 interrupted.""")
-
-
 def run():
     script_path = Path(sys.argv[1])
     arguments = sys.argv[2:]
+    help_arguments = arguments[:arguments.index("--")] if "--" in arguments else arguments
+    if not arguments or arguments[0] == "help" or any(value in {"--help", "-h"} for value in help_arguments):
+        source_root = source_root_for(script_path, None)
+        return run_cli(["node", str(source_root / "src/cli-help.js"), *arguments], cwd=Path.cwd())
     if arguments[:2] == ["worktree", "recover"]:
         if len(arguments) != 3:
             fail("usage: ponytail worktree recover <attachment-token>")
@@ -827,8 +784,7 @@ def run():
         except OSError as error:
             raise ProjectError(f"project index CLI could not start: {error}", 2) from error
     if operation in {"-h", "--help", "help"}:
-        print_usage()
-        return run_cli(["node", str(source_root / "src/rolling-operations.js"), "--help"], cwd=root)
+        return run_cli(["node", str(source_root / "src/cli-help.js"), "--help"], cwd=root)
     if operation == "validate":
         if arguments == ["--all"]:
             validate_all_projects(config)

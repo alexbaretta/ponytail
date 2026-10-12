@@ -15,6 +15,10 @@ while project-wide management records remain under `pm/`.
 ## Ownership
 
 - `skills/` owns canonical reusable skills and the portable Ponytail policy.
+  `skills/plan-execution/references/rolling-campaigns.md` owns the configured
+  rolling coordinator/worker operating procedure. `src/cli-help.ts` owns
+  cross-chapter CLI help; campaign help remains owned by its command registry.
+  `scripts/build-runtime.ts` generates the shipped JavaScript launch files.
   `skills/plan-execution/references/glossary.md` owns shared short definitions.
   `skills/plan-execution/scripts/obligations.js` owns the portable V1 obligation
   reader, certificate projection, checkpoint validation and scoped entrypoint.

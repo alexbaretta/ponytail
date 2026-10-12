@@ -138,6 +138,10 @@
     {
       "id": "REQ-PONYTAIL-STATIC-LANGUAGE",
       "sourcePath": "pm/requirements/static-language.md"
+    },
+    {
+      "id": "REQ-ROLLING-CLIENT-PROTOCOL",
+      "sourcePath": "pm/requirements/rolling-campaigns.md"
     }
   ],
   "artifacts": [
@@ -793,7 +797,7 @@
     },
     {
       "class": "plan",
-      "path": "pm/plans/closed/2026-10-10-rolling-obligation-campaigns/plan.md",
+      "path": "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/plan.md",
       "locator": "text"
     },
     {
@@ -813,7 +817,7 @@
     },
     {
       "class": "plan",
-      "path": "pm/plans/closed/2026-10-10-rolling-obligation-campaigns/sprints/S02.md",
+      "path": "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/sprints/S02.md",
       "locator": "text"
     },
     {
@@ -883,7 +887,7 @@
     },
     {
       "class": "plan",
-      "path": "pm/plans/closed/2026-10-10-rolling-obligation-campaigns/sprints/S03.md",
+      "path": "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/sprints/S03.md",
       "locator": "text"
     },
     {
@@ -903,7 +907,7 @@
     },
     {
       "class": "plan",
-      "path": "pm/plans/closed/2026-10-10-rolling-obligation-campaigns/sprints/S04.md",
+      "path": "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/sprints/S04.md",
       "locator": "text"
     },
     {
@@ -922,7 +926,7 @@
       "locator": "text"
     },
     {
-      "path": "pm/plans/closed/2026-10-10-rolling-obligation-campaigns/sprints/S07.md",
+      "path": "pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/sprints/S07.md",
       "locator": "text",
       "class": "plan"
     },
@@ -1215,6 +1219,26 @@
       "class": "integration-test",
       "path": "tests/rolling-cli.integration.test.ts",
       "locator": "text"
+    },
+    {
+      "class": "implementation",
+      "path": "skills/plan-execution/references/rolling-campaigns.md",
+      "locator": "text"
+    },
+    {
+      "class": "unit-test",
+      "path": "tests/campaign-compliance.test.ts",
+      "locator": "text"
+    },
+    {
+      "class": "integration-test",
+      "path": "tests/campaign-compliance.integration.test.ts",
+      "locator": "text"
+    },
+    {
+      "class": "implementation",
+      "path": "src/cli-help.ts",
+      "locator": "text"
     }
   ],
   "entities": [],
@@ -1498,6 +1522,14 @@
     {
       "path": "ponytail-mcp/rolling.js",
       "sourcePath": "ponytail-mcp/rolling.ts"
+    },
+    {
+      "path": ".openclaw/skills/plan-execution/references/rolling-campaigns.md",
+      "sourcePath": "skills/plan-execution/references/rolling-campaigns.md"
+    },
+    {
+      "path": "src/cli-help.js",
+      "sourcePath": "src/cli-help.ts"
     }
   ],
   "reverseViewPath": "pm/requirements/traceability.generated.md",

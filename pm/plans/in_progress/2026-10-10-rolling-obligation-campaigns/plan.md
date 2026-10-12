@@ -5,6 +5,42 @@ Licensed under the MIT License. See LICENSE in the project root.
 
 # Rolling obligation campaigns
 
+## Compliance reopening — 2026-10-12
+
+The stakeholder's audit disproved full compliance. The former closure and
+accepted counts are historical claims, not current proof of the exported
+workflow or complete CLI help. This campaign is reopened for the following
+remaining atomic delivery obligations; do not restore the removed certificate
+database or duplicate repository file hashes as execution manifests.
+
+| ID | Independently verifiable condition | Discharge criterion | Dependencies |
+| --- | --- | --- | --- |
+| OBL-114 | Export explicit worker/coordinator terminology and atomic planning vocabulary | Inspect canonical, installed and generated glossary resources | None |
+| OBL-115 | Export an executable coordinator operating procedure | Procedure agrees with configuration, graph lifecycle, scheduling and review/publication APIs; no conflicting serial mandate | OBL-114 |
+| OBL-116 | Export autonomous worker execution and correction procedure | Exported instructions and runtime briefs agree on leases, QA, semantic rebase, review, publication and blocker ownership | OBL-114 |
+| OBL-117 | Search chapter and command help | Real CLI help succeeds, explains arguments/behavior and performs no index mutation | None |
+| OBL-118 | Plan chapter and command help | Real CLI help succeeds for every plan query | OBL-117 |
+| OBL-119 | Traceability chapter and command help | Real CLI help succeeds without indexing or validation mutation | OBL-118 |
+| OBL-120 | Plan-input chapter and command help | Real CLI help explains queue commands without consuming or changing queue state | OBL-119 |
+| OBL-121 | Worktree chapter and command help | Real CLI help lists reclaim/recover/upgrade and cannot reclaim, recover or upgrade a checkout | OBL-120 |
+| OBL-122 | Root utility command help | Every advertised utility has successful explanatory help; registration/setup commands remain inert | OBL-121 |
+| OBL-129 | Expose stopped-worker lease rebinding after graph amendments | Coordinator tooling renews the original inactive assignment against the current graph and returns its fenced generation; next-actions identifies required rebinding | OBL-115 |
+
+Requirements: REQ-ROLLING-CLIENT-PROTOCOL, REQ-ROLLING-INTERFACES,
+REQ-ROLLING-GRAPH and REQ-ROLLING-STATE.
+Acceptance: Arcs ROLL-CLIENT-PROTOCOL and ROLL-CLI-HELP. The existing campaign
+requirements and acceptance Arcs remain required at final compliance audit.
+
+Execute related batches: exported protocol (114–116), typed CLI help
+(117–122), and retained-worker rebinding (129). Keep new code statically typed TypeScript; preserve existing upstream
+languages. Use canonical generators for exported copies. Verify real CLI and
+exported artifacts, not just registry strings. Final acceptance requires the
+configured full unit command, applicable integration evidence, TSTS, traceability,
+rule-copy/version checks and an item-by-item audit of all campaign requirements.
+Current remaining delivery count: 0/10 discharged. This correction must activate
+its bounded current scope before implementation; the stripped former ledger is
+historical reference data, not an executable acceptance database.
+
 ## Stakeholder scope correction — 2026-10-11
 
 The repository's [local rules](../../../../AGENTS.md#local-rules) own the
@@ -18,7 +54,7 @@ retains all 91 registered atomic delivery obligations and invalidates affected
 certificates for explicit renewal. This amendment awards no completion.
 
 - Plan ID: `2026-10-10-rolling-obligation-campaigns`
-- **Status:** `closed`
+- **Status:** `in_progress`
 - Management and component repository: Ponytail in the supplied checkout.
 - Implementation authority: stakeholder goal on 2026-10-10: "Finish
   documenting this campaign, the implement it. If possible, do away with the
@@ -35,7 +71,7 @@ certificates for explicit renewal. This amendment awards no completion.
 - Execution contract: [design](design.md).
 
 <!-- ponytail-plan-campaign
-{"schemaVersion":3,"id":"2026-10-10-rolling-obligation-campaigns","parent_plan_id":null,"depends_on":[],"obligation_document":"pm/plans/closed/2026-10-10-rolling-obligation-campaigns/obligations.json"}
+{"schemaVersion":3,"id":"2026-10-10-rolling-obligation-campaigns","parent_plan_id":null,"depends_on":[],"obligation_document":"pm/plans/in_progress/2026-10-10-rolling-obligation-campaigns/compliance-obligations.json"}
 -->
 
 ## Objective
@@ -243,3 +279,16 @@ BASELINE-17 registers 92 atomic delivery conditions, including the reproduced ar
 ## Final acceptance — 2026-10-12
 
 BASELINE-17 / CHECKPOINT-327 accepts all 92 atomic delivery obligations and all 21 proof-inventory/requirement rollups. The six-coordinate proof vector is zero and no owned responsibility remains unresolved. CERT-324 through CERT-436 retain the final source, actual execution provenance and sealed evidence. All predecessor baselines, certificates and checkpoints are preserved. Full repository QA passed 897 tests; final clean-source native QA passed 12 cases; unchanged TSTS, generated runtime, traceability, rule-copy and version checks passed. The directory transition below will preserve this accepted historical record; current-input projection is not substituted for historical acceptance after relocation.
+
+Current canonical conditions and discharge criteria: `compliance-obligations.json`.
+The preceding table is a scope summary. `obligations.json` and old checkpoints
+are historical reference data after the stakeholder-approved certificate removal.
+The compliance baseline covers remaining delivery; final acceptance also audits
+all original campaign requirements against current implementation and exports.
+
+The CLI-source audit also found OBL-129: `rebindLease` exists in the store and
+is called directly by tests, but has no public coordinator operation. Merely
+reconciling the graph can leave an inactive worker blocked by `scope_changed`.
+Repair the public path and its decision projection instead of asking the
+coordinator to bypass the CLI. Six schema-required inventory gates (123–128)
+are final proof checks, not additional atomic delivery credit.

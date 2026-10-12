@@ -20,6 +20,7 @@ const sources: readonly string[] = [
   'src/rolling-publication.ts',
   'src/rolling-operations.ts',
   'src/rolling-cli-registry.ts',
+  'src/cli-help.ts',
   'ponytail-mcp/index.ts',
   'ponytail-mcp/rolling.ts',
   'src/rolling-worker.ts',

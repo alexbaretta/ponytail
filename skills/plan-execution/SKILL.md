@@ -28,6 +28,14 @@ owns short definitions; detailed execution contracts remain in this skill.
 
 ## Obligation-centered acceptance
 
+For explicitly configured rolling campaigns, use the
+[rolling coordinator and worker procedure](references/rolling-campaigns.md).
+It governs concurrent assignments and reviewed incremental publication;
+the legacy serial procedure below does not override that configured mode.
+Use rolling `next-actions`/`replenish` for dependency-ready, completion-first
+scheduling; the portable global-coordinate selector is not a rolling dispatch
+barrier. The obligation acceptance and evidence gates still apply.
+
 Traceability: supports REQ-OBLIGATION-IDENTITY
 Traceability: supports REQ-OBLIGATION-DISCHARGE
 Traceability: supports REQ-OBLIGATION-ASSIGNMENT
@@ -706,9 +714,9 @@ and the current story and tasklet. Read historical artifacts or referenced
 configuration only when the active work depends on them or evidence suggests
 drift.
 
-## Serial Plan Orchestration
+## Legacy Serial Plan Orchestration
 
-Every long-lived plan uses one execution path: one ready sprint, one selected
+Plans using the legacy serial selectors use one execution path: one ready sprint, one selected
 tasklet batch, one executing agent, one checkout, and one Git index. Finish the
 batch's implementation, review, validation, lifecycle reconciliation, and
 commit before selecting more work. Do not delegate plan drafting,
@@ -765,15 +773,19 @@ campaigns do not affect the result. The census covers plans, sprints, and
 tasklets. It does not schedule parallel work, assign workers or worktrees,
 determine integration readiness, or estimate throughput or completion time.
 
-Use the canonical command:
+Use the host's configured census operation. Projects installing the rolling CLI
+inspect historical records through its explicit read-only chapter adapter:
 
 ```text
-ponytail campaign validate <plan-name-or-path>
-ponytail campaign validate --all [--json]
-ponytail campaign report [<plan-name-or-path>]
-ponytail campaign list [--active|--pending|--closed|--deferred|--rejected]
-ponytail campaign activate <plan-name-or-path>
+ponytail campaign legacy --command validate --arguments '["<plan-name-or-path>"]'
+ponytail campaign legacy --command validate --arguments '["--all","--json"]'
+ponytail campaign legacy --command report --arguments '["<plan-name-or-path>"]'
+ponytail campaign legacy --command list --arguments '["--active"]'
 ```
+
+Legacy activation and dispatch operations described below are available only
+when explicitly configured by the host; the rolling chapter does not expose
+legacy activation or scheduling. Use the rolling procedure for rolling execution.
 
 The input may be the exact stable plan name, its directory, or its `plan.md`.
 A bare name must resolve to exactly one plan across configured lifecycle
@@ -919,8 +931,9 @@ not form a cycle. The campaign's integrated tree must show every target
 `[DONE]` before the affected sprint is assigned for review or execution.
 The executing agent must not treat its local tasklet selector as proof that an
 external prerequisite has joined. Before reviewing or executing a V4 sprint,
-run `ponytail campaign tasklet-prerequisites <campaign> --json` from the selected
-project checkout. Confirm every edge for the selected sprint has
+run the host's configured legacy tasklet-prerequisite inspection from the
+selected project checkout. The rolling chapter does not expose this retired
+legacy dispatch command; never invoke an unavailable selector. Confirm every edge for the selected sprint has
 `status: "DONE"` at the reported integration revision. If one remains
 unfinished, leave that sprint untouched and report its exact target; continue
 independent work.

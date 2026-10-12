@@ -84,6 +84,7 @@ export interface RollingOperationResults {
  'resume-worker':Awaited<ReturnType<typeof resumeRollingWorker>>;'observe-resumption':Awaited<ReturnType<typeof resumeRollingWorker>>;
  'dispatch-worker':Awaited<ReturnType<typeof collectRollingWorkerSubmission>>;'collect-submission':Awaited<ReturnType<typeof collectRollingWorkerSubmission>>;
  'suspend-worker':Awaited<ReturnType<typeof suspendRollingWorker>>;'retire-worker':Awaited<ReturnType<typeof retireRollingWorker>>;
+ 'rebind-worker':Awaited<ReturnType<RollingCampaignStore['rebindLease']>>;
  'request-review':Awaited<ReturnType<RollingCampaignStore['requestReview']>>;'dispatch-review':Awaited<ReturnType<typeof collectRollingReview>>;'inspect-review':Awaited<ReturnType<typeof collectRollingReview>>;
  integrate:Awaited<ReturnType<RollingCampaignStore['publishIncrement']>>;accept:Awaited<ReturnType<RollingCampaignStore['acceptIncrementCertificates']>>;
  'freeze-publication':Awaited<ReturnType<RollingCampaignStore['claimPublicationBatch']>>;
@@ -109,6 +110,7 @@ export interface RollingWorkerDecision {readonly kind:'worker';readonly command:
 export interface RollingReviewDecision {readonly kind:'review';readonly command:'dispatch-review' | 'inspect-review';readonly review:RollingStoredReview;}
 export interface RollingAssignmentDecision {readonly kind:'assignment';readonly command:'request-review' | 'dispatch-worker' | 'collect-submission' | 'integrate' | 'retire-worker';readonly assignment:RollingStoredAssignment;}
 export interface RollingWorkerSuspensionDecision {readonly kind:'worker-suspension';readonly command:'suspend-worker';readonly assignment:RollingStoredAssignment;readonly blockers:readonly string[];}
+export interface RollingWorkerRebindingDecision {readonly kind:'worker-rebinding';readonly command:'rebind-worker';readonly assignment:RollingStoredAssignment;}
 export interface RollingWorkerDispatchBlockedDecision {readonly kind:'blocked-worker-dispatch';readonly reason:'instruction_turn_unknown';readonly assignment:RollingStoredAssignment;readonly dispatch:RollingWorkerDispatchStarted;}
 export interface RollingReviewDispatchBlockedDecision {readonly kind:'blocked-review-dispatch';readonly reason:'instruction_turn_unknown';readonly review:RollingStoredReview;readonly dispatch:RollingReviewDispatchStarted;}
 export interface RollingPublicationDecision {readonly kind:'publication';readonly command:'prepare-publication' | 'observe-preparation' | 'observe-refresh' | 'inspect-publication-conflict' | 'run-publication-qa' | 'observe-publication-qa' | 'publish-mainline' | 'observe-mainline' | 'refresh-mainline' | 'synchronize-campaign';readonly publication:RollingPublicationStatus;}
@@ -118,7 +120,7 @@ export interface RollingIncrementAcceptanceDecision {readonly kind:'acceptance';
 export interface RollingReleaseDecision {readonly kind:'release';readonly command:'replenish';readonly release:RollingAssignmentRelease;readonly graphDigest:string;}
 export interface RollingReplenishDecision {readonly kind:'replenish';readonly graphDigest:string;}
 // Discriminator: kind
-export type RollingCoordinatorDecision = RollingReconcileDecision | RollingWorkerDecision | RollingReviewDecision | RollingAssignmentDecision | RollingPublicationDecision | RollingReplenishDecision | RollingWorkerSuspensionDecision | RollingWorkerDispatchBlockedDecision | RollingReviewDispatchBlockedDecision | RollingReleaseDecision | RollingIncrementAcceptanceDecision | RollingPublicationFreezeDecision | RollingClosureDecision;
+export type RollingCoordinatorDecision = RollingReconcileDecision | RollingWorkerDecision | RollingReviewDecision | RollingAssignmentDecision | RollingPublicationDecision | RollingReplenishDecision | RollingWorkerSuspensionDecision | RollingWorkerRebindingDecision | RollingWorkerDispatchBlockedDecision | RollingReviewDispatchBlockedDecision | RollingReleaseDecision | RollingIncrementAcceptanceDecision | RollingPublicationFreezeDecision | RollingClosureDecision;
 export interface RollingCoordinatorActions {readonly snapshot:RollingCoordinatorSnapshot;readonly decisions:readonly RollingCoordinatorDecision[];}
 
 function publicationCommand(rollingPublicationStatus:RollingPublicationStatus):RollingPublicationDecision['command'] {
@@ -154,6 +156,11 @@ export function projectRollingCoordinatorActions(rollingCoordinatorSnapshot:Roll
  }
  for (const rollingStoredAssignment of rollingCoordinatorSnapshot.assignments) {
   if (rollingCoordinatorSnapshot.actions.some(rollingAction=>rollingAction.assignmentId === rollingStoredAssignment.id && rollingAction.generation === rollingStoredAssignment.generation)) continue;
+  if (rollingStoredAssignment.state === 'INACTIVE' && rollingStoredAssignment.activityStopped && !rollingStoredAssignment.retired
+   && rollingStoredAssignment.sessionId && rollingStoredAssignment.lease
+   && rollingCoordinatorSnapshot.scheduling.blocked.some(block=>block.reason === 'scope_changed' && block.obligationId === rollingStoredAssignment.obligationId)) {
+   decisions.push({kind:'worker-rebinding',command:'rebind-worker',assignment:rollingStoredAssignment});continue;
+  }
   const rollingAssignmentRelease=rollingCoordinatorSnapshot.releasableAssignments.find(release=>release.id === rollingStoredAssignment.id && release.generation === rollingStoredAssignment.generation);
   if (rollingAssignmentRelease && rollingStoredAssignment.state === 'RETIRING' && rollingStoredAssignment.retired && rollingStoredAssignment.activityStopped) {
    decisions.push({kind:'release',command:'replenish',release:rollingAssignmentRelease,graphDigest:rollingCoordinatorSnapshot.graphDigest});continue;
@@ -293,6 +300,11 @@ export class RollingCampaignOperations {
    case 'reconcile': return {command,result:await this.reconcile(stringField(input,'campaign'))};
    case 'status': return {command,result:await this.status(stringField(input,'campaign'))};
    case 'next-actions': return {command,result:await this.nextActions(stringField(input,'campaign'))};
+   case 'rebind-worker': {
+    const campaignId = stringField(input,'campaign');
+    const rollingGraphReconciliation = await this.reconcile(campaignId);
+    return {command,result:await this.rollingCampaignStore.rebindLease(campaignId,stringField(input,'assignment'),stringField(input,'generation'),rollingGraphReconciliation.graphDigest)};
+   }
    case 'replenish': {
     const trigger = input.trigger ?? 'periodic';
     if (trigger !== 'event' && trigger !== 'periodic') throw new Error('rolling campaign: trigger must be event or periodic');

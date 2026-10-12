@@ -25,7 +25,7 @@ const skill = fs.readFileSync(
 test('serial policy preserves atomic batch and convergence boundaries', () => {
   assert.match(skill, /one type definition, class\s+envelope, method or function, controller endpoint[\s\S]*focused fixture, or validation gate/);
   assert.match(skill, /more than\s+1,000 new lines requires the executing agent to split it or record why/);
-  assert.match(skill, /## Serial Plan Orchestration/);
+  assert.match(skill, /## Legacy Serial Plan Orchestration/);
   assert.match(skill, /one ready sprint, one selected\s+tasklet batch, one executing agent, one checkout, and one Git index/);
   assert.match(skill, /Finish the\s+batch's implementation, review, validation, lifecycle reconciliation, and\s+commit before selecting more work/);
   assert.match(skill, /Do not delegate plan drafting,\s+implementation, review, validation, Git ownership, or lifecycle updates/);
@@ -41,7 +41,7 @@ test('serial policy preserves atomic batch and convergence boundaries', () => {
   assert.match(skill, /runs final\s+input validation once/);
   assert.match(skill, /feature advances through its single\s+approval gate only after every implementation tasklet is reconciled/);
   const serialPlanPolicy = skill.slice(
-    skill.indexOf('## Serial Plan Orchestration'),
+    skill.indexOf('## Legacy Serial Plan Orchestration'),
     skill.indexOf('### Campaign Graphs'),
   );
   assert.doesNotMatch(serialPlanPolicy, /parallel|wave|packet|dispatch|subagent|secondary task|worktree|path-disjoint|runtime capacity|capable writer|orchestrator|handoff/i);
@@ -55,8 +55,8 @@ test('campaign census policy preserves scoped reports and adds repository invent
   assert.match(skill, /only the campaign containing the supplied plan/);
   assert.match(skill, /malformed or contradictory unrelated\s+campaigns do not affect the result/);
   assert.match(skill, /does not schedule parallel work, assign workers or worktrees/);
-  assert.match(skill, /ponytail campaign validate <plan-name-or-path>/);
-  assert.match(skill, /ponytail campaign validate --all \[--json\]/);
+  assert.ok(skill.includes(`ponytail campaign legacy --command validate --arguments '["<plan-name-or-path>"]'`));
+  assert.ok(skill.includes(`ponytail campaign legacy --command validate --arguments '["--all","--json"]'`));
   assert.match(skill, /no campaign block as unmanaged legacy data without inferred\s+membership regardless of its location/);
   assert.match(skill, /managed plan names an unmarked\s+plan as its direct parent or dependency/);
   assert.match(skill, /P is\s+stranded exactly when C lacks that reciprocal reference/);

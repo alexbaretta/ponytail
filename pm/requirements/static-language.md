@@ -20,9 +20,9 @@ pre-existing Ponytail code or impose language mandates on client projects.
 
 ## REQ-PONYTAIL-STATIC-LANGUAGE: Check our Codex plan-execution implementation
 
-**Atomic obligations:** [OBL-70](../plans/closed/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-70),
-[OBL-71](../plans/closed/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-71)
-and [OBL-72](../plans/closed/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-72)
+**Atomic obligations:** [OBL-70](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-70),
+[OBL-71](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-71)
+and [OBL-72](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-72)
 define the known compiler/checker/runtime foundation conditions in the canonical
 campaign obligation document.
 
@@ -51,53 +51,53 @@ within that scope, not further blanket migration, extensions to TSTS or changes
 to other projects. Preserve translations already completed.
 
 Known operation migration obligation:
-[OBL-73](../plans/closed/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-73)
+[OBL-73](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-73)
 references the canonical condition and discharge criterion for inventory
 presentation. It is one bounded operation, not the remaining migration scope.
 
-[OBL-74](../plans/closed/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-74)
+[OBL-74](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-74)
 references the canonical typed campaign listing condition and its discharge
 criterion, including configured lifecycle normalization and active membership.
 
-[OBL-75](../plans/closed/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-75)
+[OBL-75](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-75)
 references the canonical typed activation condition, including link preservation,
 precondition errors and rollback after a failed move/write episode.
 
-[OBL-76](../plans/closed/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-76)
+[OBL-76](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-76)
 references the canonical typed campaign argument parsing condition and its
 selection, option compatibility and usage-error proof.
 
 Known portable operation obligations:
-[OBL-77](../plans/closed/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-77),
-[OBL-78](../plans/closed/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-78),
-[OBL-79](../plans/closed/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-79),
-[OBL-80](../plans/closed/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-80),
-[OBL-81](../plans/closed/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-81),
-[OBL-82](../plans/closed/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-82),
-[OBL-83](../plans/closed/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-83),
-[OBL-84](../plans/closed/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-84),
-[OBL-85](../plans/closed/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-85),
-[OBL-86](../plans/closed/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-86),
-[OBL-87](../plans/closed/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-87),
-[OBL-88](../plans/closed/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-88),
-[OBL-89](../plans/closed/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-89),
-[OBL-90](../plans/closed/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-90),
-[OBL-91](../plans/closed/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-91),
-[OBL-92](../plans/closed/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-92),
-[OBL-93](../plans/closed/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-93),
-[OBL-94](../plans/closed/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-94),
-[OBL-95](../plans/closed/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-95),
-[OBL-96](../plans/closed/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-96),
-[OBL-97](../plans/closed/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-97),
-[OBL-98](../plans/closed/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-98),
-[OBL-99](../plans/closed/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-99),
-[OBL-100](../plans/closed/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-100),
-[OBL-101](../plans/closed/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-101),
-[OBL-102](../plans/closed/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-102),
-[OBL-103](../plans/closed/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-103),
-[OBL-104](../plans/closed/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-104),
-[OBL-105](../plans/closed/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-105),
-[OBL-106](../plans/closed/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-106).
+[OBL-77](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-77),
+[OBL-78](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-78),
+[OBL-79](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-79),
+[OBL-80](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-80),
+[OBL-81](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-81),
+[OBL-82](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-82),
+[OBL-83](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-83),
+[OBL-84](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-84),
+[OBL-85](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-85),
+[OBL-86](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-86),
+[OBL-87](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-87),
+[OBL-88](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-88),
+[OBL-89](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-89),
+[OBL-90](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-90),
+[OBL-91](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-91),
+[OBL-92](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-92),
+[OBL-93](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-93),
+[OBL-94](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-94),
+[OBL-95](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-95),
+[OBL-96](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-96),
+[OBL-97](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-97),
+[OBL-98](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-98),
+[OBL-99](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-99),
+[OBL-100](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-100),
+[OBL-101](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-101),
+[OBL-102](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-102),
+[OBL-103](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-103),
+[OBL-104](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-104),
+[OBL-105](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-105),
+[OBL-106](../plans/in_progress/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-106).
 These canonical records cover inspected portable readers, projection, acceptance
 and selectors. Their inspection-only bindings do not authorize implementation
 until prerequisites, exact paths and operations are reconciled. The former

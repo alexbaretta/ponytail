@@ -22,6 +22,7 @@ import { parseRollingWorkerSubmission, type RollingWorkerSubmissionV1, type Roll
 import { readRollingReviewRequestV1,readRollingReviewOutcomeV1,dispatchRollingReview, collectRollingReview, type RollingReviewOutcomeV1 } from '../src/rolling-review.js';
 import { retireRollingWorker, provisionRollingWorker, attachRollingWorker, suspendRollingWorker, collectRollingWorkerSubmission, recoverRollingWorkerCreation, observeRollingWorkerInitialization, resumeRollingWorker, parseRollingWorkerResumption, dispatchRollingWorker, buildRollingWorkerInstructions, type RollingWorkerInitialization } from '../src/rolling-worker.js';
 import { RollingCodex, RollingObservationTimeout, type RollingNativeTurn, type RollingNativeThread, type RollingNativeServerRequest } from '../src/rolling-codex.js';
+import {RollingCampaignOperations} from '../src/rolling-operations.js';
 import { acceptBoundCheckpoint, type ObligationCertificateBindingV1, type ObligationCertificateSubmission,
   type ObligationCertificateBindingRequest } from '../skills/plan-execution/scripts/obligation-certificate-bindings.js';
 
@@ -317,16 +318,20 @@ export async function runRollingReviewScenario(t: TestContext, reviewScenario: R
   await rollingCampaignStore.reconcileGraph('bound-fixture', boundRollingGraph.digest, nextRollingGraph.digest);
   assert.equal(JSON.stringify((await rollingCampaignStore.status('bound-fixture')).assignments[0]?.lease), frozen);
   await assert.rejects(rollingCampaignStore.assertOperation('bound-fixture', boundRollingStoredAssignment.id, boundRollingStoredAssignment.generation, nextRollingGraph.digest, 'test'), /frozen binding differs/);
-  await assert.rejects(rollingCampaignStore.rebindLease('bound-fixture', boundRollingStoredAssignment.id, boundRollingStoredAssignment.generation, nextRollingGraph.digest), /stopped retained owner/);
+  const rollingCampaignOperations = new RollingCampaignOperations(rollingCampaignStore,root);
+  await assert.rejects(rollingCampaignOperations.execute('rebind-worker',{campaign:'bound-fixture',assignment:boundRollingStoredAssignment.id,generation:boundRollingStoredAssignment.generation}), /stopped retained owner/);
   await assert.rejects(rollingCampaignStore.suspend('bound-fixture', boundRollingStoredAssignment.id, boundRollingStoredAssignment.generation, false, ['OBL-1']), /stopped acknowledgment/);
   await rollingCampaignStore.suspend('bound-fixture', boundRollingStoredAssignment.id, boundRollingStoredAssignment.generation, true, ['OBL-1']);
   const blockedRollingAllocationResult = await rollingCampaignStore.allocate('bound-fixture', nextRollingGraph.digest);
   assert.equal(blockedRollingAllocationResult.assignment, null);
   assert.ok(blockedRollingAllocationResult.blocked?.some(item => item.reason === 'scope_changed'));
-  const rollingLeaseRenewal = await rollingCampaignStore.rebindLease('bound-fixture', boundRollingStoredAssignment.id, boundRollingStoredAssignment.generation, nextRollingGraph.digest);
+  assert.ok((await rollingCampaignOperations.nextActions('bound-fixture')).decisions.some(decision=>decision.kind === 'worker-rebinding' && decision.assignment.id === boundRollingStoredAssignment.id));
+  const rollingOperationResponse = await rollingCampaignOperations.execute('rebind-worker',{campaign:'bound-fixture',assignment:boundRollingStoredAssignment.id,generation:boundRollingStoredAssignment.generation});
+  assert.equal(rollingOperationResponse.command,'rebind-worker');
+  const rollingLeaseRenewal = rollingOperationResponse.result;
   assert.notEqual(rollingLeaseRenewal.generation, boundRollingStoredAssignment.generation);
   assert.equal(rollingLeaseRenewal.lease.binding.revisionId, 'BIND-2');
-  await assert.rejects(rollingCampaignStore.rebindLease('bound-fixture', boundRollingStoredAssignment.id, boundRollingStoredAssignment.generation, nextRollingGraph.digest), /lease generation/);
+  await assert.rejects(rollingCampaignOperations.execute('rebind-worker',{campaign:'bound-fixture',assignment:boundRollingStoredAssignment.id,generation:boundRollingStoredAssignment.generation}), /lease generation/);
   const resumedBoundRollingAllocationResult = await rollingCampaignStore.allocate('bound-fixture', nextRollingGraph.digest);
   assert.ok(resumedBoundRollingAllocationResult.assignment?.lease && resumedBoundRollingAllocationResult.actionId && resumedBoundRollingAllocationResult.worktree);
   assert.equal(resumedBoundRollingAllocationResult.assignment.id, boundRollingStoredAssignment.id);

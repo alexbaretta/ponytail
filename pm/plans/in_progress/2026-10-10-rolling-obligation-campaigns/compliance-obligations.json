@@ -1,0 +1,616 @@
+{
+  "schemaVersion": 1,
+  "scopeId": "2026-10-10-rolling-obligation-campaigns",
+  "baselines": [
+    {
+      "id": "BASELINE-COMPLIANCE-1",
+      "predecessorId": null,
+      "authority": {
+        "references": [
+          "stakeholder:2026-10-12-campaign-compliance"
+        ],
+        "assessors": [
+          "coordinator"
+        ]
+      },
+      "requirements": [
+        {
+          "id": "REQ-ROLLING-CLIENT-PROTOCOL",
+          "path": "pm/requirements/rolling-campaigns.md",
+          "digest": "70035239f09fe6f643b650393f5b96750d3de02be6b07cc19ed824586cac984a"
+        },
+        {
+          "id": "REQ-ROLLING-INTERFACES",
+          "path": "pm/requirements/rolling-campaigns.md",
+          "digest": "70035239f09fe6f643b650393f5b96750d3de02be6b07cc19ed824586cac984a"
+        },
+        {
+          "id": "REQ-ROLLING-GRAPH",
+          "path": "pm/requirements/rolling-campaigns.md",
+          "digest": "70035239f09fe6f643b650393f5b96750d3de02be6b07cc19ed824586cac984a"
+        },
+        {
+          "id": "REQ-ROLLING-STATE",
+          "path": "pm/requirements/rolling-campaigns.md",
+          "digest": "70035239f09fe6f643b650393f5b96750d3de02be6b07cc19ed824586cac984a"
+        }
+      ],
+      "obligationIds": [
+        "OBL-114",
+        "OBL-115",
+        "OBL-116",
+        "OBL-117",
+        "OBL-118",
+        "OBL-119",
+        "OBL-120",
+        "OBL-121",
+        "OBL-122",
+        "OBL-123",
+        "OBL-124",
+        "OBL-125",
+        "OBL-126",
+        "OBL-127",
+        "OBL-128",
+        "OBL-129"
+      ],
+      "inventoryIds": [
+        "OBL-123",
+        "OBL-124",
+        "OBL-125",
+        "OBL-126",
+        "OBL-127",
+        "OBL-128"
+      ]
+    }
+  ],
+  "obligations": [
+    {
+      "id": "OBL-114",
+      "category": "C1",
+      "requirementIds": [
+        "REQ-ROLLING-CLIENT-PROTOCOL"
+      ],
+      "responsibilityId": "compliance-114",
+      "condition": "Export explicit worker/coordinator terminology and atomic planning vocabulary",
+      "criterion": "Inspect canonical, installed and generated glossary resources",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "ROLL-CLIENT-PROTOCOL"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "skills/plan-execution/SKILL.md",
+          "skills/plan-execution/references/glossary.md",
+          "skills/plan-execution/references/rolling-campaigns.md"
+        ],
+        "operations": [
+          "node --test dist/tests/campaign-compliance.test.js"
+        ],
+        "selection": [
+          "OBL-114"
+        ],
+        "target": {
+          "identity": "local",
+          "profile": "campaign-compliance"
+        }
+      }
+    },
+    {
+      "id": "OBL-115",
+      "category": "C1",
+      "requirementIds": [
+        "REQ-ROLLING-CLIENT-PROTOCOL"
+      ],
+      "responsibilityId": "compliance-115",
+      "condition": "Export an executable coordinator operating procedure",
+      "criterion": "Procedure agrees with configuration, graph lifecycle, scheduling and review/publication APIs; no conflicting serial mandate",
+      "dependsOn": [
+        "OBL-114"
+      ],
+      "acceptanceGroups": [
+        "ROLL-CLIENT-PROTOCOL"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "skills/plan-execution/SKILL.md",
+          "skills/plan-execution/references/glossary.md",
+          "skills/plan-execution/references/rolling-campaigns.md"
+        ],
+        "operations": [
+          "node --test dist/tests/campaign-compliance.test.js"
+        ],
+        "selection": [
+          "OBL-115"
+        ],
+        "target": {
+          "identity": "local",
+          "profile": "campaign-compliance"
+        }
+      }
+    },
+    {
+      "id": "OBL-116",
+      "category": "C1",
+      "requirementIds": [
+        "REQ-ROLLING-CLIENT-PROTOCOL"
+      ],
+      "responsibilityId": "compliance-116",
+      "condition": "Export autonomous worker execution and correction procedure",
+      "criterion": "Exported instructions and runtime briefs agree on leases, QA, semantic rebase, review, publication and blocker ownership",
+      "dependsOn": [
+        "OBL-114"
+      ],
+      "acceptanceGroups": [
+        "ROLL-CLIENT-PROTOCOL"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "skills/plan-execution/SKILL.md",
+          "skills/plan-execution/references/glossary.md",
+          "skills/plan-execution/references/rolling-campaigns.md"
+        ],
+        "operations": [
+          "node --test dist/tests/campaign-compliance.test.js"
+        ],
+        "selection": [
+          "OBL-116"
+        ],
+        "target": {
+          "identity": "local",
+          "profile": "campaign-compliance"
+        }
+      }
+    },
+    {
+      "id": "OBL-117",
+      "category": "C1",
+      "requirementIds": [
+        "REQ-ROLLING-INTERFACES"
+      ],
+      "responsibilityId": "compliance-117",
+      "condition": "Search chapter and command help",
+      "criterion": "Real CLI help succeeds, explains arguments/behavior and performs no index mutation",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "ROLL-CLI-HELP"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "src/cli-help.ts",
+          "src/cli-help.js",
+          "cli/ponytail",
+          "scripts/build-runtime.ts",
+          "tests/campaign-compliance.integration.test.ts",
+          "tests/project-validation.test.js"
+        ],
+        "operations": [
+          "node --test dist/tests/campaign-compliance.integration.test.js"
+        ],
+        "selection": [
+          "OBL-117"
+        ],
+        "target": {
+          "identity": "local",
+          "profile": "campaign-compliance"
+        }
+      }
+    },
+    {
+      "id": "OBL-118",
+      "category": "C1",
+      "requirementIds": [
+        "REQ-ROLLING-INTERFACES"
+      ],
+      "responsibilityId": "compliance-118",
+      "condition": "Plan chapter and command help",
+      "criterion": "Real CLI help succeeds for every plan query",
+      "dependsOn": [
+        "OBL-117"
+      ],
+      "acceptanceGroups": [
+        "ROLL-CLI-HELP"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "src/cli-help.ts",
+          "src/cli-help.js",
+          "cli/ponytail",
+          "scripts/build-runtime.ts",
+          "tests/campaign-compliance.integration.test.ts",
+          "tests/project-validation.test.js"
+        ],
+        "operations": [
+          "node --test dist/tests/campaign-compliance.integration.test.js"
+        ],
+        "selection": [
+          "OBL-118"
+        ],
+        "target": {
+          "identity": "local",
+          "profile": "campaign-compliance"
+        }
+      }
+    },
+    {
+      "id": "OBL-119",
+      "category": "C1",
+      "requirementIds": [
+        "REQ-ROLLING-INTERFACES"
+      ],
+      "responsibilityId": "compliance-119",
+      "condition": "Traceability chapter and command help",
+      "criterion": "Real CLI help succeeds without indexing or validation mutation",
+      "dependsOn": [
+        "OBL-118"
+      ],
+      "acceptanceGroups": [
+        "ROLL-CLI-HELP"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "src/cli-help.ts",
+          "src/cli-help.js",
+          "cli/ponytail",
+          "scripts/build-runtime.ts",
+          "tests/campaign-compliance.integration.test.ts",
+          "tests/project-validation.test.js"
+        ],
+        "operations": [
+          "node --test dist/tests/campaign-compliance.integration.test.js"
+        ],
+        "selection": [
+          "OBL-119"
+        ],
+        "target": {
+          "identity": "local",
+          "profile": "campaign-compliance"
+        }
+      }
+    },
+    {
+      "id": "OBL-120",
+      "category": "C1",
+      "requirementIds": [
+        "REQ-ROLLING-INTERFACES"
+      ],
+      "responsibilityId": "compliance-120",
+      "condition": "Plan-input chapter and command help",
+      "criterion": "Real CLI help explains queue commands without consuming or changing queue state",
+      "dependsOn": [
+        "OBL-119"
+      ],
+      "acceptanceGroups": [
+        "ROLL-CLI-HELP"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "src/cli-help.ts",
+          "src/cli-help.js",
+          "cli/ponytail",
+          "scripts/build-runtime.ts",
+          "tests/campaign-compliance.integration.test.ts",
+          "tests/project-validation.test.js"
+        ],
+        "operations": [
+          "node --test dist/tests/campaign-compliance.integration.test.js"
+        ],
+        "selection": [
+          "OBL-120"
+        ],
+        "target": {
+          "identity": "local",
+          "profile": "campaign-compliance"
+        }
+      }
+    },
+    {
+      "id": "OBL-121",
+      "category": "C1",
+      "requirementIds": [
+        "REQ-ROLLING-INTERFACES"
+      ],
+      "responsibilityId": "compliance-121",
+      "condition": "Worktree chapter and command help",
+      "criterion": "Real CLI help lists reclaim/recover/upgrade and cannot reclaim, recover or upgrade a checkout",
+      "dependsOn": [
+        "OBL-120"
+      ],
+      "acceptanceGroups": [
+        "ROLL-CLI-HELP"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "src/cli-help.ts",
+          "src/cli-help.js",
+          "cli/ponytail",
+          "scripts/build-runtime.ts",
+          "tests/campaign-compliance.integration.test.ts",
+          "tests/project-validation.test.js"
+        ],
+        "operations": [
+          "node --test dist/tests/campaign-compliance.integration.test.js"
+        ],
+        "selection": [
+          "OBL-121"
+        ],
+        "target": {
+          "identity": "local",
+          "profile": "campaign-compliance"
+        }
+      }
+    },
+    {
+      "id": "OBL-122",
+      "category": "C1",
+      "requirementIds": [
+        "REQ-ROLLING-INTERFACES"
+      ],
+      "responsibilityId": "compliance-122",
+      "condition": "Root utility command help",
+      "criterion": "Every advertised utility has successful explanatory help; registration/setup commands remain inert",
+      "dependsOn": [
+        "OBL-121"
+      ],
+      "acceptanceGroups": [
+        "ROLL-CLI-HELP"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "src/cli-help.ts",
+          "src/cli-help.js",
+          "cli/ponytail",
+          "scripts/build-runtime.ts",
+          "tests/campaign-compliance.integration.test.ts",
+          "tests/project-validation.test.js"
+        ],
+        "operations": [
+          "node --test dist/tests/campaign-compliance.integration.test.js"
+        ],
+        "selection": [
+          "OBL-122"
+        ],
+        "target": {
+          "identity": "local",
+          "profile": "campaign-compliance"
+        }
+      }
+    },
+    {
+      "id": "OBL-123",
+      "category": "T1",
+      "requirementIds": [
+        "REQ-ROLLING-CLIENT-PROTOCOL",
+        "REQ-ROLLING-INTERFACES",
+        "REQ-ROLLING-GRAPH",
+        "REQ-ROLLING-STATE"
+      ],
+      "responsibilityId": "inventory-T1",
+      "condition": "Complete T1 compliance proof inventory",
+      "criterion": "Inspect the complete declared scope, traceability and applicable QA with no unexplained gaps.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "campaign-final-compliance"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-124",
+      "category": "T2",
+      "requirementIds": [
+        "REQ-ROLLING-CLIENT-PROTOCOL",
+        "REQ-ROLLING-INTERFACES",
+        "REQ-ROLLING-GRAPH",
+        "REQ-ROLLING-STATE"
+      ],
+      "responsibilityId": "inventory-T2",
+      "condition": "Complete T2 compliance proof inventory",
+      "criterion": "Inspect the complete declared scope, traceability and applicable QA with no unexplained gaps.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "campaign-final-compliance"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-125",
+      "category": "T3",
+      "requirementIds": [
+        "REQ-ROLLING-CLIENT-PROTOCOL",
+        "REQ-ROLLING-INTERFACES",
+        "REQ-ROLLING-GRAPH",
+        "REQ-ROLLING-STATE"
+      ],
+      "responsibilityId": "inventory-T3",
+      "condition": "Complete T3 compliance proof inventory",
+      "criterion": "Inspect the complete declared scope, traceability and applicable QA with no unexplained gaps.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "campaign-final-compliance"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-126",
+      "category": "T4",
+      "requirementIds": [
+        "REQ-ROLLING-CLIENT-PROTOCOL",
+        "REQ-ROLLING-INTERFACES",
+        "REQ-ROLLING-GRAPH",
+        "REQ-ROLLING-STATE"
+      ],
+      "responsibilityId": "inventory-T4",
+      "condition": "Complete T4 compliance proof inventory",
+      "criterion": "Inspect the complete declared scope, traceability and applicable QA with no unexplained gaps.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "campaign-final-compliance"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-127",
+      "category": "C1",
+      "requirementIds": [
+        "REQ-ROLLING-CLIENT-PROTOCOL",
+        "REQ-ROLLING-INTERFACES",
+        "REQ-ROLLING-GRAPH",
+        "REQ-ROLLING-STATE"
+      ],
+      "responsibilityId": "inventory-C1",
+      "condition": "Complete C1 compliance proof inventory",
+      "criterion": "Inspect the complete declared scope, traceability and applicable QA with no unexplained gaps.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "campaign-final-compliance"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-128",
+      "category": "C2",
+      "requirementIds": [
+        "REQ-ROLLING-CLIENT-PROTOCOL",
+        "REQ-ROLLING-INTERFACES",
+        "REQ-ROLLING-GRAPH",
+        "REQ-ROLLING-STATE"
+      ],
+      "responsibilityId": "inventory-C2",
+      "condition": "Complete C2 compliance proof inventory",
+      "criterion": "Inspect the complete declared scope, traceability and applicable QA with no unexplained gaps.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "campaign-final-compliance"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-129",
+      "category": "C1",
+      "requirementIds": [
+        "REQ-ROLLING-GRAPH",
+        "REQ-ROLLING-STATE"
+      ],
+      "responsibilityId": "compliance-129",
+      "condition": "Expose stopped-worker lease rebinding after graph amendments",
+      "criterion": "Public CLI/shared API renews the original stopped assignment against the current graph with a fenced generation; integration proves original-session resumption with that renewal.",
+      "dependsOn": [
+        "OBL-115"
+      ],
+      "acceptanceGroups": [
+        "ROLL-CLI-HELP"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [
+          "src/rolling-operations.ts",
+          "src/rolling-operations.js",
+          "src/rolling-cli-registry.ts",
+          "src/rolling-cli-registry.js",
+          "tests/rolling-operations.test.ts",
+          "tests/rolling-campaign-store.integration.test.ts"
+        ],
+        "operations": [
+          "node --test dist/tests/rolling-operations.test.js dist/tests/rolling-campaign-store.integration.test.js"
+        ],
+        "selection": [
+          "OBL-129"
+        ],
+        "target": {
+          "identity": "local",
+          "profile": "campaign-compliance"
+        }
+      }
+    }
+  ],
+  "certificates": [],
+  "checkpoints": []
+}

@@ -139,6 +139,12 @@ function projectRollingCoordinatorActions(rollingCoordinatorSnapshot) {
     for (const rollingStoredAssignment of rollingCoordinatorSnapshot.assignments) {
         if (rollingCoordinatorSnapshot.actions.some(rollingAction => rollingAction.assignmentId === rollingStoredAssignment.id && rollingAction.generation === rollingStoredAssignment.generation))
             continue;
+        if (rollingStoredAssignment.state === 'INACTIVE' && rollingStoredAssignment.activityStopped && !rollingStoredAssignment.retired
+            && rollingStoredAssignment.sessionId && rollingStoredAssignment.lease
+            && rollingCoordinatorSnapshot.scheduling.blocked.some(block => block.reason === 'scope_changed' && block.obligationId === rollingStoredAssignment.obligationId)) {
+            decisions.push({ kind: 'worker-rebinding', command: 'rebind-worker', assignment: rollingStoredAssignment });
+            continue;
+        }
         const rollingAssignmentRelease = rollingCoordinatorSnapshot.releasableAssignments.find(release => release.id === rollingStoredAssignment.id && release.generation === rollingStoredAssignment.generation);
         if (rollingAssignmentRelease && rollingStoredAssignment.state === 'RETIRING' && rollingStoredAssignment.retired && rollingStoredAssignment.activityStopped) {
             decisions.push({ kind: 'release', command: 'replenish', release: rollingAssignmentRelease, graphDigest: rollingCoordinatorSnapshot.graphDigest });
@@ -306,6 +312,11 @@ class RollingCampaignOperations {
             case 'reconcile': return { command, result: await this.reconcile(stringField(input, 'campaign')) };
             case 'status': return { command, result: await this.status(stringField(input, 'campaign')) };
             case 'next-actions': return { command, result: await this.nextActions(stringField(input, 'campaign')) };
+            case 'rebind-worker': {
+                const campaignId = stringField(input, 'campaign');
+                const rollingGraphReconciliation = await this.reconcile(campaignId);
+                return { command, result: await this.rollingCampaignStore.rebindLease(campaignId, stringField(input, 'assignment'), stringField(input, 'generation'), rollingGraphReconciliation.graphDigest) };
+            }
             case 'replenish': {
                 const trigger = input.trigger ?? 'periodic';
                 if (trigger !== 'event' && trigger !== 'periodic')
