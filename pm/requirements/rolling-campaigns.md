@@ -166,6 +166,8 @@ requirement. Acceptance: [ROLL-CLIENT-PROTOCOL](../uat/rolling-campaigns.md#arc-
 OBL-117 through OBL-122 under REQ-ROLLING-INTERFACES cover search, plan,
 traceability, plan-input, worktree and root utility help respectively. Every
 chapter lists its commands; every command explains its arguments and behavior.
+Root `-h`/`--help` lists only first-level chapters and utilities, without
+expanding their subcommands or usage pages.
 Help returns successfully without performing the command's mutations, including
 for registration and recovery commands. Existing campaign and PM help must
 remain functional. Acceptance: [ROLL-CLI-HELP](../uat/rolling-campaigns.md#arc-roll-cli-help).

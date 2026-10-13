@@ -129,33 +129,13 @@ test('CLI shell scripts are parse-safe', () => {
   }
 });
 
-test('ponytail help publishes campaign, plan-input, index, and plan command families', () => {
-  const result = run(ponytail, ['--help'], { cwd: root });
+test('ponytail root help lists only first-level chapters and utilities', () => {
+  const result = run(ponytail, ['-h'], { cwd: root });
   assert.equal(result.status, 0, result.stderr);
-  assert.match(result.stdout, /ponytail plan-input <plan> -- <instruction>/);
-  assert.match(result.stdout, /ponytail plan-input coordinate <plan>/);
-  assert.match(result.stdout, /ponytail plan-input release <plan>/);
-  assert.match(result.stdout, /ponytail plan-input complete <plan> <id> --record <pm-path>/);
-  assert.match(result.stdout, /Usage: ponytail campaign <command>/);
-  assert.match(result.stdout, /next-actions/);
-  assert.match(result.stdout, /provision-worker/);
-  assert.match(result.stdout, /legacy/);
-  assert.doesNotMatch(result.stdout, /campaign schedule-ready|campaign advance/);
-  assert.match(result.stdout, /ponytail worktree reclaim \[--dry-run\] \[--json\]/);
-  assert.match(result.stdout, /ponytail traceability index \[--rebuild\] \[--json\]/);
-  assert.match(result.stdout, /ponytail traceability search <query>/);
-  assert.match(result.stdout, /ponytail traceability validate \[--plan <plan> \| --campaign <plan>\]/);
-  assert.match(result.stdout, /ponytail search query <text> \[--ref <ref> \| --commit <commit-id> \| --history <ref-or-commit>\]/);
-  assert.match(
-    result.stdout,
-    /ponytail search update-index \[-j <n_workers>\] \[-n <commits_per_db_transaction>\]/,
-  );
-  assert.match(result.stdout, /ponytail plan search <query>/);
-  assert.match(result.stdout, /ponytail plan descendants <plan>/);
-  assert.match(result.stdout, /ponytail plan ancestors <plan>/);
-  assert.match(result.stdout, /ponytail plan roots \[--json\]/);
-  assert.match(result.stdout, /ponytail plan stranded \[--json\]/);
-  assert.match(result.stdout, /ponytail validate \[--all\]/);
+  for (const chapter of ['campaign','search','plan','traceability','plan-input','worktree','pm'])
+    assert.ok(result.stdout.includes(`ponytail ${chapter} <command> --help`));
+  assert.match(result.stdout, /ponytail register/);
+  assert.doesNotMatch(result.stdout, /Preconditions:|Chapter commands:|request-review|freeze-publication|plan-input coordinate|traceability index/);
 });
 
 test('QA omits campaign census and the CLI dispatches it through campaign', () => {

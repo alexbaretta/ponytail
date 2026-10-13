@@ -63,10 +63,8 @@ function renderCliHelp(argv) {
         const chapters = [...new Set(exports.cliHelpCommands.map(item => item.chapter).filter(Boolean))];
         return 'Usage: ponytail <chapter|command> [arguments]\n\nChapters:\n'
             + ['campaign', ...chapters].map(name => `  ponytail ${name} <command> --help`).join('\n')
-            + '\n\nChapter commands:\n' + exports.cliHelpCommands.filter(item => item.chapter !== '').map(item => `  ponytail ${item.chapter} ${item.name} ${item.arguments}`).join('\n')
-            + '\n  ponytail plan-input <plan> -- <instruction>\n'
             + '\n\nUtility commands:\n' + exports.cliHelpCommands.filter(item => item.chapter === '').map(item => `  ponytail ${item.name} ${item.arguments}`).join('\n')
-            + '\n\nUse ponytail <chapter> --help or ponytail <command> --help for behavior and arguments.\n\n' + (0, rolling_cli_registry_js_1.rollingCampaignHelp)();
+            + '\n\nUse ponytail <chapter> --help or ponytail <command> --help for behavior and arguments.\n';
     }
     const chapterCommands = exports.cliHelpCommands.filter(item => item.chapter === chapter);
     if (chapterCommands.length > 0 && command === undefined)

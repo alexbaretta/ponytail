@@ -62,10 +62,8 @@ export function renderCliHelp(argv:readonly string[]):string {
   const chapters = [...new Set(cliHelpCommands.map(item=>item.chapter).filter(Boolean))];
   return 'Usage: ponytail <chapter|command> [arguments]\n\nChapters:\n'
    + ['campaign',...chapters].map(name=>`  ponytail ${name} <command> --help`).join('\n')
-   +'\n\nChapter commands:\n'+cliHelpCommands.filter(item=>item.chapter !== '').map(item=>`  ponytail ${item.chapter} ${item.name} ${item.arguments}`).join('\n')
-   +'\n  ponytail plan-input <plan> -- <instruction>\n'
    +'\n\nUtility commands:\n'+cliHelpCommands.filter(item=>item.chapter === '').map(item=>`  ponytail ${item.name} ${item.arguments}`).join('\n')
-   +'\n\nUse ponytail <chapter> --help or ponytail <command> --help for behavior and arguments.\n\n'+rollingCampaignHelp();
+   +'\n\nUse ponytail <chapter> --help or ponytail <command> --help for behavior and arguments.\n';
  }
  const chapterCommands = cliHelpCommands.filter(item=>item.chapter === chapter);
  if (chapterCommands.length > 0 && command === undefined) return `Usage: ponytail ${chapter} <command> [arguments]\n\n`
