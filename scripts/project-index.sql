@@ -248,6 +248,13 @@ CREATE TABLE IF NOT EXISTS published_generation_v1 (
 
 -- Traceability: implements REQ-ROLLING-STATE
 -- Traceability: supports REQ-ROLLING-SCHEDULING
+CREATE TABLE IF NOT EXISTS rolling_reset_v1 (
+ project_id uuid PRIMARY KEY REFERENCES project_v1(project_id) ON DELETE CASCADE,
+ reset_text text NOT NULL,
+ state text NOT NULL CHECK(state IN ('PENDING','COMPLETE')),
+ CHECK(COALESCE(reset_text::jsonb->>'schemaVersion'='1' AND reset_text::jsonb->>'state'=state,false))
+);
+
 CREATE TABLE IF NOT EXISTS rolling_pool_v1 (
   project_id uuid PRIMARY KEY REFERENCES project_v1(project_id) ON DELETE CASCADE,
   managed_directory text NOT NULL CHECK (managed_directory <> '')

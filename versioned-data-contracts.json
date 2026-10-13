@@ -967,6 +967,38 @@
         "V1"
       ],
       "supportedDowngradeVersions": []
+    },
+    {
+      "id": "rolling-reset-request",
+      "implementation": {
+        "workspace": "ponytail",
+        "module": "src/rolling-reset.ts",
+        "readerRegistryExport": "RollingResetRequestReaders"
+      },
+      "currentVersion": "V1",
+      "versions": [
+        "V1"
+      ],
+      "supportedReadVersions": [
+        "V1"
+      ],
+      "supportedDowngradeVersions": []
+    },
+    {
+      "id": "rolling-project-reset",
+      "implementation": {
+        "workspace": "ponytail",
+        "module": "src/rolling-reset.ts",
+        "readerRegistryExport": "RollingProjectResetReaders"
+      },
+      "currentVersion": "V1",
+      "versions": [
+        "V1"
+      ],
+      "supportedReadVersions": [
+        "V1"
+      ],
+      "supportedDowngradeVersions": []
     }
   ]
 }

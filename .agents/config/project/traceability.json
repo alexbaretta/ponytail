@@ -190,6 +190,10 @@
     {
       "id": "REQ-ROLLING-PARALLEL-DISPATCH",
       "sourcePath": "pm/requirements/rolling-campaigns.md"
+    },
+    {
+      "id": "REQ-ROLLING-RESET",
+      "sourcePath": "pm/requirements/rolling-campaigns.md"
     }
   ],
   "artifacts": [
@@ -1501,6 +1505,26 @@
     {
       "class": "unit-test",
       "path": "tests/rolling-worker.test.ts",
+      "locator": "text"
+    },
+    {
+      "class": "plan",
+      "path": "pm/plans/closed/2026-10-13-project-campaign-reset/plan.md",
+      "locator": "text"
+    },
+    {
+      "class": "implementation",
+      "path": "src/rolling-reset.ts",
+      "locator": "text"
+    },
+    {
+      "class": "unit-test",
+      "path": "tests/rolling-reset.test.ts",
+      "locator": "text"
+    },
+    {
+      "class": "integration-test",
+      "path": "tests/rolling-reset.integration.test.ts",
       "locator": "text"
     }
   ],

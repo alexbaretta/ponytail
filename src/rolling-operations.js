@@ -268,41 +268,43 @@ class RollingCampaignOperations {
         readRollingCampaignInitializationV1(rollingCampaignInitializationV1);
         if (node_fs_1.default.realpathSync(rollingCampaignInitializationV1.coordinatorRoot) !== node_fs_1.default.realpathSync(this.root))
             throw new Error('rolling campaign: initialization root differs from the invoking project');
-        const { coordinatorRoot, documentPath, bindingsPath, bindingHistory } = rollingCampaignInitializationV1;
-        const rollingResolvedConfiguration = (0, rolling_campaign_js_1.loadRollingConfiguration)(coordinatorRoot, rollingCampaignInitializationV1.configuration);
-        if ((0, rolling_integration_js_1.git)(coordinatorRoot, ['status', '--porcelain']).trim() !== '')
-            throw new Error('rolling campaign: initialization requires a clean coordinator checkout');
-        const mainlineRef = `refs/remotes/${rollingResolvedConfiguration.mainline.remote}/${rollingResolvedConfiguration.mainline.branch}`;
-        (0, rolling_integration_js_1.git)(coordinatorRoot, ['fetch', '--no-tags', '--', rollingResolvedConfiguration.mainline.remote, `refs/heads/${rollingResolvedConfiguration.mainline.branch}:${mainlineRef}`]);
-        const branch = (0, rolling_integration_js_1.gitResult)(coordinatorRoot, ['show-ref', '--verify', '--quiet', `refs/heads/${rollingResolvedConfiguration.incrementRef}`]);
-        if (branch.status === 1)
-            (0, rolling_integration_js_1.git)(coordinatorRoot, ['branch', rollingResolvedConfiguration.incrementRef, mainlineRef]);
-        else if (branch.status !== 0)
-            throw new Error('rolling campaign: cannot inspect the campaign branch');
-        (0, rolling_integration_js_1.git)(coordinatorRoot, ['switch', rollingResolvedConfiguration.incrementRef]);
-        (0, rolling_integration_js_1.git)(coordinatorRoot, ['merge', '--ff-only', mainlineRef]);
-        const revision = (0, rolling_integration_js_1.git)(coordinatorRoot, ['rev-parse', 'HEAD']).trim();
-        const rollingIncrementPublication = { rootPath: coordinatorRoot, target: { remote: rollingResolvedConfiguration.mainline.remote, branch: rollingResolvedConfiguration.incrementRef }, revision };
-        if (revision === (0, rolling_integration_js_1.git)(coordinatorRoot, ['rev-parse', mainlineRef]).trim()) {
-            const remote = (0, rolling_integration_js_1.gitResult)(coordinatorRoot, ['ls-remote', '--exit-code', '--heads', '--', rollingResolvedConfiguration.mainline.remote, `refs/heads/${rollingResolvedConfiguration.incrementRef}`]);
-            if (remote.status === 2)
-                (0, rolling_integration_js_1.gitResult)(coordinatorRoot, ['push', '--porcelain', '--', rollingResolvedConfiguration.mainline.remote, `refs/heads/${rollingResolvedConfiguration.incrementRef}:refs/heads/${rollingResolvedConfiguration.incrementRef}`]);
-            else if (remote.status !== 0)
-                throw new Error('rolling campaign: initial branch observation failed; retain the checkout');
-        }
-        const rollingIncrementPublicationResult = revision === (0, rolling_integration_js_1.git)(coordinatorRoot, ['rev-parse', mainlineRef]).trim()
-            ? (0, rolling_integration_js_1.publishRollingIncrement)(rollingIncrementPublication) : (0, rolling_integration_js_1.reconcileRollingIncrementPublication)(rollingIncrementPublication);
-        if (rollingIncrementPublicationResult.state !== 'PUBLISHED')
-            throw new Error(`rolling campaign: initial campaign base ${rollingIncrementPublicationResult.state}; preserve the checkout and observe the remote`);
-        (0, rolling_integration_js_1.git)(coordinatorRoot, ['merge', '--ff-only', rollingIncrementPublicationResult.remoteRevision]);
-        const rollingManagedDirectory = (0, rolling_worktrees_js_1.resolveRollingManagedDirectory)(coordinatorRoot);
-        const rollingGraph = (0, rolling_campaign_js_1.collectRollingGraph)(coordinatorRoot, documentPath, bindingsPath, bindingHistory?.path);
-        const rollingCampaignRegistration = {
-            id: rollingGraph.document.scopeId, coordinatorRoot: rollingGraph.coordinatorRoot, documentPath, bindingsPath, graphDigest: rollingGraph.digest,
-            managedDirectory: rollingManagedDirectory.directory, configuration: rollingResolvedConfiguration,
-            ...(bindingHistory === null ? {} : { bindingHistory })
-        };
-        return this.rollingCampaignStore.registerCampaign(rollingCampaignRegistration);
+        return this.rollingCampaignStore.initializeCampaign(async () => {
+            const { coordinatorRoot, documentPath, bindingsPath, bindingHistory } = rollingCampaignInitializationV1;
+            const rollingResolvedConfiguration = (0, rolling_campaign_js_1.loadRollingConfiguration)(coordinatorRoot, rollingCampaignInitializationV1.configuration);
+            if ((0, rolling_integration_js_1.git)(coordinatorRoot, ['status', '--porcelain']).trim() !== '')
+                throw new Error('rolling campaign: initialization requires a clean coordinator checkout');
+            const mainlineRef = `refs/remotes/${rollingResolvedConfiguration.mainline.remote}/${rollingResolvedConfiguration.mainline.branch}`;
+            (0, rolling_integration_js_1.git)(coordinatorRoot, ['fetch', '--no-tags', '--', rollingResolvedConfiguration.mainline.remote, `refs/heads/${rollingResolvedConfiguration.mainline.branch}:${mainlineRef}`]);
+            const branch = (0, rolling_integration_js_1.gitResult)(coordinatorRoot, ['show-ref', '--verify', '--quiet', `refs/heads/${rollingResolvedConfiguration.incrementRef}`]);
+            if (branch.status === 1)
+                (0, rolling_integration_js_1.git)(coordinatorRoot, ['branch', rollingResolvedConfiguration.incrementRef, mainlineRef]);
+            else if (branch.status !== 0)
+                throw new Error('rolling campaign: cannot inspect the campaign branch');
+            (0, rolling_integration_js_1.git)(coordinatorRoot, ['switch', rollingResolvedConfiguration.incrementRef]);
+            (0, rolling_integration_js_1.git)(coordinatorRoot, ['merge', '--ff-only', mainlineRef]);
+            const revision = (0, rolling_integration_js_1.git)(coordinatorRoot, ['rev-parse', 'HEAD']).trim();
+            const rollingIncrementPublication = { rootPath: coordinatorRoot, target: { remote: rollingResolvedConfiguration.mainline.remote, branch: rollingResolvedConfiguration.incrementRef }, revision };
+            if (revision === (0, rolling_integration_js_1.git)(coordinatorRoot, ['rev-parse', mainlineRef]).trim()) {
+                const remote = (0, rolling_integration_js_1.gitResult)(coordinatorRoot, ['ls-remote', '--exit-code', '--heads', '--', rollingResolvedConfiguration.mainline.remote, `refs/heads/${rollingResolvedConfiguration.incrementRef}`]);
+                if (remote.status === 2)
+                    (0, rolling_integration_js_1.gitResult)(coordinatorRoot, ['push', '--porcelain', '--', rollingResolvedConfiguration.mainline.remote, `refs/heads/${rollingResolvedConfiguration.incrementRef}:refs/heads/${rollingResolvedConfiguration.incrementRef}`]);
+                else if (remote.status !== 0)
+                    throw new Error('rolling campaign: initial branch observation failed; retain the checkout');
+            }
+            const rollingIncrementPublicationResult = revision === (0, rolling_integration_js_1.git)(coordinatorRoot, ['rev-parse', mainlineRef]).trim()
+                ? (0, rolling_integration_js_1.publishRollingIncrement)(rollingIncrementPublication) : (0, rolling_integration_js_1.reconcileRollingIncrementPublication)(rollingIncrementPublication);
+            if (rollingIncrementPublicationResult.state !== 'PUBLISHED')
+                throw new Error(`rolling campaign: initial campaign base ${rollingIncrementPublicationResult.state}; preserve the checkout and observe the remote`);
+            (0, rolling_integration_js_1.git)(coordinatorRoot, ['merge', '--ff-only', rollingIncrementPublicationResult.remoteRevision]);
+            const rollingManagedDirectory = (0, rolling_worktrees_js_1.resolveRollingManagedDirectory)(coordinatorRoot);
+            const rollingGraph = (0, rolling_campaign_js_1.collectRollingGraph)(coordinatorRoot, documentPath, bindingsPath, bindingHistory?.path);
+            const rollingCampaignRegistration = {
+                id: rollingGraph.document.scopeId, coordinatorRoot: rollingGraph.coordinatorRoot, documentPath, bindingsPath, graphDigest: rollingGraph.digest,
+                managedDirectory: rollingManagedDirectory.directory, configuration: rollingResolvedConfiguration,
+                ...(bindingHistory === null ? {} : { bindingHistory })
+            };
+            return rollingCampaignRegistration;
+        });
     }
     reconcile(campaignId) { return this.rollingCampaignStore.reconcileCoordinator(campaignId); }
     status(campaignId) { return this.rollingCampaignStore.coordinatorSnapshot(campaignId); }
@@ -437,6 +439,11 @@ class RollingCampaignOperations {
         const input = readRollingCommandInput(command, value);
         const timeoutMs = 3600000;
         switch (command) {
+            case 'reset': {
+                if (input.execute !== undefined && typeof input.execute !== 'boolean')
+                    throw new Error('rolling campaign: execute must be boolean');
+                return { command, result: await this.native(signal, rollingCodex => this.rollingCampaignStore.resetProject(this.root, input.request, input.execute === true, rollingCodex)) };
+            }
             case 'init': return { command, result: await this.initialize(readRollingCampaignInitializationV1(input.request)) };
             case 'reconcile': return { command, result: await this.reconcile(stringField(input, 'campaign')) };
             case 'status': return { command, result: await this.status(stringField(input, 'campaign')) };

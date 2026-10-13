@@ -21,6 +21,7 @@ exports.readRollingAssignmentScopeV3 = readRollingAssignmentScopeV3;
 exports.parseRollingExecutionConfig = parseRollingExecutionConfig;
 exports.parseRollingAssignmentScope = parseRollingAssignmentScope;
 const node_crypto_1 = __importDefault(require("node:crypto"));
+const rolling_reset_js_1 = require("./rolling-reset.js");
 const rolling_publication_js_1 = require("./rolling-publication.js");
 const rolling_integration_js_1 = require("./rolling-integration.js");
 const node_path_1 = __importDefault(require("node:path"));
@@ -354,6 +355,9 @@ class RollingCampaignStore {
         const poolClient = await this.pool.connect();
         try {
             await poolClient.query('BEGIN');
+            await poolClient.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))', [this.projectId]);
+            const pendingReset = (await poolClient.query("SELECT 1 FROM ponytail_index.rolling_reset_v1 WHERE project_id=$1 AND state='PENDING'", [this.projectId])).rows;
+            requireState(pendingReset.length === 0, 'project reset is pending; resume reset before scheduling');
             const pool = (await poolClient.query('SELECT * FROM ponytail_index.rolling_pool_v1 WHERE project_id=$1 FOR UPDATE', [this.projectId])).rows[0];
             const rollingPoolRow = readPool(pool);
             const campaign = (await poolClient.query('SELECT c.*, (SELECT receipt_text FROM ponytail_index.rolling_campaign_closure_v1 r WHERE r.project_id=c.project_id AND r.campaign_id=c.campaign_id) AS closure_text FROM ponytail_index.rolling_campaign_v1 c WHERE c.project_id=$1 AND c.campaign_id=$2 FOR UPDATE', [this.projectId, campaignId])).rows[0];
@@ -371,15 +375,48 @@ class RollingCampaignStore {
             poolClient.release();
         }
     }
-    async registerCampaign(request) {
+    async resetProject(root, request, execute, rollingCodex) {
+        const poolClient = await this.pool.connect();
+        try {
+            return await (0, rolling_reset_js_1.resetRollingProject)(poolClient, this.projectId, root, request, execute, rollingCodex);
+        }
+        finally {
+            poolClient.release();
+        }
+    }
+    async initializeCampaign(prepare) {
+        const poolClient = await this.pool.connect();
+        let locked = false;
+        try {
+            const row = (await poolClient.query('SELECT pg_try_advisory_lock(hashtextextended($1,0)) AS locked', [this.projectId])).rows[0];
+            requireState(row?.locked === true, 'project operation owns reset/initialization');
+            locked = true;
+            const pendingReset = (await poolClient.query("SELECT 1 FROM ponytail_index.rolling_reset_v1 WHERE project_id=$1 AND state='PENDING'", [this.projectId])).rows;
+            requireState(pendingReset.length === 0, 'project reset is pending; resume reset before initialization');
+            return await this.registerCampaign(await prepare(), poolClient);
+        }
+        finally {
+            try {
+                if (locked)
+                    await poolClient.query('SELECT pg_advisory_unlock(hashtextextended($1,0))', [this.projectId]);
+            }
+            finally {
+                poolClient.release();
+            }
+        }
+    }
+    async registerCampaign(request, initializationPoolClient = null) {
         const rollingGraph = (0, rolling_campaign_js_1.collectRollingGraph)(request.coordinatorRoot, request.documentPath, request.bindingsPath, request.bindingHistory?.path);
         requireState(rollingGraph.digest === request.graphDigest && rollingGraph.document.scopeId === request.id, 'stale or mismatched coordinator graph');
         const rollingResolvedConfiguration = (0, rolling_campaign_js_1.resolveRollingConfiguration)(rollingGraph.projectConfiguration, request.configuration, null);
         const rollingExecutionConfigV3 = readRollingExecutionConfigV3({ schemaVersion: 3, ...rollingResolvedConfiguration, bindingHistory: request.bindingHistory ?? null });
         requireState(node_path_1.default.isAbsolute(request.managedDirectory), 'managed directory must be absolute');
-        const poolClient = await this.pool.connect();
+        const poolClient = initializationPoolClient ?? await this.pool.connect();
         try {
             await poolClient.query('BEGIN');
+            await poolClient.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))', [this.projectId]);
+            const pendingReset = (await poolClient.query("SELECT 1 FROM ponytail_index.rolling_reset_v1 WHERE project_id=$1 AND state='PENDING'", [this.projectId])).rows;
+            requireState(pendingReset.length === 0, 'project reset is pending; resume reset before scheduling');
             await poolClient.query('INSERT INTO ponytail_index.rolling_pool_v1(project_id,managed_directory) VALUES($1,$2) ON CONFLICT DO NOTHING', [this.projectId, request.managedDirectory]);
             const pool = (await poolClient.query('SELECT managed_directory FROM ponytail_index.rolling_pool_v1 WHERE project_id=$1 FOR UPDATE', [this.projectId])).rows[0];
             requireState(readPool(pool).managed_directory === request.managedDirectory, 'managed directory differs from project pool');
@@ -397,7 +434,8 @@ class RollingCampaignStore {
             throw error;
         }
         finally {
-            poolClient.release();
+            if (initializationPoolClient === null)
+                poolClient.release();
         }
     }
     collectGraph(rollingCampaignRow) {

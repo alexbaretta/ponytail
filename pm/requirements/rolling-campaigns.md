@@ -301,3 +301,24 @@ one. Report actual running workers separately from occupied leases, projected
 selection and unavailable checkouts. Preserve dependency, ownership and physical
 checkout authorization constraints. Discharge: ACC-ROLLING-PARALLEL-DISPATCH
 verifies concurrent dispatch guidance and truthful capacity/blocker reporting.
+
+## REQ-ROLLING-RESET: Explicit project campaign reset
+
+Authority: Alex's explicit reset request on 2026-10-13.
+Atomic obligation OBL-RESET-1: preview and execute a restartable reset of the
+invoking project's parallel campaign execution state. Stop and archive original
+workers/reviewers before releasing ownership, run declared resource cleanup,
+remove leases and prior rolling campaign records, and allow fresh initialization.
+Remove obsolete agent-owned registered Git checkouts outside the configured
+physical managed directory, including this repository's Codex checkouts; retain
+main/coordinator and ordinary user checkouts. Clear session markers in retained
+pool members and prepare them at the coordinator's committed base while retaining
+build caches. Preserve unpublished commits and tracked/untracked source changes
+through named Git recovery refs. Never wipe other projects or search/traceability
+indexes. A preview must list exact paths, actors and disposition without mutation.
+Unknown actor ownership, active external publication/QA, incomplete resource
+cleanup or changed physical identity retains a pending reset and blocks new work.
+Execution requires an explicit request ID, reason and authority; interrupted
+execution resumes that request, and identical completed retries are harmless.
+Discharge: ACC-ROLLING-RESET demonstrates preview, original actor cessation,
+external removal, pool reuse, DB isolation and interrupted retry.

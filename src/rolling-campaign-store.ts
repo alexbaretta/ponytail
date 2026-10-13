@@ -1,6 +1,8 @@
 // Copyright (c) 2026 Alex Baretta. All rights reserved.
 // Licensed under the MIT License. See LICENSE in the project root.
 import crypto from 'node:crypto';
+import {resetRollingProject,type RollingProjectResetV1} from './rolling-reset.js';
+import type {RollingCodex} from './rolling-codex.js';
 import {readRollingPublicationRepairReviewV1,readRollingPublicationRepairV1,validateRollingPublicationRepair,type RollingPublicationRepairReviewV1,type RollingPublicationRepairV1,readRollingMainlineRefreshIntentV1,readRollingMainlineRefreshPreparationV1,readRollingMainlineRefreshResultV1,type RollingMainlineRefreshIntentV1,type RollingMainlineRefreshPreparationV1,type RollingMainlineRefreshResultV1,synchronizeRollingCampaign,readRollingMainlinePublicationV1,type RollingMainlinePublicationV1,readRollingMainlinePreparationV1,readRollingMainlineCandidateV1,readRollingPublicationQaV1,parseRollingPublicationQa,readRollingPublicationQaJobV1,verifyRollingMainlineCandidate,verifyRollingPublicationQa,type RollingMainlinePreparationV1,type RollingMainlineCandidateV1,type RollingPublicationQaV1,type RollingPublicationQaJobV1,selectRollingPublicationBatch,readRollingPublicationBatchClaimV1,type RollingPublicationBatchClaimV1,type RollingPublicationWaiting,type RollingPublicationTrigger,type RollingAcceptedIncrement,type RollingPublicationSelection} from './rolling-publication.js';
 import {git,gitResult,readRollingIncrementClaimV1,readRollingIncrementRebaseV1,verifyRollingIncrementRebase,prepareRollingIncrementRebase,readRollingIncrementPublicationV1,reconcileRollingIncrementPublication,publishRollingIncrement,verifyRollingIncrementLocalIntegration,fastForwardRollingIncrement,verifyRollingIncrementConflictInspection,type RollingIncrementConflictInspection,type RollingIncrementRepair,type RollingIncrementClaimV1,type RollingIncrementRebaseV1,type RollingFastRebaseResult,type RollingIncrementPublicationV1,type RollingIncrementPublicationResult,type RollingIncrementPushStarted} from './rolling-integration.js';
 import path from 'node:path';
@@ -491,6 +493,9 @@ export class RollingCampaignStore {
     const poolClient = await this.pool.connect();
     try {
       await poolClient.query<Record<string, unknown>>('BEGIN');
+      await poolClient.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))',[this.projectId]);
+      const pendingReset=(await poolClient.query("SELECT 1 FROM ponytail_index.rolling_reset_v1 WHERE project_id=$1 AND state='PENDING'",[this.projectId])).rows;
+      requireState(pendingReset.length===0,'project reset is pending; resume reset before scheduling');
       const pool = (await poolClient.query<Record<string, unknown>>('SELECT * FROM ponytail_index.rolling_pool_v1 WHERE project_id=$1 FOR UPDATE', [this.projectId])).rows[0];
       const rollingPoolRow = readPool(pool);
       const campaign = (await poolClient.query<Record<string, unknown>>('SELECT c.*, (SELECT receipt_text FROM ponytail_index.rolling_campaign_closure_v1 r WHERE r.project_id=c.project_id AND r.campaign_id=c.campaign_id) AS closure_text FROM ponytail_index.rolling_campaign_v1 c WHERE c.project_id=$1 AND c.campaign_id=$2 FOR UPDATE', [this.projectId, campaignId])).rows[0];
@@ -503,15 +508,37 @@ export class RollingCampaignStore {
     finally { poolClient.release(); }
   }
 
-  async registerCampaign(request: RollingCampaignRegistration): Promise<RollingCampaignRegistrationResult> {
+  async resetProject(root:string,request:unknown,execute:boolean,rollingCodex:RollingCodex|null):Promise<RollingProjectResetV1> {
+    const poolClient=await this.pool.connect();
+    try{return await resetRollingProject(poolClient,this.projectId,root,request,execute,rollingCodex);}
+    finally{poolClient.release();}
+  }
+
+  // Traceability: implements REQ-ROLLING-RESET
+  async initializeCampaign(prepare:()=>Promise<RollingCampaignRegistration>):Promise<RollingCampaignRegistrationResult> {
+    const poolClient=await this.pool.connect();
+    let locked=false;
+    try {
+      const row=(await poolClient.query<Record<string,unknown>>('SELECT pg_try_advisory_lock(hashtextextended($1,0)) AS locked',[this.projectId])).rows[0];
+      requireState(row?.locked===true,'project operation owns reset/initialization');locked=true;
+      const pendingReset=(await poolClient.query("SELECT 1 FROM ponytail_index.rolling_reset_v1 WHERE project_id=$1 AND state='PENDING'",[this.projectId])).rows;
+      requireState(pendingReset.length===0,'project reset is pending; resume reset before initialization');
+      return await this.registerCampaign(await prepare(),poolClient);
+    } finally {try{if(locked)await poolClient.query('SELECT pg_advisory_unlock(hashtextextended($1,0))',[this.projectId]);}finally{poolClient.release();}}
+  }
+
+  async registerCampaign(request: RollingCampaignRegistration,initializationPoolClient:PoolClient|null=null): Promise<RollingCampaignRegistrationResult> {
     const rollingGraph = collectRollingGraph(request.coordinatorRoot, request.documentPath, request.bindingsPath, request.bindingHistory?.path);
     requireState(rollingGraph.digest === request.graphDigest && rollingGraph.document.scopeId === request.id, 'stale or mismatched coordinator graph');
     const rollingResolvedConfiguration = resolveRollingConfiguration(rollingGraph.projectConfiguration, request.configuration, null);
     const rollingExecutionConfigV3 = readRollingExecutionConfigV3({schemaVersion:3,...rollingResolvedConfiguration,bindingHistory:request.bindingHistory ?? null});
     requireState(path.isAbsolute(request.managedDirectory), 'managed directory must be absolute');
-    const poolClient = await this.pool.connect();
+    const poolClient = initializationPoolClient ?? await this.pool.connect();
     try {
       await poolClient.query<Record<string, unknown>>('BEGIN');
+      await poolClient.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))',[this.projectId]);
+      const pendingReset=(await poolClient.query("SELECT 1 FROM ponytail_index.rolling_reset_v1 WHERE project_id=$1 AND state='PENDING'",[this.projectId])).rows;
+      requireState(pendingReset.length===0,'project reset is pending; resume reset before scheduling');
       await poolClient.query<Record<string, unknown>>('INSERT INTO ponytail_index.rolling_pool_v1(project_id,managed_directory) VALUES($1,$2) ON CONFLICT DO NOTHING', [this.projectId, request.managedDirectory]);
       const pool = (await poolClient.query<Record<string, unknown>>('SELECT managed_directory FROM ponytail_index.rolling_pool_v1 WHERE project_id=$1 FOR UPDATE', [this.projectId])).rows[0];
       requireState(readPool(pool).managed_directory === request.managedDirectory, 'managed directory differs from project pool');
@@ -525,7 +552,7 @@ export class RollingCampaignStore {
       await poolClient.query<Record<string, unknown>>('COMMIT');
       return { id: request.id, graphDigest: rollingGraph.digest };
     } catch (error) { await poolClient.query<Record<string, unknown>>('ROLLBACK'); throw error; }
-    finally { poolClient.release(); }
+    finally { if(initializationPoolClient===null)poolClient.release(); }
   }
 
   private collectGraph(rollingCampaignRow: RollingCampaignRow): RollingGraph {

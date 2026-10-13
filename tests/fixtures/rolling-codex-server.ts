@@ -78,6 +78,8 @@ lines.on('line', line => {
   } else if (method === 'fixture-archive-count') {
     result = {count:archiveCount};
   } else if (method === 'thread/list') {
+    if(params.archived===false) {result={data:archiveCount===0&&params.cwd===archivedRoot?[{id:threadId,cwd:archivedRoot}]:[],nextCursor:null};}
+    else {
     if (params.archived !== true || params.cwd !== archivedRoot) throw new Error('archive inventory requires its exact checkout filter');
     if (archiveCount === 0) result = {data:[],nextCursor:null};
     else if (foreignArchiveRoot) result = {data:[{id:'thread-fixture',cwd:'/foreign'}],nextCursor:null};
@@ -85,6 +87,7 @@ lines.on('line', line => {
     else {
       if (params.cursor !== 'archive-next') throw new Error('unexpected archive inventory cursor');
       result = {data:[{id:'thread-fixture',cwd:archivedRoot}],nextCursor:null};
+    }
     }
   } else if (method === 'thread/archive') {
     if (params.threadId !== 'thread-fixture' || externallyActive || [...turns.values()].some(turn=>turn.status === 'inProgress')) throw new Error('archive fixture requires the original idle actor');

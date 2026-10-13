@@ -226,3 +226,36 @@ resubmit. Workers never publish to mainline or accept their own discharge.
 Report unknown prerequisites, blockers or required scope changes to the
 coordinator; retain the checkout and do not silently alter its authoritative graph.
 These are legitimate coordination boundaries, unlike routine coding decisions.
+
+## Explicit campaign reset
+
+Traceability: implements REQ-ROLLING-RESET
+
+Only an explicit human instruction to abandon previous parallel campaign state
+permits `ponytail campaign reset`. Execution approval for ordinary development
+or a blocked assignment does not imply reset authority. This project-scoped
+operation clears all prior rolling campaigns and leases for the invoking project,
+not the shared database or project search/traceability indexes.
+
+Create a V1 request `{schemaVersion:1,id:<UUID>,reason:<actual-reason>,authority:
+[<human-reference>]}`. Run `ponytail campaign reset --request @request.json`
+to preview exact registered Git paths, native actors and dispositions. Review
+this inventory, then run the same command with `--execute true` to act. Reuse
+the original request after interruption; do not create a new request while the
+original reset is pending. Scheduling stays fenced until cleanup completes.
+
+Reset archives the original actors after observing cessation, runs declared
+resource cleanup, prepares retained numbered pool checkouts at the coordinator's
+committed HEAD, and removes obsolete agent-owned external checkouts, including
+this repository's Codex worktrees. Main/coordinator and ordinary user checkouts
+are protected. Unknown activity, conflicting native writer, active external
+QA/push or failed cleanup retains pending ownership rather than guessing.
+
+Git refs `refs/ponytail/reset/<request-id>/<inventory-index>/head` preserve
+unpublished commits. When tracked or untracked source changes exist, `changes`
+retains the stash object (untracked files are in its third parent). Build caches
+are retained in reusable pool members; ignored disposable files in removed
+checkouts are deleted. The command does not publish or alter mainline refs.
+After reset completion, initialize a fresh campaign from its approved files and
+configured target. Existing Git history and source requirements remain usable;
+cleared execution records are not proof of discharged obligations.

@@ -133,6 +133,9 @@ services. `PROJECT_STRUCTURE.md` is authoritative for that boundary.
 - Rolling worker attachment focused proof: `node --test dist/tests/rolling-worker.test.js
   dist/tests/rolling-campaign-store.integration.test.js`; actual native provisioning
   uses the explicit live native acceptance command above.
+- Explicit project reset focused proof: `node --test dist/tests/rolling-reset.test.js
+  dist/tests/rolling-reset.integration.test.js`; uses disposable Git repositories,
+  controlled native protocol and isolated project rows in existing PostgreSQL.
 - Rolling checkout focused proof: `node --test tests/rolling-worktrees.test.js
   tests/rolling-worktrees.integration.test.js`; all Git worktrees belong to
   disposable test repositories.

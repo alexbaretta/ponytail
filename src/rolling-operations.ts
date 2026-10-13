@@ -87,6 +87,7 @@ function inspectRollingLegacy(root:string,value:unknown):string {
  return result.stdout;
 }
 export interface RollingOperationResults {
+ reset:Awaited<ReturnType<RollingCampaignStore['resetProject']>>;
  init:RollingCampaignRegistrationResult;reconcile:RollingGraphReconciliation;status:RollingCoordinatorSnapshot;'next-actions':RollingCoordinatorActions;replenish:RollingReplenishment;
  'provision-worker':Awaited<ReturnType<typeof attachRollingWorker>>;'recover-worker':Awaited<ReturnType<typeof recoverRollingWorkerCreation>>;
  'resume-worker':Awaited<ReturnType<typeof resumeRollingWorker>>;'observe-resumption':Awaited<ReturnType<typeof resumeRollingWorker>>;
@@ -270,6 +271,7 @@ export class RollingCampaignOperations {
  async initialize(rollingCampaignInitializationV1:RollingCampaignInitializationV1):Promise<RollingCampaignRegistrationResult> {
   readRollingCampaignInitializationV1(rollingCampaignInitializationV1);
   if (fs.realpathSync(rollingCampaignInitializationV1.coordinatorRoot) !== fs.realpathSync(this.root)) throw new Error('rolling campaign: initialization root differs from the invoking project');
+  return this.rollingCampaignStore.initializeCampaign(async()=> {
   const {coordinatorRoot,documentPath,bindingsPath,bindingHistory} = rollingCampaignInitializationV1;
   const rollingResolvedConfiguration = loadRollingConfiguration(coordinatorRoot,rollingCampaignInitializationV1.configuration);
   if (git(coordinatorRoot,['status','--porcelain']).trim() !== '') throw new Error('rolling campaign: initialization requires a clean coordinator checkout');
@@ -298,7 +300,8 @@ export class RollingCampaignOperations {
    managedDirectory:rollingManagedDirectory.directory,configuration:rollingResolvedConfiguration,
    ...(bindingHistory === null ? {} : {bindingHistory})
   };
-  return this.rollingCampaignStore.registerCampaign(rollingCampaignRegistration);
+  return rollingCampaignRegistration;
+  });
  }
 
  reconcile(campaignId:string):Promise<RollingGraphReconciliation> { return this.rollingCampaignStore.reconcileCoordinator(campaignId); }
@@ -416,6 +419,10 @@ export class RollingCampaignOperations {
   const input = readRollingCommandInput(command,value);
   const timeoutMs = 3600000;
   switch (command) {
+   case 'reset': {
+    if(input.execute!==undefined&&typeof input.execute!=='boolean')throw new Error('rolling campaign: execute must be boolean');
+    return {command,result:await this.native(signal,rollingCodex=>this.rollingCampaignStore.resetProject(this.root,input.request,input.execute===true,rollingCodex))};
+   }
    case 'init': return {command,result:await this.initialize(readRollingCampaignInitializationV1(input.request))};
    case 'reconcile': return {command,result:await this.reconcile(stringField(input,'campaign'))};
    case 'status': return {command,result:await this.status(stringField(input,'campaign'))};

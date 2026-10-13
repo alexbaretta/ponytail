@@ -412,3 +412,20 @@ the exported procedure and start multiple top-level worker dispatches before
 waiting for their completion. N defaults to 10; no repeated human parallelism
 approval is requested. Report real native activity, logical ownership and
 projected scheduling capacity distinctly; retain actual checkout restrictions.
+
+## ACC-ROLLING-RESET
+
+Traceability: verifies REQ-ROLLING-RESET
+Obligation: OBL-RESET-1. Arc: ROLLING-RESET.
+
+1. Preview a project with retained numbered checkouts, an obsolete external
+   agent checkout, an ordinary user checkout and original native worker. Verify
+   exact inventory and zero mutation.
+2. Execute an authorized reset. Observe original session interruption/archival
+   and project resource cleanup before ownership release. Verify source recovery
+   refs, external Git registration/root removal, retained pool cache and absent
+   marker. Fresh initialization/allocation must succeed.
+3. Verify other project campaign rows and project indexes are unchanged.
+4. Interrupt cleanup, restart the same request and verify scheduling stays
+   fenced until completion. Repeated completed request performs no new deletion.
+   Changed actor/path, foreign writer or unresolved external push retains state.
