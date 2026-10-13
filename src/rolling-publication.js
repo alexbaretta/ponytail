@@ -6,11 +6,14 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.RollingMainlineRefreshResultReaders = exports.RollingMainlineRefreshPreparationReaders = exports.RollingMainlineRefreshIntentReaders = exports.RollingMainlinePublicationReaders = exports.RollingPublicationQaJobReaders = exports.RollingPublicationQaReaders = exports.RollingMainlineCandidateReaders = exports.RollingMainlinePreparationReaders = exports.RollingPublicationBatchClaimReaders = void 0;
+exports.RollingMainlineRefreshResultReaders = exports.RollingMainlineRefreshPreparationReaders = exports.RollingMainlineRefreshIntentReaders = exports.RollingMainlinePublicationReaders = exports.RollingPublicationQaJobReaders = exports.RollingPublicationQaReaders = exports.RollingPublicationRepairReaders = exports.RollingPublicationRepairReviewReaders = exports.RollingMainlineCandidateReaders = exports.RollingMainlinePreparationReaders = exports.RollingPublicationBatchClaimReaders = void 0;
 exports.readRollingPublicationBatchClaimV1 = readRollingPublicationBatchClaimV1;
 exports.selectRollingPublicationBatch = selectRollingPublicationBatch;
 exports.readRollingMainlinePreparationV1 = readRollingMainlinePreparationV1;
 exports.readRollingMainlineCandidateV1 = readRollingMainlineCandidateV1;
+exports.readRollingPublicationRepairReviewV1 = readRollingPublicationRepairReviewV1;
+exports.readRollingPublicationRepairV1 = readRollingPublicationRepairV1;
+exports.validateRollingPublicationRepair = validateRollingPublicationRepair;
 exports.readRollingPublicationQaV1 = readRollingPublicationQaV1;
 exports.parseRollingPublicationQa = parseRollingPublicationQa;
 exports.prepareRollingMainline = prepareRollingMainline;
@@ -34,6 +37,7 @@ const node_child_process_1 = require("node:child_process");
 const lossless_json_1 = require("lossless-json");
 const rolling_campaign_js_1 = require("./rolling-campaign.js");
 const rolling_integration_js_1 = require("./rolling-integration.js");
+const obligations_js_1 = require("../skills/plan-execution/scripts/obligations.js");
 function isRecord(value) {
     return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
@@ -125,6 +129,43 @@ function readRollingMainlineCandidateV1(value) {
     return { ...rollingMainlinePreparationV1, revision: commit(candidate.revision) };
 }
 exports.RollingMainlineCandidateReaders = { V1: readRollingMainlineCandidateV1 };
+function readRollingPublicationRepairReviewV1(value) {
+    const input = record(value, ['schemaVersion', 'batchId', 'previousRevision', 'revision', 'reviewerId', 'reference', 'paths', 'decision']);
+    requirePublication(input.schemaVersion === 1 && input.decision === 'accepted', 'repair requires an accepted V1 review');
+    requirePublication(typeof input.reviewerId === 'string' && input.reviewerId.trim() === input.reviewerId && input.reviewerId.length > 0 && !/[\0\r\n]/u.test(input.reviewerId), 'invalid repair reviewer');
+    requirePublication(typeof input.reference === 'string' && Array.isArray(input.paths) && input.paths.length > 0, 'repair review lacks reference or paths');
+    (0, obligations_js_1.relativePath)(input.reference);
+    const paths = input.paths.map((value) => { requirePublication(typeof value === 'string', 'invalid repair path'); (0, obligations_js_1.relativePath)(value); return value; });
+    requirePublication(new Set(paths).size === paths.length, 'duplicate reviewed repair paths');
+    return { schemaVersion: 1, batchId: batchId(input.batchId), previousRevision: commit(input.previousRevision), revision: commit(input.revision), reviewerId: input.reviewerId, reference: input.reference, paths, decision: 'accepted' };
+}
+exports.RollingPublicationRepairReviewReaders = { V1: readRollingPublicationRepairReviewV1 };
+function readRollingPublicationRepairV1(value) {
+    const input = record(value, ['schemaVersion', 'id', 'batchId', 'review', 'previousCandidate', 'candidate']);
+    requirePublication(input.schemaVersion === 1, 'unsupported publication repair version');
+    const checkedRollingPublicationRepairReviewV1 = readRollingPublicationRepairReviewV1(input.review);
+    const previousRollingMainlineCandidateV1 = readRollingMainlineCandidateV1(input.previousCandidate), repairedRollingMainlineCandidateV1 = readRollingMainlineCandidateV1(input.candidate);
+    const id = batchId(input.id), publicationBatchId = batchId(input.batchId);
+    requirePublication(checkedRollingPublicationRepairReviewV1.batchId === publicationBatchId && previousRollingMainlineCandidateV1.batchId === publicationBatchId && repairedRollingMainlineCandidateV1.batchId === publicationBatchId
+        && checkedRollingPublicationRepairReviewV1.previousRevision === previousRollingMainlineCandidateV1.revision && checkedRollingPublicationRepairReviewV1.revision === repairedRollingMainlineCandidateV1.revision
+        && previousRollingMainlineCandidateV1.rootPath === repairedRollingMainlineCandidateV1.rootPath && previousRollingMainlineCandidateV1.sourceRevision === repairedRollingMainlineCandidateV1.sourceRevision
+        && previousRollingMainlineCandidateV1.mainlineRevision === repairedRollingMainlineCandidateV1.mainlineRevision, 'repair differs from original candidate history');
+    return { schemaVersion: 1, id, batchId: publicationBatchId, review: checkedRollingPublicationRepairReviewV1, previousCandidate: previousRollingMainlineCandidateV1, candidate: repairedRollingMainlineCandidateV1 };
+}
+exports.RollingPublicationRepairReaders = { V1: readRollingPublicationRepairV1 };
+function validateRollingPublicationRepair(rollingPublicationBatchClaimV1, rollingMainlineCandidateV1, rollingPublicationRepairReviewV1) {
+    const checkedRollingPublicationRepairReviewV1 = readRollingPublicationRepairReviewV1(rollingPublicationRepairReviewV1);
+    requirePublication(checkedRollingPublicationRepairReviewV1.batchId === rollingPublicationBatchClaimV1.id && checkedRollingPublicationRepairReviewV1.previousRevision === rollingMainlineCandidateV1.revision
+        && checkedRollingPublicationRepairReviewV1.revision !== checkedRollingPublicationRepairReviewV1.previousRevision, 'repair review differs from the retained failed candidate');
+    const repairedRollingMainlineCandidateV1 = { ...rollingMainlineCandidateV1, revision: checkedRollingPublicationRepairReviewV1.revision };
+    verifyRollingMainlineCandidate(rollingPublicationBatchClaimV1, repairedRollingMainlineCandidateV1);
+    (0, rolling_integration_js_1.git)(repairedRollingMainlineCandidateV1.rootPath, ['merge-base', '--is-ancestor', checkedRollingPublicationRepairReviewV1.previousRevision, checkedRollingPublicationRepairReviewV1.revision]);
+    const changedPaths = (0, rolling_integration_js_1.git)(repairedRollingMainlineCandidateV1.rootPath, ['diff', '--name-only', '-z', checkedRollingPublicationRepairReviewV1.previousRevision, checkedRollingPublicationRepairReviewV1.revision]).split('\0').filter(Boolean).sort();
+    requirePublication(JSON.stringify(changedPaths) === JSON.stringify([...checkedRollingPublicationRepairReviewV1.paths].sort()), 'repair diff differs from reviewed paths');
+    const referencePath = node_path_1.default.join(repairedRollingMainlineCandidateV1.rootPath, checkedRollingPublicationRepairReviewV1.reference);
+    requirePublication(node_fs_1.default.existsSync(referencePath) && node_fs_1.default.lstatSync(referencePath).isFile() && !node_fs_1.default.lstatSync(referencePath).isSymbolicLink(), 'repair review reference is unavailable');
+    return repairedRollingMainlineCandidateV1;
+}
 function readRollingPublicationQaV1(value) {
     const qa = record(value, ['schemaVersion', 'id', 'batchId', 'revision', 'configurationDigest', 'outcome', 'commands']);
     requirePublication(qa.schemaVersion === 1 && (qa.outcome === 'PASS' || qa.outcome === 'FAIL'), 'unsupported publication QA outcome');

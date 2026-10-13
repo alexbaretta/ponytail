@@ -232,3 +232,17 @@ stale, active or mismatched observations are rejected. Actual dispatch retains
 writer acquisition. Completed blocker prose is not a discharge proposal.
 Discharge: ACC-ROLLING-READONLY-COLLECTION demonstrates collection while another
 transport retains its idle writer and rejection of every invalid boundary above.
+
+## REQ-ROLLING-PUBLICATION-REPAIR: Repair a failed-QA candidate
+
+Atomic obligation: OBL-RECOVERY-2. A retained QA_FAILED batch can adopt an
+explicitly reviewed, committed descendant repair through `repair-publication`.
+The repair identifies the exact predecessor, accepted review and changed paths.
+Preserve batch identity, original candidate, source history, frozen membership
+and immutable QA attempts. Atomically journal candidate adoption, clear current
+QA authorization, and require fresh configured full QA on the exact repaired
+candidate before normal publication. Reject unrelated ancestry, dirty or
+foreign checkouts, unreviewed changes and retries with different repair data.
+Discharge: ACC-ROLLING-PUBLICATION-REPAIR demonstrates failed QA, reviewed
+candidate adoption, restart-safe retry, rejected stale proof, fresh full QA and
+normal publication without replacing the original batch or its history.

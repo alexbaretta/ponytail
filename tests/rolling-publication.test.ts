@@ -2,11 +2,24 @@
 // Licensed under the MIT License. See LICENSE in the project root.
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import {readRollingPublicationRepairReviewV1,readRollingPublicationRepairV1,type RollingPublicationRepairReviewV1,type RollingPublicationRepairV1} from '../src/rolling-publication.js';
 import {parseRollingPublicationQa,readRollingPublicationQaV1,type RollingPublicationQaV1,readRollingPublicationBatchClaimV1,selectRollingPublicationBatch,type RollingPublicationBatchClaimV1,type RollingAcceptedIncrement} from '../src/rolling-publication.js';
 
 const firstRollingAcceptedIncrement:RollingAcceptedIncrement = {id:'00000000-0000-0000-0000-000000000001',revision:'a'.repeat(40)};
 const secondRollingAcceptedIncrement:RollingAcceptedIncrement = {id:'00000000-0000-0000-0000-000000000002',revision:'b'.repeat(40)};
 const thirdRollingAcceptedIncrement:RollingAcceptedIncrement = {id:'00000000-0000-0000-0000-000000000003',revision:'c'.repeat(40)};
+
+// Traceability: verifies REQ-ROLLING-PUBLICATION-REPAIR
+test('repair contracts reject unaccepted reviews, unsafe paths and changed candidate history',()=> {
+ const rollingPublicationRepairReviewV1:RollingPublicationRepairReviewV1={schemaVersion:1,batchId:firstRollingAcceptedIncrement.id,previousRevision:'a'.repeat(40),revision:'b'.repeat(40),reviewerId:'reviewer',reference:'tmp/review.md',paths:['src/repair.ts'],decision:'accepted'};
+ assert.deepEqual(readRollingPublicationRepairReviewV1(rollingPublicationRepairReviewV1),rollingPublicationRepairReviewV1);
+ for(const value of [{...rollingPublicationRepairReviewV1,decision:'rejected'},{...rollingPublicationRepairReviewV1,paths:['../foreign']},{...rollingPublicationRepairReviewV1,paths:['src/repair.ts','src/repair.ts']},{...rollingPublicationRepairReviewV1,extra:true}]) assert.throws(()=>readRollingPublicationRepairReviewV1(value));
+ const rollingPublicationRepairV1:RollingPublicationRepairV1={schemaVersion:1,id:secondRollingAcceptedIncrement.id,batchId:firstRollingAcceptedIncrement.id,review:rollingPublicationRepairReviewV1,
+  previousCandidate:{schemaVersion:1,batchId:firstRollingAcceptedIncrement.id,rootPath:'/fixture',sourceRevision:'c'.repeat(40),mainlineRevision:'d'.repeat(40),revision:'a'.repeat(40)},
+  candidate:{schemaVersion:1,batchId:firstRollingAcceptedIncrement.id,rootPath:'/fixture',sourceRevision:'c'.repeat(40),mainlineRevision:'d'.repeat(40),revision:'b'.repeat(40)}};
+ assert.deepEqual(readRollingPublicationRepairV1(rollingPublicationRepairV1),rollingPublicationRepairV1);
+ assert.throws(()=>readRollingPublicationRepairV1({...rollingPublicationRepairV1,candidate:{...rollingPublicationRepairV1.candidate,sourceRevision:'e'.repeat(40)}}),/original candidate history/);
+});
 
 // Traceability: verifies REQ-ROLLING-PUBLICATION
 test('publication freezes exactly M distinct accepted increments without counting repeated acknowledgements',()=> {

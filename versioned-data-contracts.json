@@ -887,6 +887,38 @@
         "V1"
       ],
       "supportedDowngradeVersions": []
+    },
+    {
+      "id": "rolling-publication-repair-review",
+      "implementation": {
+        "workspace": "ponytail",
+        "module": "src/rolling-publication.ts",
+        "readerRegistryExport": "RollingPublicationRepairReviewReaders"
+      },
+      "currentVersion": "V1",
+      "versions": [
+        "V1"
+      ],
+      "supportedReadVersions": [
+        "V1"
+      ],
+      "supportedDowngradeVersions": []
+    },
+    {
+      "id": "rolling-publication-repair",
+      "implementation": {
+        "workspace": "ponytail",
+        "module": "src/rolling-publication.ts",
+        "readerRegistryExport": "RollingPublicationRepairReaders"
+      },
+      "currentVersion": "V1",
+      "versions": [
+        "V1"
+      ],
+      "supportedReadVersions": [
+        "V1"
+      ],
+      "supportedDowngradeVersions": []
     }
   ]
 }

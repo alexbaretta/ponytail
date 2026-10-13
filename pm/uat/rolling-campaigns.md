@@ -348,3 +348,20 @@ Obligation: OBL-RECOVERY-1. Arc: ROLLING-READONLY-COLLECTION.
 3. Repeat with active/unknown activity, stale observation, wrong actor/checkout/
    turn/generation and completed blocker prose. Expect actionable refusal with
    ownership and candidate preserved; no discharge or replacement is recorded.
+
+## ACC-ROLLING-PUBLICATION-REPAIR
+
+Traceability: verifies REQ-ROLLING-PUBLICATION-REPAIR
+Obligation: OBL-RECOVERY-2. Arc: ROLLING-PUBLICATION-REPAIR.
+
+1. Freeze a batch, prepare its exact candidate and retain a failed full-QA job.
+2. Commit only the prerequisite repairs on the original publication branch.
+   Review the exact predecessor-to-repair diff, identifying its changed paths.
+3. Run repair-publication for that batch with the accepted review. Expect an
+   immutable adoption record and new candidate, unchanged original history and
+   QA_FAILED attempt, and cleared current QA authorization. Repeat after process
+   restart: expect the same adoption, not a second candidate or lost history.
+4. Reject dirty/foreign checkouts, unrelated commits, rejected or mismatched
+   reviews, omitted changed paths and a different repair on retry. Verify stale
+   QA cannot publish. Run every configured full-QA command on the new candidate;
+   only its complete fresh passing receipt permits a normal push.

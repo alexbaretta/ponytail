@@ -106,6 +106,7 @@
         "accept",
         "freeze-publication",
         "prepare-publication",
+        "repair-publication",
         "observe-preparation",
         "inspect-publication-conflict",
         "run-publication-qa",

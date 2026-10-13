@@ -6,6 +6,7 @@ import {spawnSync} from 'node:child_process';
 import {parse} from 'lossless-json';
 import {isRollingArgv,readRollingResolvedConfiguration,type RollingArgv} from './rolling-campaign.js';
 import {git,gitResult,publishRollingIncrement,readRollingIncrementPublicationResult,type RollingIncrementPublicationResult,type RollingIncrementTarget} from './rolling-integration.js';
+import {relativePath} from '../skills/plan-execution/scripts/obligations.js';
 
 export interface RollingAcceptedIncrement {
  readonly id:string;
@@ -166,6 +167,66 @@ export function readRollingMainlineCandidateV1(value:unknown):RollingMainlineCan
  return {...rollingMainlinePreparationV1,revision:commit(candidate.revision)};
 }
 export const RollingMainlineCandidateReaders = {V1:readRollingMainlineCandidateV1};
+
+export interface RollingPublicationRepairReviewV1 {
+ readonly schemaVersion:1;
+ readonly batchId:string;
+ readonly previousRevision:string;
+ readonly revision:string;
+ readonly reviewerId:string;
+ readonly reference:string;
+ readonly paths:readonly string[];
+ readonly decision:'accepted';
+}
+export interface RollingPublicationRepairV1 {
+ readonly schemaVersion:1;
+ readonly id:string;
+ readonly batchId:string;
+ readonly review:RollingPublicationRepairReviewV1;
+ readonly previousCandidate:RollingMainlineCandidateV1;
+ readonly candidate:RollingMainlineCandidateV1;
+}
+// Traceability: implements REQ-ROLLING-PUBLICATION-REPAIR
+export function readRollingPublicationRepairReviewV1(value:unknown):RollingPublicationRepairReviewV1 {
+ const input=record(value,['schemaVersion','batchId','previousRevision','revision','reviewerId','reference','paths','decision']);
+ requirePublication(input.schemaVersion===1 && input.decision==='accepted','repair requires an accepted V1 review');
+ requirePublication(typeof input.reviewerId==='string'&&input.reviewerId.trim()===input.reviewerId&&input.reviewerId.length>0&&!/[\0\r\n]/u.test(input.reviewerId),'invalid repair reviewer');
+ requirePublication(typeof input.reference==='string'&&Array.isArray(input.paths)&&input.paths.length>0,'repair review lacks reference or paths');
+ relativePath(input.reference);
+ const paths:readonly string[]=input.paths.map((value:unknown)=>{requirePublication(typeof value==='string','invalid repair path');relativePath(value);return value;});
+ requirePublication(new Set(paths).size===paths.length,'duplicate reviewed repair paths');
+ return {schemaVersion:1,batchId:batchId(input.batchId),previousRevision:commit(input.previousRevision),revision:commit(input.revision),reviewerId:input.reviewerId,reference:input.reference,paths,decision:'accepted'};
+}
+export const RollingPublicationRepairReviewReaders={V1:readRollingPublicationRepairReviewV1};
+// Traceability: implements REQ-ROLLING-PUBLICATION-REPAIR
+export function readRollingPublicationRepairV1(value:unknown):RollingPublicationRepairV1 {
+ const input=record(value,['schemaVersion','id','batchId','review','previousCandidate','candidate']);
+ requirePublication(input.schemaVersion===1,'unsupported publication repair version');
+ const checkedRollingPublicationRepairReviewV1=readRollingPublicationRepairReviewV1(input.review);
+ const previousRollingMainlineCandidateV1=readRollingMainlineCandidateV1(input.previousCandidate),repairedRollingMainlineCandidateV1=readRollingMainlineCandidateV1(input.candidate);
+ const id=batchId(input.id),publicationBatchId=batchId(input.batchId);
+ requirePublication(checkedRollingPublicationRepairReviewV1.batchId===publicationBatchId&&previousRollingMainlineCandidateV1.batchId===publicationBatchId&&repairedRollingMainlineCandidateV1.batchId===publicationBatchId
+  &&checkedRollingPublicationRepairReviewV1.previousRevision===previousRollingMainlineCandidateV1.revision&&checkedRollingPublicationRepairReviewV1.revision===repairedRollingMainlineCandidateV1.revision
+  &&previousRollingMainlineCandidateV1.rootPath===repairedRollingMainlineCandidateV1.rootPath&&previousRollingMainlineCandidateV1.sourceRevision===repairedRollingMainlineCandidateV1.sourceRevision
+  &&previousRollingMainlineCandidateV1.mainlineRevision===repairedRollingMainlineCandidateV1.mainlineRevision,'repair differs from original candidate history');
+ return {schemaVersion:1,id,batchId:publicationBatchId,review:checkedRollingPublicationRepairReviewV1,previousCandidate:previousRollingMainlineCandidateV1,candidate:repairedRollingMainlineCandidateV1};
+}
+export const RollingPublicationRepairReaders={V1:readRollingPublicationRepairV1};
+// Traceability: implements REQ-ROLLING-PUBLICATION-REPAIR
+export function validateRollingPublicationRepair(rollingPublicationBatchClaimV1:RollingPublicationBatchClaimV1,
+ rollingMainlineCandidateV1:RollingMainlineCandidateV1,rollingPublicationRepairReviewV1:RollingPublicationRepairReviewV1):RollingMainlineCandidateV1 {
+ const checkedRollingPublicationRepairReviewV1=readRollingPublicationRepairReviewV1(rollingPublicationRepairReviewV1);
+ requirePublication(checkedRollingPublicationRepairReviewV1.batchId===rollingPublicationBatchClaimV1.id&&checkedRollingPublicationRepairReviewV1.previousRevision===rollingMainlineCandidateV1.revision
+  &&checkedRollingPublicationRepairReviewV1.revision!==checkedRollingPublicationRepairReviewV1.previousRevision,'repair review differs from the retained failed candidate');
+ const repairedRollingMainlineCandidateV1:RollingMainlineCandidateV1={...rollingMainlineCandidateV1,revision:checkedRollingPublicationRepairReviewV1.revision};
+ verifyRollingMainlineCandidate(rollingPublicationBatchClaimV1,repairedRollingMainlineCandidateV1);
+ git(repairedRollingMainlineCandidateV1.rootPath,['merge-base','--is-ancestor',checkedRollingPublicationRepairReviewV1.previousRevision,checkedRollingPublicationRepairReviewV1.revision]);
+ const changedPaths=git(repairedRollingMainlineCandidateV1.rootPath,['diff','--name-only','-z',checkedRollingPublicationRepairReviewV1.previousRevision,checkedRollingPublicationRepairReviewV1.revision]).split('\0').filter(Boolean).sort();
+ requirePublication(JSON.stringify(changedPaths)===JSON.stringify([...checkedRollingPublicationRepairReviewV1.paths].sort()),'repair diff differs from reviewed paths');
+ const referencePath=path.join(repairedRollingMainlineCandidateV1.rootPath,checkedRollingPublicationRepairReviewV1.reference);
+ requirePublication(fs.existsSync(referencePath)&&fs.lstatSync(referencePath).isFile()&&!fs.lstatSync(referencePath).isSymbolicLink(),'repair review reference is unavailable');
+ return repairedRollingMainlineCandidateV1;
+}
 // Traceability: implements REQ-ROLLING-PUBLICATION
 export function readRollingPublicationQaV1(value:unknown):RollingPublicationQaV1 {
  const qa = record(value,['schemaVersion','id','batchId','revision','configurationDigest','outcome','commands']);

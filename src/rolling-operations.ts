@@ -14,9 +14,9 @@ import type {RollingStoredReview,RollingReviewerLoss} from './rolling-review.js'
 import {git,gitResult,publishRollingIncrement,reconcileRollingIncrementPublication,type RollingIncrementPublication,type RollingIncrementRepair,type RollingIncrementRebaseV1,rebasePreparedRollingIncrement,observePreparedRollingIncrement,refreshRollingIncrementProof,fastForwardRollingIncrement} from './rolling-integration.js';
 import {RollingCodex,type RollingNativeServerRequest} from './rolling-codex.js';
 import {provisionRollingWorker,attachRollingWorker,recoverRollingWorkerCreation,resumeRollingWorker,dispatchRollingWorker,collectRollingWorkerSubmission,readRollingWorkerOwnerObservationV1,suspendRollingWorker,retireRollingWorker,type RollingWorkerContext} from './rolling-worker.js';
+import {readRollingPublicationRepairReviewV1,prepareRollingMainline,mergeRollingMainline,observeRollingMainlineCandidate,runRollingPublicationQa,prepareRollingMainlineRefresh,mergeRollingMainlineRefresh,observeRollingMainlineRefresh,type RollingMainlineCandidateV1,type RollingMainlineRefreshResultV1} from './rolling-publication.js';
 import {dispatchRollingReview,collectRollingReview,startRollingReview} from './rolling-review.js';
 import type {RollingPublicationFrozen,RollingPublicationTrigger} from './rolling-publication.js';
-import {prepareRollingMainline,mergeRollingMainline,observeRollingMainlineCandidate,runRollingPublicationQa,prepareRollingMainlineRefresh,mergeRollingMainlineRefresh,observeRollingMainlineRefresh,type RollingMainlineCandidateV1,type RollingMainlineRefreshResultV1} from './rolling-publication.js';
 import {rollingCommandDefinitions,rollingCampaignHelp,isRollingCommandName,type RollingCommandName} from './rolling-cli-registry.js';
 
 export interface RollingCampaignInitializationV1 {
@@ -102,6 +102,7 @@ export interface RollingOperationResults {
  'observe-publication-qa':Awaited<ReturnType<RollingCampaignStore['publicationContext']>>;
  'publish-mainline':Awaited<ReturnType<RollingCampaignStore['publishMainline']>>;'observe-mainline':Awaited<ReturnType<RollingCampaignStore['observeMainlinePublication']>>;
  'refresh-mainline':RollingMainlineRefreshResultV1;'observe-refresh':RollingMainlineRefreshResultV1;
+ 'repair-publication':Awaited<ReturnType<RollingCampaignStore['repairPublication']>>;
  'synchronize-campaign':Awaited<ReturnType<RollingCampaignStore['synchronizePublishedCampaign']>>;
  close:Awaited<ReturnType<RollingCampaignStore['closeCampaign']>>;legacy:string;
 }
@@ -447,6 +448,12 @@ export class RollingCampaignOperations {
    }
    case 'prepare-publication': case 'observe-preparation': return {command,result:await this.preparePublication(stringField(input,'campaign'),stringField(input,'batch'))};
    case 'inspect-publication-conflict': case 'observe-publication-qa': return {command,result:await this.rollingCampaignStore.publicationContext(stringField(input,'campaign'),stringField(input,'batch'))};
+   case 'repair-publication': {
+    const campaignId=stringField(input,'campaign'),batchId=stringField(input,'batch');
+    const rollingPublicationContext=await this.rollingCampaignStore.publicationContext(campaignId,batchId);
+    if (fs.realpathSync(this.root)!==rollingPublicationContext.claim.rootPath) throw new Error('rolling campaign: repair requires the original publication checkout');
+    return {command,result:await this.rollingCampaignStore.repairPublication(campaignId,batchId,readRollingPublicationRepairReviewV1(input.review))};
+   }
    case 'run-publication-qa': {
     const campaignId = stringField(input,'campaign'),batchId = stringField(input,'batch');
     const rollingPublicationQaJobV1 = await this.rollingCampaignStore.beginPublicationQa(campaignId,batchId);

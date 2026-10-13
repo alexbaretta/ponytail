@@ -29,8 +29,8 @@ const rolling_campaign_store_js_1 = require("./rolling-campaign-store.js");
 const rolling_integration_js_1 = require("./rolling-integration.js");
 const rolling_codex_js_1 = require("./rolling-codex.js");
 const rolling_worker_js_1 = require("./rolling-worker.js");
-const rolling_review_js_1 = require("./rolling-review.js");
 const rolling_publication_js_1 = require("./rolling-publication.js");
+const rolling_review_js_1 = require("./rolling-review.js");
 const rolling_cli_registry_js_1 = require("./rolling-cli-registry.js");
 function isRecord(value) { return value !== null && typeof value === 'object' && !Array.isArray(value); }
 function record(value) {
@@ -478,6 +478,13 @@ class RollingCampaignOperations {
             case 'observe-preparation': return { command, result: await this.preparePublication(stringField(input, 'campaign'), stringField(input, 'batch')) };
             case 'inspect-publication-conflict':
             case 'observe-publication-qa': return { command, result: await this.rollingCampaignStore.publicationContext(stringField(input, 'campaign'), stringField(input, 'batch')) };
+            case 'repair-publication': {
+                const campaignId = stringField(input, 'campaign'), batchId = stringField(input, 'batch');
+                const rollingPublicationContext = await this.rollingCampaignStore.publicationContext(campaignId, batchId);
+                if (node_fs_1.default.realpathSync(this.root) !== rollingPublicationContext.claim.rootPath)
+                    throw new Error('rolling campaign: repair requires the original publication checkout');
+                return { command, result: await this.rollingCampaignStore.repairPublication(campaignId, batchId, (0, rolling_publication_js_1.readRollingPublicationRepairReviewV1)(input.review)) };
+            }
             case 'run-publication-qa': {
                 const campaignId = stringField(input, 'campaign'), batchId = stringField(input, 'batch');
                 const rollingPublicationQaJobV1 = await this.rollingCampaignStore.beginPublicationQa(campaignId, batchId);

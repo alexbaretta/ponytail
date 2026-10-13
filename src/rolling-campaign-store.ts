@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Alex Baretta. All rights reserved.
 // Licensed under the MIT License. See LICENSE in the project root.
 import crypto from 'node:crypto';
-import {readRollingMainlineRefreshIntentV1,readRollingMainlineRefreshPreparationV1,readRollingMainlineRefreshResultV1,type RollingMainlineRefreshIntentV1,type RollingMainlineRefreshPreparationV1,type RollingMainlineRefreshResultV1,synchronizeRollingCampaign,readRollingMainlinePublicationV1,type RollingMainlinePublicationV1,readRollingMainlinePreparationV1,readRollingMainlineCandidateV1,readRollingPublicationQaV1,parseRollingPublicationQa,readRollingPublicationQaJobV1,verifyRollingMainlineCandidate,verifyRollingPublicationQa,type RollingMainlinePreparationV1,type RollingMainlineCandidateV1,type RollingPublicationQaV1,type RollingPublicationQaJobV1,selectRollingPublicationBatch,readRollingPublicationBatchClaimV1,type RollingPublicationBatchClaimV1,type RollingPublicationWaiting,type RollingPublicationTrigger,type RollingAcceptedIncrement,type RollingPublicationSelection} from './rolling-publication.js';
+import {readRollingPublicationRepairReviewV1,readRollingPublicationRepairV1,validateRollingPublicationRepair,type RollingPublicationRepairReviewV1,type RollingPublicationRepairV1,readRollingMainlineRefreshIntentV1,readRollingMainlineRefreshPreparationV1,readRollingMainlineRefreshResultV1,type RollingMainlineRefreshIntentV1,type RollingMainlineRefreshPreparationV1,type RollingMainlineRefreshResultV1,synchronizeRollingCampaign,readRollingMainlinePublicationV1,type RollingMainlinePublicationV1,readRollingMainlinePreparationV1,readRollingMainlineCandidateV1,readRollingPublicationQaV1,parseRollingPublicationQa,readRollingPublicationQaJobV1,verifyRollingMainlineCandidate,verifyRollingPublicationQa,type RollingMainlinePreparationV1,type RollingMainlineCandidateV1,type RollingPublicationQaV1,type RollingPublicationQaJobV1,selectRollingPublicationBatch,readRollingPublicationBatchClaimV1,type RollingPublicationBatchClaimV1,type RollingPublicationWaiting,type RollingPublicationTrigger,type RollingAcceptedIncrement,type RollingPublicationSelection} from './rolling-publication.js';
 import {git,readRollingIncrementClaimV1,readRollingIncrementRebaseV1,verifyRollingIncrementRebase,prepareRollingIncrementRebase,readRollingIncrementPublicationV1,reconcileRollingIncrementPublication,publishRollingIncrement,verifyRollingIncrementLocalIntegration,fastForwardRollingIncrement,verifyRollingIncrementConflictInspection,type RollingIncrementConflictInspection,type RollingIncrementRepair,type RollingIncrementClaimV1,type RollingIncrementRebaseV1,type RollingFastRebaseResult,type RollingIncrementPublicationV1,type RollingIncrementPublicationResult,type RollingIncrementPushStarted} from './rolling-integration.js';
 import path from 'node:path';
 import { parse } from 'lossless-json';
@@ -1005,13 +1005,36 @@ export class RollingCampaignStore {
   }
 
   private async publicationCandidate(poolClient:PoolClient,campaignId:string,id:string):Promise<RollingMainlineCandidateV1> {
-    const row = (await poolClient.query<Record<string,unknown>>("SELECT CASE WHEN b.refresh_id IS NULL THEN c.candidate_text ELSE (r.result_text::jsonb->'candidate')::text END AS candidate_text FROM ponytail_index.rolling_publication_batch_v1 b JOIN ponytail_index.rolling_publication_candidate_v1 c USING(project_id,campaign_id,batch_id) LEFT JOIN ponytail_index.rolling_mainline_refresh_v1 r ON r.project_id=b.project_id AND r.campaign_id=b.campaign_id AND r.batch_id=b.batch_id AND r.refresh_id=b.refresh_id WHERE b.project_id=$1 AND b.campaign_id=$2 AND b.batch_id=$3",[this.projectId,campaignId,id])).rows[0];
+    const row = (await poolClient.query<Record<string,unknown>>("SELECT CASE WHEN b.refresh_id IS NOT NULL THEN (r.result_text::jsonb->'candidate')::text WHEN b.repair_id IS NOT NULL THEN (a.repair_text::jsonb->'candidate')::text ELSE c.candidate_text END AS candidate_text FROM ponytail_index.rolling_publication_batch_v1 b JOIN ponytail_index.rolling_publication_candidate_v1 c USING(project_id,campaign_id,batch_id) LEFT JOIN ponytail_index.rolling_mainline_refresh_v1 r ON r.project_id=b.project_id AND r.campaign_id=b.campaign_id AND r.batch_id=b.batch_id AND r.refresh_id=b.refresh_id LEFT JOIN ponytail_index.rolling_publication_repair_v1 a ON a.project_id=b.project_id AND a.campaign_id=b.campaign_id AND a.batch_id=b.batch_id AND a.repair_id=b.repair_id WHERE b.project_id=$1 AND b.campaign_id=$2 AND b.batch_id=$3",[this.projectId,campaignId,id])).rows[0];
     requireState(row,'publication has no retained candidate');
     return readRollingMainlineCandidateV1(readStateText(stringColumn(row.candidate_text,'mainline candidate')));
   }
 
   private publicationConfigurationDigest(rollingExecutionConfigV3:RollingExecutionConfigV3,rollingGraph:RollingGraph):string {
     return crypto.createHash('sha256').update(JSON.stringify({execution:rollingExecutionConfigV3,project:rollingGraph.projectConfiguration})).digest('hex');
+  }
+
+  // Traceability: implements REQ-ROLLING-PUBLICATION-REPAIR
+  async repairPublication(campaignId:string,id:string,rollingPublicationRepairReviewV1:RollingPublicationRepairReviewV1):Promise<RollingPublicationRepairV1> {
+    const checkedRollingPublicationRepairReviewV1=readRollingPublicationRepairReviewV1(rollingPublicationRepairReviewV1);
+    return this.transaction(campaignId,async poolClient=> {
+      const row=(await poolClient.query<Record<string,unknown>>('SELECT state,pending_refresh_id FROM ponytail_index.rolling_publication_batch_v1 WHERE project_id=$1 AND campaign_id=$2 AND batch_id=$3',[this.projectId,campaignId,id])).rows[0];
+      requireState(row,'publication batch is missing');
+      const previous=(await poolClient.query<Record<string,unknown>>('SELECT repair_text FROM ponytail_index.rolling_publication_repair_v1 WHERE project_id=$1 AND campaign_id=$2 AND batch_id=$3 AND previous_revision=$4',[this.projectId,campaignId,id,checkedRollingPublicationRepairReviewV1.previousRevision])).rows[0];
+      if(previous) {
+        const rollingPublicationRepairV1=readRollingPublicationRepairV1(readStateText(stringColumn(previous.repair_text,'publication repair')));
+        requireState(isDeepStrictEqual(rollingPublicationRepairV1.review,checkedRollingPublicationRepairReviewV1),'publication repair retry differs from its original review');
+        return rollingPublicationRepairV1;
+      }
+      requireState(row.state==='QA_FAILED'&&row.pending_refresh_id===null,'repair requires the original failed QA with no pending refresh');
+      const rollingPublicationBatchClaimV1=await this.publicationClaim(poolClient,campaignId,id);
+      const previousRollingMainlineCandidateV1=await this.publicationCandidate(poolClient,campaignId,id);
+      const repairedRollingMainlineCandidateV1=validateRollingPublicationRepair(rollingPublicationBatchClaimV1,previousRollingMainlineCandidateV1,checkedRollingPublicationRepairReviewV1);
+      const rollingPublicationRepairV1=readRollingPublicationRepairV1({schemaVersion:1,id:crypto.randomUUID(),batchId:id,review:checkedRollingPublicationRepairReviewV1,previousCandidate:previousRollingMainlineCandidateV1,candidate:repairedRollingMainlineCandidateV1});
+      await poolClient.query('INSERT INTO ponytail_index.rolling_publication_repair_v1(project_id,campaign_id,batch_id,repair_id,previous_revision,repair_text) VALUES($1,$2,$3,$4,$5,$6)',[this.projectId,campaignId,id,rollingPublicationRepairV1.id,previousRollingMainlineCandidateV1.revision,JSON.stringify(rollingPublicationRepairV1)]);
+      await poolClient.query("UPDATE ponytail_index.rolling_publication_batch_v1 SET state='CANDIDATE',repair_id=$4,refresh_id=NULL,qa_id=NULL WHERE project_id=$1 AND campaign_id=$2 AND batch_id=$3",[this.projectId,campaignId,id,rollingPublicationRepairV1.id]);
+      return rollingPublicationRepairV1;
+    });
   }
 
   private publicationQaConfiguration(rollingCampaignRow:RollingCampaignRow):RollingPublicationQaConfiguration {

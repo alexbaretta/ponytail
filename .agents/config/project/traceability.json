@@ -166,6 +166,10 @@
     {
       "id": "REQ-ROLLING-READONLY-COLLECTION",
       "sourcePath": "pm/requirements/rolling-campaigns.md"
+    },
+    {
+      "id": "REQ-ROLLING-PUBLICATION-REPAIR",
+      "sourcePath": "pm/requirements/rolling-campaigns.md"
     }
   ],
   "artifacts": [
@@ -1466,7 +1470,7 @@
     },
     {
       "class": "plan",
-      "path": "pm/plans/in_progress/2026-10-13-rolling-recovery/plan.md",
+      "path": "pm/plans/closed/2026-10-13-rolling-recovery/plan.md",
       "locator": "text"
     }
   ],

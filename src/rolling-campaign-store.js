@@ -808,12 +808,33 @@ class RollingCampaignStore {
         });
     }
     async publicationCandidate(poolClient, campaignId, id) {
-        const row = (await poolClient.query("SELECT CASE WHEN b.refresh_id IS NULL THEN c.candidate_text ELSE (r.result_text::jsonb->'candidate')::text END AS candidate_text FROM ponytail_index.rolling_publication_batch_v1 b JOIN ponytail_index.rolling_publication_candidate_v1 c USING(project_id,campaign_id,batch_id) LEFT JOIN ponytail_index.rolling_mainline_refresh_v1 r ON r.project_id=b.project_id AND r.campaign_id=b.campaign_id AND r.batch_id=b.batch_id AND r.refresh_id=b.refresh_id WHERE b.project_id=$1 AND b.campaign_id=$2 AND b.batch_id=$3", [this.projectId, campaignId, id])).rows[0];
+        const row = (await poolClient.query("SELECT CASE WHEN b.refresh_id IS NOT NULL THEN (r.result_text::jsonb->'candidate')::text WHEN b.repair_id IS NOT NULL THEN (a.repair_text::jsonb->'candidate')::text ELSE c.candidate_text END AS candidate_text FROM ponytail_index.rolling_publication_batch_v1 b JOIN ponytail_index.rolling_publication_candidate_v1 c USING(project_id,campaign_id,batch_id) LEFT JOIN ponytail_index.rolling_mainline_refresh_v1 r ON r.project_id=b.project_id AND r.campaign_id=b.campaign_id AND r.batch_id=b.batch_id AND r.refresh_id=b.refresh_id LEFT JOIN ponytail_index.rolling_publication_repair_v1 a ON a.project_id=b.project_id AND a.campaign_id=b.campaign_id AND a.batch_id=b.batch_id AND a.repair_id=b.repair_id WHERE b.project_id=$1 AND b.campaign_id=$2 AND b.batch_id=$3", [this.projectId, campaignId, id])).rows[0];
         requireState(row, 'publication has no retained candidate');
         return (0, rolling_publication_js_1.readRollingMainlineCandidateV1)(readStateText(stringColumn(row.candidate_text, 'mainline candidate')));
     }
     publicationConfigurationDigest(rollingExecutionConfigV3, rollingGraph) {
         return node_crypto_1.default.createHash('sha256').update(JSON.stringify({ execution: rollingExecutionConfigV3, project: rollingGraph.projectConfiguration })).digest('hex');
+    }
+    async repairPublication(campaignId, id, rollingPublicationRepairReviewV1) {
+        const checkedRollingPublicationRepairReviewV1 = (0, rolling_publication_js_1.readRollingPublicationRepairReviewV1)(rollingPublicationRepairReviewV1);
+        return this.transaction(campaignId, async (poolClient) => {
+            const row = (await poolClient.query('SELECT state,pending_refresh_id FROM ponytail_index.rolling_publication_batch_v1 WHERE project_id=$1 AND campaign_id=$2 AND batch_id=$3', [this.projectId, campaignId, id])).rows[0];
+            requireState(row, 'publication batch is missing');
+            const previous = (await poolClient.query('SELECT repair_text FROM ponytail_index.rolling_publication_repair_v1 WHERE project_id=$1 AND campaign_id=$2 AND batch_id=$3 AND previous_revision=$4', [this.projectId, campaignId, id, checkedRollingPublicationRepairReviewV1.previousRevision])).rows[0];
+            if (previous) {
+                const rollingPublicationRepairV1 = (0, rolling_publication_js_1.readRollingPublicationRepairV1)(readStateText(stringColumn(previous.repair_text, 'publication repair')));
+                requireState((0, node_util_1.isDeepStrictEqual)(rollingPublicationRepairV1.review, checkedRollingPublicationRepairReviewV1), 'publication repair retry differs from its original review');
+                return rollingPublicationRepairV1;
+            }
+            requireState(row.state === 'QA_FAILED' && row.pending_refresh_id === null, 'repair requires the original failed QA with no pending refresh');
+            const rollingPublicationBatchClaimV1 = await this.publicationClaim(poolClient, campaignId, id);
+            const previousRollingMainlineCandidateV1 = await this.publicationCandidate(poolClient, campaignId, id);
+            const repairedRollingMainlineCandidateV1 = (0, rolling_publication_js_1.validateRollingPublicationRepair)(rollingPublicationBatchClaimV1, previousRollingMainlineCandidateV1, checkedRollingPublicationRepairReviewV1);
+            const rollingPublicationRepairV1 = (0, rolling_publication_js_1.readRollingPublicationRepairV1)({ schemaVersion: 1, id: node_crypto_1.default.randomUUID(), batchId: id, review: checkedRollingPublicationRepairReviewV1, previousCandidate: previousRollingMainlineCandidateV1, candidate: repairedRollingMainlineCandidateV1 });
+            await poolClient.query('INSERT INTO ponytail_index.rolling_publication_repair_v1(project_id,campaign_id,batch_id,repair_id,previous_revision,repair_text) VALUES($1,$2,$3,$4,$5,$6)', [this.projectId, campaignId, id, rollingPublicationRepairV1.id, previousRollingMainlineCandidateV1.revision, JSON.stringify(rollingPublicationRepairV1)]);
+            await poolClient.query("UPDATE ponytail_index.rolling_publication_batch_v1 SET state='CANDIDATE',repair_id=$4,refresh_id=NULL,qa_id=NULL WHERE project_id=$1 AND campaign_id=$2 AND batch_id=$3", [this.projectId, campaignId, id, rollingPublicationRepairV1.id]);
+            return rollingPublicationRepairV1;
+        });
     }
     publicationQaConfiguration(rollingCampaignRow) {
         const rollingGraph = this.collectGraph(rollingCampaignRow);

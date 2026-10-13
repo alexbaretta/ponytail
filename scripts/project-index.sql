@@ -483,6 +483,7 @@ ALTER TABLE rolling_publication_batch_v1 ADD COLUMN IF NOT EXISTS synchronized_r
 ALTER TABLE rolling_publication_batch_v1 ADD COLUMN IF NOT EXISTS synchronized_remote_revision text;
 ALTER TABLE rolling_publication_batch_v1 ADD COLUMN IF NOT EXISTS pending_refresh_id uuid;
 ALTER TABLE rolling_publication_batch_v1 ADD COLUMN IF NOT EXISTS refresh_id uuid;
+ALTER TABLE rolling_publication_batch_v1 ADD COLUMN IF NOT EXISTS repair_id uuid;
 DROP INDEX IF EXISTS rolling_publication_batch_v1_active_root;
 CREATE UNIQUE INDEX IF NOT EXISTS rolling_publication_batch_v1_active_root
 ON rolling_publication_batch_v1(project_id,coordinator_root) WHERE state <> 'PUBLISHED' OR synchronized_revision IS NULL;
@@ -560,6 +561,22 @@ CREATE TABLE IF NOT EXISTS rolling_mainline_refresh_v1 (
   result_text text CHECK (result_text IS NULL OR (result_text::jsonb->>'schemaVersion'='1'
     AND result_text::jsonb->>'batchId'=batch_id::text AND result_text::jsonb->>'id'=refresh_id::text) IS TRUE),
   PRIMARY KEY(project_id,campaign_id,batch_id,refresh_id),
+  FOREIGN KEY(project_id,campaign_id,batch_id)
+    REFERENCES rolling_publication_batch_v1(project_id,campaign_id,batch_id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS rolling_publication_repair_v1 (
+  project_id uuid NOT NULL,
+  campaign_id text NOT NULL,
+  batch_id uuid NOT NULL,
+  repair_id uuid NOT NULL,
+  previous_revision text NOT NULL,
+  repair_text text NOT NULL CHECK ((repair_text::jsonb->>'schemaVersion'='1'
+    AND repair_text::jsonb->>'batchId'=batch_id::text
+    AND repair_text::jsonb->>'id'=repair_id::text
+    AND repair_text::jsonb->'previousCandidate'->>'revision'=previous_revision) IS TRUE),
+  PRIMARY KEY(project_id,campaign_id,batch_id,repair_id),
+  UNIQUE(project_id,campaign_id,batch_id,previous_revision),
   FOREIGN KEY(project_id,campaign_id,batch_id)
     REFERENCES rolling_publication_batch_v1(project_id,campaign_id,batch_id) ON DELETE CASCADE
 );
