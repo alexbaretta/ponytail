@@ -27,3 +27,12 @@ Traceability: introduces REQ-ROLLING-PUBLICATION from issue 2026-10-12-BUG-canon
   Final combined repository
   acceptance remains the coordinator's gate after the related repairs land.
 - Evidence: ignored tmp/integrate-before.log and tmp/integrate-after.log.
+
+The first real GWEN publication exposed a transport defect: Keybase rejects a
+raw commit SHA as the push source. Publication now uses the checked full local
+branch ref, after verifying the exact reviewed HEAD, cleanliness and ancestry;
+initial campaign creation also uses its configured local branch ref. No force
+push or alternate publication path was introduced. An actual Git pre-push
+hook regression failed on the SHA source before repair; all 11 integration
+unit tests pass afterward. Retrying the original retained increment confirmed
+remote containment on origin/traceability. Final combined QA remains pending.

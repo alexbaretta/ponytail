@@ -106,10 +106,14 @@ test('normal increment push establishes containment and repeated reconciliation 
  assert.ok(rollingFastRebaseResult.state === 'REBASED');
  const rollingIncrementPublication = {rootPath:rollingReviewedIncrement.rootPath,target:rollingReviewedIncrement.target,
   revision:rollingFastRebaseResult.revision};
+ fs.writeFileSync(path.join(rollingReviewedIncrement.rootPath,'.git','hooks','pre-push'),
+  '#!/bin/sh\nset -eu\nread -r local_ref local_sha remote_ref remote_sha\nprintf "%s\\n" "$local_ref" > "$(git rev-parse --git-dir)/push-source.txt"\n', {mode:0o755});
  const rollingIncrementPublicationResult = publishRollingIncrement(rollingIncrementPublication);
  assert.equal(rollingIncrementPublicationResult.state,'PUBLISHED');
  assert.ok(rollingIncrementPublicationResult.state === 'PUBLISHED');
  assert.equal(rollingIncrementPublicationResult.remoteRevision,rollingFastRebaseResult.revision);
+ assert.equal(fs.readFileSync(path.join(rollingReviewedIncrement.rootPath,'.git','push-source.txt'),'utf8').trim(),
+  git(rollingReviewedIncrement.rootPath,['symbolic-ref','HEAD']));
  const remoteRoot = path.join(rollingIntegrationFixture.root,'origin.git');
  fs.writeFileSync(path.join(remoteRoot,'hooks','pre-receive'),'#!/bin/sh\nexit 1\n',{mode:0o755});
  assert.deepEqual(publishRollingIncrement(rollingIncrementPublication),rollingIncrementPublicationResult);

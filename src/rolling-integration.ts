@@ -265,8 +265,10 @@ export function publishRollingIncrement(rollingIncrementPublication: RollingIncr
  const spawnSyncReturns = gitResult(rootPath,['merge-base','--is-ancestor',rollingIncrementPublicationResult.remoteRevision,revision]);
  if (spawnSyncReturns.status === 1) return rollingIncrementPublicationResult;
  requireIntegration(spawnSyncReturns.status === 0,'increment ancestry check failed');
+ const sourceRef = git(rootPath,['symbolic-ref','--quiet','HEAD']).trim();
+ git(rootPath,['check-ref-format',sourceRef]);
  // No force flag or '+' refspec. An upstream race is reconciled, never reset.
- const pushSpawnSyncReturns = gitResult(rootPath,['push','--porcelain','--',target.remote,`${revision}:refs/heads/${target.branch}`]);
+ const pushSpawnSyncReturns = gitResult(rootPath,['push','--porcelain','--',target.remote,`${sourceRef}:refs/heads/${target.branch}`]);
  const reconciledRollingIncrementPublicationResult = reconcileRollingIncrementPublication(rollingIncrementPublication);
  if (reconciledRollingIncrementPublicationResult.state === 'REBASE_REQUIRED'
   && reconciledRollingIncrementPublicationResult.remoteRevision === rollingIncrementPublicationResult.remoteRevision) {

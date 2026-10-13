@@ -269,7 +269,7 @@ class RollingCampaignOperations {
         if (revision === (0, rolling_integration_js_1.git)(coordinatorRoot, ['rev-parse', mainlineRef]).trim()) {
             const remote = (0, rolling_integration_js_1.gitResult)(coordinatorRoot, ['ls-remote', '--exit-code', '--heads', '--', rollingResolvedConfiguration.mainline.remote, `refs/heads/${rollingResolvedConfiguration.incrementRef}`]);
             if (remote.status === 2)
-                (0, rolling_integration_js_1.gitResult)(coordinatorRoot, ['push', '--porcelain', '--', rollingResolvedConfiguration.mainline.remote, `${revision}:refs/heads/${rollingResolvedConfiguration.incrementRef}`]);
+                (0, rolling_integration_js_1.gitResult)(coordinatorRoot, ['push', '--porcelain', '--', rollingResolvedConfiguration.mainline.remote, `refs/heads/${rollingResolvedConfiguration.incrementRef}:refs/heads/${rollingResolvedConfiguration.incrementRef}`]);
             else if (remote.status !== 0)
                 throw new Error('rolling campaign: initial branch observation failed; retain the checkout');
         }

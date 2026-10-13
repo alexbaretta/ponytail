@@ -267,7 +267,7 @@ export class RollingCampaignOperations {
   const rollingIncrementPublication:RollingIncrementPublication = {rootPath:coordinatorRoot,target:{remote:rollingResolvedConfiguration.mainline.remote,branch:rollingResolvedConfiguration.incrementRef},revision};
   if (revision === git(coordinatorRoot,['rev-parse',mainlineRef]).trim()) {
    const remote = gitResult(coordinatorRoot,['ls-remote','--exit-code','--heads','--',rollingResolvedConfiguration.mainline.remote,`refs/heads/${rollingResolvedConfiguration.incrementRef}`]);
-   if (remote.status === 2) gitResult(coordinatorRoot,['push','--porcelain','--',rollingResolvedConfiguration.mainline.remote,`${revision}:refs/heads/${rollingResolvedConfiguration.incrementRef}`]);
+   if (remote.status === 2) gitResult(coordinatorRoot,['push','--porcelain','--',rollingResolvedConfiguration.mainline.remote,`refs/heads/${rollingResolvedConfiguration.incrementRef}:refs/heads/${rollingResolvedConfiguration.incrementRef}`]);
    else if (remote.status !== 0) throw new Error('rolling campaign: initial branch observation failed; retain the checkout');
   }
   const rollingIncrementPublicationResult = revision === git(coordinatorRoot,['rev-parse',mainlineRef]).trim()
