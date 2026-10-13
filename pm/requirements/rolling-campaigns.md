@@ -117,6 +117,12 @@ semantic conflicts when textual conflicts arise. Refresh required proof on
 changed inputs, push normally, and verify remote outcomes. Delivery does not
 by itself discharge obligations or establish mainline acceptance.
 
+The canonical `integrate` command must perform this complete lifecycle, retaining
+the original integration intent for retries. A changed replay reruns the configured
+focused QA against the actual candidate before publication. Textual conflicts
+return the original worker for semantic repair and fresh review; failed QA leaves
+the candidate unpublished. A confirmed delivery retry returns its original receipt.
+
 OBL-160 requires loss-aware reviewer replacement through the shared coordinator
 API, CLI and MCP. Supply the original review ID and an explicit loss reference;
 retain the prior request/verdict, fence its actor and obtain fresh review from

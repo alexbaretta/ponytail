@@ -1447,6 +1447,11 @@
     },
     {
       "class": "issue",
+      "path": "pm/bugs/in_progress/2026-10-12-BUG-canonical_increment_integration.md",
+      "locator": "text"
+    },
+    {
+      "class": "issue",
       "path": "pm/bugs/in_progress/2026-10-12-BUG-failed_worker_resumption.md",
       "locator": "text"
     }

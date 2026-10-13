@@ -2,7 +2,7 @@
 // Licensed under the MIT License. See LICENSE in the project root.
 import {readRollingObligationFixtureSource} from './helpers/rolling-obligation-source.js';
 import assert from 'node:assert/strict';
-import {readRollingIncrementClaimV1,rebasePreparedRollingIncrement,continueFastRebaseRollingIncrement,publishRollingIncrement,fastForwardRollingIncrement} from '../src/rolling-integration.js';
+import {readRollingIncrementPublicationV1,readRollingIncrementClaimV1,rebasePreparedRollingIncrement,continueFastRebaseRollingIncrement,publishRollingIncrement,fastForwardRollingIncrement} from '../src/rolling-integration.js';
 import test, { type TestContext } from 'node:test';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
@@ -70,7 +70,7 @@ test('native code fixture approvals permit exact shell-wrapped commands only for
 
 // Traceability: verifies REQ-ROLLING-STATE
 // Traceability: verifies REQ-ROLLING-SCHEDULING
-export interface ReviewScenario { readonly decision: RollingReviewOutcomeV1['decision']; readonly mode: 'manual' | 'protocol' | 'native'; readonly advancedCoordinator?: boolean; readonly replaceLostReviewer?: boolean; readonly automaticPublication?: boolean; readonly conflictContinuation?: boolean; readonly conflictRepair?: boolean; readonly integratedCertificates?: boolean; readonly publicationBatch?:'threshold' | 'partial'; readonly publicationFlush?:'completion' | 'quiescence' }
+export interface ReviewScenario { readonly decision: RollingReviewOutcomeV1['decision']; readonly mode: 'manual' | 'protocol' | 'native'; readonly advancedCoordinator?: boolean; readonly canonicalIntegration?: 'publish' | 'upstream' | 'conflict' | 'qa-failure' | 'recover'; readonly replaceLostReviewer?: boolean; readonly automaticPublication?: boolean; readonly conflictContinuation?: boolean; readonly conflictRepair?: boolean; readonly integratedCertificates?: boolean; readonly publicationBatch?:'threshold' | 'partial'; readonly publicationFlush?:'completion' | 'quiescence' }
 function declineReviewApprovals(rollingCodex: RollingCodex): void {
   rollingCodex.on('serverRequest', message => rollingCodex.respondToServer(message.id, { decision: 'decline' }));
 }
@@ -122,7 +122,7 @@ export async function runRollingReviewScenario(t: TestContext, reviewScenario: R
   const rollingProjectConfigV1: RollingProjectConfigV1 = {
     schemaVersion: 1, mainline: { remote: 'origin', branch: 'main' },
     managedWorktrees: { directory: 'managed', anchor: 'main' }, maxActiveWorkers: 1,
-    publicationSize: reviewScenario.publicationBatch === 'threshold' ? 1 : reviewScenario.publicationBatch || reviewScenario.publicationFlush ? 2 : 1, setupCommands: [], qa: { focused: [], publication: reviewScenario.publicationBatch ? [['env','-u','NODE_TEST_CONTEXT',process.execPath,'--test','fixture/full.test.ts']] : [['node', '--test']] },
+    publicationSize: reviewScenario.publicationBatch === 'threshold' ? 1 : reviewScenario.publicationBatch || reviewScenario.publicationFlush ? 2 : 1, setupCommands: [], qa: { focused: reviewScenario.canonicalIntegration ? [['node','fixture/current.ts']] : [], publication: reviewScenario.publicationBatch ? [['env','-u','NODE_TEST_CONTEXT',process.execPath,'--test','fixture/full.test.ts']] : [['node', '--test']] },
   };
   fs.writeFileSync(path.join(root, '.agents/config/project/rolling-campaigns.json'), JSON.stringify(rollingProjectConfigV1));
   let obligationDocumentV1: ObligationDocumentV1 = readRollingObligationFixtureSource();
@@ -358,9 +358,10 @@ export async function runRollingReviewScenario(t: TestContext, reviewScenario: R
   await assert.rejects(rollingCampaignStore.assertOperation('bound-fixture', boundRollingStoredAssignment.id, resumedBoundRollingAllocationResult.assignment.generation, unrelatedRollingGraph.digest, 'test'), /wrong frozen graph identity/);
 
   // A real reserved Git worktree supplies a candidate; external session acknowledgments above remain synthetic.
-  fs.writeFileSync(path.join(root, '.gitignore'), 'session_id.txt\nproof.txt\nmanaged/\n');
+  fs.writeFileSync(path.join(root, '.gitignore'), 'session_id.txt\nproof.txt\nmanaged/\n'+(reviewScenario.canonicalIntegration ? 'proof.txt.*\n' : ''));
   fs.mkdirSync(path.join(root, 'fixture'), { recursive: true });
-  fs.writeFileSync(path.join(root, 'fixture/current.ts'), 'export const value: number = 1;\n');
+  const fixtureTail=reviewScenario.canonicalIntegration ? '\n'+Array.from({length:12},(_,index)=>`// Stable upstream context ${index}\n`).join('') : '';
+  fs.writeFileSync(path.join(root, 'fixture/current.ts'), 'export const value: number = 1;\n'+fixtureTail);
   if (reviewScenario.publicationBatch) {
     fs.writeFileSync(path.join(root,'fixture/full.test.ts'),"import test from 'node:test';\nimport assert from 'node:assert/strict';\nimport {value} from './current.ts';\ntest('full fixture unit',()=>assert.equal(value,1));\n");
     execFileSync('git',['-C',root,'add','fixture/full.test.ts']);
@@ -389,16 +390,19 @@ export async function runRollingReviewScenario(t: TestContext, reviewScenario: R
   fs.writeFileSync(path.join(workerRoot, 'session_id.txt'), 'bound-session\n');
   // Publication success uses an approved value; the older reviewer Arc deliberately supplies value 2.
   fs.writeFileSync(path.join(workerRoot, 'fixture/current.ts'), reviewScenario.publicationBatch
-    ? 'export const value: number = 1; // approved publication candidate\n' : 'export const value: number = 2;\n');
+    ? 'export const value: number = 1; // approved publication candidate\n' : 'export const value: number = 2;\n'+fixtureTail);
   execFileSync('git', ['-C', workerRoot, 'add', '--', 'fixture/current.ts']);
   execFileSync('git', ['-C', workerRoot, '-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.test', 'commit', '-q', '-m', 'bounded submission fixture']);
   const revision = execFileSync('git', ['-C', workerRoot, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
-  const checkOutput = execFileSync(process.execPath, ['--check', path.join(workerRoot, 'fixture/current.ts')], { encoding: 'utf8' });
-  fs.writeFileSync(path.join(workerRoot, 'proof.txt'), `${checkOutput}Node syntax check exited 0\n`);
-  const submissionObligationEvidence: ObligationEvidence = { command: 'node --check fixture/current.ts', selection: ['focused fixture proof'],
+  const checkOutput = execFileSync(process.execPath, reviewScenario.canonicalIntegration
+   ? [path.join(workerRoot,'fixture/current.ts')] : ['--check', path.join(workerRoot, 'fixture/current.ts')], { encoding: 'utf8' });
+  fs.writeFileSync(path.join(workerRoot, 'proof.txt'), `${checkOutput}Focused fixture command exited 0\n`);
+  const submissionObligationEvidence: ObligationEvidence = { command: reviewScenario.canonicalIntegration ? 'node fixture/current.ts' : 'node --check fixture/current.ts', selection: ['focused fixture proof'],
     target: { identity: 'local', profile: 'fixture', verification: 'fixture/current.ts' }, revision, dirty: false,
     startedAt: new Date().toISOString(), completedAt: new Date().toISOString(), outcome: 'pass', skips: 0, failures: 0,
-    inputs: createObligationGitInputs(workerRoot, ['fixture/current.ts']), outputPath: 'proof.txt', finalization: 'pass' };
+    inputs: reviewScenario.canonicalIntegration === 'upstream'
+     ? ['fixture/current.ts','proof.txt'].map(relative=>({path:relative,digest:inputDigest(workerRoot,relative)}))
+     : createObligationGitInputs(workerRoot, ['fixture/current.ts']), outputPath: 'proof.txt', finalization: 'pass' };
   const rollingWorkerSubmissionV1: RollingWorkerSubmissionV1 = { schemaVersion: 1, campaignId: 'bound-fixture', assignmentId: submissionRollingStoredAssignment.id,
     generation: submissionRollingStoredAssignment.generation, sessionId: 'bound-session', graphDigest: submissionRollingGraph.digest,
     revision, baseCommit, stopped: true, proof: [{ operation: 'check', evidence: submissionObligationEvidence }] };
@@ -611,13 +615,71 @@ export async function runRollingReviewScenario(t: TestContext, reviewScenario: R
     execFileSync('git',['clone','--bare','-q',root,remoteRoot]);
     execFileSync('git',['-C',remoteRoot,'update-ref','refs/heads/campaign/bound-fixture',baseCommit]);
     execFileSync('git',['-C',root,'remote','add','origin',remoteRoot]);
-    if (reviewScenario.conflictContinuation || reviewScenario.conflictRepair) {
+    if (reviewScenario.conflictContinuation || reviewScenario.conflictRepair || reviewScenario.canonicalIntegration === 'conflict') {
       const upstreamRoot = path.join(root,'managed','upstream-conflict');
       execFileSync('git',['clone','-q','--branch','campaign/bound-fixture',remoteRoot,upstreamRoot]);
       fs.writeFileSync(path.join(upstreamRoot,'fixture/current.ts'),'export const value: number = 1; // upstream context\n');
       execFileSync('git',['-C',upstreamRoot,'add','fixture/current.ts']);
       execFileSync('git',['-C',upstreamRoot,'-c','user.name=Fixture','-c','user.email=fixture@example.test','commit','-q','-m','Upstream context']);
       execFileSync('git',['-C',upstreamRoot,'push','-q','origin','HEAD:refs/heads/campaign/bound-fixture']);
+    }
+    if (reviewScenario.canonicalIntegration) {
+      if (['upstream','qa-failure','recover'].includes(reviewScenario.canonicalIntegration)) {
+        const upstreamRoot=path.join(root,'managed','independent-upstream');
+        execFileSync('git',['clone','-q','--branch','campaign/bound-fixture',remoteRoot,upstreamRoot]);
+        if (reviewScenario.canonicalIntegration === 'qa-failure') fs.appendFileSync(path.join(upstreamRoot,'fixture/current.ts'),'throw new Error("QA failure after clean upstream replay");\n');
+        else fs.writeFileSync(path.join(upstreamRoot,'independent.txt'),'Independent upstream context\n');
+        execFileSync('git',['-C',upstreamRoot,'add','.']);
+        execFileSync('git',['-C',upstreamRoot,'-c','user.name=Fixture','-c','user.email=fixture@example.test','commit','-q','-m','Independent upstream change']);
+        execFileSync('git',['-C',upstreamRoot,'push','-q','origin','HEAD:refs/heads/campaign/bound-fixture']);
+      }
+      const initialRemote=execFileSync('git',['-C',remoteRoot,'rev-parse','refs/heads/campaign/bound-fixture'],{encoding:'utf8'}).trim();
+      if (reviewScenario.canonicalIntegration === 'recover') {
+        const originalIntent=await rollingCampaignStore.beginIncrementRebase('bound-fixture',rollingStoredReview.request.id);
+        const completedRebase=rebasePreparedRollingIncrement(workerRoot,originalIntent);
+        assert.equal(completedRebase.state,'REBASED');
+        // Simulate a lost process after Git replay and before its DB receipt.
+      }
+      const projectJournal:unknown=JSON.parse(fs.readFileSync(path.join(repositoryRoot,'ponytail-journal.json'),'utf8'));
+      assert.ok(typeof projectJournal === 'object' && projectJournal !== null);
+      fs.writeFileSync(path.join(root,'ponytail-journal.json'),JSON.stringify({...projectJournal,projectId,projectName:`rolling-${projectId}`}));
+      prepareCoordinatorIncrementCheckout(root,'campaign/bound-fixture');
+      const invoke=()=>spawnSync(process.execPath,[path.join(repositoryRoot,'src/rolling-operations.js'),'integrate','--campaign','bound-fixture','--review',rollingStoredReview.request.id],{cwd:root,encoding:'utf8',env:{...process.env,NODE_TEST_CONTEXT:undefined}});
+      const completed=invoke();
+      if (reviewScenario.canonicalIntegration === 'qa-failure') {
+        assert.equal(completed.status,1,completed.stdout+completed.stderr);assert.match(completed.stderr,/focused integration QA failed/);
+        assert.equal(execFileSync('git',['-C',remoteRoot,'rev-parse','refs/heads/campaign/bound-fixture'],{encoding:'utf8'}).trim(),initialRemote);
+        const retained=(await pool.query<Record<string,unknown>>('SELECT state,proof_text FROM ponytail_index.rolling_increment_v1 WHERE project_id=$1',[projectId])).rows[0];
+        assert.equal(retained?.state,'REBASED');assert.equal(retained.proof_text,null);
+        return;
+      }
+      assert.equal(completed.status,0,completed.stderr);
+      const response:unknown=JSON.parse(completed.stdout);
+      assert.ok(response && typeof response === 'object' && 'command' in response && response.command === 'integrate' && 'result' in response);
+      if (reviewScenario.canonicalIntegration === 'conflict') {
+        const retained=await rollingCampaignStore.incrementRebase('bound-fixture',rollingStoredReview.request.id);
+        assert.equal(retained?.result?.state,'TEXTUAL_CONFLICT');
+        assert.equal((await rollingCampaignStore.status('bound-fixture')).assignments[0]?.state,'REWORK');
+        assert.equal(execFileSync('git',['-C',remoteRoot,'rev-parse','refs/heads/campaign/bound-fixture'],{encoding:'utf8'}).trim(),initialRemote);
+        const repeated=invoke();assert.equal(repeated.status,0,repeated.stderr);assert.equal(repeated.stdout,completed.stdout);
+        return;
+      }
+      const publication=readRollingIncrementPublicationV1(response.result);
+      assert.equal(publication.result.state,'PUBLISHED');
+      assert.equal(execFileSync('git',['-C',remoteRoot,'rev-parse','refs/heads/campaign/bound-fixture'],{encoding:'utf8'}).trim(),publication.result.revision);
+      assert.equal(execFileSync('git',['-C',root,'rev-parse','HEAD'],{encoding:'utf8'}).trim(),publication.result.revision);
+      const repeated=invoke();assert.equal(repeated.status,0,repeated.stderr);assert.equal(repeated.stdout,completed.stdout);
+      const proof=(await pool.query<Record<string,unknown>>('SELECT proof_text FROM ponytail_index.rolling_increment_v1 WHERE project_id=$1',[projectId])).rows[0];
+      assert.ok(proof && typeof proof.proof_text === 'string');
+      const refreshed=parseRollingWorkerSubmission(proof.proof_text);assert.equal(refreshed.revision,publication.result.revision);
+      assert.equal(refreshed.baseCommit,initialRemote);
+      assert.equal((await rollingCampaignStore.reviews('bound-fixture',submissionRollingStoredAssignment.id))[0]?.outcome?.revision,revision);
+      if (reviewScenario.canonicalIntegration !== 'publish') {
+        assert.notEqual(refreshed.revision,revision);
+        assert.notEqual(refreshed.proof[0]?.evidence.outputPath,'proof.txt');
+      }
+      assert.equal((await pool.query<{count:number}>('SELECT count(*)::integer AS count FROM ponytail_index.rolling_increment_delivery_v1 WHERE project_id=$1',[projectId])).rows[0]?.count,1);
+      return;
     }
     const attempts = await Promise.allSettled(Array.from({length:4},()=>rollingCampaignStore.beginIncrementRebase('bound-fixture',rollingStoredReview.request.id)));
     assert.equal(attempts.filter(attempt=>attempt.status === 'fulfilled').length,1);
@@ -1916,3 +1978,11 @@ test('publication threshold uses configured M and persists one claim without cou
 // Traceability: verifies REQ-ROLLING-PUBLICATION
 for (const mainlinePublication of ['normal','lost_ack','race','unavailable','rejected'] as const) test(`mainline ${mainlinePublication} publication retains one observation and synchronizes the campaign after restart`,
  t=>runRollingReviewScenario(t,{decision:'accepted',mode:'manual',publicationBatch:'partial'},mainlinePublication));
+
+// Traceability: verifies REQ-ROLLING-INTERFACES
+// Traceability: verifies REQ-ROLLING-REVIEW
+// Traceability: verifies REQ-ROLLING-PUBLICATION
+for (const canonicalIntegration of ['publish','upstream','conflict','qa-failure','recover'] satisfies readonly NonNullable<ReviewScenario['canonicalIntegration']>[]) {
+  test(`canonical integrate CLI ${canonicalIntegration} preserves the reviewed actor and exact candidate`,
+    t=>runRollingReviewScenario(t,{decision:'accepted',mode:'manual',canonicalIntegration}));
+}

@@ -11,6 +11,8 @@ exports.gitResult = gitResult;
 exports.git = git;
 exports.prepareRollingIncrementRebase = prepareRollingIncrementRebase;
 exports.rebasePreparedRollingIncrement = rebasePreparedRollingIncrement;
+exports.observePreparedRollingIncrement = observePreparedRollingIncrement;
+exports.refreshRollingIncrementProof = refreshRollingIncrementProof;
 exports.fastRebaseRollingIncrement = fastRebaseRollingIncrement;
 exports.verifyRollingIncrementConflictInspection = verifyRollingIncrementConflictInspection;
 exports.continueFastRebaseRollingIncrement = continueFastRebaseRollingIncrement;
@@ -24,6 +26,8 @@ exports.readRollingIncrementPublicationV1 = readRollingIncrementPublicationV1;
 exports.readRollingIncrementPublicationResult = readRollingIncrementPublicationResult;
 exports.verifyRollingIncrementLocalIntegration = verifyRollingIncrementLocalIntegration;
 const node_fs_1 = __importDefault(require("node:fs"));
+const node_crypto_1 = __importDefault(require("node:crypto"));
+const obligations_js_1 = require("../skills/plan-execution/scripts/obligations.js");
 const node_path_1 = __importDefault(require("node:path"));
 const node_child_process_1 = require("node:child_process");
 function requireIntegration(condition, message) {
@@ -88,6 +92,54 @@ function rebasePreparedRollingIncrement(rootPath, rollingFastRebaseIdentity) {
     git(rootPath, ['merge-base', '--is-ancestor', reviewedBase, integrationBase]);
     const spawnSyncReturns = gitResult(rootPath, ['rebase', '-i', '--no-autostash', '--no-autosquash', '--no-update-refs', '--onto', integrationBase, reviewedBase], { ...process.env, GIT_SEQUENCE_EDITOR: 'true', GIT_TERMINAL_PROMPT: '0' });
     return rebaseResult(rootPath, { reviewedRevision, reviewedBase, integrationBase }, spawnSyncReturns);
+}
+function observePreparedRollingIncrement(rootPath, rollingFastRebaseIdentity) {
+    const observedRollingFastRebaseIdentity = { reviewedRevision: rollingFastRebaseIdentity.reviewedRevision,
+        reviewedBase: rollingFastRebaseIdentity.reviewedBase, integrationBase: rollingFastRebaseIdentity.integrationBase };
+    const conflictedPaths = git(rootPath, ['diff', '--name-only', '--diff-filter=U', '-z']).split('\0').filter(Boolean);
+    const rebasePath = git(rootPath, ['rev-parse', '--path-format=absolute', '--git-path', 'rebase-merge']).trim();
+    if (conflictedPaths.length > 0) {
+        requireIntegration(node_fs_1.default.readFileSync(node_path_1.default.join(rebasePath, 'orig-head'), 'utf8').trim() === rollingFastRebaseIdentity.reviewedRevision
+            && node_fs_1.default.readFileSync(node_path_1.default.join(rebasePath, 'onto'), 'utf8').trim() === rollingFastRebaseIdentity.integrationBase, 'retained conflict differs from original intent');
+        return { ...observedRollingFastRebaseIdentity, state: 'TEXTUAL_CONFLICT', originalCommit: commit(git(rootPath, ['rev-parse', 'REBASE_HEAD']).trim()), conflictedPaths };
+    }
+    requireIntegration(!node_fs_1.default.existsSync(rebasePath), 'original rebase is still unfinished; preserve it');
+    const revision = commit(git(rootPath, ['rev-parse', 'HEAD']).trim());
+    requireIntegration(git(rootPath, ['rev-parse', 'ORIG_HEAD']).trim() === rollingFastRebaseIdentity.reviewedRevision, 'completed replay lacks its original reviewed identity');
+    const rollingFastRebaseResult = { ...observedRollingFastRebaseIdentity, state: 'REBASED', revision,
+        proofRefreshRequired: revision !== rollingFastRebaseIdentity.reviewedRevision || rollingFastRebaseIdentity.integrationBase !== rollingFastRebaseIdentity.reviewedBase };
+    verifyRollingIncrementRebase(rootPath, rollingFastRebaseResult);
+    return rollingFastRebaseResult;
+}
+function refreshRollingIncrementProof(rollingIncrementClaimV1, rollingFastRebaseReady, rollingWorkerSubmissionV1, commands) {
+    const root = rollingIncrementClaimV1.rootPath;
+    requireIntegration(commands.length > 0, 'changed integration candidate requires configured focused QA');
+    requireIntegration(rollingWorkerSubmissionV1.proof.every(proof => commands.some(argv => argv.join(' ') === proof.evidence.command)), 'focused QA does not reproduce every reviewed proof command; reconcile its explicit argv selection before integration');
+    const outcomes = new Map();
+    for (const argv of commands) {
+        verifyRollingIncrementRebase(root, rollingFastRebaseReady);
+        const prior = rollingWorkerSubmissionV1.proof.find(proof => proof.evidence.command === argv.join(' '));
+        requireIntegration(prior, 'configured focused QA has no reviewed evidence scope');
+        const outputPath = `${prior.evidence.outputPath}.integration-${rollingIncrementClaimV1.id}-${node_crypto_1.default.randomUUID()}`;
+        requireIntegration(gitResult(root, ['check-ignore', '--quiet', '--', outputPath]).status === 0, 'integration QA output must be ignored in the existing proof directory');
+        const outputFile = node_path_1.default.join(root, outputPath);
+        requireIntegration(node_fs_1.default.realpathSync(node_path_1.default.dirname(outputFile)) === node_path_1.default.dirname(outputFile), 'integration QA output directory must not be a symlink');
+        const startedAt = new Date().toISOString();
+        const spawnSyncReturns = (0, node_child_process_1.spawnSync)(argv[0], argv.slice(1), { cwd: root, encoding: 'utf8' });
+        const completedAt = new Date().toISOString();
+        node_fs_1.default.writeFileSync(outputFile, (spawnSyncReturns.stdout ?? '') + (spawnSyncReturns.stderr ?? '') + (spawnSyncReturns.error?.message ?? ''), { flag: 'wx', mode: 0o600 });
+        requireIntegration(!spawnSyncReturns.error && spawnSyncReturns.status === 0, `focused integration QA failed; retained output: ${outputPath}`);
+        verifyRollingIncrementRebase(root, rollingFastRebaseReady);
+        outcomes.set(argv.join(' '), { startedAt, completedAt, outputPath });
+    }
+    return { ...rollingWorkerSubmissionV1, revision: rollingFastRebaseReady.revision, baseCommit: rollingFastRebaseReady.integrationBase,
+        proof: rollingWorkerSubmissionV1.proof.map((rollingSubmissionProof) => {
+            const outcome = outcomes.get(rollingSubmissionProof.evidence.command);
+            requireIntegration(outcome, 'reviewed proof command was not executed');
+            return { ...rollingSubmissionProof, evidence: { ...rollingSubmissionProof.evidence, ...outcome, revision: rollingFastRebaseReady.revision,
+                    inputs: { schemaVersion: 2, revision: rollingFastRebaseReady.revision, paths: (0, obligations_js_1.obligationInputPaths)(rollingSubmissionProof.evidence.inputs)
+                            .filter(relative => relative !== rollingSubmissionProof.evidence.outputPath || gitResult(root, ['check-ignore', '--quiet', '--', relative]).status !== 0) } } };
+        }) };
 }
 function fastRebaseRollingIncrement(rollingReviewedIncrement) {
     const rollingFastRebaseIdentity = prepareRollingIncrementRebase(rollingReviewedIncrement);

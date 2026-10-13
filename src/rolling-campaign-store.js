@@ -1021,6 +1021,8 @@ class RollingCampaignStore {
                 await this.validateIncrementClaim(poolClient, rollingCampaignRow, rollingIncrementClaimV1);
                 return rollingIncrementClaimV1;
             }
+            const rollingPublicationLane = await this.publicationLane(poolClient, rollingCampaignRow);
+            requireState(rollingPublicationLane.integrationCampaignId === null, 'another increment owns the integration lane; finish its original operation');
             const activePublications = (await poolClient.query("SELECT batch_id FROM ponytail_index.rolling_publication_batch_v1 WHERE project_id=$1 AND coordinator_root=$2 AND (state<>'PUBLISHED' OR synchronized_revision IS NULL)", [this.projectId, rollingCampaignRow.coordinator_root])).rows;
             requireState(activePublications.length === 0, 'mainline publication owns the coordinator checkout; finish it before claiming another increment');
             const row = (await poolClient.query('SELECT request_text,outcome_text,replacement_text FROM ponytail_index.rolling_review_v1 WHERE project_id=$1 AND campaign_id=$2 AND review_id=$3', [this.projectId, campaignId, reviewId])).rows[0];

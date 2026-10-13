@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-10-12-integration_command_skips_lifecycle",
+  "recorded_at": "2026-10-12T23:48:35-07:00",
+  "source_references": [
+    "pm/bugs/in_progress/2026-10-12-BUG-canonical_increment_integration.md"
+  ],
+  "context": {
+    "languages": [
+      "typescript"
+    ],
+    "frameworks": [],
+    "components": [
+      "rolling-campaign"
+    ],
+    "affected_boundaries": [
+      "canonical CLI to persisted integration lifecycle"
+    ],
+    "code_references": [
+      "src/rolling-operations.ts"
+    ]
+  },
+  "observed_behavior": "An accepted candidate fails immediately at publication because no rebase or proof has been recorded.",
+  "expected_behavior": "The canonical command performs the complete reviewed integration lifecycle.",
+  "causal_mechanism": "The command delegates only to the terminal publish method, while preparation and proof APIs are exercised only by direct store tests.",
+  "anti_pattern": {
+    "structural_description": "Expose the terminal lifecycle step as a complete operation.",
+    "why_it_fails": "Internal component tests can pass while the actual user command omits required states."
+  },
+  "correct_pattern": {
+    "required_invariant": "Canonical command acceptance exercises the real complete lifecycle.",
+    "implementation_description": "Reuse original claims, intents, Git replay, focused QA and publication receipts."
+  },
+  "applicability_conditions": [
+    "A public command orchestrates several durable lifecycle stages."
+  ],
+  "known_non_matches": [
+    "A documented low-level command intentionally performs only one stage."
+  ],
+  "confirmation_evidence": [
+    "Five canonical CLI cases fail before repair and pass afterward."
+  ],
+  "regression_proofs": [
+    "tests/rolling-campaign-store.integration.test.ts: canonical integrate CLI"
+  ]
+}

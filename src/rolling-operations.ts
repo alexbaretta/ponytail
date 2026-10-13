@@ -7,11 +7,11 @@ import {spawnSync} from 'node:child_process';
 import {parse} from 'lossless-json';
 import {databaseOptions} from './project-index-database.js';
 import {relativePath} from '../skills/plan-execution/scripts/obligations.js';
-import {collectRollingGraph,loadRollingConfiguration,readRollingCampaignRequest,type RollingCampaignRequest} from './rolling-campaign.js';
+import {collectRollingGraph,loadRollingConfiguration,parseRollingProjectConfig,readRollingCampaignRequest,type RollingCampaignRequest} from './rolling-campaign.js';
 import {resolveRollingManagedDirectory,validateRollingSessionMarker} from './rolling-worktrees.js';
 import {RollingCampaignStore,readRollingBindingHistoryConfiguration,type RollingBindingHistoryConfiguration,type RollingCampaignRegistration,type RollingCampaignRegistrationResult,type RollingGraphReconciliation,type RollingCoordinatorSnapshot,type RollingAllocationResult,type RollingAction,type RollingStoredAssignment,type RollingPublicationStatus,type RollingAssignmentRelease,type RollingWorkerDispatchStarted,type RollingWorkerDispatch,type RollingReviewDispatchStarted,type RollingStoredIncrement} from './rolling-campaign-store.js';
 import type {RollingStoredReview,RollingReviewerLoss} from './rolling-review.js';
-import {git,gitResult,publishRollingIncrement,reconcileRollingIncrementPublication,type RollingIncrementPublication} from './rolling-integration.js';
+import {git,gitResult,publishRollingIncrement,reconcileRollingIncrementPublication,type RollingIncrementPublication,type RollingIncrementRepair,type RollingIncrementRebaseV1,rebasePreparedRollingIncrement,observePreparedRollingIncrement,refreshRollingIncrementProof,fastForwardRollingIncrement} from './rolling-integration.js';
 import {RollingCodex,type RollingNativeServerRequest} from './rolling-codex.js';
 import {provisionRollingWorker,attachRollingWorker,recoverRollingWorkerCreation,resumeRollingWorker,dispatchRollingWorker,collectRollingWorkerSubmission,suspendRollingWorker,retireRollingWorker,type RollingWorkerContext} from './rolling-worker.js';
 import {dispatchRollingReview,collectRollingReview} from './rolling-review.js';
@@ -94,7 +94,7 @@ export interface RollingOperationResults {
  'suspend-worker':Awaited<ReturnType<typeof suspendRollingWorker>>;'retire-worker':Awaited<ReturnType<typeof retireRollingWorker>>;
  'rebind-worker':Awaited<ReturnType<RollingCampaignStore['rebindLease']>>;
  'request-review':Awaited<ReturnType<RollingCampaignStore['requestReview']>>;'dispatch-review':Awaited<ReturnType<typeof collectRollingReview>>;'inspect-review':Awaited<ReturnType<typeof collectRollingReview>>;
- integrate:Awaited<ReturnType<RollingCampaignStore['publishIncrement']>>;accept:Awaited<ReturnType<RollingCampaignStore['acceptIncrementCertificates']>>;
+ integrate:Awaited<ReturnType<RollingCampaignStore['publishIncrement']>> | RollingIncrementRepair;accept:Awaited<ReturnType<RollingCampaignStore['acceptIncrementCertificates']>>;
  'freeze-publication':Awaited<ReturnType<RollingCampaignStore['claimPublicationBatch']>>;
  'prepare-publication':RollingMainlineCandidateV1;'observe-preparation':RollingMainlineCandidateV1;
  'inspect-publication-conflict':Awaited<ReturnType<RollingCampaignStore['publicationContext']>>;
@@ -349,6 +349,48 @@ export class RollingCampaignOperations {
   return this.rollingCampaignStore.recordMainlineRefresh(campaignId,batchId,rollingMainlineRefreshResultV1);
  }
 
+ private returnIncrementForRepair(campaignId:string,reviewId:string,rollingIncrementRebaseV1:RollingIncrementRebaseV1):Promise<RollingIncrementRepair> {
+  if (rollingIncrementRebaseV1.result?.state !== 'TEXTUAL_CONFLICT') throw new Error('rolling campaign: worker repair requires a recorded textual conflict');
+  return this.rollingCampaignStore.requestIncrementRepair(campaignId,reviewId,
+   `Textual conflict in original integration ${rollingIncrementRebaseV1.incrementId}: ${rollingIncrementRebaseV1.result.originalCommit}; paths ${rollingIncrementRebaseV1.result.conflictedPaths.join(', ')}. Worker semantic repair and fresh original review are required.`);
+ }
+
+ // Traceability: implements REQ-ROLLING-REVIEW
+ // Traceability: implements REQ-ROLLING-PUBLICATION
+ async integrate(campaignId:string,reviewId:string):Promise<RollingOperationResults['integrate']> {
+  const rollingCoordinatorSnapshot=await this.status(campaignId);
+  const existingRollingStoredIncrement=rollingCoordinatorSnapshot.increments.find(increment=>increment.claim.reviewId === reviewId);
+  if (existingRollingStoredIncrement?.state === 'PUBLISHED') return this.rollingCampaignStore.observeIncrementPublication(campaignId,reviewId);
+  const retainedRollingIncrementRebaseV1=await this.rollingCampaignStore.incrementRebase(campaignId,reviewId);
+  if (existingRollingStoredIncrement && ['PUSHING','UNCONFIRMED','PUSH_REJECTED','REBASE_REQUIRED'].includes(existingRollingStoredIncrement.state)) {
+   if (fs.realpathSync(this.root) !== existingRollingStoredIncrement.claim.coordinatorRoot) throw new Error('rolling campaign: integration recovery requires the original coordinator checkout');
+   if (retainedRollingIncrementRebaseV1?.result?.state !== 'REBASED') throw new Error('rolling campaign: push recovery lacks its original candidate');
+   fastForwardRollingIncrement(existingRollingStoredIncrement.claim.coordinatorRoot,existingRollingStoredIncrement.claim.target.branch,retainedRollingIncrementRebaseV1.result.revision);
+   const observedRollingIncrementPublicationV1=await this.rollingCampaignStore.observeIncrementPublication(campaignId,reviewId);
+   if (observedRollingIncrementPublicationV1.result.state === 'PUBLISHED' || observedRollingIncrementPublicationV1.result.state === 'UNCONFIRMED') return observedRollingIncrementPublicationV1;
+   return this.rollingCampaignStore.retryIncrementPush(campaignId,reviewId);
+  }
+  if (retainedRollingIncrementRebaseV1?.result?.state === 'TEXTUAL_CONFLICT') return this.returnIncrementForRepair(campaignId,reviewId,retainedRollingIncrementRebaseV1);
+  const rollingIncrementClaimV1=await this.rollingCampaignStore.claimIncrement(campaignId,reviewId);
+  if (fs.realpathSync(this.root) !== rollingIncrementClaimV1.coordinatorRoot) throw new Error('rolling campaign: integration requires the original coordinator checkout');
+  const rollingIncrementRebaseV1=retainedRollingIncrementRebaseV1 ?? await this.rollingCampaignStore.beginIncrementRebase(campaignId,reviewId);
+  let rollingFastRebaseResult=rollingIncrementRebaseV1.result;
+  if (rollingFastRebaseResult === null) {
+   const rebasePath=git(rollingIncrementClaimV1.rootPath,['rev-parse','--path-format=absolute','--git-path','rebase-merge']).trim();
+   rollingFastRebaseResult=git(rollingIncrementClaimV1.rootPath,['rev-parse','HEAD']).trim() === rollingIncrementRebaseV1.reviewedRevision && !fs.existsSync(rebasePath)
+    ? rebasePreparedRollingIncrement(rollingIncrementClaimV1.rootPath,rollingIncrementRebaseV1) : observePreparedRollingIncrement(rollingIncrementClaimV1.rootPath,rollingIncrementRebaseV1);
+   await this.rollingCampaignStore.recordIncrementRebase(campaignId,reviewId,rollingFastRebaseResult);
+  }
+  if (rollingFastRebaseResult.state === 'TEXTUAL_CONFLICT') return this.returnIncrementForRepair(campaignId,reviewId,{...rollingIncrementRebaseV1,result:rollingFastRebaseResult});
+  const rollingStoredSubmissions=await this.rollingCampaignStore.submissions(campaignId,rollingIncrementClaimV1.assignmentId);
+  const reviewedRollingStoredSubmission=rollingStoredSubmissions.find(submission=>submission.submission.revision === rollingIncrementClaimV1.reviewedRevision && submission.submission.generation === rollingIncrementClaimV1.generation);
+  if (!reviewedRollingStoredSubmission) throw new Error('rolling campaign: integration lacks its exact reviewed submission');
+  const rollingPhysicalProjectConfig=parseRollingProjectConfig(fs.readFileSync(path.join(rollingIncrementClaimV1.coordinatorRoot,'.agents/config/project/rolling-campaigns.json'),'utf8'));
+  const rollingWorkerSubmissionV1=rollingFastRebaseResult.proofRefreshRequired ? refreshRollingIncrementProof(rollingIncrementClaimV1,rollingFastRebaseResult,reviewedRollingStoredSubmission.submission,rollingPhysicalProjectConfig.qa.focused) : reviewedRollingStoredSubmission.submission;
+  await this.rollingCampaignStore.recordIncrementProof(campaignId,reviewId,rollingWorkerSubmissionV1);
+  return this.rollingCampaignStore.publishIncrement(campaignId,reviewId);
+ }
+
  // Traceability: implements REQ-ROLLING-INTERFACES
  async execute(command:RollingCommandName,value:unknown,signal?:AbortSignal):Promise<RollingOperationResponse> {
   if (command === 'legacy') return {command,result:inspectRollingLegacy(this.root,value)};
@@ -395,7 +437,7 @@ export class RollingCampaignOperations {
     return collectRollingReview(this.rollingCampaignStore,rollingCodex,campaignId,reviewId,timeoutMs);
    })};
    case 'inspect-review': return {command,result:await this.native(signal,rollingCodex=>collectRollingReview(this.rollingCampaignStore,rollingCodex,stringField(input,'campaign'),stringField(input,'review'),timeoutMs))};
-   case 'integrate': return {command,result:await this.rollingCampaignStore.publishIncrement(stringField(input,'campaign'),stringField(input,'review'))};
+   case 'integrate': return {command,result:await this.integrate(stringField(input,'campaign'),stringField(input,'review'))};
    case 'accept': return {command,result:await this.rollingCampaignStore.acceptIncrementCertificates(stringField(input,'campaign'),stringField(input,'review'),stringField(input,'candidate'),stringArray(input.bindings))};
    case 'freeze-publication': {
     const campaignId = stringField(input,'campaign');const rollingGraphReconciliation = await this.reconcile(campaignId);

@@ -364,6 +364,52 @@ class RollingCampaignOperations {
             : (0, rolling_publication_js_1.observeRollingMainlineRefresh)(rollingPublicationContext.claim, rollingPublicationContext.refreshPreparation);
         return this.rollingCampaignStore.recordMainlineRefresh(campaignId, batchId, rollingMainlineRefreshResultV1);
     }
+    returnIncrementForRepair(campaignId, reviewId, rollingIncrementRebaseV1) {
+        if (rollingIncrementRebaseV1.result?.state !== 'TEXTUAL_CONFLICT')
+            throw new Error('rolling campaign: worker repair requires a recorded textual conflict');
+        return this.rollingCampaignStore.requestIncrementRepair(campaignId, reviewId, `Textual conflict in original integration ${rollingIncrementRebaseV1.incrementId}: ${rollingIncrementRebaseV1.result.originalCommit}; paths ${rollingIncrementRebaseV1.result.conflictedPaths.join(', ')}. Worker semantic repair and fresh original review are required.`);
+    }
+    async integrate(campaignId, reviewId) {
+        const rollingCoordinatorSnapshot = await this.status(campaignId);
+        const existingRollingStoredIncrement = rollingCoordinatorSnapshot.increments.find(increment => increment.claim.reviewId === reviewId);
+        if (existingRollingStoredIncrement?.state === 'PUBLISHED')
+            return this.rollingCampaignStore.observeIncrementPublication(campaignId, reviewId);
+        const retainedRollingIncrementRebaseV1 = await this.rollingCampaignStore.incrementRebase(campaignId, reviewId);
+        if (existingRollingStoredIncrement && ['PUSHING', 'UNCONFIRMED', 'PUSH_REJECTED', 'REBASE_REQUIRED'].includes(existingRollingStoredIncrement.state)) {
+            if (node_fs_1.default.realpathSync(this.root) !== existingRollingStoredIncrement.claim.coordinatorRoot)
+                throw new Error('rolling campaign: integration recovery requires the original coordinator checkout');
+            if (retainedRollingIncrementRebaseV1?.result?.state !== 'REBASED')
+                throw new Error('rolling campaign: push recovery lacks its original candidate');
+            (0, rolling_integration_js_1.fastForwardRollingIncrement)(existingRollingStoredIncrement.claim.coordinatorRoot, existingRollingStoredIncrement.claim.target.branch, retainedRollingIncrementRebaseV1.result.revision);
+            const observedRollingIncrementPublicationV1 = await this.rollingCampaignStore.observeIncrementPublication(campaignId, reviewId);
+            if (observedRollingIncrementPublicationV1.result.state === 'PUBLISHED' || observedRollingIncrementPublicationV1.result.state === 'UNCONFIRMED')
+                return observedRollingIncrementPublicationV1;
+            return this.rollingCampaignStore.retryIncrementPush(campaignId, reviewId);
+        }
+        if (retainedRollingIncrementRebaseV1?.result?.state === 'TEXTUAL_CONFLICT')
+            return this.returnIncrementForRepair(campaignId, reviewId, retainedRollingIncrementRebaseV1);
+        const rollingIncrementClaimV1 = await this.rollingCampaignStore.claimIncrement(campaignId, reviewId);
+        if (node_fs_1.default.realpathSync(this.root) !== rollingIncrementClaimV1.coordinatorRoot)
+            throw new Error('rolling campaign: integration requires the original coordinator checkout');
+        const rollingIncrementRebaseV1 = retainedRollingIncrementRebaseV1 ?? await this.rollingCampaignStore.beginIncrementRebase(campaignId, reviewId);
+        let rollingFastRebaseResult = rollingIncrementRebaseV1.result;
+        if (rollingFastRebaseResult === null) {
+            const rebasePath = (0, rolling_integration_js_1.git)(rollingIncrementClaimV1.rootPath, ['rev-parse', '--path-format=absolute', '--git-path', 'rebase-merge']).trim();
+            rollingFastRebaseResult = (0, rolling_integration_js_1.git)(rollingIncrementClaimV1.rootPath, ['rev-parse', 'HEAD']).trim() === rollingIncrementRebaseV1.reviewedRevision && !node_fs_1.default.existsSync(rebasePath)
+                ? (0, rolling_integration_js_1.rebasePreparedRollingIncrement)(rollingIncrementClaimV1.rootPath, rollingIncrementRebaseV1) : (0, rolling_integration_js_1.observePreparedRollingIncrement)(rollingIncrementClaimV1.rootPath, rollingIncrementRebaseV1);
+            await this.rollingCampaignStore.recordIncrementRebase(campaignId, reviewId, rollingFastRebaseResult);
+        }
+        if (rollingFastRebaseResult.state === 'TEXTUAL_CONFLICT')
+            return this.returnIncrementForRepair(campaignId, reviewId, { ...rollingIncrementRebaseV1, result: rollingFastRebaseResult });
+        const rollingStoredSubmissions = await this.rollingCampaignStore.submissions(campaignId, rollingIncrementClaimV1.assignmentId);
+        const reviewedRollingStoredSubmission = rollingStoredSubmissions.find(submission => submission.submission.revision === rollingIncrementClaimV1.reviewedRevision && submission.submission.generation === rollingIncrementClaimV1.generation);
+        if (!reviewedRollingStoredSubmission)
+            throw new Error('rolling campaign: integration lacks its exact reviewed submission');
+        const rollingPhysicalProjectConfig = (0, rolling_campaign_js_1.parseRollingProjectConfig)(node_fs_1.default.readFileSync(node_path_1.default.join(rollingIncrementClaimV1.coordinatorRoot, '.agents/config/project/rolling-campaigns.json'), 'utf8'));
+        const rollingWorkerSubmissionV1 = rollingFastRebaseResult.proofRefreshRequired ? (0, rolling_integration_js_1.refreshRollingIncrementProof)(rollingIncrementClaimV1, rollingFastRebaseResult, reviewedRollingStoredSubmission.submission, rollingPhysicalProjectConfig.qa.focused) : reviewedRollingStoredSubmission.submission;
+        await this.rollingCampaignStore.recordIncrementProof(campaignId, reviewId, rollingWorkerSubmissionV1);
+        return this.rollingCampaignStore.publishIncrement(campaignId, reviewId);
+    }
     async execute(command, value, signal) {
         if (command === 'legacy')
             return { command, result: inspectRollingLegacy(this.root, value) };
@@ -417,7 +463,7 @@ class RollingCampaignOperations {
                     return (0, rolling_review_js_1.collectRollingReview)(this.rollingCampaignStore, rollingCodex, campaignId, reviewId, timeoutMs);
                 }) };
             case 'inspect-review': return { command, result: await this.native(signal, rollingCodex => (0, rolling_review_js_1.collectRollingReview)(this.rollingCampaignStore, rollingCodex, stringField(input, 'campaign'), stringField(input, 'review'), timeoutMs)) };
-            case 'integrate': return { command, result: await this.rollingCampaignStore.publishIncrement(stringField(input, 'campaign'), stringField(input, 'review')) };
+            case 'integrate': return { command, result: await this.integrate(stringField(input, 'campaign'), stringField(input, 'review')) };
             case 'accept': return { command, result: await this.rollingCampaignStore.acceptIncrementCertificates(stringField(input, 'campaign'), stringField(input, 'review'), stringField(input, 'candidate'), stringArray(input.bindings)) };
             case 'freeze-publication': {
                 const campaignId = stringField(input, 'campaign');

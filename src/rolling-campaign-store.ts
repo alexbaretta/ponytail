@@ -1253,6 +1253,8 @@ export class RollingCampaignStore {
         await this.validateIncrementClaim(poolClient,rollingCampaignRow,rollingIncrementClaimV1);
         return rollingIncrementClaimV1;
       }
+      const rollingPublicationLane=await this.publicationLane(poolClient,rollingCampaignRow);
+      requireState(rollingPublicationLane.integrationCampaignId === null,'another increment owns the integration lane; finish its original operation');
       const activePublications = (await poolClient.query<Record<string,unknown>>(
         "SELECT batch_id FROM ponytail_index.rolling_publication_batch_v1 WHERE project_id=$1 AND coordinator_root=$2 AND (state<>'PUBLISHED' OR synchronized_revision IS NULL)",
         [this.projectId,rollingCampaignRow.coordinator_root])).rows;

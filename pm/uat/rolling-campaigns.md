@@ -150,6 +150,12 @@ Traceability: verifies REQ-ROLLING-REVIEW
    applies the declared textual-conflict semantic-review exception.
 3. **Step REVIEW-PUSH:** Acceptance contribution to [OBL-54](../plans/closed/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-54), [OBL-55](../plans/closed/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-55), [OBL-56](../plans/closed/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-56). Integrate after applicable proof. Reconcile rejected or
    uncertain pushes by actual remote state, never force or assumed success.
+   Invoke the canonical `integrate` CLI against an accepted review with unchanged
+   and independently advanced upstream bases. Verify actual remote publication,
+   fresh focused proof for changed candidates and idempotent delivery receipts.
+   A textual conflict returns the original worker; focused QA failure must leave
+   the remote unchanged. Restart after Git replay before recording its result and
+   recover the same retained intent rather than replaying or allocating anew.
 
 ## Arc ROLL-PUBLISH: Publish tested batches
 
