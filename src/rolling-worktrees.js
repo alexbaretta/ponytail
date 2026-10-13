@@ -55,12 +55,17 @@ function resolveRollingManagedDirectory(coordinatorRoot) {
     const root = node_fs_1.default.realpathSync(coordinatorRoot);
     requireCheckout(git(root, ['rev-parse', '--show-toplevel']) === root, 'coordinator must be a Git checkout root');
     const inventory = git(root, ['worktree', 'list', '--porcelain', '-z']).split('\0')
-        .filter(field => field.startsWith('worktree ')).map(field => node_fs_1.default.realpathSync(field.slice(9)));
+        .filter(field => field.startsWith('worktree ')).map(field => field.slice(9));
     const mainRoot = inventory[0];
     requireCheckout(mainRoot !== undefined, 'repository has no main worktree');
     const configuration = readConfiguration(root);
     const directory = readRollingPhysicalDirectory(node_path_1.default.resolve(mainRoot, configuration.managedWorktrees.directory));
     for (const checkout of inventory) {
+        if (checkout === root)
+            continue;
+        if (node_path_1.default.dirname(checkout) !== directory &&
+            !statIfPresent(node_path_1.default.join(checkout, '.agents/config/project/rolling-campaigns.json')))
+            continue;
         const configured = readConfiguration(checkout);
         requireCheckout(readRollingPhysicalDirectory(node_path_1.default.resolve(mainRoot, configured.managedWorktrees.directory)) === directory, `managed directory differs in ${checkout}`);
     }

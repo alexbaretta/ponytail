@@ -118,3 +118,30 @@ test('retirement cleanup verifies owner, preserves caches and user work, and ret
  assert.throws(()=>cleanupRollingWorktree(root,rollingWorktreeRetirement),/unintegrated commits/);
  assert.ok(fs.existsSync(path.join(rollingWorktreeLease.rootPath,'session_id.txt')));
 });
+
+// Traceability: verifies REQ-ROLLING-WORKERS
+test('rolling adoption leaves unconfigured historical worktrees untouched and validates every participant', t => {
+ const fixture=fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(),'rolling-adoption-')));
+ t.after(()=>fs.rmSync(fixture,{recursive:true,force:true}));
+ const main=path.join(fixture,'main');fs.mkdirSync(main);
+ const git=(cwd:string,argv:readonly string[]):string=>execFileSync('git',['-C',cwd,...argv],{encoding:'utf8',stdio:['ignore','pipe','pipe']}).trim();
+ git(main,['init','-q']);git(main,['config','user.name','Fixture']);git(main,['config','user.email','fixture@example.test']);
+ fs.writeFileSync(path.join(main,'README.md'),'historical base');git(main,['add','.']);git(main,['commit','-qm','historical base']);
+ const coordinator=path.join(fixture,'coordinator');git(main,['worktree','add','-qb','campaign',coordinator]);
+ const legacy=path.join(fixture,'legacy');git(main,['worktree','add','-qb','legacy',legacy]);
+ const configuration:RollingProjectConfigV2={schemaVersion:2,mainline:{remote:'origin',branch:'main'},managedWorktrees:{directory:path.join(fixture,'pool'),anchor:'main'},maxActiveWorkers:10,publicationSize:1,setupCommands:[],retirementCommands:[],qa:{focused:[],publication:[['node','--test']]}};
+ const configurationPath='.agents/config/project/rolling-campaigns.json';
+ fs.mkdirSync(path.join(coordinator,path.dirname(configurationPath)),{recursive:true});fs.writeFileSync(path.join(coordinator,configurationPath),JSON.stringify(configuration));
+ assert.equal(resolveRollingManagedDirectory(coordinator).directory,configuration.managedWorktrees.directory);
+ assert.equal(fs.existsSync(path.join(main,configurationPath)),false);assert.equal(fs.existsSync(path.join(legacy,configurationPath)),false);
+ fs.mkdirSync(path.join(legacy,path.dirname(configurationPath)),{recursive:true});
+ const conflictingConfiguration:RollingProjectConfigV2={...configuration,managedWorktrees:{directory:path.join(fixture,'other-pool'),anchor:'main'}};
+ fs.writeFileSync(path.join(legacy,configurationPath),JSON.stringify(conflictingConfiguration));assert.throws(()=>resolveRollingManagedDirectory(coordinator),/directory differs/);
+ fs.unlinkSync(path.join(legacy,configurationPath));
+ const worker=path.join(configuration.managedWorktrees.directory,'101');git(main,['worktree','add','-qb','worker',worker]);
+ assert.throws(()=>resolveRollingManagedDirectory(coordinator),/missing regular project configuration/);
+ fs.mkdirSync(path.join(worker,path.dirname(configurationPath)),{recursive:true});fs.writeFileSync(path.join(worker,configurationPath),JSON.stringify(configuration));
+ assert.equal(resolveRollingManagedDirectory(worker).directory,configuration.managedWorktrees.directory);
+ git(main,['worktree','remove',legacy]);git(main,['worktree','add','-qb','stale',legacy]);fs.rmSync(legacy,{recursive:true,force:true});
+ assert.equal(resolveRollingManagedDirectory(coordinator).directory,configuration.managedWorktrees.directory,'an absent unowned historical checkout is not a rolling participant');
+});

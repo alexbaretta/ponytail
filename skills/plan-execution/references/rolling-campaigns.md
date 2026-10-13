@@ -65,7 +65,10 @@ retirement commands, and focused/publication QA argv selections. Resolve target
 selection from stakeholder request, project default, then Git init.defaultBranch.
 N defaults to 10 active workers; publication M defaults to 1, with campaign and
 project overrides. Worktree numbers begin at 101. Relative pool paths use the
-configured common main-checkout anchor; every checkout resolves the same pool.
+configured common main-checkout anchor. The coordinator, every managed pool
+member and every other rolling-configured checkout resolve the same pool.
+Historical checkouts without rolling configuration are not participants and
+need no edits; they cannot receive a rolling assignment without current policy.
 
 Initialize with `ponytail campaign init --request @request.json`. Physical V1
 request fields are `schemaVersion: 1`, absolute `coordinatorRoot`, repository-relative

@@ -1399,6 +1399,11 @@
       "class": "implementation",
       "path": "skills/requirements-traceability/scripts/coverage-rules.ts",
       "locator": "text"
+    },
+    {
+      "class": "issue",
+      "path": "pm/bugs/closed/2026-10-12-BUG-rolling_adoption_legacy_worktrees.md",
+      "locator": "text"
     }
   ],
   "entities": [],

@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-10-12-rolling_adoption_legacy_worktrees",
+  "recorded_at": "2026-10-12T19:54:45-07:00",
+  "source_references": [
+    "pm/bugs/closed/2026-10-12-BUG-rolling_adoption_legacy_worktrees.md"
+  ],
+  "context": {
+    "languages": [
+      "typescript"
+    ],
+    "frameworks": [],
+    "components": [
+      "rolling campaign worktree allocation"
+    ],
+    "affected_boundaries": [
+      "Git worktree inventory to rolling participant configuration"
+    ],
+    "code_references": [
+      "src/rolling-worktrees.ts:63",
+      "tests/rolling-worktrees.integration.test.ts:122"
+    ]
+  },
+  "observed_behavior": "A coordinator could not adopt rolling campaigns while historical Git worktrees lacked rolling configuration or retained absent checkout registrations.",
+  "expected_behavior": "Validate the coordinator and every actual rolling participant without editing or enrolling unrelated historical checkouts.",
+  "causal_mechanism": "Pool resolution treated every Git inventory entry as a configured rolling participant and eagerly resolved absent historical roots.",
+  "anti_pattern": {
+    "structural_description": "An inventory containing historical and current checkouts was treated as the membership authority for one configured campaign capability.",
+    "why_it_fails": "Historical branches and retained unowned registrations do not necessarily carry the newer configuration or have an existing root."
+  },
+  "correct_pattern": {
+    "required_invariant": "The coordinator, all registered roots directly in the managed pool, and all checkouts declaring rolling configuration must agree on physical pool identity.",
+    "implementation_description": "Keep Git registration paths intact and validate configuration only for these participants; do not resolve or mutate unrelated historical checkout roots."
+  },
+  "applicability_conditions": [
+    "A repository adopts rolling campaigns after creating historical worktrees."
+  ],
+  "known_non_matches": [
+    "A registered pool member missing configuration still fails.",
+    "A checkout declaring a different managed pool still fails."
+  ],
+  "confirmation_evidence": [
+    "The new real-Git adoption regression failed at the missing historical primary configuration before the repair and passed after it."
+  ],
+  "regression_proofs": [
+    "tests/rolling-worktrees.integration.test.ts: rolling adoption leaves unconfigured historical worktrees untouched and validates every participant"
+  ]
+}

@@ -65,12 +65,17 @@ export function resolveRollingManagedDirectory(coordinatorRoot: string): Rolling
   const root = fs.realpathSync(coordinatorRoot);
   requireCheckout(git(root, ['rev-parse', '--show-toplevel']) === root, 'coordinator must be a Git checkout root');
   const inventory = git(root, ['worktree', 'list', '--porcelain', '-z']).split('\0')
-    .filter(field => field.startsWith('worktree ')).map(field => fs.realpathSync(field.slice(9)));
+    .filter(field => field.startsWith('worktree ')).map(field => field.slice(9));
   const mainRoot = inventory[0];
   requireCheckout(mainRoot !== undefined, 'repository has no main worktree');
   const configuration = readConfiguration(root);
   const directory = readRollingPhysicalDirectory(path.resolve(mainRoot, configuration.managedWorktrees.directory));
   for (const checkout of inventory) {
+    if (checkout === root) continue;
+    // Historical branches do not participate until they declare rolling policy.
+    // Every pool member must carry it, even during recovery of a missing root.
+    if (path.dirname(checkout) !== directory &&
+        !statIfPresent(path.join(checkout, '.agents/config/project/rolling-campaigns.json'))) continue;
     const configured = readConfiguration(checkout);
     requireCheckout(readRollingPhysicalDirectory(path.resolve(mainRoot, configured.managedWorktrees.directory)) === directory,
       `managed directory differs in ${checkout}`);
