@@ -14,12 +14,12 @@ import { stringify } from 'lossless-json';
 import {prepareRollingMainlineRefresh,mergeRollingMainlineRefresh,observeRollingMainlineRefresh,prepareRollingMainline,mergeRollingMainline,observeRollingMainlineCandidate,runRollingPublicationQa} from '../src/rolling-publication.js';
 import { databaseOptions } from '../src/project-index-database.js';
 import { collectRollingGraph, parseRollingProjectConfig,type RollingPhysicalProjectConfig, type RollingProjectConfigV1, type RollingBindingsV1, type RollingBinding, type RollingGraph } from '../src/rolling-campaign.js';
-import { RollingCampaignStore, type RollingCampaignRegistration, type RollingAllocationResult, type RollingWorkerDispatchAttached, type RollingReviewDispatchAttached, type RollingSessionAttachment, type RollingStoredAssignment, type RollingExecutionConfigV1, type RollingAssignmentScopeV1, type RollingExecutionConfigV2, type RollingAssignmentScopeV2, type RollingCampaignStatus } from '../src/rolling-campaign-store.js';
+import { RollingCampaignStore, type RollingCampaignRegistration, type RollingAllocationResult, type RollingWorkerDispatchAttached, type RollingReviewDispatchAttached, type RollingReviewDispatch, type RollingSessionAttachment, type RollingStoredAssignment, type RollingExecutionConfigV1, type RollingAssignmentScopeV1, type RollingExecutionConfigV2, type RollingAssignmentScopeV2, type RollingCampaignStatus } from '../src/rolling-campaign-store.js';
 import { isObligationGitInputs, obligationInputPaths, createObligationGitInputs, inputDigest, parseObligationDocument, type ObligationDocumentV1, type ObligationBaseline, type Obligation, type ObligationCertificate, type ObligationCheckpoint } from '../skills/plan-execution/scripts/obligations.js';
 import type { ObligationBindingHistoryV1, ObligationBindingRevisionV1 } from '../skills/plan-execution/scripts/obligation-binding-history.js';
 import type { ObligationEvidence } from '../skills/plan-execution/scripts/obligations.js';
 import { parseRollingWorkerSubmission, type RollingWorkerSubmissionV1, type RollingSubmissionProof } from '../src/rolling-worker-submission.js';
-import { readRollingReviewRequestV1,readRollingReviewOutcomeV1,dispatchRollingReview, collectRollingReview, type RollingReviewOutcomeV1, type RollingStoredReview } from '../src/rolling-review.js';
+import { readRollingReviewRequestV1,readRollingReviewOutcomeV1,dispatchRollingReview, collectRollingReview, startRollingReview, type RollingReviewOutcomeV1, type RollingStoredReview } from '../src/rolling-review.js';
 import { retireRollingWorker, provisionRollingWorker, attachRollingWorker, suspendRollingWorker, collectRollingWorkerSubmission, recoverRollingWorkerCreation, observeRollingWorkerInitialization, resumeRollingWorker, parseRollingWorkerResumption, dispatchRollingWorker, buildRollingWorkerInstructions, type RollingWorkerInitialization } from '../src/rolling-worker.js';
 import { RollingCodex, RollingObservationTimeout, type RollingNativeTurn, type RollingNativeThread, type RollingNativeServerRequest } from '../src/rolling-codex.js';
 import {RollingCampaignOperations,authorizeRollingWorkerRebaseApproval} from '../src/rolling-operations.js';
@@ -1123,7 +1123,7 @@ async function observeRollingWorkerTurn(t: TestContext, rollingCodex: RollingCod
   }
 }
 
-export async function runRollingWorkerScenario(t: TestContext, mode: 'protocol' | 'native', operation: 'attachment' | 'instructions' | 'suspension' | 'resumption' | 'recovery' | 'collection' | 'code' | 'inspection' | 'failed-turn', rework = false, integrationRepair = false, retirement = false): Promise<void> {
+export async function runRollingWorkerScenario(t: TestContext, mode: 'protocol' | 'native', operation: 'attachment' | 'instructions' | 'suspension' | 'resumption' | 'recovery' | 'collection' | 'code' | 'inspection' | 'failed-turn', rework = false, integrationRepair = false, retirement = false, startReviewer = false): Promise<void> {
   assert.ok(!integrationRepair || mode === 'protocol' && operation === 'collection');
   assert.ok(!rework || mode === 'native' && operation === 'code', 'correction Arc requires the real native code worker');
   const repositoryRoot = path.resolve(__dirname, '../..');
@@ -1567,6 +1567,29 @@ export async function runRollingWorkerScenario(t: TestContext, mode: 'protocol' 
     assert.equal((await rollingCampaignStore.status('worker-fixture')).assignments[0]?.activityStopped,true);
     assert.equal(execFileSync('git',['-C',rootPath,'status','--porcelain'],{encoding:'utf8'}),'');
     t.diagnostic(`component submission revision=${revision}; exact original turn=${rollingWorkerDispatchAttached.turnId}; session=${rollingSessionAttachment.sessionId}; focused QA=2; REVIEW persisted; native code/rebase Arc remains unverified`);
+    if (startReviewer) {
+      const reviewerRollingCodex = new RollingCodex({executable:process.execPath,
+        argv:[path.join(__dirname,'fixtures/rolling-codex-server.js'),'--reviewer']});
+      await reviewerRollingCodex.initialize();
+      try {
+        await assert.rejects(reviewerRollingCodex.resumeThread('thread-reviewer-fixture',rootPath), /no rollout found/);
+        const rollingStoredReview:RollingStoredReview = await startRollingReview(rollingCampaignStore,reviewerRollingCodex,
+          'worker-fixture',rollingAllocationResult.assignment.id,generation,revision);
+        assert.equal(rollingStoredReview.request.reviewerSessionId,'session-reviewer-fixture');
+        assert.equal(rollingStoredReview.outcome?.decision,'accepted');
+        const rollingReviewDispatch:RollingReviewDispatch | null = await rollingCampaignStore.reviewDispatch('worker-fixture',rollingStoredReview.request.id);
+        assert.equal(rollingReviewDispatch?.reviewerThreadId,'thread-reviewer-fixture');
+        assert.equal(rollingReviewDispatch?.state,'ATTACHED');
+        assert.ok(rollingReviewDispatch?.state === 'ATTACHED');
+        assert.equal(rollingReviewDispatch.turnId,'turn-1');
+        assert.deepEqual(await startRollingReview(new RollingCampaignStore(pool,projectId),reviewerRollingCodex,
+          'worker-fixture',rollingAllocationResult.assignment.id,generation,revision),rollingStoredReview);
+        assert.equal((await rollingCampaignStore.reviews('worker-fixture',rollingAllocationResult.assignment.id)).length,1);
+        assert.deepEqual(await rollingCampaignStore.reviewDispatch('worker-fixture',rollingStoredReview.request.id),rollingReviewDispatch);
+      } finally {await reviewerRollingCodex.close();}
+      return;
+    }
+
     if (integrationRepair) {
       const acceptedRollingStoredReview = await rollingCampaignStore.requestReview('worker-fixture',rollingAllocationResult.assignment.id,generation,revision,'original-reviewer');
       const acceptedRollingReviewOutcomeV1: RollingReviewOutcomeV1 = {schemaVersion:1,reviewId:acceptedRollingStoredReview.request.id,revision,
@@ -1986,3 +2009,8 @@ for (const canonicalIntegration of ['publish','upstream','conflict','qa-failure'
   test(`canonical integrate CLI ${canonicalIntegration} preserves the reviewed actor and exact candidate`,
     t=>runRollingReviewScenario(t,{decision:'accepted',mode:'manual',canonicalIntegration}));
 }
+
+// Traceability: verifies REQ-ROLLING-REVIEW
+// Traceability: verifies REQ-ROLLING-INTERFACES
+test('canonical reviewer creation starts the real review before resume and retains exact dispatch on retry',
+ t=>runRollingWorkerScenario(t,'protocol','collection',false,false,false,true));

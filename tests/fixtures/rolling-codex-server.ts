@@ -40,6 +40,8 @@ let archivedRoot:string | null = null;
 let foreignArchiveRoot = false;
 let externallyActive = false;
 let terminalDuringHistoryRead = false;
+const threadId = process.argv.includes('--reviewer') ? 'thread-reviewer-fixture' : 'thread-fixture';
+const sessionId = process.argv.includes('--reviewer') ? 'session-reviewer-fixture' : 'session-fixture';
 const turns = new Map<string, RollingNativeTurn>();
 lines.on('line', line => {
   const parsed: unknown = JSON.parse(line);
@@ -58,7 +60,7 @@ lines.on('line', line => {
     const cwd = text(params.cwd);
     archivedRoot = cwd;
     const fixtureThreadResult: FixtureThreadResult = {
-      thread: { id: 'thread-fixture', sessionId: 'session-fixture' }, cwd,
+      thread: { id: threadId, sessionId }, cwd,
       instructionSources: [`${cwd}/AGENTS.md`]
     };
     result = fixtureThreadResult;

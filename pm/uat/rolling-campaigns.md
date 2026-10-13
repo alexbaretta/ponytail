@@ -145,6 +145,9 @@ Traceability: verifies REQ-ROLLING-REVIEW
    reject late activity on the replaced request, and obtain a fresh exact-candidate
    review from the replacement. Verify both the replacement record and immutable
    prior requests/verdicts after restart; a timeout alone does not establish loss.
+   Create the first reviewer with `start-review`: its first turn is the actual
+   review, and retry retains the recorded distinct thread/session identities
+   without a bootstrap or duplicate review.
 2. **Step REVIEW-REBASE:** Acceptance contribution to [OBL-49](../plans/closed/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-49), [OBL-53](../plans/closed/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-53). Advance the campaign base with clean and conflicting
    edits. Full worker rebase inspects every commit; coordinator fast rebase
    applies the declared textual-conflict semantic-review exception.

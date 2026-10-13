@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-10-13-native_reviewer_empty_thread",
+  "recorded_at": "2026-10-13T00:12:33-07:00",
+  "source_references": [
+    "pm/bugs/in_progress/2026-10-13-BUG-native_reviewer_empty_thread.md"
+  ],
+  "context": {
+    "languages": [
+      "typescript"
+    ],
+    "frameworks": [],
+    "components": [
+      "native rolling review lifecycle"
+    ],
+    "affected_boundaries": [
+      "native thread creation to durable review dispatch"
+    ],
+    "code_references": [
+      "src/rolling-review.ts",
+      "src/rolling-operations.ts",
+      "tests/rolling-campaign-store.integration.test.ts"
+    ]
+  },
+  "observed_behavior": "A newly created empty native reviewer cannot resume after disconnect.",
+  "expected_behavior": "Canonical reviewer creation starts its actual review before closing the connection and retains the exact reviewer and turn.",
+  "causal_mechanism": "thread/start yields an identity before its first turn has persisted a resumable rollout.",
+  "anti_pattern": {
+    "structural_description": "Creation is treated as durable dispatch before any actual turn.",
+    "why_it_fails": "A later connection cannot resume the empty actor despite its recorded identity."
+  },
+  "correct_pattern": {
+    "required_invariant": "Create and dispatch the actual review on one connection, journaling original identity and dispatch before execution.",
+    "implementation_description": "Connect existing request and dispatch operations, reuse recorded reviewerThreadId for rework, collect original turns on retry, and preserve explicit loss replacement."
+  },
+  "applicability_conditions": [
+    "Native session persistence begins at the first actual turn."
+  ],
+  "known_non_matches": [
+    "An already dispatched retained reviewer resumes through its recorded thread ID."
+  ],
+  "confirmation_evidence": [
+    "The controlled native protocol rejects premature resume; canonical start-review executes review as turn-1 and retains its attached dispatch on retry."
+  ],
+  "regression_proofs": [
+    "tests/rolling-campaign-store.integration.test.ts: canonical reviewer creation starts the real review before resume and retains exact dispatch on retry"
+  ]
+}

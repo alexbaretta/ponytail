@@ -105,14 +105,25 @@ assignment, generation, action, review and batch IDs. Do not infer or replace th
    Invoke `suspend-worker` with its assignment/generation and prerequisite IDs.
    Ponytail observes stopped activity, retains ownership and frees active capacity.
    Replenish other eligible work; resume the retained actor when prerequisites clear.
+   A failed native instruction turn, such as temporary model capacity failure,
+   needs no invented obligation dependency. Use `suspend-worker --blockers '[]'`
+   with its original assignment/generation; Ponytail must observe that exact
+   failed turn and idle actor. Replenish/resume preserves the original session,
+   checkout and unfinished work. If it retains an owned rebase, inspect and
+   continue it before a fresh semantic replay; never reset its amendments away.
 5. Collect the exact terminal submission using `collect-submission`. Use
-   `request-review`, `dispatch-review` and `inspect-review` for adversarial review.
+   `start-review` to create an independent native reviewer and start its actual
+   review on the same connection before closing it. The command preserves the
+   recorded reviewer thread through corrections and collects the original turn
+   on retry. Use `request-review`, `dispatch-review` and `inspect-review` for
+   explicitly attached reviewers; never close a newly created empty thread and
+   assume it can later resume.
    Rejected work returns to the original worker and original reviewer after
    correction and refreshed QA/rebase. Acceptance cannot transfer to another SHA.
    If the reviewer is genuinely lost, retain its original review ID and observed
-   loss reference. Use `request-review --loss '{"reviewId":"<original-review>",
-   "lossReference":"<observed-loss-reference>"}'` with the replacement reviewer
-   identity. Ponytail retains/fences the original request and requires fresh review;
+   loss reference. Use `start-review --loss '{"reviewId":"<original-review>",
+   "lossReference":"<observed-loss-reference>"}'` to create the replacement reviewer, or `request-review --loss` with an
+   explicitly created replacement identity and immediate `dispatch-review`. Ponytail retains/fences the original request and requires fresh review;
    a timeout alone is not proof of loss.
 6. `integrate` performs the coordinator's fast rebase: inspect semantic conflicts
    when textual conflicts occur, preserving the deliberately shorter review window.

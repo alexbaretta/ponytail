@@ -117,6 +117,12 @@ semantic conflicts when textual conflicts arise. Refresh required proof on
 changed inputs, push normally, and verify remote outcomes. Delivery does not
 by itself discharge obligations or establish mainline acceptance.
 
+The canonical `start-review` command creates a reviewer and starts its actual
+review on the same native connection before closing it. Rework resumes the
+recorded reviewer thread; retries retain its exact original turn. An empty native
+thread is not a durable review actor, and replacement still requires an explicit
+observed loss reference.
+
 The canonical `integrate` command must perform this complete lifecycle, retaining
 the original integration intent for retries. A changed replay reruns the configured
 focused QA against the actual candidate before publication. Textual conflicts

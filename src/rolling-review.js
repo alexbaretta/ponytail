@@ -16,6 +16,7 @@ exports.readRollingReviewTurn = readRollingReviewTurn;
 exports.observeRollingReviewTurn = observeRollingReviewTurn;
 exports.dispatchRollingReview = dispatchRollingReview;
 exports.collectRollingReview = collectRollingReview;
+exports.startRollingReview = startRollingReview;
 const lossless_json_1 = require("lossless-json");
 function requireReview(condition, message) {
     if (!condition)
@@ -147,4 +148,32 @@ async function collectRollingReview(rollingCampaignStore, rollingCodex, campaign
         started: { turn: { id: rollingReviewDispatch.turnId } } };
     const rollingReviewOutcomeV1 = readRollingReviewTurn(rollingReviewTurn, rollingNativeTurn);
     return rollingCampaignStore.recordReviewOutcome(campaignId, reviewId, rollingNativeThread.thread.sessionId, rollingReviewOutcomeV1);
+}
+async function startRollingReview(rollingCampaignStore, rollingCodex, campaignId, assignmentId, generation, revision, rollingReviewerLoss = null, timeoutMs = 60000) {
+    const reviews = await rollingCampaignStore.reviews(campaignId, assignmentId);
+    const previousRollingStoredReview = reviews.at(-1);
+    const rollingReviewReplacementV1 = rollingReviewerLoss === null ? null
+        : await rollingCampaignStore.reviewReplacement(campaignId, rollingReviewerLoss.reviewId);
+    if (rollingReviewReplacementV1 !== null) {
+        const rollingStoredReview = await rollingCampaignStore.requestReview(campaignId, assignmentId, generation, revision, rollingReviewReplacementV1.reviewerSessionId, rollingReviewerLoss);
+        return collectRollingReview(rollingCampaignStore, rollingCodex, campaignId, rollingStoredReview.request.id, timeoutMs);
+    }
+    if (previousRollingStoredReview !== undefined && rollingReviewerLoss === null
+        && previousRollingStoredReview.request.generation === generation && previousRollingStoredReview.request.revision === revision) {
+        const rollingStoredReview = await rollingCampaignStore.requestReview(campaignId, assignmentId, generation, revision, previousRollingStoredReview.request.reviewerSessionId);
+        return collectRollingReview(rollingCampaignStore, rollingCodex, campaignId, rollingStoredReview.request.id, timeoutMs);
+    }
+    const rollingWorkerCreationV1 = await rollingCampaignStore.workerIdentity(campaignId, assignmentId, generation);
+    let rollingNativeThread;
+    if (previousRollingStoredReview !== undefined && rollingReviewerLoss === null) {
+        const rollingReviewDispatch = await rollingCampaignStore.reviewDispatch(campaignId, previousRollingStoredReview.request.id);
+        requireReview(rollingReviewDispatch?.state === 'ATTACHED', 'original reviewer thread is not attached; preserve the request and use dispatch-review or explicit observed loss');
+        rollingNativeThread = await rollingCodex.resumeThread(rollingReviewDispatch.reviewerThreadId, rollingWorkerCreationV1.rootPath);
+    }
+    else {
+        rollingNativeThread = await rollingCodex.startThread(rollingWorkerCreationV1.rootPath);
+    }
+    const rollingStoredReview = await rollingCampaignStore.requestReview(campaignId, assignmentId, generation, revision, rollingNativeThread.thread.sessionId, rollingReviewerLoss);
+    await dispatchRollingReview(rollingCampaignStore, rollingCodex, campaignId, rollingStoredReview.request.id, rollingNativeThread);
+    return collectRollingReview(rollingCampaignStore, rollingCodex, campaignId, rollingStoredReview.request.id, timeoutMs);
 }

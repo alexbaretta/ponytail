@@ -14,7 +14,7 @@ import type {RollingStoredReview,RollingReviewerLoss} from './rolling-review.js'
 import {git,gitResult,publishRollingIncrement,reconcileRollingIncrementPublication,type RollingIncrementPublication,type RollingIncrementRepair,type RollingIncrementRebaseV1,rebasePreparedRollingIncrement,observePreparedRollingIncrement,refreshRollingIncrementProof,fastForwardRollingIncrement} from './rolling-integration.js';
 import {RollingCodex,type RollingNativeServerRequest} from './rolling-codex.js';
 import {provisionRollingWorker,attachRollingWorker,recoverRollingWorkerCreation,resumeRollingWorker,dispatchRollingWorker,collectRollingWorkerSubmission,suspendRollingWorker,retireRollingWorker,type RollingWorkerContext} from './rolling-worker.js';
-import {dispatchRollingReview,collectRollingReview} from './rolling-review.js';
+import {dispatchRollingReview,collectRollingReview,startRollingReview} from './rolling-review.js';
 import type {RollingPublicationFrozen,RollingPublicationTrigger} from './rolling-publication.js';
 import {prepareRollingMainline,mergeRollingMainline,observeRollingMainlineCandidate,runRollingPublicationQa,prepareRollingMainlineRefresh,mergeRollingMainlineRefresh,observeRollingMainlineRefresh,type RollingMainlineCandidateV1,type RollingMainlineRefreshResultV1} from './rolling-publication.js';
 import {rollingCommandDefinitions,rollingCampaignHelp,isRollingCommandName,type RollingCommandName} from './rolling-cli-registry.js';
@@ -93,7 +93,7 @@ export interface RollingOperationResults {
  'dispatch-worker':Awaited<ReturnType<typeof collectRollingWorkerSubmission>>;'collect-submission':Awaited<ReturnType<typeof collectRollingWorkerSubmission>>;
  'suspend-worker':Awaited<ReturnType<typeof suspendRollingWorker>>;'retire-worker':Awaited<ReturnType<typeof retireRollingWorker>>;
  'rebind-worker':Awaited<ReturnType<RollingCampaignStore['rebindLease']>>;
- 'request-review':Awaited<ReturnType<RollingCampaignStore['requestReview']>>;'dispatch-review':Awaited<ReturnType<typeof collectRollingReview>>;'inspect-review':Awaited<ReturnType<typeof collectRollingReview>>;
+ 'start-review':Awaited<ReturnType<typeof startRollingReview>>;'request-review':Awaited<ReturnType<RollingCampaignStore['requestReview']>>;'dispatch-review':Awaited<ReturnType<typeof collectRollingReview>>;'inspect-review':Awaited<ReturnType<typeof collectRollingReview>>;
  integrate:Awaited<ReturnType<RollingCampaignStore['publishIncrement']>> | RollingIncrementRepair;accept:Awaited<ReturnType<RollingCampaignStore['acceptIncrementCertificates']>>;
  'freeze-publication':Awaited<ReturnType<RollingCampaignStore['claimPublicationBatch']>>;
  'prepare-publication':RollingMainlineCandidateV1;'observe-preparation':RollingMainlineCandidateV1;
@@ -116,7 +116,7 @@ export interface RollingReplenishment {
 export interface RollingReconcileDecision {readonly kind:'reconcile';readonly expectedDigest:string;readonly observedDigest:string;}
 export interface RollingWorkerDecision {readonly kind:'worker';readonly command:'provision-worker' | 'recover-worker' | 'resume-worker' | 'observe-resumption';readonly action:RollingAction;}
 export interface RollingReviewDecision {readonly kind:'review';readonly command:'dispatch-review' | 'inspect-review';readonly review:RollingStoredReview;}
-export interface RollingAssignmentDecision {readonly kind:'assignment';readonly command:'request-review' | 'dispatch-worker' | 'collect-submission' | 'integrate' | 'retire-worker';readonly assignment:RollingStoredAssignment;}
+export interface RollingAssignmentDecision {readonly kind:'assignment';readonly command:'start-review' | 'dispatch-worker' | 'collect-submission' | 'integrate' | 'retire-worker';readonly assignment:RollingStoredAssignment;}
 export interface RollingWorkerSuspensionDecision {readonly kind:'worker-suspension';readonly command:'suspend-worker';readonly assignment:RollingStoredAssignment;readonly blockers:readonly string[];}
 export interface RollingWorkerRebindingDecision {readonly kind:'worker-rebinding';readonly command:'rebind-worker';readonly assignment:RollingStoredAssignment;}
 export interface RollingWorkerDispatchBlockedDecision {readonly kind:'blocked-worker-dispatch';readonly reason:'instruction_turn_unknown';readonly assignment:RollingStoredAssignment;readonly dispatch:RollingWorkerDispatchStarted;}
@@ -190,7 +190,7 @@ export function projectRollingCoordinatorActions(rollingCoordinatorSnapshot:Roll
   } else if (rollingStoredAssignment.state === 'REWORK') decisions.push({kind:'worker-suspension',command:'suspend-worker',assignment:rollingStoredAssignment,blockers:[]});
   else if (['REVIEW','INTEGRATING','RETIRING'].includes(rollingStoredAssignment.state)
    && !rollingCoordinatorSnapshot.reviews.some(review=>review.request.assignmentId === rollingStoredAssignment.id && review.outcome === null))
-   decisions.push({kind:'assignment',command:rollingStoredAssignment.state === 'REVIEW' ? 'request-review' : rollingStoredAssignment.state === 'INTEGRATING' ? 'integrate' : 'retire-worker',assignment:rollingStoredAssignment});
+   decisions.push({kind:'assignment',command:rollingStoredAssignment.state === 'REVIEW' ? 'start-review' : rollingStoredAssignment.state === 'INTEGRATING' ? 'integrate' : 'retire-worker',assignment:rollingStoredAssignment});
  }
  for (const action of rollingCoordinatorSnapshot.actions) decisions.push({kind:'worker',command:action.kind === 'START_WORKER' ? action.state === 'PENDING' ? 'provision-worker' : 'recover-worker' : action.state === 'PENDING' ? 'resume-worker' : 'observe-resumption',action});
  if (rollingCoordinatorSnapshot.publicationReadiness.state === 'FROZEN') decisions.push({kind:'publication-freeze',command:'freeze-publication',selection:rollingCoordinatorSnapshot.publicationReadiness,flush:rollingCoordinatorSnapshot.publicationReadiness.trigger === 'threshold' ? null : rollingCoordinatorSnapshot.publicationReadiness.trigger});
@@ -428,6 +428,7 @@ export class RollingCampaignOperations {
    case 'collect-submission': return {command,result:await this.native(signal,rollingCodex=>collectRollingWorkerSubmission(this.rollingCampaignStore,rollingCodex,stringField(input,'campaign'),stringField(input,'assignment'),stringField(input,'generation'),timeoutMs),{campaignId:stringField(input,'campaign'),assignmentId:stringField(input,'assignment'),generation:stringField(input,'generation')})};
    case 'suspend-worker': return {command,result:await this.native(signal,rollingCodex=>suspendRollingWorker(this.rollingCampaignStore,rollingCodex,stringField(input,'campaign'),stringField(input,'assignment'),stringField(input,'generation'),stringArray(input.blockers),timeoutMs))};
    case 'retire-worker': return {command,result:await this.native(signal,rollingCodex=>retireRollingWorker(this.rollingCampaignStore,rollingCodex,stringField(input,'campaign'),stringField(input,'assignment'),stringField(input,'generation'),timeoutMs))};
+   case 'start-review': return {command,result:await this.native(signal,rollingCodex=>startRollingReview(this.rollingCampaignStore,rollingCodex,stringField(input,'campaign'),stringField(input,'assignment'),stringField(input,'generation'),stringField(input,'revision'),readRollingReviewerLoss(input.loss),timeoutMs))};
    case 'request-review': return {command,result:await this.rollingCampaignStore.requestReview(stringField(input,'campaign'),stringField(input,'assignment'),stringField(input,'generation'),stringField(input,'revision'),stringField(input,'reviewer'),readRollingReviewerLoss(input.loss))};
    case 'dispatch-review': return {command,result:await this.native(signal,async rollingCodex=> {
     const campaignId = stringField(input,'campaign'),reviewId = stringField(input,'review');

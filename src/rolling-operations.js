@@ -189,7 +189,7 @@ function projectRollingCoordinatorActions(rollingCoordinatorSnapshot) {
             decisions.push({ kind: 'worker-suspension', command: 'suspend-worker', assignment: rollingStoredAssignment, blockers: [] });
         else if (['REVIEW', 'INTEGRATING', 'RETIRING'].includes(rollingStoredAssignment.state)
             && !rollingCoordinatorSnapshot.reviews.some(review => review.request.assignmentId === rollingStoredAssignment.id && review.outcome === null))
-            decisions.push({ kind: 'assignment', command: rollingStoredAssignment.state === 'REVIEW' ? 'request-review' : rollingStoredAssignment.state === 'INTEGRATING' ? 'integrate' : 'retire-worker', assignment: rollingStoredAssignment });
+            decisions.push({ kind: 'assignment', command: rollingStoredAssignment.state === 'REVIEW' ? 'start-review' : rollingStoredAssignment.state === 'INTEGRATING' ? 'integrate' : 'retire-worker', assignment: rollingStoredAssignment });
     }
     for (const action of rollingCoordinatorSnapshot.actions)
         decisions.push({ kind: 'worker', command: action.kind === 'START_WORKER' ? action.state === 'PENDING' ? 'provision-worker' : 'recover-worker' : action.state === 'PENDING' ? 'resume-worker' : 'observe-resumption', action });
@@ -454,6 +454,7 @@ class RollingCampaignOperations {
             case 'collect-submission': return { command, result: await this.native(signal, rollingCodex => (0, rolling_worker_js_1.collectRollingWorkerSubmission)(this.rollingCampaignStore, rollingCodex, stringField(input, 'campaign'), stringField(input, 'assignment'), stringField(input, 'generation'), timeoutMs), { campaignId: stringField(input, 'campaign'), assignmentId: stringField(input, 'assignment'), generation: stringField(input, 'generation') }) };
             case 'suspend-worker': return { command, result: await this.native(signal, rollingCodex => (0, rolling_worker_js_1.suspendRollingWorker)(this.rollingCampaignStore, rollingCodex, stringField(input, 'campaign'), stringField(input, 'assignment'), stringField(input, 'generation'), stringArray(input.blockers), timeoutMs)) };
             case 'retire-worker': return { command, result: await this.native(signal, rollingCodex => (0, rolling_worker_js_1.retireRollingWorker)(this.rollingCampaignStore, rollingCodex, stringField(input, 'campaign'), stringField(input, 'assignment'), stringField(input, 'generation'), timeoutMs)) };
+            case 'start-review': return { command, result: await this.native(signal, rollingCodex => (0, rolling_review_js_1.startRollingReview)(this.rollingCampaignStore, rollingCodex, stringField(input, 'campaign'), stringField(input, 'assignment'), stringField(input, 'generation'), stringField(input, 'revision'), readRollingReviewerLoss(input.loss), timeoutMs)) };
             case 'request-review': return { command, result: await this.rollingCampaignStore.requestReview(stringField(input, 'campaign'), stringField(input, 'assignment'), stringField(input, 'generation'), stringField(input, 'revision'), stringField(input, 'reviewer'), readRollingReviewerLoss(input.loss)) };
             case 'dispatch-review': return { command, result: await this.native(signal, async (rollingCodex) => {
                     const campaignId = stringField(input, 'campaign'), reviewId = stringField(input, 'review');
