@@ -3,8 +3,14 @@
 // Generated from src/plan-input-command.ts by npm run build.
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.isRollingCampaignCommand = isRollingCampaignCommand;
 exports.parseCli = parseCli;
 const plan_input_queue_js_1 = require("./plan-input-queue.js");
+const rolling_cli_registry_js_1 = require("./rolling-cli-registry.js");
+function isRollingCampaignCommand(operation, argument) {
+    return (0, rolling_cli_registry_js_1.isRollingCommandName)(operation) && (argument === null
+        || argument !== '--json' && argument.startsWith('-'));
+}
 function parseCli(argv) {
     const command = argv[0];
     if (command === undefined)

@@ -1434,6 +1434,16 @@
       "class": "issue",
       "path": "pm/bugs/closed/2026-10-12-BUG-shared_document_pruning.md",
       "locator": "text"
+    },
+    {
+      "class": "integration-test",
+      "path": "tests/plan-input-rolling-hook.test.ts",
+      "locator": "text"
+    },
+    {
+      "class": "issue",
+      "path": "pm/bugs/closed/2026-10-12-BUG-rolling_command_hook_classification.md",
+      "locator": "text"
     }
   ],
   "entities": [],

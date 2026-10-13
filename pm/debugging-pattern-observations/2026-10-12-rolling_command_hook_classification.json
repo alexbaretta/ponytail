@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-10-12-rolling_command_hook_classification",
+  "recorded_at": "2026-10-12T22:35:40-07:00",
+  "source_references": [
+    "pm/bugs/closed/2026-10-12-BUG-rolling_command_hook_classification.md"
+  ],
+  "context": {
+    "languages": [
+      "typescript",
+      "javascript"
+    ],
+    "frameworks": [],
+    "components": [
+      "plan-input hook command classification"
+    ],
+    "affected_boundaries": [
+      "rolling CLI command to legacy authentication hook"
+    ],
+    "code_references": [
+      "hooks/plan-input.js",
+      "src/plan-input-command.ts",
+      "tests/plan-input-rolling-hook.test.ts"
+    ]
+  },
+  "observed_behavior": "Rolling named campaign flags are resolved as historical plan selectors and denied.",
+  "expected_behavior": "The rolling CLI owns its named-command validation; historical mutations retain coordinator authentication.",
+  "causal_mechanism": "A legacy command regex matches reused rolling operation names without distinguishing positional selectors from named flags.",
+  "anti_pattern": {
+    "structural_description": "Historical command classification interprets a newer canonical command grammar.",
+    "why_it_fails": "A valid named flag is treated as a legacy plan identity."
+  },
+  "correct_pattern": {
+    "required_invariant": "Command ownership follows the canonical registry and grammar while historical authorization stays intact.",
+    "implementation_description": "Typed registry membership distinguishes named rolling invocations; inspect every chained historical operation."
+  },
+  "applicability_conditions": [
+    "A historical hook and current CLI reuse command names with different argument grammar."
+  ],
+  "known_non_matches": [
+    "A positional historical plan invocation still belongs to the legacy hook."
+  ],
+  "confirmation_evidence": [
+    "Real hook subprocess failing-first and focused18/18 passing proof."
+  ],
+  "regression_proofs": [
+    "tests/plan-input-rolling-hook.test.ts"
+  ]
+}

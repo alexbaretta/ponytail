@@ -9,6 +9,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { resolveCampaignRoot } = require('../src/campaign-census');
 const { enqueue } = require('../src/plan-input');
+const { isRollingCampaignCommand } = require('../src/plan-input-command');
 const {
   bindWorker,
   releaseLedgerCoordinator,
@@ -155,8 +156,11 @@ function coordinatorCommand(toolInput) {
 
 function campaignCommand(toolInput) {
   for (const command of commandStrings(toolInput)) {
-    const match = /(?:^|(?:&&|\|\||;)\s*)ponytail campaign (status|reservation-audit|runnable-plans|schedule-ready|schedule-review-ready|schedule-planning-ready|ready-actions|observe|advance|reconcile|retry-dispatch|action-result|report-blocker|attach)(?:\s+([^\s;&|]+))?/.exec(command);
-    if (match) return { operation: match[1], argument: match[2] ?? null };
+    for (const match of command.matchAll(/(?:^|(?:&&|\|\||;)\s*)ponytail campaign (status|reservation-audit|runnable-plans|schedule-ready|schedule-review-ready|schedule-planning-ready|ready-actions|observe|advance|reconcile|retry-dispatch|action-result|report-blocker|attach)(?=\s|$|[;&|])(?:\s+([^\s;&|]+))?/g)) {
+      if (!isRollingCampaignCommand(match[1], match[2] ?? null)) {
+        return { operation: match[1], argument: match[2] ?? null };
+      }
+    }
   }
   return null;
 }

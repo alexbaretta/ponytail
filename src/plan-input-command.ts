@@ -1,6 +1,15 @@
 // Copyright (c) 2026 Alex Baretta. All rights reserved.
 // Licensed under the MIT License. See LICENSE in the project root.
 import { fail } from './plan-input-queue.js';
+import { isRollingCommandName } from './rolling-cli-registry.js';
+
+// Traceability: implements REQ-ROLLING-INTERFACES
+export function isRollingCampaignCommand(operation: string, argument: string | null): boolean {
+  // Positional plan selectors and the historical --json reader retain the
+  // legacy hook's authentication. Named rolling flags are checked by its CLI.
+  return isRollingCommandName(operation) && (argument === null
+    || argument !== '--json' && argument.startsWith('-'));
+}
 
 interface PlanInputCommandFields {
   readonly plan: string;
