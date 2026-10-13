@@ -52,6 +52,12 @@ second database service. Every indexed generation and query is isolated by
 project, repository, worktree, and corpus so one worktree's dirty state,
 failed refresh, or rebuild cannot replace another worktree's published answer.
 
+On 2026-10-12, the stakeholder clarified that repeated references to one stable
+entity across files must publish one entity and all distinct relationships.
+Human `ponytail traceability index` output must show an ASCII progress bar.
+Redirected output must use printable progress lines without terminal controls;
+`--json` must remain machine-readable without progress text.
+
 ## Search
 
 Ponytail must provide fast human and versioned-JSON queries over indexed entity

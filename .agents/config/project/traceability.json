@@ -1239,6 +1239,21 @@
       "class": "implementation",
       "path": "src/cli-help.ts",
       "locator": "text"
+    },
+    {
+      "class": "implementation",
+      "path": "src/traceability-projection.ts",
+      "locator": "text"
+    },
+    {
+      "class": "implementation",
+      "path": "src/index-progress.ts",
+      "locator": "text"
+    },
+    {
+      "class": "unit-test",
+      "path": "tests/traceability-projection.test.ts",
+      "locator": "text"
     }
   ],
   "entities": [],
@@ -1530,6 +1545,14 @@
     {
       "path": "src/cli-help.js",
       "sourcePath": "src/cli-help.ts"
+    },
+    {
+      "path": "src/traceability-projection.js",
+      "sourcePath": "src/traceability-projection.ts"
+    },
+    {
+      "path": "src/index-progress.js",
+      "sourcePath": "src/index-progress.ts"
     }
   ],
   "reverseViewPath": "pm/requirements/traceability.generated.md",

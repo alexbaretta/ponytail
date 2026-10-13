@@ -2,6 +2,8 @@
 // Copyright (c) 2026 Alex Baretta. All rights reserved.
 // Licensed under the MIT License. See LICENSE in the project root.
 
+const { normalizeTraceabilityPayloads } = require('./traceability-projection');
+const { indexProgress } = require('./index-progress');
 const crypto = require('node:crypto');
 const fs = require('node:fs');
 const os = require('node:os');
@@ -632,6 +634,7 @@ function collectTraceabilityProjection(configurationPath) {
     stateDigest,
     searchableFields: configuration.index.searchableFields,
     readPayload: ProjectIndexStorageReaders.variants.V1,
+    normalizePayloads: normalizeTraceabilityPayloads,
     files,
   };
 }
@@ -934,7 +937,7 @@ async function one(client, text, values) {
   return result.rows[0];
 }
 
-async function publishTraceabilityGeneration(client, projection) {
+async function publishTraceabilityGeneration(client, projection, onProgress) {
   await client.query('BEGIN');
   try {
     const lockKey = JSON.stringify([
@@ -1036,6 +1039,7 @@ async function publishTraceabilityGeneration(client, projection) {
         parsed.parse_result_id,
       ]);
       payloads.push(parsed.payload);
+      onProgress?.(payloads.length, projection.files.length, projection.corpus);
     }
     const normalized = projection.normalizePayloads === undefined
       ? {
@@ -1144,7 +1148,7 @@ async function indexTraceability(options = {}) {
   const pool = options.pool ?? new (require('pg').Pool)(databaseOptions(projection.worktreePath));
   const client = await pool.connect();
   try {
-    const publication = await publishTraceabilityGeneration(client, projection);
+    const publication = await publishTraceabilityGeneration(client, projection, options.onProgress);
     return TraceabilityIndexResultReaders.variants.V1({
       schemaVersion: 1,
       corpus: 'traceability',
@@ -1173,7 +1177,7 @@ async function indexProject(options = {}) {
   try {
     const corpora = [];
     for (const projection of [traceability, plans]) {
-      const publication = await publishTraceabilityGeneration(client, projection);
+      const publication = await publishTraceabilityGeneration(client, projection, options.onProgress);
       corpora.push({
         corpus: projection.corpus,
         generationId: publication.generationId,
@@ -2658,7 +2662,11 @@ async function run(args) {
         'usage: ponytail traceability index [--rebuild] [--json]',
       );
     }
-    const result = await indexProject({ rebuild: args.includes('--rebuild') });
+    const progress = args.includes('--json') ? null : indexProgress();
+    let result;
+    try {
+      result = await indexProject({ rebuild: args.includes('--rebuild'), onProgress: progress?.update });
+    } finally { progress?.stop(); }
     if (args.includes('--json')) process.stdout.write(`${JSON.stringify(result)}\n`);
     else for (const corpus of result.corpora) process.stdout.write(
       `indexed ${corpus.corpus}: ${corpus.processedFiles} files, ` +

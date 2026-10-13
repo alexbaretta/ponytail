@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-10-12-cross_file_entity_publication",
+  "recorded_at": "2026-10-12T17:04:18-07:00",
+  "source_references": [
+    "pm/requirements/traceability-index.md"
+  ],
+  "context": {
+    "languages": [
+      "javascript",
+      "typescript"
+    ],
+    "frameworks": [
+      "postgresql"
+    ],
+    "components": [
+      "project-index"
+    ],
+    "affected_boundaries": [
+      "per-file parse cache to published generation"
+    ],
+    "code_references": [
+      "src/project-index.js:1044",
+      "src/traceability-projection.ts"
+    ]
+  },
+  "observed_behavior": "Traceability index publication fails with duplicate entity_v1 primary key for a plan referenced by its plan document and sprint.",
+  "expected_behavior": "One stable entity and every distinct relationship publish successfully.",
+  "causal_mechanism": "Per-file maps deduplicate locally, but flattening multiple payloads repeats a global stable entity ID.",
+  "anti_pattern": {
+    "structural_description": "Flatten independently normalized records into a globally unique database table.",
+    "why_it_fails": "Local uniqueness does not establish uniqueness across file boundaries."
+  },
+  "correct_pattern": {
+    "required_invariant": "Each generation contains one entity per stable identity and one edge per source/target/role.",
+    "implementation_description": "Normalize the corpus by entity identity and relationship tuple before inserts."
+  },
+  "applicability_conditions": [
+    "Multiple configured files annotate one stable entity."
+  ],
+  "known_non_matches": [
+    "Unrelated requirements have different stable identities."
+  ],
+  "confirmation_evidence": [
+    "Pure parse inspection identified the duplicated plan identity.",
+    "Original live PostgreSQL command failed; corrected publication succeeded."
+  ],
+  "regression_proofs": [
+    "tests/traceability-projection.test.ts: cross-file plan references publish one entity and every distinct relationship",
+    "tests/project-index.test.js: publishes repeated cross-file plan references once without losing edges"
+  ]
+}

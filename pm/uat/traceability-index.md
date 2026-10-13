@@ -26,6 +26,10 @@ Traceability: verifies REQ-TRACEABILITY-INDEX
    - Every supported entity and annotation is present; the result identifies
      the repository revision, worktree, generation, processed files, and
      database schema version.
+   - Repeated plan identities in different files produce one entity and retain
+     every distinct relationship without a database uniqueness failure.
+   - Human output shows file progress for each corpus. Redirected output uses
+     printable lines; JSON output contains only the result.
 2. Reindex without changing inputs.
    - No source file is reparsed and the logical query result is unchanged.
 3. Create a second worktree at the same revision and index it.

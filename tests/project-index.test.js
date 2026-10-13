@@ -417,6 +417,29 @@ test('projects explicit inventories and stable prospective planning entities', (
   ]);
 });
 
+test('publishes repeated cross-file plan references once without losing edges', async () => {
+  const { configurationPath, root } = fixture();
+  const configuration = JSON.parse(fs.readFileSync(configurationPath, 'utf8'));
+  configuration.schemaVersion = 3;
+  configuration.entities = [];
+  for (const name of ['plan.md', 'sprint.md']) {
+    configuration.artifacts.push({ class: 'plan', path: name, locator: 'text' });
+    fs.writeFileSync(path.join(root, name),
+      'Traceability: plans-implementation ' + 'REQ-VALUE from plan delivery\n');
+  }
+  fs.writeFileSync(configurationPath, JSON.stringify(configuration));
+  const client = new BoundaryClient();
+  const projection = collectTraceabilityProjection(configurationPath);
+  projection.files = projection.files.filter(file => ['plan.md', 'sprint.md'].includes(file.path));
+  await publishTraceabilityGeneration(client, projection);
+  const entities = client.queries.filter(query => query.text.includes('INSERT INTO ponytail_index.entity_v1')
+    && query.values[1] === 'trace:plan:delivery');
+  assert.equal(entities.length, 1);
+  const relationships = client.queries.filter(query => query.text.includes('INSERT INTO ponytail_index.relationship_v1')
+    && query.values[1] === 'trace:plan:delivery');
+  assert.equal(relationships.length, 1);
+});
+
 test('does not parse files already present in the immutable cache', async () => {
   const { configurationPath } = fixture();
   const projection = collectTraceabilityProjection(configurationPath);
