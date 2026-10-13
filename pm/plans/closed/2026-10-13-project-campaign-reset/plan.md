@@ -29,3 +29,12 @@ removal, preserved source recovery refs/cache, pending cleanup restart, foreign
 repository and active Git-operation refusal, initialization fencing and harmless
 completed retry after new allocation. No live GWEN reset was performed; this is
 not a claim of live native acceptance or completed client campaign restart.
+
+## Acceptance correction, 2026-10-13
+
+The client restart check exposed a detached-checkout provisioning defect not
+covered by the original allocation-only regression. The live restart condition
+of OBL-RESET-1 remains unresolved; repair and extended proof are owned by
+[restart acceptance](../../in_progress/2026-10-13-campaign-restart-acceptance/plan.md).
+Earlier DB clearing/source preservation evidence remains valid. Delivery alone
+does not establish usable parallel development.

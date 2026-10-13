@@ -1539,7 +1539,7 @@ class RollingCampaignStore {
             return { id, generation: nextGeneration, lease: rollingAssignmentScopeV3.execution.lease };
         });
     }
-    async allocate(campaignId, expectedDigest, release = null) {
+    async allocate(campaignId, expectedDigest, release = null, existingOnly = false) {
         return this.transaction(campaignId, async (poolClient, rollingCampaignRow, rollingPoolRow) => {
             const rollingGraph = this.graph(rollingCampaignRow, expectedDigest);
             if (release) {
@@ -1563,16 +1563,47 @@ class RollingCampaignStore {
             const rollingAssignmentScopeV3 = this.scope(rollingGraph, rollingExecutionConfigV3, generation, selected.obligationId, selected.binding, selected.plannedPaths);
             let id = selected.assignmentId;
             let worktree;
+            const rollingManagedDirectory = existingOnly ? (0, rolling_worktrees_js_1.resolveRollingManagedDirectory)(rollingCampaignRow.coordinator_root) : null;
+            function validateExistingCheckout(rootPath, sessionId = null, expectedNumber = null) {
+                requireState(rollingManagedDirectory !== null && rollingManagedDirectory.worktrees.includes(rootPath) && node_fs_1.default.existsSync(rootPath) && node_fs_1.default.realpathSync(rootPath) === rootPath, 'available checkout has no registered physical root');
+                requireState(node_fs_1.default.realpathSync((0, rolling_integration_js_1.git)(rootPath, ['rev-parse', '--path-format=absolute', '--git-common-dir']).trim()) === node_fs_1.default.realpathSync((0, rolling_integration_js_1.git)(rollingCampaignRow.coordinator_root, ['rev-parse', '--path-format=absolute', '--git-common-dir']).trim()), 'pool checkout belongs to another repository');
+                const number = Number(node_path_1.default.basename(rootPath));
+                requireState(node_path_1.default.dirname(rootPath) === rollingManagedDirectory.directory && Number.isSafeInteger(number) && number >= 101 && String(number) === node_path_1.default.basename(rootPath) && (expectedNumber === null || number === expectedNumber), 'checkout escaped configured numbered pool or stored number');
+                if (sessionId !== null)
+                    (0, rolling_worktrees_js_1.validateRollingSessionMarker)(rootPath, sessionId);
+                else {
+                    (0, rolling_worktrees_js_1.requireRollingSessionMarkerAbsent)(rootPath);
+                    requireState((0, rolling_integration_js_1.git)(rootPath, ['status', '--porcelain']).trim() === '', 'retained pool checkout is dirty; preserve its claim');
+                }
+            }
             if (id) {
                 const assignment = assignments.find(item => item.id === id);
                 requireState(assignment && assignment.sessionId, 'inactive assignment has no resumable session');
                 worktree = readWorktree((await poolClient.query('SELECT * FROM ponytail_index.rolling_worktree_v1 WHERE project_id=$1 AND number=$2', [this.projectId, assignment.worktreeNumber])).rows[0]);
+                if (existingOnly)
+                    validateExistingCheckout(worktree.rootPath, assignment.sessionId, worktree.number);
                 await poolClient.query("UPDATE ponytail_index.rolling_assignment_v1 SET generation=$2,state='RESERVED',activity_stopped=false,blockers_text='[]',scope_text=$3 WHERE assignment_id=$1", [id, generation, JSON.stringify(rollingAssignmentScopeV3)]);
             }
             else {
+                if (rollingManagedDirectory !== null) {
+                    requireState(rollingManagedDirectory.directory === rollingPoolRow.managed_directory, 'physical pool differs from retained database identity');
+                    const known = (await poolClient.query('SELECT root_path FROM ponytail_index.rolling_worktree_v1 WHERE project_id=$1', [this.projectId])).rows;
+                    for (const rootPath of rollingManagedDirectory.worktrees) {
+                        const number = Number(node_path_1.default.basename(rootPath));
+                        if (node_path_1.default.dirname(rootPath) !== rollingManagedDirectory.directory || !Number.isSafeInteger(number) || number < 101 || String(number) !== node_path_1.default.basename(rootPath) || known.some(row => row.root_path === rootPath))
+                            continue;
+                        validateExistingCheckout(rootPath);
+                        await poolClient.query("INSERT INTO ponytail_index.rolling_worktree_v1(project_id,number,root_path,state) VALUES($1,$2,$3,'AVAILABLE')", [this.projectId, number, rootPath]);
+                    }
+                }
                 const available = (await poolClient.query("SELECT * FROM ponytail_index.rolling_worktree_v1 WHERE project_id=$1 AND state='AVAILABLE' ORDER BY number LIMIT 1", [this.projectId])).rows[0];
-                if (available)
+                if (existingOnly && !available)
+                    return { assignment: null, reason: 'no_available_worktree' };
+                if (available) {
                     worktree = readWorktree(available);
+                    if (existingOnly)
+                        validateExistingCheckout(worktree.rootPath, null, worktree.number);
+                }
                 else {
                     const numbers = (await poolClient.query('SELECT number FROM ponytail_index.rolling_worktree_v1 WHERE project_id=$1 ORDER BY number', [this.projectId])).rows;
                     let number = 101;

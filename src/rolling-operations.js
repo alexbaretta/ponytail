@@ -464,7 +464,9 @@ class RollingCampaignOperations {
                         throw new Error('rolling campaign: undeclared release fields');
                     rollingAssignmentRelease = { id: stringField(release, 'id'), generation: stringField(release, 'generation') };
                 }
-                return { command, result: await this.replenish(stringField(input, 'campaign'), trigger, rollingAssignmentRelease) };
+                if (input['existing-only'] !== undefined && typeof input['existing-only'] !== 'boolean')
+                    throw new Error('rolling campaign: existing-only must be boolean');
+                return { command, result: await this.replenish(stringField(input, 'campaign'), trigger, rollingAssignmentRelease, input['existing-only'] === true) };
             }
             case 'provision-worker': return { command, result: await this.native(signal, async (rollingCodex) => {
                     const campaignId = stringField(input, 'campaign'), actionId = stringField(input, 'action'), generation = stringField(input, 'generation');
@@ -542,17 +544,20 @@ class RollingCampaignOperations {
             case 'close': return { command, result: await this.rollingCampaignStore.closeCampaign(stringField(input, 'campaign')) };
         }
     }
-    async replenish(campaignId, trigger, rollingAssignmentRelease = null) {
+    async replenish(campaignId, trigger, rollingAssignmentRelease = null, existingOnly = false) {
         const rollingGraphReconciliation = await this.reconcile(campaignId);
         const initialRollingCoordinatorSnapshot = await this.status(campaignId);
         const allocations = [];
+        let stopReason = null;
         for (let index = 0; index < initialRollingCoordinatorSnapshot.configuration.maxActiveWorkers; index++) {
-            const rollingAllocationResult = await this.rollingCampaignStore.allocate(campaignId, rollingGraphReconciliation.graphDigest, index === 0 && rollingAssignmentRelease !== null ? rollingAssignmentRelease : undefined);
-            if (rollingAllocationResult.assignment === null)
+            const rollingAllocationResult = await this.rollingCampaignStore.allocate(campaignId, rollingGraphReconciliation.graphDigest, index === 0 && rollingAssignmentRelease !== null ? rollingAssignmentRelease : undefined, existingOnly);
+            if (rollingAllocationResult.assignment === null) {
+                stopReason = rollingAllocationResult.reason;
                 break;
+            }
             allocations.push(rollingAllocationResult);
         }
-        return { trigger, graphDigest: rollingGraphReconciliation.graphDigest, allocations, snapshot: await this.status(campaignId) };
+        return { trigger, graphDigest: rollingGraphReconciliation.graphDigest, allocations, stopReason, snapshot: await this.status(campaignId) };
     }
 }
 exports.RollingCampaignOperations = RollingCampaignOperations;

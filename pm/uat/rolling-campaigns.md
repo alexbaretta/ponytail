@@ -424,8 +424,20 @@ Obligation: OBL-RESET-1. Arc: ROLLING-RESET.
 2. Execute an authorized reset. Observe original session interruption/archival
    and project resource cleanup before ownership release. Verify source recovery
    refs, external Git registration/root removal, retained pool cache and absent
-   marker. Fresh initialization/allocation must succeed.
+   marker. Fresh initialization/allocation and provisioning from the detached
+   retained checkout must succeed without losing source or caches.
 3. Verify other project campaign rows and project indexes are unchanged.
 4. Interrupt cleanup, restart the same request and verify scheduling stays
    fenced until completion. Repeated completed request performs no new deletion.
    Changed actor/path, foreign writer or unresolved external push retains state.
+
+## ACC-ROLLING-EXISTING-POOL
+
+Traceability: verifies REQ-ROLLING-EXISTING-POOL
+Obligation: OBL-RESTART-1. Arc: ROLLING-EXISTING-POOL.
+
+After project reset, keep physical checkouts 101 and 103 with DB pool rows
+cleared and configured N=10. Replenish in existing-only mode: reserve 101 then
+103, report no available worktree when both are owned, and never reserve or
+create 102/104. Reject retained session markers and preserve dirty checkout
+claims. Original retained unblocked sessions remain preferred over new work.

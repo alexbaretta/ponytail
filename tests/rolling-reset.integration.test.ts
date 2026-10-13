@@ -8,12 +8,15 @@ import crypto from 'node:crypto';
 import {Pool} from 'pg';
 import {fixture,git} from './helpers/obligation-fixture.js';
 import {databaseOptions} from '../src/project-index-database.js';
-import {RollingCampaignStore,type RollingCampaignRegistration} from '../src/rolling-campaign-store.js';
+import {RollingCampaignStore,type RollingCampaignRegistration,type RollingConfigurationAmendmentRequestV1} from '../src/rolling-campaign-store.js';
 import {collectRollingGraph,type RollingProjectConfigV2,type RollingBindingsV1} from '../src/rolling-campaign.js';
 import {RollingCodex} from '../src/rolling-codex.js';
 import {identifyRollingWorkerCreation} from '../src/rolling-worker.js';
+import {provisionRollingWorktree,type RollingWorktreeLease} from '../src/rolling-worktrees.js';
+import {RollingCampaignOperations} from '../src/rolling-operations.js';
 import {type RollingResetRequestV1} from '../src/rolling-reset.js';
 // Traceability: verifies REQ-ROLLING-RESET
+// Traceability: verifies REQ-ROLLING-EXISTING-POOL
 test('project reset previews, archives original active actor, recovers source, resumes failed cleanup and isolates DB',async t=>{
  const obligationFixture=fixture(t),root=obligationFixture.root;
  const pool:Pool=new Pool(databaseOptions(path.resolve(__dirname,'../..')));
@@ -70,4 +73,31 @@ test('project reset previews, archives original active actor, recovers source, r
  await rollingCampaignStore.registerCampaign(rollingCampaignRegistration);assert.ok((await rollingCampaignStore.allocate('pilot',rollingGraph.digest)).assignment);
  assert.deepEqual(await rollingCampaignStore.resetProject(root,rollingResetRequestV1,true,rollingCodex),completedRollingProjectResetV1);
  assert.equal((await pool.query('SELECT 1 FROM ponytail_index.rolling_assignment_v1 WHERE project_id=$1',[projectId])).rows.length,1);
+ const expandedRollingProjectConfigV2:RollingProjectConfigV2={...rollingProjectConfigV2,maxActiveWorkers:10};
+ fs.writeFileSync(path.join(root,'.agents/config/project/rolling-campaigns.json'),JSON.stringify(expandedRollingProjectConfigV2));git(root,['add','.agents/config/project/rolling-campaigns.json']);git(root,['commit','-m','Existing physical pool concurrency']);
+ const extraRoot=path.join(managedDirectory,'103');git(root,['worktree','add','--detach',extraRoot,base]);
+ await rollingCampaignStore.reconcileCoordinator('pilot');
+ const rollingConfigurationAmendmentRequestV1:RollingConfigurationAmendmentRequestV1={schemaVersion:1,id:crypto.randomUUID(),expected:{mainline:{remote:'origin',branch:'main'},incrementRef:'campaign/pilot',maxActiveWorkers:1,publicationSize:1},configuration:{mainline:{remote:'origin',branch:'main'},incrementRef:'campaign/pilot',maxActiveWorkers:10,publicationSize:1},reason:'Use existing physical pool up to N10',authority:['human']};
+ await rollingCampaignStore.amendConfiguration('pilot',rollingConfigurationAmendmentRequestV1,root);
+ const rollingCampaignOperations=new RollingCampaignOperations(rollingCampaignStore,root);
+ fs.writeFileSync(path.join(extraRoot,'session_id.txt'),'unknown owner');
+ await assert.rejects(rollingCampaignOperations.replenish('pilot','event',null,true),/session marker/);fs.unlinkSync(path.join(extraRoot,'session_id.txt'));
+ fs.writeFileSync(path.join(extraRoot,'dirty-source.txt'),'preserve');
+ await assert.rejects(rollingCampaignOperations.replenish('pilot','event',null,true),/dirty/);fs.unlinkSync(path.join(extraRoot,'dirty-source.txt'));
+ for(const invalidRoot of [userRoot,extraRoot]) {
+  await pool.query("INSERT INTO ponytail_index.rolling_worktree_v1(project_id,number,root_path,state) VALUES($1,102,$2,'AVAILABLE')",[projectId,invalidRoot]);
+  await assert.rejects(rollingCampaignOperations.replenish('pilot','event',null,true),/escaped configured numbered pool/);
+  await pool.query('DELETE FROM ponytail_index.rolling_worktree_v1 WHERE project_id=$1 AND number=102',[projectId]);
+ }
+ const rollingReplenishment=await rollingCampaignOperations.replenish('pilot','periodic',null,true);
+ assert.equal(rollingReplenishment.allocations.length,1);assert.equal(rollingReplenishment.allocations[0]?.worktree?.number,103);assert.equal(rollingReplenishment.stopReason,'no_available_worktree');assert.equal(rollingReplenishment.snapshot.configuration.maxActiveWorkers,10);
+ assert.equal(fs.existsSync(path.join(managedDirectory,'102')),false);assert.equal(fs.existsSync(path.join(managedDirectory,'104')),false);
+ const roots=(await pool.query<Record<string,unknown>>('SELECT root_path FROM ponytail_index.rolling_worktree_v1 WHERE project_id=$1 ORDER BY number',[projectId])).rows.map(row=>row.root_path);assert.deepEqual(roots,[rootPath,extraRoot]);
+ const physicalAllocation=rollingReplenishment.allocations[0];assert.ok(physicalAllocation?.assignment&&physicalAllocation.worktree);
+ const rollingWorktreeLease:RollingWorktreeLease={...physicalAllocation.worktree,generation:physicalAllocation.assignment.generation};
+ const rollingProvisionedWorktree=provisionRollingWorktree(root,rollingWorktreeLease,git(root,['rev-parse','HEAD']));
+ assert.equal(git(extraRoot,['symbolic-ref','--short','HEAD']),rollingProvisionedWorktree.branch);
+ assert.equal(git(extraRoot,['rev-parse','HEAD']),git(root,['rev-parse','HEAD']));
+
+
 });

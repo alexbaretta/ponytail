@@ -322,3 +322,16 @@ Execution requires an explicit request ID, reason and authority; interrupted
 execution resumes that request, and identical completed retries are harmless.
 Discharge: ACC-ROLLING-RESET demonstrates preview, original actor cessation,
 external removal, pool reuse, DB isolation and interrupted retry.
+
+## REQ-ROLLING-EXISTING-POOL: Replenish within existing physical checkouts
+
+Authority: Alex's 2026-10-13 request to verify successful reset and actual
+parallel restart; GWEN's fixed existing checkout boundary.
+Atomic obligation OBL-RESTART-1: allow the coordinator to replenish only into
+registered physical numbered checkouts in the configured managed directory.
+An explicit existing-only invocation must import safely available retained
+checkouts after reset clears DB pool rows, choose the lowest available number,
+prefer original resumable actors, and stop with a physical capacity result
+without reserving nonexistent roots. Keep configured N unchanged.
+Discharge: ACC-ROLLING-EXISTING-POOL demonstrates a gapped physical pool with
+N larger than the pool, reuse after reset, and no out-of-pool creation.

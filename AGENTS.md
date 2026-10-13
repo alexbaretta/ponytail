@@ -180,7 +180,9 @@ services. `PROJECT_STRUCTURE.md` is authoritative for that boundary.
   @<request.json>`; status: `ponytail campaign status --campaign <id>`;
   coordinator decisions: `ponytail campaign next-actions --campaign <id>`;
   graph reconciliation: `ponytail campaign reconcile --campaign <id>`;
-  allocation: `ponytail campaign replenish --campaign <id> [--release <JSON>]`.
+  allocation: `ponytail campaign replenish --campaign <id> [--release <JSON>]
+  [--existing-only true]`. Existing-only admission imports safe retained physical
+  pool roots after reset and refuses nonexistent checkout reservations.
   The canonical command registry is `src/rolling-cli-registry.ts`; CLI and the
   optional `ponytail-mcp/rolling.ts` adapter invoke the shared typed operations
   in `src/rolling-operations.ts`. Native sessions use Codex App Server directly;

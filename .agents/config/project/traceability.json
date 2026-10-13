@@ -194,6 +194,10 @@
     {
       "id": "REQ-ROLLING-RESET",
       "sourcePath": "pm/requirements/rolling-campaigns.md"
+    },
+    {
+      "id": "REQ-ROLLING-EXISTING-POOL",
+      "sourcePath": "pm/requirements/rolling-campaigns.md"
     }
   ],
   "artifacts": [
@@ -1525,6 +1529,11 @@
     {
       "class": "integration-test",
       "path": "tests/rolling-reset.integration.test.ts",
+      "locator": "text"
+    },
+    {
+      "class": "plan",
+      "path": "pm/plans/in_progress/2026-10-13-campaign-restart-acceptance/plan.md",
       "locator": "text"
     }
   ],

@@ -121,7 +121,10 @@ assignment, generation, action, review and batch IDs. Do not infer or replace th
    Then replenish/resume using the refreshed identities. Reconciliation alone
    does not renew a worker's frozen lease.
 3. Run `replenish --campaign <id>` to reserve compatible obligation/worktree pairs
-   up to N. It prefers reactivating unblocked inactive workers and chooses the
+   up to N. With a fixed authorized physical pool, pass `--existing-only true`.
+   This imports safe retained registered checkouts after reset and stops with
+   `stopReason: no_available_worktree` when none are free; it never reserves a
+   nonexistent root and does not reduce configured N. It prefers reactivating unblocked inactive workers and chooses the
    first available numbered checkout. Use returned actions with `provision-worker`
    or `resume-worker`, then `dispatch-worker`. Recover unknown outcomes with
    `recover-worker` or `observe-resumption`; never create a duplicate actor.

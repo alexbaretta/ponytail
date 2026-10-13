@@ -2,7 +2,9 @@
 // Licensed under the MIT License. See LICENSE in the project root.
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import {projectRollingCoordinatorActions,readRollingReviewerLoss,parseRollingCampaignInitialization,readRollingCampaignInitializationV1,type RollingCampaignInitializationV1} from '../src/rolling-operations.js';
+import {Pool} from 'pg';
+import {RollingCampaignStore} from '../src/rolling-campaign-store.js';
+import {RollingCampaignOperations,projectRollingCoordinatorActions,readRollingReviewerLoss,parseRollingCampaignInitialization,readRollingCampaignInitializationV1,type RollingCampaignInitializationV1} from '../src/rolling-operations.js';
 import type {RollingCoordinatorSnapshot,RollingAction,RollingPublicationStatus,RollingStoredAssignment,RollingWorkerDispatchAttached,RollingWorkerDispatchStarted,RollingStoredWorkerDispatch,RollingReviewDispatchStarted,RollingReviewDispatchAttached,RollingStoredReviewDispatch,RollingAssignmentRelease,RollingStoredIncrement} from '../src/rolling-campaign-store.js';
 import type {RollingPublicationFrozen,RollingPublicationTrigger} from '../src/rolling-publication.js';
 import type {RollingIncrementClaimV1,RollingIncrementPublicationV1} from '../src/rolling-integration.js';
@@ -251,4 +253,14 @@ test('OBL-160: reviewer loss is an explicit exact input contract',()=>{
   {reviewId:'original-review',lossReference:''},{reviewId:' ',lossReference:'observed'},
   {reviewId:'original-review',lossReference:'observed',retry:true}];
  for (const input of invalidInputs) assert.throws(()=>readRollingReviewerLoss(input));
+});
+
+// Traceability: verifies REQ-ROLLING-EXISTING-POOL
+test('existing-only CLI admission rejects nonboolean boundary data before database or checkout work',async()=>{
+ const pool:Pool=new Pool();
+ try {
+  const rollingCampaignStore=new RollingCampaignStore(pool,'00000000-0000-0000-0000-000000000001');
+  const rollingCampaignOperations=new RollingCampaignOperations(rollingCampaignStore,'/unused');
+  await assert.rejects(rollingCampaignOperations.execute('replenish',{campaign:'pilot','existing-only':'true'}),/existing-only must be boolean/);
+ } finally {await pool.end();}
 });

@@ -136,7 +136,9 @@ export function provisionRollingWorktree(coordinatorRoot: string, lease: Rolling
       && pool.worktrees.includes(worktreeRoot), 'checkout path has unknown or conflicting registration');
     requireRollingSessionMarkerAbsent(worktreeRoot);
     requireCheckout(git(worktreeRoot, ['status', '--porcelain']).length === 0, 'checkout has uncommitted work; preserve it');
-    const currentBranch = git(worktreeRoot, ['symbolic-ref', '--short', 'HEAD']);
+    const currentBranchResult=spawnSync('git',['-C',worktreeRoot,'symbolic-ref','--quiet','--short','HEAD'],{encoding:'utf8'});
+    requireCheckout(!currentBranchResult.error&&(currentBranchResult.status===0||currentBranchResult.status===1),'cannot inspect retained checkout branch');
+    const currentBranch=currentBranchResult.status===0?currentBranchResult.stdout.trim():null;
     if (currentBranch === branch) {
       requireCheckout(git(worktreeRoot, ['rev-parse', 'HEAD']) === baseCommit, 'provisioned intent has changed commits; preserve it');
     } else {
