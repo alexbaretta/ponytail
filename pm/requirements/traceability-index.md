@@ -56,13 +56,10 @@ On 2026-10-12, the stakeholder clarified that repeated references to one stable
 entity across files must publish one entity and all distinct relationships.
 Human `ponytail traceability index` output must show an ASCII progress bar.
 Align brackets, percentages, counts, phase labels, elapsed times and ETAs
-across corpora. Show preparation before source
-snapshot collection, then initialize counted processing at zero; do not leave
-expensive preparation invisible. Count plan-manifest discovery, source-file
-snapshot collection, cached-file processing and database publication separately.
-Unknown discovery uses an ASCII spinner in a TTY and periodic printable
-liveness lines otherwise, never a permanently empty progress bar. Both
-spinners and bars show elapsed time for their current phase.
+across corpora. Count source-file snapshot collection, plan-manifest scanning,
+cached-file processing and database publication separately, starting at zero.
+Suppress the negligible initial "discovering sources" stage. Bars show elapsed
+time for their current phase.
 Expensive certificate freshness assessments within a file expose their own
 counted progress. Returning to the parent file phase preserves its elapsed time.
 Database publication reaches 100% only after its transaction commits.

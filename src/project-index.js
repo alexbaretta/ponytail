@@ -847,12 +847,12 @@ function parsePlanIndexObligations(root, relativePath, source,onProgress) {
   }
 }
 
-function collectPlanProjection(root = fs.realpathSync(git(process.cwd(), ['rev-parse', '--show-toplevel'])), onProgress, onPrepare) {
+function collectPlanProjection(root = fs.realpathSync(git(process.cwd(), ['rev-parse', '--show-toplevel'])), onProgress) {
   root = fs.realpathSync(root);
   const managementPath = path.join(root, '.agents/config/project/management.json');
   const managementBytes = fs.readFileSync(managementPath);
   const management = readManagementConfigV1(JSON.parse(managementBytes));
-  const planSources = listPlanSourceFiles(root, management, () => onPrepare?.('plans'));
+  const planSources = listPlanSourceFiles(root, management);
   const sourceByPath = new Map(planSources.map(source => [source.relativePlanFile, source]));
   const paths = new Set([path.relative(root, managementPath)]);
   const obligationDependencyDigests = new Map();
@@ -1230,10 +1230,8 @@ async function indexTraceability(options = {}) {
 async function indexProject(options = {}) {
   const configurationPath = options.configurationPath ??
     path.resolve('.agents/config/project/traceability.json');
-  options.onPrepare?.('traceability');
   const traceability = collectTraceabilityProjection(configurationPath, options.onProgress);
-  options.onPrepare?.('plans');
-  const plans = collectPlanProjection(traceability.worktreePath, options.onProgress, options.onPrepare);
+  const plans = collectPlanProjection(traceability.worktreePath, options.onProgress);
   const pool = options.pool ?? new (require('pg').Pool)(databaseOptions(traceability.worktreePath));
   const client = await pool.connect();
   try {
@@ -2745,7 +2743,7 @@ async function run(args) {
     let result;
     try {
       result = await indexProject({ rebuild: seen.has('--rebuild'), batchSize,
-        signal: abortController.signal, onProgress: progress?.update, onPrepare: progress?.prepare });
+        signal: abortController.signal, onProgress: progress?.update });
     } finally {
       progress?.stop();
       process.removeListener('SIGINT', interrupt);

@@ -5,44 +5,15 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.indexProgress = indexProgress;
 function indexProgress(indexProgressStream = process.stdout, now = Date.now) {
-    let discoveryCorpus = null;
-    let spinnerIndex = 0;
-    let spinnerTimer;
     const stageStarts = new Map();
     let currentStage = '';
     let startedAt = now();
     let lastPrintedAt = 0;
     let lineOpen = false;
     let lineLength = 0;
-    const stop = () => { if (spinnerTimer !== undefined)
-        clearInterval(spinnerTimer); spinnerTimer = undefined; discoveryCorpus = null; if (lineOpen)
+    const stop = () => { if (lineOpen)
         indexProgressStream.write('\n'); lineOpen = false; lineLength = 0; };
-    const pulse = () => {
-        if (discoveryCorpus === null || now() - lastPrintedAt < (indexProgressStream.isTTY ? 200 : 5000))
-            return;
-        lastPrintedAt = now();
-        const frame = '|/-\\'.charAt(spinnerIndex++ % 4);
-        const text = `${discoveryCorpus.padEnd(12)} ${(indexProgressStream.isTTY ? frame : '...').padEnd(42)} ${' '.repeat(4)} ${' '.repeat(13)} ${'discovering sources'.padEnd(23)} | elapsed ${String(Math.floor((now() - startedAt) / 1000)).padStart(4)}s`;
-        indexProgressStream.write(indexProgressStream.isTTY ? `\r${text.padEnd(lineLength)}` : `${text}\n`);
-        lineLength = Math.max(lineLength, text.length);
-        lineOpen = indexProgressStream.isTTY === true;
-    };
     return {
-        prepare(corpus) {
-            if (discoveryCorpus === corpus) {
-                pulse();
-                return;
-            }
-            stop();
-            discoveryCorpus = corpus;
-            startedAt = now();
-            currentStage = '';
-            spinnerIndex = 0;
-            lastPrintedAt = now() - 5000;
-            pulse();
-            spinnerTimer = setInterval(pulse, 200);
-            spinnerTimer.unref();
-        },
         update(completed, total, corpus, phase = 'files', details) {
             const stage = `${corpus}:${phase}`;
             const first = stage !== currentStage;

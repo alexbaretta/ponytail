@@ -64,14 +64,13 @@ export function scanPlanCandidates(repositoryRoot: string, campaignManagementCon
   });
 }
 
-export function listPlanSourceFiles(repositoryRoot: string, campaignManagementConfigV1: CampaignManagementConfigV1, onDiscovery?:()=>void): CampaignPlanSource[] {
+export function listPlanSourceFiles(repositoryRoot: string, campaignManagementConfigV1: CampaignManagementConfigV1): CampaignPlanSource[] {
   const planRoot = path.join(repositoryRoot, campaignManagementConfigV1.planRoot);
   const sources: CampaignPlanSource[] = [];
   for (const lifecycle of campaignManagementConfigV1.lifecycle.directories) {
     const directory = path.join(planRoot, lifecycle);
     if (!fs.existsSync(directory)) continue;
     for (const name of sortedDirectories(directory)) {
-      onDiscovery?.();
       const planFile = path.join(directory, name, 'plan.md');
       if (isPlanFile(planFile)) {
         sources.push({
@@ -85,7 +84,6 @@ export function listPlanSourceFiles(repositoryRoot: string, campaignManagementCo
     const lifecycleDirectories = new Set(campaignManagementConfigV1.lifecycle.directories);
     for (const name of sortedDirectories(planRoot)) {
       if (lifecycleDirectories.has(name)) continue;
-      onDiscovery?.();
       const planFile = path.join(planRoot, name, 'plan.md');
       if (isPlanFile(planFile)) {
         sources.push({

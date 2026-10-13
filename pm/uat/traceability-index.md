@@ -28,11 +28,9 @@ Traceability: verifies REQ-TRACEABILITY-INDEX
      database schema version.
    - Repeated plan identities in different files produce one entity and retain
      every distinct relationship without a database uniqueness failure.
-   - Human output immediately shows source preparation, then counted file
-     collection, manifest scanning, file processing and database publication
-     have counted progress starting at zero. Unknown discovery uses a status
-     spinner (periodic printable messages when redirected); all indicators show
-     elapsed time. Certificate assessments within a file advance a subphase;
+   - Source collection, manifest scanning, file processing and database publication
+     have counted progress starting at zero; no "discovering sources" lines appear.
+     All bars show elapsed time. Certificate assessments within a file advance a subphase;
      the parent file phase retains its elapsed time. Brackets align and
      publication reaches 100% after commit; all output columns align.
    - Human output shows file progress for each corpus. Redirected output uses

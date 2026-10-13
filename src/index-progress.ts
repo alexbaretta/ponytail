@@ -7,26 +7,12 @@ export interface IndexProgressStream {readonly isTTY?:boolean;write(text:string)
 // Traceability: implements REQ-TRACEABILITY-INDEX
 // Traceability: implements REQ-TRACEABILITY-PROGRESS
 export function indexProgress(indexProgressStream:IndexProgressStream=process.stdout,now:()=>number=Date.now):{
- prepare(corpus:string):void;update(completed:number,total:number,corpus:string,phase?:IndexProgressPhase,details?:IndexProgressDetails):void;stop():void;
+ update(completed:number,total:number,corpus:string,phase?:IndexProgressPhase,details?:IndexProgressDetails):void;stop():void;
 } {
- let discoveryCorpus:string|null=null;let spinnerIndex=0;let spinnerTimer:ReturnType<typeof setInterval>|undefined;
  const stageStarts=new Map<string,number>();
  let currentStage='';let startedAt=now();let lastPrintedAt=0;let lineOpen=false;let lineLength=0;
- const stop=():void=>{if(spinnerTimer!==undefined) clearInterval(spinnerTimer);spinnerTimer=undefined;discoveryCorpus=null;if(lineOpen) indexProgressStream.write('\n');lineOpen=false;lineLength=0;};
- const pulse=():void=>{
-  if(discoveryCorpus===null || now()-lastPrintedAt<(indexProgressStream.isTTY?200:5000)) return;
-  lastPrintedAt=now();
-  const frame='|/-\\'.charAt(spinnerIndex++%4);
-  const text=`${discoveryCorpus.padEnd(12)} ${(indexProgressStream.isTTY?frame:'...').padEnd(42)} ${' '.repeat(4)} ${' '.repeat(13)} ${'discovering sources'.padEnd(23)} | elapsed ${String(Math.floor((now()-startedAt)/1000)).padStart(4)}s`;
-  indexProgressStream.write(indexProgressStream.isTTY?`\r${text.padEnd(lineLength)}`:`${text}\n`);
-  lineLength=Math.max(lineLength,text.length);lineOpen=indexProgressStream.isTTY===true;
- };
+ const stop=():void=>{if(lineOpen) indexProgressStream.write('\n');lineOpen=false;lineLength=0;};
  return {
-  prepare(corpus) {
-   if(discoveryCorpus===corpus) {pulse();return;}
-   stop();discoveryCorpus=corpus;startedAt=now();currentStage='';spinnerIndex=0;lastPrintedAt=now()-5000;
-   pulse();spinnerTimer=setInterval(pulse,200);spinnerTimer.unref();
-  },
   update(completed,total,corpus,phase='files',details) {
    const stage=`${corpus}:${phase}`;
    const first=stage!==currentStage;
