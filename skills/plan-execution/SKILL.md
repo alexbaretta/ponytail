@@ -32,6 +32,9 @@ For explicitly configured rolling campaigns, use the
 [rolling coordinator and worker procedure](references/rolling-campaigns.md).
 It governs concurrent assignments and reviewed incremental publication;
 the legacy serial procedure below does not override that configured mode.
+Approval to execute a configured rolling campaign includes its configured
+parallel execution. Do not ask for another instruction to parallelize. N defaults
+to 10 active workers; use available compatible work and authorized checkouts.
 Use rolling `next-actions`/`replenish` for dependency-ready, completion-first
 scheduling; the portable global-coordinate selector is not a rolling dispatch
 barrier. The obligation acceptance and evidence gates still apply.

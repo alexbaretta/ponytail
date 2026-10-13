@@ -484,9 +484,10 @@ ALTER TABLE rolling_publication_batch_v1 ADD COLUMN IF NOT EXISTS synchronized_r
 ALTER TABLE rolling_publication_batch_v1 ADD COLUMN IF NOT EXISTS pending_refresh_id uuid;
 ALTER TABLE rolling_publication_batch_v1 ADD COLUMN IF NOT EXISTS refresh_id uuid;
 ALTER TABLE rolling_publication_batch_v1 ADD COLUMN IF NOT EXISTS repair_id uuid;
+ALTER TABLE rolling_publication_batch_v1 ADD COLUMN IF NOT EXISTS withdrawn boolean NOT NULL DEFAULT false;
 DROP INDEX IF EXISTS rolling_publication_batch_v1_active_root;
 CREATE UNIQUE INDEX IF NOT EXISTS rolling_publication_batch_v1_active_root
-ON rolling_publication_batch_v1(project_id,coordinator_root) WHERE state <> 'PUBLISHED' OR synchronized_revision IS NULL;
+ON rolling_publication_batch_v1(project_id,coordinator_root) WHERE NOT withdrawn AND (state <> 'PUBLISHED' OR synchronized_revision IS NULL);
 
 CREATE TABLE IF NOT EXISTS rolling_publication_member_v1 (
   project_id uuid NOT NULL,
@@ -500,6 +501,30 @@ CREATE TABLE IF NOT EXISTS rolling_publication_member_v1 (
     REFERENCES rolling_publication_batch_v1(project_id,campaign_id,batch_id) ON DELETE CASCADE,
   FOREIGN KEY(project_id,campaign_id,increment_id)
     REFERENCES rolling_increment_delivery_v1(project_id,campaign_id,increment_id)
+);
+ALTER TABLE rolling_publication_member_v1 ADD COLUMN IF NOT EXISTS withdrawn boolean NOT NULL DEFAULT false;
+ALTER TABLE rolling_publication_member_v1 DROP CONSTRAINT rolling_publication_member_v1_pkey;
+ALTER TABLE rolling_publication_member_v1 ADD PRIMARY KEY(project_id,campaign_id,batch_id,increment_id);
+CREATE UNIQUE INDEX IF NOT EXISTS rolling_publication_member_v1_current
+ON rolling_publication_member_v1(project_id,campaign_id,increment_id) WHERE NOT withdrawn;
+
+CREATE TABLE IF NOT EXISTS rolling_publication_withdrawal_v1 (
+ project_id uuid NOT NULL,campaign_id text NOT NULL,batch_id uuid NOT NULL,withdrawal_text text NOT NULL,
+ PRIMARY KEY(project_id,campaign_id,batch_id),
+ CHECK ((withdrawal_text::jsonb->>'schemaVersion'='1' AND withdrawal_text::jsonb->>'campaignId'=campaign_id AND withdrawal_text::jsonb->>'batchId'=batch_id::text) IS TRUE),
+ FOREIGN KEY(project_id,campaign_id,batch_id) REFERENCES rolling_publication_batch_v1(project_id,campaign_id,batch_id) ON DELETE CASCADE
+);
+CREATE TABLE IF NOT EXISTS rolling_configuration_amendment_v1 (
+ project_id uuid NOT NULL,campaign_id text NOT NULL,amendment_id uuid NOT NULL,amendment_text text NOT NULL,
+ PRIMARY KEY(project_id,campaign_id,amendment_id),
+ CHECK ((amendment_text::jsonb->>'schemaVersion'='1' AND amendment_text::jsonb->>'id'=amendment_id::text AND amendment_text::jsonb->>'campaignId'=campaign_id) IS TRUE),
+ FOREIGN KEY(project_id,campaign_id) REFERENCES rolling_campaign_v1(project_id,campaign_id) ON DELETE CASCADE
+);
+CREATE TABLE IF NOT EXISTS rolling_worker_correction_v1 (
+ project_id uuid NOT NULL,campaign_id text NOT NULL,assignment_id uuid NOT NULL,generation uuid NOT NULL,reason text NOT NULL,
+ PRIMARY KEY(project_id,campaign_id,assignment_id,generation),
+ FOREIGN KEY(assignment_id) REFERENCES rolling_assignment_v1(assignment_id) ON DELETE CASCADE,
+ FOREIGN KEY(project_id,campaign_id) REFERENCES rolling_campaign_v1(project_id,campaign_id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS rolling_publication_preparation_v1 (

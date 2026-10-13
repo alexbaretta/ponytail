@@ -170,6 +170,26 @@
     {
       "id": "REQ-ROLLING-PUBLICATION-REPAIR",
       "sourcePath": "pm/requirements/rolling-campaigns.md"
+    },
+    {
+      "id": "REQ-ROLLING-CONFIGURATION-AMENDMENT",
+      "sourcePath": "pm/requirements/rolling-campaigns.md"
+    },
+    {
+      "id": "REQ-ROLLING-PUBLICATION-WITHDRAWAL",
+      "sourcePath": "pm/requirements/rolling-campaigns.md"
+    },
+    {
+      "id": "REQ-ROLLING-WORKER-CORRECTION",
+      "sourcePath": "pm/requirements/rolling-campaigns.md"
+    },
+    {
+      "id": "REQ-ROLLING-QA-APPROVAL",
+      "sourcePath": "pm/requirements/rolling-campaigns.md"
+    },
+    {
+      "id": "REQ-ROLLING-PARALLEL-DISPATCH",
+      "sourcePath": "pm/requirements/rolling-campaigns.md"
     }
   ],
   "artifacts": [
@@ -1471,6 +1491,16 @@
     {
       "class": "plan",
       "path": "pm/plans/closed/2026-10-13-rolling-recovery/plan.md",
+      "locator": "text"
+    },
+    {
+      "class": "plan",
+      "path": "pm/plans/closed/2026-10-13-campaign-lifecycle-amendments/plan.md",
+      "locator": "text"
+    },
+    {
+      "class": "unit-test",
+      "path": "tests/rolling-worker.test.ts",
       "locator": "text"
     }
   ],

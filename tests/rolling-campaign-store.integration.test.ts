@@ -20,9 +20,9 @@ import type { ObligationBindingHistoryV1, ObligationBindingRevisionV1 } from '..
 import type { ObligationEvidence } from '../skills/plan-execution/scripts/obligations.js';
 import { parseRollingWorkerSubmission, type RollingWorkerSubmissionV1, type RollingSubmissionProof } from '../src/rolling-worker-submission.js';
 import { readRollingReviewRequestV1,readRollingReviewOutcomeV1,dispatchRollingReview, collectRollingReview, startRollingReview, type RollingReviewOutcomeV1, type RollingStoredReview } from '../src/rolling-review.js';
-import { retireRollingWorker, provisionRollingWorker, attachRollingWorker, suspendRollingWorker, collectRollingWorkerSubmission, recoverRollingWorkerCreation, observeRollingWorkerInitialization, resumeRollingWorker, parseRollingWorkerResumption, dispatchRollingWorker, buildRollingWorkerInstructions, type RollingWorkerInitialization } from '../src/rolling-worker.js';
+import { retireRollingWorker, provisionRollingWorker, attachRollingWorker, suspendRollingWorker, collectRollingWorkerSubmission,correctRollingWorker, recoverRollingWorkerCreation, observeRollingWorkerInitialization, resumeRollingWorker, parseRollingWorkerResumption, dispatchRollingWorker, buildRollingWorkerInstructions, type RollingWorkerInitialization } from '../src/rolling-worker.js';
 import { RollingCodex, RollingObservationTimeout, type RollingNativeTurn, type RollingNativeThread, type RollingNativeServerRequest } from '../src/rolling-codex.js';
-import {RollingCampaignOperations,executeRollingCommand,authorizeRollingWorkerRebaseApproval} from '../src/rolling-operations.js';
+import {RollingCampaignOperations,executeRollingCommand,authorizeRollingWorkerCommandApproval} from '../src/rolling-operations.js';
 import { acceptBoundCheckpoint, type ObligationCertificateBindingV1, type ObligationCertificateSubmission,
   type ObligationCertificateBindingRequest } from '../skills/plan-execution/scripts/obligation-certificate-bindings.js';
 
@@ -82,7 +82,7 @@ function prepareCoordinatorIncrementCheckout(root: string,branch: string): void 
   execFileSync('git',['-C',root,'switch','-q',branch]);
 }
 
-export async function runRollingReviewScenario(t: TestContext, reviewScenario: ReviewScenario, mainlinePublication:'normal' | 'lost_ack' | 'race' | 'unavailable' | 'rejected' | 'repair' | null = null): Promise<void> {
+export async function runRollingReviewScenario(t: TestContext, reviewScenario: ReviewScenario, mainlinePublication:'normal' | 'lost_ack' | 'race' | 'unavailable' | 'rejected' | 'repair' | 'withdraw' | null = null): Promise<void> {
   assert.ok(!(reviewScenario.automaticPublication && (reviewScenario.publicationBatch || reviewScenario.publicationFlush || reviewScenario.integratedCertificates)),
     'the short automatic-increment Arc cannot stand in for later publication or certificate phases');
   const reviewDecision = reviewScenario.decision;
@@ -850,12 +850,52 @@ export async function runRollingReviewScenario(t: TestContext, reviewScenario: R
     const passingConfiguration = parseRollingProjectConfig(fs.readFileSync(configurationPath,'utf8'));
     if(mainlinePublication!=='repair') fs.writeFileSync(configurationPath,JSON.stringify({...passingConfiguration,qa:{...passingConfiguration.qa,publication:[['false']]}}));
     const failedRollingPublicationQaJobV1 = await restartedPublicationStore.beginPublicationQa('bound-fixture',firstClaim.claim.id);
+    if(mainlinePublication==='withdraw') await assert.rejects(restartedPublicationStore.withdrawPublication('bound-fixture',firstClaim.claim.id,'Retarget authorized',['human']),/settled QA/);
     await assert.rejects(restartedPublicationStore.beginPublicationQa('bound-fixture',firstClaim.claim.id),/original QA attempt/);
     const failedRollingPublicationQaV1 = runRollingPublicationQa(rollingPublicationBatchClaimV1,rollingMainlineCandidateV1,failedRollingPublicationQaJobV1.id,failedRollingPublicationQaJobV1.configurationDigest,failedRollingPublicationQaJobV1.commands);
     assert.equal(failedRollingPublicationQaV1.outcome,'FAIL');
     await restartedPublicationStore.recordPublicationQa('bound-fixture',firstClaim.claim.id,failedRollingPublicationQaV1);
     await assert.rejects(restartedPublicationStore.beginMainlinePush('bound-fixture',firstClaim.claim.id),/full publication QA/);
     fs.writeFileSync(configurationPath,JSON.stringify(passingConfiguration));
+    if(mainlinePublication==='withdraw') {
+      const amendedRollingGraphReconciliation=await restartedPublicationStore.reconcileCoordinator('bound-fixture');
+      const rollingCoordinatorSnapshot=await restartedPublicationStore.coordinatorSnapshot('bound-fixture');
+      const rollingConfigurationAmendmentRequestV1:import('../src/rolling-campaign-store.js').RollingConfigurationAmendmentRequestV1={schemaVersion:1,id:crypto.randomUUID(),
+        expected:{mainline:rollingCoordinatorSnapshot.configuration.mainline,incrementRef:rollingCoordinatorSnapshot.configuration.incrementRef,maxActiveWorkers:rollingCoordinatorSnapshot.configuration.maxActiveWorkers,publicationSize:rollingCoordinatorSnapshot.configuration.publicationSize},
+        configuration:{mainline:{remote:'origin',branch:'uat-requirements'},incrementRef:rollingCoordinatorSnapshot.configuration.incrementRef,maxActiveWorkers:10,publicationSize:5},reason:'Human retarget and batch-size amendment',authority:['human']};
+      await assert.rejects(restartedPublicationStore.amendConfiguration('bound-fixture',rollingConfigurationAmendmentRequestV1,root),/withdraw existing/);
+      const originalHead=execFileSync('git',['-C',root,'rev-parse','HEAD'],{encoding:'utf8'}).trim();
+      const rollingPublicationWithdrawalV1=await restartedPublicationStore.withdrawPublication('bound-fixture',firstClaim.claim.id,'Retarget authorized',['human']);
+      assert.deepEqual(await new RollingCampaignStore(pool,projectId).withdrawPublication('bound-fixture',firstClaim.claim.id,'Retarget authorized',['human']),rollingPublicationWithdrawalV1);
+      await assert.rejects(restartedPublicationStore.withdrawPublication('bound-fixture',firstClaim.claim.id,'Different authority',['human']),/retry differs/);
+      assert.equal(execFileSync('git',['-C',root,'rev-parse','HEAD'],{encoding:'utf8'}).trim(),originalHead);
+      assert.equal((await restartedPublicationStore.publicationContext('bound-fixture',firstClaim.claim.id)).qa?.outcome,'FAIL');
+      await assert.rejects(restartedPublicationStore.beginPublicationQa('bound-fixture',firstClaim.claim.id),/withdrawn/);
+      await assert.rejects(restartedPublicationStore.amendConfiguration('bound-fixture',{...rollingConfigurationAmendmentRequestV1,expected:{...rollingConfigurationAmendmentRequestV1.expected,publicationSize:99}},root),/stale expected/);
+      const rollingConfigurationAmendmentV1=await restartedPublicationStore.amendConfiguration('bound-fixture',rollingConfigurationAmendmentRequestV1,root);
+      assert.equal(rollingConfigurationAmendmentV1.configuration.publicationSize,5);assert.equal(rollingConfigurationAmendmentV1.configuration.maxActiveWorkers,10);
+      assert.equal(rollingConfigurationAmendmentV1.configuration.mainline.branch,'uat-requirements');
+      assert.deepEqual(await new RollingCampaignStore(pool,projectId).amendConfiguration('bound-fixture',rollingConfigurationAmendmentRequestV1,root),rollingConfigurationAmendmentV1);
+      await assert.rejects(restartedPublicationStore.amendConfiguration('bound-fixture',{...rollingConfigurationAmendmentRequestV1,reason:'changed retry'},root),/retry differs/);
+      execFileSync('git',['-C',remoteRoot,'update-ref','refs/heads/uat-requirements',baseCommit]);
+      execFileSync('git',['-C',root,'switch',rollingConfigurationAmendmentV1.configuration.incrementRef]);
+      const replacement=await restartedPublicationStore.claimPublicationBatch('bound-fixture',amendedRollingGraphReconciliation.graphDigest,'explicit_flush');assert.ok(replacement.state==='CLAIMED');
+      assert.notEqual(replacement.claim.id,firstClaim.claim.id);assert.equal(replacement.claim.publicationSize,5);
+      assert.equal(replacement.claim.target.branch,'uat-requirements');assert.deepEqual(replacement.claim.increments,firstClaim.claim.increments);
+      const replacementRollingPublicationBatchClaimV1=await restartedPublicationStore.beginMainlinePreparation('bound-fixture',replacement.claim.id);
+      const replacementRollingMainlinePreparationV1=prepareRollingMainline(replacementRollingPublicationBatchClaimV1);
+      await restartedPublicationStore.recordMainlinePreparation('bound-fixture',replacement.claim.id,replacementRollingMainlinePreparationV1);
+      const replacementRollingMainlineCandidateV1=mergeRollingMainline(replacementRollingPublicationBatchClaimV1,replacementRollingMainlinePreparationV1);
+      await restartedPublicationStore.recordMainlineCandidate('bound-fixture',replacement.claim.id,replacementRollingMainlineCandidateV1);
+      await assert.rejects(restartedPublicationStore.beginMainlinePush('bound-fixture',replacement.claim.id),/full publication QA/);
+      const replacementRollingPublicationQaJobV1=await restartedPublicationStore.beginPublicationQa('bound-fixture',replacement.claim.id);
+      const replacementRollingPublicationQaV1=runRollingPublicationQa(replacementRollingPublicationBatchClaimV1,replacementRollingMainlineCandidateV1,replacementRollingPublicationQaJobV1.id,replacementRollingPublicationQaJobV1.configurationDigest,replacementRollingPublicationQaJobV1.commands);
+      assert.equal(replacementRollingPublicationQaV1.outcome,'PASS');await restartedPublicationStore.recordPublicationQa('bound-fixture',replacement.claim.id,replacementRollingPublicationQaV1);
+      assert.equal((await restartedPublicationStore.publishMainline('bound-fixture',replacement.claim.id)).result.state,'PUBLISHED');
+      assert.equal((await pool.query<Record<string,unknown>>('SELECT count(*)::integer AS count FROM ponytail_index.rolling_publication_member_v1 WHERE project_id=$1',[projectId])).rows[0]?.count,2);
+      assert.equal((await pool.query<Record<string,unknown>>('SELECT count(*)::integer AS count FROM ponytail_index.rolling_publication_withdrawal_v1 WHERE project_id=$1',[projectId])).rows[0]?.count,1);
+      return;
+    }
     if(mainlinePublication==='repair') {
       fs.writeFileSync(path.join(root,'fixture/current.ts'),'export const value: number = 2;\n');
       execFileSync('git',['-C',root,'add','fixture/current.ts']);
@@ -1163,7 +1203,7 @@ async function observeRollingWorkerTurn(t: TestContext, rollingCodex: RollingCod
   }
 }
 
-export async function runRollingWorkerScenario(t: TestContext, mode: 'protocol' | 'native', operation: 'attachment' | 'instructions' | 'suspension' | 'resumption' | 'recovery' | 'collection' | 'code' | 'inspection' | 'failed-turn', rework = false, integrationRepair = false, retirement = false, startReviewer = false, readonlyCollection=false): Promise<void> {
+export async function runRollingWorkerScenario(t: TestContext, mode: 'protocol' | 'native', operation: 'attachment' | 'instructions' | 'suspension' | 'resumption' | 'recovery' | 'collection' | 'code' | 'inspection' | 'failed-turn', rework = false, integrationRepair = false, retirement = false, startReviewer = false, readonlyCollection=false,correction=false,correctionReload=false): Promise<void> {
   assert.ok(!integrationRepair || mode === 'protocol' && operation === 'collection');
   assert.ok(!rework || mode === 'native' && operation === 'code', 'correction Arc requires the real native code worker');
   const repositoryRoot = path.resolve(__dirname, '../..');
@@ -1305,13 +1345,13 @@ export async function runRollingWorkerScenario(t: TestContext, mode: 'protocol' 
   else {
     rollingCodex.on('serverRequest',message => {
       void (async()=> {
-        const permittedRebase=operation === 'code' && instructionGeneration !== null && rollingWorkerDispatchAttached !== null
-          && rollingAllocationResult.assignment !== null && await authorizeRollingWorkerRebaseApproval(rollingCampaignStore,'worker-fixture',rollingAllocationResult.assignment.id,instructionGeneration,message);
-        const permitted=permittedRebase || operation === 'code' && rollingWorkerInitialization !== null && rollingWorkerDispatchAttached !== null
+        const permittedWorkerCommand=operation === 'code' && instructionGeneration !== null && rollingWorkerDispatchAttached !== null
+          && rollingAllocationResult.assignment !== null && await authorizeRollingWorkerCommandApproval(rollingCampaignStore,'worker-fixture',rollingAllocationResult.assignment.id,instructionGeneration,message);
+        const permitted=permittedWorkerCommand || operation === 'code' && rollingWorkerInitialization !== null && rollingWorkerDispatchAttached !== null
           && rollingAllocationResult.worktree !== undefined
           && permitNativeCodeFixtureApproval(message,rollingAllocationResult.worktree.rootPath,
             rollingWorkerInitialization.rollingWorkerCreationV1.threadId,rollingWorkerDispatchAttached.turnId);
-        if (operation === 'code') t.diagnostic(`native QA approval method=${message.method}; scopedRebase=${permittedRebase}; decision=${permitted ? 'accept once' : 'decline'}; request=${JSON.stringify(message.params)}`);
+        if (operation === 'code') t.diagnostic(`native QA approval method=${message.method}; scopedCommand=${permittedWorkerCommand}; decision=${permitted ? 'accept once' : 'decline'}; request=${JSON.stringify(message.params)}`);
         rollingCodex.respondToServer(message.id,{decision:permitted ? 'accept' : 'decline'});
       })().catch(cause=>{t.diagnostic(`native approval failed: ${String(cause)}`);rollingCodex.respondToServer(message.id,{decision:'decline'});});
     });
@@ -1487,6 +1527,11 @@ export async function runRollingWorkerScenario(t: TestContext, mode: 'protocol' 
     assert.equal(rollingWorkerDispatchAttached.threadId,rollingWorkerInitialization.rollingWorkerCreationV1.threadId);
     const rollingNativeTurn = await observeRollingWorkerTurn(t,rollingCodex,rollingWorkerDispatchAttached.threadId,rollingWorkerDispatchAttached.turnId);
     assert.equal(rollingNativeTurn.status,'completed');
+    if(mode==='protocol'&&operation==='instructions') {
+      const rollingNativeServerRequest:RollingNativeServerRequest={id:'qa',method:'item/commandExecution/requestApproval',params:{cwd:rollingAllocationResult.worktree.rootPath,threadId:rollingWorkerDispatchAttached.threadId,turnId:rollingWorkerDispatchAttached.turnId,command:'node --test fixture.test.ts'}};
+      assert.equal(await authorizeRollingWorkerCommandApproval(rollingCampaignStore,'worker-fixture',rollingAllocationResult.assignment.id,generation,rollingNativeServerRequest),true);
+      await assert.rejects(authorizeRollingWorkerCommandApproval(rollingCampaignStore,'worker-fixture',rollingAllocationResult.assignment.id,crypto.randomUUID(),rollingNativeServerRequest),/invalid lease generation/);
+    }
     if (operation === 'code') t.diagnostic(`native worker final response: ${rollingNativeTurn.items.filter(item => item.type === 'agentMessage').at(-1)?.text}`);
     assert.equal(execFileSync('git',['-C',rollingAllocationResult.worktree.rootPath,'status','--porcelain'],{encoding:'utf8'}),'');
     if (operation === 'code') {
@@ -1617,6 +1662,22 @@ export async function runRollingWorkerScenario(t: TestContext, mode: 'protocol' 
       await rollingCodex.request('fixture-activity',{active:false});
       await rollingCodex.request('fixture-turn',{turnId:rollingWorkerDispatchAttached.turnId,status:'completed',text:'Stopped after rejected approval.'});
       await assert.rejects(collectRollingWorkerSubmission(rollingCampaignStore,rollingCodex,'worker-fixture',rollingAllocationResult.assignment.id,generation,60000,rollingWorkerOwnerObservationV1),/no valid submission JSON/);
+      if(correction) {
+        fs.writeFileSync(path.join(rootPath,'correction-checkpoint.txt'),'Preserve unfinished work.\n');
+        await assert.rejects(correctRollingWorker(rollingCampaignStore,rollingCodex,'worker-fixture',rollingAllocationResult.assignment.id,generation,'Approval refused',{...rollingWorkerOwnerObservationV1,status:'active'}),/reports active/);
+        await assert.rejects(correctRollingWorker(rollingCampaignStore,rollingCodex,'worker-fixture',rollingAllocationResult.assignment.id,generation,'Approval refused'),/active writer/);
+        if(correctionReload)await rollingCodex.request('fixture-correction-reload',{});
+        const corrected=await correctRollingWorker(rollingCampaignStore,rollingCodex,'worker-fixture',rollingAllocationResult.assignment.id,generation,'Approval refused',correctionReload?null:rollingWorkerOwnerObservationV1);
+        assert.equal(corrected.state,'INACTIVE');
+        assert.deepEqual(await correctRollingWorker(rollingCampaignStore,rollingCodex,'worker-fixture',rollingAllocationResult.assignment.id,generation,'Approval refused',rollingWorkerOwnerObservationV1),corrected);
+        await assert.rejects(correctRollingWorker(rollingCampaignStore,rollingCodex,'worker-fixture',rollingAllocationResult.assignment.id,generation,'Different reason',rollingWorkerOwnerObservationV1),/retry differs/);
+        assert.equal(fs.readFileSync(path.join(rootPath,'correction-checkpoint.txt'),'utf8'),'Preserve unfinished work.\n');
+        const reactivated=await rollingCampaignStore.allocate('worker-fixture',rollingGraph.digest);
+        assert.equal(reactivated.assignment?.id,rollingAllocationResult.assignment.id);assert.equal(reactivated.assignment?.sessionId,rollingSessionAttachment.sessionId);
+        assert.equal(reactivated.worktree?.rootPath,rootPath);assert.notEqual(reactivated.assignment?.generation,generation);
+        await assert.rejects(correctRollingWorker(rollingCampaignStore,rollingCodex,'worker-fixture',rollingAllocationResult.assignment.id,generation,'Approval refused',rollingWorkerOwnerObservationV1),/invalid lease generation/);
+        return;
+      }
       await rollingCodex.request('fixture-turn',{turnId:rollingWorkerDispatchAttached.turnId,status:'completed',text});
       const rollingSubmissionReceipt=await collectRollingWorkerSubmission(rollingCampaignStore,rollingCodex,'worker-fixture',rollingAllocationResult.assignment.id,generation,60000,rollingWorkerOwnerObservationV1);
       assert.equal(rollingSubmissionReceipt.state,'REVIEW');
@@ -1993,6 +2054,8 @@ test('parallel submission accepts an ancestor base after coordinator advancement
 
 // Traceability: verifies REQ-ROLLING-WORKERS
 // Traceability: verifies REQ-ROLLING-STATE
+// Traceability: verifies REQ-ROLLING-QA-APPROVAL
+// Traceability: verifies REQ-ROLLING-PARALLEL-DISPATCH
 test('worker provisioning fences creation and atomically attaches the native identity and ignored marker',
  t => runRollingWorkerScenario(t, 'protocol', 'instructions'));
 
@@ -2086,3 +2149,13 @@ for (const canonicalIntegration of ['publish','upstream','conflict','qa-failure'
 // Traceability: verifies REQ-ROLLING-INTERFACES
 test('canonical reviewer creation starts the real review before resume and retains exact dispatch on retry',
  t=>runRollingWorkerScenario(t,'protocol','collection',false,false,false,true));
+
+// Traceability: verifies REQ-ROLLING-CONFIGURATION-AMENDMENT
+// Traceability: verifies REQ-ROLLING-PUBLICATION-WITHDRAWAL
+test('withdrawal preserves publication history and audited amendment refreezes accepted increments for fresh target QA',t=>runRollingReviewScenario(t,{decision:'accepted',mode:'manual',publicationBatch:'partial'},'withdraw'));
+
+// Traceability: verifies REQ-ROLLING-WORKER-CORRECTION
+test('terminal blocker correction preserves dirty original ownership and prefers same-session reactivation',t=>runRollingWorkerScenario(t,'protocol','collection',false,false,false,false,true,true));
+
+// Traceability: verifies REQ-ROLLING-WORKER-CORRECTION
+test('terminal correction reacquires the unloaded original actor before freshly proving idle',t=>runRollingWorkerScenario(t,'protocol','collection',false,false,false,false,true,true,true));

@@ -2,9 +2,29 @@
 // Licensed under the MIT License. See LICENSE in the project root.
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import {readRollingConfigurationAmendmentRequestV1,readRollingConfigurationAmendmentV1,readRollingPublicationWithdrawalV1,
+ type RollingConfigurationAmendmentRequestV1,type RollingConfigurationAmendmentV1,type RollingPublicationWithdrawalV1} from '../src/rolling-campaign-store.js';
 import { readRollingAssignmentScopeV1, readRollingExecutionConfigV1, readRollingAssignmentScopeV2, readRollingExecutionConfigV2,
   RollingAssignmentScopeReaders, RollingExecutionConfigReaders, readRollingExecutionConfigV3, readRollingAssignmentScopeV3, parseRollingExecutionConfig, parseRollingAssignmentScope,
   type RollingAssignmentScopeV3, type RollingExecutionConfigV3, type RollingAssignmentScopeV1, type RollingExecutionConfigV1, type RollingAssignmentScopeV2, type RollingExecutionConfigV2 } from '../src/rolling-campaign-store.js';
+
+// Traceability: verifies REQ-ROLLING-CONFIGURATION-AMENDMENT
+// Traceability: verifies REQ-ROLLING-PUBLICATION-WITHDRAWAL
+test('lifecycle contracts require exact versions, authority and optimistic configuration identities',()=> {
+ const rollingConfigurationAmendmentRequestV1:RollingConfigurationAmendmentRequestV1={schemaVersion:1,id:'00000000-0000-0000-0000-000000000001',
+  expected:{mainline:{remote:'origin',branch:'master'},incrementRef:'traceability',maxActiveWorkers:10,publicationSize:1},
+  configuration:{mainline:{remote:'origin',branch:'uat-requirements'},incrementRef:'traceability',maxActiveWorkers:10,publicationSize:5},reason:'Human amendment',authority:['human']};
+ assert.deepEqual(readRollingConfigurationAmendmentRequestV1(rollingConfigurationAmendmentRequestV1),rollingConfigurationAmendmentRequestV1);
+ for(const value of [{...rollingConfigurationAmendmentRequestV1,schemaVersion:2},{...rollingConfigurationAmendmentRequestV1,id:'not-an-id'},{...rollingConfigurationAmendmentRequestV1,authority:[]},{...rollingConfigurationAmendmentRequestV1,expected:{...rollingConfigurationAmendmentRequestV1.expected,publicationSize:0}}])assert.throws(()=>readRollingConfigurationAmendmentRequestV1(value));
+ const rollingConfigurationAmendmentV1:RollingConfigurationAmendmentV1={schemaVersion:1,id:rollingConfigurationAmendmentRequestV1.id,campaignId:'fixture',request:rollingConfigurationAmendmentRequestV1,
+  previousConfiguration:{schemaVersion:3,...rollingConfigurationAmendmentRequestV1.expected,bindingHistory:null},
+  configuration:{schemaVersion:3,mainline:{remote:'origin',branch:'uat-requirements'},incrementRef:'traceability',maxActiveWorkers:10,publicationSize:5,bindingHistory:null}};
+ assert.deepEqual(readRollingConfigurationAmendmentV1(rollingConfigurationAmendmentV1),rollingConfigurationAmendmentV1);
+ assert.throws(()=>readRollingConfigurationAmendmentV1({...rollingConfigurationAmendmentV1,id:'00000000-0000-0000-0000-000000000002'}),/differs from request/);
+ const rollingPublicationWithdrawalV1:RollingPublicationWithdrawalV1={schemaVersion:1,id:rollingConfigurationAmendmentRequestV1.id,campaignId:'fixture',batchId:'00000000-0000-0000-0000-000000000003',reason:'Retarget',authority:['human']};
+ assert.deepEqual(readRollingPublicationWithdrawalV1(rollingPublicationWithdrawalV1),rollingPublicationWithdrawalV1);
+ for(const value of [{...rollingPublicationWithdrawalV1,batchId:'foreign'},{...rollingPublicationWithdrawalV1,authority:[]},{...rollingPublicationWithdrawalV1,reason:''},{...rollingPublicationWithdrawalV1,extra:true}])assert.throws(()=>readRollingPublicationWithdrawalV1(value));
+});
 
 // Traceability: verifies REQ-ROLLING-STATE
 // Traceability: verifies REQ-PONYTAIL-STATIC-LANGUAGE

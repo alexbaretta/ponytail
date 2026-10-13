@@ -7,6 +7,9 @@ Licensed under the MIT License. See LICENSE in the project root.
 Use this procedure when the invoking project configures rolling campaign
 operations and the stakeholder authorizes coordinated execution. Read the
 project's configuration; do not inherit another project's paths or identity.
+Execution approval activates configured parallelism automatically; no additional
+human instruction to parallelize is needed. N is a capacity limit, not a promise
+that dependencies, permissions and physical checkout capacity permit N workers.
 Ponytail-managed checkouts and direct Codex App Server sessions require no
 Ponytail plugin. MCP is an optional transport for the same typed operations.
 
@@ -77,6 +80,27 @@ request fields are `schemaVersion: 1`, absolute `coordinatorRoot`, repository-re
 Initialization publishes the initial campaign base: require stakeholder authority
 for that publication. The result identifies the campaign and accepted graph.
 
+Amend an existing campaign with `amend-configuration --campaign <id> --request
+@request.json`. Its V1 request contains `schemaVersion: 1`, a fresh UUID `id`,
+`expected` (the current resolved `mainline`, `incrementRef`, `maxActiveWorkers`,
+`publicationSize`), proposed `configuration` with those same four fields, actual
+`reason` and nonempty human `authority` references. Reconcile committed project
+configuration first. Preserve the campaign increment branch and remote; do not
+reinitialize. Identical UUID/request retries return the immutable original receipt.
+
+If an unpublished frozen batch owns the old target, wait for its exact QA to
+finish, preserve coordinator amendments and settle Git operations, then use
+`withdraw-publication --campaign <id> --batch <uuid> --reason <actual-reason>
+--authority '<JSON-reference-array>'`. This preserves its claim, memberships,
+candidate branch and all attempts while releasing only operational reservations.
+Running QA, incomplete preparation and any started push refuse withdrawal;
+unknown pushes must be observed rather than bypassed. Inspect withdrawn history
+with the existing inspection commands. Apply the configuration amendment, switch
+the clean coordinator back to its retained campaign branch, and let normal
+freezing prepare a fresh candidate against the new target. Old QA is historical
+evidence, never publication authorization for that new candidate.
+
+
 ## Coordinator loop
 
 Use `ponytail campaign --help` and each command's `--help` for required named
@@ -101,6 +125,17 @@ assignment, generation, action, review and batch IDs. Do not infer or replace th
    first available numbered checkout. Use returned actions with `provision-worker`
    or `resume-worker`, then `dispatch-worker`. Recover unknown outcomes with
    `recover-worker` or `observe-resumption`; never create a duplicate actor.
+   `dispatch-worker` is long-running: start the selected independent dispatches
+   concurrently, retain their command/transport handles, and observe them without
+   awaiting each worker's completion before starting the next. Implementation
+   workers are top-level native sessions; subagents do not replace them. Retain
+   approval handling on each owning transport. Query and replenish while others
+   run; serialize only the coordinator mutation/publication lane.
+   Distinguish native running/waiting sessions from logical occupied assignments.
+   `availableCapacity` is the capacity left after the reported hypothetical
+   selection, not the count of sessions already created. Report dependency,
+   ownership, approval and actual checkout restrictions when N cannot be filled;
+   never reinterpret N as authorization to create otherwise forbidden checkouts.
 4. For a blocked worker, record dependency discoveries and reconcile first.
    Invoke `suspend-worker` with its assignment/generation and prerequisite IDs.
    Ponytail observes stopped activity, retains ownership and frees active capacity.
@@ -111,6 +146,20 @@ assignment, generation, action, review and batch IDs. Do not infer or replace th
    failed turn and idle actor. Replenish/resume preserves the original session,
    checkout and unfinished work. If it retains an owned rebase, inspect and
    continue it before a fresh semantic replay; never reset its amendments away.
+   A completed turn containing blocker prose is not a failed native turn or a
+   submission. Use `retry-worker --campaign <id> --assignment <uuid>
+   --generation <uuid> --reason <actual-reason>` for the latest terminal idle
+   actor, supplying the fresh owning `--observation` packet used by collection
+   when the observer reports notLoaded. This checkpoints work, records correction
+   and frees active capacity without fabricated prerequisites. Replenish prefers
+   its original actor; resume with the returned generation and dispatch renewed
+   instructions. Active, newer or unknown native activity is not eligible.
+   Correction is an authorized actor-control operation: without an owning packet,
+   an unloaded observer may explicitly resume only the recorded original actor,
+   then freshly verify the same latest terminal turn and idle state. A conflicting
+   writer or inability to prove idle preserves ownership and refuses correction.
+   Collection never performs that writer acquisition. Do not synthesize fresh
+   timestamps on historical observations.
 5. Collect the exact terminal submission using `collect-submission`. Use
    `start-review` to create an independent native reviewer and start its actual
    review on the same connection before closing it. The command preserves the
@@ -145,6 +194,13 @@ assignment, generation, action, review and batch IDs. Do not infer or replace th
    integration, not an imposed deadline or a substitute acceptance criterion.
 
 ## Worker execution
+
+Required focused QA requests are matched to the exact declared argv, original
+actor, checkout, turn and generation. Invoke those commands separately, without
+appending shell operations, redirects or unconfigured diagnostic commands; retain
+the native output as evidence through ordinary in-scope file operations. Accepted
+host restrictions still apply. A refusal is not a passing QA result or permission
+to broaden execution policy.
 
 Read project rules, skills and the exact frozen assignment before work. The
 lease owns current permitted paths, operations, prerequisites and proof selection.

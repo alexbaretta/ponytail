@@ -2,7 +2,7 @@
 // Licensed under the MIT License. See LICENSE in the project root.
 import crypto from 'node:crypto';
 import {readRollingPublicationRepairReviewV1,readRollingPublicationRepairV1,validateRollingPublicationRepair,type RollingPublicationRepairReviewV1,type RollingPublicationRepairV1,readRollingMainlineRefreshIntentV1,readRollingMainlineRefreshPreparationV1,readRollingMainlineRefreshResultV1,type RollingMainlineRefreshIntentV1,type RollingMainlineRefreshPreparationV1,type RollingMainlineRefreshResultV1,synchronizeRollingCampaign,readRollingMainlinePublicationV1,type RollingMainlinePublicationV1,readRollingMainlinePreparationV1,readRollingMainlineCandidateV1,readRollingPublicationQaV1,parseRollingPublicationQa,readRollingPublicationQaJobV1,verifyRollingMainlineCandidate,verifyRollingPublicationQa,type RollingMainlinePreparationV1,type RollingMainlineCandidateV1,type RollingPublicationQaV1,type RollingPublicationQaJobV1,selectRollingPublicationBatch,readRollingPublicationBatchClaimV1,type RollingPublicationBatchClaimV1,type RollingPublicationWaiting,type RollingPublicationTrigger,type RollingAcceptedIncrement,type RollingPublicationSelection} from './rolling-publication.js';
-import {git,readRollingIncrementClaimV1,readRollingIncrementRebaseV1,verifyRollingIncrementRebase,prepareRollingIncrementRebase,readRollingIncrementPublicationV1,reconcileRollingIncrementPublication,publishRollingIncrement,verifyRollingIncrementLocalIntegration,fastForwardRollingIncrement,verifyRollingIncrementConflictInspection,type RollingIncrementConflictInspection,type RollingIncrementRepair,type RollingIncrementClaimV1,type RollingIncrementRebaseV1,type RollingFastRebaseResult,type RollingIncrementPublicationV1,type RollingIncrementPublicationResult,type RollingIncrementPushStarted} from './rolling-integration.js';
+import {git,gitResult,readRollingIncrementClaimV1,readRollingIncrementRebaseV1,verifyRollingIncrementRebase,prepareRollingIncrementRebase,readRollingIncrementPublicationV1,reconcileRollingIncrementPublication,publishRollingIncrement,verifyRollingIncrementLocalIntegration,fastForwardRollingIncrement,verifyRollingIncrementConflictInspection,type RollingIncrementConflictInspection,type RollingIncrementRepair,type RollingIncrementClaimV1,type RollingIncrementRebaseV1,type RollingFastRebaseResult,type RollingIncrementPublicationV1,type RollingIncrementPublicationResult,type RollingIncrementPushStarted} from './rolling-integration.js';
 import path from 'node:path';
 import { parse } from 'lossless-json';
 import type { Pool, PoolClient } from 'pg';
@@ -20,7 +20,7 @@ import { cleanupRollingWorktree, validateRollingSessionMarker } from './rolling-
 import { readRollingReviewRequestV1, readRollingReviewOutcomeV1, parseRollingReviewRequest, parseRollingReviewOutcome,
   readRollingReviewReplacementV1, parseRollingReviewReplacement, validateRollingReviewOutcome, type RollingReviewRequestV1, type RollingReviewOutcomeV1,
   type RollingReviewReplacementV1, type RollingReviewerLoss, type RollingStoredReview } from './rolling-review.js';
-import { collectRollingGraph, selectRollingAssignments, resolveRollingConfiguration, readRollingResolvedConfiguration, readRollingBindingsV1,
+import { collectRollingGraph, selectRollingAssignments, resolveRollingConfiguration, readRollingCampaignRequest, readRollingResolvedConfiguration, readRollingBindingsV1,
   type RollingAssignment, type RollingAssignmentState, type RollingBinding, type RollingCampaignRequest,
   type RollingArgv, type RollingGraph, type RollingResolvedConfiguration, type RollingSchedulingBlock, type RollingSchedulingResult } from './rolling-campaign.js';
 
@@ -110,6 +110,52 @@ export interface RollingCampaignRegistration {
 }
 export interface RollingCampaignRegistrationResult { readonly id: string; readonly graphDigest: string }
 export interface RollingGraphReconciliation { readonly graphDigest: string }
+export interface RollingConfigurationAmendmentRequestV1 {
+ readonly schemaVersion:1;readonly id:string;readonly expected:RollingResolvedConfiguration;
+ readonly configuration:RollingCampaignRequest;readonly reason:string;readonly authority:readonly string[];
+}
+export interface RollingConfigurationAmendmentV1 {
+ readonly schemaVersion:1;readonly id:string;readonly campaignId:string;
+ readonly request:RollingConfigurationAmendmentRequestV1;
+ readonly previousConfiguration:RollingExecutionConfigV3;readonly configuration:RollingExecutionConfigV3;
+}
+export interface RollingPublicationWithdrawalV1 {
+ readonly schemaVersion:1;readonly id:string;readonly campaignId:string;readonly batchId:string;
+ readonly reason:string;readonly authority:readonly string[];
+}
+function lifecycleAuthority(reason:unknown,authority:unknown):{readonly reason:string;readonly authority:readonly string[]} {
+ requireState(typeof reason==='string'&&reason.trim().length>0&&isStringArray(authority)&&authority.length>0,'lifecycle change requires reason and authority');
+ return {reason,authority};
+}
+function requireSettledCoordinator(root:string):void {
+ requireState(git(root,['status','--porcelain']).trim()==='','preserve dirty coordinator inputs before lifecycle change');
+ for(const operation of ['MERGE_HEAD','CHERRY_PICK_HEAD','rebase-merge','rebase-apply','sequencer']) {
+  requireState(!fs.existsSync(path.resolve(root,git(root,['rev-parse','--git-path',operation]).trim())),'finish the retained Git operation before lifecycle change');
+ }
+}
+// Traceability: implements REQ-ROLLING-CONFIGURATION-AMENDMENT
+export function readRollingConfigurationAmendmentRequestV1(value:unknown):RollingConfigurationAmendmentRequestV1 {
+ requireKeys(value,['schemaVersion','id','expected','configuration','reason','authority']);
+ const id=stringColumn(value.id,'amendment request ID');requireState(/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/u.test(id),'invalid amendment request ID');
+ return {schemaVersion:1,id,expected:readRollingResolvedConfiguration(value.expected),configuration:readRollingCampaignRequest(value.configuration),...lifecycleAuthority(value.reason,value.authority)};
+}
+export const RollingConfigurationAmendmentRequestReaders={V1:readRollingConfigurationAmendmentRequestV1};
+// Traceability: implements REQ-ROLLING-CONFIGURATION-AMENDMENT
+export function readRollingConfigurationAmendmentV1(value:unknown):RollingConfigurationAmendmentV1 {
+ requireKeys(value,['schemaVersion','id','campaignId','request','previousConfiguration','configuration']);
+ const rollingConfigurationAmendmentRequestV1=readRollingConfigurationAmendmentRequestV1(value.request);
+ requireState(value.id===rollingConfigurationAmendmentRequestV1.id,'amendment receipt differs from request');
+ return {schemaVersion:1,id:rollingConfigurationAmendmentRequestV1.id,campaignId:stringColumn(value.campaignId,'campaign ID'),request:rollingConfigurationAmendmentRequestV1,
+  previousConfiguration:readRollingExecutionConfigV3(value.previousConfiguration),configuration:readRollingExecutionConfigV3(value.configuration)};
+}
+export const RollingConfigurationAmendmentReaders={V1:readRollingConfigurationAmendmentV1};
+// Traceability: implements REQ-ROLLING-PUBLICATION-WITHDRAWAL
+export function readRollingPublicationWithdrawalV1(value:unknown):RollingPublicationWithdrawalV1 {
+ requireKeys(value,['schemaVersion','id','campaignId','batchId','reason','authority']);
+ for(const key of ['id','batchId'])requireState(typeof value[key]==='string'&&/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/u.test(value[key]),'invalid withdrawal identity');
+ return {schemaVersion:1,id:stringColumn(value.id,'withdrawal ID'),campaignId:stringColumn(value.campaignId,'campaign ID'),batchId:stringColumn(value.batchId,'batch ID'),...lifecycleAuthority(value.reason,value.authority)};
+}
+export const RollingPublicationWithdrawalReaders={V1:readRollingPublicationWithdrawalV1};
 interface RollingPublicationQaConfiguration {readonly digest:string;readonly commands:readonly RollingArgv[]}
 export interface RollingPublicationBatchClaimed { readonly state:'CLAIMED';readonly claim:RollingPublicationBatchClaimV1 }
 // Discriminator: state
@@ -172,6 +218,7 @@ export interface RollingPublicationStatus {
   readonly pendingRefreshId: string | null;
 }
 export interface RollingPublicationContext {
+  readonly withdrawal:RollingPublicationWithdrawalV1|null;
  readonly claim:RollingPublicationBatchClaimV1;readonly preparation:RollingMainlinePreparationV1 | null;
  readonly candidate:RollingMainlineCandidateV1 | null;readonly qaJob:RollingPublicationQaJobV1 | null;readonly qa:RollingPublicationQaV1 | null;
  readonly refreshIntent:RollingMainlineRefreshIntentV1 | null;readonly refreshPreparation:RollingMainlineRefreshPreparationV1 | null;readonly refreshResult:RollingMainlineRefreshResultV1 | null;
@@ -511,6 +558,56 @@ export class RollingCampaignStore {
       requireState(rollingGraph.document.scopeId === campaignId,'campaign scope changed');
       await poolClient.query('UPDATE ponytail_index.rolling_campaign_v1 SET graph_digest=$3 WHERE project_id=$1 AND campaign_id=$2',[this.projectId,campaignId,rollingGraph.digest]);
       return {graphDigest:rollingGraph.digest};
+    });
+  }
+
+  // Traceability: implements REQ-ROLLING-CONFIGURATION-AMENDMENT
+  async amendConfiguration(campaignId:string,rollingConfigurationAmendmentRequestV1:RollingConfigurationAmendmentRequestV1,coordinatorRoot:string):Promise<RollingConfigurationAmendmentV1> {
+    const checkedRollingConfigurationAmendmentRequestV1=readRollingConfigurationAmendmentRequestV1(rollingConfigurationAmendmentRequestV1);
+    return this.transaction(campaignId,async(poolClient,rollingCampaignRow)=> {
+      requireState(fs.realpathSync(coordinatorRoot)===rollingCampaignRow.coordinator_root,'amendment requires the original coordinator checkout');
+      const previous=(await poolClient.query<Record<string,unknown>>('SELECT amendment_text FROM ponytail_index.rolling_configuration_amendment_v1 WHERE project_id=$1 AND campaign_id=$2 AND amendment_id=$3',[this.projectId,campaignId,checkedRollingConfigurationAmendmentRequestV1.id])).rows[0];
+      if(previous) {
+        const rollingConfigurationAmendmentV1=readRollingConfigurationAmendmentV1(readStateText(stringColumn(previous.amendment_text,'amendment')));
+        requireState(isDeepStrictEqual(rollingConfigurationAmendmentV1.request,checkedRollingConfigurationAmendmentRequestV1),'amendment retry differs from original request');return rollingConfigurationAmendmentV1;
+      }
+      const previousRollingExecutionConfigV3=parseRollingExecutionConfig(rollingCampaignRow.configuration_text);
+      const previousRollingResolvedConfiguration:RollingResolvedConfiguration={mainline:previousRollingExecutionConfigV3.mainline,incrementRef:previousRollingExecutionConfigV3.incrementRef,maxActiveWorkers:previousRollingExecutionConfigV3.maxActiveWorkers,publicationSize:previousRollingExecutionConfigV3.publicationSize};
+      requireState(isDeepStrictEqual(previousRollingResolvedConfiguration,checkedRollingConfigurationAmendmentRequestV1.expected),'stale expected campaign configuration');
+      const rollingGraph=this.graph(rollingCampaignRow,rollingCampaignRow.graph_digest);
+      const gitDefaultBranchResult=gitResult(rollingCampaignRow.coordinator_root,['config','--get','init.defaultBranch']);
+      requireState(gitDefaultBranchResult.status===0||gitDefaultBranchResult.status===1,'cannot resolve Git default branch');
+      const rollingResolvedConfiguration=resolveRollingConfiguration(rollingGraph.projectConfiguration,checkedRollingConfigurationAmendmentRequestV1.configuration,gitDefaultBranchResult.stdout.trim()||null);
+      requireState(rollingResolvedConfiguration.incrementRef===previousRollingExecutionConfigV3.incrementRef&&rollingResolvedConfiguration.mainline.remote===previousRollingExecutionConfigV3.mainline.remote,'amendment must preserve increment branch and remote');
+      const rollingPublicationLane=await this.publicationLane(poolClient,rollingCampaignRow);
+      requireState(rollingPublicationLane.publicationCampaignId===null&&rollingPublicationLane.integrationCampaignId===null,'settle or withdraw existing publication/integration ownership before amendment');
+      requireSettledCoordinator(rollingCampaignRow.coordinator_root);
+      const rollingExecutionConfigV3:RollingExecutionConfigV3={schemaVersion:3,...rollingResolvedConfiguration,bindingHistory:previousRollingExecutionConfigV3.bindingHistory};
+      const rollingConfigurationAmendmentV1=readRollingConfigurationAmendmentV1({schemaVersion:1,id:checkedRollingConfigurationAmendmentRequestV1.id,campaignId,request:checkedRollingConfigurationAmendmentRequestV1,previousConfiguration:previousRollingExecutionConfigV3,configuration:rollingExecutionConfigV3});
+      await poolClient.query('INSERT INTO ponytail_index.rolling_configuration_amendment_v1(project_id,campaign_id,amendment_id,amendment_text) VALUES($1,$2,$3,$4)',[this.projectId,campaignId,rollingConfigurationAmendmentV1.id,JSON.stringify(rollingConfigurationAmendmentV1)]);
+      await poolClient.query('UPDATE ponytail_index.rolling_campaign_v1 SET configuration_text=$3 WHERE project_id=$1 AND campaign_id=$2',[this.projectId,campaignId,JSON.stringify(rollingExecutionConfigV3)]);
+      return rollingConfigurationAmendmentV1;
+    });
+  }
+
+  // Traceability: implements REQ-ROLLING-PUBLICATION-WITHDRAWAL
+  async withdrawPublication(campaignId:string,id:string,reason:string,authority:readonly string[]):Promise<RollingPublicationWithdrawalV1> {
+    const authorized=lifecycleAuthority(reason,authority);
+    return this.transaction(campaignId,async poolClient=> {
+      const previous=(await poolClient.query<Record<string,unknown>>('SELECT withdrawal_text FROM ponytail_index.rolling_publication_withdrawal_v1 WHERE project_id=$1 AND campaign_id=$2 AND batch_id=$3',[this.projectId,campaignId,id])).rows[0];
+      if(previous) {
+        const rollingPublicationWithdrawalV1=readRollingPublicationWithdrawalV1(readStateText(stringColumn(previous.withdrawal_text,'withdrawal')));
+        requireState(rollingPublicationWithdrawalV1.reason===reason&&isDeepStrictEqual(rollingPublicationWithdrawalV1.authority,authority),'withdrawal retry differs from original authority');return rollingPublicationWithdrawalV1;
+      }
+      const batch=(await poolClient.query<Record<string,unknown>>('SELECT state,publication_id,pending_refresh_id FROM ponytail_index.rolling_publication_batch_v1 WHERE project_id=$1 AND campaign_id=$2 AND batch_id=$3',[this.projectId,campaignId,id])).rows[0];
+      requireState(batch&&['FROZEN','CANDIDATE','QA_FAILED','QA_PASSED'].includes(stringColumn(batch.state,'publication state'))&&batch.publication_id===null&&batch.pending_refresh_id===null,'withdrawal requires settled QA/preparation and no started push');
+      const rollingPublicationBatchClaimV1=await this.publicationClaim(poolClient,campaignId,id);
+      requireSettledCoordinator(rollingPublicationBatchClaimV1.rootPath);
+      const rollingPublicationWithdrawalV1=readRollingPublicationWithdrawalV1({schemaVersion:1,id:crypto.randomUUID(),campaignId,batchId:id,...authorized});
+      await poolClient.query('INSERT INTO ponytail_index.rolling_publication_withdrawal_v1(project_id,campaign_id,batch_id,withdrawal_text) VALUES($1,$2,$3,$4)',[this.projectId,campaignId,id,JSON.stringify(rollingPublicationWithdrawalV1)]);
+      await poolClient.query('UPDATE ponytail_index.rolling_publication_member_v1 SET withdrawn=true WHERE project_id=$1 AND campaign_id=$2 AND batch_id=$3',[this.projectId,campaignId,id]);
+      await poolClient.query('UPDATE ponytail_index.rolling_publication_batch_v1 SET withdrawn=true WHERE project_id=$1 AND campaign_id=$2 AND batch_id=$3',[this.projectId,campaignId,id]);
+      return rollingPublicationWithdrawalV1;
     });
   }
 
@@ -861,14 +958,14 @@ export class RollingCampaignStore {
   }
 
   private async publicationLane(poolClient:PoolClient,rollingCampaignRow:RollingCampaignRow):Promise<RollingPublicationLane> {
-    const publication=(await poolClient.query<Record<string,unknown>>("SELECT campaign_id FROM ponytail_index.rolling_publication_batch_v1 WHERE project_id=$1 AND coordinator_root=$2 AND (state<>'PUBLISHED' OR synchronized_revision IS NULL) LIMIT 1",[this.projectId,rollingCampaignRow.coordinator_root])).rows[0];
+    const publication=(await poolClient.query<Record<string,unknown>>("SELECT campaign_id FROM ponytail_index.rolling_publication_batch_v1 WHERE project_id=$1 AND coordinator_root=$2 AND NOT withdrawn AND (state<>'PUBLISHED' OR synchronized_revision IS NULL) LIMIT 1",[this.projectId,rollingCampaignRow.coordinator_root])).rows[0];
     const integration=(await poolClient.query<Record<string,unknown>>("SELECT i.campaign_id FROM ponytail_index.rolling_increment_v1 i JOIN ponytail_index.rolling_campaign_v1 c USING(project_id,campaign_id) WHERE i.project_id=$1 AND c.coordinator_root=$2 AND i.state<>'PUBLISHED' AND i.repair_reference IS NULL ORDER BY i.created_at,i.increment_id LIMIT 1",[this.projectId,rollingCampaignRow.coordinator_root])).rows[0];
     return {publicationCampaignId:publication ? stringColumn(publication.campaign_id,'publication owner') : null,integrationCampaignId:integration ? stringColumn(integration.campaign_id,'integration owner') : null};
   }
 
   private async orderedAcceptedIncrements(poolClient:PoolClient,rollingCampaignRow:RollingCampaignRow,rollingExecutionConfigV3:RollingExecutionConfigV3):Promise<readonly RollingAcceptedIncrement[]> {
     const rows = (await poolClient.query<Record<string,unknown>>(
-      'SELECT d.increment_id,d.revision FROM ponytail_index.rolling_increment_delivery_v1 d LEFT JOIN ponytail_index.rolling_publication_member_v1 m USING(project_id,campaign_id,increment_id) WHERE d.project_id=$1 AND d.campaign_id=$2 AND m.increment_id IS NULL',
+      'SELECT d.increment_id,d.revision FROM ponytail_index.rolling_increment_delivery_v1 d LEFT JOIN ponytail_index.rolling_publication_member_v1 m ON m.project_id=d.project_id AND m.campaign_id=d.campaign_id AND m.increment_id=d.increment_id AND NOT m.withdrawn WHERE d.project_id=$1 AND d.campaign_id=$2 AND m.increment_id IS NULL',
       [this.projectId,rollingCampaignRow.campaign_id])).rows;
     const rollingAcceptedIncrements:readonly RollingAcceptedIncrement[] = rows.map(row=>({id:stringColumn(row.increment_id,'accepted increment ID'),revision:stringColumn(row.revision,'accepted increment revision')}));
     // Transaction timestamps are not Git ancestry. Build the prefix from the
@@ -893,7 +990,7 @@ export class RollingCampaignStore {
     return this.transaction(campaignId,async (poolClient,rollingCampaignRow)=> {
       const rollingGraph = this.graph(rollingCampaignRow,expectedDigest);
       const existing = (await poolClient.query<Record<string,unknown>>(
-        "SELECT claim_text FROM ponytail_index.rolling_publication_batch_v1 WHERE project_id=$1 AND campaign_id=$2 AND (state<>'PUBLISHED' OR synchronized_revision IS NULL)",
+        "SELECT claim_text FROM ponytail_index.rolling_publication_batch_v1 WHERE project_id=$1 AND campaign_id=$2 AND NOT withdrawn AND (state<>'PUBLISHED' OR synchronized_revision IS NULL)",
         [this.projectId,campaignId])).rows[0];
       if (existing) return {state:'CLAIMED',claim:readRollingPublicationBatchClaimV1(readStateText(stringColumn(existing.claim_text,'publication claim')))};
       const rollingPublicationLane=await this.publicationLane(poolClient,rollingCampaignRow);
@@ -926,9 +1023,10 @@ export class RollingCampaignStore {
     });
   }
 
-  private async publicationClaim(poolClient:PoolClient,campaignId:string,id:string):Promise<RollingPublicationBatchClaimV1> {
-    const row = (await poolClient.query<Record<string,unknown>>('SELECT claim_text FROM ponytail_index.rolling_publication_batch_v1 WHERE project_id=$1 AND campaign_id=$2 AND batch_id=$3',[this.projectId,campaignId,id])).rows[0];
+  private async publicationClaim(poolClient:PoolClient,campaignId:string,id:string,inspect=false):Promise<RollingPublicationBatchClaimV1> {
+    const row = (await poolClient.query<Record<string,unknown>>('SELECT claim_text,withdrawn FROM ponytail_index.rolling_publication_batch_v1 WHERE project_id=$1 AND campaign_id=$2 AND batch_id=$3',[this.projectId,campaignId,id])).rows[0];
     requireState(row,'publication batch is missing');
+    requireState(inspect || row.withdrawn===false,'publication was withdrawn; historical receipts grant no mutation authority');
     return readRollingPublicationBatchClaimV1(readStateText(stringColumn(row.claim_text,'publication claim')));
   }
 
@@ -941,7 +1039,9 @@ export class RollingCampaignStore {
       const preparation = nullableStringColumn(row.preparation_text,'publication preparation');
       const job = nullableStringColumn(row.job_text,'QA job'),qa = nullableStringColumn(row.qa_text,'QA result');
       const refreshIntent = nullableStringColumn(row.refresh_intent,'refresh intent'),refreshPreparation = nullableStringColumn(row.refresh_preparation,'refresh preparation'),refreshResult = nullableStringColumn(row.refresh_result,'refresh result');
-      return {claim:await this.publicationClaim(poolClient,campaignId,id),preparation:preparation === null ? null : readRollingMainlinePreparationV1(readStateText(preparation)),
+      const withdrawal=(await poolClient.query<Record<string,unknown>>('SELECT withdrawal_text FROM ponytail_index.rolling_publication_withdrawal_v1 WHERE project_id=$1 AND campaign_id=$2 AND batch_id=$3',[this.projectId,campaignId,id])).rows[0];
+      return {withdrawal:withdrawal?readRollingPublicationWithdrawalV1(readStateText(stringColumn(withdrawal.withdrawal_text,'withdrawal'))):null,
+        claim:await this.publicationClaim(poolClient,campaignId,id,true),preparation:preparation === null ? null : readRollingMainlinePreparationV1(readStateText(preparation)),
         candidate:row.candidate_text === null ? null : await this.publicationCandidate(poolClient,campaignId,id),
         qaJob:job === null ? null : readRollingPublicationQaJobV1(readStateText(job)),qa:qa === null ? null : parseRollingPublicationQa(qa),
         refreshIntent:refreshIntent === null ? null : readRollingMainlineRefreshIntentV1(readStateText(refreshIntent)),
@@ -1279,7 +1379,7 @@ export class RollingCampaignStore {
       const rollingPublicationLane=await this.publicationLane(poolClient,rollingCampaignRow);
       requireState(rollingPublicationLane.integrationCampaignId === null,'another increment owns the integration lane; finish its original operation');
       const activePublications = (await poolClient.query<Record<string,unknown>>(
-        "SELECT batch_id FROM ponytail_index.rolling_publication_batch_v1 WHERE project_id=$1 AND coordinator_root=$2 AND (state<>'PUBLISHED' OR synchronized_revision IS NULL)",
+        "SELECT batch_id FROM ponytail_index.rolling_publication_batch_v1 WHERE project_id=$1 AND coordinator_root=$2 AND NOT withdrawn AND (state<>'PUBLISHED' OR synchronized_revision IS NULL)",
         [this.projectId,rollingCampaignRow.coordinator_root])).rows;
       requireState(activePublications.length === 0,'mainline publication owns the coordinator checkout; finish it before claiming another increment');
       const row = (await poolClient.query<Record<string, unknown>>('SELECT request_text,outcome_text,replacement_text FROM ponytail_index.rolling_review_v1 WHERE project_id=$1 AND campaign_id=$2 AND review_id=$3', [this.projectId,campaignId,reviewId])).rows[0];
@@ -1776,7 +1876,7 @@ export class RollingCampaignStore {
         requireState(rollingIncrementState !== 'PUBLISHED' || rollingIncrementPublicationV1?.result.state === 'PUBLISHED','published increment lacks its confirmed original receipt');
         return {claim:rollingIncrementClaimV1,state:rollingIncrementState,publication:rollingIncrementPublicationV1,obligationSatisfied:rollingGraph.projection.satisfiedIds.includes(stringColumn(row.obligation_id,'increment obligation'))};
       });
-      const publications = (await poolClient.query<Record<string,unknown>>("SELECT * FROM ponytail_index.rolling_publication_batch_v1 WHERE project_id=$1 AND campaign_id=$2 AND (state<>'PUBLISHED' OR synchronized_revision IS NULL) ORDER BY created_at,batch_id",[this.projectId,campaignId])).rows.map((row):RollingPublicationStatus => ({
+      const publications = (await poolClient.query<Record<string,unknown>>("SELECT * FROM ponytail_index.rolling_publication_batch_v1 WHERE project_id=$1 AND campaign_id=$2 AND NOT withdrawn AND (state<>'PUBLISHED' OR synchronized_revision IS NULL) ORDER BY created_at,batch_id",[this.projectId,campaignId])).rows.map((row):RollingPublicationStatus => ({
         claim:readRollingPublicationBatchClaimV1(readStateText(stringColumn(row.claim_text,'publication claim'))),state:publicationState(row.state),
         qaId:nullableStringColumn(row.qa_id,'publication QA'),publicationId:nullableStringColumn(row.publication_id,'publication observation'),pendingRefreshId:nullableStringColumn(row.pending_refresh_id,'pending mainline refresh')
       }));
@@ -1810,7 +1910,7 @@ export class RollingCampaignStore {
       requireState(owners && owners.present === false,'closure requires every original worker owner retired and released');
       const actions = (await poolClient.query<Record<string,unknown>>("SELECT EXISTS(SELECT 1 FROM ponytail_index.rolling_action_v1 WHERE project_id=$1 AND campaign_id=$2 AND state IN ('PENDING','STARTED')) AS present",[this.projectId,campaignId])).rows[0];
       requireState(actions && actions.present === false,'closure requires reconciled action outcomes');
-      const publications = (await poolClient.query<Record<string,unknown>>("SELECT EXISTS(SELECT 1 FROM ponytail_index.rolling_publication_batch_v1 WHERE project_id=$1 AND campaign_id=$2 AND (state<>'PUBLISHED' OR synchronized_revision IS NULL)) OR EXISTS(SELECT 1 FROM ponytail_index.rolling_increment_delivery_v1 d LEFT JOIN ponytail_index.rolling_publication_member_v1 m USING(project_id,campaign_id,increment_id) WHERE d.project_id=$1 AND d.campaign_id=$2 AND m.increment_id IS NULL) AS present",[this.projectId,campaignId])).rows[0];
+      const publications = (await poolClient.query<Record<string,unknown>>("SELECT EXISTS(SELECT 1 FROM ponytail_index.rolling_publication_batch_v1 WHERE project_id=$1 AND campaign_id=$2 AND NOT withdrawn AND (state<>'PUBLISHED' OR synchronized_revision IS NULL)) OR EXISTS(SELECT 1 FROM ponytail_index.rolling_increment_delivery_v1 d LEFT JOIN ponytail_index.rolling_publication_member_v1 m ON m.project_id=d.project_id AND m.campaign_id=d.campaign_id AND m.increment_id=d.increment_id AND NOT m.withdrawn WHERE d.project_id=$1 AND d.campaign_id=$2 AND m.increment_id IS NULL) AS present",[this.projectId,campaignId])).rows[0];
       requireState(publications && publications.present === false,'closure requires all accepted increments published and synchronized');
       const rollingExecutionConfigV3 = parseRollingExecutionConfig(rollingCampaignRow.configuration_text);
       const rootPath = rollingCampaignRow.coordinator_root;
@@ -2047,6 +2147,17 @@ export class RollingCampaignStore {
   // Traceability: implements REQ-ROLLING-SCHEDULING
   async suspendObservedWorker(campaignId:string,id:string,generation:string,rollingWorkerStopV1:RollingWorkerStopV1,
     blockers:readonly string[]):Promise<RollingAssignmentTransition> {
+    return this.stopObservedWorker(campaignId,id,generation,rollingWorkerStopV1,blockers,null);
+  }
+
+  // Traceability: implements REQ-ROLLING-WORKER-CORRECTION
+  async correctObservedWorker(campaignId:string,id:string,generation:string,rollingWorkerStopV1:RollingWorkerStopV1,reason:string):Promise<RollingAssignmentTransition> {
+    requireState(reason.trim().length>0,'worker correction requires its actual reason');
+    return this.stopObservedWorker(campaignId,id,generation,rollingWorkerStopV1,[],reason);
+  }
+
+  private async stopObservedWorker(campaignId:string,id:string,generation:string,rollingWorkerStopV1:RollingWorkerStopV1,
+    blockers:readonly string[],correctionReason:string|null):Promise<RollingAssignmentTransition> {
     const checkedRollingWorkerStopV1 = readRollingWorkerStopV1(rollingWorkerStopV1);
     requireState(checkedRollingWorkerStopV1.campaignId === campaignId && checkedRollingWorkerStopV1.assignmentId === id
       && checkedRollingWorkerStopV1.generation === generation,'stop observation differs from assignment');
@@ -2056,7 +2167,7 @@ export class RollingCampaignStore {
       const rollingStoredAssignment = await this.assignment(poolClient,campaignId,id,generation);
       requireState(rollingStoredAssignment.state === 'WORKING' || rollingStoredAssignment.state === 'INACTIVE' || rollingStoredAssignment.state === 'REWORK','worker is not eligible for suspension');
       const existing = await this.workerStopValue(poolClient,campaignId,id,generation);
-      requireState(blockers.length > 0 || rollingStoredAssignment.state === 'REWORK'
+      requireState(correctionReason!==null&&checkedRollingWorkerStopV1.turn!==null || blockers.length > 0 || rollingStoredAssignment.state === 'REWORK'
         || rollingStoredAssignment.state === 'WORKING' && checkedRollingWorkerStopV1.turn?.status === 'failed'
         || rollingStoredAssignment.state === 'INACTIVE' && rollingStoredAssignment.blockers.length === 0 && existing !== null,
         'suspension requires obligation blockers unless returning rejected work or an observed failed turn');
@@ -2068,6 +2179,11 @@ export class RollingCampaignStore {
         [this.projectId,campaignId,id,generation])).rows[0];
       requireState(dispatch ? dispatch.state === 'ATTACHED' && dispatch.turn_id === checkedRollingWorkerStopV1.turn?.id
         : checkedRollingWorkerStopV1.turn === null,'stop observation differs from known worker turn');
+      if(correctionReason!==null) {
+        const correction=(await poolClient.query<Record<string,unknown>>('SELECT reason FROM ponytail_index.rolling_worker_correction_v1 WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3 AND generation=$4',[this.projectId,campaignId,id,generation])).rows[0];
+        if(correction)requireState(correction.reason===correctionReason,'correction retry differs from its original reason');
+        else await poolClient.query('INSERT INTO ponytail_index.rolling_worker_correction_v1(project_id,campaign_id,assignment_id,generation,reason) VALUES($1,$2,$3,$4,$5)',[this.projectId,campaignId,id,generation,correctionReason]);
+      }
       await this.cancelActions(poolClient,id);
       if (existing) requireState(isDeepStrictEqual(existing,{...checkedRollingWorkerStopV1,observedAt:existing.observedAt}),
         'stop observation checkpoint is immutable');

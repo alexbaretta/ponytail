@@ -919,6 +919,54 @@
         "V1"
       ],
       "supportedDowngradeVersions": []
+    },
+    {
+      "id": "rolling-configuration-amendment-request",
+      "implementation": {
+        "workspace": "ponytail",
+        "module": "src/rolling-campaign-store.ts",
+        "readerRegistryExport": "RollingConfigurationAmendmentRequestReaders"
+      },
+      "currentVersion": "V1",
+      "versions": [
+        "V1"
+      ],
+      "supportedReadVersions": [
+        "V1"
+      ],
+      "supportedDowngradeVersions": []
+    },
+    {
+      "id": "rolling-configuration-amendment",
+      "implementation": {
+        "workspace": "ponytail",
+        "module": "src/rolling-campaign-store.ts",
+        "readerRegistryExport": "RollingConfigurationAmendmentReaders"
+      },
+      "currentVersion": "V1",
+      "versions": [
+        "V1"
+      ],
+      "supportedReadVersions": [
+        "V1"
+      ],
+      "supportedDowngradeVersions": []
+    },
+    {
+      "id": "rolling-publication-withdrawal",
+      "implementation": {
+        "workspace": "ponytail",
+        "module": "src/rolling-campaign-store.ts",
+        "readerRegistryExport": "RollingPublicationWithdrawalReaders"
+      },
+      "currentVersion": "V1",
+      "versions": [
+        "V1"
+      ],
+      "supportedReadVersions": [
+        "V1"
+      ],
+      "supportedDowngradeVersions": []
     }
   ]
 }

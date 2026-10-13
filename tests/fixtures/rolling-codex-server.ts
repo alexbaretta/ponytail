@@ -40,6 +40,7 @@ let archivedRoot:string | null = null;
 let foreignArchiveRoot = false;
 let externallyActive = false;
 let observerOnly = false;
+let unloadedUntilResume = false;
 let terminalDuringHistoryRead = false;
 const threadId = process.argv.includes('--reviewer') ? 'thread-reviewer-fixture' : 'thread-fixture';
 const sessionId = process.argv.includes('--reviewer') ? 'session-reviewer-fixture' : 'session-fixture';
@@ -56,6 +57,7 @@ lines.on('line', line => {
   else if (!initialized) throw new Error('handshake missing');
   else if (method === 'thread/start' || method === 'thread/resume') {
     if(method==='thread/resume' && observerOnly){send({id:message.id,error:{code:-32600,message:'already has an active writer'}});return;}
+    if(method==='thread/resume')unloadedUntilResume=false;
     if (method === 'thread/resume' && turnCount === 0) {
       send({ id: message.id, error: { code: -32600, message: 'no rollout found before the first turn' } }); return;
     }
@@ -97,13 +99,15 @@ lines.on('line', line => {
     externallyActive = params.active;
   } else if(method === 'fixture-observer-only') {
     observerOnly=true;
+  } else if(method==='fixture-correction-reload') {
+    observerOnly=false;unloadedUntilResume=true;
   } else if(method === 'fixture-foreign-start') {
     turns.set('foreign-turn',{id:'foreign-turn',status:'inProgress',items:[]});
     send({method:'turn/started',params:{threadId,turn:{id:'foreign-turn'}}});
   } else if (method === 'thread/read') {
     const threadId = text(params.threadId);
     result = {thread:{id:threadId === 'wrong-activity' ? 'thread-fixture' : threadId,sessionId,cwd:archivedRoot,
-      status:{type:threadId === 'unsupported-activity' ? 'unknown' : externallyActive || [...turns.values()].some(turn => turn.status === 'inProgress') ? 'active' : observerOnly?'notLoaded':'idle'}}};
+      status:{type:threadId === 'unsupported-activity' ? 'unknown' : externallyActive || [...turns.values()].some(turn => turn.status === 'inProgress') ? 'active' : observerOnly||unloadedUntilResume?'notLoaded':'idle'}}};
   } else if (method === 'turn/start') {
     const turnId = `turn-${++turnCount}`;
     if (!Array.isArray(params.input)) throw new Error('missing turn input');

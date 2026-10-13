@@ -365,3 +365,50 @@ Obligation: OBL-RECOVERY-2. Arc: ROLLING-PUBLICATION-REPAIR.
    reviews, omitted changed paths and a different repair on retry. Verify stale
    QA cannot publish. Run every configured full-QA command on the new candidate;
    only its complete fresh passing receipt permits a normal push.
+
+## ACC-ROLLING-CONFIGURATION-AMENDMENT
+
+Traceability: verifies REQ-ROLLING-CONFIGURATION-AMENDMENT
+Obligation: OBL-RECOVERY-3. Arc: ROLLING-CONFIGURATION-AMENDMENT.
+Amend an existing campaign from master/M1 to another target/M5/N10. Verify the
+same campaign and workers, immutable previous configuration, new effective
+configuration, stale-input refusal and identical-request replay after restart.
+
+## ACC-ROLLING-PUBLICATION-WITHDRAWAL
+
+Traceability: verifies REQ-ROLLING-PUBLICATION-WITHDRAWAL
+Obligation: OBL-RECOVERY-4. Arc: ROLLING-PUBLICATION-WITHDRAWAL.
+Withdraw a settled failed-QA batch, verify every original record and branch
+remains, verify its original push is refused, amend the campaign and refreeze its
+accepted increments. Require a freshly prepared candidate and full QA for the
+new target. Running QA, incomplete preparation and unresolved push refuse
+withdrawal without releasing ownership. Concurrent/repeated withdrawal retains
+one receipt; a changed reason/authority refuses.
+
+## ACC-ROLLING-WORKER-CORRECTION
+
+Traceability: verifies REQ-ROLLING-WORKER-CORRECTION
+Obligation: OBL-RECOVERY-5. Arc: ROLLING-WORKER-CORRECTION.
+Observe a completed blocker-prose turn with its original idle owning transport.
+Request correction with a real reason and no fabricated dependency; verify dirty
+work retained, capacity freed and preferred same-session reactivation with a new
+generation. Active/unknown ownership, newer turns and stale observations refuse. An unloaded original actor may be explicitly reacquired for correction, after which the unchanged latest terminal turn and idle state must be freshly verified; conflicting writers refuse.
+
+## ACC-ROLLING-QA-APPROVAL
+
+Traceability: verifies REQ-ROLLING-QA-APPROVAL
+Obligation: OBL-RECOVERY-6. Arc: ROLLING-QA-APPROVAL.
+Request the exact frozen focused QA in the owning turn and checkout, including a
+recognized shell wrapper. Verify bounded acceptance. Alter argv, append a shell
+operation, change actor/turn/checkout/generation or request unrelated diagnostic
+execution: verify refusal. Existing bounded rebase checks remain enforced.
+
+## ACC-ROLLING-PARALLEL-DISPATCH
+
+Traceability: verifies REQ-ROLLING-PARALLEL-DISPATCH
+Obligation: OBL-RECOVERY-7. Arc: ROLLING-PARALLEL-DISPATCH.
+On an authorized rolling campaign with multiple compatible obligations, follow
+the exported procedure and start multiple top-level worker dispatches before
+waiting for their completion. N defaults to 10; no repeated human parallelism
+approval is requested. Report real native activity, logical ownership and
+projected scheduling capacity distinctly; retain actual checkout restrictions.

@@ -246,3 +246,58 @@ foreign checkouts, unreviewed changes and retries with different repair data.
 Discharge: ACC-ROLLING-PUBLICATION-REPAIR demonstrates failed QA, reviewed
 candidate adoption, restart-safe retry, rejected stale proof, fresh full QA and
 normal publication without replacing the original batch or its history.
+
+## REQ-ROLLING-CONFIGURATION-AMENDMENT: Existing-campaign configuration
+
+Atomic obligation: OBL-RECOVERY-3. Amend the existing campaign's mainline branch,
+active-worker limit and publication size through an authorized, optimistic,
+immutable recorded amendment. Preserve campaign identity, increment branch and
+remote, workers, leases and historical configuration. Refuse changes while an
+unwithdrawn publication or integration owns the coordinator checkout. Identical
+request retries return the original receipt without overwriting later changes.
+Discharge: ACC-ROLLING-CONFIGURATION-AMENDMENT verifies amendment, stale-input
+refusal, replay safety and scheduling against the amended effective values.
+
+## REQ-ROLLING-PUBLICATION-WITHDRAWAL: Unpublished batch withdrawal
+
+Atomic obligation: OBL-RECOVERY-4. Withdraw an unpublished, settled batch with
+recorded reason and authority, retaining its frozen claim, membership, candidate,
+repairs and QA attempts. Refuse running QA, incomplete Git preparation/refresh,
+or any started/unresolved/published push. Atomically release its operational
+ownership and membership reservations so accepted increments can be frozen under
+the current amended configuration. Preserve the original candidate branch; no
+Git reset, target rewrite or push occurs. Refuse future mutations/publication of
+the withdrawn batch. Discharge: ACC-ROLLING-PUBLICATION-WITHDRAWAL verifies all
+boundaries, retained history, refreezing and fresh QA against the new target.
+
+## REQ-ROLLING-WORKER-CORRECTION: Terminal worker correction
+
+Atomic obligation: OBL-RECOVERY-5. Return an original terminal, idle worker for
+correction without inventing a prerequisite or changing its actual native turn
+status. Verify latest original turn, actor, checkout and current generation;
+record the correction reason and retained checkout checkpoint. Release active
+capacity while preserving actor, work and lease for preferred reactivation.
+Unknown/active ownership remains refused. Discharge:
+ACC-ROLLING-WORKER-CORRECTION verifies completed blocker prose, same-actor
+reactivation and stale/active observation refusal.
+
+## REQ-ROLLING-QA-APPROVAL: Required focused QA approval
+
+Atomic obligation: OBL-RECOVERY-6. Native worker approval routing recognizes the
+exact required focused QA argv from its current frozen execution/bindings and
+configured focused QA, fenced to the original actor, checkout, instruction turn
+and generation. Preserve accepted host permission restrictions. Do not authorize
+arbitrary shell suffixes, diagnostic scripts or policy proposals. Retain bounded
+semantic-rebase approvals. Discharge: ACC-ROLLING-QA-APPROVAL verifies exact QA
+requests and refusal of altered commands, foreign identities and stale leases.
+
+## REQ-ROLLING-PARALLEL-DISPATCH: Automatic configured concurrency
+
+Atomic obligation: OBL-RECOVERY-7. Once campaign execution is authorized and
+rolling operations adopted, fill compatible ready work up to N without requiring
+another instruction to parallelize. N defaults to 10. Keep long-running worker
+dispatches on concurrent retained transports rather than awaiting workers one by
+one. Report actual running workers separately from occupied leases, projected
+selection and unavailable checkouts. Preserve dependency, ownership and physical
+checkout authorization constraints. Discharge: ACC-ROLLING-PARALLEL-DISPATCH
+verifies concurrent dispatch guidance and truthful capacity/blocker reporting.

@@ -9,11 +9,11 @@ import {databaseOptions} from './project-index-database.js';
 import {relativePath} from '../skills/plan-execution/scripts/obligations.js';
 import {collectRollingGraph,loadRollingConfiguration,parseRollingProjectConfig,readRollingCampaignRequest,type RollingCampaignRequest} from './rolling-campaign.js';
 import {resolveRollingManagedDirectory,validateRollingSessionMarker} from './rolling-worktrees.js';
-import {RollingCampaignStore,readRollingBindingHistoryConfiguration,type RollingBindingHistoryConfiguration,type RollingCampaignRegistration,type RollingCampaignRegistrationResult,type RollingGraphReconciliation,type RollingCoordinatorSnapshot,type RollingAllocationResult,type RollingAction,type RollingStoredAssignment,type RollingPublicationStatus,type RollingAssignmentRelease,type RollingWorkerDispatchStarted,type RollingWorkerDispatch,type RollingReviewDispatchStarted,type RollingStoredIncrement} from './rolling-campaign-store.js';
+import {RollingCampaignStore,readRollingConfigurationAmendmentRequestV1,readRollingBindingHistoryConfiguration,type RollingBindingHistoryConfiguration,type RollingCampaignRegistration,type RollingCampaignRegistrationResult,type RollingGraphReconciliation,type RollingCoordinatorSnapshot,type RollingAllocationResult,type RollingAction,type RollingStoredAssignment,type RollingPublicationStatus,type RollingAssignmentRelease,type RollingWorkerDispatchStarted,type RollingWorkerDispatch,type RollingReviewDispatchStarted,type RollingStoredIncrement} from './rolling-campaign-store.js';
 import type {RollingStoredReview,RollingReviewerLoss} from './rolling-review.js';
 import {git,gitResult,publishRollingIncrement,reconcileRollingIncrementPublication,type RollingIncrementPublication,type RollingIncrementRepair,type RollingIncrementRebaseV1,rebasePreparedRollingIncrement,observePreparedRollingIncrement,refreshRollingIncrementProof,fastForwardRollingIncrement} from './rolling-integration.js';
 import {RollingCodex,type RollingNativeServerRequest} from './rolling-codex.js';
-import {provisionRollingWorker,attachRollingWorker,recoverRollingWorkerCreation,resumeRollingWorker,dispatchRollingWorker,collectRollingWorkerSubmission,readRollingWorkerOwnerObservationV1,suspendRollingWorker,retireRollingWorker,type RollingWorkerContext} from './rolling-worker.js';
+import {provisionRollingWorker,attachRollingWorker,recoverRollingWorkerCreation,resumeRollingWorker,dispatchRollingWorker,collectRollingWorkerSubmission,correctRollingWorker,readRollingWorkerOwnerObservationV1,suspendRollingWorker,retireRollingWorker,type RollingWorkerContext} from './rolling-worker.js';
 import {readRollingPublicationRepairReviewV1,prepareRollingMainline,mergeRollingMainline,observeRollingMainlineCandidate,runRollingPublicationQa,prepareRollingMainlineRefresh,mergeRollingMainlineRefresh,observeRollingMainlineRefresh,type RollingMainlineCandidateV1,type RollingMainlineRefreshResultV1} from './rolling-publication.js';
 import {dispatchRollingReview,collectRollingReview,startRollingReview} from './rolling-review.js';
 import type {RollingPublicationFrozen,RollingPublicationTrigger} from './rolling-publication.js';
@@ -91,10 +91,13 @@ export interface RollingOperationResults {
  'provision-worker':Awaited<ReturnType<typeof attachRollingWorker>>;'recover-worker':Awaited<ReturnType<typeof recoverRollingWorkerCreation>>;
  'resume-worker':Awaited<ReturnType<typeof resumeRollingWorker>>;'observe-resumption':Awaited<ReturnType<typeof resumeRollingWorker>>;
  'dispatch-worker':Awaited<ReturnType<typeof collectRollingWorkerSubmission>>;'collect-submission':Awaited<ReturnType<typeof collectRollingWorkerSubmission>>;
+ 'retry-worker':Awaited<ReturnType<typeof correctRollingWorker>>;
  'suspend-worker':Awaited<ReturnType<typeof suspendRollingWorker>>;'retire-worker':Awaited<ReturnType<typeof retireRollingWorker>>;
  'rebind-worker':Awaited<ReturnType<RollingCampaignStore['rebindLease']>>;
  'start-review':Awaited<ReturnType<typeof startRollingReview>>;'request-review':Awaited<ReturnType<RollingCampaignStore['requestReview']>>;'dispatch-review':Awaited<ReturnType<typeof collectRollingReview>>;'inspect-review':Awaited<ReturnType<typeof collectRollingReview>>;
  integrate:Awaited<ReturnType<RollingCampaignStore['publishIncrement']>> | RollingIncrementRepair;accept:Awaited<ReturnType<RollingCampaignStore['acceptIncrementCertificates']>>;
+ 'amend-configuration':Awaited<ReturnType<RollingCampaignStore['amendConfiguration']>>;
+ 'withdraw-publication':Awaited<ReturnType<RollingCampaignStore['withdrawPublication']>>;
  'freeze-publication':Awaited<ReturnType<RollingCampaignStore['claimPublicationBatch']>>;
  'prepare-publication':RollingMainlineCandidateV1;'observe-preparation':RollingMainlineCandidateV1;
  'inspect-publication-conflict':Awaited<ReturnType<RollingCampaignStore['publicationContext']>>;
@@ -202,9 +205,10 @@ export function projectRollingCoordinatorActions(rollingCoordinatorSnapshot:Roll
  return {snapshot:rollingCoordinatorSnapshot,decisions};
 }
 
+// Traceability: implements REQ-ROLLING-QA-APPROVAL
 // Traceability: implements REQ-ROLLING-WORKERS
-export function readRollingWorkerRebaseApproval(rollingNativeServerRequest:RollingNativeServerRequest,
- rollingWorkerContext:RollingWorkerContext,rollingWorkerDispatch:RollingWorkerDispatch | null):'start' | 'continue' | null {
+export function readRollingWorkerCommandApproval(rollingNativeServerRequest:RollingNativeServerRequest,
+ rollingWorkerContext:RollingWorkerContext,rollingWorkerDispatch:RollingWorkerDispatch | null):'start' | 'continue' | 'focused_qa' | null {
  const params=rollingNativeServerRequest.params;
  if (rollingNativeServerRequest.method !== 'item/commandExecution/requestApproval'
   || params === null || typeof params !== 'object' || Array.isArray(params)
@@ -214,9 +218,20 @@ export function readRollingWorkerRebaseApproval(rollingNativeServerRequest:Rolli
   || !('threadId' in params) || params.threadId !== rollingWorkerContext.rollingWorkerCreationV1.threadId
   || params.threadId !== rollingWorkerDispatch.threadId
   || !('turnId' in params) || params.turnId !== rollingWorkerDispatch.turnId
-  || !('command' in params) || typeof params.command !== 'string'
-  || !rollingWorkerContext.lease.binding.execution.operations.includes('edit')
-  || rollingWorkerContext.lease.binding.execution.plannedPaths.length === 0) return null;
+  || !('command' in params) || typeof params.command !== 'string') return null;
+ const matches=(command:string):boolean=>params.command===command||['/bin/bash','/bin/zsh','/bin/sh','/opt/homebrew/bin/bash'].some(shell=>params.command===`${shell} -lc '${command.replaceAll("'","'\\''")}'`);
+ const render=(argv:readonly string[]):string=>argv.map(argument=>/^[A-Za-z0-9_./:=@%+-]+$/u.test(argument)?argument:`'${argument.replaceAll("'","'\\''")}'`).join(' ');
+ if(rollingWorkerContext.lease.binding.execution.operations.includes('test')) {
+  const selections=[rollingWorkerContext.lease.binding.execution.selection,...rollingWorkerContext.binding.unitTests.map(reference=>reference.selection),...rollingWorkerContext.binding.integrationTests.map(reference=>reference.selection)];
+  const commands=[...rollingWorkerContext.qa.focused.map(render),...selections.filter(selection=>selection.length>0).flatMap(selection=> {
+   const firstArgument=selection[0];
+   if(firstArgument===undefined)throw new Error('rolling campaign: required QA selection lacks its executable');
+   if(selection.length===1&&/\s/u.test(firstArgument))return /[;$|&<>`\r\n]/u.test(firstArgument)?[]:[firstArgument];
+   return [render(selection)];
+  })];
+  if(commands.some(matches))return 'focused_qa';
+ }
+ if(!rollingWorkerContext.lease.binding.execution.operations.includes('edit')||rollingWorkerContext.lease.binding.execution.plannedPaths.length===0)return null;
  const commands:Readonly<Record<'start' | 'continue',string>>={
   start:'GIT_SEQUENCE_EDITOR="sed -i.bak -e s/^pick/edit/" git rebase --interactive --force-rebase FETCH_HEAD',
   continue:'git rebase --continue'
@@ -232,15 +247,16 @@ export function readRollingWorkerRebaseApproval(rollingNativeServerRequest:Rolli
 }
 
 // Traceability: implements REQ-ROLLING-WORKERS
-export async function authorizeRollingWorkerRebaseApproval(rollingCampaignStore:RollingCampaignStore,
+export async function authorizeRollingWorkerCommandApproval(rollingCampaignStore:RollingCampaignStore,
  campaignId:string,assignmentId:string,generation:string,request:RollingNativeServerRequest):Promise<boolean> {
  const rollingWorkerContext=await rollingCampaignStore.workerContext(campaignId,assignmentId,generation);
  const rollingWorkerDispatch=await rollingCampaignStore.workerDispatch(campaignId,assignmentId,generation);
- const rebase=readRollingWorkerRebaseApproval(request,rollingWorkerContext,rollingWorkerDispatch);
- if (rebase === null) return false;
+ const approval=readRollingWorkerCommandApproval(request,rollingWorkerContext,rollingWorkerDispatch);
+ if (approval === null) return false;
  const root=rollingWorkerContext.rollingWorkerCreationV1.rootPath;
  validateRollingSessionMarker(root,rollingWorkerContext.rollingWorkerCreationV1.sessionId);
- return rebase === 'start' ? git(root,['rev-parse','--verify','FETCH_HEAD']).trim() ===
+ if(approval==='focused_qa')return true;
+ return approval === 'start' ? git(root,['rev-parse','--verify','FETCH_HEAD']).trim() ===
   git(root,['rev-parse','--verify',`refs/remotes/${rollingWorkerContext.configuration.mainline.remote}/${rollingWorkerContext.configuration.incrementRef}`]).trim()
   : gitResult(root,['rebase','--show-current-patch']).status === 0;
 }
@@ -299,7 +315,7 @@ export class RollingCampaignOperations {
     let approved=false;
     try {
      if (worker !== null) {
-      approved=await authorizeRollingWorkerRebaseApproval(this.rollingCampaignStore,worker.campaignId,worker.assignmentId,worker.generation,request);
+      approved=await authorizeRollingWorkerCommandApproval(this.rollingCampaignStore,worker.campaignId,worker.assignmentId,worker.generation,request);
      }
     } catch (cause) {rollingCodex.emit('diagnostic',`worker approval withheld: ${cause instanceof Error ? cause.message : String(cause)}`);}
     rollingCodex.respondToServer(request.id,{decision:approved ? 'accept' : 'decline'});
@@ -319,6 +335,7 @@ export class RollingCampaignOperations {
 
  private async preparePublication(campaignId:string,batchId:string):Promise<RollingMainlineCandidateV1> {
   let rollingPublicationContext = await this.rollingCampaignStore.publicationContext(campaignId,batchId);
+  if(rollingPublicationContext.withdrawal!==null)throw new Error('rolling campaign: publication was withdrawn; inspect its preserved history instead');
   if (rollingPublicationContext.candidate !== null) return rollingPublicationContext.candidate;
   if (rollingPublicationContext.preparation === null) {
    const rollingPublicationBatchClaimV1 = await this.rollingCampaignStore.beginMainlinePreparation(campaignId,batchId);
@@ -334,6 +351,7 @@ export class RollingCampaignOperations {
 
  private async refreshPublication(campaignId:string,batchId:string,observe:boolean):Promise<RollingMainlineRefreshResultV1> {
   let rollingPublicationContext = await this.rollingCampaignStore.publicationContext(campaignId,batchId);
+  if(rollingPublicationContext.withdrawal!==null)throw new Error('rolling campaign: publication was withdrawn; inspect its preserved history instead');
   if (observe && rollingPublicationContext.refreshResult !== null) return rollingPublicationContext.refreshResult;
   const rollingMainlineRefreshIntentV1 = observe ? rollingPublicationContext.refreshIntent : await this.rollingCampaignStore.beginMainlineRefresh(campaignId,batchId);
   if (rollingMainlineRefreshIntentV1 === null) throw new Error('rolling campaign: refresh has no original retained intent');
@@ -427,6 +445,7 @@ export class RollingCampaignOperations {
     return collectRollingWorkerSubmission(this.rollingCampaignStore,rollingCodex,campaignId,assignmentId,generation,timeoutMs);
    },{campaignId:stringField(input,'campaign'),assignmentId:stringField(input,'assignment'),generation:stringField(input,'generation')})};
    case 'collect-submission': return {command,result:await this.native(signal,rollingCodex=>collectRollingWorkerSubmission(this.rollingCampaignStore,rollingCodex,stringField(input,'campaign'),stringField(input,'assignment'),stringField(input,'generation'),timeoutMs,input.observation===undefined?null:readRollingWorkerOwnerObservationV1(input.observation)))};
+   case 'retry-worker': return {command,result:await this.native(signal,rollingCodex=>correctRollingWorker(this.rollingCampaignStore,rollingCodex,stringField(input,'campaign'),stringField(input,'assignment'),stringField(input,'generation'),stringField(input,'reason'),input.observation===undefined?null:readRollingWorkerOwnerObservationV1(input.observation)))};
    case 'suspend-worker': return {command,result:await this.native(signal,rollingCodex=>suspendRollingWorker(this.rollingCampaignStore,rollingCodex,stringField(input,'campaign'),stringField(input,'assignment'),stringField(input,'generation'),stringArray(input.blockers),timeoutMs))};
    case 'retire-worker': return {command,result:await this.native(signal,rollingCodex=>retireRollingWorker(this.rollingCampaignStore,rollingCodex,stringField(input,'campaign'),stringField(input,'assignment'),stringField(input,'generation'),timeoutMs))};
    case 'start-review': return {command,result:await this.native(signal,rollingCodex=>startRollingReview(this.rollingCampaignStore,rollingCodex,stringField(input,'campaign'),stringField(input,'assignment'),stringField(input,'generation'),stringField(input,'revision'),readRollingReviewerLoss(input.loss),timeoutMs))};
@@ -441,6 +460,16 @@ export class RollingCampaignOperations {
    case 'inspect-review': return {command,result:await this.native(signal,rollingCodex=>collectRollingReview(this.rollingCampaignStore,rollingCodex,stringField(input,'campaign'),stringField(input,'review'),timeoutMs))};
    case 'integrate': return {command,result:await this.integrate(stringField(input,'campaign'),stringField(input,'review'))};
    case 'accept': return {command,result:await this.rollingCampaignStore.acceptIncrementCertificates(stringField(input,'campaign'),stringField(input,'review'),stringField(input,'candidate'),stringArray(input.bindings))};
+   case 'amend-configuration': {
+    const campaignId=stringField(input,'campaign');
+    return {command,result:await this.rollingCampaignStore.amendConfiguration(campaignId,readRollingConfigurationAmendmentRequestV1(input.request),this.root)};
+   }
+   case 'withdraw-publication': {
+    const campaignId=stringField(input,'campaign'),batchId=stringField(input,'batch');
+    const rollingPublicationContext=await this.rollingCampaignStore.publicationContext(campaignId,batchId);
+    if (fs.realpathSync(this.root)!==rollingPublicationContext.claim.rootPath) throw new Error('rolling campaign: withdrawal requires the original publication checkout');
+    return {command,result:await this.rollingCampaignStore.withdrawPublication(campaignId,batchId,stringField(input,'reason'),stringArray(input.authority))};
+   }
    case 'freeze-publication': {
     const campaignId = stringField(input,'campaign');const rollingGraphReconciliation = await this.reconcile(campaignId);
     const flush = input.flush ?? null;if (flush !== null && flush !== 'explicit_flush' && flush !== 'completion' && flush !== 'quiescence') throw new Error('rolling campaign: invalid publication flush trigger');

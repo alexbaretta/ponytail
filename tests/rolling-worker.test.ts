@@ -6,7 +6,7 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import { execFileSync } from 'node:child_process';
-import {readRollingWorkerRebaseApproval} from '../src/rolling-operations.js';
+import {readRollingWorkerCommandApproval} from '../src/rolling-operations.js';
 import type {RollingWorkerDispatchAttached} from '../src/rolling-campaign-store.js';
 import { RollingCodex, type RollingNativeThread,type RollingNativeNotification } from '../src/rolling-codex.js';
 import { readRollingWorkerRetirementV1, type RollingWorkerRetirementV1, readRollingWorkerCreationV1, parseRollingWorkerCreation, identifyRollingWorkerCreation,
@@ -59,6 +59,7 @@ test('initialization uses the returned native thread directly and binds only its
 });
 
 // Traceability: verifies REQ-ROLLING-WORKERS
+// Traceability: verifies REQ-ROLLING-QA-APPROVAL
 test('worker instructions retain exact obligation, requirement, acceptance step, lease and QA selections', async () => {
  const rollingWorkerContext: RollingWorkerContext = {
   assignmentId:'assignment',
@@ -93,18 +94,29 @@ test('worker instructions retain exact obligation, requirement, acceptance step,
   {params:{cwd:'/fixture',threadId:'thread',turnId:'turn',command:command.replace('FETCH_HEAD','FETCH_HEAD; git reset --hard')},decision:'decline'}
  ];
  const approvalRequest={id:'approval',method:'item/commandExecution/requestApproval',params:requests[0]?.params};
- assert.equal(readRollingWorkerRebaseApproval({...approvalRequest,method:'item/fileChange/requestApproval'},rollingWorkerContext,rollingWorkerDispatchAttached),null);
- assert.equal(readRollingWorkerRebaseApproval({...approvalRequest,params:null},rollingWorkerContext,rollingWorkerDispatchAttached),null);
- assert.equal(readRollingWorkerRebaseApproval(approvalRequest,rollingWorkerContext,null),null);
+ assert.equal(readRollingWorkerCommandApproval({...approvalRequest,method:'item/fileChange/requestApproval'},rollingWorkerContext,rollingWorkerDispatchAttached),null);
+ assert.equal(readRollingWorkerCommandApproval({...approvalRequest,params:null},rollingWorkerContext,rollingWorkerDispatchAttached),null);
+ assert.equal(readRollingWorkerCommandApproval(approvalRequest,rollingWorkerContext,null),null);
  const inspectRollingWorkerContext:RollingWorkerContext={...rollingWorkerContext,lease:{...rollingWorkerContext.lease,
   binding:{...rollingWorkerContext.lease.binding,execution:{...rollingWorkerContext.lease.binding.execution,operations:['inspect']}}}};
- assert.equal(readRollingWorkerRebaseApproval(approvalRequest,inspectRollingWorkerContext,rollingWorkerDispatchAttached),null);
+ assert.equal(readRollingWorkerCommandApproval(approvalRequest,inspectRollingWorkerContext,rollingWorkerDispatchAttached),null);
+ const qaRollingWorkerContext:RollingWorkerContext={...rollingWorkerContext,lease:{...rollingWorkerContext.lease,
+  binding:{...rollingWorkerContext.lease.binding,execution:{...rollingWorkerContext.lease.binding.execution,operations:['test']}}}};
+ for(const command of ['node --test fixture.test.ts',"/bin/bash -lc 'node --test fixture.test.ts'"]) {
+  const rollingNativeServerRequest:import('../src/rolling-codex.js').RollingNativeServerRequest={id:'qa',method:'item/commandExecution/requestApproval',params:{cwd:'/fixture',threadId:'thread',turnId:'turn',command}};
+  assert.equal(readRollingWorkerCommandApproval(rollingNativeServerRequest,qaRollingWorkerContext,rollingWorkerDispatchAttached),'focused_qa');
+  assert.equal(readRollingWorkerCommandApproval({...rollingNativeServerRequest,params:{cwd:'/fixture',threadId:'thread',turnId:'turn',command:command+'; touch outside'}},qaRollingWorkerContext,rollingWorkerDispatchAttached),null);
+  assert.equal(readRollingWorkerCommandApproval({...rollingNativeServerRequest,params:{cwd:'/foreign',threadId:'thread',turnId:'turn',command}},qaRollingWorkerContext,rollingWorkerDispatchAttached),null);
+ }
+ assert.equal(readRollingWorkerCommandApproval({...approvalRequest,params:{cwd:'/fixture',threadId:'thread',turnId:'turn',command:'node unrelated.js'}},qaRollingWorkerContext,rollingWorkerDispatchAttached),null);
+ const literalQaRollingWorkerContext:RollingWorkerContext={...qaRollingWorkerContext,qa:{...qaRollingWorkerContext.qa,focused:[['node','--test','--test-name-pattern=good|bad','fixture.test.ts']]}};
+ assert.equal(readRollingWorkerCommandApproval({...approvalRequest,params:{cwd:'/fixture',threadId:'thread',turnId:'turn',command:"node --test '--test-name-pattern=good|bad' fixture.test.ts"}},literalQaRollingWorkerContext,rollingWorkerDispatchAttached),'focused_qa');
  const rollingCodex=await RollingCodex.connect({executable:process.execPath,argv:[path.join(__dirname,'fixtures/rolling-codex-server.js')]});
  try {
   for (const request of requests) {
    const answer=new Promise<RollingNativeNotification>(resolve=>rollingCodex.once('notification',resolve));
    rollingCodex.once('serverRequest',rollingNativeServerRequest=>rollingCodex.respondToServer(rollingNativeServerRequest.id,
-    {decision:readRollingWorkerRebaseApproval(rollingNativeServerRequest,rollingWorkerContext,rollingWorkerDispatchAttached) === null ? 'decline' : 'accept'}));
+    {decision:readRollingWorkerCommandApproval(rollingNativeServerRequest,rollingWorkerContext,rollingWorkerDispatchAttached) === null ? 'decline' : 'accept'}));
    await rollingCodex.request('approval',request.params);
    assert.deepEqual((await answer).params,{decision:request.decision});
   }
@@ -155,6 +167,7 @@ test('worker instructions retain exact obligation, requirement, acceptance step,
 
 // Traceability: verifies REQ-ROLLING-WORKERS
 // Traceability: verifies REQ-ROLLING-STATE
+// Traceability: verifies REQ-ROLLING-WORKER-CORRECTION
 test('stop observations retain native idle identity, exact stopped turn and dirty checkout checkpoint', () => {
  const rollingWorkerStopV1:RollingWorkerStopV1 = {schemaVersion:1,campaignId:'fixture',assignmentId:'assignment',generation:'generation',
   threadId:'thread',sessionId:'session',observedAt:'2026-10-11T13:00:00Z',nativeStatus:'idle',turn:{id:'turn',status:'interrupted'},

@@ -18,6 +18,7 @@ exports.recoverRollingWorkerCreation = recoverRollingWorkerCreation;
 exports.buildRollingWorkerInstructions = buildRollingWorkerInstructions;
 exports.dispatchRollingWorker = dispatchRollingWorker;
 exports.collectRollingWorkerSubmission = collectRollingWorkerSubmission;
+exports.correctRollingWorker = correctRollingWorker;
 exports.readRollingWorkerOwnerObservationV1 = readRollingWorkerOwnerObservationV1;
 exports.readRollingWorkerStopV1 = readRollingWorkerStopV1;
 exports.parseRollingWorkerStop = parseRollingWorkerStop;
@@ -28,10 +29,10 @@ exports.resumeRollingWorker = resumeRollingWorker;
 exports.suspendRollingWorker = suspendRollingWorker;
 exports.buildRollingRetirementInstructions = buildRollingRetirementInstructions;
 exports.retireRollingWorker = retireRollingWorker;
+const rolling_integration_js_1 = require("./rolling-integration.js");
 const node_path_1 = __importDefault(require("node:path"));
 const node_fs_1 = __importDefault(require("node:fs"));
 const lossless_json_1 = require("lossless-json");
-const node_child_process_1 = require("node:child_process");
 const rolling_worktrees_js_1 = require("./rolling-worktrees.js");
 const rolling_worker_submission_js_1 = require("./rolling-worker-submission.js");
 function requireWorker(condition, message) {
@@ -131,7 +132,7 @@ function buildRollingWorkerInstructions(rollingWorkerContext) {
         + 'The coordinator graph is authoritative; the frozen lease below owns current prerequisites, permitted paths, operations, proof selection and target. '
         + 'The obligation owns the canonical condition and discharge criterion. Its historical execution field does not override this frozen lease. '
         + 'Use the exact requirement references, acceptance arc and step references, implementation IDs, source paths, unit and integration selections below. '
-        + 'Establish only this obligation within the lease. For a no-edit obligation, return fresh inspection and proof without inventing a code change or Git rebase. Run configured focused QA and the referenced focused arcs; publication QA belongs to the coordinator publication gate. '
+        + 'Establish only this obligation within the lease. For a no-edit obligation, return fresh inspection and proof without inventing a code change or Git rebase. Run configured focused QA and the referenced focused arcs; publication QA belongs to the coordinator publication gate. For required QA approval, invoke the exact declared command separately without shell redirects or appended operations; retain the native captured output through ordinary in-scope file operations. Accepted host permissions still apply. '
         + 'Preserve static typing and project build-impact rules. Report newly discovered prerequisites to the coordinator; do not silently change the authoritative graph. '
         + 'If blocked, stop activity and report the blocker while retaining the checkout. Delivery is proposed discharge, not acceptance. '
         + 'When submitting code changes, fetch the configured campaign branch and perform a full semantic rebase commit by commit, refresh affected evidence, retain the exact candidate SHA and base, and stop activity. '
@@ -161,7 +162,7 @@ async function dispatchRollingWorker(rollingCampaignStore, rollingCodex, campaig
     const rollingTurnStarted = await rollingCodex.startTurn(rollingNativeThread.thread.id, instructions);
     return rollingCampaignStore.attachWorkerDispatch(campaignId, assignmentId, generation, rollingWorkerDispatchStarted.id, rollingTurnStarted.turn.id);
 }
-async function collectRollingWorkerSubmission(rollingCampaignStore, rollingCodex, campaignId, assignmentId, generation, timeoutMs = 60000, rollingWorkerOwnerObservationV1 = null) {
+async function observeRollingWorkerTerminalTurn(rollingCampaignStore, rollingCodex, campaignId, assignmentId, generation, timeoutMs = 60000, rollingWorkerOwnerObservationV1 = null, loadForCorrection = false) {
     const rollingWorkerCreationV1 = await rollingCampaignStore.workerIdentity(campaignId, assignmentId, generation);
     const rollingWorkerDispatch = await rollingCampaignStore.workerDispatch(campaignId, assignmentId, generation);
     requireWorker(rollingWorkerDispatch?.state === 'ATTACHED', 'submission requires its known original instruction turn');
@@ -174,10 +175,17 @@ async function collectRollingWorkerSubmission(rollingCampaignStore, rollingCodex
         await new Promise(resolve => setTimeout(resolve, Math.min(250, Math.max(1, deadline - Date.now()))));
         rollingNativeTurn = await rollingCodex.readTurn(rollingWorkerDispatch.threadId, rollingWorkerDispatch.turnId);
     }
-    requireWorker(rollingNativeTurn.status === 'completed', 'submission instruction turn did not complete');
+    requireWorker(['completed', 'failed', 'interrupted'].includes(rollingNativeTurn.status), 'submission instruction turn did not complete');
     const latestRollingNativeTurn = await rollingCodex.readLatestTurn(rollingWorkerDispatch.threadId);
-    requireWorker(latestRollingNativeTurn.id === rollingWorkerDispatch.turnId && latestRollingNativeTurn.status === 'completed', 'another native turn follows the original instruction; preserve active ownership');
-    const rollingNativeThreadActivity = await rollingCodex.readThreadActivity(rollingWorkerDispatch.threadId);
+    requireWorker(latestRollingNativeTurn.id === rollingWorkerDispatch.turnId && latestRollingNativeTurn.status === rollingNativeTurn.status, 'another native turn follows the original instruction; preserve active ownership');
+    let rollingNativeThreadActivity = await rollingCodex.readThreadActivity(rollingWorkerDispatch.threadId);
+    if (loadForCorrection && rollingWorkerOwnerObservationV1 === null && rollingNativeThreadActivity.status === 'notLoaded') {
+        const rollingNativeThread = await rollingCodex.resumeThread(rollingWorkerCreationV1.threadId, rollingWorkerCreationV1.rootPath);
+        requireWorker(JSON.stringify(identifyRollingWorkerCreation(rollingNativeThread, rollingWorkerCreationV1.rootPath)) === JSON.stringify(rollingWorkerCreationV1), 'correction writer differs from original actor');
+        const reloadedRollingNativeTurn = await rollingCodex.readLatestTurn(rollingWorkerDispatch.threadId);
+        requireWorker(reloadedRollingNativeTurn.id === rollingNativeTurn.id && reloadedRollingNativeTurn.status === rollingNativeTurn.status, 'correction writer observed a newer or active turn');
+        rollingNativeThreadActivity = await rollingCodex.readThreadActivity(rollingWorkerDispatch.threadId);
+    }
     if (rollingWorkerOwnerObservationV1 !== null) {
         const checkedRollingWorkerOwnerObservationV1 = readRollingWorkerOwnerObservationV1(rollingWorkerOwnerObservationV1);
         requireWorker(checkedRollingWorkerOwnerObservationV1.threadId === rollingWorkerCreationV1.threadId
@@ -191,6 +199,11 @@ async function collectRollingWorkerSubmission(rollingCampaignStore, rollingCodex
     }
     requireWorker(rollingNativeThreadActivity.status === 'idle'
         || rollingNativeThreadActivity.status === 'notLoaded' && rollingWorkerOwnerObservationV1 !== null, 'submission actor is not known idle; supply a fresh owning-transport observation when notLoaded; preserve active ownership');
+    return { rollingWorkerCreationV1, rollingNativeTurn };
+}
+async function collectRollingWorkerSubmission(rollingCampaignStore, rollingCodex, campaignId, assignmentId, generation, timeoutMs = 60000, rollingWorkerOwnerObservationV1 = null) {
+    const { rollingWorkerCreationV1, rollingNativeTurn } = await observeRollingWorkerTerminalTurn(rollingCampaignStore, rollingCodex, campaignId, assignmentId, generation, timeoutMs, rollingWorkerOwnerObservationV1);
+    requireWorker(rollingNativeTurn.status === 'completed', 'submission instruction turn did not complete');
     const finalText = rollingNativeTurn.items.filter(item => item.type === 'agentMessage').at(-1)?.text;
     requireWorker(finalText, 'worker turn has no final submission');
     let rollingWorkerSubmissionV1;
@@ -198,9 +211,23 @@ async function collectRollingWorkerSubmission(rollingCampaignStore, rollingCodex
         rollingWorkerSubmissionV1 = (0, rolling_worker_submission_js_1.parseRollingWorkerSubmission)(finalText);
     }
     catch (cause) {
-        throw new Error(`rolling worker: completed turn has no valid submission JSON; retain the original worker for correction: ${cause instanceof Error ? cause.message : String(cause)}`);
+        throw new Error(`rolling worker: completed turn has no valid submission JSON; use retry-worker for an observed terminal idle actor; retain the original worker for correction: ${cause instanceof Error ? cause.message : String(cause)}`);
     }
     return rollingCampaignStore.submit(campaignId, assignmentId, generation, rollingWorkerSubmissionV1);
+}
+function checkpointRollingWorker(rollingWorkerCreationV1) {
+    const root = rollingWorkerCreationV1.rootPath;
+    (0, rolling_worktrees_js_1.validateRollingSessionMarker)(root, rollingWorkerCreationV1.sessionId);
+    requireWorker((0, rolling_integration_js_1.git)(root, ['rev-parse', '--show-toplevel']).trim() === root, 'retained checkout identity differs');
+    return { revision: (0, rolling_integration_js_1.git)(root, ['rev-parse', 'HEAD']).trim(), gitStatus: (0, rolling_integration_js_1.git)(root, ['status', '--porcelain=v1', '--untracked-files=all']) };
+}
+async function correctRollingWorker(rollingCampaignStore, rollingCodex, campaignId, assignmentId, generation, reason, rollingWorkerOwnerObservationV1 = null) {
+    requireWorker(reason.trim().length > 0, 'worker correction requires its actual reason');
+    const { rollingWorkerCreationV1, rollingNativeTurn } = await observeRollingWorkerTerminalTurn(rollingCampaignStore, rollingCodex, campaignId, assignmentId, generation, 1, rollingWorkerOwnerObservationV1, true);
+    const rollingWorkerStopV1 = readRollingWorkerStopV1({ schemaVersion: 1, campaignId, assignmentId, generation,
+        threadId: rollingWorkerCreationV1.threadId, sessionId: rollingWorkerCreationV1.sessionId, observedAt: new Date().toISOString(), nativeStatus: 'idle', turn: { id: rollingNativeTurn.id, status: rollingNativeTurn.status },
+        checkpoint: checkpointRollingWorker(rollingWorkerCreationV1) });
+    return rollingCampaignStore.correctObservedWorker(campaignId, assignmentId, generation, rollingWorkerStopV1, reason);
 }
 function readRollingWorkerOwnerObservationV1(value) {
     const input = stopFields(value, ['schemaVersion', 'threadId', 'sessionId', 'rootPath', 'turnId', 'generation', 'status', 'observedAt']);
@@ -304,15 +331,9 @@ async function observeRollingWorkerStop(rollingCampaignStore, rollingCodex, camp
     }
     const rollingNativeThreadActivity = await rollingCodex.readThreadActivity(rollingNativeThread.thread.id);
     requireWorker(rollingNativeThreadActivity.status === 'idle', 'native worker is not known idle; preserve its active slot');
-    function git(argv) {
-        const result = (0, node_child_process_1.spawnSync)('git', ['-C', rollingWorkerCreationV1.rootPath, ...argv], { encoding: 'utf8' });
-        requireWorker(!result.error && result.status === 0, result.error?.message || result.stderr.trim() || 'cannot checkpoint retained checkout');
-        return result.stdout;
-    }
-    requireWorker(git(['rev-parse', '--show-toplevel']).trim() === rollingWorkerCreationV1.rootPath, 'retained checkout identity differs');
     const rollingWorkerStopV1 = readRollingWorkerStopV1({ schemaVersion: 1, campaignId, assignmentId, generation,
         threadId: rollingNativeThread.thread.id, sessionId: rollingNativeThread.thread.sessionId, observedAt: new Date().toISOString(), nativeStatus: 'idle', turn,
-        checkpoint: { revision: git(['rev-parse', 'HEAD']).trim(), gitStatus: git(['status', '--porcelain=v1', '--untracked-files=all']) } });
+        checkpoint: checkpointRollingWorker(rollingWorkerCreationV1) });
     return rollingWorkerStopV1;
 }
 function buildRollingRetirementInstructions(rollingWorkerRetirementV1) {

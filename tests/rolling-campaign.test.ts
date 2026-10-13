@@ -66,6 +66,7 @@ test('capacity and publication limits reject unsafe values before JSON conversio
 });
 
 // Traceability: verifies REQ-ROLLING-CONFIGURATION
+// Traceability: verifies REQ-ROLLING-PARALLEL-DISPATCH
 test('campaign resolution uses explicit, project, then Git defaults and retains its selected target', () => {
   let rollingProjectConfigV1: RollingProjectConfigV1 = { ...projectConfiguration(), maxActiveWorkers: 4, publicationSize: 3 };
   let rollingCampaignRequest: RollingCampaignRequest = { mainline: { remote: 'upstream', branch: 'release/stable' },
