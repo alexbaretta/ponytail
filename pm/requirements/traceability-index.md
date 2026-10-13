@@ -62,6 +62,8 @@ snapshot collection, cached-file processing and database publication separately.
 Unknown discovery uses an ASCII spinner in a TTY and periodic printable
 liveness lines otherwise, never a permanently empty progress bar. Both
 spinners and bars show elapsed time for their current phase.
+Expensive certificate freshness assessments within a file expose their own
+counted progress. Returning to the parent file phase preserves its elapsed time.
 Database publication reaches 100% only after its transaction commits.
 Redirected output must use printable progress lines without terminal controls;
 `--json` must remain machine-readable without progress text.

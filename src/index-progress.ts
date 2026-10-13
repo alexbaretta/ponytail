@@ -1,6 +1,6 @@
 // Copyright (c) 2026 Alex Baretta. All rights reserved.
 // Licensed under the MIT License. See LICENSE in the project root.
-export type IndexProgressPhase='files'|'source files'|'plan manifests'|'database records';
+export type IndexProgressPhase='files'|'source files'|'plan manifests'|'database records'|'certificate assessments';
 export interface IndexProgressStream {readonly isTTY?:boolean;write(text:string):unknown;}
 
 // Traceability: implements REQ-TRACEABILITY-INDEX
@@ -8,6 +8,7 @@ export function indexProgress(indexProgressStream:IndexProgressStream=process.st
  prepare(corpus:string):void;update(completed:number,total:number,corpus:string,phase?:IndexProgressPhase):void;stop():void;
 } {
  let discoveryCorpus:string|null=null;let spinnerIndex=0;let spinnerTimer:ReturnType<typeof setInterval>|undefined;
+ const stageStarts=new Map<string,number>();
  let currentStage='';let startedAt=now();let lastPrintedAt=0;let lineOpen=false;let lineLength=0;
  const stop=():void=>{if(spinnerTimer!==undefined) clearInterval(spinnerTimer);spinnerTimer=undefined;discoveryCorpus=null;if(lineOpen) indexProgressStream.write('\n');lineOpen=false;lineLength=0;};
  const pulse=():void=>{
@@ -27,7 +28,7 @@ export function indexProgress(indexProgressStream:IndexProgressStream=process.st
   update(completed,total,corpus,phase='files') {
    const stage=`${corpus}:${phase}`;
    const first=stage!==currentStage;
-   if(first) {stop();currentStage=stage;startedAt=now();}
+   if(first) {stop();currentStage=stage;startedAt=completed===0?now():stageStarts.get(stage)??now();stageStarts.set(stage,startedAt);}
    if(!first && completed!==total && now()-lastPrintedAt<1000) return;
    lastPrintedAt=now();
    const percentage=total===0?100:Math.floor(completed*100/total);

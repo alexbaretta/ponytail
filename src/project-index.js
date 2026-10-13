@@ -811,11 +811,11 @@ function normalizePlanPayloads(payloads) {
 // Traceability: implements REQ-OBLIGATION-IDENTITY
 // Traceability: implements REQ-OBLIGATION-DISCHARGE
 // Traceability: implements REQ-OBLIGATION-FRESHNESS
-function parsePlanIndexObligations(root, relativePath, source) {
+function parsePlanIndexObligations(root, relativePath, source,onProgress) {
   const { parseObligationDocument, projectObligations } = require('../skills/plan-execution/scripts/obligations');
   try {
     const obligationDocument = parseObligationDocument(source);
-    const projection = projectObligations(obligationDocument, root);
+    const projection = projectObligations(obligationDocument, root,(completed,total)=>onProgress?.(completed,total,'plans','certificate assessments'));
     const records = [];
     for (const obligation of obligationDocument.obligations) records.push(planRecord({
       recordKind: 'obligation', recordId: obligation.id, owningPlanId: obligationDocument.scopeId,
@@ -895,7 +895,7 @@ function collectPlanProjection(root = fs.realpathSync(git(process.cwd(), ['rev-p
       parserIdentity: digest(`${parserIdentity}\n${configurationDigest}\n${relativePath}\n${hasTaskletGraph}\n${obligationDependencyDigests.get(relativePath) ?? ''}`),
       gitState,
       parse: () => {
-        if (obligationDependencyDigests.has(relativePath)) return parsePlanIndexObligations(root, relativePath, content.toString('utf8'));
+        if (obligationDependencyDigests.has(relativePath)) return parsePlanIndexObligations(root, relativePath, content.toString('utf8'),onProgress);
         if (relativePath.endsWith('/plan.md')) {
           return parsePlanIndexPlan(
             root,

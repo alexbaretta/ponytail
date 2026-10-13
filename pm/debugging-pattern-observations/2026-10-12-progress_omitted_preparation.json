@@ -19,7 +19,8 @@
     ],
     "code_references": [
       "src/project-index.js",
-      "src/index-progress.ts"
+      "src/index-progress.ts",
+      "skills/plan-execution/scripts/obligations.ts"
     ]
   },
   "observed_behavior": "Long source collection has no counted progress; later cached-file processing appears to jump straight to 100%. Initial placeholder bars never fill. Shortened TTY ETA leaves trailing characters.",
@@ -41,11 +42,13 @@
   ],
   "confirmation_evidence": [
     "Original callbacks are invoked only after snapshot collection.",
-    "Live TTY now shows zero and advancing source-file counts immediately."
+    "Live TTY now shows zero and advancing source-file counts immediately.",
+    "One plan obligation document took 11.5 seconds of certificate assessments; live subphase advanced through 58 certificates and retained parent elapsed time."
   ],
   "regression_proofs": [
     "tests/traceability-projection.test.ts",
     "tests/project-index.test.js: source snapshots account for every file before database indexing",
-    "tests/project-index.test.js: publishes a complete generation with parameterized statements"
+    "tests/project-index.test.js: publishes a complete generation with parameterized statements",
+    "tests/traceability-projection.test.ts: file elapsed time includes nested certificate assessment work"
   ]
 }

@@ -51,3 +51,14 @@ for(const isTTY of [true,false]) test(`unknown discovery stays live without clai
   else {assert.equal(output.split('discovering sources').length-1,2);assert.doesNotMatch(output,/[\x00-\x09\x0b-\x1f\x7f]/u);}
  } finally {progress.stop();}
 });
+
+// Traceability: verifies REQ-TRACEABILITY-INDEX
+test('file elapsed time includes nested certificate assessment work',()=>{
+ let output='';let milliseconds=0;
+ const progress=indexProgress({write(text){output+=text;}},()=>milliseconds);
+ progress.update(0,150,'plans');milliseconds=1000;
+ progress.update(0,58,'plans','certificate assessments');milliseconds=22000;
+ progress.update(58,58,'plans','certificate assessments');progress.update(150,150,'plans');progress.stop();
+ assert.match(output,/150\/150 files \| elapsed 22s/);
+ assert.match(output,/58\/58 certificate assessments \| elapsed 21s/);
+});

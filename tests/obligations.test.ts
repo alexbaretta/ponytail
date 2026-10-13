@@ -89,7 +89,9 @@ test('Git certificate serialization stores a revision and paths, without file ha
  const certificate: ObligationCertificate = {...obligationCertificate, inputs:createObligationGitInputs(root,['requirement.md','proof.txt'])};
  const initial = initialObservation(obligationDocumentV1,root);
  const accepted = acceptCheckpoint(initial,dischargeCandidate(initial,certificate),root);
- assert.equal(projectObligations(accepted,root).satisfiedIds.includes('OBL-1'),true);
+ const assessmentProgress:number[]=[];
+ assert.equal(projectObligations(accepted,root,(completed,total)=>{assert.equal(total,1);assessmentProgress.push(completed);}).satisfiedIds.includes('OBL-1'),true);
+ assert.deepEqual(assessmentProgress,[0,1]);
  assert.deepEqual(parseObligationDocument(JSON.stringify(accepted)).certificates,[certificate]);
  assert.ok(!JSON.stringify(certificate).includes('digest'));
  for (const inputs of [{schemaVersion:2,revision:'HEAD',paths:['proof.txt']},

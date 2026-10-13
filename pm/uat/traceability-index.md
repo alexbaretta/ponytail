@@ -32,7 +32,9 @@ Traceability: verifies REQ-TRACEABILITY-INDEX
      collection, manifest scanning, file processing and database publication
      have counted progress starting at zero. Unknown discovery uses a status
      spinner (periodic printable messages when redirected); all indicators show
-     elapsed time. Brackets align and publication reaches 100% after commit.
+     elapsed time. Certificate assessments within a file advance a subphase;
+     the parent file phase retains its elapsed time. Brackets align and
+     publication reaches 100% after commit.
    - Human output shows file progress for each corpus. Redirected output uses
      printable lines; JSON output contains only the result.
 2. Reindex without changing inputs.

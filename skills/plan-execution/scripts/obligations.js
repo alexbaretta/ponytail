@@ -463,15 +463,18 @@ function prerequisites(obligation, bindings) {
     requireCondition(obligationEffectiveBinding, `missing effective binding: ${obligation.id}`);
     return obligationEffectiveBinding.dependsOn;
 }
-function projectBaseline(obligationDocument, baseline, accepted, root, bindings) {
+function projectBaseline(obligationDocument, baseline, accepted, root, bindings, onProgress) {
     const satisfied = new Set();
     const assessments = [];
-    for (const certificate of obligationDocument.certificates.filter(certificate => accepted.has(certificate.id))) {
+    const certificates = obligationDocument.certificates.filter(certificate => accepted.has(certificate.id));
+    onProgress?.(0, certificates.length);
+    for (const [index, certificate] of certificates.entries()) {
         const reasons = root === null ? certificateReasons(obligationDocument, baseline, certificate)
             : freshCertificate(obligationDocument, baseline, certificate, root).reasons;
         assessments.push({ id: certificate.id, valid: reasons.length === 0, reasons });
         if (reasons.length === 0)
             certificate.obligationIds.forEach(id => satisfied.add(id));
+        onProgress?.(index + 1, certificates.length);
     }
     const obligations = obligationDocument.obligations.filter(obligation => baseline.obligationIds.includes(obligation.id));
     let changed = true;
@@ -491,8 +494,8 @@ function projectBaseline(obligationDocument, baseline, accepted, root, bindings)
         unresolvedIds: unresolved.map(obligation => obligation.id), gates, assessments,
         complete: obligationVector.every(count => count === 0) && gates.length === 0 };
 }
-function projectObligations(obligationDocument, root) {
-    return projectObligationScope(obligationDocument, root).projection;
+function projectObligations(obligationDocument, root, onProgress) {
+    return projectObligationScope(obligationDocument, root, undefined, onProgress).projection;
 }
 function projectObligationHistoricalAcceptance(obligationDocument) {
     readObligationDocumentV1(obligationDocument);
@@ -500,12 +503,12 @@ function projectObligationHistoricalAcceptance(obligationDocument) {
     return { baselineId: replay.baseline.id, checkpointId: obligationDocument.checkpoints.at(-1)?.id ?? null,
         complete: projectBaseline(obligationDocument, replay.baseline, replay.accepted, null).complete };
 }
-function projectObligationScope(obligationDocument, root, obligationBindingHistoryV1) {
+function projectObligationScope(obligationDocument, root, obligationBindingHistoryV1, onProgress) {
     readObligationDocumentV1(obligationDocument);
     const replay = replayHistory(obligationDocument);
     const bindings = (0, obligation_binding_history_js_1.projectObligationBindings)(obligationDocument, obligationBindingHistoryV1 === undefined
         ? { schemaVersion: 1, scopeId: obligationDocument.scopeId, revisions: [] } : obligationBindingHistoryV1);
-    return { projection: projectBaseline(obligationDocument, replay.baseline, replay.accepted, root, bindings), bindings };
+    return { projection: projectBaseline(obligationDocument, replay.baseline, replay.accepted, root, bindings, onProgress), bindings };
 }
 function compareVectors(before, after) {
     vector(before);

@@ -8,6 +8,7 @@ function indexProgress(indexProgressStream = process.stdout, now = Date.now) {
     let discoveryCorpus = null;
     let spinnerIndex = 0;
     let spinnerTimer;
+    const stageStarts = new Map();
     let currentStage = '';
     let startedAt = now();
     let lastPrintedAt = 0;
@@ -48,7 +49,8 @@ function indexProgress(indexProgressStream = process.stdout, now = Date.now) {
             if (first) {
                 stop();
                 currentStage = stage;
-                startedAt = now();
+                startedAt = completed === 0 ? now() : stageStarts.get(stage) ?? now();
+                stageStarts.set(stage, startedAt);
             }
             if (!first && completed !== total && now() - lastPrintedAt < 1000)
                 return;
