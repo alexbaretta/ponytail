@@ -723,8 +723,11 @@ export class RollingCampaignStore {
       requireState(commonDirectory(rollingStoredWorktree.rootPath) === commonDirectory(rollingCampaignRow.coordinator_root), 'worker repository differs from coordinator');
       const rollingExecutionConfigV3 = parseRollingExecutionConfig(rollingCampaignRow.configuration_text);
       const base = spawnSync('git', ['-C', rollingCampaignRow.coordinator_root, 'rev-parse', `refs/heads/${rollingExecutionConfigV3.incrementRef}^{commit}`], { encoding: 'utf8' });
-      requireState(!base.error && base.status === 0 && base.stdout.trim() === checkedRollingWorkerSubmissionV1.baseCommit,
-        'submission base differs from current coordinator increment');
+      requireState(!base.error && base.status === 0, 'cannot resolve current coordinator increment');
+      const baseAncestrySpawnSyncReturns = spawnSync('git', ['-C', rollingCampaignRow.coordinator_root, 'merge-base', '--is-ancestor',
+        checkedRollingWorkerSubmissionV1.baseCommit, base.stdout.trim()], {encoding:'utf8'});
+      requireState(!baseAncestrySpawnSyncReturns.error && baseAncestrySpawnSyncReturns.status === 0,
+        'submission base is not an ancestor of current coordinator increment');
       validateRollingWorkerSubmission(rollingStoredWorktree.rootPath, obligationLeaseV1, checkedRollingWorkerSubmissionV1);
       await poolClient.query<Record<string, unknown>>('INSERT INTO ponytail_index.rolling_submission_v1(project_id,campaign_id,assignment_id,generation,revision,submission_text,lease_text) VALUES($1,$2,$3,$4,$5,$6,$7)',
         [this.projectId, campaignId, id, generation, checkedRollingWorkerSubmissionV1.revision, JSON.stringify(checkedRollingWorkerSubmissionV1), JSON.stringify(obligationLeaseV1)]);

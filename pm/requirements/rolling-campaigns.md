@@ -90,6 +90,11 @@ Required semantic replay receives one-use native escalation approval only for
 the active frozen edit lease, retained actor, checkout and instruction turn,
 using the documented replay command against its freshly fetched campaign base.
 Unrelated commands and native file-change requests remain outside that authority.
+A submitted campaign base may remain an ancestor of the current increment after
+another compatible delivery lands. Preserve the exact worker candidate, lease
+and proof; the coordinator refreshes it through the reviewed fast-rebase path.
+Reject an unrelated base or an unintegrated candidate revision used as its own
+base to conceal changes.
 Retire a worker and its owned activity before release/reuse; inactive workers
 retain their original session/checkout. Preserve valid caches and user work.
 

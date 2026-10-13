@@ -70,7 +70,7 @@ test('native code fixture approvals permit exact shell-wrapped commands only for
 
 // Traceability: verifies REQ-ROLLING-STATE
 // Traceability: verifies REQ-ROLLING-SCHEDULING
-export interface ReviewScenario { readonly decision: RollingReviewOutcomeV1['decision']; readonly mode: 'manual' | 'protocol' | 'native'; readonly replaceLostReviewer?: boolean; readonly automaticPublication?: boolean; readonly conflictContinuation?: boolean; readonly conflictRepair?: boolean; readonly integratedCertificates?: boolean; readonly publicationBatch?:'threshold' | 'partial'; readonly publicationFlush?:'completion' | 'quiescence' }
+export interface ReviewScenario { readonly decision: RollingReviewOutcomeV1['decision']; readonly mode: 'manual' | 'protocol' | 'native'; readonly advancedCoordinator?: boolean; readonly replaceLostReviewer?: boolean; readonly automaticPublication?: boolean; readonly conflictContinuation?: boolean; readonly conflictRepair?: boolean; readonly integratedCertificates?: boolean; readonly publicationBatch?:'threshold' | 'partial'; readonly publicationFlush?:'completion' | 'quiescence' }
 function declineReviewApprovals(rollingCodex: RollingCodex): void {
   rollingCodex.on('serverRequest', message => rollingCodex.respondToServer(message.id, { decision: 'decline' }));
 }
@@ -412,6 +412,13 @@ export async function runRollingReviewScenario(t: TestContext, reviewScenario: R
   fs.unlinkSync(path.join(workerRoot, 'unexpected.ts'));
   assert.equal((await rollingCampaignStore.status('bound-fixture')).assignments[0]?.state, 'WORKING');
   assert.deepEqual(await rollingCampaignStore.submissions('bound-fixture', submissionRollingStoredAssignment.id), []);
+  if (reviewScenario.advancedCoordinator) {
+    const advancedCoordinatorCommit = execFileSync('git', ['-C', root, '-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.test', 'commit-tree', `${baseCommit}^{tree}`, '-p', baseCommit, '-m', 'Independent coordinator advancement'], {encoding:'utf8'}).trim();
+    execFileSync('git', ['-C', root, 'update-ref', 'refs/heads/campaign/bound-fixture', advancedCoordinatorCommit, baseCommit]);
+    const unrelatedBaseCommit = execFileSync('git', ['-C', root, '-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.test', 'commit-tree', `${baseCommit}^{tree}`, '-m', 'Foreign root'], {encoding:'utf8'}).trim();
+    await assert.rejects(rollingCampaignStore.submit('bound-fixture', submissionRollingStoredAssignment.id, submissionRollingStoredAssignment.generation, {...rollingWorkerSubmissionV1, baseCommit:unrelatedBaseCommit}), /current coordinator increment/);
+    await assert.rejects(rollingCampaignStore.submit('bound-fixture', submissionRollingStoredAssignment.id, submissionRollingStoredAssignment.generation, concealedRollingWorkerSubmissionV1), /current coordinator increment/);
+  }
   const receipts = await Promise.all(Array.from({ length: 4 }, () => rollingCampaignStore.submit('bound-fixture', submissionRollingStoredAssignment.id,
     submissionRollingStoredAssignment.generation, rollingWorkerSubmissionV1)));
   assert.ok(receipts.every(item => item.state === 'REVIEW' && item.revision === revision));
@@ -423,6 +430,7 @@ export async function runRollingReviewScenario(t: TestContext, reviewScenario: R
   assert.equal(submittedRollingCampaignStatus.assignments[0]?.state, 'REVIEW');
   assert.equal(submittedRollingCampaignStatus.assignments[0]?.activityStopped, true);
   assert.ok(!collectRollingGraph(root, 'bound-obligations.json', 'bound-bindings.json', 'history.json').projection.satisfiedIds.includes(firstRollingBinding.obligationId));
+  if (reviewScenario.advancedCoordinator) return;
   const differentRollingWorkerSubmissionV1: RollingWorkerSubmissionV1 = { ...rollingWorkerSubmissionV1,
     proof: [{ operation: 'check', evidence: { ...submissionObligationEvidence, command: 'different command' } }] };
   await assert.rejects(rollingCampaignStore.submit('bound-fixture', submissionRollingStoredAssignment.id, submissionRollingStoredAssignment.generation, differentRollingWorkerSubmissionV1), /immutable result/);
@@ -1805,6 +1813,11 @@ export async function runRollingWorkerScenario(t: TestContext, mode: 'protocol' 
     t.diagnostic(`worker native thread=${rollingNativeThread.thread.id}; session=${rollingNativeThread.thread.sessionId}; checkout=${rollingNativeThread.cwd}; attachment recovered after restart; model=${rollingNativeThread.model}`);
   }
 }
+
+// Traceability: verifies REQ-ROLLING-WORKERS
+// Traceability: verifies REQ-ROLLING-STATE
+test('parallel submission accepts an ancestor base after coordinator advancement without accepting unrelated or concealed bases',
+ t=>runRollingReviewScenario(t,{decision:'accepted',mode:'manual',advancedCoordinator:true}));
 
 // Traceability: verifies REQ-ROLLING-WORKERS
 // Traceability: verifies REQ-ROLLING-STATE
