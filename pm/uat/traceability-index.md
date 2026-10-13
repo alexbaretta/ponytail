@@ -34,7 +34,7 @@ Traceability: verifies REQ-TRACEABILITY-INDEX
      spinner (periodic printable messages when redirected); all indicators show
      elapsed time. Certificate assessments within a file advance a subphase;
      the parent file phase retains its elapsed time. Brackets align and
-     publication reaches 100% after commit.
+     publication reaches 100% after commit; all output columns align.
    - Human output shows file progress for each corpus. Redirected output uses
      printable lines; JSON output contains only the result.
 2. Reindex without changing inputs.

@@ -17,7 +17,7 @@ export function indexProgress(indexProgressStream:IndexProgressStream=process.st
   if(discoveryCorpus===null || now()-lastPrintedAt<(indexProgressStream.isTTY?200:5000)) return;
   lastPrintedAt=now();
   const frame='|/-\\'.charAt(spinnerIndex++%4);
-  const text=`${discoveryCorpus.padEnd(12)} ${indexProgressStream.isTTY?frame:'...'} discovering sources | elapsed ${Math.floor((now()-startedAt)/1000)}s`;
+  const text=`${discoveryCorpus.padEnd(12)} ${(indexProgressStream.isTTY?frame:'...').padEnd(42)} ${' '.repeat(4)} ${' '.repeat(13)} ${'discovering sources'.padEnd(23)} | elapsed ${String(Math.floor((now()-startedAt)/1000)).padStart(4)}s`;
   indexProgressStream.write(indexProgressStream.isTTY?`\r${text.padEnd(lineLength)}`:`${text}\n`);
   lineLength=Math.max(lineLength,text.length);lineOpen=indexProgressStream.isTTY===true;
  };
@@ -37,7 +37,7 @@ export function indexProgress(indexProgressStream:IndexProgressStream=process.st
    const filled=Math.floor(percentage*40/100);
    const eta=total===0?'0s':completed===0?'unknown':`${Math.ceil((now()-startedAt)/1000*(total-completed)/completed)}s`;
    const counts=details===undefined?'':` | ${details.parsedFiles} parsed, ${details.reusedFiles} reused`;
-   const text=`${corpus.padEnd(12)} [${'='.repeat(filled)}${' '.repeat(40-filled)}] ${percentage}% ${completed}/${total} ${phase} | elapsed ${Math.floor((now()-startedAt)/1000)}s | ETA ${eta}${counts}`;
+   const text=`${corpus.padEnd(12)} [${'='.repeat(filled)}${' '.repeat(40-filled)}] ${String(percentage).padStart(3)}% ${String(completed).padStart(6)}/${String(total).padStart(6)} ${phase.padEnd(23)} | elapsed ${String(Math.floor((now()-startedAt)/1000)).padStart(4)}s | ETA ${eta.padStart(7)}${counts}`;
    const line=indexProgressStream.isTTY?text.padEnd(lineLength):text;
    indexProgressStream.write(indexProgressStream.isTTY?`\r${line}`:`${line}\n`);
    lineLength=line.length;

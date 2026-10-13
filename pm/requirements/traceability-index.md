@@ -55,7 +55,8 @@ failed refresh, or rebuild cannot replace another worktree's published answer.
 On 2026-10-12, the stakeholder clarified that repeated references to one stable
 entity across files must publish one entity and all distinct relationships.
 Human `ponytail traceability index` output must show an ASCII progress bar.
-Align its opening brackets across corpora. Show preparation before source
+Align brackets, percentages, counts, phase labels, elapsed times and ETAs
+across corpora. Show preparation before source
 snapshot collection, then initialize counted processing at zero; do not leave
 expensive preparation invisible. Count plan-manifest discovery, source-file
 snapshot collection, cached-file processing and database publication separately.
