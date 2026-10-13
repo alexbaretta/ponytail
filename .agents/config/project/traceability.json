@@ -1384,6 +1384,11 @@
       "class": "unit-test",
       "path": "tests/traceability-projection.test.ts",
       "locator": "text"
+    },
+    {
+      "class": "integration-test",
+      "path": "tests/traceability-incremental.integration.test.ts",
+      "locator": "text"
     }
   ],
   "entities": [],

@@ -264,20 +264,17 @@ function gitPath(root, args) {
   return fs.realpathSync(value);
 }
 
-function fileState(root, relativePath) {
+function repositoryFileStates(root) {
+  return {
+    tracked: new Set(git(root, ['ls-files', '-z']).split('\0')),
+    changed: new Set(git(root, ['diff', '--name-only', '-z', 'HEAD']).split('\0')),
+  };
+}
+
+function fileState(root, relativePath, states) {
   const absolutePath = path.join(root, relativePath);
   if (!fs.existsSync(absolutePath)) return { content: Buffer.alloc(0), gitState: 'deleted' };
-  const tracked = spawnSync(
-    'git',
-    ['ls-files', '--error-unmatch', '--', relativePath],
-    { cwd: root, encoding: 'utf8' },
-  );
-  if (tracked.status !== 0 && tracked.status !== 1) throw tracked.error ?? new Error(tracked.stderr);
-  const changed = spawnSync('git', ['diff', '--quiet', 'HEAD', '--', relativePath], {
-    cwd: root,
-  });
-  if (changed.status !== 0 && changed.status !== 1) throw changed.error ?? new Error(changed.stderr);
-  const gitState = tracked.status === 1 ? 'added' : changed.status === 0 ? 'tracked' : 'modified';
+  const gitState = !states.tracked.has(relativePath) ? 'added' : states.changed.has(relativePath) ? 'modified' : 'tracked';
   return { content: fs.readFileSync(absolutePath), gitState };
 }
 
@@ -616,9 +613,10 @@ function collectTraceabilityProjection(configurationPath, onProgress) {
     fs.readFileSync(__filename),
     fs.readFileSync(require.resolve('../skills/requirements-traceability/scripts/check-traceability')),
   ]));
+  const states = repositoryFileStates(root);
   onProgress?.(0, paths.length, 'traceability', 'source files');
   const files = paths.map((relativePath, index) => {
-    const { content, gitState } = fileState(root, relativePath);
+    const { content, gitState } = fileState(root, relativePath, states);
     const file = {
       path: relativePath,
       contentDigest: digest(content),
@@ -863,13 +861,20 @@ function collectPlanProjection(root = fs.realpathSync(git(process.cwd(), ['rev-p
     try { plan = parsePlanSource(root, source.relativePlanFile, source.lifecycle, fs.readFileSync(path.join(root, source.relativePlanFile), 'utf8')); }
     catch { plan = null; }
     if (plan?.obligationDocument) {
-      const { inputDigest, parseObligationDocument } = require('../skills/plan-execution/scripts/obligations');
+      const { inputDigest, parseObligationDocument, isObligationGitInputs, gitInputReasons } = require('../skills/plan-execution/scripts/obligations');
       const documentPath = plan.obligationDocument;
       const dependencyDigests = [];
       try {
         inputDigest(root, documentPath);
         const obligationDocument = parseObligationDocument(fs.readFileSync(path.join(root, documentPath), 'utf8'));
-        const inputs = new Set([...obligationDocument.baselines.flatMap(baseline => baseline.requirements.map(requirement => requirement.path)), ...obligationDocument.certificates.flatMap(certificate => certificate.inputs.map(input => input.path))]);
+        const inputSets = new Map(obligationDocument.certificates.flatMap(certificate => [certificate.inputs, ...certificate.evidence.map(evidence => evidence.inputs)]).map(inputs => [JSON.stringify(inputs), inputs]));
+        const inputs = new Set(obligationDocument.baselines.flatMap(baseline => baseline.requirements.map(requirement => requirement.path)));
+        for (const [key, inputSet] of inputSets) {
+          if (isObligationGitInputs(inputSet)) dependencyDigests.push(`git:${key}:${JSON.stringify(gitInputReasons(root, inputSet))}`);
+          else for (const input of inputSet) inputs.add(input.path);
+        }
+        for (const relative of new Set(obligationDocument.certificates.flatMap(certificate => [...certificate.artifacts, ...certificate.evidence.map(evidence => evidence.outputPath)])))
+          dependencyDigests.push(`artifact:${relative}:${fs.existsSync(path.join(root, relative))}`);
         for (const relative of [...inputs].sort()) {
           try { dependencyDigests.push(`${relative}:${inputDigest(root, relative)}`); }
           catch (error) { dependencyDigests.push(`${relative}:unavailable:${error.message}`); }
@@ -896,9 +901,10 @@ function collectPlanProjection(root = fs.realpathSync(git(process.cwd(), ['rev-p
     fs.readFileSync(require.resolve('../skills/plan-execution/scripts/ready-sprints')),
     fs.readFileSync(require.resolve('../skills/plan-execution/scripts/ready-tasklets')),
   ]));
+  const states = repositoryFileStates(root);
   onProgress?.(0, paths.size, 'plans', 'source files');
   const files = [...paths].sort().map((relativePath, index) => {
-    const { content, gitState } = fileState(root, relativePath);
+    const { content, gitState } = fileState(root, relativePath, states);
     const hasTaskletGraph = /S\d+\.md$/u.test(relativePath) &&
       paths.has(relativePath.replace(/\.md$/, '.tasklets.json'));
     const file = {
@@ -974,6 +980,7 @@ async function publishTraceabilityGeneration(client, projection, options = {}) {
     'SELECT pg_try_advisory_lock(hashtextextended($1, 0)) AS acquired', [lockKey]);
   if (!lock.acquired) throw new Error('project index writer is already active for this worktree corpus');
   const onProgress = options.onProgress;
+  const rebuild = options.rebuild === true;
   let transactionActive = false;
   try {
     options.signal?.throwIfAborted();
@@ -995,6 +1002,22 @@ async function publishTraceabilityGeneration(client, projection, options = {}) {
       ON CONFLICT (repository_id, root_path) DO UPDATE
       SET root_path = EXCLUDED.root_path
       RETURNING worktree_id`, [repository.repository_id, projection.worktreePath]);
+    const previous = await client.query(`
+      SELECT generation.*
+      FROM ponytail_index.published_generation_v1 published
+      JOIN ponytail_index.generation_v1 generation USING (generation_id)
+      WHERE published.worktree_id = $1::uuid AND published.corpus = $2`, [worktree.worktree_id, projection.corpus]);
+    const retained = !rebuild && previous.rows.length === 1 ? previous.rows[0] : null;
+    if (retained && retained.state_digest === projection.stateDigest && retained.configuration_digest === projection.configurationDigest && retained.parser_identity === projection.parserIdentity) {
+      if (retained.head_commit !== projection.headCommit) await client.query(
+        'UPDATE ponytail_index.generation_v1 SET head_commit = $2 WHERE generation_id = $1::uuid', [retained.generation_id, projection.headCommit]);
+      projection.assertCurrent?.();
+      options.signal?.throwIfAborted();
+      await client.query('COMMIT');
+      transactionActive = false;
+      onProgress?.(projection.files.length, projection.files.length, projection.corpus, 'cached files', {parsedFiles:0,reusedFiles:projection.files.length});
+      return {generationId:retained.generation_id,stateDigest:projection.stateDigest,parsedFiles:0,reusedFiles:projection.files.length};
+    }
     await client.query('COMMIT');
     transactionActive = false;
     const payloads = [];
@@ -1064,11 +1087,7 @@ async function publishTraceabilityGeneration(client, projection, options = {}) {
     options.signal?.throwIfAborted();
     await client.query('BEGIN');
     transactionActive = true;
-    const previous = await client.query(`
-      SELECT generation_id
-      FROM ponytail_index.published_generation_v1
-      WHERE worktree_id = $1::uuid AND corpus = $2`, [worktree.worktree_id, projection.corpus]);
-    const generation = await one(client, `
+    const generation = retained ?? await one(client, `
       INSERT INTO ponytail_index.generation_v1 (
         worktree_id, corpus, head_commit, state_digest, configuration_digest, parser_identity
       ) VALUES ($1::uuid, $2, $3, $4, $5, $6)
@@ -1076,11 +1095,25 @@ async function publishTraceabilityGeneration(client, projection, options = {}) {
       worktree.worktree_id, projection.corpus, projection.headCommit,
       projection.stateDigest, projection.configurationDigest, projection.parserIdentity,
     ]);
+    const readRows = async (table, columns, key) => {
+      if (!retained) return new Map();
+      const result = await client.query(`SELECT ${columns.join(', ')} FROM ponytail_index.${table} WHERE generation_id = $1::uuid`, [generation.generation_id]);
+      return new Map(result.rows.map(row => [key(row), JSON.stringify(columns.map(column => row[column]))]));
+    };
+    const entityColumns = ['entity_id','entity_kind','path','line','unit_name','annotation','description'];
+    const relationshipColumns = ['source_entity_id','target_entity_id','role'];
+    const searchColumns = ['entity_id','searchable_entity_id','entity_kind','path','unit_name','annotation','description','role','requirement_id'];
+    const oldFiles = await readRows('file_v1', ['path','content_digest','git_state','parse_result_id'], row => row.path);
+    const oldEntities = await readRows('entity_v1', entityColumns, row => row.entity_id);
+    const oldRelationships = await readRows('relationship_v1', relationshipColumns, row => JSON.stringify(relationshipColumns.map(column => row[column])));
+    const oldSearch = await readRows('search_document_v2', searchColumns, row => row.entity_id);
     for (const [index, file] of projection.files.entries()) {
-      await client.query(`
+      const fileValues = [file.path, file.contentDigest, file.gitState, parseResultIds[index]];
+      if (oldFiles.get(file.path) !== JSON.stringify(fileValues)) await client.query(`
         INSERT INTO ponytail_index.file_v1 (
           generation_id, path, content_digest, git_state, parse_result_id
-        ) VALUES ($1::uuid, $2, $3, $4, $5::uuid)`, [
+        ) VALUES ($1::uuid, $2, $3, $4, $5::uuid)
+        ON CONFLICT (generation_id, path) DO UPDATE SET content_digest = EXCLUDED.content_digest, git_state = EXCLUDED.git_state, parse_result_id = EXCLUDED.parse_result_id`, [
         generation.generation_id,
         file.path,
         file.contentDigest,
@@ -1096,16 +1129,28 @@ async function publishTraceabilityGeneration(client, projection, options = {}) {
       : projection.normalizePayloads(payloads);
     const allEntities = normalized.entities;
     const allRelationships = normalized.relationships;
+    if (retained) {
+      const filePaths = new Set(projection.files.map(file => file.path));
+      const removedFiles = [...oldFiles.keys()].filter(relativePath => !filePaths.has(relativePath));
+      if (removedFiles.length) await client.query('DELETE FROM ponytail_index.file_v1 WHERE generation_id = $1::uuid AND path = ANY($2::text[])', [generation.generation_id, removedFiles]);
+      const entityIds = new Set(allEntities.map(entity => entity.entityId));
+      const removedEntities = [...oldEntities.keys()].filter(entityId => !entityIds.has(entityId));
+      if (removedEntities.length) await client.query('DELETE FROM ponytail_index.entity_v1 WHERE generation_id = $1::uuid AND entity_id = ANY($2::text[])', [generation.generation_id, removedEntities]);
+      const relationshipKeys = new Set(allRelationships.map(relationship => JSON.stringify([relationship.sourceEntityId,relationship.targetEntityId,relationship.role])));
+      for (const key of oldRelationships.keys()) if (!relationshipKeys.has(key)) await client.query('DELETE FROM ponytail_index.relationship_v1 WHERE generation_id = $1::uuid AND source_entity_id = $2 AND target_entity_id = $3 AND role = $4', [generation.generation_id,...JSON.parse(key)]);
+    }
     const publicationTotal = allEntities.length * 2 + allRelationships.length + 1;
     let publishedRecords = 0;
     const publicationProgress = () => onProgress?.(publishedRecords, publicationTotal, projection.corpus, 'database records');
     publicationProgress();
     const searchDocuments = new Map();
     for (const entity of allEntities) {
-      await client.query(`
+      const entityValues = [entity.entityId,entity.entityKind,entity.path,entity.line,entity.unitName,entity.annotation,entity.description];
+      if (oldEntities.get(entity.entityId) !== JSON.stringify(entityValues)) await client.query(`
         INSERT INTO ponytail_index.entity_v1 (
           generation_id, entity_id, entity_kind, path, line, unit_name, annotation, description
-        ) VALUES ($1::uuid, $2, $3, $4, $5, $6, $7, $8)`, [
+        ) VALUES ($1::uuid, $2, $3, $4, $5, $6, $7, $8)
+        ON CONFLICT (generation_id, entity_id) DO UPDATE SET entity_kind = EXCLUDED.entity_kind, path = EXCLUDED.path, line = EXCLUDED.line, unit_name = EXCLUDED.unit_name, annotation = EXCLUDED.annotation, description = EXCLUDED.description`, [
         generation.generation_id,
         entity.entityId,
         entity.entityKind,
@@ -1128,10 +1173,11 @@ async function publishTraceabilityGeneration(client, projection, options = {}) {
       publishedRecords++;publicationProgress();
     }
     for (const relationship of allRelationships) {
-      await client.query(`
+      const relationshipKey = JSON.stringify([relationship.sourceEntityId,relationship.targetEntityId,relationship.role]);
+      if (!oldRelationships.has(relationshipKey)) await client.query(`
         INSERT INTO ponytail_index.relationship_v1 (
           generation_id, source_entity_id, target_entity_id, role
-        ) VALUES ($1::uuid, $2, $3, $4)`, [
+        ) VALUES ($1::uuid, $2, $3, $4) ON CONFLICT DO NOTHING`, [
         generation.generation_id,
         relationship.sourceEntityId,
         relationship.targetEntityId,
@@ -1148,12 +1194,15 @@ async function publishTraceabilityGeneration(client, projection, options = {}) {
     }
     for (const [entityId, document] of searchDocuments) {
       const content = Object.values(document).filter(value => value !== null).join('\n');
+      const searchValues = [entityId,document.entityId,document.entityKind,document.path,document.unitName,document.annotation,document.description,document.role,document.requirementId];
+      if (oldSearch.get(entityId) === JSON.stringify(searchValues)) {publishedRecords++;publicationProgress();continue;}
       const documentId = await insertTextDocument(client, Buffer.from(content));
       await client.query(`
         INSERT INTO ponytail_index.search_document_v2 (
           generation_id, entity_id, document_id, searchable_entity_id, entity_kind,
           path, unit_name, annotation, description, role, requirement_id
-        ) VALUES ($1::uuid, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`, [
+        ) VALUES ($1::uuid, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+        ON CONFLICT (generation_id, entity_id) DO UPDATE SET document_id = EXCLUDED.document_id, searchable_entity_id = EXCLUDED.searchable_entity_id, entity_kind = EXCLUDED.entity_kind, path = EXCLUDED.path, unit_name = EXCLUDED.unit_name, annotation = EXCLUDED.annotation, description = EXCLUDED.description, role = EXCLUDED.role, requirement_id = EXCLUDED.requirement_id`, [
         generation.generation_id,
         entityId,
         documentId,
@@ -1177,7 +1226,8 @@ async function publishTraceabilityGeneration(client, projection, options = {}) {
       projection.corpus,
       generation.generation_id,
     ]);
-    if (previous.rows.length === 1) {
+    if (retained) await client.query('UPDATE ponytail_index.generation_v1 SET head_commit = $2, state_digest = $3, configuration_digest = $4, parser_identity = $5 WHERE generation_id = $1::uuid', [generation.generation_id, projection.headCommit, projection.stateDigest, projection.configurationDigest, projection.parserIdentity]);
+    if (rebuild && previous.rows.length === 1) {
       await client.query('DELETE FROM ponytail_index.generation_v1 WHERE generation_id = $1::uuid', [
         previous.rows[0].generation_id,
       ]);
@@ -1326,7 +1376,7 @@ async function currentGeneration(client, projection) {
   if (result.rows.length !== 1) {
     throw new ProjectIndexError(
       'PROJECT_INDEX_MISSING',
-      `${projection.corpus} index is missing for this worktree; run ponytail traceability index`,
+      `${projection.corpus} index is missing for this worktree; run ponytail traceability update-index`,
     );
   }
   const generation = result.rows[0];
@@ -1336,7 +1386,7 @@ async function currentGeneration(client, projection) {
       generation.parser_identity !== projection.parserIdentity) {
     throw new ProjectIndexError(
       'PROJECT_INDEX_STALE',
-      `${projection.corpus} index is stale for this worktree; run ponytail traceability index`,
+      `${projection.corpus} index is stale for this worktree; run ponytail traceability update-index`,
     );
   }
   return generation;
@@ -2692,7 +2742,7 @@ async function run(args) {
     if (matches.length === 0) process.exitCode = 1;
     return;
   }
-  const valid = family === 'traceability' && ['index', 'search', 'validate'].includes(operation) ||
+  const valid = family === 'traceability' && ['update-index', 'search', 'validate'].includes(operation) ||
     family === 'plan' && ['search', 'descendants', 'ancestors', 'roots', 'stranded'].includes(operation);
   if (!valid) {
     throw new ProjectIndexError(
@@ -2714,14 +2764,14 @@ async function run(args) {
     else printPlanGraphHuman(result);
     return;
   }
-  if (operation === 'index') {
+  if (operation === 'update-index') {
     const seen = new Set();
     let batchSize = 10;
     for (let index = 0; index < args.length; index += 1) {
       const argument = args[index];
       if (!['--rebuild', '--json', '--batch-size'].includes(argument) || seen.has(argument)) {
         throw new ProjectIndexError('TRACEABILITY_INDEX_USAGE',
-          'usage: ponytail traceability index [--batch-size <n>] [--rebuild] [--json]');
+          'usage: ponytail traceability update-index [--batch-size <n>] [--rebuild] [--json]');
       }
       seen.add(argument);
       if (argument === '--batch-size') {

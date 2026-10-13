@@ -150,7 +150,8 @@ async function main() {
         ) AS public_table`);
     assert.deepEqual(privileges.rows[0], { public_schema: false, public_table: false });
 
-    const rebuilt = await publishTraceabilityGeneration(client, first);
+    const rebuilt = await publishTraceabilityGeneration(client, first, { rebuild: true });
+    assert.notEqual(rebuilt.generationId, firstResult.generationId);
     assert.equal(rebuilt.stateDigest, firstResult.stateDigest);
     const generations = await client.query(`
       SELECT count(*)::integer AS count
@@ -184,7 +185,7 @@ async function main() {
       .update(`${invalidFile.parserIdentity}-invalid`).digest('hex');
     invalidFile.parse = () => {
       const payload = validParse();
-      payload.entities.push(requirement);
+      payload.relationships.push({ sourceEntityId: requirement.entityId, targetEntityId: 'missing-requirement', role: 'implements' });
       return payload;
     };
     await assert.rejects(() => publishTraceabilityGeneration(client, invalid));
@@ -248,7 +249,7 @@ async function main() {
       files: changedFiles,
     };
     const changedPlanResult = await publishTraceabilityGeneration(client, changedPlan);
-    assert.notEqual(changedPlanResult.generationId, planFirstResult.generationId);
+    assert.equal(changedPlanResult.generationId, planFirstResult.generationId);
     assert.equal(changedPlanResult.parsedFiles, 1);
     assert.equal(changedPlanResult.reusedFiles, changedFiles.length - 1);
     const traceAfterPlanChange = await client.query(`
@@ -756,7 +757,7 @@ async function main() {
   }
   const cli = path.join(root, 'src/project-index.js');
   const indexed = JSON.parse(execFileSync(process.execPath, [
-    cli, 'traceability', 'index', '--json',
+    cli, 'traceability', 'update-index', '--json',
   ], { cwd: root, encoding: 'utf8' }));
   assert.equal(indexed.schemaVersion, 2);
   assert.deepEqual(indexed.corpora.map(corpus => corpus.corpus), ['traceability', 'plans']);

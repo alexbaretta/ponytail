@@ -68,6 +68,22 @@ function fixture() {
   return { configurationPath, root };
 }
 
+test('plan parse cache tracks Git certificate input freshness without treating Git inputs as hash arrays', t => {
+  const obligationFixtureHelpers = require('../dist/tests/helpers/obligation-fixture');
+  const { createObligationGitInputs } = require('../skills/plan-execution/scripts/obligations');
+  const obligationFixture = obligationFixtureHelpers.fixture(t);
+  const { root, documentPath, document, proofPath } = obligationFixture;
+  fs.writeFileSync(path.join(root, 'ponytail-journal.json'), JSON.stringify({schemaVersion:1,projectId:'019c0000-0000-7000-8000-000000000099',projectName:'dependency-fixture',database:{name:'ponytail'}}));
+  const certificate = {id:'CERT-GIT',obligationIds:['OBL-1'],inputs:createObligationGitInputs(root,['src.txt']),artifacts:[proofPath],assessor:'coordinator',authority:['approved-CHNG'],adequate:true,reason:'Reviewed complete inventory',disposition:null,evidence:[],inventoryIds:[]};
+  fs.writeFileSync(path.join(root,documentPath),JSON.stringify({...document,certificates:[certificate]}));
+  const identity = () => collectPlanProjection(root).files.find(file=>file.path===documentPath).parserIdentity;
+  const initial = identity();
+  fs.writeFileSync(path.join(root,'src.txt'),'changed certified input');
+  assert.notEqual(identity(),initial);
+  fs.writeFileSync(path.join(root,'src.txt'),'implementation input');
+  assert.equal(identity(),initial);
+});
+
 test('source snapshots account for every file before database indexing', () => {
   const { configurationPath } = fixture();
   const counts = [];
@@ -1054,7 +1070,7 @@ test('refuses stale plan queries without rebuilding', async () => {
     () => searchPlans('processor', {
       lifecycle: null, kind: null, plan: null,
     }, { root, pool: boundary.pool }),
-    /plans index is stale for this worktree; run ponytail traceability index/,
+    /plans index is stale for this worktree; run ponytail traceability update-index/,
   );
   assert.equal(boundary.queries.some(query =>
     query.text.includes('websearch_to_tsquery')), false);

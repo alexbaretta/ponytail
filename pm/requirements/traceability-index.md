@@ -30,6 +30,15 @@ configured source files. The index is a cache, never a source of truth: source
 requirements, annotations, plans, issues, implementation, tests, and UAT remain
 canonical, and a complete rebuild must reproduce the same logical index.
 
+The canonical update command is `ponytail traceability update-index`; the old
+`index` spelling is retired. Its default updates only changed file, entity,
+relationship and search rows under the existing worktree/corpus writer lock
+and transaction. Unchanged snapshots perform no graph or file writes. Changes
+to shared plan relationships must still reconcile their affected graph records.
+`--rebuild` explicitly replaces the entire derived generation while retaining
+valid immutable parse-cache entries. Deletions and failed updates preserve
+transactional consistency. Git file-state discovery is batched per corpus.
+
 Reindexing must avoid reparsing an unchanged file. Each indexed file record
 must retain its exact content identity, the repository revision observed during
 the scan, and the applicable configuration, grammar, and index-schema
@@ -54,7 +63,7 @@ failed refresh, or rebuild cannot replace another worktree's published answer.
 
 On 2026-10-12, the stakeholder clarified that repeated references to one stable
 entity across files must publish one entity and all distinct relationships.
-Human `ponytail traceability index` output must show an ASCII progress bar.
+Human `ponytail traceability update-index` output must show an ASCII progress bar.
 Align brackets, percentages, counts, phase labels, elapsed times and ETAs
 across corpora. Count source-file snapshot collection, plan-manifest scanning,
 cached-file processing and database publication separately, starting at zero.

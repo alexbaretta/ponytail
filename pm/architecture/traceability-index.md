@@ -63,7 +63,8 @@ Human progress uses stderr while results use stdout; `--json` suppresses
 progress so stdout remains exactly one machine-readable result.
 Cancellation closes the display, releases the lock and exits 130 without
 reporting successful publication.
-Rebuild and incremental update publish new worktree corpus generations in one
+Rebuild publishes a new worktree corpus generation; incremental update retains
+unchanged rows in the current generation. Both publish all projection changes in one
 final transaction; readers select the published generation for their exact project,
 repository, worktree, and corpus. The database stores no authoritative
 approval or completion state. Superseded generation rows are removed without
@@ -128,7 +129,7 @@ are impossible.
 The installed dispatcher exposes one command family:
 
 ```text
-ponytail traceability index [--batch-size <n>] [--rebuild] [--json]
+ponytail traceability update-index [--batch-size <n>] [--rebuild] [--json]
 ponytail traceability search <query> [filters] [--json]
 ponytail traceability validate [--plan <plan> | --campaign <plan>] [--json]
 ponytail plan search <query> [filters] [--json]

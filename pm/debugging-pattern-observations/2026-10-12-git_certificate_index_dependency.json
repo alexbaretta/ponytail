@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-10-12-git_certificate_index_dependency",
+  "recorded_at": "2026-10-12T18:04:05-07:00",
+  "source_references": [
+    "pm/requirements/traceability-index.md"
+  ],
+  "context": {
+    "languages": [
+      "javascript",
+      "typescript"
+    ],
+    "frameworks": [],
+    "components": [
+      "project-index"
+    ],
+    "affected_boundaries": [
+      "Git certificate freshness to immutable plan parse-cache identity"
+    ],
+    "code_references": [
+      "src/project-index.js:852"
+    ]
+  },
+  "observed_behavior": "Git certificate inputs were treated as legacy hash arrays; dependency collection caught the resulting map error and stored a constant invalid signature.",
+  "expected_behavior": "Changes to certified inputs invalidate the plan parse cache.",
+  "causal_mechanism": "The collector assumes every input contract is an array, although Git inputs are a revision/paths object. Its caught error hides subsequent dependency changes.",
+  "anti_pattern": {
+    "structural_description": "Read one physical input variant using another variant shape.",
+    "why_it_fails": "The error signature remains unchanged as certified source inputs change."
+  },
+  "correct_pattern": {
+    "required_invariant": "Every input variant contributes its actual semantic freshness dependencies.",
+    "implementation_description": "Use the canonical Git-input discriminator and freshness checker, deduplicate identical input sets, and include artifact availability."
+  },
+  "applicability_conditions": [
+    "Plan index contains certificates using the Git input variant."
+  ],
+  "known_non_matches": [
+    "Legacy hash-array inputs remain valid under their existing contract."
+  ],
+  "confirmation_evidence": [
+    "Collector calls map on an object Git-input variant.",
+    "Regression changes a certified source, observes a new parse identity, and restores the original identity when source content is restored."
+  ],
+  "regression_proofs": [
+    "tests/project-index.test.js: plan parse cache tracks Git certificate input freshness without treating Git inputs as hash arrays"
+  ]
+}

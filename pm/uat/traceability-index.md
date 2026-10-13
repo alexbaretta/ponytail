@@ -35,7 +35,13 @@ Traceability: verifies REQ-TRACEABILITY-INDEX
      publication reaches 100% after commit; all output columns align.
    - Human output shows file progress for each corpus. Redirected output uses
      printable lines; JSON output contains only the result.
-2. Reindex without changing inputs.
+2. Run `ponytail traceability update-index` without changing inputs.
+   - Existing file, entity, relationship and search rows retain their physical
+     identities. An unrelated commit refreshes metadata without graph rewrites.
+   - Change one annotation, then remove it; only affected graph rows change,
+     and an unchanged sibling retains its physical identity.
+   - Invalid input rolls back to the prior usable generation.
+   - `--rebuild` publishes a replacement generation despite unchanged inputs.
    - No source file is reparsed and the logical query result is unchanged.
 3. Create a second worktree at the same revision and index it.
    - No database is created in that worktree; identical content reuses cached

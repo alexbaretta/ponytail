@@ -217,6 +217,13 @@ Run the configured reverse-view generation command after relationship changes,
 then run the configured check. A stale checked-in reverse view is a failed
 reverse connection, not documentation drift to ignore.
 
+Projects adopting the Ponytail indexed CLI use `ponytail traceability update-index`
+before indexed queries. The default incrementally reconciles the invoking
+worktree's files and graph, retaining unchanged rows and valid immutable parses.
+Use `--rebuild` to explicitly replace the complete derived generation, and
+`--json` for machine-readable output. The old `traceability index` spelling is
+retired; configured structural and semantic checks remain separate gates.
+
 ## Workflow
 
 1. Confirm that each requirement is approved, stable, and present in the
