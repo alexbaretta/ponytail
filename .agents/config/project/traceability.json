@@ -1389,6 +1389,11 @@
       "class": "integration-test",
       "path": "tests/traceability-incremental.integration.test.ts",
       "locator": "text"
+    },
+    {
+      "class": "unit-test",
+      "path": "tests/cli-help.test.ts",
+      "locator": "text"
     }
   ],
   "entities": [],
@@ -1700,6 +1705,10 @@
     {
       "path": "src/semantic-rebase.js",
       "sourcePath": "src/semantic-rebase.ts"
+    },
+    {
+      "path": "src/cli-command-registry.v1.json",
+      "sourcePath": "src/cli-help.ts"
     }
   ],
   "reverseViewPath": "pm/requirements/traceability.generated.md",

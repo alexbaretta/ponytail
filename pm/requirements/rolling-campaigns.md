@@ -167,7 +167,11 @@ OBL-117 through OBL-122 under REQ-ROLLING-INTERFACES cover search, plan,
 traceability, plan-input, worktree and root utility help respectively. Every
 chapter lists its commands; every command explains its arguments and behavior.
 Root `-h`/`--help` lists only first-level chapters and utilities, without
-expanding their subcommands or usage pages.
+expanding their subcommands or usage pages. Invalid command selection prints
+the same relevant chapter/root help as `-h`, exits unsuccessfully, and precedes
+project/database access. Index argument errors print full subcommand help.
+Help wraps at word boundaries to the terminal width (80 columns when no
+terminal width is available), preserving indentation.
 Help returns successfully without performing the command's mutations, including
 for registration and recovery commands. Existing campaign and PM help must
 remain functional. Acceptance: [ROLL-CLI-HELP](../uat/rolling-campaigns.md#arc-roll-cli-help).

@@ -1,6 +1,6 @@
 // Copyright (c) 2026 Alex Baretta. All rights reserved.
 // Licensed under the MIT License. See LICENSE in the project root.
-import {rollingCampaignHelp} from './rolling-cli-registry.js';
+import {rollingCampaignHelp,rollingCommandDefinitions} from './rolling-cli-registry.js';
 
 export interface CliHelpCommand {readonly chapter:string;readonly name:string;readonly arguments:string;readonly behavior:string;}
 
@@ -58,11 +58,11 @@ export const cliHelpCommands:readonly CliHelpCommand[] = [
 ];
 
 // Traceability: implements REQ-ROLLING-INTERFACES
-export function renderCliHelp(argv:readonly string[]):string {
+function cliHelpText(argv:readonly string[]):string {
  const separator = argv.indexOf('--');
  const args = (separator < 0 ? argv : argv.slice(0,separator)).filter(argument=>argument !== '--help' && argument !== '-h');
  const [chapter,command] = args;
- if (chapter === 'campaign') return rollingCampaignHelp(command);
+ if (chapter === 'campaign') return rollingCampaignHelp(rollingCommandDefinitions.some(item=>item.name===command)?command:undefined);
  if (chapter === undefined || chapter === 'help') {
   const chapters = [...new Set(cliHelpCommands.map(item=>item.chapter).filter(Boolean))];
   return 'Usage: ponytail <chapter|command> [arguments]\n\nChapters:\n'
@@ -71,17 +71,45 @@ export function renderCliHelp(argv:readonly string[]):string {
    +'\n\nUse ponytail <chapter> --help or ponytail <command> --help for behavior and arguments.\n';
  }
  const chapterCommands = cliHelpCommands.filter(item=>item.chapter === chapter);
- if (chapterCommands.length > 0 && command === undefined) return `Usage: ponytail ${chapter} <command> [arguments]\n\n`
+ if (chapterCommands.length > 0 && !chapterCommands.some(item=>item.name===command)) return `Usage: ponytail ${chapter} <command> [arguments]\n\n`
   +chapterCommands.map(item=>`  ${item.name} ${item.arguments}\n    ${item.behavior}`).join('\n')
   +(chapter === 'plan-input' ? '\n\nEnqueue input: ponytail plan-input <plan> -- <instruction>\nThe instruction after -- is queued verbatim; help does not consume or modify the queue.' : '')
   +'\n\nUse each command’s --help for its arguments.\n';
  const cliHelpCommand = cliHelpCommands.find(item=>item.chapter === chapter && item.name === command
   || item.chapter === '' && item.name === chapter);
- if (!cliHelpCommand) throw new Error(`unknown help command: ${args.join(' ')}`);
+ if (!cliHelpCommand) return cliHelpText([]);
  return `Usage: ponytail ${cliHelpCommand.chapter ? cliHelpCommand.chapter+' ' : ''}${cliHelpCommand.name} ${cliHelpCommand.arguments}\n\n${cliHelpCommand.behavior}\n\n--help, -h: Show this message without performing any command operation.\n`;
 }
 
-if (require.main === module) {
- try {process.stdout.write(renderCliHelp(process.argv.slice(2)));}
- catch (error) {process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);process.exitCode=2;}
+// Traceability: implements REQ-ROLLING-INTERFACES
+export function renderCliHelp(argv:readonly string[],width:number=process.stdout.columns||process.stderr.columns||80):string {
+ const columns=Number.isSafeInteger(width)&&width>0?width:80;
+ return cliHelpText(argv).split('\n').flatMap(line=>{
+  const leading=line.match(/^ */u)?.[0]??'';
+  const indent=(line.startsWith('Usage:')?'  ':leading).slice(0,Math.max(0,columns-1));
+  const lines:string[]=[];
+  let remaining=line;
+  while(remaining.length>columns) {
+   let split=remaining.lastIndexOf(' ',columns);
+   if(split<=indent.length) split=columns;
+   lines.push(remaining.slice(0,split).trimEnd());
+   remaining=indent+remaining.slice(split).trimStart();
+  }
+  lines.push(remaining);return lines;
+ }).join('\n');
 }
+
+export interface CliCommandRegistryV1 {
+ readonly schemaVersion:1;
+ readonly rootCommands:readonly string[];
+ readonly chapters:Readonly<Record<string,{readonly commands:readonly string[];readonly freeform:boolean}>>;
+}
+// Traceability: implements REQ-ROLLING-INTERFACES
+export const cliCommandRegistryV1:CliCommandRegistryV1={schemaVersion:1,
+ rootCommands:cliHelpCommands.filter(item=>item.chapter==='').map(item=>item.name),
+ chapters:{...Object.fromEntries([...new Set(cliHelpCommands.map(item=>item.chapter).filter(Boolean))].map(chapter=>[
+  chapter,{commands:cliHelpCommands.filter(item=>item.chapter===chapter).map(item=>item.name),freeform:chapter==='plan-input'},
+ ] as const)),campaign:{commands:rollingCommandDefinitions.map(item=>item.name),freeform:false}},
+};
+
+if (require.main === module) process.stdout.write(renderCliHelp(process.argv.slice(2)));

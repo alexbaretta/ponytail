@@ -4,6 +4,7 @@
 
 const { normalizeTraceabilityPayloads } = require('./traceability-projection');
 const { indexProgress } = require('./index-progress');
+const { renderCliHelp } = require('./cli-help');
 const crypto = require('node:crypto');
 const fs = require('node:fs');
 const os = require('node:os');
@@ -2828,7 +2829,11 @@ if (require.main === module && process.argv[2] === '--repository-index-worker') 
   });
   run(process.argv.slice(2)).catch(error => {
     const code = error instanceof ProjectIndexError ? error.code : 'PROJECT_INDEX_FAILURE';
-    process.stderr.write(`error ${code}: ${error.message}\n`);
+    if (code.endsWith('_USAGE')) {
+      const args = process.argv.slice(2);
+      const message = code === 'PROJECT_INDEX_USAGE' || error.message.startsWith('usage:') ? 'invalid command or arguments' : error.message;
+      process.stderr.write(`error ${code}: ${message}\n\n${renderCliHelp(args)}`);
+    } else process.stderr.write(`error ${code}: ${error.message}\n`);
     process.exitCode = ['REPOSITORY_INDEX_INTERRUPTED', 'TRACEABILITY_INDEX_INTERRUPTED']
       .includes(code) ? 130 : 2;
   });

@@ -300,3 +300,9 @@ change or rebase on an inspection-only obligation.
 Traceability: verifies REQ-ROLLING-STATE
 
 Demonstrates [OBL-113](../plans/closed/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-113). Establish fresh complete acceptance and DONE sprint/tasklet state in a disposable adopted plan. Move its directory to the configured successful-completion state and repair the manifest locator. Historical inspection preserves the accepted checkpoint and completed state without rewriting old certificate paths or digests. Current-input inspection still reports relocated or changed evidence as stale. Incomplete or invalidated accepted history cannot close a plan. Fixture-only consumers must remain independent of the active campaign's mutable location.
+
+CLI help error-format amendment: select an unknown command, including retired
+`traceability index`, outside a Git checkout. The command fails with the
+matching root/chapter `-h` page and performs no project mutations. Invalid
+index arguments show subcommand help. At 40, 80 and 120 columns, help preserves
+its words and indentation, and every output line fits the selected width.

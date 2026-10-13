@@ -89,7 +89,7 @@ test('every command distinguishes missing Git from absent registration', t => {
   }
   git(f.home, 'init', '-q');
   assert.equal(run(f.home, f.home, 'list-projects').status, 0);
-  for (const command of ['bless', 'blessed', 'list-components', 'register-dependency', 'unregister-dependency', 'list-dependencies', 'pre-commit', 'validate', 'qa', 'update-skills', 'setup']) {
+  for (const command of ['bless', 'blessed', 'list-components', 'register-dependency', 'unregister-dependency', 'list-dependencies', 'pre-commit', 'validate', 'qa', 'update-skills']) {
     const result = run(f.home, f.home, command);
     assert.equal(result.status, 3, result.stderr);
     assert.match(result.stderr, /not registered/);

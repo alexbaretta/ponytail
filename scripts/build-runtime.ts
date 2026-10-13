@@ -3,6 +3,7 @@
 // Licensed under the MIT License. See LICENSE in the project root.
 import fs from 'node:fs';
 import path from 'node:path';
+import {cliCommandRegistryV1} from '../src/cli-help.js';
 
 // Preserve established launch paths with compiler output from canonical TypeScript.
 const root = path.resolve(__dirname, '../..');
@@ -56,6 +57,13 @@ if (!(argv.length === 0 || argv.length === 1 && argv[0] === '--check')) {
   process.stderr.write('Usage: build-runtime [--check]\n');
   process.exitCode = 2;
 } else {
+  const registryPath=path.join(root,'src/cli-command-registry.v1.json');
+  const registryText=JSON.stringify(cliCommandRegistryV1,null,2)+'\n';
+  if(argv.length===0) fs.writeFileSync(registryPath,registryText);
+  else if(fs.readFileSync(registryPath,'utf8')!==registryText) {
+    process.stderr.write('CLI command registry differs from its typed owner; run npm run build\n');
+    process.exitCode=1;
+  }
   for (const source of sources) {
     const relative = source.replace(/\.ts$/, '.js');
     const compiled = fs.readFileSync(path.join(root, 'dist', relative), 'utf8');

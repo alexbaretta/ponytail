@@ -648,6 +648,16 @@ def run():
     if not arguments or arguments[0] == "help" or any(value in {"--help", "-h"} for value in help_arguments):
         source_root = source_root_for(script_path, None)
         return run_cli(["node", str(source_root / "src/cli-help.js"), *arguments], cwd=Path.cwd())
+    source_root = source_root_for(script_path, None)
+    with (source_root / "src/cli-command-registry.v1.json").open(encoding="utf-8") as stream:
+        command_registry = json.load(stream)
+    if command_registry["schemaVersion"] != 1:
+        fail("unsupported CLI command registry version; run npm run build")
+    chapter = command_registry["chapters"].get(arguments[0])
+    known_command = (len(arguments) > 1 and (chapter["freeform"] or arguments[1] in chapter["commands"])) if chapter is not None else arguments[0] in command_registry["rootCommands"]
+    if not known_command:
+        print(f"error: unknown or missing command: {' '.join(arguments[:2])}\n", file=sys.stderr)
+        return run_cli(["node", str(source_root / "src/cli-help.js"), *arguments[:2]], cwd=Path.cwd(), stdout=sys.stderr) or 2
     if arguments[:2] == ["worktree", "recover"]:
         if len(arguments) != 3:
             fail("usage: ponytail worktree recover <attachment-token>")

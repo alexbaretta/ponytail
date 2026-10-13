@@ -38,7 +38,7 @@ for (const [obligationId,chapter] of [['OBL-117','search'],['OBL-118','plan'],['
    assert.equal(spawnSyncReturns.status,0,spawnSyncReturns.stderr);
    assert.match(spawnSyncReturns.stdout,/Usage:/);
    for (const command of cliHelpCommandList.filter(command=>selection.includes(command.name)))
-    assert.ok(spawnSyncReturns.stdout.includes(command.behavior));
+    assert.ok(spawnSyncReturns.stdout.replace(/\s+/gu,' ').includes(command.behavior.replace(/\s+/gu,' ')));
    assert.deepEqual(fs.readdirSync(directory),[],`help changed checkout: ${selection.join(' ')}`);
   }
  });

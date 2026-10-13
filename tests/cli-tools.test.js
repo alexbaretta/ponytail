@@ -150,7 +150,7 @@ test('semantic rebase help publishes aggregate review and retained replay comman
 test('traceability update-index help publishes the batch-size contract', () => {
   const result = run(ponytail, ['traceability', 'update-index', '--help'], { cwd: root });
   assert.equal(result.status, 0, result.stderr);
-  assert.match(result.stdout, /ponytail traceability update-index \[--batch-size <n>\] \[--rebuild\] \[--json\]/);
+  assert.match(result.stdout.replace(/\s+/gu, ' '), /ponytail traceability update-index \[--batch-size <n>\] \[--rebuild\] \[--json\]/);
 });
 
 test('QA omits campaign census and the CLI dispatches it through campaign', () => {

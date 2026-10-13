@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-10-12-cli_error_help_scope",
+  "recorded_at": "2026-10-12T18:17:47-07:00",
+  "source_references": [
+    "pm/requirements/rolling-campaigns.md"
+  ],
+  "context": {
+    "languages": [
+      "typescript",
+      "javascript",
+      "python"
+    ],
+    "frameworks": [],
+    "components": [
+      "cli-help",
+      "CLI dispatcher"
+    ],
+    "affected_boundaries": [
+      "command selection to project validation and usage output"
+    ],
+    "code_references": [
+      "src/cli-help.ts",
+      "src/project-index.js",
+      "cli/ponytail"
+    ]
+  },
+  "observed_behavior": "Invalid traceability command selection prints generic root adapter usage rather than its chapter help, after entering project dispatch.",
+  "expected_behavior": "An invalid selection returns nonzero with the same relevant root/chapter help as -h, before project or database access.",
+  "causal_mechanism": "The adapter owns a generic usage string; command selection is not checked against the canonical help registry before project dispatch.",
+  "anti_pattern": {
+    "structural_description": "Separate error usage from canonical command help and validate invocation context before recognizing the command.",
+    "why_it_fails": "Users get an irrelevant usage page or unrelated project error instead of the menu needed to correct the command."
+  },
+  "correct_pattern": {
+    "required_invariant": "Invalid command selection resolves the proper help scope before project access.",
+    "implementation_description": "Use the canonical typed command registry for selection and the shared renderer for error pages and word wrapping."
+  },
+  "applicability_conditions": [
+    "A multi-chapter CLI receives a retired, missing or unknown command."
+  ],
+  "known_non_matches": [
+    "A valid command still requires its normal Git and registration context."
+  ],
+  "confirmation_evidence": [
+    "Real CLI invalid selections in an empty non-Git directory return matching chapter/root help without mutations."
+  ],
+  "regression_proofs": [
+    "tests/cli-help.test.ts"
+  ]
+}

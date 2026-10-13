@@ -1,0 +1,123 @@
+{
+  "schemaVersion": 1,
+  "rootCommands": [
+    "register",
+    "unregister",
+    "list-projects",
+    "bless",
+    "bless-worktree",
+    "blessed",
+    "blessed-worktree",
+    "register-component",
+    "unregister-component",
+    "list-components",
+    "register-dependency",
+    "unregister-dependency",
+    "list-dependencies",
+    "detect-components",
+    "pre-commit",
+    "validate",
+    "qa",
+    "update-skills",
+    "update-permissions",
+    "update"
+  ],
+  "chapters": {
+    "search": {
+      "commands": [
+        "update-index",
+        "query"
+      ],
+      "freeform": false
+    },
+    "plan": {
+      "commands": [
+        "search",
+        "descendants",
+        "ancestors",
+        "roots",
+        "stranded"
+      ],
+      "freeform": false
+    },
+    "traceability": {
+      "commands": [
+        "update-index",
+        "search",
+        "validate"
+      ],
+      "freeform": false
+    },
+    "plan-input": {
+      "commands": [
+        "coordinate",
+        "release",
+        "list",
+        "claim",
+        "complete"
+      ],
+      "freeform": true
+    },
+    "worktree": {
+      "commands": [
+        "reclaim",
+        "recover",
+        "upgrade"
+      ],
+      "freeform": false
+    },
+    "rebase": {
+      "commands": [
+        "diff",
+        "run",
+        "status",
+        "continue",
+        "abort"
+      ],
+      "freeform": false
+    },
+    "pm": {
+      "commands": [
+        "pdf"
+      ],
+      "freeform": false
+    },
+    "campaign": {
+      "commands": [
+        "init",
+        "reconcile",
+        "status",
+        "next-actions",
+        "replenish",
+        "provision-worker",
+        "recover-worker",
+        "resume-worker",
+        "rebind-worker",
+        "observe-resumption",
+        "dispatch-worker",
+        "collect-submission",
+        "suspend-worker",
+        "retire-worker",
+        "request-review",
+        "dispatch-review",
+        "inspect-review",
+        "integrate",
+        "accept",
+        "freeze-publication",
+        "prepare-publication",
+        "observe-preparation",
+        "inspect-publication-conflict",
+        "run-publication-qa",
+        "observe-publication-qa",
+        "publish-mainline",
+        "observe-mainline",
+        "refresh-mainline",
+        "observe-refresh",
+        "synchronize-campaign",
+        "close",
+        "legacy"
+      ],
+      "freeform": false
+    }
+  }
+}
