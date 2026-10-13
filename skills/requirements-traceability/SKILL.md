@@ -137,7 +137,9 @@ A no-unit-test disposition waives only the unit-test relationship class.
 Integration and UAT remain required. Do not use a disposition merely because a
 test is inconvenient, expensive, or not yet written.
 
-Projects using indexed gap validation configure explicit directional rules.
+Indexed validation always checks the four required coverage classes above,
+even when the project configures no directional rules. Projects may configure
+additional explicit directional rules.
 Each rule names one stable ID, source and target entity kinds, allowed roles,
 forward or reverse traversal, and a positive minimum cardinality. Forward
 rules count relationships from each source; reverse rules count relationships

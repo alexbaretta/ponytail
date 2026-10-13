@@ -1394,6 +1394,11 @@
       "class": "unit-test",
       "path": "tests/cli-help.test.ts",
       "locator": "text"
+    },
+    {
+      "class": "implementation",
+      "path": "skills/requirements-traceability/scripts/coverage-rules.ts",
+      "locator": "text"
     }
   ],
   "entities": [],
@@ -1709,6 +1714,10 @@
     {
       "path": "src/cli-command-registry.v1.json",
       "sourcePath": "src/cli-help.ts"
+    },
+    {
+      "path": "skills/requirements-traceability/scripts/coverage-rules.js",
+      "sourcePath": "skills/requirements-traceability/scripts/coverage-rules.ts"
     }
   ],
   "reverseViewPath": "pm/requirements/traceability.generated.md",

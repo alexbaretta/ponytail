@@ -46,7 +46,15 @@ test('incremental CLI retains unchanged database rows, reconciles deletions, rol
  UNION ALL SELECT 'entity',entity_id,xmin::text || ':' || ctid::text FROM ponytail_index.entity_v1 WHERE generation_id IN (SELECT generation_id FROM ids)
  UNION ALL SELECT 'relationship',source_entity_id || target_entity_id || role,xmin::text || ':' || ctid::text FROM ponytail_index.relationship_v1 WHERE generation_id IN (SELECT generation_id FROM ids)
  UNION ALL SELECT 'search',entity_id,xmin::text || ':' || ctid::text FROM ponytail_index.search_document_v2 WHERE generation_id IN (SELECT generation_id FROM ids) ORDER BY kind,id`,[projectId])).rows;
- update();const initial=await rows();assert.ok(initial.length>=3);
+ const validate=()=>spawnSync(process.execPath,[path.join(repositoryRoot,'src/project-index.js'),'traceability','validate','--json'],{cwd:root,encoding:'utf8'});
+ update();
+ const incomplete=validate();assert.equal(incomplete.status,1,incomplete.stderr);
+ const validationResult:unknown=JSON.parse(incomplete.stdout);
+ assert.ok(typeof validationResult==='object' && validationResult!==null && 'rules' in validationResult && 'gaps' in validationResult);
+ assert.equal(validationResult.rules,4);assert.ok(Array.isArray(validationResult.gaps));
+ assert.equal(validationResult.gaps.length,3);
+ assert.deepEqual(validationResult.gaps.map((gap:unknown)=>{assert.ok(typeof gap==='object' && gap!==null && 'targetKind' in gap);return gap.targetKind;}).sort(),['integration-test','uat','unit-test']);
+ const initial=await rows();assert.ok(initial.length>=3);
  const initialStorage=await storage();
  update();assert.deepEqual(await rows(),initial,'no-op preserves physical row identity');assert.deepEqual(await storage(),initialStorage);
  fs.writeFileSync(path.join(root,'unrelated.txt'),'unchanged indexed inputs');git(['add','unrelated.txt']);git(['-c','user.name=Fixture','-c','user.email=fixture@example.test','commit','-qm','unrelated']);update();assert.deepEqual(await storage(),initialStorage,'HEAD-only updates preserve every graph and file row');
@@ -58,4 +66,9 @@ test('incremental CLI retains unchanged database rows, reconciles deletions, rol
  fs.writeFileSync(path.join(root,'src/first.js'),'// '+traceabilityMarker + ': implements REQ-VALUE\n');update();
  const beforeRebuild=await rows();update(['--rebuild']);assert.notEqual((await rows())[0]?.generation_id,beforeRebuild[0]?.generation_id);
  configuration.artifacts=configuration.artifacts.filter(artifact=>artifact.path!=='src/first.js');fs.writeFileSync(configurationPath,JSON.stringify(configuration));fs.unlinkSync(path.join(root,'src/first.js'));update();assert.ok(!(await rows()).some(row=>row.path==='src/first.js'));
+ for(const artifactClass of ['unit-test','integration-test','uat']) {
+  const artifactPath=`src/${artifactClass}.txt`;fs.writeFileSync(path.join(root,artifactPath),'// '+traceabilityMarker+': verifies REQ-VALUE\n');configuration.artifacts.push({class:artifactClass,path:artifactPath,locator:'text'});
+ }
+ fs.writeFileSync(configurationPath,JSON.stringify(configuration));update();
+ const complete=validate();assert.equal(complete.status,0,complete.stderr);assert.match(complete.stdout,/"rules":4/);
 });

@@ -5,6 +5,7 @@
 const { normalizeTraceabilityPayloads } = require('./traceability-projection');
 const { indexProgress } = require('./index-progress');
 const { renderCliHelp } = require('./cli-help');
+const { requiredCoverageRules } = require('../skills/requirements-traceability/scripts/coverage-rules');
 const crypto = require('node:crypto');
 const fs = require('node:fs');
 const os = require('node:os');
@@ -1525,8 +1526,10 @@ function evaluateValidationRules(configuration, entities, relationships, entityI
   const entityById = new Map(entities.map(entity => [entity.entity_id, entity]));
   const requirementById = new Map(configuration.requirements.map(requirement =>
     [requirement.id, requirement]));
+  const artifactPathsByClass = new Map(requiredCoverageRules.map(rule => [rule.targetKind,
+    new Set(configuration.artifacts.filter(artifact => artifact.class === rule.targetKind).map(artifact => artifact.path))]));
   const gaps = [];
-  for (const rule of configuration.validationRules) {
+  for (const rule of [...requiredCoverageRules, ...configuration.validationRules]) {
     const sources = entities.filter(entity =>
       entity.entity_kind === rule.sourceKind && entityIds.has(entity.entity_id));
     for (const source of sources) {
@@ -1544,7 +1547,9 @@ function evaluateValidationRules(configuration, entities, relationships, entityI
           ? relationship.source_entity_id === source.entity_id
           : relationship.target_entity_id === source.entity_id;
         if (matchesSource && entityIds.has(targetId) &&
-            entityById.get(targetId)?.entity_kind === rule.targetKind) {
+            (requiredCoverageRules.includes(rule)
+              ? artifactPathsByClass.get(rule.targetKind).has(entityById.get(targetId)?.path)
+              : entityById.get(targetId)?.entity_kind === rule.targetKind)) {
           targets.add(targetId);
         }
       }
@@ -1600,7 +1605,7 @@ async function validateTraceability(scope, options = {}) {
       corpus: 'traceability',
       scope: { kind: scope.kind, id: selected.id },
       generationId: generation.generation_id,
-      rules: configuration.validationRules.length,
+      rules: requiredCoverageRules.length + configuration.validationRules.length,
       gaps: evaluateValidationRules(
         configuration,
         entityResult.rows,

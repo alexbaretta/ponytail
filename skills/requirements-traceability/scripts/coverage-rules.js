@@ -1,0 +1,12 @@
+// Copyright (c) 2026 Alex Baretta. All rights reserved.
+// Licensed under the MIT License. See LICENSE in the project root.
+// Generated from skills/requirements-traceability/scripts/coverage-rules.ts by npm run build.
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.requiredCoverageRules = void 0;
+exports.requiredCoverageRules = [
+    { id: 'coverage-implementation', sourceKind: 'requirement', targetKind: 'implementation', roles: ['implements', 'supports'], direction: 'reverse', cardinality: { minimum: 1 } },
+    { id: 'coverage-unit-test', sourceKind: 'requirement', targetKind: 'unit-test', roles: ['verifies'], direction: 'reverse', cardinality: { minimum: 1 } },
+    { id: 'coverage-integration-test', sourceKind: 'requirement', targetKind: 'integration-test', roles: ['verifies'], direction: 'reverse', cardinality: { minimum: 1 } },
+    { id: 'coverage-uat', sourceKind: 'requirement', targetKind: 'uat', roles: ['verifies'], direction: 'reverse', cardinality: { minimum: 1 } },
+];

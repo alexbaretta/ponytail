@@ -133,6 +133,11 @@ Traceability: verifies REQ-TRACEABILITY-INDEX
 - **External effects:** None.
 
 1. Validate the repository-wide graph.
+   - With no configured directional rules, missing implementation, unit-test,
+     integration-test and UAT coverage still produces exact gaps and exit 1.
+     A justified unit-test disposition waives only that class; prospective
+     relationships do not satisfy coverage. Fully covered requirements pass
+     four required checks. Configured directional rules add to these checks.
    - The report evaluates every configured source/target/direction rule and
      identifies each unmatched source entity, missing target kind, role, and
      cardinality with exit `1`.

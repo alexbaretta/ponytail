@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-10-12-vacuous_traceability_validation",
+  "recorded_at": "2026-10-12T18:38:56-07:00",
+  "source_references": [
+    "pm/requirements/traceability-index.md"
+  ],
+  "context": {
+    "languages": [
+      "typescript",
+      "javascript"
+    ],
+    "frameworks": [],
+    "components": [
+      "traceability index validation"
+    ],
+    "affected_boundaries": [
+      "required coverage to configured directional rules"
+    ],
+    "code_references": [
+      "src/project-index.js",
+      "skills/requirements-traceability/scripts/coverage-rules.ts",
+      "skills/requirements-traceability/scripts/check-traceability.js"
+    ]
+  },
+  "observed_behavior": "GWEN-001 reports traceability valid: 0 rules despite 978 required coverage gaps.",
+  "expected_behavior": "Indexed validation always checks mandatory implementation, unit-test or disposition, integration-test and UAT coverage in the selected scope.",
+  "causal_mechanism": "The indexed validator iterates only optional schema V4 directional rules; earlier configurations normalize to an empty rule list.",
+  "anti_pattern": {
+    "structural_description": "Treat optional policy extensions as the entire validation policy.",
+    "why_it_fails": "An empty configured extension list yields a vacuous success without checking required coverage."
+  },
+  "correct_pattern": {
+    "required_invariant": "Required coverage is unconditional; custom rules add to it.",
+    "implementation_description": "Share a typed canonical set of required coverage rules with the structural checker. Match registered artifact classes independently of declared entity kinds; preserve all classes when a file is registered more than once."
+  },
+  "applicability_conditions": [
+    "Projects with no custom directional rules, custom entity kinds, or multiple classes for one artifact."
+  ],
+  "known_non_matches": [
+    "Structural source validation and TypeScript semantic checks remain separate commands."
+  ],
+  "confirmation_evidence": [
+    "GWEN-001 now exits 1 and reports 978 gaps across 305 requirements, matching the structural audit.",
+    "Real CLI fixture without custom rules reports three missing classes and passes after all required coverage is added."
+  ],
+  "regression_proofs": [
+    "tests/project-index.test.js",
+    "tests/traceability-incremental.integration.test.ts",
+    "scripts/test-project-index-postgres.sh"
+  ]
+}

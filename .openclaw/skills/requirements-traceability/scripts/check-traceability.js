@@ -6,7 +6,8 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 
-const completedArtifactClasses = Object.freeze(['implementation', 'unit-test', 'integration-test', 'uat']);
+const { requiredCoverageRules } = require('./coverage-rules');
+const completedArtifactClasses = Object.freeze(requiredCoverageRules.map(rule => rule.targetKind));
 const artifactClasses = new Set([...completedArtifactClasses, 'plan', 'tasklet', 'issue']);
 const locatorKinds = new Set(['text', 'typescript']);
 const relationshipRoles = new Set([
@@ -25,10 +26,7 @@ const searchableFields = Object.freeze([
 ]);
 const searchableFieldSet = new Set(searchableFields);
 const artifactClassRoles = new Map([
-  ['implementation', new Set(['implements', 'supports'])],
-  ['unit-test', new Set(['verifies'])],
-  ['integration-test', new Set(['verifies'])],
-  ['uat', new Set(['verifies'])],
+  ...requiredCoverageRules.map(rule => [rule.targetKind, new Set(rule.roles)]),
   ['plan', new Set(['plans-implementation', 'plans-verification'])],
   ['tasklet', new Set(['plans-implementation', 'plans-verification'])],
   ['issue', new Set(['introduces', 'plans-implementation', 'plans-verification'])],
@@ -566,15 +564,11 @@ function analyzeTraceability(configurationPath, options = {}) {
 
   for (const requirement of configuration.requirements) {
     const owned = relationships.filter(relationship => relationship.requirementId === requirement.id);
-    if (!owned.some(relationship => relationship.artifactClass === 'implementation')) {
-      diagnostics.push(diagnostic('traceability-coverage', `${requirement.id} lacks implementation coverage`));
-    }
-    if (!owned.some(relationship => relationship.artifactClass === 'unit-test') && requirement.noUnitTestReason === undefined) {
-      diagnostics.push(diagnostic('traceability-coverage', `${requirement.id} lacks unit-test coverage or a justified disposition`));
-    }
-    for (const artifactClass of ['integration-test', 'uat']) {
-      if (!owned.some(relationship => relationship.artifactClass === artifactClass)) {
-        diagnostics.push(diagnostic('traceability-coverage', `${requirement.id} lacks ${artifactClass} coverage`));
+    for (const rule of requiredCoverageRules) {
+      if (rule.targetKind === 'unit-test' && requirement.noUnitTestReason !== undefined) continue;
+      if (!owned.some(relationship => relationship.artifactClass === rule.targetKind && rule.roles.includes(relationship.role))) {
+        const disposition = rule.targetKind === 'unit-test' ? ' or a justified disposition' : '';
+        diagnostics.push(diagnostic('traceability-coverage', `${requirement.id} lacks ${rule.targetKind} coverage${disposition}`));
       }
     }
   }

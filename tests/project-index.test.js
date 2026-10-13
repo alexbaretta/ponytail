@@ -645,6 +645,7 @@ test('parses mutually exclusive validation scopes', () => {
 
 test('reports every directional cardinality gap without counting prospective roles', () => {
   const configuration = {
+    artifacts: [{path:'api.ts',class:'implementation'},{path:'api.ts',class:'unit-test'},{path:'api.test.ts',class:'unit-test'},{path:'plan.md',class:'tasklet'}],
     requirements: [
       { id: 'REQ-ONE', sourcePath: 'one.md' },
       { id: 'REQ-TWO', sourcePath: 'two.md', noUnitTestReason: 'Not executable.' },
@@ -680,7 +681,10 @@ test('reports every directional cardinality gap without counting prospective rol
   const gaps = evaluateValidationRules(
     configuration, entities, relationships, new Set(entities.map(entity => entity.entity_id)),
   );
-  assert.deepEqual(gaps.map(gap => [gap.ruleId, gap.sourceEntityId]), [
+  assert.equal(gaps.some(gap => gap.ruleId === 'coverage-implementation' && gap.sourceEntityId === 'REQ-ONE'), false, 'declared endpoint identity retains implementation artifact coverage');
+  assert.equal(gaps.some(gap => gap.ruleId === 'coverage-unit-test' && gap.sourceEntityId === 'REQ-TWO'), false);
+  assert.equal(gaps.some(gap => gap.ruleId === 'coverage-implementation' && gap.sourceEntityId === 'REQ-TWO'), true);
+  assert.deepEqual(gaps.filter(gap => !gap.ruleId.startsWith('coverage-')).map(gap => [gap.ruleId, gap.sourceEntityId]), [
     ['endpoint-requirement', 'trace:endpoint:orphan'],
     ['requirement-endpoint', 'REQ-TWO'],
   ]);
@@ -729,7 +733,11 @@ test('validates only the exact fresh indexed graph and emits typed gaps', async 
     { kind: 'repository', input: null },
     { configurationPath, pool: { async connect() { return client; } } },
   );
+  assert.equal(result.rules, 6);
   assert.deepEqual(result.gaps.map(gap => [gap.ruleId, gap.sourceEntityId, gap.actual]), [
+    ['coverage-integration-test', 'REQ-VALUE', 0],
+    ['coverage-uat', 'REQ-VALUE', 0],
+    ['coverage-unit-test', 'REQ-VALUE', 0],
     ['requirement-unit', 'REQ-VALUE', 0],
   ]);
   assert.equal(result.scope.kind, 'repository');

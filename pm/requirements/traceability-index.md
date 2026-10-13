@@ -130,7 +130,8 @@ relationship, rather than only returning an aggregate count.
 
 The model must retain the existing requirement coverage rules for
 implementation, unit tests or their permitted disposition, integration tests,
-and UAT. It must also support project-configured inventories and rules such as
+and UAT. These four checks are mandatory even without project-configured
+validation rules; configured rules add checks rather than replace them. It must also support project-configured inventories and rules such as
 "every endpoint is required" and the inverse "every requirement has an
 endpoint" without hardcoding a product framework into Ponytail. Explicit
 entity declarations and configured semantic locators are canonical; Ponytail

@@ -307,7 +307,9 @@ async function main() {
     assert.equal(gapValidation.stderr, '');
     assert.ok(gapValidation.stdout.endsWith('\n'));
     const gapResult = JSON.parse(gapValidation.stdout);
-    assert.deepEqual(gapResult.gaps.map(gap => gap.ruleId), ['requirement-unit-test']);
+    assert.deepEqual(gapResult.gaps.map(gap => gap.ruleId), [
+      'coverage-integration-test', 'coverage-uat', 'coverage-unit-test', 'requirement-unit-test',
+    ]);
 
     parallelRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ponytail-parallel-index-'));
     execFileSync('git', ['init', '-q', '-b', 'main'], { cwd: parallelRoot });
@@ -780,7 +782,7 @@ async function main() {
       cli, 'traceability', 'validate', ...scopeArguments, '--json',
     ], { cwd: root, encoding: 'utf8' }));
     assert.deepEqual(validation.gaps, []);
-    assert.equal(validation.rules, 4);
+    assert.equal(validation.rules, 8);
   }
   const planSearch = JSON.parse(execFileSync(process.execPath, [
     cli, 'plan', 'search', 'PostgreSQL', '--json',

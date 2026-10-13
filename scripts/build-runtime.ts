@@ -24,6 +24,7 @@ const sources: readonly string[] = [
   'src/cli-help.ts',
   'src/semantic-rebase.ts',
   'src/traceability-projection.ts',
+  'skills/requirements-traceability/scripts/coverage-rules.ts',
   'src/index-progress.ts',
   'ponytail-mcp/index.ts',
   'ponytail-mcp/rolling.ts',
