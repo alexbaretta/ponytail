@@ -82,6 +82,11 @@ test('worker instructions retain exact obligation, requirement, acceptance step,
  const command='/opt/homebrew/bin/bash -lc \'GIT_SEQUENCE_EDITOR="sed -i.bak -e s/^pick/edit/" git rebase --interactive --force-rebase FETCH_HEAD\'';
  const requests:readonly {readonly params:Readonly<Record<string,unknown>>;readonly decision:'accept' | 'decline'}[]=[
   {params:{cwd:'/fixture',threadId:'thread',turnId:'turn',command},decision:'accept'},
+  {params:{kind:'command',cwd:'/fixture',threadId:'thread',turnId:'turn',command:"/opt/homebrew/bin/bash -lc 'GIT_SEQUENCE_EDITOR=\"sed -i.bak -e s/''^pick/edit/\" git rebase --interactive --force-rebase FETCH_HEAD'"},decision:'accept'},
+  {params:{kind:'stdin',cwd:'/fixture',threadId:'thread',turnId:'turn',command},decision:'decline'},
+
+  {params:{cwd:'file://foreign/fixture',threadId:'thread',turnId:'turn',command},decision:'decline'},
+  {params:{cwd:'file:///fixture?different',threadId:'thread',turnId:'turn',command},decision:'decline'},
   {params:{cwd:'/foreign',threadId:'thread',turnId:'turn',command},decision:'decline'},
   {params:{cwd:'/fixture',threadId:'foreign',turnId:'turn',command},decision:'decline'},
   {params:{cwd:'/fixture',threadId:'thread',turnId:'foreign',command},decision:'decline'},

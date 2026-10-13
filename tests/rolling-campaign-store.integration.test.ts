@@ -22,7 +22,7 @@ import { parseRollingWorkerSubmission, type RollingWorkerSubmissionV1, type Roll
 import { readRollingReviewRequestV1,readRollingReviewOutcomeV1,dispatchRollingReview, collectRollingReview, type RollingReviewOutcomeV1, type RollingStoredReview } from '../src/rolling-review.js';
 import { retireRollingWorker, provisionRollingWorker, attachRollingWorker, suspendRollingWorker, collectRollingWorkerSubmission, recoverRollingWorkerCreation, observeRollingWorkerInitialization, resumeRollingWorker, parseRollingWorkerResumption, dispatchRollingWorker, buildRollingWorkerInstructions, type RollingWorkerInitialization } from '../src/rolling-worker.js';
 import { RollingCodex, RollingObservationTimeout, type RollingNativeTurn, type RollingNativeThread, type RollingNativeServerRequest } from '../src/rolling-codex.js';
-import {RollingCampaignOperations} from '../src/rolling-operations.js';
+import {RollingCampaignOperations,authorizeRollingWorkerRebaseApproval} from '../src/rolling-operations.js';
 import { acceptBoundCheckpoint, type ObligationCertificateBindingV1, type ObligationCertificateSubmission,
   type ObligationCertificateBindingRequest } from '../skills/plan-execution/scripts/obligation-certificate-bindings.js';
 
@@ -31,9 +31,8 @@ const nativeCodeFixtureCommands: readonly string[] = [
  "git commit -m 'Set fixture value and unit expectation to 2'",
  'git fetch origin campaign/worker-fixture',
  'git fetch origin campaign/worker-fixture > tmp/fetch.txt 2>&1',
- 'git rebase -i origin/campaign/worker-fixture',
- 'git rebase -i origin/campaign/worker-fixture > tmp/semantic-rebase.txt 2>&1',
- 'git rebase --continue','git rebase --continue >> tmp/semantic-rebase.txt 2>&1'
+ 'GIT_SEQUENCE_EDITOR="sed -i.bak -e s/^pick/edit/" git rebase --interactive --force-rebase FETCH_HEAD',
+ 'git rebase --continue'
 ];
 
 function permitNativeCodeFixtureApproval(rollingNativeServerRequest: RollingNativeServerRequest,
@@ -44,7 +43,7 @@ function permitNativeCodeFixtureApproval(rollingNativeServerRequest: RollingNati
     && 'cwd' in params && params.cwd === root
     && 'threadId' in params && params.threadId === threadId
     && 'turnId' in params && params.turnId === turnId
-    && 'command' in params && nativeCodeFixtureCommands.some(command =>
+    && 'command' in params && nativeCodeFixtureCommands.filter(command=>!command.includes('git rebase')).some(command =>
       params.command === `/opt/homebrew/bin/bash -lc '${command.replaceAll("'", "'\\''")}'`);
 }
 
@@ -1130,10 +1129,10 @@ export async function runRollingWorkerScenario(t: TestContext, mode: 'protocol' 
   const sourceObligationDocumentV1 = readRollingObligationFixtureSource();
   const originalObligationBaseline = sourceObligationDocumentV1.baselines[0];assert.ok(originalObligationBaseline);
   let fixtureRequirementText = operation === 'code'
-    ? `# Worker code fixture\n\nChange the exported fixture value to 2 and update the unit expectation. Preserve the integration invariant. Commit only fixture.ts and fixture.test.ts. Then freshly fetch origin campaign/worker-fixture and perform an interactive semantic rebase, stopping after ${rework ? 'each of its two replayed commits' : 'its single replayed commit'} to inspect the patch in the new base and run focused QA before continuing. The project already configures a checked sequence editor to mark ${rework ? 'every commit' : 'the commit'} for an edit stop: use ordinary git rebase -i with that editor, without an editor override or terminal interaction. Retain the original pre-rebase commit SHA in ignored tmp/original-commit.txt and actual rebase output plus the semantic inspection in ignored tmp/semantic-rebase.txt. Use ignored tmp/focused.txt for the actual final focused test output, with --test-reporter=tap. Return only strict submission JSON with fresh Git-based evidence identifying the tested commit and relevant tracked source paths. Retain the ignored rebase and test outputs for inspection; do not hash them or put ignored logs in source inputs.\n`
+    ? `# Worker code fixture\n\nChange the exported fixture value to 2 and update the unit expectation. Preserve the integration invariant. Commit only fixture.ts and fixture.test.ts. Then freshly fetch origin campaign/worker-fixture and perform an interactive semantic rebase, stopping after ${rework ? 'each of its two replayed commits' : 'its single replayed commit'} to inspect the patch in the new base and run focused QA before continuing. Use the canonical listed GIT_SEQUENCE_EDITOR replay command to mark every commit for an edit stop, without terminal interaction. Retain the original pre-rebase commit SHA in ignored tmp/original-commit.txt and actual rebase output plus the semantic inspection in ignored tmp/semantic-rebase.txt. Use ignored tmp/focused.txt for the actual final focused test output, with --test-reporter=tap. Return only strict submission JSON with fresh Git-based evidence identifying the tested commit and relevant tracked source paths. Retain the ignored rebase and test outputs for inspection; do not hash them or put ignored logs in source inputs.\n`
     : '# Worker responsibility fixture\n\nInspect the fixture value and retain the assigned requirement, acceptance, Arc/step, implementation, unit/integration, lease, path and QA references in ignored tmp/responsibility.txt. Preserve tracked source files. Retain actual focused QA output in ignored tmp/focused.txt and its verification in ignored tmp/verification.json.\n';
   if (integrationRepair) fixtureRequirementText = 'Establish fixture value 2, preserve independently published upstream context, and prove focused unit and integration behavior. Substantive integration repairs require fresh semantic inspection, rebase, focused QA and the original reviewer.\n';
-  if (operation === 'code') fixtureRequirementText += 'For Git mutations, invoke separate commands exactly from this reviewed list, without bundling them with other commands or editor overrides. Other inspection and proof commands remain ordinary local operations.\n'
+  if (operation === 'code') fixtureRequirementText += 'For Git mutations, invoke separate commands exactly from this reviewed list, without bundling them with other commands or changing the listed editor command. Other inspection and proof commands remain ordinary local operations.\n'
     + nativeCodeFixtureCommands.map(command => `- ${command}`).join('\n') + '\n';
   const obligationBaseline: ObligationBaseline = {...originalObligationBaseline,
     requirements:originalObligationBaseline.requirements.map(item => ({...item,digest:operation !== 'attachment'
@@ -1195,13 +1194,16 @@ export async function runRollingWorkerScenario(t: TestContext, mode: 'protocol' 
   if (mode === 'protocol') await rollingCodex.initialize();
   else {
     rollingCodex.on('serverRequest',message => {
-      const params = message.params;
-      const permitted = operation === 'code' && rollingWorkerInitialization !== null && rollingWorkerDispatchAttached !== null
-        && rollingAllocationResult.worktree !== undefined
-        && permitNativeCodeFixtureApproval(message, rollingAllocationResult.worktree.rootPath,
-          rollingWorkerInitialization.rollingWorkerCreationV1.threadId, rollingWorkerDispatchAttached.turnId);
-      if (operation === 'code') t.diagnostic(`native QA approval method=${message.method}; decision=${permitted ? 'accept exact fixture command' : 'decline'}; request=${JSON.stringify(params)}`);
-      rollingCodex.respondToServer(message.id,{decision:permitted ? 'accept' : 'decline'});
+      void (async()=> {
+        const permittedRebase=operation === 'code' && instructionGeneration !== null && rollingWorkerDispatchAttached !== null
+          && rollingAllocationResult.assignment !== null && await authorizeRollingWorkerRebaseApproval(rollingCampaignStore,'worker-fixture',rollingAllocationResult.assignment.id,instructionGeneration,message);
+        const permitted=permittedRebase || operation === 'code' && rollingWorkerInitialization !== null && rollingWorkerDispatchAttached !== null
+          && rollingAllocationResult.worktree !== undefined
+          && permitNativeCodeFixtureApproval(message,rollingAllocationResult.worktree.rootPath,
+            rollingWorkerInitialization.rollingWorkerCreationV1.threadId,rollingWorkerDispatchAttached.turnId);
+        if (operation === 'code') t.diagnostic(`native QA approval method=${message.method}; scopedRebase=${permittedRebase}; decision=${permitted ? 'accept once' : 'decline'}; request=${JSON.stringify(message.params)}`);
+        rollingCodex.respondToServer(message.id,{decision:permitted ? 'accept' : 'decline'});
+      })().catch(cause=>{t.diagnostic(`native approval failed: ${String(cause)}`);rollingCodex.respondToServer(message.id,{decision:'decline'});});
     });
     rollingCodex.on('diagnostic',message => t.diagnostic(message.trim()));
   }

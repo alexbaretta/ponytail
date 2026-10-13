@@ -12,6 +12,7 @@ exports.parseRollingCampaignInitialization = parseRollingCampaignInitialization;
 exports.readRollingReviewerLoss = readRollingReviewerLoss;
 exports.projectRollingCoordinatorActions = projectRollingCoordinatorActions;
 exports.readRollingWorkerRebaseApproval = readRollingWorkerRebaseApproval;
+exports.authorizeRollingWorkerRebaseApproval = authorizeRollingWorkerRebaseApproval;
 exports.withRollingCampaignOperations = withRollingCampaignOperations;
 exports.executeRollingCommand = executeRollingCommand;
 exports.runRollingOperationCli = runRollingOperationCli;
@@ -206,6 +207,7 @@ function readRollingWorkerRebaseApproval(rollingNativeServerRequest, rollingWork
     const params = rollingNativeServerRequest.params;
     if (rollingNativeServerRequest.method !== 'item/commandExecution/requestApproval'
         || params === null || typeof params !== 'object' || Array.isArray(params)
+        || 'kind' in params && params.kind !== 'command'
         || rollingWorkerDispatch?.state !== 'ATTACHED'
         || !('cwd' in params) || params.cwd !== rollingWorkerContext.rollingWorkerCreationV1.rootPath
         || !('threadId' in params) || params.threadId !== rollingWorkerContext.rollingWorkerCreationV1.threadId
@@ -220,11 +222,23 @@ function readRollingWorkerRebaseApproval(rollingNativeServerRequest, rollingWork
         continue: 'git rebase --continue'
     };
     for (const kind of ['start', 'continue']) {
-        const command = commands[kind];
-        if (params.command === command || ['/bin/bash', '/bin/zsh', '/bin/sh', '/opt/homebrew/bin/bash'].some(shell => params.command === `${shell} -lc '${command}'`))
+        const commandSpellings = [commands[kind], commands[kind].replace('s/^pick/edit/', "s/''^pick/edit/")];
+        if (commandSpellings.some(command => params.command === command || ['/bin/bash', '/bin/zsh', '/bin/sh', '/opt/homebrew/bin/bash'].some(shell => params.command === `${shell} -lc '${command}'`)))
             return kind;
     }
     return null;
+}
+async function authorizeRollingWorkerRebaseApproval(rollingCampaignStore, campaignId, assignmentId, generation, request) {
+    const rollingWorkerContext = await rollingCampaignStore.workerContext(campaignId, assignmentId, generation);
+    const rollingWorkerDispatch = await rollingCampaignStore.workerDispatch(campaignId, assignmentId, generation);
+    const rebase = readRollingWorkerRebaseApproval(request, rollingWorkerContext, rollingWorkerDispatch);
+    if (rebase === null)
+        return false;
+    const root = rollingWorkerContext.rollingWorkerCreationV1.rootPath;
+    (0, rolling_worktrees_js_1.validateRollingSessionMarker)(root, rollingWorkerContext.rollingWorkerCreationV1.sessionId);
+    return rebase === 'start' ? (0, rolling_integration_js_1.git)(root, ['rev-parse', '--verify', 'FETCH_HEAD']).trim() ===
+        (0, rolling_integration_js_1.git)(root, ['rev-parse', '--verify', `refs/remotes/${rollingWorkerContext.configuration.mainline.remote}/${rollingWorkerContext.configuration.incrementRef}`]).trim()
+        : (0, rolling_integration_js_1.gitResult)(root, ['rebase', '--show-current-patch']).status === 0;
 }
 class RollingCampaignOperations {
     rollingCampaignStore;
@@ -286,18 +300,7 @@ class RollingCampaignOperations {
                 let approved = false;
                 try {
                     if (worker !== null) {
-                        const rollingWorkerContext = await this.rollingCampaignStore.workerContext(worker.campaignId, worker.assignmentId, worker.generation);
-                        const rollingWorkerDispatch = await this.rollingCampaignStore.workerDispatch(worker.campaignId, worker.assignmentId, worker.generation);
-                        const rebase = readRollingWorkerRebaseApproval(request, rollingWorkerContext, rollingWorkerDispatch);
-                        if (rebase !== null) {
-                            const root = rollingWorkerContext.rollingWorkerCreationV1.rootPath;
-                            (0, rolling_worktrees_js_1.validateRollingSessionMarker)(root, rollingWorkerContext.rollingWorkerCreationV1.sessionId);
-                            if (rebase === 'start')
-                                approved = (0, rolling_integration_js_1.git)(root, ['rev-parse', '--verify', 'FETCH_HEAD']).trim() ===
-                                    (0, rolling_integration_js_1.git)(root, ['rev-parse', '--verify', `refs/remotes/${rollingWorkerContext.configuration.mainline.remote}/${rollingWorkerContext.configuration.incrementRef}`]).trim();
-                            else
-                                approved = (0, rolling_integration_js_1.gitResult)(root, ['rebase', '--show-current-patch']).status === 0;
-                        }
+                        approved = await authorizeRollingWorkerRebaseApproval(this.rollingCampaignStore, worker.campaignId, worker.assignmentId, worker.generation, request);
                     }
                 }
                 catch (cause) {

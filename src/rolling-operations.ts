@@ -207,6 +207,7 @@ export function readRollingWorkerRebaseApproval(rollingNativeServerRequest:Rolli
  const params=rollingNativeServerRequest.params;
  if (rollingNativeServerRequest.method !== 'item/commandExecution/requestApproval'
   || params === null || typeof params !== 'object' || Array.isArray(params)
+  || 'kind' in params && params.kind !== 'command'
   || rollingWorkerDispatch?.state !== 'ATTACHED'
   || !('cwd' in params) || params.cwd !== rollingWorkerContext.rollingWorkerCreationV1.rootPath
   || !('threadId' in params) || params.threadId !== rollingWorkerContext.rollingWorkerCreationV1.threadId
@@ -220,11 +221,27 @@ export function readRollingWorkerRebaseApproval(rollingNativeServerRequest:Rolli
   continue:'git rebase --continue'
  };
  for (const kind of ['start','continue'] satisfies readonly ('start' | 'continue')[]) {
-  const command=commands[kind];
-  if (params.command === command || ['/bin/bash','/bin/zsh','/bin/sh','/opt/homebrew/bin/bash'].some(shell=>
-   params.command === `${shell} -lc '${command}'`)) return kind;
+  // Native command display can insert empty shell quotes before the caret.
+  // Both spellings retain the same fixed editor; no proposed rule grants authority.
+  const commandSpellings=[commands[kind],commands[kind].replace('s/^pick/edit/',"s/''^pick/edit/")];
+  if (commandSpellings.some(command=>params.command === command || ['/bin/bash','/bin/zsh','/bin/sh','/opt/homebrew/bin/bash'].some(shell=>
+   params.command === `${shell} -lc '${command}'`))) return kind;
  }
  return null;
+}
+
+// Traceability: implements REQ-ROLLING-WORKERS
+export async function authorizeRollingWorkerRebaseApproval(rollingCampaignStore:RollingCampaignStore,
+ campaignId:string,assignmentId:string,generation:string,request:RollingNativeServerRequest):Promise<boolean> {
+ const rollingWorkerContext=await rollingCampaignStore.workerContext(campaignId,assignmentId,generation);
+ const rollingWorkerDispatch=await rollingCampaignStore.workerDispatch(campaignId,assignmentId,generation);
+ const rebase=readRollingWorkerRebaseApproval(request,rollingWorkerContext,rollingWorkerDispatch);
+ if (rebase === null) return false;
+ const root=rollingWorkerContext.rollingWorkerCreationV1.rootPath;
+ validateRollingSessionMarker(root,rollingWorkerContext.rollingWorkerCreationV1.sessionId);
+ return rebase === 'start' ? git(root,['rev-parse','--verify','FETCH_HEAD']).trim() ===
+  git(root,['rev-parse','--verify',`refs/remotes/${rollingWorkerContext.configuration.mainline.remote}/${rollingWorkerContext.configuration.incrementRef}`]).trim()
+  : gitResult(root,['rebase','--show-current-patch']).status === 0;
 }
 
 // Traceability: implements REQ-ROLLING-INTERFACES
@@ -281,16 +298,7 @@ export class RollingCampaignOperations {
     let approved=false;
     try {
      if (worker !== null) {
-      const rollingWorkerContext=await this.rollingCampaignStore.workerContext(worker.campaignId,worker.assignmentId,worker.generation);
-      const rollingWorkerDispatch=await this.rollingCampaignStore.workerDispatch(worker.campaignId,worker.assignmentId,worker.generation);
-      const rebase=readRollingWorkerRebaseApproval(request,rollingWorkerContext,rollingWorkerDispatch);
-      if (rebase !== null) {
-       const root=rollingWorkerContext.rollingWorkerCreationV1.rootPath;
-       validateRollingSessionMarker(root,rollingWorkerContext.rollingWorkerCreationV1.sessionId);
-       if (rebase === 'start') approved=git(root,['rev-parse','--verify','FETCH_HEAD']).trim() ===
-        git(root,['rev-parse','--verify',`refs/remotes/${rollingWorkerContext.configuration.mainline.remote}/${rollingWorkerContext.configuration.incrementRef}`]).trim();
-       else approved=gitResult(root,['rebase','--show-current-patch']).status === 0;
-      }
+      approved=await authorizeRollingWorkerRebaseApproval(this.rollingCampaignStore,worker.campaignId,worker.assignmentId,worker.generation,request);
      }
     } catch (cause) {rollingCodex.emit('diagnostic',`worker approval withheld: ${cause instanceof Error ? cause.message : String(cause)}`);}
     rollingCodex.respondToServer(request.id,{decision:approved ? 'accept' : 'decline'});

@@ -31,3 +31,16 @@ Traceability: introduces REQ-ROLLING-WORKERS from issue 2026-10-12-BUG-native_wo
   Full core QA passed 546/547 legacy tests, then stopped at the independently
   confirmed shared-index pruning race (PostgreSQL 23503 in project-index.js).
   This issue remains IN_PROGRESS; no full-QA pass or live acceptance is claimed.
+
+## Native command display correction
+
+The real native acceptance captured the complete approval request: its cwd was
+the retained physical path, but the command display inserted empty shell quotes
+before the caret in `s/^pick/edit/`. The executable body still requested the
+canonical replay. A literal comparison rejected that equivalent spelling.
+The matcher now recognizes only the observed exact equivalent spelling, retaining
+all actor, lease, marker and fresh-base checks. Policy proposals remain unaccepted;
+stdin requests do not inherit command admission. The existing live Arc now uses
+the production authorization function for every rebase request, without fixture
+fallback, and its editor instructions match the canonical replay.
+Final native and full-core acceptance pending.
