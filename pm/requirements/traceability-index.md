@@ -55,6 +55,14 @@ failed refresh, or rebuild cannot replace another worktree's published answer.
 On 2026-10-12, the stakeholder clarified that repeated references to one stable
 entity across files must publish one entity and all distinct relationships.
 Human `ponytail traceability index` output must show an ASCII progress bar.
+Align its opening brackets across corpora. Show preparation before source
+snapshot collection, then initialize counted processing at zero; do not leave
+expensive preparation invisible. Count plan-manifest discovery, source-file
+snapshot collection, cached-file processing and database publication separately.
+Unknown discovery uses an ASCII spinner in a TTY and periodic printable
+liveness lines otherwise, never a permanently empty progress bar. Both
+spinners and bars show elapsed time for their current phase.
+Database publication reaches 100% only after its transaction commits.
 Redirected output must use printable progress lines without terminal controls;
 `--json` must remain machine-readable without progress text.
 

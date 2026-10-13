@@ -1,24 +1,42 @@
 // Copyright (c) 2026 Alex Baretta. All rights reserved.
 // Licensed under the MIT License. See LICENSE in the project root.
+export type IndexProgressPhase='files'|'source files'|'plan manifests'|'database records';
 export interface IndexProgressStream {readonly isTTY?:boolean;write(text:string):unknown;}
 
 // Traceability: implements REQ-TRACEABILITY-INDEX
 export function indexProgress(indexProgressStream:IndexProgressStream=process.stdout,now:()=>number=Date.now):{
- update(completed:number,total:number,corpus:string):void;stop():void;
+ prepare(corpus:string):void;update(completed:number,total:number,corpus:string,phase?:IndexProgressPhase):void;stop():void;
 } {
- let currentCorpus='';let startedAt=now();let lastPrintedAt=0;let lineOpen=false;
- const stop=():void=>{if(lineOpen) indexProgressStream.write('\n');lineOpen=false;};
+ let discoveryCorpus:string|null=null;let spinnerIndex=0;let spinnerTimer:ReturnType<typeof setInterval>|undefined;
+ let currentStage='';let startedAt=now();let lastPrintedAt=0;let lineOpen=false;let lineLength=0;
+ const stop=():void=>{if(spinnerTimer!==undefined) clearInterval(spinnerTimer);spinnerTimer=undefined;discoveryCorpus=null;if(lineOpen) indexProgressStream.write('\n');lineOpen=false;lineLength=0;};
+ const pulse=():void=>{
+  if(discoveryCorpus===null || now()-lastPrintedAt<(indexProgressStream.isTTY?200:5000)) return;
+  lastPrintedAt=now();
+  const frame='|/-\\'.charAt(spinnerIndex++%4);
+  const text=`${discoveryCorpus.padEnd(12)} ${indexProgressStream.isTTY?frame:'...'} discovering sources | elapsed ${Math.floor((now()-startedAt)/1000)}s`;
+  indexProgressStream.write(indexProgressStream.isTTY?`\r${text.padEnd(lineLength)}`:`${text}\n`);
+  lineLength=Math.max(lineLength,text.length);lineOpen=indexProgressStream.isTTY===true;
+ };
  return {
-  update(completed,total,corpus) {
-   const first=corpus!==currentCorpus;
-   if(first) {stop();currentCorpus=corpus;startedAt=now();}
+  prepare(corpus) {
+   if(discoveryCorpus===corpus) {pulse();return;}
+   stop();discoveryCorpus=corpus;startedAt=now();currentStage='';spinnerIndex=0;lastPrintedAt=now()-5000;
+   pulse();spinnerTimer=setInterval(pulse,200);spinnerTimer.unref();
+  },
+  update(completed,total,corpus,phase='files') {
+   const stage=`${corpus}:${phase}`;
+   const first=stage!==currentStage;
+   if(first) {stop();currentStage=stage;startedAt=now();}
    if(!first && completed!==total && now()-lastPrintedAt<1000) return;
    lastPrintedAt=now();
    const percentage=total===0?100:Math.floor(completed*100/total);
    const filled=Math.floor(percentage*40/100);
-   const eta=completed===0?'unknown':`${Math.ceil((now()-startedAt)/1000*(total-completed)/completed)}s`;
-   const text=`${corpus} [${'='.repeat(filled)}${' '.repeat(40-filled)}] ${percentage}% ${completed}/${total} files | ETA ${eta}`;
-   indexProgressStream.write(indexProgressStream.isTTY?`\r${text}`:`${text}\n`);
+   const eta=total===0?'0s':completed===0?'unknown':`${Math.ceil((now()-startedAt)/1000*(total-completed)/completed)}s`;
+   const text=`${corpus.padEnd(12)} [${'='.repeat(filled)}${' '.repeat(40-filled)}] ${percentage}% ${completed}/${total} ${phase} | elapsed ${Math.floor((now()-startedAt)/1000)}s | ETA ${eta}`;
+   const line=indexProgressStream.isTTY?text.padEnd(lineLength):text;
+   indexProgressStream.write(indexProgressStream.isTTY?`\r${line}`:`${line}\n`);
+   lineLength=line.length;
    lineOpen=indexProgressStream.isTTY===true;
    if(completed===total) stop();
   },stop,

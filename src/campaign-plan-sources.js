@@ -71,7 +71,7 @@ function scanPlanCandidates(repositoryRoot, campaignManagementConfigV1) {
         return leftOrder - rightOrder || left.relativePlanFile.localeCompare(right.relativePlanFile);
     });
 }
-function listPlanSourceFiles(repositoryRoot, campaignManagementConfigV1) {
+function listPlanSourceFiles(repositoryRoot, campaignManagementConfigV1, onDiscovery) {
     const planRoot = node_path_1.default.join(repositoryRoot, campaignManagementConfigV1.planRoot);
     const sources = [];
     for (const lifecycle of campaignManagementConfigV1.lifecycle.directories) {
@@ -79,6 +79,7 @@ function listPlanSourceFiles(repositoryRoot, campaignManagementConfigV1) {
         if (!node_fs_1.default.existsSync(directory))
             continue;
         for (const name of sortedDirectories(directory)) {
+            onDiscovery?.();
             const planFile = node_path_1.default.join(directory, name, 'plan.md');
             if (isPlanFile(planFile)) {
                 sources.push({
@@ -93,6 +94,7 @@ function listPlanSourceFiles(repositoryRoot, campaignManagementConfigV1) {
         for (const name of sortedDirectories(planRoot)) {
             if (lifecycleDirectories.has(name))
                 continue;
+            onDiscovery?.();
             const planFile = node_path_1.default.join(planRoot, name, 'plan.md');
             if (isPlanFile(planFile)) {
                 sources.push({

@@ -12,6 +12,7 @@ const test = require('node:test');
 const {
   collectPlanProjection,
   collectTraceabilityProjection,
+  indexProject,
   evaluateValidationRules,
   normalizePlanPayloads,
   parseGrepArguments,
@@ -67,6 +68,26 @@ function fixture() {
   ], { cwd: root });
   return { configurationPath, root };
 }
+
+test('source snapshots account for every file before database indexing', () => {
+  const { configurationPath } = fixture();
+  const counts = [];
+  const projection = collectTraceabilityProjection(configurationPath,
+    (completed, total, corpus, phase) => counts.push({ completed, total, corpus, phase }));
+  assert.equal(counts[0].completed, 0);
+  assert.equal(counts.at(-1).completed, projection.files.length);
+  assert.ok(counts.every(count => count.phase === 'source files' && count.total === projection.files.length));
+});
+
+test('index progress announces preparation before source discovery can fail', async () => {
+  const { root } = fixture();
+  const preparations = [];
+  await assert.rejects(() => indexProject({
+    configurationPath: path.join(root, 'missing.json'),
+    onPrepare: corpus => preparations.push(corpus),
+  }), /ENOENT/);
+  assert.deepEqual(preparations, ['traceability']);
+});
 
 test('incremental commit preparation never rereads already indexed Git blobs', async () => {
   const { root } = fixture();
@@ -464,7 +485,14 @@ test('publishes a complete generation with parameterized statements', async () =
   const { configurationPath } = fixture();
   const projection = collectTraceabilityProjection(configurationPath);
   const client = new BoundaryClient();
-  const result = await publishTraceabilityGeneration(client, projection);
+  let committedProgress = false;
+  const result = await publishTraceabilityGeneration(client, projection, (completed, total, corpus, phase) => {
+    if (phase === 'database records' && completed === total) {
+      assert.equal(client.queries.at(-1).text, 'COMMIT');
+      committedProgress = true;
+    }
+  });
+  assert.equal(committedProgress, true);
   assert.equal(result.stateDigest, projection.stateDigest);
   assert.equal(client.queries[0].text, 'BEGIN');
   assert.equal(client.queries.at(-1).text, 'COMMIT');

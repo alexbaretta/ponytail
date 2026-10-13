@@ -580,7 +580,7 @@ function parseFile(configuration, relativePath, source) {
   };
 }
 
-function collectTraceabilityProjection(configurationPath) {
+function collectTraceabilityProjection(configurationPath, onProgress) {
   configurationPath = fs.realpathSync(configurationPath);
   const configuration = loadTraceabilityConfiguration(configurationPath);
   const root = fs.realpathSync(configuration.root);
@@ -607,9 +607,10 @@ function collectTraceabilityProjection(configurationPath) {
     fs.readFileSync(__filename),
     fs.readFileSync(require.resolve('../skills/requirements-traceability/scripts/check-traceability')),
   ]));
-  const files = paths.map(relativePath => {
+  onProgress?.(0, paths.length, 'traceability', 'source files');
+  const files = paths.map((relativePath, index) => {
     const { content, gitState } = fileState(root, relativePath);
-    return {
+    const file = {
       path: relativePath,
       contentDigest: digest(content),
       parserIdentity: digest(`${parserIdentity}\n${configurationDigest}\n${relativePath}`),
@@ -618,6 +619,8 @@ function collectTraceabilityProjection(configurationPath) {
         ? { schemaVersion: 1, entities: [], relationships: [] }
         : parseFile(configuration, relativePath, content.toString('utf8')),
     };
+    onProgress?.(index + 1, paths.length, 'traceability', 'source files');
+    return file;
   });
   const stateDigest = digest(files.map(file =>
     `${file.path}\0${file.gitState}\0${file.contentDigest}\n`).join(''));
@@ -832,16 +835,17 @@ function parsePlanIndexObligations(root, relativePath, source) {
   }
 }
 
-function collectPlanProjection(root = fs.realpathSync(git(process.cwd(), ['rev-parse', '--show-toplevel']))) {
+function collectPlanProjection(root = fs.realpathSync(git(process.cwd(), ['rev-parse', '--show-toplevel'])), onProgress, onPrepare) {
   root = fs.realpathSync(root);
   const managementPath = path.join(root, '.agents/config/project/management.json');
   const managementBytes = fs.readFileSync(managementPath);
   const management = readManagementConfigV1(JSON.parse(managementBytes));
-  const planSources = listPlanSourceFiles(root, management);
+  const planSources = listPlanSourceFiles(root, management, () => onPrepare?.('plans'));
   const sourceByPath = new Map(planSources.map(source => [source.relativePlanFile, source]));
   const paths = new Set([path.relative(root, managementPath)]);
   const obligationDependencyDigests = new Map();
-  for (const source of planSources) {
+  for (const [index, source] of planSources.entries()) {
+    onProgress?.(index, planSources.length, 'plans', 'plan manifests');
     paths.add(source.relativePlanFile);
     let plan;
     try { plan = parsePlanSource(root, source.relativePlanFile, source.lifecycle, fs.readFileSync(path.join(root, source.relativePlanFile), 'utf8')); }
@@ -871,6 +875,7 @@ function collectPlanProjection(root = fs.realpathSync(git(process.cwd(), ['rev-p
       }
     }
   }
+  onProgress?.(planSources.length, planSources.length, 'plans', 'plan manifests');
   const configurationDigest = digest(managementBytes);
   const parserIdentity = digest(Buffer.concat([
     Buffer.from('plan-index-v1\0'),
@@ -879,11 +884,12 @@ function collectPlanProjection(root = fs.realpathSync(git(process.cwd(), ['rev-p
     fs.readFileSync(require.resolve('../skills/plan-execution/scripts/ready-sprints')),
     fs.readFileSync(require.resolve('../skills/plan-execution/scripts/ready-tasklets')),
   ]));
-  const files = [...paths].sort().map(relativePath => {
+  onProgress?.(0, paths.size, 'plans', 'source files');
+  const files = [...paths].sort().map((relativePath, index) => {
     const { content, gitState } = fileState(root, relativePath);
     const hasTaskletGraph = /S\d+\.md$/u.test(relativePath) &&
       paths.has(relativePath.replace(/\.md$/, '.tasklets.json'));
-    return {
+    const file = {
       path: relativePath,
       contentDigest: digest(content),
       parserIdentity: digest(`${parserIdentity}\n${configurationDigest}\n${relativePath}\n${hasTaskletGraph}\n${obligationDependencyDigests.get(relativePath) ?? ''}`),
@@ -908,6 +914,8 @@ function collectPlanProjection(root = fs.realpathSync(git(process.cwd(), ['rev-p
         return { schemaVersion: 1, records: [] };
       },
     };
+    onProgress?.(index + 1, paths.size, 'plans', 'source files');
+    return file;
   });
   const stateDigest = digest(files.map(file =>
     `${file.path}\0${file.gitState}\0${file.contentDigest}\0${file.parserIdentity}\n`).join(''));
@@ -1049,6 +1057,10 @@ async function publishTraceabilityGeneration(client, projection, onProgress) {
       : projection.normalizePayloads(payloads);
     const allEntities = normalized.entities;
     const allRelationships = normalized.relationships;
+    const publicationTotal = allEntities.length * 2 + allRelationships.length + 1;
+    let publishedRecords = 0;
+    const publicationProgress = () => onProgress?.(publishedRecords, publicationTotal, projection.corpus, 'database records');
+    publicationProgress();
     const searchDocuments = new Map();
     for (const entity of allEntities) {
       await client.query(`
@@ -1074,6 +1086,7 @@ async function publishTraceabilityGeneration(client, projection, onProgress) {
         role: entity.searchRole ?? null,
       }).map(([field, value]) => [field, projection.searchableFields.includes(field) ? value : null]));
       searchDocuments.set(entity.entityId, { ...searchable, requirementId: null });
+      publishedRecords++;publicationProgress();
     }
     for (const relationship of allRelationships) {
       await client.query(`
@@ -1092,6 +1105,7 @@ async function publishTraceabilityGeneration(client, projection, onProgress) {
         document.requirementId = projection.searchableFields.includes('requirementId')
           ? relationship.targetEntityId : null;
       }
+      publishedRecords++;publicationProgress();
     }
     for (const [entityId, document] of searchDocuments) {
       const content = Object.values(document).filter(value => value !== null).join('\n');
@@ -1113,6 +1127,7 @@ async function publishTraceabilityGeneration(client, projection, onProgress) {
         document.role,
         document.requirementId,
       ]);
+      publishedRecords++;publicationProgress();
     }
     await client.query(`
       INSERT INTO ponytail_index.published_generation_v1 (worktree_id, corpus, generation_id)
@@ -1129,6 +1144,7 @@ async function publishTraceabilityGeneration(client, projection, onProgress) {
       ]);
     }
     await client.query('COMMIT');
+    publishedRecords++;publicationProgress();
     return {
       generationId: generation.generation_id,
       stateDigest: projection.stateDigest,
@@ -1170,13 +1186,16 @@ async function indexTraceability(options = {}) {
 async function indexProject(options = {}) {
   const configurationPath = options.configurationPath ??
     path.resolve('.agents/config/project/traceability.json');
-  const traceability = collectTraceabilityProjection(configurationPath);
-  const plans = collectPlanProjection(traceability.worktreePath);
+  options.onPrepare?.('traceability');
+  const traceability = collectTraceabilityProjection(configurationPath, options.onProgress);
+  options.onPrepare?.('plans');
+  const plans = collectPlanProjection(traceability.worktreePath, options.onProgress, options.onPrepare);
   const pool = options.pool ?? new (require('pg').Pool)(databaseOptions(traceability.worktreePath));
   const client = await pool.connect();
   try {
     const corpora = [];
     for (const projection of [traceability, plans]) {
+      options.onProgress?.(0, projection.files.length, projection.corpus);
       const publication = await publishTraceabilityGeneration(client, projection, options.onProgress);
       corpora.push({
         corpus: projection.corpus,
@@ -2665,7 +2684,7 @@ async function run(args) {
     const progress = args.includes('--json') ? null : indexProgress();
     let result;
     try {
-      result = await indexProject({ rebuild: args.includes('--rebuild'), onProgress: progress?.update });
+      result = await indexProject({ rebuild: args.includes('--rebuild'), onProgress: progress?.update, onPrepare: progress?.prepare });
     } finally { progress?.stop(); }
     if (args.includes('--json')) process.stdout.write(`${JSON.stringify(result)}\n`);
     else for (const corpus of result.corpora) process.stdout.write(

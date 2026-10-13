@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-10-12-progress_omitted_preparation",
+  "recorded_at": "2026-10-12T17:27:26-07:00",
+  "source_references": [
+    "pm/requirements/traceability-index.md"
+  ],
+  "context": {
+    "languages": [
+      "typescript",
+      "javascript"
+    ],
+    "frameworks": [],
+    "components": [
+      "project-index"
+    ],
+    "affected_boundaries": [
+      "source discovery and snapshot collection to progress renderer"
+    ],
+    "code_references": [
+      "src/project-index.js",
+      "src/index-progress.ts"
+    ]
+  },
+  "observed_behavior": "Long source collection has no counted progress; later cached-file processing appears to jump straight to 100%. Initial placeholder bars never fill. Shortened TTY ETA leaves trailing characters.",
+  "expected_behavior": "Every counted stage advances; unknown discovery stays live; terminal redraws erase previous text.",
+  "causal_mechanism": "Callbacks cover only cached-file processing, after both source snapshots are collected. Placeholder lines are never updated. Carriage-return redraws omit padding.",
+  "anti_pattern": {
+    "structural_description": "Measure only a late pipeline stage and present static placeholders for earlier work.",
+    "why_it_fails": "Displayed completion does not account for the expensive stages; old terminal text remains visible."
+  },
+  "correct_pattern": {
+    "required_invariant": "Progress reports actual stage work and completion; unknown totals use liveness; redraws replace the whole prior line.",
+    "implementation_description": "Instrument manifests, snapshots, cached files and publication; use spinner checkpoints/timer and printable redirected heartbeat; align labels and pad redraws. Count final publication only after commit."
+  },
+  "applicability_conditions": [
+    "Multi-stage indexing with expensive synchronous source collection and cached parses."
+  ],
+  "known_non_matches": [
+    "Fast cached-file processing can legitimately complete between refreshes."
+  ],
+  "confirmation_evidence": [
+    "Original callbacks are invoked only after snapshot collection.",
+    "Live TTY now shows zero and advancing source-file counts immediately."
+  ],
+  "regression_proofs": [
+    "tests/traceability-projection.test.ts",
+    "tests/project-index.test.js: source snapshots account for every file before database indexing",
+    "tests/project-index.test.js: publishes a complete generation with parameterized statements"
+  ]
+}
