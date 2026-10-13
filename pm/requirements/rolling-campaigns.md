@@ -335,3 +335,14 @@ prefer original resumable actors, and stop with a physical capacity result
 without reserving nonexistent roots. Keep configured N unchanged.
 Discharge: ACC-ROLLING-EXISTING-POOL demonstrates a gapped physical pool with
 N larger than the pool, reuse after reset, and no out-of-pool creation.
+
+Under REQ-ROLLING-PUBLICATION, atomic obligation OBL-RESTART-2 requires
+`campaign observe-increment --campaign <id> --review <id>` to settle the
+original push intent from freshly fetched remote containment without checkout
+mutation or another push. An absent candidate yields REBASE_REQUIRED; an
+unobservable remote remains UNCONFIRMED and cannot be treated as settled.
+
+Observation requires `--stopped <reference>`: the coordinator explicitly
+attests terminal cessation of the original integration/push operation using
+owning-command evidence. Remote absence alone is insufficient; running or
+unknown operations remain fenced.

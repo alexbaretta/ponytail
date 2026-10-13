@@ -441,3 +441,14 @@ cleared and configured N=10. Replenish in existing-only mode: reserve 101 then
 103, report no available worktree when both are owned, and never reserve or
 create 102/104. Reject retained session markers and preserve dirty checkout
 claims. Original retained unblocked sessions remain preferred over new work.
+
+ACC-ROLLING-INCREMENT-OBSERVATION (OBL-RESTART-2): after a coordinator
+fast-forward fails with a retained PUSHING intent, observe that exact review
+from its original coordinator. Confirm REBASE_REQUIRED when Git proves the
+candidate absent, and unchanged coordinator HEAD, source and remote target.
+Then retry reset without falsifying journal state.
+
+Observation requires `--stopped <reference>`: the coordinator explicitly
+attests terminal cessation of the original integration/push operation using
+owning-command evidence. Remote absence alone is insufficient; running or
+unknown operations remain fenced.

@@ -392,6 +392,15 @@ class RollingCampaignOperations {
             throw new Error('rolling campaign: worker repair requires a recorded textual conflict');
         return this.rollingCampaignStore.requestIncrementRepair(campaignId, reviewId, `Textual conflict in original integration ${rollingIncrementRebaseV1.incrementId}: ${rollingIncrementRebaseV1.result.originalCommit}; paths ${rollingIncrementRebaseV1.result.conflictedPaths.join(', ')}. Worker semantic repair and fresh original review are required.`);
     }
+    async observeIncrement(campaignId, reviewId, stopped) {
+        if (!stopped.trim())
+            throw new Error('rolling campaign: increment observation requires original command cessation evidence');
+        const rollingCoordinatorSnapshot = await this.status(campaignId);
+        const rollingStoredIncrement = rollingCoordinatorSnapshot.increments.find(increment => increment.claim.reviewId === reviewId);
+        if (!rollingStoredIncrement || node_fs_1.default.realpathSync(this.root) !== rollingStoredIncrement.claim.coordinatorRoot)
+            throw new Error('rolling campaign: increment observation requires the original coordinator checkout');
+        return this.rollingCampaignStore.observeIncrementPublication(campaignId, reviewId);
+    }
     async integrate(campaignId, reviewId) {
         const rollingCoordinatorSnapshot = await this.status(campaignId);
         const existingRollingStoredIncrement = rollingCoordinatorSnapshot.increments.find(increment => increment.claim.reviewId === reviewId);
@@ -495,6 +504,7 @@ class RollingCampaignOperations {
                     return (0, rolling_review_js_1.collectRollingReview)(this.rollingCampaignStore, rollingCodex, campaignId, reviewId, timeoutMs);
                 }) };
             case 'inspect-review': return { command, result: await this.native(signal, rollingCodex => (0, rolling_review_js_1.collectRollingReview)(this.rollingCampaignStore, rollingCodex, stringField(input, 'campaign'), stringField(input, 'review'), timeoutMs)) };
+            case 'observe-increment': return { command, result: await this.observeIncrement(stringField(input, 'campaign'), stringField(input, 'review'), stringField(input, 'stopped')) };
             case 'integrate': return { command, result: await this.integrate(stringField(input, 'campaign'), stringField(input, 'review')) };
             case 'accept': return { command, result: await this.rollingCampaignStore.acceptIncrementCertificates(stringField(input, 'campaign'), stringField(input, 'review'), stringField(input, 'candidate'), stringArray(input.bindings)) };
             case 'amend-configuration': {

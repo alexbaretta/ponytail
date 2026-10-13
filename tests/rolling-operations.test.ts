@@ -264,3 +264,14 @@ test('existing-only CLI admission rejects nonboolean boundary data before databa
   await assert.rejects(rollingCampaignOperations.execute('replenish',{campaign:'pilot','existing-only':'true'}),/existing-only must be boolean/);
  } finally {await pool.end();}
 });
+
+// Traceability: verifies REQ-ROLLING-PUBLICATION
+test('increment observation requires original command cessation evidence before database work',async()=>{
+ const pool:Pool=new Pool();
+ try {
+  const rollingCampaignStore=new RollingCampaignStore(pool,'00000000-0000-0000-0000-000000000001');
+  const rollingCampaignOperations=new RollingCampaignOperations(rollingCampaignStore,'/unused');
+  await assert.rejects(rollingCampaignOperations.execute('observe-increment',{campaign:'pilot',review:'original'}),/stopped/);
+  await assert.rejects(rollingCampaignOperations.observeIncrement('pilot','original',' '),/cessation evidence/);
+ } finally {await pool.end();}
+});

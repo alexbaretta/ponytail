@@ -30,3 +30,8 @@ Live gate remains pending: component tests do not establish actual GWEN reset
 or native parallel worker activity. Keep this plan active until that evidence
 is obtained; fix any further confirmed Ponytail blocker rather than reporting
 delivery as completion.
+
+OBL-RESTART-2: IN_PROGRESS. Expose retained increment remote observation under
+REQ-ROLLING-PUBLICATION so a failed local fast-forward can be settled without
+pushing or discarding coordinator source. Verify real Git and PostgreSQL
+PUSHING-to-REBASE_REQUIRED receipt and unchanged local/remote source.

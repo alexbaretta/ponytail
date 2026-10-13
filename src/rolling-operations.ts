@@ -96,6 +96,7 @@ export interface RollingOperationResults {
  'suspend-worker':Awaited<ReturnType<typeof suspendRollingWorker>>;'retire-worker':Awaited<ReturnType<typeof retireRollingWorker>>;
  'rebind-worker':Awaited<ReturnType<RollingCampaignStore['rebindLease']>>;
  'start-review':Awaited<ReturnType<typeof startRollingReview>>;'request-review':Awaited<ReturnType<RollingCampaignStore['requestReview']>>;'dispatch-review':Awaited<ReturnType<typeof collectRollingReview>>;'inspect-review':Awaited<ReturnType<typeof collectRollingReview>>;
+ 'observe-increment':Awaited<ReturnType<RollingCampaignStore['observeIncrementPublication']>>;
  integrate:Awaited<ReturnType<RollingCampaignStore['publishIncrement']>> | RollingIncrementRepair;accept:Awaited<ReturnType<RollingCampaignStore['acceptIncrementCertificates']>>;
  'amend-configuration':Awaited<ReturnType<RollingCampaignStore['amendConfiguration']>>;
  'withdraw-publication':Awaited<ReturnType<RollingCampaignStore['withdrawPublication']>>;
@@ -378,6 +379,15 @@ export class RollingCampaignOperations {
    `Textual conflict in original integration ${rollingIncrementRebaseV1.incrementId}: ${rollingIncrementRebaseV1.result.originalCommit}; paths ${rollingIncrementRebaseV1.result.conflictedPaths.join(', ')}. Worker semantic repair and fresh original review are required.`);
  }
 
+ // Traceability: implements REQ-ROLLING-PUBLICATION
+ async observeIncrement(campaignId:string,reviewId:string,stopped:string):Promise<RollingOperationResults['observe-increment']> {
+  if (!stopped.trim()) throw new Error('rolling campaign: increment observation requires original command cessation evidence');
+  const rollingCoordinatorSnapshot=await this.status(campaignId);
+  const rollingStoredIncrement=rollingCoordinatorSnapshot.increments.find(increment=>increment.claim.reviewId === reviewId);
+  if (!rollingStoredIncrement || fs.realpathSync(this.root) !== rollingStoredIncrement.claim.coordinatorRoot) throw new Error('rolling campaign: increment observation requires the original coordinator checkout');
+  return this.rollingCampaignStore.observeIncrementPublication(campaignId,reviewId);
+ }
+
  // Traceability: implements REQ-ROLLING-REVIEW
  // Traceability: implements REQ-ROLLING-PUBLICATION
  async integrate(campaignId:string,reviewId:string):Promise<RollingOperationResults['integrate']> {
@@ -467,6 +477,7 @@ export class RollingCampaignOperations {
     return collectRollingReview(this.rollingCampaignStore,rollingCodex,campaignId,reviewId,timeoutMs);
    })};
    case 'inspect-review': return {command,result:await this.native(signal,rollingCodex=>collectRollingReview(this.rollingCampaignStore,rollingCodex,stringField(input,'campaign'),stringField(input,'review'),timeoutMs))};
+   case 'observe-increment': return {command,result:await this.observeIncrement(stringField(input,'campaign'),stringField(input,'review'),stringField(input,'stopped'))};
    case 'integrate': return {command,result:await this.integrate(stringField(input,'campaign'),stringField(input,'review'))};
    case 'accept': return {command,result:await this.rollingCampaignStore.acceptIncrementCertificates(stringField(input,'campaign'),stringField(input,'review'),stringField(input,'candidate'),stringArray(input.bindings))};
    case 'amend-configuration': {

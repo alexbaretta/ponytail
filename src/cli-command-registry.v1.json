@@ -104,6 +104,7 @@
         "request-review",
         "dispatch-review",
         "inspect-review",
+        "observe-increment",
         "integrate",
         "accept",
         "amend-configuration",

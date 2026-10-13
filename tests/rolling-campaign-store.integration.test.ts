@@ -70,7 +70,7 @@ test('native code fixture approvals permit exact shell-wrapped commands only for
 
 // Traceability: verifies REQ-ROLLING-STATE
 // Traceability: verifies REQ-ROLLING-SCHEDULING
-export interface ReviewScenario { readonly decision: RollingReviewOutcomeV1['decision']; readonly mode: 'manual' | 'protocol' | 'native'; readonly advancedCoordinator?: boolean; readonly canonicalIntegration?: 'publish' | 'upstream' | 'conflict' | 'qa-failure' | 'recover'; readonly replaceLostReviewer?: boolean; readonly automaticPublication?: boolean; readonly conflictContinuation?: boolean; readonly conflictRepair?: boolean; readonly integratedCertificates?: boolean; readonly publicationBatch?:'threshold' | 'partial'; readonly publicationFlush?:'completion' | 'quiescence' }
+export interface ReviewScenario { readonly decision: RollingReviewOutcomeV1['decision']; readonly mode: 'manual' | 'protocol' | 'native'; readonly advancedCoordinator?: boolean; readonly canonicalIntegration?: 'publish' | 'upstream' | 'conflict' | 'qa-failure' | 'recover' | 'failed-ff'; readonly replaceLostReviewer?: boolean; readonly automaticPublication?: boolean; readonly conflictContinuation?: boolean; readonly conflictRepair?: boolean; readonly integratedCertificates?: boolean; readonly publicationBatch?:'threshold' | 'partial'; readonly publicationFlush?:'completion' | 'quiescence' }
 function declineReviewApprovals(rollingCodex: RollingCodex): void {
   rollingCodex.on('serverRequest', message => rollingCodex.respondToServer(message.id, { decision: 'decline' }));
 }
@@ -644,8 +644,34 @@ export async function runRollingReviewScenario(t: TestContext, reviewScenario: R
       assert.ok(typeof projectJournal === 'object' && projectJournal !== null);
       fs.writeFileSync(path.join(root,'ponytail-journal.json'),JSON.stringify({...projectJournal,projectId,projectName:`rolling-${projectId}`}));
       prepareCoordinatorIncrementCheckout(root,'campaign/bound-fixture');
+      if (reviewScenario.canonicalIntegration === 'failed-ff') {
+        const rollingIncrementRebaseV1=await rollingCampaignStore.beginIncrementRebase('bound-fixture',rollingStoredReview.request.id);
+        const rollingFastRebaseResult=rebasePreparedRollingIncrement(workerRoot,rollingIncrementRebaseV1);
+        assert.equal(rollingFastRebaseResult.state,'REBASED');
+        await rollingCampaignStore.recordIncrementRebase('bound-fixture',rollingStoredReview.request.id,rollingFastRebaseResult);
+        await rollingCampaignStore.recordIncrementProof('bound-fixture',rollingStoredReview.request.id,rollingWorkerSubmissionV1);
+        await rollingCampaignStore.beginIncrementPush('bound-fixture',rollingStoredReview.request.id);
+        fs.writeFileSync(path.join(root,'coordinator-note.md'),'Reviewed coordinator source retained after failed integration.\n');
+        execFileSync('git',['-C',root,'add','coordinator-note.md']);
+        execFileSync('git',['-C',root,'-c','user.name=Fixture','-c','user.email=fixture@example.test','commit','-q','-m','Retain coordinator source']);
+      }
+      const coordinatorRevision=execFileSync('git',['-C',root,'rev-parse','HEAD'],{encoding:'utf8'}).trim();
       const invoke=()=>spawnSync(process.execPath,[path.join(repositoryRoot,'src/rolling-operations.js'),'integrate','--campaign','bound-fixture','--review',rollingStoredReview.request.id],{cwd:root,encoding:'utf8',env:{...process.env,NODE_TEST_CONTEXT:undefined}});
       const completed=invoke();
+      if (reviewScenario.canonicalIntegration === 'failed-ff') {
+        assert.equal(completed.status,1,completed.stdout+completed.stderr);
+        assert.equal((await rollingCampaignStore.coordinatorSnapshot('bound-fixture')).increments[0]?.state,'PUSHING',completed.stderr);
+        const observedSpawnSyncReturns=spawnSync(process.execPath,[path.join(repositoryRoot,'src/rolling-operations.js'),'observe-increment','--campaign','bound-fixture','--review',rollingStoredReview.request.id,'--stopped','Original integrate invocation returned exit 1 after failed fast-forward; no retained push process'],{cwd:root,encoding:'utf8',env:{...process.env,NODE_TEST_CONTEXT:undefined}});
+        assert.equal(observedSpawnSyncReturns.status,0,observedSpawnSyncReturns.stderr);
+        const response:unknown=JSON.parse(observedSpawnSyncReturns.stdout);
+        assert.ok(response && typeof response === 'object' && 'result' in response);
+        assert.equal(readRollingIncrementPublicationV1(response.result).result.state,'REBASE_REQUIRED');
+        assert.equal((await rollingCampaignStore.coordinatorSnapshot('bound-fixture')).increments[0]?.state,'REBASE_REQUIRED');
+        assert.equal(execFileSync('git',['-C',root,'rev-parse','HEAD'],{encoding:'utf8'}).trim(),coordinatorRevision);
+        assert.equal(execFileSync('git',['-C',remoteRoot,'rev-parse','refs/heads/campaign/bound-fixture'],{encoding:'utf8'}).trim(),initialRemote);
+        assert.match(fs.readFileSync(path.join(root,'coordinator-note.md'),'utf8'),/Reviewed coordinator source/);
+        return;
+      }
       if (reviewScenario.canonicalIntegration === 'qa-failure') {
         assert.equal(completed.status,1,completed.stdout+completed.stderr);assert.match(completed.stderr,/focused integration QA failed/);
         assert.equal(execFileSync('git',['-C',remoteRoot,'rev-parse','refs/heads/campaign/bound-fixture'],{encoding:'utf8'}).trim(),initialRemote);
@@ -2140,7 +2166,7 @@ test('failed QA publication adopts an exact reviewed repair and requires fresh f
 // Traceability: verifies REQ-ROLLING-INTERFACES
 // Traceability: verifies REQ-ROLLING-REVIEW
 // Traceability: verifies REQ-ROLLING-PUBLICATION
-for (const canonicalIntegration of ['publish','upstream','conflict','qa-failure','recover'] satisfies readonly NonNullable<ReviewScenario['canonicalIntegration']>[]) {
+for (const canonicalIntegration of ['publish','upstream','conflict','qa-failure','recover','failed-ff'] satisfies readonly NonNullable<ReviewScenario['canonicalIntegration']>[]) {
   test(`canonical integrate CLI ${canonicalIntegration} preserves the reviewed actor and exact candidate`,
     t=>runRollingReviewScenario(t,{decision:'accepted',mode:'manual',canonicalIntegration}));
 }

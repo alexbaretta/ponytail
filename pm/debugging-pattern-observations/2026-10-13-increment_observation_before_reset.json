@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-10-13-increment_observation_before_reset",
+  "recorded_at": "2026-10-13T16:35:13-07:00",
+  "source_references": [
+    "pm/plans/in_progress/2026-10-13-campaign-restart-acceptance/plan.md"
+  ],
+  "context": {
+    "languages": [
+      "typescript"
+    ],
+    "frameworks": [],
+    "components": [
+      "rolling campaign integration"
+    ],
+    "affected_boundaries": [
+      "local Git fast-forward",
+      "durable push intent",
+      "reset busy guard"
+    ],
+    "code_references": [
+      "src/rolling-campaign-store.ts:1607",
+      "src/rolling-operations.ts:383"
+    ]
+  },
+  "observed_behavior": "Failed coordinator fast-forward leaves PUSHING and prevents project reset.",
+  "expected_behavior": "Coordinator can observe the original push intent from real remote containment without repeating a failed fast-forward.",
+  "causal_mechanism": "PUSHING is committed before local fast-forward; integrate recovery repeats that fast-forward before observation and no command exposed the existing independent observation.",
+  "anti_pattern": {
+    "structural_description": "External-outcome observation is reachable only after replaying a failed local prerequisite.",
+    "why_it_fails": "Divergent preserved coordinator source prevents reaching the remote observation required to settle the intent."
+  },
+  "correct_pattern": {
+    "required_invariant": "Original remote outcome can be observed independently of local source mutation or push retry.",
+    "implementation_description": "Expose the existing scoped store observation with an original coordinator guard through observe-increment."
+  },
+  "applicability_conditions": [
+    "Retained committed increment push intent",
+    "Coordinator source diverged from candidate",
+    "Remote candidate is absent"
+  ],
+  "known_non_matches": [
+    "Unobservable remote stays UNCONFIRMED and continues to fence reset"
+  ],
+  "confirmation_evidence": [
+    "GWEN actual reset refused stale PUSHING after failed FF; fetched remote did not contain candidate",
+    "Disposable real Git/PostgreSQL regression records REBASE_REQUIRED without local or remote source changes"
+  ],
+  "regression_proofs": [
+    "tests/rolling-campaign-store.integration.test.ts: canonical integrate CLI failed-ff preserves the reviewed actor and exact candidate"
+  ]
+}
