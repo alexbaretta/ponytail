@@ -156,7 +156,7 @@ lines.on('line', line => {
       return;
     }
   } else if (method === 'approval') {
-    send({ id: 'approval-id', method: 'item/commandExecution/requestApproval', params: { threadId: 'thread-fixture' } });
+    send({ id: 'approval-id', method: 'item/commandExecution/requestApproval', params: { threadId: 'thread-fixture',...params } });
   } else if (method === 'explode') {
     send({ id: message.id, error: { code: -32603, message: 'fixture failure' } }); return;
   } else if (method === 'unsafe-number') {

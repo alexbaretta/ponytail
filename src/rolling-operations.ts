@@ -8,12 +8,12 @@ import {parse} from 'lossless-json';
 import {databaseOptions} from './project-index-database.js';
 import {relativePath} from '../skills/plan-execution/scripts/obligations.js';
 import {collectRollingGraph,loadRollingConfiguration,readRollingCampaignRequest,type RollingCampaignRequest} from './rolling-campaign.js';
-import {resolveRollingManagedDirectory} from './rolling-worktrees.js';
-import {RollingCampaignStore,readRollingBindingHistoryConfiguration,type RollingBindingHistoryConfiguration,type RollingCampaignRegistration,type RollingCampaignRegistrationResult,type RollingGraphReconciliation,type RollingCoordinatorSnapshot,type RollingAllocationResult,type RollingAction,type RollingStoredAssignment,type RollingPublicationStatus,type RollingAssignmentRelease,type RollingWorkerDispatchStarted,type RollingReviewDispatchStarted,type RollingStoredIncrement} from './rolling-campaign-store.js';
+import {resolveRollingManagedDirectory,validateRollingSessionMarker} from './rolling-worktrees.js';
+import {RollingCampaignStore,readRollingBindingHistoryConfiguration,type RollingBindingHistoryConfiguration,type RollingCampaignRegistration,type RollingCampaignRegistrationResult,type RollingGraphReconciliation,type RollingCoordinatorSnapshot,type RollingAllocationResult,type RollingAction,type RollingStoredAssignment,type RollingPublicationStatus,type RollingAssignmentRelease,type RollingWorkerDispatchStarted,type RollingWorkerDispatch,type RollingReviewDispatchStarted,type RollingStoredIncrement} from './rolling-campaign-store.js';
 import type {RollingStoredReview,RollingReviewerLoss} from './rolling-review.js';
 import {git,gitResult,publishRollingIncrement,reconcileRollingIncrementPublication,type RollingIncrementPublication} from './rolling-integration.js';
-import {RollingCodex} from './rolling-codex.js';
-import {provisionRollingWorker,attachRollingWorker,recoverRollingWorkerCreation,resumeRollingWorker,dispatchRollingWorker,collectRollingWorkerSubmission,suspendRollingWorker,retireRollingWorker} from './rolling-worker.js';
+import {RollingCodex,type RollingNativeServerRequest} from './rolling-codex.js';
+import {provisionRollingWorker,attachRollingWorker,recoverRollingWorkerCreation,resumeRollingWorker,dispatchRollingWorker,collectRollingWorkerSubmission,suspendRollingWorker,retireRollingWorker,type RollingWorkerContext} from './rolling-worker.js';
 import {dispatchRollingReview,collectRollingReview} from './rolling-review.js';
 import type {RollingPublicationFrozen,RollingPublicationTrigger} from './rolling-publication.js';
 import {prepareRollingMainline,mergeRollingMainline,observeRollingMainlineCandidate,runRollingPublicationQa,prepareRollingMainlineRefresh,mergeRollingMainlineRefresh,observeRollingMainlineRefresh,type RollingMainlineCandidateV1,type RollingMainlineRefreshResultV1} from './rolling-publication.js';
@@ -201,6 +201,32 @@ export function projectRollingCoordinatorActions(rollingCoordinatorSnapshot:Roll
  return {snapshot:rollingCoordinatorSnapshot,decisions};
 }
 
+// Traceability: implements REQ-ROLLING-WORKERS
+export function readRollingWorkerRebaseApproval(rollingNativeServerRequest:RollingNativeServerRequest,
+ rollingWorkerContext:RollingWorkerContext,rollingWorkerDispatch:RollingWorkerDispatch | null):'start' | 'continue' | null {
+ const params=rollingNativeServerRequest.params;
+ if (rollingNativeServerRequest.method !== 'item/commandExecution/requestApproval'
+  || params === null || typeof params !== 'object' || Array.isArray(params)
+  || rollingWorkerDispatch?.state !== 'ATTACHED'
+  || !('cwd' in params) || params.cwd !== rollingWorkerContext.rollingWorkerCreationV1.rootPath
+  || !('threadId' in params) || params.threadId !== rollingWorkerContext.rollingWorkerCreationV1.threadId
+  || params.threadId !== rollingWorkerDispatch.threadId
+  || !('turnId' in params) || params.turnId !== rollingWorkerDispatch.turnId
+  || !('command' in params) || typeof params.command !== 'string'
+  || !rollingWorkerContext.lease.binding.execution.operations.includes('edit')
+  || rollingWorkerContext.lease.binding.execution.plannedPaths.length === 0) return null;
+ const commands:Readonly<Record<'start' | 'continue',string>>={
+  start:'GIT_SEQUENCE_EDITOR="sed -i.bak -e s/^pick/edit/" git rebase --interactive --force-rebase FETCH_HEAD',
+  continue:'git rebase --continue'
+ };
+ for (const kind of ['start','continue'] satisfies readonly ('start' | 'continue')[]) {
+  const command=commands[kind];
+  if (params.command === command || ['/bin/bash','/bin/zsh','/bin/sh','/opt/homebrew/bin/bash'].some(shell=>
+   params.command === `${shell} -lc '${command}'`)) return kind;
+ }
+ return null;
+}
+
 // Traceability: implements REQ-ROLLING-INTERFACES
 // Both transports invoke this layer; it never allocates through a Codex plugin.
 export class RollingCampaignOperations {
@@ -245,14 +271,31 @@ export class RollingCampaignOperations {
  status(campaignId:string):Promise<RollingCoordinatorSnapshot> { return this.rollingCampaignStore.coordinatorSnapshot(campaignId); }
  async nextActions(campaignId:string):Promise<RollingCoordinatorActions> { return projectRollingCoordinatorActions(await this.status(campaignId)); }
 
- private async native<Result>(signal:AbortSignal | undefined,operation:(rollingCodex:RollingCodex)=>Promise<Result>):Promise<Result> {
+ private async native<Result>(signal:AbortSignal | undefined,operation:(rollingCodex:RollingCodex)=>Promise<Result>,worker: {readonly campaignId:string;readonly assignmentId:string;readonly generation:string} | null = null):Promise<Result> {
   const rollingCodex = await RollingCodex.connect({cwd:this.root});
   let cancellation:Promise<void> | null = null;
   const abort = ():void=> {cancellation ??= rollingCodex.interruptOwnedTurns();};
   signal?.addEventListener('abort',abort,{once:true});
-  // Project-owned Codex policy authorizes routine commands. The adapter cannot
-  // invent authorization for an additional native approval request.
-  rollingCodex.on('serverRequest',request=>rollingCodex.respondToServer(request.id,{decision:'decline'}));
+  rollingCodex.on('serverRequest',request=> {
+   void (async()=> {
+    let approved=false;
+    try {
+     if (worker !== null) {
+      const rollingWorkerContext=await this.rollingCampaignStore.workerContext(worker.campaignId,worker.assignmentId,worker.generation);
+      const rollingWorkerDispatch=await this.rollingCampaignStore.workerDispatch(worker.campaignId,worker.assignmentId,worker.generation);
+      const rebase=readRollingWorkerRebaseApproval(request,rollingWorkerContext,rollingWorkerDispatch);
+      if (rebase !== null) {
+       const root=rollingWorkerContext.rollingWorkerCreationV1.rootPath;
+       validateRollingSessionMarker(root,rollingWorkerContext.rollingWorkerCreationV1.sessionId);
+       if (rebase === 'start') approved=git(root,['rev-parse','--verify','FETCH_HEAD']).trim() ===
+        git(root,['rev-parse','--verify',`refs/remotes/${rollingWorkerContext.configuration.mainline.remote}/${rollingWorkerContext.configuration.incrementRef}`]).trim();
+       else approved=gitResult(root,['rebase','--show-current-patch']).status === 0;
+      }
+     }
+    } catch (cause) {rollingCodex.emit('diagnostic',`worker approval withheld: ${cause instanceof Error ? cause.message : String(cause)}`);}
+    rollingCodex.respondToServer(request.id,{decision:approved ? 'accept' : 'decline'});
+   })().catch(cause=>rollingCodex.emit('diagnostic',`native approval response failed: ${cause instanceof Error ? cause.message : String(cause)}`));
+  });
   try {
    if (signal?.aborted) throw new Error('rolling campaign: operation interrupted');
    return await operation(rollingCodex);
@@ -331,8 +374,8 @@ export class RollingCampaignOperations {
     const campaignId = stringField(input,'campaign'),assignmentId = stringField(input,'assignment'),generation = stringField(input,'generation');
     await dispatchRollingWorker(this.rollingCampaignStore,rollingCodex,campaignId,assignmentId,generation);
     return collectRollingWorkerSubmission(this.rollingCampaignStore,rollingCodex,campaignId,assignmentId,generation,timeoutMs);
-   })};
-   case 'collect-submission': return {command,result:await this.native(signal,rollingCodex=>collectRollingWorkerSubmission(this.rollingCampaignStore,rollingCodex,stringField(input,'campaign'),stringField(input,'assignment'),stringField(input,'generation'),timeoutMs))};
+   },{campaignId:stringField(input,'campaign'),assignmentId:stringField(input,'assignment'),generation:stringField(input,'generation')})};
+   case 'collect-submission': return {command,result:await this.native(signal,rollingCodex=>collectRollingWorkerSubmission(this.rollingCampaignStore,rollingCodex,stringField(input,'campaign'),stringField(input,'assignment'),stringField(input,'generation'),timeoutMs),{campaignId:stringField(input,'campaign'),assignmentId:stringField(input,'assignment'),generation:stringField(input,'generation')})};
    case 'suspend-worker': return {command,result:await this.native(signal,rollingCodex=>suspendRollingWorker(this.rollingCampaignStore,rollingCodex,stringField(input,'campaign'),stringField(input,'assignment'),stringField(input,'generation'),stringArray(input.blockers),timeoutMs))};
    case 'retire-worker': return {command,result:await this.native(signal,rollingCodex=>retireRollingWorker(this.rollingCampaignStore,rollingCodex,stringField(input,'campaign'),stringField(input,'assignment'),stringField(input,'generation'),timeoutMs))};
    case 'request-review': return {command,result:await this.rollingCampaignStore.requestReview(stringField(input,'campaign'),stringField(input,'assignment'),stringField(input,'generation'),stringField(input,'revision'),stringField(input,'reviewer'),readRollingReviewerLoss(input.loss))};

@@ -6,7 +6,9 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import { execFileSync } from 'node:child_process';
-import { RollingCodex, type RollingNativeThread } from '../src/rolling-codex.js';
+import {readRollingWorkerRebaseApproval} from '../src/rolling-operations.js';
+import type {RollingWorkerDispatchAttached} from '../src/rolling-campaign-store.js';
+import { RollingCodex, type RollingNativeThread,type RollingNativeNotification } from '../src/rolling-codex.js';
 import { readRollingWorkerRetirementV1, type RollingWorkerRetirementV1, readRollingWorkerCreationV1, parseRollingWorkerCreation, identifyRollingWorkerCreation,
  readRollingWorkerResumptionV1, parseRollingWorkerResumption, type RollingWorkerResumptionV1, readRollingWorkerStopV1, parseRollingWorkerStop, type RollingWorkerStopV1, buildRollingWorkerInstructions, type RollingWorkerContext, initializeRollingWorker, observeRollingWorkerInitialization, type RollingWorkerCreationV1 } from '../src/rolling-worker.js';
 import { validateRollingSessionMarker, requireRollingSessionMarkerAbsent } from '../src/rolling-worktrees.js';
@@ -57,7 +59,7 @@ test('initialization uses the returned native thread directly and binds only its
 });
 
 // Traceability: verifies REQ-ROLLING-WORKERS
-test('worker instructions retain exact obligation, requirement, acceptance step, lease and QA selections', () => {
+test('worker instructions retain exact obligation, requirement, acceptance step, lease and QA selections', async () => {
  const rollingWorkerContext: RollingWorkerContext = {
   assignmentId:'assignment',
   rollingWorkerCreationV1:{schemaVersion:1,threadId:'thread',sessionId:'session',rootPath:'/fixture'},
@@ -76,6 +78,32 @@ test('worker instructions retain exact obligation, requirement, acceptance step,
   baseCommit:'c'.repeat(40),rejectedReview:null,incrementRepair:null,
   qa:{focused:[['node','--test','fixture.test.ts']],publication:[['npm','test']]}
  };
+ const rollingWorkerDispatchAttached:RollingWorkerDispatchAttached={id:'dispatch',threadId:'thread',instructions:'approved worker instruction',state:'ATTACHED',turnId:'turn'};
+ const command='/opt/homebrew/bin/bash -lc \'GIT_SEQUENCE_EDITOR="sed -i.bak -e s/^pick/edit/" git rebase --interactive --force-rebase FETCH_HEAD\'';
+ const requests:readonly {readonly params:Readonly<Record<string,unknown>>;readonly decision:'accept' | 'decline'}[]=[
+  {params:{cwd:'/fixture',threadId:'thread',turnId:'turn',command},decision:'accept'},
+  {params:{cwd:'/foreign',threadId:'thread',turnId:'turn',command},decision:'decline'},
+  {params:{cwd:'/fixture',threadId:'foreign',turnId:'turn',command},decision:'decline'},
+  {params:{cwd:'/fixture',threadId:'thread',turnId:'foreign',command},decision:'decline'},
+  {params:{cwd:'/fixture',threadId:'thread',turnId:'turn',command:command.replace('FETCH_HEAD','FETCH_HEAD; git reset --hard')},decision:'decline'}
+ ];
+ const approvalRequest={id:'approval',method:'item/commandExecution/requestApproval',params:requests[0]?.params};
+ assert.equal(readRollingWorkerRebaseApproval({...approvalRequest,method:'item/fileChange/requestApproval'},rollingWorkerContext,rollingWorkerDispatchAttached),null);
+ assert.equal(readRollingWorkerRebaseApproval({...approvalRequest,params:null},rollingWorkerContext,rollingWorkerDispatchAttached),null);
+ assert.equal(readRollingWorkerRebaseApproval(approvalRequest,rollingWorkerContext,null),null);
+ const inspectRollingWorkerContext:RollingWorkerContext={...rollingWorkerContext,lease:{...rollingWorkerContext.lease,
+  binding:{...rollingWorkerContext.lease.binding,execution:{...rollingWorkerContext.lease.binding.execution,operations:['inspect']}}}};
+ assert.equal(readRollingWorkerRebaseApproval(approvalRequest,inspectRollingWorkerContext,rollingWorkerDispatchAttached),null);
+ const rollingCodex=await RollingCodex.connect({executable:process.execPath,argv:[path.join(__dirname,'fixtures/rolling-codex-server.js')]});
+ try {
+  for (const request of requests) {
+   const answer=new Promise<RollingNativeNotification>(resolve=>rollingCodex.once('notification',resolve));
+   rollingCodex.once('serverRequest',rollingNativeServerRequest=>rollingCodex.respondToServer(rollingNativeServerRequest.id,
+    {decision:readRollingWorkerRebaseApproval(rollingNativeServerRequest,rollingWorkerContext,rollingWorkerDispatchAttached) === null ? 'decline' : 'accept'}));
+   await rollingCodex.request('approval',request.params);
+   assert.deepEqual((await answer).params,{decision:request.decision});
+  }
+ } finally {await rollingCodex.close();}
  const repairRollingWorkerContext: RollingWorkerContext = {...rollingWorkerContext,incrementRepair:{reference:'Inspect conflicting contract',
   rebase:{schemaVersion:1,incrementId:'increment',reviewedRevision:'d'.repeat(40),reviewedBase:'c'.repeat(40),integrationBase:'e'.repeat(40),
    result:{state:'TEXTUAL_CONFLICT',reviewedRevision:'d'.repeat(40),reviewedBase:'c'.repeat(40),integrationBase:'e'.repeat(40),originalCommit:'d'.repeat(40),conflictedPaths:['fixture.ts']}}}};

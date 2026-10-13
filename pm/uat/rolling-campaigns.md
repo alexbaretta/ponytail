@@ -130,6 +130,11 @@ Traceability: verifies REQ-ROLLING-WORKERS
 3. **Step WORKER-RESUME:** Acceptance contribution to [OBL-47](../plans/closed/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-47). Resume a suspended native session in its original
    checkout. Desktop visibility is recorded separately from execution support.
 
+4. **Step WORKER-REBASE-APPROVAL:** An active edit worker receives one-use
+   approval for its required documented semantic replay and existing rebase
+   continuation. Foreign cwd, thread or turn, unknown dispatch, inspection-only
+   scope, destructive command suffixes and file-change requests receive no approval.
+
 ## Arc ROLL-REVIEW: Iterate and integrate exact candidates
 
 Traceability: verifies REQ-ROLLING-REVIEW

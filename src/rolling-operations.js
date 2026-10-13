@@ -11,6 +11,7 @@ exports.readRollingCampaignInitializationV1 = readRollingCampaignInitializationV
 exports.parseRollingCampaignInitialization = parseRollingCampaignInitialization;
 exports.readRollingReviewerLoss = readRollingReviewerLoss;
 exports.projectRollingCoordinatorActions = projectRollingCoordinatorActions;
+exports.readRollingWorkerRebaseApproval = readRollingWorkerRebaseApproval;
 exports.withRollingCampaignOperations = withRollingCampaignOperations;
 exports.executeRollingCommand = executeRollingCommand;
 exports.runRollingOperationCli = runRollingOperationCli;
@@ -201,6 +202,30 @@ function projectRollingCoordinatorActions(rollingCoordinatorSnapshot) {
         decisions.push({ kind: 'closure', command: 'close' });
     return { snapshot: rollingCoordinatorSnapshot, decisions };
 }
+function readRollingWorkerRebaseApproval(rollingNativeServerRequest, rollingWorkerContext, rollingWorkerDispatch) {
+    const params = rollingNativeServerRequest.params;
+    if (rollingNativeServerRequest.method !== 'item/commandExecution/requestApproval'
+        || params === null || typeof params !== 'object' || Array.isArray(params)
+        || rollingWorkerDispatch?.state !== 'ATTACHED'
+        || !('cwd' in params) || params.cwd !== rollingWorkerContext.rollingWorkerCreationV1.rootPath
+        || !('threadId' in params) || params.threadId !== rollingWorkerContext.rollingWorkerCreationV1.threadId
+        || params.threadId !== rollingWorkerDispatch.threadId
+        || !('turnId' in params) || params.turnId !== rollingWorkerDispatch.turnId
+        || !('command' in params) || typeof params.command !== 'string'
+        || !rollingWorkerContext.lease.binding.execution.operations.includes('edit')
+        || rollingWorkerContext.lease.binding.execution.plannedPaths.length === 0)
+        return null;
+    const commands = {
+        start: 'GIT_SEQUENCE_EDITOR="sed -i.bak -e s/^pick/edit/" git rebase --interactive --force-rebase FETCH_HEAD',
+        continue: 'git rebase --continue'
+    };
+    for (const kind of ['start', 'continue']) {
+        const command = commands[kind];
+        if (params.command === command || ['/bin/bash', '/bin/zsh', '/bin/sh', '/opt/homebrew/bin/bash'].some(shell => params.command === `${shell} -lc '${command}'`))
+            return kind;
+    }
+    return null;
+}
 class RollingCampaignOperations {
     rollingCampaignStore;
     root;
@@ -251,12 +276,36 @@ class RollingCampaignOperations {
     reconcile(campaignId) { return this.rollingCampaignStore.reconcileCoordinator(campaignId); }
     status(campaignId) { return this.rollingCampaignStore.coordinatorSnapshot(campaignId); }
     async nextActions(campaignId) { return projectRollingCoordinatorActions(await this.status(campaignId)); }
-    async native(signal, operation) {
+    async native(signal, operation, worker = null) {
         const rollingCodex = await rolling_codex_js_1.RollingCodex.connect({ cwd: this.root });
         let cancellation = null;
         const abort = () => { cancellation ??= rollingCodex.interruptOwnedTurns(); };
         signal?.addEventListener('abort', abort, { once: true });
-        rollingCodex.on('serverRequest', request => rollingCodex.respondToServer(request.id, { decision: 'decline' }));
+        rollingCodex.on('serverRequest', request => {
+            void (async () => {
+                let approved = false;
+                try {
+                    if (worker !== null) {
+                        const rollingWorkerContext = await this.rollingCampaignStore.workerContext(worker.campaignId, worker.assignmentId, worker.generation);
+                        const rollingWorkerDispatch = await this.rollingCampaignStore.workerDispatch(worker.campaignId, worker.assignmentId, worker.generation);
+                        const rebase = readRollingWorkerRebaseApproval(request, rollingWorkerContext, rollingWorkerDispatch);
+                        if (rebase !== null) {
+                            const root = rollingWorkerContext.rollingWorkerCreationV1.rootPath;
+                            (0, rolling_worktrees_js_1.validateRollingSessionMarker)(root, rollingWorkerContext.rollingWorkerCreationV1.sessionId);
+                            if (rebase === 'start')
+                                approved = (0, rolling_integration_js_1.git)(root, ['rev-parse', '--verify', 'FETCH_HEAD']).trim() ===
+                                    (0, rolling_integration_js_1.git)(root, ['rev-parse', '--verify', `refs/remotes/${rollingWorkerContext.configuration.mainline.remote}/${rollingWorkerContext.configuration.incrementRef}`]).trim();
+                            else
+                                approved = (0, rolling_integration_js_1.gitResult)(root, ['rebase', '--show-current-patch']).status === 0;
+                        }
+                    }
+                }
+                catch (cause) {
+                    rollingCodex.emit('diagnostic', `worker approval withheld: ${cause instanceof Error ? cause.message : String(cause)}`);
+                }
+                rollingCodex.respondToServer(request.id, { decision: approved ? 'accept' : 'decline' });
+            })().catch(cause => rollingCodex.emit('diagnostic', `native approval response failed: ${cause instanceof Error ? cause.message : String(cause)}`));
+        });
         try {
             if (signal?.aborted)
                 throw new Error('rolling campaign: operation interrupted');
@@ -352,8 +401,8 @@ class RollingCampaignOperations {
                     const campaignId = stringField(input, 'campaign'), assignmentId = stringField(input, 'assignment'), generation = stringField(input, 'generation');
                     await (0, rolling_worker_js_1.dispatchRollingWorker)(this.rollingCampaignStore, rollingCodex, campaignId, assignmentId, generation);
                     return (0, rolling_worker_js_1.collectRollingWorkerSubmission)(this.rollingCampaignStore, rollingCodex, campaignId, assignmentId, generation, timeoutMs);
-                }) };
-            case 'collect-submission': return { command, result: await this.native(signal, rollingCodex => (0, rolling_worker_js_1.collectRollingWorkerSubmission)(this.rollingCampaignStore, rollingCodex, stringField(input, 'campaign'), stringField(input, 'assignment'), stringField(input, 'generation'), timeoutMs)) };
+                }, { campaignId: stringField(input, 'campaign'), assignmentId: stringField(input, 'assignment'), generation: stringField(input, 'generation') }) };
+            case 'collect-submission': return { command, result: await this.native(signal, rollingCodex => (0, rolling_worker_js_1.collectRollingWorkerSubmission)(this.rollingCampaignStore, rollingCodex, stringField(input, 'campaign'), stringField(input, 'assignment'), stringField(input, 'generation'), timeoutMs), { campaignId: stringField(input, 'campaign'), assignmentId: stringField(input, 'assignment'), generation: stringField(input, 'generation') }) };
             case 'suspend-worker': return { command, result: await this.native(signal, rollingCodex => (0, rolling_worker_js_1.suspendRollingWorker)(this.rollingCampaignStore, rollingCodex, stringField(input, 'campaign'), stringField(input, 'assignment'), stringField(input, 'generation'), stringArray(input.blockers), timeoutMs)) };
             case 'retire-worker': return { command, result: await this.native(signal, rollingCodex => (0, rolling_worker_js_1.retireRollingWorker)(this.rollingCampaignStore, rollingCodex, stringField(input, 'campaign'), stringField(input, 'assignment'), stringField(input, 'generation'), timeoutMs)) };
             case 'request-review': return { command, result: await this.rollingCampaignStore.requestReview(stringField(input, 'campaign'), stringField(input, 'assignment'), stringField(input, 'generation'), stringField(input, 'revision'), stringField(input, 'reviewer'), readRollingReviewerLoss(input.loss)) };

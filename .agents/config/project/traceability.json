@@ -1419,6 +1419,11 @@
       "class": "implementation",
       "path": "scripts/build-runtime.ts",
       "locator": "text"
+    },
+    {
+      "class": "issue",
+      "path": "pm/bugs/in_progress/2026-10-12-BUG-native_worker_rebase_approval.md",
+      "locator": "text"
     }
   ],
   "entities": [],

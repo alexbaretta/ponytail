@@ -86,6 +86,10 @@ Create/setup ordinary Git worktrees in the configured pool; reuse the lowest
 healthy available number with a fresh Codex session in that exact checkout.
 Use direct Codex control without requiring a Ponytail plugin. Setup repairs and
 verifies the session marker's ignore rule. Validate native attachment identity.
+Required semantic replay receives one-use native escalation approval only for
+the active frozen edit lease, retained actor, checkout and instruction turn,
+using the documented replay command against its freshly fetched campaign base.
+Unrelated commands and native file-change requests remain outside that authority.
 Retire a worker and its owned activity before release/reuse; inactive workers
 retain their original session/checkout. Preserve valid caches and user work.
 

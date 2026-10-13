@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-10-12-native_worker_rebase_approval",
+  "recorded_at": "2026-10-12T22:05:27-07:00",
+  "source_references": [
+    "pm/bugs/in_progress/2026-10-12-BUG-native_worker_rebase_approval.md"
+  ],
+  "context": {
+    "languages": [
+      "typescript"
+    ],
+    "frameworks": [],
+    "components": [
+      "native rolling worker approval adapter"
+    ],
+    "affected_boundaries": [
+      "frozen worker authorization to native command approval"
+    ],
+    "code_references": [
+      "src/rolling-operations.ts",
+      "tests/rolling-worker.test.ts"
+    ]
+  },
+  "observed_behavior": "Production adapter declines a required semantic rebase despite the explicitly authorized active edit lease.",
+  "expected_behavior": "The exact leased worker can replay its commit against the freshly fetched configured campaign base.",
+  "causal_mechanism": "Production unconditionally declined native approval requests while acceptance fixtures supplied a separate narrow approval handler.",
+  "anti_pattern": {
+    "structural_description": "Acceptance tests provide authorization behavior absent from the production native transport adapter.",
+    "why_it_fails": "Fixture success conceals the operational denial encountered by real workers."
+  },
+  "correct_pattern": {
+    "required_invariant": "Native approval must preserve current lease and exact actor/turn/checkout scope while permitting the required authorized replay operation.",
+    "implementation_description": "Resolve current worker context and dispatch from the durable store; validate its marker and campaign base; approve only documented exact replay commands once."
+  },
+  "applicability_conditions": [
+    "Required worker Git replay crosses the linked checkout sandbox boundary."
+  ],
+  "known_non_matches": [
+    "Foreign actors, unknown turns, inspection-only leases and unrelated commands do not inherit rebase authority."
+  ],
+  "confirmation_evidence": [
+    "Native controlled protocol accepts exact leased replay and rejects mismatches and command injection."
+  ],
+  "regression_proofs": [
+    "tests/rolling-worker.test.ts: worker instructions retain exact obligation, requirement, acceptance step, lease and QA selections"
+  ]
+}
