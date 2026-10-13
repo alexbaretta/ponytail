@@ -1061,7 +1061,7 @@ async function observeRollingWorkerTurn(t: TestContext, rollingCodex: RollingCod
   }
 }
 
-export async function runRollingWorkerScenario(t: TestContext, mode: 'protocol' | 'native', operation: 'attachment' | 'instructions' | 'suspension' | 'resumption' | 'recovery' | 'collection' | 'code' | 'inspection', rework = false, integrationRepair = false, retirement = false): Promise<void> {
+export async function runRollingWorkerScenario(t: TestContext, mode: 'protocol' | 'native', operation: 'attachment' | 'instructions' | 'suspension' | 'resumption' | 'recovery' | 'collection' | 'code' | 'inspection' | 'failed-turn', rework = false, integrationRepair = false, retirement = false): Promise<void> {
   assert.ok(!integrationRepair || mode === 'protocol' && operation === 'collection');
   assert.ok(!rework || mode === 'native' && operation === 'code', 'correction Arc requires the real native code worker');
   const repositoryRoot = path.resolve(__dirname, '../..');
@@ -1671,6 +1671,29 @@ export async function runRollingWorkerScenario(t: TestContext, mode: 'protocol' 
     assert.deepEqual(recoveredReviews.find(review => review.request.id === correctedRollingStoredReview.request.id)?.outcome,correctedRejectedRollingReviewOutcomeV1);
     assert.equal((await rollingCampaignStore.reviewReplacement('worker-fixture',correctedRollingStoredReview.request.id))?.replacementReviewId,recoveryRollingStoredReview.request.id);
   }
+  if (operation === 'failed-turn') {
+    assert.equal(mode,'protocol');
+    assert.ok(rollingWorkerDispatchAttached);
+    await assert.rejects(suspendRollingWorker(rollingCampaignStore,rollingCodex,'worker-fixture',rollingAllocationResult.assignment.id,generation,[]),/suspension requires/);
+    const unfinished = 'export const unfinished: number = 7;\n';
+    fs.writeFileSync(path.join(rollingAllocationResult.worktree.rootPath,'unfinished.ts'),unfinished);
+    await rollingCodex.request('fixture-turn',{turnId:rollingWorkerDispatchAttached.turnId,status:'failed',text:'Selected model is at capacity.'});
+    assert.equal((await suspendRollingWorker(rollingCampaignStore,rollingCodex,'worker-fixture',rollingAllocationResult.assignment.id,generation,[])).state,'INACTIVE');
+    const rollingWorkerStopV1 = await rollingCampaignStore.workerStop('worker-fixture',rollingAllocationResult.assignment.id,generation);
+    assert.equal(rollingWorkerStopV1?.turn?.status,'failed');
+    assert.equal(rollingWorkerStopV1?.turn?.id,rollingWorkerDispatchAttached.turnId);
+    assert.ok(rollingWorkerStopV1?.checkpoint.gitStatus.includes('unfinished.ts'));
+    const resumedRollingAllocationResult = await rollingCampaignStore.allocate('worker-fixture',rollingGraph.digest);
+    assert.ok(resumedRollingAllocationResult.assignment && resumedRollingAllocationResult.actionId && resumedRollingAllocationResult.worktree);
+    assert.equal(resumedRollingAllocationResult.assignment.id,rollingAllocationResult.assignment.id);
+    assert.notEqual(resumedRollingAllocationResult.assignment.generation,generation);
+    assert.equal(resumedRollingAllocationResult.worktree.rootPath,rollingAllocationResult.worktree.rootPath);
+    const resumedRollingSessionAttachment = await resumeRollingWorker(rollingCampaignStore,rollingCodex,'worker-fixture',resumedRollingAllocationResult.actionId,resumedRollingAllocationResult.assignment.generation);
+    assert.equal(resumedRollingSessionAttachment.sessionId,rollingWorkerInitialization.rollingWorkerCreationV1.sessionId);
+    assert.equal(fs.readFileSync(path.join(rollingAllocationResult.worktree.rootPath,'unfinished.ts'),'utf8'),unfinished);
+    assert.deepEqual(await new RollingCampaignStore(pool,projectId).workerStop('worker-fixture',rollingAllocationResult.assignment.id,generation),rollingWorkerStopV1);
+    return;
+  }
   if ((operation === 'suspension' || operation === 'resumption')) {
     assert.ok(rollingWorkerDispatchAttached);
     const unfinished = 'export const unfinished: number = 7;\n';
@@ -1827,6 +1850,11 @@ test('worker provisioning fences creation and atomically attaches the native ide
 // Traceability: verifies REQ-ROLLING-WORKERS
 // Traceability: verifies REQ-ROLLING-SCHEDULING
 // Traceability: verifies REQ-ROLLING-STATE
+// Traceability: verifies REQ-ROLLING-WORKERS
+// Traceability: verifies REQ-ROLLING-STATE
+test('failed native turn resumes the original worker without a fabricated obligation blocker',
+ t=>runRollingWorkerScenario(t,'protocol','failed-turn'));
+
 test('worker suspension observes stopped activity and frees capacity while retaining dirty ownership',
  t => runRollingWorkerScenario(t, 'protocol', 'suspension'));
 

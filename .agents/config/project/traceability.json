@@ -1444,6 +1444,11 @@
       "class": "issue",
       "path": "pm/bugs/closed/2026-10-12-BUG-rolling_command_hook_classification.md",
       "locator": "text"
+    },
+    {
+      "class": "issue",
+      "path": "pm/bugs/in_progress/2026-10-12-BUG-failed_worker_resumption.md",
+      "locator": "text"
     }
   ],
   "entities": [],

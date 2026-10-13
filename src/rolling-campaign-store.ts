@@ -2032,8 +2032,9 @@ export class RollingCampaignStore {
       requireState(rollingStoredAssignment.state === 'WORKING' || rollingStoredAssignment.state === 'INACTIVE' || rollingStoredAssignment.state === 'REWORK','worker is not eligible for suspension');
       const existing = await this.workerStopValue(poolClient,campaignId,id,generation);
       requireState(blockers.length > 0 || rollingStoredAssignment.state === 'REWORK'
+        || rollingStoredAssignment.state === 'WORKING' && checkedRollingWorkerStopV1.turn?.status === 'failed'
         || rollingStoredAssignment.state === 'INACTIVE' && rollingStoredAssignment.blockers.length === 0 && existing !== null,
-        'suspension requires obligation blockers unless returning rejected work');
+        'suspension requires obligation blockers unless returning rejected work or an observed failed turn');
       const rollingWorkerCreationV1 = await this.attachedWorkerIdentity(poolClient,campaignId,rollingStoredAssignment);
       requireState(checkedRollingWorkerStopV1.threadId === rollingWorkerCreationV1.threadId
         && checkedRollingWorkerStopV1.sessionId === rollingWorkerCreationV1.sessionId,'stop observation differs from attached native worker');

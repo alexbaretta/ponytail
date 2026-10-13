@@ -97,6 +97,9 @@ Reject an unrelated base or an unintegrated candidate revision used as its own
 base to conceal changes.
 Retire a worker and its owned activity before release/reuse; inactive workers
 retain their original session/checkout. Preserve valid caches and user work.
+An observed failed native instruction turn may be suspended without a fabricated
+obligation dependency. Retain its original idle actor and checkout, including an
+unfinished rebase, and resume through the same completion-first lifecycle.
 
 ## REQ-ROLLING-REVIEW: Reviewed incremental integration
 

@@ -270,6 +270,11 @@ Advance the coordinator increment independently after the worker's finalized
 proof. Its original ancestor base remains admissible without changing the
 candidate or proof. An unrelated Git root and the unintegrated candidate itself as a concealed
 base remain rejected; immutable lease/path/freshness checks still apply.
+For a native instruction failure without an obligation dependency, suspend with
+empty blockers only after observing that exact failed turn and idle original
+actor. A completed unreviewed turn does not qualify. Resumption retains session,
+checkout and unfinished work, renews the generation, and preserves the failed
+stop record across restart.
 
 ### Acceptance ROLL-BOUND-ACCEPTANCE
 
