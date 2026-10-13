@@ -31,7 +31,32 @@ or native parallel worker activity. Keep this plan active until that evidence
 is obtained; fix any further confirmed Ponytail blocker rather than reporting
 delivery as completion.
 
-OBL-RESTART-2: IN_PROGRESS. Expose retained increment remote observation under
+OBL-RESTART-2: DISCHARGED. Expose retained increment remote observation under
 REQ-ROLLING-PUBLICATION so a failed local fast-forward can be settled without
 pushing or discarding coordinator source. Verify real Git and PostgreSQL
 PUSHING-to-REBASE_REQUIRED receipt and unchanged local/remote source.
+
+## Increment observation acceptance
+
+Ponytail commit `7133238` exposes stopped original increment observation.
+Focused proof: 21 operation tests and the real Git/PostgreSQL failed-FF
+regression pass. Final `npm test` passes 951 tests, zero failures
+(`tmp/restart-observe-final-full.log`, ignored); TSTS checks 1,574 files,
+traceability checks 980 relationships; rule copies and versions pass.
+Read-only adversarial review accepts the explicit coordinator cessation
+attestation boundary. Observation schema validates.
+
+Actual GWEN observation exited zero for increment
+`67dcf2ca-8564-40b3-8d86-f298bc5b43d5`, candidate
+`47a6963dd927eaa859101636d7615ba566db8d25`, remote
+`a3a81afb876c2b217c277eca570c98eba922362a`, recording
+REBASE_REQUIRED with source unchanged. Its original failed integration
+command had genuinely terminated before any push. This discharges
+OBL-RESTART-2; it does not discharge reset or parallel restart.
+
+Actual same-request reset subsequently failed at configured GWEN resource
+cleanup after 335,768 ms: observability used `/var/run/docker.sock` instead of
+the target Colima daemon. The client session owns the canonical adapter fix
+and retry of request `e3235fab-8e71-419a-b079-59823d2ba0fa`.
+Reset COMPLETE, fresh initialization and native parallel overlap remain
+unverified; this plan remains IN_PROGRESS.
