@@ -333,3 +333,18 @@ CLI help error-format amendment: select an unknown command, including retired
 matching root/chapter `-h` page and performs no project mutations. Invalid
 index arguments show subcommand help. At 40, 80 and 120 columns, help preserves
 its words and indentation, and every output line fits the selected width.
+
+## ACC-ROLLING-READONLY-COLLECTION
+
+Traceability: verifies REQ-ROLLING-READONLY-COLLECTION
+Obligation: OBL-RECOVERY-1. Arc: ROLLING-READONLY-COLLECTION.
+
+1. Retain an original completed worker and its valid exact-candidate submission
+   in an idle owning transport that rejects writer acquisition from observers.
+2. Collect with native read-only identity/turn access and a fresh coordinator-
+   attested owning-transport observation when the observer reports notLoaded.
+   Expect the same actor, generation, candidate and verified submission; no
+   resume, new turn or interruption occurs.
+3. Repeat with active/unknown activity, stale observation, wrong actor/checkout/
+   turn/generation and completed blocker prose. Expect actionable refusal with
+   ownership and candidate preserved; no discharge or replacement is recorded.

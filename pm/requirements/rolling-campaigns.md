@@ -217,3 +217,18 @@ Stored frozen lease contribution: [OBL-110](../plans/closed/2026-10-10-rolling-o
 Frozen worker submission contribution: [OBL-111](../plans/closed/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-111), owned by REQ-ROLLING-GRAPH, REQ-ROLLING-STATE and REQ-ROLLING-WORKERS. Its canonical criterion is in the obligation document.
 
 Bound certificate acceptance contribution: [OBL-112](../plans/closed/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-112), owned by REQ-ROLLING-GRAPH. Its canonical criterion is in the obligation document.
+
+## REQ-ROLLING-READONLY-COLLECTION: Read-only result collection
+
+Atomic obligation: OBL-RECOVERY-1. Collect the recorded original worker turn
+without resuming its thread, acquiring a writer, or interrupting foreign
+activity. Verify native thread/session/physical checkout identity, current
+assignment generation and the exact recorded turn. Require known idle activity
+and a completed, valid submission before existing submission checks run.
+An unloaded observer is not proof of idle activity. Where the worker belongs to
+another transport, the authorized coordinator may provide a fresh owning-
+transport observation of that same actor and latest turn; contradictory,
+stale, active or mismatched observations are rejected. Actual dispatch retains
+writer acquisition. Completed blocker prose is not a discharge proposal.
+Discharge: ACC-ROLLING-READONLY-COLLECTION demonstrates collection while another
+transport retains its idle writer and rejection of every invalid boundary above.

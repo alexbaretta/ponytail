@@ -871,6 +871,22 @@
       "versions": ["V1"],
       "supportedReadVersions": ["V1"],
       "supportedDowngradeVersions": []
+    },
+    {
+      "id": "rolling-worker-owner-observation",
+      "implementation": {
+        "workspace": "ponytail",
+        "module": "src/rolling-worker.ts",
+        "readerRegistryExport": "RollingWorkerOwnerObservationReaders"
+      },
+      "currentVersion": "V1",
+      "versions": [
+        "V1"
+      ],
+      "supportedReadVersions": [
+        "V1"
+      ],
+      "supportedDowngradeVersions": []
     }
   ]
 }

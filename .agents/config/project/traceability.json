@@ -162,6 +162,10 @@
     {
       "id": "REQ-FAST-SEMANTIC-REBASE",
       "sourcePath": "pm/requirements/fast-semantic-rebase.md"
+    },
+    {
+      "id": "REQ-ROLLING-READONLY-COLLECTION",
+      "sourcePath": "pm/requirements/rolling-campaigns.md"
     }
   ],
   "artifacts": [
@@ -1458,6 +1462,11 @@
     {
       "class": "issue",
       "path": "pm/bugs/in_progress/2026-10-13-BUG-native_reviewer_empty_thread.md",
+      "locator": "text"
+    },
+    {
+      "class": "plan",
+      "path": "pm/plans/in_progress/2026-10-13-rolling-recovery/plan.md",
       "locator": "text"
     }
   ],

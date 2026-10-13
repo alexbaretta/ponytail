@@ -6,7 +6,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.RollingWorkerRetirementReaders = exports.RollingWorkerResumptionReaders = exports.RollingWorkerStopReaders = exports.RollingWorkerCreationReaders = void 0;
+exports.RollingWorkerRetirementReaders = exports.RollingWorkerResumptionReaders = exports.RollingWorkerStopReaders = exports.RollingWorkerOwnerObservationReaders = exports.RollingWorkerCreationReaders = void 0;
 exports.readRollingWorkerCreationV1 = readRollingWorkerCreationV1;
 exports.parseRollingWorkerCreation = parseRollingWorkerCreation;
 exports.identifyRollingWorkerCreation = identifyRollingWorkerCreation;
@@ -18,6 +18,7 @@ exports.recoverRollingWorkerCreation = recoverRollingWorkerCreation;
 exports.buildRollingWorkerInstructions = buildRollingWorkerInstructions;
 exports.dispatchRollingWorker = dispatchRollingWorker;
 exports.collectRollingWorkerSubmission = collectRollingWorkerSubmission;
+exports.readRollingWorkerOwnerObservationV1 = readRollingWorkerOwnerObservationV1;
 exports.readRollingWorkerStopV1 = readRollingWorkerStopV1;
 exports.parseRollingWorkerStop = parseRollingWorkerStop;
 exports.readRollingWorkerResumptionV1 = readRollingWorkerResumptionV1;
@@ -160,24 +161,55 @@ async function dispatchRollingWorker(rollingCampaignStore, rollingCodex, campaig
     const rollingTurnStarted = await rollingCodex.startTurn(rollingNativeThread.thread.id, instructions);
     return rollingCampaignStore.attachWorkerDispatch(campaignId, assignmentId, generation, rollingWorkerDispatchStarted.id, rollingTurnStarted.turn.id);
 }
-async function collectRollingWorkerSubmission(rollingCampaignStore, rollingCodex, campaignId, assignmentId, generation, timeoutMs = 60000) {
+async function collectRollingWorkerSubmission(rollingCampaignStore, rollingCodex, campaignId, assignmentId, generation, timeoutMs = 60000, rollingWorkerOwnerObservationV1 = null) {
     const rollingWorkerCreationV1 = await rollingCampaignStore.workerIdentity(campaignId, assignmentId, generation);
     const rollingWorkerDispatch = await rollingCampaignStore.workerDispatch(campaignId, assignmentId, generation);
     requireWorker(rollingWorkerDispatch?.state === 'ATTACHED', 'submission requires its known original instruction turn');
     requireWorker(rollingWorkerDispatch.threadId === rollingWorkerCreationV1.threadId, 'instruction turn differs from original attached worker');
-    const rollingNativeThread = await rollingCodex.resumeThread(rollingWorkerCreationV1.threadId, rollingWorkerCreationV1.rootPath);
-    requireWorker(JSON.stringify(identifyRollingWorkerCreation(rollingNativeThread, rollingWorkerCreationV1.rootPath)) === JSON.stringify(rollingWorkerCreationV1), 'submission actor differs from original attached worker');
+    const observedRollingWorkerCreationV1 = readRollingWorkerCreationV1({ schemaVersion: 1, ...await rollingCodex.readThreadIdentity(rollingWorkerCreationV1.threadId, rollingWorkerCreationV1.rootPath) });
+    requireWorker(JSON.stringify(observedRollingWorkerCreationV1) === JSON.stringify(rollingWorkerCreationV1), 'submission actor differs from original attached worker');
     let rollingNativeTurn = await rollingCodex.readTurn(rollingWorkerDispatch.threadId, rollingWorkerDispatch.turnId);
-    if (rollingNativeTurn.status === 'inProgress')
-        rollingNativeTurn = await rollingCodex.waitForTurn(rollingWorkerDispatch.threadId, rollingWorkerDispatch.turnId, timeoutMs);
+    const deadline = Date.now() + timeoutMs;
+    while (rollingNativeTurn.status === 'inProgress' && Date.now() < deadline) {
+        await new Promise(resolve => setTimeout(resolve, Math.min(250, Math.max(1, deadline - Date.now()))));
+        rollingNativeTurn = await rollingCodex.readTurn(rollingWorkerDispatch.threadId, rollingWorkerDispatch.turnId);
+    }
     requireWorker(rollingNativeTurn.status === 'completed', 'submission instruction turn did not complete');
+    const latestRollingNativeTurn = await rollingCodex.readLatestTurn(rollingWorkerDispatch.threadId);
+    requireWorker(latestRollingNativeTurn.id === rollingWorkerDispatch.turnId && latestRollingNativeTurn.status === 'completed', 'another native turn follows the original instruction; preserve active ownership');
     const rollingNativeThreadActivity = await rollingCodex.readThreadActivity(rollingWorkerDispatch.threadId);
-    requireWorker(rollingNativeThreadActivity.status === 'idle', 'submission actor is not known idle; preserve active ownership');
+    if (rollingWorkerOwnerObservationV1 !== null) {
+        const checkedRollingWorkerOwnerObservationV1 = readRollingWorkerOwnerObservationV1(rollingWorkerOwnerObservationV1);
+        requireWorker(checkedRollingWorkerOwnerObservationV1.threadId === rollingWorkerCreationV1.threadId
+            && checkedRollingWorkerOwnerObservationV1.sessionId === rollingWorkerCreationV1.sessionId
+            && checkedRollingWorkerOwnerObservationV1.rootPath === rollingWorkerCreationV1.rootPath
+            && checkedRollingWorkerOwnerObservationV1.turnId === rollingWorkerDispatch.turnId
+            && checkedRollingWorkerOwnerObservationV1.generation === generation, 'owning observation differs from original assignment');
+        const age = Date.now() - Date.parse(checkedRollingWorkerOwnerObservationV1.observedAt);
+        requireWorker(age >= 0 && age <= 60000, 'owning observation is stale or future dated');
+        requireWorker(checkedRollingWorkerOwnerObservationV1.status === 'idle', 'owning transport reports active worker');
+    }
+    requireWorker(rollingNativeThreadActivity.status === 'idle'
+        || rollingNativeThreadActivity.status === 'notLoaded' && rollingWorkerOwnerObservationV1 !== null, 'submission actor is not known idle; supply a fresh owning-transport observation when notLoaded; preserve active ownership');
     const finalText = rollingNativeTurn.items.filter(item => item.type === 'agentMessage').at(-1)?.text;
     requireWorker(finalText, 'worker turn has no final submission');
-    const rollingWorkerSubmissionV1 = (0, rolling_worker_submission_js_1.parseRollingWorkerSubmission)(finalText);
+    let rollingWorkerSubmissionV1;
+    try {
+        rollingWorkerSubmissionV1 = (0, rolling_worker_submission_js_1.parseRollingWorkerSubmission)(finalText);
+    }
+    catch (cause) {
+        throw new Error(`rolling worker: completed turn has no valid submission JSON; retain the original worker for correction: ${cause instanceof Error ? cause.message : String(cause)}`);
+    }
     return rollingCampaignStore.submit(campaignId, assignmentId, generation, rollingWorkerSubmissionV1);
 }
+function readRollingWorkerOwnerObservationV1(value) {
+    const input = stopFields(value, ['schemaVersion', 'threadId', 'sessionId', 'rootPath', 'turnId', 'generation', 'status', 'observedAt']);
+    requireWorker(input.schemaVersion === 1 && (input.status === 'idle' || input.status === 'active'), 'invalid owning observation version or status');
+    const rootPath = identity(input.rootPath), observedAt = identity(input.observedAt);
+    requireWorker(node_path_1.default.isAbsolute(rootPath) && node_path_1.default.normalize(rootPath) === rootPath && Number.isFinite(Date.parse(observedAt)), 'invalid owning observation checkout or timestamp');
+    return { schemaVersion: 1, threadId: identity(input.threadId), sessionId: identity(input.sessionId), rootPath, turnId: identity(input.turnId), generation: identity(input.generation), status: input.status, observedAt };
+}
+exports.RollingWorkerOwnerObservationReaders = { V1: readRollingWorkerOwnerObservationV1 };
 function isStopRecord(value) {
     return value !== null && typeof value === 'object' && !Array.isArray(value);
 }

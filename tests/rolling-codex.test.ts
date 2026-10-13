@@ -41,13 +41,10 @@ test('native protocol binds checkout and session, preserves numbers and observes
   await assert.rejects(rollingCodex.readThreadActivity('unsupported-activity'),/unsupported native thread activity/);
   await rollingCodex.request('fixture-activity',{active:true});
   assert.equal((await rollingCodex.readThreadActivity(started.thread.id)).status,'active');
-  try {
-    await assert.rejects(rollingCodex.close(),(cause:unknown) => cause instanceof Error
-      && cause.message.includes('observe terminal turns') && cause.message.includes(JSON.stringify([[started.thread.id,null]])));
-  } finally {
-    await rollingCodex.request('fixture-activity',{active:false});
-    assert.equal((await rollingCodex.readThreadActivity(started.thread.id)).status,'idle');
-  }
+  await rollingCodex.interruptOwnedTurns();
+  assert.equal((await rollingCodex.readThreadActivity(started.thread.id)).status,'active');
+  await rollingCodex.request('fixture-activity',{active:false});
+  assert.equal((await rollingCodex.readThreadActivity(started.thread.id)).status,'idle');
   await assert.rejects(rollingCodex.resumeThread('wrong-thread', root),
     (cause: unknown) => cause instanceof RollingNativeResponseError && cause.nativeResult !== undefined);
   for (const status of ['completed', 'failed', 'interrupted']) {
@@ -68,6 +65,17 @@ test('native protocol binds checkout and session, preserves numbers and observes
   await rollingCodex.interruptTurn(started.thread.id, pending.turn.id);
   assert.equal((await rollingCodex.waitForTurn(started.thread.id, pending.turn.id)).status, 'interrupted');
   await rollingCodex.archiveThread(started.thread.id);
+});
+
+// Traceability: verifies REQ-ROLLING-READONLY-COLLECTION
+test('passive started notifications and history reads never acquire foreign turn ownership',async testContext => {
+  const {root,rollingCodex} = await fixture(testContext);
+  const rollingNativeThread = await rollingCodex.startThread(root);
+  await rollingCodex.request('fixture-foreign-start',{});
+  assert.equal((await rollingCodex.readTurn(rollingNativeThread.thread.id,'foreign-turn')).status,'inProgress');
+  await rollingCodex.interruptOwnedTurns();
+  assert.equal((await rollingCodex.readTurn(rollingNativeThread.thread.id,'foreign-turn')).status,'inProgress');
+  await rollingCodex.close();
 });
 
 // Traceability: verifies REQ-ROLLING-WORKERS

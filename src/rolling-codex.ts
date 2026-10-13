@@ -217,7 +217,9 @@ export class RollingCodex extends EventEmitter<RollingCodexEvents> {
       const params = nativeRecord(message.params);
       const threadId = nativeString(params.threadId, 'turn thread identity');
       const turnId = nativeString(nativeRecord(params.turn).id, 'turn identity');
-      if (method === 'turn/started') this.activeTurns.set(threadId, turnId);
+      if (method === 'turn/started') {
+        if (this.activeTurns.has(threadId)) this.activeTurns.set(threadId, turnId);
+      }
       else {
         this.completedTurns.set(threadId, completedTurn(params.turn));
         if (this.activeTurns.get(threadId) === turnId) this.activeTurns.delete(threadId);
@@ -265,12 +267,28 @@ export class RollingCodex extends EventEmitter<RollingCodexEvents> {
     return threadIdentity(await this.request('thread/resume', { threadId, cwd, excludeTurns: true }), cwd, threadId);
   }
 
+  // Traceability: implements REQ-ROLLING-READONLY-COLLECTION
+  async readThreadIdentity(threadId:string,cwd:string):Promise<{readonly threadId:string;readonly sessionId:string;readonly rootPath:string}> {
+    checkoutRoot(cwd);
+    const result=nativeRecord(await this.request('thread/read',{threadId,includeTurns:false}));
+    const thread=nativeRecord(result.thread);
+    requireProtocol(thread.id===threadId && thread.cwd===cwd,'observed thread differs from designated actor or checkout');
+    return {threadId,sessionId:nativeString(thread.sessionId,'observed session identity'),rootPath:cwd};
+  }
+
   async startTurn(threadId: string, prompt: string): Promise<RollingTurnStarted> {
     requireProtocol(threadId.length > 0 && prompt.length > 0, 'turn requires thread and prompt');
-    const result = nativeRecord(await this.request('turn/start', { threadId, input: [{ type: 'text', text: prompt, text_elements: [] }] }));
-    const turnId = nativeString(nativeRecord(result.turn).id, 'turn identity');
-    if (this.completedTurns.get(threadId)?.id !== turnId) this.activeTurns.set(threadId, turnId);
-    return { turn: { id: turnId } };
+    requireProtocol(!this.activeTurns.has(threadId), 'thread already has an owned turn');
+    this.activeTurns.set(threadId, null);
+    try {
+      const result = nativeRecord(await this.request('turn/start', { threadId, input: [{ type: 'text', text: prompt, text_elements: [] }] }));
+      const turnId = nativeString(nativeRecord(result.turn).id, 'turn identity');
+      if (this.completedTurns.get(threadId)?.id !== turnId) this.activeTurns.set(threadId, turnId);
+      return { turn: { id: turnId } };
+    } catch (cause) {
+      if (cause instanceof RollingNativeRpcError && this.activeTurns.get(threadId) === null) this.activeTurns.delete(threadId);
+      throw cause;
+    }
   }
 
   interruptTurn(threadId: string, turnId: string): Promise<unknown> { return this.request('turn/interrupt', { threadId, turnId }); }
@@ -298,11 +316,18 @@ export class RollingCodex extends EventEmitter<RollingCodexEvents> {
     throw new Error('rolling Codex: assigned turn is absent from native history');
   }
 
+  // Traceability: implements REQ-ROLLING-READONLY-COLLECTION
+  async readLatestTurn(threadId:string):Promise<RollingNativeTurn> {
+    const result=nativeRecord(await this.request('thread/turns/list',{threadId,cursor:null,limit:1,sortDirection:'desc',itemsView:'full'}));
+    requireProtocol(Array.isArray(result.data)&&result.data.length===1,'original worker has no observed latest turn');
+    return this.observeNativeTurn(threadId,completedTurn(result.data[0]));
+  }
+
   private observeNativeTurn(threadId:string,rollingNativeTurn:RollingNativeTurn):RollingNativeTurn {
     if (rollingNativeTurn.status === 'inProgress') {
       const completedRollingNativeTurn = this.completedTurns.get(threadId);
       if (completedRollingNativeTurn?.id === rollingNativeTurn.id) return completedRollingNativeTurn;
-      this.activeTurns.set(threadId,rollingNativeTurn.id);
+      if (this.activeTurns.has(threadId)) this.activeTurns.set(threadId,rollingNativeTurn.id);
     }
     else {
       requireProtocol(['completed','failed','interrupted'].includes(rollingNativeTurn.status),'unsupported persisted turn status');
@@ -327,7 +352,6 @@ export class RollingCodex extends EventEmitter<RollingCodexEvents> {
     const status = nativeString(nativeRecord(thread.status).type,'native thread activity');
     switch (status) {
       case 'active':
-        if (!this.activeTurns.has(threadId)) this.activeTurns.set(threadId,null);
         return {threadId,status};
       case 'idle':
         if (this.activeTurns.get(threadId) === null) this.activeTurns.delete(threadId);

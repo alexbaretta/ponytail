@@ -1123,7 +1123,7 @@ async function observeRollingWorkerTurn(t: TestContext, rollingCodex: RollingCod
   }
 }
 
-export async function runRollingWorkerScenario(t: TestContext, mode: 'protocol' | 'native', operation: 'attachment' | 'instructions' | 'suspension' | 'resumption' | 'recovery' | 'collection' | 'code' | 'inspection' | 'failed-turn', rework = false, integrationRepair = false, retirement = false, startReviewer = false): Promise<void> {
+export async function runRollingWorkerScenario(t: TestContext, mode: 'protocol' | 'native', operation: 'attachment' | 'instructions' | 'suspension' | 'resumption' | 'recovery' | 'collection' | 'code' | 'inspection' | 'failed-turn', rework = false, integrationRepair = false, retirement = false, startReviewer = false, readonlyCollection=false): Promise<void> {
   assert.ok(!integrationRepair || mode === 'protocol' && operation === 'collection');
   assert.ok(!rework || mode === 'native' && operation === 'code', 'correction Arc requires the real native code worker');
   const repositoryRoot = path.resolve(__dirname, '../..');
@@ -1313,7 +1313,8 @@ export async function runRollingWorkerScenario(t: TestContext, mode: 'protocol' 
       await rollingCodex.request('fixture-activity',{active:true});
       assert.equal((await recoverRollingWorkerCreation(restartedRollingCampaignStore,rollingCodex,'worker-fixture',rollingAllocationResult.actionId,generation)).state,'active');
       assert.equal((await restartedRollingCampaignStore.status('worker-fixture')).assignments[0]?.state,'RESERVED');
-      await assert.rejects(rollingCodex.close(),/observe terminal turns/);
+      await rollingCodex.interruptOwnedTurns();
+      assert.equal((await rollingCodex.readThreadActivity(rollingWorkerCreationV1.threadId)).status,'active');
       await rollingCodex.request('fixture-activity',{active:false});
     } else {
       await rollingCodex.close();
@@ -1559,6 +1560,29 @@ export async function runRollingWorkerScenario(t: TestContext, mode: 'protocol' 
     await assert.rejects(collectRollingWorkerSubmission(rollingCampaignStore,rollingCodex,'worker-fixture',rollingAllocationResult.assignment.id,generation),/attached session/);
     await rollingCodex.request('fixture-turn',{turnId:rollingWorkerDispatchAttached.turnId,status:'completed',text});
     await assert.rejects(suspendRollingWorker(rollingCampaignStore,rollingCodex,'worker-fixture',rollingAllocationResult.assignment.id,generation,[]),/obligation blockers/);
+    if(readonlyCollection) {
+      await rollingCodex.request('fixture-observer-only',{});
+      await assert.rejects(rollingCodex.resumeThread(rollingWorkerContext.rollingWorkerCreationV1.threadId,rootPath),/active writer/);
+      await assert.rejects(collectRollingWorkerSubmission(rollingCampaignStore,rollingCodex,'worker-fixture',rollingAllocationResult.assignment.id,generation),/not known idle/);
+      const rollingWorkerOwnerObservationV1:import('../src/rolling-worker.js').RollingWorkerOwnerObservationV1={schemaVersion:1,
+        threadId:rollingWorkerContext.rollingWorkerCreationV1.threadId,sessionId:rollingSessionAttachment.sessionId,rootPath,
+        turnId:rollingWorkerDispatchAttached.turnId,generation,status:'idle',observedAt:new Date().toISOString()};
+      for(const status of ['active'] as const) await assert.rejects(collectRollingWorkerSubmission(rollingCampaignStore,rollingCodex,'worker-fixture',rollingAllocationResult.assignment.id,generation,60000,{...rollingWorkerOwnerObservationV1,status}),/reports active/);
+      for(const observedAt of [new Date(Date.now()-120000).toISOString(),new Date(Date.now()+120000).toISOString()])
+        await assert.rejects(collectRollingWorkerSubmission(rollingCampaignStore,rollingCodex,'worker-fixture',rollingAllocationResult.assignment.id,generation,60000,{...rollingWorkerOwnerObservationV1,observedAt}),/stale or future/);
+      for(const field of ['threadId','sessionId','turnId','generation'] as const)
+        await assert.rejects(collectRollingWorkerSubmission(rollingCampaignStore,rollingCodex,'worker-fixture',rollingAllocationResult.assignment.id,generation,60000,{...rollingWorkerOwnerObservationV1,[field]:'foreign'}),/differs from original/);
+      await rollingCodex.request('fixture-activity',{active:true});
+      await assert.rejects(collectRollingWorkerSubmission(rollingCampaignStore,rollingCodex,'worker-fixture',rollingAllocationResult.assignment.id,generation,60000,rollingWorkerOwnerObservationV1),/not known idle/);
+      await rollingCodex.request('fixture-activity',{active:false});
+      await rollingCodex.request('fixture-turn',{turnId:rollingWorkerDispatchAttached.turnId,status:'completed',text:'Stopped after rejected approval.'});
+      await assert.rejects(collectRollingWorkerSubmission(rollingCampaignStore,rollingCodex,'worker-fixture',rollingAllocationResult.assignment.id,generation,60000,rollingWorkerOwnerObservationV1),/no valid submission JSON/);
+      await rollingCodex.request('fixture-turn',{turnId:rollingWorkerDispatchAttached.turnId,status:'completed',text});
+      const rollingSubmissionReceipt=await collectRollingWorkerSubmission(rollingCampaignStore,rollingCodex,'worker-fixture',rollingAllocationResult.assignment.id,generation,60000,rollingWorkerOwnerObservationV1);
+      assert.equal(rollingSubmissionReceipt.state,'REVIEW');
+      assert.equal(rollingSubmissionReceipt.revision,revision);
+      return;
+    }
     const rollingSubmissionReceipt = await collectRollingWorkerSubmission(rollingCampaignStore,rollingCodex,'worker-fixture',rollingAllocationResult.assignment.id,generation);
     assert.equal(rollingSubmissionReceipt.revision,revision);assert.equal(rollingSubmissionReceipt.state,'REVIEW');
     assert.deepEqual(await collectRollingWorkerSubmission(new RollingCampaignStore(pool,projectId),rollingCodex,'worker-fixture',rollingAllocationResult.assignment.id,generation),rollingSubmissionReceipt);
@@ -1939,6 +1963,10 @@ test('worker provisioning fences creation and atomically attaches the native ide
 // Traceability: verifies REQ-ROLLING-STATE
 test('failed native turn resumes the original worker without a fabricated obligation blocker',
  t=>runRollingWorkerScenario(t,'protocol','failed-turn'));
+
+// Traceability: verifies REQ-ROLLING-READONLY-COLLECTION
+test('read-only collection preserves an idle foreign writer and rejects invalid owning observations',
+ t=>runRollingWorkerScenario(t,'protocol','collection',false,false,false,false,true));
 
 test('worker suspension observes stopped activity and frees capacity while retaining dirty ownership',
  t => runRollingWorkerScenario(t, 'protocol', 'suspension'));
