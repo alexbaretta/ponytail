@@ -162,7 +162,9 @@ Serial-only instructions must be limited to legacy serial execution and must
 not prohibit the explicitly configured rolling workflow or adversarial review.
 
 The installer and generated host copies must export this same procedure and
-its glossary resources. Runtime worker briefs alone do not satisfy this
+its glossary resources. Copied obligation inspection runtimes must include their
+required dependencies and execute outside the source repository without Node
+module search overrides. Runtime worker briefs alone do not satisfy this
 requirement. Acceptance: [ROLL-CLIENT-PROTOCOL](../uat/rolling-campaigns.md#arc-roll-client-protocol).
 
 ### CLI help compliance amendment

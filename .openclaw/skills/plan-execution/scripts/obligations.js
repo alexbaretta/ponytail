@@ -32,7 +32,7 @@ const node_path_1 = __importDefault(require("node:path"));
 const node_crypto_1 = __importDefault(require("node:crypto"));
 const node_child_process_1 = require("node:child_process");
 const node_util_1 = require("node:util");
-const lossless_json_1 = require("lossless-json");
+const lossless_json_1 = require("./lossless-json.js");
 const obligation_binding_history_js_1 = require("./obligation-binding-history.js");
 function isObligationGitInputs(value) {
     return 'schemaVersion' in value && value.schemaVersion === 2;

@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-10-12-installed_obligation_dependency",
+  "recorded_at": "2026-10-12T20:07:08-07:00",
+  "source_references": [
+    "pm/bugs/closed/2026-10-12-BUG-installed_obligation_dependency.md"
+  ],
+  "context": {
+    "languages": [
+      "typescript"
+    ],
+    "frameworks": [],
+    "components": [
+      "portable obligation runtime packaging"
+    ],
+    "affected_boundaries": [
+      "repository dependency resolution to copied skill runtime"
+    ],
+    "code_references": [
+      "scripts/build-runtime.ts",
+      "tests/installed-obligations.integration.test.ts"
+    ]
+  },
+  "observed_behavior": "Copied obligation validation fails MODULE_NOT_FOUND for lossless-json outside the repository.",
+  "expected_behavior": "Copied runtime inspection executes without repository dependencies or Node search overrides.",
+  "causal_mechanism": "The generated portable runtime retained bare package imports but the installer only copies skill resources.",
+  "anti_pattern": {
+    "structural_description": "A deployable directory depends on an ancestor dependency directory excluded from its deployment boundary.",
+    "why_it_fails": "Repository tests resolve the dependency from the repository node_modules, masking its absence after copying."
+  },
+  "correct_pattern": {
+    "required_invariant": "Every dependency needed by the portable installed runtime is included in that deployment boundary.",
+    "implementation_description": "Generate one licensed upstream module in the skill scripts directory and rewrite generated package imports to relative references."
+  },
+  "applicability_conditions": [
+    "Skill resources are copied outside the source repository."
+  ],
+  "known_non_matches": [
+    "Typed source tests inside the repository resolve the installed package successfully."
+  ],
+  "confirmation_evidence": [
+    "Real disposable installer regression failed before repair and passed after repair with Node search overrides removed."
+  ],
+  "regression_proofs": [
+    "tests/installed-obligations.integration.test.ts: installed obligation runtime works outside the repository without Node dependency search overrides"
+  ]
+}

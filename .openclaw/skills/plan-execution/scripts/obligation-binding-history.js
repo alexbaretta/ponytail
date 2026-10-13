@@ -13,7 +13,7 @@ exports.parseObligationLease = parseObligationLease;
 exports.freezeObligationLease = freezeObligationLease;
 exports.assertObligationLeaseOperation = assertObligationLeaseOperation;
 const node_util_1 = require("node:util");
-const lossless_json_1 = require("lossless-json");
+const lossless_json_1 = require("./lossless-json.js");
 const obligations_js_1 = require("./obligations.js");
 function requireBinding(condition, message) {
     if (!condition)

@@ -26,7 +26,9 @@ skill installation and controlled CLI/native-protocol fixtures.
    coordinator approval; review, publication, blockers and scope decisions retain
    their proper owners. No unconditional serial rule contradicts this workflow.
 4. Inspect installed and generated host copies, including supporting resources;
-   they agree with canonical skills. This is required proof for the three
+   run obligation validation and ESM named imports outside the source repository
+   without Node module search overrides. Both succeed. Installed resources
+   agree with canonical skills. This is required proof for the three
    preceding acceptances, not an additional delivered obligation.
 
 ## Arc ROLL-CLI-HELP

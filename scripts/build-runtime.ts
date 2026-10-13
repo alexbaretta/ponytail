@@ -53,11 +53,21 @@ const sources: readonly string[] = [
   'skills/plan-execution/scripts/sprint-graph.ts',
   'skills/plan-execution/scripts/ready-sprints.ts'
 ];
+const portableLosslessJson = 'skills/plan-execution/scripts/lossless-json.js';
 const argv = process.argv.slice(2);
 if (!(argv.length === 0 || argv.length === 1 && argv[0] === '--check')) {
   process.stderr.write('Usage: build-runtime [--check]\n');
   process.exitCode = 2;
 } else {
+  const dependencyLicense = fs.readFileSync(path.join(root, 'node_modules/lossless-json/LICENSE.md'), 'utf8');
+  const dependencyRuntime = fs.readFileSync(require.resolve('lossless-json'), 'utf8');
+  const dependencyOutput = path.join(root, portableLosslessJson);
+  const dependencyText = `// Ponytail packaging copyright (c) 2026 Alex Baretta. All rights reserved.\n// Copyright (c) 2026 Alex Baretta applies to this generated packaging header.\n// Licensed under the MIT License. See LICENSE in the project root.\n// Generated from the installed lossless-json dependency by npm run build.\n/*\n${dependencyLicense}*/\n${dependencyRuntime}`;
+  if (argv.length === 0) fs.writeFileSync(dependencyOutput, dependencyText);
+  else if (fs.readFileSync(dependencyOutput, 'utf8') !== dependencyText) {
+    process.stderr.write(`${portableLosslessJson} differs from its installed dependency; run npm run build\n`);
+    process.exitCode = 1;
+  }
   const registryPath=path.join(root,'src/cli-command-registry.v1.json');
   const registryText=JSON.stringify(cliCommandRegistryV1,null,2)+'\n';
   if(argv.length===0) fs.writeFileSync(registryPath,registryText);
@@ -70,7 +80,9 @@ if (!(argv.length === 0 || argv.length === 1 && argv[0] === '--check')) {
     const compiled = fs.readFileSync(path.join(root, 'dist', relative), 'utf8');
     const sourceText = fs.readFileSync(path.join(root, source), 'utf8');
     const sourceHeader = sourceText.split('\n').slice(0, sourceText.startsWith('#!') ? 3 : 2).join('\n');
-    const generated = `${sourceHeader}\n// Generated from ${source} by npm run build.\n${compiled.replace(/^#![^\n]*\n/, '')}`;
+    const portableCompiled = source.startsWith('skills/plan-execution/scripts/')
+      ? compiled.replaceAll('require("lossless-json")', 'require("./lossless-json.js")') : compiled;
+    const generated = `${sourceHeader}\n// Generated from ${source} by npm run build.\n${portableCompiled.replace(/^#![^\n]*\n/, '')}`;
     const output = path.join(root, relative);
     if (argv.length === 0) fs.writeFileSync(output, generated);
     else if (fs.readFileSync(output, 'utf8') !== generated) {

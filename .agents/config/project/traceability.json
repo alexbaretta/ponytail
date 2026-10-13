@@ -1404,6 +1404,21 @@
       "class": "issue",
       "path": "pm/bugs/closed/2026-10-12-BUG-rolling_adoption_legacy_worktrees.md",
       "locator": "text"
+    },
+    {
+      "class": "integration-test",
+      "path": "tests/installed-obligations.integration.test.ts",
+      "locator": "text"
+    },
+    {
+      "class": "issue",
+      "path": "pm/bugs/closed/2026-10-12-BUG-installed_obligation_dependency.md",
+      "locator": "text"
+    },
+    {
+      "class": "implementation",
+      "path": "scripts/build-runtime.ts",
+      "locator": "text"
     }
   ],
   "entities": [],
@@ -1723,6 +1738,14 @@
     {
       "path": "skills/requirements-traceability/scripts/coverage-rules.js",
       "sourcePath": "skills/requirements-traceability/scripts/coverage-rules.ts"
+    },
+    {
+      "path": "skills/plan-execution/scripts/lossless-json.js",
+      "sourcePath": "scripts/build-runtime.ts"
+    },
+    {
+      "path": ".openclaw/skills/plan-execution/scripts/lossless-json.js",
+      "sourcePath": "scripts/build-runtime.ts"
     }
   ],
   "reverseViewPath": "pm/requirements/traceability.generated.md",

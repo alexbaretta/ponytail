@@ -13,7 +13,7 @@ exports.acceptBoundCheckpoint = acceptBoundCheckpoint;
 const node_fs_1 = __importDefault(require("node:fs"));
 const node_path_1 = __importDefault(require("node:path"));
 const node_util_1 = require("node:util");
-const lossless_json_1 = require("lossless-json");
+const lossless_json_1 = require("./lossless-json.js");
 const obligations_js_1 = require("./obligations.js");
 const obligation_binding_history_js_1 = require("./obligation-binding-history.js");
 function requireCertificateBinding(condition, message) {
