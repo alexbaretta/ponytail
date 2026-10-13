@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-10-12-shared_document_pruning",
+  "recorded_at": "2026-10-12T22:19:15-07:00",
+  "source_references": [
+    "pm/bugs/closed/2026-10-12-BUG-shared_document_pruning.md"
+  ],
+  "context": {
+    "languages": [
+      "javascript",
+      "typescript",
+      "sql"
+    ],
+    "frameworks": [
+      "PostgreSQL"
+    ],
+    "components": [
+      "shared text document store"
+    ],
+    "affected_boundaries": [
+      "worktree overlay cleanup to peer blob publication"
+    ],
+    "code_references": [
+      "src/project-index.js",
+      "tests/repository-document-cleanup.integration.test.ts"
+    ]
+  },
+  "observed_behavior": "Overlay pruning fails with PostgreSQL 23503 after a peer commits a shared-document blob reference.",
+  "expected_behavior": "The caller refresh preserves peer references and cleans only its owned superseded overlay data.",
+  "causal_mechanism": "A global orphan-delete snapshot misses an uncommitted peer reference; worktree-scoped writer ownership does not protect shared text rows.",
+  "anti_pattern": {
+    "structural_description": "Locally scoped publishers perform global shared-store cleanup without matching transactional ownership.",
+    "why_it_fails": "Foreign-key validation observes a newly committed reference that the cleanup snapshot excluded."
+  },
+  "correct_pattern": {
+    "required_invariant": "Shared document identity remains protected until all publisher references commit; pruning retains ownership of busy candidates.",
+    "implementation_description": "Use document upsert row locks, scoped candidate row locks with SKIP LOCKED, and deferred retry from retained unpublished generations."
+  },
+  "applicability_conditions": [
+    "Independently published objects reference a globally deduplicated row."
+  ],
+  "known_non_matches": [
+    "An exclusively owned row with no independently published references."
+  ],
+  "confirmation_evidence": [
+    "A deterministic real PostgreSQL peer-project CLI regression failed with git_blob_v1 FK23503 before repair and passed after repair."
+  ],
+  "regression_proofs": [
+    "tests/repository-document-cleanup.integration.test.ts"
+  ]
+}

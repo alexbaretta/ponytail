@@ -179,6 +179,7 @@ Requirement: [pm/requirements/repository-text-index.md](repository-text-index.md
 - implementation: implements [src/project-index.js:40](../../src/project-index.js#L40)
 - unit-test: verifies [tests/project-index.test.js:34](../../tests/project-index.test.js#L34)
 - integration-test: verifies [scripts/test-project-index-postgres.sh:7](../../scripts/test-project-index-postgres.sh#L7)
+- integration-test: verifies [tests/repository-document-cleanup.integration.test.ts:14](../../tests/repository-document-cleanup.integration.test.ts#L14)
 - integration-test: verifies [tests/repository-index-concurrency.test.js:12](../../tests/repository-index-concurrency.test.js#L12)
 - uat: verifies [pm/uat/repository-text-index.md:14](../../pm/uat/repository-text-index.md#L14)
 - uat: verifies [pm/uat/repository-text-index.md:76](../../pm/uat/repository-text-index.md#L76)
@@ -215,6 +216,7 @@ Requirement: [pm/requirements/repository-text-index.md](repository-text-index.md
 - issue: plans-verification [pm/bugs/closed/2026-09-30-FEAT-repository_text_index_and_grep.md:23](../../pm/bugs/closed/2026-09-30-FEAT-repository_text_index_and_grep.md#L23)
 - issue: introduces [pm/bugs/closed/2026-10-01-FEAT-search_index_progress_resume.md:15](../../pm/bugs/closed/2026-10-01-FEAT-search_index_progress_resume.md#L15)
 - issue: introduces [pm/bugs/closed/2026-10-06-BUG-peer_refs_block_commit_hook.md:13](../../pm/bugs/closed/2026-10-06-BUG-peer_refs_block_commit_hook.md#L13)
+- issue: introduces [pm/bugs/closed/2026-10-12-BUG-shared_document_pruning.md:11](../../pm/bugs/closed/2026-10-12-BUG-shared_document_pruning.md#L11)
 
 ## REQ-CAMPAIGN-ORCHESTRATION
 

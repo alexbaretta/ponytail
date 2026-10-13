@@ -1194,8 +1194,11 @@ async function publishTraceabilityGeneration(client, projection, options = {}) {
       }
       publishedRecords++;publicationProgress();
     }
-    for (const [entityId, document] of searchDocuments) {
+    const orderedSearchDocuments = [...searchDocuments].map(([entityId, document]) => {
       const content = Object.values(document).filter(value => value !== null).join('\n');
+      return { entityId, document, content, documentId: digest(content) };
+    }).sort((left, right) => left.documentId.localeCompare(right.documentId));
+    for (const { entityId, document, content } of orderedSearchDocuments) {
       const searchValues = [entityId,document.entityId,document.entityKind,document.path,document.unitName,document.annotation,document.description,document.role,document.requirementId];
       if (oldSearch.get(entityId) === JSON.stringify(searchValues)) {publishedRecords++;publicationProgress();continue;}
       const documentId = await insertTextDocument(client, Buffer.from(content));
@@ -2015,7 +2018,7 @@ async function insertTextDocument(client, buffer) {
   await client.query(`
     INSERT INTO ponytail_index.text_document_v1 (document_id, content)
     VALUES ($1, $2)
-    ON CONFLICT (document_id) DO NOTHING`, [documentId, content]);
+    ON CONFLICT (document_id) DO UPDATE SET document_id = EXCLUDED.document_id`, [documentId, content]);
   return documentId;
 }
 
@@ -2087,7 +2090,7 @@ async function ingestGitCommitBatch(client, context, commits, signal) {
       if (content !== null) await client.query(`
         INSERT INTO ponytail_index.text_document_v1 (document_id, content)
         VALUES ($1, $2)
-        ON CONFLICT (document_id) DO NOTHING`, [documentId, content]);
+        ON CONFLICT (document_id) DO UPDATE SET document_id = EXCLUDED.document_id`, [documentId, content]);
     }
     for (const [blobOid, buffer] of [...prepared.blobs].sort(([left], [right]) =>
       left.localeCompare(right))) {
@@ -2346,6 +2349,34 @@ async function collectWorktreeOverlay(context) {
   return { headCommit, stateDigest, entries };
 }
 
+async function pruneSupersededWorktreeText(client, worktreeId, generationId) {
+  const superseded = await client.query(`SELECT DISTINCT entry.document_id
+    FROM ponytail_index.worktree_text_entry_v1 entry
+    JOIN ponytail_index.worktree_text_generation_v1 generation USING (generation_id)
+    WHERE generation.worktree_id = $1::uuid AND generation.generation_id <> $2::uuid
+      AND entry.document_id IS NOT NULL`, [worktreeId, generationId]);
+  // Busy documents retain their unpublished ownership mappings for the next
+  // refresh. Never wait on a peer while holding other shared document locks.
+  const locked = await client.query(`SELECT document_id FROM ponytail_index.text_document_v1
+    WHERE document_id = ANY($1::text[]) ORDER BY document_id FOR UPDATE SKIP LOCKED`,
+  [superseded.rows.map(row => row.document_id)]);
+  const documentIds = locked.rows.map(row => row.document_id);
+  await client.query(`DELETE FROM ponytail_index.worktree_text_entry_v1 entry
+    USING ponytail_index.worktree_text_generation_v1 generation
+    WHERE entry.generation_id = generation.generation_id AND generation.worktree_id = $1::uuid
+      AND generation.generation_id <> $2::uuid
+      AND (entry.document_id IS NULL OR entry.document_id = ANY($3::text[]))`, [worktreeId, generationId, documentIds]);
+  await client.query(`DELETE FROM ponytail_index.worktree_text_generation_v1 generation
+    WHERE generation.worktree_id = $1::uuid AND generation.generation_id <> $2::uuid
+      AND NOT EXISTS (SELECT 1 FROM ponytail_index.worktree_text_entry_v1 entry
+        WHERE entry.generation_id = generation.generation_id)`, [worktreeId, generationId]);
+  await client.query(`DELETE FROM ponytail_index.text_document_v1 document
+    WHERE document.document_id = ANY($1::text[])
+      AND NOT EXISTS (SELECT 1 FROM ponytail_index.git_blob_v1 blob WHERE blob.document_id = document.document_id)
+      AND NOT EXISTS (SELECT 1 FROM ponytail_index.worktree_text_entry_v1 entry WHERE entry.document_id = document.document_id)
+      AND NOT EXISTS (SELECT 1 FROM ponytail_index.search_document_v2 search WHERE search.document_id = document.document_id)`, [documentIds]);
+}
+
 async function publishWorktreeOverlay(client, context) {
   const first = await collectWorktreeOverlay(context);
   const second = await collectWorktreeOverlay(context);
@@ -2358,6 +2389,7 @@ async function publishWorktreeOverlay(client, context) {
     JOIN ponytail_index.worktree_text_generation_v1 generation USING (generation_id)
     WHERE published.worktree_id = $1::uuid`, [context.worktreeId]);
   if (current.rows[0]?.state_digest === second.stateDigest) {
+    await pruneSupersededWorktreeText(client, context.worktreeId, current.rows[0].generation_id);
     return { generationId: current.rows[0].generation_id, stateDigest: second.stateDigest,
       indexedDocuments: 0, reused: true };
   }
@@ -2367,15 +2399,17 @@ async function publishWorktreeOverlay(client, context) {
     ) VALUES ($1::uuid, $2, $3)
     RETURNING generation_id`, [context.worktreeId, second.headCommit, second.stateDigest]);
   let indexedDocuments = 0;
+  const documents = new Map(second.entries.filter(entry => entry.documentId !== null)
+    .map(entry => [entry.documentId, entry.content]));
+  for (const [documentId, content] of [...documents].sort(([left], [right]) => left.localeCompare(right))) {
+    const inserted = await client.query(`
+      INSERT INTO ponytail_index.text_document_v1 (document_id, content)
+      VALUES ($1, $2)
+      ON CONFLICT (document_id) DO UPDATE SET document_id = EXCLUDED.document_id
+      RETURNING (xmax = 0) AS inserted`, [documentId, content]);
+    indexedDocuments += inserted.rows.filter(row => row.inserted).length;
+  }
   for (const entry of second.entries) {
-    if (entry.documentId !== null) {
-      const inserted = await client.query(`
-        INSERT INTO ponytail_index.text_document_v1 (document_id, content)
-        VALUES ($1, $2)
-        ON CONFLICT (document_id) DO NOTHING
-        RETURNING document_id`, [entry.documentId, entry.content]);
-      indexedDocuments += inserted.rows.length;
-    }
     await client.query(`
       INSERT INTO ponytail_index.worktree_text_entry_v1 (
         generation_id, path, state, document_id
@@ -2389,21 +2423,7 @@ async function publishWorktreeOverlay(client, context) {
     ) VALUES ($1::uuid, $2::uuid)
     ON CONFLICT (worktree_id) DO UPDATE
     SET generation_id = EXCLUDED.generation_id`, [context.worktreeId, generation.generation_id]);
-  if (current.rows.length === 1) {
-    await client.query(`DELETE FROM ponytail_index.worktree_text_generation_v1
-      WHERE generation_id = $1::uuid`, [current.rows[0].generation_id]);
-    await client.query(`DELETE FROM ponytail_index.text_document_v1 document
-      WHERE NOT EXISTS (
-        SELECT 1 FROM ponytail_index.git_blob_v1 blob
-        WHERE blob.document_id = document.document_id
-      ) AND NOT EXISTS (
-        SELECT 1 FROM ponytail_index.worktree_text_entry_v1 entry
-        WHERE entry.document_id = document.document_id
-      ) AND NOT EXISTS (
-        SELECT 1 FROM ponytail_index.search_document_v2 search
-        WHERE search.document_id = document.document_id
-      )`);
-  }
+  await pruneSupersededWorktreeText(client, context.worktreeId, generation.generation_id);
   return { generationId: generation.generation_id, stateDigest: second.stateDigest,
     indexedDocuments, reused: false };
 }

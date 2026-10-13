@@ -1424,6 +1424,16 @@
       "class": "issue",
       "path": "pm/bugs/in_progress/2026-10-12-BUG-native_worker_rebase_approval.md",
       "locator": "text"
+    },
+    {
+      "class": "integration-test",
+      "path": "tests/repository-document-cleanup.integration.test.ts",
+      "locator": "text"
+    },
+    {
+      "class": "issue",
+      "path": "pm/bugs/closed/2026-10-12-BUG-shared_document_pruning.md",
+      "locator": "text"
     }
   ],
   "entities": [],
