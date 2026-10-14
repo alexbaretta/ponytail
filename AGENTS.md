@@ -153,6 +153,11 @@ services. `PROJECT_STRUCTURE.md` is authoritative for that boundary.
 - Rolling worker attachment focused proof: `node --test dist/tests/rolling-worker.test.js
   dist/tests/rolling-campaign-store.integration.test.js`; actual native provisioning
   uses the explicit live native acceptance command above.
+- Swarm checkout lifecycle: `ponytail swarm worktree-assign --base <commit-or-ref>`;
+  failed setup retains exact membership and reports number/generation. Resume with
+  `ponytail swarm worktree-setup --number <n> --generation <uuid>`. Release with
+  `ponytail swarm worktree-release --number <n> --generation <uuid>`; this preserves
+  checkout/source, uses project cleanup and refuses retained native ownership.
 - Swarm retained checkout focused proof: `node --test
   dist/tests/swarm-worktrees.integration.test.js
   dist/tests/swarm-store.integration.test.js dist/tests/rolling-reset.integration.test.js`;

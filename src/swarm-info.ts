@@ -8,7 +8,7 @@ import {git} from './rolling-integration.js';
 import {resolveSwarmOwner,type SwarmOwnershipInventory} from './swarm-owner.js';
 import {renderCliHelp} from './cli-help.js';
 import type {RollingStoredWorktree} from './rolling-campaign-store.js';
-import {SwarmStore} from './swarm-store.js';
+import {SwarmStore,type SwarmWorktreeMembership} from './swarm-store.js';
 import {RollingCodex} from './rolling-codex.js';
 import type {SwarmUserWorktree} from './swarm-owner.js';
 
@@ -216,14 +216,17 @@ export async function runSwarmCli(argv:readonly string[]):Promise<void> {
   const flag=argv[i];
   if(flag==='--json'&&!json) {json=true;continue;}
   const value=argv[i+1];
-  if((flag==='--session'||flag==='--thread')&&!fields.has(flag)&&typeof value==='string'&&value.length>0&&!value.startsWith('--')) {fields.set(flag,value);i++;continue;}
+  if((flag==='--session'||flag==='--thread'||flag==='--base'||flag==='--number'||flag==='--generation')&&!fields.has(flag)&&typeof value==='string'&&value.length>0&&!value.startsWith('--')) {fields.set(flag,value);i++;continue;}
   valid=false;break;
  }
  const info=argv[0]==='info'&&fields.size===0;
  const enrollment=argv[0]==='owner-enroll'&&fields.size===0;
  const bind=argv[0]==='coordinator-bind'&&fields.size===2&&fields.has('--session')&&fields.has('--thread');
  const unbind=argv[0]==='coordinator-unbind'&&fields.size===1&&fields.has('--session');
- if(!valid||!info&&!enrollment&&!bind&&!unbind) {
+ const assign=argv[0]==='worktree-assign'&&fields.size===1&&fields.has('--base');
+ const setup=argv[0]==='worktree-setup'&&fields.size===2&&fields.has('--number')&&fields.has('--generation');
+ const release=argv[0]==='worktree-release'&&fields.size===2&&fields.has('--number')&&fields.has('--generation');
+ if(!valid||!info&&!enrollment&&!bind&&!unbind&&!assign&&!setup&&!release) {
   process.stderr.write(renderCliHelp(['swarm',argv[0]??''])+'\n');process.exitCode=2;return;
  }
  const root=fs.realpathSync(git(process.cwd(),['rev-parse','--show-toplevel']).trim());
@@ -232,19 +235,35 @@ export async function runSwarmCli(argv:readonly string[]):Promise<void> {
  const projectId=text(journal.projectId);
  if(!/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/u.test(projectId)) throw new Error('swarm: invalid invoking project identity');
  const pool=new Pool(databaseOptions(root));
+ let outputRoot=root;
  try {
-  if(enrollment||bind||unbind) {
+  if(enrollment||bind||unbind||assign||setup||release) {
    const swarmStore=new SwarmStore(pool,projectId);
    const ownerRoot=enrollment?root:(await inspectSwarmInfo(root,pool,projectId)).ownerRoot;
    const swarmUserWorktree:SwarmUserWorktree={rootPath:ownerRoot,gitCommonDirectory:fs.realpathSync(git(ownerRoot,['rev-parse','--path-format=absolute','--git-common-dir']).trim())};
-   if(enrollment) await swarmStore.enrollOwner(swarmUserWorktree);
+   outputRoot=ownerRoot;
+   if(assign) {
+    await swarmStore.enrollOwner(swarmUserWorktree);
+    const baseCommit=git(ownerRoot,['rev-parse','--verify','--end-of-options',`${text(fields.get('--base'))}^{commit}`]).trim();
+    const swarmWorktreeMembership=await swarmStore.reserveWorktree(ownerRoot,{kind:'provision',baseCommit});
+    if(swarmWorktreeMembership===null) throw new Error('swarm: allocation did not reserve a checkout');
+    try {await swarmStore.provisionWorktree(swarmWorktreeMembership);}
+    catch(cause) {throw new Error(`swarm: setup failed for worktree ${swarmWorktreeMembership.number}, generation ${swarmWorktreeMembership.generation}; use worktree-setup to retry: ${cause instanceof Error?cause.message:String(cause)}`);}
+   } else if(setup||release) {
+    const number=integer(fields.get('--number'));
+    const worktree=(await inspectSwarmInfo(ownerRoot,pool,projectId)).worktrees.find(worktree=>worktree.number===number);
+    if(worktree===undefined||worktree.membership.kind!=='swarm'||worktree.membership.generation!==fields.get('--generation')) throw new Error('swarm: checkout membership changed or is absent');
+    const swarmWorktreeMembership:SwarmWorktreeMembership={number,rootPath:worktree.rootPath,ownerRoot,generation:worktree.membership.generation};
+    if(setup) await swarmStore.provisionWorktree(swarmWorktreeMembership);
+    else await swarmStore.releaseWorktree(swarmWorktreeMembership);
+   } else if(enrollment) await swarmStore.enrollOwner(swarmUserWorktree);
    else if(bind) {
     const rollingCodex=await RollingCodex.connect({cwd:ownerRoot});
     try {await bindSwarmCoordinator(swarmStore,swarmUserWorktree,text(fields.get('--thread')),text(fields.get('--session')),rollingCodex);}
     finally {await rollingCodex.close();}
    } else await swarmStore.unbindCoordinator(ownerRoot,text(fields.get('--session')));
   }
-  const swarmInfoV3=await inspectSwarmInfo(root,pool,projectId);
+  const swarmInfoV3=await inspectSwarmInfo(outputRoot,pool,projectId);
   process.stdout.write(json?JSON.stringify(swarmInfoV3)+'\n':renderSwarmInfo(swarmInfoV3));
  } finally {await pool.end();}
 }

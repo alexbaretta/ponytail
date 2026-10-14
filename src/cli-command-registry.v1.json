@@ -25,6 +25,9 @@
   "chapters": {
     "swarm": {
       "commands": [
+        "worktree-assign",
+        "worktree-setup",
+        "worktree-release",
         "info",
         "owner-enroll",
         "coordinator-bind",

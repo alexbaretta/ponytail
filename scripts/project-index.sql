@@ -324,6 +324,7 @@ CREATE TABLE IF NOT EXISTS swarm_worktree_v1 (
   FOREIGN KEY (project_id,number) REFERENCES rolling_worktree_v1(project_id,number),
   FOREIGN KEY (project_id,owner_root) REFERENCES swarm_owner_v1(project_id,owner_root)
 );
+ALTER TABLE swarm_worktree_v1 ADD COLUMN IF NOT EXISTS base_commit text CHECK (base_commit ~ '^([0-9a-f]{40}|[0-9a-f]{64})$');
 CREATE INDEX IF NOT EXISTS swarm_worktree_v1_owner ON swarm_worktree_v1(project_id,owner_root,number);
 
 CREATE TABLE IF NOT EXISTS rolling_assignment_v1 (

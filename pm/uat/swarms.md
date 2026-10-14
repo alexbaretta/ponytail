@@ -140,6 +140,17 @@ standalone managed invocation through the real installed CLI, owner equivalence,
 sibling isolation and rejection of contradictory campaign/swarm owners. Historical
 V1/V2 reader proofs remain intact. Native activity is still explicitly unobserved.
 
+**Allocation CLI evidence:** The installed CLI Arc in
+`tests/swarm-worktrees.integration.test.ts` creates checkout 101 with project
+setup, releases it from managed invocation with project cleanup, then reuses it
+with a fresh membership generation. Stale release fails. A deliberate setup
+failure retains checkout 102 and its exact base/generation; `worktree-setup`
+resumes it and completed retry does not rerun setup. Cleanup failure retains
+ownership and source until retry. Replacing an enrolled user checkout with a
+foreign clone cannot redirect pending setup. Seven unit/help and four focused
+integration tests pass. No live worker was dispatched; worker cessation and the
+complete deletion Arc remain pending.
+
 ## Arc SWARM-CLEAR: Release resources and restart
 
 Traceability: verifies REQ-SWARM-CLEAR
