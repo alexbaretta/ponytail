@@ -16,7 +16,7 @@
           "digest": "24af7c5a4799dafc89a65ea17e99b4b48909c8752824474231bf6007e74cad1a"
         }
       ],
-      "obligationIds": ["OBL-1", "OBL-2", "OBL-3", "OBL-4", "OBL-5", "OBL-6", "OBL-7", "OBL-8", "OBL-9", "OBL-10", "OBL-11"],
+      "obligationIds": ["OBL-1", "OBL-2", "OBL-3", "OBL-4", "OBL-5", "OBL-6", "OBL-7", "OBL-8", "OBL-9", "OBL-10", "OBL-11", "OBL-12", "OBL-13"],
       "inventoryIds": ["OBL-1", "OBL-2", "OBL-3", "OBL-4", "OBL-5", "OBL-6"]
     }
   ],
@@ -97,6 +97,20 @@
       "criterion": "CLI, skill, and integration transcript contain no language inference or rebase-time test, build, QA, fetch, push, or publication.", "dependsOn": ["OBL-10"],
       "acceptanceGroups": ["2026-10-13-fast-semantic-rebase"], "supersedes": null,
       "execution": {"sprintId": "S01", "taskletIds": ["S01-F04-T01", "S01-F04-T02", "S01-F04-T03"], "plannedPaths": ["src/semantic-rebase.ts", "skills/semantic-rebase/SKILL.md", "tests/semantic-rebase-worker.integration.test.ts"], "operations": ["edit", "test"], "selection": [], "target": null}
+    },
+    {
+      "id": "OBL-12", "category": "C1", "requirementIds": ["REQ-FAST-SEMANTIC-REBASE"],
+      "responsibilityId": "fast-semantic-rebase-final-unit-execution", "condition": "Run the configured final unit gate against the final relevant inputs.",
+      "criterion": "The configured full unit command passes without failed or skipped required selections.", "dependsOn": ["OBL-11"],
+      "acceptanceGroups": ["2026-10-13-fast-semantic-rebase"], "supersedes": null,
+      "execution": {"sprintId": "S01", "taskletIds": ["S01-F04-T03"], "plannedPaths": [".agents/config/project/traceability.json", "pm/requirements/traceability.generated.md", "pm/plans/in_progress/2026-10-13-fast-semantic-rebase/plan.md", "pm/plans/in_progress/2026-10-13-fast-semantic-rebase/sprints/S01.md", "pm/plans/in_progress/2026-10-13-fast-semantic-rebase/sprints/S01.tasklets.json", "pm/plans/in_progress/2026-10-13-fast-semantic-rebase/evidence/integration/S01/acceptance.json", "pm/plans/in_progress/2026-10-13-fast-semantic-rebase/evidence/integration/plan/acceptance.json", "tests/semantic-rebase-worker.integration.test.ts"], "operations": ["npm test"], "selection": ["applicable full unit tests"], "target": {"identity": "/Users/alex/git/github/ponytail", "profile": "local-node-full"}}
+    },
+    {
+      "id": "OBL-13", "category": "C2", "requirementIds": ["REQ-FAST-SEMANTIC-REBASE"],
+      "responsibilityId": "fast-semantic-rebase-worker-arc-execution", "condition": "Run the real-Git worker-session Arc against the final relevant inputs.",
+      "criterion": "The worker Arc passes for equivalent, similar, distinct, multi-contributor, conflict, continuation, and prohibited-side-effect behavior.", "dependsOn": ["OBL-11"],
+      "acceptanceGroups": ["2026-10-13-fast-semantic-rebase"], "supersedes": null,
+      "execution": {"sprintId": "S01", "taskletIds": ["S01-F04-T03"], "plannedPaths": ["tests/semantic-rebase-worker.integration.test.ts", "pm/plans/in_progress/2026-10-13-fast-semantic-rebase/evidence/integration/S01/acceptance.json"], "operations": ["node --test dist/tests/semantic-rebase-worker.integration.test.js"], "selection": ["worker session uses the skill and CLI across equivalent similar and distinct histories"], "target": {"identity": "/Users/alex/git/github/ponytail", "profile": "local-real-git"}}
     }
   ],
   "certificates": [
@@ -112,6 +126,60 @@
       "disposition": null,
       "evidence": [],
       "inventoryIds": ["OBL-7"]
+    },
+    {
+      "id": "CERT-2", "obligationIds": ["OBL-7"],
+      "inputs": [{"path": "pm/requirements/fast-semantic-rebase.md", "digest": "24af7c5a4799dafc89a65ea17e99b4b48909c8752824474231bf6007e74cad1a"}, {"path": "src/semantic-rebase.ts", "digest": "6d8ec3a6549bfdf7df866b31a546508699618ac0924b06ce9366943485ddbce4"}],
+      "artifacts": ["src/semantic-rebase.ts"], "assessor": "ponytail-local-approved-coordinator", "authority": ["stakeholder-approved:fast-semantic-rebase:2026-10-13"], "adequate": true,
+      "reason": "The typed implementation freezes both branch final states and emits deterministic source and target change identities.", "disposition": null, "evidence": [], "inventoryIds": []
+    },
+    {
+      "id": "CERT-3", "obligationIds": ["OBL-2"],
+      "inputs": [{"path": "pm/requirements/fast-semantic-rebase.md", "digest": "24af7c5a4799dafc89a65ea17e99b4b48909c8752824474231bf6007e74cad1a"}, {"path": "pm/uat/fast-semantic-rebase.md", "digest": "90c8985f91dd1068d8e59388be54b340aaf9ef3087efa187a2e07c922f517e4a"}],
+      "artifacts": ["pm/uat/fast-semantic-rebase.md"], "assessor": "ponytail-local-approved-coordinator", "authority": ["stakeholder-approved:fast-semantic-rebase:2026-10-13"], "adequate": true,
+      "reason": "The UAT Suite inventories the one required real-Git worker-session Arc.", "disposition": null, "evidence": [], "inventoryIds": []
+    },
+    {
+      "id": "CERT-4", "obligationIds": ["OBL-3"],
+      "inputs": [{"path": "pm/requirements/fast-semantic-rebase.md", "digest": "24af7c5a4799dafc89a65ea17e99b4b48909c8752824474231bf6007e74cad1a"}, {"path": "pm/uat/fast-semantic-rebase.md", "digest": "90c8985f91dd1068d8e59388be54b340aaf9ef3087efa187a2e07c922f517e4a"}],
+      "artifacts": ["pm/uat/fast-semantic-rebase.md"], "assessor": "ponytail-local-approved-coordinator", "authority": ["stakeholder-approved:fast-semantic-rebase:2026-10-13"], "adequate": true,
+      "reason": "The UAT Arc enumerates observable Steps for analysis, selection, replay, conflicts, continuation, abort, and prohibited side effects.", "disposition": null, "evidence": [], "inventoryIds": []
+    },
+    {
+      "id": "CERT-5", "obligationIds": ["OBL-4"],
+      "inputs": [{"path": "pm/requirements/fast-semantic-rebase.md", "digest": "24af7c5a4799dafc89a65ea17e99b4b48909c8752824474231bf6007e74cad1a"}, {"path": "pm/plans/in_progress/2026-10-13-fast-semantic-rebase/sprints/S01.tasklets.json", "digest": "4186cc9c0dd8c118d47c05702d8cdda86824912344552ec8eeff46661a8b6aea"}],
+      "artifacts": ["pm/plans/in_progress/2026-10-13-fast-semantic-rebase/sprints/S01.tasklets.json"], "assessor": "ponytail-local-approved-coordinator", "authority": ["stakeholder-approved:fast-semantic-rebase:2026-10-13"], "adequate": true,
+      "reason": "The reviewed tasklet graph inventories each independently testable implementation, policy, and integration unit.", "disposition": null, "evidence": [], "inventoryIds": ["OBL-8", "OBL-9", "OBL-10", "OBL-11"]
+    },
+    {
+      "id": "CERT-6", "obligationIds": ["OBL-8"],
+      "inputs": [{"path": "pm/requirements/fast-semantic-rebase.md", "digest": "24af7c5a4799dafc89a65ea17e99b4b48909c8752824474231bf6007e74cad1a"}, {"path": "src/semantic-rebase.ts", "digest": "6d8ec3a6549bfdf7df866b31a546508699618ac0924b06ce9366943485ddbce4"}, {"path": "tests/semantic-rebase.test.ts", "digest": "8e8ea8ca75ffa5f13909802b74c543b39f22e0fa23d170bcdf052b7347f06121"}],
+      "artifacts": ["src/semantic-rebase.ts", "tests/semantic-rebase.test.ts"], "assessor": "ponytail-local-approved-coordinator", "authority": ["stakeholder-approved:fast-semantic-rebase:2026-10-13"], "adequate": true,
+      "reason": "The selection reader is bound to one analysis and rejects stale, unknown, duplicate, target-only, and malformed relations.", "disposition": null, "evidence": [], "inventoryIds": []
+    },
+    {
+      "id": "CERT-7", "obligationIds": ["OBL-9"],
+      "inputs": [{"path": "pm/requirements/fast-semantic-rebase.md", "digest": "24af7c5a4799dafc89a65ea17e99b4b48909c8752824474231bf6007e74cad1a"}, {"path": "src/semantic-rebase.ts", "digest": "6d8ec3a6549bfdf7df866b31a546508699618ac0924b06ce9366943485ddbce4"}, {"path": "tests/semantic-rebase.test.ts", "digest": "8e8ea8ca75ffa5f13909802b74c543b39f22e0fa23d170bcdf052b7347f06121"}],
+      "artifacts": ["src/semantic-rebase.ts", "tests/semantic-rebase.test.ts"], "assessor": "ponytail-local-approved-coordinator", "authority": ["stakeholder-approved:fast-semantic-rebase:2026-10-13"], "adequate": true,
+      "reason": "Contributor mapping covers exact final intervals and conservatively widens only to the affected path lineage.", "disposition": null, "evidence": [], "inventoryIds": []
+    },
+    {
+      "id": "CERT-8", "obligationIds": ["OBL-10"],
+      "inputs": [{"path": "pm/requirements/fast-semantic-rebase.md", "digest": "24af7c5a4799dafc89a65ea17e99b4b48909c8752824474231bf6007e74cad1a"}, {"path": "src/semantic-rebase.ts", "digest": "6d8ec3a6549bfdf7df866b31a546508699618ac0924b06ce9366943485ddbce4"}, {"path": "tests/semantic-rebase.test.ts", "digest": "8e8ea8ca75ffa5f13909802b74c543b39f22e0fa23d170bcdf052b7347f06121"}],
+      "artifacts": ["src/semantic-rebase.ts", "tests/semantic-rebase.test.ts"], "assessor": "ponytail-local-approved-coordinator", "authority": ["stakeholder-approved:fast-semantic-rebase:2026-10-13"], "adequate": true,
+      "reason": "The retained replay lifecycle preserves frozen identity, conflicts, broadened-review stops, completion accounting, and exact abort restoration.", "disposition": null, "evidence": [], "inventoryIds": []
+    },
+    {
+      "id": "CERT-9", "obligationIds": ["OBL-11"],
+      "inputs": [{"path": "pm/requirements/fast-semantic-rebase.md", "digest": "24af7c5a4799dafc89a65ea17e99b4b48909c8752824474231bf6007e74cad1a"}, {"path": "skills/semantic-rebase/SKILL.md", "digest": "e635804644ccb3004dbaf6c3e46c52c5cae56732617161749d4c0be930322c75"}, {"path": "tests/semantic-rebase-worker.integration.test.ts", "digest": "86e4a99f6eb05fcc200ddb47bf90fd2e092c4db773a044c07ac391d6c942a76f"}],
+      "artifacts": ["skills/semantic-rebase/SKILL.md", "tests/semantic-rebase-worker.integration.test.ts"], "assessor": "ponytail-local-approved-coordinator", "authority": ["stakeholder-approved:fast-semantic-rebase:2026-10-13"], "adequate": true,
+      "reason": "Policy and integration transcript keep semantic judgment in aggregate agent review and prohibit rebase-time product validation and publication.", "disposition": null, "evidence": [], "inventoryIds": []
+    },
+    {
+      "id": "CERT-10", "obligationIds": ["OBL-5"],
+      "inputs": [{"path": "pm/requirements/fast-semantic-rebase.md", "digest": "24af7c5a4799dafc89a65ea17e99b4b48909c8752824474231bf6007e74cad1a"}, {"path": "pm/plans/in_progress/2026-10-13-fast-semantic-rebase/sprints/S01.md", "digest": "5e09a6d6d5405cc50e50dbb8e5fd8a87da6164f227a7dfc22df77841bf881b91"}],
+      "artifacts": ["pm/plans/in_progress/2026-10-13-fast-semantic-rebase/sprints/S01.md"], "assessor": "ponytail-local-approved-coordinator", "authority": ["stakeholder-approved:fast-semantic-rebase:2026-10-13"], "adequate": true,
+      "reason": "The sprint inventories the required focused and configured final unit selections while retaining the observed final-gate blocker.", "disposition": null, "evidence": [], "inventoryIds": ["OBL-12"]
     }
   ],
   "checkpoints": [
@@ -125,6 +193,56 @@
       "id": "CP2", "predecessorId": "CP1", "baselineId": "B1", "kind": "productive", "selectedIds": ["OBL-1"],
       "registeredIds": [], "certificateIds": ["CERT-1"], "invalidatedIds": [], "before": [2, 1, 1, 5, 1, 1], "after": [1, 1, 1, 5, 1, 1],
       "preparation": null, "reason": "Complete the activated requirement inventory before implementation.", "assessor": "ponytail-local-approved-coordinator"
+    },
+    {
+      "id": "CP3", "predecessorId": "CP2", "baselineId": "B1", "kind": "disturbance", "selectedIds": [],
+      "registeredIds": ["OBL-12", "OBL-13"], "certificateIds": [], "invalidatedIds": [], "before": [1, 1, 1, 5, 1, 1], "after": [1, 1, 1, 5, 2, 2],
+      "preparation": null, "reason": "Register the distinct final unit and worker Arc executions discovered during detailed acceptance planning.", "assessor": "ponytail-local-approved-coordinator"
+    },
+    {
+      "id": "CP4", "predecessorId": "CP3", "baselineId": "B1", "kind": "productive", "selectedIds": ["OBL-7"],
+      "registeredIds": [], "certificateIds": ["CERT-2"], "invalidatedIds": [], "before": [1, 1, 1, 5, 2, 2], "after": [0, 1, 1, 5, 2, 2],
+      "preparation": null, "reason": "Accept the implemented frozen aggregate review contract.", "assessor": "ponytail-local-approved-coordinator"
+    },
+    {
+      "id": "CP5", "predecessorId": "CP4", "baselineId": "B1", "kind": "productive", "selectedIds": ["OBL-2"],
+      "registeredIds": [], "certificateIds": ["CERT-3"], "invalidatedIds": [], "before": [0, 1, 1, 5, 2, 2], "after": [0, 0, 1, 5, 2, 2],
+      "preparation": null, "reason": "Accept the complete acceptance Arc inventory.", "assessor": "ponytail-local-approved-coordinator"
+    },
+    {
+      "id": "CP6", "predecessorId": "CP5", "baselineId": "B1", "kind": "productive", "selectedIds": ["OBL-3"],
+      "registeredIds": [], "certificateIds": ["CERT-4"], "invalidatedIds": [], "before": [0, 0, 1, 5, 2, 2], "after": [0, 0, 0, 5, 2, 2],
+      "preparation": null, "reason": "Accept the complete acceptance Step inventory.", "assessor": "ponytail-local-approved-coordinator"
+    },
+    {
+      "id": "CP7", "predecessorId": "CP6", "baselineId": "B1", "kind": "productive", "selectedIds": ["OBL-4"],
+      "registeredIds": [], "certificateIds": ["CERT-5"], "invalidatedIds": [], "before": [0, 0, 0, 5, 2, 2], "after": [0, 0, 0, 4, 2, 2],
+      "preparation": null, "reason": "Accept the implementation and policy unit inventory.", "assessor": "ponytail-local-approved-coordinator"
+    },
+    {
+      "id": "CP8", "predecessorId": "CP7", "baselineId": "B1", "kind": "productive", "selectedIds": ["OBL-8"],
+      "registeredIds": [], "certificateIds": ["CERT-6"], "invalidatedIds": [], "before": [0, 0, 0, 4, 2, 2], "after": [0, 0, 0, 3, 2, 2],
+      "preparation": null, "reason": "Accept the frozen agent selection contract.", "assessor": "ponytail-local-approved-coordinator"
+    },
+    {
+      "id": "CP9", "predecessorId": "CP8", "baselineId": "B1", "kind": "productive", "selectedIds": ["OBL-9"],
+      "registeredIds": [], "certificateIds": ["CERT-7"], "invalidatedIds": [], "before": [0, 0, 0, 3, 2, 2], "after": [0, 0, 0, 2, 2, 2],
+      "preparation": null, "reason": "Accept contributor mapping and path-lineage fallback.", "assessor": "ponytail-local-approved-coordinator"
+    },
+    {
+      "id": "CP10", "predecessorId": "CP9", "baselineId": "B1", "kind": "productive", "selectedIds": ["OBL-10"],
+      "registeredIds": [], "certificateIds": ["CERT-8"], "invalidatedIds": [], "before": [0, 0, 0, 2, 2, 2], "after": [0, 0, 0, 1, 2, 2],
+      "preparation": null, "reason": "Accept the retained replay lifecycle and recovery behavior.", "assessor": "ponytail-local-approved-coordinator"
+    },
+    {
+      "id": "CP11", "predecessorId": "CP10", "baselineId": "B1", "kind": "productive", "selectedIds": ["OBL-11"],
+      "registeredIds": [], "certificateIds": ["CERT-9"], "invalidatedIds": [], "before": [0, 0, 0, 1, 2, 2], "after": [0, 0, 0, 0, 2, 2],
+      "preparation": null, "reason": "Accept the aggregate semantic authority and no-runtime-validation boundary.", "assessor": "ponytail-local-approved-coordinator"
+    },
+    {
+      "id": "CP12", "predecessorId": "CP11", "baselineId": "B1", "kind": "productive", "selectedIds": ["OBL-5"],
+      "registeredIds": [], "certificateIds": ["CERT-10"], "invalidatedIds": [], "before": [0, 0, 0, 0, 2, 2], "after": [0, 0, 0, 0, 1, 2],
+      "preparation": null, "reason": "Accept the final unit selection inventory while retaining its unresolved execution obligation.", "assessor": "ponytail-local-approved-coordinator"
     }
   ]
 }
