@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-10-13-worker_rebase_upstream_ambiguity",
+  "recorded_at": "2026-10-13T17:37:52-07:00",
+  "source_references": [
+    "pm/plans/in_progress/2026-10-13-campaign-restart-acceptance/plan.md"
+  ],
+  "context": {
+    "languages": [
+      "typescript"
+    ],
+    "frameworks": [],
+    "components": [
+      "rolling-worker"
+    ],
+    "affected_boundaries": [
+      "coordinator configuration to worker instructions"
+    ],
+    "code_references": [
+      "src/rolling-worker.ts",
+      "tests/rolling-worker.test.ts"
+    ]
+  },
+  "observed_behavior": "An original GWEN worker fetched origin/uat-requirements rather than the campaign increment branch origin/traceability, then stopped at semantic-rebase approval.",
+  "expected_behavior": "Worker semantic replay uses the campaign increment branch; mainline is owned by coordinator publication.",
+  "causal_mechanism": "Instructions named a configured campaign branch without spelling out its ref or fetch arguments while the frozen context also contained a distinct mainline branch.",
+  "anti_pattern": {
+    "structural_description": "Operational instructions rely on an ambiguous prose label for one of two configured branches.",
+    "why_it_fails": "The actor can choose the other valid configured branch and attempt to replay unrelated coordinator history."
+  },
+  "correct_pattern": {
+    "required_invariant": "The worker fetch ref and replay upstream derive directly from configuration.incrementRef and configuration.mainline.remote.",
+    "implementation_description": "Instructions include the exact remote-tracking ref and typed Git fetch argument vector, and identify mainline as coordinator publication scope."
+  },
+  "applicability_conditions": [
+    "Campaign increment branch differs from mainline."
+  ],
+  "known_non_matches": [
+    "The existing exact semantic-rebase approval scope correctly rejected the incorrect attempt."
+  ],
+  "confirmation_evidence": [
+    "Original worker101 fetched the distinct mainline before the correction.",
+    "After corrected instructions its original attached turn 01a137d0-8c69-7573-b3d5-89eb8b083f62 completed with candidate 6313652095a8deeeb19d2210d1c19a4fe81170be."
+  ],
+  "regression_proofs": [
+    "tests/rolling-worker.test.ts: worker instructions retain exact obligation, requirement, acceptance step, lease and QA selections"
+  ]
+}

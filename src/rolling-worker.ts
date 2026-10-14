@@ -11,7 +11,7 @@ import { parseRollingWorkerSubmission, type RollingWorkerSubmissionV1 } from './
 
 import type { Obligation, ObligationRequirement } from '../skills/plan-execution/scripts/obligations.js';
 import type { ObligationLeaseV1 } from '../skills/plan-execution/scripts/obligation-binding-history.js';
-import type { RollingBinding, RollingProjectConfigV1, RollingResolvedConfiguration } from './rolling-campaign.js';
+import type { RollingArgv, RollingBinding, RollingProjectConfigV1, RollingResolvedConfiguration } from './rolling-campaign.js';
 import type { RollingCampaignStore, RollingSessionAttachment, RollingWorkerDispatchAttached, RollingAssignmentTransition, RollingSubmissionReceipt, RollingWorkerRetirement } from './rolling-campaign-store.js';
 import type { RollingReviewRejectedV1 } from './rolling-review.js';
 
@@ -157,6 +157,8 @@ export function buildRollingWorkerInstructions(rollingWorkerContext: RollingWork
   'worker instructions differ from frozen obligation');
  requireWorker(obligation.requirementIds.every(id => requirements.some(item => item.id === id))
   && requirements.every(item => obligation.requirementIds.includes(item.id)), 'worker instructions lack exact requirement references');
+ const rollingArgv:RollingArgv=['git','fetch','--no-tags','--',rollingWorkerContext.configuration.mainline.remote,
+  `refs/heads/${rollingWorkerContext.configuration.incrementRef}:refs/remotes/${rollingWorkerContext.configuration.mainline.remote}/${rollingWorkerContext.configuration.incrementRef}`];
  const rollingWorkerSubmissionV1: RollingWorkerSubmissionV1 = {
   schemaVersion:1,campaignId:lease.scopeId,assignmentId:rollingWorkerContext.assignmentId,
   generation:lease.generation,sessionId:rollingWorkerContext.rollingWorkerCreationV1.sessionId,
@@ -178,6 +180,7 @@ export function buildRollingWorkerInstructions(rollingWorkerContext: RollingWork
   + 'Preserve static typing and project build-impact rules. Report newly discovered prerequisites to the coordinator; do not silently change the authoritative graph. '
   + 'If blocked, stop activity and report the blocker while retaining the checkout. Delivery is proposed discharge, not acceptance. '
   + 'When submitting code changes, fetch the configured campaign branch and perform a full semantic rebase commit by commit, refresh affected evidence, retain the exact candidate SHA and base, and stop activity. '
+  + `Worker rebase upstream: refs/remotes/${rollingWorkerContext.configuration.mainline.remote}/${rollingWorkerContext.configuration.incrementRef}. Exact fetch argument vector: ${JSON.stringify(rollingArgv)}. The fetched FETCH_HEAD must identify this campaign increment branch before replay. The coordinator publication gate owns ${rollingWorkerContext.configuration.mainline.remote}/${rollingWorkerContext.configuration.mainline.branch}. `
   + 'For semantic replay after fetching the configured campaign branch, use GIT_SEQUENCE_EDITOR=\"sed -i.bak -e s/^pick/edit/\" git rebase --interactive --force-rebase FETCH_HEAD. Inspect each stopped commit before git rebase --continue. These exact commands receive one-use approval only for this active leased worker and its original instruction turn. '
   + 'If this checkout retains its owned in-progress rebase after a failed prior turn, inspect the stopped commit and continue that rebase before beginning a fresh replay; preserve its amendments and staged work. '
   + 'Git mutations in this linked checkout write shared repository metadata outside the checkout. Request sandbox escalation for each authorized Git mutation before its first execution (sandbox_permissions=require_escalated). Keep the lease and authorized command scope binding. '

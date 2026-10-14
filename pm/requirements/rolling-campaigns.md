@@ -346,3 +346,8 @@ Observation requires `--stopped <reference>`: the coordinator explicitly
 attests terminal cessation of the original integration/push operation using
 owning-command evidence. Remote absence alone is insufficient; running or
 unknown operations remain fenced.
+
+Under REQ-ROLLING-WORKERS, atomic obligation OBL-RESTART-3 requires worker
+instructions to name the exact remote-tracking campaign increment branch and
+fetch argument vector used for full semantic replay. The coordinator owns
+publication to the separately configured mainline.

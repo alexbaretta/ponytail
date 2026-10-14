@@ -452,3 +452,9 @@ Observation requires `--stopped <reference>`: the coordinator explicitly
 attests terminal cessation of the original integration/push operation using
 owning-command evidence. Remote absence alone is insufficient; running or
 unknown operations remain fenced.
+
+ACC-ROLLING-WORKER-UPSTREAM (OBL-RESTART-3): configure different increment
+and mainline branches. Confirm the worker receives an explicit fetch vector
+and rebase upstream selecting the increment branch, while the mainline remains
+the coordinator publication target. Verify same-worker correction after a
+wrong-mainline fetch; preserve the existing candidate and lease boundaries.
