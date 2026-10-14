@@ -12,59 +12,94 @@ Licensed under the MIT License. See LICENSE in the project root.
 -->
 
 # Semantic Rebase
+A semantic rebase preserves the source branch's required intent on the target
+branch's final architecture. Perform semantic judgment once over both final
+trees; do not inspect every cleanly replayed commit by default.
 
-A rebase is a commit-by-commit integration review, not a successful invocation
-of `git rebase`. Arrange the rebase so the agent stops after every replayed
-commit, including commits that Git could apply cleanly. Do not batch review or
-resolution across commits.
+## Prepare one aggregate review
 
-Before replay, preserve the original commit identities and inspect the ordered
-commit series. For each commit, establish its intent from its message, patch,
-tests, and relevant surrounding code. Then replay only that commit.
+Start from a clean attached source branch and invoke:
 
-At every stop:
+```text
+ponytail rebase diff <target> [--output <review-file>]
+```
 
-1. Resolve all textual conflicts for the current commit without selecting one
-   side wholesale when both sides carry required behavior.
-2. Inspect every replayed hunk in the context of the new base, including hunks
-   Git applied without a conflict marker. Compare the original commit's intent
-   with architectural, algorithmic, contract, schema, and control-flow changes
-   made on the new base.
-3. Treat a cleanly applied hunk as a semantic conflict when the new base makes
-   its assumptions, placement, algorithm, abstraction, contract, or behavior
-   obsolete or incorrect. Adapt the hunk to the new design, or omit it when the
-   new base already satisfies the commit's intent; do not preserve obsolete
-   code merely because it applies.
-4. Run the smallest focused proof needed for the current commit's integrated
-   behavior. Amend the replayed commit when resolution changed it.
-5. Continue only after the current commit is textually clean, semantically
-   valid, and independently understood. Never defer a known conflict to a
-   later commit in the series.
+The command freezes the invoking worktree's source branch and tip, resolved
+target tip, merge base, and ordered source commits. It emits one deterministic
+stream containing `base..target` and `base..source` final-state changes. Stable
+`TNNNN` and `SNNNN` identifiers belong only to that frozen analysis.
 
-Preserve the branch's intended commit boundaries and the new base's current
-architecture. Do not squash, reorder, drop, or broaden commits unless the
-requested rebase or a confirmed semantic resolution requires it.
+Review the complete stream as a code review. Compare behavior, contracts,
+algorithms, architecture, data flow, schemas, and control flow across the two
+final states. The CLI performs no language, symbol, domain, dependency, or
+semantic-conflict inference.
 
-After the final commit, verify that no rebase state remains, the expected new
-base is an ancestor of `HEAD`, the resulting commit sequence preserves the
-original series' intent, and the worktree contains only understood changes.
-Run the repository's applicable final validation for the fully rebased tree.
+Record every source change that may need adaptation and its optional related
+target context in a selection file:
 
-## Authorized Post-Review Fast Rebase
+```text
+ponytail-semantic-rebase-selection-v1 <analysis-digest>
+S0003 T0002,T0007 | concise review reason
+S0011 - | source-side interaction needing replay inspection
+```
 
-A rolling campaign may explicitly authorize Ponytail's fast-rebase policy for
-coordinator integration after an adversarial review accepts the exact candidate.
-The worker has already performed its full semantic rebase. This bounded exception
-permits interactive replay onto the freshly fetched campaign branch without
-additional semantic inspection of cleanly replayed commits.
+Select source IDs to create stops. Target IDs explain context and do not create
+stops. When the review finds no candidate, use a header-only selection file;
+`run` then replays without planned agent stops while retaining unexpected Git
+conflicts.
 
-Textual conflicts stop replay and require semantic inspection of the conflicting
-changes, identified by their original commit and integration base. Preserve the
-retained rebase and both sides' required behavior. Record the inspection before
-continuing; substantive repairs return to the original worker and reviewer for
-fresh implementation, full semantic rebase, proof and review.
+## Replay only reviewed candidates
 
-Preserve commit boundaries and unrelated branch refs. Refresh applicable focused
-QA when inputs change, then fast-forward and push normally. Verify remote
-containment before recording delivery. Worker rebases and mainline publication
-retain the full semantic-rebase procedure above.
+Run:
+
+```text
+ponytail rebase run <target> --conflicts <selection-file>
+```
+
+Ponytail maps each selected final source change backward through the frozen
+source history, following exact text intervals where possible. New files,
+deletions, binary or structural changes, and ambiguous provenance widen only
+to commits touching that affected path lineage. It programs Git interactive
+rebase with a `break` immediately after every contributor and plain `pick` for
+the rest, so review occurs in the contributor's replayed context.
+
+At each retained stop:
+
+1. Read `ponytail rebase status` and the current dossier.
+2. If Git reported a textual conflict, resolve both sides according to the
+   aggregate review and the stopped commit's intent. Never select one side
+   wholesale when both contain required behavior.
+3. If this is a planned semantic stop, inspect the selected source patch in
+   the replayed context and adapt or omit it when the target already satisfies
+   its intent.
+4. Keep edits within the dossier's selected lineage. If a necessary repair
+   expands beyond it, make the repair and let `continue` retain a residual
+   review rather than treating the expanded change as pre-reviewed.
+5. Invoke `ponytail rebase continue`.
+
+The rebase commands never run unit tests, integration tests, builds, product
+QA, fetch, push, merge, publication, worktree creation, autostash, autosquash,
+or update-refs behavior. Rebase-time validation is Git integrity only. Run
+project validation separately after the rebase under the invoking project's
+ordinary acceptance policy.
+
+Use `ponytail rebase abort` to restore an active replay to the exact frozen
+source tip. Do not manually delete Ponytail or Git rebase state. A stale
+analysis, changed source or target, dirty start, foreign rebase, malformed
+selection, or broadened resolution must stop with its state retained.
+
+## Completion
+
+After completion, verify that the target tip is an ancestor of `HEAD`, no Git
+rebase state remains, every original source commit is accounted for as
+replayed, empty, equivalent, or conflict-adapted, every selected contributor
+was stopped, and the final range-diff is understood. Then run the repository's
+applicable validation outside the rebase lifecycle.
+
+## Authorized post-review campaign integration
+
+A rolling campaign may separately authorize its coordinator fast-rebase after
+an adversarial review accepts an exact candidate. That bounded publication
+exception retains its own authority and does not replace this worker workflow.
+Textual conflicts or substantive integration repairs return to semantic review
+and fresh acceptance before publication.
