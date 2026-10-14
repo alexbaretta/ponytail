@@ -14,6 +14,7 @@ boundary by `tests/campaign-census.test.js`.
 
 ## Suite index
 
+- [Swarms](swarms.md)
 - [Rolling campaigns](rolling-campaigns.md)
 - [Static language acceptance](static-language.md)
 - [Obligation-centered execution](obligation-execution.md)

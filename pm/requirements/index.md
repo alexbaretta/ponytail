@@ -12,6 +12,7 @@ behavior independently from implementation plans and architecture.
 
 ## Requirement sets
 
+- [Swarms](swarms.md)
 - [Rolling campaigns](rolling-campaigns.md)
 - [Ponytail implementation language](static-language.md)
 - [Obligation-centered execution](obligation-execution.md)
