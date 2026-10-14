@@ -211,6 +211,22 @@ class SwarmStore {
             await poolClient.query("UPDATE ponytail_index.rolling_worktree_v1 SET state='RESERVED' WHERE project_id=$1 AND number=$2", [this.projectId, currentSwarmWorkerBinding.worktreeNumber]);
         });
     }
+    async recordWorkerInactive(ownerRoot, sessionId, generation, leaseGeneration, blockers) {
+        return this.transaction(async (poolClient) => {
+            await poolClient.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))', [this.projectId]);
+            const row = (await poolClient.query(`SELECT k.*,n.thread_id,n.root_path,o.git_common_directory,o.coordinator_session_id FROM ponytail_index.swarm_worker_v1 k
+    JOIN ponytail_index.swarm_native_session_v1 n USING(session_id)
+    JOIN ponytail_index.swarm_owner_v1 o ON o.project_id=k.project_id AND o.owner_root=k.owner_root
+    WHERE k.project_id=$1 AND k.owner_root=$2 AND k.session_id=$3 AND k.generation=$4 FOR UPDATE OF k`, [this.projectId, ownerRoot, sessionId, generation])).rows[0];
+            if (row === undefined || row.coordinator_session_id === null)
+                throw new Error('swarm: bound coordinator and original worker are required for inactivity recording');
+            const swarmWorkerBinding = readWorker(row);
+            if (swarmWorkerBinding.state !== 'BOUND' || swarmWorkerBinding.completed)
+                throw new Error('swarm: only an unfinished bound worker can become inactive');
+            physicalOwner({ rootPath: ownerRoot, gitCommonDirectory: stringColumn(row.git_common_directory) });
+            await new rolling_campaign_store_js_1.RollingCampaignStore(this.pool, this.projectId).recordSwarmWorkerInactive(poolClient, swarmWorkerBinding, leaseGeneration, blockers);
+        });
+    }
     async completeWorker(ownerRoot, sessionId, generation) {
         return this.transaction(async (poolClient) => {
             await poolClient.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))', [this.projectId]);
@@ -229,7 +245,7 @@ class SwarmStore {
             return { ...swarmWorkerBinding, completed: true };
         });
     }
-    async bindWorker(swarmWorktreeMembership, swarmSessionIdentity, swarmWorkerAssignment) {
+    async bindWorker(swarmWorktreeMembership, swarmSessionIdentity, swarmWorkerAssignment, leaseGeneration = null) {
         swarmWorkerAssignment = readSwarmWorkerAssignment(swarmWorkerAssignment);
         return this.transaction(async (poolClient) => {
             await poolClient.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))', [this.projectId]);
@@ -257,7 +273,7 @@ class SwarmStore {
             if ((await poolClient.query("SELECT 1 FROM ponytail_index.swarm_worker_v1 WHERE project_id=$1 AND worktree_number=$2 AND state<>'REMOVED' AND session_id<>$3", [this.projectId, swarmWorktreeMembership.number, swarmSessionIdentity.sessionId])).rowCount)
                 throw new Error('swarm: checkout already has a bound worker');
             await this.recordNativeSession(poolClient, swarmSessionIdentity);
-            await new rolling_campaign_store_js_1.RollingCampaignStore(this.pool, this.projectId).recordSwarmWorkerBinding(poolClient, swarmWorktreeMembership, swarmSessionIdentity, swarmWorkerAssignment);
+            await new rolling_campaign_store_js_1.RollingCampaignStore(this.pool, this.projectId).recordSwarmWorkerBinding(poolClient, swarmWorktreeMembership, swarmSessionIdentity, swarmWorkerAssignment, leaseGeneration);
             if (existing !== undefined && existing.state !== 'REMOVED') {
                 const swarmWorkerBinding = readWorker(existing);
                 if (swarmWorkerBinding.state !== 'BOUND' || swarmWorkerBinding.worktreeGeneration !== swarmWorktreeMembership.generation || swarmWorkerBinding.assignment.kind !== swarmWorkerAssignment.kind

@@ -119,7 +119,8 @@ action, review and batch IDs.
    then run `reconcile --campaign <id>`. Fix cycles and missing references before
    dispatch. The coordinator's graph is authoritative; worker copies are not.
    Historical frozen leases remain immutable; a scope change needs renewed
-   authorization before the original worker proceeds.
+   authorization before the original worker proceeds. The public scope-changing
+   lease-renewal transition remains pending; do not bypass a reported scope change.
 3. `replenish --campaign <id>` reserves compatible obligation/worktree pairs up
    to N and prefers unblocked retained assignments. `--existing-only true` uses
    only safe retained physical roots and reports lack of capacity. Carry each
@@ -137,8 +138,12 @@ action, review and batch IDs.
    independent top-level workers concurrently and observe them through the host.
    Unknown dispatch blockers retain their original identities for observation.
 4. A blocked worker reports its discovered prerequisites. Reconcile first,
-   quiesce it through host tools and retain its source and checkout. Inactive
-   workers free active capacity and take precedence when unblocked. Permission
+   quiesce it through host tools, then use `swarm worker-inactive` with the exact
+   worker generation, campaign lease generation and declared blocker IDs. Retain
+   its source and checkout. Inactive workers free active capacity and take
+   precedence when unblocked. Resume the original session through host tools and
+   repeat `swarm worker-bind` with the new `--lease-generation` from replenishment;
+   the command records assignment membership rather than actual execution. Permission
    and host-capability failures are concrete blockers, not invented dependencies.
 5. Collect the original worker's exact final commit/base and focused evidence.
    Assign an allowed adversarial reviewer through coordinator host tools; send

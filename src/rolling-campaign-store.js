@@ -528,6 +528,26 @@ class RollingCampaignStore {
         const workerDispatches = (await poolClient.query("SELECT dispatch_id FROM ponytail_index.rolling_worker_dispatch_v1 WHERE project_id=$1 AND assignment_id=$2 AND state='STARTED'", [this.projectId, assignmentId])).rows;
         requireState(workerDispatches.length === 0, 'worker dispatch outcome must be reconciled before stopping ownership');
     }
+    async setWorkerInactive(poolClient, campaignId, id, blockers) {
+        await poolClient.query("UPDATE ponytail_index.rolling_assignment_v1 SET state='INACTIVE',activity_stopped=true,blockers_text=$4 WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3", [this.projectId, campaignId, id, JSON.stringify(blockers)]);
+        return { id, state: 'INACTIVE' };
+    }
+    async recordSwarmWorkerInactive(poolClient, swarmWorkerBinding, leaseGeneration, blockers) {
+        requireState(blockers.every(id => /^OBL-[1-9][0-9]*$/u.test(id)) && new Set(blockers).size === blockers.length, 'inactive worker requires unique obligation blockers');
+        const rows = (await poolClient.query("SELECT * FROM ponytail_index.rolling_assignment_v1 WHERE project_id=$1 AND worktree_number=$2 AND state<>'RELEASED' FOR UPDATE", [this.projectId, swarmWorkerBinding.worktreeNumber])).rows;
+        requireState(rows.length === 1, 'inactive worker requires its retained campaign assignment');
+        const rollingStoredAssignment = readAssignment(rows[0]);
+        const rollingCampaignRow = await this.campaign(poolClient, rollingStoredAssignment.scopeId);
+        requireState(rollingCampaignRow.closure_text === null && rollingCampaignRow.coordinator_root === swarmWorkerBinding.ownerRoot, 'inactive worker campaign owner changed or is closed');
+        requireState(rollingStoredAssignment.generation === leaseGeneration && rollingStoredAssignment.sessionId === swarmWorkerBinding.sessionId && !rollingStoredAssignment.retired, 'inactive worker lease or original session changed');
+        requireState(['WORKING', 'INACTIVE', 'REWORK', 'RESERVED'].includes(rollingStoredAssignment.state), 'campaign worker cannot become inactive in its current state');
+        const rollingGraph = this.collectGraph(rollingCampaignRow);
+        requireState(rollingGraph.digest === rollingCampaignRow.graph_digest, 'campaign graph changed; reconcile before recording inactivity');
+        requireState(blockers.every(id => rollingGraph.document.obligations.some(obligation => obligation.id === id)), 'inactive worker blocker is not in the authoritative graph');
+        (0, rolling_worktrees_js_1.validateRollingSessionMarker)(swarmWorkerBinding.rootPath, swarmWorkerBinding.sessionId);
+        await poolClient.query("UPDATE ponytail_index.rolling_action_v1 SET state='CANCELLED' WHERE project_id=$1 AND assignment_id=$2 AND state IN ('PENDING','STARTED')", [this.projectId, rollingStoredAssignment.id]);
+        await this.setWorkerInactive(poolClient, rollingStoredAssignment.scopeId, rollingStoredAssignment.id, blockers);
+    }
     async suspend(campaignId, id, generation, stopped, blockers) {
         requireState(stopped === true && Array.isArray(blockers) && blockers.length > 0
             && blockers.every(item => /^OBL-[1-9][0-9]*$/.test(item)) && new Set(blockers).size === blockers.length, 'suspension requires stopped acknowledgment and unique obligation blockers');
@@ -535,8 +555,7 @@ class RollingCampaignStore {
             const assignment = await this.assignment(poolClient, campaignId, id, generation);
             requireState(assignment.sessionId && !assignment.retired, 'only an attached non-retired session may become inactive');
             await this.cancelActions(poolClient, id);
-            await poolClient.query("UPDATE ponytail_index.rolling_assignment_v1 SET state='INACTIVE',activity_stopped=true,blockers_text=$4 WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3", [this.projectId, campaignId, id, JSON.stringify(blockers)]);
-            return { id, state: 'INACTIVE' };
+            return this.setWorkerInactive(poolClient, campaignId, id, blockers);
         });
     }
     async retire(campaignId, id, generation, stopped) {
@@ -618,12 +637,15 @@ class RollingCampaignStore {
             return { ...rollingWorkerRetirement, state: 'CLEANED' };
         });
     }
-    async recordSwarmWorkerBinding(poolClient, swarmWorktreeMembership, swarmSessionIdentity, swarmWorkerAssignment) {
+    async recordSwarmWorkerBinding(poolClient, swarmWorktreeMembership, swarmSessionIdentity, swarmWorkerAssignment, leaseGeneration) {
         const rows = (await poolClient.query("SELECT a.* FROM ponytail_index.rolling_assignment_v1 a WHERE a.project_id=$1 AND a.worktree_number=$2 AND a.state<>'RELEASED' FOR UPDATE", [this.projectId, swarmWorktreeMembership.number])).rows;
-        if (rows.length === 0)
+        if (rows.length === 0) {
+            requireState(leaseGeneration === null, 'checkout has no campaign lease');
             return;
+        }
         requireState(rows.length === 1, 'swarm checkout has multiple campaign assignments');
         const rollingStoredAssignment = readAssignment(rows[0]);
+        requireState(leaseGeneration === null || rollingStoredAssignment.generation === leaseGeneration, 'campaign lease generation changed before worker binding');
         const rollingCampaignRow = await this.campaign(poolClient, rollingStoredAssignment.scopeId);
         requireState(rollingCampaignRow.closure_text === null, 'campaign is closed; binding is refused');
         requireState(rollingCampaignRow.coordinator_root === swarmWorktreeMembership.ownerRoot, 'campaign checkout belongs to another swarm');
@@ -649,6 +671,15 @@ class RollingCampaignStore {
         (0, rolling_worktrees_js_1.validateRollingSessionMarker)(swarmWorktreeMembership.rootPath, swarmSessionIdentity.sessionId);
         if (rollingStoredAssignment.sessionId !== null) {
             requireState(rollingActionRow.state === 'COMPLETED' && rollingActionRow.resultText !== null && (0, node_util_1.isDeepStrictEqual)((0, rolling_worker_js_1.parseRollingWorkerCreation)(rollingActionRow.resultText), rollingWorkerCreationV1), 'original host worker identity changed');
+            if (rollingStoredAssignment.state === 'RESERVED') {
+                requireState(leaseGeneration === rollingStoredAssignment.generation, 'retained worker binding requires its current lease generation');
+                const pending = (await poolClient.query("SELECT * FROM ponytail_index.rolling_action_v1 WHERE project_id=$1 AND assignment_id=$2 AND generation=$3 AND kind='RESUME_WORKER' AND state='PENDING' FOR UPDATE", [this.projectId, rollingStoredAssignment.id, leaseGeneration])).rows;
+                requireState(pending.length === 1, 'retained worker has no unique pending resumption');
+                const resumptionRollingActionRow = readAction(pending[0]);
+                const rollingWorkerResumptionV1 = { schemaVersion: 1, rollingWorkerCreationV1, baseCommit: this.campaignBase(rollingCampaignRow) };
+                await poolClient.query("UPDATE ponytail_index.rolling_action_v1 SET state='COMPLETED',result_text=$2 WHERE action_id=$1", [resumptionRollingActionRow.id, JSON.stringify(rollingWorkerResumptionV1)]);
+                await this.attachWorkerSession(poolClient, rollingStoredAssignment, swarmSessionIdentity.sessionId);
+            }
             return;
         }
         requireState(rollingStoredAssignment.state === 'RESERVED' && rollingStoredAssignment.generation === swarmWorktreeMembership.generation
@@ -1940,8 +1971,7 @@ class RollingCampaignStore {
                 requireState((0, node_util_1.isDeepStrictEqual)(existing, { ...checkedRollingWorkerStopV1, observedAt: existing.observedAt }), 'stop observation checkpoint is immutable');
             else
                 await poolClient.query('INSERT INTO ponytail_index.rolling_worker_stop_v1(project_id,campaign_id,assignment_id,generation,observation_text) VALUES($1,$2,$3,$4,$5)', [this.projectId, campaignId, id, generation, JSON.stringify(checkedRollingWorkerStopV1)]);
-            await poolClient.query("UPDATE ponytail_index.rolling_assignment_v1 SET state='INACTIVE',activity_stopped=true,blockers_text=$4 WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3", [this.projectId, campaignId, id, JSON.stringify(blockers)]);
-            return { id, state: 'INACTIVE' };
+            return this.setWorkerInactive(poolClient, campaignId, id, blockers);
         });
     }
     async workerContext(campaignId, id, generation) {

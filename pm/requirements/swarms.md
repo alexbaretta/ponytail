@@ -83,6 +83,12 @@ available to enforce their original-owner restriction.
 | OBL-8 | Each bound worker is named `W<nn> S<mm> <three word summary>` for a sprint assignment or `W<nn> P<mm> <three word summary>` for a plan assignment. W is its current swarm worker number; S/P is a shortened assignment identifier with an unambiguous mapping to the full plan/sprint ID. | Native names conform, distinguish workers in the current swarm, and resolve to the reported assignment; rebinding or assignment changes do not lose full identity. |
 | OBL-9 | On a worker session's final completion, the coordinator prepends `DONE ` to its name. Naming completion does not itself discharge an obligation, release a lease, archive a session or delete a worktree. | The completed original session is named `DONE W<nn> S<mm> <three word summary>` or `DONE W<nn> P<mm> <three word summary>`, while durable acceptance and ownership remain truthful. |
 
+A bound campaign worker may be recorded inactive only after the coordinator
+establishes host quiescence. It retains its session/checkout, frees scheduling
+capacity and is preferred when unblocked. The supplied current lease generation
+fences inactivity and retained resumption bookkeeping; renewing membership does
+not itself resume or prove execution of the session.
+
 Worker detachment fences the matching campaign assignment and outstanding
 allocation actions in the same database transaction as removal. Submitted
 evidence remains intact; releasing a lease does not discharge its obligation.

@@ -234,3 +234,8 @@ preserving sessions, source and evidence. Release passes recorded cleanup
 provenance and checks markers/Git state again after callbacks. Real CLI/PG proof
 covers pending resumption cancellation, idempotent detachment, callback refusal
 and dirty-source retention. Retained reactivation and final gates remain open.
+
+Retained-worker inactivity and unchanged-scope resumption now use the swarm CLI,
+with original identity and exact current lease generations. CLI/PG proof covers
+capacity release, blocker validation and original-worker preference. The remaining
+operational gap is scope-changing lease renewal; final acceptance remains open.

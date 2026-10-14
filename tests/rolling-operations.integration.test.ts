@@ -296,7 +296,16 @@ test('shared operations initialize defaults and reconcile event/periodic content
  await verifyMcpParity(root,rollingCampaignOperations);
  await pool.query("DELETE FROM ponytail_index.rolling_worker_retirement_v1 WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3",[projectId,'pilot',firstRollingStoredAssignment.id]);
  await pool.query("UPDATE ponytail_index.rolling_assignment_v1 SET state='WORKING',retired=false,activity_stopped=false WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3",[projectId,'pilot',firstRollingStoredAssignment.id]);
- await rollingCampaignStore.suspend('pilot',firstRollingStoredAssignment.id,firstRollingStoredAssignment.generation,true,['OBL-7']);
+ const originalWorker=(await inspectSwarmInfo(root,pool,projectId)).workers.find(worker=>worker.binding.sessionId===workerSessionId);assert.ok(originalWorker);
+ const inactiveArgs=['worker-inactive','--session',workerSessionId,'--generation',originalWorker.binding.generation,'--lease-generation',firstRollingStoredAssignment.generation,'--blockers','["OBL-7"]','--json'];
+ const staleInactivitySpawnSyncReturns:SpawnSyncReturns<string>=spawnSync(process.execPath,[path.join(process.cwd(),'src/swarm-info.js'),...inactiveArgs.map(value=>value===firstRollingStoredAssignment.generation?crypto.randomUUID():value)],{cwd:root,encoding:'utf8'});
+ assert.equal(staleInactivitySpawnSyncReturns.status,1);assert.match(staleInactivitySpawnSyncReturns.stderr,/lease or original session changed/);
+ const unknownBlockerSpawnSyncReturns:SpawnSyncReturns<string>=spawnSync(process.execPath,[path.join(process.cwd(),'src/swarm-info.js'),...inactiveArgs.map(value=>value==='["OBL-7"]'?'["OBL-999999"]':value)],{cwd:root,encoding:'utf8'});
+ assert.equal(unknownBlockerSpawnSyncReturns.status,1);assert.match(unknownBlockerSpawnSyncReturns.stderr,/authoritative graph/);
+ for(let attempt=0;attempt<2;attempt++) {
+  const inactivitySpawnSyncReturns:SpawnSyncReturns<string>=spawnSync(process.execPath,[path.join(process.cwd(),'src/swarm-info.js'),...inactiveArgs],{cwd:root,encoding:'utf8'});
+  assert.equal(inactivitySpawnSyncReturns.status,0,inactivitySpawnSyncReturns.stderr);
+ }
  const inactiveRollingCoordinatorSnapshot = await rollingCampaignOperations.status('pilot');
  assert.equal(inactiveRollingCoordinatorSnapshot.scheduling.activeCount,1);
  assert.equal(inactiveRollingCoordinatorSnapshot.assignments.find(item=>item.id === firstRollingStoredAssignment.id)?.state,'INACTIVE');
@@ -324,6 +333,20 @@ test('shared operations initialize defaults and reconcile event/periodic content
  assert.equal(resumedRollingReplenishment.allocations[0]?.assignment?.id,firstRollingStoredAssignment.id);
  assert.equal(resumedRollingReplenishment.allocations[0]?.assignment?.sessionId,workerSessionId);
  assert.notEqual(resumedRollingReplenishment.allocations[0]?.assignment?.generation,firstRollingStoredAssignment.generation);
+ const resumedAssignment=resumedRollingReplenishment.allocations[0]?.assignment;assert.ok(resumedAssignment);
+ const missingLeaseGenerationSpawnSyncReturns:SpawnSyncReturns<string>=spawnSync(process.execPath,[path.join(process.cwd(),'src/swarm-info.js'),...workerBindArgs],{cwd:root,encoding:'utf8'});
+ assert.equal(missingLeaseGenerationSpawnSyncReturns.status,1);assert.match(missingLeaseGenerationSpawnSyncReturns.stderr,/current lease generation/);
+ const oldLeaseGenerationSpawnSyncReturns:SpawnSyncReturns<string>=spawnSync(process.execPath,[path.join(process.cwd(),'src/swarm-info.js'),...workerBindArgs,'--lease-generation',firstRollingStoredAssignment.generation],{cwd:root,encoding:'utf8'});
+ assert.equal(oldLeaseGenerationSpawnSyncReturns.status,1);assert.match(oldLeaseGenerationSpawnSyncReturns.stderr,/generation changed/);
+ for(let attempt=0;attempt<2;attempt++) {
+  const resumptionSpawnSyncReturns:SpawnSyncReturns<string>=spawnSync(process.execPath,[path.join(process.cwd(),'src/swarm-info.js'),...workerBindArgs,'--lease-generation',resumedAssignment.generation],{cwd:root,encoding:'utf8'});
+  assert.equal(resumptionSpawnSyncReturns.status,0,resumptionSpawnSyncReturns.stderr);
+ }
+ const resumedSnapshot=await rollingCampaignOperations.status('pilot');
+ assert.equal(resumedSnapshot.assignments.find(assignment=>assignment.id===firstRollingStoredAssignment.id)?.state,'WORKING');
+ assert.ok(!resumedSnapshot.actions.some(action=>action.assignmentId===firstRollingStoredAssignment.id));
+ assert.equal((await inspectSwarmInfo(root,pool,projectId)).workers.find(worker=>worker.binding.sessionId===workerSessionId)?.binding.generation,originalWorker.binding.generation);
+
  assert.deepEqual((await rollingCampaignOperations.replenish('pilot','event')).allocations,[]);
  fs.writeFileSync(path.join(root,'bindings.json'),JSON.stringify({...rollingBindingsV1,bindings:rollingBindingsV1.bindings.slice(0,2)}));
  const changedRollingCoordinatorActions = await rollingCampaignOperations.nextActions('pilot');
@@ -338,6 +361,11 @@ test('shared operations initialize defaults and reconcile event/periodic content
  assert.equal(reconciledRollingCoordinatorActions.snapshot.graphDigest,reconciledRollingCoordinatorActions.snapshot.observedGraphDigest);
  assert.ok(reconciledRollingCoordinatorActions.decisions.every(item=>item.kind !== 'reconcile'));
  fs.writeFileSync(path.join(retainedRoot,'owned-resource.txt'),firstRollingStoredAssignment.generation);
+ const inactiveAgainSpawnSyncReturns:SpawnSyncReturns<string>=spawnSync(process.execPath,[path.join(process.cwd(),'src/swarm-info.js'),'worker-inactive','--session',workerSessionId,'--generation',originalWorker.binding.generation,'--lease-generation',resumedAssignment.generation,'--json'],{cwd:root,encoding:'utf8'});
+ assert.equal(inactiveAgainSpawnSyncReturns.status,0,inactiveAgainSpawnSyncReturns.stderr);
+ const pendingReactivation=await rollingCampaignOperations.replenish('pilot','event');
+ assert.equal(pendingReactivation.allocations[0]?.assignment?.id,firstRollingStoredAssignment.id);
+ assert.ok(pendingReactivation.snapshot.actions.some(action=>action.assignmentId===firstRollingStoredAssignment.id && action.kind==='RESUME_WORKER'));
  const recordedWorker=(await inspectSwarmInfo(root,pool,projectId)).workers.find(worker=>worker.binding.sessionId===workerSessionId);assert.ok(recordedWorker);
  const evidenceQuery='SELECT (SELECT COUNT(*)::text FROM ponytail_index.rolling_submission_v1 WHERE project_id=$1) AS submissions,(SELECT COUNT(*)::text FROM ponytail_index.rolling_review_v1 WHERE project_id=$1) AS reviews';
  const evidenceBefore=(await pool.query<Record<string,unknown>>(evidenceQuery,[projectId])).rows;

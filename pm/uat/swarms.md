@@ -350,3 +350,14 @@ source in quarantine. A cleanup callback that creates a new session marker cause
 release refusal with membership retained; retry succeeds after resolving that
 fixture marker. Focused PG/CLI and existing clear/standalone binding Arcs pass.
 Retained worker reactivation and final acceptance remain pending.
+
+### Retained original-worker reactivation evidence
+
+The real swarm CLI rejects stale inactivity generations and unknown blockers,
+records the original worker inactive without native observation/control, and
+allows compatible replacement work. When its blocker is satisfied, replenishment
+selects that retained worker first. Repeated worker-bind using the renewed lease
+generation completes the resumption bookkeeping while preserving the original
+session, checkout and swarm worker number. Missing/stale resumption generations
+are refused. Scoped unit/help and PG/CLI proof pass; runtime activity remains
+unobserved. Scope-changing lease renewal and final acceptance remain pending.

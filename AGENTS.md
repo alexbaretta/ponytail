@@ -150,10 +150,15 @@ services. `PROJECT_STRUCTURE.md` is authoritative for that boundary.
   uses the explicit live native acceptance command above.
 - Original worker admission: `ponytail swarm worker-bind --thread <id> --session
   <id> --number <n> --generation <worktree-uuid> --kind <plan|sprint> --assignment
-  <full-id> --summary "three word summary" [--json]`. Requires an enrolled owner,
+  <full-id> --summary "three word summary" [--lease-generation <campaign-uuid>] [--json]`. Requires an enrolled owner,
   bound coordinator and exact assigned checkout. Records the supplied identity
   and reports the desired name for the coordinator to apply through host tools.
   `swarm info` reports V4 bindings; no swarm command contacts Codex.
+- Retained worker inactivity: `ponytail swarm worker-inactive --session <id>
+  --generation <worker-uuid> --lease-generation <campaign-uuid>
+  [--blockers <JSON-array>] [--json]`. Coordinator establishes quiescence first;
+  the command records inactivity without operating the session. Replenish prefers
+  the unblocked original worker; renewed worker-bind uses its returned lease generation.
 - Final worker naming: `ponytail swarm worker-complete --session <id>
   --generation <worker-uuid> [--json]`. Records completion and reports the desired
   DONE-prefixed name; the coordinator renames the session through host tools.

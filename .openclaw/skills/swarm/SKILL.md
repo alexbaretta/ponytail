@@ -104,8 +104,15 @@ existing gates; worker edits alone are not discharged obligations.
 On an unknown dependency, update the authoritative plan graph and reconcile it.
 Drive the worker to quiescence through host tools and verify the original session
 has stopped. Retain its checkout and unfinished work, classify it inactive and
-exclude it from active capacity. Replenish other compatible work. When unblocked,
-resume the original session first with the updated authorized scope. Never edit
+exclude it from active capacity with `worker-inactive --session <id>
+--generation <worker-generation> --lease-generation <campaign-generation>
+--blockers '["OBL-n"]'`. Blockers must already exist in the reconciled graph; use
+an empty list for non-prerequisite pauses. This only records inactivity and
+retains ownership. Replenish other compatible work. When unblocked,
+resume the original session first through host tools with the updated authorized
+scope. Bind the same identity again with `worker-bind` and the returned campaign
+`--lease-generation`; retain the original checkout generation and worker number.
+Binding completes only the bookkeeping resumption. Never edit
 DB projections directly or manufacture native activity observations.
 
 ## Complete, detach and reuse
