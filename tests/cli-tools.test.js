@@ -138,6 +138,15 @@ test('ponytail root help lists only first-level chapters and utilities', () => {
   assert.doesNotMatch(result.stdout, /Preconditions:|Chapter commands:|request-review|freeze-publication|plan-input coordinate|traceability index/);
 });
 
+// Traceability: verifies REQ-FAST-SEMANTIC-REBASE
+test('semantic rebase help publishes aggregate review and retained replay commands', () => {
+  const result = run(ponytail, ['rebase', '--help'], { cwd: root });
+  assert.equal(result.status, 0, result.stderr);
+  for (const command of ['diff', 'run', 'status', 'continue', 'abort']) assert.match(result.stdout, new RegExp(`\\b${command}\\b`));
+  assert.match(result.stdout, /aggregate final-state review/);
+  assert.match(result.stdout, /no semantic inference or product validation/);
+});
+
 test('traceability index help publishes the batch-size contract', () => {
   const result = run(ponytail, ['traceability', 'index', '--help'], { cwd: root });
   assert.equal(result.status, 0, result.stderr);

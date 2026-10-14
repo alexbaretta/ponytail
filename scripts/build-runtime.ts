@@ -21,6 +21,7 @@ const sources: readonly string[] = [
   'src/rolling-operations.ts',
   'src/rolling-cli-registry.ts',
   'src/cli-help.ts',
+  'src/semantic-rebase.ts',
   'src/traceability-projection.ts',
   'src/index-progress.ts',
   'ponytail-mcp/index.ts',

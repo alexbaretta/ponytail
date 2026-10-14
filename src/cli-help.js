@@ -25,6 +25,11 @@ exports.cliHelpCommands = [
     { chapter: 'worktree', name: 'reclaim', arguments: '[--dry-run] [--json]', behavior: 'Use the invoking project’s lifecycle adapter to reclaim proven abandoned checkouts. --dry-run reports without cleanup; --json returns structured findings.' },
     { chapter: 'worktree', name: 'recover', arguments: '<attachment-token>', behavior: 'From a neutral existing cwd, restore only the original checkout bound to this worker attachment token. Never choose a replacement checkout.' },
     { chapter: 'worktree', name: 'upgrade', arguments: '<attachment-token> --revision <commit>', behavior: 'Upgrade the original provisioned checkout to the specified integrated adoption-tooling commit; preserve original attachment identity.' },
+    { chapter: 'rebase', name: 'diff', arguments: '<target> [--output <file>]', behavior: 'Freeze both branch tips and their merge base, then emit one aggregate final-state review stream with stable source and target change IDs. Performs no semantic inference or product validation.' },
+    { chapter: 'rebase', name: 'run', arguments: '<target> --conflicts <selection-file>', behavior: 'Validate the frozen analysis and agent selection, then replay automatically until a selected contributor or unexpected Git conflict.' },
+    { chapter: 'rebase', name: 'status', arguments: '', behavior: 'Report the worktree-local analysis or retained replay and reprint the current stop dossier.' },
+    { chapter: 'rebase', name: 'continue', arguments: '', behavior: 'Continue the retained replay after review. A resolution outside the current selected lineage emits a residual review and remains stopped.' },
+    { chapter: 'rebase', name: 'abort', arguments: '', behavior: 'Abort an active retained replay and verify restoration of the exact frozen source tip.' },
     { chapter: 'pm', name: 'pdf', arguments: '<collection|all> [--output-dir <path>]', behavior: 'Render the configured linked Markdown collections with Pandoc/XeLaTeX. --output-dir selects the destination; collection names come from project configuration.' },
     ...[
         ['register', '', 'Register the invoking Git repository in Ponytail’s user configuration.'],

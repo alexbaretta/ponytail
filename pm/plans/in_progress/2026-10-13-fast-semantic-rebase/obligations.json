@@ -25,87 +25,106 @@
       "id": "OBL-1", "category": "T1", "requirementIds": ["REQ-FAST-SEMANTIC-REBASE"],
       "responsibilityId": "fast-semantic-rebase-requirement-inventory", "condition": "Inventory the approved atomic requirement conditions.",
       "criterion": "The activated requirement enumerates FSR-01 through FSR-05 without omitted responsibility.", "dependsOn": [],
-      "acceptanceGroups": ["fast-semantic-rebase"], "supersedes": null,
+      "acceptanceGroups": ["2026-10-13-fast-semantic-rebase"], "supersedes": null,
       "execution": {"sprintId": "S01", "taskletIds": ["S01-F01-T01"], "plannedPaths": ["pm/requirements/fast-semantic-rebase.md"], "operations": ["inspect"], "selection": [], "target": null}
     },
     {
       "id": "OBL-2", "category": "T2", "requirementIds": ["REQ-FAST-SEMANTIC-REBASE"],
       "responsibilityId": "fast-semantic-rebase-uat-inventory", "condition": "Inventory required acceptance Arcs.",
       "criterion": "The worker-session Arc covers every approved atomic obligation.", "dependsOn": ["OBL-1"],
-      "acceptanceGroups": ["fast-semantic-rebase"], "supersedes": null,
+      "acceptanceGroups": ["2026-10-13-fast-semantic-rebase"], "supersedes": null,
       "execution": {"sprintId": "S01", "taskletIds": ["S01-F01-T01"], "plannedPaths": ["pm/uat/fast-semantic-rebase.md"], "operations": ["inspect"], "selection": [], "target": null}
     },
     {
       "id": "OBL-3", "category": "T3", "requirementIds": ["REQ-FAST-SEMANTIC-REBASE"],
       "responsibilityId": "fast-semantic-rebase-step-inventory", "condition": "Inventory acceptance Steps and assertions.",
       "criterion": "The Arc names the observable evidence for diff, selection, replay, continuation, abort, and prohibited side effects.", "dependsOn": ["OBL-2"],
-      "acceptanceGroups": ["fast-semantic-rebase"], "supersedes": null,
+      "acceptanceGroups": ["2026-10-13-fast-semantic-rebase"], "supersedes": null,
       "execution": {"sprintId": "S01", "taskletIds": ["S01-F01-T01"], "plannedPaths": ["pm/uat/fast-semantic-rebase.md"], "operations": ["inspect"], "selection": [], "target": null}
     },
     {
       "id": "OBL-4", "category": "T4", "requirementIds": ["REQ-FAST-SEMANTIC-REBASE"],
       "responsibilityId": "fast-semantic-rebase-unit-inventory", "condition": "Inventory independently testable implementation and policy units.",
       "criterion": "The typed component, CLI adapter, policy, unit tests, and integration fixture have explicit owners.", "dependsOn": ["OBL-3"],
-      "acceptanceGroups": ["fast-semantic-rebase"], "supersedes": null,
+      "acceptanceGroups": ["2026-10-13-fast-semantic-rebase"], "supersedes": null,
       "execution": {"sprintId": "S01", "taskletIds": ["S01-F01-T01"], "plannedPaths": ["pm/plans/in_progress/2026-10-13-fast-semantic-rebase/sprints/S01.tasklets.json"], "operations": ["inspect"], "selection": [], "target": null}
     },
     {
       "id": "OBL-5", "category": "C1", "requirementIds": ["REQ-FAST-SEMANTIC-REBASE"],
       "responsibilityId": "fast-semantic-rebase-unit-execution-inventory", "condition": "Inventory required focused and final unit selections.",
       "criterion": "The plan names the focused semantic-rebase tests and final configured unit gate.", "dependsOn": ["OBL-4"],
-      "acceptanceGroups": ["fast-semantic-rebase"], "supersedes": null,
+      "acceptanceGroups": ["2026-10-13-fast-semantic-rebase"], "supersedes": null,
       "execution": {"sprintId": "S01", "taskletIds": ["S01-F01-T01"], "plannedPaths": ["pm/plans/in_progress/2026-10-13-fast-semantic-rebase/sprints/S01.md"], "operations": ["inspect"], "selection": [], "target": null}
     },
     {
       "id": "OBL-6", "category": "C2", "requirementIds": ["REQ-FAST-SEMANTIC-REBASE"],
       "responsibilityId": "fast-semantic-rebase-integration-execution-inventory", "condition": "Inventory the real-Git worker-session integration selection.",
       "criterion": "The plan binds one isolated integration Arc to all approved obligations.", "dependsOn": ["OBL-5"],
-      "acceptanceGroups": ["fast-semantic-rebase"], "supersedes": null,
+      "acceptanceGroups": ["2026-10-13-fast-semantic-rebase"], "supersedes": null,
       "execution": {"sprintId": "S01", "taskletIds": ["S01-F01-T01"], "plannedPaths": ["pm/uat/fast-semantic-rebase.md"], "operations": ["inspect"], "selection": [], "target": null}
     },
     {
       "id": "OBL-7", "category": "T1", "requirementIds": ["REQ-FAST-SEMANTIC-REBASE"],
       "responsibilityId": "FSR-01", "condition": "Emit one frozen deterministic aggregate review for both branch final states.",
       "criterion": "Stable source and target change IDs bind exact base and tip identities.", "dependsOn": ["OBL-1"],
-      "acceptanceGroups": ["fast-semantic-rebase"], "supersedes": null,
+      "acceptanceGroups": ["2026-10-13-fast-semantic-rebase"], "supersedes": null,
       "execution": {"sprintId": "S01", "taskletIds": ["S01-F01-T02", "S01-F01-T03", "S01-F01-T04"], "plannedPaths": ["src/semantic-rebase.ts", "tests/semantic-rebase.test.ts", "versioned-data-contracts.json", "pm/plans/in_progress/2026-10-13-fast-semantic-rebase/sprints/S01.md"], "operations": ["edit", "test"], "selection": [], "target": null}
     },
     {
       "id": "OBL-8", "category": "T4", "requirementIds": ["REQ-FAST-SEMANTIC-REBASE"],
       "responsibilityId": "FSR-02", "condition": "Accept only an agent-authored selection bound to the frozen analysis.",
       "criterion": "Strict selection parsing rejects stale, unknown, target-only, duplicate, or malformed relations.", "dependsOn": ["OBL-7"],
-      "acceptanceGroups": ["fast-semantic-rebase"], "supersedes": null,
+      "acceptanceGroups": ["2026-10-13-fast-semantic-rebase"], "supersedes": null,
       "execution": {"sprintId": "S01", "taskletIds": ["S01-F02-T01", "S01-F02-T03"], "plannedPaths": ["src/semantic-rebase.ts", "tests/semantic-rebase.test.ts"], "operations": ["edit", "test"], "selection": [], "target": null}
     },
     {
       "id": "OBL-9", "category": "T4", "requirementIds": ["REQ-FAST-SEMANTIC-REBASE"],
       "responsibilityId": "FSR-03", "condition": "Map selected source changes to every contributing source commit.",
       "criterion": "Exact line provenance is used where possible and ambiguity widens only to affected path lineage.", "dependsOn": ["OBL-8"],
-      "acceptanceGroups": ["fast-semantic-rebase"], "supersedes": null,
+      "acceptanceGroups": ["2026-10-13-fast-semantic-rebase"], "supersedes": null,
       "execution": {"sprintId": "S01", "taskletIds": ["S01-F02-T02", "S01-F02-T03"], "plannedPaths": ["src/semantic-rebase.ts", "tests/semantic-rebase.test.ts"], "operations": ["edit", "test"], "selection": [], "target": null}
     },
     {
       "id": "OBL-10", "category": "T4", "requirementIds": ["REQ-FAST-SEMANTIC-REBASE"],
       "responsibilityId": "FSR-04", "condition": "Operate the exact retained interactive replay safely within one worktree.",
       "criterion": "Lifecycle commands preserve identity, conflicts, abort restoration, unrelated refs, and broadened-resolution review.", "dependsOn": ["OBL-9"],
-      "acceptanceGroups": ["fast-semantic-rebase"], "supersedes": null,
+      "acceptanceGroups": ["2026-10-13-fast-semantic-rebase"], "supersedes": null,
       "execution": {"sprintId": "S01", "taskletIds": ["S01-F03-T01", "S01-F03-T02", "S01-F03-T03", "S01-F03-T04", "S01-F03-T05"], "plannedPaths": ["src/semantic-rebase.ts", "tests/semantic-rebase.test.ts"], "operations": ["edit", "test"], "selection": [], "target": null}
     },
     {
       "id": "OBL-11", "category": "T4", "requirementIds": ["REQ-FAST-SEMANTIC-REBASE"],
       "responsibilityId": "FSR-05", "condition": "Keep semantic judgment agentic and product validation outside rebase runtime.",
       "criterion": "CLI, skill, and integration transcript contain no language inference or rebase-time test, build, QA, fetch, push, or publication.", "dependsOn": ["OBL-10"],
-      "acceptanceGroups": ["fast-semantic-rebase"], "supersedes": null,
+      "acceptanceGroups": ["2026-10-13-fast-semantic-rebase"], "supersedes": null,
       "execution": {"sprintId": "S01", "taskletIds": ["S01-F04-T01", "S01-F04-T02", "S01-F04-T03"], "plannedPaths": ["src/semantic-rebase.ts", "skills/semantic-rebase/SKILL.md", "tests/semantic-rebase-worker.integration.test.ts"], "operations": ["edit", "test"], "selection": [], "target": null}
     }
   ],
-  "certificates": [],
+  "certificates": [
+    {
+      "id": "CERT-1",
+      "obligationIds": ["OBL-1"],
+      "inputs": [{"path": "pm/requirements/fast-semantic-rebase.md", "digest": "24af7c5a4799dafc89a65ea17e99b4b48909c8752824474231bf6007e74cad1a"}],
+      "artifacts": ["pm/requirements/fast-semantic-rebase.md"],
+      "assessor": "ponytail-local-approved-coordinator",
+      "authority": ["stakeholder-approved:fast-semantic-rebase:2026-10-13"],
+      "adequate": true,
+      "reason": "The activated requirement enumerates all five approved atomic conditions without omitting the aggregate review, agent selection, contributor mapping, lifecycle safety, or no-runtime-validation boundaries.",
+      "disposition": null,
+      "evidence": [],
+      "inventoryIds": ["OBL-7"]
+    }
+  ],
   "checkpoints": [
     {
       "id": "CP1", "predecessorId": null, "baselineId": "B1", "kind": "initial", "selectedIds": [],
       "registeredIds": ["OBL-1", "OBL-2", "OBL-3", "OBL-4", "OBL-5", "OBL-6", "OBL-7", "OBL-8", "OBL-9", "OBL-10", "OBL-11"],
       "certificateIds": [], "invalidatedIds": [], "before": [2, 1, 1, 5, 1, 1], "after": [2, 1, 1, 5, 1, 1],
       "preparation": null, "reason": "Register the activated approved scope before implementation.", "assessor": "ponytail-local-approved-coordinator"
+    },
+    {
+      "id": "CP2", "predecessorId": "CP1", "baselineId": "B1", "kind": "productive", "selectedIds": ["OBL-1"],
+      "registeredIds": [], "certificateIds": ["CERT-1"], "invalidatedIds": [], "before": [2, 1, 1, 5, 1, 1], "after": [1, 1, 1, 5, 1, 1],
+      "preparation": null, "reason": "Complete the activated requirement inventory before implementation.", "assessor": "ponytail-local-approved-coordinator"
     }
   ]
 }

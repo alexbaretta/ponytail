@@ -847,6 +847,30 @@
       "versions": ["V1"],
       "supportedReadVersions": ["V1"],
       "supportedDowngradeVersions": []
+    },
+    {
+      "id": "semantic-rebase-analysis",
+      "implementation": {"workspace": "ponytail", "module": "src/semantic-rebase.ts", "readerRegistryExport": "SemanticRebaseAnalysisReaders"},
+      "currentVersion": "V1",
+      "versions": ["V1"],
+      "supportedReadVersions": ["V1"],
+      "supportedDowngradeVersions": []
+    },
+    {
+      "id": "semantic-rebase-selection",
+      "implementation": {"workspace": "ponytail", "module": "src/semantic-rebase.ts", "readerRegistryExport": "SemanticRebaseSelectionReaders"},
+      "currentVersion": "V1",
+      "versions": ["V1"],
+      "supportedReadVersions": ["V1"],
+      "supportedDowngradeVersions": []
+    },
+    {
+      "id": "semantic-rebase-run-state",
+      "implementation": {"workspace": "ponytail", "module": "src/semantic-rebase.ts", "readerRegistryExport": "SemanticRebaseRunReaders"},
+      "currentVersion": "V1",
+      "versions": ["V1"],
+      "supportedReadVersions": ["V1"],
+      "supportedDowngradeVersions": []
     }
   ]
 }

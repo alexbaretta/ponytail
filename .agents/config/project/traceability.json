@@ -158,9 +158,53 @@
     {
       "id": "REQ-ROLLING-CLIENT-PROTOCOL",
       "sourcePath": "pm/requirements/rolling-campaigns.md"
+    },
+    {
+      "id": "REQ-FAST-SEMANTIC-REBASE",
+      "sourcePath": "pm/requirements/fast-semantic-rebase.md"
     }
   ],
   "artifacts": [
+    {
+      "class": "implementation",
+      "path": "src/semantic-rebase.ts",
+      "locator": "text"
+    },
+    {
+      "class": "implementation",
+      "path": "skills/semantic-rebase/SKILL.md",
+      "locator": "text"
+    },
+    {
+      "class": "unit-test",
+      "path": "tests/semantic-rebase.test.ts",
+      "locator": "text"
+    },
+    {
+      "class": "unit-test",
+      "path": "tests/semantic-rebase-policy.test.js",
+      "locator": "text"
+    },
+    {
+      "class": "integration-test",
+      "path": "tests/semantic-rebase-worker.integration.test.ts",
+      "locator": "text"
+    },
+    {
+      "class": "uat",
+      "path": "pm/uat/fast-semantic-rebase.md",
+      "locator": "text"
+    },
+    {
+      "class": "plan",
+      "path": "pm/plans/in_progress/2026-10-13-fast-semantic-rebase/plan.md",
+      "locator": "text"
+    },
+    {
+      "class": "tasklet",
+      "path": "pm/plans/in_progress/2026-10-13-fast-semantic-rebase/sprints/S01.md",
+      "locator": "text"
+    },
     {
       "class": "implementation",
       "path": "tsts/src/shared-message-contracts.ts",
@@ -1647,6 +1691,10 @@
     {
       "path": "src/index-progress.js",
       "sourcePath": "src/index-progress.ts"
+    },
+    {
+      "path": "src/semantic-rebase.js",
+      "sourcePath": "src/semantic-rebase.ts"
     }
   ],
   "reverseViewPath": "pm/requirements/traceability.generated.md",

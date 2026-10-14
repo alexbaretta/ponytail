@@ -118,7 +118,7 @@ Requirement: [pm/requirements/index.md](index.md)
 - implementation: implements [src/campaign-report.ts:245](../../src/campaign-report.ts#L245)
 - unit-test: verifies [tests/campaign-census-format.test.js:11](../../tests/campaign-census-format.test.js#L11)
 - integration-test: verifies [tests/campaign-census.test.js:606](../../tests/campaign-census.test.js#L606)
-- uat: verifies [pm/uat/index.md:46](../../pm/uat/index.md#L46)
+- uat: verifies [pm/uat/index.md:47](../../pm/uat/index.md#L47)
 
 ## REQ-PLAN-INPUT-QUEUE
 
@@ -1032,7 +1032,7 @@ Requirement: [pm/requirements/rolling-campaigns.md](rolling-campaigns.md)
 
 - implementation: implements [ponytail-mcp/rolling.ts:10](../../ponytail-mcp/rolling.ts#L10)
 - implementation: implements [src/cli-help.ts:7](../../src/cli-help.ts#L7)
-- implementation: implements [src/cli-help.ts:55](../../src/cli-help.ts#L55)
+- implementation: implements [src/cli-help.ts:60](../../src/cli-help.ts#L60)
 - implementation: implements [src/rolling-campaign-store.ts:90](../../src/rolling-campaign-store.ts#L90)
 - implementation: implements [src/rolling-campaign-store.ts:506](../../src/rolling-campaign-store.ts#L506)
 - implementation: implements [src/rolling-campaign-store.ts:933](../../src/rolling-campaign-store.ts#L933)
@@ -1113,3 +1113,18 @@ Requirement: [pm/requirements/rolling-campaigns.md](rolling-campaigns.md)
 - unit-test: verifies [tests/campaign-compliance.test.ts:33](../../tests/campaign-compliance.test.ts#L33)
 - integration-test: verifies [tests/campaign-compliance.integration.test.ts:14](../../tests/campaign-compliance.integration.test.ts#L14)
 - uat: verifies [pm/uat/rolling-campaigns.md:10](../../pm/uat/rolling-campaigns.md#L10)
+
+## REQ-FAST-SEMANTIC-REBASE
+
+Requirement: [pm/requirements/fast-semantic-rebase.md](fast-semantic-rebase.md)
+
+- implementation: implements [skills/semantic-rebase/SKILL.md:17](../../skills/semantic-rebase/SKILL.md#L17)
+- implementation: implements [src/semantic-rebase.ts:110](../../src/semantic-rebase.ts#L110)
+- unit-test: verifies [tests/semantic-rebase-policy.test.js:4](../../tests/semantic-rebase-policy.test.js#L4)
+- unit-test: verifies [tests/semantic-rebase.test.ts:3](../../tests/semantic-rebase.test.ts#L3)
+- integration-test: verifies [tests/semantic-rebase-worker.integration.test.ts:3](../../tests/semantic-rebase-worker.integration.test.ts#L3)
+- uat: verifies [pm/uat/fast-semantic-rebase.md:7](../../pm/uat/fast-semantic-rebase.md#L7)
+- plan: plans-implementation [pm/plans/in_progress/2026-10-13-fast-semantic-rebase/plan.md:166](../../pm/plans/in_progress/2026-10-13-fast-semantic-rebase/plan.md#L166)
+- plan: plans-verification [pm/plans/in_progress/2026-10-13-fast-semantic-rebase/plan.md:167](../../pm/plans/in_progress/2026-10-13-fast-semantic-rebase/plan.md#L167)
+- tasklet: plans-implementation [pm/plans/in_progress/2026-10-13-fast-semantic-rebase/sprints/S01.md:205](../../pm/plans/in_progress/2026-10-13-fast-semantic-rebase/sprints/S01.md#L205)
+- tasklet: plans-verification [pm/plans/in_progress/2026-10-13-fast-semantic-rebase/sprints/S01.md:206](../../pm/plans/in_progress/2026-10-13-fast-semantic-rebase/sprints/S01.md#L206)

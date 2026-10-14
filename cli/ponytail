@@ -772,6 +772,14 @@ def run():
             return run_cli(["node", str(worktree_cli), *arguments], cwd=root)
         except OSError as error:
             raise ProjectError(f"worktree CLI could not start: {error}", 2) from error
+    if operation == "rebase":
+        rebase_cli = source_root / "src/semantic-rebase.js"
+        if not rebase_cli.is_file():
+            raise ProjectError(f"rebase CLI source is unavailable: {rebase_cli}", 2)
+        try:
+            return run_cli(["node", str(rebase_cli), *arguments], cwd=root)
+        except OSError as error:
+            raise ProjectError(f"rebase CLI could not start: {error}", 2) from error
     if operation in {"traceability", "plan", "search"}:
         project_index_cli = source_root / "src/project-index.js"
         if not project_index_cli.is_file():

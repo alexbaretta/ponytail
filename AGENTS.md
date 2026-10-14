@@ -192,6 +192,11 @@ services. `PROJECT_STRUCTURE.md` is authoritative for that boundary.
 - Worktree reclamation: `ponytail worktree reclaim [--dry-run] [--json]`;
   lifecycle authority is the invoking project's committed
   `.agents/config/project/worktree-lifecycle.json` adapter.
+- Semantic rebase: `ponytail rebase diff <target> [--output <file>]`, then
+  `ponytail rebase run <target> --conflicts <selection-file>`; inspect retained
+  stops with `ponytail rebase status`, advance with `ponytail rebase continue`,
+  or restore the frozen source with `ponytail rebase abort`. These commands run
+  no project tests, builds, QA, fetch, push, merge, or publication.
 - Worker-owned recovery: `ponytail worktree recover <attachment-token>` from
   an existing neutral cwd; restores only the bound original checkout from its
   main worktree. Campaign worker pairs are retained, not automatically retired.

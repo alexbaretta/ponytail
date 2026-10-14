@@ -3,5 +3,5 @@
 # Licensed under the MIT License. See LICENSE in the project root.
 interface:
   display_name: "Semantic Rebase"
-  short_description: "Review every rebased commit for semantic conflicts"
-  default_prompt: "Use $semantic-rebase to rebase this branch one commit at a time, resolving textual and semantic conflicts before continuing."
+  short_description: "Review final trees and stop only where needed"
+  default_prompt: "Use $semantic-rebase to review one aggregate final-state diff, select potential semantic conflicts, and replay with Ponytail stops only at contributing commits or unexpected Git conflicts."

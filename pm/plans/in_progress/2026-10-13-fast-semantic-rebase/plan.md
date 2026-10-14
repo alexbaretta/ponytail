@@ -53,8 +53,8 @@ and canonical obligation baseline were reconciled at implementation kickoff.
   submodule, mode, and whole-file change units.
 - Map selected final source changes back to all contributing source commits by
   walking rename-aware per-commit diffs.
-- Drive Git's interactive rebase with `edit` for selected contributors and
-  `pick` for the remaining source commits.
+- Drive Git's interactive rebase with a stop immediately after selected
+  contributors and `pick` for the remaining source commits.
 - Retain unexpected textual conflicts as stops even when the agent did not
   select their hunks.
 - Regenerate a residual final-state review when a semantic resolution changes
