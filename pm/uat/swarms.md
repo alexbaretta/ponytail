@@ -7,12 +7,12 @@ Licensed under the MIT License. See LICENSE in the project root.
 
 [UAT index](index.md) · [Canonical requirements and obligations](../requirements/swarms.md)
 
-Approved expected behavior; full native lifecycle Arcs remain unexecuted.
+Approved expected behavior; final acceptance remains open.
 Focused automated evidence below is partial and does not establish release
-acceptance or native lifecycle capability.
+acceptance. Native-control evidence is historical and superseded.
 Use disposable checkouts and isolated rows in the existing project database
-for automated lifecycle proof. Native session cessation and Desktop activity
-also require evidence through their real owning transport.
+for automated lifecycle proof. The coordinator establishes session cessation
+and observes activity through host tools; these are not CLI capabilities.
 
 **Scope correction, 2026-10-13:** Swarm CLI acceptance exercises database
 bookkeeping and worktree operations with Codex unavailable. The coordinator
@@ -80,9 +80,9 @@ executing workers, a missing checkout and an unavailable native observation.
    inventory shows exact session IDs/names, paths, assignments and associations.
 2. Compare human and machine-readable inventories from the owner and a managed
    checkout. Membership agrees, excludes other owners and performs no mutation.
-3. Verify that live activity, idle observations, missing resources and unknown
-   host activity differ. A working assignment alone is never shown as proof of
-   actual execution or Desktop visibility.
+3. With Codex unavailable, verify activity remains explicitly unobserved and
+   missing checkout resources remain distinguishable. A working assignment is
+   never shown as proof of actual execution or Desktop visibility.
 
 ## Arc SWARM-SESSIONS: Remove and conditionally reattach originals
 
@@ -95,12 +95,12 @@ checkout, two user owners, and real host reattachment capability inspection.
 
 1. Bind the worker to its designated owner; conflicting/cross-owner binding
    fails without modifying either swarm.
-2. Request removal during execution. Confirm cancellation and cessation before
-   lease/membership release, including interruption and retry of removal.
-   If cessation cannot be proven, unresolved ownership remains visible.
-3. Confirm the removed native session still exists and is not archived. Reattach
-   that original session to the same owner where supported; verify its checkout
-   identity. Otherwise verify the specific unsupported outcome without replacement.
+2. Establish quiescence through host tools before invoking removal. Verify the
+   CLI fences the matching assignment and removes membership, preserving source
+   and evidence; active Git operations or conflicting ownership refuse removal.
+3. Verify session-origin metadata survives removal. Rebind the same identity to
+   the same owner and checkout without session API calls. Host resumption is a
+   separate coordinator operation, where supported.
 4. Attempt attachment to another owner after removal. It still fails because
    session provenance survives removal and clearing.
 
@@ -232,8 +232,8 @@ Traceability: verifies REQ-SWARM-CLEAR
 **Prerequisites:** A swarm with workers/coordinator, assignments and leases;
 another owner's independent swarm; existing campaign delivery evidence.
 
-1. Clear the first swarm, including an interrupted cessation attempt and retry.
-   Unresolved resources remain owned until stopped; completed clear leaves no
+1. Establish worker quiescence through host tools, then clear the first swarm.
+   Failed resource checks retain unresolved ownership; completed clear leaves no
    workers, coordinator, managed-worktree bindings or stale reservations.
 2. Verify sessions/checkouts, source changes and historical delivery/publication
    records survive. The second owner's state is unchanged.
