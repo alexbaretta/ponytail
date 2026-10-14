@@ -119,9 +119,11 @@ and may preserve final state for inspection. It must:
 
 Setup may reconcile or remove state left by the same owned fixture identity.
 Finalization may intentionally preserve successful state, but cancellation and
-failure handling must still leave an actionable manifest. If intentional
-shared state can change an unrelated session's observable behavior, apply
-`cross-session-effects` before accepting that profile.
+failure handling must still leave an actionable manifest. If the profile
+changes shipped product behavior across independent product-user or tenant
+sessions, apply `cross-session-effects`. Interference confined to development
+or test runs is a test-isolation defect governed by this skill, not a product
+cross-session effect.
 
 The harness owns profile selection, safety checks, fixture reconciliation, and
 evidence capture. Production code must not gain test-only routes, branches, or

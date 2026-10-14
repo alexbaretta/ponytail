@@ -7,7 +7,7 @@ skill	enabled	bash-parse-safe-scripts	skills/bash-parse-safe-scripts	claude,code
 skill	enabled	build-impact	skills/build-impact	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Build only affected targets
 skill	enabled	cloud-cli-reauth	skills/cloud-cli-reauth	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Cloud CLI authentication recovery
 skill	enabled	codex-execpolicy	skills/codex-execpolicy	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Codex command policy proposals and accepted-state management
-skill	enabled	cross-session-effects	skills/cross-session-effects	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Cross-session behavior approval and test-first safety
+skill	enabled	cross-session-effects	skills/cross-session-effects	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Product user-session interference approval and test-first safety
 skill	enabled	debugging	skills/debugging	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Differential diagnosis and root-cause hypothesis testing
 skill	enabled	diagnostic-assertions	skills/diagnostic-assertions	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Diagnostic and invariant classification
 skill	disabled	git-write-escalation	-	-	Current Codex manages these approvals without a skill

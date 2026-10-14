@@ -118,7 +118,7 @@
         "pi",
         "qoder"
       ],
-      "reason": "Cross-session behavior approval and test-first safety"
+      "reason": "Product user-session interference approval and test-first safety"
     },
     {
       "kind": "skill",

@@ -1,11 +1,15 @@
 ---
 name: cross-session-effects
 description: >-
-  Use when activity from one user, tenant, device, process, network origin,
-  deployment instance, or time window can change another independent
-  session's success, failure, delay, or observable behavior. Covers shared
-  rate limits, lockouts, quotas, reputation, circuit breakers, concurrency
-  limits, automatic bans, and comparable aggregate controls.
+  Use only when planning, changing, reviewing, or testing shipped product
+  behavior through which activity in one end-user or tenant session can alter
+  another independent end-user or tenant session's availability or observable
+  product behavior. Covers product rate limits, lockouts, quotas, reputation,
+  circuit breakers, concurrency limits, automatic bans, and comparable
+  aggregate controls. Do not use for development environments, developer or
+  agent sessions, CI, test runners, build tools, repositories, worktrees, or
+  development orchestration unless the changed tooling is itself a shipped
+  multi-user product and the effect crosses its product-user sessions.
 ---
 
 <!--
@@ -16,16 +20,31 @@ Licensed under the MIT License. See LICENSE in the project root.
 
 # Cross-Session Effects
 
-A cross-session effect exists when activity from one user, tenant, device,
-process, network origin, deployment instance, or time window can change
-whether another otherwise independent session succeeds, fails, is delayed, or
-receives different observable behavior. Examples include broadly keyed rate
-limits, shared lockouts, reputation scores, circuit breakers, quotas,
-concurrency caps, abuse counters, and automatic bans.
+A product cross-session effect exists when shipped runtime behavior allows
+activity associated with one independently acting product user or tenant
+session to change whether another product user or tenant session succeeds,
+fails, is delayed, or observes different product behavior. Examples include
+broadly keyed rate limits, shared lockouts, reputation scores, circuit
+breakers, quotas, concurrency caps, abuse counters, and automatic bans.
 
-A shared implementation mechanism alone is not a cross-session effect. This
-policy applies when independently testable sessions influence one another's
-observable behavior.
+Apply this skill only when all three conditions hold:
+
+1. The subject is shipped product code or configuration, or a proposed change
+   to that product behavior.
+2. The product domain contains independent end-user or tenant sessions.
+3. Activity attributed to one such session can affect another such session.
+
+Do not apply this skill merely because development or validation work involves
+concurrent processes, agents, test workers, repositories, worktrees, databases,
+provider sandboxes, shared machines, build capacity, CI limits, deployment
+coordination, or other development infrastructure. Manage those concerns
+through the applicable testing, orchestration, resource-isolation, or project
+skills.
+
+A development tool is in scope only when the tool itself is the shipped
+product, has independent product-user sessions, and the proposed behavior
+crosses those sessions. A shared implementation mechanism alone is not a
+cross-session effect.
 
 ## Authority
 

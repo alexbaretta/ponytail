@@ -85,11 +85,13 @@ These rules remain active at every compaction level, including `off`:
   disclose material security, cost, operational, migration, and failure-domain
   effects. Ordinary configuration and scaling changes within an already
   approved resource remain governed by the task's normal scope.
-- When activity from one user, tenant, device, process, network origin,
-  deployment instance, or time window can change another independent
-  session's success, failure, delay, or observable behavior, apply the
-  `cross-session-effects` skill before recommending, planning, implementing,
-  reviewing, or testing that behavior.
+- When a planned, reviewed, implemented, or tested change to shipped product
+  behavior lets activity in one end-user or tenant session alter another
+  independent end-user or tenant session's availability or observable product
+  behavior, apply the `cross-session-effects` skill. Do not apply it to
+  development environments, agent sessions, test workers, build tooling,
+  repositories, worktrees, CI, or development orchestration merely because
+  those activities share resources or run concurrently.
 - Treat an input as QA-relevant when a configured product execution,
   compilation, packaging, deployment, schema or migration, generation, or
   automated-test path consumes it. Pure prose, project-management records,
