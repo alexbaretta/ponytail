@@ -48,8 +48,11 @@ session-identity acquisition instructions, both skill/installer checks passed.
 The skill explicitly distinguishes returned thread/host metadata from a trusted
 session ID and retains reservations when the host cannot provide that identity.
 TSTS's full unit command passed 100 tests; the Pi extension passed 23 tests and
-the isolated Codex installer suite passed. The legacy full Node selection remains
-running and must be observed to completion.
+the isolated Codex installer suite passed. The legacy full Node selection passed
+558 of 559 tests. Its single failure was the configured traceability checker.
+After canonical reverse-view regeneration, the focused rerun confirms that only
+the three TypeScript-source coverage findings remain; stale generated locations
+are repaired. The legacy selection and `npm test` are not passing acceptance.
 `npm test` stops at three coverage findings for the separate
 `REQ-TYPESCRIPT-ONLY-SOURCE` requirement. Do not label that command passing or
 invent a repository-wide migration to bypass it. Reconcile the plan's stale
