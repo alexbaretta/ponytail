@@ -167,6 +167,11 @@ services. `PROJECT_STRUCTURE.md` is authoritative for that boundary.
   `ponytail swarm worktree-setup --number <n> --generation <uuid>`. Release with
   `ponytail swarm worktree-release --number <n> --generation <uuid>`; this preserves
   checkout/source, uses project cleanup and refuses retained native ownership.
+- Swarm clearing: `ponytail swarm clear [--json]`. The coordinator must first
+  establish quiescence through its host tools. Releases this owner’s worker,
+  checkout and coordinator associations plus campaign allocation leases/actions;
+  preserves session origins, checkouts, source and campaign evidence. Runs project
+  resource cleanup with original creation provenance. Does not contact Codex.
 - Swarm worktree deletion: `ponytail swarm worktree-delete --number <n>` or
   `ponytail swarm worktree-delete --all [--json]`; checkpoints project cleanup and
   exact Git removal, reports each protected/retained/deleted resource, preserves

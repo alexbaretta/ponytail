@@ -15,3 +15,4 @@ if (fs.existsSync(resourcePath)) {
  assert.equal(fs.readFileSync(resourcePath,'utf8'),process.env.PONYTAIL_WORKTREE_GENERATION);
  fs.unlinkSync(resourcePath);
 }
+if(fs.existsSync(path.join(root,'cleanup-change-marker.txt'))) fs.writeFileSync(path.join(root,'session_id.txt'),'foreign-worker\n');

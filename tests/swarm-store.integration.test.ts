@@ -86,9 +86,28 @@ test('concurrent coordinator bindings are exclusive and release preserves campai
   await assert.rejects(swarmStore.bindCoordinator(mainRoot,coordinatorIdentity(mainRoot,'successor')),/canonical physical Git checkout/);
  } finally {fs.rmSync(mainRoot,{recursive:true,force:true});fs.renameSync(movedRoot,mainRoot);}
  assert.equal((await swarmStore.coordinatorBinding(mainRoot))?.sessionId,'successor');
+ const resourceGeneration=crypto.randomUUID();
+ await pool.query("INSERT INTO ponytail_index.rolling_action_v1(project_id,campaign_id,action_id,assignment_id,kind,generation,state) VALUES($1,'fixture',$2,$3,'START_WORKER',$4,'COMPLETED')",[projectId,crypto.randomUUID(),assignmentId,resourceGeneration]);
+ const cleanupRollingProjectConfigV2:RollingProjectConfigV2={...rollingProjectConfigV2,retirementCommands:[['node',path.join(__dirname,'fixtures/rolling-worktree-cleanup.js')]]};
+ fs.writeFileSync(path.join(mainRoot,'.agents/config/project/rolling-campaigns.json'),JSON.stringify(cleanupRollingProjectConfigV2));
+ fs.writeFileSync(path.join(managedRoot,'owned-resource.txt'),resourceGeneration);
+ fs.writeFileSync(path.join(managedRoot,'cleanup-change-marker.txt'),'');
+ await assert.rejects(swarmStore.clear(mainRoot),/session marker/);
+ assert.equal((await swarmStore.coordinatorBinding(mainRoot))?.sessionId,'successor');
+ assert.equal(fs.readFileSync(path.join(managedRoot,'session_id.txt'),'utf8'),'foreign-worker\n');
+ fs.unlinkSync(path.join(managedRoot,'cleanup-change-marker.txt'));fs.unlinkSync(path.join(managedRoot,'session_id.txt'));
+ await swarmStore.clear(mainRoot);
+ assert.equal(fs.existsSync(path.join(managedRoot,'owned-resource.txt')),false);
+ assert.equal((await swarmStore.coordinatorBinding(mainRoot))?.sessionId,null);
+ assert.equal((await swarmStore.coordinatorBinding(otherRoot))?.sessionId,'independent-coordinator');
+ assert.equal((await pool.query<Record<string,unknown>>('SELECT state FROM ponytail_index.rolling_assignment_v1 WHERE assignment_id=$1',[assignmentId])).rows[0]?.state,'RELEASED');
+ assert.equal((await pool.query<Record<string,unknown>>('SELECT campaign_id FROM ponytail_index.rolling_campaign_v1 WHERE project_id=$1',[projectId])).rows[0]?.campaign_id,'fixture');
+ assert.ok(fs.existsSync(managedRoot));
+ await swarmStore.clear(mainRoot);
 });
 
 // Traceability: verifies REQ-SWARM-SESSIONS
+// Traceability: verifies REQ-SWARM-CLEAR
 test('original worker identity and exclusive checkout binding survive coordinator loss',async t=>{
  const repositoryRoot=path.resolve(__dirname,'../..');
  const root=fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(),'swarm-workers-'))),mainRoot=path.join(root,'main');fs.mkdirSync(mainRoot);
@@ -157,4 +176,22 @@ test('original worker identity and exclusive checkout binding survive coordinato
  // Historical removed state must retain origin independently of current membership.
  await pool.query("UPDATE ponytail_index.swarm_worker_v1 SET state='REMOVED' WHERE session_id=$1",[swarmWorkerBinding.sessionId]);
  await assert.rejects(swarmStore.bindWorker(otherSwarmWorktreeMembership,{sessionId:swarmWorkerBinding.sessionId,threadId:swarmWorkerBinding.threadId,rootPath:otherSwarmWorktreeMembership.rootPath},swarmWorkerAssignment),/original|origin/);
+ const failingRollingProjectConfigV2:RollingProjectConfigV2={...rollingProjectConfigV2,retirementCommands:[['node','-e','process.exit(1)']]};
+ const configurationPath=path.join(mainRoot,'.agents/config/project/rolling-campaigns.json');
+ fs.writeFileSync(configurationPath,JSON.stringify(failingRollingProjectConfigV2));
+ await assert.rejects(swarmStore.clear(mainRoot),/original resource generation is unknown/);
+ assert.equal((await swarmStore.workerBinding(mainRoot,extraSwarmWorkerBinding.sessionId,extraSwarmWorkerBinding.generation)).state,'BOUND');
+ fs.writeFileSync(configurationPath,JSON.stringify(rollingProjectConfigV2));
+ await swarmStore.clear(mainRoot);
+ assert.equal((await inspectSwarmInfo(mainRoot,pool,projectId)).workers.length,0);
+ assert.equal((await inspectSwarmInfo(mainRoot,pool,projectId)).worktrees.length,0);
+ assert.equal((await inspectSwarmInfo(otherRoot,pool,projectId)).workers.length,1);
+ assert.equal((await swarmStore.workerBinding(mainRoot,extraSwarmWorkerBinding.sessionId,extraSwarmWorkerBinding.generation)).state,'REMOVED');
+ assert.ok(fs.existsSync(extraRoot));
+ await swarmStore.bindCoordinator(mainRoot,coordinatorIdentity(mainRoot,'after-clear-coordinator'));
+ const reusedSwarmWorktreeMembership=await swarmStore.reserveWorktree(mainRoot,{kind:'retained'});assert.ok(reusedSwarmWorktreeMembership);
+ assert.equal(reusedSwarmWorktreeMembership.rootPath,extraRoot);
+ const reusedSwarmWorkerBinding=await swarmStore.bindWorker(reusedSwarmWorktreeMembership,coordinatorIdentity(extraRoot,extraSwarmWorkerBinding.sessionId),swarmWorkerAssignment);
+ assert.equal(reusedSwarmWorkerBinding.workerNumber,1);assert.notEqual(reusedSwarmWorkerBinding.generation,extraSwarmWorkerBinding.generation);
+
 });

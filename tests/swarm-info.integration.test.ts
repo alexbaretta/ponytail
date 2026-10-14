@@ -119,6 +119,15 @@ test('physical owner and managed invocation report the same isolated read-only l
  const detach=spawnSync(path.join(repositoryRoot,'cli/ponytail'),['swarm','worker-unbind','--session',worker.binding.sessionId,'--generation',worker.binding.generation,'--json'],{cwd:userRoot,encoding:'utf8',env:workerEnv});
  assert.equal(detach.status,0,detach.stderr);assert.equal(readSwarmInfoV4(JSON.parse(detach.stdout)).workers.length,0);
  assert.equal(fs.existsSync(unassignedRoot),true);
+ assert.deepEqual((await pool.query<Record<string,unknown>>('SELECT assignment_id,state,generation,xmin::text AS version FROM ponytail_index.rolling_assignment_v1 WHERE project_id=$1',[projectId])).rows,before);
+ const clearing=spawnSync(path.join(repositoryRoot,'cli/ponytail'),['swarm','clear','--json'],{cwd:unassignedRoot,encoding:'utf8',env:workerEnv});
+ assert.equal(clearing.status,0,clearing.stderr);
+ const clearedSwarmInfoV4=readSwarmInfoV4(JSON.parse(clearing.stdout));
+ assert.deepEqual(clearedSwarmInfoV4.coordinator,{kind:'unbound'});assert.equal(clearedSwarmInfoV4.workers.length,0);assert.equal(clearedSwarmInfoV4.worktrees.length,0);
+ assert.ok(fs.existsSync(managedRoot)&&fs.existsSync(unassignedRoot));
+ // Restore this test's legacy lease for its subsequent read-only conflict proof.
+ await pool.query("UPDATE ponytail_index.rolling_assignment_v1 SET state='WORKING',activity_stopped=false,retired=false WHERE assignment_id=$1",[assignmentId]);
+ const afterClearing=(await pool.query<Record<string,unknown>>('SELECT assignment_id,state,generation,xmin::text AS version FROM ponytail_index.rolling_assignment_v1 WHERE project_id=$1',[projectId])).rows;
 
  await pool.query('INSERT INTO ponytail_index.swarm_owner_v1(project_id,owner_root,git_common_directory) VALUES($1,$2,$3)',[projectId,siblingRoot,gitCommonDirectory]);
  await pool.query('INSERT INTO ponytail_index.swarm_worktree_v1(project_id,number,owner_root,generation) VALUES($1,101,$2,$3)',[projectId,siblingRoot,crypto.randomUUID()]);
@@ -128,5 +137,5 @@ test('physical owner and managed invocation report the same isolated read-only l
  assert.equal(invalid.status,2);assert.match(invalid.stderr,/Usage: ponytail swarm/);
  fs.rmSync(managedRoot,{recursive:true,force:true});
  assert.equal((await inspectSwarmInfo(userRoot,pool,projectId)).worktrees[0]?.present,false);
- assert.deepEqual((await pool.query<Record<string,unknown>>('SELECT assignment_id,state,generation,xmin::text AS version FROM ponytail_index.rolling_assignment_v1 WHERE project_id=$1',[projectId])).rows,before);
+ assert.deepEqual((await pool.query<Record<string,unknown>>('SELECT assignment_id,state,generation,xmin::text AS version FROM ponytail_index.rolling_assignment_v1 WHERE project_id=$1',[projectId])).rows,afterClearing);
 });

@@ -8,6 +8,13 @@ import test from 'node:test';
 import {spawnSync} from 'node:child_process';
 import {renderCliHelp} from '../src/cli-help.js';
 
+// Traceability: verifies REQ-SWARM-CLEAR
+test('swarm clear rejects unsupported arguments before reading project state',()=>{
+ const result=spawnSync(process.execPath,[path.join(process.cwd(),'src/swarm-info.js'),'clear','--all'],{cwd:'/tmp',encoding:'utf8'});
+ assert.equal(result.status,2);assert.match(result.stderr,/Usage: ponytail swarm clear/);
+ assert.doesNotMatch(result.stderr,/ponytail-journal|not a git repository/);
+});
+
 // Traceability: verifies REQ-ROLLING-INTERFACES
 // Traceability: verifies REQ-SWARM-CLI
 test('help wraps chapter, command, campaign and root pages at word boundaries with indentation',()=>{

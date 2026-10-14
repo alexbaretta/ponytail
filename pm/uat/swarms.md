@@ -20,6 +20,16 @@ performs session creation, cancellation, quiescence and renaming through host
 tools. Earlier native-control evidence below is historical and is not a required
 CLI acceptance gate. No API operation may be introduced to satisfy those records.
 
+**Database clear evidence:** The installed `swarm clear` command succeeds from
+an assigned managed checkout and reports empty owner membership and an unbound
+coordinator. It preserves checkouts and session-origin rows without calling Codex.
+PostgreSQL proof includes legacy lease release, retained campaign evidence,
+sibling-owner isolation, original-session attachment after a fresh coordinator,
+and worker numbering restarting at one. Cleanup uses the original START_WORKER
+resource generation, retains ownership for unknown resource provenance or failed
+checks, and refuses a foreign marker introduced during cleanup. The coordinator,
+not this command, establishes session quiescence before invocation.
+
 ## Arc SWARM-OWNERS: Select the owner and retain orphaned workers
 
 Traceability: verifies REQ-SWARM-OWNERSHIP

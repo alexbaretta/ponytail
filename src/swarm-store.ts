@@ -20,6 +20,8 @@ export interface SwarmSessionIdentity {
 export interface SwarmWorktreeMembership extends RollingWorktreeLease {
  readonly ownerRoot:string;
 }
+interface SwarmCleanupAssignment {readonly assignmentId:string;readonly generation:string;readonly sessionId:string;}
+interface SwarmClearCheckout extends SwarmWorktreeMembership {readonly sessionId:string|null;readonly cleanupAssignment:SwarmCleanupAssignment|null;}
 
 export type SwarmWorktreeRequest={readonly kind:'retained'}|{readonly kind:'provision';readonly baseCommit:string};
 
@@ -89,6 +91,72 @@ function physicalOwner(swarmUserWorktree:SwarmUserWorktree):void {
 // Traceability: implements REQ-SWARM-OWNERSHIP
 export class SwarmStore {
  constructor(private readonly pool:Pool,private readonly projectId:string) {}
+ // Traceability: implements REQ-SWARM-CLEAR
+ async clear(ownerRoot:string):Promise<void> {
+  return this.transaction(async poolClient=>{
+   await poolClient.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))',[this.projectId]);
+   const owner=(await poolClient.query<Record<string,unknown>>('SELECT * FROM ponytail_index.swarm_owner_v1 WHERE project_id=$1 AND owner_root=$2 FOR UPDATE',[this.projectId,ownerRoot])).rows[0];
+   if(owner===undefined) throw new Error('swarm: enroll the user owner before clearing its associations');
+   const swarmCoordinatorBinding=readBinding(owner);physicalOwner(swarmCoordinatorBinding.swarmUserWorktree);
+   const rollingManagedDirectory=resolveRollingManagedDirectory(ownerRoot);
+   const rows=(await poolClient.query<Record<string,unknown>>(`SELECT w.*,s.owner_root,s.generation AS membership_generation,s.base_commit,
+    a.assignment_id,a.generation AS assignment_generation,a.session_id,c.coordinator_root
+    FROM ponytail_index.rolling_worktree_v1 w LEFT JOIN ponytail_index.swarm_worktree_v1 s USING(project_id,number)
+    LEFT JOIN ponytail_index.rolling_assignment_v1 a ON a.project_id=w.project_id AND a.worktree_number=w.number AND a.state<>'RELEASED'
+    LEFT JOIN ponytail_index.rolling_campaign_v1 c ON c.project_id=a.project_id AND c.campaign_id=a.campaign_id
+    WHERE w.project_id=$1 AND (s.owner_root=$2 OR c.coordinator_root=$2) ORDER BY w.number FOR UPDATE OF w`,[this.projectId,ownerRoot])).rows;
+   const workers=(await poolClient.query<Record<string,unknown>>(`SELECT k.*,n.thread_id,n.root_path FROM ponytail_index.swarm_worker_v1 k
+    JOIN ponytail_index.swarm_native_session_v1 n USING(session_id) WHERE k.project_id=$1 AND k.owner_root=$2 AND k.state<>'REMOVED' FOR UPDATE`,[this.projectId,ownerRoot])).rows.map(readWorker);
+   const checkouts:SwarmClearCheckout[]=[];
+   for(const row of rows) {
+    const rollingStoredWorktree=readWorktree(row);
+    if(row.owner_root!==null&&row.owner_root!==ownerRoot||row.coordinator_root!==null&&row.coordinator_root!==ownerRoot) throw new Error('swarm: conflicting checkout owner; no associations cleared');
+    if(rollingStoredWorktree.rootPath!==path.join(rollingManagedDirectory.directory,String(rollingStoredWorktree.number))
+     ||!rollingManagedDirectory.worktrees.includes(rollingStoredWorktree.rootPath)||fs.realpathSync(rollingStoredWorktree.rootPath)!==rollingStoredWorktree.rootPath
+     ||fs.realpathSync(git(rollingStoredWorktree.rootPath,['rev-parse','--path-format=absolute','--git-common-dir']).trim())!==swarmCoordinatorBinding.swarmUserWorktree.gitCommonDirectory) throw new Error('swarm: checkout identity changed; no associations cleared');
+    requireRollingGitOperationAbsent(rollingStoredWorktree.rootPath);
+    const worker=workers.find(worker=>worker.worktreeNumber===rollingStoredWorktree.number);
+    if(worker!==undefined&&worker.worktreeGeneration!==row.membership_generation) throw new Error('swarm: worker checkout generation changed; no associations cleared');
+    const sessionId=worker?.sessionId??(row.session_id===null?null:stringColumn(row.session_id));
+    const marker=path.join(rollingStoredWorktree.rootPath,'session_id.txt');
+    if(fs.lstatSync(marker,{throwIfNoEntry:false})!==undefined) {
+     if(sessionId===null) throw new Error('swarm: unknown session marker; no associations cleared');
+     validateRollingSessionMarker(rollingStoredWorktree.rootPath,sessionId);
+    }
+    let generation=row.base_commit===null?'':stringColumn(row.membership_generation);
+    let cleanupAssignment:SwarmCleanupAssignment|null=null;
+    if(row.assignment_id!==null) {
+     const resourceRows=(await poolClient.query<Record<string,unknown>>("SELECT generation FROM ponytail_index.rolling_action_v1 WHERE project_id=$1 AND assignment_id=$2 AND kind='START_WORKER' AND state='COMPLETED'",[this.projectId,row.assignment_id])).rows;
+     if(resourceRows.length>1) throw new Error('swarm: original resource generation is ambiguous; no associations cleared');
+     generation=resourceRows[0]===undefined?'':stringColumn(resourceRows[0].generation);
+     if(sessionId!==null) cleanupAssignment={assignmentId:stringColumn(row.assignment_id),generation:stringColumn(row.assignment_generation),sessionId};
+    }
+    checkouts.push({number:rollingStoredWorktree.number,rootPath:rollingStoredWorktree.rootPath,ownerRoot,generation,sessionId,cleanupAssignment});
+   }
+   if(workers.some(worker=>!checkouts.some(checkout=>checkout.number===worker.worktreeNumber))) throw new Error('swarm: bound worker has no owned checkout; no associations cleared');
+   for(const swarmClearCheckout of checkouts) this.cleanupWorktree(swarmClearCheckout,swarmClearCheckout.cleanupAssignment);
+   for(const swarmClearCheckout of checkouts) {
+    requireRollingGitOperationAbsent(swarmClearCheckout.rootPath);
+    const marker=path.join(swarmClearCheckout.rootPath,'session_id.txt');
+    if(fs.lstatSync(marker,{throwIfNoEntry:false})!==undefined) {
+     if(swarmClearCheckout.sessionId===null) throw new Error('swarm: unknown session marker after cleanup; no associations cleared');
+     validateRollingSessionMarker(swarmClearCheckout.rootPath,swarmClearCheckout.sessionId);
+    }
+   }
+   for(const swarmWorktreeMembership of checkouts) {
+    const marker=path.join(swarmWorktreeMembership.rootPath,'session_id.txt');
+    if(fs.existsSync(marker)) fs.unlinkSync(marker);
+    const state=git(swarmWorktreeMembership.rootPath,['status','--porcelain']).trim()?'QUARANTINED':'AVAILABLE';
+    await poolClient.query(`UPDATE ponytail_index.rolling_action_v1 SET state='CANCELLED' WHERE project_id=$1 AND assignment_id IN
+     (SELECT assignment_id FROM ponytail_index.rolling_assignment_v1 WHERE project_id=$1 AND worktree_number=$2 AND state<>'RELEASED') AND state IN ('PENDING','STARTED')`,[this.projectId,swarmWorktreeMembership.number]);
+    await poolClient.query("UPDATE ponytail_index.rolling_assignment_v1 SET state='RELEASED',activity_stopped=true,retired=true WHERE project_id=$1 AND worktree_number=$2 AND state<>'RELEASED'",[this.projectId,swarmWorktreeMembership.number]);
+    await poolClient.query('UPDATE ponytail_index.rolling_worktree_v1 SET state=$3 WHERE project_id=$1 AND number=$2',[this.projectId,swarmWorktreeMembership.number,state]);
+   }
+   await poolClient.query("UPDATE ponytail_index.swarm_worker_v1 SET state='REMOVED' WHERE project_id=$1 AND owner_root=$2",[this.projectId,ownerRoot]);
+   await poolClient.query('DELETE FROM ponytail_index.swarm_worktree_v1 WHERE project_id=$1 AND owner_root=$2',[this.projectId,ownerRoot]);
+   await poolClient.query('UPDATE ponytail_index.swarm_owner_v1 SET coordinator_session_id=NULL,worker_sequence=0 WHERE project_id=$1 AND owner_root=$2',[this.projectId,ownerRoot]);
+  });
+ }
  async workerBinding(ownerRoot:string,sessionId:string,generation:string):Promise<SwarmWorkerBinding> {
   const row=(await this.pool.query<Record<string,unknown>>(`SELECT k.*,n.thread_id,n.root_path FROM ponytail_index.swarm_worker_v1 k
    JOIN ponytail_index.swarm_native_session_v1 n USING(session_id) WHERE k.project_id=$1 AND k.owner_root=$2 AND k.session_id=$3 AND k.generation=$4`,[this.projectId,ownerRoot,sessionId,generation])).rows[0];
@@ -305,14 +373,15 @@ export class SwarmStore {
    try {await poolClient.query('SELECT pg_advisory_unlock(hashtextextended($1,0))',[this.projectId]);} finally {poolClient.release();}
   }
  }
- private cleanupWorktree(swarmWorktreeMembership:SwarmWorktreeMembership):void {
+ private cleanupWorktree(swarmWorktreeMembership:SwarmWorktreeMembership,swarmCleanupAssignment:SwarmCleanupAssignment|null=null):void {
   const rollingManagedDirectory=resolveRollingManagedDirectory(swarmWorktreeMembership.ownerRoot);
   if(rollingManagedDirectory.configuration.retirementCommands===null) throw new Error('swarm: project retirement cleanup is unspecified; preserve ownership');
   if(rollingManagedDirectory.configuration.retirementCommands.length&&!swarmWorktreeMembership.generation) throw new Error('swarm: original resource generation is unknown; preserve checkout for cleanup');
   for(const argv of rollingManagedDirectory.configuration.retirementCommands) {
    const result=spawnSync(argv[0],argv.slice(1),{cwd:swarmWorktreeMembership.rootPath,encoding:'utf8',env:{...process.env,
     PONYTAIL_WORKTREE_ROOT:swarmWorktreeMembership.rootPath,PONYTAIL_MAIN_WORKTREE_ROOT:rollingManagedDirectory.mainRoot,
-    PONYTAIL_WORKTREE_NUMBER:String(swarmWorktreeMembership.number),PONYTAIL_WORKTREE_GENERATION:swarmWorktreeMembership.generation}});
+    PONYTAIL_WORKTREE_NUMBER:String(swarmWorktreeMembership.number),PONYTAIL_WORKTREE_GENERATION:swarmWorktreeMembership.generation,
+    ...(swarmCleanupAssignment===null?{}:{PONYTAIL_ASSIGNMENT_ID:swarmCleanupAssignment.assignmentId,PONYTAIL_ASSIGNMENT_GENERATION:swarmCleanupAssignment.generation,PONYTAIL_SESSION_ID:swarmCleanupAssignment.sessionId})}});
    if(result.error||result.status!==0) throw new Error('swarm: project resource cleanup failed; preserve ownership');
   }
  }

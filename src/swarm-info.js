@@ -324,7 +324,8 @@ async function runSwarmCli(argv) {
     const workerBind = argv[0] === 'worker-bind' && fields.size === 7 && ['--thread', '--session', '--number', '--generation', '--kind', '--assignment', '--summary'].every(flag => fields.has(flag));
     const workerComplete = argv[0] === 'worker-complete' && fields.size === 2 && fields.has('--session') && fields.has('--generation');
     const workerUnbind = argv[0] === 'worker-unbind' && fields.size === 2 && fields.has('--session') && fields.has('--generation');
-    if (!valid || !info && !enrollment && !bind && !unbind && !assign && !setup && !release && !deletion && !workerBind && !workerComplete && !workerUnbind) {
+    const clear = argv[0] === 'clear' && fields.size === 0;
+    if (!valid || !info && !enrollment && !bind && !unbind && !assign && !setup && !release && !deletion && !workerBind && !workerComplete && !workerUnbind && !clear) {
         process.stderr.write((0, cli_help_js_1.renderCliHelp)(['swarm', argv[0] ?? '']) + '\n');
         process.exitCode = 2;
         return;
@@ -339,12 +340,14 @@ async function runSwarmCli(argv) {
     const pool = new pg_1.Pool((0, project_index_database_js_1.databaseOptions)(root));
     let outputRoot = root;
     try {
-        if (enrollment || bind || unbind || assign || setup || release || deletion || workerBind || workerComplete || workerUnbind) {
+        if (enrollment || bind || unbind || assign || setup || release || deletion || workerBind || workerComplete || workerUnbind || clear) {
             const swarmStore = new swarm_store_js_1.SwarmStore(pool, projectId);
             const ownerRoot = enrollment ? root : (await inspectSwarmInfo(root, pool, projectId)).ownerRoot;
             const swarmUserWorktree = { rootPath: ownerRoot, gitCommonDirectory: node_fs_1.default.realpathSync((0, rolling_integration_js_1.git)(ownerRoot, ['rev-parse', '--path-format=absolute', '--git-common-dir']).trim()) };
             outputRoot = ownerRoot;
-            if (workerComplete || workerUnbind) {
+            if (clear)
+                await swarmStore.clear(ownerRoot);
+            else if (workerComplete || workerUnbind) {
                 const swarmWorkerBinding = await swarmStore.workerBinding(ownerRoot, text(fields.get('--session')), text(fields.get('--generation')));
                 if (workerComplete)
                     await swarmStore.completeWorker(ownerRoot, swarmWorkerBinding.sessionId, swarmWorkerBinding.generation);
