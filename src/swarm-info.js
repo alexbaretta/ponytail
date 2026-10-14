@@ -6,7 +6,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.SwarmInfoReaders = void 0;
+exports.SwarmInfoReaders = exports.SwarmWorktreeDeletionReportReaders = void 0;
+exports.readSwarmWorktreeDeletionReportV1 = readSwarmWorktreeDeletionReportV1;
 exports.readSwarmInfoV1 = readSwarmInfoV1;
 exports.readSwarmInfoV2 = readSwarmInfoV2;
 exports.readSwarmInfoV3 = readSwarmInfoV3;
@@ -24,6 +25,27 @@ const swarm_owner_js_1 = require("./swarm-owner.js");
 const cli_help_js_1 = require("./cli-help.js");
 const swarm_store_js_1 = require("./swarm-store.js");
 const rolling_codex_js_1 = require("./rolling-codex.js");
+function readSwarmWorktreeDeletionReportV1(value) {
+    const input = record(value);
+    keys(input, ['schemaVersion', 'ownerRoot', 'results']);
+    if (input.schemaVersion !== 1 || !Array.isArray(input.results))
+        throw new Error('swarm: unsupported deletion report');
+    return { schemaVersion: 1, ownerRoot: absoluteRoot(input.ownerRoot), results: input.results.map((value) => {
+            const input = record(value);
+            const number = integer(input.number), rootPath = absoluteRoot(input.rootPath);
+            switch (input.outcome) {
+                case 'deleted':
+                    keys(input, ['number', 'rootPath', 'outcome']);
+                    return { number, rootPath, outcome: 'deleted' };
+                case 'retained':
+                case 'protected':
+                    keys(input, ['number', 'rootPath', 'outcome', 'reason']);
+                    return { number, rootPath, outcome: input.outcome, reason: text(input.reason) };
+                default: throw new Error('swarm: unsupported deletion outcome');
+            }
+        }) };
+}
+exports.SwarmWorktreeDeletionReportReaders = { V1: readSwarmWorktreeDeletionReportV1 };
 function isRecord(value) { return value !== null && typeof value === 'object' && !Array.isArray(value); }
 function record(value) {
     if (!isRecord(value))
@@ -231,6 +253,10 @@ async function runSwarmCli(argv) {
             json = true;
             continue;
         }
+        if (flag === '--all' && !fields.has(flag)) {
+            fields.set(flag, 'true');
+            continue;
+        }
         const value = argv[i + 1];
         if ((flag === '--session' || flag === '--thread' || flag === '--base' || flag === '--number' || flag === '--generation') && !fields.has(flag) && typeof value === 'string' && value.length > 0 && !value.startsWith('--')) {
             fields.set(flag, value);
@@ -247,7 +273,8 @@ async function runSwarmCli(argv) {
     const assign = argv[0] === 'worktree-assign' && fields.size === 1 && fields.has('--base');
     const setup = argv[0] === 'worktree-setup' && fields.size === 2 && fields.has('--number') && fields.has('--generation');
     const release = argv[0] === 'worktree-release' && fields.size === 2 && fields.has('--number') && fields.has('--generation');
-    if (!valid || !info && !enrollment && !bind && !unbind && !assign && !setup && !release) {
+    const deletion = argv[0] === 'worktree-delete' && fields.size === 1 && (fields.has('--number') || fields.has('--all'));
+    if (!valid || !info && !enrollment && !bind && !unbind && !assign && !setup && !release && !deletion) {
         process.stderr.write((0, cli_help_js_1.renderCliHelp)(['swarm', argv[0] ?? '']) + '\n');
         process.exitCode = 2;
         return;
@@ -262,12 +289,21 @@ async function runSwarmCli(argv) {
     const pool = new pg_1.Pool((0, project_index_database_js_1.databaseOptions)(root));
     let outputRoot = root;
     try {
-        if (enrollment || bind || unbind || assign || setup || release) {
+        if (enrollment || bind || unbind || assign || setup || release || deletion) {
             const swarmStore = new swarm_store_js_1.SwarmStore(pool, projectId);
             const ownerRoot = enrollment ? root : (await inspectSwarmInfo(root, pool, projectId)).ownerRoot;
             const swarmUserWorktree = { rootPath: ownerRoot, gitCommonDirectory: node_fs_1.default.realpathSync((0, rolling_integration_js_1.git)(ownerRoot, ['rev-parse', '--path-format=absolute', '--git-common-dir']).trim()) };
             outputRoot = ownerRoot;
-            if (assign) {
+            if (deletion) {
+                await swarmStore.enrollOwner(swarmUserWorktree);
+                const results = await swarmStore.deleteWorktrees(ownerRoot, fields.has('--all') ? null : integer(fields.get('--number')));
+                const swarmWorktreeDeletionReportV1 = { schemaVersion: 1, ownerRoot, results };
+                process.stdout.write(json ? JSON.stringify(swarmWorktreeDeletionReportV1) + '\n' : `Swarm owner: ${ownerRoot}\n` + results.map(result => `  ${result.number} ${result.outcome} ${result.rootPath}${result.outcome === 'deleted' ? '' : ` | ${result.reason}`}\n`).join(''));
+                if (results.some(result => result.outcome === 'retained' || result.outcome === 'protected' && !fields.has('--all')))
+                    process.exitCode = 1;
+                return;
+            }
+            else if (assign) {
                 await swarmStore.enrollOwner(swarmUserWorktree);
                 const baseCommit = (0, rolling_integration_js_1.git)(ownerRoot, ['rev-parse', '--verify', '--end-of-options', `${text(fields.get('--base'))}^{commit}`]).trim();
                 const swarmWorktreeMembership = await swarmStore.reserveWorktree(ownerRoot, { kind: 'provision', baseCommit });

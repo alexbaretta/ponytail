@@ -219,6 +219,7 @@ async function resetRollingProject(poolClient, projectId, root, request, execute
     requireReset(locked?.locked === true, 'another project operation owns reset/scheduling');
     try {
         requireReset((await poolClient.query('SELECT 1 FROM ponytail_index.swarm_worktree_v1 WHERE project_id=$1 LIMIT 1', [projectId])).rowCount === 0, 'release retained swarm worktree memberships before project reset');
+        requireReset((await poolClient.query("SELECT 1 FROM ponytail_index.swarm_worktree_deletion_v1 WHERE project_id=$1 AND state='PENDING' LIMIT 1", [projectId])).rowCount === 0, 'complete pending swarm worktree deletion before project reset');
         const existing = (await poolClient.query('SELECT reset_text FROM ponytail_index.rolling_reset_v1 WHERE project_id=$1', [projectId])).rows[0];
         let rollingProjectResetV1;
         if (existing) {

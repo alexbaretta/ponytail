@@ -151,6 +151,16 @@ foreign clone cannot redirect pending setup. Seven unit/help and four focused
 integration tests pass. No live worker was dispatched; worker cessation and the
 complete deletion Arc remain pending.
 
+**Deletion CLI evidence:** `worktree-delete --number` and `worktree-delete --all`
+pass through the installed CLI and real Git/PostgreSQL. Tests preserve assigned
+checkout 102 and the user root, recover selected/all cleanup failure, and retry
+only outstanding removals. Pending deletion independently fences allocation even
+if the pool row incorrectly appears available. Canonical pool reset removes old
+resource receipts. An original source commit is detached and its branch removed;
+revision-specific Git refs retain that source through reset/recreation/deletion of
+worktree 101. Eight unit/help and eight focused integration tests pass, with
+accepted adversarial review. Native worker lifecycle acceptance remains pending.
+
 ## Arc SWARM-CLEAR: Release resources and restart
 
 Traceability: verifies REQ-SWARM-CLEAR

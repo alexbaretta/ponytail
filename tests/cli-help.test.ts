@@ -11,7 +11,7 @@ import {renderCliHelp} from '../src/cli-help.js';
 // Traceability: verifies REQ-ROLLING-INTERFACES
 // Traceability: verifies REQ-SWARM-CLI
 test('help wraps chapter, command, campaign and root pages at word boundaries with indentation',()=>{
- for(const width of [40,80,120]) for(const args of [[],['traceability'],['traceability','search'],['campaign'],['campaign','request-review'],['swarm'],['swarm','info'],['swarm','owner-enroll'],['swarm','coordinator-bind'],['swarm','coordinator-unbind'],['swarm','worktree-assign'],['swarm','worktree-setup'],['swarm','worktree-release']]) {
+ for(const width of [40,80,120]) for(const args of [[],['traceability'],['traceability','search'],['campaign'],['campaign','request-review'],['swarm'],['swarm','info'],['swarm','owner-enroll'],['swarm','coordinator-bind'],['swarm','coordinator-unbind'],['swarm','worktree-assign'],['swarm','worktree-setup'],['swarm','worktree-release'],['swarm','worktree-delete']]) {
   const text=renderCliHelp(args,width);
   assert.ok(text.split('\n').every(line=>line.length<=width));
   assert.equal(text.replace(/\s+/gu,' ').trim(),renderCliHelp(args,10000).replace(/\s+/gu,' ').trim());

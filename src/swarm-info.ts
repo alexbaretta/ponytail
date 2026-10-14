@@ -8,7 +8,7 @@ import {git} from './rolling-integration.js';
 import {resolveSwarmOwner,type SwarmOwnershipInventory} from './swarm-owner.js';
 import {renderCliHelp} from './cli-help.js';
 import type {RollingStoredWorktree} from './rolling-campaign-store.js';
-import {SwarmStore,type SwarmWorktreeMembership} from './swarm-store.js';
+import {SwarmStore,type SwarmWorktreeMembership,type SwarmWorktreeDeletionResult} from './swarm-store.js';
 import {RollingCodex} from './rolling-codex.js';
 import type {SwarmUserWorktree} from './swarm-owner.js';
 
@@ -55,6 +55,25 @@ export interface SwarmInfoV3 {
  readonly nativeActivity:'unobserved';
  readonly worktrees:readonly SwarmWorktreeInfoV3[];
 }
+export interface SwarmWorktreeDeletionReportV1 {
+ readonly schemaVersion:1;
+ readonly ownerRoot:string;
+ readonly results:readonly SwarmWorktreeDeletionResult[];
+}
+export function readSwarmWorktreeDeletionReportV1(value:unknown):SwarmWorktreeDeletionReportV1 {
+ const input=record(value);keys(input,['schemaVersion','ownerRoot','results']);
+ if(input.schemaVersion!==1||!Array.isArray(input.results)) throw new Error('swarm: unsupported deletion report');
+ return {schemaVersion:1,ownerRoot:absoluteRoot(input.ownerRoot),results:input.results.map((value:unknown)=>{
+  const input=record(value);
+  const number=integer(input.number),rootPath=absoluteRoot(input.rootPath);
+  switch(input.outcome) {
+   case 'deleted':keys(input,['number','rootPath','outcome']);return {number,rootPath,outcome:'deleted'};
+   case 'retained':case 'protected':keys(input,['number','rootPath','outcome','reason']);return {number,rootPath,outcome:input.outcome,reason:text(input.reason)};
+   default:throw new Error('swarm: unsupported deletion outcome');
+  }
+ })};
+}
+export const SwarmWorktreeDeletionReportReaders={V1:readSwarmWorktreeDeletionReportV1};
 function isRecord(value:unknown):value is Record<string,unknown> {return value!==null&&typeof value==='object'&&!Array.isArray(value);}
 function record(value:unknown):Record<string,unknown> {
  if(!isRecord(value)) throw new Error('swarm: expected a record');
@@ -215,6 +234,7 @@ export async function runSwarmCli(argv:readonly string[]):Promise<void> {
  for(let i=1;i<argv.length;i++) {
   const flag=argv[i];
   if(flag==='--json'&&!json) {json=true;continue;}
+  if(flag==='--all'&&!fields.has(flag)) {fields.set(flag,'true');continue;}
   const value=argv[i+1];
   if((flag==='--session'||flag==='--thread'||flag==='--base'||flag==='--number'||flag==='--generation')&&!fields.has(flag)&&typeof value==='string'&&value.length>0&&!value.startsWith('--')) {fields.set(flag,value);i++;continue;}
   valid=false;break;
@@ -226,7 +246,8 @@ export async function runSwarmCli(argv:readonly string[]):Promise<void> {
  const assign=argv[0]==='worktree-assign'&&fields.size===1&&fields.has('--base');
  const setup=argv[0]==='worktree-setup'&&fields.size===2&&fields.has('--number')&&fields.has('--generation');
  const release=argv[0]==='worktree-release'&&fields.size===2&&fields.has('--number')&&fields.has('--generation');
- if(!valid||!info&&!enrollment&&!bind&&!unbind&&!assign&&!setup&&!release) {
+ const deletion=argv[0]==='worktree-delete'&&fields.size===1&&(fields.has('--number')||fields.has('--all'));
+ if(!valid||!info&&!enrollment&&!bind&&!unbind&&!assign&&!setup&&!release&&!deletion) {
   process.stderr.write(renderCliHelp(['swarm',argv[0]??''])+'\n');process.exitCode=2;return;
  }
  const root=fs.realpathSync(git(process.cwd(),['rev-parse','--show-toplevel']).trim());
@@ -237,12 +258,19 @@ export async function runSwarmCli(argv:readonly string[]):Promise<void> {
  const pool=new Pool(databaseOptions(root));
  let outputRoot=root;
  try {
-  if(enrollment||bind||unbind||assign||setup||release) {
+  if(enrollment||bind||unbind||assign||setup||release||deletion) {
    const swarmStore=new SwarmStore(pool,projectId);
    const ownerRoot=enrollment?root:(await inspectSwarmInfo(root,pool,projectId)).ownerRoot;
    const swarmUserWorktree:SwarmUserWorktree={rootPath:ownerRoot,gitCommonDirectory:fs.realpathSync(git(ownerRoot,['rev-parse','--path-format=absolute','--git-common-dir']).trim())};
    outputRoot=ownerRoot;
-   if(assign) {
+   if(deletion) {
+    await swarmStore.enrollOwner(swarmUserWorktree);
+    const results=await swarmStore.deleteWorktrees(ownerRoot,fields.has('--all')?null:integer(fields.get('--number')));
+    const swarmWorktreeDeletionReportV1:SwarmWorktreeDeletionReportV1={schemaVersion:1,ownerRoot,results};
+    process.stdout.write(json?JSON.stringify(swarmWorktreeDeletionReportV1)+'\n':`Swarm owner: ${ownerRoot}\n`+results.map(result=>`  ${result.number} ${result.outcome} ${result.rootPath}${result.outcome==='deleted'?'':` | ${result.reason}`}\n`).join(''));
+    if(results.some(result=>result.outcome==='retained'||result.outcome==='protected'&&!fields.has('--all'))) process.exitCode=1;
+    return;
+   } else if(assign) {
     await swarmStore.enrollOwner(swarmUserWorktree);
     const baseCommit=git(ownerRoot,['rev-parse','--verify','--end-of-options',`${text(fields.get('--base'))}^{commit}`]).trim();
     const swarmWorktreeMembership=await swarmStore.reserveWorktree(ownerRoot,{kind:'provision',baseCommit});

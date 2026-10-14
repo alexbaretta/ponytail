@@ -1001,6 +1001,18 @@
       "supportedDowngradeVersions": []
     },
     {
+      "id": "swarm-worktree-deletion-report",
+      "implementation": {
+        "workspace": "ponytail",
+        "module": "src/swarm-info.ts",
+        "readerRegistryExport": "SwarmWorktreeDeletionReportReaders"
+      },
+      "currentVersion": "V1",
+      "versions": ["V1"],
+      "supportedReadVersions": ["V1"],
+      "supportedDowngradeVersions": []
+    },
+    {
       "id": "swarm-info",
       "implementation": {
         "workspace": "ponytail",

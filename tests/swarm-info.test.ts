@@ -2,7 +2,7 @@
 // Licensed under the MIT License. See LICENSE in the project root.
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import {readSwarmInfo,readSwarmInfoV1,readSwarmInfoV2,readSwarmInfoV3,renderSwarmInfo,type SwarmInfoV1,type SwarmInfoV2,type SwarmInfoV3} from '../src/swarm-info.js';
+import {readSwarmInfo,readSwarmInfoV1,readSwarmInfoV2,readSwarmInfoV3,readSwarmWorktreeDeletionReportV1,renderSwarmInfo,type SwarmInfoV1,type SwarmInfoV2,type SwarmInfoV3} from '../src/swarm-info.js';
 
 const swarmInfoV1:SwarmInfoV1={schemaVersion:1,ownerRoot:'/repo/user-001',ownershipSource:'campaign-leases',
  coordinator:{kind:'unrecorded'},nativeActivity:'unobserved',worktrees:[{number:101,rootPath:'/repo/managed/101',present:true,
@@ -55,4 +55,14 @@ test('V3 reports standalone swarm membership and preserves historical assignment
  const worktree=swarmInfoV3.worktrees[0];assert.ok(worktree);
  for(const membership of [{kind:'campaign-lease'},{kind:'swarm'},{kind:'unknown'},null])
   assert.throws(()=>readSwarmInfoV3({...swarmInfoV3,worktrees:[{...worktree,membership}]}));
+});
+
+// Traceability: verifies REQ-SWARM-WORKTREES
+test('deletion report reader distinguishes deleted, protected and recoverable outcomes',()=>{
+ const report={schemaVersion:1,ownerRoot:'/repo/user-001',results:[{number:101,rootPath:'/repo/managed/101',outcome:'deleted'},
+  {number:102,rootPath:'/repo/managed/102',outcome:'protected',reason:'assigned'},
+  {number:103,rootPath:'/repo/managed/103',outcome:'retained',reason:'cleanup failed'}]};
+ assert.deepEqual(readSwarmWorktreeDeletionReportV1(report),report);
+ for(const value of [{...report,schemaVersion:2},{...report,results:[{number:101,rootPath:'/repo/managed/101',outcome:'unknown'}]},
+  {...report,results:[{number:101,rootPath:'/repo/managed/101',outcome:'protected'}]}]) assert.throws(()=>readSwarmWorktreeDeletionReportV1(value));
 });

@@ -74,7 +74,10 @@ while project-wide management records remain under `pm/`.
   memberships reserve the canonical rolling pool under its existing project fence;
   claim/release preserve checkout content and refuse live assignments or Git operations.
   Durable base-commit setup intent precedes canonical worktree provisioning; exact
-  recovery checks the frozen owner and target repository identity.
+  recovery checks the frozen owner and target repository identity. Deletion
+  checkpoints cleanup and exact removal in resource-scoped DB receipts, protects
+  assigned roots, and retains committed source in revision-specific Git refs.
+
 - `src/swarm-info.ts` owns the swarm inventory/coordinator CLI adapter, physical
   Git/project-scoped inventory, native coordinator identity admission, immutable
   V1/V2/V3 result readers and normalization to V3, including standalone retained

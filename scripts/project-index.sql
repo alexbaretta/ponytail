@@ -327,6 +327,21 @@ CREATE TABLE IF NOT EXISTS swarm_worktree_v1 (
 ALTER TABLE swarm_worktree_v1 ADD COLUMN IF NOT EXISTS base_commit text CHECK (base_commit ~ '^([0-9a-f]{40}|[0-9a-f]{64})$');
 CREATE INDEX IF NOT EXISTS swarm_worktree_v1_owner ON swarm_worktree_v1(project_id,owner_root,number);
 
+-- Traceability: supports REQ-SWARM-WORKTREES
+CREATE TABLE IF NOT EXISTS swarm_worktree_deletion_v1 (
+  project_id uuid NOT NULL REFERENCES project_v1(project_id) ON DELETE CASCADE,
+  number bigint NOT NULL CHECK (number BETWEEN 101 AND 9007199254740991),
+  owner_root text NOT NULL,
+  root_path text NOT NULL,
+  git_common_directory text NOT NULL,
+  revision text NOT NULL CHECK (revision ~ '^([0-9a-f]{40}|[0-9a-f]{64})$'),
+  resource_generation uuid,
+  cleanup_complete boolean NOT NULL DEFAULT false,
+  state text NOT NULL DEFAULT 'PENDING' CHECK (state IN ('PENDING','COMPLETE')),
+  PRIMARY KEY (project_id,number),
+  FOREIGN KEY (project_id,number) REFERENCES rolling_worktree_v1(project_id,number) ON DELETE CASCADE
+);
+
 CREATE TABLE IF NOT EXISTS rolling_assignment_v1 (
   project_id uuid NOT NULL,
   campaign_id text NOT NULL,

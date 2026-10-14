@@ -9,7 +9,7 @@ import {execFileSync,spawnSync} from 'node:child_process';
 import test from 'node:test';
 import {Pool} from 'pg';
 import {databaseOptions} from '../src/project-index-database.js';
-import {inspectSwarmInfo} from '../src/swarm-info.js';
+import {inspectSwarmInfo,readSwarmWorktreeDeletionReportV1} from '../src/swarm-info.js';
 import {SwarmStore} from '../src/swarm-store.js';
 import type {SwarmUserWorktree} from '../src/swarm-owner.js';
 import {resetRollingProject,type RollingResetRequestV1} from '../src/rolling-reset.js';
@@ -129,7 +129,7 @@ test('installed swarm CLI creates, reuses and resumes exact durable project setu
  fs.writeFileSync(path.join(mainRoot,'ponytail-journal.json'),JSON.stringify({...journal,projectId}));
  const setupScript=path.join(root,'setup.cjs'),cleanupScript=path.join(root,'cleanup.cjs'),refusal=path.join(root,'refuse'),cleanupRefusal=path.join(root,'refuse-cleanup');
  fs.writeFileSync(setupScript,`const fs=require('node:fs');if(fs.existsSync(${JSON.stringify(refusal)}))process.exit(9);const file='setup-runs';fs.writeFileSync(file,String(Number(fs.existsSync(file)?fs.readFileSync(file,'utf8'):'0')+1));`);
- fs.writeFileSync(cleanupScript,`const fs=require('node:fs');if(fs.existsSync(${JSON.stringify(cleanupRefusal)}))process.exit(7);fs.writeFileSync('cleanup-runs',process.env.PONYTAIL_WORKTREE_GENERATION);`);
+ fs.writeFileSync(cleanupScript,`const fs=require('node:fs');if(fs.existsSync(${JSON.stringify(cleanupRefusal)})&&['all',process.env.PONYTAIL_WORKTREE_NUMBER].includes(fs.readFileSync(${JSON.stringify(cleanupRefusal)},'utf8')))process.exit(7);fs.writeFileSync('cleanup-runs',process.env.PONYTAIL_WORKTREE_GENERATION);`);
  const rollingProjectConfigV2:RollingProjectConfigV2={schemaVersion:2,mainline:{remote:'origin',branch:'main'},managedWorktrees:{directory:path.join(root,'managed'),anchor:'main'},
   maxActiveWorkers:null,publicationSize:null,setupCommands:[[process.execPath,setupScript]],retirementCommands:[[process.execPath,cleanupScript]],qa:{focused:[],publication:[['node','--version']]}};
  fs.mkdirSync(path.join(mainRoot,'.agents/config/project'),{recursive:true});fs.writeFileSync(path.join(mainRoot,'.agents/config/project/rolling-campaigns.json'),JSON.stringify(rollingProjectConfigV2));
@@ -141,7 +141,7 @@ test('installed swarm CLI creates, reuses and resumes exact durable project setu
  const firstWorktree=firstSwarmInfoV3.worktrees[0];assert.ok(firstWorktree&&firstWorktree.membership.kind==='swarm');assert.equal(firstWorktree.number,101);
  assert.equal(firstWorktree.state,'RESERVED');assert.equal(fs.readFileSync(path.join(firstWorktree.rootPath,'setup-runs'),'utf8'),'1');
  fs.writeFileSync(path.join(firstWorktree.rootPath,'ponytail-journal.json'),JSON.stringify({...journal,projectId}));
- fs.writeFileSync(cleanupRefusal,'fail cleanup');
+ fs.writeFileSync(cleanupRefusal,'all');
  const refusedRelease=cli(firstWorktree.rootPath,['worktree-release','--number','101','--generation',firstWorktree.membership.generation]);
  assert.equal(refusedRelease.status,1);assert.match(refusedRelease.stderr,/cleanup failed/);
  assert.equal((await inspectSwarmInfo(mainRoot,pool,projectId)).worktrees[0]?.state,'RESERVED');assert.ok(fs.existsSync(firstWorktree.rootPath));
@@ -165,4 +165,68 @@ test('installed swarm CLI creates, reuses and resumes exact durable project setu
  assert.equal((await inspectSwarmInfo(mainRoot,pool,projectId)).worktrees.find(worktree=>worktree.number===102)?.state,'RESERVED');
  assert.equal(cli(mainRoot,['worktree-setup','--number','102','--generation',pendingWorktree.membership.generation]).status,0);
  assert.equal(fs.readFileSync(path.join(pendingWorktree.rootPath,'setup-runs'),'utf8'),'1');
+ fs.writeFileSync(path.join(secondWorktree.rootPath,'retained-source.txt'),'original source survives checkout deletion');
+ execFileSync('git',['-C',secondWorktree.rootPath,'add','retained-source.txt']);
+ execFileSync('git',['-C',secondWorktree.rootPath,'-c','user.name=Fixture','-c','user.email=fixture@example.test','commit','-qm','source to retain']);
+ const retainedRevision=execFileSync('git',['-C',secondWorktree.rootPath,'rev-parse','HEAD'],{encoding:'utf8'}).trim();
+ for(const worktree of [secondWorktree,pendingWorktree]) {
+  assert.ok(worktree.membership.kind==='swarm');
+  const release=cli(mainRoot,['worktree-release','--number',String(worktree.number),'--generation',worktree.membership.generation]);assert.equal(release.status,0,release.stderr);
+ }
+ fs.writeFileSync(cleanupRefusal,'all');
+ const refusedDelete=cli(mainRoot,['worktree-delete','--number','101','--json']);assert.equal(refusedDelete.status,1);
+ assert.equal(readSwarmWorktreeDeletionReportV1(JSON.parse(refusedDelete.stdout)).results[0]?.outcome,'retained');
+ assert.ok(fs.existsSync(firstWorktree.rootPath));
+ assert.equal((await pool.query<Record<string,unknown>>('SELECT state FROM ponytail_index.rolling_worktree_v1 WHERE project_id=$1 AND number=101',[projectId])).rows[0]?.state,'QUARANTINED');
+ const originalSourceBranch=execFileSync('git',['-C',firstWorktree.rootPath,'symbolic-ref','--short','HEAD'],{encoding:'utf8'}).trim();
+ execFileSync('git',['-C',firstWorktree.rootPath,'switch','--detach'],{stdio:'pipe'});git(['branch','-D',originalSourceBranch]);
+
+ // Reproduce the old interrupted-write state; intent independently fences reuse.
+ await pool.query("UPDATE ponytail_index.rolling_worktree_v1 SET state='AVAILABLE' WHERE project_id=$1 AND number=101",[projectId]);
+ const swarmStore=new SwarmStore(pool,projectId);
+ const recoveredSwarmWorktreeMembership=await swarmStore.reserveWorktree(mainRoot,{kind:'retained'});assert.ok(recoveredSwarmWorktreeMembership);
+ assert.equal(recoveredSwarmWorktreeMembership.number,102);await swarmStore.releaseWorktree(recoveredSwarmWorktreeMembership);
+
+ const resetPoolClient=await pool.connect();
+ try {await assert.rejects(resetRollingProject(resetPoolClient,projectId,mainRoot,{schemaVersion:1,id:crypto.randomUUID(),reason:'fixture reset',authority:['fixture']},true,null),/pending swarm worktree deletion/);}
+ finally {resetPoolClient.release();}
+ fs.unlinkSync(cleanupRefusal);
+ const deleted=cli(mainRoot,['worktree-delete','--number','101','--json']);assert.equal(deleted.status,0,deleted.stderr);
+ assert.equal(readSwarmWorktreeDeletionReportV1(JSON.parse(deleted.stdout)).results[0]?.outcome,'deleted');
+ assert.equal(fs.existsSync(firstWorktree.rootPath),false);
+ assert.equal(git(['rev-parse',`refs/ponytail/swarm/deleted/101/${retainedRevision}`]),retainedRevision);
+ assert.equal(cli(mainRoot,['worktree-delete','--number','101']).status,0);
+ // Deleted pool rows retain history and cannot be reused as a new incarnation.
+ assert.equal(cli(mainRoot,['worktree-assign','--base','HEAD']).status,0);
+ assert.equal((await inspectSwarmInfo(mainRoot,pool,projectId)).worktrees[0]?.number,102);
+ const eligible: number[]=[];
+ for(let i=0;i<2;i++) {
+  const allocated=cli(mainRoot,['worktree-assign','--base','HEAD']);assert.equal(allocated.status,0,allocated.stderr);
+ }
+ for(const worktree of (await inspectSwarmInfo(mainRoot,pool,projectId)).worktrees.filter(worktree=>worktree.number!==102)) {
+  assert.ok(worktree.membership.kind==='swarm');eligible.push(worktree.number);
+  const released=cli(mainRoot,['worktree-release','--number',String(worktree.number),'--generation',worktree.membership.generation]);assert.equal(released.status,0,released.stderr);
+ }
+ assert.deepEqual(eligible,[103,104]);
+ fs.writeFileSync(cleanupRefusal,'103');
+ const all=cli(mainRoot,['worktree-delete','--all','--json']);assert.equal(all.status,1);
+ assert.deepEqual(readSwarmWorktreeDeletionReportV1(JSON.parse(all.stdout)).results.map(result=>[result.number,result.outcome]),[[102,'protected'],[103,'retained'],[104,'deleted']]);
+ assert.ok(fs.existsSync(mainRoot));assert.ok(fs.existsSync(path.join(root,'managed/102')));assert.ok(fs.existsSync(path.join(root,'managed/103')));assert.equal(fs.existsSync(path.join(root,'managed/104')),false);
+ fs.unlinkSync(cleanupRefusal);
+ const allRetry=cli(mainRoot,['worktree-delete','--all','--json']);assert.equal(allRetry.status,0,allRetry.stderr);
+ assert.deepEqual(readSwarmWorktreeDeletionReportV1(JSON.parse(allRetry.stdout)).results.map(result=>[result.number,result.outcome]),[[102,'protected'],[103,'deleted']]);
+ assert.equal(cli(mainRoot,['worktree-delete','--number','102']).status,1);
+ // Pool reset removes obsolete resource-scoped deletion receipts with their rows.
+ const remaining=(await inspectSwarmInfo(mainRoot,pool,projectId)).worktrees[0];assert.ok(remaining&&remaining.membership.kind==='swarm');
+ assert.equal(cli(mainRoot,['worktree-release','--number','102','--generation',remaining.membership.generation]).status,0);
+ await pool.query('DELETE FROM ponytail_index.rolling_pool_v1 WHERE project_id=$1',[projectId]);
+ assert.equal((await pool.query('SELECT 1 FROM ponytail_index.swarm_worktree_deletion_v1 WHERE project_id=$1',[projectId])).rowCount,0);
+ const reincarnated=cli(mainRoot,['worktree-assign','--base','HEAD']);assert.equal(reincarnated.status,0,reincarnated.stderr);
+ const recreated=(await inspectSwarmInfo(mainRoot,pool,projectId)).worktrees[0];assert.ok(recreated&&recreated.membership.kind==='swarm');assert.equal(recreated.number,101);
+ assert.equal(cli(mainRoot,['worktree-release','--number','101','--generation',recreated.membership.generation]).status,0);
+ assert.equal(cli(mainRoot,['worktree-delete','--number','101']).status,0);
+ assert.equal(git(['rev-parse',`refs/ponytail/swarm/deleted/101/${retainedRevision}`]),retainedRevision);
+ const recreatedRevision=git(['rev-parse','HEAD']);assert.notEqual(recreatedRevision,retainedRevision);
+ assert.equal(git(['rev-parse',`refs/ponytail/swarm/deleted/101/${recreatedRevision}`]),recreatedRevision);
+ assert.equal(git(['show',`${retainedRevision}:retained-source.txt`]),'original source survives checkout deletion');
 });

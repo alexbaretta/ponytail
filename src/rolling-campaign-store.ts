@@ -1879,6 +1879,7 @@ export class RollingCampaignStore {
         }
         const available = (await poolClient.query<Record<string, unknown>>(`SELECT w.* FROM ponytail_index.rolling_worktree_v1 w WHERE w.project_id=$1 AND w.state='AVAILABLE'
           AND NOT EXISTS(SELECT 1 FROM ponytail_index.swarm_worktree_v1 s WHERE s.project_id=w.project_id AND s.number=w.number)
+          AND NOT EXISTS(SELECT 1 FROM ponytail_index.swarm_worktree_deletion_v1 d WHERE d.project_id=w.project_id AND d.number=w.number)
           ORDER BY w.number LIMIT 1`, [this.projectId])).rows[0];
         if(existingOnly&&!available)return {assignment:null,reason:'no_available_worktree'};
         if (available) {

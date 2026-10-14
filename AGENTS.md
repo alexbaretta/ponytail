@@ -158,6 +158,10 @@ services. `PROJECT_STRUCTURE.md` is authoritative for that boundary.
   `ponytail swarm worktree-setup --number <n> --generation <uuid>`. Release with
   `ponytail swarm worktree-release --number <n> --generation <uuid>`; this preserves
   checkout/source, uses project cleanup and refuses retained native ownership.
+- Swarm worktree deletion: `ponytail swarm worktree-delete --number <n>` or
+  `ponytail swarm worktree-delete --all [--json]`; checkpoints project cleanup and
+  exact Git removal, reports each protected/retained/deleted resource, preserves
+  committed source refs and pool history, and retries outstanding deletion only.
 - Swarm retained checkout focused proof: `node --test
   dist/tests/swarm-worktrees.integration.test.js
   dist/tests/swarm-store.integration.test.js dist/tests/rolling-reset.integration.test.js`;
