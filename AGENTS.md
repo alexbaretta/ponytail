@@ -160,6 +160,10 @@ services. `PROJECT_STRUCTURE.md` is authoritative for that boundary.
   then sets/confirms the name without acquiring the original writer. `swarm info`
   reports V4 worker bindings, desired names and independent native observations.
   `notLoaded` does not establish idle or cessation.
+- Final worker naming: `ponytail swarm worker-complete --session <id>
+  --generation <worker-uuid> [--json]`. Sets and confirms the DONE-prefixed name
+  for the exact bound worker. Retains ownership and acceptance state; retry the
+  same binding after an unknown naming outcome.
 - Swarm checkout lifecycle: `ponytail swarm worktree-assign --base <commit-or-ref>`;
   failed setup retains exact membership and reports number/generation. Resume with
   `ponytail swarm worktree-setup --number <n> --generation <uuid>`. Release with

@@ -87,6 +87,14 @@ test('live original coordinator and worker bind and name through the CLI without
  assert.equal(swarmWorkerInfoV1.desiredName,'W1 P1 Verify original worker');assert.ok(swarmWorkerInfoV1.nativeObservation.kind==='observed');assert.equal(swarmWorkerInfoV1.nativeObservation.name,swarmWorkerInfoV1.desiredName);
  assert.equal((await rollingCodex.readThreadActivity(rollingNativeWorkerThread.thread.id)).status,'idle');
  assert.equal(await rollingCodex.isThreadArchived(rollingNativeWorkerThread.thread.id,swarmWorktreeInfoV3.rootPath),false);
+ const workerComplete=cli(['worker-complete','--session',swarmWorkerInfoV1.binding.sessionId,'--generation',swarmWorkerInfoV1.binding.generation,'--json']);
+ assert.equal(workerComplete.status,0,workerComplete.stderr);
+ const completedSwarmInfoV4=readSwarmInfoV4(JSON.parse(workerComplete.stdout));
+ const completedWorker=completedSwarmInfoV4.workers[0];assert.ok(completedWorker&&completedWorker.nativeObservation.kind==='observed');
+ assert.equal(completedWorker.nativeObservation.name,'DONE W1 P1 Verify original worker');
+ assert.equal(completedWorker.binding.completed,true);assert.equal(completedWorker.binding.generation,swarmWorkerInfoV1.binding.generation);
+ assert.equal((await rollingCodex.readThreadActivity(rollingNativeWorkerThread.thread.id)).status,'idle');
+ assert.equal(await rollingCodex.isThreadArchived(rollingNativeWorkerThread.thread.id,swarmWorktreeInfoV3.rootPath),false);
  const unbind=cli(['coordinator-unbind','--session',rollingNativeThread.thread.sessionId,'--json']);
  assert.equal(unbind.status,0,unbind.stderr);assert.deepEqual(readSwarmInfoV4(JSON.parse(unbind.stdout)).coordinator,{kind:'unbound'});
  assert.equal(await rollingCodex.isThreadArchived(rollingNativeThread.thread.id,ownerRoot),false);

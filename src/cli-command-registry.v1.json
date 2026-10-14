@@ -25,6 +25,7 @@
   "chapters": {
     "swarm": {
       "commands": [
+        "worker-complete",
         "worktree-delete",
         "worktree-assign",
         "worktree-setup",

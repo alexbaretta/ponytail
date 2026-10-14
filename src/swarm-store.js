@@ -66,6 +66,26 @@ class SwarmStore {
         this.pool = pool;
         this.projectId = projectId;
     }
+    async completeWorker(ownerRoot, sessionId, generation, rollingNativeThreadIdentity) {
+        return this.transaction(async (poolClient) => {
+            await poolClient.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))', [this.projectId]);
+            const owner = (await poolClient.query('SELECT * FROM ponytail_index.swarm_owner_v1 WHERE project_id=$1 AND owner_root=$2 FOR UPDATE', [this.projectId, ownerRoot])).rows[0];
+            if (owner === undefined || owner.coordinator_session_id === null)
+                throw new Error('swarm: bind a coordinator before completing a worker');
+            physicalOwner(readBinding(owner).swarmUserWorktree);
+            const row = (await poolClient.query(`SELECT k.*,n.thread_id,n.root_path FROM ponytail_index.swarm_worker_v1 k
+    JOIN ponytail_index.swarm_native_session_v1 n USING(session_id) WHERE k.project_id=$1 AND k.owner_root=$2 AND k.session_id=$3 AND k.generation=$4 FOR UPDATE`, [this.projectId, ownerRoot, sessionId, generation])).rows[0];
+            if (row === undefined)
+                throw new Error('swarm: worker binding changed or is absent');
+            const swarmWorkerBinding = readWorker(row);
+            if (swarmWorkerBinding.state !== 'BOUND')
+                throw new Error('swarm: only a bound worker can be completed');
+            if (rollingNativeThreadIdentity.sessionId !== swarmWorkerBinding.sessionId || rollingNativeThreadIdentity.threadId !== swarmWorkerBinding.threadId || rollingNativeThreadIdentity.rootPath !== swarmWorkerBinding.rootPath)
+                throw new Error('swarm: original worker identity changed');
+            await poolClient.query('UPDATE ponytail_index.swarm_worker_v1 SET completed=true WHERE session_id=$1', [sessionId]);
+            return { ...swarmWorkerBinding, completed: true };
+        });
+    }
     async bindWorker(swarmWorktreeMembership, rollingNativeThreadIdentity, swarmWorkerAssignment) {
         swarmWorkerAssignment = readSwarmWorkerAssignment(swarmWorkerAssignment);
         return this.transaction(async (poolClient) => {

@@ -125,6 +125,17 @@ the exact binding for retry. Nineteen unit/help/protocol and five focused integr
 tests pass. Native removal/reattachment, DONE naming and lifetime origin across
 project lifecycle changes remain pending; these are not discharged by admission.
 
+**Completion naming evidence:** `worker-complete` records the DONE naming intent
+for an exact bound worker generation before the native request and confirms the
+original native name. PostgreSQL proof rejects stale generations, foreign owners
+and changed native identity, preserves ACTIVE checkout ownership, and retains the
+same intent after a lost naming acknowledgement. The installed CLI live Arc
+confirms `DONE W1 P1 Verify original worker` while the original writer stays open
+and idle and its unarchived session remains bound. This is session completion
+naming, not obligation discharge or worker removal. Four focused integration/live
+tests and nineteen unit/help/protocol tests pass. Removal and reattachment remain
+pending.
+
 ## Arc SWARM-CHECKOUTS: Allocate, release, transfer and reclaim
 
 Traceability: verifies REQ-SWARM-WORKTREES

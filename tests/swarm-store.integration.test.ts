@@ -13,7 +13,7 @@ import {SwarmStore,swarmWorkerName,type SwarmWorkerAssignment} from '../src/swar
 import type {SwarmUserWorktree} from '../src/swarm-owner.js';
 import type {RollingProjectConfigV2} from '../src/rolling-campaign.js';
 import {RollingCodex,RollingUnknownOutcome,type RollingNativeThreadIdentity} from '../src/rolling-codex.js';
-import {bindSwarmCoordinator,bindSwarmWorker,inspectSwarmInfo} from '../src/swarm-info.js';
+import {bindSwarmCoordinator,bindSwarmWorker,completeSwarmWorker,inspectSwarmInfo} from '../src/swarm-info.js';
 function coordinatorIdentity(rootPath:string,sessionId:string):RollingNativeThreadIdentity {
  return {rootPath,sessionId,threadId:`thread-${sessionId}`};
 }
@@ -149,7 +149,21 @@ test('original worker identity and exclusive checkout binding survive coordinato
  assert.equal((await pool.query<Record<string,unknown>>('SELECT state,generation,worker_number FROM ponytail_index.swarm_worker_v1 WHERE session_id=$1',[swarmWorkerBinding.sessionId])).rows[0]?.generation,swarmWorkerBinding.generation);
  assert.equal((await inspectSwarmInfo(mainRoot,pool,projectId)).workers.length,2);
 
+ const rollingNativeThreadIdentity:RollingNativeThreadIdentity={threadId:swarmWorkerBinding.threadId,sessionId:swarmWorkerBinding.sessionId,rootPath:swarmWorkerBinding.rootPath};
+ await assert.rejects(swarmStore.completeWorker(mainRoot,swarmWorkerBinding.sessionId,crypto.randomUUID(),rollingNativeThreadIdentity),/binding changed/);
+ await assert.rejects(swarmStore.completeWorker(otherRoot,swarmWorkerBinding.sessionId,swarmWorkerBinding.generation,rollingNativeThreadIdentity),/binding changed/);
+ await assert.rejects(swarmStore.completeWorker(mainRoot,swarmWorkerBinding.sessionId,swarmWorkerBinding.generation,{...rollingNativeThreadIdentity,rootPath:otherRoot}),/identity changed/);
+ await assert.rejects(completeSwarmWorker(swarmStore,swarmWorkerBinding,{
+  async readThreadIdentity(){return rollingNativeThreadIdentity;},
+  async setThreadName(){throw new RollingUnknownOutcome('completion-name','thread/name/set','lost completion acknowledgment');},
+  async readThreadState(){throw new Error('unknown completion must remain retryable');}
+ }),/lost completion acknowledgment/);
+ const completedSwarmWorkerBinding=await swarmStore.completeWorker(mainRoot,swarmWorkerBinding.sessionId,swarmWorkerBinding.generation,rollingNativeThreadIdentity);
+ assert.deepEqual(completedSwarmWorkerBinding,{...swarmWorkerBinding,completed:true});
+ assert.equal((await pool.query<Record<string,unknown>>('SELECT state FROM ponytail_index.rolling_worktree_v1 WHERE project_id=$1 AND number=$2',[projectId,swarmWorkerBinding.worktreeNumber])).rows[0]?.state,'ACTIVE');
+
  await swarmStore.unbindCoordinator(mainRoot,'main-coordinator');
+ await assert.rejects(swarmStore.completeWorker(mainRoot,swarmWorkerBinding.sessionId,swarmWorkerBinding.generation,rollingNativeThreadIdentity),/coordinator/);
  assert.equal((await pool.query<Record<string,unknown>>('SELECT state FROM ponytail_index.swarm_worker_v1 WHERE session_id=$1',[swarmWorkerBinding.sessionId])).rows[0]?.state,'BOUND');
  await assert.rejects(swarmStore.bindWorker(mainSwarmWorktreeMembership,identities[0]??coordinatorIdentity(mainSwarmWorktreeMembership.rootPath,'third-worker'),swarmWorkerAssignment),/coordinator/);
  // Historical removed state must retain origin independently of current membership.
