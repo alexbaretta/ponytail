@@ -24,3 +24,4 @@ ownership of project-specific management records and evidence.
 - [Developer-private agent instructions](developer-private-agent-instructions.md)
 - [Repository text index](repository-text-index.md)
 - [Worktree reclamation](worktree-reclamation.md)
+- [Fast semantic rebase](fast-semantic-rebase.md)

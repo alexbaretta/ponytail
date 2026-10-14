@@ -31,6 +31,7 @@ behavior independently from implementation plans and architecture.
 - [Repository text index and search](repository-text-index.md)
 - [Worktree reclamation](worktree-reclamation.md)
 - [Retained workers and worker-owned recovery](worker-worktree-retention.md)
+- [Fast semantic rebase](fast-semantic-rebase.md)
 
 ## Campaign census CLI
 
