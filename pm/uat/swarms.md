@@ -338,3 +338,15 @@ Focused evidence: both manual `persists accepted/rejected review` Arcs and the
 `shared operations initialize defaults` MCP parity Arc; scoped command/help tests
 also pass. Neither bookkeeping command uses Codex APIs. Retained worker lifecycle
 and final plan acceptance remain pending.
+
+### Individual worker lease release evidence
+
+The real CLI detaches an original retained worker with a pending resumption,
+cancels only that assignment's outstanding actions and marks its lease released.
+A repeated unbind succeeds without deleting the session, checkout, submitted
+proposals or review records. Subsequent release invokes project cleanup with the
+original resource generation and released assignment context, preserving dirty
+source in quarantine. A cleanup callback that creates a new session marker causes
+release refusal with membership retained; retry succeeds after resolving that
+fixture marker. Focused PG/CLI and existing clear/standalone binding Arcs pass.
+Retained worker reactivation and final acceptance remain pending.

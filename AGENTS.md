@@ -161,7 +161,8 @@ services. `PROJECT_STRUCTURE.md` is authoritative for that boundary.
   --generation <worker-uuid> [--json]`. The coordinator must stop assigned work and
   establish quiescence before invoking it. Removes database membership and the
   matching session marker; preserves sessions and checkouts. Refuses active Git
-  operations and unfenced campaign leases. Does not contact Codex.
+  operations and campaign ownership conflicts; releases its matching campaign
+  lease and pending actions atomically. Does not contact Codex.
 - Swarm checkout lifecycle: `ponytail swarm worktree-assign --base <commit-or-ref>`;
   failed setup retains exact membership and reports number/generation. Resume with
   `ponytail swarm worktree-setup --number <n> --generation <uuid>`. Release with

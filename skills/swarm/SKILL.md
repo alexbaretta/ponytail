@@ -120,7 +120,9 @@ discharge an obligation or release ownership.
 
 Before removal, cancel assigned work through host tools and establish quiescence.
 Then use `worker-unbind --session <id> --generation <worker-generation>`. It removes
-membership and the matching session marker; it does not stop, delete or archive
+membership and the matching session marker, fences its matching campaign
+assignment and cancels pending allocation actions. It preserves submitted evidence
+and does not discharge unfinished obligations. It does not stop, delete or archive
 the session. Stop sending work to a detached session. Where supported, an original
 session may reattach through `worker-bind` to its original owner and checkout;
 never attach it to another user-worktree swarm.

@@ -228,3 +228,9 @@ Host result/verdict bookkeeping is now exposed through `campaign submit` and
 Real accepted/rejected CLI Arcs and MCP registration parity pass. Remaining
 operational integration is retained worker reactivation and ownership release;
 final gates and obligation assessment remain open.
+
+Individual worker unbinding now fences the owned campaign lease/actions while
+preserving sessions, source and evidence. Release passes recorded cleanup
+provenance and checks markers/Git state again after callbacks. Real CLI/PG proof
+covers pending resumption cancellation, idempotent detachment, callback refusal
+and dirty-source retention. Retained reactivation and final gates remain open.

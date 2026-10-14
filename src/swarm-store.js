@@ -133,9 +133,7 @@ class SwarmStore {
                 if (node_fs_1.default.existsSync(marker))
                     node_fs_1.default.unlinkSync(marker);
                 const state = (0, rolling_integration_js_1.git)(swarmWorktreeMembership.rootPath, ['status', '--porcelain']).trim() ? 'QUARANTINED' : 'AVAILABLE';
-                await poolClient.query(`UPDATE ponytail_index.rolling_action_v1 SET state='CANCELLED' WHERE project_id=$1 AND assignment_id IN
-     (SELECT assignment_id FROM ponytail_index.rolling_assignment_v1 WHERE project_id=$1 AND worktree_number=$2 AND state<>'RELEASED') AND state IN ('PENDING','STARTED')`, [this.projectId, swarmWorktreeMembership.number]);
-                await poolClient.query("UPDATE ponytail_index.rolling_assignment_v1 SET state='RELEASED',activity_stopped=true,retired=true WHERE project_id=$1 AND worktree_number=$2 AND state<>'RELEASED'", [this.projectId, swarmWorktreeMembership.number]);
+                await this.releaseCampaignAssignment(poolClient, swarmWorktreeMembership.number, ownerRoot, swarmWorktreeMembership.sessionId);
                 await poolClient.query('UPDATE ponytail_index.rolling_worktree_v1 SET state=$3 WHERE project_id=$1 AND number=$2', [this.projectId, swarmWorktreeMembership.number, state]);
             }
             await poolClient.query("UPDATE ponytail_index.swarm_worker_v1 SET state='REMOVED' WHERE project_id=$1 AND owner_root=$2", [this.projectId, ownerRoot]);
@@ -149,6 +147,17 @@ class SwarmStore {
         if (row === undefined)
             throw new Error('swarm: worker binding changed or is absent');
         return readWorker(row);
+    }
+    async releaseCampaignAssignment(poolClient, number, ownerRoot, sessionId) {
+        const rows = (await poolClient.query(`SELECT a.assignment_id,a.session_id,c.coordinator_root FROM ponytail_index.rolling_assignment_v1 a
+   JOIN ponytail_index.rolling_campaign_v1 c USING(project_id,campaign_id)
+   WHERE a.project_id=$1 AND a.worktree_number=$2 AND a.state<>'RELEASED' FOR UPDATE OF a`, [this.projectId, number])).rows;
+        if (rows.length > 1 || rows.some(row => row.coordinator_root !== ownerRoot || row.session_id !== sessionId))
+            throw new Error('swarm: campaign assignment belongs to another owner or worker; preserve membership');
+        for (const row of rows) {
+            await poolClient.query("UPDATE ponytail_index.rolling_action_v1 SET state='CANCELLED' WHERE project_id=$1 AND assignment_id=$2 AND state IN ('PENDING','STARTED')", [this.projectId, row.assignment_id]);
+            await poolClient.query("UPDATE ponytail_index.rolling_assignment_v1 SET state='RELEASED',activity_stopped=true,retired=true WHERE project_id=$1 AND assignment_id=$2", [this.projectId, row.assignment_id]);
+        }
     }
     async hasNativeOwner(poolClient, rootPath) {
         return Boolean((await poolClient.query(`SELECT 1 FROM ponytail_index.swarm_native_session_v1 n LEFT JOIN ponytail_index.swarm_worker_v1 k USING(session_id)
@@ -187,18 +196,17 @@ class SwarmStore {
             const worktree = (await poolClient.query(`SELECT w.*,o.git_common_directory FROM ponytail_index.swarm_worktree_v1 s JOIN ponytail_index.rolling_worktree_v1 w USING(project_id,number)
     JOIN ponytail_index.swarm_owner_v1 o ON o.project_id=s.project_id AND o.owner_root=s.owner_root
     WHERE s.project_id=$1 AND s.number=$2 AND s.owner_root=$3 AND s.generation=$4 FOR UPDATE`, [this.projectId, currentSwarmWorkerBinding.worktreeNumber, currentSwarmWorkerBinding.ownerRoot, currentSwarmWorkerBinding.worktreeGeneration])).rows[0];
-            if (worktree === undefined || worktree.root_path !== currentSwarmWorkerBinding.rootPath || worktree.state !== 'ACTIVE')
+            if (worktree === undefined || worktree.root_path !== currentSwarmWorkerBinding.rootPath || (worktree.state !== 'ACTIVE' && worktree.state !== 'RESERVED'))
                 throw new Error('swarm: original worker checkout membership changed');
-            if ((await poolClient.query("SELECT 1 FROM ponytail_index.rolling_assignment_v1 WHERE project_id=$1 AND worktree_number=$2 AND state<>'RELEASED'", [this.projectId, currentSwarmWorkerBinding.worktreeNumber])).rowCount)
-                throw new Error('swarm: campaign assignment must be fenced before worker ownership can be released');
             if (node_fs_1.default.realpathSync(currentSwarmWorkerBinding.rootPath) !== currentSwarmWorkerBinding.rootPath || node_fs_1.default.realpathSync((0, rolling_integration_js_1.git)(currentSwarmWorkerBinding.rootPath, ['rev-parse', '--path-format=absolute', '--git-common-dir']).trim()) !== worktree.git_common_directory)
                 throw new Error('swarm: original checkout identity changed');
             (0, rolling_worktrees_js_1.requireRollingGitOperationAbsent)(currentSwarmWorkerBinding.rootPath);
             const marker = node_path_1.default.join(currentSwarmWorkerBinding.rootPath, 'session_id.txt');
-            if (node_fs_1.default.lstatSync(marker, { throwIfNoEntry: false }) !== undefined) {
+            if (node_fs_1.default.lstatSync(marker, { throwIfNoEntry: false }) !== undefined)
                 (0, rolling_worktrees_js_1.validateRollingSessionMarker)(currentSwarmWorkerBinding.rootPath, currentSwarmWorkerBinding.sessionId);
+            await this.releaseCampaignAssignment(poolClient, currentSwarmWorkerBinding.worktreeNumber, currentSwarmWorkerBinding.ownerRoot, currentSwarmWorkerBinding.sessionId);
+            if (node_fs_1.default.lstatSync(marker, { throwIfNoEntry: false }) !== undefined)
                 node_fs_1.default.unlinkSync(marker);
-            }
             await poolClient.query("UPDATE ponytail_index.swarm_worker_v1 SET state='REMOVED' WHERE session_id=$1", [currentSwarmWorkerBinding.sessionId]);
             await poolClient.query("UPDATE ponytail_index.rolling_worktree_v1 SET state='RESERVED' WHERE project_id=$1 AND number=$2", [this.projectId, currentSwarmWorkerBinding.worktreeNumber]);
         });
@@ -301,8 +309,18 @@ class SwarmStore {
                 throw new Error('swarm: checkout retains an assignment or native actor; establish cessation and remove worker ownership first');
             (0, rolling_worktrees_js_1.requireRollingGitOperationAbsent)(rollingStoredWorktree.rootPath);
             (0, rolling_worktrees_js_1.requireRollingSessionMarkerAbsent)(rollingStoredWorktree.rootPath);
-            if (row.base_commit !== null)
-                this.cleanupWorktree(swarmWorktreeMembership);
+            if (row.base_commit !== null) {
+                const released = (await poolClient.query(`SELECT a.assignment_id,a.generation,a.session_id FROM ponytail_index.rolling_assignment_v1 a
+     JOIN ponytail_index.rolling_campaign_v1 c USING(project_id,campaign_id)
+     JOIN ponytail_index.rolling_action_v1 r ON r.project_id=a.project_id AND r.assignment_id=a.assignment_id AND r.kind='START_WORKER' AND r.state='COMPLETED'
+     JOIN ponytail_index.swarm_worker_v1 k ON k.project_id=a.project_id AND k.session_id=a.session_id
+     WHERE a.project_id=$1 AND a.worktree_number=$2 AND c.coordinator_root=$3 AND a.state='RELEASED'
+      AND r.generation=$4 AND k.owner_root=$3 AND k.worktree_generation=$4 AND k.state='REMOVED'
+     ORDER BY a.created_at DESC,a.assignment_id LIMIT 1`, [this.projectId, swarmWorktreeMembership.number, swarmWorktreeMembership.ownerRoot, swarmWorktreeMembership.generation])).rows[0];
+                this.cleanupWorktree(swarmWorktreeMembership, released === undefined ? null : { assignmentId: stringColumn(released.assignment_id), generation: stringColumn(released.generation), sessionId: stringColumn(released.session_id) });
+            }
+            (0, rolling_worktrees_js_1.requireRollingGitOperationAbsent)(rollingStoredWorktree.rootPath);
+            (0, rolling_worktrees_js_1.requireRollingSessionMarkerAbsent)(rollingStoredWorktree.rootPath);
             const state = (0, rolling_integration_js_1.git)(rollingStoredWorktree.rootPath, ['status', '--porcelain']).trim() ? 'QUARANTINED' : 'AVAILABLE';
             await poolClient.query('DELETE FROM ponytail_index.swarm_worktree_v1 WHERE project_id=$1 AND number=$2', [this.projectId, rollingStoredWorktree.number]);
             await poolClient.query('UPDATE ponytail_index.rolling_worktree_v1 SET state=$3 WHERE project_id=$1 AND number=$2', [this.projectId, rollingStoredWorktree.number, state]);
