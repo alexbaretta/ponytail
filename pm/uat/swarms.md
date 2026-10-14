@@ -119,3 +119,22 @@ another owner's independent swarm; existing campaign delivery evidence.
 2. Invalid commands produce the relevant scoped usage. Help performs no mutation.
 3. Exercise resource operations through the real CLI and campaign consumers;
    both expose the same ownership state, not independent registries.
+
+## Arc SWARM-SKILL: Use exported guidance to execute in parallel
+
+**Acceptance:** ACC-SW-16 (SW-16).
+**Requirement:** REQ-SWARM-SKILL.
+**Prerequisites:** Implemented swarm chapter, a registered canonical skill and
+generated/installed host copies, and a plan with independent ready obligations.
+
+1. Compare exported guidance with real chapter and subcommand help. Every
+   prescribed command exists and uses the canonical ownership/lifecycle path.
+2. Have the coordinator follow it to inspect the owning swarm and dispatch
+   compatible original top-level workers concurrently up to configured N,
+   without an extra instruction to parallelize. Verify actual native activity
+   and exact instruction receipt; unknown sends do not cause duplicate dispatch.
+3. Follow completion-first and publication gates, rename completed sessions,
+   then quiesce/remove workers and release or clear resources. Preserved sessions
+   remain bound to their original user-worktree provenance; checkouts can transfer
+   only after prior ownership is relinquished. Inspect both owner and managed
+   checkout to confirm truthful resulting membership.

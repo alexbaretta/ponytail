@@ -32,10 +32,11 @@ for diagnosis of actual worker sessions and managed checkout ownership. Separate
 resource membership from campaign scheduling and acceptance. Reuse the existing
 PostgreSQL and Git/native lifecycle boundaries; keep one ownership source.
 
-Delivery baseline: **15 atomic obligations, 0 discharged, 0 in progress,
-15 not started**. Canonical conditions and discharge criteria live exclusively
+Delivery baseline: **16 atomic obligations, 0 discharged, 0 in progress,
+16 not started**. SW-16 incorporates the stakeholder's additional explicit
+request for an agent skill. Canonical conditions and discharge criteria live exclusively
 in the linked requirement tables. Final acceptance below is a rollup, not a
-sixteenth delivery obligation.
+seventeenth delivery obligation.
 
 ## Planned implementation order and dependencies
 
@@ -59,6 +60,7 @@ Complete started obligations, including their proof, before opening more work.
 | 3 | SW-13 | SW-12 | SWARM-CHECKOUTS / 4 |
 | 4: complete interface and restart | SW-14 | SW-02, SW-06, SW-11 | SWARM-CLEAR / 1–3 |
 | 4 | SW-15 | SW-03–SW-14 | SWARM-CLI / 1–3 |
+| 4 | SW-16 | SW-15 | SWARM-SKILL / 1–3 |
 
 Expose command help with each delivered command; SW-15 verifies the complete
 chapter and campaign integration. SW-03 is the first useful diagnostic delivery;
@@ -92,7 +94,9 @@ each assignment rather than inventing source IDs in this planning-only record.
    consume them. Reconcile prepared dispatches, reservations and generation fences;
    clearing must not delete accepted campaign evidence. Keep destructive project
    reset distinct from release-only swarm clear.
-5. Synchronize root/chapter help, project instructions, exported glossary/rules,
+5. Write and register the reusable swarm execution skill, using the skill-creator
+   workflow and existing generators rather than hand-editing exported copies.
+   Synchronize root/chapter help, project instructions, exported glossary/rules,
    worker/coordinator procedures and generated host adapters with each implementation
    increment. Keep session lifetime restrictions separate from transferable
    checkout membership. Use TypeScript and existing TSTS for all new code/tests.

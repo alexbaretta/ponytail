@@ -118,3 +118,17 @@ session archival assumptions only for the explicitly adopted swarm workflow.
 Historical reader meanings remain unchanged. Native transport availability,
 permission approvals and actual activity must remain observable rather than
 being inferred from ownership records.
+
+## REQ-SWARM-SKILL: Export the parallel execution procedure
+
+**Approval:** Additional explicit stakeholder goal, 2026-10-13.
+
+| Obligation | Required condition | Discharge criterion |
+| --- | --- | --- |
+| SW-16 | A reusable skill teaches agents to use swarms and the implemented swarm tooling for parallel plan/campaign execution: owner resolution, one coordinator, dependency-ready completion-first scheduling up to configured N, original top-level worker sessions, truthful activity inspection, names, safe removal/reattachment, checkout release/transfer and clearing. Campaign obligations and publication gates retain their separate authority. | Canonical and generated/installed skill resources agree with actual chapter help and operations; an agent follows the procedure to inspect and run compatible workers concurrently, then quiesce and release resources without replacing sessions or deleting preserved work. |
+
+The skill must explain that approval to execute a configured parallel plan
+includes parallelization; another human instruction is unnecessary. Inspect
+actual activity and blockers instead of equating reservations or membership
+with execution. Teach the real native transport representation and uncertain-send
+recovery; do not claim absent capabilities or invent unavailable commands.
