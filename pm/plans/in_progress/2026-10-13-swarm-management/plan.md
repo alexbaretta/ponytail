@@ -27,6 +27,15 @@ plan activation. GWEN execution is separately paused by its user.
 **Canonical scope:** [Swarm requirements](../../../requirements/swarms.md).
 **Acceptance:** [Swarm Suite](../../../uat/swarms.md).
 
+**Stakeholder scope correction, 2026-10-13:** Ponytail records coordinator and
+worker session IDs and manages worktree creation, attachment, detachment and
+deletion. The coordinator uses its host tools to create or stop sessions, drive
+workers to quiescence and rename them. Ponytail is not authorized to add Codex
+API session creation or stopping capabilities. Earlier native-runtime control
+and native-proof planning in this document and its subordinate records is
+superseded by this correction; it is not an implementation requirement. Reconcile
+the affected requirements, UAT, commands and implementation to this boundary.
+
 ## Outcome
 
 Provide an owner-scoped `ponytail swarm` chapter, beginning with `swarm info`
