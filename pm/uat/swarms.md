@@ -7,7 +7,7 @@ Licensed under the MIT License. See LICENSE in the project root.
 
 [UAT index](index.md) · [Canonical requirements and obligations](../requirements/swarms.md)
 
-Approved expected behavior; final acceptance remains open.
+Final CLI acceptance passed on 2026-10-14 under the session-operation boundary.
 Focused automated evidence below is partial and does not establish release
 acceptance. Native-control evidence is historical and superseded.
 Use disposable checkouts and isolated rows in the existing project database
@@ -376,3 +376,12 @@ PostgreSQL scenarios covering amended leases and retained ownership, and four
 MCP tests pass. TSTS checked 1,648 files without violations; read-only adversarial
 review found no material defect. The prior broad typed run passed 325 tests before
 this renewal change; it is not final-tree acceptance for this increment.
+
+### Final acceptance disposition
+
+ACC-SW-01 through ACC-SW-16 are accepted for the corrected CLI/resource and
+exported-skill scope. Actual host session control remains coordinator-owned;
+historical native-control Arcs are superseded and are not CLI acceptance gates.
+Complete `npm test` passed all 1,011 tests across its five families, the installer
+suite, generators, 1,085 traceability relationships and TSTS analysis of 1,649
+files. The closed swarm plan records the canonical assessments and evidence.

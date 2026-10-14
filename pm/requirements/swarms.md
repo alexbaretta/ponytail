@@ -6,10 +6,10 @@ Licensed under the MIT License. See LICENSE in the project root.
 # Swarms
 
 [Requirements index](index.md) · [Acceptance Suite](../uat/swarms.md) ·
-[Implementation plan](../plans/in_progress/2026-10-13-swarm-management/plan.md)
+[Implementation plan](../plans/closed/2026-10-13-swarm-management/plan.md)
 
 **Approval:** Stakeholder definition and command requirements, 2026-10-13.
-Approved behavior; implementation and acceptance are pending.
+Approved behavior; implementation and corrected-scope acceptance passed on 2026-10-14.
 
 ## Session-operation boundary
 

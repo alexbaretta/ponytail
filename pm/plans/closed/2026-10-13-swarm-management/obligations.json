@@ -166,6 +166,89 @@
         "OBL-21",
         "OBL-22"
       ]
+    },
+    {
+      "id": "SWARM-B3",
+      "predecessorId": "SWARM-B2",
+      "authority": {
+        "references": [
+          "user-goal-2026-10-13-swarm-management",
+          "user-goal-2026-10-13-swarm-skill-and-exclusive-session-cli",
+          "user-swarm-session-bookkeeping-clarification-2026-10-13"
+        ],
+        "assessors": [
+          "coordinator"
+        ]
+      },
+      "requirements": [
+        {
+          "id": "REQ-SWARM-OWNERSHIP",
+          "path": "pm/requirements/swarms.md",
+          "digest": "9399f2daa99ee81e4985ecf831b141b81dfbe7e3440818dceebda4b8913e07ce"
+        },
+        {
+          "id": "REQ-SWARM-INFO",
+          "path": "pm/requirements/swarms.md",
+          "digest": "9399f2daa99ee81e4985ecf831b141b81dfbe7e3440818dceebda4b8913e07ce"
+        },
+        {
+          "id": "REQ-SWARM-SESSIONS",
+          "path": "pm/requirements/swarms.md",
+          "digest": "9399f2daa99ee81e4985ecf831b141b81dfbe7e3440818dceebda4b8913e07ce"
+        },
+        {
+          "id": "REQ-SWARM-WORKTREES",
+          "path": "pm/requirements/swarms.md",
+          "digest": "9399f2daa99ee81e4985ecf831b141b81dfbe7e3440818dceebda4b8913e07ce"
+        },
+        {
+          "id": "REQ-SWARM-CLEAR",
+          "path": "pm/requirements/swarms.md",
+          "digest": "9399f2daa99ee81e4985ecf831b141b81dfbe7e3440818dceebda4b8913e07ce"
+        },
+        {
+          "id": "REQ-SWARM-CLI",
+          "path": "pm/requirements/swarms.md",
+          "digest": "9399f2daa99ee81e4985ecf831b141b81dfbe7e3440818dceebda4b8913e07ce"
+        },
+        {
+          "id": "REQ-SWARM-SKILL",
+          "path": "pm/requirements/swarms.md",
+          "digest": "9399f2daa99ee81e4985ecf831b141b81dfbe7e3440818dceebda4b8913e07ce"
+        }
+      ],
+      "obligationIds": [
+        "OBL-1",
+        "OBL-2",
+        "OBL-3",
+        "OBL-4",
+        "OBL-5",
+        "OBL-6",
+        "OBL-7",
+        "OBL-8",
+        "OBL-9",
+        "OBL-10",
+        "OBL-11",
+        "OBL-12",
+        "OBL-13",
+        "OBL-14",
+        "OBL-15",
+        "OBL-16",
+        "OBL-17",
+        "OBL-18",
+        "OBL-19",
+        "OBL-20",
+        "OBL-21",
+        "OBL-22"
+      ],
+      "inventoryIds": [
+        "OBL-17",
+        "OBL-18",
+        "OBL-19",
+        "OBL-20",
+        "OBL-21",
+        "OBL-22"
+      ]
     }
   ],
   "obligations": [
@@ -2065,6 +2148,73 @@
       ],
       "preparation": null,
       "reason": "The same successful final npm test command includes all configured integration workflows (there is no separate integration suite): actual CLI/MCP/Git/PostgreSQL fixtures prove the approved swarm lifecycle, retained-worker scope renewal and campaign association boundaries. No skip or failed Arc is accepted as passing proof.",
+      "assessor": "coordinator"
+    },
+    {
+      "id": "SWARM-CP17",
+      "predecessorId": "SWARM-CP16",
+      "baselineId": "SWARM-B3",
+      "kind": "rebaseline",
+      "selectedIds": [],
+      "registeredIds": [
+        "OBL-1",
+        "OBL-2",
+        "OBL-3",
+        "OBL-4",
+        "OBL-5",
+        "OBL-6",
+        "OBL-7",
+        "OBL-8",
+        "OBL-9",
+        "OBL-10",
+        "OBL-11",
+        "OBL-12",
+        "OBL-13",
+        "OBL-14",
+        "OBL-15",
+        "OBL-16",
+        "OBL-17",
+        "OBL-18",
+        "OBL-19",
+        "OBL-20",
+        "OBL-21",
+        "OBL-22"
+      ],
+      "certificateIds": [],
+      "invalidatedIds": [
+        "SWARM-CERT-T1",
+        "SWARM-CERT-T2",
+        "SWARM-CERT-T3-B1",
+        "SWARM-CERT-T3-B2",
+        "SWARM-CERT-T3-B3",
+        "SWARM-CERT-T3-B4",
+        "SWARM-CERT-T3-B5",
+        "SWARM-CERT-T3-B6",
+        "SWARM-CERT-T3-B7",
+        "SWARM-CERT-T3-B8",
+        "SWARM-CERT-T3-B9",
+        "SWARM-CERT-T4",
+        "SWARM-CERT-C1",
+        "SWARM-CERT-C2"
+      ],
+      "before": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "after": [
+        1,
+        1,
+        17,
+        1,
+        1,
+        1
+      ],
+      "preparation": null,
+      "reason": "Close the completed plan and repair requirement navigation/status without changing approved conditions. Explicitly invalidate prior Git-input assessments of the changed requirement page before renewing their unchanged implementation/proof.",
       "assessor": "coordinator"
     }
   ]

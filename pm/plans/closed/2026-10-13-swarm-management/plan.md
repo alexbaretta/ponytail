@@ -6,7 +6,7 @@ Licensed under the MIT License. See LICENSE in the project root.
 # Swarm ownership and resource management
 
 - Plan ID: `2026-10-13-swarm-management`
-- Status: in_progress
+- Status: closed
 
 <!-- ponytail-plan-campaign
 {
@@ -14,14 +14,13 @@ Licensed under the MIT License. See LICENSE in the project root.
   "id": "2026-10-13-swarm-management",
   "parent_plan_id": null,
   "depends_on": [],
-  "obligation_document": "pm/plans/in_progress/2026-10-13-swarm-management/obligations.json"
+  "obligation_document": "pm/plans/closed/2026-10-13-swarm-management/obligations.json"
 }
 -->
 
 **Authority:** Stakeholder swarm definition and explicit request to document
 requirements and create a plan, 2026-10-13.
-**Lifecycle:** In progress, activated by the stakeholder's updated implementation
-goal. No live ownership migration, clearing or worker dispatch is performed by
+**Lifecycle:** Closed after full final QA and canonical obligation assessment. No live ownership migration, clearing or worker dispatch is performed by
 plan activation. GWEN execution is separately paused by its user.
 **Repository:** Ponytail, in the supplied user checkout.
 **Canonical scope:** [Swarm requirements](../../../requirements/swarms.md).
@@ -43,7 +42,7 @@ for diagnosis of actual worker sessions and managed checkout ownership. Separate
 resource membership from campaign scheduling and acceptance. Reuse the existing
 PostgreSQL and Git/native lifecycle boundaries; keep one ownership source.
 
-Delivery baseline: **16 atomic obligations, 0 discharged, 1 in progress,
+Historical activation baseline: **16 atomic obligations, 0 discharged, 1 in progress,
 15 not started**. OBL-1 owner resolution is in progress. OBL-16 incorporates the stakeholder's additional explicit
 request for an agent skill. Canonical conditions and discharge criteria live exclusively
 in the linked requirement tables. Final acceptance below is a rollup, not a
@@ -249,3 +248,11 @@ Scope-changing renewal now has the pure `campaign renew-lease` entrypoint;
 It replaces the retired worker spelling without an alias and preserves the
 original session, checkout and inactive state. Focused proof and final acceptance
 are recorded separately; no obligation discharge is inferred from implementation.
+
+## Final acceptance
+
+All 16 delivery obligations and six inventory/QA assessments are discharged.
+The canonical vector is `[0,0,0,0,0,0]`. Complete `npm test`, traceability, TSTS,
+installer, generated-resource, rule-copy and version checks passed. The
+[completion audit](evidence/completion-audit.md) records exact proof boundaries.
+No GWEN session or campaign was resumed, cleared or mutated.
