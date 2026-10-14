@@ -163,6 +163,17 @@ No obligation is discharged by activation. Fix and verify the smallest owner
 resolution boundary first; inventory remaining session CLI operations before
 moving them into the swarm chapter.
 
+Initial inventory implementation: `src/swarm-info.ts` reads one repeatable-read,
+read-only project-scoped lease snapshot and checks selected physical Git identity.
+It exposes the installed `swarm info` chapter and V1 JSON. It neither migrates
+ownership nor guesses coordinator/native activity. Five focused unit tests and
+one real PostgreSQL/Git Arc pass, including same-owner routing, sibling isolation,
+empty inventory, unassigned rejection, missing checkout and unchanged row versions.
+The canonical GWEN printout includes seven leases; this is diagnostic evidence,
+not native activity or swarm-binding adoption. Certificate assessment is pending;
+the delivery discharge count remains zero until the configured acceptance gates
+are established.
+
 OBL-1 core boundary: strict `src/swarm-owner.ts` and focused typed tests prove
 same-owner routing, independent sibling owners and explicit invalid-ownership
 rejections. The first three tests pass; installed CLI/physical inventory proof

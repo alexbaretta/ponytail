@@ -774,6 +774,8 @@ def run():
             return run_cli(["node", str(campaign_cli), *arguments], cwd=root)
         except OSError as error:
             raise ProjectError(f"campaign CLI could not start: {error}", 2) from error
+    if operation == "swarm":
+        return run_cli(["node", str(source_root / "src/swarm-info.js"), *arguments], cwd=root)
     if operation == "worktree":
         worktree_cli = source_root / "src/worktree-reclamation.js"
         if not worktree_cli.is_file():

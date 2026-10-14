@@ -264,7 +264,7 @@ export interface RollingWorkerCreationInspection {
   readonly worktree:RollingAllocatedWorktree;
   readonly rollingWorkerCreationV1:RollingWorkerCreationV1 | null;
 }
-interface RollingStoredWorktree extends RollingAllocatedWorktree {
+export interface RollingStoredWorktree extends RollingAllocatedWorktree {
   readonly state: 'AVAILABLE' | 'PROVISIONING' | 'RESERVED' | 'ACTIVE' | 'QUARANTINED';
 }
 

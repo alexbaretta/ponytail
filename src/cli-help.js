@@ -7,6 +7,7 @@ exports.cliCommandRegistryV1 = exports.cliHelpCommands = void 0;
 exports.renderCliHelp = renderCliHelp;
 const rolling_cli_registry_js_1 = require("./rolling-cli-registry.js");
 exports.cliHelpCommands = [
+    { chapter: 'swarm', name: 'info', arguments: '[--json]', behavior: 'Read the invoking user worktree’s assigned sessions and managed checkouts. A managed checkout selects its recorded owner. Existing campaign leases are reported explicitly; coordinator binding and native activity remain unrecorded until observed. --json emits versioned inventory. Does not allocate, dispatch, stop or alter resources.' },
     { chapter: 'search', name: 'update-index', arguments: '[-j <n_workers>] [-n <commits_per_db_transaction>]', behavior: 'Fetch no remote data; index local Git history. -j controls workers; -n controls transaction checkpoint size. Interrupted updates resume completed checkpoints.' },
     { chapter: 'search', name: 'query', arguments: '<text> [--ref <ref> | --commit <commit-id> | --history <ref-or-commit>] [--path <path>] [-i|--ignore-case]', behavior: 'Search indexed file text at a ref, exact commit or throughout selected history. --path restricts paths; -i ignores case. No matches exits 1.' },
     { chapter: 'plan', name: 'search', arguments: '<query> [--lifecycle <lifecycle>] [--kind <kind>] [--plan <plan>] [--json]', behavior: 'Search project-managed plan records. Optional filters select lifecycle, record kind or owning plan; --json returns structured results.' },

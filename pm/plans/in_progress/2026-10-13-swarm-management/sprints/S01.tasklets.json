@@ -2,7 +2,10 @@
   "schemaVersion": 4,
   "sprint": "S01",
   "features": {
-    "S01-F01": {"depends_on": [], "validation_tasklet": "S01-F01-T02"}
+    "S01-F01": {
+      "depends_on": [],
+      "validation_tasklet": "S01-F01-T02"
+    }
   },
   "tasklets": {
     "S01-F01-T01": {
@@ -10,14 +13,36 @@
       "affinity": [],
       "risk": "normal",
       "feature": "S01-F01",
-      "planned_paths": ["src/swarm-owner.ts", "tests/swarm-owner.test.ts", "scripts/build-runtime.ts", "PROJECT_STRUCTURE.md", "AGENTS.md", ".agents/config/project/traceability.json", "pm/uat/swarms.md"]
+      "planned_paths": [
+        "src/swarm-owner.ts",
+        "tests/swarm-owner.test.ts",
+        "scripts/build-runtime.ts",
+        "PROJECT_STRUCTURE.md",
+        "AGENTS.md",
+        ".agents/config/project/traceability.json",
+        "pm/uat/swarms.md"
+      ]
     },
     "S01-F01-T02": {
-      "depends_on": ["S01-F01-T01"],
+      "depends_on": [
+        "S01-F01-T01"
+      ],
       "affinity": [],
       "risk": "normal",
       "feature": "S01-F01",
-      "planned_paths": []
+      "planned_paths": [
+        "src/swarm-info.ts",
+        "src/cli-help.ts",
+        "src/rolling-campaign-store.ts",
+        "tests/swarm-info.test.ts",
+        "tests/swarm-info.integration.test.ts",
+        "cli/ponytail",
+        "scripts/build-runtime.ts",
+        "AGENTS.md",
+        "PROJECT_STRUCTURE.md",
+        "versioned-data-contracts.json",
+        ".agents/config/project/traceability.json"
+      ]
     }
   },
   "external_depends_on": {}

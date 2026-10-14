@@ -1072,9 +1072,9 @@ Requirement: [pm/requirements/rolling-campaigns.md](rolling-campaigns.md)
 
 - implementation: implements [ponytail-mcp/rolling.ts:10](../../ponytail-mcp/rolling.ts#L10)
 - implementation: implements [src/cli-help.ts:7](../../src/cli-help.ts#L7)
-- implementation: implements [src/cli-help.ts:60](../../src/cli-help.ts#L60)
-- implementation: implements [src/cli-help.ts:84](../../src/cli-help.ts#L84)
-- implementation: implements [src/cli-help.ts:107](../../src/cli-help.ts#L107)
+- implementation: implements [src/cli-help.ts:61](../../src/cli-help.ts#L61)
+- implementation: implements [src/cli-help.ts:85](../../src/cli-help.ts#L85)
+- implementation: implements [src/cli-help.ts:108](../../src/cli-help.ts#L108)
 - implementation: implements [src/plan-input-command.ts:6](../../src/plan-input-command.ts#L6)
 - implementation: implements [src/rolling-campaign-store.ts:92](../../src/rolling-campaign-store.ts#L92)
 - implementation: implements [src/rolling-campaign-store.ts:580](../../src/rolling-campaign-store.ts#L580)
@@ -1091,8 +1091,8 @@ Requirement: [pm/requirements/rolling-campaigns.md](rolling-campaigns.md)
 - implementation: implements [src/rolling-operations.ts:551](../../src/rolling-operations.ts#L551)
 - implementation: implements [src/rolling-operations.ts:557](../../src/rolling-operations.ts#L557)
 - unit-test: verifies [tests/cli-help.test.ts:11](../../tests/cli-help.test.ts#L11)
-- unit-test: verifies [tests/cli-help.test.ts:21](../../tests/cli-help.test.ts#L21)
-- unit-test: verifies [tests/cli-help.test.ts:45](../../tests/cli-help.test.ts#L45)
+- unit-test: verifies [tests/cli-help.test.ts:22](../../tests/cli-help.test.ts#L22)
+- unit-test: verifies [tests/cli-help.test.ts:49](../../tests/cli-help.test.ts#L49)
 - unit-test: verifies [tests/rolling-cli-registry.test.ts:9](../../tests/rolling-cli-registry.test.ts#L9)
 - unit-test: verifies [tests/rolling-cli-registry.test.ts:25](../../tests/rolling-cli-registry.test.ts#L25)
 - unit-test: verifies [tests/rolling-operations.test.ts:23](../../tests/rolling-operations.test.ts#L23)
@@ -1277,16 +1277,22 @@ Requirement: [pm/requirements/rolling-campaigns.md](rolling-campaigns.md)
 
 Requirement: [pm/requirements/swarms.md](swarms.md)
 
+- implementation: implements [src/swarm-info.ts:75](../../src/swarm-info.ts#L75)
 - implementation: implements [src/swarm-owner.ts:18](../../src/swarm-owner.ts#L18)
 - unit-test: verifies [tests/swarm-owner.test.ts:12](../../tests/swarm-owner.test.ts#L12)
 - unit-test: verifies [tests/swarm-owner.test.ts:19](../../tests/swarm-owner.test.ts#L19)
 - unit-test: verifies [tests/swarm-owner.test.ts:30](../../tests/swarm-owner.test.ts#L30)
+- integration-test: verifies [tests/swarm-info.integration.test.ts:14](../../tests/swarm-info.integration.test.ts#L14)
 - uat: verifies [pm/uat/swarms.md:18](../../pm/uat/swarms.md#L18)
 
 ## REQ-SWARM-INFO
 
 Requirement: [pm/requirements/swarms.md](swarms.md)
 
+- implementation: implements [src/swarm-info.ts:76](../../src/swarm-info.ts#L76)
+- unit-test: verifies [tests/swarm-info.test.ts:11](../../tests/swarm-info.test.ts#L11)
+- unit-test: verifies [tests/swarm-info.test.ts:23](../../tests/swarm-info.test.ts#L23)
+- integration-test: verifies [tests/swarm-info.integration.test.ts:15](../../tests/swarm-info.integration.test.ts#L15)
 - uat: verifies [pm/uat/swarms.md:35](../../pm/uat/swarms.md#L35)
 
 ## REQ-SWARM-SESSIONS
@@ -1312,6 +1318,10 @@ Requirement: [pm/requirements/swarms.md](swarms.md)
 
 Requirement: [pm/requirements/swarms.md](swarms.md)
 
+- implementation: implements [src/swarm-info.ts:114](../../src/swarm-info.ts#L114)
+- unit-test: verifies [tests/cli-help.test.ts:12](../../tests/cli-help.test.ts#L12)
+- unit-test: verifies [tests/cli-help.test.ts:23](../../tests/cli-help.test.ts#L23)
+- integration-test: verifies [tests/swarm-info.integration.test.ts:16](../../tests/swarm-info.integration.test.ts#L16)
 - uat: verifies [pm/uat/swarms.md:125](../../pm/uat/swarms.md#L125)
 
 ## REQ-SWARM-SKILL

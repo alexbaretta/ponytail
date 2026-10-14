@@ -9,8 +9,9 @@ import {spawnSync} from 'node:child_process';
 import {renderCliHelp} from '../src/cli-help.js';
 
 // Traceability: verifies REQ-ROLLING-INTERFACES
+// Traceability: verifies REQ-SWARM-CLI
 test('help wraps chapter, command, campaign and root pages at word boundaries with indentation',()=>{
- for(const width of [40,80,120]) for(const args of [[],['traceability'],['traceability','search'],['campaign'],['campaign','request-review']]) {
+ for(const width of [40,80,120]) for(const args of [[],['traceability'],['traceability','search'],['campaign'],['campaign','request-review'],['swarm'],['swarm','info']]) {
   const text=renderCliHelp(args,width);
   assert.ok(text.split('\n').every(line=>line.length<=width));
   assert.equal(text.replace(/\s+/gu,' ').trim(),renderCliHelp(args,10000).replace(/\s+/gu,' ').trim());
@@ -19,6 +20,7 @@ test('help wraps chapter, command, campaign and root pages at word boundaries wi
 });
 
 // Traceability: verifies REQ-ROLLING-INTERFACES
+// Traceability: verifies REQ-SWARM-CLI
 test('invalid commands show the relevant help page before any project or database access',t=>{
  const root=path.resolve(__dirname,'../..');
  const directory=fs.mkdtempSync(path.join(os.tmpdir(),'cli-invalid-'));
@@ -27,6 +29,8 @@ test('invalid commands show the relevant help page before any project or databas
   [['traceability','index'],['traceability']],
   [['traceability','typo'],['traceability']],
   [['campaign','typo'],['campaign']],
+  [['swarm','typo'],['swarm']],
+  [['swarm'],['swarm']],
   [['pm','typo'],['pm']],
   [['worktree','typo'],['worktree']],
   [['typo'],[]],

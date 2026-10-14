@@ -14,6 +14,7 @@ const sources: readonly string[] = [
   'skills/plan-execution/scripts/obligations.ts',
   'src/rolling-campaign.ts',
   'src/swarm-owner.ts',
+  'src/swarm-info.ts',
   'src/rolling-worktrees.ts',
   'src/rolling-reset.ts',
   'src/rolling-campaign-store.ts',

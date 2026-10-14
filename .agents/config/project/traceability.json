@@ -1578,6 +1578,21 @@
       "class": "uat",
       "path": "pm/uat/swarms.md",
       "locator": "text"
+    },
+    {
+      "class": "implementation",
+      "path": "src/swarm-info.ts",
+      "locator": "text"
+    },
+    {
+      "class": "unit-test",
+      "path": "tests/swarm-info.test.ts",
+      "locator": "text"
+    },
+    {
+      "class": "integration-test",
+      "path": "tests/swarm-info.integration.test.ts",
+      "locator": "text"
     }
   ],
   "entities": [],
@@ -1909,6 +1924,10 @@
     {
       "path": "src/swarm-owner.js",
       "sourcePath": "src/swarm-owner.ts"
+    },
+    {
+      "path": "src/swarm-info.js",
+      "sourcePath": "src/swarm-info.ts"
     }
   ],
   "reverseViewPath": "pm/requirements/traceability.generated.md",

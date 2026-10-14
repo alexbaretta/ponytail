@@ -23,6 +23,12 @@
     "update"
   ],
   "chapters": {
+    "swarm": {
+      "commands": [
+        "info"
+      ],
+      "freeform": false
+    },
     "search": {
       "commands": [
         "update-index",

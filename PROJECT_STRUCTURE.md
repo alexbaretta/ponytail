@@ -68,6 +68,10 @@ while project-wide management records remain under `pm/`.
 - `src/swarm-owner.ts` owns independently testable user/managed-worktree owner
   resolution over a checked physical inventory. It rejects ambiguous, unassigned
   and cross-repository ownership; its adjacent `.js` runtime is generated.
+- `src/swarm-info.ts` owns the initial read-only swarm chapter, physical
+  Git/project-scoped lease inventory and immutable V1 result reader. Its adjacent
+  `.js` runtime is generated; existing lease provenance and absent native
+  observations remain explicit until authoritative swarm bindings are adopted.
 - `src/project-index-database.ts` owns the checked project-local PostgreSQL
   connection options and shared index error declaration. `src/project-index-database.js`
   is compiler-generated compatibility runtime.

@@ -110,6 +110,13 @@ services. `PROJECT_STRUCTURE.md` is authoritative for that boundary.
   - Node full: `npm test`.
 - Rolling Codex protocol proof: `node --test dist/tests/rolling-codex.test.js`.
 - Swarm owner focused proof: `node --test dist/tests/swarm-owner.test.js`.
+- Swarm inventory focused proof: `node --test dist/tests/swarm-info.test.js
+  dist/tests/swarm-info.integration.test.js`; the integration selection uses
+  disposable Git worktrees and isolated existing-PostgreSQL project rows.
+- Swarm inventory: `ponytail swarm info [--json]`; resolves a managed checkout
+  to its user-worktree owner and reports existing campaign-lease provenance.
+  Native activity and coordinator binding are explicitly unobserved/unrecorded
+  in the initial inventory contract; inspection does not mutate resources.
 - Git certificate focused proof: `node --test dist/tests/obligations.test.js
   dist/tests/obligation-certificate-bindings.test.js
   dist/tests/rolling-worker-submission.test.js dist/tests/rolling-worker.test.js`.

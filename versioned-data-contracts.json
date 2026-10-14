@@ -999,6 +999,22 @@
         "V1"
       ],
       "supportedDowngradeVersions": []
+    },
+    {
+      "id": "swarm-info",
+      "implementation": {
+        "workspace": "ponytail",
+        "module": "src/swarm-info.ts",
+        "readerRegistryExport": "SwarmInfoReaders"
+      },
+      "currentVersion": "V1",
+      "versions": [
+        "V1"
+      ],
+      "supportedReadVersions": [
+        "V1"
+      ],
+      "supportedDowngradeVersions": []
     }
   ]
 }
