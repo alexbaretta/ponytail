@@ -4,10 +4,9 @@ Audited source revision: `13dbcd45`. Authority: the stakeholder's swarm definiti
 and clarification that Ponytail manages associations and worktrees, while the
 coordinator alone operates sessions through host tools.
 
-This is an evidence map, not a certificate or discharge checkpoint. The ledger
-currently accepts requirement and verification inventories OBL-17 and OBL-18;
-the 16 delivery obligations remain pending individual assessment. Final
-acceptance is open.
+This is an evidence map, not a certificate or discharge checkpoint. The canonical
+ledger now accepts all 16 delivery obligations and six inventory/QA assessments;
+its vector is `[0,0,0,0,0,0]`. All configured final QA passed.
 
 | Obligation | Authoritative implementation | Behavioral evidence |
 | --- | --- | --- |
@@ -25,7 +24,7 @@ acceptance is open.
 | OBL-12 | Selected unassigned deletion | Installed CLI Arc protects assigned/user resources, retains committed source refs and retries failed cleanup. |
 | OBL-13 | All-unassigned deletion | Installed CLI Arc reports protected/retained/deleted results and retries only outstanding deletion. |
 | OBL-14 | Owner-scoped clear | Installed CLI and PG Arcs release associations/leases/actions, preserve origins/source/evidence, isolate sibling owners and permit retained-resource reuse. |
-| OBL-15 | Swarm help/registry and shared operations | Scoped help tests, installed CLI Arcs and MCP parity prove resource operations share ownership; prior session API commands are unavailable. |
+| OBL-15 | Swarm help/registry and shared operations | Scoped help and real swarm CLI/PG Arcs prove resource operations share ownership. MCP parity covers campaign adapters and retirement of session endpoints; no swarm MCP API is claimed. |
 | OBL-16 | Registered swarm skill and generated exports | Real isolated installer copies the skill; command/help checks validate prescribed operations. Independent scenario review accepts parallel scheduling, retained-worker priority and truthful host capability/identity boundaries. |
 
 Tests named above live under `tests/`. Disposable fixtures use real Git and the
@@ -42,7 +41,7 @@ worker bindings. Checkout 104 was RESERVED without a session. Runtime activity
 was unobserved. This proves routing and inventory, not active development or
 adoption; no campaign was cleared or resumed.
 
-## Outstanding final assessment
+## Final assessment history
 
 The final-source typed test command passed all 325 tests (269 seconds), including
 the shared PostgreSQL/Git Arcs. After the procedural review corrected the skill's
@@ -76,3 +75,13 @@ for OBL-17 (approved responsibility inventory) and OBL-18 (verification-owner
 inventory). The metric vector is `[0,0,17,1,1,1]`; this is inventory completion,
 not delivery or execution acceptance. Neither certificate contains per-file
 hash records or embedded transcripts.
+
+Final acceptance: the complete `npm test` command passed 559 legacy Node,
+325 typed, 23 Pi, four MCP and 100 TSTS tests, plus the isolated installer,
+generated-resource checks and all 1,085 traceability relationships. TSTS analyzed
+1,649 files without violations. Rule-copy and version checks passed. No required
+suite was skipped. Independent review found no missing approved functionality;
+MCP evidence is campaign adapter parity, while swarm resources are proved by
+actual CLI/PostgreSQL workflows. All delivery certificates and category
+assessments were accepted through the canonical validator, with compact Git
+revision/path references and no per-file hash inventories or transcripts.
