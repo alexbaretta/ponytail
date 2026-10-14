@@ -10,8 +10,9 @@ project's configuration; do not inherit another project's paths or identity.
 Execution approval activates configured parallelism automatically; no additional
 human instruction to parallelize is needed. N is a capacity limit, not a promise
 that dependencies, permissions and physical checkout capacity permit N workers.
-Ponytail-managed checkouts and direct Codex App Server sessions require no
-Ponytail plugin. MCP is an optional transport for the same typed operations.
+The coordinator operates top-level worker sessions through host tools and uses
+the `swarm` skill for session associations and Ponytail-managed checkouts. MCP is
+an optional transport for the same bookkeeping operations.
 
 ## Plan and initialize
 
@@ -101,132 +102,59 @@ freezing prepare a fresh candidate against the new target. Old QA is historical
 evidence, never publication authorization for that new candidate.
 
 
-## Session-operation scope correction
-
-The coordinator, not Ponytail CLI or MCP, creates, starts, stops and renames
-sessions through its host tools. Use `ponytail swarm` for session associations
-and managed-worktree lifecycle. Runtime activity is a host observation; database
-membership is not activity proof. The earlier native session-control procedure
-below is superseded: its session API command spellings are retired and must not
-be invoked. Planning, graph reconciliation, acceptance and publication remain
-campaign responsibilities. The swarm skill will own the revised operational
-session procedure; do not build a private App Server controller as a substitute.
-
 ## Coordinator loop
 
-Use `ponytail campaign --help` and each command's `--help` for required named
-flags. Operations return `{command, result}` JSON; preserve returned campaign,
-assignment, generation, action, review and batch IDs. Do not infer or replace them.
+Apply the `swarm` skill for host session creation, messaging, activity inspection,
+naming, quiescence and session/worktree associations. Ponytail CLI and MCP do not
+operate sessions through Codex APIs. Use `ponytail campaign --help` and each
+command's scoped help; preserve returned campaign, assignment, generation,
+action, review and batch IDs.
 
 1. Query `status --campaign <id>` and `next-actions --campaign <id>` on startup,
-   resumption, worker events and periodic replenishment. Execute their indicated
-   operation with the returned identities; do not recreate scheduling policy.
-2. Update the canonical files for approved newly discovered obligations and
-   dependency/binding changes, then run `reconcile --campaign <id>`. It rebuilds
-   the coordinator graph, checks validity and invalidates stale scheduling inputs.
-   Fix cycles or missing references before dispatch. Do not edit graph projections
-   directly in PostgreSQL or accept a worker's graph as scheduling authority.
-   If `next-actions` reports `rebind-worker` for a stopped inactive assignment,
-   execute it with that assignment's current generation. Retain the returned
-   renewed generation and lease; the original session and checkout remain owned.
-   Then replenish/resume using the refreshed identities. Reconciliation alone
-   does not renew a worker's frozen lease.
-3. Run `replenish --campaign <id>` to reserve compatible obligation/worktree pairs
-   up to N. With a fixed authorized physical pool, pass `--existing-only true`.
-   This imports safe retained registered checkouts after reset and stops with
-   `stopReason: no_available_worktree` when none are free; it never reserves a
-   nonexistent root and does not reduce configured N. It prefers reactivating unblocked inactive workers and chooses the
-   first available numbered checkout. Use returned actions with `provision-worker`
-   or `resume-worker`, then `dispatch-worker`. Recover unknown outcomes with
-   `recover-worker` or `observe-resumption`; never create a duplicate actor.
-   `dispatch-worker` is long-running: start the selected independent dispatches
-   concurrently, retain their command/transport handles, and observe them without
-   awaiting each worker's completion before starting the next. Implementation
-   workers are top-level native sessions; subagents do not replace them. Retain
-   approval handling on each owning transport. Query and replenish while others
-   run; serialize only the coordinator mutation/publication lane.
-   In the Codex desktop, use `prepare-worker-dispatch` instead of starting a
-   private `dispatch-worker` process when the worker must execute visibly in the
-   desktop. Preparation returns immutable instructions and the original thread
-   ID without acquiring a native writer or starting implementation. Preparation
-   checks original identity, terminal turn and absence of observed active work;
-   notLoaded is an unavailable activity observation, not proof of idle. The
-   desktop owns actual dispatch and activity verification. Send those exact instructions once to
-   that existing thread with the desktop thread tool, observe its actual turn
-   ID, then run `acknowledge-worker-dispatch --dispatch <id> --turn <id>` with
-   the assignment/generation selectors. Acknowledgment verifies the native
-   instruction delivery against the frozen instructions without acquiring the
-   writer. Native dispatch has a user-message input; the Desktop send tool has
-   a delegation output with canonically escaped input. Preserve that actual
-   transport record; do not invent a user-message item or resend for a missing
-   acknowledgment.
-   If sending or acknowledgment has an unknown outcome, inspect the original
-   thread and prepared dispatch; never resend merely because acknowledgment
-   was lost. Observe activity and approvals through the owning desktop. After
-   completion, use `collect-submission` with a fresh genuine owning-transport
-   idle observation when a private reader sees notLoaded. Private App Server
-   activity does not establish desktop-visible execution.
-   Distinguish native running/waiting sessions from logical occupied assignments.
-   `availableCapacity` is the capacity left after the reported hypothetical
-   selection, not the count of sessions already created. Report dependency,
-   ownership, approval and actual checkout restrictions when N cannot be filled;
-   never reinterpret N as authorization to create otherwise forbidden checkouts.
-4. For a blocked worker, record dependency discoveries and reconcile first.
-   Invoke `suspend-worker` with its assignment/generation and prerequisite IDs.
-   Ponytail observes stopped activity, retains ownership and frees active capacity.
-   Replenish other eligible work; resume the retained actor when prerequisites clear.
-   A failed native instruction turn, such as temporary model capacity failure,
-   needs no invented obligation dependency. Use `suspend-worker --blockers '[]'`
-   with its original assignment/generation; Ponytail must observe that exact
-   failed turn and idle actor. Replenish/resume preserves the original session,
-   checkout and unfinished work. If it retains an owned rebase, inspect and
-   continue it before a fresh semantic replay; never reset its amendments away.
-   A completed turn containing blocker prose is not a failed native turn or a
-   submission. Use `retry-worker --campaign <id> --assignment <uuid>
-   --generation <uuid> --reason <actual-reason>` for the latest terminal idle
-   actor, supplying the fresh owning `--observation` packet used by collection
-   when the observer reports notLoaded. This checkpoints work, records correction
-   and frees active capacity without fabricated prerequisites. Replenish prefers
-   its original actor; resume with the returned generation and dispatch renewed
-   instructions. Active, newer or unknown native activity is not eligible.
-   Correction is an authorized actor-control operation: without an owning packet,
-   an unloaded observer may explicitly resume only the recorded original actor,
-   then freshly verify the same latest terminal turn and idle state. A conflicting
-   writer or inability to prove idle preserves ownership and refuses correction.
-   Collection never performs that writer acquisition. Do not synthesize fresh
-   timestamps on historical observations.
-5. Collect the exact terminal submission using `collect-submission`. Use
-   `start-review` to create an independent native reviewer and start its actual
-   review on the same connection before closing it. The command preserves the
-   recorded reviewer thread through corrections and collects the original turn
-   on retry. Use `request-review`, `dispatch-review` and `inspect-review` for
-   explicitly attached reviewers; never close a newly created empty thread and
-   assume it can later resume.
-   Rejected work returns to the original worker and original reviewer after
-   correction and refreshed QA/rebase. Acceptance cannot transfer to another SHA.
-   If the reviewer is genuinely lost, retain its original review ID and observed
-   loss reference. Use `start-review --loss '{"reviewId":"<original-review>",
-   "lossReference":"<observed-loss-reference>"}'` to create the replacement reviewer, or `request-review --loss` with an
-   explicitly created replacement identity and immediate `dispatch-review`. Ponytail retains/fences the original request and requires fresh review;
-   a timeout alone is not proof of loss.
-6. `integrate` performs the coordinator's fast rebase: inspect semantic conflicts
-   when textual conflicts occur, preserving the deliberately shorter review window.
-   Substantive conflicts return to the worker for full semantic repair and review.
-   Use `accept` with the candidate and binding packets only for the confirmed
-   reviewed delivery and adequate current Git-based evidence. Retire ownership
-   through `retire-worker` before another actor receives the checkout. Replenish
-   can atomically release a completed assignment with its `{id,generation}`.
+   resumption, worker events and periodic replenishment. Execute supported
+   `command` recommendations through Ponytail; perform `hostAction` recommendations
+   through coordinator host tools. Preserve the associated prerequisite records;
+   do not recreate scheduling policy or treat membership as runtime activity.
+2. Update canonical files for approved dependency, binding and scope discoveries,
+   then run `reconcile --campaign <id>`. Fix cycles and missing references before
+   dispatch. The coordinator's graph is authoritative; worker copies are not.
+   Historical frozen leases remain immutable; a scope change needs renewed
+   authorization before the original worker proceeds.
+3. `replenish --campaign <id>` reserves compatible obligation/worktree pairs up
+   to N and prefers unblocked retained assignments. `--existing-only true` uses
+   only safe retained physical roots and reports lack of capacity. Carry each
+   returned assignment and generation forward; never allocate a second checkout
+   for an already reserved obligation. The public campaign-to-swarm adoption
+   transition is currently pending: `worker-bind` requires swarm membership,
+   while a campaign reservation alone is not that membership. Do not dispatch
+   that reservation or bypass its ownership until the transition is available. Start
+   independent top-level workers concurrently and observe them through the host.
+   Unknown dispatch blockers retain their original identities for observation.
+4. A blocked worker reports its discovered prerequisites. Reconcile first,
+   quiesce it through host tools and retain its source and checkout. Inactive
+   workers free active capacity and take precedence when unblocked. Permission
+   and host-capability failures are concrete blockers, not invented dependencies.
+5. Collect the original worker's exact final commit/base and focused evidence.
+   Assign an allowed adversarial reviewer through coordinator host tools; send
+   corrections to the original worker and reviewer. Record review/acceptance
+   using their exact contracts. Public host-submission and reviewer-verdict
+   bookkeeping transitions are currently pending; do not invoke `request-review`
+   on an unrecorded submission or fabricate reviewer identities or decisions.
+6. After adversarial-review acceptance, `integrate` performs the coordinator fast rebase and campaign
+   increment publication. Resolve textual conflicts and their semantic effects,
+   then refresh affected focused proof. After confirmed increment publication,
+   `accept` performs certificate acceptance/discharge. Quiesce and detach workers and release
+   checkouts using the swarm procedure; preserve campaign acceptance evidence.
 7. `freeze-publication` freezes up to M accepted increments. Use
    `prepare-publication`, `run-publication-qa` and `publish-mainline` on that exact
    candidate. Full configured QA gates mainline publication; focused QA gates
-   campaign increments. Observe uncertain preparations, QA and pushes using
+   campaign increments. Observe uncertain preparation, QA and pushes with
    `observe-preparation`, `observe-publication-qa`, `observe-mainline` or
-   `observe-refresh` for the retained original operation before retrying. Inspect
-   a retained merge using `inspect-publication-conflict`. Upstream changes use
-   `refresh-mainline`, renewed QA and `synchronize-campaign`; never reset history.
-8. Close only after all approved obligations, final gates, publication and actor
-   retirement are proved. Daily results are an expected consequence of frequent
-   integration, not an imposed deadline or a substitute acceptance criterion.
+   `observe-refresh` for the original operation before retrying. Inspect retained
+   merge conflicts with `inspect-publication-conflict`. Upstream changes use
+   `refresh-mainline`, renewed QA and `synchronize-campaign`.
+8. Close only after obligations, final gates, publication and ownership release
+   are proved. Daily results follow frequent integration rather than a deadline.
 
 ## Worker execution
 
@@ -258,32 +186,9 @@ Report unknown prerequisites, blockers or required scope changes to the
 coordinator; retain the checkout and do not silently alter its authoritative graph.
 These are legitimate coordination boundaries, unlike routine coding decisions.
 
-## Explicit campaign reset
-Only an explicit human instruction to abandon previous parallel campaign state
-permits `ponytail campaign reset`. Execution approval for ordinary development
-or a blocked assignment does not imply reset authority. This project-scoped
-operation clears all prior rolling campaigns and leases for the invoking project,
-not the shared database or project search/traceability indexes.
+## Clear swarm associations
 
-Create a V1 request `{schemaVersion:1,id:<UUID>,reason:<actual-reason>,authority:
-[<human-reference>]}`. Run `ponytail campaign reset --request @request.json`
-to preview exact registered Git paths, native actors and dispositions. Review
-this inventory, then run the same command with `--execute true` to act. Reuse
-the original request after interruption; do not create a new request while the
-original reset is pending. Scheduling stays fenced until cleanup completes.
-
-Reset archives the original actors after observing cessation, runs declared
-resource cleanup, prepares retained numbered pool checkouts at the coordinator's
-committed HEAD, and removes obsolete agent-owned external checkouts, including
-this repository's Codex worktrees. Main/coordinator and ordinary user checkouts
-are protected. Unknown activity, conflicting native writer, active external
-QA/push or failed cleanup retains pending ownership rather than guessing.
-
-Git refs `refs/ponytail/reset/<request-id>/<inventory-index>/head` preserve
-unpublished commits. When tracked or untracked source changes exist, `changes`
-retains the stash object (untracked files are in its third parent). Build caches
-are retained in reusable pool members; ignored disposable files in removed
-checkouts are deleted. The command does not publish or alter mainline refs.
-After reset completion, initialize a fresh campaign from its approved files and
-configured target. Existing Git history and source requirements remain usable;
-cleared execution records are not proof of discharged obligations.
+For a fresh coordinator allocation state, follow the `swarm` skill's quiescence
+and `ponytail swarm clear` procedure. It preserves sessions, checkouts, source and
+campaign evidence. It is not a project-wide database reset or session archival
+operation. Prior execution records do not establish discharged obligations.

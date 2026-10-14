@@ -23,7 +23,8 @@ owns short definitions; detailed execution contracts remain in this skill.
 
 For explicitly configured rolling campaigns, use the
 [rolling coordinator and worker procedure](references/rolling-campaigns.md).
-It governs concurrent assignments and reviewed incremental publication;
+Apply the `swarm` skill for coordinator host-session operations and worktree
+bookkeeping. The rolling procedure governs concurrent assignments and reviewed incremental publication;
 the legacy serial procedure below does not override that configured mode.
 Approval to execute a configured rolling campaign includes its configured
 parallel execution. Do not ask for another instruction to parallelize. N defaults

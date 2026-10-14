@@ -202,3 +202,12 @@ new active scope, rather than omitted from project checks.
 These are bounded implementation decisions; any materially different product
 outcome must return to the stakeholder. Managed-checkout release/transfer and
 session removal never authorize deletion of uncommitted work.
+
+## Current scope-corrected integration checkpoint
+
+Session API commands are retired from CLI/MCP. The swarm skill and host export
+are implemented with focused installer proof. Final acceptance remains open:
+campaign reservations need adoption into canonical swarm ownership; host worker
+submissions and reviewer decisions need supported bookkeeping entrypoints. These
+operations must record supplied evidence without controlling sessions. No
+obligation discharge is inferred from this checkpoint.

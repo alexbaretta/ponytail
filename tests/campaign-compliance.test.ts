@@ -20,8 +20,7 @@ test('OBL-114: canonical vocabulary defines actors and atomic delivery boundarie
 // Traceability: verifies REQ-ROLLING-CLIENT-PROTOCOL
 test('OBL-115: coordinator procedure owns graph, scheduling and publication decisions',()=>{
  const procedure = read('skills/plan-execution/references/rolling-campaigns.md');
- for (const operation of ['init','reconcile','status','next-actions','replenish','provision-worker','resume-worker',
-  'suspend-worker','start-review','request-review','dispatch-review','inspect-review','integrate','accept','freeze-publication',
+ for (const operation of ['init','reconcile','status','next-actions','replenish','request-review','integrate','accept','freeze-publication',
   'prepare-publication','run-publication-qa','publish-mainline','synchronize-campaign'])
   assert.ok(procedure.includes(operation),`missing coordinator operation: ${operation}`);
  for (const field of ['coordinatorRoot','documentPath','bindingsPath','bindingHistory','incrementRef','maxActiveWorkers','publicationSize'])

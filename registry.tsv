@@ -28,6 +28,7 @@ skill	enabled	requirements	skills/requirements	claude,codex,copilot,devin,hermes
 skill	enabled	requirements-traceability	skills/requirements-traceability	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Link approved requirements to implementation and verification
 skill	enabled	semantic-rebase	skills/semantic-rebase	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Commit-by-commit textual and semantic rebase review
 skill	enabled	static-type-safety	skills/static-type-safety	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Static type and contract safety
+skill	enabled	swarm	skills/swarm	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Coordinate parallel sessions and managed worktree ownership
 skill	enabled	test-credentials	skills/test-credentials	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Test credential discovery and safety
 skill	enabled	typescript-unit-testing	skills/typescript-unit-testing	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Contract-safe TypeScript unit testing
 skill	enabled	user-acceptance-testing	skills/user-acceptance-testing	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Reconcile requirement changes with traceable user acceptance and release evidence

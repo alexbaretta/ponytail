@@ -291,3 +291,14 @@ and campaign compliance; the isolated PostgreSQL `shared operations initialize
 defaults` integration proves actual MCP registration parity and coordinator
 decisions. TSTS checked 1,642 files without violations. This does not establish
 final plan acceptance or the pending swarm skill acceptance.
+
+### Swarm skill publication evidence
+
+The canonical registered `swarm` skill separates coordinator host session
+operations from CLI/MCP bookkeeping and worktree operations. Five focused tests
+validate shipped command references and the real Codex installer copy into an
+isolated home (plugin installation mocked, skill-copy path real). Generated
+OpenClaw and registry resources are synchronized. This establishes publication
+proof, not final parallel-campaign acceptance: campaign reservation adoption,
+host-submission recording and reviewer-verdict recording remain pending public
+bookkeeping transitions. The procedure explicitly identifies these gaps.

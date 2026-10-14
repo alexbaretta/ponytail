@@ -41,6 +41,7 @@ provides_skills:
   - requirements-traceability
   - semantic-rebase
   - static-type-safety
+  - swarm
   - test-credentials
   - typescript-unit-testing
   - user-acceptance-testing

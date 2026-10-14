@@ -1608,6 +1608,21 @@
       "class": "integration-test",
       "path": "tests/swarm-worktrees.integration.test.ts",
       "locator": "text"
+    },
+    {
+      "class": "implementation",
+      "path": "skills/swarm/SKILL.md",
+      "locator": "text"
+    },
+    {
+      "class": "unit-test",
+      "path": "tests/swarm-skill.test.ts",
+      "locator": "text"
+    },
+    {
+      "class": "integration-test",
+      "path": "tests/swarm-skill.integration.test.ts",
+      "locator": "text"
     }
   ],
   "entities": [],

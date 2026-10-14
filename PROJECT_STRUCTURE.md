@@ -16,7 +16,9 @@ while project-wide management records remain under `pm/`.
 
 - `skills/` owns canonical reusable skills and the portable Ponytail policy.
   `skills/plan-execution/references/rolling-campaigns.md` owns the configured
-  rolling coordinator/worker operating procedure. `src/cli-help.ts` owns
+  rolling planning, worker proof and publication procedure.
+  `skills/swarm/SKILL.md` owns coordinator host-session operations and swarm
+  bookkeeping for parallel execution. `src/cli-help.ts` owns
   cross-chapter CLI help; campaign help remains owned by its command registry.
   `scripts/build-runtime.ts` generates the shipped JavaScript launch files.
   `skills/plan-execution/references/glossary.md` owns shared short definitions.

@@ -454,6 +454,23 @@
     {
       "kind": "skill",
       "status": "enabled",
+      "name": "swarm",
+      "source": "skills/swarm",
+      "hosts": [
+        "claude",
+        "codex",
+        "copilot",
+        "devin",
+        "hermes",
+        "openclaw",
+        "pi",
+        "qoder"
+      ],
+      "reason": "Coordinate parallel sessions and managed worktree ownership"
+    },
+    {
+      "kind": "skill",
+      "status": "enabled",
       "name": "test-credentials",
       "source": "skills/test-credentials",
       "hosts": [
