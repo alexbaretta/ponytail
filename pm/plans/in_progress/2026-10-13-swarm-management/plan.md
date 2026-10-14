@@ -207,6 +207,10 @@ session removal never authorize deletion of uncommitted work.
 
 ## Current scope-corrected integration checkpoint
 
+The [completion audit](evidence/completion-audit.md) maps the approved obligations
+to current implementation and behavioral proof, and records the remaining final
+assessment gates. It does not replace the obligation ledger or infer discharge.
+
 Session API commands are retired from CLI/MCP. The swarm skill and host export
 are implemented with focused installer proof. Final acceptance remains open:
 campaign reservations need adoption into canonical swarm ownership; host worker
