@@ -102,7 +102,7 @@ runtime reports these threads unloaded. Database WORKING/INTEGRATING states
 are lifecycle accounting, not live execution evidence. This limitation must
 remain explicit when reporting the restart result.
 
-OBL-RESTART-4: IN_PROGRESS. Clarify command-consumed QA inputs separately
+OBL-RESTART-4: IN_PROGRESS. Bind changed candidate artifacts and QA inputs separately
 from coordinator authority reads under REQ-ROLLING-WORKERS and
 ACC-ROLLING-WORKER-QA-INPUTS. Original101/107 retain their candidates and
 produce fresh proof; never rewrite immutable submissions. Build and focused
@@ -120,3 +120,13 @@ GWEN coordinator launched original101 and107 corrected native dispatches
 concurrently (retained controllers25098/90430), plus worker102 inventory
 dispatch67088 after canonical retirement/release of its previous obligation.
 These are genuine native dispatches, not desktop-owned activity evidence.
+
+The command-consumed-only wording in `71f0665` was too restrictive: existing
+submission validation also binds all changed candidate artifacts for Git
+freshness. Original101/107 correctly failed on omitted report inputs. Corrected
+instructions preserve artifact freshness, genuine QA inputs and the exclusion
+of authority-only accepted state. No validator exemption or retained proof edit
+is introduced. A real-Git consumer regression accepts a changed report input
+and rejects omission, without asserting automated prose testing. Focused worker
+and submission proof passes13 tests; independent review accepts this correction.
+Final full core QA and fresh original-worker proof remain pending.

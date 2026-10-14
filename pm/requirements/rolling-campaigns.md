@@ -353,7 +353,9 @@ fetch argument vector used for full semantic replay. The coordinator owns
 publication to the separately configured mainline.
 
 Under REQ-ROLLING-WORKERS, atomic obligation OBL-RESTART-4 requires instructions
-to distinguish command-consumed QA inputs from coordinator authority reads.
-Retain authority in the frozen lease. A worker must report incompatible proof
+to include changed candidate artifacts and command-consumed QA inputs while
+distinguishing authority-only reads. Artifact inclusion establishes Git
+freshness, not automated testing of inert prose. Retain authority in the frozen
+lease. A worker must report incompatible proof
 scope if QA consumes the accepted obligation document, whose changing accepted
 state cannot certify its own bytes; it must not omit a genuine QA input.

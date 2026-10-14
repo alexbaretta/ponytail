@@ -461,8 +461,10 @@ wrong-mainline fetch; preserve the existing candidate and lease boundaries.
 
 ACC-ROLLING-WORKER-QA-INPUTS (OBL-RESTART-4): inspect instructions for a worker
 that reads coordinator authority but runs focused QA consuming different files.
-Verify they require command-consumed inputs and keep authority-only reads in
-the frozen lease. If QA actually consumes the accepted obligation document,
+Verify they require changed artifacts and command-consumed inputs, without
+claiming automated testing of prose, and keep authority-only reads in the
+frozen lease. Check an inert changed report is required for Git freshness and
+accepted without a command-consumption claim. If QA actually consumes the accepted obligation document,
 verify the instructions require reporting incompatible scope rather than
 dropping that input. Recover the original worker with fresh actual proof;
 never rewrite a retained submission to change its evidence.

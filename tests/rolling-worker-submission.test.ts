@@ -47,6 +47,30 @@ function fixture(): SubmissionFixture {
 }
 
 // Traceability: verifies REQ-ROLLING-WORKERS
+test('changed assessment reports bind candidate freshness without claiming automated prose testing', t => {
+ const submissionFixture:SubmissionFixture=fixture();
+ t.after(()=>fs.rmSync(submissionFixture.root,{recursive:true,force:true}));
+ fs.writeFileSync(path.join(submissionFixture.root,'assessment.md'),'Source assessment, independently reviewed.\n');
+ execFileSync('git',['-C',submissionFixture.root,'add','assessment.md']);
+ execFileSync('git',['-C',submissionFixture.root,'-c','user.name=Fixture','-c','user.email=fixture@example.test','commit','-q','-m','assessment']);
+ const revision=execFileSync('git',['-C',submissionFixture.root,'rev-parse','HEAD'],{encoding:'utf8'}).trim();
+ const rollingSubmissionProof=submissionFixture.submission.proof[0];assert.ok(rollingSubmissionProof);
+ const obligationLeaseV1:ObligationLeaseV1={...submissionFixture.lease,binding:{...submissionFixture.lease.binding,
+  execution:{...submissionFixture.lease.binding.execution,plannedPaths:['src','assessment.md']}}};
+ const obligationEvidence:ObligationEvidence={...rollingSubmissionProof.evidence,revision,
+  target:{...rollingSubmissionProof.evidence.target,verification:'src/current.ts'},
+  inputs:createObligationGitInputs(submissionFixture.root,['src','assessment.md'])};
+ const rollingWorkerSubmissionV1:RollingWorkerSubmissionV1={...submissionFixture.submission,revision,
+  proof:[{...rollingSubmissionProof,evidence:obligationEvidence}]};
+ assert.deepEqual(validateRollingWorkerSubmission(submissionFixture.root,obligationLeaseV1,rollingWorkerSubmissionV1),
+  ['assessment.md','src/current.ts','src/deleted.ts','src/old.ts']);
+ const missingArtifactRollingWorkerSubmissionV1:RollingWorkerSubmissionV1={...rollingWorkerSubmissionV1,
+  proof:[{...rollingSubmissionProof,evidence:{...obligationEvidence,inputs:createObligationGitInputs(submissionFixture.root,['src'])}}]};
+ assert.throws(()=>validateRollingWorkerSubmission(submissionFixture.root,obligationLeaseV1,missingArtifactRollingWorkerSubmissionV1),
+  /changed input lacks focused evidence: assessment.md/);
+});
+
+// Traceability: verifies REQ-ROLLING-WORKERS
 test('Git proof validates the actual candidate and keeps ignored output outside source inputs', t => {
  const submissionFixture: SubmissionFixture = fixture();
  t.after(() => fs.rmSync(submissionFixture.root, {recursive:true,force:true}));
