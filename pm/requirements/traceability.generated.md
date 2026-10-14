@@ -1285,6 +1285,7 @@ Requirement: [pm/requirements/swarms.md](swarms.md)
 - unit-test: verifies [tests/swarm-owner.test.ts:12](../../tests/swarm-owner.test.ts#L12)
 - unit-test: verifies [tests/swarm-owner.test.ts:19](../../tests/swarm-owner.test.ts#L19)
 - unit-test: verifies [tests/swarm-owner.test.ts:30](../../tests/swarm-owner.test.ts#L30)
+- integration-test: verifies [tests/swarm-coordinator.integration.ts:17](../../tests/swarm-coordinator.integration.ts#L17)
 - integration-test: verifies [tests/swarm-info.integration.test.ts:15](../../tests/swarm-info.integration.test.ts#L15)
 - integration-test: verifies [tests/swarm-store.integration.test.ts:21](../../tests/swarm-store.integration.test.ts#L21)
 - uat: verifies [pm/uat/swarms.md:19](../../pm/uat/swarms.md#L19)
@@ -1297,27 +1298,28 @@ Requirement: [pm/requirements/swarms.md](swarms.md)
 - unit-test: verifies [tests/swarm-info.test.ts:11](../../tests/swarm-info.test.ts#L11)
 - unit-test: verifies [tests/swarm-info.test.ts:25](../../tests/swarm-info.test.ts#L25)
 - unit-test: verifies [tests/swarm-info.test.ts:35](../../tests/swarm-info.test.ts#L35)
+- integration-test: verifies [tests/swarm-coordinator.integration.ts:18](../../tests/swarm-coordinator.integration.ts#L18)
 - integration-test: verifies [tests/swarm-info.integration.test.ts:16](../../tests/swarm-info.integration.test.ts#L16)
-- uat: verifies [pm/uat/swarms.md:53](../../pm/uat/swarms.md#L53)
+- uat: verifies [pm/uat/swarms.md:56](../../pm/uat/swarms.md#L56)
 
 ## REQ-SWARM-SESSIONS
 
 Requirement: [pm/requirements/swarms.md](swarms.md)
 
-- uat: verifies [pm/uat/swarms.md:70](../../pm/uat/swarms.md#L70)
-- uat: verifies [pm/uat/swarms.md:90](../../pm/uat/swarms.md#L90)
+- uat: verifies [pm/uat/swarms.md:73](../../pm/uat/swarms.md#L73)
+- uat: verifies [pm/uat/swarms.md:93](../../pm/uat/swarms.md#L93)
 
 ## REQ-SWARM-WORKTREES
 
 Requirement: [pm/requirements/swarms.md](swarms.md)
 
-- uat: verifies [pm/uat/swarms.md:104](../../pm/uat/swarms.md#L104)
+- uat: verifies [pm/uat/swarms.md:107](../../pm/uat/swarms.md#L107)
 
 ## REQ-SWARM-CLEAR
 
 Requirement: [pm/requirements/swarms.md](swarms.md)
 
-- uat: verifies [pm/uat/swarms.md:126](../../pm/uat/swarms.md#L126)
+- uat: verifies [pm/uat/swarms.md:129](../../pm/uat/swarms.md#L129)
 
 ## REQ-SWARM-CLI
 
@@ -1326,11 +1328,12 @@ Requirement: [pm/requirements/swarms.md](swarms.md)
 - implementation: implements [src/swarm-info.ts:163](../../src/swarm-info.ts#L163)
 - unit-test: verifies [tests/cli-help.test.ts:12](../../tests/cli-help.test.ts#L12)
 - unit-test: verifies [tests/cli-help.test.ts:23](../../tests/cli-help.test.ts#L23)
+- integration-test: verifies [tests/swarm-coordinator.integration.ts:19](../../tests/swarm-coordinator.integration.ts#L19)
 - integration-test: verifies [tests/swarm-info.integration.test.ts:17](../../tests/swarm-info.integration.test.ts#L17)
-- uat: verifies [pm/uat/swarms.md:143](../../pm/uat/swarms.md#L143)
+- uat: verifies [pm/uat/swarms.md:146](../../pm/uat/swarms.md#L146)
 
 ## REQ-SWARM-SKILL
 
 Requirement: [pm/requirements/swarms.md](swarms.md)
 
-- uat: verifies [pm/uat/swarms.md:160](../../pm/uat/swarms.md#L160)
+- uat: verifies [pm/uat/swarms.md:163](../../pm/uat/swarms.md#L163)

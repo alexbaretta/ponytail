@@ -1603,6 +1603,11 @@
       "class": "integration-test",
       "path": "tests/swarm-store.integration.test.ts",
       "locator": "text"
+    },
+    {
+      "class": "integration-test",
+      "path": "tests/swarm-coordinator.integration.ts",
+      "locator": "text"
     }
   ],
   "entities": [],

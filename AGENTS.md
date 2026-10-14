@@ -110,6 +110,11 @@ services. `PROJECT_STRUCTURE.md` is authoritative for that boundary.
   - Node full: `npm test`.
 - Rolling Codex protocol proof: `node --test dist/tests/rolling-codex.test.js`.
 - Swarm owner focused proof: `node --test dist/tests/swarm-owner.test.js`.
+- Swarm live coordinator acceptance: `node --test
+  dist/tests/swarm-coordinator.integration.js`; uses a disposable native session,
+  configured host model/permissions and isolated existing-PostgreSQL records.
+  Binding preserves the original writer; unbinding preserves the session and
+  source. Only test teardown archives the disposable verification session.
 - Swarm inventory focused proof: `node --test dist/tests/swarm-info.test.js
   dist/tests/swarm-store.integration.test.js
   dist/tests/swarm-info.integration.test.js`; the integration selection uses

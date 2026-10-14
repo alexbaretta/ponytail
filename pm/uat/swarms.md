@@ -45,8 +45,11 @@ The installed bind CLI with a controlled native executable resolves managed
 invocation to its owner and records distinct native thread/session identities.
 The installed `coordinator-unbind` command rejects stale session IDs and
 preserves workers; V2 inventory reports bound, unbound and unrecorded states
-distinctly. Full live native binding and coordinator-loss acceptance remain
-pending.
+distinctly. Live native bind/unbind now passes in
+`tests/swarm-coordinator.integration.ts`, while the original writer remains
+open: the original session survives unbinding and source remains unchanged.
+Only the disposable test teardown archives that verification actor.
+Coordinator-loss recovery with explicitly bound workers remains pending.
 
 ## Arc SWARM-INFO: Diagnose membership and execution
 
