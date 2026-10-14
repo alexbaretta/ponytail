@@ -46,6 +46,8 @@ These rules remain active at every compaction level, including `off`:
   store secrets in `AGENTS.local.md`.
 - Understand the requested behavior and trace the affected flow before
   editing. Fix confirmed root causes, not reported symptoms.
+- Do not invent requirements. Stick to what the user tells you in the chat or
+  shares with you as requirements files.
 - Implement only expressed stakeholder requirements. Architectural elegance,
   comprehensiveness, consistency with a possible future direction,
   future-proofing, and hypothetical usefulness do not create requirements or

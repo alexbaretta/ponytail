@@ -281,6 +281,8 @@ rule-copy check, and the version check for final core acceptance.
 
 ## Local Rules
 
+- Do not invent requirements. Stick to what the user tells you in the chat or
+  shares with you as requirements files.
 - The user's language and static-type-safety mandates apply prospectively
   only to code introduced by our work, specifically the Codex plan-execution
   CLI and its supporting implementation, tests and tooling. Write that code
