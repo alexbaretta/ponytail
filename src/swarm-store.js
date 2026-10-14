@@ -95,10 +95,7 @@ class SwarmStore {
             return { ...swarmWorkerBinding, state: 'REMOVING' };
         });
     }
-    async finishWorkerRemoval(swarmWorkerBinding, rollingNativeThreadState, rollingNativeTurn) {
-        if (rollingNativeThreadState.threadId !== swarmWorkerBinding.threadId || rollingNativeThreadState.sessionId !== swarmWorkerBinding.sessionId || rollingNativeThreadState.rootPath !== swarmWorkerBinding.rootPath
-            || rollingNativeThreadState.status !== 'idle' || rollingNativeTurn !== null && !['completed', 'failed', 'interrupted'].includes(rollingNativeTurn.status))
-            throw new Error('swarm: original worker terminal turn and idle runtime are required; retain removal intent');
+    async detachWorker(swarmWorkerBinding) {
         return this.transaction(async (poolClient) => {
             await poolClient.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))', [this.projectId]);
             const row = (await poolClient.query(`SELECT k.*,n.thread_id,n.root_path FROM ponytail_index.swarm_worker_v1 k
@@ -108,8 +105,6 @@ class SwarmStore {
             const currentSwarmWorkerBinding = readWorker(row);
             if (currentSwarmWorkerBinding.state === 'REMOVED')
                 return;
-            if (currentSwarmWorkerBinding.threadId !== rollingNativeThreadState.threadId || currentSwarmWorkerBinding.rootPath !== rollingNativeThreadState.rootPath)
-                throw new Error('swarm: original worker identity changed during removal');
             if (currentSwarmWorkerBinding.state !== 'REMOVING')
                 throw new Error('swarm: prepare original worker removal first');
             const worktree = (await poolClient.query(`SELECT w.*,o.git_common_directory FROM ponytail_index.swarm_worktree_v1 s JOIN ponytail_index.rolling_worktree_v1 w USING(project_id,number)
@@ -131,7 +126,7 @@ class SwarmStore {
             await poolClient.query("UPDATE ponytail_index.rolling_worktree_v1 SET state='RESERVED' WHERE project_id=$1 AND number=$2", [this.projectId, currentSwarmWorkerBinding.worktreeNumber]);
         });
     }
-    async completeWorker(ownerRoot, sessionId, generation, rollingNativeThreadIdentity) {
+    async completeWorker(ownerRoot, sessionId, generation) {
         return this.transaction(async (poolClient) => {
             await poolClient.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))', [this.projectId]);
             const owner = (await poolClient.query('SELECT * FROM ponytail_index.swarm_owner_v1 WHERE project_id=$1 AND owner_root=$2 FOR UPDATE', [this.projectId, ownerRoot])).rows[0];
@@ -145,13 +140,11 @@ class SwarmStore {
             const swarmWorkerBinding = readWorker(row);
             if (swarmWorkerBinding.state !== 'BOUND')
                 throw new Error('swarm: only a bound worker can be completed');
-            if (rollingNativeThreadIdentity.sessionId !== swarmWorkerBinding.sessionId || rollingNativeThreadIdentity.threadId !== swarmWorkerBinding.threadId || rollingNativeThreadIdentity.rootPath !== swarmWorkerBinding.rootPath)
-                throw new Error('swarm: original worker identity changed');
             await poolClient.query('UPDATE ponytail_index.swarm_worker_v1 SET completed=true WHERE session_id=$1', [sessionId]);
             return { ...swarmWorkerBinding, completed: true };
         });
     }
-    async bindWorker(swarmWorktreeMembership, rollingNativeThreadIdentity, swarmWorkerAssignment) {
+    async bindWorker(swarmWorktreeMembership, swarmSessionIdentity, swarmWorkerAssignment) {
         swarmWorkerAssignment = readSwarmWorkerAssignment(swarmWorkerAssignment);
         return this.transaction(async (poolClient) => {
             await poolClient.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))', [this.projectId]);
@@ -161,10 +154,10 @@ class SwarmStore {
             const swarmCoordinatorBinding = readBinding(owner);
             physicalOwner(swarmCoordinatorBinding.swarmUserWorktree);
             const existing = (await poolClient.query(`SELECT k.*,n.thread_id,n.root_path FROM ponytail_index.swarm_worker_v1 k
-    JOIN ponytail_index.swarm_native_session_v1 n USING(session_id) WHERE k.session_id=$1 FOR UPDATE`, [rollingNativeThreadIdentity.sessionId])).rows[0];
+    JOIN ponytail_index.swarm_native_session_v1 n USING(session_id) WHERE k.session_id=$1 FOR UPDATE`, [swarmSessionIdentity.sessionId])).rows[0];
             if (existing !== undefined && (existing.project_id !== this.projectId || existing.owner_root !== swarmWorktreeMembership.ownerRoot || existing.root_path !== swarmWorktreeMembership.rootPath || Number(existing.worktree_number) !== swarmWorktreeMembership.number))
                 throw new Error('swarm: original worker owner or checkout cannot change');
-            if (rollingNativeThreadIdentity.rootPath !== swarmWorktreeMembership.rootPath)
+            if (swarmSessionIdentity.rootPath !== swarmWorktreeMembership.rootPath)
                 throw new Error('swarm: observed original worker checkout differs from membership');
             const row = (await poolClient.query(`SELECT w.* FROM ponytail_index.swarm_worktree_v1 s JOIN ponytail_index.rolling_worktree_v1 w USING(project_id,number)
     WHERE s.project_id=$1 AND s.number=$2 AND s.owner_root=$3 AND s.generation=$4 FOR UPDATE`, [this.projectId, swarmWorktreeMembership.number, swarmWorktreeMembership.ownerRoot, swarmWorktreeMembership.generation])).rows[0];
@@ -175,10 +168,10 @@ class SwarmStore {
                 || node_fs_1.default.realpathSync((0, rolling_integration_js_1.git)(rollingStoredWorktree.rootPath, ['rev-parse', '--path-format=absolute', '--git-common-dir']).trim()) !== swarmCoordinatorBinding.swarmUserWorktree.gitCommonDirectory)
                 throw new Error('swarm: original worker checkout identity changed');
             if (node_fs_1.default.lstatSync(node_path_1.default.join(rollingStoredWorktree.rootPath, 'session_id.txt'), { throwIfNoEntry: false }) !== undefined)
-                (0, rolling_worktrees_js_1.validateRollingSessionMarker)(rollingStoredWorktree.rootPath, rollingNativeThreadIdentity.sessionId);
-            if ((await poolClient.query("SELECT 1 FROM ponytail_index.swarm_worker_v1 WHERE project_id=$1 AND worktree_number=$2 AND state<>'REMOVED' AND session_id<>$3", [this.projectId, swarmWorktreeMembership.number, rollingNativeThreadIdentity.sessionId])).rowCount)
+                (0, rolling_worktrees_js_1.validateRollingSessionMarker)(rollingStoredWorktree.rootPath, swarmSessionIdentity.sessionId);
+            if ((await poolClient.query("SELECT 1 FROM ponytail_index.swarm_worker_v1 WHERE project_id=$1 AND worktree_number=$2 AND state<>'REMOVED' AND session_id<>$3", [this.projectId, swarmWorktreeMembership.number, swarmSessionIdentity.sessionId])).rowCount)
                 throw new Error('swarm: checkout already has a bound worker');
-            await this.recordNativeSession(poolClient, rollingNativeThreadIdentity);
+            await this.recordNativeSession(poolClient, swarmSessionIdentity);
             if (existing !== undefined && existing.state !== 'REMOVED') {
                 const swarmWorkerBinding = readWorker(existing);
                 if (swarmWorkerBinding.state !== 'BOUND' || swarmWorkerBinding.worktreeGeneration !== swarmWorktreeMembership.generation || swarmWorkerBinding.assignment.kind !== swarmWorkerAssignment.kind
@@ -200,11 +193,11 @@ class SwarmStore {
             const generation = node_crypto_1.default.randomUUID();
             await poolClient.query(`INSERT INTO ponytail_index.swarm_worker_v1(session_id,project_id,owner_root,worktree_number,worktree_generation,generation,worker_number,assignment_kind,assignment_id,short_assignment_number,summary,state)
     VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'BOUND') ON CONFLICT(session_id) DO UPDATE SET worktree_generation=EXCLUDED.worktree_generation,generation=EXCLUDED.generation,
-    worker_number=EXCLUDED.worker_number,assignment_kind=EXCLUDED.assignment_kind,assignment_id=EXCLUDED.assignment_id,short_assignment_number=EXCLUDED.short_assignment_number,summary=EXCLUDED.summary,state='BOUND',completed=false`, [rollingNativeThreadIdentity.sessionId, this.projectId, swarmWorktreeMembership.ownerRoot, swarmWorktreeMembership.number, swarmWorktreeMembership.generation, generation, positiveIntegerColumn(sequence.worker_sequence),
+    worker_number=EXCLUDED.worker_number,assignment_kind=EXCLUDED.assignment_kind,assignment_id=EXCLUDED.assignment_id,short_assignment_number=EXCLUDED.short_assignment_number,summary=EXCLUDED.summary,state='BOUND',completed=false`, [swarmSessionIdentity.sessionId, this.projectId, swarmWorktreeMembership.ownerRoot, swarmWorktreeMembership.number, swarmWorktreeMembership.generation, generation, positiveIntegerColumn(sequence.worker_sequence),
                 swarmWorkerAssignment.kind, swarmWorkerAssignment.id, positiveIntegerColumn(assignment.short_number), swarmWorkerAssignment.summary]);
             await poolClient.query("UPDATE ponytail_index.rolling_worktree_v1 SET state='ACTIVE' WHERE project_id=$1 AND number=$2", [this.projectId, swarmWorktreeMembership.number]);
             const recorded = (await poolClient.query(`SELECT k.*,n.thread_id,n.root_path FROM ponytail_index.swarm_worker_v1 k
-    JOIN ponytail_index.swarm_native_session_v1 n USING(session_id) WHERE k.session_id=$1`, [rollingNativeThreadIdentity.sessionId])).rows[0];
+    JOIN ponytail_index.swarm_native_session_v1 n USING(session_id) WHERE k.session_id=$1`, [swarmSessionIdentity.sessionId])).rows[0];
             if (recorded === undefined)
                 throw new Error('swarm: worker binding was not recorded');
             return readWorker(recorded);
@@ -459,8 +452,8 @@ class SwarmStore {
             }
         }
     }
-    async recordNativeSession(poolClient, rollingNativeThreadIdentity) {
-        const { sessionId, threadId, rootPath } = rollingNativeThreadIdentity;
+    async recordNativeSession(poolClient, swarmSessionIdentity) {
+        const { sessionId, threadId, rootPath } = swarmSessionIdentity;
         for (const id of [sessionId, threadId])
             if (!id.trim() || id !== id.trim() || /[\0\r\n]/u.test(id))
                 throw new Error('swarm: native IDs must be nonempty canonical strings');
@@ -507,14 +500,14 @@ class SwarmStore {
             return swarmCoordinatorBinding;
         });
     }
-    async bindCoordinator(ownerRoot, rollingNativeThreadIdentity) {
-        const { sessionId, threadId, rootPath } = rollingNativeThreadIdentity;
+    async bindCoordinator(ownerRoot, swarmSessionIdentity) {
+        const { sessionId, threadId, rootPath } = swarmSessionIdentity;
         if (!sessionId.trim() || sessionId !== sessionId.trim())
             throw new Error('swarm: coordinator session ID must be nonempty without surrounding whitespace');
         if (!threadId.trim() || threadId !== threadId.trim() || rootPath !== ownerRoot)
             throw new Error('swarm: observed coordinator thread/checkout differs from owner');
         return this.transaction(async (poolClient) => {
-            await this.recordNativeSession(poolClient, rollingNativeThreadIdentity);
+            await this.recordNativeSession(poolClient, swarmSessionIdentity);
             const row = (await poolClient.query(`UPDATE ponytail_index.swarm_owner_v1 SET coordinator_session_id=$3
     WHERE project_id=$1 AND owner_root=$2 AND (coordinator_session_id IS NULL OR coordinator_session_id=$3) RETURNING *`, [this.projectId, ownerRoot, sessionId])).rows[0];
             if (row === undefined)

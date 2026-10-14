@@ -14,6 +14,12 @@ Use disposable checkouts and isolated rows in the existing project database
 for automated lifecycle proof. Native session cessation and Desktop activity
 also require evidence through their real owning transport.
 
+**Scope correction, 2026-10-13:** Swarm CLI acceptance exercises database
+bookkeeping and worktree operations with Codex unavailable. The coordinator
+performs session creation, cancellation, quiescence and renaming through host
+tools. Earlier native-control evidence below is historical and is not a required
+CLI acceptance gate. No API operation may be introduced to satisfy those records.
+
 ## Arc SWARM-OWNERS: Select the owner and retain orphaned workers
 
 Traceability: verifies REQ-SWARM-OWNERSHIP

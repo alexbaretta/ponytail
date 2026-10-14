@@ -3,7 +3,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import type {SwarmWorkerBinding} from '../src/swarm-store.js';
-import {readSwarmInfo,readSwarmInfoV1,readSwarmInfoV2,readSwarmInfoV3,readSwarmInfoV4,observeSwarmWorkers,readSwarmWorktreeDeletionReportV1,renderSwarmInfo,type SwarmInfoV1,type SwarmInfoV2,type SwarmInfoV3,type SwarmInfoV4} from '../src/swarm-info.js';
+import {readSwarmInfo,readSwarmInfoV1,readSwarmInfoV2,readSwarmInfoV3,readSwarmInfoV4,readSwarmWorktreeDeletionReportV1,renderSwarmInfo,type SwarmInfoV1,type SwarmInfoV2,type SwarmInfoV3,type SwarmInfoV4} from '../src/swarm-info.js';
 
 const swarmInfoV1:SwarmInfoV1={schemaVersion:1,ownerRoot:'/repo/user-001',ownershipSource:'campaign-leases',
  coordinator:{kind:'unrecorded'},nativeActivity:'unobserved',worktrees:[{number:101,rootPath:'/repo/managed/101',present:true,
@@ -77,9 +77,6 @@ test('V4 distinguishes desired names, native observations and current membership
  const swarmInfoV4:SwarmInfoV4={...readSwarmInfo(swarmInfoV1),workers:[{binding:swarmWorkerBinding,desiredName:'W1 P1 Inspect acceptance coverage',nativeObservation:{kind:'observed',name:'W1 P1 Inspect acceptance coverage',status:'notLoaded'}}],nativeActivity:'worker-observations'};
  assert.deepEqual(readSwarmInfoV4(JSON.parse(JSON.stringify(swarmInfoV4))),swarmInfoV4);
  assert.match(renderSwarmInfo(swarmInfoV4),/native: notLoaded/);assert.doesNotMatch(renderSwarmInfo(swarmInfoV4),/native: idle/);
- const foreignObservedSwarmInfoV4=await observeSwarmWorkers(swarmInfoV4,{async readThreadState(){return {threadId:swarmWorkerBinding.threadId,sessionId:'foreign-session',rootPath:swarmWorkerBinding.rootPath,name:'foreign title',status:'idle'};}});
- assert.equal(foreignObservedSwarmInfoV4.workers[0]?.nativeObservation.kind,'unavailable');
- assert.doesNotMatch(renderSwarmInfo(foreignObservedSwarmInfoV4),/native: idle/);
 
  const worker=swarmInfoV4.workers[0];assert.ok(worker);
  for(const binding of [{...swarmWorkerBinding,state:'REMOVED'},{...swarmWorkerBinding,ownerRoot:'/other'},

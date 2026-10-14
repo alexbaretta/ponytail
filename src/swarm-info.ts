@@ -8,8 +8,7 @@ import {git} from './rolling-integration.js';
 import {resolveSwarmOwner,type SwarmOwnershipInventory} from './swarm-owner.js';
 import {renderCliHelp} from './cli-help.js';
 import type {RollingStoredWorktree} from './rolling-campaign-store.js';
-import {SwarmStore,type SwarmWorktreeMembership,type SwarmWorktreeDeletionResult,readWorker,swarmWorkerName,type SwarmWorkerAssignment,type SwarmWorkerBinding} from './swarm-store.js';
-import {RollingCodex} from './rolling-codex.js';
+import {SwarmStore,type SwarmWorktreeMembership,type SwarmWorktreeDeletionResult,readWorker,swarmWorkerName,type SwarmWorkerBinding} from './swarm-store.js';
 import type {SwarmUserWorktree} from './swarm-owner.js';
 
 export interface SwarmWorktreeInfoV1 {
@@ -219,65 +218,6 @@ export function readSwarmInfo(value:unknown):SwarmInfoV4 {
   default:throw new Error('swarm: unsupported inventory version');
  }
 }
-// Traceability: implements REQ-SWARM-SESSIONS
-export async function bindSwarmWorker(swarmStore:SwarmStore,swarmWorktreeMembership:SwarmWorktreeMembership,threadId:string,sessionId:string,swarmWorkerAssignment:SwarmWorkerAssignment,rollingCodex:Pick<RollingCodex,'readThreadIdentity'|'setThreadName'|'readThreadState'>):Promise<SwarmWorkerBinding> {
- const rollingNativeThreadIdentity=await rollingCodex.readThreadIdentity(threadId,swarmWorktreeMembership.rootPath);
- if(rollingNativeThreadIdentity.sessionId!==sessionId) throw new Error('swarm: observed native worker differs from requested session');
- const swarmWorkerBinding=await swarmStore.bindWorker(swarmWorktreeMembership,rollingNativeThreadIdentity,swarmWorkerAssignment);
- await rollingCodex.setThreadName(threadId,swarmWorkerName(swarmWorkerBinding));
- const rollingNativeThreadState=await rollingCodex.readThreadState(threadId,swarmWorktreeMembership.rootPath);
- if(rollingNativeThreadState.sessionId!==sessionId||rollingNativeThreadState.name!==swarmWorkerName(swarmWorkerBinding)) throw new Error('swarm: native worker name is not confirmed; retain binding for retry');
- return swarmWorkerBinding;
-}
-
-// Traceability: implements REQ-SWARM-SESSIONS
-export async function completeSwarmWorker(swarmStore:SwarmStore,swarmWorkerBinding:SwarmWorkerBinding,rollingCodex:Pick<RollingCodex,'readThreadIdentity'|'setThreadName'|'readThreadState'>):Promise<SwarmWorkerBinding> {
- const rollingNativeThreadIdentity=await rollingCodex.readThreadIdentity(swarmWorkerBinding.threadId,swarmWorkerBinding.rootPath);
- const completedSwarmWorkerBinding=await swarmStore.completeWorker(swarmWorkerBinding.ownerRoot,swarmWorkerBinding.sessionId,swarmWorkerBinding.generation,rollingNativeThreadIdentity);
- await rollingCodex.setThreadName(completedSwarmWorkerBinding.threadId,swarmWorkerName(completedSwarmWorkerBinding));
- const rollingNativeThreadState=await rollingCodex.readThreadState(completedSwarmWorkerBinding.threadId,completedSwarmWorkerBinding.rootPath);
- if(rollingNativeThreadState.sessionId!==completedSwarmWorkerBinding.sessionId||rollingNativeThreadState.name!==swarmWorkerName(completedSwarmWorkerBinding)) throw new Error('swarm: completed worker name was not confirmed; retry worker-complete');
- return completedSwarmWorkerBinding;
-}
-
-// Traceability: implements REQ-SWARM-SESSIONS
-export async function removeSwarmWorker(swarmStore:SwarmStore,swarmWorkerBinding:SwarmWorkerBinding,rollingCodex:Pick<RollingCodex,'readThreadIdentity'|'readLatestTurn'|'interruptTurn'|'readTurn'|'readThreadState'>):Promise<void> {
- const removingSwarmWorkerBinding=await swarmStore.prepareWorkerRemoval(swarmWorkerBinding.ownerRoot,swarmWorkerBinding.sessionId,swarmWorkerBinding.generation);
- if(removingSwarmWorkerBinding.state==='REMOVED') return;
- const rollingNativeThreadIdentity=await rollingCodex.readThreadIdentity(removingSwarmWorkerBinding.threadId,removingSwarmWorkerBinding.rootPath);
- if(rollingNativeThreadIdentity.sessionId!==removingSwarmWorkerBinding.sessionId) throw new Error('swarm: observed original worker identity changed');
- let rollingNativeTurn=await rollingCodex.readLatestTurn(removingSwarmWorkerBinding.threadId,true);
- if(rollingNativeTurn?.status==='inProgress') {
-  await rollingCodex.interruptTurn(removingSwarmWorkerBinding.threadId,rollingNativeTurn.id);
-  rollingNativeTurn=await rollingCodex.readTurn(removingSwarmWorkerBinding.threadId,rollingNativeTurn.id);
- }
- const latestRollingNativeTurn=await rollingCodex.readLatestTurn(removingSwarmWorkerBinding.threadId,true);
- if(latestRollingNativeTurn?.id!==rollingNativeTurn?.id) throw new Error('swarm: original worker started another turn; retain removal intent');
- const rollingNativeThreadState=await rollingCodex.readThreadState(removingSwarmWorkerBinding.threadId,removingSwarmWorkerBinding.rootPath);
- await swarmStore.finishWorkerRemoval(removingSwarmWorkerBinding,rollingNativeThreadState,latestRollingNativeTurn);
-}
-// Traceability: implements REQ-SWARM-INFO
-export async function observeSwarmWorkers(swarmInfoV4:SwarmInfoV4,rollingCodex:Pick<RollingCodex,'readThreadState'>):Promise<SwarmInfoV4> {
- const workers=await Promise.all(swarmInfoV4.workers.map(async worker=>{
-  let nativeObservation:SwarmNativeObservation;
-  try {
-   const rollingNativeThreadState=await rollingCodex.readThreadState(worker.binding.threadId,worker.binding.rootPath);
-   if(rollingNativeThreadState.sessionId!==worker.binding.sessionId) throw new Error('swarm: native observation has a different original session');
-   nativeObservation={kind:'observed',name:rollingNativeThreadState.name,status:rollingNativeThreadState.status};
-  } catch(cause) {nativeObservation={kind:'unavailable',reason:cause instanceof Error?cause.message:String(cause)};}
-  return {...worker,nativeObservation};
- }));
- return {...swarmInfoV4,nativeActivity:workers.length?'worker-observations':'unobserved',workers};
-}
-// Traceability: implements REQ-SWARM-OWNERSHIP
-export async function bindSwarmCoordinator(swarmStore:SwarmStore,swarmUserWorktree:SwarmUserWorktree,threadId:string,sessionId:string,rollingCodex:Pick<RollingCodex,'readThreadIdentity'>):Promise<void> {
- const rollingNativeThreadIdentity=await rollingCodex.readThreadIdentity(threadId,swarmUserWorktree.rootPath);
- if(rollingNativeThreadIdentity.sessionId!==sessionId||rollingNativeThreadIdentity.threadId!==threadId||rollingNativeThreadIdentity.rootPath!==swarmUserWorktree.rootPath)
-  throw new Error('swarm: observed native session identity differs from requested coordinator');
- await swarmStore.enrollOwner(swarmUserWorktree);
- await swarmStore.bindCoordinator(swarmUserWorktree.rootPath,rollingNativeThreadIdentity);
-}
-
 // Traceability: implements REQ-SWARM-OWNERSHIP
 // Traceability: implements REQ-SWARM-INFO
 export async function inspectSwarmInfo(invokingPath:string,pool:Pool,projectId:string):Promise<SwarmInfoV4> {
@@ -379,21 +319,20 @@ export async function runSwarmCli(argv:readonly string[]):Promise<void> {
    outputRoot=ownerRoot;
    if(workerComplete||workerUnbind) {
     const swarmWorkerBinding=await swarmStore.workerBinding(ownerRoot,text(fields.get('--session')),text(fields.get('--generation')));
-    const rollingCodex=await RollingCodex.connect({cwd:ownerRoot});
-    try {
-     if(workerComplete) await completeSwarmWorker(swarmStore,swarmWorkerBinding,rollingCodex);
-     else await removeSwarmWorker(swarmStore,swarmWorkerBinding,rollingCodex);
-    } finally {await rollingCodex.close();}
+    if(workerComplete) await swarmStore.completeWorker(ownerRoot,swarmWorkerBinding.sessionId,swarmWorkerBinding.generation);
+    else {
+     const removingSwarmWorkerBinding=await swarmStore.prepareWorkerRemoval(ownerRoot,swarmWorkerBinding.sessionId,swarmWorkerBinding.generation);
+     await swarmStore.detachWorker(removingSwarmWorkerBinding);
+    }
    } else if(workerBind) {
     const number=integer(fields.get('--number'));
     const worktree=(await inspectSwarmInfo(ownerRoot,pool,projectId)).worktrees.find(worktree=>worktree.number===number);
     if(worktree===undefined||worktree.membership.kind!=='swarm'||worktree.membership.generation!==fields.get('--generation')) throw new Error('swarm: checkout membership changed or is absent');
     const kind=fields.get('--kind');
     if(kind!=='plan'&&kind!=='sprint') throw new Error('swarm: worker assignment kind must be plan or sprint');
-    const rollingCodex=await RollingCodex.connect({cwd:ownerRoot});
-    try {await bindSwarmWorker(swarmStore,{number,rootPath:worktree.rootPath,ownerRoot,generation:worktree.membership.generation},text(fields.get('--thread')),text(fields.get('--session')),
-     {kind,id:text(fields.get('--assignment')),summary:text(fields.get('--summary'))},rollingCodex);}
-    finally {await rollingCodex.close();}
+    await swarmStore.bindWorker({number,rootPath:worktree.rootPath,ownerRoot,generation:worktree.membership.generation},
+     {threadId:text(fields.get('--thread')),sessionId:text(fields.get('--session')),rootPath:worktree.rootPath},
+     {kind,id:text(fields.get('--assignment')),summary:text(fields.get('--summary'))});
    } else if(deletion) {
     await swarmStore.enrollOwner(swarmUserWorktree);
     const results=await swarmStore.deleteWorktrees(ownerRoot,fields.has('--all')?null:integer(fields.get('--number')));
@@ -417,18 +356,11 @@ export async function runSwarmCli(argv:readonly string[]):Promise<void> {
     else await swarmStore.releaseWorktree(swarmWorktreeMembership);
    } else if(enrollment) await swarmStore.enrollOwner(swarmUserWorktree);
    else if(bind) {
-    const rollingCodex=await RollingCodex.connect({cwd:ownerRoot});
-    try {await bindSwarmCoordinator(swarmStore,swarmUserWorktree,text(fields.get('--thread')),text(fields.get('--session')),rollingCodex);}
-    finally {await rollingCodex.close();}
+    await swarmStore.enrollOwner(swarmUserWorktree);
+    await swarmStore.bindCoordinator(ownerRoot,{threadId:text(fields.get('--thread')),sessionId:text(fields.get('--session')),rootPath:ownerRoot});
    } else await swarmStore.unbindCoordinator(ownerRoot,text(fields.get('--session')));
   }
-  let swarmInfoV4=await inspectSwarmInfo(outputRoot,pool,projectId);
-  if(swarmInfoV4.workers.length) {
-   let rollingCodex:RollingCodex|null=null;
-   try {rollingCodex=await RollingCodex.connect({cwd:swarmInfoV4.ownerRoot});swarmInfoV4=await observeSwarmWorkers(swarmInfoV4,rollingCodex);}
-   catch(cause) {const reason=cause instanceof Error?cause.message:String(cause);swarmInfoV4={...swarmInfoV4,nativeActivity:'worker-observations',workers:swarmInfoV4.workers.map(worker=>({...worker,nativeObservation:{kind:'unavailable',reason}}))};}
-   finally {if(rollingCodex) await rollingCodex.close();}
-  }
+  const swarmInfoV4=await inspectSwarmInfo(outputRoot,pool,projectId);
   process.stdout.write(json?JSON.stringify(swarmInfoV4)+'\n':renderSwarmInfo(swarmInfoV4));
  } finally {await pool.end();}
 }

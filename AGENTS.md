@@ -110,23 +110,18 @@ services. `PROJECT_STRUCTURE.md` is authoritative for that boundary.
   - Node full: `npm test`.
 - Rolling Codex protocol proof: `node --test dist/tests/rolling-codex.test.js`.
 - Swarm owner focused proof: `node --test dist/tests/swarm-owner.test.js`.
-- Swarm live coordinator acceptance: `node --test
-  dist/tests/swarm-coordinator.integration.js`; uses a disposable native session,
-  configured host model/permissions and isolated existing-PostgreSQL records.
-  Binding preserves the original writer; unbinding preserves the session and
-  source. Only test teardown archives the disposable verification session.
 - Swarm inventory focused proof: `node --test dist/tests/swarm-info.test.js
   dist/tests/swarm-store.integration.test.js
   dist/tests/swarm-info.integration.test.js`; the integration selection uses
   disposable Git worktrees and isolated existing-PostgreSQL project rows.
 - Swarm inventory: `ponytail swarm info [--json]`; resolves a managed checkout
   to its user-worktree owner and reports existing campaign-lease provenance.
-  V2 reports explicit coordinator bindings; native activity remains unobserved.
+  V4 reports recorded session bindings and desired names; runtime activity remains unobserved.
   Inspection does not mutate resources; the immutable V1 reader is retained.
 - Swarm owner enrollment: `ponytail swarm owner-enroll [--json]` declares a new
   configured user checkout's role without creating a session or worktree.
 - Swarm coordinator binding: `ponytail swarm coordinator-bind --thread <id> --session <id>
-  [--json]` checks native identity and enrolls the configured user checkout;
+  [--json]` records the supplied identity and enrolls the configured user checkout;
   `ponytail swarm coordinator-unbind --session <id> [--json]` releases only that
   exact binding and preserves workers/checkouts. Each command has scoped help.
 - Git certificate focused proof: `node --test dist/tests/obligations.test.js
@@ -156,19 +151,17 @@ services. `PROJECT_STRUCTURE.md` is authoritative for that boundary.
 - Original worker admission: `ponytail swarm worker-bind --thread <id> --session
   <id> --number <n> --generation <worktree-uuid> --kind <plan|sprint> --assignment
   <full-id> --summary "three word summary" [--json]`. Requires an enrolled owner,
-  bound coordinator and exact assigned checkout; observes native identity, binds,
-  then sets/confirms the name without acquiring the original writer. `swarm info`
-  reports V4 worker bindings, desired names and independent native observations.
-  `notLoaded` does not establish idle or cessation.
+  bound coordinator and exact assigned checkout. Records the supplied identity
+  and reports the desired name for the coordinator to apply through host tools.
+  `swarm info` reports V4 bindings; no swarm command contacts Codex.
 - Final worker naming: `ponytail swarm worker-complete --session <id>
-  --generation <worker-uuid> [--json]`. Sets and confirms the DONE-prefixed name
-  for the exact bound worker. Retains ownership and acceptance state; retry the
-  same binding after an unknown naming outcome.
-- Worker removal intent: `ponytail swarm worker-unbind --session <id>
-  --generation <worker-uuid> [--json]`. Requires original terminal-turn and idle
-  runtime evidence. Observer `notLoaded` retains REMOVING ownership; native host
-  control from the original runtime is still required to finish that removal.
-  Does not archive/delete sessions or silently release campaign leases.
+  --generation <worker-uuid> [--json]`. Records completion and reports the desired
+  DONE-prefixed name; the coordinator renames the session through host tools.
+- Worker detachment: `ponytail swarm worker-unbind --session <id>
+  --generation <worker-uuid> [--json]`. The coordinator must stop assigned work and
+  establish quiescence before invoking it. Removes database membership and the
+  matching session marker; preserves sessions and checkouts. Refuses active Git
+  operations and unfenced campaign leases. Does not contact Codex.
 - Swarm checkout lifecycle: `ponytail swarm worktree-assign --base <commit-or-ref>`;
   failed setup retains exact membership and reports number/generation. Resume with
   `ponytail swarm worktree-setup --number <n> --generation <uuid>`. Release with

@@ -73,10 +73,9 @@ test('physical owner and managed invocation report the same isolated read-only l
  const unboundInfo=readSwarmInfoV4(JSON.parse(unbind.stdout));
  assert.deepEqual(unboundInfo.coordinator,{kind:'unbound'});assert.deepEqual(unboundInfo.worktrees,ownerInfo.worktrees);
  const bin=path.join(root,'bin');fs.mkdirSync(bin);
- const nativeFixture=path.join(__dirname,'fixtures/rolling-codex-server.js');
- const originalMode=fs.statSync(nativeFixture).mode;
- fs.chmodSync(nativeFixture,0o755);t.after(()=>fs.chmodSync(nativeFixture,originalMode));
- fs.symlinkSync(nativeFixture,path.join(bin,'codex'));
+ const codexInvocation=path.join(root,'codex-was-invoked');
+ fs.writeFileSync(path.join(bin,'codex'),`#!/bin/sh\ntouch '${codexInvocation}'\nexit 97\n`,{mode:0o755});
+ t.after(()=>assert.equal(fs.existsSync(codexInvocation),false,'swarm bookkeeping must not invoke Codex'));
  const nativeThreadId=`thread-${projectId}`,nativeSessionId=`session-${projectId}`;
  const nativeBind=spawnSync(path.join(repositoryRoot,'cli/ponytail'),['swarm','coordinator-bind','--session',nativeSessionId,'--thread',nativeThreadId,'--json'],
   {cwd:managedRoot,encoding:'utf8',env:{...env,PATH:bin+path.delimiter+env.PATH,ROLLING_NATIVE_FIXTURE_ID:projectId}});
@@ -109,10 +108,17 @@ test('physical owner and managed invocation report the same isolated read-only l
  assert.equal(workerBind.status,0,workerBind.stderr);
  const workerSwarmInfoV4=readSwarmInfoV4(JSON.parse(workerBind.stdout));
  assert.equal(workerSwarmInfoV4.workers.length,1);assert.equal(workerSwarmInfoV4.workers[0]?.desiredName,'W1 P1 Inspect acceptance coverage');
- assert.deepEqual(workerSwarmInfoV4.workers[0]?.nativeObservation,{kind:'observed',name:'W1 P1 Inspect acceptance coverage',status:'notLoaded'});
+ assert.deepEqual(workerSwarmInfoV4.workers[0]?.nativeObservation,{kind:'unobserved'});
  assert.equal((await inspectSwarmInfo(siblingRoot,pool,projectId)).workers.length,0);
  const managedWorkerInfo=spawnSync(path.join(repositoryRoot,'cli/ponytail'),['swarm','info','--json'],{cwd:unassignedRoot,encoding:'utf8',env:workerEnv});
  assert.equal(managedWorkerInfo.status,0,managedWorkerInfo.stderr);assert.deepEqual(readSwarmInfoV4(JSON.parse(managedWorkerInfo.stdout)),workerSwarmInfoV4);
+
+ const worker=workerSwarmInfoV4.workers[0];assert.ok(worker);
+ const complete=spawnSync(path.join(repositoryRoot,'cli/ponytail'),['swarm','worker-complete','--session',worker.binding.sessionId,'--generation',worker.binding.generation,'--json'],{cwd:userRoot,encoding:'utf8',env:workerEnv});
+ assert.equal(complete.status,0,complete.stderr);assert.equal(readSwarmInfoV4(JSON.parse(complete.stdout)).workers[0]?.desiredName,'DONE W1 P1 Inspect acceptance coverage');
+ const detach=spawnSync(path.join(repositoryRoot,'cli/ponytail'),['swarm','worker-unbind','--session',worker.binding.sessionId,'--generation',worker.binding.generation,'--json'],{cwd:userRoot,encoding:'utf8',env:workerEnv});
+ assert.equal(detach.status,0,detach.stderr);assert.equal(readSwarmInfoV4(JSON.parse(detach.stdout)).workers.length,0);
+ assert.equal(fs.existsSync(unassignedRoot),true);
 
  await pool.query('INSERT INTO ponytail_index.swarm_owner_v1(project_id,owner_root,git_common_directory) VALUES($1,$2,$3)',[projectId,siblingRoot,gitCommonDirectory]);
  await pool.query('INSERT INTO ponytail_index.swarm_worktree_v1(project_id,number,owner_root,generation) VALUES($1,101,$2,$3)',[projectId,siblingRoot,crypto.randomUUID()]);

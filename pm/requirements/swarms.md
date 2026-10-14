@@ -11,6 +11,17 @@ Licensed under the MIT License. See LICENSE in the project root.
 **Approval:** Stakeholder definition and command requirements, 2026-10-13.
 Approved behavior; implementation and acceptance are pending.
 
+## Session-operation boundary
+
+The CLI only manages session associations in the database and worktree resources.
+It does not use Codex APIs to create, stop, rename, archive, delete, inspect or
+otherwise operate sessions. The coordinator performs host session operations,
+including establishing quiescence before detachment and applying the reported
+worker names. References below to session cessation, native names or reattachment
+are coordinator responsibilities, not CLI capabilities. Runtime activity is not
+inferred from membership. This stakeholder clarification supersedes earlier
+native-control interpretations and proof criteria.
+
 ## Concepts
 
 A **swarm** is a set of worker sessions, a set of managed worktrees, and zero
