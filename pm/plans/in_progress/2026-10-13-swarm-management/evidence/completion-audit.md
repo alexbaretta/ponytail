@@ -4,8 +4,10 @@ Audited source revision: `13dbcd45`. Authority: the stakeholder's swarm definiti
 and clarification that Ponytail manages associations and worktrees, while the
 coordinator alone operates sessions through host tools.
 
-This is an evidence map, not a certificate or discharge checkpoint. The original
-ledger still reports zero discharged obligations. Final acceptance is open.
+This is an evidence map, not a certificate or discharge checkpoint. The ledger
+currently accepts requirement and verification inventories OBL-17 and OBL-18;
+the 16 delivery obligations remain pending individual assessment. Final
+acceptance is open.
 
 | Obligation | Authoritative implementation | Behavioral evidence |
 | --- | --- | --- |
@@ -68,3 +70,9 @@ The append-only `SWARM-B2` / `SWARM-CP2` rebaseline now activates the corrected
 requirement source through the canonical checkpoint validator, preserving B1,
 all 22 known responsibilities and zero discharge credit. It adds no file-hash
 certificate inventory. Certificate assessment remains pending.
+
+The canonical validator subsequently accepted compact Git-input certificates
+for OBL-17 (approved responsibility inventory) and OBL-18 (verification-owner
+inventory). The metric vector is `[0,0,17,1,1,1]`; this is inventory completion,
+not delivery or execution acceptance. Neither certificate contains per-file
+hash records or embedded transcripts.

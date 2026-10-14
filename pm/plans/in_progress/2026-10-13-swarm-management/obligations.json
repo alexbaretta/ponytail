@@ -820,7 +820,78 @@
       }
     }
   ],
-  "certificates": [],
+  "certificates": [
+    {
+      "id": "SWARM-CERT-T1",
+      "obligationIds": [
+        "OBL-17"
+      ],
+      "inputs": {
+        "schemaVersion": 2,
+        "revision": "d1b1279a168518dd8ecfe9242902e5560dd74e37",
+        "paths": [
+          "pm/requirements/swarms.md",
+          "pm/uat/swarms.md",
+          "tests",
+          "src",
+          "skills/swarm",
+          "skills/plan-execution/references/glossary.md",
+          ".agents/config/project/traceability.json"
+        ]
+      },
+      "artifacts": [
+        "pm/requirements/swarms.md",
+        "pm/uat/swarms.md",
+        ".agents/config/project/traceability.json"
+      ],
+      "assessor": "coordinator",
+      "authority": [
+        "user-goal-2026-10-13-swarm-management",
+        "user-goal-2026-10-13-swarm-skill-and-exclusive-session-cli",
+        "user-swarm-session-bookkeeping-clarification-2026-10-13"
+      ],
+      "adequate": true,
+      "reason": "Reviewed the approved swarm definition and session-operation correction against all 16 atomic delivery conditions and seven requirement owners. Every explicit resource/association operation and skill responsibility has an identified acceptance Arc; Codex session control is excluded by stakeholder authority. No missing approved responsibility was found.",
+      "disposition": null,
+      "evidence": [],
+      "inventoryIds": []
+    },
+    {
+      "id": "SWARM-CERT-T2",
+      "obligationIds": [
+        "OBL-18"
+      ],
+      "inputs": {
+        "schemaVersion": 2,
+        "revision": "d1b1279a168518dd8ecfe9242902e5560dd74e37",
+        "paths": [
+          "pm/requirements/swarms.md",
+          "pm/uat/swarms.md",
+          "tests",
+          "src",
+          "skills/swarm",
+          "skills/plan-execution/references/glossary.md",
+          ".agents/config/project/traceability.json"
+        ]
+      },
+      "artifacts": [
+        "pm/requirements/swarms.md",
+        "pm/uat/swarms.md",
+        ".agents/config/project/traceability.json"
+      ],
+      "assessor": "coordinator",
+      "authority": [
+        "user-goal-2026-10-13-swarm-management",
+        "user-goal-2026-10-13-swarm-skill-and-exclusive-session-cli",
+        "user-swarm-session-bookkeeping-clarification-2026-10-13"
+      ],
+      "adequate": true,
+      "reason": "Reviewed typed owner/inventory/help/command proofs and real PostgreSQL/Git lifecycle workflows for the seven requirement groups. Existing tests are the verification owners for the 16 registered delivery responsibilities; no additional independent unit-proof responsibility is required. This assesses completeness of the proof inventory, not final full-suite execution.",
+      "disposition": null,
+      "evidence": [],
+      "inventoryIds": []
+    }
+  ],
   "checkpoints": [
     {
       "id": "SWARM-CP1",
@@ -924,6 +995,72 @@
       ],
       "preparation": null,
       "reason": "Activate the stakeholder clarification: coordinator host tools operate sessions; Ponytail records associations and manages worktrees. Preserve the original obligation identities; no discharge credit.",
+      "assessor": "coordinator"
+    },
+    {
+      "id": "SWARM-CP3",
+      "predecessorId": "SWARM-CP2",
+      "baselineId": "SWARM-B2",
+      "kind": "productive",
+      "selectedIds": [
+        "OBL-17"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "SWARM-CERT-T1"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        1,
+        1,
+        17,
+        1,
+        1,
+        1
+      ],
+      "after": [
+        0,
+        1,
+        17,
+        1,
+        1,
+        1
+      ],
+      "preparation": null,
+      "reason": "Reviewed the approved swarm definition and session-operation correction against all 16 atomic delivery conditions and seven requirement owners. Every explicit resource/association operation and skill responsibility has an identified acceptance Arc; Codex session control is excluded by stakeholder authority. No missing approved responsibility was found.",
+      "assessor": "coordinator"
+    },
+    {
+      "id": "SWARM-CP4",
+      "predecessorId": "SWARM-CP3",
+      "baselineId": "SWARM-B2",
+      "kind": "productive",
+      "selectedIds": [
+        "OBL-18"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "SWARM-CERT-T2"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        0,
+        1,
+        17,
+        1,
+        1,
+        1
+      ],
+      "after": [
+        0,
+        0,
+        17,
+        1,
+        1,
+        1
+      ],
+      "preparation": null,
+      "reason": "Reviewed typed owner/inventory/help/command proofs and real PostgreSQL/Git lifecycle workflows for the seven requirement groups. Existing tests are the verification owners for the 16 registered delivery responsibilities; no additional independent unit-proof responsibility is required. This assesses completeness of the proof inventory, not final full-suite execution.",
       "assessor": "coordinator"
     }
   ]
