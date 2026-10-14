@@ -116,8 +116,14 @@ services. `PROJECT_STRUCTURE.md` is authoritative for that boundary.
   disposable Git worktrees and isolated existing-PostgreSQL project rows.
 - Swarm inventory: `ponytail swarm info [--json]`; resolves a managed checkout
   to its user-worktree owner and reports existing campaign-lease provenance.
-  Native activity and coordinator binding are explicitly unobserved/unrecorded
-  in the initial inventory contract; inspection does not mutate resources.
+  V2 reports explicit coordinator bindings; native activity remains unobserved.
+  Inspection does not mutate resources; the immutable V1 reader is retained.
+- Swarm owner enrollment: `ponytail swarm owner-enroll [--json]` declares a new
+  configured user checkout's role without creating a session or worktree.
+- Swarm coordinator binding: `ponytail swarm coordinator-bind --thread <id> --session <id>
+  [--json]` checks native identity and enrolls the configured user checkout;
+  `ponytail swarm coordinator-unbind --session <id> [--json]` releases only that
+  exact binding and preserves workers/checkouts. Each command has scoped help.
 - Git certificate focused proof: `node --test dist/tests/obligations.test.js
   dist/tests/obligation-certificate-bindings.test.js
   dist/tests/rolling-worker-submission.test.js dist/tests/rolling-worker.test.js`.

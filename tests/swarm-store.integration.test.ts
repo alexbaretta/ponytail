@@ -12,6 +12,11 @@ import {databaseOptions} from '../src/project-index-database.js';
 import {SwarmStore} from '../src/swarm-store.js';
 import type {SwarmUserWorktree} from '../src/swarm-owner.js';
 import type {RollingProjectConfigV2} from '../src/rolling-campaign.js';
+import {RollingCodex,type RollingNativeThreadIdentity} from '../src/rolling-codex.js';
+import {bindSwarmCoordinator,inspectSwarmInfo} from '../src/swarm-info.js';
+function coordinatorIdentity(rootPath:string,sessionId:string):RollingNativeThreadIdentity {
+ return {rootPath,sessionId,threadId:`thread-${sessionId}`};
+}
 
 // Traceability: verifies REQ-SWARM-OWNERSHIP
 test('concurrent coordinator bindings are exclusive and release preserves campaign workers',async t=>{
@@ -50,30 +55,43 @@ test('concurrent coordinator bindings are exclusive and release preserves campai
  assert.equal((await swarmStore.enrollOwner(swarmUserWorktree)).sessionId,null);
  assert.deepEqual(await swarmStore.enrollOwner(swarmUserWorktree),await swarmStore.coordinatorBinding(mainRoot));
  await swarmStore.enrollOwner(otherSwarmUserWorktree);
+ assert.deepEqual((await inspectSwarmInfo(otherRoot,pool,projectId)).coordinator,{kind:'unbound'});
+ const nativeThreadId=`thread-${projectId}`,nativeSessionId=`session-${projectId}`;
+ const rollingCodex=await RollingCodex.connect({executable:'env',argv:[`ROLLING_NATIVE_FIXTURE_ID=${projectId}`,process.execPath,path.join(__dirname,'fixtures/rolling-codex-server.js')]});
+ try {
+  await rollingCodex.startThread(otherRoot);
+  await rollingCodex.request('fixture-observer-only',{});
+  await assert.rejects(bindSwarmCoordinator(swarmStore,otherSwarmUserWorktree,nativeSessionId,nativeSessionId,rollingCodex),/no rollout found/);
+  await assert.rejects(bindSwarmCoordinator(swarmStore,otherSwarmUserWorktree,nativeThreadId,'foreign-session',rollingCodex),/differs from requested/);
+  assert.equal((await swarmStore.coordinatorBinding(otherRoot))?.sessionId,null);
+  await bindSwarmCoordinator(swarmStore,otherSwarmUserWorktree,nativeThreadId,nativeSessionId,rollingCodex);
+  assert.deepEqual((await inspectSwarmInfo(otherRoot,pool,projectId)).coordinator,{kind:'bound',sessionId:nativeSessionId,threadId:nativeThreadId});
+  await swarmStore.unbindCoordinator(otherRoot,nativeSessionId);
+ } finally {await rollingCodex.close();}
  await assert.rejects(swarmStore.enrollOwner(managedSwarmUserWorktree),/managed checkout/);
  const candidates=['coordinator-one','coordinator-two'];
- const results=await Promise.allSettled(candidates.map(sessionId=>swarmStore.bindCoordinator(mainRoot,sessionId)));
+ const results=await Promise.allSettled(candidates.map(sessionId=>swarmStore.bindCoordinator(mainRoot,coordinatorIdentity(mainRoot,sessionId))));
  assert.equal(results.filter(result=>result.status==='fulfilled').length,1);
  const swarmCoordinatorBinding=await swarmStore.coordinatorBinding(mainRoot);assert.ok(swarmCoordinatorBinding?.sessionId);
  const sessionId=swarmCoordinatorBinding.sessionId;
- assert.deepEqual(await swarmStore.bindCoordinator(mainRoot,sessionId),swarmCoordinatorBinding);
- await assert.rejects(swarmStore.bindCoordinator(otherRoot,sessionId),/unique constraint/);
- assert.equal((await swarmStore.bindCoordinator(otherRoot,'independent-coordinator')).sessionId,'independent-coordinator');
+ assert.deepEqual(await swarmStore.bindCoordinator(mainRoot,coordinatorIdentity(mainRoot,sessionId)),swarmCoordinatorBinding);
+ await assert.rejects(swarmStore.bindCoordinator(otherRoot,coordinatorIdentity(otherRoot,sessionId)),/original checkout changed/);
+ assert.equal((await swarmStore.bindCoordinator(otherRoot,coordinatorIdentity(otherRoot,'independent-coordinator'))).sessionId,'independent-coordinator');
  await assert.rejects(swarmStore.unbindCoordinator(mainRoot,'stale-coordinator'),/binding changed/);
  assert.equal((await swarmStore.unbindCoordinator(mainRoot,sessionId)).sessionId,null);
  assert.equal((await pool.query<Record<string,unknown>>('SELECT state,session_id FROM ponytail_index.rolling_assignment_v1 WHERE assignment_id=$1',[assignmentId])).rows[0]?.session_id,'worker-session');
  assert.equal((await pool.query<Record<string,unknown>>('SELECT state FROM ponytail_index.rolling_worktree_v1 WHERE project_id=$1',[projectId])).rows[0]?.state,'ACTIVE');
- assert.equal((await swarmStore.bindCoordinator(mainRoot,'successor')).sessionId,'successor');
+ assert.equal((await swarmStore.bindCoordinator(mainRoot,coordinatorIdentity(mainRoot,'successor'))).sessionId,'successor');
  assert.equal((await swarmStore.coordinatorBinding(otherRoot))?.sessionId,'independent-coordinator');
- await assert.rejects(swarmStore.bindCoordinator(mainRoot,' '),/nonempty/);
+ await assert.rejects(swarmStore.bindCoordinator(mainRoot,coordinatorIdentity(mainRoot,' ')),/nonempty/);
  const movedRoot=path.join(root,'temporarily-moved');fs.renameSync(mainRoot,movedRoot);
  try {
-  await assert.rejects(swarmStore.bindCoordinator(mainRoot,'successor'),/ENOENT/);
+  await assert.rejects(swarmStore.bindCoordinator(mainRoot,coordinatorIdentity(mainRoot,'successor')),/ENOENT/);
   const foreignRoot=path.join(root,'foreign');fs.mkdirSync(foreignRoot);
   execFileSync('git',['-C',foreignRoot,'init','-q','-b','replacement']);
   execFileSync('git',['-C',foreignRoot,'-c','user.name=Fixture','-c','user.email=fixture@example.test','commit','--allow-empty','-qm','foreign']);
   execFileSync('git',['-C',foreignRoot,'worktree','add','-q','-b','replacement-worker',mainRoot]);
-  await assert.rejects(swarmStore.bindCoordinator(mainRoot,'successor'),/canonical physical Git checkout/);
+  await assert.rejects(swarmStore.bindCoordinator(mainRoot,coordinatorIdentity(mainRoot,'successor')),/canonical physical Git checkout/);
  } finally {fs.rmSync(mainRoot,{recursive:true,force:true});fs.renameSync(movedRoot,mainRoot);}
  assert.equal((await swarmStore.coordinatorBinding(mainRoot))?.sessionId,'successor');
 });

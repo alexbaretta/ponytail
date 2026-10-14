@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 // Copyright (c) 2026 Alex Baretta. All rights reserved.
 // Licensed under the MIT License. See LICENSE in the project root.
 import readline from 'node:readline';
@@ -36,14 +37,16 @@ let turnCount = 0;
 let archiveRefused = false;
 let archiveAcknowledgementLost = false;
 let archiveCount = 0;
-let archivedRoot:string | null = null;
+const nativeCli=process.argv.includes('app-server');
+let archivedRoot:string | null = nativeCli?process.cwd():null;
 let foreignArchiveRoot = false;
 let externallyActive = false;
-let observerOnly = false;
+let observerOnly = nativeCli;
 let unloadedUntilResume = false;
 let terminalDuringHistoryRead = false;
-const threadId = process.argv.includes('--reviewer') ? 'thread-reviewer-fixture' : 'thread-fixture';
-const sessionId = process.argv.includes('--reviewer') ? 'session-reviewer-fixture' : 'session-fixture';
+const identitySuffix=process.env.ROLLING_NATIVE_FIXTURE_ID??'fixture';
+const threadId = process.argv.includes('--reviewer') ? `thread-reviewer-${identitySuffix}` : `thread-${identitySuffix}`;
+const sessionId = process.argv.includes('--reviewer') ? `session-reviewer-${identitySuffix}` : `session-${identitySuffix}`;
 const desktopDelivery=process.argv.includes('--desktop-delivery');
 const turns = new Map<string, RollingNativeTurn>();
 const prompts=new Map<string,string>();
@@ -110,9 +113,12 @@ lines.on('line', line => {
     turns.set('foreign-turn',{id:'foreign-turn',status:'inProgress',items:[]});
     send({method:'turn/started',params:{threadId,turn:{id:'foreign-turn'}}});
   } else if (method === 'thread/read') {
-    const threadId = text(params.threadId);
-    result = {thread:{id:threadId === 'wrong-activity' ? 'thread-fixture' : threadId,sessionId,cwd:archivedRoot,
-      status:{type:threadId === 'unsupported-activity' ? 'unknown' : externallyActive || [...turns.values()].some(turn => turn.status === 'inProgress') ? 'active' : observerOnly||unloadedUntilResume?'notLoaded':'idle'}}};
+    const requestedThreadId = text(params.threadId);
+    if(requestedThreadId!==threadId&&requestedThreadId!=='wrong-activity'&&requestedThreadId!=='unsupported-activity') {
+      send({id:message.id,error:{code:-32600,message:'no rollout found for requested thread'}});return;
+    }
+    result = {thread:{id:requestedThreadId === 'wrong-activity' ? 'thread-fixture' : requestedThreadId,sessionId,cwd:archivedRoot,
+      status:{type:requestedThreadId === 'unsupported-activity' ? 'unknown' : externallyActive || [...turns.values()].some(turn => turn.status === 'inProgress') ? 'active' : observerOnly||unloadedUntilResume?'notLoaded':'idle'}}};
   } else if (method === 'turn/start') {
     const turnId = `turn-${++turnCount}`;
     if (!Array.isArray(params.input)) throw new Error('missing turn input');

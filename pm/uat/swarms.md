@@ -39,6 +39,15 @@ coordinator remains independent. Explicit coordinator unbinding preserves
 legacy worker records, but native coordinator loss/observation and membership
 adoption in step 3 remain pending. ACC-SW-01 and ACC-SW-02 are not yet accepted.
 
+**Coordinator adapter evidence:** Controlled native protocol observation checks
+session and checkout identity before binding without acquiring a writer.
+The installed bind CLI with a controlled native executable resolves managed
+invocation to its owner and records distinct native thread/session identities.
+The installed `coordinator-unbind` command rejects stale session IDs and
+preserves workers; V2 inventory reports bound, unbound and unrecorded states
+distinctly. Full live native binding and coordinator-loss acceptance remain
+pending.
+
 ## Arc SWARM-INFO: Diagnose membership and execution
 
 Traceability: verifies REQ-SWARM-INFO

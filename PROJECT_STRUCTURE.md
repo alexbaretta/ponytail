@@ -69,11 +69,12 @@ while project-wide management records remain under `pm/`.
   resolution over a checked physical inventory. It rejects ambiguous, unassigned
   and cross-repository ownership; its adjacent `.js` runtime is generated.
 - `src/swarm-store.ts` owns explicit user-worktree enrollment and exclusive
-  coordinator bindings in the existing project database.
-- `src/swarm-info.ts` owns the initial read-only swarm chapter, physical
-  Git/project-scoped lease inventory and immutable V1 result reader. Its adjacent
-  `.js` runtime is generated; existing lease provenance and absent native
-  observations remain explicit until authoritative swarm bindings are adopted.
+  coordinator bindings in the existing project database, including canonical
+  native thread/session/checkout identity mappings.
+- `src/swarm-info.ts` owns the swarm inventory/coordinator CLI adapter, physical
+  Git/project-scoped inventory, native coordinator identity admission, immutable
+  V1/V2 result readers and normalization to V2. Its adjacent `.js` runtime is
+  generated; legacy worker leases and absent activity observations stay explicit.
 - `src/project-index-database.ts` owns the checked project-local PostgreSQL
   connection options and shared index error declaration. `src/project-index-database.js`
   is compiler-generated compatibility runtime.

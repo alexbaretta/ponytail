@@ -1007,12 +1007,12 @@
         "module": "src/swarm-info.ts",
         "readerRegistryExport": "SwarmInfoReaders"
       },
-      "currentVersion": "V1",
+      "currentVersion": "V2",
       "versions": [
-        "V1"
+        "V1", "V2"
       ],
       "supportedReadVersions": [
-        "V1"
+        "V1", "V2"
       ],
       "supportedDowngradeVersions": []
     }

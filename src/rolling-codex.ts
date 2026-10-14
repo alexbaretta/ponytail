@@ -21,6 +21,11 @@ export interface RollingNativeThread {
   readonly instructionSources: readonly string[];
   readonly model: string | null;
 }
+export interface RollingNativeThreadIdentity {
+ readonly threadId:string;
+ readonly sessionId:string;
+ readonly rootPath:string;
+}
 
 export interface RollingNativeThreadActivity {
   readonly threadId: string;
@@ -277,7 +282,7 @@ export class RollingCodex extends EventEmitter<RollingCodexEvents> {
   }
 
   // Traceability: implements REQ-ROLLING-READONLY-COLLECTION
-  async readThreadIdentity(threadId:string,cwd:string):Promise<{readonly threadId:string;readonly sessionId:string;readonly rootPath:string}> {
+  async readThreadIdentity(threadId:string,cwd:string):Promise<RollingNativeThreadIdentity> {
     checkoutRoot(cwd);
     const result=nativeRecord(await this.request('thread/read',{threadId,includeTurns:false}));
     const thread=nativeRecord(result.thread);

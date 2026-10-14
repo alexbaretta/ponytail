@@ -265,6 +265,14 @@ CREATE TABLE IF NOT EXISTS swarm_owner_v1 (
   UNIQUE (coordinator_session_id)
 );
 
+-- Traceability: supports REQ-SWARM-OWNERSHIP
+CREATE TABLE IF NOT EXISTS swarm_native_session_v1 (
+  session_id text PRIMARY KEY CHECK (session_id <> ''),
+  thread_id text NOT NULL UNIQUE CHECK (thread_id <> ''),
+  project_id uuid NOT NULL REFERENCES project_v1(project_id) ON DELETE CASCADE,
+  root_path text NOT NULL CHECK (root_path <> '')
+);
+
 CREATE TABLE IF NOT EXISTS rolling_pool_v1 (
   project_id uuid PRIMARY KEY REFERENCES project_v1(project_id) ON DELETE CASCADE,
   managed_directory text NOT NULL CHECK (managed_directory <> '')

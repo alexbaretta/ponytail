@@ -25,7 +25,10 @@
   "chapters": {
     "swarm": {
       "commands": [
-        "info"
+        "info",
+        "owner-enroll",
+        "coordinator-bind",
+        "coordinator-unbind"
       ],
       "freeform": false
     },

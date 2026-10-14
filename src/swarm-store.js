@@ -70,10 +70,18 @@ class SwarmStore {
             return swarmCoordinatorBinding;
         });
     }
-    async bindCoordinator(ownerRoot, sessionId) {
+    async bindCoordinator(ownerRoot, rollingNativeThreadIdentity) {
+        const { sessionId, threadId, rootPath } = rollingNativeThreadIdentity;
         if (!sessionId.trim() || sessionId !== sessionId.trim())
             throw new Error('swarm: coordinator session ID must be nonempty without surrounding whitespace');
+        if (!threadId.trim() || threadId !== threadId.trim() || rootPath !== ownerRoot)
+            throw new Error('swarm: observed coordinator thread/checkout differs from owner');
         return this.transaction(async (poolClient) => {
+            await poolClient.query(`INSERT INTO ponytail_index.swarm_native_session_v1(session_id,thread_id,project_id,root_path)
+    VALUES($1,$2,$3,$4) ON CONFLICT(session_id) DO NOTHING`, [sessionId, threadId, this.projectId, rootPath]);
+            const native = (await poolClient.query('SELECT * FROM ponytail_index.swarm_native_session_v1 WHERE session_id=$1 FOR UPDATE', [sessionId])).rows[0];
+            if (native === undefined || native.thread_id !== threadId || native.project_id !== this.projectId || native.root_path !== rootPath)
+                throw new Error('swarm: native session identity or original checkout changed');
             const row = (await poolClient.query(`UPDATE ponytail_index.swarm_owner_v1 SET coordinator_session_id=$3
     WHERE project_id=$1 AND owner_root=$2 AND (coordinator_session_id IS NULL OR coordinator_session_id=$3) RETURNING *`, [this.projectId, ownerRoot, sessionId])).rows[0];
             if (row === undefined)
