@@ -7,6 +7,7 @@ import {cliCommandRegistryV1} from '../src/cli-help.js';
 
 // Preserve established launch paths with compiler output from canonical TypeScript.
 const root = path.resolve(__dirname, '../..');
+// Traceability: supports REQ-TYPESCRIPT-ONLY-SOURCE
 const sources: readonly string[] = [
   'tests/helpers/obligation-fixture.ts',
   'skills/plan-execution/scripts/obligation-binding-history.ts',

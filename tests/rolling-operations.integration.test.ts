@@ -85,6 +85,7 @@ async function verifyMcpParity(root:string,rollingCampaignOperations:RollingCamp
 // Traceability: verifies REQ-ROLLING-SCHEDULING
 // Traceability: verifies REQ-SWARM-WORKTREES
 // Traceability: verifies REQ-SWARM-CLI
+// Traceability: verifies REQ-TYPESCRIPT-ONLY-SOURCE
 test('shared operations initialize defaults and reconcile event/periodic contention without duplicate allocations',async testContext=> {
  const obligationFixture = fixture(testContext);
  const {root} = obligationFixture;

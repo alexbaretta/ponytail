@@ -7,7 +7,10 @@ import {spawnSync} from 'node:child_process';
 import {rollingCommandDefinitions,rollingCampaignHelp} from '../src/rolling-cli-registry.js';
 
 // Traceability: verifies REQ-ROLLING-INTERFACES
+// Traceability: verifies REQ-TYPESCRIPT-ONLY-SOURCE
 test('every registered command exposes its complete contract through the shipped CLI',()=> {
+ const runtimeSpawnSyncReturns=spawnSync(process.execPath,[path.join(process.cwd(),'dist/scripts/build-runtime.js'),'--check'],{encoding:'utf8'});
+ assert.equal(runtimeSpawnSyncReturns.status,0,runtimeSpawnSyncReturns.stderr);
  const chapter = spawnSync(process.execPath,[path.join(process.cwd(),'src/rolling-operations.js'),'--help'],{encoding:'utf8'});
  assert.equal(chapter.status,0,chapter.stderr);
  assert.equal(chapter.stdout,rollingCampaignHelp());

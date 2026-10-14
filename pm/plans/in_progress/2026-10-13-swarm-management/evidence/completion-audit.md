@@ -53,12 +53,16 @@ the isolated Codex installer suite passed. The legacy full Node selection passed
 After canonical reverse-view regeneration, the focused rerun confirms that only
 the three TypeScript-source coverage findings remain; stale generated locations
 are repaired. The legacy selection and `npm test` are not passing acceptance.
-`npm test` stops at three coverage findings for the separate
-`REQ-TYPESCRIPT-ONLY-SOURCE` requirement. Do not label that command passing or
-invent a repository-wide migration to bypass it. Reconcile the plan's stale
-activation baseline with the authorized session-operation scope, assess compact
-Git-revision-based evidence, and update durable obligation status only after its
-actual gates are satisfied.
+Those three coverage findings are now repaired with bounded forward mappings to
+existing typed runtime generation, its real consistency check and the actual
+CLI/MCP integration workflow. The configured traceability checker passes 1,085
+relationships, four focused tests and one PostgreSQL scenario pass, and TSTS
+checks 1,649 files without violations. Independent review accepts the mappings
+as proof of generated entrypoints only; the broader migration remains outside
+swarm scope and is not discharged. The complete `npm test` command is now
+running; observe its terminal result before claiming final acceptance.
+Assess compact Git-revision-based evidence and update durable obligation status
+only after its actual gates are satisfied.
 
 The append-only `SWARM-B2` / `SWARM-CP2` rebaseline now activates the corrected
 requirement source through the canonical checkpoint validator, preserving B1,
