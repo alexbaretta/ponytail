@@ -167,8 +167,7 @@ function resetCheckout(rollingProjectResetV1, rollingResetWorktree, index) {
     }
     requireReset(node_fs_1.default.realpathSync(root) === root && (0, rolling_integration_js_1.git)(root, ['rev-parse', '--show-toplevel']).trim() === root, 'checkout identity changed');
     requireReset(node_fs_1.default.realpathSync((0, rolling_integration_js_1.git)(root, ['rev-parse', '--path-format=absolute', '--git-common-dir']).trim()) === rollingProjectResetV1.gitDirectory, 'checkout now belongs to another Git repository');
-    for (const operation of ['rebase-merge', 'rebase-apply', 'MERGE_HEAD', 'CHERRY_PICK_HEAD', 'sequencer'])
-        requireReset(!node_fs_1.default.existsSync((0, rolling_integration_js_1.git)(root, ['rev-parse', '--path-format=absolute', '--git-path', operation]).trim()), 'settle active Git operation before reset');
+    (0, rolling_worktrees_js_1.requireRollingGitOperationAbsent)(root);
     const marker = node_path_1.default.join(root, 'session_id.txt');
     if (node_fs_1.default.existsSync(marker)) {
         requireReset(rollingResetWorktree.sessionId !== null, 'unexpected new session marker');
@@ -219,6 +218,7 @@ async function resetRollingProject(poolClient, projectId, root, request, execute
     const locked = (await poolClient.query('SELECT pg_try_advisory_lock(hashtextextended($1,0)) AS locked', [projectId])).rows[0];
     requireReset(locked?.locked === true, 'another project operation owns reset/scheduling');
     try {
+        requireReset((await poolClient.query('SELECT 1 FROM ponytail_index.swarm_worktree_v1 WHERE project_id=$1 LIMIT 1', [projectId])).rowCount === 0, 'release retained swarm worktree memberships before project reset');
         const existing = (await poolClient.query('SELECT reset_text FROM ponytail_index.rolling_reset_v1 WHERE project_id=$1', [projectId])).rows[0];
         let rollingProjectResetV1;
         if (existing) {

@@ -153,6 +153,10 @@ services. `PROJECT_STRUCTURE.md` is authoritative for that boundary.
 - Rolling worker attachment focused proof: `node --test dist/tests/rolling-worker.test.js
   dist/tests/rolling-campaign-store.integration.test.js`; actual native provisioning
   uses the explicit live native acceptance command above.
+- Swarm retained checkout focused proof: `node --test
+  dist/tests/swarm-worktrees.integration.test.js
+  dist/tests/swarm-store.integration.test.js dist/tests/rolling-reset.integration.test.js`;
+  uses disposable Git repositories and isolated project rows in existing PostgreSQL.
 - Explicit project reset focused proof: `node --test dist/tests/rolling-reset.test.js
   dist/tests/rolling-reset.integration.test.js`; uses disposable Git repositories,
   controlled native protocol and isolated project rows in existing PostgreSQL.

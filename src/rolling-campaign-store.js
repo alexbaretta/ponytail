@@ -20,6 +20,7 @@ exports.readRollingExecutionConfigV3 = readRollingExecutionConfigV3;
 exports.readRollingAssignmentScopeV3 = readRollingAssignmentScopeV3;
 exports.parseRollingExecutionConfig = parseRollingExecutionConfig;
 exports.parseRollingAssignmentScope = parseRollingAssignmentScope;
+exports.readWorktree = readWorktree;
 const node_crypto_1 = __importDefault(require("node:crypto"));
 const rolling_reset_js_1 = require("./rolling-reset.js");
 const rolling_publication_js_1 = require("./rolling-publication.js");
@@ -1596,7 +1597,9 @@ class RollingCampaignStore {
                         await poolClient.query("INSERT INTO ponytail_index.rolling_worktree_v1(project_id,number,root_path,state) VALUES($1,$2,$3,'AVAILABLE')", [this.projectId, number, rootPath]);
                     }
                 }
-                const available = (await poolClient.query("SELECT * FROM ponytail_index.rolling_worktree_v1 WHERE project_id=$1 AND state='AVAILABLE' ORDER BY number LIMIT 1", [this.projectId])).rows[0];
+                const available = (await poolClient.query(`SELECT w.* FROM ponytail_index.rolling_worktree_v1 w WHERE w.project_id=$1 AND w.state='AVAILABLE'
+          AND NOT EXISTS(SELECT 1 FROM ponytail_index.swarm_worktree_v1 s WHERE s.project_id=w.project_id AND s.number=w.number)
+          ORDER BY w.number LIMIT 1`, [this.projectId])).rows[0];
                 if (existingOnly && !available)
                     return { assignment: null, reason: 'no_available_worktree' };
                 if (available) {

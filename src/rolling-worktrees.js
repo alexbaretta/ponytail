@@ -6,6 +6,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.requireRollingGitOperationAbsent = requireRollingGitOperationAbsent;
 exports.readRollingPhysicalDirectory = readRollingPhysicalDirectory;
 exports.resolveRollingManagedDirectory = resolveRollingManagedDirectory;
 exports.requireRollingSessionMarkerAbsent = requireRollingSessionMarkerAbsent;
@@ -25,6 +26,11 @@ function git(root, argv) {
     const result = (0, node_child_process_1.spawnSync)('git', ['-C', root, ...argv], { encoding: 'utf8' });
     requireCheckout(!result.error && result.status === 0, result.error?.message || result.stderr.trim() || `git ${argv[0]} failed`);
     return result.stdout.trim();
+}
+function requireRollingGitOperationAbsent(root) {
+    for (const operation of ['rebase-merge', 'rebase-apply', 'MERGE_HEAD', 'CHERRY_PICK_HEAD', 'sequencer']) {
+        requireCheckout(!node_fs_1.default.existsSync(git(root, ['rev-parse', '--path-format=absolute', '--git-path', operation])), 'settle active Git operation before checkout reuse');
+    }
 }
 function statIfPresent(file) {
     try {

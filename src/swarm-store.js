@@ -9,8 +9,10 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.SwarmStore = void 0;
 const node_fs_1 = __importDefault(require("node:fs"));
 const node_path_1 = __importDefault(require("node:path"));
+const node_crypto_1 = __importDefault(require("node:crypto"));
 const rolling_integration_js_1 = require("./rolling-integration.js");
 const rolling_worktrees_js_1 = require("./rolling-worktrees.js");
+const rolling_campaign_store_js_1 = require("./rolling-campaign-store.js");
 function stringColumn(value) {
     if (typeof value !== 'string' || !value.length)
         throw new Error('swarm: invalid owner database value');
@@ -32,6 +34,72 @@ class SwarmStore {
     constructor(pool, projectId) {
         this.pool = pool;
         this.projectId = projectId;
+    }
+    async releaseWorktree(swarmWorktreeMembership) {
+        return this.transaction(async (poolClient) => {
+            await poolClient.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))', [this.projectId]);
+            const row = (await poolClient.query(`SELECT w.*,o.git_common_directory FROM ponytail_index.swarm_worktree_v1 s
+    JOIN ponytail_index.rolling_worktree_v1 w USING(project_id,number)
+    JOIN ponytail_index.swarm_owner_v1 o ON o.project_id=s.project_id AND o.owner_root=s.owner_root
+    WHERE s.project_id=$1 AND s.number=$2 AND s.owner_root=$3 AND s.generation=$4 FOR UPDATE`, [this.projectId, swarmWorktreeMembership.number, swarmWorktreeMembership.ownerRoot, swarmWorktreeMembership.generation])).rows[0];
+            if (row === undefined)
+                throw new Error('swarm: checkout membership changed or is absent; no ownership was released');
+            const rollingStoredWorktree = (0, rolling_campaign_store_js_1.readWorktree)(row);
+            if (rollingStoredWorktree.rootPath !== swarmWorktreeMembership.rootPath || rollingStoredWorktree.state !== 'RESERVED')
+                throw new Error('swarm: checkout has conflicting identity or activity; preserve ownership');
+            if (node_fs_1.default.realpathSync(rollingStoredWorktree.rootPath) !== rollingStoredWorktree.rootPath
+                || node_fs_1.default.realpathSync((0, rolling_integration_js_1.git)(rollingStoredWorktree.rootPath, ['rev-parse', '--path-format=absolute', '--git-common-dir']).trim()) !== row.git_common_directory)
+                throw new Error('swarm: checkout repository identity changed; preserve ownership');
+            if ((await poolClient.query("SELECT 1 FROM ponytail_index.rolling_assignment_v1 WHERE project_id=$1 AND worktree_number=$2 AND state<>'RELEASED'", [this.projectId, rollingStoredWorktree.number])).rowCount
+                || (await poolClient.query('SELECT 1 FROM ponytail_index.swarm_native_session_v1 WHERE project_id=$1 AND root_path=$2', [this.projectId, rollingStoredWorktree.rootPath])).rowCount)
+                throw new Error('swarm: checkout retains an assignment or native actor; establish cessation and remove worker ownership first');
+            (0, rolling_worktrees_js_1.requireRollingGitOperationAbsent)(rollingStoredWorktree.rootPath);
+            (0, rolling_worktrees_js_1.requireRollingSessionMarkerAbsent)(rollingStoredWorktree.rootPath);
+            const state = (0, rolling_integration_js_1.git)(rollingStoredWorktree.rootPath, ['status', '--porcelain']).trim() ? 'QUARANTINED' : 'AVAILABLE';
+            await poolClient.query('DELETE FROM ponytail_index.swarm_worktree_v1 WHERE project_id=$1 AND number=$2', [this.projectId, rollingStoredWorktree.number]);
+            await poolClient.query('UPDATE ponytail_index.rolling_worktree_v1 SET state=$3 WHERE project_id=$1 AND number=$2', [this.projectId, rollingStoredWorktree.number, state]);
+        });
+    }
+    async claimExistingWorktree(ownerRoot) {
+        return this.transaction(async (poolClient) => {
+            await poolClient.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))', [this.projectId]);
+            if ((await poolClient.query("SELECT 1 FROM ponytail_index.rolling_reset_v1 WHERE project_id=$1 AND state='PENDING'", [this.projectId])).rowCount)
+                throw new Error('swarm: pending project reset must be resolved before checkout admission');
+            const owner = (await poolClient.query('SELECT * FROM ponytail_index.swarm_owner_v1 WHERE project_id=$1 AND owner_root=$2 FOR UPDATE', [this.projectId, ownerRoot])).rows[0];
+            if (owner === undefined)
+                throw new Error('swarm: enroll the user owner before claiming a checkout');
+            const swarmCoordinatorBinding = readBinding(owner);
+            physicalOwner(swarmCoordinatorBinding.swarmUserWorktree);
+            const rollingManagedDirectory = (0, rolling_worktrees_js_1.resolveRollingManagedDirectory)(ownerRoot);
+            const pool = (await poolClient.query('SELECT managed_directory FROM ponytail_index.rolling_pool_v1 WHERE project_id=$1 FOR UPDATE', [this.projectId])).rows[0];
+            if (pool === undefined)
+                return null;
+            if (pool.managed_directory !== rollingManagedDirectory.directory)
+                throw new Error('swarm: configured physical directory differs from the registered pool');
+            const row = (await poolClient.query(`SELECT w.* FROM ponytail_index.rolling_worktree_v1 w
+    WHERE w.project_id=$1 AND w.state='AVAILABLE'
+    AND NOT EXISTS(SELECT 1 FROM ponytail_index.swarm_worktree_v1 s WHERE s.project_id=w.project_id AND s.number=w.number)
+    AND NOT EXISTS(SELECT 1 FROM ponytail_index.rolling_assignment_v1 a WHERE a.project_id=w.project_id AND a.worktree_number=w.number AND a.state<>'RELEASED')
+    ORDER BY w.number LIMIT 1 FOR UPDATE`, [this.projectId])).rows[0];
+            if (row === undefined)
+                return null;
+            const rollingStoredWorktree = (0, rolling_campaign_store_js_1.readWorktree)(row);
+            if (rollingStoredWorktree.rootPath !== node_path_1.default.join(rollingManagedDirectory.directory, String(rollingStoredWorktree.number))
+                || !rollingManagedDirectory.worktrees.includes(rollingStoredWorktree.rootPath)
+                || node_fs_1.default.realpathSync(rollingStoredWorktree.rootPath) !== rollingStoredWorktree.rootPath
+                || node_fs_1.default.realpathSync((0, rolling_integration_js_1.git)(rollingStoredWorktree.rootPath, ['rev-parse', '--path-format=absolute', '--git-common-dir']).trim()) !== swarmCoordinatorBinding.swarmUserWorktree.gitCommonDirectory)
+                throw new Error('swarm: available checkout has inconsistent physical pool identity; preserve it for recovery');
+            (0, rolling_worktrees_js_1.requireRollingGitOperationAbsent)(rollingStoredWorktree.rootPath);
+            (0, rolling_worktrees_js_1.requireRollingSessionMarkerAbsent)(rollingStoredWorktree.rootPath);
+            if ((await poolClient.query('SELECT 1 FROM ponytail_index.swarm_native_session_v1 WHERE project_id=$1 AND root_path=$2', [this.projectId, rollingStoredWorktree.rootPath])).rowCount)
+                throw new Error('swarm: available checkout retains a native actor; establish cessation before reuse');
+            if ((0, rolling_integration_js_1.git)(rollingStoredWorktree.rootPath, ['status', '--porcelain']).trim())
+                throw new Error('swarm: available checkout contains uncommitted work; preserve it');
+            const generation = node_crypto_1.default.randomUUID();
+            await poolClient.query('INSERT INTO ponytail_index.swarm_worktree_v1(project_id,number,owner_root,generation) VALUES($1,$2,$3,$4)', [this.projectId, rollingStoredWorktree.number, ownerRoot, generation]);
+            await poolClient.query("UPDATE ponytail_index.rolling_worktree_v1 SET state='RESERVED' WHERE project_id=$1 AND number=$2", [this.projectId, rollingStoredWorktree.number]);
+            return { number: rollingStoredWorktree.number, rootPath: rollingStoredWorktree.rootPath, ownerRoot, generation };
+        });
     }
     async transaction(operation) {
         const poolClient = await this.pool.connect();

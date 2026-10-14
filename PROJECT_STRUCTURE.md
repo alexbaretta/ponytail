@@ -70,7 +70,9 @@ while project-wide management records remain under `pm/`.
   and cross-repository ownership; its adjacent `.js` runtime is generated.
 - `src/swarm-store.ts` owns explicit user-worktree enrollment and exclusive
   coordinator bindings in the existing project database, including canonical
-  native thread/session/checkout identity mappings.
+  native thread/session/checkout identity mappings. Retained managed-checkout
+  memberships reserve the canonical rolling pool under its existing project fence;
+  claim/release preserve checkout content and refuse live assignments or Git operations.
 - `src/swarm-info.ts` owns the swarm inventory/coordinator CLI adapter, physical
   Git/project-scoped inventory, native coordinator identity admission, immutable
   V1/V2 result readers and normalization to V2. Its adjacent `.js` runtime is

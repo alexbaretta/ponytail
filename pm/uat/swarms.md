@@ -124,6 +124,16 @@ physical pool, project setup/cleanup tooling and a protected active checkout.
    failure, observe per-resource results and retry outstanding cleanup. Assigned
    resources and user checkouts remain intact.
 
+**Partial internal evidence:** `tests/swarm-worktrees.integration.test.ts` proves
+exclusive lowest-number claims from the existing canonical pool, transfer after
+release, stale-generation refusal, marker/native-actor protection, and preservation
+of dirty source through quarantined release. A clean stopped interactive rebase
+blocks both claim and release. Legacy project reset refuses retained memberships
+before inventory or checkout changes. Focused swarm/reset/allocator proof passes
+eight tests; adversarial review accepts this internal increment. Provisioning,
+resource cleanup, worker cessation, deletion and real CLI lifecycle acceptance
+remain pending; these results do not discharge ACC-SW-10 through ACC-SW-13.
+
 ## Arc SWARM-CLEAR: Release resources and restart
 
 Traceability: verifies REQ-SWARM-CLEAR

@@ -37,6 +37,12 @@ function git(root: string, argv: readonly string[]): string {
   return result.stdout.trim();
 }
 
+export function requireRollingGitOperationAbsent(root: string): void {
+  for (const operation of ['rebase-merge', 'rebase-apply', 'MERGE_HEAD', 'CHERRY_PICK_HEAD', 'sequencer']) {
+    requireCheckout(!fs.existsSync(git(root, ['rev-parse', '--path-format=absolute', '--git-path', operation])), 'settle active Git operation before checkout reuse');
+  }
+}
+
 function statIfPresent(file: string): fs.Stats | null {
   try { return fs.lstatSync(file); }
   catch (error) { if (error instanceof Error && 'code' in error && error.code === 'ENOENT') return null; throw error; }

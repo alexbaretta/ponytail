@@ -466,7 +466,7 @@ function readAssignment(value: unknown): RollingStoredAssignment {
     plannedPaths: rollingAssignmentScopeV3.execution.kind === 'unleased' ? rollingAssignmentScopeV3.execution.plannedPaths : rollingAssignmentScopeV3.execution.lease.binding.execution.plannedPaths,
     exclusiveResources: rollingAssignmentScopeV3.exclusiveResources, binding: rollingAssignmentScopeV3.binding, lease: obligationLeaseV1, blockers };
 }
-function readWorktree(value: unknown): RollingStoredWorktree {
+export function readWorktree(value: unknown): RollingStoredWorktree {
   requireState(isRecord(value), 'worktree row is missing');
   const state = value.state;
   requireState(state === 'AVAILABLE' || state === 'PROVISIONING' || state === 'RESERVED' || state === 'ACTIVE' || state === 'QUARANTINED', 'invalid database worktree state');
@@ -1877,7 +1877,9 @@ export class RollingCampaignStore {
             await poolClient.query("INSERT INTO ponytail_index.rolling_worktree_v1(project_id,number,root_path,state) VALUES($1,$2,$3,'AVAILABLE')",[this.projectId,number,rootPath]);
           }
         }
-        const available = (await poolClient.query<Record<string, unknown>>("SELECT * FROM ponytail_index.rolling_worktree_v1 WHERE project_id=$1 AND state='AVAILABLE' ORDER BY number LIMIT 1", [this.projectId])).rows[0];
+        const available = (await poolClient.query<Record<string, unknown>>(`SELECT w.* FROM ponytail_index.rolling_worktree_v1 w WHERE w.project_id=$1 AND w.state='AVAILABLE'
+          AND NOT EXISTS(SELECT 1 FROM ponytail_index.swarm_worktree_v1 s WHERE s.project_id=w.project_id AND s.number=w.number)
+          ORDER BY w.number LIMIT 1`, [this.projectId])).rows[0];
         if(existingOnly&&!available)return {assignment:null,reason:'no_available_worktree'};
         if (available) {
           worktree = readWorktree(available);

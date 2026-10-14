@@ -314,6 +314,18 @@ CREATE TABLE IF NOT EXISTS rolling_worktree_v1 (
 CREATE INDEX IF NOT EXISTS rolling_worktree_v1_available
 ON rolling_worktree_v1 (project_id, number) WHERE state='AVAILABLE';
 
+-- Traceability: supports REQ-SWARM-WORKTREES
+CREATE TABLE IF NOT EXISTS swarm_worktree_v1 (
+  project_id uuid NOT NULL,
+  number bigint NOT NULL,
+  owner_root text NOT NULL,
+  generation uuid NOT NULL,
+  PRIMARY KEY (project_id,number),
+  FOREIGN KEY (project_id,number) REFERENCES rolling_worktree_v1(project_id,number),
+  FOREIGN KEY (project_id,owner_root) REFERENCES swarm_owner_v1(project_id,owner_root)
+);
+CREATE INDEX IF NOT EXISTS swarm_worktree_v1_owner ON swarm_worktree_v1(project_id,owner_root,number);
+
 CREATE TABLE IF NOT EXISTS rolling_assignment_v1 (
   project_id uuid NOT NULL,
   campaign_id text NOT NULL,
