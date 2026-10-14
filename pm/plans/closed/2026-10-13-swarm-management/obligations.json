@@ -1573,6 +1573,672 @@
         }
       ],
       "inventoryIds": []
+    },
+    {
+      "id": "SWARM-CERT-T1-CLOSED",
+      "obligationIds": [
+        "OBL-17"
+      ],
+      "inputs": {
+        "schemaVersion": 2,
+        "revision": "8705b15754c8cd5d9318fb7941eca7d8c8cc9b28",
+        "paths": [
+          "pm/requirements/swarms.md",
+          "pm/uat/swarms.md",
+          "tests",
+          "src",
+          "skills/swarm",
+          "skills/plan-execution/references/glossary.md",
+          ".agents/config/project/traceability.json"
+        ]
+      },
+      "artifacts": [
+        "pm/requirements/swarms.md",
+        "pm/uat/swarms.md",
+        ".agents/config/project/traceability.json"
+      ],
+      "assessor": "coordinator",
+      "authority": [
+        "user-goal-2026-10-13-swarm-management",
+        "user-goal-2026-10-13-swarm-skill-and-exclusive-session-cli",
+        "user-swarm-session-bookkeeping-clarification-2026-10-13"
+      ],
+      "adequate": true,
+      "reason": "Reviewed the approved swarm definition and session-operation correction against all 16 atomic delivery conditions and seven requirement owners. Every explicit resource/association operation and skill responsibility has an identified acceptance Arc; Codex session control is excluded by stakeholder authority. No missing approved responsibility was found. Closure reassessment: only requirement navigation/status and UAT disposition changed; approved conditions and product inputs are unchanged. Reuse the recorded passing source tests and current structural traceability checks; host-session control remains outside CLI scope.",
+      "disposition": null,
+      "evidence": [],
+      "inventoryIds": []
+    },
+    {
+      "id": "SWARM-CERT-T2-CLOSED",
+      "obligationIds": [
+        "OBL-18"
+      ],
+      "inputs": {
+        "schemaVersion": 2,
+        "revision": "8705b15754c8cd5d9318fb7941eca7d8c8cc9b28",
+        "paths": [
+          "pm/requirements/swarms.md",
+          "pm/uat/swarms.md",
+          "tests",
+          "src",
+          "skills/swarm",
+          "skills/plan-execution/references/glossary.md",
+          ".agents/config/project/traceability.json"
+        ]
+      },
+      "artifacts": [
+        "pm/requirements/swarms.md",
+        "pm/uat/swarms.md",
+        ".agents/config/project/traceability.json"
+      ],
+      "assessor": "coordinator",
+      "authority": [
+        "user-goal-2026-10-13-swarm-management",
+        "user-goal-2026-10-13-swarm-skill-and-exclusive-session-cli",
+        "user-swarm-session-bookkeeping-clarification-2026-10-13"
+      ],
+      "adequate": true,
+      "reason": "Reviewed typed owner/inventory/help/command proofs and real PostgreSQL/Git lifecycle workflows for the seven requirement groups. Existing tests are the verification owners for the 16 registered delivery responsibilities; no additional independent unit-proof responsibility is required. This assesses completeness of the proof inventory, not final full-suite execution. Closure reassessment: only requirement navigation/status and UAT disposition changed; approved conditions and product inputs are unchanged. Reuse the recorded passing source tests and current structural traceability checks; host-session control remains outside CLI scope.",
+      "disposition": null,
+      "evidence": [],
+      "inventoryIds": []
+    },
+    {
+      "id": "SWARM-CERT-T3-B1-CLOSED",
+      "obligationIds": [
+        "OBL-1",
+        "OBL-19"
+      ],
+      "inputs": {
+        "schemaVersion": 2,
+        "revision": "8705b15754c8cd5d9318fb7941eca7d8c8cc9b28",
+        "paths": [
+          "pm/requirements/swarms.md",
+          "pm/uat/swarms.md",
+          "src",
+          "tests",
+          "skills/swarm",
+          "skills/plan-execution/references/rolling-campaigns.md",
+          "AGENTS.md",
+          ".agents/config/project/traceability.json",
+          "scripts/build-runtime.ts"
+        ]
+      },
+      "artifacts": [
+        "pm/requirements/swarms.md",
+        "pm/uat/swarms.md",
+        "src",
+        "tests",
+        "skills/swarm"
+      ],
+      "assessor": "coordinator",
+      "authority": [
+        "user-goal-2026-10-13-swarm-management",
+        "user-goal-2026-10-13-swarm-skill-and-exclusive-session-cli",
+        "user-swarm-session-bookkeeping-clarification-2026-10-13"
+      ],
+      "adequate": true,
+      "reason": "OBL-1: Owner resolution is proved by owner/managed equivalence, sibling isolation and explicit ambiguous/cross-repository refusal, including current read-only GWEN inspection. OBL-19: Reviewed all16 approved delivery responsibilities against their real typed implementations and verification owners; the completion audit and independent review identify no missing approved functionality. Native session API controls are excluded by stakeholder authority. Closure reassessment: only requirement navigation/status and UAT disposition changed; approved conditions and product inputs are unchanged. Reuse the recorded passing source tests and current structural traceability checks; host-session control remains outside CLI scope.",
+      "disposition": null,
+      "evidence": [],
+      "inventoryIds": [
+        "OBL-1",
+        "OBL-2",
+        "OBL-3",
+        "OBL-4",
+        "OBL-5",
+        "OBL-6",
+        "OBL-7",
+        "OBL-8",
+        "OBL-9",
+        "OBL-10",
+        "OBL-11",
+        "OBL-12",
+        "OBL-13",
+        "OBL-14",
+        "OBL-15",
+        "OBL-16"
+      ]
+    },
+    {
+      "id": "SWARM-CERT-T3-B2-CLOSED",
+      "obligationIds": [
+        "OBL-2",
+        "OBL-10"
+      ],
+      "inputs": {
+        "schemaVersion": 2,
+        "revision": "8705b15754c8cd5d9318fb7941eca7d8c8cc9b28",
+        "paths": [
+          "pm/requirements/swarms.md",
+          "pm/uat/swarms.md",
+          "src",
+          "tests",
+          "skills/swarm",
+          "skills/plan-execution/references/rolling-campaigns.md",
+          "AGENTS.md",
+          ".agents/config/project/traceability.json",
+          "scripts/build-runtime.ts"
+        ]
+      },
+      "artifacts": [
+        "pm/requirements/swarms.md",
+        "pm/uat/swarms.md",
+        "src",
+        "tests",
+        "skills/swarm"
+      ],
+      "assessor": "coordinator",
+      "authority": [
+        "user-goal-2026-10-13-swarm-management",
+        "user-goal-2026-10-13-swarm-skill-and-exclusive-session-cli",
+        "user-swarm-session-bookkeeping-clarification-2026-10-13"
+      ],
+      "adequate": true,
+      "reason": "OBL-2: Concurrent coordinator bindings have one winner; stale unbind is rejected and worker/checkouts survive explicit coordinator loss. OBL-10: Real CLI allocation/setup and competing-owner Arcs prove lowest eligible numbers above100, correct base, retained setup intent and same-checkout recovery. Closure reassessment: only requirement navigation/status and UAT disposition changed; approved conditions and product inputs are unchanged. Reuse the recorded passing source tests and current structural traceability checks; host-session control remains outside CLI scope.",
+      "disposition": null,
+      "evidence": [],
+      "inventoryIds": []
+    },
+    {
+      "id": "SWARM-CERT-T3-B3-CLOSED",
+      "obligationIds": [
+        "OBL-3",
+        "OBL-5"
+      ],
+      "inputs": {
+        "schemaVersion": 2,
+        "revision": "8705b15754c8cd5d9318fb7941eca7d8c8cc9b28",
+        "paths": [
+          "pm/requirements/swarms.md",
+          "pm/uat/swarms.md",
+          "src",
+          "tests",
+          "skills/swarm",
+          "skills/plan-execution/references/rolling-campaigns.md",
+          "AGENTS.md",
+          ".agents/config/project/traceability.json",
+          "scripts/build-runtime.ts"
+        ]
+      },
+      "artifacts": [
+        "pm/requirements/swarms.md",
+        "pm/uat/swarms.md",
+        "src",
+        "tests",
+        "skills/swarm"
+      ],
+      "assessor": "coordinator",
+      "authority": [
+        "user-goal-2026-10-13-swarm-management",
+        "user-goal-2026-10-13-swarm-skill-and-exclusive-session-cli",
+        "user-swarm-session-bookkeeping-clarification-2026-10-13"
+      ],
+      "adequate": true,
+      "reason": "OBL-3: Real owner/managed CLI inventory reports exact associations, empty inventories and sibling isolation without mutations. OBL-5: Concurrent worker admission has one winner and records immutable original owner/checkout/session; cross-owner and cross-checkout rebinding fail. Closure reassessment: only requirement navigation/status and UAT disposition changed; approved conditions and product inputs are unchanged. Reuse the recorded passing source tests and current structural traceability checks; host-session control remains outside CLI scope.",
+      "disposition": null,
+      "evidence": [],
+      "inventoryIds": []
+    },
+    {
+      "id": "SWARM-CERT-T3-B4-CLOSED",
+      "obligationIds": [
+        "OBL-4",
+        "OBL-6",
+        "OBL-8"
+      ],
+      "inputs": {
+        "schemaVersion": 2,
+        "revision": "8705b15754c8cd5d9318fb7941eca7d8c8cc9b28",
+        "paths": [
+          "pm/requirements/swarms.md",
+          "pm/uat/swarms.md",
+          "src",
+          "tests",
+          "skills/swarm",
+          "skills/plan-execution/references/rolling-campaigns.md",
+          "AGENTS.md",
+          ".agents/config/project/traceability.json",
+          "scripts/build-runtime.ts"
+        ]
+      },
+      "artifacts": [
+        "pm/requirements/swarms.md",
+        "pm/uat/swarms.md",
+        "src",
+        "tests",
+        "skills/swarm"
+      ],
+      "assessor": "coordinator",
+      "authority": [
+        "user-goal-2026-10-13-swarm-management",
+        "user-goal-2026-10-13-swarm-skill-and-exclusive-session-cli",
+        "user-swarm-session-bookkeeping-clarification-2026-10-13"
+      ],
+      "adequate": true,
+      "reason": "OBL-4: V4 reports runtime unobserved and missing resources explicitly. The CLI fixture proves its failing Codex executable is never invoked. OBL-6: Host-quiesced CLI detachment fences only the matching campaign lease/actions, preserves evidence/source and removes only its matching marker; retries are stable. OBL-8: Worker tests establish incremental W numbers, shared P/S full-assignment mapping and three-word desired names; the skill directs coordinator host naming. Closure reassessment: only requirement navigation/status and UAT disposition changed; approved conditions and product inputs are unchanged. Reuse the recorded passing source tests and current structural traceability checks; host-session control remains outside CLI scope.",
+      "disposition": null,
+      "evidence": [],
+      "inventoryIds": []
+    },
+    {
+      "id": "SWARM-CERT-T3-B5-CLOSED",
+      "obligationIds": [
+        "OBL-7",
+        "OBL-9",
+        "OBL-11"
+      ],
+      "inputs": {
+        "schemaVersion": 2,
+        "revision": "8705b15754c8cd5d9318fb7941eca7d8c8cc9b28",
+        "paths": [
+          "pm/requirements/swarms.md",
+          "pm/uat/swarms.md",
+          "src",
+          "tests",
+          "skills/swarm",
+          "skills/plan-execution/references/rolling-campaigns.md",
+          "AGENTS.md",
+          ".agents/config/project/traceability.json",
+          "scripts/build-runtime.ts"
+        ]
+      },
+      "artifacts": [
+        "pm/requirements/swarms.md",
+        "pm/uat/swarms.md",
+        "src",
+        "tests",
+        "skills/swarm"
+      ],
+      "assessor": "coordinator",
+      "authority": [
+        "user-goal-2026-10-13-swarm-management",
+        "user-goal-2026-10-13-swarm-skill-and-exclusive-session-cli",
+        "user-swarm-session-bookkeeping-clarification-2026-10-13"
+      ],
+      "adequate": true,
+      "reason": "OBL-7: Original remove/rebind retains session and checkout identity; session provenance survives clearing and prevents cross-owner reuse. Host resumption remains separate. OBL-9: Completion records and reports the DONE-prefixed desired name without changing acceptance or ownership; the skill assigns actual naming to coordinator host tools. OBL-11: Release/transfer Arcs preserve source/checkout and exclusive ownership; retained actors, markers, active Git operations and dirty source prevent unsafe reuse. Closure reassessment: only requirement navigation/status and UAT disposition changed; approved conditions and product inputs are unchanged. Reuse the recorded passing source tests and current structural traceability checks; host-session control remains outside CLI scope.",
+      "disposition": null,
+      "evidence": [],
+      "inventoryIds": []
+    },
+    {
+      "id": "SWARM-CERT-T3-B6-CLOSED",
+      "obligationIds": [
+        "OBL-12",
+        "OBL-14"
+      ],
+      "inputs": {
+        "schemaVersion": 2,
+        "revision": "8705b15754c8cd5d9318fb7941eca7d8c8cc9b28",
+        "paths": [
+          "pm/requirements/swarms.md",
+          "pm/uat/swarms.md",
+          "src",
+          "tests",
+          "skills/swarm",
+          "skills/plan-execution/references/rolling-campaigns.md",
+          "AGENTS.md",
+          ".agents/config/project/traceability.json",
+          "scripts/build-runtime.ts"
+        ]
+      },
+      "artifacts": [
+        "pm/requirements/swarms.md",
+        "pm/uat/swarms.md",
+        "src",
+        "tests",
+        "skills/swarm"
+      ],
+      "assessor": "coordinator",
+      "authority": [
+        "user-goal-2026-10-13-swarm-management",
+        "user-goal-2026-10-13-swarm-skill-and-exclusive-session-cli",
+        "user-swarm-session-bookkeeping-clarification-2026-10-13"
+      ],
+      "adequate": true,
+      "reason": "OBL-12: Selected deletion Arc protects assigned/user resources, preserves committed source refs and retries durable cleanup refusal. OBL-14: Installed CLI/PG clear releases owner associations/leases/actions while preserving origins/checkouts/evidence and isolating sibling owners; cleanup refusal retains ownership. Closure reassessment: only requirement navigation/status and UAT disposition changed; approved conditions and product inputs are unchanged. Reuse the recorded passing source tests and current structural traceability checks; host-session control remains outside CLI scope.",
+      "disposition": null,
+      "evidence": [],
+      "inventoryIds": []
+    },
+    {
+      "id": "SWARM-CERT-T3-B7-CLOSED",
+      "obligationIds": [
+        "OBL-13"
+      ],
+      "inputs": {
+        "schemaVersion": 2,
+        "revision": "8705b15754c8cd5d9318fb7941eca7d8c8cc9b28",
+        "paths": [
+          "pm/requirements/swarms.md",
+          "pm/uat/swarms.md",
+          "src",
+          "tests",
+          "skills/swarm",
+          "skills/plan-execution/references/rolling-campaigns.md",
+          "AGENTS.md",
+          ".agents/config/project/traceability.json",
+          "scripts/build-runtime.ts"
+        ]
+      },
+      "artifacts": [
+        "pm/requirements/swarms.md",
+        "pm/uat/swarms.md",
+        "src",
+        "tests",
+        "skills/swarm"
+      ],
+      "assessor": "coordinator",
+      "authority": [
+        "user-goal-2026-10-13-swarm-management",
+        "user-goal-2026-10-13-swarm-skill-and-exclusive-session-cli",
+        "user-swarm-session-bookkeeping-clarification-2026-10-13"
+      ],
+      "adequate": true,
+      "reason": "OBL-13: All-unassigned deletion Arc reports protected/retained/deleted resources and retries outstanding cleanup only. Closure reassessment: only requirement navigation/status and UAT disposition changed; approved conditions and product inputs are unchanged. Reuse the recorded passing source tests and current structural traceability checks; host-session control remains outside CLI scope.",
+      "disposition": null,
+      "evidence": [],
+      "inventoryIds": []
+    },
+    {
+      "id": "SWARM-CERT-T3-B8-CLOSED",
+      "obligationIds": [
+        "OBL-15"
+      ],
+      "inputs": {
+        "schemaVersion": 2,
+        "revision": "8705b15754c8cd5d9318fb7941eca7d8c8cc9b28",
+        "paths": [
+          "pm/requirements/swarms.md",
+          "pm/uat/swarms.md",
+          "src",
+          "tests",
+          "skills/swarm",
+          "skills/plan-execution/references/rolling-campaigns.md",
+          "AGENTS.md",
+          ".agents/config/project/traceability.json",
+          "scripts/build-runtime.ts"
+        ]
+      },
+      "artifacts": [
+        "pm/requirements/swarms.md",
+        "pm/uat/swarms.md",
+        "src",
+        "tests",
+        "skills/swarm"
+      ],
+      "assessor": "coordinator",
+      "authority": [
+        "user-goal-2026-10-13-swarm-management",
+        "user-goal-2026-10-13-swarm-skill-and-exclusive-session-cli",
+        "user-swarm-session-bookkeeping-clarification-2026-10-13"
+      ],
+      "adequate": true,
+      "reason": "OBL-15: Scoped chapter/subcommand help and actual swarm CLI/PG Arcs cover the required resource operations. Campaign CLI/MCP retire session endpoints without aliases. Closure reassessment: only requirement navigation/status and UAT disposition changed; approved conditions and product inputs are unchanged. Reuse the recorded passing source tests and current structural traceability checks; host-session control remains outside CLI scope.",
+      "disposition": null,
+      "evidence": [],
+      "inventoryIds": []
+    },
+    {
+      "id": "SWARM-CERT-T3-B9-CLOSED",
+      "obligationIds": [
+        "OBL-16"
+      ],
+      "inputs": {
+        "schemaVersion": 2,
+        "revision": "8705b15754c8cd5d9318fb7941eca7d8c8cc9b28",
+        "paths": [
+          "pm/requirements/swarms.md",
+          "pm/uat/swarms.md",
+          "src",
+          "tests",
+          "skills/swarm",
+          "skills/plan-execution/references/rolling-campaigns.md",
+          "AGENTS.md",
+          ".agents/config/project/traceability.json",
+          "scripts/build-runtime.ts"
+        ]
+      },
+      "artifacts": [
+        "pm/requirements/swarms.md",
+        "pm/uat/swarms.md",
+        "src",
+        "tests",
+        "skills/swarm"
+      ],
+      "assessor": "coordinator",
+      "authority": [
+        "user-goal-2026-10-13-swarm-management",
+        "user-goal-2026-10-13-swarm-skill-and-exclusive-session-cli",
+        "user-swarm-session-bookkeeping-clarification-2026-10-13"
+      ],
+      "adequate": true,
+      "reason": "OBL-16: Registered skill and actual isolated installer agree with shipped commands. Independent scenario review accepts N10 compatible parallelism, original-worker priority, host session operations and truthful identity/root capability limits. Closure reassessment: only requirement navigation/status and UAT disposition changed; approved conditions and product inputs are unchanged. Reuse the recorded passing source tests and current structural traceability checks; host-session control remains outside CLI scope.",
+      "disposition": null,
+      "evidence": [],
+      "inventoryIds": []
+    },
+    {
+      "id": "SWARM-CERT-T4-CLOSED",
+      "obligationIds": [
+        "OBL-20"
+      ],
+      "inputs": {
+        "schemaVersion": 2,
+        "revision": "8705b15754c8cd5d9318fb7941eca7d8c8cc9b28",
+        "paths": [
+          "package.json",
+          "src",
+          "tests",
+          "skills",
+          "scripts",
+          "tsts",
+          "ponytail-mcp",
+          "pi-extension",
+          ".agents/config/project",
+          "tsconfig.json",
+          "tsts.json",
+          "registry.tsv",
+          "generated",
+          "config",
+          "pm/requirements/swarms.md",
+          "pm/uat/swarms.md"
+        ]
+      },
+      "artifacts": [
+        "package.json",
+        "tests",
+        "src",
+        "pm/requirements/swarms.md",
+        "pm/uat/swarms.md"
+      ],
+      "assessor": "coordinator",
+      "authority": [
+        "user-goal-2026-10-13-swarm-management",
+        "user-goal-2026-10-13-swarm-skill-and-exclusive-session-cli",
+        "user-swarm-session-bookkeeping-clarification-2026-10-13"
+      ],
+      "adequate": true,
+      "reason": "All16 approved delivery responsibilities have identified actual CLI/PostgreSQL/Git integration Arcs or skill installation/scenario proof. Owner routing, original-session association, setup/reuse/release/deletion/clear, campaign adoption and retired session endpoints have real verification owners; no missing required workflow is inferred from superseded native-control criteria. Closure reassessment: only requirement navigation/status and UAT disposition changed; approved conditions and product inputs are unchanged. Reuse the recorded passing source tests and current structural traceability checks; host-session control remains outside CLI scope.",
+      "disposition": null,
+      "evidence": [],
+      "inventoryIds": []
+    },
+    {
+      "id": "SWARM-CERT-C1-CLOSED",
+      "obligationIds": [
+        "OBL-21"
+      ],
+      "inputs": {
+        "schemaVersion": 2,
+        "revision": "8705b15754c8cd5d9318fb7941eca7d8c8cc9b28",
+        "paths": [
+          "package.json",
+          "src",
+          "tests",
+          "skills",
+          "scripts",
+          "tsts",
+          "ponytail-mcp",
+          "pi-extension",
+          ".agents/config/project",
+          "tsconfig.json",
+          "tsts.json",
+          "registry.tsv",
+          "generated",
+          "config",
+          "pm/requirements/swarms.md",
+          "pm/uat/swarms.md"
+        ]
+      },
+      "artifacts": [
+        "package.json",
+        "tests",
+        "src",
+        "pm/requirements/swarms.md",
+        "pm/uat/swarms.md"
+      ],
+      "assessor": "coordinator",
+      "authority": [
+        "user-goal-2026-10-13-swarm-management",
+        "user-goal-2026-10-13-swarm-skill-and-exclusive-session-cli",
+        "user-swarm-session-bookkeeping-clarification-2026-10-13"
+      ],
+      "adequate": true,
+      "reason": "The configured complete npm test command finished successfully after final source edits:559 legacy Node tests,325 typed tests,23 Pi tests,4 MCP tests and100 TSTS tests, plus installer, generator, traceability and static checks. Relevant tracked source inputs are unchanged; the retained unrelated bug-document edit is outside this proof scope. Closure reassessment: only requirement navigation/status and UAT disposition changed; approved conditions and product inputs are unchanged. Reuse the recorded passing source tests and current structural traceability checks; host-session control remains outside CLI scope.",
+      "disposition": null,
+      "evidence": [
+        {
+          "command": "npm test",
+          "selection": [
+            "npm test"
+          ],
+          "target": {
+            "identity": "ponytail",
+            "profile": "final",
+            "verification": "package.json"
+          },
+          "revision": "ad3e2490c98f7c942edf280d896b8fe9a9416a83",
+          "dirty": false,
+          "startedAt": "2026-10-14T14:27:51.400Z",
+          "completedAt": "2026-10-14T14:33:39.782Z",
+          "outcome": "pass",
+          "skips": 0,
+          "failures": 0,
+          "inputs": {
+            "schemaVersion": 2,
+            "revision": "ad3e2490c98f7c942edf280d896b8fe9a9416a83",
+            "paths": [
+              "package.json",
+              "src",
+              "tests",
+              "skills",
+              "scripts",
+              "tsts",
+              "ponytail-mcp",
+              "pi-extension",
+              ".agents/config/project",
+              "tsconfig.json",
+              "tsts.json",
+              "registry.tsv",
+              "generated",
+              "config"
+            ]
+          },
+          "outputPath": "tmp/swarm-final-core-complete.log",
+          "finalization": "pass"
+        }
+      ],
+      "inventoryIds": []
+    },
+    {
+      "id": "SWARM-CERT-C2-CLOSED",
+      "obligationIds": [
+        "OBL-22"
+      ],
+      "inputs": {
+        "schemaVersion": 2,
+        "revision": "8705b15754c8cd5d9318fb7941eca7d8c8cc9b28",
+        "paths": [
+          "package.json",
+          "src",
+          "tests",
+          "skills",
+          "scripts",
+          "tsts",
+          "ponytail-mcp",
+          "pi-extension",
+          ".agents/config/project",
+          "tsconfig.json",
+          "tsts.json",
+          "registry.tsv",
+          "generated",
+          "config",
+          "pm/requirements/swarms.md",
+          "pm/uat/swarms.md"
+        ]
+      },
+      "artifacts": [
+        "package.json",
+        "tests",
+        "src",
+        "pm/requirements/swarms.md",
+        "pm/uat/swarms.md"
+      ],
+      "assessor": "coordinator",
+      "authority": [
+        "user-goal-2026-10-13-swarm-management",
+        "user-goal-2026-10-13-swarm-skill-and-exclusive-session-cli",
+        "user-swarm-session-bookkeeping-clarification-2026-10-13"
+      ],
+      "adequate": true,
+      "reason": "The same successful final npm test command includes all configured integration workflows (there is no separate integration suite): actual CLI/MCP/Git/PostgreSQL fixtures prove the approved swarm lifecycle, retained-worker scope renewal and campaign association boundaries. No skip or failed Arc is accepted as passing proof. Closure reassessment: only requirement navigation/status and UAT disposition changed; approved conditions and product inputs are unchanged. Reuse the recorded passing source tests and current structural traceability checks; host-session control remains outside CLI scope.",
+      "disposition": null,
+      "evidence": [
+        {
+          "command": "npm test",
+          "selection": [
+            "npm test"
+          ],
+          "target": {
+            "identity": "ponytail",
+            "profile": "final",
+            "verification": "package.json"
+          },
+          "revision": "ad3e2490c98f7c942edf280d896b8fe9a9416a83",
+          "dirty": false,
+          "startedAt": "2026-10-14T14:27:51.400Z",
+          "completedAt": "2026-10-14T14:33:39.782Z",
+          "outcome": "pass",
+          "skips": 0,
+          "failures": 0,
+          "inputs": {
+            "schemaVersion": 2,
+            "revision": "ad3e2490c98f7c942edf280d896b8fe9a9416a83",
+            "paths": [
+              "package.json",
+              "src",
+              "tests",
+              "skills",
+              "scripts",
+              "tsts",
+              "ponytail-mcp",
+              "pi-extension",
+              ".agents/config/project",
+              "tsconfig.json",
+              "tsts.json",
+              "registry.tsv",
+              "generated",
+              "config"
+            ]
+          },
+          "outputPath": "tmp/swarm-final-core-complete.log",
+          "finalization": "pass"
+        }
+      ],
+      "inventoryIds": []
     }
   ],
   "checkpoints": [
@@ -2215,6 +2881,476 @@
       ],
       "preparation": null,
       "reason": "Close the completed plan and repair requirement navigation/status without changing approved conditions. Explicitly invalidate prior Git-input assessments of the changed requirement page before renewing their unchanged implementation/proof.",
+      "assessor": "coordinator"
+    },
+    {
+      "id": "SWARM-CP18",
+      "predecessorId": "SWARM-CP17",
+      "baselineId": "SWARM-B3",
+      "kind": "productive",
+      "selectedIds": [
+        "OBL-17"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "SWARM-CERT-T1-CLOSED"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        1,
+        1,
+        17,
+        1,
+        1,
+        1
+      ],
+      "after": [
+        0,
+        1,
+        17,
+        1,
+        1,
+        1
+      ],
+      "preparation": null,
+      "reason": "Reviewed the approved swarm definition and session-operation correction against all 16 atomic delivery conditions and seven requirement owners. Every explicit resource/association operation and skill responsibility has an identified acceptance Arc; Codex session control is excluded by stakeholder authority. No missing approved responsibility was found. Closure reassessment: only requirement navigation/status and UAT disposition changed; approved conditions and product inputs are unchanged. Reuse the recorded passing source tests and current structural traceability checks; host-session control remains outside CLI scope.",
+      "assessor": "coordinator"
+    },
+    {
+      "id": "SWARM-CP19",
+      "predecessorId": "SWARM-CP18",
+      "baselineId": "SWARM-B3",
+      "kind": "productive",
+      "selectedIds": [
+        "OBL-18"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "SWARM-CERT-T2-CLOSED"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        0,
+        1,
+        17,
+        1,
+        1,
+        1
+      ],
+      "after": [
+        0,
+        0,
+        17,
+        1,
+        1,
+        1
+      ],
+      "preparation": null,
+      "reason": "Reviewed typed owner/inventory/help/command proofs and real PostgreSQL/Git lifecycle workflows for the seven requirement groups. Existing tests are the verification owners for the 16 registered delivery responsibilities; no additional independent unit-proof responsibility is required. This assesses completeness of the proof inventory, not final full-suite execution. Closure reassessment: only requirement navigation/status and UAT disposition changed; approved conditions and product inputs are unchanged. Reuse the recorded passing source tests and current structural traceability checks; host-session control remains outside CLI scope.",
+      "assessor": "coordinator"
+    },
+    {
+      "id": "SWARM-CP20",
+      "predecessorId": "SWARM-CP19",
+      "baselineId": "SWARM-B3",
+      "kind": "productive",
+      "selectedIds": [
+        "OBL-1",
+        "OBL-19"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "SWARM-CERT-T3-B1-CLOSED"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        0,
+        0,
+        17,
+        1,
+        1,
+        1
+      ],
+      "after": [
+        0,
+        0,
+        15,
+        1,
+        1,
+        1
+      ],
+      "preparation": null,
+      "reason": "OBL-1: Owner resolution is proved by owner/managed equivalence, sibling isolation and explicit ambiguous/cross-repository refusal, including current read-only GWEN inspection. OBL-19: Reviewed all16 approved delivery responsibilities against their real typed implementations and verification owners; the completion audit and independent review identify no missing approved functionality. Native session API controls are excluded by stakeholder authority. Closure reassessment: only requirement navigation/status and UAT disposition changed; approved conditions and product inputs are unchanged. Reuse the recorded passing source tests and current structural traceability checks; host-session control remains outside CLI scope.",
+      "assessor": "coordinator"
+    },
+    {
+      "id": "SWARM-CP21",
+      "predecessorId": "SWARM-CP20",
+      "baselineId": "SWARM-B3",
+      "kind": "productive",
+      "selectedIds": [
+        "OBL-2",
+        "OBL-10"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "SWARM-CERT-T3-B2-CLOSED"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        0,
+        0,
+        15,
+        1,
+        1,
+        1
+      ],
+      "after": [
+        0,
+        0,
+        13,
+        1,
+        1,
+        1
+      ],
+      "preparation": null,
+      "reason": "OBL-2: Concurrent coordinator bindings have one winner; stale unbind is rejected and worker/checkouts survive explicit coordinator loss. OBL-10: Real CLI allocation/setup and competing-owner Arcs prove lowest eligible numbers above100, correct base, retained setup intent and same-checkout recovery. Closure reassessment: only requirement navigation/status and UAT disposition changed; approved conditions and product inputs are unchanged. Reuse the recorded passing source tests and current structural traceability checks; host-session control remains outside CLI scope.",
+      "assessor": "coordinator"
+    },
+    {
+      "id": "SWARM-CP22",
+      "predecessorId": "SWARM-CP21",
+      "baselineId": "SWARM-B3",
+      "kind": "productive",
+      "selectedIds": [
+        "OBL-3",
+        "OBL-5"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "SWARM-CERT-T3-B3-CLOSED"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        0,
+        0,
+        13,
+        1,
+        1,
+        1
+      ],
+      "after": [
+        0,
+        0,
+        11,
+        1,
+        1,
+        1
+      ],
+      "preparation": null,
+      "reason": "OBL-3: Real owner/managed CLI inventory reports exact associations, empty inventories and sibling isolation without mutations. OBL-5: Concurrent worker admission has one winner and records immutable original owner/checkout/session; cross-owner and cross-checkout rebinding fail. Closure reassessment: only requirement navigation/status and UAT disposition changed; approved conditions and product inputs are unchanged. Reuse the recorded passing source tests and current structural traceability checks; host-session control remains outside CLI scope.",
+      "assessor": "coordinator"
+    },
+    {
+      "id": "SWARM-CP23",
+      "predecessorId": "SWARM-CP22",
+      "baselineId": "SWARM-B3",
+      "kind": "productive",
+      "selectedIds": [
+        "OBL-4",
+        "OBL-6",
+        "OBL-8"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "SWARM-CERT-T3-B4-CLOSED"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        0,
+        0,
+        11,
+        1,
+        1,
+        1
+      ],
+      "after": [
+        0,
+        0,
+        8,
+        1,
+        1,
+        1
+      ],
+      "preparation": null,
+      "reason": "OBL-4: V4 reports runtime unobserved and missing resources explicitly. The CLI fixture proves its failing Codex executable is never invoked. OBL-6: Host-quiesced CLI detachment fences only the matching campaign lease/actions, preserves evidence/source and removes only its matching marker; retries are stable. OBL-8: Worker tests establish incremental W numbers, shared P/S full-assignment mapping and three-word desired names; the skill directs coordinator host naming. Closure reassessment: only requirement navigation/status and UAT disposition changed; approved conditions and product inputs are unchanged. Reuse the recorded passing source tests and current structural traceability checks; host-session control remains outside CLI scope.",
+      "assessor": "coordinator"
+    },
+    {
+      "id": "SWARM-CP24",
+      "predecessorId": "SWARM-CP23",
+      "baselineId": "SWARM-B3",
+      "kind": "productive",
+      "selectedIds": [
+        "OBL-7",
+        "OBL-9",
+        "OBL-11"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "SWARM-CERT-T3-B5-CLOSED"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        0,
+        0,
+        8,
+        1,
+        1,
+        1
+      ],
+      "after": [
+        0,
+        0,
+        5,
+        1,
+        1,
+        1
+      ],
+      "preparation": null,
+      "reason": "OBL-7: Original remove/rebind retains session and checkout identity; session provenance survives clearing and prevents cross-owner reuse. Host resumption remains separate. OBL-9: Completion records and reports the DONE-prefixed desired name without changing acceptance or ownership; the skill assigns actual naming to coordinator host tools. OBL-11: Release/transfer Arcs preserve source/checkout and exclusive ownership; retained actors, markers, active Git operations and dirty source prevent unsafe reuse. Closure reassessment: only requirement navigation/status and UAT disposition changed; approved conditions and product inputs are unchanged. Reuse the recorded passing source tests and current structural traceability checks; host-session control remains outside CLI scope.",
+      "assessor": "coordinator"
+    },
+    {
+      "id": "SWARM-CP25",
+      "predecessorId": "SWARM-CP24",
+      "baselineId": "SWARM-B3",
+      "kind": "productive",
+      "selectedIds": [
+        "OBL-12",
+        "OBL-14"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "SWARM-CERT-T3-B6-CLOSED"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        0,
+        0,
+        5,
+        1,
+        1,
+        1
+      ],
+      "after": [
+        0,
+        0,
+        3,
+        1,
+        1,
+        1
+      ],
+      "preparation": null,
+      "reason": "OBL-12: Selected deletion Arc protects assigned/user resources, preserves committed source refs and retries durable cleanup refusal. OBL-14: Installed CLI/PG clear releases owner associations/leases/actions while preserving origins/checkouts/evidence and isolating sibling owners; cleanup refusal retains ownership. Closure reassessment: only requirement navigation/status and UAT disposition changed; approved conditions and product inputs are unchanged. Reuse the recorded passing source tests and current structural traceability checks; host-session control remains outside CLI scope.",
+      "assessor": "coordinator"
+    },
+    {
+      "id": "SWARM-CP26",
+      "predecessorId": "SWARM-CP25",
+      "baselineId": "SWARM-B3",
+      "kind": "productive",
+      "selectedIds": [
+        "OBL-13"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "SWARM-CERT-T3-B7-CLOSED"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        0,
+        0,
+        3,
+        1,
+        1,
+        1
+      ],
+      "after": [
+        0,
+        0,
+        2,
+        1,
+        1,
+        1
+      ],
+      "preparation": null,
+      "reason": "OBL-13: All-unassigned deletion Arc reports protected/retained/deleted resources and retries outstanding cleanup only. Closure reassessment: only requirement navigation/status and UAT disposition changed; approved conditions and product inputs are unchanged. Reuse the recorded passing source tests and current structural traceability checks; host-session control remains outside CLI scope.",
+      "assessor": "coordinator"
+    },
+    {
+      "id": "SWARM-CP27",
+      "predecessorId": "SWARM-CP26",
+      "baselineId": "SWARM-B3",
+      "kind": "productive",
+      "selectedIds": [
+        "OBL-15"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "SWARM-CERT-T3-B8-CLOSED"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        0,
+        0,
+        2,
+        1,
+        1,
+        1
+      ],
+      "after": [
+        0,
+        0,
+        1,
+        1,
+        1,
+        1
+      ],
+      "preparation": null,
+      "reason": "OBL-15: Scoped chapter/subcommand help and actual swarm CLI/PG Arcs cover the required resource operations. Campaign CLI/MCP retire session endpoints without aliases. Closure reassessment: only requirement navigation/status and UAT disposition changed; approved conditions and product inputs are unchanged. Reuse the recorded passing source tests and current structural traceability checks; host-session control remains outside CLI scope.",
+      "assessor": "coordinator"
+    },
+    {
+      "id": "SWARM-CP28",
+      "predecessorId": "SWARM-CP27",
+      "baselineId": "SWARM-B3",
+      "kind": "productive",
+      "selectedIds": [
+        "OBL-16"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "SWARM-CERT-T3-B9-CLOSED"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        0,
+        0,
+        1,
+        1,
+        1,
+        1
+      ],
+      "after": [
+        0,
+        0,
+        0,
+        1,
+        1,
+        1
+      ],
+      "preparation": null,
+      "reason": "OBL-16: Registered skill and actual isolated installer agree with shipped commands. Independent scenario review accepts N10 compatible parallelism, original-worker priority, host session operations and truthful identity/root capability limits. Closure reassessment: only requirement navigation/status and UAT disposition changed; approved conditions and product inputs are unchanged. Reuse the recorded passing source tests and current structural traceability checks; host-session control remains outside CLI scope.",
+      "assessor": "coordinator"
+    },
+    {
+      "id": "SWARM-CP29",
+      "predecessorId": "SWARM-CP28",
+      "baselineId": "SWARM-B3",
+      "kind": "productive",
+      "selectedIds": [
+        "OBL-20"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "SWARM-CERT-T4-CLOSED"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        0,
+        0,
+        0,
+        1,
+        1,
+        1
+      ],
+      "after": [
+        0,
+        0,
+        0,
+        0,
+        1,
+        1
+      ],
+      "preparation": null,
+      "reason": "All16 approved delivery responsibilities have identified actual CLI/PostgreSQL/Git integration Arcs or skill installation/scenario proof. Owner routing, original-session association, setup/reuse/release/deletion/clear, campaign adoption and retired session endpoints have real verification owners; no missing required workflow is inferred from superseded native-control criteria. Closure reassessment: only requirement navigation/status and UAT disposition changed; approved conditions and product inputs are unchanged. Reuse the recorded passing source tests and current structural traceability checks; host-session control remains outside CLI scope.",
+      "assessor": "coordinator"
+    },
+    {
+      "id": "SWARM-CP30",
+      "predecessorId": "SWARM-CP29",
+      "baselineId": "SWARM-B3",
+      "kind": "productive",
+      "selectedIds": [
+        "OBL-21"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "SWARM-CERT-C1-CLOSED"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        0,
+        0,
+        0,
+        0,
+        1,
+        1
+      ],
+      "after": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        1
+      ],
+      "preparation": null,
+      "reason": "The configured complete npm test command finished successfully after final source edits:559 legacy Node tests,325 typed tests,23 Pi tests,4 MCP tests and100 TSTS tests, plus installer, generator, traceability and static checks. Relevant tracked source inputs are unchanged; the retained unrelated bug-document edit is outside this proof scope. Closure reassessment: only requirement navigation/status and UAT disposition changed; approved conditions and product inputs are unchanged. Reuse the recorded passing source tests and current structural traceability checks; host-session control remains outside CLI scope.",
+      "assessor": "coordinator"
+    },
+    {
+      "id": "SWARM-CP31",
+      "predecessorId": "SWARM-CP30",
+      "baselineId": "SWARM-B3",
+      "kind": "productive",
+      "selectedIds": [
+        "OBL-22"
+      ],
+      "registeredIds": [],
+      "certificateIds": [
+        "SWARM-CERT-C2-CLOSED"
+      ],
+      "invalidatedIds": [],
+      "before": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        1
+      ],
+      "after": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "preparation": null,
+      "reason": "The same successful final npm test command includes all configured integration workflows (there is no separate integration suite): actual CLI/MCP/Git/PostgreSQL fixtures prove the approved swarm lifecycle, retained-worker scope renewal and campaign association boundaries. No skip or failed Arc is accepted as passing proof. Closure reassessment: only requirement navigation/status and UAT disposition changed; approved conditions and product inputs are unchanged. Reuse the recorded passing source tests and current structural traceability checks; host-session control remains outside CLI scope.",
       "assessor": "coordinator"
     }
   ]

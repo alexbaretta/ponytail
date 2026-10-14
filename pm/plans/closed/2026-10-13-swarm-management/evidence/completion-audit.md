@@ -85,3 +85,10 @@ MCP evidence is campaign adapter parity, while swarm resources are proved by
 actual CLI/PostgreSQL workflows. All delivery certificates and category
 assessments were accepted through the canonical validator, with compact Git
 revision/path references and no per-file hash inventories or transcripts.
+
+Closure: the plan and sprint are in their configured completed state. B3 records
+only repaired lifecycle navigation/status, and explicit reassessment restores
+all 22 responsibilities to fresh satisfaction using unchanged product proof.
+The final vector is `[0,0,0,0,0,0]`. Legacy sprint tasklet metadata is synchronized
+with every Markdown tasklet; its adopted selector reports completion. Current
+traceability, runtime consistency, rule-copy and version checks pass after closure.
