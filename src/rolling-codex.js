@@ -301,8 +301,10 @@ class RollingCodex extends node_events_1.EventEmitter {
         } while (cursor !== null);
         throw new Error('rolling Codex: assigned turn is absent from native history');
     }
-    async readLatestTurn(threadId) {
+    async readLatestTurn(threadId, allowEmpty = false) {
         const result = nativeRecord(await this.request('thread/turns/list', { threadId, cursor: null, limit: 1, sortDirection: 'desc', itemsView: 'full' }));
+        if (allowEmpty && Array.isArray(result.data) && result.data.length === 0 && (result.nextCursor === null || result.nextCursor === undefined))
+            return null;
         requireProtocol(Array.isArray(result.data) && result.data.length === 1, 'original worker has no observed latest turn');
         return this.observeNativeTurn(threadId, completedTurn(result.data[0]));
     }

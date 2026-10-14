@@ -347,8 +347,11 @@ export class RollingCodex extends EventEmitter<RollingCodexEvents> {
   }
 
   // Traceability: implements REQ-ROLLING-READONLY-COLLECTION
-  async readLatestTurn(threadId:string):Promise<RollingNativeTurn> {
+  readLatestTurn(threadId:string):Promise<RollingNativeTurn>;
+  readLatestTurn(threadId:string,allowEmpty:true):Promise<RollingNativeTurn|null>;
+  async readLatestTurn(threadId:string,allowEmpty=false):Promise<RollingNativeTurn|null> {
     const result=nativeRecord(await this.request('thread/turns/list',{threadId,cursor:null,limit:1,sortDirection:'desc',itemsView:'full'}));
+    if(allowEmpty&&Array.isArray(result.data)&&result.data.length===0&&(result.nextCursor===null||result.nextCursor===undefined)) return null;
     requireProtocol(Array.isArray(result.data)&&result.data.length===1,'original worker has no observed latest turn');
     return this.observeNativeTurn(threadId,completedTurn(result.data[0]));
   }

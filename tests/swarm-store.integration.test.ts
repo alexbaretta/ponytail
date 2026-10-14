@@ -12,8 +12,8 @@ import {databaseOptions} from '../src/project-index-database.js';
 import {SwarmStore,swarmWorkerName,type SwarmWorkerAssignment} from '../src/swarm-store.js';
 import type {SwarmUserWorktree} from '../src/swarm-owner.js';
 import type {RollingProjectConfigV2} from '../src/rolling-campaign.js';
-import {RollingCodex,RollingUnknownOutcome,type RollingNativeThreadIdentity} from '../src/rolling-codex.js';
-import {bindSwarmCoordinator,bindSwarmWorker,completeSwarmWorker,inspectSwarmInfo} from '../src/swarm-info.js';
+import {RollingCodex,RollingUnknownOutcome,type RollingNativeThreadIdentity,type RollingNativeThreadState,type RollingNativeTurn} from '../src/rolling-codex.js';
+import {bindSwarmCoordinator,bindSwarmWorker,completeSwarmWorker,removeSwarmWorker,inspectSwarmInfo} from '../src/swarm-info.js';
 function coordinatorIdentity(rootPath:string,sessionId:string):RollingNativeThreadIdentity {
  return {rootPath,sessionId,threadId:`thread-${sessionId}`};
 }
@@ -149,6 +149,18 @@ test('original worker identity and exclusive checkout binding survive coordinato
  assert.equal((await pool.query<Record<string,unknown>>('SELECT state,generation,worker_number FROM ponytail_index.swarm_worker_v1 WHERE session_id=$1',[swarmWorkerBinding.sessionId])).rows[0]?.generation,swarmWorkerBinding.generation);
  assert.equal((await inspectSwarmInfo(mainRoot,pool,projectId)).workers.length,2);
 
+ const unstartedSwarmWorktreeMembership=await swarmStore.reserveWorktree(mainRoot,{kind:'provision',baseCommit:git(['rev-parse','HEAD'])});assert.ok(unstartedSwarmWorktreeMembership);
+ await swarmStore.provisionWorktree(unstartedSwarmWorktreeMembership);
+ const unstartedRollingCodex=new RollingCodex({executable:process.execPath,argv:[path.join(__dirname,'fixtures/rolling-codex-server.js')]});
+ try {
+  await unstartedRollingCodex.initialize();
+  const unstartedRollingNativeThread=await unstartedRollingCodex.startThread(unstartedSwarmWorktreeMembership.rootPath);
+  const unstartedSwarmWorkerBinding=await swarmStore.bindWorker(unstartedSwarmWorktreeMembership,{threadId:unstartedRollingNativeThread.thread.id,sessionId:unstartedRollingNativeThread.thread.sessionId,rootPath:unstartedSwarmWorktreeMembership.rootPath},swarmWorkerAssignment);
+  await removeSwarmWorker(swarmStore,unstartedSwarmWorkerBinding,unstartedRollingCodex);
+  assert.equal((await swarmStore.workerBinding(mainRoot,unstartedSwarmWorkerBinding.sessionId,unstartedSwarmWorkerBinding.generation)).state,'REMOVED');
+ } finally {await unstartedRollingCodex.close();}
+ await swarmStore.releaseWorktree(unstartedSwarmWorktreeMembership);
+
  const rollingNativeThreadIdentity:RollingNativeThreadIdentity={threadId:swarmWorkerBinding.threadId,sessionId:swarmWorkerBinding.sessionId,rootPath:swarmWorkerBinding.rootPath};
  await assert.rejects(swarmStore.completeWorker(mainRoot,swarmWorkerBinding.sessionId,crypto.randomUUID(),rollingNativeThreadIdentity),/binding changed/);
  await assert.rejects(swarmStore.completeWorker(otherRoot,swarmWorkerBinding.sessionId,swarmWorkerBinding.generation,rollingNativeThreadIdentity),/binding changed/);
@@ -162,9 +174,32 @@ test('original worker identity and exclusive checkout binding survive coordinato
  assert.deepEqual(completedSwarmWorkerBinding,{...swarmWorkerBinding,completed:true});
  assert.equal((await pool.query<Record<string,unknown>>('SELECT state FROM ponytail_index.rolling_worktree_v1 WHERE project_id=$1 AND number=$2',[projectId,swarmWorkerBinding.worktreeNumber])).rows[0]?.state,'ACTIVE');
 
+ const removingSwarmWorkerBinding=await swarmStore.prepareWorkerRemoval(mainRoot,swarmWorkerBinding.sessionId,swarmWorkerBinding.generation);
+ const rollingNativeThreadState:RollingNativeThreadState={...rollingNativeThreadIdentity,name:swarmWorkerName(completedSwarmWorkerBinding),status:'idle'};
+ const rollingNativeTurn:RollingNativeTurn={id:'stopped-original-turn',status:'completed',items:[]};
+ const statuses:readonly RollingNativeThreadState['status'][]=['active','notLoaded','systemError'];
+ for(const status of statuses) await assert.rejects(swarmStore.finishWorkerRemoval(removingSwarmWorkerBinding,{...rollingNativeThreadState,status},rollingNativeTurn),/idle runtime/);
+ await assert.rejects(removeSwarmWorker(swarmStore,removingSwarmWorkerBinding,{
+  async readThreadIdentity(){return rollingNativeThreadIdentity;},
+  async readLatestTurn(){return {...rollingNativeTurn,status:'inProgress'};},
+  async interruptTurn(){throw new RollingUnknownOutcome('removal-interrupt','turn/interrupt','lost interrupt acknowledgment');},
+  async readTurn(){throw new Error('unknown interruption retains ownership');},
+  async readThreadState(){throw new Error('unknown interruption retains ownership');}
+ }),/lost interrupt acknowledgment/);
+ assert.equal((await swarmStore.workerBinding(mainRoot,swarmWorkerBinding.sessionId,swarmWorkerBinding.generation)).state,'REMOVING');
+ await assert.rejects(swarmStore.finishWorkerRemoval(removingSwarmWorkerBinding,rollingNativeThreadState,{...rollingNativeTurn,status:'unknown'}),/terminal turn/);
+ fs.writeFileSync(path.join(swarmWorkerBinding.rootPath,'session_id.txt'),swarmWorkerBinding.sessionId+'\n');
+ await swarmStore.finishWorkerRemoval(removingSwarmWorkerBinding,rollingNativeThreadState,rollingNativeTurn);
+ await swarmStore.finishWorkerRemoval(removingSwarmWorkerBinding,rollingNativeThreadState,rollingNativeTurn);
+ assert.equal(fs.existsSync(path.join(swarmWorkerBinding.rootPath,'session_id.txt')),false);
+ assert.equal((await inspectSwarmInfo(mainRoot,pool,projectId)).workers.length,1);
+ await swarmStore.releaseWorktree(mainSwarmWorktreeMembership);
+ const transferredSwarmWorktreeMembership=await swarmStore.reserveWorktree(otherRoot,{kind:'retained'});assert.ok(transferredSwarmWorktreeMembership);
+ await assert.rejects(swarmStore.bindWorker(transferredSwarmWorktreeMembership,rollingNativeThreadIdentity,swarmWorkerAssignment),/original|origin/);
+
  await swarmStore.unbindCoordinator(mainRoot,'main-coordinator');
  await assert.rejects(swarmStore.completeWorker(mainRoot,swarmWorkerBinding.sessionId,swarmWorkerBinding.generation,rollingNativeThreadIdentity),/coordinator/);
- assert.equal((await pool.query<Record<string,unknown>>('SELECT state FROM ponytail_index.swarm_worker_v1 WHERE session_id=$1',[swarmWorkerBinding.sessionId])).rows[0]?.state,'BOUND');
+ assert.equal((await pool.query<Record<string,unknown>>('SELECT state FROM ponytail_index.swarm_worker_v1 WHERE session_id=$1',[swarmWorkerBinding.sessionId])).rows[0]?.state,'REMOVED');
  await assert.rejects(swarmStore.bindWorker(mainSwarmWorktreeMembership,identities[0]??coordinatorIdentity(mainSwarmWorktreeMembership.rootPath,'third-worker'),swarmWorkerAssignment),/coordinator/);
  // Historical removed state must retain origin independently of current membership.
  await pool.query("UPDATE ponytail_index.swarm_worker_v1 SET state='REMOVED' WHERE session_id=$1",[swarmWorkerBinding.sessionId]);

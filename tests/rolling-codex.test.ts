@@ -31,6 +31,8 @@ test('native protocol binds checkout and session, preserves numbers and observes
   const started = await rollingCodex.startThread(root);
   assert.equal(started.thread.sessionId, 'session-fixture');
   assert.deepEqual(started.instructionSources, [path.join(root, 'AGENTS.md')]);
+  assert.equal(await rollingCodex.readLatestTurn(started.thread.id,true),null);
+  await assert.rejects(rollingCodex.readLatestTurn(started.thread.id),/no observed latest turn/);
   await assert.rejects(rollingCodex.resumeThread(started.thread.id, root), /no rollout found/);
   const first = await rollingCodex.startTurn(started.thread.id, 'completed');
   await rollingCodex.waitForTurn(started.thread.id, first.turn.id);

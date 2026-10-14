@@ -12,7 +12,8 @@ import {Pool} from 'pg';
 import {databaseOptions} from '../src/project-index-database.js';
 import {RollingCodex,type RollingNativeThread} from '../src/rolling-codex.js';
 import type {RollingProjectConfigV2} from '../src/rolling-campaign.js';
-import {readSwarmInfoV4} from '../src/swarm-info.js';
+import {readSwarmInfoV4,removeSwarmWorker,bindSwarmWorker,inspectSwarmInfo} from '../src/swarm-info.js';
+import {SwarmStore,type SwarmWorktreeMembership} from '../src/swarm-store.js';
 
 // Traceability: verifies REQ-SWARM-OWNERSHIP
 // Traceability: verifies REQ-SWARM-INFO
@@ -95,6 +96,17 @@ test('live original coordinator and worker bind and name through the CLI without
  assert.equal(completedWorker.binding.completed,true);assert.equal(completedWorker.binding.generation,swarmWorkerInfoV1.binding.generation);
  assert.equal((await rollingCodex.readThreadActivity(rollingNativeWorkerThread.thread.id)).status,'idle');
  assert.equal(await rollingCodex.isThreadArchived(rollingNativeWorkerThread.thread.id,swarmWorktreeInfoV3.rootPath),false);
+ const workerUnbind=cli(['worker-unbind','--session',completedWorker.binding.sessionId,'--generation',completedWorker.binding.generation,'--json']);
+ assert.equal(workerUnbind.status,1);assert.match(workerUnbind.stderr,/terminal turn and idle runtime/);
+ const swarmStore=new SwarmStore(pool,projectId);
+ assert.equal((await inspectSwarmInfo(ownerRoot,pool,projectId)).workers[0]?.binding.state,'REMOVING');
+ await removeSwarmWorker(swarmStore,completedWorker.binding,rollingCodex);
+ assert.equal((await inspectSwarmInfo(ownerRoot,pool,projectId)).workers.length,0);
+ assert.equal(await rollingCodex.isThreadArchived(rollingNativeWorkerThread.thread.id,swarmWorktreeInfoV3.rootPath),false);
+ const swarmWorktreeMembership:SwarmWorktreeMembership={number:swarmWorktreeInfoV3.number,rootPath:swarmWorktreeInfoV3.rootPath,ownerRoot,generation:swarmWorktreeInfoV3.membership.generation};
+ const reattachedSwarmWorkerBinding=await bindSwarmWorker(swarmStore,swarmWorktreeMembership,completedWorker.binding.threadId,completedWorker.binding.sessionId,completedWorker.binding.assignment,rollingCodex);
+ assert.equal(reattachedSwarmWorkerBinding.sessionId,completedWorker.binding.sessionId);assert.equal(reattachedSwarmWorkerBinding.workerNumber,2);
+ assert.notEqual(reattachedSwarmWorkerBinding.generation,completedWorker.binding.generation);assert.equal(reattachedSwarmWorkerBinding.completed,false);
  const unbind=cli(['coordinator-unbind','--session',rollingNativeThread.thread.sessionId,'--json']);
  assert.equal(unbind.status,0,unbind.stderr);assert.deepEqual(readSwarmInfoV4(JSON.parse(unbind.stdout)).coordinator,{kind:'unbound'});
  assert.equal(await rollingCodex.isThreadArchived(rollingNativeThread.thread.id,ownerRoot),false);

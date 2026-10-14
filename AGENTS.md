@@ -164,6 +164,11 @@ services. `PROJECT_STRUCTURE.md` is authoritative for that boundary.
   --generation <worker-uuid> [--json]`. Sets and confirms the DONE-prefixed name
   for the exact bound worker. Retains ownership and acceptance state; retry the
   same binding after an unknown naming outcome.
+- Worker removal intent: `ponytail swarm worker-unbind --session <id>
+  --generation <worker-uuid> [--json]`. Requires original terminal-turn and idle
+  runtime evidence. Observer `notLoaded` retains REMOVING ownership; native host
+  control from the original runtime is still required to finish that removal.
+  Does not archive/delete sessions or silently release campaign leases.
 - Swarm checkout lifecycle: `ponytail swarm worktree-assign --base <commit-or-ref>`;
   failed setup retains exact membership and reports number/generation. Resume with
   `ponytail swarm worktree-setup --number <n> --generation <uuid>`. Release with

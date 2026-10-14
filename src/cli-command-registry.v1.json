@@ -25,6 +25,7 @@
   "chapters": {
     "swarm": {
       "commands": [
+        "worker-unbind",
         "worker-complete",
         "worktree-delete",
         "worktree-assign",

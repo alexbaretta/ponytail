@@ -8,7 +8,7 @@ import type {Pool,PoolClient} from 'pg';
 import {git,gitResult} from './rolling-integration.js';
 import type {SwarmUserWorktree} from './swarm-owner.js';
 import {resolveRollingManagedDirectory,requireRollingSessionMarkerAbsent,requireRollingGitOperationAbsent,provisionRollingWorktree,validateRollingSessionMarker} from './rolling-worktrees.js';
-import type {RollingNativeThreadIdentity} from './rolling-codex.js';
+import type {RollingNativeThreadIdentity,RollingNativeThreadState,RollingNativeTurn} from './rolling-codex.js';
 import {readWorktree} from './rolling-campaign-store.js';
 import type {RollingWorktreeLease} from './rolling-worktrees.js';
 
@@ -84,6 +84,58 @@ function physicalOwner(swarmUserWorktree:SwarmUserWorktree):void {
 // Traceability: implements REQ-SWARM-OWNERSHIP
 export class SwarmStore {
  constructor(private readonly pool:Pool,private readonly projectId:string) {}
+ async workerBinding(ownerRoot:string,sessionId:string,generation:string):Promise<SwarmWorkerBinding> {
+  const row=(await this.pool.query<Record<string,unknown>>(`SELECT k.*,n.thread_id,n.root_path FROM ponytail_index.swarm_worker_v1 k
+   JOIN ponytail_index.swarm_native_session_v1 n USING(session_id) WHERE k.project_id=$1 AND k.owner_root=$2 AND k.session_id=$3 AND k.generation=$4`,[this.projectId,ownerRoot,sessionId,generation])).rows[0];
+  if(row===undefined) throw new Error('swarm: worker binding changed or is absent');
+  return readWorker(row);
+ }
+ private async hasNativeOwner(poolClient:PoolClient,rootPath:string):Promise<boolean> {
+  return Boolean((await poolClient.query(`SELECT 1 FROM ponytail_index.swarm_native_session_v1 n LEFT JOIN ponytail_index.swarm_worker_v1 k USING(session_id)
+   WHERE n.project_id=$1 AND n.root_path=$2 AND (k.state IS NULL OR k.state<>'REMOVED')`,[this.projectId,rootPath])).rowCount);
+ }
+ // Traceability: implements REQ-SWARM-SESSIONS
+ async prepareWorkerRemoval(ownerRoot:string,sessionId:string,generation:string):Promise<SwarmWorkerBinding> {
+  return this.transaction(async poolClient=>{
+   await poolClient.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))',[this.projectId]);
+   const owner=(await poolClient.query<Record<string,unknown>>('SELECT * FROM ponytail_index.swarm_owner_v1 WHERE project_id=$1 AND owner_root=$2 FOR UPDATE',[this.projectId,ownerRoot])).rows[0];
+   if(owner===undefined||owner.coordinator_session_id===null) throw new Error('swarm: bind a coordinator before removing a worker');
+   physicalOwner(readBinding(owner).swarmUserWorktree);
+   const row=(await poolClient.query<Record<string,unknown>>(`SELECT k.*,n.thread_id,n.root_path FROM ponytail_index.swarm_worker_v1 k
+    JOIN ponytail_index.swarm_native_session_v1 n USING(session_id) WHERE k.project_id=$1 AND k.owner_root=$2 AND k.session_id=$3 AND k.generation=$4 FOR UPDATE`,[this.projectId,ownerRoot,sessionId,generation])).rows[0];
+   if(row===undefined) throw new Error('swarm: worker binding changed or is absent');
+   const swarmWorkerBinding=readWorker(row);
+   if(swarmWorkerBinding.state==='REMOVED') return swarmWorkerBinding;
+   await poolClient.query("UPDATE ponytail_index.swarm_worker_v1 SET state='REMOVING' WHERE session_id=$1",[sessionId]);
+   return {...swarmWorkerBinding,state:'REMOVING'};
+  });
+ }
+ // Traceability: implements REQ-SWARM-SESSIONS
+ async finishWorkerRemoval(swarmWorkerBinding:SwarmWorkerBinding,rollingNativeThreadState:RollingNativeThreadState,rollingNativeTurn:RollingNativeTurn|null):Promise<void> {
+  if(rollingNativeThreadState.threadId!==swarmWorkerBinding.threadId||rollingNativeThreadState.sessionId!==swarmWorkerBinding.sessionId||rollingNativeThreadState.rootPath!==swarmWorkerBinding.rootPath
+   ||rollingNativeThreadState.status!=='idle'||rollingNativeTurn!==null&&!['completed','failed','interrupted'].includes(rollingNativeTurn.status)) throw new Error('swarm: original worker terminal turn and idle runtime are required; retain removal intent');
+  return this.transaction(async poolClient=>{
+   await poolClient.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))',[this.projectId]);
+   const row=(await poolClient.query<Record<string,unknown>>(`SELECT k.*,n.thread_id,n.root_path FROM ponytail_index.swarm_worker_v1 k
+    JOIN ponytail_index.swarm_native_session_v1 n USING(session_id) WHERE k.project_id=$1 AND k.owner_root=$2 AND k.session_id=$3 AND k.generation=$4 FOR UPDATE`,[this.projectId,swarmWorkerBinding.ownerRoot,swarmWorkerBinding.sessionId,swarmWorkerBinding.generation])).rows[0];
+   if(row===undefined) throw new Error('swarm: worker binding changed or is absent');
+   const currentSwarmWorkerBinding=readWorker(row);
+   if(currentSwarmWorkerBinding.state==='REMOVED') return;
+   if(currentSwarmWorkerBinding.threadId!==rollingNativeThreadState.threadId||currentSwarmWorkerBinding.rootPath!==rollingNativeThreadState.rootPath) throw new Error('swarm: original worker identity changed during removal');
+   if(currentSwarmWorkerBinding.state!=='REMOVING') throw new Error('swarm: prepare original worker removal first');
+   const worktree=(await poolClient.query<Record<string,unknown>>(`SELECT w.*,o.git_common_directory FROM ponytail_index.swarm_worktree_v1 s JOIN ponytail_index.rolling_worktree_v1 w USING(project_id,number)
+    JOIN ponytail_index.swarm_owner_v1 o ON o.project_id=s.project_id AND o.owner_root=s.owner_root
+    WHERE s.project_id=$1 AND s.number=$2 AND s.owner_root=$3 AND s.generation=$4 FOR UPDATE`,[this.projectId,currentSwarmWorkerBinding.worktreeNumber,currentSwarmWorkerBinding.ownerRoot,currentSwarmWorkerBinding.worktreeGeneration])).rows[0];
+   if(worktree===undefined||worktree.root_path!==currentSwarmWorkerBinding.rootPath||worktree.state!=='ACTIVE') throw new Error('swarm: original worker checkout membership changed');
+   if((await poolClient.query("SELECT 1 FROM ponytail_index.rolling_assignment_v1 WHERE project_id=$1 AND worktree_number=$2 AND state<>'RELEASED'",[this.projectId,currentSwarmWorkerBinding.worktreeNumber])).rowCount) throw new Error('swarm: campaign assignment must be fenced before worker ownership can be released');
+   if(fs.realpathSync(currentSwarmWorkerBinding.rootPath)!==currentSwarmWorkerBinding.rootPath||fs.realpathSync(git(currentSwarmWorkerBinding.rootPath,['rev-parse','--path-format=absolute','--git-common-dir']).trim())!==worktree.git_common_directory) throw new Error('swarm: original checkout identity changed');
+   requireRollingGitOperationAbsent(currentSwarmWorkerBinding.rootPath);
+   const marker=path.join(currentSwarmWorkerBinding.rootPath,'session_id.txt');
+   if(fs.lstatSync(marker,{throwIfNoEntry:false})!==undefined) {validateRollingSessionMarker(currentSwarmWorkerBinding.rootPath,currentSwarmWorkerBinding.sessionId);fs.unlinkSync(marker);}
+   await poolClient.query("UPDATE ponytail_index.swarm_worker_v1 SET state='REMOVED' WHERE session_id=$1",[currentSwarmWorkerBinding.sessionId]);
+   await poolClient.query("UPDATE ponytail_index.rolling_worktree_v1 SET state='RESERVED' WHERE project_id=$1 AND number=$2",[this.projectId,currentSwarmWorkerBinding.worktreeNumber]);
+  });
+ }
  // Traceability: implements REQ-SWARM-SESSIONS
  async completeWorker(ownerRoot:string,sessionId:string,generation:string,rollingNativeThreadIdentity:RollingNativeThreadIdentity):Promise<SwarmWorkerBinding> {
   return this.transaction(async poolClient=>{
@@ -164,7 +216,7 @@ export class SwarmStore {
     ||fs.realpathSync(git(rollingStoredWorktree.rootPath,['rev-parse','--path-format=absolute','--git-common-dir']).trim())!==row.git_common_directory)
     throw new Error('swarm: checkout repository identity changed; preserve ownership');
    if((await poolClient.query("SELECT 1 FROM ponytail_index.rolling_assignment_v1 WHERE project_id=$1 AND worktree_number=$2 AND state<>'RELEASED'",[this.projectId,rollingStoredWorktree.number])).rowCount
-    ||(await poolClient.query('SELECT 1 FROM ponytail_index.swarm_native_session_v1 WHERE project_id=$1 AND root_path=$2',[this.projectId,rollingStoredWorktree.rootPath])).rowCount)
+    ||await this.hasNativeOwner(poolClient,rollingStoredWorktree.rootPath))
     throw new Error('swarm: checkout retains an assignment or native actor; establish cessation and remove worker ownership first');
    requireRollingGitOperationAbsent(rollingStoredWorktree.rootPath);
    requireRollingSessionMarkerAbsent(rollingStoredWorktree.rootPath);
@@ -219,7 +271,7 @@ export class SwarmStore {
     throw new Error('swarm: available checkout has inconsistent physical pool identity; preserve it for recovery');
    requireRollingGitOperationAbsent(rollingStoredWorktree.rootPath);
    requireRollingSessionMarkerAbsent(rollingStoredWorktree.rootPath);
-   if((await poolClient.query('SELECT 1 FROM ponytail_index.swarm_native_session_v1 WHERE project_id=$1 AND root_path=$2',[this.projectId,rollingStoredWorktree.rootPath])).rowCount)
+   if(await this.hasNativeOwner(poolClient,rollingStoredWorktree.rootPath))
     throw new Error('swarm: available checkout retains a native actor; establish cessation before reuse');
    if(git(rollingStoredWorktree.rootPath,['status','--porcelain']).trim()) throw new Error('swarm: available checkout contains uncommitted work; preserve it');
    }
@@ -283,7 +335,7 @@ export class SwarmStore {
      if(rollingStoredWorktree.rootPath!==path.join(rollingManagedDirectory.directory,String(rollingStoredWorktree.number))) throw new Error('swarm: checkout is outside the configured physical pool');
      if((await poolClient.query('SELECT 1 FROM ponytail_index.swarm_worktree_v1 WHERE project_id=$1 AND number=$2',[this.projectId,rollingStoredWorktree.number])).rowCount
       ||(await poolClient.query("SELECT 1 FROM ponytail_index.rolling_assignment_v1 WHERE project_id=$1 AND worktree_number=$2 AND state<>'RELEASED'",[this.projectId,rollingStoredWorktree.number])).rowCount
-      ||(await poolClient.query('SELECT 1 FROM ponytail_index.swarm_native_session_v1 WHERE project_id=$1 AND root_path=$2',[this.projectId,rollingStoredWorktree.rootPath])).rowCount) {results.push({number:rollingStoredWorktree.number,rootPath:rollingStoredWorktree.rootPath,outcome:'protected',reason:'checkout remains assigned or has a retained native actor'});continue;}
+      ||await this.hasNativeOwner(poolClient,rollingStoredWorktree.rootPath)) {results.push({number:rollingStoredWorktree.number,rootPath:rollingStoredWorktree.rootPath,outcome:'protected',reason:'checkout remains assigned or has a retained native actor'});continue;}
      let deletion=(await poolClient.query<Record<string,unknown>>('SELECT * FROM ponytail_index.swarm_worktree_deletion_v1 WHERE project_id=$1 AND number=$2',[this.projectId,rollingStoredWorktree.number])).rows[0];
      if(deletion!==undefined&&(deletion.owner_root!==ownerRoot||deletion.root_path!==rollingStoredWorktree.rootPath||deletion.git_common_directory!==swarmCoordinatorBinding.swarmUserWorktree.gitCommonDirectory)) throw new Error('swarm: deletion belongs to another owner or repository');
      let registered=git(ownerRoot,['worktree','list','--porcelain','-z']).split('\0').includes(`worktree ${rollingStoredWorktree.rootPath}`);

@@ -88,6 +88,18 @@ checkout, two user owners, and real host reattachment capability inspection.
 4. Attempt attachment to another owner after removal. It still fails because
    session provenance survives removal and clearing.
 
+**Removal boundary evidence:** PostgreSQL tests prove exact-generation intent,
+unknown-interrupt retention, explicit active/notLoaded/systemError refusal,
+ignored-marker removal only after idle/terminal proof, and exclusive checkout
+transfer with permanent cross-owner worker refusal. The real native Arc shows
+`worker-unbind` from an observer retaining REMOVING when its original runtime is
+notLoaded. The owning App Server can then remove that same worker without
+archiving it and rebind the original session to the same owner/checkout with a
+fresh worker generation/number. Six integration/live tests and nineteen
+unit/help/protocol tests pass. This proves the core boundary and the observer
+refusal; complete installed-CLI removal through the original desktop runtime,
+active-turn native cancellation and campaign-lease fencing remain pending.
+
 ## Arc SWARM-NAMES: Identify assignments and final completion
 
 Traceability: verifies REQ-SWARM-SESSIONS

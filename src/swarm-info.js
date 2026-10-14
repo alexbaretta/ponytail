@@ -15,6 +15,7 @@ exports.readSwarmInfoV4 = readSwarmInfoV4;
 exports.readSwarmInfo = readSwarmInfo;
 exports.bindSwarmWorker = bindSwarmWorker;
 exports.completeSwarmWorker = completeSwarmWorker;
+exports.removeSwarmWorker = removeSwarmWorker;
 exports.observeSwarmWorkers = observeSwarmWorkers;
 exports.bindSwarmCoordinator = bindSwarmCoordinator;
 exports.inspectSwarmInfo = inspectSwarmInfo;
@@ -244,6 +245,24 @@ async function completeSwarmWorker(swarmStore, swarmWorkerBinding, rollingCodex)
         throw new Error('swarm: completed worker name was not confirmed; retry worker-complete');
     return completedSwarmWorkerBinding;
 }
+async function removeSwarmWorker(swarmStore, swarmWorkerBinding, rollingCodex) {
+    const removingSwarmWorkerBinding = await swarmStore.prepareWorkerRemoval(swarmWorkerBinding.ownerRoot, swarmWorkerBinding.sessionId, swarmWorkerBinding.generation);
+    if (removingSwarmWorkerBinding.state === 'REMOVED')
+        return;
+    const rollingNativeThreadIdentity = await rollingCodex.readThreadIdentity(removingSwarmWorkerBinding.threadId, removingSwarmWorkerBinding.rootPath);
+    if (rollingNativeThreadIdentity.sessionId !== removingSwarmWorkerBinding.sessionId)
+        throw new Error('swarm: observed original worker identity changed');
+    let rollingNativeTurn = await rollingCodex.readLatestTurn(removingSwarmWorkerBinding.threadId, true);
+    if (rollingNativeTurn?.status === 'inProgress') {
+        await rollingCodex.interruptTurn(removingSwarmWorkerBinding.threadId, rollingNativeTurn.id);
+        rollingNativeTurn = await rollingCodex.readTurn(removingSwarmWorkerBinding.threadId, rollingNativeTurn.id);
+    }
+    const latestRollingNativeTurn = await rollingCodex.readLatestTurn(removingSwarmWorkerBinding.threadId, true);
+    if (latestRollingNativeTurn?.id !== rollingNativeTurn?.id)
+        throw new Error('swarm: original worker started another turn; retain removal intent');
+    const rollingNativeThreadState = await rollingCodex.readThreadState(removingSwarmWorkerBinding.threadId, removingSwarmWorkerBinding.rootPath);
+    await swarmStore.finishWorkerRemoval(removingSwarmWorkerBinding, rollingNativeThreadState, latestRollingNativeTurn);
+}
 async function observeSwarmWorkers(swarmInfoV4, rollingCodex) {
     const workers = await Promise.all(swarmInfoV4.workers.map(async (worker) => {
         let nativeObservation;
@@ -371,7 +390,8 @@ async function runSwarmCli(argv) {
     const deletion = argv[0] === 'worktree-delete' && fields.size === 1 && (fields.has('--number') || fields.has('--all'));
     const workerBind = argv[0] === 'worker-bind' && fields.size === 7 && ['--thread', '--session', '--number', '--generation', '--kind', '--assignment', '--summary'].every(flag => fields.has(flag));
     const workerComplete = argv[0] === 'worker-complete' && fields.size === 2 && fields.has('--session') && fields.has('--generation');
-    if (!valid || !info && !enrollment && !bind && !unbind && !assign && !setup && !release && !deletion && !workerBind && !workerComplete) {
+    const workerUnbind = argv[0] === 'worker-unbind' && fields.size === 2 && fields.has('--session') && fields.has('--generation');
+    if (!valid || !info && !enrollment && !bind && !unbind && !assign && !setup && !release && !deletion && !workerBind && !workerComplete && !workerUnbind) {
         process.stderr.write((0, cli_help_js_1.renderCliHelp)(['swarm', argv[0] ?? '']) + '\n');
         process.exitCode = 2;
         return;
@@ -386,18 +406,19 @@ async function runSwarmCli(argv) {
     const pool = new pg_1.Pool((0, project_index_database_js_1.databaseOptions)(root));
     let outputRoot = root;
     try {
-        if (enrollment || bind || unbind || assign || setup || release || deletion || workerBind || workerComplete) {
+        if (enrollment || bind || unbind || assign || setup || release || deletion || workerBind || workerComplete || workerUnbind) {
             const swarmStore = new swarm_store_js_1.SwarmStore(pool, projectId);
             const ownerRoot = enrollment ? root : (await inspectSwarmInfo(root, pool, projectId)).ownerRoot;
             const swarmUserWorktree = { rootPath: ownerRoot, gitCommonDirectory: node_fs_1.default.realpathSync((0, rolling_integration_js_1.git)(ownerRoot, ['rev-parse', '--path-format=absolute', '--git-common-dir']).trim()) };
             outputRoot = ownerRoot;
-            if (workerComplete) {
-                const worker = (await inspectSwarmInfo(ownerRoot, pool, projectId)).workers.find(worker => worker.binding.sessionId === fields.get('--session') && worker.binding.generation === fields.get('--generation'));
-                if (worker === undefined)
-                    throw new Error('swarm: worker binding changed or is absent');
+            if (workerComplete || workerUnbind) {
+                const swarmWorkerBinding = await swarmStore.workerBinding(ownerRoot, text(fields.get('--session')), text(fields.get('--generation')));
                 const rollingCodex = await rolling_codex_js_1.RollingCodex.connect({ cwd: ownerRoot });
                 try {
-                    await completeSwarmWorker(swarmStore, worker.binding, rollingCodex);
+                    if (workerComplete)
+                        await completeSwarmWorker(swarmStore, swarmWorkerBinding, rollingCodex);
+                    else
+                        await removeSwarmWorker(swarmStore, swarmWorkerBinding, rollingCodex);
                 }
                 finally {
                     await rollingCodex.close();

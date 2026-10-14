@@ -239,6 +239,23 @@ export async function completeSwarmWorker(swarmStore:SwarmStore,swarmWorkerBindi
  if(rollingNativeThreadState.sessionId!==completedSwarmWorkerBinding.sessionId||rollingNativeThreadState.name!==swarmWorkerName(completedSwarmWorkerBinding)) throw new Error('swarm: completed worker name was not confirmed; retry worker-complete');
  return completedSwarmWorkerBinding;
 }
+
+// Traceability: implements REQ-SWARM-SESSIONS
+export async function removeSwarmWorker(swarmStore:SwarmStore,swarmWorkerBinding:SwarmWorkerBinding,rollingCodex:Pick<RollingCodex,'readThreadIdentity'|'readLatestTurn'|'interruptTurn'|'readTurn'|'readThreadState'>):Promise<void> {
+ const removingSwarmWorkerBinding=await swarmStore.prepareWorkerRemoval(swarmWorkerBinding.ownerRoot,swarmWorkerBinding.sessionId,swarmWorkerBinding.generation);
+ if(removingSwarmWorkerBinding.state==='REMOVED') return;
+ const rollingNativeThreadIdentity=await rollingCodex.readThreadIdentity(removingSwarmWorkerBinding.threadId,removingSwarmWorkerBinding.rootPath);
+ if(rollingNativeThreadIdentity.sessionId!==removingSwarmWorkerBinding.sessionId) throw new Error('swarm: observed original worker identity changed');
+ let rollingNativeTurn=await rollingCodex.readLatestTurn(removingSwarmWorkerBinding.threadId,true);
+ if(rollingNativeTurn?.status==='inProgress') {
+  await rollingCodex.interruptTurn(removingSwarmWorkerBinding.threadId,rollingNativeTurn.id);
+  rollingNativeTurn=await rollingCodex.readTurn(removingSwarmWorkerBinding.threadId,rollingNativeTurn.id);
+ }
+ const latestRollingNativeTurn=await rollingCodex.readLatestTurn(removingSwarmWorkerBinding.threadId,true);
+ if(latestRollingNativeTurn?.id!==rollingNativeTurn?.id) throw new Error('swarm: original worker started another turn; retain removal intent');
+ const rollingNativeThreadState=await rollingCodex.readThreadState(removingSwarmWorkerBinding.threadId,removingSwarmWorkerBinding.rootPath);
+ await swarmStore.finishWorkerRemoval(removingSwarmWorkerBinding,rollingNativeThreadState,latestRollingNativeTurn);
+}
 // Traceability: implements REQ-SWARM-INFO
 export async function observeSwarmWorkers(swarmInfoV4:SwarmInfoV4,rollingCodex:Pick<RollingCodex,'readThreadState'>):Promise<SwarmInfoV4> {
  const workers=await Promise.all(swarmInfoV4.workers.map(async worker=>{
@@ -343,7 +360,8 @@ export async function runSwarmCli(argv:readonly string[]):Promise<void> {
  const deletion=argv[0]==='worktree-delete'&&fields.size===1&&(fields.has('--number')||fields.has('--all'));
  const workerBind=argv[0]==='worker-bind'&&fields.size===7&&['--thread','--session','--number','--generation','--kind','--assignment','--summary'].every(flag=>fields.has(flag));
  const workerComplete=argv[0]==='worker-complete'&&fields.size===2&&fields.has('--session')&&fields.has('--generation');
- if(!valid||!info&&!enrollment&&!bind&&!unbind&&!assign&&!setup&&!release&&!deletion&&!workerBind&&!workerComplete) {
+ const workerUnbind=argv[0]==='worker-unbind'&&fields.size===2&&fields.has('--session')&&fields.has('--generation');
+ if(!valid||!info&&!enrollment&&!bind&&!unbind&&!assign&&!setup&&!release&&!deletion&&!workerBind&&!workerComplete&&!workerUnbind) {
   process.stderr.write(renderCliHelp(['swarm',argv[0]??''])+'\n');process.exitCode=2;return;
  }
  const root=fs.realpathSync(git(process.cwd(),['rev-parse','--show-toplevel']).trim());
@@ -354,16 +372,18 @@ export async function runSwarmCli(argv:readonly string[]):Promise<void> {
  const pool=new Pool(databaseOptions(root));
  let outputRoot=root;
  try {
-  if(enrollment||bind||unbind||assign||setup||release||deletion||workerBind||workerComplete) {
+  if(enrollment||bind||unbind||assign||setup||release||deletion||workerBind||workerComplete||workerUnbind) {
    const swarmStore=new SwarmStore(pool,projectId);
    const ownerRoot=enrollment?root:(await inspectSwarmInfo(root,pool,projectId)).ownerRoot;
    const swarmUserWorktree:SwarmUserWorktree={rootPath:ownerRoot,gitCommonDirectory:fs.realpathSync(git(ownerRoot,['rev-parse','--path-format=absolute','--git-common-dir']).trim())};
    outputRoot=ownerRoot;
-   if(workerComplete) {
-    const worker=(await inspectSwarmInfo(ownerRoot,pool,projectId)).workers.find(worker=>worker.binding.sessionId===fields.get('--session')&&worker.binding.generation===fields.get('--generation'));
-    if(worker===undefined) throw new Error('swarm: worker binding changed or is absent');
+   if(workerComplete||workerUnbind) {
+    const swarmWorkerBinding=await swarmStore.workerBinding(ownerRoot,text(fields.get('--session')),text(fields.get('--generation')));
     const rollingCodex=await RollingCodex.connect({cwd:ownerRoot});
-    try {await completeSwarmWorker(swarmStore,worker.binding,rollingCodex);} finally {await rollingCodex.close();}
+    try {
+     if(workerComplete) await completeSwarmWorker(swarmStore,swarmWorkerBinding,rollingCodex);
+     else await removeSwarmWorker(swarmStore,swarmWorkerBinding,rollingCodex);
+    } finally {await rollingCodex.close();}
    } else if(workerBind) {
     const number=integer(fields.get('--number'));
     const worktree=(await inspectSwarmInfo(ownerRoot,pool,projectId)).worktrees.find(worktree=>worktree.number===number);
