@@ -102,6 +102,18 @@ Traceability: verifies REQ-SWARM-SESSIONS
 3. Complete a worker session and confirm the coordinator prepends `DONE `.
    Naming alone changes no acceptance, resource ownership or physical existence.
 
+**Worker storage evidence:** `tests/swarm-store.integration.test.ts` exercises
+independently modeled native identities against the real project database and
+physical checkouts. Concurrent admission to one checkout has exactly one winner;
+same-assignment retry preserves its number/generation. Sibling swarms number
+independently, workers sharing a full plan share the short plan label, and the
+three-word desired name has the required W/P/S and DONE form. Coordinator loss
+preserves the bound worker; simulated historical REMOVED state still cannot
+change its original owner/checkout. The test failed before implementation and
+passes after it, with accepted adversarial review. This establishes the storage
+boundary only; native naming, cessation, removal/reattachment and installed worker
+CLI acceptance remain pending.
+
 ## Arc SWARM-CHECKOUTS: Allocate, release, transfer and reclaim
 
 Traceability: verifies REQ-SWARM-WORKTREES

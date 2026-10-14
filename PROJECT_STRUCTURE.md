@@ -70,7 +70,11 @@ while project-wide management records remain under `pm/`.
   and cross-repository ownership; its adjacent `.js` runtime is generated.
 - `src/swarm-store.ts` owns explicit user-worktree enrollment and exclusive
   coordinator bindings in the existing project database, including canonical
-  native thread/session/checkout identity mappings. Retained managed-checkout
+  native thread/session/checkout identity mappings. Worker records retain original
+  owner/checkout provenance across removal, fence live checkout membership, and
+  map full assignments to per-swarm worker and plan/sprint numbers. Desired-name
+  construction does not itself perform native renaming or prove activity.
+ Retained managed-checkout
   memberships reserve the canonical rolling pool under its existing project fence;
   claim/release preserve checkout content and refuse live assignments or Git operations.
   Durable base-commit setup intent precedes canonical worktree provisioning; exact

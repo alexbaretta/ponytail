@@ -266,12 +266,45 @@ CREATE TABLE IF NOT EXISTS swarm_owner_v1 (
 );
 
 -- Traceability: supports REQ-SWARM-OWNERSHIP
+ALTER TABLE swarm_owner_v1 ADD COLUMN IF NOT EXISTS worker_sequence bigint NOT NULL DEFAULT 0 CHECK (worker_sequence BETWEEN 0 AND 9007199254740991);
+
 CREATE TABLE IF NOT EXISTS swarm_native_session_v1 (
   session_id text PRIMARY KEY CHECK (session_id <> ''),
   thread_id text NOT NULL UNIQUE CHECK (thread_id <> ''),
   project_id uuid NOT NULL REFERENCES project_v1(project_id) ON DELETE CASCADE,
   root_path text NOT NULL CHECK (root_path <> '')
 );
+
+-- Traceability: supports REQ-SWARM-SESSIONS
+CREATE TABLE IF NOT EXISTS swarm_assignment_v1 (
+ project_id uuid NOT NULL,
+ owner_root text NOT NULL,
+ kind text NOT NULL CHECK (kind IN ('plan','sprint')),
+ assignment_id text NOT NULL CHECK (assignment_id <> ''),
+ short_number bigint NOT NULL CHECK (short_number BETWEEN 1 AND 9007199254740991),
+ PRIMARY KEY (project_id,owner_root,kind,assignment_id),
+ UNIQUE (project_id,owner_root,kind,short_number),
+ FOREIGN KEY (project_id,owner_root) REFERENCES swarm_owner_v1(project_id,owner_root) ON DELETE CASCADE
+);
+CREATE TABLE IF NOT EXISTS swarm_worker_v1 (
+ session_id text PRIMARY KEY REFERENCES swarm_native_session_v1(session_id) ON DELETE CASCADE,
+ project_id uuid NOT NULL REFERENCES project_v1(project_id) ON DELETE CASCADE,
+ owner_root text NOT NULL,
+ worktree_number bigint NOT NULL CHECK (worktree_number BETWEEN 101 AND 9007199254740991),
+ worktree_generation uuid NOT NULL,
+ generation uuid NOT NULL,
+ worker_number bigint NOT NULL CHECK (worker_number BETWEEN 1 AND 9007199254740991),
+ assignment_kind text NOT NULL CHECK (assignment_kind IN ('plan','sprint')),
+ assignment_id text NOT NULL CHECK (assignment_id <> ''),
+ short_assignment_number bigint NOT NULL CHECK (short_assignment_number BETWEEN 1 AND 9007199254740991),
+ summary text NOT NULL,
+ state text NOT NULL CHECK (state IN ('BOUND','REMOVING','REMOVED')),
+ completed boolean NOT NULL DEFAULT false,
+ FOREIGN KEY (project_id,owner_root) REFERENCES swarm_owner_v1(project_id,owner_root) ON DELETE CASCADE
+);
+CREATE UNIQUE INDEX IF NOT EXISTS swarm_worker_v1_checkout ON swarm_worker_v1(project_id,worktree_number) WHERE state<>'REMOVED';
+CREATE UNIQUE INDEX IF NOT EXISTS swarm_worker_v1_number ON swarm_worker_v1(project_id,owner_root,worker_number) WHERE state<>'REMOVED';
+CREATE INDEX IF NOT EXISTS swarm_worker_v1_owner ON swarm_worker_v1(project_id,owner_root,worker_number) WHERE state<>'REMOVED';
 
 CREATE TABLE IF NOT EXISTS rolling_pool_v1 (
   project_id uuid PRIMARY KEY REFERENCES project_v1(project_id) ON DELETE CASCADE,
