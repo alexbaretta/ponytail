@@ -56,6 +56,7 @@ async function verifyMcpParity(root:string,rollingCampaignOperations:RollingCamp
   assert.ok(result !== null && typeof result === 'object' && 'tools' in result && Array.isArray(result.tools));
   for (const rollingCommandDefinition of rollingCommandDefinitions) {
    const tool:unknown = result.tools.find((tool:unknown)=>tool !== null && typeof tool === 'object' && 'name' in tool && tool.name === `ponytail_campaign_${rollingCommandDefinition.name.replaceAll('-','_')}`);
+   if(!rollingCommandDefinition.cli) {assert.equal(tool,undefined,`retired tool remains exposed: ${rollingCommandDefinition.name}`);continue;}
    assert.ok(tool !== null && typeof tool === 'object' && 'inputSchema' in tool);
    const inputSchema = tool.inputSchema;
    assert.ok(inputSchema !== null && typeof inputSchema === 'object' && 'required' in inputSchema && Array.isArray(inputSchema.required));
@@ -153,7 +154,7 @@ test('shared operations initialize defaults and reconcile event/periodic content
  await rollingCampaignStore.acknowledgeAction('pilot',rollingAction.id,rollingAction.generation,'COMPLETED','isolated stopped-session fixture');
  await rollingCampaignStore.attachSession('pilot',firstRollingStoredAssignment.id,firstRollingStoredAssignment.generation,'session-fixture');
  const workingRollingCoordinatorActions=await rollingCampaignOperations.nextActions('pilot');
- assert.ok(workingRollingCoordinatorActions.decisions.some(decision=>decision.kind === 'assignment' && decision.command === 'dispatch-worker' && decision.assignment.id === firstRollingStoredAssignment.id));
+ assert.ok(workingRollingCoordinatorActions.decisions.some(decision=>decision.kind === 'host-assignment' && decision.hostAction === 'send-assignment' && decision.assignment.id === firstRollingStoredAssignment.id));
  // Stored native receipts are fixture data here; this Arc exercises real PostgreSQL
  // snapshot/decision boundaries, without claiming native turn execution.
  const rollingWorkerDispatchStarted:RollingWorkerDispatchStarted={id:crypto.randomUUID(),threadId:'receipt-fixture',instructions:'bounded snapshot fixture',state:'STARTED'};
@@ -167,12 +168,12 @@ test('shared operations initialize defaults and reconcile event/periodic content
   [projectId,'pilot',firstRollingStoredAssignment.id,rollingWorkerDispatchAttached.state,rollingWorkerDispatchAttached.turnId]);
  const attachedRollingCoordinatorActions=await rollingCampaignOperations.nextActions('pilot');
  assert.deepEqual(attachedRollingCoordinatorActions.snapshot.workerDispatches,[{assignmentId:firstRollingStoredAssignment.id,generation:firstRollingStoredAssignment.generation,dispatch:rollingWorkerDispatchAttached}]);
- assert.ok(attachedRollingCoordinatorActions.decisions.some(decision=>decision.kind === 'assignment' && decision.command === 'collect-submission' && decision.assignment.id === firstRollingStoredAssignment.id));
+ assert.ok(attachedRollingCoordinatorActions.decisions.some(decision=>decision.kind === 'host-assignment' && decision.hostAction === 'collect-result' && decision.assignment.id === firstRollingStoredAssignment.id));
  await verifyMcpParity(root,rollingCampaignOperations);
  await pool.query("UPDATE ponytail_index.rolling_worker_dispatch_v1 SET generation=$4 WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3",[projectId,'pilot',firstRollingStoredAssignment.id,crypto.randomUUID()]);
  const staleRollingCoordinatorActions=await rollingCampaignOperations.nextActions('pilot');
  assert.deepEqual(staleRollingCoordinatorActions.snapshot.workerDispatches,[]);
- assert.ok(staleRollingCoordinatorActions.decisions.some(decision=>decision.kind === 'assignment' && decision.command === 'dispatch-worker' && decision.assignment.id === firstRollingStoredAssignment.id));
+ assert.ok(staleRollingCoordinatorActions.decisions.some(decision=>decision.kind === 'host-assignment' && decision.hostAction === 'send-assignment' && decision.assignment.id === firstRollingStoredAssignment.id));
  await pool.query("DELETE FROM ponytail_index.rolling_worker_dispatch_v1 WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3",[projectId,'pilot',firstRollingStoredAssignment.id]);
  // Exact typed submission/request fixtures establish relational snapshot inputs;
  // their receipt states exercise the real database without claiming native execution.
@@ -187,7 +188,7 @@ test('shared operations initialize defaults and reconcile event/periodic content
  const rollingReviewRequestV1:RollingReviewRequestV1={schemaVersion:1,id:crypto.randomUUID(),campaignId:'pilot',assignmentId:firstRollingStoredAssignment.id,generation:firstRollingStoredAssignment.generation,baseCommit:candidateRevision,revision:candidateRevision,reviewerSessionId:'reviewer-fixture'};
  await pool.query("INSERT INTO ponytail_index.rolling_review_v1(project_id,campaign_id,review_id,assignment_id,generation,revision,request_text) VALUES($1,$2,$3,$4,$5,$6,$7)",[projectId,'pilot',rollingReviewRequestV1.id,firstRollingStoredAssignment.id,firstRollingStoredAssignment.generation,candidateRevision,JSON.stringify(rollingReviewRequestV1)]);
  await pool.query("UPDATE ponytail_index.rolling_assignment_v1 SET state='REVIEW',activity_stopped=true WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3",[projectId,'pilot',firstRollingStoredAssignment.id]);
- assert.ok((await rollingCampaignOperations.nextActions('pilot')).decisions.some(decision=>decision.kind === 'review' && decision.command === 'dispatch-review' && decision.review.request.id === rollingReviewRequestV1.id));
+ assert.ok((await rollingCampaignOperations.nextActions('pilot')).decisions.some(decision=>decision.kind === 'review' && decision.hostAction === 'send-review' && decision.review.request.id === rollingReviewRequestV1.id));
  const rollingReviewDispatchStarted:RollingReviewDispatchStarted={id:crypto.randomUUID(),reviewerThreadId:'reviewer-thread-fixture',state:'STARTED'};
  await pool.query("INSERT INTO ponytail_index.rolling_review_dispatch_v1(project_id,campaign_id,review_id,dispatch_id,reviewer_thread_id,state) VALUES($1,$2,$3,$4,$5,$6)",[projectId,'pilot',rollingReviewRequestV1.id,rollingReviewDispatchStarted.id,rollingReviewDispatchStarted.reviewerThreadId,rollingReviewDispatchStarted.state]);
  const unknownReviewRollingCoordinatorActions=await rollingCampaignOperations.nextActions('pilot');
@@ -197,7 +198,7 @@ test('shared operations initialize defaults and reconcile event/periodic content
  await pool.query("UPDATE ponytail_index.rolling_review_dispatch_v1 SET state=$4,turn_id=$5 WHERE project_id=$1 AND campaign_id=$2 AND review_id=$3",[projectId,'pilot',rollingReviewRequestV1.id,rollingReviewDispatchAttached.state,rollingReviewDispatchAttached.turnId]);
  const attachedReviewRollingCoordinatorActions=await rollingCampaignOperations.nextActions('pilot');
  assert.deepEqual(attachedReviewRollingCoordinatorActions.snapshot.reviewDispatches,[{reviewId:rollingReviewRequestV1.id,dispatch:rollingReviewDispatchAttached}]);
- assert.ok(attachedReviewRollingCoordinatorActions.decisions.some(decision=>decision.kind === 'review' && decision.command === 'inspect-review' && decision.review.request.id === rollingReviewRequestV1.id));
+ assert.ok(attachedReviewRollingCoordinatorActions.decisions.some(decision=>decision.kind === 'review' && decision.hostAction === 'observe-review' && decision.review.request.id === rollingReviewRequestV1.id));
  await verifyMcpParity(root,rollingCampaignOperations);
  const rollingReviewAcceptedV1:RollingReviewAcceptedV1={schemaVersion:1,reviewId:rollingReviewRequestV1.id,revision:candidateRevision,reviewerSessionId:rollingReviewRequestV1.reviewerSessionId,completedAt:observedAt,decision:'accepted',findings:[]};
  await pool.query("UPDATE ponytail_index.rolling_review_v1 SET outcome_text=$4 WHERE project_id=$1 AND campaign_id=$2 AND review_id=$3",[projectId,'pilot',rollingReviewRequestV1.id,JSON.stringify(rollingReviewAcceptedV1)]);

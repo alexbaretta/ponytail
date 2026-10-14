@@ -11,7 +11,7 @@ test('every registered command exposes its complete contract through the shipped
  const chapter = spawnSync(process.execPath,[path.join(process.cwd(),'src/rolling-operations.js'),'--help'],{encoding:'utf8'});
  assert.equal(chapter.status,0,chapter.stderr);
  assert.equal(chapter.stdout,rollingCampaignHelp());
- for (const rollingCommandDefinition of rollingCommandDefinitions) {
+ for (const rollingCommandDefinition of rollingCommandDefinitions.filter(command=>command.cli)) {
   const command = spawnSync(process.execPath,[path.join(process.cwd(),'src/rolling-operations.js'),rollingCommandDefinition.name,'--help'],{encoding:'utf8'});
   assert.equal(command.status,0,command.stderr);
   assert.equal(command.stdout,rollingCampaignHelp(rollingCommandDefinition.name));
@@ -29,5 +29,14 @@ test('retired campaign commands and malformed options fail before opening projec
   assert.equal(result.status,1);
   assert.match(result.stderr,/unknown|repeated|missing/);
   assert.doesNotMatch(result.stderr,/ponytail-journal/);
+ }
+});
+
+// Traceability: verifies REQ-SWARM-CLI
+test('session API operations are absent from CLI help and refused before project access',()=>{
+ for(const rollingCommandDefinition of rollingCommandDefinitions.filter(command=>!command.cli)) {
+  assert.ok(!rollingCampaignHelp().includes(`  ${rollingCommandDefinition.name} `));
+  const result=spawnSync(process.execPath,[path.join(process.cwd(),'src/rolling-operations.js'),rollingCommandDefinition.name,'--help'],{cwd:'/tmp',encoding:'utf8'});
+  assert.equal(result.status,1);assert.match(result.stderr,/retired CLI command/);assert.doesNotMatch(result.stderr,/ponytail-journal|not a git repository/);
  }
 });

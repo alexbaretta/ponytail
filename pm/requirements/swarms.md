@@ -118,14 +118,16 @@ under its former lease. Coordinator loss must not prevent explicit safe clearing
 | OBL-15 | The `ponytail swarm` chapter exposes info, worktree assignment/release, selected/all-unassigned worktree deletion, coordinator binding/unbinding, worker binding/unbinding, supported original-session reattachment, and clearing. The chapter and each command provide scoped help describing arguments, behavior and effects. | Real CLI help and valid/invalid invocations expose every required operation; resource mutations use the same canonical ownership and lifecycle logic as campaign execution. |
 
 Campaign commands continue to own obligation graphs, scheduling and acceptance.
-The swarm tooling replaces all earlier Ponytail subcommands for creating,
-querying and managing sessions. Session creation, dispatch, observation,
-resumption, cancellation, binding and unbinding use the swarm chapter as their
-sole operational CLI home, including the native session operations currently
-embedded in campaign tooling. Do not retain old command aliases or parallel
-session-management paths. Campaign scheduling consumes the same canonical
-swarm operations; its graph, assignment and acceptance queries remain planning
-operations rather than a second session inventory.
+The swarm tooling replaces earlier Ponytail session-management subcommands.
+The CLI and optional MCP adapter expose session association bookkeeping through
+the swarm chapter; neither operates sessions through Codex APIs. The coordinator
+creates, dispatches, observes, resumes, cancels and names sessions through its
+host tools. Do not retain old command aliases or parallel session-management
+paths. Campaign scheduling consumes the same canonical swarm bookkeeping; its
+graph, assignment and acceptance queries remain planning operations rather than
+a second session inventory. `campaign next-actions` distinguishes coordinator
+host actions from executable Ponytail commands and retains their exact assignment,
+action and review identities. It must not recommend retired CLI commands.
 Do not create a second independently maintained ownership registry or merely
 rename campaign IDs to swarm IDs. Preserve historical records and explicitly
 reconcile existing resources before exposing them as migrated membership.

@@ -47,7 +47,7 @@ test('next actions retain exact fenced identities and prerequisite explanations 
  const rollingAction:RollingAction = {id:'action',assignmentId:'assignment',kind:'RESUME_WORKER',generation:'generation',state:'STARTED'};
  const rollingCoordinatorSnapshot:RollingCoordinatorSnapshot = {...snapshot(),actions:[rollingAction]};
  const rollingCoordinatorActions = projectRollingCoordinatorActions(rollingCoordinatorSnapshot);
- assert.deepEqual(rollingCoordinatorActions.decisions,[{kind:'worker',command:'observe-resumption',action:rollingAction},{kind:'replenish',graphDigest:rollingCoordinatorSnapshot.graphDigest}]);
+ assert.deepEqual(rollingCoordinatorActions.decisions,[{kind:'worker',hostAction:'observe-session-resumption',action:rollingAction},{kind:'replenish',graphDigest:rollingCoordinatorSnapshot.graphDigest}]);
  assert.deepEqual(rollingCoordinatorActions.snapshot.scheduling.blocked,[{reason:'prerequisites',obligationId:'OBL-2',prerequisites:['OBL-1']}]);
  assert.equal(rollingCoordinatorActions.snapshot.scheduling.selected[0]?.obligationId,'OBL-1');
 });
@@ -77,7 +77,7 @@ test('OBL-129: stopped retained workers receive lease rebinding before new alloc
  const rollingCoordinatorSnapshot:RollingCoordinatorSnapshot = {...snapshot(),assignments:[rollingStoredAssignment],
   scheduling:{...snapshot().scheduling,selected:[],blocked:[{reason:'scope_changed',obligationId:'OBL-1',prerequisites:[]}]}};
  assert.deepEqual(projectRollingCoordinatorActions(rollingCoordinatorSnapshot).decisions,
-  [{kind:'worker-rebinding',command:'rebind-worker',assignment:rollingStoredAssignment}]);
+  [{kind:'worker-rebinding',hostAction:'reassign-scope',assignment:rollingStoredAssignment}]);
  const activeRollingCoordinatorSnapshot:RollingCoordinatorSnapshot = {...rollingCoordinatorSnapshot,
   assignments:[{...rollingStoredAssignment,activityStopped:false}]};
  assert.deepEqual(projectRollingCoordinatorActions(activeRollingCoordinatorSnapshot).decisions,[]);
@@ -89,7 +89,7 @@ test('attached working worker receives an executable next action before new allo
  const rollingStoredAssignment:RollingStoredAssignment=workingAssignment();
  const rollingCoordinatorSnapshot:RollingCoordinatorSnapshot={...snapshot(),assignments:[rollingStoredAssignment]};
  assert.deepEqual(projectRollingCoordinatorActions(rollingCoordinatorSnapshot).decisions,
-  [{kind:'assignment',command:'dispatch-worker',assignment:rollingStoredAssignment},{kind:'replenish',graphDigest:rollingCoordinatorSnapshot.graphDigest}]);
+  [{kind:'host-assignment',hostAction:'send-assignment',assignment:rollingStoredAssignment},{kind:'replenish',graphDigest:rollingCoordinatorSnapshot.graphDigest}]);
 });
 
 // Traceability: verifies REQ-ROLLING-INTERFACES
@@ -98,7 +98,7 @@ test('rejected work stops its original worker before resume-first replenishment'
  const rollingStoredAssignment:RollingStoredAssignment={...workingAssignment(),state:'REWORK',activityStopped:true};
  const rollingCoordinatorSnapshot:RollingCoordinatorSnapshot={...snapshot(),assignments:[rollingStoredAssignment]};
  assert.deepEqual(projectRollingCoordinatorActions(rollingCoordinatorSnapshot).decisions,
-  [{kind:'worker-suspension',command:'suspend-worker',assignment:rollingStoredAssignment,blockers:[]},{kind:'replenish',graphDigest:rollingCoordinatorSnapshot.graphDigest}]);
+  [{kind:'worker-suspension',hostAction:'quiesce-session',assignment:rollingStoredAssignment,blockers:[]},{kind:'replenish',graphDigest:rollingCoordinatorSnapshot.graphDigest}]);
 });
 
 // Traceability: verifies REQ-ROLLING-INTERFACES
@@ -108,12 +108,12 @@ test('known worker instruction is collected and unknown creation keeps its origi
  const rollingWorkerDispatchAttached:RollingWorkerDispatchAttached={id:'dispatch',threadId:'thread',instructions:'bounded work',state:'ATTACHED',turnId:'turn'};
  const rollingStoredWorkerDispatch:RollingStoredWorkerDispatch={assignmentId:rollingStoredAssignment.id,generation:rollingStoredAssignment.generation,dispatch:rollingWorkerDispatchAttached};
  const rollingCoordinatorSnapshot:RollingCoordinatorSnapshot={...snapshot(),assignments:[rollingStoredAssignment],workerDispatches:[rollingStoredWorkerDispatch]};
- assert.deepEqual(projectRollingCoordinatorActions(rollingCoordinatorSnapshot).decisions[0],{kind:'assignment',command:'collect-submission',assignment:rollingStoredAssignment});
+ assert.deepEqual(projectRollingCoordinatorActions(rollingCoordinatorSnapshot).decisions[0],{kind:'host-assignment',hostAction:'collect-result',assignment:rollingStoredAssignment});
  const rollingWorkerDispatchStarted:RollingWorkerDispatchStarted={id:'dispatch',threadId:'thread',instructions:'bounded work',state:'STARTED'};
  const unknownRollingCoordinatorSnapshot:RollingCoordinatorSnapshot={...rollingCoordinatorSnapshot,workerDispatches:[{...rollingStoredWorkerDispatch,dispatch:rollingWorkerDispatchStarted}]};
  assert.deepEqual(projectRollingCoordinatorActions(unknownRollingCoordinatorSnapshot).decisions[0],{kind:'blocked-worker-dispatch',reason:'instruction_turn_unknown',assignment:rollingStoredAssignment,dispatch:rollingWorkerDispatchStarted});
  const staleRollingCoordinatorSnapshot:RollingCoordinatorSnapshot={...rollingCoordinatorSnapshot,workerDispatches:[{...rollingStoredWorkerDispatch,generation:'old-generation'}]};
- assert.deepEqual(projectRollingCoordinatorActions(staleRollingCoordinatorSnapshot).decisions[0],{kind:'assignment',command:'dispatch-worker',assignment:rollingStoredAssignment});
+ assert.deepEqual(projectRollingCoordinatorActions(staleRollingCoordinatorSnapshot).decisions[0],{kind:'host-assignment',hostAction:'send-assignment',assignment:rollingStoredAssignment});
 });
 
 // Traceability: verifies REQ-ROLLING-INTERFACES
@@ -123,9 +123,9 @@ test('pending original attachment is observed before worker dispatch and stopped
  const rollingAction:RollingAction={id:'action',assignmentId:rollingStoredAssignment.id,generation:rollingStoredAssignment.generation,kind:'START_WORKER',state:'STARTED'};
  const rollingCoordinatorSnapshot:RollingCoordinatorSnapshot={...snapshot(),assignments:[rollingStoredAssignment],actions:[rollingAction]};
  assert.equal(projectRollingCoordinatorActions(rollingCoordinatorSnapshot).decisions[0]?.kind,'worker');
- assert.ok(!projectRollingCoordinatorActions(rollingCoordinatorSnapshot).decisions.some(decision=>decision.kind === 'assignment'));
+ assert.ok(!projectRollingCoordinatorActions(rollingCoordinatorSnapshot).decisions.some(decision=>decision.kind === 'host-assignment'));
  const stoppedRollingCoordinatorSnapshot:RollingCoordinatorSnapshot={...rollingCoordinatorSnapshot,actions:[],assignments:[{...rollingStoredAssignment,activityStopped:true}]};
- assert.ok(!projectRollingCoordinatorActions(stoppedRollingCoordinatorSnapshot).decisions.some(decision=>decision.kind === 'assignment'));
+ assert.ok(!projectRollingCoordinatorActions(stoppedRollingCoordinatorSnapshot).decisions.some(decision=>decision.kind === 'host-assignment'));
 });
 
 function pendingReview():RollingStoredReview {
@@ -138,7 +138,7 @@ function pendingReview():RollingStoredReview {
 test('new review request is dispatched before attempting to inspect its nonexistent turn',()=> {
  const rollingStoredReview:RollingStoredReview=pendingReview();
  const rollingCoordinatorSnapshot:RollingCoordinatorSnapshot={...snapshot(),reviews:[rollingStoredReview]};
- assert.deepEqual(projectRollingCoordinatorActions(rollingCoordinatorSnapshot).decisions[0],{kind:'review',command:'dispatch-review',review:rollingStoredReview});
+ assert.deepEqual(projectRollingCoordinatorActions(rollingCoordinatorSnapshot).decisions[0],{kind:'review',hostAction:'send-review',review:rollingStoredReview});
 });
 
 // Traceability: verifies REQ-ROLLING-INTERFACES
@@ -151,9 +151,9 @@ test('review decisions observe known turns and preserve uncertain original dispa
  assert.deepEqual(projectRollingCoordinatorActions(rollingCoordinatorSnapshot).decisions[0],{kind:'blocked-review-dispatch',reason:'instruction_turn_unknown',review:rollingStoredReview,dispatch:rollingReviewDispatchStarted});
  const rollingReviewDispatchAttached:RollingReviewDispatchAttached={...rollingReviewDispatchStarted,state:'ATTACHED',turnId:'original-turn'};
  const attachedRollingCoordinatorSnapshot:RollingCoordinatorSnapshot={...rollingCoordinatorSnapshot,reviewDispatches:[{...rollingStoredReviewDispatch,dispatch:rollingReviewDispatchAttached}]};
- assert.deepEqual(projectRollingCoordinatorActions(attachedRollingCoordinatorSnapshot).decisions[0],{kind:'review',command:'inspect-review',review:rollingStoredReview});
+ assert.deepEqual(projectRollingCoordinatorActions(attachedRollingCoordinatorSnapshot).decisions[0],{kind:'review',hostAction:'observe-review',review:rollingStoredReview});
  const foreignRollingCoordinatorSnapshot:RollingCoordinatorSnapshot={...attachedRollingCoordinatorSnapshot,reviewDispatches:[{...rollingStoredReviewDispatch,reviewId:'earlier-review'}]};
- assert.deepEqual(projectRollingCoordinatorActions(foreignRollingCoordinatorSnapshot).decisions[0],{kind:'review',command:'dispatch-review',review:rollingStoredReview});
+ assert.deepEqual(projectRollingCoordinatorActions(foreignRollingCoordinatorSnapshot).decisions[0],{kind:'review',hostAction:'send-review',review:rollingStoredReview});
 });
 
 // Traceability: verifies REQ-ROLLING-INTERFACES
@@ -170,12 +170,12 @@ test('retired unassigned checkout is released even when no obligation is unblock
 test('attached retirement requires current cleanup eligibility before releasing its checkout',()=> {
  const rollingStoredAssignment:RollingStoredAssignment={...workingAssignment(),state:'RETIRING',retired:true,activityStopped:true};
  const rollingCoordinatorSnapshot:RollingCoordinatorSnapshot={...snapshot(),assignments:[rollingStoredAssignment],scheduling:{...snapshot().scheduling,selected:[]}};
- assert.deepEqual(projectRollingCoordinatorActions(rollingCoordinatorSnapshot).decisions,[{kind:'assignment',command:'retire-worker',assignment:rollingStoredAssignment}]);
+ assert.deepEqual(projectRollingCoordinatorActions(rollingCoordinatorSnapshot).decisions,[{kind:'host-assignment',hostAction:'detach-session',assignment:rollingStoredAssignment}]);
  const rollingAssignmentRelease:RollingAssignmentRelease={id:rollingStoredAssignment.id,generation:rollingStoredAssignment.generation};
  const cleanedRollingCoordinatorSnapshot:RollingCoordinatorSnapshot={...rollingCoordinatorSnapshot,releasableAssignments:[rollingAssignmentRelease]};
  assert.deepEqual(projectRollingCoordinatorActions(cleanedRollingCoordinatorSnapshot).decisions,[{kind:'release',command:'replenish',release:rollingAssignmentRelease,graphDigest:cleanedRollingCoordinatorSnapshot.graphDigest}]);
  const staleRollingCoordinatorSnapshot:RollingCoordinatorSnapshot={...cleanedRollingCoordinatorSnapshot,releasableAssignments:[{...rollingAssignmentRelease,generation:'previous-generation'}]};
- assert.deepEqual(projectRollingCoordinatorActions(staleRollingCoordinatorSnapshot).decisions,[{kind:'assignment',command:'retire-worker',assignment:rollingStoredAssignment}]);
+ assert.deepEqual(projectRollingCoordinatorActions(staleRollingCoordinatorSnapshot).decisions,[{kind:'host-assignment',hostAction:'detach-session',assignment:rollingStoredAssignment}]);
 });
 
 // Traceability: verifies REQ-ROLLING-INTERFACES
@@ -184,7 +184,7 @@ test('published accepted increment retires instead of repeating integration',()=
  const rollingStoredAssignment:RollingStoredAssignment={...workingAssignment(),state:'INTEGRATING',activityStopped:true};
  const rollingStoredIncrement:RollingStoredIncrement=publishedIncrement(rollingStoredAssignment,true);
  const rollingCoordinatorSnapshot:RollingCoordinatorSnapshot={...snapshot(),assignments:[rollingStoredAssignment],increments:[rollingStoredIncrement]};
- assert.deepEqual(projectRollingCoordinatorActions(rollingCoordinatorSnapshot).decisions[0],{kind:'assignment',command:'retire-worker',assignment:rollingStoredAssignment});
+ assert.deepEqual(projectRollingCoordinatorActions(rollingCoordinatorSnapshot).decisions[0],{kind:'host-assignment',hostAction:'detach-session',assignment:rollingStoredAssignment});
 });
 
 function publishedIncrement(rollingStoredAssignment:RollingStoredAssignment,obligationSatisfied:boolean):RollingStoredIncrement {

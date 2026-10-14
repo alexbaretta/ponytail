@@ -232,8 +232,9 @@ services. `PROJECT_STRUCTURE.md` is authoritative for that boundary.
   pool roots after reset and refuses nonexistent checkout reservations.
   The canonical command registry is `src/rolling-cli-registry.ts`; CLI and the
   optional `ponytail-mcp/rolling.ts` adapter invoke the shared typed operations
-  in `src/rolling-operations.ts`. Native sessions use Codex App Server directly;
-  no Ponytail plugin is required. Historical inspection is explicit through
+  in `src/rolling-operations.ts`. Session API commands are retired from CLI and
+  MCP registration; the coordinator operates sessions through host tools and
+  records associations with `ponytail swarm`. Historical inspection is explicit through
   `ponytail campaign legacy --command <validate|report|list|status|reservation-audit>
   [--arguments <JSON-array>]`. Legacy scheduling/dispatch is retired from this
   chapter; historical persisted records and their readers remain intact.

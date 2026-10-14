@@ -74,7 +74,7 @@ function cliHelpText(argv:readonly string[]):string {
  const separator = argv.indexOf('--');
  const args = (separator < 0 ? argv : argv.slice(0,separator)).filter(argument=>argument !== '--help' && argument !== '-h');
  const [chapter,command] = args;
- if (chapter === 'campaign') return rollingCampaignHelp(rollingCommandDefinitions.some(item=>item.name===command)?command:undefined);
+ if (chapter === 'campaign') return rollingCampaignHelp(rollingCommandDefinitions.some(item=>item.cli&&item.name===command)?command:undefined);
  if (chapter === undefined || chapter === 'help') {
   const chapters = [...new Set(cliHelpCommands.map(item=>item.chapter).filter(Boolean))];
   return 'Usage: ponytail <chapter|command> [arguments]\n\nChapters:\n'
@@ -121,7 +121,7 @@ export const cliCommandRegistryV1:CliCommandRegistryV1={schemaVersion:1,
  rootCommands:cliHelpCommands.filter(item=>item.chapter==='').map(item=>item.name),
  chapters:{...Object.fromEntries([...new Set(cliHelpCommands.map(item=>item.chapter).filter(Boolean))].map(chapter=>[
   chapter,{commands:cliHelpCommands.filter(item=>item.chapter===chapter).map(item=>item.name),freeform:chapter==='plan-input'},
- ] as const)),campaign:{commands:rollingCommandDefinitions.map(item=>item.name),freeform:false}},
+ ] as const)),campaign:{commands:rollingCommandDefinitions.filter(item=>item.cli).map(item=>item.name),freeform:false}},
 };
 
 if (require.main === module) process.stdout.write(renderCliHelp(process.argv.slice(2)));

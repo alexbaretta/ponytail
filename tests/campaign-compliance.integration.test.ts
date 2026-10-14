@@ -46,7 +46,7 @@ for (const [obligationId,chapter] of [['OBL-117','search'],['OBL-118','plan'],['
 
 // Traceability: verifies REQ-ROLLING-INTERFACES
 test('campaign and PM help remain available through the shared help routing',()=>{
- for (const command of rollingCommandDefinitions) {
+ for (const command of rollingCommandDefinitions.filter(command=>command.cli)) {
   const spawnSyncReturns = spawnSync(path.join(root,'cli/ponytail'),['campaign',command.name,'--help'],{cwd:root,encoding:'utf8'});
   assert.equal(spawnSyncReturns.status,0,spawnSyncReturns.stderr);
   assert.match(spawnSyncReturns.stdout,/Preconditions:/);

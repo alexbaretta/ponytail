@@ -122,11 +122,12 @@ export interface RollingReplenishment {
  readonly snapshot:RollingCoordinatorSnapshot;
 }
 export interface RollingReconcileDecision {readonly kind:'reconcile';readonly expectedDigest:string;readonly observedDigest:string;}
-export interface RollingWorkerDecision {readonly kind:'worker';readonly command:'provision-worker' | 'recover-worker' | 'resume-worker' | 'observe-resumption';readonly action:RollingAction;}
-export interface RollingReviewDecision {readonly kind:'review';readonly command:'dispatch-review' | 'inspect-review';readonly review:RollingStoredReview;}
-export interface RollingAssignmentDecision {readonly kind:'assignment';readonly command:'start-review' | 'dispatch-worker' | 'collect-submission' | 'integrate' | 'retire-worker';readonly assignment:RollingStoredAssignment;}
-export interface RollingWorkerSuspensionDecision {readonly kind:'worker-suspension';readonly command:'suspend-worker';readonly assignment:RollingStoredAssignment;readonly blockers:readonly string[];}
-export interface RollingWorkerRebindingDecision {readonly kind:'worker-rebinding';readonly command:'rebind-worker';readonly assignment:RollingStoredAssignment;}
+export interface RollingWorkerDecision {readonly kind:'worker';readonly hostAction:'create-session' | 'observe-session-creation' | 'resume-session' | 'observe-session-resumption';readonly action:RollingAction;}
+export interface RollingReviewDecision {readonly kind:'review';readonly hostAction:'send-review' | 'observe-review';readonly review:RollingStoredReview;}
+export interface RollingAssignmentDecision {readonly kind:'assignment';readonly command:'integrate';readonly assignment:RollingStoredAssignment;}
+export interface RollingHostAssignmentDecision {readonly kind:'host-assignment';readonly hostAction:'request-adversarial-review' | 'send-assignment' | 'collect-result' | 'detach-session';readonly assignment:RollingStoredAssignment;}
+export interface RollingWorkerSuspensionDecision {readonly kind:'worker-suspension';readonly hostAction:'quiesce-session';readonly assignment:RollingStoredAssignment;readonly blockers:readonly string[];}
+export interface RollingWorkerRebindingDecision {readonly kind:'worker-rebinding';readonly hostAction:'reassign-scope';readonly assignment:RollingStoredAssignment;}
 export interface RollingWorkerDispatchBlockedDecision {readonly kind:'blocked-worker-dispatch';readonly reason:'instruction_turn_unknown';readonly assignment:RollingStoredAssignment;readonly dispatch:RollingWorkerDispatchStarted;}
 export interface RollingReviewDispatchBlockedDecision {readonly kind:'blocked-review-dispatch';readonly reason:'instruction_turn_unknown';readonly review:RollingStoredReview;readonly dispatch:RollingReviewDispatchStarted;}
 export interface RollingPublicationDecision {readonly kind:'publication';readonly command:'prepare-publication' | 'observe-preparation' | 'observe-refresh' | 'inspect-publication-conflict' | 'run-publication-qa' | 'observe-publication-qa' | 'publish-mainline' | 'observe-mainline' | 'refresh-mainline' | 'synchronize-campaign';readonly publication:RollingPublicationStatus;}
@@ -136,7 +137,7 @@ export interface RollingIncrementAcceptanceDecision {readonly kind:'acceptance';
 export interface RollingReleaseDecision {readonly kind:'release';readonly command:'replenish';readonly release:RollingAssignmentRelease;readonly graphDigest:string;}
 export interface RollingReplenishDecision {readonly kind:'replenish';readonly graphDigest:string;}
 // Discriminator: kind
-export type RollingCoordinatorDecision = RollingReconcileDecision | RollingWorkerDecision | RollingReviewDecision | RollingAssignmentDecision | RollingPublicationDecision | RollingReplenishDecision | RollingWorkerSuspensionDecision | RollingWorkerRebindingDecision | RollingWorkerDispatchBlockedDecision | RollingReviewDispatchBlockedDecision | RollingReleaseDecision | RollingIncrementAcceptanceDecision | RollingPublicationFreezeDecision | RollingClosureDecision;
+export type RollingCoordinatorDecision = RollingReconcileDecision | RollingWorkerDecision | RollingReviewDecision | RollingAssignmentDecision | RollingHostAssignmentDecision | RollingPublicationDecision | RollingReplenishDecision | RollingWorkerSuspensionDecision | RollingWorkerRebindingDecision | RollingWorkerDispatchBlockedDecision | RollingReviewDispatchBlockedDecision | RollingReleaseDecision | RollingIncrementAcceptanceDecision | RollingPublicationFreezeDecision | RollingClosureDecision;
 export interface RollingCoordinatorActions {readonly snapshot:RollingCoordinatorSnapshot;readonly decisions:readonly RollingCoordinatorDecision[];}
 
 function publicationCommand(rollingPublicationStatus:RollingPublicationStatus):RollingPublicationDecision['command'] {
@@ -164,8 +165,8 @@ export function projectRollingCoordinatorActions(rollingCoordinatorSnapshot:Roll
  for (const rollingStoredReview of rollingCoordinatorSnapshot.reviews) if (rollingStoredReview.outcome === null) {
   const rollingReviewDispatch=rollingCoordinatorSnapshot.reviewDispatches.find(rollingStoredReviewDispatch=>rollingStoredReviewDispatch.reviewId === rollingStoredReview.request.id)?.dispatch;
   switch (rollingReviewDispatch?.state) {
-   case undefined: decisions.push({kind:'review',command:'dispatch-review',review:rollingStoredReview});break;
-   case 'ATTACHED': decisions.push({kind:'review',command:'inspect-review',review:rollingStoredReview});break;
+   case undefined: decisions.push({kind:'review',hostAction:'send-review',review:rollingStoredReview});break;
+   case 'ATTACHED': decisions.push({kind:'review',hostAction:'observe-review',review:rollingStoredReview});break;
    case 'STARTED': decisions.push({kind:'blocked-review-dispatch',reason:'instruction_turn_unknown',review:rollingStoredReview,dispatch:rollingReviewDispatch});break;
    default: rollingReviewDispatch satisfies never;
   }
@@ -175,7 +176,7 @@ export function projectRollingCoordinatorActions(rollingCoordinatorSnapshot:Roll
   if (rollingStoredAssignment.state === 'INACTIVE' && rollingStoredAssignment.activityStopped && !rollingStoredAssignment.retired
    && rollingStoredAssignment.sessionId && rollingStoredAssignment.lease
    && rollingCoordinatorSnapshot.scheduling.blocked.some(block=>block.reason === 'scope_changed' && block.obligationId === rollingStoredAssignment.obligationId)) {
-   decisions.push({kind:'worker-rebinding',command:'rebind-worker',assignment:rollingStoredAssignment});continue;
+   decisions.push({kind:'worker-rebinding',hostAction:'reassign-scope',assignment:rollingStoredAssignment});continue;
   }
   const rollingAssignmentRelease=rollingCoordinatorSnapshot.releasableAssignments.find(release=>release.id === rollingStoredAssignment.id && release.generation === rollingStoredAssignment.generation);
   if (rollingAssignmentRelease && rollingStoredAssignment.state === 'RETIRING' && rollingStoredAssignment.retired && rollingStoredAssignment.activityStopped) {
@@ -183,24 +184,26 @@ export function projectRollingCoordinatorActions(rollingCoordinatorSnapshot:Roll
   }
   const rollingStoredIncrement=rollingCoordinatorSnapshot.increments.find(increment=>increment.claim.assignmentId === rollingStoredAssignment.id && increment.claim.generation === rollingStoredAssignment.generation);
   if (rollingStoredAssignment.state === 'INTEGRATING' && rollingStoredIncrement?.state === 'PUBLISHED') {
-   if (rollingStoredIncrement.obligationSatisfied) decisions.push({kind:'assignment',command:'retire-worker',assignment:rollingStoredAssignment});
+   if (rollingStoredIncrement.obligationSatisfied) decisions.push({kind:'host-assignment',hostAction:'detach-session',assignment:rollingStoredAssignment});
    else decisions.push({kind:'acceptance',command:'accept',assignment:rollingStoredAssignment,increment:rollingStoredIncrement});
    continue;
   }
   if (rollingStoredAssignment.state === 'WORKING' && !rollingStoredAssignment.retired && !rollingStoredAssignment.activityStopped && rollingStoredAssignment.sessionId !== null) {
    const rollingWorkerDispatch=rollingCoordinatorSnapshot.workerDispatches.find(rollingStoredWorkerDispatch=>rollingStoredWorkerDispatch.assignmentId === rollingStoredAssignment.id && rollingStoredWorkerDispatch.generation === rollingStoredAssignment.generation)?.dispatch;
    switch (rollingWorkerDispatch?.state) {
-    case undefined: decisions.push({kind:'assignment',command:'dispatch-worker',assignment:rollingStoredAssignment});break;
-    case 'ATTACHED': decisions.push({kind:'assignment',command:'collect-submission',assignment:rollingStoredAssignment});break;
+    case undefined: decisions.push({kind:'host-assignment',hostAction:'send-assignment',assignment:rollingStoredAssignment});break;
+    case 'ATTACHED': decisions.push({kind:'host-assignment',hostAction:'collect-result',assignment:rollingStoredAssignment});break;
     case 'STARTED': decisions.push({kind:'blocked-worker-dispatch',reason:'instruction_turn_unknown',assignment:rollingStoredAssignment,dispatch:rollingWorkerDispatch});break;
     default: rollingWorkerDispatch satisfies never;
    }
-  } else if (rollingStoredAssignment.state === 'REWORK') decisions.push({kind:'worker-suspension',command:'suspend-worker',assignment:rollingStoredAssignment,blockers:[]});
+  } else if (rollingStoredAssignment.state === 'REWORK') decisions.push({kind:'worker-suspension',hostAction:'quiesce-session',assignment:rollingStoredAssignment,blockers:[]});
   else if (['REVIEW','INTEGRATING','RETIRING'].includes(rollingStoredAssignment.state)
    && !rollingCoordinatorSnapshot.reviews.some(review=>review.request.assignmentId === rollingStoredAssignment.id && review.outcome === null))
-   decisions.push({kind:'assignment',command:rollingStoredAssignment.state === 'REVIEW' ? 'start-review' : rollingStoredAssignment.state === 'INTEGRATING' ? 'integrate' : 'retire-worker',assignment:rollingStoredAssignment});
+   decisions.push(rollingStoredAssignment.state === 'INTEGRATING'
+    ? {kind:'assignment',command:'integrate',assignment:rollingStoredAssignment}
+    : {kind:'host-assignment',hostAction:rollingStoredAssignment.state === 'REVIEW' ? 'request-adversarial-review' : 'detach-session',assignment:rollingStoredAssignment});
  }
- for (const action of rollingCoordinatorSnapshot.actions) decisions.push({kind:'worker',command:action.kind === 'START_WORKER' ? action.state === 'PENDING' ? 'provision-worker' : 'recover-worker' : action.state === 'PENDING' ? 'resume-worker' : 'observe-resumption',action});
+ for (const action of rollingCoordinatorSnapshot.actions) decisions.push({kind:'worker',hostAction:action.kind === 'START_WORKER' ? action.state === 'PENDING' ? 'create-session' : 'observe-session-creation' : action.state === 'PENDING' ? 'resume-session' : 'observe-session-resumption',action});
  if (rollingCoordinatorSnapshot.publicationReadiness.state === 'FROZEN') decisions.push({kind:'publication-freeze',command:'freeze-publication',selection:rollingCoordinatorSnapshot.publicationReadiness,flush:rollingCoordinatorSnapshot.publicationReadiness.trigger === 'threshold' ? null : rollingCoordinatorSnapshot.publicationReadiness.trigger});
  if (rollingCoordinatorSnapshot.scheduling.selected.length > 0) decisions.push({kind:'replenish',graphDigest:rollingCoordinatorSnapshot.graphDigest});
  if (rollingCoordinatorSnapshot.obligationProjection.complete && rollingCoordinatorSnapshot.assignments.every(assignment=>assignment.state === 'RELEASED')
@@ -559,9 +562,9 @@ export async function runRollingOperationCli(argv:readonly string[]):Promise<voi
  const [command,...arguments_] = argv;
  if (command === undefined || command === '--help') {process.stdout.write(rollingCampaignHelp());return;}
  if (!isRollingCommandName(command)) throw new Error(`rolling campaign: unknown command ${command}`);
- if (arguments_.length === 1 && arguments_[0] === '--help') {process.stdout.write(rollingCampaignHelp(command));return;}
  const definition = rollingCommandDefinitions.find(item=>item.name === command);
- if (!definition) throw new Error('rolling campaign: missing command definition');
+ if (!definition?.cli) throw new Error(`rolling campaign: unknown or retired CLI command ${command}; session operations belong to the coordinator host tools`);
+ if (arguments_.length === 1 && arguments_[0] === '--help') {process.stdout.write(rollingCampaignHelp(command));return;}
  const input:Record<string,unknown> = {};
  let jsonOutput = false;
  for (let index=0;index<arguments_.length;index++) {

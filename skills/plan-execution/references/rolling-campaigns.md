@@ -105,6 +105,17 @@ freezing prepare a fresh candidate against the new target. Old QA is historical
 evidence, never publication authorization for that new candidate.
 
 
+## Session-operation scope correction
+
+The coordinator, not Ponytail CLI or MCP, creates, starts, stops and renames
+sessions through its host tools. Use `ponytail swarm` for session associations
+and managed-worktree lifecycle. Runtime activity is a host observation; database
+membership is not activity proof. The earlier native session-control procedure
+below is superseded: its session API command spellings are retired and must not
+be invoked. Planning, graph reconciliation, acceptance and publication remain
+campaign responsibilities. The swarm skill will own the revised operational
+session procedure; do not build a private App Server controller as a substitute.
+
 ## Coordinator loop
 
 Use `ponytail campaign --help` and each command's `--help` for required named

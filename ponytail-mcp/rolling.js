@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { rollingCommandDefinitions } from '../src/rolling-cli-registry.js';
 import { executeRollingCommand } from '../src/rolling-operations.js';
 export function registerRollingCampaignTools(mcpServer) {
-    for (const rollingCommandDefinition of rollingCommandDefinitions) {
+    for (const rollingCommandDefinition of rollingCommandDefinitions.filter(command => command.cli)) {
         const inputSchema = {
             root: z.string().refine(path.isAbsolute, 'An absolute invoking project root is required.')
         };

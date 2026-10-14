@@ -277,3 +277,17 @@ generated/installed host copies, and a plan with independent ready obligations.
    remain bound to their original user-worktree provenance; checkouts can transfer
    only after prior ownership is relinquished. Inspect both owner and managed
    checkout to confirm truthful resulting membership.
+
+### Session command retirement regression evidence
+
+The campaign CLI, root command registry, chapter/subcommand help and optional MCP
+registration omit all session API operations. Direct retired-command invocation
+fails before opening project state. `campaign next-actions` identifies session
+work with `hostAction`, preserving the prerequisite action, assignment and review
+records; pure publication and integration operations retain `command`.
+
+Focused proof: 39 tests in `rolling-operations`, `rolling-cli-registry`, `cli-help`
+and campaign compliance; the isolated PostgreSQL `shared operations initialize
+defaults` integration proves actual MCP registration parity and coordinator
+decisions. TSTS checked 1,642 files without violations. This does not establish
+final plan acceptance or the pending swarm skill acceptance.

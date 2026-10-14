@@ -9,7 +9,7 @@ import {executeRollingCommand} from '../src/rolling-operations.js';
 
 // Traceability: implements REQ-ROLLING-INTERFACES
 export function registerRollingCampaignTools(mcpServer:McpServer):void {
- for (const rollingCommandDefinition of rollingCommandDefinitions) {
+ for (const rollingCommandDefinition of rollingCommandDefinitions.filter(command=>command.cli)) {
   const inputSchema:Record<string,z.ZodType<unknown>> = {
    root:z.string().refine(path.isAbsolute,'An absolute invoking project root is required.')
   };

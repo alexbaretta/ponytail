@@ -137,10 +137,10 @@ function projectRollingCoordinatorActions(rollingCoordinatorSnapshot) {
             const rollingReviewDispatch = rollingCoordinatorSnapshot.reviewDispatches.find(rollingStoredReviewDispatch => rollingStoredReviewDispatch.reviewId === rollingStoredReview.request.id)?.dispatch;
             switch (rollingReviewDispatch?.state) {
                 case undefined:
-                    decisions.push({ kind: 'review', command: 'dispatch-review', review: rollingStoredReview });
+                    decisions.push({ kind: 'review', hostAction: 'send-review', review: rollingStoredReview });
                     break;
                 case 'ATTACHED':
-                    decisions.push({ kind: 'review', command: 'inspect-review', review: rollingStoredReview });
+                    decisions.push({ kind: 'review', hostAction: 'observe-review', review: rollingStoredReview });
                     break;
                 case 'STARTED':
                     decisions.push({ kind: 'blocked-review-dispatch', reason: 'instruction_turn_unknown', review: rollingStoredReview, dispatch: rollingReviewDispatch });
@@ -154,7 +154,7 @@ function projectRollingCoordinatorActions(rollingCoordinatorSnapshot) {
         if (rollingStoredAssignment.state === 'INACTIVE' && rollingStoredAssignment.activityStopped && !rollingStoredAssignment.retired
             && rollingStoredAssignment.sessionId && rollingStoredAssignment.lease
             && rollingCoordinatorSnapshot.scheduling.blocked.some(block => block.reason === 'scope_changed' && block.obligationId === rollingStoredAssignment.obligationId)) {
-            decisions.push({ kind: 'worker-rebinding', command: 'rebind-worker', assignment: rollingStoredAssignment });
+            decisions.push({ kind: 'worker-rebinding', hostAction: 'reassign-scope', assignment: rollingStoredAssignment });
             continue;
         }
         const rollingAssignmentRelease = rollingCoordinatorSnapshot.releasableAssignments.find(release => release.id === rollingStoredAssignment.id && release.generation === rollingStoredAssignment.generation);
@@ -165,7 +165,7 @@ function projectRollingCoordinatorActions(rollingCoordinatorSnapshot) {
         const rollingStoredIncrement = rollingCoordinatorSnapshot.increments.find(increment => increment.claim.assignmentId === rollingStoredAssignment.id && increment.claim.generation === rollingStoredAssignment.generation);
         if (rollingStoredAssignment.state === 'INTEGRATING' && rollingStoredIncrement?.state === 'PUBLISHED') {
             if (rollingStoredIncrement.obligationSatisfied)
-                decisions.push({ kind: 'assignment', command: 'retire-worker', assignment: rollingStoredAssignment });
+                decisions.push({ kind: 'host-assignment', hostAction: 'detach-session', assignment: rollingStoredAssignment });
             else
                 decisions.push({ kind: 'acceptance', command: 'accept', assignment: rollingStoredAssignment, increment: rollingStoredIncrement });
             continue;
@@ -174,10 +174,10 @@ function projectRollingCoordinatorActions(rollingCoordinatorSnapshot) {
             const rollingWorkerDispatch = rollingCoordinatorSnapshot.workerDispatches.find(rollingStoredWorkerDispatch => rollingStoredWorkerDispatch.assignmentId === rollingStoredAssignment.id && rollingStoredWorkerDispatch.generation === rollingStoredAssignment.generation)?.dispatch;
             switch (rollingWorkerDispatch?.state) {
                 case undefined:
-                    decisions.push({ kind: 'assignment', command: 'dispatch-worker', assignment: rollingStoredAssignment });
+                    decisions.push({ kind: 'host-assignment', hostAction: 'send-assignment', assignment: rollingStoredAssignment });
                     break;
                 case 'ATTACHED':
-                    decisions.push({ kind: 'assignment', command: 'collect-submission', assignment: rollingStoredAssignment });
+                    decisions.push({ kind: 'host-assignment', hostAction: 'collect-result', assignment: rollingStoredAssignment });
                     break;
                 case 'STARTED':
                     decisions.push({ kind: 'blocked-worker-dispatch', reason: 'instruction_turn_unknown', assignment: rollingStoredAssignment, dispatch: rollingWorkerDispatch });
@@ -186,13 +186,15 @@ function projectRollingCoordinatorActions(rollingCoordinatorSnapshot) {
             }
         }
         else if (rollingStoredAssignment.state === 'REWORK')
-            decisions.push({ kind: 'worker-suspension', command: 'suspend-worker', assignment: rollingStoredAssignment, blockers: [] });
+            decisions.push({ kind: 'worker-suspension', hostAction: 'quiesce-session', assignment: rollingStoredAssignment, blockers: [] });
         else if (['REVIEW', 'INTEGRATING', 'RETIRING'].includes(rollingStoredAssignment.state)
             && !rollingCoordinatorSnapshot.reviews.some(review => review.request.assignmentId === rollingStoredAssignment.id && review.outcome === null))
-            decisions.push({ kind: 'assignment', command: rollingStoredAssignment.state === 'REVIEW' ? 'start-review' : rollingStoredAssignment.state === 'INTEGRATING' ? 'integrate' : 'retire-worker', assignment: rollingStoredAssignment });
+            decisions.push(rollingStoredAssignment.state === 'INTEGRATING'
+                ? { kind: 'assignment', command: 'integrate', assignment: rollingStoredAssignment }
+                : { kind: 'host-assignment', hostAction: rollingStoredAssignment.state === 'REVIEW' ? 'request-adversarial-review' : 'detach-session', assignment: rollingStoredAssignment });
     }
     for (const action of rollingCoordinatorSnapshot.actions)
-        decisions.push({ kind: 'worker', command: action.kind === 'START_WORKER' ? action.state === 'PENDING' ? 'provision-worker' : 'recover-worker' : action.state === 'PENDING' ? 'resume-worker' : 'observe-resumption', action });
+        decisions.push({ kind: 'worker', hostAction: action.kind === 'START_WORKER' ? action.state === 'PENDING' ? 'create-session' : 'observe-session-creation' : action.state === 'PENDING' ? 'resume-session' : 'observe-session-resumption', action });
     if (rollingCoordinatorSnapshot.publicationReadiness.state === 'FROZEN')
         decisions.push({ kind: 'publication-freeze', command: 'freeze-publication', selection: rollingCoordinatorSnapshot.publicationReadiness, flush: rollingCoordinatorSnapshot.publicationReadiness.trigger === 'threshold' ? null : rollingCoordinatorSnapshot.publicationReadiness.trigger });
     if (rollingCoordinatorSnapshot.scheduling.selected.length > 0)
@@ -599,13 +601,13 @@ async function runRollingOperationCli(argv) {
     }
     if (!(0, rolling_cli_registry_js_1.isRollingCommandName)(command))
         throw new Error(`rolling campaign: unknown command ${command}`);
+    const definition = rolling_cli_registry_js_1.rollingCommandDefinitions.find(item => item.name === command);
+    if (!definition?.cli)
+        throw new Error(`rolling campaign: unknown or retired CLI command ${command}; session operations belong to the coordinator host tools`);
     if (arguments_.length === 1 && arguments_[0] === '--help') {
         process.stdout.write((0, rolling_cli_registry_js_1.rollingCampaignHelp)(command));
         return;
     }
-    const definition = rolling_cli_registry_js_1.rollingCommandDefinitions.find(item => item.name === command);
-    if (!definition)
-        throw new Error('rolling campaign: missing command definition');
     const input = {};
     let jsonOutput = false;
     for (let index = 0; index < arguments_.length; index++) {
