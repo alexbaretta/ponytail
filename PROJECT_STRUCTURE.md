@@ -75,7 +75,8 @@ while project-wide management records remain under `pm/`.
   claim/release preserve checkout content and refuse live assignments or Git operations.
 - `src/swarm-info.ts` owns the swarm inventory/coordinator CLI adapter, physical
   Git/project-scoped inventory, native coordinator identity admission, immutable
-  V1/V2 result readers and normalization to V2. Its adjacent `.js` runtime is
+  V1/V2/V3 result readers and normalization to V3, including standalone retained
+  membership without an invented campaign assignment. Its adjacent `.js` runtime is
   generated; legacy worker leases and absent activity observations stay explicit.
 - `src/project-index-database.ts` owns the checked project-local PostgreSQL
   connection options and shared index error declaration. `src/project-index-database.js`

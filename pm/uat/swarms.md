@@ -134,6 +134,12 @@ eight tests; adversarial review accepts this internal increment. Provisioning,
 resource cleanup, worker cessation, deletion and real CLI lifecycle acceptance
 remain pending; these results do not discharge ACC-SW-10 through ACC-SW-13.
 
+**Inventory evidence:** V3 exposes an explicit retained membership generation and
+an absent campaign assignment. `tests/swarm-info.integration.test.ts` exercises
+standalone managed invocation through the real installed CLI, owner equivalence,
+sibling isolation and rejection of contradictory campaign/swarm owners. Historical
+V1/V2 reader proofs remain intact. Native activity is still explicitly unobserved.
+
 ## Arc SWARM-CLEAR: Release resources and restart
 
 Traceability: verifies REQ-SWARM-CLEAR

@@ -12,7 +12,7 @@ import {Pool} from 'pg';
 import {databaseOptions} from '../src/project-index-database.js';
 import {RollingCodex,type RollingNativeThread} from '../src/rolling-codex.js';
 import type {RollingProjectConfigV2} from '../src/rolling-campaign.js';
-import {readSwarmInfoV2} from '../src/swarm-info.js';
+import {readSwarmInfoV3} from '../src/swarm-info.js';
 
 // Traceability: verifies REQ-SWARM-OWNERSHIP
 // Traceability: verifies REQ-SWARM-INFO
@@ -63,11 +63,11 @@ test('live native coordinator binds through the real CLI without acquiring its o
  assert.equal((await rollingCodex.waitForTurn(rollingNativeThread.thread.id,activeTurnId)).status,'completed');activeTurnId=null;
  const bind=cli(['coordinator-bind','--thread',rollingNativeThread.thread.id,'--session',rollingNativeThread.thread.sessionId,'--json']);
  assert.equal(bind.status,0,bind.stderr);
- const bound=readSwarmInfoV2(JSON.parse(bind.stdout));
+ const bound=readSwarmInfoV3(JSON.parse(bind.stdout));
  assert.deepEqual(bound.coordinator,{kind:'bound',threadId:rollingNativeThread.thread.id,sessionId:rollingNativeThread.thread.sessionId});
  assert.equal((await rollingCodex.readThreadActivity(rollingNativeThread.thread.id)).status,'idle');
  const unbind=cli(['coordinator-unbind','--session',rollingNativeThread.thread.sessionId,'--json']);
- assert.equal(unbind.status,0,unbind.stderr);assert.deepEqual(readSwarmInfoV2(JSON.parse(unbind.stdout)).coordinator,{kind:'unbound'});
+ assert.equal(unbind.status,0,unbind.stderr);assert.deepEqual(readSwarmInfoV3(JSON.parse(unbind.stdout)).coordinator,{kind:'unbound'});
  assert.equal(await rollingCodex.isThreadArchived(rollingNativeThread.thread.id,ownerRoot),false);
  assert.equal(git(['rev-parse','HEAD']),revision);assert.equal(git(['status','--porcelain']),'');
  t.diagnostic(`native coordinator thread=${rollingNativeThread.thread.id}; session=${rollingNativeThread.thread.sessionId}; original writer retained; CLI bind/unbind preserved session and source`);
