@@ -143,7 +143,7 @@ test('semantic rebase help publishes aggregate review and retained replay comman
   const result = run(ponytail, ['rebase', '--help'], { cwd: root });
   assert.equal(result.status, 0, result.stderr);
   for (const command of ['diff', 'run', 'status', 'continue', 'abort']) assert.match(result.stdout, new RegExp(`\\b${command}\\b`));
-  assert.match(result.stdout, /aggregate final-state review/);
+  assert.match(result.stdout.replace(/\s+/gu, ' '), /aggregate final-state review/);
   assert.match(result.stdout, /no semantic inference or product validation/);
 });
 
