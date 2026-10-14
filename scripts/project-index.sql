@@ -255,6 +255,16 @@ CREATE TABLE IF NOT EXISTS rolling_reset_v1 (
  CHECK(COALESCE(reset_text::jsonb->>'schemaVersion'='1' AND reset_text::jsonb->>'state'=state,false))
 );
 
+-- Traceability: supports REQ-SWARM-OWNERSHIP
+CREATE TABLE IF NOT EXISTS swarm_owner_v1 (
+  project_id uuid NOT NULL REFERENCES project_v1(project_id) ON DELETE CASCADE,
+  owner_root text NOT NULL CHECK (owner_root <> ''),
+  git_common_directory text NOT NULL CHECK (git_common_directory <> ''),
+  coordinator_session_id text CHECK (coordinator_session_id <> ''),
+  PRIMARY KEY (project_id, owner_root),
+  UNIQUE (coordinator_session_id)
+);
+
 CREATE TABLE IF NOT EXISTS rolling_pool_v1 (
   project_id uuid PRIMARY KEY REFERENCES project_v1(project_id) ON DELETE CASCADE,
   managed_directory text NOT NULL CHECK (managed_directory <> '')

@@ -1593,6 +1593,16 @@
       "class": "integration-test",
       "path": "tests/swarm-info.integration.test.ts",
       "locator": "text"
+    },
+    {
+      "class": "implementation",
+      "path": "src/swarm-store.ts",
+      "locator": "text"
+    },
+    {
+      "class": "integration-test",
+      "path": "tests/swarm-store.integration.test.ts",
+      "locator": "text"
     }
   ],
   "entities": [],
@@ -1928,6 +1938,10 @@
     {
       "path": "src/swarm-info.js",
       "sourcePath": "src/swarm-info.ts"
+    },
+    {
+      "path": "src/swarm-store.js",
+      "sourcePath": "src/swarm-store.ts"
     }
   ],
   "reverseViewPath": "pm/requirements/traceability.generated.md",

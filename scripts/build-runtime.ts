@@ -15,6 +15,7 @@ const sources: readonly string[] = [
   'src/rolling-campaign.ts',
   'src/swarm-owner.ts',
   'src/swarm-info.ts',
+  'src/swarm-store.ts',
   'src/rolling-worktrees.ts',
   'src/rolling-reset.ts',
   'src/rolling-campaign-store.ts',

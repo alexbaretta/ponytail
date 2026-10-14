@@ -7,8 +7,9 @@ Licensed under the MIT License. See LICENSE in the project root.
 
 [UAT index](index.md) · [Canonical requirements and obligations](../requirements/swarms.md)
 
-Approved expected behavior; every Arc below is planned and unexecuted. No
-implementation, native capability or release acceptance is claimed.
+Approved expected behavior; full native lifecycle Arcs remain unexecuted.
+Focused automated evidence below is partial and does not establish release
+acceptance or native lifecycle capability.
 Use disposable checkouts and isolated rows in the existing project database
 for automated lifecycle proof. Native session cessation and Desktop activity
 also require evidence through their real owning transport.
@@ -29,6 +30,14 @@ owned by the first, and bound worker/coordinator sessions.
    At most one succeeds; the other cannot replace it.
 3. Simulate coordinator loss. Worker/checkouts remain bound and visible, with
    coordinator unavailability distinguished from an explicitly empty binding.
+
+**Partial evidence (2026-10-13):** Step 1's physical owner/managed selection,
+sibling isolation and read-only CLI behavior pass in
+`tests/swarm-info.integration.test.ts`. Step 2's storage race and stale-unbind
+protection pass in `tests/swarm-store.integration.test.ts`; another owner's
+coordinator remains independent. Explicit coordinator unbinding preserves
+legacy worker records, but native coordinator loss/observation and membership
+adoption in step 3 remain pending. ACC-SW-01 and ACC-SW-02 are not yet accepted.
 
 ## Arc SWARM-INFO: Diagnose membership and execution
 

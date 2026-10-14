@@ -74,7 +74,8 @@ chapter and campaign integration. OBL-3 is the first useful diagnostic delivery;
 it need not wait for deletion or clearing operations.
 
 Initial sprint: [S01 ownership and inspection](sprints/S01.md), first feature
-planned and in progress; physical inventory/CLI integration remains pending.
+planned and in progress; physical inventory/CLI integration now passes focused
+proof. Explicit membership and native observation remain pending.
 Later batches receive detailed sprint records when their planning begins.
 
 ## Activation and architecture work

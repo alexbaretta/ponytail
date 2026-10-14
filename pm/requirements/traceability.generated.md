@@ -1279,10 +1279,12 @@ Requirement: [pm/requirements/swarms.md](swarms.md)
 
 - implementation: implements [src/swarm-info.ts:75](../../src/swarm-info.ts#L75)
 - implementation: implements [src/swarm-owner.ts:18](../../src/swarm-owner.ts#L18)
+- implementation: implements [src/swarm-store.ts:26](../../src/swarm-store.ts#L26)
 - unit-test: verifies [tests/swarm-owner.test.ts:12](../../tests/swarm-owner.test.ts#L12)
 - unit-test: verifies [tests/swarm-owner.test.ts:19](../../tests/swarm-owner.test.ts#L19)
 - unit-test: verifies [tests/swarm-owner.test.ts:30](../../tests/swarm-owner.test.ts#L30)
 - integration-test: verifies [tests/swarm-info.integration.test.ts:14](../../tests/swarm-info.integration.test.ts#L14)
+- integration-test: verifies [tests/swarm-store.integration.test.ts:15](../../tests/swarm-store.integration.test.ts#L15)
 - uat: verifies [pm/uat/swarms.md:18](../../pm/uat/swarms.md#L18)
 
 ## REQ-SWARM-INFO
