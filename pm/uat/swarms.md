@@ -326,3 +326,15 @@ Arcs remain green. No command contacts Codex or claims observed native activity.
 
 Result/verdict recording and retained worker lifecycle transitions remain pending;
 this evidence does not establish final campaign acceptance.
+
+### Host result and review bookkeeping evidence
+
+The real campaign CLI records host-collected V1 worker submissions and accepted
+or rejected adversarial verdicts. Existing PostgreSQL/Git proof checks enforce
+the original session, current frozen lease, exact clean candidate/base and
+independent assigned reviewer. Replays retain the immutable proposal/decision.
+The optional MCP adapter registers the same typed operations and schemas.
+Focused evidence: both manual `persists accepted/rejected review` Arcs and the
+`shared operations initialize defaults` MCP parity Arc; scoped command/help tests
+also pass. Neither bookkeeping command uses Codex APIs. Retained worker lifecycle
+and final plan acceptance remain pending.

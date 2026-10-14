@@ -10,6 +10,8 @@ import {relativePath} from '../skills/plan-execution/scripts/obligations.js';
 import {collectRollingGraph,loadRollingConfiguration,parseRollingProjectConfig,readRollingCampaignRequest,type RollingCampaignRequest} from './rolling-campaign.js';
 import {resolveRollingManagedDirectory,validateRollingSessionMarker} from './rolling-worktrees.js';
 import {RollingCampaignStore,readRollingConfigurationAmendmentRequestV1,readRollingBindingHistoryConfiguration,type RollingBindingHistoryConfiguration,type RollingCampaignRegistration,type RollingCampaignRegistrationResult,type RollingGraphReconciliation,type RollingCoordinatorSnapshot,type RollingAllocationResult,type RollingAction,type RollingStoredAssignment,type RollingPublicationStatus,type RollingAssignmentRelease,type RollingWorkerDispatchStarted,type RollingWorkerDispatch,type RollingReviewDispatchStarted,type RollingStoredIncrement} from './rolling-campaign-store.js';
+import {readRollingWorkerSubmissionV1} from './rolling-worker-submission.js';
+import {readRollingReviewOutcomeV1} from './rolling-review.js';
 import type {RollingStoredReview,RollingReviewerLoss} from './rolling-review.js';
 import {git,gitResult,publishRollingIncrement,reconcileRollingIncrementPublication,type RollingIncrementPublication,type RollingIncrementRepair,type RollingIncrementRebaseV1,rebasePreparedRollingIncrement,observePreparedRollingIncrement,refreshRollingIncrementProof,fastForwardRollingIncrement} from './rolling-integration.js';
 import {RollingCodex,type RollingNativeServerRequest} from './rolling-codex.js';
@@ -87,6 +89,8 @@ function inspectRollingLegacy(root:string,value:unknown):string {
  return result.stdout;
 }
 export interface RollingOperationResults {
+ submit:Awaited<ReturnType<RollingCampaignStore['submit']>>;
+ 'record-review':Awaited<ReturnType<RollingCampaignStore['recordReviewOutcome']>>;
  reset:Awaited<ReturnType<RollingCampaignStore['resetProject']>>;
  init:RollingCampaignRegistrationResult;reconcile:RollingGraphReconciliation;status:RollingCoordinatorSnapshot;'next-actions':RollingCoordinatorActions;replenish:RollingReplenishment;
  'provision-worker':Awaited<ReturnType<typeof attachRollingWorker>>;'recover-worker':Awaited<ReturnType<typeof recoverRollingWorkerCreation>>;
@@ -474,6 +478,11 @@ export class RollingCampaignOperations {
    case 'suspend-worker': return {command,result:await this.native(signal,rollingCodex=>suspendRollingWorker(this.rollingCampaignStore,rollingCodex,stringField(input,'campaign'),stringField(input,'assignment'),stringField(input,'generation'),stringArray(input.blockers),timeoutMs))};
    case 'retire-worker': return {command,result:await this.native(signal,rollingCodex=>retireRollingWorker(this.rollingCampaignStore,rollingCodex,stringField(input,'campaign'),stringField(input,'assignment'),stringField(input,'generation'),timeoutMs))};
    case 'start-review': return {command,result:await this.native(signal,rollingCodex=>startRollingReview(this.rollingCampaignStore,rollingCodex,stringField(input,'campaign'),stringField(input,'assignment'),stringField(input,'generation'),stringField(input,'revision'),readRollingReviewerLoss(input.loss),timeoutMs))};
+   case 'submit': return {command,result:await this.rollingCampaignStore.submit(stringField(input,'campaign'),stringField(input,'assignment'),stringField(input,'generation'),readRollingWorkerSubmissionV1(input.submission))};
+   case 'record-review': {
+    const rollingReviewOutcomeV1=readRollingReviewOutcomeV1(input.outcome);
+    return {command,result:await this.rollingCampaignStore.recordReviewOutcome(stringField(input,'campaign'),stringField(input,'review'),rollingReviewOutcomeV1.reviewerSessionId,rollingReviewOutcomeV1)};
+   }
    case 'request-review': return {command,result:await this.rollingCampaignStore.requestReview(stringField(input,'campaign'),stringField(input,'assignment'),stringField(input,'generation'),stringField(input,'revision'),stringField(input,'reviewer'),readRollingReviewerLoss(input.loss))};
    case 'dispatch-review': return {command,result:await this.native(signal,async rollingCodex=> {
     const campaignId = stringField(input,'campaign'),reviewId = stringField(input,'review');

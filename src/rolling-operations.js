@@ -26,11 +26,13 @@ const obligations_js_1 = require("../skills/plan-execution/scripts/obligations.j
 const rolling_campaign_js_1 = require("./rolling-campaign.js");
 const rolling_worktrees_js_1 = require("./rolling-worktrees.js");
 const rolling_campaign_store_js_1 = require("./rolling-campaign-store.js");
+const rolling_worker_submission_js_1 = require("./rolling-worker-submission.js");
+const rolling_review_js_1 = require("./rolling-review.js");
 const rolling_integration_js_1 = require("./rolling-integration.js");
 const rolling_codex_js_1 = require("./rolling-codex.js");
 const rolling_worker_js_1 = require("./rolling-worker.js");
 const rolling_publication_js_1 = require("./rolling-publication.js");
-const rolling_review_js_1 = require("./rolling-review.js");
+const rolling_review_js_2 = require("./rolling-review.js");
 const rolling_cli_registry_js_1 = require("./rolling-cli-registry.js");
 function isRecord(value) { return value !== null && typeof value === 'object' && !Array.isArray(value); }
 function record(value) {
@@ -498,16 +500,21 @@ class RollingCampaignOperations {
             case 'retry-worker': return { command, result: await this.native(signal, rollingCodex => (0, rolling_worker_js_1.correctRollingWorker)(this.rollingCampaignStore, rollingCodex, stringField(input, 'campaign'), stringField(input, 'assignment'), stringField(input, 'generation'), stringField(input, 'reason'), input.observation === undefined ? null : (0, rolling_worker_js_1.readRollingWorkerOwnerObservationV1)(input.observation))) };
             case 'suspend-worker': return { command, result: await this.native(signal, rollingCodex => (0, rolling_worker_js_1.suspendRollingWorker)(this.rollingCampaignStore, rollingCodex, stringField(input, 'campaign'), stringField(input, 'assignment'), stringField(input, 'generation'), stringArray(input.blockers), timeoutMs)) };
             case 'retire-worker': return { command, result: await this.native(signal, rollingCodex => (0, rolling_worker_js_1.retireRollingWorker)(this.rollingCampaignStore, rollingCodex, stringField(input, 'campaign'), stringField(input, 'assignment'), stringField(input, 'generation'), timeoutMs)) };
-            case 'start-review': return { command, result: await this.native(signal, rollingCodex => (0, rolling_review_js_1.startRollingReview)(this.rollingCampaignStore, rollingCodex, stringField(input, 'campaign'), stringField(input, 'assignment'), stringField(input, 'generation'), stringField(input, 'revision'), readRollingReviewerLoss(input.loss), timeoutMs)) };
+            case 'start-review': return { command, result: await this.native(signal, rollingCodex => (0, rolling_review_js_2.startRollingReview)(this.rollingCampaignStore, rollingCodex, stringField(input, 'campaign'), stringField(input, 'assignment'), stringField(input, 'generation'), stringField(input, 'revision'), readRollingReviewerLoss(input.loss), timeoutMs)) };
+            case 'submit': return { command, result: await this.rollingCampaignStore.submit(stringField(input, 'campaign'), stringField(input, 'assignment'), stringField(input, 'generation'), (0, rolling_worker_submission_js_1.readRollingWorkerSubmissionV1)(input.submission)) };
+            case 'record-review': {
+                const rollingReviewOutcomeV1 = (0, rolling_review_js_1.readRollingReviewOutcomeV1)(input.outcome);
+                return { command, result: await this.rollingCampaignStore.recordReviewOutcome(stringField(input, 'campaign'), stringField(input, 'review'), rollingReviewOutcomeV1.reviewerSessionId, rollingReviewOutcomeV1) };
+            }
             case 'request-review': return { command, result: await this.rollingCampaignStore.requestReview(stringField(input, 'campaign'), stringField(input, 'assignment'), stringField(input, 'generation'), stringField(input, 'revision'), stringField(input, 'reviewer'), readRollingReviewerLoss(input.loss)) };
             case 'dispatch-review': return { command, result: await this.native(signal, async (rollingCodex) => {
                     const campaignId = stringField(input, 'campaign'), reviewId = stringField(input, 'review');
                     const rollingReviewContext = await this.rollingCampaignStore.reviewContext(campaignId, reviewId);
                     const rollingNativeThread = await rollingCodex.resumeThread(stringField(input, 'thread'), rollingReviewContext.rootPath);
-                    await (0, rolling_review_js_1.dispatchRollingReview)(this.rollingCampaignStore, rollingCodex, campaignId, reviewId, rollingNativeThread);
-                    return (0, rolling_review_js_1.collectRollingReview)(this.rollingCampaignStore, rollingCodex, campaignId, reviewId, timeoutMs);
+                    await (0, rolling_review_js_2.dispatchRollingReview)(this.rollingCampaignStore, rollingCodex, campaignId, reviewId, rollingNativeThread);
+                    return (0, rolling_review_js_2.collectRollingReview)(this.rollingCampaignStore, rollingCodex, campaignId, reviewId, timeoutMs);
                 }) };
-            case 'inspect-review': return { command, result: await this.native(signal, rollingCodex => (0, rolling_review_js_1.collectRollingReview)(this.rollingCampaignStore, rollingCodex, stringField(input, 'campaign'), stringField(input, 'review'), timeoutMs)) };
+            case 'inspect-review': return { command, result: await this.native(signal, rollingCodex => (0, rolling_review_js_2.collectRollingReview)(this.rollingCampaignStore, rollingCodex, stringField(input, 'campaign'), stringField(input, 'review'), timeoutMs)) };
             case 'observe-increment': return { command, result: await this.observeIncrement(stringField(input, 'campaign'), stringField(input, 'review'), stringField(input, 'stopped')) };
             case 'integrate': return { command, result: await this.integrate(stringField(input, 'campaign'), stringField(input, 'review')) };
             case 'accept': return { command, result: await this.rollingCampaignStore.acceptIncrementCertificates(stringField(input, 'campaign'), stringField(input, 'review'), stringField(input, 'candidate'), stringArray(input.bindings)) };

@@ -99,7 +99,9 @@ focused QA and Arcs. For changed code they fetch and semantically rebase against
 the campaign branch before submitting the final commit/base and proof. They
 request adversarial review and coordinator publication; routine coding decisions
 remain worker-owned. Review corrections go to the original worker and reviewer.
-The coordinator owns fast rebase, acceptance and publication under the plan's
+Record host-collected proposals and verdicts through the rolling procedure's
+`campaign submit` and `campaign record-review` commands; neither operates a
+session. The coordinator owns fast rebase, acceptance and publication under the plan's
 existing gates; worker edits alone are not discharged obligations.
 
 On an unknown dependency, update the authoritative plan graph and reconcile it.

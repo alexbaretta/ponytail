@@ -146,10 +146,14 @@ action, review and batch IDs.
    and host-capability failures are concrete blockers, not invented dependencies.
 5. Collect the original worker's exact final commit/base and focused evidence.
    Assign an allowed adversarial reviewer through coordinator host tools; send
-   corrections to the original worker and reviewer. Record review/acceptance
-   using their exact contracts. Public host-submission and reviewer-verdict
-   bookkeeping transitions are currently pending; do not invoke `request-review`
-   on an unrecorded submission or fabricate reviewer identities or decisions.
+   corrections to the original worker and reviewer. Record the collected V1
+   proposal with `submit --campaign <id> --assignment <uuid> --generation <uuid>
+   --submission @submission.json`. After it becomes review-ready, bind the exact
+   candidate and independent reviewer with `request-review`. Collect the actual
+   verdict through host tools, then use `record-review --campaign <id>
+   --review <uuid> --outcome @outcome.json`. These commands only validate and store
+   supplied evidence; the coordinator establishes session quiescence through
+   host tools. Never fabricate reviewer identities or decisions.
 6. After adversarial-review acceptance, `integrate` performs the coordinator fast rebase and campaign
    increment publication. Resolve textual conflicts and their semantic effects,
    then refresh affected focused proof. After confirmed increment publication,

@@ -222,3 +222,9 @@ Host-created initial workers now bind through the real swarm CLI into campaign
 accounting in the same transaction, preserving original identity and validating
 current scope. Remaining operational integration is result/verdict recording,
 retained reactivation and ownership release. Formal acceptance remains pending.
+
+Host result/verdict bookkeeping is now exposed through `campaign submit` and
+`campaign record-review`, using existing immutable V1 readers and store checks.
+Real accepted/rejected CLI Arcs and MCP registration parity pass. Remaining
+operational integration is retained worker reactivation and ownership release;
+final gates and obligation assessment remain open.

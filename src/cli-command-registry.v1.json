@@ -106,6 +106,8 @@
         "status",
         "next-actions",
         "replenish",
+        "submit",
+        "record-review",
         "request-review",
         "observe-increment",
         "integrate",

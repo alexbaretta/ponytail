@@ -358,7 +358,7 @@ export async function runRollingReviewScenario(t: TestContext, reviewScenario: R
   await assert.rejects(rollingCampaignStore.assertOperation('bound-fixture', boundRollingStoredAssignment.id, resumedBoundRollingAllocationResult.assignment.generation, unrelatedRollingGraph.digest, 'test'), /wrong frozen graph identity/);
 
   // A real reserved Git worktree supplies a candidate; external session acknowledgments above remain synthetic.
-  fs.writeFileSync(path.join(root, '.gitignore'), 'session_id.txt\nproof.txt\nmanaged/\n'+(reviewScenario.canonicalIntegration ? 'proof.txt.*\n' : '')+(mainlinePublication==='repair'?'/tmp/\n/ponytail-journal.json\n':''));
+  fs.writeFileSync(path.join(root, '.gitignore'), 'session_id.txt\nproof.txt\nmanaged/\n/ponytail-journal.json\n'+(reviewScenario.canonicalIntegration ? 'proof.txt.*\n' : '')+(mainlinePublication==='repair'?'/tmp/\n/ponytail-journal.json\n':''));
   fs.mkdirSync(path.join(root, 'fixture'), { recursive: true });
   const fixtureTail=reviewScenario.canonicalIntegration ? '\n'+Array.from({length:12},(_,index)=>`// Stable upstream context ${index}\n`).join('') : '';
   fs.writeFileSync(path.join(root, 'fixture/current.ts'), 'export const value: number = 1;\n'+fixtureTail);
@@ -422,6 +422,16 @@ export async function runRollingReviewScenario(t: TestContext, reviewScenario: R
     const unrelatedBaseCommit = execFileSync('git', ['-C', root, '-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.test', 'commit-tree', `${baseCommit}^{tree}`, '-m', 'Foreign root'], {encoding:'utf8'}).trim();
     await assert.rejects(rollingCampaignStore.submit('bound-fixture', submissionRollingStoredAssignment.id, submissionRollingStoredAssignment.generation, {...rollingWorkerSubmissionV1, baseCommit:unrelatedBaseCommit}), /current coordinator increment/);
     await assert.rejects(rollingCampaignStore.submit('bound-fixture', submissionRollingStoredAssignment.id, submissionRollingStoredAssignment.generation, concealedRollingWorkerSubmissionV1), /current coordinator increment/);
+  }
+  if(reviewScenario.mode==='manual') {
+    const projectJournal:unknown=JSON.parse(fs.readFileSync(path.join(repositoryRoot,'ponytail-journal.json'),'utf8'));
+    assert.ok(projectJournal!==null && typeof projectJournal==='object' && !Array.isArray(projectJournal));
+    fs.writeFileSync(path.join(root,'ponytail-journal.json'),JSON.stringify({...projectJournal,projectId,projectName:`rolling-${projectId}`}));
+    const submissionPath=path.join(root,'managed/host-submission.json');fs.writeFileSync(submissionPath,JSON.stringify(rollingWorkerSubmissionV1));
+    const submitted=spawnSync(process.execPath,[path.join(repositoryRoot,'src/rolling-operations.js'),'submit','--campaign','bound-fixture','--assignment',submissionRollingStoredAssignment.id,'--generation',submissionRollingStoredAssignment.generation,'--submission',`@${submissionPath}`],{cwd:root,encoding:'utf8'});
+    assert.equal(submitted.status,0,submitted.stderr);
+    const response:unknown=JSON.parse(submitted.stdout);
+    assert.deepEqual(response,{command:'submit',result:{assignmentId:submissionRollingStoredAssignment.id,generation:submissionRollingStoredAssignment.generation,revision,state:'REVIEW'}});
   }
   const receipts = await Promise.all(Array.from({ length: 4 }, () => rollingCampaignStore.submit('bound-fixture', submissionRollingStoredAssignment.id,
     submissionRollingStoredAssignment.generation, rollingWorkerSubmissionV1)));
@@ -593,6 +603,13 @@ export async function runRollingReviewScenario(t: TestContext, reviewScenario: R
   await assert.rejects(rollingCampaignStore.recordReviewOutcome('bound-fixture', rollingStoredReview.request.id, reviewerSessionId, rollingReviewOutcomeV1), /dirty/);
   fs.unlinkSync(path.join(workerRoot, 'unexpected.ts'));
   await assert.rejects(rollingCampaignStore.claimIncrement('bound-fixture',rollingStoredReview.request.id),/decided review/);
+  if(reviewScenario.mode==='manual') {
+    const outcomePath=path.join(root,'managed/host-verdict.json');fs.writeFileSync(outcomePath,JSON.stringify(rollingReviewOutcomeV1));
+    const reviewed=spawnSync(process.execPath,[path.join(repositoryRoot,'src/rolling-operations.js'),'record-review','--campaign','bound-fixture','--review',rollingStoredReview.request.id,'--outcome',`@${outcomePath}`],{cwd:root,encoding:'utf8'});
+    assert.equal(reviewed.status,0,reviewed.stderr);
+    const response:unknown=JSON.parse(reviewed.stdout);
+    assert.deepEqual(response,{command:'record-review',result:{request:rollingStoredReview.request,outcome:rollingReviewOutcomeV1}});
+  }
   const decisions = await Promise.all(Array.from({ length: 4 }, () => rollingCampaignStore.recordReviewOutcome('bound-fixture',
     rollingStoredReview.request.id, reviewerSessionId, rollingReviewOutcomeV1)));
   assert.ok(decisions.every(item => JSON.stringify(item.outcome) === JSON.stringify(rollingReviewOutcomeV1)));
@@ -1194,6 +1211,7 @@ const reviewScenarios: readonly ReviewScenario[] = [{ decision: 'accepted', mode
 test('real PostgreSQL records lost reviewer replacement and fences the old actor while retaining fresh review after restart',
   t => runRollingReviewScenario(t,{decision:'accepted',mode:'manual',replaceLostReviewer:true}));
 // Traceability: verifies REQ-ROLLING-PUBLICATION
+// Traceability: verifies REQ-SWARM-CLI
 for (const reviewScenario of reviewScenarios) {
   test(`real PostgreSQL serializes allocation, retains ownership and persists ${reviewScenario.mode === 'protocol' ? 'native application' : reviewScenario.decision} review`,
     t => runRollingReviewScenario(t, reviewScenario));
