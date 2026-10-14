@@ -143,9 +143,10 @@ coverage. Maintain canonical annotations and regenerate the reverse view.
 Each increment needs focused proof of its atomic condition through the actual
 CLI/store/lifecycle boundary. Use disposable Git repositories, isolated rows in
 the existing PostgreSQL, and native protocol fixtures for deterministic failures.
-Use real native sessions for capability/cessation claims and Desktop-owned
-observations for visible activity claims. Include competing owner claims,
-cross-owner rejection, orphan recovery, partial cessation/cleanup and retry where
+Session activity and cessation are host-tool responsibilities, not CLI acceptance
+conditions. Prove that swarm commands record supplied identities without invoking
+Codex session APIs. Include competing owner claims,
+cross-owner rejection, orphan recovery, cleanup refusal and retry where
 the corresponding obligation introduces those paths. Do not duplicate assertions
 across layers merely to inflate test counts.
 
@@ -157,10 +158,11 @@ upstream failures remain explicit and must not be recast as passing proof.
 Live diagnostic acceptance: have the cooperating GWEN coordinator run
 `ponytail swarm info` from its user checkout and one owned managed checkout.
 Both must identify the same owner and actual current session/worktree bindings.
-Client mutations remain with that coordinator. A live clear/restart demonstration
-requires cessation and preserved work before releasing anything; do not clear
-the current campaign merely to test the new command. Parallel execution acceptance
-still requires genuinely overlapping Desktop-visible top-level worker turns.
+Client mutations remain with that coordinator. Do not clear or restart the paused
+GWEN campaign merely to test the command. Verify clear and ownership release in
+disposable fixtures. The exported skill must instruct the coordinator to start
+and observe concurrent top-level workers through host tools; the CLI must not
+create or control those sessions.
 
 ## Starting checkpoint
 
