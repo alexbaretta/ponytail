@@ -14,6 +14,7 @@ behavior independently from implementation plans and architecture.
 
 - [Swarms](swarms.md)
 - [Rolling campaigns](rolling-campaigns.md)
+- [QA swarm execution](qa-swarm.md)
 - [Ponytail implementation language](static-language.md)
 - [Obligation-centered execution](obligation-execution.md)
 - [Activated feature requirements](open-features.md)

@@ -1169,6 +1169,15 @@ Requirement: [pm/requirements/rolling-campaigns.md](rolling-campaigns.md)
 - uat: verifies [pm/uat/rolling-campaigns.md:10](../../pm/uat/rolling-campaigns.md#L10)
 - issue: introduces [pm/bugs/closed/2026-10-12-BUG-installed_obligation_dependency.md:12](../../pm/bugs/closed/2026-10-12-BUG-installed_obligation_dependency.md#L12)
 
+## REQ-QA-SWARM
+
+Requirement: [pm/requirements/qa-swarm.md](qa-swarm.md)
+
+- implementation: implements [skills/qa-swarm/SKILL.md:17](../../skills/qa-swarm/SKILL.md#L17)
+- unit-test: verifies [tests/qa-swarm-policy.test.js:2](../../tests/qa-swarm-policy.test.js#L2)
+- integration-test: verifies [tests/qa-swarm.integration.test.js:2](../../tests/qa-swarm.integration.test.js#L2)
+- uat: verifies [pm/uat/qa-swarm.md:10](../../pm/uat/qa-swarm.md#L10)
+
 ## REQ-FAST-SEMANTIC-REBASE
 
 Requirement: [pm/requirements/fast-semantic-rebase.md](fast-semantic-rebase.md)

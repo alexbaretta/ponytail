@@ -352,6 +352,23 @@
     {
       "kind": "skill",
       "status": "enabled",
+      "name": "qa-swarm",
+      "source": "skills/qa-swarm",
+      "hosts": [
+        "claude",
+        "codex",
+        "copilot",
+        "devin",
+        "hermes",
+        "openclaw",
+        "pi",
+        "qoder"
+      ],
+      "reason": "Parallel whole-slice QA with incremental repairs and atomic acceptance"
+    },
+    {
+      "kind": "skill",
+      "status": "enabled",
       "name": "production-test-boundaries",
       "source": "skills/production-test-boundaries",
       "hosts": [

@@ -160,6 +160,10 @@
       "sourcePath": "pm/requirements/rolling-campaigns.md"
     },
     {
+      "id": "REQ-QA-SWARM",
+      "sourcePath": "pm/requirements/qa-swarm.md"
+    },
+    {
       "id": "REQ-FAST-SEMANTIC-REBASE",
       "sourcePath": "pm/requirements/fast-semantic-rebase.md"
     },
@@ -1001,6 +1005,26 @@
     },
     {
       "class": "implementation",
+      "path": "skills/qa-swarm/SKILL.md",
+      "locator": "text"
+    },
+    {
+      "class": "unit-test",
+      "path": "tests/qa-swarm-policy.test.js",
+      "locator": "text"
+    },
+    {
+      "class": "integration-test",
+      "path": "tests/qa-swarm.integration.test.js",
+      "locator": "text"
+    },
+    {
+      "class": "uat",
+      "path": "pm/uat/qa-swarm.md",
+      "locator": "text"
+    },
+    {
+      "class": "implementation",
       "path": "src/rolling-campaign.ts",
       "locator": "text"
     },
@@ -1662,6 +1686,10 @@
     {
       "path": ".openclaw/skills/plan-execution/SKILL.md",
       "sourcePath": "skills/plan-execution/SKILL.md"
+    },
+    {
+      "path": ".openclaw/skills/qa-swarm/SKILL.md",
+      "sourcePath": "skills/qa-swarm/SKILL.md"
     },
     {
       "path": ".openclaw/skills/requirements/SKILL.md",

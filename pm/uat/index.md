@@ -16,6 +16,7 @@ boundary by `tests/campaign-census.test.js`.
 
 - [Swarms](swarms.md)
 - [Rolling campaigns](rolling-campaigns.md)
+- [QA swarm acceptance](qa-swarm.md)
 - [Static language acceptance](static-language.md)
 - [Obligation-centered execution](obligation-execution.md)
 - [Activated feature acceptance](open-features.md)
