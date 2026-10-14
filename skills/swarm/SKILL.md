@@ -64,9 +64,15 @@ canonical graph is authoritative.
    actual tool schema: do not invent a cwd argument or substitute a private App
    Server controller. If the host cannot start a session in the assigned root,
    report that concrete capability gap while continuing independent work.
-3. Obtain the actual returned thread/session IDs. Ask the worker to verify its
-   designated root and exclusively create ignored `session_id.txt` there with
-   its exact session ID followed by one newline. An existing differing marker
+3. Retain the actual returned thread ID and host ID. Obtain the session ID from
+   trusted host metadata or the original worker's own session identity; inspect
+   the exposed tools rather than assuming a field. Codex `create_thread` does not
+   document a separate returned session ID. Never infer it equals the thread ID.
+   If the session identity is unavailable, retain the checkout reservation and
+   report that capability gap; do not bind an invented identity or write a marker.
+   With that identity established, ask the worker to verify its designated root
+   and exclusively create ignored `session_id.txt` with its exact session ID
+   followed by one newline. An existing differing marker
    must be reconciled before admission. Initialization alone is not development.
 4. Record `worker-bind --thread <thread-id> --session <session-id> --number <n>
    --generation <worktree-generation> --kind <plan|sprint> --assignment <full-id>
