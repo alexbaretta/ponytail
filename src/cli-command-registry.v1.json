@@ -29,6 +29,7 @@
         "worktree-assign",
         "worktree-setup",
         "worktree-release",
+        "worker-bind",
         "info",
         "owner-enroll",
         "coordinator-bind",

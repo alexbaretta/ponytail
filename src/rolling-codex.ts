@@ -27,6 +27,11 @@ export interface RollingNativeThreadIdentity {
  readonly rootPath:string;
 }
 
+export interface RollingNativeThreadState extends RollingNativeThreadIdentity {
+ readonly name:string|null;
+ readonly status:RollingNativeThreadActivity['status'];
+}
+
 export interface RollingNativeThreadActivity {
   readonly threadId: string;
   readonly status: 'idle' | 'active' | 'notLoaded' | 'systemError';
@@ -131,6 +136,17 @@ function threadIdentity(value: unknown, cwd: string, expectedId: string | null =
   } catch (cause) {
     throw new RollingNativeResponseError(cause instanceof Error ? cause.message : 'invalid native thread response', value);
   }
+}
+
+function nativeThreadStatus(thread:Readonly<Record<string,unknown>>):RollingNativeThreadActivity['status'] {
+    const status = nativeString(nativeRecord(thread.status).type,'native thread activity');
+    switch (status) {
+      case 'active':
+        return status;
+      case 'idle':return status;
+      case 'notLoaded': case 'systemError': return status;
+      default: throw new Error('rolling Codex: unsupported native thread activity');
+    }
 }
 
 function completedTurn(value: unknown): RollingNativeTurn {
@@ -363,16 +379,22 @@ export class RollingCodex extends EventEmitter<RollingCodexEvents> {
     const result = nativeRecord(await this.request('thread/read', {threadId,includeTurns:false}));
     const thread = nativeRecord(result.thread);
     requireProtocol(thread.id === threadId,'native activity differs from requested thread');
-    const status = nativeString(nativeRecord(thread.status).type,'native thread activity');
-    switch (status) {
-      case 'active':
-        return {threadId,status};
-      case 'idle':
-        if (this.activeTurns.get(threadId) === null) this.activeTurns.delete(threadId);
-        return {threadId,status};
-      case 'notLoaded': case 'systemError': return {threadId,status};
-      default: throw new Error('rolling Codex: unsupported native thread activity');
-    }
+    const status=nativeThreadStatus(thread);
+    if(status==='idle'&&this.activeTurns.get(threadId)===null) this.activeTurns.delete(threadId);
+    return {threadId,status};
+  }
+
+  async readThreadState(threadId:string,cwd:string):Promise<RollingNativeThreadState> {
+    checkoutRoot(cwd);
+    const thread=nativeRecord(nativeRecord(await this.request('thread/read',{threadId,includeTurns:false})).thread);
+    requireProtocol(thread.id===threadId&&thread.cwd===cwd,'observed thread differs from designated actor or checkout');
+    requireProtocol(thread.name===null||typeof thread.name==='string','native thread name is unavailable');
+    return {threadId,sessionId:nativeString(thread.sessionId,'observed session identity'),rootPath:cwd,name:thread.name,status:nativeThreadStatus(thread)};
+  }
+
+  async setThreadName(threadId:string,name:string):Promise<void> {
+    requireProtocol(threadId.length>0&&name.length>0,'thread naming requires exact thread and name');
+    await this.request('thread/name/set',{threadId,name});
   }
 
   waitForTurn(threadId: string, turnId: string, timeoutMs = 60000): Promise<RollingNativeTurn> {

@@ -7,7 +7,9 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SwarmStore = void 0;
+exports.readSwarmWorkerAssignment = readSwarmWorkerAssignment;
 exports.swarmWorkerName = swarmWorkerName;
+exports.readWorker = readWorker;
 const node_fs_1 = __importDefault(require("node:fs"));
 const node_path_1 = __importDefault(require("node:path"));
 const node_crypto_1 = __importDefault(require("node:crypto"));
@@ -15,6 +17,16 @@ const node_child_process_1 = require("node:child_process");
 const rolling_integration_js_1 = require("./rolling-integration.js");
 const rolling_worktrees_js_1 = require("./rolling-worktrees.js");
 const rolling_campaign_store_js_1 = require("./rolling-campaign-store.js");
+function readSwarmWorkerAssignment(value) {
+    if (value === null || typeof value !== 'object' || Array.isArray(value) || !('kind' in value) || !('id' in value) || !('summary' in value))
+        throw new Error('swarm: invalid worker assignment');
+    if (JSON.stringify(Object.keys(value).sort()) !== JSON.stringify(['id', 'kind', 'summary']))
+        throw new Error('swarm: invalid worker assignment fields');
+    if (value.kind !== 'plan' && value.kind !== 'sprint' || typeof value.id !== 'string' || !value.id.trim() || value.id !== value.id.trim() || /[\0\r\n]/u.test(value.id)
+        || typeof value.summary !== 'string' || !/^\S+ \S+ \S+$/u.test(value.summary))
+        throw new Error('swarm: assignment requires an exact ID and three word summary');
+    return { kind: value.kind, id: value.id, summary: value.summary };
+}
 function swarmWorkerName(swarmWorkerBinding) {
     return `${swarmWorkerBinding.completed ? 'DONE ' : ''}W${swarmWorkerBinding.workerNumber} ${swarmWorkerBinding.assignment.kind === 'plan' ? 'P' : 'S'}${swarmWorkerBinding.shortAssignmentNumber} ${swarmWorkerBinding.assignment.summary}`;
 }
@@ -30,12 +42,12 @@ function positiveIntegerColumn(value) {
     return number;
 }
 function readWorker(row) {
-    if (row.assignment_kind !== 'plan' && row.assignment_kind !== 'sprint' || row.state !== 'BOUND' && row.state !== 'REMOVING' && row.state !== 'REMOVED' || typeof row.completed !== 'boolean')
+    if (row.state !== 'BOUND' && row.state !== 'REMOVING' && row.state !== 'REMOVED' || typeof row.completed !== 'boolean')
         throw new Error('swarm: invalid worker database state');
     return { sessionId: stringColumn(row.session_id), threadId: stringColumn(row.thread_id), ownerRoot: stringColumn(row.owner_root), rootPath: stringColumn(row.root_path),
         worktreeNumber: positiveIntegerColumn(row.worktree_number), worktreeGeneration: stringColumn(row.worktree_generation), generation: stringColumn(row.generation),
         workerNumber: positiveIntegerColumn(row.worker_number), shortAssignmentNumber: positiveIntegerColumn(row.short_assignment_number),
-        assignment: { kind: row.assignment_kind, id: stringColumn(row.assignment_id), summary: stringColumn(row.summary) }, state: row.state, completed: row.completed };
+        assignment: readSwarmWorkerAssignment({ kind: row.assignment_kind, id: row.assignment_id, summary: row.summary }), state: row.state, completed: row.completed };
 }
 function readBinding(row) {
     return { swarmUserWorktree: { rootPath: stringColumn(row.owner_root), gitCommonDirectory: stringColumn(row.git_common_directory) },
@@ -55,9 +67,7 @@ class SwarmStore {
         this.projectId = projectId;
     }
     async bindWorker(swarmWorktreeMembership, rollingNativeThreadIdentity, swarmWorkerAssignment) {
-        if (!swarmWorkerAssignment.id.trim() || swarmWorkerAssignment.id !== swarmWorkerAssignment.id.trim() || /[\0\r\n]/u.test(swarmWorkerAssignment.id)
-            || !/^\S+ \S+ \S+$/u.test(swarmWorkerAssignment.summary))
-            throw new Error('swarm: assignment requires an exact ID and three word summary');
+        swarmWorkerAssignment = readSwarmWorkerAssignment(swarmWorkerAssignment);
         return this.transaction(async (poolClient) => {
             await poolClient.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))', [this.projectId]);
             const owner = (await poolClient.query('SELECT * FROM ponytail_index.swarm_owner_v1 WHERE project_id=$1 AND owner_root=$2 FOR UPDATE', [this.projectId, swarmWorktreeMembership.ownerRoot])).rows[0];

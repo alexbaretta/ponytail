@@ -12,8 +12,8 @@ import {databaseOptions} from '../src/project-index-database.js';
 import {SwarmStore,swarmWorkerName,type SwarmWorkerAssignment} from '../src/swarm-store.js';
 import type {SwarmUserWorktree} from '../src/swarm-owner.js';
 import type {RollingProjectConfigV2} from '../src/rolling-campaign.js';
-import {RollingCodex,type RollingNativeThreadIdentity} from '../src/rolling-codex.js';
-import {bindSwarmCoordinator,inspectSwarmInfo} from '../src/swarm-info.js';
+import {RollingCodex,RollingUnknownOutcome,type RollingNativeThreadIdentity} from '../src/rolling-codex.js';
+import {bindSwarmCoordinator,bindSwarmWorker,inspectSwarmInfo} from '../src/swarm-info.js';
 function coordinatorIdentity(rootPath:string,sessionId:string):RollingNativeThreadIdentity {
  return {rootPath,sessionId,threadId:`thread-${sessionId}`};
 }
@@ -141,6 +141,14 @@ test('original worker identity and exclusive checkout binding survive coordinato
  const extraSwarmWorktreeMembership=await swarmStore.reserveWorktree(mainRoot,{kind:'retained'});assert.ok(extraSwarmWorktreeMembership);
  const extraSwarmWorkerBinding=await swarmStore.bindWorker(extraSwarmWorktreeMembership,coordinatorIdentity(extraRoot,'same-plan-worker'),{...swarmWorkerAssignment,summary:'Inspect integration coverage'});
  assert.equal(swarmWorkerName(extraSwarmWorkerBinding),'W2 P1 Inspect integration coverage');
+ await assert.rejects(bindSwarmWorker(swarmStore,mainSwarmWorktreeMembership,swarmWorkerBinding.threadId,swarmWorkerBinding.sessionId,swarmWorkerAssignment,{
+  async readThreadIdentity(){return {threadId:swarmWorkerBinding.threadId,sessionId:swarmWorkerBinding.sessionId,rootPath:swarmWorkerBinding.rootPath};},
+  async setThreadName(){throw new RollingUnknownOutcome('naming-request','thread/name/set','lost naming acknowledgment');},
+  async readThreadState(){throw new Error('unknown naming outcome must not use an alternate observation path');}
+ }),/lost naming acknowledgment/);
+ assert.equal((await pool.query<Record<string,unknown>>('SELECT state,generation,worker_number FROM ponytail_index.swarm_worker_v1 WHERE session_id=$1',[swarmWorkerBinding.sessionId])).rows[0]?.generation,swarmWorkerBinding.generation);
+ assert.equal((await inspectSwarmInfo(mainRoot,pool,projectId)).workers.length,2);
+
  await swarmStore.unbindCoordinator(mainRoot,'main-coordinator');
  assert.equal((await pool.query<Record<string,unknown>>('SELECT state FROM ponytail_index.swarm_worker_v1 WHERE session_id=$1',[swarmWorkerBinding.sessionId])).rows[0]?.state,'BOUND');
  await assert.rejects(swarmStore.bindWorker(mainSwarmWorktreeMembership,identities[0]??coordinatorIdentity(mainSwarmWorktreeMembership.rootPath,'third-worker'),swarmWorkerAssignment),/coordinator/);

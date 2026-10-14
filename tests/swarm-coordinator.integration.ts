@@ -12,12 +12,12 @@ import {Pool} from 'pg';
 import {databaseOptions} from '../src/project-index-database.js';
 import {RollingCodex,type RollingNativeThread} from '../src/rolling-codex.js';
 import type {RollingProjectConfigV2} from '../src/rolling-campaign.js';
-import {readSwarmInfoV3} from '../src/swarm-info.js';
+import {readSwarmInfoV4} from '../src/swarm-info.js';
 
 // Traceability: verifies REQ-SWARM-OWNERSHIP
 // Traceability: verifies REQ-SWARM-INFO
 // Traceability: verifies REQ-SWARM-CLI
-test('live native coordinator binds through the real CLI without acquiring its original writer',async t=>{
+test('live original coordinator and worker bind and name through the CLI without acquiring writers',async t=>{
  const repositoryRoot=path.resolve(__dirname,'../..');
  const root=fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(),'swarm-native-')));
  const ownerRoot=path.join(root,'owner');fs.mkdirSync(ownerRoot);
@@ -28,12 +28,19 @@ test('live native coordinator binds through the real CLI without acquiring its o
  let rollingCodex:RollingCodex|null=null;
  let rollingNativeThread:RollingNativeThread|null=null;
  let activeTurnId:string|null=null;
+ let rollingNativeWorkerThread:RollingNativeThread|null=null;
+ let activeWorkerTurnId:string|null=null;
  t.after(async()=>{
   try {
+   if(rollingCodex&&rollingNativeWorkerThread) {
+    if(activeWorkerTurnId) {await rollingCodex.interruptTurn(rollingNativeWorkerThread.thread.id,activeWorkerTurnId);await rollingCodex.waitForTurn(rollingNativeWorkerThread.thread.id,activeWorkerTurnId);}
+    await rollingCodex.archiveThread(rollingNativeWorkerThread.thread.id);
+   }
    if(rollingCodex&&rollingNativeThread) {
     if(activeTurnId) {await rollingCodex.interruptTurn(rollingNativeThread.thread.id,activeTurnId);await rollingCodex.waitForTurn(rollingNativeThread.thread.id,activeTurnId);}
     await rollingCodex.archiveThread(rollingNativeThread.thread.id);
    }
+   await pool.query('DELETE FROM ponytail_index.swarm_worktree_v1 WHERE project_id=$1',[projectId]);
    await pool.query('DELETE FROM ponytail_index.project_v1 WHERE project_id=$1',[projectId]);
    fs.rmSync(root,{recursive:true,force:true});
   } finally {if(rollingCodex) await rollingCodex.close();await pool.end();}
@@ -63,12 +70,26 @@ test('live native coordinator binds through the real CLI without acquiring its o
  assert.equal((await rollingCodex.waitForTurn(rollingNativeThread.thread.id,activeTurnId)).status,'completed');activeTurnId=null;
  const bind=cli(['coordinator-bind','--thread',rollingNativeThread.thread.id,'--session',rollingNativeThread.thread.sessionId,'--json']);
  assert.equal(bind.status,0,bind.stderr);
- const bound=readSwarmInfoV3(JSON.parse(bind.stdout));
+ const bound=readSwarmInfoV4(JSON.parse(bind.stdout));
  assert.deepEqual(bound.coordinator,{kind:'bound',threadId:rollingNativeThread.thread.id,sessionId:rollingNativeThread.thread.sessionId});
  assert.equal((await rollingCodex.readThreadActivity(rollingNativeThread.thread.id)).status,'idle');
+ const allocation=cli(['worktree-assign','--base','HEAD','--json']);assert.equal(allocation.status,0,allocation.stderr);
+ const allocatedSwarmInfoV4=readSwarmInfoV4(JSON.parse(allocation.stdout));
+ const swarmWorktreeInfoV3=allocatedSwarmInfoV4.worktrees[0];assert.ok(swarmWorktreeInfoV3&&swarmWorktreeInfoV3.membership.kind==='swarm');
+ rollingNativeWorkerThread=await rollingCodex.startThread(swarmWorktreeInfoV3.rootPath);
+ const workerTurnStarted=await rollingCodex.startTurn(rollingNativeWorkerThread.thread.id,'Reply exactly PONYTAIL_SWARM_WORKER_READY. Do not use tools or modify files.');
+ activeWorkerTurnId=workerTurnStarted.turn.id;assert.equal((await rollingCodex.waitForTurn(rollingNativeWorkerThread.thread.id,activeWorkerTurnId)).status,'completed');activeWorkerTurnId=null;
+ const workerBind=cli(['worker-bind','--thread',rollingNativeWorkerThread.thread.id,'--session',rollingNativeWorkerThread.thread.sessionId,
+  '--number',String(swarmWorktreeInfoV3.number),'--generation',swarmWorktreeInfoV3.membership.generation,'--kind','plan','--assignment','native-worker-acceptance','--summary','Verify original worker','--json']);
+ assert.equal(workerBind.status,0,workerBind.stderr);
+ const workerSwarmInfoV4=readSwarmInfoV4(JSON.parse(workerBind.stdout));const swarmWorkerInfoV1=workerSwarmInfoV4.workers[0];assert.ok(swarmWorkerInfoV1);
+ assert.equal(swarmWorkerInfoV1.binding.sessionId,rollingNativeWorkerThread.thread.sessionId);assert.equal(swarmWorkerInfoV1.binding.rootPath,swarmWorktreeInfoV3.rootPath);
+ assert.equal(swarmWorkerInfoV1.desiredName,'W1 P1 Verify original worker');assert.ok(swarmWorkerInfoV1.nativeObservation.kind==='observed');assert.equal(swarmWorkerInfoV1.nativeObservation.name,swarmWorkerInfoV1.desiredName);
+ assert.equal((await rollingCodex.readThreadActivity(rollingNativeWorkerThread.thread.id)).status,'idle');
+ assert.equal(await rollingCodex.isThreadArchived(rollingNativeWorkerThread.thread.id,swarmWorktreeInfoV3.rootPath),false);
  const unbind=cli(['coordinator-unbind','--session',rollingNativeThread.thread.sessionId,'--json']);
- assert.equal(unbind.status,0,unbind.stderr);assert.deepEqual(readSwarmInfoV3(JSON.parse(unbind.stdout)).coordinator,{kind:'unbound'});
+ assert.equal(unbind.status,0,unbind.stderr);assert.deepEqual(readSwarmInfoV4(JSON.parse(unbind.stdout)).coordinator,{kind:'unbound'});
  assert.equal(await rollingCodex.isThreadArchived(rollingNativeThread.thread.id,ownerRoot),false);
  assert.equal(git(['rev-parse','HEAD']),revision);assert.equal(git(['status','--porcelain']),'');
- t.diagnostic(`native coordinator thread=${rollingNativeThread.thread.id}; session=${rollingNativeThread.thread.sessionId}; original writer retained; CLI bind/unbind preserved session and source`);
+ t.diagnostic(`native coordinator thread=${rollingNativeThread.thread.id}; session=${rollingNativeThread.thread.sessionId}; original writers retained; CLI coordinator bind/unbind and worker bind/name preserved sessions and source`);
 });

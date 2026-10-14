@@ -9,7 +9,7 @@ import {execFileSync,spawnSync} from 'node:child_process';
 import test from 'node:test';
 import {Pool} from 'pg';
 import {databaseOptions} from '../src/project-index-database.js';
-import {inspectSwarmInfo,readSwarmInfoV3} from '../src/swarm-info.js';
+import {inspectSwarmInfo,readSwarmInfoV4} from '../src/swarm-info.js';
 import type {RollingProjectConfigV2} from '../src/rolling-campaign.js';
 
 // Traceability: verifies REQ-SWARM-OWNERSHIP
@@ -61,7 +61,7 @@ test('physical owner and managed invocation report the same isolated read-only l
  assert.equal((await inspectSwarmInfo(mainRoot,pool,projectId)).worktrees.length,0);
  await assert.rejects(inspectSwarmInfo(unassignedRoot,pool,projectId),/unassigned/);
  const cli=spawnSync(path.join(repositoryRoot,'cli/ponytail'),['swarm','info','--json'],{cwd:managedRoot,encoding:'utf8',env});
- assert.equal(cli.status,0,cli.stderr);assert.deepEqual(readSwarmInfoV3(JSON.parse(cli.stdout)),ownerInfo);
+ assert.equal(cli.status,0,cli.stderr);assert.deepEqual(readSwarmInfoV4(JSON.parse(cli.stdout)),ownerInfo);
  const gitCommonDirectory=fs.realpathSync(git(['rev-parse','--path-format=absolute','--git-common-dir']));
  await pool.query("INSERT INTO ponytail_index.swarm_owner_v1(project_id,owner_root,git_common_directory,coordinator_session_id) VALUES($1,$2,$3,'coordinator-fixture')",[projectId,userRoot,gitCommonDirectory]);
  const staleUnbind=spawnSync(path.join(repositoryRoot,'cli/ponytail'),['swarm','coordinator-unbind','--session','stale'],{cwd:managedRoot,encoding:'utf8',env});
@@ -70,7 +70,7 @@ test('physical owner and managed invocation report the same isolated read-only l
  assert.deepEqual(boundInfo.coordinator,{kind:'bound',sessionId:'coordinator-fixture',threadId:null});
  const unbind=spawnSync(path.join(repositoryRoot,'cli/ponytail'),['swarm','coordinator-unbind','--session','coordinator-fixture','--json'],{cwd:managedRoot,encoding:'utf8',env});
  assert.equal(unbind.status,0,unbind.stderr);
- const unboundInfo=readSwarmInfoV3(JSON.parse(unbind.stdout));
+ const unboundInfo=readSwarmInfoV4(JSON.parse(unbind.stdout));
  assert.deepEqual(unboundInfo.coordinator,{kind:'unbound'});assert.deepEqual(unboundInfo.worktrees,ownerInfo.worktrees);
  const bin=path.join(root,'bin');fs.mkdirSync(bin);
  const nativeFixture=path.join(__dirname,'fixtures/rolling-codex-server.js');
@@ -81,14 +81,14 @@ test('physical owner and managed invocation report the same isolated read-only l
  const nativeBind=spawnSync(path.join(repositoryRoot,'cli/ponytail'),['swarm','coordinator-bind','--session',nativeSessionId,'--thread',nativeThreadId,'--json'],
   {cwd:managedRoot,encoding:'utf8',env:{...env,PATH:bin+path.delimiter+env.PATH,ROLLING_NATIVE_FIXTURE_ID:projectId}});
  assert.equal(nativeBind.status,0,nativeBind.stderr);
- const nativeBoundInfo=readSwarmInfoV3(JSON.parse(nativeBind.stdout));
+ const nativeBoundInfo=readSwarmInfoV4(JSON.parse(nativeBind.stdout));
  assert.equal(nativeBoundInfo.ownerRoot,userRoot);
  assert.deepEqual(nativeBoundInfo.coordinator,{kind:'bound',sessionId:nativeSessionId,threadId:nativeThreadId});
  await assert.rejects(inspectSwarmInfo(unenrolledRoot,pool,projectId),/no recorded role/);
  const enrollment=spawnSync(path.join(repositoryRoot,'cli/ponytail'),['swarm','owner-enroll','--json'],{cwd:unenrolledRoot,encoding:'utf8',env});
  assert.equal(enrollment.status,0,enrollment.stderr);
- assert.deepEqual(readSwarmInfoV3(JSON.parse(enrollment.stdout)).coordinator,{kind:'unbound'});
- assert.equal(readSwarmInfoV3(JSON.parse(enrollment.stdout)).ownerRoot,unenrolledRoot);
+ assert.deepEqual(readSwarmInfoV4(JSON.parse(enrollment.stdout)).coordinator,{kind:'unbound'});
+ assert.equal(readSwarmInfoV4(JSON.parse(enrollment.stdout)).ownerRoot,unenrolledRoot);
  const managedEnrollment=spawnSync(path.join(repositoryRoot,'cli/ponytail'),['swarm','owner-enroll'],{cwd:managedRoot,encoding:'utf8',env});
  assert.equal(managedEnrollment.status,1);assert.match(managedEnrollment.stderr,/managed checkout/);
  const membershipGeneration=crypto.randomUUID();
@@ -96,11 +96,24 @@ test('physical owner and managed invocation report the same isolated read-only l
  await pool.query("UPDATE ponytail_index.rolling_worktree_v1 SET state='RESERVED' WHERE project_id=$1 AND number=102",[projectId]);
  const standalone=spawnSync(path.join(repositoryRoot,'cli/ponytail'),['swarm','info','--json'],{cwd:unassignedRoot,encoding:'utf8',env});
  assert.equal(standalone.status,0,standalone.stderr);
- const standaloneSwarmInfoV3=readSwarmInfoV3(JSON.parse(standalone.stdout));
+ const standaloneSwarmInfoV3=readSwarmInfoV4(JSON.parse(standalone.stdout));
  assert.equal(standaloneSwarmInfoV3.ownerRoot,userRoot);
  assert.deepEqual(standaloneSwarmInfoV3.worktrees.find(worktree=>worktree.number===102)?.membership,{kind:'swarm',generation:membershipGeneration});
  assert.equal(standaloneSwarmInfoV3.worktrees.find(worktree=>worktree.number===102)?.assignment,null);
  assert.deepEqual(await inspectSwarmInfo(userRoot,pool,projectId),standaloneSwarmInfoV3);
+ const workerFixtureId=`${projectId}-worker`,workerNameFile=path.join(root,'worker-name');
+ const workerEnv:NodeJS.ProcessEnv={...env,PATH:bin+path.delimiter+env.PATH,ROLLING_NATIVE_FIXTURE_ID:workerFixtureId,
+  ROLLING_NATIVE_FIXTURE_ROOT:unassignedRoot,ROLLING_NATIVE_FIXTURE_NAME_FILE:workerNameFile};
+ const workerBind=spawnSync(path.join(repositoryRoot,'cli/ponytail'),['swarm','worker-bind','--thread',`thread-${workerFixtureId}`,'--session',`session-${workerFixtureId}`,
+  '--number','102','--generation',membershipGeneration,'--kind','plan','--assignment','traceability','--summary','Inspect acceptance coverage','--json'],{cwd:userRoot,encoding:'utf8',env:workerEnv});
+ assert.equal(workerBind.status,0,workerBind.stderr);
+ const workerSwarmInfoV4=readSwarmInfoV4(JSON.parse(workerBind.stdout));
+ assert.equal(workerSwarmInfoV4.workers.length,1);assert.equal(workerSwarmInfoV4.workers[0]?.desiredName,'W1 P1 Inspect acceptance coverage');
+ assert.deepEqual(workerSwarmInfoV4.workers[0]?.nativeObservation,{kind:'observed',name:'W1 P1 Inspect acceptance coverage',status:'notLoaded'});
+ assert.equal((await inspectSwarmInfo(siblingRoot,pool,projectId)).workers.length,0);
+ const managedWorkerInfo=spawnSync(path.join(repositoryRoot,'cli/ponytail'),['swarm','info','--json'],{cwd:unassignedRoot,encoding:'utf8',env:workerEnv});
+ assert.equal(managedWorkerInfo.status,0,managedWorkerInfo.stderr);assert.deepEqual(readSwarmInfoV4(JSON.parse(managedWorkerInfo.stdout)),workerSwarmInfoV4);
+
  await pool.query('INSERT INTO ponytail_index.swarm_owner_v1(project_id,owner_root,git_common_directory) VALUES($1,$2,$3)',[projectId,siblingRoot,gitCommonDirectory]);
  await pool.query('INSERT INTO ponytail_index.swarm_worktree_v1(project_id,number,owner_root,generation) VALUES($1,101,$2,$3)',[projectId,siblingRoot,crypto.randomUUID()]);
  await assert.rejects(inspectSwarmInfo(userRoot,pool,projectId),/conflicting swarm and campaign owners/);

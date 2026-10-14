@@ -39,6 +39,13 @@ export interface SwarmWorkerBinding {
  readonly state:'BOUND'|'REMOVING'|'REMOVED';
  readonly completed:boolean;
 }
+export function readSwarmWorkerAssignment(value:unknown):SwarmWorkerAssignment {
+ if(value===null||typeof value!=='object'||Array.isArray(value)||!('kind' in value)||!('id' in value)||!('summary' in value)) throw new Error('swarm: invalid worker assignment');
+ if(JSON.stringify(Object.keys(value).sort())!==JSON.stringify(['id','kind','summary'])) throw new Error('swarm: invalid worker assignment fields');
+ if(value.kind!=='plan'&&value.kind!=='sprint'||typeof value.id!=='string'||!value.id.trim()||value.id!==value.id.trim()||/[\0\r\n]/u.test(value.id)
+  ||typeof value.summary!=='string'||!/^\S+ \S+ \S+$/u.test(value.summary)) throw new Error('swarm: assignment requires an exact ID and three word summary');
+ return {kind:value.kind,id:value.id,summary:value.summary};
+}
 // Traceability: implements REQ-SWARM-SESSIONS
 export function swarmWorkerName(swarmWorkerBinding:SwarmWorkerBinding):string {
  return `${swarmWorkerBinding.completed?'DONE ':''}W${swarmWorkerBinding.workerNumber} ${swarmWorkerBinding.assignment.kind==='plan'?'P':'S'}${swarmWorkerBinding.shortAssignmentNumber} ${swarmWorkerBinding.assignment.summary}`;
@@ -57,12 +64,12 @@ function positiveIntegerColumn(value:unknown):number {
  if(typeof number!=='number'||!Number.isSafeInteger(number)||number<1) throw new Error('swarm: invalid database integer');
  return number;
 }
-function readWorker(row:Record<string,unknown>):SwarmWorkerBinding {
- if(row.assignment_kind!=='plan'&&row.assignment_kind!=='sprint'||row.state!=='BOUND'&&row.state!=='REMOVING'&&row.state!=='REMOVED'||typeof row.completed!=='boolean') throw new Error('swarm: invalid worker database state');
+export function readWorker(row:Record<string,unknown>):SwarmWorkerBinding {
+ if(row.state!=='BOUND'&&row.state!=='REMOVING'&&row.state!=='REMOVED'||typeof row.completed!=='boolean') throw new Error('swarm: invalid worker database state');
  return {sessionId:stringColumn(row.session_id),threadId:stringColumn(row.thread_id),ownerRoot:stringColumn(row.owner_root),rootPath:stringColumn(row.root_path),
   worktreeNumber:positiveIntegerColumn(row.worktree_number),worktreeGeneration:stringColumn(row.worktree_generation),generation:stringColumn(row.generation),
   workerNumber:positiveIntegerColumn(row.worker_number),shortAssignmentNumber:positiveIntegerColumn(row.short_assignment_number),
-  assignment:{kind:row.assignment_kind,id:stringColumn(row.assignment_id),summary:stringColumn(row.summary)},state:row.state,completed:row.completed};
+  assignment:readSwarmWorkerAssignment({kind:row.assignment_kind,id:row.assignment_id,summary:row.summary}),state:row.state,completed:row.completed};
 }
 function readBinding(row:Record<string,unknown>):SwarmCoordinatorBinding {
  return {swarmUserWorktree:{rootPath:stringColumn(row.owner_root),gitCommonDirectory:stringColumn(row.git_common_directory)},
@@ -79,8 +86,7 @@ export class SwarmStore {
  constructor(private readonly pool:Pool,private readonly projectId:string) {}
  // Traceability: implements REQ-SWARM-SESSIONS
  async bindWorker(swarmWorktreeMembership:SwarmWorktreeMembership,rollingNativeThreadIdentity:RollingNativeThreadIdentity,swarmWorkerAssignment:SwarmWorkerAssignment):Promise<SwarmWorkerBinding> {
-  if(!swarmWorkerAssignment.id.trim()||swarmWorkerAssignment.id!==swarmWorkerAssignment.id.trim()||/[\0\r\n]/u.test(swarmWorkerAssignment.id)
-   ||!/^\S+ \S+ \S+$/u.test(swarmWorkerAssignment.summary)) throw new Error('swarm: assignment requires an exact ID and three word summary');
+  swarmWorkerAssignment=readSwarmWorkerAssignment(swarmWorkerAssignment);
   return this.transaction(async poolClient=>{
    await poolClient.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))',[this.projectId]);
    const owner=(await poolClient.query<Record<string,unknown>>('SELECT * FROM ponytail_index.swarm_owner_v1 WHERE project_id=$1 AND owner_root=$2 FOR UPDATE',[this.projectId,swarmWorktreeMembership.ownerRoot])).rows[0];

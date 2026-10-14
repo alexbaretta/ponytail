@@ -48,7 +48,7 @@ test('competing user swarms exclusively claim the lowest available retained chec
  assert.equal(swarmWorktreeMembership.number,101);assert.equal(swarmWorktreeMembership.rootPath,checkout101);
  assert.ok(swarmWorktreeMembership.ownerRoot===mainRoot||swarmWorktreeMembership.ownerRoot===otherRoot);
  const swarmInfoV3=await inspectSwarmInfo(swarmWorktreeMembership.ownerRoot,pool,projectId);
- assert.equal(swarmInfoV3.schemaVersion,3);assert.equal(swarmInfoV3.worktrees.length,1);
+ assert.equal(swarmInfoV3.schemaVersion,4);assert.equal(swarmInfoV3.worktrees.length,1);
  assert.deepEqual(swarmInfoV3.worktrees[0]?.membership,{kind:'swarm',generation:swarmWorktreeMembership.generation});
  assert.equal(swarmInfoV3.worktrees[0]?.assignment,null);
  assert.deepEqual(await inspectSwarmInfo(checkout101,pool,projectId),swarmInfoV3);

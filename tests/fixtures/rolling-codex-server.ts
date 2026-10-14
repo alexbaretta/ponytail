@@ -38,10 +38,12 @@ let archiveRefused = false;
 let archiveAcknowledgementLost = false;
 let archiveCount = 0;
 const nativeCli=process.argv.includes('app-server');
-let archivedRoot:string | null = nativeCli?process.cwd():null;
+let archivedRoot:string | null = nativeCli?process.env.ROLLING_NATIVE_FIXTURE_ROOT??process.cwd():null;
 let foreignArchiveRoot = false;
 let externallyActive = false;
 let observerOnly = nativeCli;
+const nameFile=process.env.ROLLING_NATIVE_FIXTURE_NAME_FILE;
+let threadName:string|null=nameFile&&fs.existsSync(nameFile)?fs.readFileSync(nameFile,'utf8'):null;
 let unloadedUntilResume = false;
 let terminalDuringHistoryRead = false;
 const identitySuffix=process.env.ROLLING_NATIVE_FIXTURE_ID??'fixture';
@@ -112,12 +114,15 @@ lines.on('line', line => {
   } else if(method === 'fixture-foreign-start') {
     turns.set('foreign-turn',{id:'foreign-turn',status:'inProgress',items:[]});
     send({method:'turn/started',params:{threadId,turn:{id:'foreign-turn'}}});
+  } else if(method==='thread/name/set') {
+    if(params.threadId!==threadId) throw new Error('naming requires original thread');
+    threadName=text(params.name);if(nameFile)fs.writeFileSync(nameFile,threadName);
   } else if (method === 'thread/read') {
     const requestedThreadId = text(params.threadId);
     if(requestedThreadId!==threadId&&requestedThreadId!=='wrong-activity'&&requestedThreadId!=='unsupported-activity') {
       send({id:message.id,error:{code:-32600,message:'no rollout found for requested thread'}});return;
     }
-    result = {thread:{id:requestedThreadId === 'wrong-activity' ? 'thread-fixture' : requestedThreadId,sessionId,cwd:archivedRoot,
+    result = {thread:{id:requestedThreadId === 'wrong-activity' ? 'thread-fixture' : requestedThreadId,sessionId,cwd:archivedRoot,name:threadName,
       status:{type:requestedThreadId === 'unsupported-activity' ? 'unknown' : externallyActive || [...turns.values()].some(turn => turn.status === 'inProgress') ? 'active' : observerOnly||unloadedUntilResume?'notLoaded':'idle'}}};
   } else if (method === 'turn/start') {
     const turnId = `turn-${++turnCount}`;

@@ -114,6 +114,17 @@ passes after it, with accepted adversarial review. This establishes the storage
 boundary only; native naming, cessation, removal/reattachment and installed worker
 CLI acceptance remain pending.
 
+**Native admission evidence:** The installed `worker-bind` CLI observes original
+identity, binds the exact managed checkout/assignment, sets its canonical native
+name, and confirms that name without resuming or acquiring its writer. V4 inventory
+retains old readers and distinguishes desired names from observed native titles
+and statuses or explicit unavailability. `notLoaded` does not become an idle
+claim. Controlled CLI/PG and real native acceptance pass; the original coordinator
+and worker writers stay open during the live Arc. Naming transport failure retains
+the exact binding for retry. Nineteen unit/help/protocol and five focused integration
+tests pass. Native removal/reattachment, DONE naming and lifetime origin across
+project lifecycle changes remain pending; these are not discharged by admission.
+
 ## Arc SWARM-CHECKOUTS: Allocate, release, transfer and reclaim
 
 Traceability: verifies REQ-SWARM-WORKTREES

@@ -1019,12 +1019,12 @@
         "module": "src/swarm-info.ts",
         "readerRegistryExport": "SwarmInfoReaders"
       },
-      "currentVersion": "V3",
+      "currentVersion": "V4",
       "versions": [
-        "V1", "V2", "V3"
+        "V1", "V2", "V3", "V4"
       ],
       "supportedReadVersions": [
-        "V1", "V2", "V3"
+        "V1", "V2", "V3", "V4"
       ],
       "supportedDowngradeVersions": []
     }

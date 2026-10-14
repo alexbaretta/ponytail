@@ -11,7 +11,10 @@ exports.readSwarmWorktreeDeletionReportV1 = readSwarmWorktreeDeletionReportV1;
 exports.readSwarmInfoV1 = readSwarmInfoV1;
 exports.readSwarmInfoV2 = readSwarmInfoV2;
 exports.readSwarmInfoV3 = readSwarmInfoV3;
+exports.readSwarmInfoV4 = readSwarmInfoV4;
 exports.readSwarmInfo = readSwarmInfo;
+exports.bindSwarmWorker = bindSwarmWorker;
+exports.observeSwarmWorkers = observeSwarmWorkers;
 exports.bindSwarmCoordinator = bindSwarmCoordinator;
 exports.inspectSwarmInfo = inspectSwarmInfo;
 exports.renderSwarmInfo = renderSwarmInfo;
@@ -165,15 +168,87 @@ function readSwarmInfoV3(value) {
             return { number: integer(input.number), rootPath: absoluteRoot(input.rootPath), present: input.present, state: worktreeState(input.state), membership: swarmWorktreeMembership, assignment };
         }) };
 }
-exports.SwarmInfoReaders = { V1: readSwarmInfoV1, V2: readSwarmInfoV2, V3: readSwarmInfoV3 };
+function workerBinding(value) {
+    const input = record(value);
+    keys(input, ['sessionId', 'threadId', 'ownerRoot', 'rootPath', 'worktreeNumber', 'worktreeGeneration', 'generation', 'workerNumber', 'shortAssignmentNumber', 'assignment', 'state', 'completed']);
+    const assignment = record(input.assignment);
+    keys(assignment, ['kind', 'id', 'summary']);
+    return (0, swarm_store_js_1.readWorker)({ session_id: text(input.sessionId), thread_id: text(input.threadId), owner_root: absoluteRoot(input.ownerRoot), root_path: absoluteRoot(input.rootPath),
+        worktree_number: integer(input.worktreeNumber), worktree_generation: text(input.worktreeGeneration), generation: text(input.generation), worker_number: input.workerNumber,
+        short_assignment_number: input.shortAssignmentNumber, assignment_kind: assignment.kind, assignment_id: text(assignment.id), summary: text(assignment.summary), state: input.state, completed: input.completed });
+}
+function nativeObservation(value) {
+    const input = record(value);
+    switch (input.kind) {
+        case 'unobserved':
+            keys(input, ['kind']);
+            return { kind: 'unobserved' };
+        case 'unavailable':
+            keys(input, ['kind', 'reason']);
+            return { kind: 'unavailable', reason: text(input.reason) };
+        case 'observed': {
+            keys(input, ['kind', 'name', 'status']);
+            const status = input.status;
+            if (status !== 'idle' && status !== 'active' && status !== 'notLoaded' && status !== 'systemError')
+                throw new Error('swarm: unsupported native observation');
+            return { kind: 'observed', name: input.name === null ? null : typeof input.name === 'string' ? input.name : text(input.name), status };
+        }
+        default: throw new Error('swarm: unsupported native observation');
+    }
+}
+function readSwarmInfoV4(value) {
+    const input = record(value);
+    keys(input, ['schemaVersion', 'ownerRoot', 'ownershipSource', 'coordinator', 'nativeActivity', 'worktrees', 'workers']);
+    if (input.schemaVersion !== 4 || !Array.isArray(input.workers) || input.nativeActivity !== 'unobserved' && input.nativeActivity !== 'worker-observations')
+        throw new Error('swarm: unsupported inventory version');
+    const { workers, ...base } = input;
+    const swarmInfoV3 = readSwarmInfoV3({ ...base, schemaVersion: 3, nativeActivity: 'unobserved' });
+    return { ...swarmInfoV3, schemaVersion: 4, nativeActivity: input.nativeActivity, workers: workers.map((value) => {
+            const input = record(value);
+            keys(input, ['binding', 'desiredName', 'nativeObservation']);
+            const swarmWorkerBinding = workerBinding(input.binding);
+            if (swarmWorkerBinding.ownerRoot !== swarmInfoV3.ownerRoot || swarmWorkerBinding.state === 'REMOVED' || input.desiredName !== (0, swarm_store_js_1.swarmWorkerName)(swarmWorkerBinding))
+                throw new Error('swarm: inconsistent current worker inventory');
+            return { binding: swarmWorkerBinding, desiredName: text(input.desiredName), nativeObservation: nativeObservation(input.nativeObservation) };
+        }) };
+}
+exports.SwarmInfoReaders = { V1: readSwarmInfoV1, V2: readSwarmInfoV2, V3: readSwarmInfoV3, V4: readSwarmInfoV4 };
 function readSwarmInfo(value) {
     const input = record(value);
     switch (input.schemaVersion) {
-        case 1: return normalizeSwarmInfoV2({ ...readSwarmInfoV1(input), schemaVersion: 2 });
-        case 2: return normalizeSwarmInfoV2(readSwarmInfoV2(input));
-        case 3: return readSwarmInfoV3(input);
+        case 1: return { ...normalizeSwarmInfoV2({ ...readSwarmInfoV1(input), schemaVersion: 2 }), schemaVersion: 4, workers: [] };
+        case 2: return { ...normalizeSwarmInfoV2(readSwarmInfoV2(input)), schemaVersion: 4, workers: [] };
+        case 3: return { ...readSwarmInfoV3(input), schemaVersion: 4, workers: [] };
+        case 4: return readSwarmInfoV4(input);
         default: throw new Error('swarm: unsupported inventory version');
     }
+}
+async function bindSwarmWorker(swarmStore, swarmWorktreeMembership, threadId, sessionId, swarmWorkerAssignment, rollingCodex) {
+    const rollingNativeThreadIdentity = await rollingCodex.readThreadIdentity(threadId, swarmWorktreeMembership.rootPath);
+    if (rollingNativeThreadIdentity.sessionId !== sessionId)
+        throw new Error('swarm: observed native worker differs from requested session');
+    const swarmWorkerBinding = await swarmStore.bindWorker(swarmWorktreeMembership, rollingNativeThreadIdentity, swarmWorkerAssignment);
+    await rollingCodex.setThreadName(threadId, (0, swarm_store_js_1.swarmWorkerName)(swarmWorkerBinding));
+    const rollingNativeThreadState = await rollingCodex.readThreadState(threadId, swarmWorktreeMembership.rootPath);
+    if (rollingNativeThreadState.sessionId !== sessionId || rollingNativeThreadState.name !== (0, swarm_store_js_1.swarmWorkerName)(swarmWorkerBinding))
+        throw new Error('swarm: native worker name is not confirmed; retain binding for retry');
+    return swarmWorkerBinding;
+}
+async function observeSwarmWorkers(swarmInfoV4, rollingCodex) {
+    const workers = await Promise.all(swarmInfoV4.workers.map(async (worker) => {
+        let nativeObservation;
+        try {
+            const rollingNativeThreadState = await rollingCodex.readThreadState(worker.binding.threadId, worker.binding.rootPath);
+            if (rollingNativeThreadState.sessionId !== worker.binding.sessionId)
+                throw new Error('swarm: native observation has a different original session');
+            nativeObservation = { kind: 'observed', name: rollingNativeThreadState.name, status: rollingNativeThreadState.status };
+        }
+        catch (cause) {
+            nativeObservation = { kind: 'unavailable', reason: cause instanceof Error ? cause.message : String(cause) };
+        }
+        return { ...worker, nativeObservation };
+    }));
+    return { ...swarmInfoV4, nativeActivity: workers.length ? 'worker-observations' : 'unobserved', workers };
 }
 async function bindSwarmCoordinator(swarmStore, swarmUserWorktree, threadId, sessionId, rollingCodex) {
     const rollingNativeThreadIdentity = await rollingCodex.readThreadIdentity(threadId, swarmUserWorktree.rootPath);
@@ -224,8 +299,16 @@ async function inspectSwarmInfo(invokingPath, pool, projectId) {
                 membership: row.owner_root === null ? { kind: 'campaign-lease' } : { kind: 'swarm', generation: text(row.generation) },
                 assignment: row.assignment_id === null ? null : { assignmentId: text(row.assignment_id), campaignId: text(row.campaign_id), obligationId: text(row.obligation_id), sessionId: nullableText(row.session_id) } };
         });
+        const workers = (await poolClient.query(`SELECT k.*,n.thread_id,n.root_path FROM ponytail_index.swarm_worker_v1 k
+   LEFT JOIN ponytail_index.swarm_native_session_v1 n ON n.session_id=k.session_id AND n.project_id=k.project_id
+   WHERE k.project_id=$1 AND k.owner_root=$2 AND k.state<>'REMOVED' ORDER BY k.worker_number`, [projectId, swarmUserWorktree.rootPath])).rows.map(row => {
+            if (row.thread_id === null || row.root_path === null)
+                throw new Error('swarm: worker native identity is missing or foreign; preserve its binding');
+            const swarmWorkerBinding = (0, swarm_store_js_1.readWorker)(row);
+            return { binding: swarmWorkerBinding, desiredName: (0, swarm_store_js_1.swarmWorkerName)(swarmWorkerBinding), nativeObservation: { kind: 'unobserved' } };
+        });
         await poolClient.query('COMMIT');
-        return { schemaVersion: 3, ownerRoot: swarmUserWorktree.rootPath, ownershipSource: owner === undefined ? 'campaign-leases' : 'swarm-owners-and-campaign-leases', coordinator: swarmCoordinator, nativeActivity: 'unobserved', worktrees };
+        return { schemaVersion: 4, ownerRoot: swarmUserWorktree.rootPath, ownershipSource: owner === undefined ? 'campaign-leases' : 'swarm-owners-and-campaign-leases', coordinator: swarmCoordinator, nativeActivity: 'unobserved', worktrees, workers };
     }
     catch (cause) {
         await poolClient.query('ROLLBACK');
@@ -235,10 +318,12 @@ async function inspectSwarmInfo(invokingPath, pool, projectId) {
         poolClient.release();
     }
 }
-function renderSwarmInfo(swarmInfoV3) {
-    const coordinator = swarmInfoV3.coordinator.kind === 'bound' ? `${swarmInfoV3.coordinator.sessionId} | thread: ${swarmInfoV3.coordinator.threadId ?? '(not recorded)'}` : swarmInfoV3.coordinator.kind === 'unbound' ? 'not bound' : 'not recorded';
-    return `Swarm owner: ${swarmInfoV3.ownerRoot}\nOwnership source: ${swarmInfoV3.ownershipSource}\nCoordinator session: ${coordinator}\nNative activity: not observed\n\nManaged worktrees (${swarmInfoV3.worktrees.length}):\n`
-        + swarmInfoV3.worktrees.map(worktree => `  ${worktree.number} ${worktree.state}${worktree.present ? '' : ' (missing)'} ${worktree.rootPath}\n    session: ${worktree.assignment?.sessionId ?? '(not attached)'} | assignment: ${worktree.assignment?.assignmentId ?? '(none)'} | obligation: ${worktree.assignment?.obligationId ?? '(none)'} | campaign: ${worktree.assignment?.campaignId ?? '(none)'}\n    membership: ${worktree.membership.kind}${worktree.membership.kind === 'swarm' ? ` | generation: ${worktree.membership.generation}` : ''}\n`).join('');
+function renderSwarmInfo(swarmInfoV4) {
+    const coordinator = swarmInfoV4.coordinator.kind === 'bound' ? `${swarmInfoV4.coordinator.sessionId} | thread: ${swarmInfoV4.coordinator.threadId ?? '(not recorded)'}` : swarmInfoV4.coordinator.kind === 'unbound' ? 'not bound' : 'not recorded';
+    return `Swarm owner: ${swarmInfoV4.ownerRoot}\nOwnership source: ${swarmInfoV4.ownershipSource}\nCoordinator session: ${coordinator}\nNative activity: ${swarmInfoV4.nativeActivity === 'unobserved' ? 'not observed' : 'see worker observations'}\n\nManaged worktrees (${swarmInfoV4.worktrees.length}):\n`
+        + swarmInfoV4.worktrees.map(worktree => `  ${worktree.number} ${worktree.state}${worktree.present ? '' : ' (missing)'} ${worktree.rootPath}\n    session: ${worktree.assignment?.sessionId ?? '(not attached)'} | assignment: ${worktree.assignment?.assignmentId ?? '(none)'} | obligation: ${worktree.assignment?.obligationId ?? '(none)'} | campaign: ${worktree.assignment?.campaignId ?? '(none)'}\n    membership: ${worktree.membership.kind}${worktree.membership.kind === 'swarm' ? ` | generation: ${worktree.membership.generation}` : ''}\n`).join('') + `\nRecorded worker bindings (${swarmInfoV4.workers.length}):\n` + swarmInfoV4.workers.map(worker => `  desired name: ${worker.desiredName} | session: ${worker.binding.sessionId} | thread: ${worker.binding.threadId} | ${worker.binding.state}\n`
+        + `    assignment: ${worker.binding.assignment.kind} ${worker.binding.assignment.id} | checkout: ${worker.binding.rootPath} | generation: ${worker.binding.generation}\n`
+        + `    native: ${worker.nativeObservation.kind === 'observed' ? `${worker.nativeObservation.status} | name: ${worker.nativeObservation.name ?? '(unnamed)'}` : worker.nativeObservation.kind === 'unavailable' ? `unavailable | ${worker.nativeObservation.reason}` : 'not observed'}\n`).join('');
 }
 async function runSwarmCli(argv) {
     if (argv.length === 0 || argv.includes('--help') || argv.includes('-h')) {
@@ -258,7 +343,7 @@ async function runSwarmCli(argv) {
             continue;
         }
         const value = argv[i + 1];
-        if ((flag === '--session' || flag === '--thread' || flag === '--base' || flag === '--number' || flag === '--generation') && !fields.has(flag) && typeof value === 'string' && value.length > 0 && !value.startsWith('--')) {
+        if ((flag === '--session' || flag === '--thread' || flag === '--base' || flag === '--number' || flag === '--generation' || flag === '--kind' || flag === '--assignment' || flag === '--summary') && !fields.has(flag) && typeof value === 'string' && value.length > 0 && !value.startsWith('--')) {
             fields.set(flag, value);
             i++;
             continue;
@@ -274,7 +359,8 @@ async function runSwarmCli(argv) {
     const setup = argv[0] === 'worktree-setup' && fields.size === 2 && fields.has('--number') && fields.has('--generation');
     const release = argv[0] === 'worktree-release' && fields.size === 2 && fields.has('--number') && fields.has('--generation');
     const deletion = argv[0] === 'worktree-delete' && fields.size === 1 && (fields.has('--number') || fields.has('--all'));
-    if (!valid || !info && !enrollment && !bind && !unbind && !assign && !setup && !release && !deletion) {
+    const workerBind = argv[0] === 'worker-bind' && fields.size === 7 && ['--thread', '--session', '--number', '--generation', '--kind', '--assignment', '--summary'].every(flag => fields.has(flag));
+    if (!valid || !info && !enrollment && !bind && !unbind && !assign && !setup && !release && !deletion && !workerBind) {
         process.stderr.write((0, cli_help_js_1.renderCliHelp)(['swarm', argv[0] ?? '']) + '\n');
         process.exitCode = 2;
         return;
@@ -289,12 +375,28 @@ async function runSwarmCli(argv) {
     const pool = new pg_1.Pool((0, project_index_database_js_1.databaseOptions)(root));
     let outputRoot = root;
     try {
-        if (enrollment || bind || unbind || assign || setup || release || deletion) {
+        if (enrollment || bind || unbind || assign || setup || release || deletion || workerBind) {
             const swarmStore = new swarm_store_js_1.SwarmStore(pool, projectId);
             const ownerRoot = enrollment ? root : (await inspectSwarmInfo(root, pool, projectId)).ownerRoot;
             const swarmUserWorktree = { rootPath: ownerRoot, gitCommonDirectory: node_fs_1.default.realpathSync((0, rolling_integration_js_1.git)(ownerRoot, ['rev-parse', '--path-format=absolute', '--git-common-dir']).trim()) };
             outputRoot = ownerRoot;
-            if (deletion) {
+            if (workerBind) {
+                const number = integer(fields.get('--number'));
+                const worktree = (await inspectSwarmInfo(ownerRoot, pool, projectId)).worktrees.find(worktree => worktree.number === number);
+                if (worktree === undefined || worktree.membership.kind !== 'swarm' || worktree.membership.generation !== fields.get('--generation'))
+                    throw new Error('swarm: checkout membership changed or is absent');
+                const kind = fields.get('--kind');
+                if (kind !== 'plan' && kind !== 'sprint')
+                    throw new Error('swarm: worker assignment kind must be plan or sprint');
+                const rollingCodex = await rolling_codex_js_1.RollingCodex.connect({ cwd: ownerRoot });
+                try {
+                    await bindSwarmWorker(swarmStore, { number, rootPath: worktree.rootPath, ownerRoot, generation: worktree.membership.generation }, text(fields.get('--thread')), text(fields.get('--session')), { kind, id: text(fields.get('--assignment')), summary: text(fields.get('--summary')) }, rollingCodex);
+                }
+                finally {
+                    await rollingCodex.close();
+                }
+            }
+            else if (deletion) {
                 await swarmStore.enrollOwner(swarmUserWorktree);
                 const results = await swarmStore.deleteWorktrees(ownerRoot, fields.has('--all') ? null : integer(fields.get('--number')));
                 const swarmWorktreeDeletionReportV1 = { schemaVersion: 1, ownerRoot, results };
@@ -341,8 +443,23 @@ async function runSwarmCli(argv) {
             else
                 await swarmStore.unbindCoordinator(ownerRoot, text(fields.get('--session')));
         }
-        const swarmInfoV3 = await inspectSwarmInfo(outputRoot, pool, projectId);
-        process.stdout.write(json ? JSON.stringify(swarmInfoV3) + '\n' : renderSwarmInfo(swarmInfoV3));
+        let swarmInfoV4 = await inspectSwarmInfo(outputRoot, pool, projectId);
+        if (swarmInfoV4.workers.length) {
+            let rollingCodex = null;
+            try {
+                rollingCodex = await rolling_codex_js_1.RollingCodex.connect({ cwd: swarmInfoV4.ownerRoot });
+                swarmInfoV4 = await observeSwarmWorkers(swarmInfoV4, rollingCodex);
+            }
+            catch (cause) {
+                const reason = cause instanceof Error ? cause.message : String(cause);
+                swarmInfoV4 = { ...swarmInfoV4, nativeActivity: 'worker-observations', workers: swarmInfoV4.workers.map(worker => ({ ...worker, nativeObservation: { kind: 'unavailable', reason } })) };
+            }
+            finally {
+                if (rollingCodex)
+                    await rollingCodex.close();
+            }
+        }
+        process.stdout.write(json ? JSON.stringify(swarmInfoV4) + '\n' : renderSwarmInfo(swarmInfoV4));
     }
     finally {
         await pool.end();
