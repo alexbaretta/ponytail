@@ -130,3 +130,48 @@ is introduced. A real-Git consumer regression accepts a changed report input
 and rejects omission, without asserting automated prose testing. Focused worker
 and submission proof passes13 tests; independent review accepts this correction.
 Final full core QA and fresh original-worker proof remain pending.
+
+Final coherent artifact/input correction in `63657ca` passes all952 tests,
+TSTS1,576 files and traceability981 relationships. This establishes component
+acceptance; native fresh proof correction remains owned by the GWEN coordinator.
+
+OBL-RESTART-5: IN_PROGRESS. Implement desktop-owned original worker handoff
+under REQ-ROLLING-WORKERS and ACC-ROLLING-DESKTOP-WORKER. Current private
+processes do not produce desktop-owned runtime activity. Hold private redispatch;
+prepare existing idle actors, send frozen instructions once through the desktop,
+acknowledge the observed exact original turn and verify actual visible execution.
+No replacement sessions, writer competition or fabricated idle observations.
+
+Desktop preparation now observes original identity and the latest terminal turn
+without resuming or acquiring the native writer. A retained-writer fixture
+rejects resume while preparation and exact-input acknowledgement succeed;
+active actors are rejected before any claim. Focused worker/Codex/operation
+proof passes 37 tests and the real PostgreSQL provisioning Arc passes. Existing
+TSTS checks 1,619 files without violations. Full core acceptance still stops on
+the three upstream REQ-TYPESCRIPT-ONLY-SOURCE coverage gaps; no broad upstream
+language migration or fabricated coverage is introduced. Full typed execution
+and independent review are pending. Actual Desktop parallel overlap remains
+unproved until the cooperating coordinator dispatches original actors.
+Observation: [preparation writer conflict](../../../debugging-pattern-observations/2026-10-13-desktop_preparation_writer_conflict.json).
+
+Live Desktop dispatch started four retained original actors within 13 seconds,
+with overlapping in-progress turns `01a1381d-39c3-71f3-80a1-9cbe37b6b3e4`,
+`01a1381d-5351-7f31-8ed6-4a6c4a1b7ad8`,
+`01a1381d-6b75-7c01-a412-31fffea685ee` and
+`01a1381d-5ee6-7021-8bb2-5b3d492bd9f4`. Independent Desktop observations
+confirm actual worker commentary and commands, not just assigned records;
+three subsequently returned structured proposals. No replacement or private
+implementation dispatch was used.
+
+The first actual acknowledgement exposed a transport mismatch: Desktop sends
+produce a `functionCallOutput` delegation with XML-escaped input, not the direct
+native `userMessage` used by the former fixture. Inspection of the exact raw
+original turn proves once-escaped input matches the frozen instructions. The
+canonical parser and acknowledgement now accept only that actual tool identity,
+strict envelope and exact escaped input; direct native input remains exact.
+Focused 37 tests and the PostgreSQL provisioning Arc pass with actual envelope
+shape, and independent review accepts the correction. The full typed run had
+306/307 passes; its sole stale OpenClaw resource was regenerated and its focused
+11 exported-resource/compliance tests pass. Final actual same-dispatch
+acknowledgements and full final-input validation remain pending.
+Observation: [Desktop input mismatch](../../../debugging-pattern-observations/2026-10-13-desktop_delegation_input_mismatch.json).

@@ -44,7 +44,9 @@ let unloadedUntilResume = false;
 let terminalDuringHistoryRead = false;
 const threadId = process.argv.includes('--reviewer') ? 'thread-reviewer-fixture' : 'thread-fixture';
 const sessionId = process.argv.includes('--reviewer') ? 'session-reviewer-fixture' : 'session-fixture';
+const desktopDelivery=process.argv.includes('--desktop-delivery');
 const turns = new Map<string, RollingNativeTurn>();
+const prompts=new Map<string,string>();
 lines.on('line', line => {
   const parsed: unknown = JSON.parse(line);
   const message = record(parsed);
@@ -115,6 +117,7 @@ lines.on('line', line => {
     const turnId = `turn-${++turnCount}`;
     if (!Array.isArray(params.input)) throw new Error('missing turn input');
     const prompt = text(record(params.input[0]).text);
+    if(prompt.startsWith('Execute the assigned atomic obligation')||prompt.startsWith('Initialize this Ponytail worker'))prompts.set(turnId,prompt);
     turns.set(turnId, { id: turnId, status: prompt === 'pending' ? 'inProgress' : prompt, items: [] });
     result = { turn: { id: turnId } };
     send({ method: 'turn/started', params: { threadId: params.threadId, turn: { id: turnId } } });
@@ -159,7 +162,14 @@ lines.on('line', line => {
   } else if (method === 'thread/turns/list') {
     const history = [...turns.values()].reverse();
     const offset = params.cursor === null ? 0 : Number(text(params.cursor));
-    result = { data: history.slice(offset, offset + 1), nextCursor: offset + 1 < history.length ? String(offset + 1) : null };
+    result = { data: history.slice(offset, offset + 1).map(turn=>{
+      const prompt=prompts.get(turn.id);
+      if(desktopDelivery&&prompt?.startsWith('Execute the assigned atomic obligation')) {
+        const output=`<codex_delegation>\n  <source_thread_id>00000000-0000-4000-8000-000000000001</source_thread_id>\n  <input>${prompt.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;')}</input>\n</codex_delegation>`;
+        return {...turn,items:[{type:'functionCallOutput',namespace:'codex_app',name:'send_message_to_thread',output},...turn.items]};
+      }
+      return prompt===undefined?turn:{...turn,items:[{type:'userMessage',content:[{type:'text',text:prompt,text_elements:[]}]},...turn.items]};
+    }), nextCursor: offset + 1 < history.length ? String(offset + 1) : null };
     if (terminalDuringHistoryRead) {
       terminalDuringHistoryRead = false;
       const previousTurn = history[0];

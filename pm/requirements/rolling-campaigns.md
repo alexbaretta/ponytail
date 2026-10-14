@@ -359,3 +359,22 @@ freshness, not automated testing of inert prose. Retain authority in the frozen
 lease. A worker must report incompatible proof
 scope if QA consumes the accepted obligation document, whose changing accepted
 state cannot certify its own bytes; it must not omit a genuine QA input.
+
+Under REQ-ROLLING-WORKERS, atomic obligation OBL-RESTART-5 requires a desktop
+coordinator to hand frozen work to the existing desktop-owned worker session.
+Ponytail preparation must observe the original identity and terminal turn
+without acquiring a competing writer or executing implementation. An observed
+active actor or failed native runtime cannot be prepared; an unloaded actor
+is not asserted idle. Acknowledgment must bind
+the original dispatch/session/generation to the actual latest native turn and
+verify its canonical instruction delivery against the immutable instructions,
+without acquiring a
+second writer. Recover uncertain sends by observing the original turn; never
+resend blindly. Desktop activity must be verified through the owning desktop,
+separately from database occupancy and private App Server activity.
+
+Direct native dispatch records a user-message input. Desktop cross-session
+delivery records the `codex_app` / `send_message_to_thread` function-call output
+with its delegation envelope and once-escaped input. Acknowledgment must compare
+that exact canonical representation to the frozen instructions; arbitrary tool
+outputs, altered or duplicate inputs and noncanonical escaping do not qualify.

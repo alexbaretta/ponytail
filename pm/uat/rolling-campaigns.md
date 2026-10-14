@@ -468,3 +468,17 @@ accepted without a command-consumption claim. If QA actually consumes the accept
 verify the instructions require reporting incompatible scope rather than
 dropping that input. Recover the original worker with fresh actual proof;
 never rewrite a retained submission to change its evidence.
+
+ACC-ROLLING-DESKTOP-WORKER (OBL-RESTART-5): prepare an attached original worker
+and verify no implementation turn starts or competing writer is acquired,
+including when the Desktop retains its idle original writer. Reject preparation
+of an observed active actor. Send the exact returned instructions
+once through the desktop into that original thread. Verify the desktop reports
+its actual turn in progress, then acknowledge that turn in Ponytail. Reject
+foreign dispatches, different or noncanonically escaped inputs and newer turns;
+verify the actual Desktop delegation item rather than a fabricated user-message
+item. Retry a lost acknowledgment
+with the same turn. Complete and collect using genuine owning-idle evidence.
+Concurrent independent workers must be visibly executing in the desktop, not
+merely allocated or running through separate private App Servers. Preserve
+original checkouts, candidates, frozen leases and configured permissions.

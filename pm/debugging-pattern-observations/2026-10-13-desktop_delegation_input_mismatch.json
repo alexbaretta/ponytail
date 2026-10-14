@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-10-13-desktop_delegation_input_mismatch",
+  "recorded_at": "2026-10-13T18:59:28-07:00",
+  "source_references": ["pm/plans/in_progress/2026-10-13-campaign-restart-acceptance/plan.md"],
+  "context": {
+    "languages": ["typescript"],
+    "frameworks": [],
+    "components": ["rolling-worker", "rolling-codex"],
+    "affected_boundaries": ["Desktop cross-session delivery", "native turn acknowledgement"],
+    "code_references": ["src/rolling-codex.ts:completedTurn", "src/rolling-worker.ts:acknowledgeRollingWorkerDispatch"]
+  },
+  "observed_behavior": "An actual Desktop worker executed exact frozen instructions, but acknowledgement failed because its native turn had no userMessage item.",
+  "expected_behavior": "Acknowledgement recognizes the actual canonical delivery record and binds the original dispatch to its exact instruction turn without resend.",
+  "causal_mechanism": "The fixture modeled private turn/start user inputs. The Desktop send tool instead inserts a functionCallOutput from codex_app/send_message_to_thread with a delegation envelope and once-escaped input. The generic parser discarded that output, making the acknowledgement input set empty.",
+  "anti_pattern": {
+    "structural_description": "A shared acknowledgement assumes the serialization of one transport also represents another independently owned execution transport.",
+    "why_it_fails": "The correct original instruction is present under another native item variant; ignoring its envelope rejects a real successful dispatch."
+  },
+  "correct_pattern": {
+    "required_invariant": "Only the exact delivery representation of the selected native transport may establish receipt of immutable instructions.",
+    "implementation_description": "Preserve only the canonical Desktop tool output and require one strict UUID-source delegation envelope whose input equals canonical once-escaping of the frozen prompt. Direct user inputs still require exact byte equality; all original identity, generation and latest-turn checks remain."
+  },
+  "applicability_conditions": ["A Desktop cross-session tool delivers prepared instructions to an original native worker", "The actual turn stores delegation as a function-call output"],
+  "known_non_matches": ["Direct private native dispatch stores a userMessage input", "Unrelated tool outputs do not qualify as instruction delivery"],
+  "confirmation_evidence": ["The exact original OBL-7 turn contained functionCallOutput, namespace codex_app and name send_message_to_thread, without userMessage", "The raw envelope differed only by once-escaping &, < and >; canonical unescaping produced the exact frozen prompt", "The corrected PostgreSQL provisioning Arc accepts the canonical escaped envelope"],
+  "regression_proofs": ["tests/rolling-campaign-store.integration.test.ts: worker provisioning fences creation and atomically attaches the native identity and ignored marker"]
+}

@@ -90,6 +90,15 @@ function completedTurn(value) {
     const items = turn.items.map((value) => {
         const item = nativeRecord(value);
         const type = nativeString(item.type, 'item type');
+        if (type === 'userMessage') {
+            requireProtocol(Array.isArray(item.content), 'user message lacks input content');
+            const content = item.content.map(nativeRecord);
+            return { type, text: content.every(input => input.type === 'text')
+                    ? content.map(input => nativeString(input.text, 'user input text')).join('') : null };
+        }
+        if (type === 'functionCallOutput' && item.namespace === 'codex_app' && item.name === 'send_message_to_thread') {
+            return { type, text: nativeString(item.output, 'desktop delegation output') };
+        }
         return { type, text: type === 'agentMessage' ? nativeString(item.text, 'agent message text') : null };
     });
     return { id, status, items };

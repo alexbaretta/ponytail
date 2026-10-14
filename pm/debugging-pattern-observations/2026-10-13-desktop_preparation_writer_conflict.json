@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-10-13-desktop_preparation_writer_conflict",
+  "recorded_at": "2026-10-13T18:50:03-07:00",
+  "source_references": ["pm/plans/in_progress/2026-10-13-campaign-restart-acceptance/plan.md"],
+  "context": {
+    "languages": ["typescript"],
+    "frameworks": [],
+    "components": ["rolling-worker", "rolling-codex"],
+    "affected_boundaries": ["read-only dispatch preparation", "native writer ownership"],
+    "code_references": ["src/rolling-worker.ts:prepareRollingWorkerDispatch", "src/rolling-worker.ts:dispatchRollingWorker"]
+  },
+  "observed_behavior": "Dispatch preparation attempted thread/resume and could fail when the Desktop retained the original worker's writer, although no implementation turn was requested.",
+  "expected_behavior": "Preparing immutable instructions observes the original actor without competing with the transport that will execute them.",
+  "causal_mechanism": "The preparation operation inherited private-dispatch writer acquisition. Its idle check occurred after resume, so another retained writer prevented preparation before the instruction claim.",
+  "anti_pattern": {
+    "structural_description": "A read-only preparation boundary acquires the exclusive capability owned by the independent execution transport.",
+    "why_it_fails": "Native writer exclusivity rejects resume even when the retained original worker is not executing an implementation turn."
+  },
+  "correct_pattern": {
+    "required_invariant": "Preparation and acknowledgement observe identity and exact turns without acquiring a writer; private execution acquires its writer explicitly.",
+    "implementation_description": "Preparation reads original identity, latest terminal turn and activity, rejects observed active/system-error actors, validates the session marker and claims frozen instructions. Private dispatch alone resumes before preparation; acknowledgement matches original dispatch, generation, latest turn and exact user input."
+  },
+  "applicability_conditions": ["An external transport retains the original native worker writer", "Instruction preparation is separate from implementation dispatch"],
+  "known_non_matches": ["An observed active worker remains ineligible for preparation", "Private dispatch still requires native writer acquisition"],
+  "confirmation_evidence": ["The protocol fixture rejects thread/resume as already having an active writer while the original preparation/acknowledgement Arc succeeds without that resume", "An active original actor fails preparation before any dispatch claim is persisted"],
+  "regression_proofs": ["tests/rolling-campaign-store.integration.test.ts: worker provisioning fences creation and atomically attaches the native identity and ignored marker"]
+}

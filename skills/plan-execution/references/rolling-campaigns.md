@@ -138,6 +138,27 @@ assignment, generation, action, review and batch IDs. Do not infer or replace th
    workers are top-level native sessions; subagents do not replace them. Retain
    approval handling on each owning transport. Query and replenish while others
    run; serialize only the coordinator mutation/publication lane.
+   In the Codex desktop, use `prepare-worker-dispatch` instead of starting a
+   private `dispatch-worker` process when the worker must execute visibly in the
+   desktop. Preparation returns immutable instructions and the original thread
+   ID without acquiring a native writer or starting implementation. Preparation
+   checks original identity, terminal turn and absence of observed active work;
+   notLoaded is an unavailable activity observation, not proof of idle. The
+   desktop owns actual dispatch and activity verification. Send those exact instructions once to
+   that existing thread with the desktop thread tool, observe its actual turn
+   ID, then run `acknowledge-worker-dispatch --dispatch <id> --turn <id>` with
+   the assignment/generation selectors. Acknowledgment verifies the native
+   instruction delivery against the frozen instructions without acquiring the
+   writer. Native dispatch has a user-message input; the Desktop send tool has
+   a delegation output with canonically escaped input. Preserve that actual
+   transport record; do not invent a user-message item or resend for a missing
+   acknowledgment.
+   If sending or acknowledgment has an unknown outcome, inspect the original
+   thread and prepared dispatch; never resend merely because acknowledgment
+   was lost. Observe activity and approvals through the owning desktop. After
+   completion, use `collect-submission` with a fresh genuine owning-transport
+   idle observation when a private reader sees notLoaded. Private App Server
+   activity does not establish desktop-visible execution.
    Distinguish native running/waiting sessions from logical occupied assignments.
    `availableCapacity` is the capacity left after the reported hypothetical
    selection, not the count of sessions already created. Report dependency,

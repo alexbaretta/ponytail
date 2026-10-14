@@ -20,7 +20,7 @@ import type { ObligationBindingHistoryV1, ObligationBindingRevisionV1 } from '..
 import type { ObligationEvidence } from '../skills/plan-execution/scripts/obligations.js';
 import { parseRollingWorkerSubmission, type RollingWorkerSubmissionV1, type RollingSubmissionProof } from '../src/rolling-worker-submission.js';
 import { readRollingReviewRequestV1,readRollingReviewOutcomeV1,dispatchRollingReview, collectRollingReview, startRollingReview, type RollingReviewOutcomeV1, type RollingStoredReview } from '../src/rolling-review.js';
-import { retireRollingWorker, provisionRollingWorker, attachRollingWorker, suspendRollingWorker, collectRollingWorkerSubmission,correctRollingWorker, recoverRollingWorkerCreation, observeRollingWorkerInitialization, resumeRollingWorker, parseRollingWorkerResumption, dispatchRollingWorker, buildRollingWorkerInstructions, type RollingWorkerInitialization } from '../src/rolling-worker.js';
+import { retireRollingWorker, provisionRollingWorker, attachRollingWorker, suspendRollingWorker, collectRollingWorkerSubmission,correctRollingWorker, recoverRollingWorkerCreation, observeRollingWorkerInitialization, resumeRollingWorker, parseRollingWorkerResumption, prepareRollingWorkerDispatch,acknowledgeRollingWorkerDispatch,dispatchRollingWorker, buildRollingWorkerInstructions, type RollingWorkerInitialization } from '../src/rolling-worker.js';
 import { RollingCodex, RollingObservationTimeout, type RollingNativeTurn, type RollingNativeThread, type RollingNativeServerRequest } from '../src/rolling-codex.js';
 import {RollingCampaignOperations,executeRollingCommand,authorizeRollingWorkerCommandApproval} from '../src/rolling-operations.js';
 import { acceptBoundCheckpoint, type ObligationCertificateBindingV1, type ObligationCertificateSubmission,
@@ -1238,7 +1238,7 @@ export async function runRollingWorkerScenario(t: TestContext, mode: 'protocol' 
   const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'rolling-worker-store-')));
   const rollingCampaignStore = new RollingCampaignStore(pool, projectId);
   let rollingCodex = mode === 'native' ? await connectRollingWorkerCodex(t)
-    : new RollingCodex({executable:process.execPath,argv:[path.join(__dirname,'fixtures/rolling-codex-server.js')]});
+    : new RollingCodex({executable:process.execPath,argv:[path.join(__dirname,'fixtures/rolling-codex-server.js'),...(operation==='instructions'?['--desktop-delivery']:[])]});
   let rollingWorkerInitialization: RollingWorkerInitialization | null = null;
   let provisioningStarted = false;
   let instructionDispatchStarted = false;
@@ -1549,7 +1549,26 @@ export async function runRollingWorkerScenario(t: TestContext, mode: 'protocol' 
     assert.deepEqual(rollingWorkerContext.qa,rollingProjectConfigV1.qa);
     instructionDispatchStarted = true;
     instructionGeneration = generation;
-    rollingWorkerDispatchAttached = await dispatchRollingWorker(rollingCampaignStore,rollingCodex,'worker-fixture',rollingAllocationResult.assignment.id,generation);
+    if(mode==='protocol'&&operation==='instructions') {
+      const previousRollingNativeTurn=await rollingCodex.readLatestTurn(rollingWorkerInitialization.rollingWorkerCreationV1.threadId);
+      await rollingCodex.request('fixture-activity',{active:true});
+      await assert.rejects(prepareRollingWorkerDispatch(rollingCampaignStore,rollingCodex,'worker-fixture',rollingAllocationResult.assignment.id,generation),/active actor/);
+      assert.equal(await rollingCampaignStore.workerDispatch('worker-fixture',rollingAllocationResult.assignment.id,generation),null);
+      await rollingCodex.request('fixture-activity',{active:false});
+      await rollingCodex.request('fixture-observer-only',{});
+      await assert.rejects(rollingCodex.resumeThread(rollingWorkerInitialization.rollingWorkerCreationV1.threadId,rollingAllocationResult.worktree.rootPath),/active writer/);
+      const rollingWorkerDispatchStarted=await prepareRollingWorkerDispatch(rollingCampaignStore,rollingCodex,'worker-fixture',rollingAllocationResult.assignment.id,generation);
+      assert.equal(rollingWorkerDispatchStarted.state,'STARTED');
+      assert.equal((await rollingCodex.readLatestTurn(rollingWorkerDispatchStarted.threadId)).id,previousRollingNativeTurn.id,'preparation must not start implementation');
+      await assert.rejects(prepareRollingWorkerDispatch(rollingCampaignStore,rollingCodex,'worker-fixture',rollingAllocationResult.assignment.id,generation),/already claimed/);
+      await assert.rejects(acknowledgeRollingWorkerDispatch(rollingCampaignStore,rollingCodex,'worker-fixture',rollingAllocationResult.assignment.id,generation,rollingWorkerDispatchStarted.id,previousRollingNativeTurn.id),/input differs/);
+      const rollingTurnStarted=await rollingCodex.startTurn(rollingWorkerDispatchStarted.threadId,rollingWorkerDispatchStarted.instructions);
+      rollingWorkerDispatchAttached=await acknowledgeRollingWorkerDispatch(rollingCampaignStore,rollingCodex,'worker-fixture',rollingAllocationResult.assignment.id,generation,rollingWorkerDispatchStarted.id,rollingTurnStarted.turn.id);
+      assert.deepEqual(await acknowledgeRollingWorkerDispatch(new RollingCampaignStore(pool,projectId),rollingCodex,'worker-fixture',rollingAllocationResult.assignment.id,generation,rollingWorkerDispatchStarted.id,rollingTurnStarted.turn.id),rollingWorkerDispatchAttached);
+      await assert.rejects(acknowledgeRollingWorkerDispatch(rollingCampaignStore,rollingCodex,'worker-fixture',rollingAllocationResult.assignment.id,generation,'foreign-dispatch',rollingTurnStarted.turn.id),/dispatch differs/);
+      await rollingCodex.request('fixture-correction-reload',{});
+      await rollingCodex.resumeThread(rollingWorkerInitialization.rollingWorkerCreationV1.threadId,rollingAllocationResult.worktree.rootPath);
+    } else rollingWorkerDispatchAttached = await dispatchRollingWorker(rollingCampaignStore,rollingCodex,'worker-fixture',rollingAllocationResult.assignment.id,generation);
     assert.equal(rollingWorkerDispatchAttached.threadId,rollingWorkerInitialization.rollingWorkerCreationV1.threadId);
     const rollingNativeTurn = await observeRollingWorkerTurn(t,rollingCodex,rollingWorkerDispatchAttached.threadId,rollingWorkerDispatchAttached.turnId);
     assert.equal(rollingNativeTurn.status,'completed');

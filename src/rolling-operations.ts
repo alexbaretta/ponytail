@@ -13,7 +13,7 @@ import {RollingCampaignStore,readRollingConfigurationAmendmentRequestV1,readRoll
 import type {RollingStoredReview,RollingReviewerLoss} from './rolling-review.js';
 import {git,gitResult,publishRollingIncrement,reconcileRollingIncrementPublication,type RollingIncrementPublication,type RollingIncrementRepair,type RollingIncrementRebaseV1,rebasePreparedRollingIncrement,observePreparedRollingIncrement,refreshRollingIncrementProof,fastForwardRollingIncrement} from './rolling-integration.js';
 import {RollingCodex,type RollingNativeServerRequest} from './rolling-codex.js';
-import {provisionRollingWorker,attachRollingWorker,recoverRollingWorkerCreation,resumeRollingWorker,dispatchRollingWorker,collectRollingWorkerSubmission,correctRollingWorker,readRollingWorkerOwnerObservationV1,suspendRollingWorker,retireRollingWorker,type RollingWorkerContext} from './rolling-worker.js';
+import {provisionRollingWorker,attachRollingWorker,recoverRollingWorkerCreation,resumeRollingWorker,prepareRollingWorkerDispatch,acknowledgeRollingWorkerDispatch,dispatchRollingWorker,collectRollingWorkerSubmission,correctRollingWorker,readRollingWorkerOwnerObservationV1,suspendRollingWorker,retireRollingWorker,type RollingWorkerContext} from './rolling-worker.js';
 import {readRollingPublicationRepairReviewV1,prepareRollingMainline,mergeRollingMainline,observeRollingMainlineCandidate,runRollingPublicationQa,prepareRollingMainlineRefresh,mergeRollingMainlineRefresh,observeRollingMainlineRefresh,type RollingMainlineCandidateV1,type RollingMainlineRefreshResultV1} from './rolling-publication.js';
 import {dispatchRollingReview,collectRollingReview,startRollingReview} from './rolling-review.js';
 import type {RollingPublicationFrozen,RollingPublicationTrigger} from './rolling-publication.js';
@@ -92,6 +92,7 @@ export interface RollingOperationResults {
  'provision-worker':Awaited<ReturnType<typeof attachRollingWorker>>;'recover-worker':Awaited<ReturnType<typeof recoverRollingWorkerCreation>>;
  'resume-worker':Awaited<ReturnType<typeof resumeRollingWorker>>;'observe-resumption':Awaited<ReturnType<typeof resumeRollingWorker>>;
  'dispatch-worker':Awaited<ReturnType<typeof collectRollingWorkerSubmission>>;'collect-submission':Awaited<ReturnType<typeof collectRollingWorkerSubmission>>;
+ 'prepare-worker-dispatch':Awaited<ReturnType<typeof prepareRollingWorkerDispatch>>;'acknowledge-worker-dispatch':Awaited<ReturnType<typeof acknowledgeRollingWorkerDispatch>>;
  'retry-worker':Awaited<ReturnType<typeof correctRollingWorker>>;
  'suspend-worker':Awaited<ReturnType<typeof suspendRollingWorker>>;'retire-worker':Awaited<ReturnType<typeof retireRollingWorker>>;
  'rebind-worker':Awaited<ReturnType<RollingCampaignStore['rebindLease']>>;
@@ -463,6 +464,8 @@ export class RollingCampaignOperations {
     await dispatchRollingWorker(this.rollingCampaignStore,rollingCodex,campaignId,assignmentId,generation);
     return collectRollingWorkerSubmission(this.rollingCampaignStore,rollingCodex,campaignId,assignmentId,generation,timeoutMs);
    },{campaignId:stringField(input,'campaign'),assignmentId:stringField(input,'assignment'),generation:stringField(input,'generation')})};
+   case 'prepare-worker-dispatch': return {command,result:await this.native(signal,rollingCodex=>prepareRollingWorkerDispatch(this.rollingCampaignStore,rollingCodex,stringField(input,'campaign'),stringField(input,'assignment'),stringField(input,'generation')))};
+   case 'acknowledge-worker-dispatch': return {command,result:await this.native(signal,rollingCodex=>acknowledgeRollingWorkerDispatch(this.rollingCampaignStore,rollingCodex,stringField(input,'campaign'),stringField(input,'assignment'),stringField(input,'generation'),stringField(input,'dispatch'),stringField(input,'turn')))};
    case 'collect-submission': return {command,result:await this.native(signal,rollingCodex=>collectRollingWorkerSubmission(this.rollingCampaignStore,rollingCodex,stringField(input,'campaign'),stringField(input,'assignment'),stringField(input,'generation'),timeoutMs,input.observation===undefined?null:readRollingWorkerOwnerObservationV1(input.observation)))};
    case 'retry-worker': return {command,result:await this.native(signal,rollingCodex=>correctRollingWorker(this.rollingCampaignStore,rollingCodex,stringField(input,'campaign'),stringField(input,'assignment'),stringField(input,'generation'),stringField(input,'reason'),input.observation===undefined?null:readRollingWorkerOwnerObservationV1(input.observation)))};
    case 'suspend-worker': return {command,result:await this.native(signal,rollingCodex=>suspendRollingWorker(this.rollingCampaignStore,rollingCodex,stringField(input,'campaign'),stringField(input,'assignment'),stringField(input,'generation'),stringArray(input.blockers),timeoutMs))};

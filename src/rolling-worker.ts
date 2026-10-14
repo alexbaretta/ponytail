@@ -12,7 +12,7 @@ import { parseRollingWorkerSubmission, type RollingWorkerSubmissionV1 } from './
 import type { Obligation, ObligationRequirement } from '../skills/plan-execution/scripts/obligations.js';
 import type { ObligationLeaseV1 } from '../skills/plan-execution/scripts/obligation-binding-history.js';
 import type { RollingArgv, RollingBinding, RollingProjectConfigV1, RollingResolvedConfiguration } from './rolling-campaign.js';
-import type { RollingCampaignStore, RollingSessionAttachment, RollingWorkerDispatchAttached, RollingAssignmentTransition, RollingSubmissionReceipt, RollingWorkerRetirement } from './rolling-campaign-store.js';
+import type { RollingCampaignStore, RollingSessionAttachment, RollingWorkerDispatchStarted, RollingWorkerDispatchAttached, RollingAssignmentTransition, RollingSubmissionReceipt, RollingWorkerRetirement } from './rolling-campaign-store.js';
 import type { RollingReviewRejectedV1 } from './rolling-review.js';
 
 export interface RollingWorkerCreationV1 {
@@ -181,7 +181,7 @@ export function buildRollingWorkerInstructions(rollingWorkerContext: RollingWork
   + 'If blocked, stop activity and report the blocker while retaining the checkout. Delivery is proposed discharge, not acceptance. '
   + 'When submitting code changes, fetch the configured campaign branch and perform a full semantic rebase commit by commit, refresh affected evidence, retain the exact candidate SHA and base, and stop activity. '
   + `Worker rebase upstream: refs/remotes/${rollingWorkerContext.configuration.mainline.remote}/${rollingWorkerContext.configuration.incrementRef}. Exact fetch argument vector: ${JSON.stringify(rollingArgv)}. The fetched FETCH_HEAD must identify this campaign increment branch before replay. The coordinator publication gate owns ${rollingWorkerContext.configuration.mainline.remote}/${rollingWorkerContext.configuration.mainline.branch}. `
-  + 'For semantic replay after fetching the configured campaign branch, use GIT_SEQUENCE_EDITOR=\"sed -i.bak -e s/^pick/edit/\" git rebase --interactive --force-rebase FETCH_HEAD. Inspect each stopped commit before git rebase --continue. These exact commands receive one-use approval only for this active leased worker and its original instruction turn. '
+  + 'For semantic replay after fetching the configured campaign branch, use GIT_SEQUENCE_EDITOR=\"sed -i.bak -e s/^pick/edit/\" git rebase --interactive --force-rebase FETCH_HEAD. Inspect each stopped commit before git rebase --continue. These exact commands are authorized only for this active leased worker and its original instruction turn; host permission approval remains required. '
   + 'If this checkout retains its owned in-progress rebase after a failed prior turn, inspect the stopped commit and continue that rebase before beginning a fresh replay; preserve its amendments and staged work. '
   + 'Git mutations in this linked checkout write shared repository metadata outside the checkout. Request sandbox escalation for each authorized Git mutation before its first execution (sandbox_permissions=require_escalated). Keep the lease and authorized command scope binding. '
   + 'Return the candidate and evidence to the coordinator for adversarial review; never publish to mainline yourself. '
@@ -201,14 +201,50 @@ export function buildRollingWorkerInstructions(rollingWorkerContext: RollingWork
 }
 
 // Traceability: implements REQ-ROLLING-WORKERS
-export async function dispatchRollingWorker(rollingCampaignStore: RollingCampaignStore, rollingCodex: RollingCodex,
- campaignId: string, assignmentId: string, generation: string): Promise<RollingWorkerDispatchAttached> {
+export async function prepareRollingWorkerDispatch(rollingCampaignStore: RollingCampaignStore, rollingCodex: RollingCodex,
+ campaignId: string, assignmentId: string, generation: string): Promise<RollingWorkerDispatchStarted> {
  const rollingWorkerContext = await rollingCampaignStore.workerContext(campaignId,assignmentId,generation);
  const instructions = buildRollingWorkerInstructions(rollingWorkerContext);
- const rollingWorkerDispatchStarted = await rollingCampaignStore.claimWorkerDispatch(campaignId,assignmentId,generation,instructions);
- const rollingNativeThread = await rollingCodex.resumeThread(rollingWorkerDispatchStarted.threadId,rollingWorkerContext.rollingWorkerCreationV1.rootPath);
- requireWorker(rollingNativeThread.thread.sessionId === rollingWorkerContext.rollingWorkerCreationV1.sessionId, 'resumed worker differs from attached session');
- const rollingTurnStarted = await rollingCodex.startTurn(rollingNativeThread.thread.id,instructions);
+ const observedIdentity=await rollingCodex.readThreadIdentity(rollingWorkerContext.rollingWorkerCreationV1.threadId,rollingWorkerContext.rollingWorkerCreationV1.rootPath);
+ requireWorker(observedIdentity.sessionId===rollingWorkerContext.rollingWorkerCreationV1.sessionId,'observed worker differs from attached session');
+ const rollingNativeTurn=await rollingCodex.readLatestTurn(observedIdentity.threadId);
+ requireWorker(['completed','failed','interrupted'].includes(rollingNativeTurn.status),'worker preparation requires a terminal original turn');
+ const rollingNativeThreadActivity=await rollingCodex.readThreadActivity(observedIdentity.threadId);
+ requireWorker(rollingNativeThreadActivity.status==='idle'||rollingNativeThreadActivity.status==='notLoaded','worker preparation cannot claim an active actor or a failed native runtime');
+ validateRollingSessionMarker(rollingWorkerContext.rollingWorkerCreationV1.rootPath,rollingWorkerContext.rollingWorkerCreationV1.sessionId);
+ return rollingCampaignStore.claimWorkerDispatch(campaignId,assignmentId,generation,instructions);
+}
+
+// Traceability: implements REQ-ROLLING-WORKERS
+export async function acknowledgeRollingWorkerDispatch(rollingCampaignStore:RollingCampaignStore,rollingCodex:RollingCodex,
+ campaignId:string,assignmentId:string,generation:string,dispatchId:string,turnId:string):Promise<RollingWorkerDispatchAttached> {
+ const rollingWorkerCreationV1=await rollingCampaignStore.workerIdentity(campaignId,assignmentId,generation);
+ const rollingWorkerDispatch=await rollingCampaignStore.workerDispatch(campaignId,assignmentId,generation);
+ requireWorker(rollingWorkerDispatch?.id===dispatchId&&rollingWorkerDispatch.threadId===rollingWorkerCreationV1.threadId,'prepared dispatch differs from original worker');
+ const observedIdentity=await rollingCodex.readThreadIdentity(rollingWorkerCreationV1.threadId,rollingWorkerCreationV1.rootPath);
+ requireWorker(observedIdentity.sessionId===rollingWorkerCreationV1.sessionId,'observed dispatch session differs');
+ const rollingNativeTurn=await rollingCodex.readTurn(rollingWorkerCreationV1.threadId,turnId);
+ const input=rollingNativeTurn.items.filter(item=>item.type==='userMessage'||item.type==='functionCallOutput'&&item.text!==null);
+ const item=input[0];
+ const delegation=item?.type==='functionCallOutput'&&item.text!==null
+  ?/^<codex_delegation>\n  <source_thread_id>[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}<\/source_thread_id>\n  <input>([\s\S]*)<\/input>\n<\/codex_delegation>$/u.exec(item.text):null;
+ const escapedInstructions=rollingWorkerDispatch.instructions.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');
+ requireWorker(input.length===1&&(item?.type==='userMessage'&&item.text===rollingWorkerDispatch.instructions
+  ||delegation?.[1]===escapedInstructions),'worker turn input differs from frozen instructions');
+ requireWorker((await rollingCodex.readLatestTurn(rollingWorkerCreationV1.threadId)).id===turnId,'another worker turn follows prepared instructions');
+ return rollingCampaignStore.attachWorkerDispatch(campaignId,assignmentId,generation,dispatchId,turnId);
+}
+
+// Traceability: implements REQ-ROLLING-WORKERS
+export async function dispatchRollingWorker(rollingCampaignStore: RollingCampaignStore, rollingCodex: RollingCodex,
+ campaignId: string, assignmentId: string, generation: string): Promise<RollingWorkerDispatchAttached> {
+ const rollingWorkerCreationV1=await rollingCampaignStore.workerIdentity(campaignId,assignmentId,generation);
+ const rollingNativeThread=await rollingCodex.resumeThread(rollingWorkerCreationV1.threadId,rollingWorkerCreationV1.rootPath);
+ requireWorker(rollingNativeThread.thread.sessionId===rollingWorkerCreationV1.sessionId,'resumed worker differs from attached session');
+ const rollingWorkerDispatchStarted=await prepareRollingWorkerDispatch(rollingCampaignStore,rollingCodex,campaignId,assignmentId,generation);
+ const instructions=rollingWorkerDispatchStarted.instructions;
+ const rollingNativeThreadId=rollingWorkerDispatchStarted.threadId;
+ const rollingTurnStarted = await rollingCodex.startTurn(rollingNativeThreadId,instructions);
  return rollingCampaignStore.attachWorkerDispatch(campaignId,assignmentId,generation,rollingWorkerDispatchStarted.id,rollingTurnStarted.turn.id);
 }
 

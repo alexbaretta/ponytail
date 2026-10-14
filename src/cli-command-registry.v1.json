@@ -96,6 +96,8 @@
         "rebind-worker",
         "observe-resumption",
         "dispatch-worker",
+        "prepare-worker-dispatch",
+        "acknowledge-worker-dispatch",
         "collect-submission",
         "retry-worker",
         "suspend-worker",
