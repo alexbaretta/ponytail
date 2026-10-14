@@ -5,7 +5,7 @@ Licensed under the MIT License. See LICENSE in the project root. -->
 
 - ID: 2026-10-13-BUG-native_reviewer_empty_thread
 - Type: BUG
-- Status: IN_PROGRESS
+- Status: CLOSED
 - Authority: stakeholder authorized repair of Ponytail coordination tooling.
 Traceability: introduces REQ-ROLLING-REVIEW from issue 2026-10-13-BUG-native_reviewer_empty_thread
 - Atomic obligation: the canonical reviewer creation command starts its actual
@@ -24,4 +24,14 @@ Traceability: introduces REQ-ROLLING-REVIEW from issue 2026-10-13-BUG-native_rev
 - Validation: canonical reviewer regression 1/1; review/operation/client tests
   36/36; generated runtime consistency, rule-copy and version checks pass.
   TSTS checks 1560 files and traceability checks 922 relationships.
-- Acceptance: independent review and final combined repository gate pending.
+- Independent adversarial review: accepted; no material findings.
+- Implementation commit: `275b7917` (rebased equivalent of `10648a05`).
+- Final acceptance (2026-10-14): complete `npm test` passed 559 legacy Node,
+  325 typed, 23 Pi, four MCP and 100 TSTS tests, including the canonical reviewer
+  regression. Installer, generated-resource and traceability checks passed;
+  TSTS analyzed 1,649 files without violations. Rule-copy and version checks passed.
+- Resolution: fixed and accepted; no remaining work for this bug.
+- Subsequent scope correction: native session operations, including public
+  `start-review`, were retired from CLI/MCP by the swarm implementation.
+  The fix remains covered by the internal protocol regression; coordinators
+  operate reviewer sessions through host tools.

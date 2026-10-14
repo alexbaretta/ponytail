@@ -974,8 +974,8 @@ Requirement: [pm/requirements/rolling-campaigns.md](rolling-campaigns.md)
 - integration-test: verifies [tests/rolling-codex.integration.ts:124](../../tests/rolling-codex.integration.ts#L124)
 - uat: verifies [pm/uat/rolling-campaigns.md:140](../../pm/uat/rolling-campaigns.md#L140)
 - plan: plans-implementation [pm/plans/closed/2026-10-10-rolling-obligation-campaigns/plan.md:268](../../pm/plans/closed/2026-10-10-rolling-obligation-campaigns/plan.md#L268)
+- issue: introduces [pm/bugs/closed/2026-10-13-BUG-native_reviewer_empty_thread.md:10](../../pm/bugs/closed/2026-10-13-BUG-native_reviewer_empty_thread.md#L10)
 - issue: introduces [pm/bugs/in_progress/2026-10-12-BUG-canonical_increment_integration.md:10](../../pm/bugs/in_progress/2026-10-12-BUG-canonical_increment_integration.md#L10)
-- issue: introduces [pm/bugs/in_progress/2026-10-13-BUG-native_reviewer_empty_thread.md:10](../../pm/bugs/in_progress/2026-10-13-BUG-native_reviewer_empty_thread.md#L10)
 
 ## REQ-ROLLING-PUBLICATION
 
