@@ -1,10 +1,11 @@
 ---
 name: qa-swarm
 description: >-
-  Use when a stakeholder asks a Ponytail rolling campaign to execute a broad QA
-  suite concurrently. Partition the suite into complete worker-owned slices,
-  integrate causal bugfixes incrementally, and submit one atomic acceptance
-  result only after an entire slice is green on one reconciled revision.
+  Use when a stakeholder asks a rolling campaign or an already-running
+  host-managed swarm to execute a broad QA suite concurrently. Partition the
+  suite into complete worker-owned slices, integrate causal bugfixes
+  incrementally, and submit one atomic acceptance result only after an entire
+  slice is green on one reconciled revision.
 ---
 
 <!--
@@ -16,14 +17,17 @@ Licensed under the MIT License. See LICENSE in the project root.
 
 Traceability: implements REQ-QA-SWARM
 
-Use Ponytail's configured rolling campaign as the scheduler, worker/session
-owner, dependency graph and final certificate authority. This skill specializes
-that technology for broad QA execution; it does not create another scheduler,
-assignment ledger, campaign command or acceptance vocabulary.
+Apply this skill when the stakeholder has authorized a broad QA run through
+either a configured rolling campaign or an already-running host-managed swarm.
+Use the host's existing scheduler, worker sessions, assignment inventory and
+reviewed Git-integration path. When rolling campaign operations are configured,
+they remain the scheduler, dependency graph and final certificate authority.
+Do not initialize or migrate to a rolling campaign merely to adopt this method
+in an existing swarm. This skill does not create another scheduler, assignment
+ledger, campaign command or acceptance vocabulary.
 
-Apply this skill only when the stakeholder has authorized a broad QA run and
-the invoking project configures rolling campaign operations. Ordinary tasklet,
-feature or standalone-change validation continues to use `plan-execution`.
+Ordinary tasklet, feature or standalone-change validation continues to use
+`plan-execution`.
 
 ## Host contract
 
@@ -31,13 +35,16 @@ Read the invoking project's instructions and configuration for:
 
 - named unit-test families and their full and focused command forms;
 - the integration Suite/Arc inventory and multi-selection command;
-- per-runner concurrency controls and safe worker count;
+- per-runner concurrency controls and the actual safe worker count, including
+  one when the runner is serial;
 - build, static, packaging and final-acceptance commands;
 - a coordinator-owned reviewed Git-integration path that can land a repair
   commit while its rolling assignment remains active;
 - exclusive resources used by selections, including databases, ports,
   applications, devices, accounts, providers and persistent environments; and
-- rolling campaign configuration and its coordinator-owned obligation files.
+- either rolling campaign configuration and its coordinator-owned obligation
+  files, or the existing coordinator-owned selector manifest and retained
+  worker session/checkout bindings.
 
 Do not invent commands, selectors, concurrency flags, execution profiles or
 resource-isolation claims. If a family cannot execute several explicit
@@ -45,24 +52,25 @@ selections through one aggregate invocation, repair that project-configuration
 or harness discrepancy before using a one-test-at-a-time loop as a substitute.
 If no nonterminal reviewed Git-integration path is configured, this workflow
 cannot land incremental repairs; configure that host prerequisite before
-starting the swarm rather than misusing terminal rolling operations.
+starting the swarm rather than misusing terminal acceptance operations.
 
 Campaign worker capacity and a test runner's internal parallelism are different
-controls. Keep both bounded by the host configuration. A default such as four
-runner processes is appropriate only when the invoking project selects it.
+controls. Keep both bounded by the host configuration. Record and use the
+runner's actual configured concurrency; never assume a default such as four.
 
 ## Slice contract
 
 The coordinator freezes one initial QA baseline and derives an exhaustive test
-inventory from the configured commands. Partition it into stable slices by
-runner, environment and exclusive-resource compatibility. Balance estimated
-runtime rather than raw test count.
+inventory from the configured commands. The inventory includes automatic,
+manual, provider-dependent and hardware-dependent selectors. Partition it into
+stable slices by runner, execution class, environment and exclusive-resource
+compatibility. Balance estimated runtime rather than raw test count.
 
 Represent each slice as one configured `gate` acceptance rollup, not an atomic
 delivery obligation and not a unit of completed implementation work. Its
-condition is that every declared selection passes in one aggregate slice run on
-one exact reconciled Git revision and configured target identity. Its discharge
-criterion requires:
+condition is that every declared selection passes in one complete configured
+slice execution on one exact reconciled Git revision and configured target
+identity. Its discharge criterion requires:
 
 - the exact command and complete ordered `selection` from the frozen execution
   binding;
@@ -79,6 +87,13 @@ Every required test belongs to exactly one slice unless an explicit acceptance
 contract requires an overlap. Do not count the rollup as an atomic delivery
 obligation or turn each passing observation into a separate submission.
 
+Automatic selectors may share one aggregate invocation. Manual,
+provider-dependent or hardware-dependent selectors may use distinct configured
+commands or profiles, but remain declared members of the slice and explicit
+acceptance gates. Do not silently omit them or call the slice green. If the host
+cannot execute one, record the configured disposition, such as `UNVERIFIED`,
+without converting non-execution into a pass or an approved skip.
+
 Use only a runner whose explicit multi-selection form fails when it cannot
 resolve or execute an assigned selector. The adversarial reviewer compares the
 retained output with the frozen `selection`; aggregate counts alone do not prove
@@ -91,10 +106,13 @@ full-suite command remains a separate final gate.
 
 ## Coordinator procedure
 
-1. Reconcile the authoritative obligation document and execution bindings,
-   then initialize or resume the rolling campaign.
-2. Use `status`, `next-actions` and `replenish` to allocate compatible slice
-   gates. Do not reconstruct their scheduling policy in conversation.
+1. Reconcile the authoritative selector inventory and execution bindings. If
+   rolling campaign operations are configured, initialize or resume that
+   campaign and use `status`, `next-actions` and `replenish` to allocate
+   compatible slice gates. Otherwise preserve the existing coordinator-owned
+   manifest, sessions and checkouts as the host contract.
+2. Freeze the complete selection, aggregate command, actual concurrency,
+   target/profile and exclusive resources for every slice before execution.
 3. Keep the slice worker and checkout assigned until the complete slice is
    green or a genuine blocker requires suspension. A passing subset does not
    release the worker.
@@ -107,15 +125,39 @@ full-suite command remains a separate final gate.
 5. Notify workers whose relevant inputs changed. Let unaffected work continue;
    invalidate only proof whose dependency closure intersects the repair. When
    that closure is unknown, require a fresh complete slice run before acceptance.
-6. Call `collect-submission` only after the worker reports a fresh complete green
-   slice and stops the original turn. Apply `request-review`, `integrate` and
-   bound-certificate `accept` to that one terminal result.
+6. Collect a terminal submission only after the worker reports a fresh complete
+   green slice and stops the original turn. In a rolling campaign, call
+   `collect-submission`, `request-review`, `integrate` and bound-certificate
+   `accept` for that one terminal result. In a host-managed swarm, use its
+   existing final review and acceptance path once for the complete slice.
 7. Close or publish the campaign only after every slice gate and every
    additional configured final gate is satisfied on compatible final inputs.
 
 Do not commit, review, rebase or publish one evidence record per passing test.
 The coordinator may retain transient progress outside the accepted obligation
 document, but only the final complete slice result is acceptance evidence.
+
+## Adopt an existing swarm
+
+Adopt at the next safe boundary without restarting a running test, Git
+operation, worker session or checkout:
+
+1. Inspect the authoritative manifest and current worker state. Preserve every
+   running operation and already-integrated causal repair.
+2. Publish one coordinator-owned conversion record with one row per unfinished
+   lane: lane, complete selector count, execution-class aggregate commands
+   and/or configured manual procedures, actual concurrency, target/profile,
+   exclusive resources, current state and blocker.
+3. Send the frozen whole-slice assignment to each retained worker. A worker
+   continues from its current safe boundary; it does not rerun passing work
+   whose relevant inputs are unchanged merely to demonstrate adoption.
+4. Confirm adoption from both the authoritative conversion record and at least
+   one worker acknowledgment or whole-slice start. Reading the skill, announcing
+   intent or creating a new scheduler record is not adoption.
+
+Do not block conversion on scheduler migration or unrelated configuration
+research when the existing manifest, sessions, checkouts and reviewed
+Git-integration path already supply the host contract.
 
 ## Worker execution
 
@@ -154,6 +196,11 @@ If the slice fails:
 Do not restart a slice merely because one selection failed. Do not repeatedly
 run only one Arc and submit its passing receipt. The assignment ends when its
 entire declared selection is green on one exact current revision.
+
+A repair commit is an implementation increment and remains nonterminal QA
+progress. Do not promote that commit, a deployment, a focused proof, or a
+micro-scope handoff into acceptance of the assigned slice. Do not commit,
+rebase, merge or publish evidence-only increments between selections.
 
 ## Atomic acceptance packet
 

@@ -26,7 +26,7 @@ test('QA swarm is registered and its generated distribution is canonical', () =>
   );
 });
 
-test('QA swarm references only implemented rolling coordinator commands', () => {
+test('QA swarm conditionally references only implemented rolling coordinator commands', () => {
   const implemented = new Set(rollingCommandDefinitions.map(command => command.name));
   const referenced = [
     'status', 'next-actions', 'replenish', 'collect-submission',
@@ -36,6 +36,8 @@ test('QA swarm references only implemented rolling coordinator commands', () => 
     assert.ok(implemented.has(command), `missing rolling command: ${command}`);
     assert.ok(skill.includes(command), `skill does not reference rolling command: ${command}`);
   }
+  assert.match(skill, /If\n   rolling campaign operations are configured/u);
+  assert.match(skill, /Otherwise preserve the existing coordinator-owned\n   manifest, sessions and checkouts as the host contract/u);
 });
 
 test('QA swarm terminal evidence uses the implemented exact schema', () => {

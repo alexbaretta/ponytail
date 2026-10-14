@@ -9,9 +9,11 @@ Licensed under the MIT License. See LICENSE in the project root.
 
 Traceability: verifies REQ-QA-SWARM
 
-- **Actor:** Rolling campaign coordinator and independent QA slice workers.
-- **Prerequisites:** The canonical rolling command registry, obligation-evidence
-  reader, generated skill distribution and QA-swarm policy fixtures.
+- **Actor:** QA coordinator and independent QA slice workers.
+- **Prerequisites:** An authoritative selector manifest, retained worker
+  bindings, reviewed Git-integration path, generated skill distribution and
+  QA-swarm policy fixtures. A configured rolling campaign may own these
+  contracts but is not required for an existing host-managed swarm.
 - **Profiles:** Automated policy and distribution proof through
   `node --test tests/qa-swarm-policy.test.js tests/qa-swarm.integration.test.js`.
 - **External effects:** Disposable Git and campaign fixtures only; no deployment
@@ -20,7 +22,9 @@ Traceability: verifies REQ-QA-SWARM
 1. **Acceptance QA-SLICE-COMPLETE (QA-SWARM-001):** Inspect the execution
    contract for one explicit slice.
    - Each slice has one complete aggregate selection, expected inventory,
-     bounded runner concurrency and declared exclusive resources.
+     actual bounded runner concurrency and declared exclusive resources.
+   - Automatic and manual/provider/hardware selectors are all accounted for;
+     unavailable selectors retain their configured non-pass disposition.
    - Every independent selected test or Arc reaches a terminal result before
      the worker reports the aggregate outcome.
    - No passing subset creates a separate acceptance submission.
@@ -44,8 +48,17 @@ Traceability: verifies REQ-QA-SWARM
      variants.
    - Ordinary review and bound-certificate acceptance can satisfy the gate
      only from the complete green packet.
-4. Inspect the canonical skill, registry and generated host copy.
-   - They preserve the same procedure and reference only implemented rolling
-     campaign commands.
+4. **Acceptance QA-EXISTING-ADOPTION (QA-SWARM-004):** Inspect conversion of an
+   already-running host-managed swarm.
+   - Active tests, Git operations, sessions and checkouts continue to their next
+     safe boundary without restart or scheduler migration.
+   - One authoritative record identifies every unfinished lane's complete
+     selector count, execution-class commands and/or manual procedures, actual
+     concurrency, target/profile, exclusive resources and state.
+   - The record and at least one worker acknowledgment or whole-slice start
+     establish adoption.
+5. Inspect the canonical skill, registry and generated host copy.
+   - They preserve the same scheduler-neutral procedure and use rolling
+     campaign commands only when that scheduler is configured.
 
 [UAT index](index.md) | [Requirement](../requirements/qa-swarm.md)

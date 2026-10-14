@@ -15,15 +15,17 @@ worker owns a slice of the QA suite, runs that whole slice to completion,
 submits causal bugfixes incrementally, and submits acceptance evidence atomically
 only after the complete slice is green.
 
-Ponytail must provide a reusable QA-swarm skill that specializes configured
-rolling campaign operations without creating a second scheduler or ledger.
+Ponytail must provide a reusable scheduler-neutral QA-swarm skill for configured
+rolling campaigns and already-running host-managed swarms without creating or
+requiring a second scheduler or ledger.
 
 ## Atomic obligations
 
 ### QA-SWARM-001: Complete slice execution
 
-Each worker receives one finite, explicit QA gate rollup whose selectors,
-runner/profile, concurrency and exclusive resources are known. A slice is not an
+Each worker receives one finite, explicit QA gate rollup whose automatic,
+manual, provider-dependent and hardware-dependent selectors, runner/profile,
+actual concurrency and exclusive resources are known. A slice is not an
 atomic delivery obligation and does not increase completed-work counts. The
 worker runs the slice through an aggregate command, lets every independent
 selection reach a terminal outcome, and retains complete failures rather than
@@ -58,6 +60,20 @@ evidence.
 
 Discharge requires the canonical and generated skills, registered distribution,
 and executable integration proof to preserve that boundary.
+
+### QA-SWARM-004: Existing-swarm adoption
+
+An already-running host-managed swarm adopts the method at safe boundaries
+without restarting active tests, Git operations, sessions or checkouts and
+without first migrating to rolling campaigns. The coordinator publishes one
+authoritative conversion record containing each unfinished lane's complete
+selector count, execution-class aggregate commands and/or configured manual
+procedures, actual concurrency, target/profile, exclusive resources and current
+state. Adoption is established by that record plus at least one worker
+acknowledgment or whole-slice start, not by reading the skill or announcing intent.
+
+Discharge requires the exported procedure and executable policy proof to
+preserve this scheduler-neutral transition.
 
 Acceptance: [QA swarm Suite](../uat/qa-swarm.md).
 

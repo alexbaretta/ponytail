@@ -121,7 +121,7 @@ Requirement: [pm/requirements/index.md](index.md)
 - implementation: implements [src/campaign-report.ts:245](../../src/campaign-report.ts#L245)
 - unit-test: verifies [tests/campaign-census-format.test.js:11](../../tests/campaign-census-format.test.js#L11)
 - integration-test: verifies [tests/campaign-census.test.js:606](../../tests/campaign-census.test.js#L606)
-- uat: verifies [pm/uat/index.md:48](../../pm/uat/index.md#L48)
+- uat: verifies [pm/uat/index.md:49](../../pm/uat/index.md#L49)
 
 ## REQ-PLAN-INPUT-QUEUE
 
@@ -1173,7 +1173,7 @@ Requirement: [pm/requirements/rolling-campaigns.md](rolling-campaigns.md)
 
 Requirement: [pm/requirements/qa-swarm.md](qa-swarm.md)
 
-- implementation: implements [skills/qa-swarm/SKILL.md:17](../../skills/qa-swarm/SKILL.md#L17)
+- implementation: implements [skills/qa-swarm/SKILL.md:18](../../skills/qa-swarm/SKILL.md#L18)
 - unit-test: verifies [tests/qa-swarm-policy.test.js:2](../../tests/qa-swarm-policy.test.js#L2)
 - integration-test: verifies [tests/qa-swarm.integration.test.js:2](../../tests/qa-swarm.integration.test.js#L2)
 - uat: verifies [pm/uat/qa-swarm.md:10](../../pm/uat/qa-swarm.md#L10)
