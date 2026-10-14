@@ -302,3 +302,14 @@ OpenClaw and registry resources are synchronized. This establishes publication
 proof, not final parallel-campaign acceptance: campaign reservation adoption,
 host-submission recording and reviewer-verdict recording remain pending public
 bookkeeping transitions. The procedure explicitly identifies these gaps.
+
+### Atomic campaign checkout ownership evidence
+
+For an enrolled swarm, campaign allocation refuses an absent coordinator and
+rolls back all reservations. Concurrent replenishment records campaign and swarm
+ownership together; actual `swarm worktree-setup` prepares the same numbered
+checkout without a second allocation. A coordinator on a different publication
+branch still records the configured campaign increment as the setup base.
+Focused proof: the `shared operations initialize defaults` PostgreSQL/CLI Arc.
+Host session attachment, submission and verdict recording remain separate pending
+work; this checkpoint does not establish complete campaign acceptance.

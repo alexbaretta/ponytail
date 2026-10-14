@@ -1828,6 +1828,8 @@ export class RollingCampaignStore {
   }
 
   // Traceability: implements REQ-ROLLING-EXISTING-POOL
+  // Traceability: implements REQ-SWARM-WORKTREES
+  // Traceability: implements REQ-SWARM-CLI
   async allocate(campaignId: string, expectedDigest: string, release: RollingAssignmentRelease | null = null,existingOnly=false): Promise<RollingAllocationResult> {
     return this.transaction<RollingAllocationResult>(campaignId, async (poolClient, rollingCampaignRow, rollingPoolRow) => {
       const rollingGraph = this.graph(rollingCampaignRow, expectedDigest);
@@ -1899,6 +1901,17 @@ export class RollingCampaignStore {
             JSON.stringify(rollingAssignmentScopeV3)]);
       }
       if (worktree.state !== 'PROVISIONING') await poolClient.query<Record<string, unknown>>("UPDATE ponytail_index.rolling_worktree_v1 SET state='RESERVED' WHERE project_id=$1 AND number=$2", [this.projectId, worktree.number]);
+      // A configured swarm owns campaign checkout reservations in the same transaction.
+      // Historical campaigns without an enrolled swarm retain their original reader path.
+      if (selected.kind === 'start_worker') {
+        const owner = (await poolClient.query<Record<string,unknown>>('SELECT coordinator_session_id FROM ponytail_index.swarm_owner_v1 WHERE project_id=$1 AND owner_root=$2 FOR UPDATE',[this.projectId,rollingCampaignRow.coordinator_root])).rows[0];
+        if (owner !== undefined) {
+          requireState(owner.coordinator_session_id !== null,'swarm coordinator must be bound before campaign allocation');
+          const baseCommit = this.campaignBase(rollingCampaignRow);
+          await poolClient.query('INSERT INTO ponytail_index.swarm_worktree_v1(project_id,number,owner_root,generation,base_commit) VALUES($1,$2,$3,$4,$5)',[this.projectId,worktree.number,rollingCampaignRow.coordinator_root,generation,baseCommit]);
+          await poolClient.query("UPDATE ponytail_index.rolling_worktree_v1 SET state='PROVISIONING' WHERE project_id=$1 AND number=$2",[this.projectId,worktree.number]);
+        }
+      }
       const actionId = crypto.randomUUID();
       await poolClient.query<Record<string, unknown>>("INSERT INTO ponytail_index.rolling_action_v1(project_id,campaign_id,action_id,assignment_id,kind,generation,state) VALUES($1,$2,$3,$4,$5,$6,'PENDING')",
         [this.projectId, campaignId, actionId, id, selected.kind === 'resume_worker' ? 'RESUME_WORKER' : 'START_WORKER', generation]);

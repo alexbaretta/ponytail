@@ -211,3 +211,9 @@ campaign reservations need adoption into canonical swarm ownership; host worker
 submissions and reviewer decisions need supported bookkeeping entrypoints. These
 operations must record supplied evidence without controlling sessions. No
 obligation discharge is inferred from this checkpoint.
+
+Campaign reservation adoption now records swarm membership atomically for an
+enrolled owner with a bound coordinator, and uses the canonical campaign base.
+The isolated CLI/PG Arc proves same-checkout setup and concurrent allocation.
+Remaining integration work is host session attachment, result/verdict recording
+and lifecycle release; final obligation assessment is still pending.

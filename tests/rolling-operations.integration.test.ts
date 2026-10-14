@@ -2,6 +2,8 @@
 // Licensed under the MIT License. See LICENSE in the project root.
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import {SwarmStore} from '../src/swarm-store.js';
+import {inspectSwarmInfo} from '../src/swarm-info.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
@@ -81,6 +83,8 @@ async function verifyMcpParity(root:string,rollingCampaignOperations:RollingCamp
 // Traceability: verifies REQ-ROLLING-INTERFACES
 // Traceability: verifies REQ-ROLLING-STATE
 // Traceability: verifies REQ-ROLLING-SCHEDULING
+// Traceability: verifies REQ-SWARM-WORKTREES
+// Traceability: verifies REQ-SWARM-CLI
 test('shared operations initialize defaults and reconcile event/periodic contention without duplicate allocations',async testContext=> {
  const obligationFixture = fixture(testContext);
  const {root} = obligationFixture;
@@ -92,7 +96,7 @@ test('shared operations initialize defaults and reconcile event/periodic content
  fs.writeFileSync(path.join(root,obligationFixture.documentPath),JSON.stringify(initialObligationDocumentV1));
  const pool = new Pool(databaseOptions(process.cwd()));
  const projectId = crypto.randomUUID();
- testContext.after(async()=> {try {await pool.query('DELETE FROM ponytail_index.project_v1 WHERE project_id=$1',[projectId]);} finally {await pool.end();}});
+ testContext.after(async()=> {try {await pool.query('DELETE FROM ponytail_index.swarm_worktree_v1 WHERE project_id=$1',[projectId]);await pool.query('DELETE FROM ponytail_index.project_v1 WHERE project_id=$1',[projectId]);await pool.query('DELETE FROM ponytail_index.swarm_native_session_v1 WHERE project_id=$1',[projectId]);} finally {await pool.end();}});
  await pool.query('INSERT INTO ponytail_index.project_v1(project_id,project_name) VALUES($1,$2)',[projectId,`operations-${projectId}`]);
  const rollingProjectConfigV1:RollingProjectConfigV1 = {schemaVersion:1,mainline:null,managedWorktrees:{directory:'managed',anchor:'main'},maxActiveWorkers:2,publicationSize:null,setupCommands:[],qa:{focused:[],publication:[['node','--test']]}};
  fs.writeFileSync(path.join(root,'.agents/config/project/rolling-campaigns.json'),JSON.stringify(rollingProjectConfigV1));
@@ -140,8 +144,21 @@ test('shared operations initialize defaults and reconcile event/periodic content
  const initialRollingCoordinatorSnapshot = await rollingCampaignOperations.status('pilot');
  const rollingExecutionConfigV3:RollingExecutionConfigV3={schemaVersion:3,mainline:{remote:'origin',branch:'main'},incrementRef:'campaign/pilot',maxActiveWorkers:2,publicationSize:1,bindingHistory:null};
  assert.deepEqual(initialRollingCoordinatorSnapshot.configuration,rollingExecutionConfigV3);
+ const swarmStore = new SwarmStore(pool,projectId);
+ const gitCommonDirectory=fs.realpathSync(git(root,['rev-parse','--path-format=absolute','--git-common-dir']));
+ await swarmStore.enrollOwner({rootPath:root,gitCommonDirectory});
+ await assert.rejects(rollingCampaignOperations.replenish('pilot','event'),/swarm coordinator must be bound/);
+ assert.equal((await rollingCampaignOperations.status('pilot')).assignments.length,0);
+ await swarmStore.bindCoordinator(root,{threadId:`host-coordinator-thread-${projectId}`,sessionId:`host-coordinator-session-${projectId}`,rootPath:root});
+ const campaignBase=git(root,['rev-parse','refs/heads/campaign/pilot']);
+ git(root,['switch','-c','publication/fixture']);
+ git(root,['commit','--allow-empty','-m','Unpublished publication candidate']);
+ assert.notEqual(git(root,['rev-parse','HEAD']),campaignBase);
  const rollingReplenishments:readonly RollingReplenishment[] = await Promise.all(Array.from({length:4},(_,index)=>rollingCampaignOperations.replenish('pilot',index%2 === 0 ? 'event' : 'periodic')));
  assert.equal(rollingReplenishments.reduce((count,item)=>count+item.allocations.length,0),2);
+ const baseRows=(await pool.query<Record<string,unknown>>('SELECT base_commit FROM ponytail_index.swarm_worktree_v1 WHERE project_id=$1',[projectId])).rows;
+ assert.equal(baseRows.length,2);assert.ok(baseRows.every(row=>row.base_commit===campaignBase));
+ git(root,['switch','campaign/pilot']);
  const reservedRollingCoordinatorSnapshot = await new RollingCampaignOperations(new RollingCampaignStore(pool,projectId),root).status('pilot');
  assert.equal(reservedRollingCoordinatorSnapshot.assignments.length,2);
  assert.equal(new Set(reservedRollingCoordinatorSnapshot.assignments.map(item=>item.obligationId)).size,2);
@@ -149,6 +166,17 @@ test('shared operations initialize defaults and reconcile event/periodic content
  assert.equal(reservedRollingCoordinatorSnapshot.actions.length,2);
  assert.deepEqual((await rollingCampaignOperations.replenish('pilot','periodic')).allocations,[]);
  const firstRollingStoredAssignment = reservedRollingCoordinatorSnapshot.assignments[0];assert.ok(firstRollingStoredAssignment);
+ const swarmInfoV4=await inspectSwarmInfo(root,pool,projectId);
+ assert.equal(swarmInfoV4.worktrees.length,2);
+ for(const rollingStoredAssignment of reservedRollingCoordinatorSnapshot.assignments) {
+  const worktree=swarmInfoV4.worktrees.find(worktree=>worktree.number===rollingStoredAssignment.worktreeNumber);assert.ok(worktree);
+  assert.deepEqual(worktree.membership,{kind:'swarm',generation:rollingStoredAssignment.generation});
+ }
+ const firstWorktree=swarmInfoV4.worktrees.find(worktree=>worktree.number===firstRollingStoredAssignment.worktreeNumber);assert.ok(firstWorktree);
+ const setup=spawnSync(process.execPath,[path.join(process.cwd(),'src/swarm-info.js'),'worktree-setup','--number',String(firstWorktree.number),'--generation',firstRollingStoredAssignment.generation,'--json'],{cwd:root,encoding:'utf8'});
+ assert.equal(setup.status,0,setup.stderr);
+ assert.equal(fs.realpathSync(firstWorktree.rootPath),firstWorktree.rootPath);
+ assert.equal((await inspectSwarmInfo(firstWorktree.rootPath,pool,projectId)).ownerRoot,root);
  const rollingAction = reservedRollingCoordinatorSnapshot.actions.find(item=>item.assignmentId === firstRollingStoredAssignment.id);assert.ok(rollingAction);
  await rollingCampaignStore.acknowledgeAction('pilot',rollingAction.id,rollingAction.generation,'STARTED');
  await rollingCampaignStore.acknowledgeAction('pilot',rollingAction.id,rollingAction.generation,'COMPLETED','isolated stopped-session fixture');
@@ -271,7 +299,7 @@ test('shared operations initialize defaults and reconcile event/periodic content
  const rollingReleaseDecision=releaseRollingCoordinatorActions.decisions.find(decision=>decision.kind === 'release');assert.ok(rollingReleaseDecision && rollingReleaseDecision.kind === 'release');
  assert.deepEqual(rollingReleaseDecision.release,{id:replacementRollingStoredAssignment.id,generation:replacementRollingStoredAssignment.generation});
  const retainedRoot=path.join(root,'managed',String(firstRollingStoredAssignment.worktreeNumber));
- git(root,['worktree','add','--detach',retainedRoot,git(root,['rev-parse','HEAD'])]);
+ assert.equal(fs.realpathSync(retainedRoot),retainedRoot); // Already provisioned through swarm setup above.
  ensureRollingSessionIdIgnored(retainedRoot);fs.writeFileSync(path.join(retainedRoot,'session_id.txt'),'session-fixture\n');
  fs.writeFileSync(path.join(retainedRoot,'retained-source.txt'),'preserve started work');
  const resumedRollingReplenishment = await rollingCampaignOperations.replenish('pilot','periodic',rollingReleaseDecision.release,true);

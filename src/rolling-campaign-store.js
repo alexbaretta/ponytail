@@ -1625,6 +1625,15 @@ class RollingCampaignStore {
             }
             if (worktree.state !== 'PROVISIONING')
                 await poolClient.query("UPDATE ponytail_index.rolling_worktree_v1 SET state='RESERVED' WHERE project_id=$1 AND number=$2", [this.projectId, worktree.number]);
+            if (selected.kind === 'start_worker') {
+                const owner = (await poolClient.query('SELECT coordinator_session_id FROM ponytail_index.swarm_owner_v1 WHERE project_id=$1 AND owner_root=$2 FOR UPDATE', [this.projectId, rollingCampaignRow.coordinator_root])).rows[0];
+                if (owner !== undefined) {
+                    requireState(owner.coordinator_session_id !== null, 'swarm coordinator must be bound before campaign allocation');
+                    const baseCommit = this.campaignBase(rollingCampaignRow);
+                    await poolClient.query('INSERT INTO ponytail_index.swarm_worktree_v1(project_id,number,owner_root,generation,base_commit) VALUES($1,$2,$3,$4,$5)', [this.projectId, worktree.number, rollingCampaignRow.coordinator_root, generation, baseCommit]);
+                    await poolClient.query("UPDATE ponytail_index.rolling_worktree_v1 SET state='PROVISIONING' WHERE project_id=$1 AND number=$2", [this.projectId, worktree.number]);
+                }
+            }
             const actionId = node_crypto_1.default.randomUUID();
             await poolClient.query("INSERT INTO ponytail_index.rolling_action_v1(project_id,campaign_id,action_id,assignment_id,kind,generation,state) VALUES($1,$2,$3,$4,$5,$6,'PENDING')", [this.projectId, campaignId, actionId, id, selected.kind === 'resume_worker' ? 'RESUME_WORKER' : 'START_WORKER', generation]);
             const row = (await poolClient.query('SELECT * FROM ponytail_index.rolling_assignment_v1 WHERE assignment_id=$1', [id])).rows[0];

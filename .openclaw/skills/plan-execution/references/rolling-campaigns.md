@@ -124,10 +124,12 @@ action, review and batch IDs.
    to N and prefers unblocked retained assignments. `--existing-only true` uses
    only safe retained physical roots and reports lack of capacity. Carry each
    returned assignment and generation forward; never allocate a second checkout
-   for an already reserved obligation. The public campaign-to-swarm adoption
-   transition is currently pending: `worker-bind` requires swarm membership,
-   while a campaign reservation alone is not that membership. Do not dispatch
-   that reservation or bypass its ownership until the transition is available. Start
+   for an already reserved obligation. With an enrolled owner and bound
+   coordinator, allocation records swarm membership in the same transaction.
+   Read its number/generation with `swarm info`, then run `swarm worktree-setup`
+   on that exact reservation. Its base is the configured campaign increment,
+   even while the coordinator is on a publication branch. Campaign worker-session
+   attachment bookkeeping remains pending; do not bypass that transition. Start
    independent top-level workers concurrently and observe them through the host.
    Unknown dispatch blockers retain their original identities for observation.
 4. A blocked worker reports its discovered prerequisites. Reconcile first,
