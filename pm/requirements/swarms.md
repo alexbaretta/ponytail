@@ -107,8 +107,14 @@ under its former lease. Coordinator loss must not prevent explicit safe clearing
 | SW-15 | The `ponytail swarm` chapter exposes info, worktree assignment/release, selected/all-unassigned worktree deletion, coordinator binding/unbinding, worker binding/unbinding, supported original-session reattachment, and clearing. The chapter and each command provide scoped help describing arguments, behavior and effects. | Real CLI help and valid/invalid invocations expose every required operation; resource mutations use the same canonical ownership and lifecycle logic as campaign execution. |
 
 Campaign commands continue to own obligation graphs, scheduling and acceptance.
-Session/worktree ownership operations currently embedded in campaign tooling move
-to the swarm chapter, with campaign scheduling consuming those same operations.
+The swarm tooling replaces all earlier Ponytail subcommands for creating,
+querying and managing sessions. Session creation, dispatch, observation,
+resumption, cancellation, binding and unbinding use the swarm chapter as their
+sole operational CLI home, including the native session operations currently
+embedded in campaign tooling. Do not retain old command aliases or parallel
+session-management paths. Campaign scheduling consumes the same canonical
+swarm operations; its graph, assignment and acceptance queries remain planning
+operations rather than a second session inventory.
 Do not create a second independently maintained ownership registry or merely
 rename campaign IDs to swarm IDs. Preserve historical records and explicitly
 reconcile existing resources before exposing them as migrated membership.

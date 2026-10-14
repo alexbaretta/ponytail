@@ -118,7 +118,10 @@ another owner's independent swarm; existing campaign delivery evidence.
    command's help explains its arguments, owner resolution and effects.
 2. Invalid commands produce the relevant scoped usage. Help performs no mutation.
 3. Exercise resource operations through the real CLI and campaign consumers;
-   both expose the same ownership state, not independent registries.
+   both expose the same ownership state, not independent registries. Verify
+   previous session creation/query/management subcommands are retired rather
+   than available as aliases; campaign planning queries do not expose a second
+   session-management interface.
 
 ## Arc SWARM-SKILL: Use exported guidance to execute in parallel
 

@@ -91,7 +91,11 @@ each assignment rather than inventing source IDs in this planning-only record.
    Inspect the host's actual native capabilities for original-session reattachment,
    cancellation, naming and Desktop observation before promising support.
 4. Move resource operations into the swarm chapter and let campaign operations
-   consume them. Reconcile prepared dispatches, reservations and generation fences;
+   consume them. The stakeholder's latest goal explicitly replaces every earlier
+   Ponytail session creation/query/management subcommand, including native worker
+   and reviewer operations; inventory those commands and retire their prior
+   operational CLI spellings rather than retaining aliases. Preserve read-only
+   historical record readers. Reconcile prepared dispatches, reservations and generation fences;
    clearing must not delete accepted campaign evidence. Keep destructive project
    reset distinct from release-only swarm clear.
 5. Write and register the reusable swarm execution skill, using the skill-creator
