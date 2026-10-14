@@ -109,6 +109,7 @@ services. `PROJECT_STRUCTURE.md` is authoritative for that boundary.
   - Node focused: `node --test [--test-name-pattern=<pattern>] <test-files>`.
   - Node full: `npm test`.
 - Rolling Codex protocol proof: `node --test dist/tests/rolling-codex.test.js`.
+- Swarm owner focused proof: `node --test dist/tests/swarm-owner.test.js`.
 - Git certificate focused proof: `node --test dist/tests/obligations.test.js
   dist/tests/obligation-certificate-bindings.test.js
   dist/tests/rolling-worker-submission.test.js dist/tests/rolling-worker.test.js`.

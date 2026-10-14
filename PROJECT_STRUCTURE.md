@@ -65,6 +65,9 @@ while project-wide management records remain under `pm/`.
   cessation, Git source recovery and exact registered checkout dispositions. Its
   durable pending receipt fences scheduling until project resource cleanup and
   campaign/lease removal complete.
+- `src/swarm-owner.ts` owns independently testable user/managed-worktree owner
+  resolution over a checked physical inventory. It rejects ambiguous, unassigned
+  and cross-repository ownership; its adjacent `.js` runtime is generated.
 - `src/project-index-database.ts` owns the checked project-local PostgreSQL
   connection options and shared index error declaration. `src/project-index-database.js`
   is compiler-generated compatibility runtime.

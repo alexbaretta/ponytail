@@ -1256,7 +1256,7 @@ Requirement: [pm/requirements/rolling-campaigns.md](rolling-campaigns.md)
 
 Requirement: [pm/requirements/rolling-campaigns.md](rolling-campaigns.md)
 
-- implementation: implements [skills/plan-execution/references/rolling-campaigns.md:252](../../skills/plan-execution/references/rolling-campaigns.md#L252)
+- implementation: implements [skills/plan-execution/references/rolling-campaigns.md:256](../../skills/plan-execution/references/rolling-campaigns.md#L256)
 - implementation: implements [src/rolling-campaign-store.ts:517](../../src/rolling-campaign-store.ts#L517)
 - implementation: implements [src/rolling-reset.ts:65](../../src/rolling-reset.ts#L65)
 - implementation: implements [src/rolling-reset.ts:161](../../src/rolling-reset.ts#L161)
@@ -1272,3 +1272,50 @@ Requirement: [pm/requirements/rolling-campaigns.md](rolling-campaigns.md)
 - unit-test: verifies [tests/rolling-operations.test.ts:258](../../tests/rolling-operations.test.ts#L258)
 - integration-test: verifies [tests/rolling-reset.integration.test.ts:19](../../tests/rolling-reset.integration.test.ts#L19)
 - uat: verifies [pm/uat/rolling-campaigns.md:436](../../pm/uat/rolling-campaigns.md#L436)
+
+## REQ-SWARM-OWNERSHIP
+
+Requirement: [pm/requirements/swarms.md](swarms.md)
+
+- implementation: implements [src/swarm-owner.ts:18](../../src/swarm-owner.ts#L18)
+- unit-test: verifies [tests/swarm-owner.test.ts:12](../../tests/swarm-owner.test.ts#L12)
+- unit-test: verifies [tests/swarm-owner.test.ts:19](../../tests/swarm-owner.test.ts#L19)
+- unit-test: verifies [tests/swarm-owner.test.ts:30](../../tests/swarm-owner.test.ts#L30)
+- uat: verifies [pm/uat/swarms.md:18](../../pm/uat/swarms.md#L18)
+
+## REQ-SWARM-INFO
+
+Requirement: [pm/requirements/swarms.md](swarms.md)
+
+- uat: verifies [pm/uat/swarms.md:35](../../pm/uat/swarms.md#L35)
+
+## REQ-SWARM-SESSIONS
+
+Requirement: [pm/requirements/swarms.md](swarms.md)
+
+- uat: verifies [pm/uat/swarms.md:52](../../pm/uat/swarms.md#L52)
+- uat: verifies [pm/uat/swarms.md:72](../../pm/uat/swarms.md#L72)
+
+## REQ-SWARM-WORKTREES
+
+Requirement: [pm/requirements/swarms.md](swarms.md)
+
+- uat: verifies [pm/uat/swarms.md:86](../../pm/uat/swarms.md#L86)
+
+## REQ-SWARM-CLEAR
+
+Requirement: [pm/requirements/swarms.md](swarms.md)
+
+- uat: verifies [pm/uat/swarms.md:108](../../pm/uat/swarms.md#L108)
+
+## REQ-SWARM-CLI
+
+Requirement: [pm/requirements/swarms.md](swarms.md)
+
+- uat: verifies [pm/uat/swarms.md:125](../../pm/uat/swarms.md#L125)
+
+## REQ-SWARM-SKILL
+
+Requirement: [pm/requirements/swarms.md](swarms.md)
+
+- uat: verifies [pm/uat/swarms.md:142](../../pm/uat/swarms.md#L142)

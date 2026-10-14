@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 4,
+  "sprint": "S01",
+  "features": {
+    "S01-F01": {"depends_on": [], "validation_tasklet": "S01-F01-T02"}
+  },
+  "tasklets": {
+    "S01-F01-T01": {
+      "depends_on": [],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S01-F01",
+      "planned_paths": ["src/swarm-owner.ts", "tests/swarm-owner.test.ts", "scripts/build-runtime.ts", "PROJECT_STRUCTURE.md", "AGENTS.md", ".agents/config/project/traceability.json", "pm/uat/swarms.md"]
+    },
+    "S01-F01-T02": {
+      "depends_on": ["S01-F01-T01"],
+      "affinity": [],
+      "risk": "normal",
+      "feature": "S01-F01",
+      "planned_paths": []
+    }
+  },
+  "external_depends_on": {}
+}

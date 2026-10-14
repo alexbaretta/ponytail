@@ -6,21 +6,23 @@ Licensed under the MIT License. See LICENSE in the project root.
 # Swarm ownership and resource management
 
 - Plan ID: `2026-10-13-swarm-management`
-- Status: open
+- Status: in_progress
 
 <!-- ponytail-plan-campaign
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "id": "2026-10-13-swarm-management",
   "parent_plan_id": null,
-  "depends_on": []
+  "depends_on": [],
+  "obligation_document": "pm/plans/in_progress/2026-10-13-swarm-management/obligations.json"
 }
 -->
 
 **Authority:** Stakeholder swarm definition and explicit request to document
 requirements and create a plan, 2026-10-13.
-**Lifecycle:** Open; implementation has not begun. This planning update does
-not implement commands, migrate live ownership, clear a swarm or dispatch workers.
+**Lifecycle:** In progress, activated by the stakeholder's updated implementation
+goal. No live ownership migration, clearing or worker dispatch is performed by
+plan activation. GWEN execution is separately paused by its user.
 **Repository:** Ponytail, in the supplied user checkout.
 **Canonical scope:** [Swarm requirements](../../../requirements/swarms.md).
 **Acceptance:** [Swarm Suite](../../../uat/swarms.md).
@@ -32,11 +34,16 @@ for diagnosis of actual worker sessions and managed checkout ownership. Separate
 resource membership from campaign scheduling and acceptance. Reuse the existing
 PostgreSQL and Git/native lifecycle boundaries; keep one ownership source.
 
-Delivery baseline: **16 atomic obligations, 0 discharged, 0 in progress,
-16 not started**. SW-16 incorporates the stakeholder's additional explicit
+Delivery baseline: **16 atomic obligations, 0 discharged, 1 in progress,
+15 not started**. OBL-1 owner resolution is in progress. OBL-16 incorporates the stakeholder's additional explicit
 request for an agent skill. Canonical conditions and discharge criteria live exclusively
 in the linked requirement tables. Final acceptance below is a rollup, not a
 seventeenth delivery obligation.
+
+The adopted ledger separately registers six required category inventory
+responsibilities, OBL-17–OBL-22. They are unresolved proof/completeness work,
+excluded from the 16-item delivery denominator. Initial vector is
+`[1,1,17,1,1,1]`; no checkpoint credits completed work.
 
 ## Planned implementation order and dependencies
 
@@ -45,34 +52,38 @@ Complete started obligations, including their proof, before opening more work.
 
 | Batch | Obligation | Prerequisites | Proving Arc / Steps |
 | --- | --- | --- | --- |
-| 1: ownership and inspection | SW-01 | None | SWARM-OWNERS / 1 |
-| 1 | SW-02 | SW-01 | SWARM-OWNERS / 2–3 |
-| 1 | SW-03 | SW-01, SW-02 | SWARM-INFO / 1–2 |
-| 1 | SW-04 | SW-03 | SWARM-INFO / 3 |
-| 2: resource bindings | SW-05 | SW-01, SW-02 | SWARM-SESSIONS / 1, 4 |
-| 2 | SW-10 | SW-01 | SWARM-CHECKOUTS / 1 |
-| 2 | SW-08 | SW-05 | SWARM-NAMES / 1–2 |
-| 2 | SW-09 | SW-08 | SWARM-NAMES / 3 |
-| 3: retained lifecycle | SW-06 | SW-05 | SWARM-SESSIONS / 2–3 |
-| 3 | SW-07 | SW-06 | SWARM-SESSIONS / 3–4 |
-| 3 | SW-11 | SW-06, SW-10 | SWARM-CHECKOUTS / 2 |
-| 3 | SW-12 | SW-11 | SWARM-CHECKOUTS / 3 |
-| 3 | SW-13 | SW-12 | SWARM-CHECKOUTS / 4 |
-| 4: complete interface and restart | SW-14 | SW-02, SW-06, SW-11 | SWARM-CLEAR / 1–3 |
-| 4 | SW-15 | SW-03–SW-14 | SWARM-CLI / 1–3 |
-| 4 | SW-16 | SW-15 | SWARM-SKILL / 1–3 |
+| 1: ownership and inspection | OBL-1 | None | SWARM-OWNERS / 1 |
+| 1 | OBL-2 | OBL-1 | SWARM-OWNERS / 2–3 |
+| 1 | OBL-3 | OBL-1, OBL-2 | SWARM-INFO / 1–2 |
+| 1 | OBL-4 | OBL-3 | SWARM-INFO / 3 |
+| 2: resource bindings | OBL-5 | OBL-1, OBL-2 | SWARM-SESSIONS / 1, 4 |
+| 2 | OBL-10 | OBL-1 | SWARM-CHECKOUTS / 1 |
+| 2 | OBL-8 | OBL-5 | SWARM-NAMES / 1–2 |
+| 2 | OBL-9 | OBL-8 | SWARM-NAMES / 3 |
+| 3: retained lifecycle | OBL-6 | OBL-5 | SWARM-SESSIONS / 2–3 |
+| 3 | OBL-7 | OBL-6 | SWARM-SESSIONS / 3–4 |
+| 3 | OBL-11 | OBL-6, OBL-10 | SWARM-CHECKOUTS / 2 |
+| 3 | OBL-12 | OBL-11 | SWARM-CHECKOUTS / 3 |
+| 3 | OBL-13 | OBL-12 | SWARM-CHECKOUTS / 4 |
+| 4: complete interface and restart | OBL-14 | OBL-2, OBL-6, OBL-11 | SWARM-CLEAR / 1–3 |
+| 4 | OBL-15 | OBL-3–OBL-14 | SWARM-CLI / 1–3 |
+| 4 | OBL-16 | OBL-15 | SWARM-SKILL / 1–3 |
 
-Expose command help with each delivered command; SW-15 verifies the complete
-chapter and campaign integration. SW-03 is the first useful diagnostic delivery;
+Expose command help with each delivered command; OBL-15 verifies the complete
+chapter and campaign integration. OBL-3 is the first useful diagnostic delivery;
 it need not wait for deletion or clearing operations.
 
-Initial sprint: [S01 ownership and inspection](sprints/S01.md), planning STUB.
+Initial sprint: [S01 ownership and inspection](sprints/S01.md), first feature
+planned and in progress; physical inventory/CLI integration remains pending.
 Later batches receive detailed sprint records when their planning begins.
 
 ## Activation and architecture work
 
-Before coding, convert this open planning record to configured V3 obligation
-operations with one bounded obligation document and the existing IDs. Preserve
+Activation writes V3 metadata and one bounded [obligation document](obligations.json)
+with the existing IDs and initial checkpoint. Canonical behavioral conditions
+and discharge criteria remain in the requirements; ledger entries reference
+them rather than repeat their prose. The ledger owns scheduling dependencies.
+Before assignments, preserve
 canonical requirement conditions through explicit references; do not introduce
 an accumulating database of certificates, file hashes or native transcripts
 in Git. Freeze actual implementation/test locators and focused selectors before
@@ -140,6 +151,24 @@ Client mutations remain with that coordinator. A live clear/restart demonstratio
 requires cessation and preserved work before releasing anything; do not clear
 the current campaign merely to test the new command. Parallel execution acceptance
 still requires genuinely overlapping Desktop-visible top-level worker turns.
+
+## Starting checkpoint
+
+At activation, the existing native Desktop handoff foundation is committed in
+`a0153b0`. Its focused unit37, PostgreSQL provisioning Arc and exported-resource11
+checks pass; TSTS reports no violations. The root full command still stops on
+the pre-existing three REQ-TYPESCRIPT-ONLY-SOURCE coverage gaps. This is an
+upstream starting-checkpoint failure, not evidence that new swarm behavior exists.
+No obligation is discharged by activation. Fix and verify the smallest owner
+resolution boundary first; inventory remaining session CLI operations before
+moving them into the swarm chapter.
+
+OBL-1 core boundary: strict `src/swarm-owner.ts` and focused typed tests prove
+same-owner routing, independent sibling owners and explicit invalid-ownership
+rejections. The first three tests pass; installed CLI/physical inventory proof
+remains pending. Therefore OBL-1 remains in progress and zero deliveries are
+discharged. Requirement coverage gaps are now registered explicitly for the
+new active scope, rather than omitted from project checks.
 
 ## Decisions to settle from implementation evidence
 

@@ -15,7 +15,9 @@ also require evidence through their real owning transport.
 
 ## Arc SWARM-OWNERS: Select the owner and retain orphaned workers
 
-**Acceptances:** ACC-SW-01 (SW-01), ACC-SW-02 (SW-02).
+Traceability: verifies REQ-SWARM-OWNERSHIP
+
+**Acceptances:** ACC-SW-01 (OBL-1), ACC-SW-02 (OBL-2).
 **Requirements:** REQ-SWARM-OWNERSHIP.
 **Prerequisites:** Two user worktrees in one repository, one managed checkout
 owned by the first, and bound worker/coordinator sessions.
@@ -30,7 +32,9 @@ owned by the first, and bound worker/coordinator sessions.
 
 ## Arc SWARM-INFO: Diagnose membership and execution
 
-**Acceptances:** ACC-SW-03 (SW-03), ACC-SW-04 (SW-04).
+Traceability: verifies REQ-SWARM-INFO
+
+**Acceptances:** ACC-SW-03 (OBL-3), ACC-SW-04 (OBL-4).
 **Requirements:** REQ-SWARM-INFO.
 **Prerequisites:** An empty swarm and an inhabited swarm containing idle and
 executing workers, a missing checkout and an unavailable native observation.
@@ -45,7 +49,9 @@ executing workers, a missing checkout and an unavailable native observation.
 
 ## Arc SWARM-SESSIONS: Remove and conditionally reattach originals
 
-**Acceptances:** ACC-SW-05 (SW-05), ACC-SW-06 (SW-06), ACC-SW-07 (SW-07).
+Traceability: verifies REQ-SWARM-SESSIONS
+
+**Acceptances:** ACC-SW-05 (OBL-5), ACC-SW-06 (OBL-6), ACC-SW-07 (OBL-7).
 **Requirements:** REQ-SWARM-SESSIONS.
 **Prerequisites:** A native worker executing an assigned task in its recorded
 checkout, two user owners, and real host reattachment capability inspection.
@@ -63,7 +69,9 @@ checkout, two user owners, and real host reattachment capability inspection.
 
 ## Arc SWARM-NAMES: Identify assignments and final completion
 
-**Acceptances:** ACC-SW-08 (SW-08), ACC-SW-09 (SW-09).
+Traceability: verifies REQ-SWARM-SESSIONS
+
+**Acceptances:** ACC-SW-08 (OBL-8), ACC-SW-09 (OBL-9).
 **Requirements:** REQ-SWARM-SESSIONS.
 **Prerequisites:** Two workers with plan/sprint assignments and full assignment IDs.
 
@@ -75,8 +83,10 @@ checkout, two user owners, and real host reattachment capability inspection.
 
 ## Arc SWARM-CHECKOUTS: Allocate, release, transfer and reclaim
 
-**Acceptances:** ACC-SW-10 (SW-10), ACC-SW-11 (SW-11),
-ACC-SW-12 (SW-12), ACC-SW-13 (SW-13).
+Traceability: verifies REQ-SWARM-WORKTREES
+
+**Acceptances:** ACC-SW-10 (OBL-10), ACC-SW-11 (OBL-11),
+ACC-SW-12 (OBL-12), ACC-SW-13 (OBL-13).
 **Requirements:** REQ-SWARM-WORKTREES.
 **Prerequisites:** Two user owners, released managed checkouts in the configured
 physical pool, project setup/cleanup tooling and a protected active checkout.
@@ -95,7 +105,9 @@ physical pool, project setup/cleanup tooling and a protected active checkout.
 
 ## Arc SWARM-CLEAR: Release resources and restart
 
-**Acceptance:** ACC-SW-14 (SW-14).
+Traceability: verifies REQ-SWARM-CLEAR
+
+**Acceptance:** ACC-SW-14 (OBL-14).
 **Requirement:** REQ-SWARM-CLEAR.
 **Prerequisites:** A swarm with workers/coordinator, assignments and leases;
 another owner's independent swarm; existing campaign delivery evidence.
@@ -110,7 +122,9 @@ another owner's independent swarm; existing campaign delivery evidence.
 
 ## Arc SWARM-CLI: Discover the complete chapter
 
-**Acceptance:** ACC-SW-15 (SW-15).
+Traceability: verifies REQ-SWARM-CLI
+
+**Acceptance:** ACC-SW-15 (OBL-15).
 **Requirement:** REQ-SWARM-CLI.
 **Prerequisites:** Installed CLI and chapter/command implementations.
 
@@ -125,7 +139,9 @@ another owner's independent swarm; existing campaign delivery evidence.
 
 ## Arc SWARM-SKILL: Use exported guidance to execute in parallel
 
-**Acceptance:** ACC-SW-16 (SW-16).
+Traceability: verifies REQ-SWARM-SKILL
+
+**Acceptance:** ACC-SW-16 (OBL-16).
 **Requirement:** REQ-SWARM-SKILL.
 **Prerequisites:** Implemented swarm chapter, a registered canonical skill and
 generated/installed host copies, and a plan with independent ready obligations.

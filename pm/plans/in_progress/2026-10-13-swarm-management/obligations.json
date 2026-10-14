@@ -1,0 +1,795 @@
+{
+  "schemaVersion": 1,
+  "scopeId": "2026-10-13-swarm-management",
+  "baselines": [
+    {
+      "id": "SWARM-B1",
+      "predecessorId": null,
+      "authority": {
+        "references": [
+          "user-goal-2026-10-13-swarm-management",
+          "user-goal-2026-10-13-swarm-skill-and-exclusive-session-cli"
+        ],
+        "assessors": [
+          "coordinator"
+        ]
+      },
+      "requirements": [
+        {
+          "id": "REQ-SWARM-OWNERSHIP",
+          "path": "pm/requirements/swarms.md",
+          "digest": "aed585934eabeeeaf0e769c2436156a05ea1d099d13abf53167d2873fad3d189"
+        },
+        {
+          "id": "REQ-SWARM-INFO",
+          "path": "pm/requirements/swarms.md",
+          "digest": "aed585934eabeeeaf0e769c2436156a05ea1d099d13abf53167d2873fad3d189"
+        },
+        {
+          "id": "REQ-SWARM-SESSIONS",
+          "path": "pm/requirements/swarms.md",
+          "digest": "aed585934eabeeeaf0e769c2436156a05ea1d099d13abf53167d2873fad3d189"
+        },
+        {
+          "id": "REQ-SWARM-WORKTREES",
+          "path": "pm/requirements/swarms.md",
+          "digest": "aed585934eabeeeaf0e769c2436156a05ea1d099d13abf53167d2873fad3d189"
+        },
+        {
+          "id": "REQ-SWARM-CLEAR",
+          "path": "pm/requirements/swarms.md",
+          "digest": "aed585934eabeeeaf0e769c2436156a05ea1d099d13abf53167d2873fad3d189"
+        },
+        {
+          "id": "REQ-SWARM-CLI",
+          "path": "pm/requirements/swarms.md",
+          "digest": "aed585934eabeeeaf0e769c2436156a05ea1d099d13abf53167d2873fad3d189"
+        },
+        {
+          "id": "REQ-SWARM-SKILL",
+          "path": "pm/requirements/swarms.md",
+          "digest": "aed585934eabeeeaf0e769c2436156a05ea1d099d13abf53167d2873fad3d189"
+        }
+      ],
+      "obligationIds": [
+        "OBL-1",
+        "OBL-2",
+        "OBL-3",
+        "OBL-4",
+        "OBL-5",
+        "OBL-6",
+        "OBL-7",
+        "OBL-8",
+        "OBL-9",
+        "OBL-10",
+        "OBL-11",
+        "OBL-12",
+        "OBL-13",
+        "OBL-14",
+        "OBL-15",
+        "OBL-16",
+        "OBL-17",
+        "OBL-18",
+        "OBL-19",
+        "OBL-20",
+        "OBL-21",
+        "OBL-22"
+      ],
+      "inventoryIds": [
+        "OBL-17",
+        "OBL-18",
+        "OBL-19",
+        "OBL-20",
+        "OBL-21",
+        "OBL-22"
+      ]
+    }
+  ],
+  "obligations": [
+    {
+      "id": "OBL-1",
+      "category": "T3",
+      "requirementIds": [
+        "REQ-SWARM-OWNERSHIP"
+      ],
+      "responsibilityId": "OBL-1",
+      "condition": "Establish the canonical OBL-1 condition in pm/requirements/swarms.md.",
+      "criterion": "Demonstrate the canonical OBL-1 discharge criterion through ACC-SW-01 in pm/uat/swarms.md.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "swarm-ownership"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": "S01",
+        "taskletIds": [
+          "S01-F01-T01",
+          "S01-F01-T02"
+        ],
+        "plannedPaths": [
+          "src/swarm-owner.ts",
+          "tests/swarm-owner.test.ts",
+          "scripts/build-runtime.ts",
+          "PROJECT_STRUCTURE.md",
+          "AGENTS.md",
+          ".agents/config/project/traceability.json",
+          "pm/uat/swarms.md"
+        ],
+        "operations": [
+          "inspect",
+          "edit",
+          "test"
+        ],
+        "selection": [
+          "node --test dist/tests/swarm-owner.test.js"
+        ],
+        "target": {
+          "identity": "ponytail-swarm-owner",
+          "profile": "unit"
+        }
+      }
+    },
+    {
+      "id": "OBL-2",
+      "category": "T3",
+      "requirementIds": [
+        "REQ-SWARM-OWNERSHIP"
+      ],
+      "responsibilityId": "OBL-2",
+      "condition": "Establish the canonical OBL-2 condition in pm/requirements/swarms.md.",
+      "criterion": "Demonstrate the canonical OBL-2 discharge criterion through ACC-SW-02 in pm/uat/swarms.md.",
+      "dependsOn": [
+        "OBL-1"
+      ],
+      "acceptanceGroups": [
+        "swarm-ownership"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": "S01",
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-3",
+      "category": "T3",
+      "requirementIds": [
+        "REQ-SWARM-INFO"
+      ],
+      "responsibilityId": "OBL-3",
+      "condition": "Establish the canonical OBL-3 condition in pm/requirements/swarms.md.",
+      "criterion": "Demonstrate the canonical OBL-3 discharge criterion through ACC-SW-03 in pm/uat/swarms.md.",
+      "dependsOn": [
+        "OBL-1",
+        "OBL-2"
+      ],
+      "acceptanceGroups": [
+        "swarm-info"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": "S01",
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-4",
+      "category": "T3",
+      "requirementIds": [
+        "REQ-SWARM-INFO"
+      ],
+      "responsibilityId": "OBL-4",
+      "condition": "Establish the canonical OBL-4 condition in pm/requirements/swarms.md.",
+      "criterion": "Demonstrate the canonical OBL-4 discharge criterion through ACC-SW-04 in pm/uat/swarms.md.",
+      "dependsOn": [
+        "OBL-3"
+      ],
+      "acceptanceGroups": [
+        "swarm-info"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": "S01",
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-5",
+      "category": "T3",
+      "requirementIds": [
+        "REQ-SWARM-SESSIONS"
+      ],
+      "responsibilityId": "OBL-5",
+      "condition": "Establish the canonical OBL-5 condition in pm/requirements/swarms.md.",
+      "criterion": "Demonstrate the canonical OBL-5 discharge criterion through ACC-SW-05 in pm/uat/swarms.md.",
+      "dependsOn": [
+        "OBL-1",
+        "OBL-2"
+      ],
+      "acceptanceGroups": [
+        "swarm-sessions"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-6",
+      "category": "T3",
+      "requirementIds": [
+        "REQ-SWARM-SESSIONS"
+      ],
+      "responsibilityId": "OBL-6",
+      "condition": "Establish the canonical OBL-6 condition in pm/requirements/swarms.md.",
+      "criterion": "Demonstrate the canonical OBL-6 discharge criterion through ACC-SW-06 in pm/uat/swarms.md.",
+      "dependsOn": [
+        "OBL-5"
+      ],
+      "acceptanceGroups": [
+        "swarm-sessions"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-7",
+      "category": "T3",
+      "requirementIds": [
+        "REQ-SWARM-SESSIONS"
+      ],
+      "responsibilityId": "OBL-7",
+      "condition": "Establish the canonical OBL-7 condition in pm/requirements/swarms.md.",
+      "criterion": "Demonstrate the canonical OBL-7 discharge criterion through ACC-SW-07 in pm/uat/swarms.md.",
+      "dependsOn": [
+        "OBL-6"
+      ],
+      "acceptanceGroups": [
+        "swarm-sessions"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-8",
+      "category": "T3",
+      "requirementIds": [
+        "REQ-SWARM-SESSIONS"
+      ],
+      "responsibilityId": "OBL-8",
+      "condition": "Establish the canonical OBL-8 condition in pm/requirements/swarms.md.",
+      "criterion": "Demonstrate the canonical OBL-8 discharge criterion through ACC-SW-08 in pm/uat/swarms.md.",
+      "dependsOn": [
+        "OBL-5"
+      ],
+      "acceptanceGroups": [
+        "swarm-sessions"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-9",
+      "category": "T3",
+      "requirementIds": [
+        "REQ-SWARM-SESSIONS"
+      ],
+      "responsibilityId": "OBL-9",
+      "condition": "Establish the canonical OBL-9 condition in pm/requirements/swarms.md.",
+      "criterion": "Demonstrate the canonical OBL-9 discharge criterion through ACC-SW-09 in pm/uat/swarms.md.",
+      "dependsOn": [
+        "OBL-8"
+      ],
+      "acceptanceGroups": [
+        "swarm-sessions"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-10",
+      "category": "T3",
+      "requirementIds": [
+        "REQ-SWARM-WORKTREES"
+      ],
+      "responsibilityId": "OBL-10",
+      "condition": "Establish the canonical OBL-10 condition in pm/requirements/swarms.md.",
+      "criterion": "Demonstrate the canonical OBL-10 discharge criterion through ACC-SW-10 in pm/uat/swarms.md.",
+      "dependsOn": [
+        "OBL-1"
+      ],
+      "acceptanceGroups": [
+        "swarm-worktrees"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-11",
+      "category": "T3",
+      "requirementIds": [
+        "REQ-SWARM-WORKTREES"
+      ],
+      "responsibilityId": "OBL-11",
+      "condition": "Establish the canonical OBL-11 condition in pm/requirements/swarms.md.",
+      "criterion": "Demonstrate the canonical OBL-11 discharge criterion through ACC-SW-11 in pm/uat/swarms.md.",
+      "dependsOn": [
+        "OBL-6",
+        "OBL-10"
+      ],
+      "acceptanceGroups": [
+        "swarm-worktrees"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-12",
+      "category": "T3",
+      "requirementIds": [
+        "REQ-SWARM-WORKTREES"
+      ],
+      "responsibilityId": "OBL-12",
+      "condition": "Establish the canonical OBL-12 condition in pm/requirements/swarms.md.",
+      "criterion": "Demonstrate the canonical OBL-12 discharge criterion through ACC-SW-12 in pm/uat/swarms.md.",
+      "dependsOn": [
+        "OBL-11"
+      ],
+      "acceptanceGroups": [
+        "swarm-worktrees"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-13",
+      "category": "T3",
+      "requirementIds": [
+        "REQ-SWARM-WORKTREES"
+      ],
+      "responsibilityId": "OBL-13",
+      "condition": "Establish the canonical OBL-13 condition in pm/requirements/swarms.md.",
+      "criterion": "Demonstrate the canonical OBL-13 discharge criterion through ACC-SW-13 in pm/uat/swarms.md.",
+      "dependsOn": [
+        "OBL-12"
+      ],
+      "acceptanceGroups": [
+        "swarm-worktrees"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-14",
+      "category": "T3",
+      "requirementIds": [
+        "REQ-SWARM-CLEAR"
+      ],
+      "responsibilityId": "OBL-14",
+      "condition": "Establish the canonical OBL-14 condition in pm/requirements/swarms.md.",
+      "criterion": "Demonstrate the canonical OBL-14 discharge criterion through ACC-SW-14 in pm/uat/swarms.md.",
+      "dependsOn": [
+        "OBL-2",
+        "OBL-6",
+        "OBL-11"
+      ],
+      "acceptanceGroups": [
+        "swarm-clear"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-15",
+      "category": "T3",
+      "requirementIds": [
+        "REQ-SWARM-CLI"
+      ],
+      "responsibilityId": "OBL-15",
+      "condition": "Establish the canonical OBL-15 condition in pm/requirements/swarms.md.",
+      "criterion": "Demonstrate the canonical OBL-15 discharge criterion through ACC-SW-15 in pm/uat/swarms.md.",
+      "dependsOn": [
+        "OBL-3",
+        "OBL-4",
+        "OBL-5",
+        "OBL-6",
+        "OBL-7",
+        "OBL-8",
+        "OBL-9",
+        "OBL-10",
+        "OBL-11",
+        "OBL-12",
+        "OBL-13",
+        "OBL-14"
+      ],
+      "acceptanceGroups": [
+        "swarm-cli"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-16",
+      "category": "T3",
+      "requirementIds": [
+        "REQ-SWARM-SKILL"
+      ],
+      "responsibilityId": "OBL-16",
+      "condition": "Establish the canonical OBL-16 condition in pm/requirements/swarms.md.",
+      "criterion": "Demonstrate the canonical OBL-16 discharge criterion through ACC-SW-16 in pm/uat/swarms.md.",
+      "dependsOn": [
+        "OBL-15"
+      ],
+      "acceptanceGroups": [
+        "swarm-skill"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-17",
+      "category": "T1",
+      "requirementIds": [
+        "REQ-SWARM-OWNERSHIP",
+        "REQ-SWARM-INFO",
+        "REQ-SWARM-SESSIONS",
+        "REQ-SWARM-WORKTREES",
+        "REQ-SWARM-CLEAR",
+        "REQ-SWARM-CLI",
+        "REQ-SWARM-SKILL"
+      ],
+      "responsibilityId": "swarm-T1-inventory",
+      "condition": "The T1 responsibility inventory for the approved swarm scope is reviewed and complete.",
+      "criterion": "Identify the required T1 responsibilities, exact source/acceptance/verification owners and justified exclusions; register every necessary missing responsibility without claiming planned proof is complete.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "swarm-inventory"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-18",
+      "category": "T2",
+      "requirementIds": [
+        "REQ-SWARM-OWNERSHIP",
+        "REQ-SWARM-INFO",
+        "REQ-SWARM-SESSIONS",
+        "REQ-SWARM-WORKTREES",
+        "REQ-SWARM-CLEAR",
+        "REQ-SWARM-CLI",
+        "REQ-SWARM-SKILL"
+      ],
+      "responsibilityId": "swarm-T2-inventory",
+      "condition": "The T2 responsibility inventory for the approved swarm scope is reviewed and complete.",
+      "criterion": "Identify the required T2 responsibilities, exact source/acceptance/verification owners and justified exclusions; register every necessary missing responsibility without claiming planned proof is complete.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "swarm-inventory"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-19",
+      "category": "T3",
+      "requirementIds": [
+        "REQ-SWARM-OWNERSHIP",
+        "REQ-SWARM-INFO",
+        "REQ-SWARM-SESSIONS",
+        "REQ-SWARM-WORKTREES",
+        "REQ-SWARM-CLEAR",
+        "REQ-SWARM-CLI",
+        "REQ-SWARM-SKILL"
+      ],
+      "responsibilityId": "swarm-T3-inventory",
+      "condition": "The T3 responsibility inventory for the approved swarm scope is reviewed and complete.",
+      "criterion": "Identify the required T3 responsibilities, exact source/acceptance/verification owners and justified exclusions; register every necessary missing responsibility without claiming planned proof is complete.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "swarm-inventory"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-20",
+      "category": "T4",
+      "requirementIds": [
+        "REQ-SWARM-OWNERSHIP",
+        "REQ-SWARM-INFO",
+        "REQ-SWARM-SESSIONS",
+        "REQ-SWARM-WORKTREES",
+        "REQ-SWARM-CLEAR",
+        "REQ-SWARM-CLI",
+        "REQ-SWARM-SKILL"
+      ],
+      "responsibilityId": "swarm-T4-inventory",
+      "condition": "The T4 responsibility inventory for the approved swarm scope is reviewed and complete.",
+      "criterion": "Identify the required T4 responsibilities, exact source/acceptance/verification owners and justified exclusions; register every necessary missing responsibility without claiming planned proof is complete.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "swarm-inventory"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-21",
+      "category": "C1",
+      "requirementIds": [
+        "REQ-SWARM-OWNERSHIP",
+        "REQ-SWARM-INFO",
+        "REQ-SWARM-SESSIONS",
+        "REQ-SWARM-WORKTREES",
+        "REQ-SWARM-CLEAR",
+        "REQ-SWARM-CLI",
+        "REQ-SWARM-SKILL"
+      ],
+      "responsibilityId": "swarm-C1-inventory",
+      "condition": "The C1 responsibility inventory for the approved swarm scope is reviewed and complete.",
+      "criterion": "Identify the required C1 responsibilities, exact source/acceptance/verification owners and justified exclusions; register every necessary missing responsibility without claiming planned proof is complete.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "swarm-inventory"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-22",
+      "category": "C2",
+      "requirementIds": [
+        "REQ-SWARM-OWNERSHIP",
+        "REQ-SWARM-INFO",
+        "REQ-SWARM-SESSIONS",
+        "REQ-SWARM-WORKTREES",
+        "REQ-SWARM-CLEAR",
+        "REQ-SWARM-CLI",
+        "REQ-SWARM-SKILL"
+      ],
+      "responsibilityId": "swarm-C2-inventory",
+      "condition": "The C2 responsibility inventory for the approved swarm scope is reviewed and complete.",
+      "criterion": "Identify the required C2 responsibilities, exact source/acceptance/verification owners and justified exclusions; register every necessary missing responsibility without claiming planned proof is complete.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "swarm-inventory"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    }
+  ],
+  "certificates": [],
+  "checkpoints": [
+    {
+      "id": "SWARM-CP1",
+      "predecessorId": null,
+      "baselineId": "SWARM-B1",
+      "kind": "initial",
+      "selectedIds": [],
+      "registeredIds": [
+        "OBL-1",
+        "OBL-2",
+        "OBL-3",
+        "OBL-4",
+        "OBL-5",
+        "OBL-6",
+        "OBL-7",
+        "OBL-8",
+        "OBL-9",
+        "OBL-10",
+        "OBL-11",
+        "OBL-12",
+        "OBL-13",
+        "OBL-14",
+        "OBL-15",
+        "OBL-16",
+        "OBL-17",
+        "OBL-18",
+        "OBL-19",
+        "OBL-20",
+        "OBL-21",
+        "OBL-22"
+      ],
+      "certificateIds": [],
+      "invalidatedIds": [],
+      "before": [
+        1,
+        1,
+        17,
+        1,
+        1,
+        1
+      ],
+      "after": [
+        1,
+        1,
+        17,
+        1,
+        1,
+        1
+      ],
+      "preparation": null,
+      "reason": "Register the complete approved initial swarm delivery scope; no completion credited.",
+      "assessor": "coordinator"
+    }
+  ]
+}

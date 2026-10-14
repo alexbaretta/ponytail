@@ -198,6 +198,34 @@
     {
       "id": "REQ-ROLLING-EXISTING-POOL",
       "sourcePath": "pm/requirements/rolling-campaigns.md"
+    },
+    {
+      "id": "REQ-SWARM-OWNERSHIP",
+      "sourcePath": "pm/requirements/swarms.md"
+    },
+    {
+      "id": "REQ-SWARM-INFO",
+      "sourcePath": "pm/requirements/swarms.md"
+    },
+    {
+      "id": "REQ-SWARM-SESSIONS",
+      "sourcePath": "pm/requirements/swarms.md"
+    },
+    {
+      "id": "REQ-SWARM-WORKTREES",
+      "sourcePath": "pm/requirements/swarms.md"
+    },
+    {
+      "id": "REQ-SWARM-CLEAR",
+      "sourcePath": "pm/requirements/swarms.md"
+    },
+    {
+      "id": "REQ-SWARM-CLI",
+      "sourcePath": "pm/requirements/swarms.md"
+    },
+    {
+      "id": "REQ-SWARM-SKILL",
+      "sourcePath": "pm/requirements/swarms.md"
     }
   ],
   "artifacts": [
@@ -1535,6 +1563,21 @@
       "class": "plan",
       "path": "pm/plans/in_progress/2026-10-13-campaign-restart-acceptance/plan.md",
       "locator": "text"
+    },
+    {
+      "class": "implementation",
+      "path": "src/swarm-owner.ts",
+      "locator": "text"
+    },
+    {
+      "class": "unit-test",
+      "path": "tests/swarm-owner.test.ts",
+      "locator": "text"
+    },
+    {
+      "class": "uat",
+      "path": "pm/uat/swarms.md",
+      "locator": "text"
     }
   ],
   "entities": [],
@@ -1862,6 +1905,10 @@
     {
       "path": ".openclaw/skills/plan-execution/scripts/lossless-json.js",
       "sourcePath": "scripts/build-runtime.ts"
+    },
+    {
+      "path": "src/swarm-owner.js",
+      "sourcePath": "src/swarm-owner.ts"
     }
   ],
   "reverseViewPath": "pm/requirements/traceability.generated.md",
