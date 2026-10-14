@@ -217,3 +217,8 @@ enrolled owner with a bound coordinator, and uses the canonical campaign base.
 The isolated CLI/PG Arc proves same-checkout setup and concurrent allocation.
 Remaining integration work is host session attachment, result/verdict recording
 and lifecycle release; final obligation assessment is still pending.
+
+Host-created initial workers now bind through the real swarm CLI into campaign
+accounting in the same transaction, preserving original identity and validating
+current scope. Remaining operational integration is result/verdict recording,
+retained reactivation and ownership release. Formal acceptance remains pending.

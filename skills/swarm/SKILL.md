@@ -71,7 +71,9 @@ canonical graph is authoritative.
 4. Record `worker-bind --thread <thread-id> --session <session-id> --number <n>
    --generation <worktree-generation> --kind <plan|sprint> --assignment <full-id>
    --summary "three word summary"`. Retain the returned worker generation,
-   distinct from the checkout generation. The worker has a permanent origin
+   distinct from the checkout generation. For a campaign reservation, this also
+   records the host identity against its original pending campaign action, using
+   the current graph and exact plan/sprint scope. It starts no session. The worker has a permanent origin
    owner and checkout; do not invent identifiers or bind it elsewhere.
 5. Apply the returned desired name through host naming tools (`set_thread_title`
    in Codex): `W<nn> P<mm> <three words>` or `W<nn> S<mm> <three words>`. Send the

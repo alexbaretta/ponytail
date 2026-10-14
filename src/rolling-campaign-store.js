@@ -352,6 +352,9 @@ class RollingCampaignStore {
         this.pool = pool;
         this.projectId = projectId;
     }
+    async campaign(poolClient, campaignId) {
+        return readCampaign((await poolClient.query('SELECT c.*, (SELECT receipt_text FROM ponytail_index.rolling_campaign_closure_v1 r WHERE r.project_id=c.project_id AND r.campaign_id=c.campaign_id) AS closure_text FROM ponytail_index.rolling_campaign_v1 c WHERE c.project_id=$1 AND c.campaign_id=$2 FOR UPDATE', [this.projectId, campaignId])).rows[0]);
+    }
     async transaction(campaignId, operation, allowClosed = false) {
         const poolClient = await this.pool.connect();
         try {
@@ -361,8 +364,7 @@ class RollingCampaignStore {
             requireState(pendingReset.length === 0, 'project reset is pending; resume reset before scheduling');
             const pool = (await poolClient.query('SELECT * FROM ponytail_index.rolling_pool_v1 WHERE project_id=$1 FOR UPDATE', [this.projectId])).rows[0];
             const rollingPoolRow = readPool(pool);
-            const campaign = (await poolClient.query('SELECT c.*, (SELECT receipt_text FROM ponytail_index.rolling_campaign_closure_v1 r WHERE r.project_id=c.project_id AND r.campaign_id=c.campaign_id) AS closure_text FROM ponytail_index.rolling_campaign_v1 c WHERE c.project_id=$1 AND c.campaign_id=$2 FOR UPDATE', [this.projectId, campaignId])).rows[0];
-            const rollingCampaignRow = readCampaign(campaign);
+            const rollingCampaignRow = await this.campaign(poolClient, campaignId);
             requireState(allowClosed || rollingCampaignRow.closure_text === null, 'campaign is closed; scheduling and mutations are refused');
             const result = await operation(poolClient, rollingCampaignRow, rollingPoolRow);
             await poolClient.query('COMMIT');
@@ -616,6 +618,49 @@ class RollingCampaignStore {
             return { ...rollingWorkerRetirement, state: 'CLEANED' };
         });
     }
+    async recordSwarmWorkerBinding(poolClient, swarmWorktreeMembership, swarmSessionIdentity, swarmWorkerAssignment) {
+        const rows = (await poolClient.query("SELECT a.* FROM ponytail_index.rolling_assignment_v1 a WHERE a.project_id=$1 AND a.worktree_number=$2 AND a.state<>'RELEASED' FOR UPDATE", [this.projectId, swarmWorktreeMembership.number])).rows;
+        if (rows.length === 0)
+            return;
+        requireState(rows.length === 1, 'swarm checkout has multiple campaign assignments');
+        const rollingStoredAssignment = readAssignment(rows[0]);
+        const rollingCampaignRow = await this.campaign(poolClient, rollingStoredAssignment.scopeId);
+        requireState(rollingCampaignRow.closure_text === null, 'campaign is closed; binding is refused');
+        requireState(rollingCampaignRow.coordinator_root === swarmWorktreeMembership.ownerRoot, 'campaign checkout belongs to another swarm');
+        const rollingGraph = this.collectGraph(rollingCampaignRow);
+        requireState(rollingGraph.digest === rollingCampaignRow.graph_digest, 'campaign graph changed; reconcile before binding a worker');
+        requireState((0, node_util_1.isDeepStrictEqual)(rollingStoredAssignment.binding, rollingGraph.bindings.find(binding => binding.obligationId === rollingStoredAssignment.obligationId)), 'campaign binding changed before worker admission');
+        let sprintId;
+        if (rollingStoredAssignment.lease !== null)
+            sprintId = this.currentLease(rollingStoredAssignment, rollingGraph).binding.execution.sprintId;
+        else {
+            requireState(rollingGraph.bindingHistory === null, 'adopted campaign assignment lacks its frozen lease');
+            const obligationEffectiveBinding = rollingGraph.effectiveBindings.get(rollingStoredAssignment.obligationId);
+            requireState(obligationEffectiveBinding && (0, node_util_1.isDeepStrictEqual)(rollingStoredAssignment.plannedPaths, obligationEffectiveBinding.execution.plannedPaths), 'campaign execution scope changed before worker admission');
+            requireState(obligationEffectiveBinding.dependsOn.every(dependency => rollingGraph.projection.satisfiedIds.includes(dependency)), 'campaign prerequisites are unresolved');
+            sprintId = obligationEffectiveBinding.execution.sprintId;
+        }
+        requireState(swarmWorkerAssignment.kind === 'plan' ? swarmWorkerAssignment.id === rollingStoredAssignment.scopeId : swarmWorkerAssignment.id === sprintId, 'worker plan or sprint differs from campaign assignment');
+        requireState(!rollingStoredAssignment.retired && (rollingStoredAssignment.sessionId === null || rollingStoredAssignment.sessionId === swarmSessionIdentity.sessionId), 'campaign assignment has another original worker');
+        const rollingActionRows = (await poolClient.query("SELECT * FROM ponytail_index.rolling_action_v1 WHERE project_id=$1 AND assignment_id=$2 AND kind='START_WORKER' FOR UPDATE", [this.projectId, rollingStoredAssignment.id])).rows;
+        requireState(rollingActionRows.length === 1, 'campaign attachment has no unique creation action');
+        const rollingActionRow = readAction(rollingActionRows[0]);
+        const rollingWorkerCreationV1 = (0, rolling_worker_js_1.readRollingWorkerCreationV1)({ schemaVersion: 1, ...swarmSessionIdentity });
+        (0, rolling_worktrees_js_1.validateRollingSessionMarker)(swarmWorktreeMembership.rootPath, swarmSessionIdentity.sessionId);
+        if (rollingStoredAssignment.sessionId !== null) {
+            requireState(rollingActionRow.state === 'COMPLETED' && rollingActionRow.resultText !== null && (0, node_util_1.isDeepStrictEqual)((0, rolling_worker_js_1.parseRollingWorkerCreation)(rollingActionRow.resultText), rollingWorkerCreationV1), 'original host worker identity changed');
+            return;
+        }
+        requireState(rollingStoredAssignment.state === 'RESERVED' && rollingStoredAssignment.generation === swarmWorktreeMembership.generation
+            && rollingActionRow.generation === rollingStoredAssignment.generation && rollingActionRow.state === 'PENDING' && rollingActionRow.resultText === null, 'campaign attachment requires its original pending reservation');
+        await poolClient.query("UPDATE ponytail_index.rolling_action_v1 SET state='COMPLETED',result_text=$2 WHERE action_id=$1", [rollingActionRow.id, JSON.stringify(rollingWorkerCreationV1)]);
+        await this.attachWorkerSession(poolClient, rollingStoredAssignment, swarmSessionIdentity.sessionId);
+    }
+    async attachWorkerSession(poolClient, rollingStoredAssignment, sessionId) {
+        await poolClient.query("UPDATE ponytail_index.rolling_assignment_v1 SET session_id=$2,state='WORKING' WHERE assignment_id=$1", [rollingStoredAssignment.id, sessionId]);
+        await poolClient.query("UPDATE ponytail_index.rolling_worktree_v1 SET state='ACTIVE' WHERE project_id=$1 AND number=$2", [this.projectId, rollingStoredAssignment.worktreeNumber]);
+        return { id: rollingStoredAssignment.id, sessionId, state: 'WORKING' };
+    }
     async attachSession(campaignId, id, generation, sessionId) {
         requireState(typeof sessionId === 'string' && sessionId.length > 0
             && sessionId.trim() === sessionId && !sessionId.includes('\0'), 'invalid session identity');
@@ -625,9 +670,7 @@ class RollingCampaignStore {
             requireState(assignment.sessionId === null || assignment.sessionId === sessionId, 'resumption must retain the original session');
             const completed = (await poolClient.query("SELECT action_id FROM ponytail_index.rolling_action_v1 WHERE project_id=$1 AND assignment_id=$2 AND generation=$3 AND state='COMPLETED'", [this.projectId, id, generation])).rows;
             requireState(completed.length === 1, 'session attachment requires completed external action');
-            await poolClient.query("UPDATE ponytail_index.rolling_assignment_v1 SET session_id=$2,state='WORKING' WHERE assignment_id=$1", [id, sessionId]);
-            await poolClient.query("UPDATE ponytail_index.rolling_worktree_v1 SET state='ACTIVE' WHERE project_id=$1 AND number=$2", [this.projectId, assignment.worktreeNumber]);
-            return { id, sessionId, state: 'WORKING' };
+            return this.attachWorkerSession(poolClient, assignment, sessionId);
         });
     }
     scope(rollingGraph, rollingExecutionConfigV3, generation, obligationId, rollingBinding, plannedPaths) {
@@ -1786,9 +1829,7 @@ class RollingCampaignStore {
             this.currentLease(rollingStoredAssignment, this.graph(rollingCampaignRow, rollingCampaignRow.graph_digest));
             (0, rolling_worktrees_js_1.validateRollingSessionMarker)(checkedRollingWorkerCreationV1.rootPath, checkedRollingWorkerCreationV1.sessionId);
             await poolClient.query("UPDATE ponytail_index.rolling_action_v1 SET state='COMPLETED' WHERE action_id=$1", [actionId]);
-            await poolClient.query("UPDATE ponytail_index.rolling_assignment_v1 SET session_id=$2,state='WORKING' WHERE assignment_id=$1", [rollingStoredAssignment.id, checkedRollingWorkerCreationV1.sessionId]);
-            await poolClient.query("UPDATE ponytail_index.rolling_worktree_v1 SET state='ACTIVE' WHERE project_id=$1 AND number=$2", [this.projectId, rollingStoredAssignment.worktreeNumber]);
-            return { id: rollingStoredAssignment.id, sessionId: checkedRollingWorkerCreationV1.sessionId, state: 'WORKING' };
+            return this.attachWorkerSession(poolClient, rollingStoredAssignment, checkedRollingWorkerCreationV1.sessionId);
         });
     }
     async attachedWorkerIdentity(poolClient, campaignId, rollingStoredAssignment) {

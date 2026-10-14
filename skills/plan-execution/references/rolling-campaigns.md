@@ -132,8 +132,12 @@ action, review and batch IDs.
    coordinator, allocation records swarm membership in the same transaction.
    Read its number/generation with `swarm info`, then run `swarm worktree-setup`
    on that exact reservation. Its base is the configured campaign increment,
-   even while the coordinator is on a publication branch. Campaign worker-session
-   attachment bookkeeping remains pending; do not bypass that transition. Start
+   even while the coordinator is on a publication branch. Create the worker
+   through host tools, establish its ignored session marker, and use `swarm
+   worker-bind` with the exact membership generation and full plan/sprint ID.
+   Binding records that identity in both swarm and campaign accounting and
+   completes the pending creation action without invoking Codex. It refuses
+   stale scope after reconciliation; resolve it before assigning work. Start
    independent top-level workers concurrently and observe them through the host.
    Unknown dispatch blockers retain their original identities for observation.
 4. A blocked worker reports its discovered prerequisites. Reconcile first,

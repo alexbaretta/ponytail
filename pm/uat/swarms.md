@@ -313,3 +313,16 @@ branch still records the configured campaign increment as the setup base.
 Focused proof: the `shared operations initialize defaults` PostgreSQL/CLI Arc.
 Host session attachment, submission and verdict recording remain separate pending
 work; this checkpoint does not establish complete campaign acceptance.
+
+### Host-created worker attachment evidence
+
+Actual `swarm worker-bind` records the original host identity in both swarm and
+campaign accounting in one transaction, completes its pending creation action
+and retries with the same identity. The PG/CLI Arc rejects a wrong plan and a
+reconciled stale execution scope without attaching a session. The stale-path
+regression first failed because admission succeeded, then passed after checking
+the current effective paths. Existing standalone binding and owner-inventory
+Arcs remain green. No command contacts Codex or claims observed native activity.
+
+Result/verdict recording and retained worker lifecycle transitions remain pending;
+this evidence does not establish final campaign acceptance.

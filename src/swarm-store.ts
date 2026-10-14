@@ -8,7 +8,7 @@ import type {Pool,PoolClient} from 'pg';
 import {git,gitResult} from './rolling-integration.js';
 import type {SwarmUserWorktree} from './swarm-owner.js';
 import {resolveRollingManagedDirectory,requireRollingSessionMarkerAbsent,requireRollingGitOperationAbsent,provisionRollingWorktree,validateRollingSessionMarker} from './rolling-worktrees.js';
-import {readWorktree} from './rolling-campaign-store.js';
+import {readWorktree,RollingCampaignStore} from './rolling-campaign-store.js';
 import type {RollingWorktreeLease} from './rolling-worktrees.js';
 
 export interface SwarmSessionIdentity {
@@ -243,6 +243,7 @@ export class SwarmStore {
    if(fs.lstatSync(path.join(rollingStoredWorktree.rootPath,'session_id.txt'),{throwIfNoEntry:false})!==undefined) validateRollingSessionMarker(rollingStoredWorktree.rootPath,swarmSessionIdentity.sessionId);
    if((await poolClient.query("SELECT 1 FROM ponytail_index.swarm_worker_v1 WHERE project_id=$1 AND worktree_number=$2 AND state<>'REMOVED' AND session_id<>$3",[this.projectId,swarmWorktreeMembership.number,swarmSessionIdentity.sessionId])).rowCount) throw new Error('swarm: checkout already has a bound worker');
    await this.recordNativeSession(poolClient,swarmSessionIdentity);
+   await new RollingCampaignStore(this.pool,this.projectId).recordSwarmWorkerBinding(poolClient,swarmWorktreeMembership,swarmSessionIdentity,swarmWorkerAssignment);
    if(existing!==undefined&&existing.state!=='REMOVED') {
     const swarmWorkerBinding=readWorker(existing);
     if(swarmWorkerBinding.state!=='BOUND'||swarmWorkerBinding.worktreeGeneration!==swarmWorktreeMembership.generation||swarmWorkerBinding.assignment.kind!==swarmWorkerAssignment.kind

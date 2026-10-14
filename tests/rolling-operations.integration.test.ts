@@ -144,6 +144,7 @@ test('shared operations initialize defaults and reconcile event/periodic content
  const initialRollingCoordinatorSnapshot = await rollingCampaignOperations.status('pilot');
  const rollingExecutionConfigV3:RollingExecutionConfigV3={schemaVersion:3,mainline:{remote:'origin',branch:'main'},incrementRef:'campaign/pilot',maxActiveWorkers:2,publicationSize:1,bindingHistory:null};
  assert.deepEqual(initialRollingCoordinatorSnapshot.configuration,rollingExecutionConfigV3);
+ const workerSessionId=crypto.randomUUID();
  const swarmStore = new SwarmStore(pool,projectId);
  const gitCommonDirectory=fs.realpathSync(git(root,['rev-parse','--path-format=absolute','--git-common-dir']));
  await swarmStore.enrollOwner({rootPath:root,gitCommonDirectory});
@@ -178,9 +179,24 @@ test('shared operations initialize defaults and reconcile event/periodic content
  assert.equal(fs.realpathSync(firstWorktree.rootPath),firstWorktree.rootPath);
  assert.equal((await inspectSwarmInfo(firstWorktree.rootPath,pool,projectId)).ownerRoot,root);
  const rollingAction = reservedRollingCoordinatorSnapshot.actions.find(item=>item.assignmentId === firstRollingStoredAssignment.id);assert.ok(rollingAction);
- await rollingCampaignStore.acknowledgeAction('pilot',rollingAction.id,rollingAction.generation,'STARTED');
- await rollingCampaignStore.acknowledgeAction('pilot',rollingAction.id,rollingAction.generation,'COMPLETED','isolated stopped-session fixture');
- await rollingCampaignStore.attachSession('pilot',firstRollingStoredAssignment.id,firstRollingStoredAssignment.generation,'session-fixture');
+ fs.writeFileSync(path.join(firstWorktree.rootPath,'session_id.txt'),workerSessionId+'\n');
+ const workerBindArgs=['worker-bind','--thread',`worker-thread-${projectId}`,'--session',workerSessionId,'--number',String(firstWorktree.number),'--generation',firstRollingStoredAssignment.generation,'--kind','plan','--assignment','pilot','--summary','Inspect requirement coverage','--json'];
+ const wrongWorkerBind=spawnSync(process.execPath,[path.join(process.cwd(),'src/swarm-info.js'),...workerBindArgs.map(value=>value==='pilot'?'other-plan':value)],{cwd:root,encoding:'utf8'});
+ assert.equal(wrongWorkerBind.status,1);assert.match(wrongWorkerBind.stderr,/plan or sprint differs/);
+ assert.equal((await rollingCampaignOperations.status('pilot')).assignments.find(assignment=>assignment.id===firstRollingStoredAssignment.id)?.sessionId,null);
+ const changedScopeObligationDocumentV1:ObligationDocumentV1={...initialObligationDocumentV1,obligations:initialObligationDocumentV1.obligations.map(obligation=>obligation.id===firstRollingStoredAssignment.obligationId?{...obligation,execution:{...obligation.execution,plannedPaths:['changed-scope.ts']}}:obligation)};
+ fs.writeFileSync(path.join(root,obligationFixture.documentPath),JSON.stringify(changedScopeObligationDocumentV1));
+ await rollingCampaignOperations.reconcile('pilot');
+ const staleScopeWorkerBind=spawnSync(process.execPath,[path.join(process.cwd(),'src/swarm-info.js'),...workerBindArgs],{cwd:root,encoding:'utf8'});
+ assert.equal(staleScopeWorkerBind.status,1);assert.match(staleScopeWorkerBind.stderr,/execution scope changed/);
+ assert.equal((await rollingCampaignOperations.status('pilot')).assignments.find(assignment=>assignment.id===firstRollingStoredAssignment.id)?.sessionId,null);
+ fs.writeFileSync(path.join(root,obligationFixture.documentPath),JSON.stringify(initialObligationDocumentV1));
+ await rollingCampaignOperations.reconcile('pilot');
+ for(let attempt=0;attempt<2;attempt++) {
+  const workerBind=spawnSync(process.execPath,[path.join(process.cwd(),'src/swarm-info.js'),...workerBindArgs],{cwd:root,encoding:'utf8'});
+  assert.equal(workerBind.status,0,workerBind.stderr);
+ }
+ assert.ok(!(await rollingCampaignOperations.status('pilot')).actions.some(action=>action.id===rollingAction.id));
  const workingRollingCoordinatorActions=await rollingCampaignOperations.nextActions('pilot');
  assert.ok(workingRollingCoordinatorActions.decisions.some(decision=>decision.kind === 'host-assignment' && decision.hostAction === 'send-assignment' && decision.assignment.id === firstRollingStoredAssignment.id));
  // Stored native receipts are fixture data here; this Arc exercises real PostgreSQL
@@ -210,7 +226,7 @@ test('shared operations initialize defaults and reconcile event/periodic content
  const obligationLeaseV1=freezeObligationLease(obligationFixture.document,obligationBindingHistoryV1,{obligationId:firstRollingStoredAssignment.obligationId,graphDigest:staleRollingCoordinatorActions.snapshot.graphDigest,generation:firstRollingStoredAssignment.generation,assessor:'coordinator',authority:currentObligationBaseline.authority.references});
  const candidateRevision=git(root,['rev-parse','HEAD']);
  const observedAt=new Date().toISOString();
- const rollingWorkerSubmissionV1:RollingWorkerSubmissionV1={schemaVersion:1,campaignId:'pilot',assignmentId:firstRollingStoredAssignment.id,generation:firstRollingStoredAssignment.generation,sessionId:'session-fixture',graphDigest:staleRollingCoordinatorActions.snapshot.graphDigest,revision:candidateRevision,baseCommit:candidateRevision,stopped:true,
+ const rollingWorkerSubmissionV1:RollingWorkerSubmissionV1={schemaVersion:1,campaignId:'pilot',assignmentId:firstRollingStoredAssignment.id,generation:firstRollingStoredAssignment.generation,sessionId:workerSessionId,graphDigest:staleRollingCoordinatorActions.snapshot.graphDigest,revision:candidateRevision,baseCommit:candidateRevision,stopped:true,
   proof:[{operation:'inspect',evidence:{command:'snapshot-fixture',selection:['relational snapshot fixture'],target:{identity:'isolated-local',profile:'database-snapshot-fixture',verification:'requirement.md'},revision:candidateRevision,dirty:false,startedAt:observedAt,completedAt:observedAt,outcome:'pass',skips:0,failures:0,inputs:[{path:'requirement.md',digest:inputDigest(root,'requirement.md')}],outputPath:'requirement.md',finalization:'pass'}}]};
  await pool.query("INSERT INTO ponytail_index.rolling_submission_v1(project_id,campaign_id,assignment_id,generation,revision,submission_text,lease_text) VALUES($1,$2,$3,$4,$5,$6,$7)",[projectId,'pilot',firstRollingStoredAssignment.id,firstRollingStoredAssignment.generation,candidateRevision,JSON.stringify(rollingWorkerSubmissionV1),JSON.stringify(obligationLeaseV1)]);
  const rollingReviewRequestV1:RollingReviewRequestV1={schemaVersion:1,id:crypto.randomUUID(),campaignId:'pilot',assignmentId:firstRollingStoredAssignment.id,generation:firstRollingStoredAssignment.generation,baseCommit:candidateRevision,revision:candidateRevision,reviewerSessionId:'reviewer-fixture'};
@@ -265,7 +281,7 @@ test('shared operations initialize defaults and reconcile event/periodic content
  await verifyMcpParity(root,rollingCampaignOperations);
  await pool.query("DELETE FROM ponytail_index.rolling_submission_v1 WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3",[projectId,'pilot',firstRollingStoredAssignment.id]);
  await pool.query("UPDATE ponytail_index.rolling_assignment_v1 SET state='WORKING',activity_stopped=false WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3",[projectId,'pilot',firstRollingStoredAssignment.id]);
- const rollingWorkerRetirementV1:RollingWorkerRetirementV1={schemaVersion:1,campaignId:'pilot',assignmentId:firstRollingStoredAssignment.id,generation:firstRollingStoredAssignment.generation,resourceGeneration:firstRollingStoredAssignment.generation,number:firstRollingStoredAssignment.worktreeNumber,rootPath:path.join(root,'managed',String(firstRollingStoredAssignment.worktreeNumber)),coordinatorRoot:root,threadId:'worker-thread-fixture',sessionId:'session-fixture',integratedRevision:candidateRevision};
+ const rollingWorkerRetirementV1:RollingWorkerRetirementV1={schemaVersion:1,campaignId:'pilot',assignmentId:firstRollingStoredAssignment.id,generation:firstRollingStoredAssignment.generation,resourceGeneration:firstRollingStoredAssignment.generation,number:firstRollingStoredAssignment.worktreeNumber,rootPath:path.join(root,'managed',String(firstRollingStoredAssignment.worktreeNumber)),coordinatorRoot:root,threadId:`worker-thread-${projectId}`,sessionId:workerSessionId,integratedRevision:candidateRevision};
  await pool.query("UPDATE ponytail_index.rolling_assignment_v1 SET state='RETIRING',retired=true,activity_stopped=true WHERE project_id=$1 AND campaign_id=$2 AND assignment_id=$3",[projectId,'pilot',firstRollingStoredAssignment.id]);
  const previousRollingWorkerRetirementV1:RollingWorkerRetirementV1={...rollingWorkerRetirementV1,generation:crypto.randomUUID()};
  await pool.query("INSERT INTO ponytail_index.rolling_worker_retirement_v1(project_id,campaign_id,assignment_id,generation,context_text,state,turn_id) VALUES($1,$2,$3,$4,$5,'CLEANED','retained-notification-turn')",[projectId,'pilot',firstRollingStoredAssignment.id,previousRollingWorkerRetirementV1.generation,JSON.stringify(previousRollingWorkerRetirementV1)]);
@@ -300,13 +316,13 @@ test('shared operations initialize defaults and reconcile event/periodic content
  assert.deepEqual(rollingReleaseDecision.release,{id:replacementRollingStoredAssignment.id,generation:replacementRollingStoredAssignment.generation});
  const retainedRoot=path.join(root,'managed',String(firstRollingStoredAssignment.worktreeNumber));
  assert.equal(fs.realpathSync(retainedRoot),retainedRoot); // Already provisioned through swarm setup above.
- ensureRollingSessionIdIgnored(retainedRoot);fs.writeFileSync(path.join(retainedRoot,'session_id.txt'),'session-fixture\n');
+ ensureRollingSessionIdIgnored(retainedRoot);fs.writeFileSync(path.join(retainedRoot,'session_id.txt'),workerSessionId+'\n');
  fs.writeFileSync(path.join(retainedRoot,'retained-source.txt'),'preserve started work');
  const resumedRollingReplenishment = await rollingCampaignOperations.replenish('pilot','periodic',rollingReleaseDecision.release,true);
  assert.equal(fs.readFileSync(path.join(retainedRoot,'retained-source.txt'),'utf8'),'preserve started work');
  assert.equal(resumedRollingReplenishment.allocations.length,1);
  assert.equal(resumedRollingReplenishment.allocations[0]?.assignment?.id,firstRollingStoredAssignment.id);
- assert.equal(resumedRollingReplenishment.allocations[0]?.assignment?.sessionId,'session-fixture');
+ assert.equal(resumedRollingReplenishment.allocations[0]?.assignment?.sessionId,workerSessionId);
  assert.notEqual(resumedRollingReplenishment.allocations[0]?.assignment?.generation,firstRollingStoredAssignment.generation);
  assert.deepEqual((await rollingCampaignOperations.replenish('pilot','event')).allocations,[]);
  fs.writeFileSync(path.join(root,'bindings.json'),JSON.stringify({...rollingBindingsV1,bindings:rollingBindingsV1.bindings.slice(0,2)}));

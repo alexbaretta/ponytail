@@ -249,6 +249,7 @@ class SwarmStore {
             if ((await poolClient.query("SELECT 1 FROM ponytail_index.swarm_worker_v1 WHERE project_id=$1 AND worktree_number=$2 AND state<>'REMOVED' AND session_id<>$3", [this.projectId, swarmWorktreeMembership.number, swarmSessionIdentity.sessionId])).rowCount)
                 throw new Error('swarm: checkout already has a bound worker');
             await this.recordNativeSession(poolClient, swarmSessionIdentity);
+            await new rolling_campaign_store_js_1.RollingCampaignStore(this.pool, this.projectId).recordSwarmWorkerBinding(poolClient, swarmWorktreeMembership, swarmSessionIdentity, swarmWorkerAssignment);
             if (existing !== undefined && existing.state !== 'REMOVED') {
                 const swarmWorkerBinding = readWorker(existing);
                 if (swarmWorkerBinding.state !== 'BOUND' || swarmWorkerBinding.worktreeGeneration !== swarmWorktreeMembership.generation || swarmWorkerBinding.assignment.kind !== swarmWorkerAssignment.kind
