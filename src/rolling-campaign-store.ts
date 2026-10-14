@@ -1886,7 +1886,7 @@ export class RollingCampaignStore {
 
   // Traceability: implements REQ-ROLLING-STATE
   // Traceability: implements REQ-ROLLING-SCHEDULING
-  async rebindLease(campaignId: string, id: string, generation: string, graphDigest: string): Promise<RollingLeaseRenewal> {
+  async renewLease(campaignId: string, id: string, generation: string, graphDigest: string): Promise<RollingLeaseRenewal> {
     return this.transaction(campaignId, async (poolClient, rollingCampaignRow) => {
       const rollingGraph = this.graph(rollingCampaignRow, graphDigest);
       const rollingStoredAssignment = await this.assignment(poolClient, campaignId, id, generation);

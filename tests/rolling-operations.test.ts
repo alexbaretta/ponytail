@@ -77,7 +77,7 @@ test('OBL-129: stopped retained workers receive lease rebinding before new alloc
  const rollingCoordinatorSnapshot:RollingCoordinatorSnapshot = {...snapshot(),assignments:[rollingStoredAssignment],
   scheduling:{...snapshot().scheduling,selected:[],blocked:[{reason:'scope_changed',obligationId:'OBL-1',prerequisites:[]}]}};
  assert.deepEqual(projectRollingCoordinatorActions(rollingCoordinatorSnapshot).decisions,
-  [{kind:'worker-rebinding',hostAction:'reassign-scope',assignment:rollingStoredAssignment}]);
+  [{kind:'worker-rebinding',command:'renew-lease',assignment:rollingStoredAssignment}]);
  const activeRollingCoordinatorSnapshot:RollingCoordinatorSnapshot = {...rollingCoordinatorSnapshot,
   assignments:[{...rollingStoredAssignment,activityStopped:false}]};
  assert.deepEqual(projectRollingCoordinatorActions(activeRollingCoordinatorSnapshot).decisions,[]);

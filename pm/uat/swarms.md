@@ -360,4 +360,19 @@ selects that retained worker first. Repeated worker-bind using the renewed lease
 generation completes the resumption bookkeeping while preserving the original
 session, checkout and swarm worker number. Missing/stale resumption generations
 are refused. Scoped unit/help and PG/CLI proof pass; runtime activity remains
-unobserved. Scope-changing lease renewal and final acceptance remain pending.
+unobserved. Final acceptance remains pending.
+
+### Scope-changing lease renewal
+
+`campaign renew-lease` exposes the existing pure database renewal boundary.
+After an approved graph amendment and recorded quiescence/inactivity, it freezes
+the current authorized scope under a fresh generation. The original session,
+checkout and INACTIVE state remain unchanged; stale generations are rejected.
+`next-actions` recommends this command rather than a host session operation.
+The previous worker command spelling is removed, and CLI/MCP use the same typed
+operation. Session resumption remains a separate coordinator host operation.
+Focused evidence: 30 operation/help/skill tests, two accepted/rejected review
+PostgreSQL scenarios covering amended leases and retained ownership, and four
+MCP tests pass. TSTS checked 1,648 files without violations; read-only adversarial
+review found no material defect. The prior broad typed run passed 325 tests before
+this renewal change; it is not final-tree acceptance for this increment.

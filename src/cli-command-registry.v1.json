@@ -107,6 +107,7 @@
         "status",
         "next-actions",
         "replenish",
+        "renew-lease",
         "submit",
         "record-review",
         "request-review",

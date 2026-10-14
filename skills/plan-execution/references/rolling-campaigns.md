@@ -123,8 +123,12 @@ action, review and batch IDs.
    then run `reconcile --campaign <id>`. Fix cycles and missing references before
    dispatch. The coordinator's graph is authoritative; worker copies are not.
    Historical frozen leases remain immutable; a scope change needs renewed
-   authorization before the original worker proceeds. The public scope-changing
-   lease-renewal transition remains pending; do not bypass a reported scope change.
+   authorization before the original worker proceeds. Once the coordinator has
+   established quiescence and recorded the worker inactive, run
+   `renew-lease --campaign <id> --assignment <id> --generation <current-generation>`.
+   This freezes the approved reconciled scope with a new generation, preserving
+   the session and checkout. It does not resume the session. Replenishment then
+   selects the retained worker; use host tools and swarm binding for resumption.
 3. `replenish --campaign <id>` reserves compatible obligation/worktree pairs up
    to N and prefers unblocked retained assignments. `--existing-only true` uses
    only safe retained physical roots and reports lack of capacity. Carry each

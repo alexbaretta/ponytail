@@ -233,6 +233,9 @@ services. `PROJECT_STRUCTURE.md` is authoritative for that boundary.
   @<request.json>`; status: `ponytail campaign status --campaign <id>`;
   coordinator decisions: `ponytail campaign next-actions --campaign <id>`;
   graph reconciliation: `ponytail campaign reconcile --campaign <id>`;
+  amended-scope renewal: `ponytail campaign renew-lease --campaign <id>
+  --assignment <id> --generation <current-uuid>`; requires a stopped inactive
+  original owner and renews only its frozen lease, preserving session/checkout.
   allocation: `ponytail campaign replenish --campaign <id> [--release <JSON>]
   [--existing-only true]`. Existing-only admission imports safe retained physical
   pool roots after reset and refuses nonexistent checkout reservations.

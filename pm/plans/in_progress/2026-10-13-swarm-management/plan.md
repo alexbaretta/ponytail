@@ -239,5 +239,9 @@ and dirty-source retention. Retained reactivation and final gates remain open.
 
 Retained-worker inactivity and unchanged-scope resumption now use the swarm CLI,
 with original identity and exact current lease generations. CLI/PG proof covers
-capacity release, blocker validation and original-worker preference. The remaining
-operational gap is scope-changing lease renewal; final acceptance remains open.
+capacity release, blocker validation and original-worker preference.
+Scope-changing renewal now has the pure `campaign renew-lease` entrypoint;
+`next-actions` recommends it for an inactive assignment with an amended scope.
+It replaces the retired worker spelling without an alias and preserves the
+original session, checkout and inactive state. Focused proof and final acceptance
+are recorded separately; no obligation discharge is inferred from implementation.

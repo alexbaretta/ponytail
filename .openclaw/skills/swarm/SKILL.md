@@ -109,6 +109,9 @@ exclude it from active capacity with `worker-inactive --session <id>
 --blockers '["OBL-n"]'`. Blockers must already exist in the reconciled graph; use
 an empty list for non-prerequisite pauses. This only records inactivity and
 retains ownership. Replenish other compatible work. When unblocked,
+renew an amended frozen scope through `campaign renew-lease` with its exact
+current assignment generation after reconciling the approved graph. This changes
+only the lease and preserves the stopped original worker. Then replenish and
 resume the original session first through host tools with the updated authorized
 scope. Bind the same identity again with `worker-bind` and the returned campaign
 `--lease-generation`; retain the original checkout generation and worker number.

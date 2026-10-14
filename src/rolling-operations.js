@@ -156,7 +156,7 @@ function projectRollingCoordinatorActions(rollingCoordinatorSnapshot) {
         if (rollingStoredAssignment.state === 'INACTIVE' && rollingStoredAssignment.activityStopped && !rollingStoredAssignment.retired
             && rollingStoredAssignment.sessionId && rollingStoredAssignment.lease
             && rollingCoordinatorSnapshot.scheduling.blocked.some(block => block.reason === 'scope_changed' && block.obligationId === rollingStoredAssignment.obligationId)) {
-            decisions.push({ kind: 'worker-rebinding', hostAction: 'reassign-scope', assignment: rollingStoredAssignment });
+            decisions.push({ kind: 'worker-rebinding', command: 'renew-lease', assignment: rollingStoredAssignment });
             continue;
         }
         const rollingAssignmentRelease = rollingCoordinatorSnapshot.releasableAssignments.find(release => release.id === rollingStoredAssignment.id && release.generation === rollingStoredAssignment.generation);
@@ -461,10 +461,10 @@ class RollingCampaignOperations {
             case 'reconcile': return { command, result: await this.reconcile(stringField(input, 'campaign')) };
             case 'status': return { command, result: await this.status(stringField(input, 'campaign')) };
             case 'next-actions': return { command, result: await this.nextActions(stringField(input, 'campaign')) };
-            case 'rebind-worker': {
+            case 'renew-lease': {
                 const campaignId = stringField(input, 'campaign');
                 const rollingGraphReconciliation = await this.reconcile(campaignId);
-                return { command, result: await this.rollingCampaignStore.rebindLease(campaignId, stringField(input, 'assignment'), stringField(input, 'generation'), rollingGraphReconciliation.graphDigest) };
+                return { command, result: await this.rollingCampaignStore.renewLease(campaignId, stringField(input, 'assignment'), stringField(input, 'generation'), rollingGraphReconciliation.graphDigest) };
             }
             case 'replenish': {
                 const trigger = input.trigger ?? 'periodic';

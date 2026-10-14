@@ -24,7 +24,7 @@ test('every registered command exposes its complete contract through the shipped
 
 // Traceability: verifies REQ-ROLLING-INTERFACES
 test('retired campaign commands and malformed options fail before opening project state',()=> {
- for (const arguments_ of [['schedule-ready'],['status','--wrong','pilot'],['status','--campaign','pilot','--campaign','other'],['status','--campaign'],['status','--json','--json']]) {
+ for (const arguments_ of [['schedule-ready'],['rebind-worker'],['status','--wrong','pilot'],['status','--campaign','pilot','--campaign','other'],['status','--campaign'],['status','--json','--json']]) {
   const result = spawnSync(process.execPath,[path.join(process.cwd(),'src/rolling-operations.js'),...arguments_],{cwd:'/tmp',encoding:'utf8'});
   assert.equal(result.status,1);
   assert.match(result.stderr,/unknown|repeated|missing/);

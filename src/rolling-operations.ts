@@ -99,7 +99,7 @@ export interface RollingOperationResults {
  'prepare-worker-dispatch':Awaited<ReturnType<typeof prepareRollingWorkerDispatch>>;'acknowledge-worker-dispatch':Awaited<ReturnType<typeof acknowledgeRollingWorkerDispatch>>;
  'retry-worker':Awaited<ReturnType<typeof correctRollingWorker>>;
  'suspend-worker':Awaited<ReturnType<typeof suspendRollingWorker>>;'retire-worker':Awaited<ReturnType<typeof retireRollingWorker>>;
- 'rebind-worker':Awaited<ReturnType<RollingCampaignStore['rebindLease']>>;
+ 'renew-lease':Awaited<ReturnType<RollingCampaignStore['renewLease']>>;
  'start-review':Awaited<ReturnType<typeof startRollingReview>>;'request-review':Awaited<ReturnType<RollingCampaignStore['requestReview']>>;'dispatch-review':Awaited<ReturnType<typeof collectRollingReview>>;'inspect-review':Awaited<ReturnType<typeof collectRollingReview>>;
  'observe-increment':Awaited<ReturnType<RollingCampaignStore['observeIncrementPublication']>>;
  integrate:Awaited<ReturnType<RollingCampaignStore['publishIncrement']>> | RollingIncrementRepair;accept:Awaited<ReturnType<RollingCampaignStore['acceptIncrementCertificates']>>;
@@ -131,7 +131,7 @@ export interface RollingReviewDecision {readonly kind:'review';readonly hostActi
 export interface RollingAssignmentDecision {readonly kind:'assignment';readonly command:'integrate';readonly assignment:RollingStoredAssignment;}
 export interface RollingHostAssignmentDecision {readonly kind:'host-assignment';readonly hostAction:'request-adversarial-review' | 'send-assignment' | 'collect-result' | 'detach-session';readonly assignment:RollingStoredAssignment;}
 export interface RollingWorkerSuspensionDecision {readonly kind:'worker-suspension';readonly hostAction:'quiesce-session';readonly assignment:RollingStoredAssignment;readonly blockers:readonly string[];}
-export interface RollingWorkerRebindingDecision {readonly kind:'worker-rebinding';readonly hostAction:'reassign-scope';readonly assignment:RollingStoredAssignment;}
+export interface RollingWorkerRebindingDecision {readonly kind:'worker-rebinding';readonly command:'renew-lease';readonly assignment:RollingStoredAssignment;}
 export interface RollingWorkerDispatchBlockedDecision {readonly kind:'blocked-worker-dispatch';readonly reason:'instruction_turn_unknown';readonly assignment:RollingStoredAssignment;readonly dispatch:RollingWorkerDispatchStarted;}
 export interface RollingReviewDispatchBlockedDecision {readonly kind:'blocked-review-dispatch';readonly reason:'instruction_turn_unknown';readonly review:RollingStoredReview;readonly dispatch:RollingReviewDispatchStarted;}
 export interface RollingPublicationDecision {readonly kind:'publication';readonly command:'prepare-publication' | 'observe-preparation' | 'observe-refresh' | 'inspect-publication-conflict' | 'run-publication-qa' | 'observe-publication-qa' | 'publish-mainline' | 'observe-mainline' | 'refresh-mainline' | 'synchronize-campaign';readonly publication:RollingPublicationStatus;}
@@ -180,7 +180,7 @@ export function projectRollingCoordinatorActions(rollingCoordinatorSnapshot:Roll
   if (rollingStoredAssignment.state === 'INACTIVE' && rollingStoredAssignment.activityStopped && !rollingStoredAssignment.retired
    && rollingStoredAssignment.sessionId && rollingStoredAssignment.lease
    && rollingCoordinatorSnapshot.scheduling.blocked.some(block=>block.reason === 'scope_changed' && block.obligationId === rollingStoredAssignment.obligationId)) {
-   decisions.push({kind:'worker-rebinding',hostAction:'reassign-scope',assignment:rollingStoredAssignment});continue;
+   decisions.push({kind:'worker-rebinding',command:'renew-lease',assignment:rollingStoredAssignment});continue;
   }
   const rollingAssignmentRelease=rollingCoordinatorSnapshot.releasableAssignments.find(release=>release.id === rollingStoredAssignment.id && release.generation === rollingStoredAssignment.generation);
   if (rollingAssignmentRelease && rollingStoredAssignment.state === 'RETIRING' && rollingStoredAssignment.retired && rollingStoredAssignment.activityStopped) {
@@ -446,10 +446,10 @@ export class RollingCampaignOperations {
    case 'reconcile': return {command,result:await this.reconcile(stringField(input,'campaign'))};
    case 'status': return {command,result:await this.status(stringField(input,'campaign'))};
    case 'next-actions': return {command,result:await this.nextActions(stringField(input,'campaign'))};
-   case 'rebind-worker': {
+   case 'renew-lease': {
     const campaignId = stringField(input,'campaign');
     const rollingGraphReconciliation = await this.reconcile(campaignId);
-    return {command,result:await this.rollingCampaignStore.rebindLease(campaignId,stringField(input,'assignment'),stringField(input,'generation'),rollingGraphReconciliation.graphDigest)};
+    return {command,result:await this.rollingCampaignStore.renewLease(campaignId,stringField(input,'assignment'),stringField(input,'generation'),rollingGraphReconciliation.graphDigest)};
    }
    case 'replenish': {
     const trigger = input.trigger ?? 'periodic';

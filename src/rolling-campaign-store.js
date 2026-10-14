@@ -1598,7 +1598,7 @@ class RollingCampaignStore {
             return { request: rollingReviewRequestV1, outcome: checkedRollingReviewOutcomeV1 };
         });
     }
-    async rebindLease(campaignId, id, generation, graphDigest) {
+    async renewLease(campaignId, id, generation, graphDigest) {
         return this.transaction(campaignId, async (poolClient, rollingCampaignRow) => {
             const rollingGraph = this.graph(rollingCampaignRow, graphDigest);
             const rollingStoredAssignment = await this.assignment(poolClient, campaignId, id, generation);

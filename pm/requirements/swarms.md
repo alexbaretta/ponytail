@@ -88,6 +88,10 @@ establishes host quiescence. It retains its session/checkout, frees scheduling
 capacity and is preferred when unblocked. The supplied current lease generation
 fences inactivity and retained resumption bookkeeping; renewing membership does
 not itself resume or prove execution of the session.
+An approved graph amendment may renew the inactive assignment's frozen lease
+through `campaign renew-lease`. Renewal fences the prior generation, preserves
+the original session and checkout, and leaves the worker inactive. The coordinator
+uses host tools to resume it after replenishment selects the retained assignment.
 
 Worker detachment fences the matching campaign assignment and outstanding
 allocation actions in the same database transaction as removal. Submitted
