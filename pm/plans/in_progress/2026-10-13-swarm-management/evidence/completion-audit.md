@@ -47,9 +47,17 @@ the shared PostgreSQL/Git Arcs. After the procedural review corrected the skill'
 session-identity acquisition instructions, both skill/installer checks passed.
 The skill explicitly distinguishes returned thread/host metadata from a trusted
 session ID and retains reservations when the host cannot provide that identity.
+TSTS's full unit command passed 100 tests; the Pi extension passed 23 tests and
+the isolated Codex installer suite passed. The legacy full Node selection remains
+running and must be observed to completion.
 `npm test` stops at three coverage findings for the separate
 `REQ-TYPESCRIPT-ONLY-SOURCE` requirement. Do not label that command passing or
 invent a repository-wide migration to bypass it. Reconcile the plan's stale
 activation baseline with the authorized session-operation scope, assess compact
 Git-revision-based evidence, and update durable obligation status only after its
 actual gates are satisfied.
+
+The append-only `SWARM-B2` / `SWARM-CP2` rebaseline now activates the corrected
+requirement source through the canonical checkpoint validator, preserving B1,
+all 22 known responsibilities and zero discharge credit. It adds no file-hash
+certificate inventory. Certificate assessment remains pending.

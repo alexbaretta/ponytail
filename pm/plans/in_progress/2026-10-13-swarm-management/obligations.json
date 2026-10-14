@@ -83,6 +83,89 @@
         "OBL-21",
         "OBL-22"
       ]
+    },
+    {
+      "id": "SWARM-B2",
+      "predecessorId": "SWARM-B1",
+      "authority": {
+        "references": [
+          "user-goal-2026-10-13-swarm-management",
+          "user-goal-2026-10-13-swarm-skill-and-exclusive-session-cli",
+          "user-swarm-session-bookkeeping-clarification-2026-10-13"
+        ],
+        "assessors": [
+          "coordinator"
+        ]
+      },
+      "requirements": [
+        {
+          "id": "REQ-SWARM-OWNERSHIP",
+          "path": "pm/requirements/swarms.md",
+          "digest": "98938a81130c89e96f831811e08d4da4458e7a5802c8c56e2dd6974cbff9f451"
+        },
+        {
+          "id": "REQ-SWARM-INFO",
+          "path": "pm/requirements/swarms.md",
+          "digest": "98938a81130c89e96f831811e08d4da4458e7a5802c8c56e2dd6974cbff9f451"
+        },
+        {
+          "id": "REQ-SWARM-SESSIONS",
+          "path": "pm/requirements/swarms.md",
+          "digest": "98938a81130c89e96f831811e08d4da4458e7a5802c8c56e2dd6974cbff9f451"
+        },
+        {
+          "id": "REQ-SWARM-WORKTREES",
+          "path": "pm/requirements/swarms.md",
+          "digest": "98938a81130c89e96f831811e08d4da4458e7a5802c8c56e2dd6974cbff9f451"
+        },
+        {
+          "id": "REQ-SWARM-CLEAR",
+          "path": "pm/requirements/swarms.md",
+          "digest": "98938a81130c89e96f831811e08d4da4458e7a5802c8c56e2dd6974cbff9f451"
+        },
+        {
+          "id": "REQ-SWARM-CLI",
+          "path": "pm/requirements/swarms.md",
+          "digest": "98938a81130c89e96f831811e08d4da4458e7a5802c8c56e2dd6974cbff9f451"
+        },
+        {
+          "id": "REQ-SWARM-SKILL",
+          "path": "pm/requirements/swarms.md",
+          "digest": "98938a81130c89e96f831811e08d4da4458e7a5802c8c56e2dd6974cbff9f451"
+        }
+      ],
+      "obligationIds": [
+        "OBL-1",
+        "OBL-2",
+        "OBL-3",
+        "OBL-4",
+        "OBL-5",
+        "OBL-6",
+        "OBL-7",
+        "OBL-8",
+        "OBL-9",
+        "OBL-10",
+        "OBL-11",
+        "OBL-12",
+        "OBL-13",
+        "OBL-14",
+        "OBL-15",
+        "OBL-16",
+        "OBL-17",
+        "OBL-18",
+        "OBL-19",
+        "OBL-20",
+        "OBL-21",
+        "OBL-22"
+      ],
+      "inventoryIds": [
+        "OBL-17",
+        "OBL-18",
+        "OBL-19",
+        "OBL-20",
+        "OBL-21",
+        "OBL-22"
+      ]
     }
   ],
   "obligations": [
@@ -789,6 +872,58 @@
       ],
       "preparation": null,
       "reason": "Register the complete approved initial swarm delivery scope; no completion credited.",
+      "assessor": "coordinator"
+    },
+    {
+      "id": "SWARM-CP2",
+      "predecessorId": "SWARM-CP1",
+      "baselineId": "SWARM-B2",
+      "kind": "rebaseline",
+      "selectedIds": [],
+      "registeredIds": [
+        "OBL-1",
+        "OBL-2",
+        "OBL-3",
+        "OBL-4",
+        "OBL-5",
+        "OBL-6",
+        "OBL-7",
+        "OBL-8",
+        "OBL-9",
+        "OBL-10",
+        "OBL-11",
+        "OBL-12",
+        "OBL-13",
+        "OBL-14",
+        "OBL-15",
+        "OBL-16",
+        "OBL-17",
+        "OBL-18",
+        "OBL-19",
+        "OBL-20",
+        "OBL-21",
+        "OBL-22"
+      ],
+      "certificateIds": [],
+      "invalidatedIds": [],
+      "before": [
+        1,
+        1,
+        17,
+        1,
+        1,
+        1
+      ],
+      "after": [
+        1,
+        1,
+        17,
+        1,
+        1,
+        1
+      ],
+      "preparation": null,
+      "reason": "Activate the stakeholder clarification: coordinator host tools operate sessions; Ponytail records associations and manages worktrees. Preserve the original obligation identities; no discharge credit.",
       "assessor": "coordinator"
     }
   ]
