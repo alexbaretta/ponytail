@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-10-13-worker_proof_authority_inputs",
+  "recorded_at": "2026-10-13T17:42:57-07:00",
+  "source_references": [
+    "pm/plans/in_progress/2026-10-13-campaign-restart-acceptance/plan.md"
+  ],
+  "context": {
+    "languages": [
+      "typescript"
+    ],
+    "frameworks": [],
+    "components": [
+      "rolling-worker",
+      "rolling-campaign-store"
+    ],
+    "affected_boundaries": [
+      "worker evidence to accepted certificate"
+    ],
+    "code_references": [
+      "src/rolling-worker.ts",
+      "src/rolling-campaign-store.ts:1678",
+      "skills/plan-execution/scripts/obligations.ts:499"
+    ]
+  },
+  "observed_behavior": "Original workers included the coordinator accepted obligation document in evidence for focused QA that did not consume that document, making the retained proof impossible to certify.",
+  "expected_behavior": "QA evidence records actual command inputs; frozen leases retain coordinator authority separately.",
+  "causal_mechanism": "Instructions requested relevant tracked inputs without distinguishing authority-only reads from QA-consumed inputs. Certificate assessment correctly requires all QA inputs and rejects self-certifying accepted-state bytes.",
+  "anti_pattern": {
+    "structural_description": "An operational evidence instruction leaves the provenance boundary between authority and QA consumption ambiguous.",
+    "why_it_fails": "A worker can overstate QA inputs and introduce a self-reference that immutable certificate assessment cannot accept."
+  },
+  "correct_pattern": {
+    "required_invariant": "Every recorded QA input is actually consumed by that command; authority-only reads stay in the frozen lease.",
+    "implementation_description": "Instructions state the consumption boundary and require reporting incompatible proof scope if QA genuinely consumes accepted-state bytes, rather than omitting real inputs or rewriting evidence."
+  },
+  "applicability_conditions": [
+    "Workers read mutable coordinator authority that their recorded QA command does not consume."
+  ],
+  "known_non_matches": [
+    "A genuinely consumed input must remain in evidence even when certificate scope is incompatible."
+  ],
+  "confirmation_evidence": [
+    "GWEN original worker101 and107 submissions included obligations.json authority reads in structural QA evidence.",
+    "Source certificateReasons requires evidence-input coverage and acceptIncrementCertificates rejects accepted-document self-coverage."
+  ],
+  "regression_proofs": [
+    "tests/rolling-worker.test.ts: worker instructions retain exact obligation, requirement, acceptance step, lease and QA selections"
+  ]
+}

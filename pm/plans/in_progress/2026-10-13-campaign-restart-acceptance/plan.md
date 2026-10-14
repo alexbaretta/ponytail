@@ -61,7 +61,7 @@ and retry of request `e3235fab-8e71-419a-b079-59823d2ba0fa`.
 Reset COMPLETE, fresh initialization and native parallel overlap remain
 unverified; this plan remains IN_PROGRESS.
 
-OBL-RESTART-3: IN_PROGRESS. Establish the explicit worker campaign-upstream
+OBL-RESTART-3: DISCHARGED. Establish the explicit worker campaign-upstream
 instruction under REQ-ROLLING-WORKERS and ACC-ROLLING-WORKER-UPSTREAM.
 Actual worker101 fetched mainline and was correctly refused semantic-rebase
 approval; generic campaign-branch wording did not identify its distinct ref.
@@ -101,3 +101,22 @@ processes performed the genuine parallel execution, while the desktop's own
 runtime reports these threads unloaded. Database WORKING/INTEGRATING states
 are lifecycle accounting, not live execution evidence. This limitation must
 remain explicit when reporting the restart result.
+
+OBL-RESTART-4: IN_PROGRESS. Clarify command-consumed QA inputs separately
+from coordinator authority reads under REQ-ROLLING-WORKERS and
+ACC-ROLLING-WORKER-QA-INPUTS. Original101/107 retain their candidates and
+produce fresh proof; never rewrite immutable submissions. Build and focused
+worker proof pass (6 tests); independent read-only review accepts the
+no-omission boundary. Final core QA and actual corrected proof remain pending.
+Causal observation: [proof authority inputs](../../../debugging-pattern-observations/2026-10-13-worker_proof_authority_inputs.json).
+
+Upstream acceptance in `d921e5e`: all 951 core unit/integration tests
+pass, TSTS checks 1,575 files without violations, and rule copies/versions pass.
+The original native actor's corrected candidate establishes the live branch
+selection gate. Subsequent result-collection recovery preserves that candidate.
+
+After generated QA-input instructions passed focused proof and review, the
+GWEN coordinator launched original101 and107 corrected native dispatches
+concurrently (retained controllers25098/90430), plus worker102 inventory
+dispatch67088 after canonical retirement/release of its previous obligation.
+These are genuine native dispatches, not desktop-owned activity evidence.

@@ -140,6 +140,9 @@ test('worker instructions retain exact obligation, requirement, acceptance step,
  assert.ok(instructions.includes('Worker rebase upstream: refs/remotes/origin/campaign/fixture.'));
  assert.ok(instructions.includes('Exact fetch argument vector: ["git","fetch","--no-tags","--","origin","refs/heads/campaign/fixture:refs/remotes/origin/campaign/fixture"].'));
  assert.ok(instructions.includes('The coordinator publication gate owns origin/main.'));
+ assert.ok(instructions.includes('Evidence inputs.paths must identify files actually consumed by the recorded QA command.'));
+ assert.ok(instructions.includes('The frozen lease retains that authority separately.'));
+ assert.ok(instructions.includes('if the QA command actually consumes that document, report the incompatible proof scope instead of omitting a genuine QA input.'));
  assert.ok(instructions.includes('Request sandbox escalation for each authorized Git mutation before its first execution (sandbox_permissions=require_escalated).'));
  const correctedRollingWorkerContext: RollingWorkerContext = { ...rollingWorkerContext,
   rejectedReview: { schemaVersion:1,reviewId:'review',revision:'a'.repeat(40),reviewerSessionId:'original-reviewer',
