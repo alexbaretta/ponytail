@@ -69,6 +69,35 @@ coordinator's exact non-null host project ID.
    Record inactivity, replenish that original native worker, and bind its renewed
    lease generation. Normal next-actions target its original session.
 
+## Arc SWARM-CONTINUITY: Execute complete assignments and respond to help
+
+Traceability: verifies REQ-SWARM-SKILL
+
+**Acceptances:** OBL-20, OBL-21. Use retained original sessions and the configured
+resource budgets; do not restart live operations to demonstrate adoption.
+
+1. Give a worker a complete bounded assignment with light proofs, one pending
+   heavy operation and an independent remaining repair. Let a focused check pass.
+   - The worker keeps its original assignment goal, reports progress, and
+     continues the independent repair without asking for another small grant.
+2. Queue its heavy operation while another original handle is live. Introduce
+   one necessary out-of-lease path and retain a genuine host approval denial.
+   - The worker preserves the live handle and current scope, prepares the exact
+     scope request, and continues available in-scope work. It does not mark the
+     goal complete or bypass the denial. A blocked native goal without a resume
+     API is reported honestly, not replaced or falsely completed.
+3. While coordinator integration is running, surface the scope request and a
+   completed resource holder among more than eight original workers.
+   - The coordinator sweeps every batch, answers the routine ownership decision
+     within its authority, reconciles the binding, hands off the released slot
+     and confirms the original session response before starting more long work.
+     The original integration handle continues; a heartbeat is not substituted
+     for this service loop. Required human authority is requested once.
+4. Reinspect idle unfinished workers and actual goals after adoption.
+   - Every idle worker has a concrete cause and next action. Passing a small
+     check is not accepted as completing the whole assignment; real waits and
+     native-goal limitations are distinguished from executing sessions.
+
 ## Arc SWARM-OWNERS: Select the owner and retain orphaned workers
 
 Traceability: verifies REQ-SWARM-OWNERSHIP

@@ -183,3 +183,16 @@ with execution. Teach the real native transport representation and uncertain-sen
 recovery; do not claim absent capabilities or invent unavailable commands.
 
 | OBL-18 | Before counting an authorized worker as executing, the coordinator explicitly instructs it to establish a session-local active goal for its bounded assignment and acceptance conditions, and verifies tool evidence. Preserve a matching unfinished goal and keep initialization-only or held workers on hold. | Canonical and generated/installed skills instruct worker-local `get_goal`/`create_goal`; host evidence shows each executing worker has its assignment goal and continues beyond its first turn. Completion requires verification and durable discharge; missing goal capability is reported. Stakeholder clarification: 2026-10-16. |
+
+
+**Stakeholder clarification, 2026-10-16:** Workers must execute independently
+through their complete assignments, and the coordinator must promptly handle
+requests for help instead of leaving most sessions inactive after small grants.
+Source: the direct Ponytail chat request accompanying the environment-worker
+light-validation screenshot. This adds the following obligations; it does not
+waive existing path, resource, review, host permission or publication gates.
+
+| Obligation | Required condition | Discharge criterion |
+| --- | --- | --- |
+| OBL-20 | Assign workers complete bounded outcomes with standing in-scope execution authority and session-local goals retained through proof, review and delivery. Small grants and temporary waits do not redefine completion or establish a blocked goal. Preserve actual native resume limitations and exact edit ownership. | Canonical/generated/installed instructions agree; a realistic worker scenario proceeds from focused proof through remaining independent work without a fresh coordinator instruction, retains its unfinished goal at an actual gate, and refuses out-of-lease edits and fabricated goal recovery. |
+| OBL-21 | The coordinator services worker requests and ready resource handoffs while integration progresses, using compact whole-roster observation and original asynchronous operation handles. Constrain scarce operations rather than unrelated source work; count actual execution separately from membership. | A realistic coordination scenario answers pending help and grants a released slot before another long integration step, covers the complete roster with bounded waits, preserves live operations and real authority gates, and identifies idle unfinished workers honestly. Live adoption evidence and any unverified host behavior are reported separately. |

@@ -166,6 +166,10 @@ Git-integration path already supply the host contract.
 
 ## Worker execution
 
+Apply the [swarm worker continuity protocol](../swarm/references/worker-continuity.md)
+throughout the complete slice. Progress, a resource-slot grant or a coordinator
+reply does not create a smaller assignment or a terminal acceptance boundary.
+
 Start from the exact frozen assignment and current campaign revision. Run the
 entire assigned slice through one aggregate command with the configured internal
 parallelism. Let every independent selected unit reach a terminal result. Within
@@ -191,7 +195,10 @@ If the slice fails:
    changed paths, diagnosis, focused commands and outcomes, relevant-input
    impact, and the remaining slice state.
 5. Do not stop the worker turn or emit a terminal rolling submission, slice
-   acceptance packet, DONE transition or discharge certificate for the repair.
+   acceptance packet, DONE transition or discharge certificate for a repair
+   alone. A genuine coordination boundary with no independent assigned work
+   available permits yielding the request through the continuity protocol,
+   while retaining the unfinished assignment and goal.
    Continue only on a tree whose relationship to the coordinator's integrated
    repair line is explicit.
 6. After integration, reconcile at a safe boundary, rerun affected failed

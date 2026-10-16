@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-10-16-fragmented_worker_authority",
+  "recorded_at": "2026-10-16T10:01:00-07:00",
+  "source_references": [
+    "pm/plans/closed/2026-10-16-swarm-worker-continuity/plan.md",
+    "pm/requirements/swarms.md#req-swarm-skill-export-the-parallel-execution-procedure",
+    "pm/uat/swarms.md#arc-swarm-continuity-execute-complete-assignments-and-respond-to-help"
+  ],
+  "context": {
+    "languages": [
+      "markdown"
+    ],
+    "frameworks": [],
+    "components": [
+      "swarm",
+      "qa-swarm",
+      "plan-execution"
+    ],
+    "affected_boundaries": [
+      "worker assignment and session goal",
+      "coordinator request service and resource admission"
+    ],
+    "code_references": [
+      "skills/swarm/SKILL.md",
+      "skills/swarm/references/worker-continuity.md",
+      "skills/qa-swarm/SKILL.md"
+    ]
+  },
+  "observed_behavior": "Workers ended short proof grants with their broader assignments unfinished; many then waited idle or retained native blocked goals that available tools could not resume.",
+  "expected_behavior": "Workers autonomously finish complete bounded assignments and retain unfinished goals while the coordinator promptly services help and genuine resource gates.",
+  "causal_mechanism": "Coordinators used micro-grants as worker return boundaries, required repeated routine permissions, promoted queue-only waits to blocked goals, and serviced requests less often than these grants expired. A temporary index-contention commit queue became a general admission dependency.",
+  "anti_pattern": {
+    "structural_description": "The coordinator owns each routine next step instead of granting a complete owned workflow; worker progress depends on recurring synchronous handoffs.",
+    "why_it_fails": "Short grants exhaust before request service, leaving safe authorized work idle and creating native goal states without an assistant resume transition."
+  },
+  "correct_pattern": {
+    "required_invariant": "Each worker retains authority and a goal for its complete owned assignment; only real conflicts consume coordinator service and resource slots.",
+    "implementation_description": "One canonical continuity protocol defines standing workflow authority, original-goal retention, exact scope amendment, intersecting resource budgets and a bounded whole-roster service loop with asynchronous operation handles."
+  },
+  "applicability_conditions": [
+    "Host-managed top-level workers with independently assigned work and limited coordinator/resource capacity",
+    "Complete assignment remains unfinished after an intermediate proof or resource grant"
+  ],
+  "known_non_matches": [
+    "A real host approval denial or unavailable native resume API",
+    "A genuine shared indexing hook or runtime resource that requires bounded admission",
+    "An initialization-only worker that remains explicitly held"
+  ],
+  "confirmation_evidence": [
+    "Stakeholder screenshot shows a 3m29 light-validation turn ending with EXP-004 unresolved.",
+    "GWEN coordinator reported 5\u20136 workers idle within about five minutes of dispatch, routine grants and 2\u20135 minute sweeps; it independently confirmed blocked goals lacked an exposed active transition.",
+    "Independent read-only forward evaluation handled a worker slice and a 15-worker coordinator without fresh micro-grants or gate bypasses; after wording clarification it found no remaining actionable conflicts."
+  ],
+  "regression_proofs": [
+    "pm/uat/swarms.md: Arc SWARM-CONTINUITY",
+    "Independent forward evaluation /root/continuity_forward_test, 2026-10-16: both scenario decisions and follow-up review; no live-runtime equivalence claim"
+  ]
+}

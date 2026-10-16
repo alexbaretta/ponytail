@@ -169,7 +169,7 @@ Queue further setup while completing started setup; keep source-only work moving
    these worker instructions. Include exact obligation IDs, requirements,
    acceptance/Arc/Step references, paths, proof selections, prerequisites and base.
    Explicitly instruct each worker to call `create_goal` in its own session for
-   that bounded assignment before implementation, so work continues beyond the
+   the complete bounded assignment before implementation, so work continues beyond the
    first turn. The goal must include the authorized obligations and acceptance
    conditions; omit a token budget unless the user requested one. Have the worker
    inspect `get_goal` first and retain a matching unfinished goal instead of
@@ -211,8 +211,16 @@ capacity cannot be filled; never describe idle bindings as active development.
 
 ## Coordinate results and blockers
 
+Use the [worker continuity protocol](references/worker-continuity.md) for complete
+assignments, standing execution/resource authority, session-local goals, help
+requests and the coordinator service loop. Apply it when adopting an existing
+swarm as well as when starting one; a short follow-up must not shrink an
+unfinished assignment into a one-turn chore.
+
 Workers implement autonomously within their exact scope and run configured
-focused QA and Arcs. For changed code they fetch and semantically rebase against
+focused QA and Arcs. Actual host approval denials remain gates; retain the
+original candidate and use the continuity protocol for help and independent
+work rather than bypassing the denied operation. For changed code they fetch and semantically rebase against
 the campaign branch, commit the exact candidate, and have a local read-only
 reviewer subagent inspect that SHA and base before terminal submission. The
 worker corrects findings and returns the corrected candidate to the same

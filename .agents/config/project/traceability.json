@@ -1639,6 +1639,16 @@
       "locator": "text"
     },
     {
+      "class": "implementation",
+      "path": "skills/swarm/references/worker-continuity.md",
+      "locator": "text"
+    },
+    {
+      "class": "plan",
+      "path": "pm/plans/closed/2026-10-16-swarm-worker-continuity/plan.md",
+      "locator": "text"
+    },
+    {
       "class": "unit-test",
       "path": "tests/swarm-skill.test.ts",
       "locator": "text"

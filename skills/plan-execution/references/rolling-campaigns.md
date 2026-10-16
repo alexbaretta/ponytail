@@ -222,6 +222,8 @@ recording and publication. Workers never publish to mainline or accept their own
 discharge. If no identifiable local reviewer is available, stop at the review
 boundary so the coordinator can assign a top-level reviewer; do not self-review
 or fabricate an identity.
+Use the [swarm worker continuity protocol](../../swarm/references/worker-continuity.md)
+for sustained goals, standing resource authority and responsive help handling.
 Report unknown prerequisites, blockers or required scope changes to the
 coordinator; retain the checkout and do not silently alter its authoritative graph.
 These are legitimate coordination boundaries, unlike routine coding decisions.
