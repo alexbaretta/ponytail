@@ -9,7 +9,7 @@ import {execFileSync,spawnSync} from 'node:child_process';
 import test from 'node:test';
 import {Pool} from 'pg';
 import {databaseOptions} from '../src/project-index-database.js';
-import {inspectSwarmInfo,readSwarmWorktreeDeletionReportV1,readSwarmInfoV5} from '../src/swarm-info.js';
+import {inspectSwarmInfo,readSwarmWorktreeDeletionReportV1,readSwarmInfoV6} from '../src/swarm-info.js';
 import {SwarmStore} from '../src/swarm-store.js';
 import type {SwarmUserWorktree} from '../src/swarm-owner.js';
 import {resetRollingProject,type RollingResetRequestV1} from '../src/rolling-reset.js';
@@ -63,7 +63,7 @@ test('host worktree enrollment preserves native paths, fences owners and never r
  fs.writeFileSync(path.join(mainRoot,'ponytail-journal.json'),JSON.stringify({...journal,projectId}));
  const enrollment=spawnSync(process.execPath,[path.join(repositoryRoot,'src/swarm-info.js'),'worktree-enroll','--path',hostRoot,'--json'],{cwd:mainRoot,encoding:'utf8'});
  assert.equal(enrollment.status,0,enrollment.stderr);
- assert.deepEqual(readSwarmInfoV5(JSON.parse(enrollment.stdout)).worktrees[0]?.membership,{kind:'swarm',generation:swarmWorktreeMembership.generation});
+ assert.deepEqual(readSwarmInfoV6(JSON.parse(enrollment.stdout)).worktrees[0]?.membership,{kind:'swarm',generation:swarmWorktreeMembership.generation});
  await assert.rejects(swarmStore.enrollWorktree(otherRoot,hostRoot),/original ownership/);
  fs.writeFileSync(path.join(hostRoot,'session_id.txt'),'host-session\n');
  const swarmWorkerBinding=await swarmStore.bindWorker(swarmWorktreeMembership,{rootPath:hostRoot,sessionId:'host-session',threadId:'host-thread'},
@@ -119,7 +119,7 @@ test('competing user swarms exclusively claim the lowest available retained chec
  assert.equal(swarmWorktreeMembership.number,101);assert.equal(swarmWorktreeMembership.rootPath,checkout101);
  assert.ok(swarmWorktreeMembership.ownerRoot===mainRoot||swarmWorktreeMembership.ownerRoot===otherRoot);
  const swarmInfoV3=await inspectSwarmInfo(swarmWorktreeMembership.ownerRoot,pool,projectId);
- assert.equal(swarmInfoV3.schemaVersion,5);assert.equal(swarmInfoV3.worktrees.length,1);
+ assert.equal(swarmInfoV3.schemaVersion,6);assert.equal(swarmInfoV3.worktrees.length,1);
  assert.deepEqual(swarmInfoV3.worktrees[0]?.membership,{kind:'swarm',generation:swarmWorktreeMembership.generation});
  assert.equal(swarmInfoV3.worktrees[0]?.assignment,null);
  assert.deepEqual(await inspectSwarmInfo(checkout101,pool,projectId),swarmInfoV3);

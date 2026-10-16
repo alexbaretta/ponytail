@@ -41,12 +41,12 @@
         "module": "src/swarm-queue.ts",
         "readerRegistryExport": "SwarmQueueResultReaders"
       },
-      "currentVersion": "V2",
+      "currentVersion": "V3",
       "versions": [
-        "V1", "V2"
+        "V1", "V2", "V3"
       ],
       "supportedReadVersions": [
-        "V1", "V2"
+        "V1", "V2", "V3"
       ],
       "supportedDowngradeVersions": []
     },
@@ -57,12 +57,12 @@
         "module": "src/swarm-queue.ts",
         "readerRegistryExport": "SwarmQueueCommandReaders"
       },
-      "currentVersion": "V2",
+      "currentVersion": "V3",
       "versions": [
-        "V1", "V2"
+        "V1", "V2", "V3"
       ],
       "supportedReadVersions": [
-        "V1", "V2"
+        "V1", "V2", "V3"
       ],
       "supportedDowngradeVersions": []
     },
@@ -73,12 +73,12 @@
         "module": "src/swarm-queue.ts",
         "readerRegistryExport": "SwarmQueueStateReaders"
       },
-      "currentVersion": "V2",
+      "currentVersion": "V3",
       "versions": [
-        "V1", "V2"
+        "V1", "V2", "V3"
       ],
       "supportedReadVersions": [
-        "V1", "V2"
+        "V1", "V2", "V3"
       ],
       "supportedDowngradeVersions": []
     },
@@ -1099,12 +1099,12 @@
         "module": "src/swarm-info.ts",
         "readerRegistryExport": "SwarmInfoReaders"
       },
-      "currentVersion": "V5",
+      "currentVersion": "V6",
       "versions": [
-        "V1", "V2", "V3", "V4", "V5"
+        "V1", "V2", "V3", "V4", "V5", "V6"
       ],
       "supportedReadVersions": [
-        "V1", "V2", "V3", "V4", "V5"
+        "V1", "V2", "V3", "V4", "V5", "V6"
       ],
       "supportedDowngradeVersions": []
     }

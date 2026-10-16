@@ -203,14 +203,23 @@ class SwarmStore {
     WHERE s.project_id=$1 AND s.number=$2 AND s.owner_root=$3 AND s.generation=$4 FOR UPDATE`, [this.projectId, currentSwarmWorkerBinding.worktreeNumber, currentSwarmWorkerBinding.ownerRoot, currentSwarmWorkerBinding.worktreeGeneration])).rows[0];
             if (worktree === undefined || worktree.root_path !== currentSwarmWorkerBinding.rootPath || (worktree.state !== 'ACTIVE' && worktree.state !== 'RESERVED'))
                 throw new Error('swarm: original worker checkout membership changed');
-            if (node_fs_1.default.realpathSync(currentSwarmWorkerBinding.rootPath) !== currentSwarmWorkerBinding.rootPath || node_fs_1.default.realpathSync((0, rolling_integration_js_1.git)(currentSwarmWorkerBinding.rootPath, ['rev-parse', '--path-format=absolute', '--git-common-dir']).trim()) !== worktree.git_common_directory)
-                throw new Error('swarm: original checkout identity changed');
-            (0, rolling_worktrees_js_1.requireRollingGitOperationAbsent)(currentSwarmWorkerBinding.rootPath);
+            const root = node_fs_1.default.lstatSync(currentSwarmWorkerBinding.rootPath, { throwIfNoEntry: false });
+            const missing = root === undefined || root.isDirectory() && node_fs_1.default.lstatSync(node_path_1.default.join(currentSwarmWorkerBinding.rootPath, '.git'), { throwIfNoEntry: false }) === undefined;
+            if (missing) {
+                if (!await (0, swarm_queue_js_1.isSwarmQueueWorkerRetirementAuthorized)(poolClient, this.projectId, currentSwarmWorkerBinding.ownerRoot, currentSwarmWorkerBinding.sessionId, currentSwarmWorkerBinding.generation, currentSwarmWorkerBinding.rootPath))
+                    throw new Error('swarm: missing native checkout requires preserved host quiescence evidence and suspended queue');
+            }
+            else {
+                if (node_fs_1.default.realpathSync(currentSwarmWorkerBinding.rootPath) !== currentSwarmWorkerBinding.rootPath || node_fs_1.default.realpathSync((0, rolling_integration_js_1.git)(currentSwarmWorkerBinding.rootPath, ['rev-parse', '--path-format=absolute', '--git-common-dir']).trim()) !== worktree.git_common_directory)
+                    throw new Error('swarm: original checkout identity changed');
+                (0, rolling_worktrees_js_1.requireRollingGitOperationAbsent)(currentSwarmWorkerBinding.rootPath);
+                const marker = node_path_1.default.join(currentSwarmWorkerBinding.rootPath, 'session_id.txt');
+                if (node_fs_1.default.lstatSync(marker, { throwIfNoEntry: false }) !== undefined)
+                    (0, rolling_worktrees_js_1.validateRollingSessionMarker)(currentSwarmWorkerBinding.rootPath, currentSwarmWorkerBinding.sessionId);
+            }
             const marker = node_path_1.default.join(currentSwarmWorkerBinding.rootPath, 'session_id.txt');
-            if (node_fs_1.default.lstatSync(marker, { throwIfNoEntry: false }) !== undefined)
-                (0, rolling_worktrees_js_1.validateRollingSessionMarker)(currentSwarmWorkerBinding.rootPath, currentSwarmWorkerBinding.sessionId);
             await this.releaseCampaignAssignment(poolClient, currentSwarmWorkerBinding.worktreeNumber, currentSwarmWorkerBinding.ownerRoot, currentSwarmWorkerBinding.sessionId);
-            if (node_fs_1.default.lstatSync(marker, { throwIfNoEntry: false }) !== undefined)
+            if (!missing && node_fs_1.default.lstatSync(marker, { throwIfNoEntry: false }) !== undefined)
                 node_fs_1.default.unlinkSync(marker);
             await poolClient.query("UPDATE ponytail_index.swarm_worker_v1 SET state='REMOVED' WHERE session_id=$1", [currentSwarmWorkerBinding.sessionId]);
             await poolClient.query("UPDATE ponytail_index.rolling_worktree_v1 SET state='RESERVED' WHERE project_id=$1 AND number=$2", [this.projectId, currentSwarmWorkerBinding.worktreeNumber]);
@@ -323,12 +332,25 @@ class SwarmStore {
             const rollingStoredWorktree = (0, rolling_campaign_store_js_1.readWorktree)(row);
             if (rollingStoredWorktree.rootPath !== swarmWorktreeMembership.rootPath || rollingStoredWorktree.state !== 'RESERVED')
                 throw new Error('swarm: checkout has conflicting identity or activity; preserve ownership');
-            if (node_fs_1.default.realpathSync(rollingStoredWorktree.rootPath) !== rollingStoredWorktree.rootPath
-                || node_fs_1.default.realpathSync((0, rolling_integration_js_1.git)(rollingStoredWorktree.rootPath, ['rev-parse', '--path-format=absolute', '--git-common-dir']).trim()) !== row.git_common_directory)
-                throw new Error('swarm: checkout repository identity changed; preserve ownership');
             if ((await poolClient.query("SELECT 1 FROM ponytail_index.rolling_assignment_v1 WHERE project_id=$1 AND worktree_number=$2 AND state<>'RELEASED'", [this.projectId, rollingStoredWorktree.number])).rowCount
                 || await this.hasNativeOwner(poolClient, rollingStoredWorktree.rootPath))
                 throw new Error('swarm: checkout retains an assignment or native actor; establish cessation and remove worker ownership first');
+            const root = node_fs_1.default.lstatSync(rollingStoredWorktree.rootPath, { throwIfNoEntry: false });
+            const missing = root === undefined || root.isDirectory() && node_fs_1.default.lstatSync(node_path_1.default.join(rollingStoredWorktree.rootPath, '.git'), { throwIfNoEntry: false }) === undefined;
+            if (missing) {
+                const rollingManagedDirectory = (0, rolling_worktrees_js_1.resolveRollingManagedDirectory)(swarmWorktreeMembership.ownerRoot);
+                if (row.base_commit !== null || rollingManagedDirectory.configuration.retirementCommands?.length !== 0)
+                    throw new Error('swarm: missing checkout still needs original project resource cleanup; preserve membership');
+                const retired = (await poolClient.query("SELECT session_id,generation FROM ponytail_index.swarm_worker_v1 WHERE project_id=$1 AND owner_root=$2 AND worktree_number=$3 AND worktree_generation=$4 AND state='REMOVED' ORDER BY worker_number DESC LIMIT 1", [this.projectId, swarmWorktreeMembership.ownerRoot, swarmWorktreeMembership.number, swarmWorktreeMembership.generation])).rows[0];
+                if (retired === undefined || !await (0, swarm_queue_js_1.isSwarmQueueWorkerRetirementAuthorized)(poolClient, this.projectId, swarmWorktreeMembership.ownerRoot, stringColumn(retired.session_id), stringColumn(retired.generation), swarmWorktreeMembership.rootPath))
+                    throw new Error('swarm: missing native checkout lacks exact preserved retirement authority');
+                await poolClient.query('DELETE FROM ponytail_index.swarm_worktree_v1 WHERE project_id=$1 AND number=$2', [this.projectId, rollingStoredWorktree.number]);
+                await poolClient.query("UPDATE ponytail_index.rolling_worktree_v1 SET state='QUARANTINED' WHERE project_id=$1 AND number=$2", [this.projectId, rollingStoredWorktree.number]);
+                return;
+            }
+            if (node_fs_1.default.realpathSync(rollingStoredWorktree.rootPath) !== rollingStoredWorktree.rootPath
+                || node_fs_1.default.realpathSync((0, rolling_integration_js_1.git)(rollingStoredWorktree.rootPath, ['rev-parse', '--path-format=absolute', '--git-common-dir']).trim()) !== row.git_common_directory)
+                throw new Error('swarm: checkout repository identity changed; preserve ownership');
             (0, rolling_worktrees_js_1.requireRollingGitOperationAbsent)(rollingStoredWorktree.rootPath);
             (0, rolling_worktrees_js_1.requireRollingSessionMarkerAbsent)(rollingStoredWorktree.rootPath);
             if (row.base_commit !== null) {

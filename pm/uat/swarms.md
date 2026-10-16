@@ -481,3 +481,13 @@ and digest, unchanged tasks/ownership/candidates and evidence bytes, bounded V2
 receipts, explicit paginated inventory and cross-chunk evidence reads. Interrupt
 before publication and verify the original state and blob count are unchanged.
 After recovery, claim and hand off another task and service the FIFO queue.
+
+
+Stakeholder shutdown: establish host quiescence and verified source/evidence
+preservation for the entire bound roster, then issue coordinator-only `suspend`.
+Verify exact-generation snapshot, unchanged tasks/claims/candidates/requests,
+idempotence and rejection of further claims/completion. Retire a checkout already
+removed by its native host without recreating or editing its missing Git metadata;
+reject any missing-root retirement not covered by that exact suspension generation.
+V6 inventory must show suspension and missing-directory/metadata distinctions.
+After unbind, preserved unfinished obligations remain unfinished.

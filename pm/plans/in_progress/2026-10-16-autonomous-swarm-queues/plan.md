@@ -193,3 +193,29 @@ push, deployment, destructive resets and unrelated changes. The coordinator
 reports a shutdown/drain direction; no further replacement sessions are being
 created. Actual source restoration, retirement and bookkeeping must be verified
 separately from tooling acceptance. No full roster migration is claimed.
+
+
+Payload recovery committed as `27c241df`. Full acceptance passed all 1029 tests,
+installer suite and TSTS over 1685 files. Installed skill/plugin copies match.
+Live recovery succeeded: V2 receipt 294 bytes, sequence 147, 72 tasks, 36 requests,
+no pending discovery. The exact 188884016-byte archive retains SHA256
+`f77e0ff2371aba0c63db23d6001a6c93487c2e30ab2813783d304763801e5a88`;
+operational state is 5025901 bytes. These counts are a recovery checkpoint.
+
+The human directly confirmed retirement here: retire inactive workers and drain
+and retire the rest; no replacement swarm. All four useful workers are now
+reported host-verified idle and their final artifacts/dirty source are copied.
+V3 adds coordinator-only evidence-backed suspension, preserving unfinished state
+and exact bound generations while fencing further mutations. V6 inventory
+separates missing native directories/metadata from available roots. Bookkeeping
+retirement of an already missing native checkout requires that exact generation's
+suspension/preservation record; existing foreign identities remain rejected.
+This is cancellation of execution, never acceptance of unfinished obligations.
+
+
+Shutdown focused proof passed 15 queue/inventory/native-worktree tests and the
+additional focused missing-native-membership release workflow. Missing-root
+membership release remains limited to removed original workers, exact suspended
+generations, host-origin checkouts and explicitly empty configured resource
+cleanup; other cleanup obligations remain protected. Independent review found no
+remaining demonstrated P1/P2 issue after the admission-fence correction.

@@ -9,17 +9,22 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.SwarmQueueStore = exports.SwarmQueueStateReaders = exports.SwarmQueueCommandReaders = exports.SwarmQueueResultReaders = exports.SwarmQueueVerdictReaders = void 0;
 exports.readSwarmQueueCommandV1 = readSwarmQueueCommandV1;
 exports.readSwarmQueueCommandV2 = readSwarmQueueCommandV2;
+exports.readSwarmQueueCommandV3 = readSwarmQueueCommandV3;
 exports.readSwarmQueueCommand = readSwarmQueueCommand;
 exports.parseSwarmQueueJson = parseSwarmQueueJson;
 exports.readSwarmQueueStateV1 = readSwarmQueueStateV1;
 exports.readSwarmQueueStateV2 = readSwarmQueueStateV2;
+exports.readSwarmQueueStateV3 = readSwarmQueueStateV3;
 exports.readSwarmQueueState = readSwarmQueueState;
 exports.readSwarmQueueVerdictV1 = readSwarmQueueVerdictV1;
 exports.readSwarmQueueResultV1 = readSwarmQueueResultV1;
 exports.createSwarmQueueResultV2 = createSwarmQueueResultV2;
 exports.readSwarmQueueResultV2 = readSwarmQueueResultV2;
+exports.createSwarmQueueResultV3 = createSwarmQueueResultV3;
+exports.readSwarmQueueResultV3 = readSwarmQueueResultV3;
 exports.selectSwarmQueueTask = selectSwarmQueueTask;
 exports.requireSwarmQueueLifecycleQuiescence = requireSwarmQueueLifecycleQuiescence;
+exports.isSwarmQueueWorkerRetirementAuthorized = isSwarmQueueWorkerRetirementAuthorized;
 const node_fs_1 = __importDefault(require("node:fs"));
 const node_path_1 = __importDefault(require("node:path"));
 const node_crypto_1 = __importDefault(require("node:crypto"));
@@ -146,9 +151,14 @@ function readSwarmQueueCommandV2(value) {
     }
     return { ...readSwarmQueueCommandV1({ ...value, schemaVersion: 1 }), schemaVersion: 2 };
 }
-function readSwarmQueueCommand(value) { requireQueue(isRecord(value), 'expected queue command'); switch (value.schemaVersion) {
-    case 1: return { ...readSwarmQueueCommandV1(value), schemaVersion: 2 };
-    case 2: return readSwarmQueueCommandV2(value);
+function readSwarmQueueCommandV3(value) { requireQueue(isRecord(value) && value.schemaVersion === 3, 'unsupported command version'); if (value.command === 'suspend') {
+    const input = record(value, ['schemaVersion', 'campaignId', 'actor', 'command', 'reason', 'hostEvidencePath']);
+    return { schemaVersion: 3, campaignId: text(input.campaignId), actor: actor(input.actor), command: 'suspend', reason: text(input.reason), hostEvidencePath: relative(input.hostEvidencePath) };
+} return { ...readSwarmQueueCommandV2({ ...value, schemaVersion: 2 }), schemaVersion: 3 }; }
+function readSwarmQueueCommand(value) { requireQueue(isRecord(value), 'invalid command'); switch (value.schemaVersion) {
+    case 1: return { ...readSwarmQueueCommandV1(value), schemaVersion: 3 };
+    case 2: return { ...readSwarmQueueCommandV2(value), schemaVersion: 3 };
+    case 3: return readSwarmQueueCommandV3(value);
     default: throw new Error('swarm queue: unsupported command version');
 } }
 function parseSwarmQueueJson(source) { return (0, lossless_json_1.parse)(source, null, swarm_queue_payloads_js_1.parseSwarmQueueInteger); }
@@ -209,9 +219,13 @@ function readSwarmQueueStateV2(value) {
     const swarmQueueStateV1 = readSwarmQueueStateV1({ ...value, schemaVersion: 1, tasks: [], requests: requests.map(request => ({ ...request, artifacts: [] })) });
     return { ...swarmQueueStateV1, schemaVersion: 2, requests, tasks };
 }
+function suspension(value) { if (value === null)
+    return null; const input = record(value, ['reason', 'coordinatorSessionId', 'hostEvidence', 'workers']); const artifact = record(input.hostEvidence, ['path', 'blob']); requireQueue(Array.isArray(input.workers), 'invalid suspension workers'); const workers = input.workers.map(value => { const worker = record(value, ['sessionId', 'generation', 'rootPath']); return { sessionId: text(worker.sessionId), generation: text(worker.generation), rootPath: text(worker.rootPath) }; }); return { workers, reason: text(input.reason), coordinatorSessionId: text(input.coordinatorSessionId), hostEvidence: { path: relative(artifact.path), blob: (0, swarm_queue_payloads_js_1.readSwarmQueueBlobV1)(artifact.blob) } }; }
+function readSwarmQueueStateV3(value) { requireQueue(isRecord(value) && value.schemaVersion === 3, 'invalid queue state V3'); const { suspension: inputSuspension, ...rest } = value; const parsedSuspension = suspension(inputSuspension); requireQueue(value.state === 'suspended' ? parsedSuspension !== null : parsedSuspension === null, 'suspension/state mismatch'); const state = readSwarmQueueStateV2({ ...rest, schemaVersion: 2, state: value.state === 'suspended' ? 'open' : value.state }); return { ...state, schemaVersion: 3, state: value.state === 'suspended' ? 'suspended' : state.state, suspension: parsedSuspension }; }
 function readSwarmQueueState(value) { requireQueue(isRecord(value), 'invalid queue state'); switch (value.schemaVersion) {
     case 1: return readSwarmQueueStateV1(value);
     case 2: return readSwarmQueueStateV2(value);
+    case 3: return readSwarmQueueStateV3(value);
     default: throw new Error('swarm queue: unsupported state version');
 } }
 function readSwarmQueueVerdictV1(value) {
@@ -242,9 +256,9 @@ function readSwarmQueueResultV1(value) {
     return { schemaVersion: 1, queue: swarmQueueStateV1, task: swarmQueueTaskV1, request: swarmQueueRequestV1 };
 }
 exports.SwarmQueueVerdictReaders = { V1: readSwarmQueueVerdictV1 };
-exports.SwarmQueueResultReaders = { V1: readSwarmQueueResultV1, V2: readSwarmQueueResultV2 };
-exports.SwarmQueueCommandReaders = { V1: readSwarmQueueCommandV1, V2: readSwarmQueueCommandV2 };
-exports.SwarmQueueStateReaders = { V1: readSwarmQueueStateV1, V2: readSwarmQueueStateV2 };
+exports.SwarmQueueResultReaders = { V1: readSwarmQueueResultV1, V2: readSwarmQueueResultV2, V3: readSwarmQueueResultV3 };
+exports.SwarmQueueCommandReaders = { V1: readSwarmQueueCommandV1, V2: readSwarmQueueCommandV2, V3: readSwarmQueueCommandV3 };
+exports.SwarmQueueStateReaders = { V1: readSwarmQueueStateV1, V2: readSwarmQueueStateV2, V3: readSwarmQueueStateV3 };
 function digest(content) { return node_crypto_1.default.createHash('sha256').update(content).digest('hex'); }
 function safeFile(root, relativePath) {
     const target = node_path_1.default.join(root, relative(relativePath));
@@ -294,29 +308,31 @@ function readSwarmQueueResultV2(value) {
     }
     return { schemaVersion: 2, queue: { campaignId: text(queue.campaignId), ownerRoot: text(queue.ownerRoot), state: queue.state, sequence: integer(queue.sequence), pendingDiscoveryId: nullableText(queue.pendingDiscoveryId), taskCount: integer(queue.taskCount), requestCount: integer(queue.requestCount) }, task: input.task === null ? null : readTaskReceipt(input.task), request: input.request === null ? null : readRequestV2(input.request), page, artifact };
 }
-function canonical(swarmQueueStateV2) {
-    const source = readFile(swarmQueueStateV2.ownerRoot, swarmQueueStateV2.documentPath);
+function createSwarmQueueResultV3(swarmQueueOperation) { const state = swarmQueueOperation.queue; const result = createSwarmQueueResultV2({ ...swarmQueueOperation, queue: { ...state, schemaVersion: 2, state: state.state === 'suspended' ? 'open' : state.state } }); return { ...result, schemaVersion: 3, queue: { ...result.queue, state: state.state, suspension: state.suspension } }; }
+function readSwarmQueueResultV3(value) { requireQueue(isRecord(value) && value.schemaVersion === 3 && isRecord(value.queue), 'invalid result V3'); const { suspension: inputSuspension, ...queue } = value.queue; const parsedSuspension = suspension(inputSuspension); requireQueue(queue.state === 'suspended' ? parsedSuspension !== null : parsedSuspension === null, 'suspension/state mismatch'); const result = readSwarmQueueResultV2({ ...value, schemaVersion: 2, queue: { ...queue, state: queue.state === 'suspended' ? 'open' : queue.state } }); return { ...result, schemaVersion: 3, queue: { ...result.queue, state: queue.state === 'suspended' ? 'suspended' : result.queue.state, suspension: parsedSuspension } }; }
+function canonical(swarmQueueStateV3) {
+    const source = readFile(swarmQueueStateV3.ownerRoot, swarmQueueStateV3.documentPath);
     const obligationDocumentV1 = (0, obligations_js_1.parseObligationDocument)(source);
-    requireQueue(obligationDocumentV1.scopeId === swarmQueueStateV2.campaignId, 'canonical obligation scope differs');
-    const obligationBindingHistoryV1 = swarmQueueStateV2.bindingsPath === null ? { schemaVersion: 1, scopeId: obligationDocumentV1.scopeId, revisions: [] } : (0, obligation_binding_history_js_1.parseObligationBindingHistory)(readFile(swarmQueueStateV2.ownerRoot, swarmQueueStateV2.bindingsPath));
-    return { document: obligationDocumentV1, history: obligationBindingHistoryV1, scope: (0, obligations_js_1.projectObligationScope)(obligationDocumentV1, swarmQueueStateV2.ownerRoot, obligationBindingHistoryV1), digest: digest(source + JSON.stringify(obligationBindingHistoryV1)) };
+    requireQueue(obligationDocumentV1.scopeId === swarmQueueStateV3.campaignId, 'canonical obligation scope differs');
+    const obligationBindingHistoryV1 = swarmQueueStateV3.bindingsPath === null ? { schemaVersion: 1, scopeId: obligationDocumentV1.scopeId, revisions: [] } : (0, obligation_binding_history_js_1.parseObligationBindingHistory)(readFile(swarmQueueStateV3.ownerRoot, swarmQueueStateV3.bindingsPath));
+    return { document: obligationDocumentV1, history: obligationBindingHistoryV1, scope: (0, obligations_js_1.projectObligationScope)(obligationDocumentV1, swarmQueueStateV3.ownerRoot, obligationBindingHistoryV1), digest: digest(source + JSON.stringify(obligationBindingHistoryV1)) };
 }
 function inspectionTask(swarmQueueTaskV1) {
     return swarmQueueTaskV1.claim !== null && swarmQueueTaskV1.claim.leases.length > 0 && swarmQueueTaskV1.claim.leases.every(obligationLeaseV1 => obligationLeaseV1.binding.execution.operations.length === 1 && obligationLeaseV1.binding.execution.operations[0] === 'inspect' && obligationLeaseV1.binding.execution.selection.length === 0 && obligationLeaseV1.binding.execution.target === null);
 }
-function reconcileUnclaimed(swarmQueueStateV2, currentSwarmQueueCanonical) {
-    return { ...swarmQueueStateV2, tasks: swarmQueueStateV2.tasks.map(swarmQueueTaskV1 => swarmQueueTaskV1.state === 'ready' && swarmQueueTaskV1.claim === null && swarmQueueTaskV1.obligationIds.every(id => currentSwarmQueueCanonical.scope.projection.satisfiedIds.includes(id)) ? { ...swarmQueueTaskV1, state: 'done' } : swarmQueueTaskV1) };
+function reconcileUnclaimed(swarmQueueStateV3, currentSwarmQueueCanonical) {
+    return { ...swarmQueueStateV3, tasks: swarmQueueStateV3.tasks.map(swarmQueueTaskV1 => swarmQueueTaskV1.state === 'ready' && swarmQueueTaskV1.claim === null && swarmQueueTaskV1.obligationIds.every(id => currentSwarmQueueCanonical.scope.projection.satisfiedIds.includes(id)) ? { ...swarmQueueTaskV1, state: 'done' } : swarmQueueTaskV1) };
 }
 function overlaps(left, right) { return left === right || left.startsWith(right + '/') || right.startsWith(left + '/'); }
 function taskPaths(swarmQueueTaskV1, swarmQueueCanonical, frozen = true) {
     return !frozen || swarmQueueTaskV1.claim === null ? swarmQueueTaskV1.obligationIds.flatMap(id => swarmQueueCanonical.scope.bindings.get(id)?.execution.plannedPaths ?? []) : [swarmQueueTaskV1.claim, ...swarmQueueTaskV1.claimHistory].flatMap(swarmQueueClaimV1 => swarmQueueClaimV1.leases.flatMap(leaseObligationLeaseV1 => leaseObligationLeaseV1.binding.execution.plannedPaths));
 }
-function selectSwarmQueueTask(swarmQueueStateV2, sessionId, swarmQueueCanonical) {
+function selectSwarmQueueTask(swarmQueueStateV3, sessionId, swarmQueueCanonical) {
     const satisfied = new Set(swarmQueueCanonical.scope.projection.satisfiedIds);
-    const reserved = swarmQueueStateV2.tasks.filter(swarmQueueTaskV1 => swarmQueueTaskV1.state !== 'done' && swarmQueueTaskV1.claim !== null);
-    const previousSwarmQueueTaskV2 = swarmQueueStateV2.tasks.filter(swarmQueueTaskV1 => swarmQueueTaskV1.claim?.sessionId === sessionId).sort((leftSwarmQueueTaskV2, rightSwarmQueueTaskV2) => (rightSwarmQueueTaskV2.claimSequence ?? -1) - (leftSwarmQueueTaskV2.claimSequence ?? -1))[0];
+    const reserved = swarmQueueStateV3.tasks.filter(swarmQueueTaskV1 => swarmQueueTaskV1.state !== 'done' && swarmQueueTaskV1.claim !== null);
+    const previousSwarmQueueTaskV2 = swarmQueueStateV3.tasks.filter(swarmQueueTaskV1 => swarmQueueTaskV1.claim?.sessionId === sessionId).sort((leftSwarmQueueTaskV2, rightSwarmQueueTaskV2) => (rightSwarmQueueTaskV2.claimSequence ?? -1) - (leftSwarmQueueTaskV2.claimSequence ?? -1))[0];
     function affinity(swarmQueueTaskV1) { return previousSwarmQueueTaskV2 === undefined ? 0 : swarmQueueTaskV1.context.filter(value => previousSwarmQueueTaskV2.context.includes(value)).length; }
-    const eligible = swarmQueueStateV2.tasks.filter(swarmQueueTaskV1 => swarmQueueTaskV1.state === 'ready' && (swarmQueueTaskV1.claim === null || swarmQueueTaskV1.claim.sessionId === sessionId) && swarmQueueTaskV1.obligationIds.some(id => !satisfied.has(id))
+    const eligible = swarmQueueStateV3.tasks.filter(swarmQueueTaskV1 => swarmQueueTaskV1.state === 'ready' && (swarmQueueTaskV1.claim === null || swarmQueueTaskV1.claim.sessionId === sessionId) && swarmQueueTaskV1.obligationIds.some(id => !satisfied.has(id))
         && swarmQueueTaskV1.obligationIds.every(id => { const bindingObligationEffectiveBinding = swarmQueueCanonical.scope.bindings.get(id); return bindingObligationEffectiveBinding !== undefined && bindingObligationEffectiveBinding.dependsOn.every(dependency => satisfied.has(dependency) || swarmQueueTaskV1.obligationIds.includes(dependency)); })
         && reserved.every(ownerSwarmQueueTaskV2 => ownerSwarmQueueTaskV2.id === swarmQueueTaskV1.id || !ownerSwarmQueueTaskV2.obligationIds.some(id => swarmQueueTaskV1.obligationIds.includes(id)) && !taskPaths(ownerSwarmQueueTaskV2, swarmQueueCanonical).some(left => taskPaths(swarmQueueTaskV1, swarmQueueCanonical, false).some(right => overlaps(left, right)))));
     const preferred = eligible.filter(swarmQueueTaskV1 => swarmQueueTaskV1.preferredWorker === sessionId).sort((leftSwarmQueueTaskV2, rightSwarmQueueTaskV2) => leftSwarmQueueTaskV2.sequence - rightSwarmQueueTaskV2.sequence);
@@ -354,17 +370,17 @@ class SwarmQueueStore {
             }
         }
     }
-    async save(poolClient, swarmQueueStateV2) { readSwarmQueueStateV2(swarmQueueStateV2); await poolClient.query('UPDATE ponytail_index.swarm_queue_v1 SET state_text=$4,closed=$5,storage_version=2 WHERE project_id=$1 AND owner_root=$2 AND campaign_id=$3', [this.projectId, this.ownerRoot, swarmQueueStateV2.campaignId, JSON.stringify(swarmQueueStateV2), swarmQueueStateV2.state === 'complete']); }
-    async inspect(campaignId) { const row = (await this.pool.query('SELECT CASE WHEN storage_version=2 THEN state_text ELSE NULL END AS state_text FROM ponytail_index.swarm_queue_v1 WHERE project_id=$1 AND owner_root=$2 AND campaign_id=$3', [this.projectId, this.ownerRoot, campaignId])).rows[0]; requireQueue(row !== undefined && typeof row.state_text === 'string', 'queue absent or legacy storage requires authorized queue status migration'); return readSwarmQueueStateV2(parseSwarmQueueJson(row.state_text)); }
-    coordinator(swarmQueueCommandV2) { requireQueue(swarmQueueCommandV2.actor.kind === 'coordinator', 'operation requires the bound coordinator'); }
+    async save(poolClient, swarmQueueStateV3) { readSwarmQueueStateV3(swarmQueueStateV3); await poolClient.query('UPDATE ponytail_index.swarm_queue_v1 SET state_text=$4,closed=$5,storage_version=3 WHERE project_id=$1 AND owner_root=$2 AND campaign_id=$3', [this.projectId, this.ownerRoot, swarmQueueStateV3.campaignId, JSON.stringify(swarmQueueStateV3), swarmQueueStateV3.state === 'complete']); }
+    async inspect(campaignId) { const row = (await this.pool.query('SELECT CASE WHEN storage_version=3 THEN state_text ELSE NULL END AS state_text FROM ponytail_index.swarm_queue_v1 WHERE project_id=$1 AND owner_root=$2 AND campaign_id=$3', [this.projectId, this.ownerRoot, campaignId])).rows[0]; requireQueue(row !== undefined && typeof row.state_text === 'string', 'queue absent or legacy storage requires authorized queue status migration'); return readSwarmQueueStateV3(parseSwarmQueueJson(row.state_text)); }
+    coordinator(swarmQueueCommandV3) { requireQueue(swarmQueueCommandV3.actor.kind === 'coordinator', 'operation requires the bound coordinator'); }
     async noLegacyAssignments(poolClient) {
         const row = (await poolClient.query(`SELECT a.assignment_id FROM ponytail_index.rolling_assignment_v1 a JOIN ponytail_index.rolling_campaign_v1 c USING(project_id,campaign_id)
    WHERE a.project_id=$1 AND c.coordinator_root=$2 AND a.state<>'RELEASED' LIMIT 1`, [this.projectId, this.ownerRoot])).rows[0];
         requireQueue(row === undefined, 'quiesce/preserve and release legacy assignments before queue activation');
     }
-    add(swarmQueueStateV2, inputs, swarmQueueCanonical = canonical(swarmQueueStateV2)) {
-        const next = [...swarmQueueStateV2.tasks];
-        let sequence = swarmQueueStateV2.sequence;
+    add(swarmQueueStateV3, inputs, swarmQueueCanonical = canonical(swarmQueueStateV3)) {
+        const next = [...swarmQueueStateV3.tasks];
+        let sequence = swarmQueueStateV3.sequence;
         for (const swarmQueueTaskInputV1 of inputs) {
             const existingSwarmQueueTaskV2 = next.find(swarmQueueTaskV1 => swarmQueueTaskV1.id === swarmQueueTaskInputV1.id);
             if (existingSwarmQueueTaskV2 !== undefined) {
@@ -376,38 +392,38 @@ class SwarmQueueStore {
             requireQueue(!next.some(swarmQueueTaskV1 => swarmQueueTaskV1.state !== 'done' && swarmQueueTaskV1.obligationIds.some(id => swarmQueueTaskInputV1.obligationIds.includes(id))), 'obligation already has queued work; use its existing task');
             next.push({ ...swarmQueueTaskInputV1, sequence: ++sequence, claimSequence: null, state: 'ready', claim: null, claimHistory: [], candidate: null, checkpoint: null, review: null });
         }
-        return { ...swarmQueueStateV2, tasks: next, sequence };
+        return { ...swarmQueueStateV3, tasks: next, sequence };
     }
-    validateDiscovery(swarmQueueStateV2, swarmQueueDiscoveryV1) {
+    validateDiscovery(swarmQueueStateV3, swarmQueueDiscoveryV1) {
         requireQueue(swarmQueueDiscoveryV1.updates.length > 0 && new Set(swarmQueueDiscoveryV1.updates.map(updateSwarmQueueDocumentUpdateV1 => updateSwarmQueueDocumentUpdateV1.path)).size === swarmQueueDiscoveryV1.updates.length, 'discovery requires unique document updates');
         requireQueue(swarmQueueDiscoveryV1.updates.every((updateSwarmQueueDocumentUpdateV1, index) => swarmQueueDiscoveryV1.updates.every((otherSwarmQueueDocumentUpdateV1, otherIndex) => index === otherIndex || !overlaps(updateSwarmQueueDocumentUpdateV1.path, otherSwarmQueueDocumentUpdateV1.path))), 'document updates cannot contain ancestor/descendant file conflicts');
-        const rootsSwarmQueueRecordRootsV1 = swarmQueueStateV2.recordRoots;
+        const rootsSwarmQueueRecordRootsV1 = swarmQueueStateV3.recordRoots;
         if (swarmQueueDiscoveryV1.kind === 'bug')
             requireQueue(swarmQueueDiscoveryV1.updates.some(updateSwarmQueueDocumentUpdateV1 => updateSwarmQueueDocumentUpdateV1.path.startsWith(rootsSwarmQueueRecordRootsV1.issues + '/')), 'bug discovery requires an issue record');
-        requireQueue(swarmQueueDiscoveryV1.updates.every(updateSwarmQueueDocumentUpdateV1 => Object.values(rootsSwarmQueueRecordRootsV1).some(root => updateSwarmQueueDocumentUpdateV1.path.startsWith(root + '/')) || updateSwarmQueueDocumentUpdateV1.path === '.agents/config/project/traceability.json' || updateSwarmQueueDocumentUpdateV1.path === swarmQueueStateV2.bindingsPath), 'discovery update outside canonical PM/configuration scope');
+        requireQueue(swarmQueueDiscoveryV1.updates.every(updateSwarmQueueDocumentUpdateV1 => Object.values(rootsSwarmQueueRecordRootsV1).some(root => updateSwarmQueueDocumentUpdateV1.path.startsWith(root + '/')) || updateSwarmQueueDocumentUpdateV1.path === '.agents/config/project/traceability.json' || updateSwarmQueueDocumentUpdateV1.path === swarmQueueStateV3.bindingsPath), 'discovery update outside canonical PM/configuration scope');
         for (const updateSwarmQueueDocumentUpdateV1 of swarmQueueDiscoveryV1.updates) {
-            const target = safeFile(swarmQueueStateV2.ownerRoot, updateSwarmQueueDocumentUpdateV1.path);
+            const target = safeFile(swarmQueueStateV3.ownerRoot, updateSwarmQueueDocumentUpdateV1.path);
             requireQueue((node_fs_1.default.existsSync(target) ? node_fs_1.default.readFileSync(target, 'utf8') : null) === updateSwarmQueueDocumentUpdateV1.beforeContent, `stale document: ${updateSwarmQueueDocumentUpdateV1.path}`);
         }
-        const beforeSwarmQueueCanonical = canonical(swarmQueueStateV2);
-        const documentUpdateSwarmQueueDocumentUpdateV1 = swarmQueueDiscoveryV1.updates.find(updateSwarmQueueDocumentUpdateV1 => updateSwarmQueueDocumentUpdateV1.path === swarmQueueStateV2.documentPath);
+        const beforeSwarmQueueCanonical = canonical(swarmQueueStateV3);
+        const documentUpdateSwarmQueueDocumentUpdateV1 = swarmQueueDiscoveryV1.updates.find(updateSwarmQueueDocumentUpdateV1 => updateSwarmQueueDocumentUpdateV1.path === swarmQueueStateV3.documentPath);
         const proposed = new Map(swarmQueueDiscoveryV1.updates.map(updateSwarmQueueDocumentUpdateV1 => [updateSwarmQueueDocumentUpdateV1.path, updateSwarmQueueDocumentUpdateV1.content]));
-        const afterObligationDocumentV1 = documentUpdateSwarmQueueDocumentUpdateV1 === undefined ? beforeSwarmQueueCanonical.document : (0, obligations_js_1.acceptCheckpoint)(beforeSwarmQueueCanonical.document, (0, obligations_js_1.parseObligationDocument)(documentUpdateSwarmQueueDocumentUpdateV1.content), swarmQueueStateV2.ownerRoot, proposed);
+        const afterObligationDocumentV1 = documentUpdateSwarmQueueDocumentUpdateV1 === undefined ? beforeSwarmQueueCanonical.document : (0, obligations_js_1.acceptCheckpoint)(beforeSwarmQueueCanonical.document, (0, obligations_js_1.parseObligationDocument)(documentUpdateSwarmQueueDocumentUpdateV1.content), swarmQueueStateV3.ownerRoot, proposed);
         requireQueue(afterObligationDocumentV1.certificates.length === beforeSwarmQueueCanonical.document.certificates.length && afterObligationDocumentV1.checkpoints.slice(beforeSwarmQueueCanonical.document.checkpoints.length).every(obligationCheckpoint => obligationCheckpoint.certificateIds.length === 0) || swarmQueueDiscoveryV1.actor.kind === 'coordinator', 'canonical assessment requires coordinator');
-        const historyUpdateSwarmQueueDocumentUpdateV1 = swarmQueueDiscoveryV1.updates.find(updateSwarmQueueDocumentUpdateV1 => updateSwarmQueueDocumentUpdateV1.path === swarmQueueStateV2.bindingsPath);
+        const historyUpdateSwarmQueueDocumentUpdateV1 = swarmQueueDiscoveryV1.updates.find(updateSwarmQueueDocumentUpdateV1 => updateSwarmQueueDocumentUpdateV1.path === swarmQueueStateV3.bindingsPath);
         const obligationBindingHistoryV1 = historyUpdateSwarmQueueDocumentUpdateV1 === undefined ? beforeSwarmQueueCanonical.history : (0, obligation_binding_history_js_1.parseObligationBindingHistory)(historyUpdateSwarmQueueDocumentUpdateV1.content);
         requireQueue(obligationBindingHistoryV1.scopeId === beforeSwarmQueueCanonical.history.scopeId && obligationBindingHistoryV1.revisions.length >= beforeSwarmQueueCanonical.history.revisions.length && beforeSwarmQueueCanonical.history.revisions.every((revisionObligationBindingRevisionV1, index) => (0, node_util_1.isDeepStrictEqual)(revisionObligationBindingRevisionV1, obligationBindingHistoryV1.revisions[index])), 'accepted binding history prefix is immutable');
-        const projectionObligationScopeProjection = (0, obligations_js_1.projectObligationScope)(afterObligationDocumentV1, swarmQueueStateV2.ownerRoot, obligationBindingHistoryV1, undefined, proposed);
-        requireQueue(swarmQueueStateV2.tasks.filter(swarmQueueTaskV1 => swarmQueueTaskV1.state === 'working').every(swarmQueueTaskV1 => swarmQueueTaskV1.claim?.leases.every(leaseObligationLeaseV1 => (0, node_util_1.isDeepStrictEqual)(leaseObligationLeaseV1.binding, projectionObligationScopeProjection.bindings.get(leaseObligationLeaseV1.binding.obligationId)))), 'discovery cannot alter an actively executing frozen binding');
+        const projectionObligationScopeProjection = (0, obligations_js_1.projectObligationScope)(afterObligationDocumentV1, swarmQueueStateV3.ownerRoot, obligationBindingHistoryV1, undefined, proposed);
+        requireQueue(swarmQueueStateV3.tasks.filter(swarmQueueTaskV1 => swarmQueueTaskV1.state === 'working').every(swarmQueueTaskV1 => swarmQueueTaskV1.claim?.leases.every(leaseObligationLeaseV1 => (0, node_util_1.isDeepStrictEqual)(leaseObligationLeaseV1.binding, projectionObligationScopeProjection.bindings.get(leaseObligationLeaseV1.binding.obligationId)))), 'discovery cannot alter an actively executing frozen binding');
         requireQueue(swarmQueueDiscoveryV1.tasks.every(swarmQueueTaskInputV1 => swarmQueueTaskInputV1.obligationIds.every(id => projectionObligationScopeProjection.bindings.has(id))), 'discovered obligations missing from accepted baseline');
-        requireQueue(swarmQueueDiscoveryV1.tasks.every(swarmQueueTaskInputV1 => !swarmQueueStateV2.tasks.some(existingSwarmQueueTaskV2 => existingSwarmQueueTaskV2.state !== 'done' && existingSwarmQueueTaskV2.id !== swarmQueueTaskInputV1.id && existingSwarmQueueTaskV2.obligationIds.some(id => swarmQueueTaskInputV1.obligationIds.includes(id)))), 'discovered work duplicates an existing obligation');
-        this.add(swarmQueueStateV2, swarmQueueDiscoveryV1.tasks, { document: afterObligationDocumentV1, history: obligationBindingHistoryV1, scope: projectionObligationScopeProjection, digest: digest(JSON.stringify(afterObligationDocumentV1) + JSON.stringify(obligationBindingHistoryV1)) });
+        requireQueue(swarmQueueDiscoveryV1.tasks.every(swarmQueueTaskInputV1 => !swarmQueueStateV3.tasks.some(existingSwarmQueueTaskV2 => existingSwarmQueueTaskV2.state !== 'done' && existingSwarmQueueTaskV2.id !== swarmQueueTaskInputV1.id && existingSwarmQueueTaskV2.obligationIds.some(id => swarmQueueTaskInputV1.obligationIds.includes(id)))), 'discovered work duplicates an existing obligation');
+        this.add(swarmQueueStateV3, swarmQueueDiscoveryV1.tasks, { document: afterObligationDocumentV1, history: obligationBindingHistoryV1, scope: projectionObligationScopeProjection, digest: digest(JSON.stringify(afterObligationDocumentV1) + JSON.stringify(obligationBindingHistoryV1)) });
         if (swarmQueueDiscoveryV1.tasks.length === 0) {
             requireQueue(swarmQueueDiscoveryV1.actor.kind === 'coordinator' && swarmQueueDiscoveryV1.kind === 'work' && documentUpdateSwarmQueueDocumentUpdateV1 !== undefined, 'existing-obligation assessment requires coordinator and canonical checkpoint');
             requireQueue((0, node_util_1.isDeepStrictEqual)(afterObligationDocumentV1.baselines, beforeSwarmQueueCanonical.document.baselines) && (0, node_util_1.isDeepStrictEqual)(afterObligationDocumentV1.obligations, beforeSwarmQueueCanonical.document.obligations) && historyUpdateSwarmQueueDocumentUpdateV1 === undefined, 'assessment cannot change scope or bindings; register discovered work with tasks');
             const assessedObligationCertificates = afterObligationDocumentV1.certificates.filter(obligationCertificate => afterObligationDocumentV1.checkpoints.at(-1)?.certificateIds.includes(obligationCertificate.id));
             requireQueue(assessedObligationCertificates.length > 0, 'assessment requires accepted canonical certificates');
-            requireQueue(swarmQueueDiscoveryV1.updates.every(updateSwarmQueueDocumentUpdateV1 => updateSwarmQueueDocumentUpdateV1.path === swarmQueueStateV2.documentPath || updateSwarmQueueDocumentUpdateV1.path.startsWith(rootsSwarmQueueRecordRootsV1.plans + '/') && assessedObligationCertificates.some(obligationCertificate => obligationCertificate.artifacts.includes(updateSwarmQueueDocumentUpdateV1.path))), 'assessment updates must be canonical checkpoint or its plan evidence');
+            requireQueue(swarmQueueDiscoveryV1.updates.every(updateSwarmQueueDocumentUpdateV1 => updateSwarmQueueDocumentUpdateV1.path === swarmQueueStateV3.documentPath || updateSwarmQueueDocumentUpdateV1.path.startsWith(rootsSwarmQueueRecordRootsV1.plans + '/') && assessedObligationCertificates.some(obligationCertificate => obligationCertificate.artifacts.includes(updateSwarmQueueDocumentUpdateV1.path))), 'assessment updates must be canonical checkpoint or its plan evidence');
         }
         else {
             requireQueue(swarmQueueDiscoveryV1.updates.some(updateSwarmQueueDocumentUpdateV1 => updateSwarmQueueDocumentUpdateV1.path.startsWith(rootsSwarmQueueRecordRootsV1.requirements + '/')) && swarmQueueDiscoveryV1.updates.some(updateSwarmQueueDocumentUpdateV1 => updateSwarmQueueDocumentUpdateV1.path.startsWith(rootsSwarmQueueRecordRootsV1.uat + '/')) && swarmQueueDiscoveryV1.updates.some(updateSwarmQueueDocumentUpdateV1 => updateSwarmQueueDocumentUpdateV1.path.startsWith(rootsSwarmQueueRecordRootsV1.plans + '/')), 'discovery must reconcile configured requirements, UAT and plan records');
@@ -420,15 +436,15 @@ class SwarmQueueStore {
                 for (const requirementId of obligation.requirementIds) {
                     const requirementObligationRequirement = afterObligationDocumentV1.baselines.find(valueObligationBaseline => valueObligationBaseline.id === projectionObligationScopeProjection.projection.baselineId)?.requirements.find(valueObligationRequirement => valueObligationRequirement.id === requirementId);
                     requireQueue(requirementObligationRequirement !== undefined, 'requirement is absent from canonical baseline');
-                    const content = proposed.get(requirementObligationRequirement.path) ?? readFile(swarmQueueStateV2.ownerRoot, requirementObligationRequirement.path);
+                    const content = proposed.get(requirementObligationRequirement.path) ?? readFile(swarmQueueStateV3.ownerRoot, requirementObligationRequirement.path);
                     requireQueue(swarmQueueDiscoveryV1.updates.some(updateSwarmQueueDocumentUpdateV1 => updateSwarmQueueDocumentUpdateV1.path === requirementObligationRequirement.path), 'discovery must reconcile the actual canonical requirement source');
                     requireQueue(digest(content) === requirementObligationRequirement.digest, 'requirement digest differs from proposed canonical source');
                     requireQueue(swarmQueueDiscoveryV1.updates.some(updateSwarmQueueDocumentUpdateV1 => updateSwarmQueueDocumentUpdateV1.path.startsWith(rootsSwarmQueueRecordRootsV1.uat + '/') && updateSwarmQueueDocumentUpdateV1.content.includes(requirementId)), 'discovery UAT must reference every affected requirement');
                 }
             }
         const traceabilityPath = '.agents/config/project/traceability.json';
-        if (node_fs_1.default.existsSync(node_path_1.default.join(swarmQueueStateV2.ownerRoot, traceabilityPath)) || proposed.has(traceabilityPath)) {
-            const traceability = parseSwarmQueueJson(proposed.get(traceabilityPath) ?? readFile(swarmQueueStateV2.ownerRoot, traceabilityPath));
+        if (node_fs_1.default.existsSync(node_path_1.default.join(swarmQueueStateV3.ownerRoot, traceabilityPath)) || proposed.has(traceabilityPath)) {
+            const traceability = parseSwarmQueueJson(proposed.get(traceabilityPath) ?? readFile(swarmQueueStateV3.ownerRoot, traceabilityPath));
             requireQueue(isRecord(traceability) && Array.isArray(traceability.requirements) && Array.isArray(traceability.artifacts), 'invalid configured traceability inventory');
             for (const swarmQueueTaskInputV1 of swarmQueueDiscoveryV1.tasks)
                 for (const id of swarmQueueTaskInputV1.obligationIds) {
@@ -437,14 +453,14 @@ class SwarmQueueStore {
                 }
         }
     }
-    publishDiscovery(swarmQueueStateV2, swarmQueueDiscoveryV1) {
+    publishDiscovery(swarmQueueStateV3, swarmQueueDiscoveryV1) {
         for (const updateSwarmQueueDocumentUpdateV1 of swarmQueueDiscoveryV1.updates) {
-            const target = safeFile(swarmQueueStateV2.ownerRoot, updateSwarmQueueDocumentUpdateV1.path);
+            const target = safeFile(swarmQueueStateV3.ownerRoot, updateSwarmQueueDocumentUpdateV1.path);
             const current = node_fs_1.default.existsSync(target) ? node_fs_1.default.readFileSync(target, 'utf8') : null;
             requireQueue(current === updateSwarmQueueDocumentUpdateV1.beforeContent || current === updateSwarmQueueDocumentUpdateV1.content, `discovery recovery conflict: ${updateSwarmQueueDocumentUpdateV1.path}; preserve external changes`);
         }
         for (const updateSwarmQueueDocumentUpdateV1 of swarmQueueDiscoveryV1.updates) {
-            const target = safeFile(swarmQueueStateV2.ownerRoot, updateSwarmQueueDocumentUpdateV1.path);
+            const target = safeFile(swarmQueueStateV3.ownerRoot, updateSwarmQueueDocumentUpdateV1.path);
             if (node_fs_1.default.existsSync(target) && digest(node_fs_1.default.readFileSync(target, 'utf8')) === digest(updateSwarmQueueDocumentUpdateV1.content))
                 continue;
             node_fs_1.default.mkdirSync(node_path_1.default.dirname(target), { recursive: true });
@@ -474,191 +490,212 @@ class SwarmQueueStore {
         }
     }
     async execute(inputSwarmQueueCommandV1, invokingRoot) {
-        const swarmQueueCommandV2 = readSwarmQueueCommand(inputSwarmQueueCommandV1);
+        const swarmQueueCommandV3 = readSwarmQueueCommand(inputSwarmQueueCommandV1);
         const poolClient = await this.pool.connect();
         let transaction = false;
         try {
             await poolClient.query('SELECT pg_advisory_lock(hashtextextended($1,0))', [this.projectId]);
             await poolClient.query('BEGIN');
             transaction = true;
-            const swarmQueueActorContext = await this.validateActor(poolClient, swarmQueueCommandV2.actor, invokingRoot, swarmQueueCommandV2.campaignId);
-            let swarmQueueStateV2;
-            const storage = (await poolClient.query('SELECT storage_version FROM ponytail_index.swarm_queue_v1 WHERE project_id=$1 AND owner_root=$2 AND campaign_id=$3 FOR UPDATE', [this.projectId, this.ownerRoot, swarmQueueCommandV2.campaignId])).rows[0];
+            const swarmQueueActorContext = await this.validateActor(poolClient, swarmQueueCommandV3.actor, invokingRoot, swarmQueueCommandV3.campaignId);
+            let swarmQueueStateV3;
+            const storage = (await poolClient.query('SELECT storage_version FROM ponytail_index.swarm_queue_v1 WHERE project_id=$1 AND owner_root=$2 AND campaign_id=$3 FOR UPDATE', [this.projectId, this.ownerRoot, swarmQueueCommandV3.campaignId])).rows[0];
             if (storage?.storage_version === 1) {
-                const swarmQueuePayloads = new swarm_queue_payloads_js_1.SwarmQueuePayloads(poolClient, this.projectId, this.ownerRoot, swarmQueueCommandV2.campaignId);
+                const swarmQueuePayloads = new swarm_queue_payloads_js_1.SwarmQueuePayloads(poolClient, this.projectId, this.ownerRoot, swarmQueueCommandV3.campaignId);
                 const migratedSwarmQueueStateV2 = readSwarmQueueStateV2(await swarmQueuePayloads.migrate());
-                await poolClient.query('UPDATE ponytail_index.swarm_queue_v1 SET legacy_state_text=state_text,state_text=$4,storage_version=2 WHERE project_id=$1 AND owner_root=$2 AND campaign_id=$3', [this.projectId, this.ownerRoot, swarmQueueCommandV2.campaignId, JSON.stringify(migratedSwarmQueueStateV2)]);
+                await poolClient.query('UPDATE ponytail_index.swarm_queue_v1 SET legacy_state_text=state_text,state_text=$4,storage_version=2 WHERE project_id=$1 AND owner_root=$2 AND campaign_id=$3', [this.projectId, this.ownerRoot, swarmQueueCommandV3.campaignId, JSON.stringify(migratedSwarmQueueStateV2)]);
             }
-            const row = (await poolClient.query('SELECT state_text FROM ponytail_index.swarm_queue_v1 WHERE project_id=$1 AND owner_root=$2 AND campaign_id=$3 FOR UPDATE', [this.projectId, this.ownerRoot, swarmQueueCommandV2.campaignId])).rows[0];
+            if (storage !== undefined) {
+                const row = (await poolClient.query('SELECT state_text,storage_version FROM ponytail_index.swarm_queue_v1 WHERE project_id=$1 AND owner_root=$2 AND campaign_id=$3', [this.projectId, this.ownerRoot, swarmQueueCommandV3.campaignId])).rows[0];
+                if (row?.storage_version === 2) {
+                    requireQueue(typeof row.state_text === 'string', 'invalid V2 state');
+                    const previous = readSwarmQueueStateV2(parseSwarmQueueJson(row.state_text));
+                    await poolClient.query('UPDATE ponytail_index.swarm_queue_v1 SET state_text=$4,storage_version=3 WHERE project_id=$1 AND owner_root=$2 AND campaign_id=$3', [this.projectId, this.ownerRoot, swarmQueueCommandV3.campaignId, JSON.stringify({ ...previous, schemaVersion: 3, suspension: null })]);
+                }
+            }
+            const row = (await poolClient.query('SELECT state_text FROM ponytail_index.swarm_queue_v1 WHERE project_id=$1 AND owner_root=$2 AND campaign_id=$3 FOR UPDATE', [this.projectId, this.ownerRoot, swarmQueueCommandV3.campaignId])).rows[0];
             if (row === undefined) {
-                requireQueue(swarmQueueCommandV2.command === 'init', 'queue campaign is absent');
-                this.coordinator(swarmQueueCommandV2);
+                requireQueue(swarmQueueCommandV3.command === 'init', 'queue campaign is absent');
+                this.coordinator(swarmQueueCommandV3);
                 await this.noLegacyAssignments(poolClient);
-                requireQueue(swarmQueueCommandV2.authority.length > 0, 'explicit campaign authority references required');
-                swarmQueueStateV2 = { schemaVersion: 2, campaignId: swarmQueueCommandV2.campaignId, ownerRoot: this.ownerRoot, documentPath: swarmQueueCommandV2.documentPath, bindingsPath: swarmQueueCommandV2.bindingsPath, authority: swarmQueueCommandV2.authority, assessor: swarmQueueCommandV2.assessor, recordRoots: swarmQueueCommandV2.recordRoots, state: 'open', sequence: 0, tasks: [], requests: [], pending: null, discoveries: [] };
-                const currentSwarmQueueCanonical = canonical(swarmQueueStateV2);
+                requireQueue(swarmQueueCommandV3.authority.length > 0, 'explicit campaign authority references required');
+                swarmQueueStateV3 = { schemaVersion: 3, suspension: null, campaignId: swarmQueueCommandV3.campaignId, ownerRoot: this.ownerRoot, documentPath: swarmQueueCommandV3.documentPath, bindingsPath: swarmQueueCommandV3.bindingsPath, authority: swarmQueueCommandV3.authority, assessor: swarmQueueCommandV3.assessor, recordRoots: swarmQueueCommandV3.recordRoots, state: 'open', sequence: 0, tasks: [], requests: [], pending: null, discoveries: [] };
+                const currentSwarmQueueCanonical = canonical(swarmQueueStateV3);
                 const first = currentSwarmQueueCanonical.scope.bindings.keys().next().value;
                 if (first !== undefined)
-                    (0, obligation_binding_history_js_1.freezeObligationLease)(currentSwarmQueueCanonical.document, currentSwarmQueueCanonical.history, { obligationId: first, generation: node_crypto_1.default.randomUUID(), graphDigest: currentSwarmQueueCanonical.digest, assessor: swarmQueueStateV2.assessor, authority: swarmQueueStateV2.authority });
-                await poolClient.query('INSERT INTO ponytail_index.swarm_queue_v1(project_id,owner_root,campaign_id,state_text,closed,storage_version) VALUES($1,$2,$3,$4,false,2)', [this.projectId, this.ownerRoot, swarmQueueStateV2.campaignId, JSON.stringify(swarmQueueStateV2)]);
+                    (0, obligation_binding_history_js_1.freezeObligationLease)(currentSwarmQueueCanonical.document, currentSwarmQueueCanonical.history, { obligationId: first, generation: node_crypto_1.default.randomUUID(), graphDigest: currentSwarmQueueCanonical.digest, assessor: swarmQueueStateV3.assessor, authority: swarmQueueStateV3.authority });
+                await poolClient.query('INSERT INTO ponytail_index.swarm_queue_v1(project_id,owner_root,campaign_id,state_text,closed,storage_version) VALUES($1,$2,$3,$4,false,3)', [this.projectId, this.ownerRoot, swarmQueueStateV3.campaignId, JSON.stringify(swarmQueueStateV3)]);
             }
             else {
                 requireQueue(typeof row.state_text === 'string', 'invalid stored state');
-                swarmQueueStateV2 = readSwarmQueueStateV2(parseSwarmQueueJson(row.state_text));
+                swarmQueueStateV3 = readSwarmQueueStateV3(parseSwarmQueueJson(row.state_text));
             }
-            requireQueue(swarmQueueStateV2.ownerRoot === this.ownerRoot && swarmQueueStateV2.campaignId === swarmQueueCommandV2.campaignId, 'stored owner/campaign differs');
-            const readOnly = ['status', 'requests', 'page', 'artifact-read'].includes(swarmQueueCommandV2.command);
-            requireQueue(swarmQueueStateV2.pending === null || readOnly || swarmQueueCommandV2.command === 'recover' || swarmQueueCommandV2.command === 'abort-discovery' || swarmQueueCommandV2.command === 'discover' || swarmQueueCommandV2.command === 'status', 'finish pending discovery through recover before mutating queue');
+            requireQueue(swarmQueueStateV3.ownerRoot === this.ownerRoot && swarmQueueStateV3.campaignId === swarmQueueCommandV3.campaignId, 'stored owner/campaign differs');
+            const readOnly = ['status', 'requests', 'page', 'artifact-read'].includes(swarmQueueCommandV3.command);
+            requireQueue(swarmQueueStateV3.pending === null || readOnly || swarmQueueCommandV3.command === 'recover' || swarmQueueCommandV3.command === 'abort-discovery' || swarmQueueCommandV3.command === 'discover' || swarmQueueCommandV3.command === 'status', 'finish pending discovery through recover before mutating queue');
             let resultTaskSwarmQueueTaskV2 = null;
             let resultRequestSwarmQueueRequestV2 = null;
             let page = null;
             let artifact = null;
             if (!readOnly)
-                requireQueue(swarmQueueStateV2.state === 'open' || swarmQueueCommandV2.command === 'complete', 'campaign is complete');
-            switch (swarmQueueCommandV2.command) {
+                requireQueue(swarmQueueStateV3.state === 'open' || swarmQueueCommandV3.command === 'complete' && swarmQueueStateV3.state === 'complete' || swarmQueueCommandV3.command === 'suspend' && swarmQueueStateV3.state === 'suspended', 'campaign execution is complete or suspended');
+            switch (swarmQueueCommandV3.command) {
                 case 'init':
-                    this.coordinator(swarmQueueCommandV2);
-                    requireQueue(swarmQueueStateV2.documentPath === swarmQueueCommandV2.documentPath && swarmQueueStateV2.bindingsPath === swarmQueueCommandV2.bindingsPath && (0, node_util_1.isDeepStrictEqual)(swarmQueueStateV2.authority, swarmQueueCommandV2.authority) && swarmQueueStateV2.assessor === swarmQueueCommandV2.assessor && (0, node_util_1.isDeepStrictEqual)(swarmQueueStateV2.recordRoots, swarmQueueCommandV2.recordRoots), 'campaign already initialized differently');
+                    this.coordinator(swarmQueueCommandV3);
+                    requireQueue(swarmQueueStateV3.documentPath === swarmQueueCommandV3.documentPath && swarmQueueStateV3.bindingsPath === swarmQueueCommandV3.bindingsPath && (0, node_util_1.isDeepStrictEqual)(swarmQueueStateV3.authority, swarmQueueCommandV3.authority) && swarmQueueStateV3.assessor === swarmQueueCommandV3.assessor && (0, node_util_1.isDeepStrictEqual)(swarmQueueStateV3.recordRoots, swarmQueueCommandV3.recordRoots), 'campaign already initialized differently');
                     break;
+                case 'suspend': {
+                    this.coordinator(swarmQueueCommandV3);
+                    requireQueue(swarmQueueStateV3.pending === null, 'settle pending discovery before suspension');
+                    if (swarmQueueStateV3.suspension !== null) {
+                        requireQueue(swarmQueueStateV3.suspension.reason === swarmQueueCommandV3.reason && swarmQueueStateV3.suspension.hostEvidence.path === swarmQueueCommandV3.hostEvidencePath && swarmQueueStateV3.suspension.hostEvidence.blob.sha256 === await fileDigest(safeFile(this.ownerRoot, swarmQueueCommandV3.hostEvidencePath)), 'suspension already differs');
+                        break;
+                    }
+                    const blob = await new swarm_queue_payloads_js_1.SwarmQueuePayloads(poolClient, this.projectId, this.ownerRoot, swarmQueueStateV3.campaignId).file(safeFile(this.ownerRoot, swarmQueueCommandV3.hostEvidencePath));
+                    requireQueue(blob.byteLength > 0, 'host quiescence/preservation evidence is empty');
+                    const workers = (await poolClient.query("SELECT k.session_id,k.generation,n.root_path FROM ponytail_index.swarm_worker_v1 k JOIN ponytail_index.swarm_native_session_v1 n ON n.session_id=k.session_id AND n.project_id=k.project_id WHERE k.project_id=$1 AND k.owner_root=$2 AND k.state<>'REMOVED' ORDER BY k.worker_number", [this.projectId, this.ownerRoot])).rows.map(row => ({ sessionId: text(row.session_id), generation: text(row.generation), rootPath: text(row.root_path) }));
+                    swarmQueueStateV3 = { ...swarmQueueStateV3, state: 'suspended', suspension: { workers, reason: swarmQueueCommandV3.reason, coordinatorSessionId: swarmQueueCommandV3.actor.sessionId, hostEvidence: { path: swarmQueueCommandV3.hostEvidencePath, blob } } };
+                    break;
+                }
                 case 'status': break;
                 case 'requests': {
-                    const requests = swarmQueueStateV2.requests.filter(request => request.state !== 'resolved');
+                    const requests = swarmQueueStateV3.requests.filter(request => request.state !== 'resolved');
                     page = { collection: 'requests', items: requests.slice(0, 32), offset: 0, nextOffset: requests.length > 32 ? 32 : null, unresolvedOnly: true };
                     break;
                 }
                 case 'page': {
-                    const offset = swarmQueueCommandV2.offset, limit = swarmQueueCommandV2.limit, unresolvedOnly = swarmQueueCommandV2.unresolvedOnly;
-                    if (swarmQueueCommandV2.collection === 'tasks') {
-                        const tasks = swarmQueueStateV2.tasks.filter(task => !unresolvedOnly || task.state !== 'done');
+                    const offset = swarmQueueCommandV3.offset, limit = swarmQueueCommandV3.limit, unresolvedOnly = swarmQueueCommandV3.unresolvedOnly;
+                    if (swarmQueueCommandV3.collection === 'tasks') {
+                        const tasks = swarmQueueStateV3.tasks.filter(task => !unresolvedOnly || task.state !== 'done');
                         page = { collection: 'tasks', items: tasks.slice(offset, offset + limit).map(taskReceipt), offset, nextOffset: offset + limit < tasks.length ? offset + limit : null, unresolvedOnly };
                     }
                     else {
-                        const requests = swarmQueueStateV2.requests.filter(request => !unresolvedOnly || request.state !== 'resolved');
+                        const requests = swarmQueueStateV3.requests.filter(request => !unresolvedOnly || request.state !== 'resolved');
                         page = { collection: 'requests', items: requests.slice(offset, offset + limit), offset, nextOffset: offset + limit < requests.length ? offset + limit : null, unresolvedOnly };
                     }
                     break;
                 }
                 case 'artifact-read': {
-                    const swarmQueuePayloads = new swarm_queue_payloads_js_1.SwarmQueuePayloads(poolClient, this.projectId, this.ownerRoot, swarmQueueStateV2.campaignId);
-                    artifact = { ...await swarmQueuePayloads.read(swarmQueueCommandV2.id, swarmQueueCommandV2.offset, swarmQueueCommandV2.length), offset: swarmQueueCommandV2.offset };
+                    const swarmQueuePayloads = new swarm_queue_payloads_js_1.SwarmQueuePayloads(poolClient, this.projectId, this.ownerRoot, swarmQueueStateV3.campaignId);
+                    artifact = { ...await swarmQueuePayloads.read(swarmQueueCommandV3.id, swarmQueueCommandV3.offset, swarmQueueCommandV3.length), offset: swarmQueueCommandV3.offset };
                     break;
                 }
                 case 'add':
-                    swarmQueueStateV2 = this.add(swarmQueueStateV2, swarmQueueCommandV2.tasks);
+                    swarmQueueStateV3 = this.add(swarmQueueStateV3, swarmQueueCommandV3.tasks);
                     break;
                 case 'claim': {
-                    requireQueue(swarmQueueCommandV2.actor.kind === 'worker' && swarmQueueActorContext.workerGeneration !== null, 'claim requires original bound worker');
+                    requireQueue(swarmQueueCommandV3.actor.kind === 'worker' && swarmQueueActorContext.workerGeneration !== null, 'claim requires original bound worker');
                     (0, rolling_worktrees_js_1.requireRollingGitOperationAbsent)(swarmQueueActorContext.rootPath);
                     await this.noLegacyAssignments(poolClient);
-                    const existingSwarmQueueTaskV2 = swarmQueueStateV2.tasks.find(swarmQueueTaskV1 => swarmQueueTaskV1.state === 'working' && swarmQueueTaskV1.claim?.sessionId === swarmQueueCommandV2.actor.sessionId);
+                    const existingSwarmQueueTaskV2 = swarmQueueStateV3.tasks.find(swarmQueueTaskV1 => swarmQueueTaskV1.state === 'working' && swarmQueueTaskV1.claim?.sessionId === swarmQueueCommandV3.actor.sessionId);
                     if (existingSwarmQueueTaskV2 !== undefined) {
                         requireQueue(existingSwarmQueueTaskV2.claim?.workerGeneration === swarmQueueActorContext.workerGeneration, 'worker generation changed');
                         resultTaskSwarmQueueTaskV2 = existingSwarmQueueTaskV2;
                         break;
                     }
-                    const swarmQueueCanonical = canonical(swarmQueueStateV2);
-                    swarmQueueStateV2 = reconcileUnclaimed(swarmQueueStateV2, swarmQueueCanonical);
-                    const selectedSwarmQueueTaskV2 = selectSwarmQueueTask(swarmQueueStateV2, swarmQueueCommandV2.actor.sessionId, swarmQueueCanonical);
+                    const swarmQueueCanonical = canonical(swarmQueueStateV3);
+                    swarmQueueStateV3 = reconcileUnclaimed(swarmQueueStateV3, swarmQueueCanonical);
+                    const selectedSwarmQueueTaskV2 = selectSwarmQueueTask(swarmQueueStateV3, swarmQueueCommandV3.actor.sessionId, swarmQueueCanonical);
                     if (selectedSwarmQueueTaskV2 === null)
                         break;
                     const generation = node_crypto_1.default.randomUUID();
-                    const leases = selectedSwarmQueueTaskV2.obligationIds.map(obligationId => (0, obligation_binding_history_js_1.freezeObligationLease)(swarmQueueCanonical.document, swarmQueueCanonical.history, { obligationId, generation, graphDigest: swarmQueueCanonical.digest, assessor: swarmQueueStateV2.assessor, authority: swarmQueueStateV2.authority }));
-                    const swarmQueueClaimV1 = { generation, sessionId: swarmQueueCommandV2.actor.sessionId, workerGeneration: swarmQueueActorContext.workerGeneration, rootPath: swarmQueueActorContext.rootPath, base: (0, rolling_integration_js_1.git)(swarmQueueActorContext.rootPath, ['rev-parse', 'HEAD']).trim(), leases };
-                    resultTaskSwarmQueueTaskV2 = { ...selectedSwarmQueueTaskV2, claimSequence: swarmQueueStateV2.sequence + 1, state: 'working', claim: swarmQueueClaimV1, claimHistory: selectedSwarmQueueTaskV2.claim === null ? selectedSwarmQueueTaskV2.claimHistory : [...selectedSwarmQueueTaskV2.claimHistory, selectedSwarmQueueTaskV2.claim], candidate: null, review: null };
-                    swarmQueueStateV2 = { ...swarmQueueStateV2, sequence: swarmQueueStateV2.sequence + 1, tasks: swarmQueueStateV2.tasks.map(swarmQueueTaskV1 => swarmQueueTaskV1.id === selectedSwarmQueueTaskV2.id ? resultTaskSwarmQueueTaskV2 ?? swarmQueueTaskV1 : swarmQueueTaskV1) };
+                    const leases = selectedSwarmQueueTaskV2.obligationIds.map(obligationId => (0, obligation_binding_history_js_1.freezeObligationLease)(swarmQueueCanonical.document, swarmQueueCanonical.history, { obligationId, generation, graphDigest: swarmQueueCanonical.digest, assessor: swarmQueueStateV3.assessor, authority: swarmQueueStateV3.authority }));
+                    const swarmQueueClaimV1 = { generation, sessionId: swarmQueueCommandV3.actor.sessionId, workerGeneration: swarmQueueActorContext.workerGeneration, rootPath: swarmQueueActorContext.rootPath, base: (0, rolling_integration_js_1.git)(swarmQueueActorContext.rootPath, ['rev-parse', 'HEAD']).trim(), leases };
+                    resultTaskSwarmQueueTaskV2 = { ...selectedSwarmQueueTaskV2, claimSequence: swarmQueueStateV3.sequence + 1, state: 'working', claim: swarmQueueClaimV1, claimHistory: selectedSwarmQueueTaskV2.claim === null ? selectedSwarmQueueTaskV2.claimHistory : [...selectedSwarmQueueTaskV2.claimHistory, selectedSwarmQueueTaskV2.claim], candidate: null, review: null };
+                    swarmQueueStateV3 = { ...swarmQueueStateV3, sequence: swarmQueueStateV3.sequence + 1, tasks: swarmQueueStateV3.tasks.map(swarmQueueTaskV1 => swarmQueueTaskV1.id === selectedSwarmQueueTaskV2.id ? resultTaskSwarmQueueTaskV2 ?? swarmQueueTaskV1 : swarmQueueTaskV1) };
                     break;
                 }
                 case 'refresh-base': {
-                    requireQueue(swarmQueueCommandV2.actor.kind === 'worker', 'refresh requires original worker');
-                    const swarmQueueTaskV1 = swarmQueueStateV2.tasks.find(swarmQueueTaskV1 => swarmQueueTaskV1.id === swarmQueueCommandV2.taskId);
-                    requireQueue(swarmQueueTaskV1 !== undefined && swarmQueueTaskV1.state === 'working' && swarmQueueTaskV1.claim !== null && swarmQueueTaskV1.claim.sessionId === swarmQueueCommandV2.actor.sessionId && swarmQueueTaskV1.claim.workerGeneration === swarmQueueActorContext.workerGeneration && swarmQueueTaskV1.claim.generation === swarmQueueCommandV2.generation, 'stale or foreign working claim');
+                    requireQueue(swarmQueueCommandV3.actor.kind === 'worker', 'refresh requires original worker');
+                    const swarmQueueTaskV1 = swarmQueueStateV3.tasks.find(swarmQueueTaskV1 => swarmQueueTaskV1.id === swarmQueueCommandV3.taskId);
+                    requireQueue(swarmQueueTaskV1 !== undefined && swarmQueueTaskV1.state === 'working' && swarmQueueTaskV1.claim !== null && swarmQueueTaskV1.claim.sessionId === swarmQueueCommandV3.actor.sessionId && swarmQueueTaskV1.claim.workerGeneration === swarmQueueActorContext.workerGeneration && swarmQueueTaskV1.claim.generation === swarmQueueCommandV3.generation, 'stale or foreign working claim');
                     (0, rolling_worktrees_js_1.requireRollingGitOperationAbsent)(swarmQueueActorContext.rootPath);
-                    requireQueue(swarmQueueCommandV2.base === (0, rolling_integration_js_1.git)(this.ownerRoot, ['rev-parse', 'HEAD']).trim() && (0, rolling_integration_js_1.gitResult)(this.ownerRoot, ['merge-base', '--is-ancestor', swarmQueueTaskV1.claim.base, swarmQueueCommandV2.base]).status === 0, 'refresh base must be current descendant owner HEAD');
-                    const currentSwarmQueueCanonical = canonical(swarmQueueStateV2);
+                    requireQueue(swarmQueueCommandV3.base === (0, rolling_integration_js_1.git)(this.ownerRoot, ['rev-parse', 'HEAD']).trim() && (0, rolling_integration_js_1.gitResult)(this.ownerRoot, ['merge-base', '--is-ancestor', swarmQueueTaskV1.claim.base, swarmQueueCommandV3.base]).status === 0, 'refresh base must be current descendant owner HEAD');
+                    const currentSwarmQueueCanonical = canonical(swarmQueueStateV3);
                     requireQueue(swarmQueueTaskV1.claim.leases.every(leaseObligationLeaseV1 => (0, node_util_1.isDeepStrictEqual)(leaseObligationLeaseV1.binding, currentSwarmQueueCanonical.scope.bindings.get(leaseObligationLeaseV1.binding.obligationId))), 'binding changed; hand off and renew through canonical graph');
-                    if (swarmQueueCommandV2.base === swarmQueueTaskV1.claim.base) {
+                    if (swarmQueueCommandV3.base === swarmQueueTaskV1.claim.base) {
                         resultTaskSwarmQueueTaskV2 = swarmQueueTaskV1;
                         break;
                     }
                     const generation = node_crypto_1.default.randomUUID();
-                    const preservedSwarmQueueCheckpointV2 = await this.preserveSource(poolClient, swarmQueueActorContext.rootPath, swarmQueueStateV2, swarmQueueTaskV1);
-                    resultTaskSwarmQueueTaskV2 = { ...swarmQueueTaskV1, claimHistory: [...swarmQueueTaskV1.claimHistory, swarmQueueTaskV1.claim], claim: { ...swarmQueueTaskV1.claim, generation, base: swarmQueueCommandV2.base, leases: swarmQueueTaskV1.claim.leases.map(leaseObligationLeaseV1 => ({ ...leaseObligationLeaseV1, generation })) }, checkpoint: preservedSwarmQueueCheckpointV2, candidate: null, review: null };
-                    swarmQueueStateV2 = { ...swarmQueueStateV2, tasks: swarmQueueStateV2.tasks.map(valueSwarmQueueTaskV2 => valueSwarmQueueTaskV2.id === swarmQueueTaskV1.id ? resultTaskSwarmQueueTaskV2 ?? valueSwarmQueueTaskV2 : valueSwarmQueueTaskV2) };
+                    const preservedSwarmQueueCheckpointV2 = await this.preserveSource(poolClient, swarmQueueActorContext.rootPath, swarmQueueStateV3, swarmQueueTaskV1);
+                    resultTaskSwarmQueueTaskV2 = { ...swarmQueueTaskV1, claimHistory: [...swarmQueueTaskV1.claimHistory, swarmQueueTaskV1.claim], claim: { ...swarmQueueTaskV1.claim, generation, base: swarmQueueCommandV3.base, leases: swarmQueueTaskV1.claim.leases.map(leaseObligationLeaseV1 => ({ ...leaseObligationLeaseV1, generation })) }, checkpoint: preservedSwarmQueueCheckpointV2, candidate: null, review: null };
+                    swarmQueueStateV3 = { ...swarmQueueStateV3, tasks: swarmQueueStateV3.tasks.map(valueSwarmQueueTaskV2 => valueSwarmQueueTaskV2.id === swarmQueueTaskV1.id ? resultTaskSwarmQueueTaskV2 ?? valueSwarmQueueTaskV2 : valueSwarmQueueTaskV2) };
                     break;
                 }
                 case 'handoff': {
-                    requireQueue(swarmQueueCommandV2.actor.kind === 'worker', 'handoff requires original worker');
-                    const swarmQueueTaskV1 = swarmQueueStateV2.tasks.find(swarmQueueTaskV1 => swarmQueueTaskV1.id === swarmQueueCommandV2.taskId);
-                    requireQueue(swarmQueueTaskV1 !== undefined && swarmQueueTaskV1.claim !== null && swarmQueueTaskV1.claim.sessionId === swarmQueueCommandV2.actor.sessionId && swarmQueueTaskV1.claim.workerGeneration === swarmQueueActorContext.workerGeneration && swarmQueueTaskV1.claim.generation === swarmQueueCommandV2.generation, 'stale or foreign task claim');
-                    const existingSwarmQueueRequestV2 = swarmQueueStateV2.requests.find(requestSwarmQueueRequestV2 => requestSwarmQueueRequestV2.id === swarmQueueCommandV2.requestId);
+                    requireQueue(swarmQueueCommandV3.actor.kind === 'worker', 'handoff requires original worker');
+                    const swarmQueueTaskV1 = swarmQueueStateV3.tasks.find(swarmQueueTaskV1 => swarmQueueTaskV1.id === swarmQueueCommandV3.taskId);
+                    requireQueue(swarmQueueTaskV1 !== undefined && swarmQueueTaskV1.claim !== null && swarmQueueTaskV1.claim.sessionId === swarmQueueCommandV3.actor.sessionId && swarmQueueTaskV1.claim.workerGeneration === swarmQueueActorContext.workerGeneration && swarmQueueTaskV1.claim.generation === swarmQueueCommandV3.generation, 'stale or foreign task claim');
+                    const existingSwarmQueueRequestV2 = swarmQueueStateV3.requests.find(requestSwarmQueueRequestV2 => requestSwarmQueueRequestV2.id === swarmQueueCommandV3.requestId);
                     if (existingSwarmQueueRequestV2 !== undefined) {
-                        requireQueue(existingSwarmQueueRequestV2.taskId === swarmQueueTaskV1.id && existingSwarmQueueRequestV2.claimGeneration === swarmQueueCommandV2.generation && existingSwarmQueueRequestV2.kind === swarmQueueCommandV2.kind && existingSwarmQueueRequestV2.detail === swarmQueueCommandV2.detail && (0, node_util_1.isDeepStrictEqual)(existingSwarmQueueRequestV2.evidencePaths, swarmQueueCommandV2.evidencePaths) && (0, node_util_1.isDeepStrictEqual)(swarmQueueTaskV1.candidate, swarmQueueCommandV2.candidate), 'request ID already differs');
+                        requireQueue(existingSwarmQueueRequestV2.taskId === swarmQueueTaskV1.id && existingSwarmQueueRequestV2.claimGeneration === swarmQueueCommandV3.generation && existingSwarmQueueRequestV2.kind === swarmQueueCommandV3.kind && existingSwarmQueueRequestV2.detail === swarmQueueCommandV3.detail && (0, node_util_1.isDeepStrictEqual)(existingSwarmQueueRequestV2.evidencePaths, swarmQueueCommandV3.evidencePaths) && (0, node_util_1.isDeepStrictEqual)(swarmQueueTaskV1.candidate, swarmQueueCommandV3.candidate), 'request ID already differs');
                         resultTaskSwarmQueueTaskV2 = swarmQueueTaskV1;
                         resultRequestSwarmQueueRequestV2 = existingSwarmQueueRequestV2;
                         break;
                     }
                     requireQueue(swarmQueueTaskV1.state === 'working', 'task is not working');
                     (0, rolling_worktrees_js_1.requireRollingGitOperationAbsent)(swarmQueueActorContext.rootPath);
-                    swarmQueueCommandV2.evidencePaths.forEach(relative => safeFile(swarmQueueActorContext.rootPath, relative));
-                    if (swarmQueueCommandV2.kind === 'integration') {
-                        requireQueue(swarmQueueCommandV2.candidate === null || swarmQueueCommandV2.candidate.proofPaths.length > 0 || inspectionTask(swarmQueueTaskV1) && swarmQueueCommandV2.evidencePaths.length > 0, 'inspection delivery requires a retained assessment artifact');
-                        requireQueue(swarmQueueCommandV2.candidate !== null, 'integration requires exact reviewed candidate');
-                        this.preserveCandidate(swarmQueueActorContext.rootPath, swarmQueueStateV2, swarmQueueTaskV1, swarmQueueCommandV2.candidate);
+                    swarmQueueCommandV3.evidencePaths.forEach(relative => safeFile(swarmQueueActorContext.rootPath, relative));
+                    if (swarmQueueCommandV3.kind === 'integration') {
+                        requireQueue(swarmQueueCommandV3.candidate === null || swarmQueueCommandV3.candidate.proofPaths.length > 0 || inspectionTask(swarmQueueTaskV1) && swarmQueueCommandV3.evidencePaths.length > 0, 'inspection delivery requires a retained assessment artifact');
+                        requireQueue(swarmQueueCommandV3.candidate !== null, 'integration requires exact reviewed candidate');
+                        this.preserveCandidate(swarmQueueActorContext.rootPath, swarmQueueStateV3, swarmQueueTaskV1, swarmQueueCommandV3.candidate);
                     }
                     else
-                        requireQueue(swarmQueueCommandV2.candidate === null, 'help must preserve unfinished work, not claim reviewed completion');
-                    const capturedPaths = [...new Set([...swarmQueueCommandV2.evidencePaths, ...(swarmQueueCommandV2.candidate === null ? [] : [swarmQueueCommandV2.candidate.verdictPath, ...swarmQueueCommandV2.candidate.proofPaths, ...swarmQueueCommandV2.candidate.proofPaths.map(relative => (0, obligations_js_1.readObligationEvidence)(parseSwarmQueueJson(readFile(swarmQueueActorContext.rootPath, relative))).outputPath)])])];
-                    const swarmQueuePayloads = new swarm_queue_payloads_js_1.SwarmQueuePayloads(poolClient, this.projectId, this.ownerRoot, swarmQueueStateV2.campaignId);
+                        requireQueue(swarmQueueCommandV3.candidate === null, 'help must preserve unfinished work, not claim reviewed completion');
+                    const capturedPaths = [...new Set([...swarmQueueCommandV3.evidencePaths, ...(swarmQueueCommandV3.candidate === null ? [] : [swarmQueueCommandV3.candidate.verdictPath, ...swarmQueueCommandV3.candidate.proofPaths, ...swarmQueueCommandV3.candidate.proofPaths.map(relative => (0, obligations_js_1.readObligationEvidence)(parseSwarmQueueJson(readFile(swarmQueueActorContext.rootPath, relative))).outputPath)])])];
+                    const swarmQueuePayloads = new swarm_queue_payloads_js_1.SwarmQueuePayloads(poolClient, this.projectId, this.ownerRoot, swarmQueueStateV3.campaignId);
                     const captured = [];
                     for (const relative of capturedPaths)
                         captured.push({ path: relative, blob: await swarmQueuePayloads.file(safeFile(swarmQueueActorContext.rootPath, relative)) });
-                    const preservedSwarmQueueCheckpointV2 = await this.preserveSource(poolClient, swarmQueueActorContext.rootPath, swarmQueueStateV2, swarmQueueTaskV1);
-                    const sequence = swarmQueueStateV2.sequence + 1;
-                    resultRequestSwarmQueueRequestV2 = { id: swarmQueueCommandV2.requestId, sequence, taskId: swarmQueueTaskV1.id, claimGeneration: swarmQueueCommandV2.generation, kind: swarmQueueCommandV2.kind, detail: swarmQueueCommandV2.detail, evidencePaths: swarmQueueCommandV2.evidencePaths, artifacts: captured, outcome: null, state: 'open', response: null };
-                    resultTaskSwarmQueueTaskV2 = { ...swarmQueueTaskV1, state: swarmQueueCommandV2.kind, candidate: swarmQueueCommandV2.candidate, checkpoint: preservedSwarmQueueCheckpointV2, review: null };
-                    swarmQueueStateV2 = { ...swarmQueueStateV2, sequence, tasks: swarmQueueStateV2.tasks.map(valueSwarmQueueTaskV2 => valueSwarmQueueTaskV2.id === swarmQueueTaskV1.id ? resultTaskSwarmQueueTaskV2 ?? valueSwarmQueueTaskV2 : valueSwarmQueueTaskV2), requests: [...swarmQueueStateV2.requests, resultRequestSwarmQueueRequestV2] };
+                    const preservedSwarmQueueCheckpointV2 = await this.preserveSource(poolClient, swarmQueueActorContext.rootPath, swarmQueueStateV3, swarmQueueTaskV1);
+                    const sequence = swarmQueueStateV3.sequence + 1;
+                    resultRequestSwarmQueueRequestV2 = { id: swarmQueueCommandV3.requestId, sequence, taskId: swarmQueueTaskV1.id, claimGeneration: swarmQueueCommandV3.generation, kind: swarmQueueCommandV3.kind, detail: swarmQueueCommandV3.detail, evidencePaths: swarmQueueCommandV3.evidencePaths, artifacts: captured, outcome: null, state: 'open', response: null };
+                    resultTaskSwarmQueueTaskV2 = { ...swarmQueueTaskV1, state: swarmQueueCommandV3.kind, candidate: swarmQueueCommandV3.candidate, checkpoint: preservedSwarmQueueCheckpointV2, review: null };
+                    swarmQueueStateV3 = { ...swarmQueueStateV3, sequence, tasks: swarmQueueStateV3.tasks.map(valueSwarmQueueTaskV2 => valueSwarmQueueTaskV2.id === swarmQueueTaskV1.id ? resultTaskSwarmQueueTaskV2 ?? valueSwarmQueueTaskV2 : valueSwarmQueueTaskV2), requests: [...swarmQueueStateV3.requests, resultRequestSwarmQueueRequestV2] };
                     break;
                 }
                 case 'record-review': {
-                    this.coordinator(swarmQueueCommandV2);
-                    const swarmQueueTaskV1 = swarmQueueStateV2.tasks.find(swarmQueueTaskV1 => swarmQueueTaskV1.id === swarmQueueCommandV2.taskId);
-                    requireQueue(swarmQueueTaskV1 !== undefined && swarmQueueTaskV1.state === 'integration' && swarmQueueTaskV1.claim?.generation === swarmQueueCommandV2.generation && swarmQueueTaskV1.candidate !== null && swarmQueueTaskV1.candidate.reviewer === swarmQueueCommandV2.reviewer, 'review differs from exact submitted candidate');
+                    this.coordinator(swarmQueueCommandV3);
+                    const swarmQueueTaskV1 = swarmQueueStateV3.tasks.find(swarmQueueTaskV1 => swarmQueueTaskV1.id === swarmQueueCommandV3.taskId);
+                    requireQueue(swarmQueueTaskV1 !== undefined && swarmQueueTaskV1.state === 'integration' && swarmQueueTaskV1.claim?.generation === swarmQueueCommandV3.generation && swarmQueueTaskV1.candidate !== null && swarmQueueTaskV1.candidate.reviewer === swarmQueueCommandV3.reviewer, 'review differs from exact submitted candidate');
                     if (swarmQueueTaskV1.review !== null) {
-                        requireQueue(swarmQueueTaskV1.review.reviewer === swarmQueueCommandV2.reviewer && swarmQueueTaskV1.review.hostEvidencePath === swarmQueueCommandV2.hostEvidencePath && swarmQueueTaskV1.review.blob.sha256 === await fileDigest(safeFile(this.ownerRoot, swarmQueueCommandV2.hostEvidencePath)), 'review already differs');
+                        requireQueue(swarmQueueTaskV1.review.reviewer === swarmQueueCommandV3.reviewer && swarmQueueTaskV1.review.hostEvidencePath === swarmQueueCommandV3.hostEvidencePath && swarmQueueTaskV1.review.blob.sha256 === await fileDigest(safeFile(this.ownerRoot, swarmQueueCommandV3.hostEvidencePath)), 'review already differs');
                         resultTaskSwarmQueueTaskV2 = swarmQueueTaskV1;
                         break;
                     }
-                    const blob = await new swarm_queue_payloads_js_1.SwarmQueuePayloads(poolClient, this.projectId, this.ownerRoot, swarmQueueStateV2.campaignId).file(safeFile(this.ownerRoot, swarmQueueCommandV2.hostEvidencePath));
-                    const trustedSwarmQueueReviewV2 = { reviewer: swarmQueueCommandV2.reviewer, base: swarmQueueTaskV1.candidate.base, revision: swarmQueueTaskV1.candidate.revision, hostEvidencePath: swarmQueueCommandV2.hostEvidencePath, blob };
+                    const blob = await new swarm_queue_payloads_js_1.SwarmQueuePayloads(poolClient, this.projectId, this.ownerRoot, swarmQueueStateV3.campaignId).file(safeFile(this.ownerRoot, swarmQueueCommandV3.hostEvidencePath));
+                    const trustedSwarmQueueReviewV2 = { reviewer: swarmQueueCommandV3.reviewer, base: swarmQueueTaskV1.candidate.base, revision: swarmQueueTaskV1.candidate.revision, hostEvidencePath: swarmQueueCommandV3.hostEvidencePath, blob };
                     resultTaskSwarmQueueTaskV2 = { ...swarmQueueTaskV1, review: trustedSwarmQueueReviewV2 };
-                    swarmQueueStateV2 = { ...swarmQueueStateV2, tasks: swarmQueueStateV2.tasks.map(valueSwarmQueueTaskV2 => valueSwarmQueueTaskV2.id === swarmQueueTaskV1.id ? resultTaskSwarmQueueTaskV2 ?? valueSwarmQueueTaskV2 : valueSwarmQueueTaskV2) };
+                    swarmQueueStateV3 = { ...swarmQueueStateV3, tasks: swarmQueueStateV3.tasks.map(valueSwarmQueueTaskV2 => valueSwarmQueueTaskV2.id === swarmQueueTaskV1.id ? resultTaskSwarmQueueTaskV2 ?? valueSwarmQueueTaskV2 : valueSwarmQueueTaskV2) };
                     break;
                 }
                 case 'take': {
-                    this.coordinator(swarmQueueCommandV2);
-                    const requestSwarmQueueRequestV2 = swarmQueueStateV2.requests.filter(requestSwarmQueueRequestV2 => requestSwarmQueueRequestV2.state === 'open').sort((leftSwarmQueueRequestV2, rightSwarmQueueRequestV2) => leftSwarmQueueRequestV2.sequence - rightSwarmQueueRequestV2.sequence)[0];
+                    this.coordinator(swarmQueueCommandV3);
+                    const requestSwarmQueueRequestV2 = swarmQueueStateV3.requests.filter(requestSwarmQueueRequestV2 => requestSwarmQueueRequestV2.state === 'open').sort((leftSwarmQueueRequestV2, rightSwarmQueueRequestV2) => leftSwarmQueueRequestV2.sequence - rightSwarmQueueRequestV2.sequence)[0];
                     if (requestSwarmQueueRequestV2 === undefined)
                         break;
                     resultRequestSwarmQueueRequestV2 = { ...requestSwarmQueueRequestV2, state: 'processing' };
-                    swarmQueueStateV2 = { ...swarmQueueStateV2, requests: swarmQueueStateV2.requests.map(valueSwarmQueueRequestV2 => valueSwarmQueueRequestV2.id === requestSwarmQueueRequestV2.id ? resultRequestSwarmQueueRequestV2 ?? valueSwarmQueueRequestV2 : valueSwarmQueueRequestV2) };
+                    swarmQueueStateV3 = { ...swarmQueueStateV3, requests: swarmQueueStateV3.requests.map(valueSwarmQueueRequestV2 => valueSwarmQueueRequestV2.id === requestSwarmQueueRequestV2.id ? resultRequestSwarmQueueRequestV2 ?? valueSwarmQueueRequestV2 : valueSwarmQueueRequestV2) };
                     break;
                 }
                 case 'resolve': {
-                    this.coordinator(swarmQueueCommandV2);
-                    const requestSwarmQueueRequestV2 = swarmQueueStateV2.requests.find(requestSwarmQueueRequestV2 => requestSwarmQueueRequestV2.id === swarmQueueCommandV2.requestId);
+                    this.coordinator(swarmQueueCommandV3);
+                    const requestSwarmQueueRequestV2 = swarmQueueStateV3.requests.find(requestSwarmQueueRequestV2 => requestSwarmQueueRequestV2.id === swarmQueueCommandV3.requestId);
                     requireQueue(requestSwarmQueueRequestV2 !== undefined, 'request absent');
                     if (requestSwarmQueueRequestV2.state === 'resolved') {
-                        requireQueue(requestSwarmQueueRequestV2.response === swarmQueueCommandV2.response && requestSwarmQueueRequestV2.outcome === swarmQueueCommandV2.outcome, 'request already resolved differently');
+                        requireQueue(requestSwarmQueueRequestV2.response === swarmQueueCommandV3.response && requestSwarmQueueRequestV2.outcome === swarmQueueCommandV3.outcome, 'request already resolved differently');
                         resultRequestSwarmQueueRequestV2 = requestSwarmQueueRequestV2;
                         break;
                     }
                     requireQueue(requestSwarmQueueRequestV2.state === 'processing', 'take request in arrival order before resolution');
-                    const swarmQueueTaskV1 = swarmQueueStateV2.tasks.find(swarmQueueTaskV1 => swarmQueueTaskV1.id === requestSwarmQueueRequestV2.taskId);
+                    const swarmQueueTaskV1 = swarmQueueStateV3.tasks.find(swarmQueueTaskV1 => swarmQueueTaskV1.id === requestSwarmQueueRequestV2.taskId);
                     requireQueue(swarmQueueTaskV1 !== undefined && swarmQueueTaskV1.claim?.generation === requestSwarmQueueRequestV2.claimGeneration, 'request claim changed');
                     let nextTaskSwarmQueueTaskV2 = swarmQueueTaskV1;
-                    if (swarmQueueCommandV2.outcome === 'accepted') {
+                    if (swarmQueueCommandV3.outcome === 'accepted') {
                         requireQueue(requestSwarmQueueRequestV2.kind === 'integration' && swarmQueueTaskV1.candidate !== null && swarmQueueTaskV1.review !== null && swarmQueueTaskV1.review.base === swarmQueueTaskV1.candidate.base && swarmQueueTaskV1.review.revision === swarmQueueTaskV1.candidate.revision && swarmQueueTaskV1.review.reviewer === swarmQueueTaskV1.candidate.reviewer, 'acceptance requires exact host-collected independent review');
-                        const swarmQueueCanonical = canonical(swarmQueueStateV2);
+                        const swarmQueueCanonical = canonical(swarmQueueStateV3);
                         requireQueue(swarmQueueTaskV1.obligationIds.every(id => swarmQueueCanonical.scope.projection.satisfiedIds.includes(id)), 'canonical obligations not discharged');
                         const artifactDigests = new Map();
                         for (const certificate of swarmQueueCanonical.document.certificates.filter(certificate => certificate.evidence.length === 0 && certificate.obligationIds.some(id => swarmQueueTaskV1.obligationIds.includes(id)) && swarmQueueCanonical.scope.projection.assessments.some(assessment => assessment.id === certificate.id && assessment.valid)))
@@ -668,79 +705,79 @@ class SwarmQueueStore {
                         requireQueue(inspectionTask(swarmQueueTaskV1) || (0, rolling_integration_js_1.gitResult)(this.ownerRoot, ['merge-base', '--is-ancestor', swarmQueueTaskV1.candidate.revision, 'HEAD']).status === 0, 'candidate not integrated in owner');
                         nextTaskSwarmQueueTaskV2 = { ...swarmQueueTaskV1, state: 'done' };
                     }
-                    else if (swarmQueueCommandV2.outcome === 'retry' || swarmQueueCommandV2.outcome === 'answered') {
+                    else if (swarmQueueCommandV3.outcome === 'retry' || swarmQueueCommandV3.outcome === 'answered') {
                         nextTaskSwarmQueueTaskV2 = { ...swarmQueueTaskV1, state: 'ready', preferredWorker: swarmQueueTaskV1.claim?.sessionId ?? swarmQueueTaskV1.preferredWorker };
                     }
-                    resultRequestSwarmQueueRequestV2 = { ...requestSwarmQueueRequestV2, state: 'resolved', response: swarmQueueCommandV2.response, outcome: swarmQueueCommandV2.outcome };
-                    swarmQueueStateV2 = { ...swarmQueueStateV2, tasks: swarmQueueStateV2.tasks.map(valueSwarmQueueTaskV2 => valueSwarmQueueTaskV2.id === swarmQueueTaskV1.id ? nextTaskSwarmQueueTaskV2 : valueSwarmQueueTaskV2), requests: swarmQueueStateV2.requests.map(valueSwarmQueueRequestV2 => valueSwarmQueueRequestV2.id === requestSwarmQueueRequestV2.id ? resultRequestSwarmQueueRequestV2 ?? valueSwarmQueueRequestV2 : valueSwarmQueueRequestV2) };
+                    resultRequestSwarmQueueRequestV2 = { ...requestSwarmQueueRequestV2, state: 'resolved', response: swarmQueueCommandV3.response, outcome: swarmQueueCommandV3.outcome };
+                    swarmQueueStateV3 = { ...swarmQueueStateV3, tasks: swarmQueueStateV3.tasks.map(valueSwarmQueueTaskV2 => valueSwarmQueueTaskV2.id === swarmQueueTaskV1.id ? nextTaskSwarmQueueTaskV2 : valueSwarmQueueTaskV2), requests: swarmQueueStateV3.requests.map(valueSwarmQueueRequestV2 => valueSwarmQueueRequestV2.id === requestSwarmQueueRequestV2.id ? resultRequestSwarmQueueRequestV2 ?? valueSwarmQueueRequestV2 : valueSwarmQueueRequestV2) };
                     break;
                 }
                 case 'discover':
                 case 'recover': {
-                    const discoveredSwarmQueueDiscoveryV1 = swarmQueueCommandV2.command === 'discover' ? swarmQueueCommandV2.discovery : swarmQueueStateV2.pending;
-                    const existingSwarmQueueDiscoveryV1 = swarmQueueCommandV2.command === 'discover' ? swarmQueueStateV2.discoveries.find(valueSwarmQueueDiscoveryV1 => valueSwarmQueueDiscoveryV1.id === swarmQueueCommandV2.discovery.id) : swarmQueueStateV2.discoveries.find(valueSwarmQueueDiscoveryV1 => valueSwarmQueueDiscoveryV1.id === swarmQueueCommandV2.discoveryId);
+                    const discoveredSwarmQueueDiscoveryV1 = swarmQueueCommandV3.command === 'discover' ? swarmQueueCommandV3.discovery : swarmQueueStateV3.pending;
+                    const existingSwarmQueueDiscoveryV1 = swarmQueueCommandV3.command === 'discover' ? swarmQueueStateV3.discoveries.find(valueSwarmQueueDiscoveryV1 => valueSwarmQueueDiscoveryV1.id === swarmQueueCommandV3.discovery.id) : swarmQueueStateV3.discoveries.find(valueSwarmQueueDiscoveryV1 => valueSwarmQueueDiscoveryV1.id === swarmQueueCommandV3.discoveryId);
                     if (existingSwarmQueueDiscoveryV1 !== undefined) {
-                        if (swarmQueueCommandV2.command === 'discover')
-                            requireQueue((0, node_util_1.isDeepStrictEqual)(existingSwarmQueueDiscoveryV1, swarmQueueCommandV2.discovery), 'discovery ID differs');
+                        if (swarmQueueCommandV3.command === 'discover')
+                            requireQueue((0, node_util_1.isDeepStrictEqual)(existingSwarmQueueDiscoveryV1, swarmQueueCommandV3.discovery), 'discovery ID differs');
                         break;
                     }
                     requireQueue(discoveredSwarmQueueDiscoveryV1 !== null, 'pending discovery absent');
-                    if (swarmQueueCommandV2.command === 'discover')
-                        requireQueue((0, node_util_1.isDeepStrictEqual)(discoveredSwarmQueueDiscoveryV1.actor, swarmQueueCommandV2.actor), 'discovery actor differs');
+                    if (swarmQueueCommandV3.command === 'discover')
+                        requireQueue((0, node_util_1.isDeepStrictEqual)(discoveredSwarmQueueDiscoveryV1.actor, swarmQueueCommandV3.actor), 'discovery actor differs');
                     else
-                        requireQueue(discoveredSwarmQueueDiscoveryV1.id === swarmQueueCommandV2.discoveryId, 'pending discovery ID differs');
-                    if (swarmQueueStateV2.pending === null) {
-                        this.validateDiscovery(swarmQueueStateV2, discoveredSwarmQueueDiscoveryV1);
-                        swarmQueueStateV2 = { ...swarmQueueStateV2, pending: discoveredSwarmQueueDiscoveryV1 };
-                        await this.save(poolClient, swarmQueueStateV2);
+                        requireQueue(discoveredSwarmQueueDiscoveryV1.id === swarmQueueCommandV3.discoveryId, 'pending discovery ID differs');
+                    if (swarmQueueStateV3.pending === null) {
+                        this.validateDiscovery(swarmQueueStateV3, discoveredSwarmQueueDiscoveryV1);
+                        swarmQueueStateV3 = { ...swarmQueueStateV3, pending: discoveredSwarmQueueDiscoveryV1 };
+                        await this.save(poolClient, swarmQueueStateV3);
                         await poolClient.query('COMMIT');
                         transaction = false;
                     }
                     else
-                        requireQueue((0, node_util_1.isDeepStrictEqual)(swarmQueueStateV2.pending, discoveredSwarmQueueDiscoveryV1), 'another discovery is pending');
-                    this.publishDiscovery(swarmQueueStateV2, discoveredSwarmQueueDiscoveryV1);
-                    const documentUpdateSwarmQueueDocumentUpdateV1 = discoveredSwarmQueueDiscoveryV1.updates.find(updateSwarmQueueDocumentUpdateV1 => updateSwarmQueueDocumentUpdateV1.path === swarmQueueStateV2.documentPath);
+                        requireQueue((0, node_util_1.isDeepStrictEqual)(swarmQueueStateV3.pending, discoveredSwarmQueueDiscoveryV1), 'another discovery is pending');
+                    this.publishDiscovery(swarmQueueStateV3, discoveredSwarmQueueDiscoveryV1);
+                    const documentUpdateSwarmQueueDocumentUpdateV1 = discoveredSwarmQueueDiscoveryV1.updates.find(updateSwarmQueueDocumentUpdateV1 => updateSwarmQueueDocumentUpdateV1.path === swarmQueueStateV3.documentPath);
                     if (documentUpdateSwarmQueueDocumentUpdateV1 !== undefined) {
                         requireQueue(documentUpdateSwarmQueueDocumentUpdateV1.beforeContent !== null, 'canonical obligation document must exist');
-                        (0, obligations_js_1.acceptCheckpoint)((0, obligations_js_1.parseObligationDocument)(documentUpdateSwarmQueueDocumentUpdateV1.beforeContent), (0, obligations_js_1.parseObligationDocument)(documentUpdateSwarmQueueDocumentUpdateV1.content), swarmQueueStateV2.ownerRoot);
+                        (0, obligations_js_1.acceptCheckpoint)((0, obligations_js_1.parseObligationDocument)(documentUpdateSwarmQueueDocumentUpdateV1.beforeContent), (0, obligations_js_1.parseObligationDocument)(documentUpdateSwarmQueueDocumentUpdateV1.content), swarmQueueStateV3.ownerRoot);
                     }
                     if (!transaction) {
                         await poolClient.query('BEGIN');
                         transaction = true;
                     }
-                    swarmQueueStateV2 = this.add({ ...swarmQueueStateV2, pending: null, discoveries: [...swarmQueueStateV2.discoveries, discoveredSwarmQueueDiscoveryV1] }, discoveredSwarmQueueDiscoveryV1.tasks);
+                    swarmQueueStateV3 = this.add({ ...swarmQueueStateV3, pending: null, discoveries: [...swarmQueueStateV3.discoveries, discoveredSwarmQueueDiscoveryV1] }, discoveredSwarmQueueDiscoveryV1.tasks);
                     break;
                 }
                 case 'abort-discovery': {
-                    requireQueue(swarmQueueStateV2.pending !== null && swarmQueueStateV2.pending.id === swarmQueueCommandV2.discoveryId, 'pending discovery differs');
-                    for (const updateSwarmQueueDocumentUpdateV1 of swarmQueueStateV2.pending.updates) {
-                        const target = safeFile(swarmQueueStateV2.ownerRoot, updateSwarmQueueDocumentUpdateV1.path);
+                    requireQueue(swarmQueueStateV3.pending !== null && swarmQueueStateV3.pending.id === swarmQueueCommandV3.discoveryId, 'pending discovery differs');
+                    for (const updateSwarmQueueDocumentUpdateV1 of swarmQueueStateV3.pending.updates) {
+                        const target = safeFile(swarmQueueStateV3.ownerRoot, updateSwarmQueueDocumentUpdateV1.path);
                         const current = node_fs_1.default.existsSync(target) ? node_fs_1.default.readFileSync(target, 'utf8') : null;
                         requireQueue(current === updateSwarmQueueDocumentUpdateV1.beforeContent || current === updateSwarmQueueDocumentUpdateV1.content, `recovery conflict: ${updateSwarmQueueDocumentUpdateV1.path}`);
                     }
-                    for (const updateSwarmQueueDocumentUpdateV1 of [...swarmQueueStateV2.pending.updates].reverse()) {
+                    for (const updateSwarmQueueDocumentUpdateV1 of [...swarmQueueStateV3.pending.updates].reverse()) {
                         if (updateSwarmQueueDocumentUpdateV1.beforeContent === null) {
-                            const target = safeFile(swarmQueueStateV2.ownerRoot, updateSwarmQueueDocumentUpdateV1.path);
+                            const target = safeFile(swarmQueueStateV3.ownerRoot, updateSwarmQueueDocumentUpdateV1.path);
                             if (node_fs_1.default.existsSync(target))
                                 node_fs_1.default.unlinkSync(target);
                         }
                         else
-                            this.publishDiscovery(swarmQueueStateV2, { ...swarmQueueStateV2.pending, updates: [{ path: updateSwarmQueueDocumentUpdateV1.path, beforeContent: updateSwarmQueueDocumentUpdateV1.content, content: updateSwarmQueueDocumentUpdateV1.beforeContent }] });
+                            this.publishDiscovery(swarmQueueStateV3, { ...swarmQueueStateV3.pending, updates: [{ path: updateSwarmQueueDocumentUpdateV1.path, beforeContent: updateSwarmQueueDocumentUpdateV1.content, content: updateSwarmQueueDocumentUpdateV1.beforeContent }] });
                     }
-                    swarmQueueStateV2 = { ...swarmQueueStateV2, pending: null };
+                    swarmQueueStateV3 = { ...swarmQueueStateV3, pending: null };
                     break;
                 }
                 case 'complete':
-                    this.coordinator(swarmQueueCommandV2);
-                    swarmQueueStateV2 = reconcileUnclaimed(swarmQueueStateV2, canonical(swarmQueueStateV2));
-                    requireQueue(swarmQueueStateV2.pending === null && swarmQueueStateV2.tasks.every(swarmQueueTaskV1 => swarmQueueTaskV1.state === 'done') && swarmQueueStateV2.requests.every(requestSwarmQueueRequestV2 => requestSwarmQueueRequestV2.state === 'resolved') && canonical(swarmQueueStateV2).scope.projection.complete, 'campaign still has outstanding discoveries/tasks/requests/obligations');
-                    swarmQueueStateV2 = { ...swarmQueueStateV2, state: 'complete' };
+                    this.coordinator(swarmQueueCommandV3);
+                    swarmQueueStateV3 = reconcileUnclaimed(swarmQueueStateV3, canonical(swarmQueueStateV3));
+                    requireQueue(swarmQueueStateV3.pending === null && swarmQueueStateV3.tasks.every(swarmQueueTaskV1 => swarmQueueTaskV1.state === 'done') && swarmQueueStateV3.requests.every(requestSwarmQueueRequestV2 => requestSwarmQueueRequestV2.state === 'resolved') && canonical(swarmQueueStateV3).scope.projection.complete, 'campaign still has outstanding discoveries/tasks/requests/obligations');
+                    swarmQueueStateV3 = { ...swarmQueueStateV3, state: 'complete' };
                     break;
             }
-            const swarmQueueOperation = { queue: swarmQueueStateV2, task: resultTaskSwarmQueueTaskV2, request: resultRequestSwarmQueueRequestV2, page, artifact };
-            requireQueue(Buffer.byteLength(JSON.stringify(createSwarmQueueResultV2(swarmQueueOperation))) <= 1024 * 1024, 'receipt exceeds 1 MiB; reduce page limit or task cluster');
+            const swarmQueueOperation = { queue: swarmQueueStateV3, task: resultTaskSwarmQueueTaskV2, request: resultRequestSwarmQueueRequestV2, page, artifact };
+            requireQueue(Buffer.byteLength(JSON.stringify(createSwarmQueueResultV3(swarmQueueOperation))) <= 1024 * 1024, 'receipt exceeds 1 MiB; reduce page limit or task cluster');
             if (!readOnly)
-                await this.save(poolClient, swarmQueueStateV2);
+                await this.save(poolClient, swarmQueueStateV3);
             await poolClient.query('COMMIT');
             transaction = false;
             return swarmQueueOperation;
@@ -759,11 +796,11 @@ class SwarmQueueStore {
             }
         }
     }
-    async preserveSource(poolClient, root, swarmQueueStateV2, swarmQueueTaskV2) {
+    async preserveSource(poolClient, root, swarmQueueStateV3, swarmQueueTaskV2) {
         const revision = (0, rolling_integration_js_1.git)(root, ['rev-parse', 'HEAD']).trim();
-        const ref = `refs/ponytail/swarm-queue-source/${digest(swarmQueueStateV2.campaignId)}/${digest(swarmQueueTaskV2.id)}/${swarmQueueTaskV2.claim?.generation}`;
+        const ref = `refs/ponytail/swarm-queue-source/${digest(swarmQueueStateV3.campaignId)}/${digest(swarmQueueTaskV2.id)}/${swarmQueueTaskV2.claim?.generation}`;
         (0, rolling_integration_js_1.git)(root, ['update-ref', ref, revision]);
-        const swarmQueuePayloads = new swarm_queue_payloads_js_1.SwarmQueuePayloads(poolClient, this.projectId, this.ownerRoot, swarmQueueStateV2.campaignId);
+        const swarmQueuePayloads = new swarm_queue_payloads_js_1.SwarmQueuePayloads(poolClient, this.projectId, this.ownerRoot, swarmQueueStateV3.campaignId);
         const untracked = [];
         for (const relative of (0, rolling_integration_js_1.git)(root, ['ls-files', '--others', '--exclude-standard', '-z']).split('\0').filter(Boolean))
             untracked.push({ path: relative, blob: await swarmQueuePayloads.file(safeFile(root, relative)) });
@@ -780,7 +817,7 @@ class SwarmQueueStore {
         } }
         return { revision, ref, indexPatch: await patch(['diff', '--cached', '--binary', '--full-index']), worktreePatch: await patch(['diff', '--binary', '--full-index']), untracked };
     }
-    preserveCandidate(root, swarmQueueStateV2, swarmQueueTaskV1, swarmQueueCandidateV1) {
+    preserveCandidate(root, swarmQueueStateV3, swarmQueueTaskV1, swarmQueueCandidateV1) {
         requireQueue(/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/u.test(swarmQueueCandidateV1.base) && /^(?:[a-f0-9]{40}|[a-f0-9]{64})$/u.test(swarmQueueCandidateV1.revision), 'candidate requires exact Git object IDs');
         requireQueue(swarmQueueCandidateV1.base === swarmQueueTaskV1.claim?.base, 'candidate must descend from its exact claim base');
         requireQueue((0, rolling_integration_js_1.git)(root, ['rev-parse', `${swarmQueueCandidateV1.revision}^{commit}`]).trim() === swarmQueueCandidateV1.revision && (0, rolling_integration_js_1.gitResult)(root, ['merge-base', '--is-ancestor', swarmQueueCandidateV1.base, swarmQueueCandidateV1.revision]).status === 0, 'candidate/base history differs');
@@ -801,16 +838,19 @@ class SwarmQueueStore {
         requireQueue((0, rolling_integration_js_1.git)(root, ['rev-list', '--merges', `${swarmQueueCandidateV1.base}..${swarmQueueCandidateV1.revision}`]).trim() === '', 'candidate requires a linear reviewed history');
         const changed = [...new Set(revisions.flatMap(revision => (0, rolling_integration_js_1.git)(root, ['diff-tree', '--no-commit-id', '--no-renames', '--name-only', '-r', '-z', revision, '--']).split('\0').filter(Boolean)))];
         requireQueue(changed.every(relative => permitted.some(scope => relative === scope || relative.startsWith(scope + '/'))), 'candidate includes paths outside its claim');
-        const ref = `refs/ponytail/swarm-queue/${digest(swarmQueueStateV2.campaignId)}/${digest(swarmQueueTaskV1.id)}/${swarmQueueTaskV1.claim?.generation}`;
+        const ref = `refs/ponytail/swarm-queue/${digest(swarmQueueStateV3.campaignId)}/${digest(swarmQueueTaskV1.id)}/${swarmQueueTaskV1.claim?.generation}`;
         (0, rolling_integration_js_1.git)(root, ['update-ref', ref, swarmQueueCandidateV1.revision]);
     }
 }
 exports.SwarmQueueStore = SwarmQueueStore;
 async function requireSwarmQueueLifecycleQuiescence(poolClient, projectId, ownerRoot, sessionId) {
-    const rows = (await poolClient.query('SELECT CASE WHEN storage_version=2 THEN state_text ELSE NULL END AS state_text FROM ponytail_index.swarm_queue_v1 WHERE project_id=$1 AND owner_root=$2 AND NOT closed', [projectId, ownerRoot])).rows;
+    const rows = (await poolClient.query('SELECT CASE WHEN storage_version=3 THEN state_text ELSE NULL END AS state_text FROM ponytail_index.swarm_queue_v1 WHERE project_id=$1 AND owner_root=$2 AND NOT closed', [projectId, ownerRoot])).rows;
     for (const row of rows) {
         requireQueue(typeof row.state_text === 'string', 'legacy queue requires authorized queue status migration');
-        const swarmQueueStateV2 = readSwarmQueueStateV2(parseSwarmQueueJson(row.state_text));
-        requireQueue(sessionId !== null && swarmQueueStateV2.pending === null && !swarmQueueStateV2.tasks.some(swarmQueueTaskV1 => swarmQueueTaskV1.state !== 'done' && swarmQueueTaskV1.claim?.sessionId === sessionId), 'preserve and settle unfinished queue ownership before lifecycle removal');
+        const swarmQueueStateV3 = readSwarmQueueStateV3(parseSwarmQueueJson(row.state_text));
+        if (swarmQueueStateV3.state === 'suspended')
+            continue;
+        requireQueue(sessionId !== null && swarmQueueStateV3.pending === null && !swarmQueueStateV3.tasks.some(swarmQueueTaskV1 => swarmQueueTaskV1.state !== 'done' && swarmQueueTaskV1.claim?.sessionId === sessionId), 'preserve and settle unfinished queue ownership before lifecycle removal');
     }
 }
+async function isSwarmQueueWorkerRetirementAuthorized(poolClient, projectId, ownerRoot, sessionId, generation, rootPath) { const rows = (await poolClient.query('SELECT state_text FROM ponytail_index.swarm_queue_v1 WHERE project_id=$1 AND owner_root=$2 AND storage_version=3', [projectId, ownerRoot])).rows; return rows.some(row => { requireQueue(typeof row.state_text === 'string', 'invalid suspended queue'); const state = readSwarmQueueStateV3(parseSwarmQueueJson(row.state_text)); return state.state === 'suspended' && state.suspension?.workers.some(worker => worker.sessionId === sessionId && worker.generation === generation && worker.rootPath === rootPath) === true; }); }

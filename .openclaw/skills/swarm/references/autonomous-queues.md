@@ -14,7 +14,7 @@ reference canonical obligation IDs, not copied acceptance conditions. Reconcile
 requirements, UAT, issues, plan, obligation document, binding history and adopted
 traceability whenever discovered work changes them.
 
-Each command uses one strict V2 request file:
+Each command uses one strict V3 request file:
 
 ```text
 ponytail swarm queue <command> --request @<request.json>
@@ -24,14 +24,14 @@ Capture command JSON under the invoking project's ignored temporary directory
 and inspect the selected `task`/`request` or compact queue metadata. Do not load
 the accumulated source snapshots and discovery history into every worker turn.
 
-Every new request has `schemaVersion: 2`, `command`, `campaignId`, and `actor`.
+Every new request has `schemaVersion: 3`, `command`, `campaignId`, and `actor`.
 A coordinator actor is `{kind: "coordinator", sessionId: "<bound-session>"}`;
 a worker actor is `{kind: "worker", sessionId: "<original-session>",
 generation: "<current-worker-generation>"}`. Run coordinator commands from the
 owner checkout and worker commands from their original enrolled checkout.
-Generations come from `swarm info`; none are invented. V1 request files remain readable. Output is physical V2: `schemaVersion: 2`,
+Generations come from `swarm info`; none are invented. V1/V2 request files remain readable. Output is physical V3: `schemaVersion: 3`,
 compact `queue` metadata (campaign, owner, state, sequence, pending discovery ID,
-task/request counts), selected `task`/`request`, `page`, and `artifact`, each
+task/request counts, suspension or null), selected `task`/`request`, `page`, and `artifact`, each
 selection nullable. It never returns the accumulated queue or source bytes.
 `requests` returns the first page of unresolved requests, including processing
 ones. Use `page` with `collection: "tasks"|"requests"`, `offset: 0`,
@@ -49,7 +49,7 @@ historical claims and checkpoint payload bytes; it retains current ownership,
 lease, candidate/base, checkpoint revision/ref and review identity. Task inventory pages expose source/review blob references for exact bounded recovery; every referenced byte remains available through `artifact-read`.
 
 The first authorized command upgrades retained V1 storage transactionally using
-streamed decoding into chunked artifacts. Its exact original state text is
+streamed decoding into chunked artifacts, then normalizes the metadata to V3. V2 upgrades without recopying payloads. Its exact original state text is
 retained in `legacy_state_text`; interruption rolls back the entire migration,
 including new chunks. Run `status` first after installation, verify preserved
 counts/ownership and original archive digest, then resume queue mutations. Never
@@ -329,3 +329,33 @@ and verify real claims. Do not silently transfer a dirty original checkout to a
 replacement. Keep a source-owning original retained until a verified handoff is
 complete. Report retired sessions, retained roots, new bindings, queue ownership
 and actual activity separately. Installation alone does not establish migration.
+
+
+## Stakeholder shutdown and retirement
+
+A stakeholder stop/retirement instruction supersedes autonomous work acquisition.
+Stop new claims immediately. Let only explicitly allowed current assignments
+finish, then establish host quiescence for every bound worker. Preserve each
+candidate/ref, dirty file, native index, staged/unstaged patch, untracked file and
+needed ignored proof in coordinator-owned durable storage; verify copied bytes
+and record worker session/generation/root identities and host idle observations.
+Do not create replacements or archive native chats before preservation succeeds.
+
+The coordinator invokes `suspend` using a V3 request with `reason` and a
+repository-relative `hostEvidencePath` containing that verified host preservation
+and quiescence report. This records an immutable report blob and the exact bound
+worker generations, closes execution and leaves tasks, unfinished obligations,
+claims, candidates, requests and history unchanged. It does not certify success.
+Repeated identical suspension is idempotent. No queue mutation, new claim or
+completion is allowed afterward; bounded inspection remains available. There is
+no implicit restart. Settle pending PM discovery before suspension.
+
+After suspension, use existing exact-generation `worker-unbind` and checkout
+release operations. For a native checkout already removed by its host, unbind
+may retire only a matching generation listed in the suspension record; it edits
+bookkeeping without recreating Git metadata or touching the missing source path.
+A foreign or changed existing checkout remains rejected. Releasing an already missing native membership additionally requires that its worker is removed, its original membership generation is preserved, Ponytail did not provision project resources there, and configured retirement commands are explicitly empty; otherwise preserve membership until cleanup is established. V6 `swarm info` reports
+suspended queues and distinguishes missing directories from missing Git metadata;
+retained queue claims describe preserved historical ownership, not active workers.
+Unpin/archive chats only after verified preservation, and verify actual remaining
+bindings/chats. Keep unfinished project obligations unfinished.

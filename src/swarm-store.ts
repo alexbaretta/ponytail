@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Alex Baretta. All rights reserved.
 // Licensed under the MIT License. See LICENSE in the project root.
 import fs from 'node:fs';
-import {requireSwarmQueueLifecycleQuiescence} from './swarm-queue.js';
+import {requireSwarmQueueLifecycleQuiescence,isSwarmQueueWorkerRetirementAuthorized} from './swarm-queue.js';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import {spawnSync} from 'node:child_process';
@@ -211,12 +211,17 @@ export class SwarmStore {
     WHERE s.project_id=$1 AND s.number=$2 AND s.owner_root=$3 AND s.generation=$4 FOR UPDATE`,[this.projectId,currentSwarmWorkerBinding.worktreeNumber,currentSwarmWorkerBinding.ownerRoot,currentSwarmWorkerBinding.worktreeGeneration])).rows[0];
    if(worktree===undefined||worktree.root_path!==currentSwarmWorkerBinding.rootPath||(worktree.state!=='ACTIVE'&&worktree.state!=='RESERVED')) throw new Error('swarm: original worker checkout membership changed');
 
+   const root=fs.lstatSync(currentSwarmWorkerBinding.rootPath,{throwIfNoEntry:false});const missing=root===undefined||root.isDirectory()&&fs.lstatSync(path.join(currentSwarmWorkerBinding.rootPath,'.git'),{throwIfNoEntry:false})===undefined;
+   if(missing){if(!await isSwarmQueueWorkerRetirementAuthorized(poolClient,this.projectId,currentSwarmWorkerBinding.ownerRoot,currentSwarmWorkerBinding.sessionId,currentSwarmWorkerBinding.generation,currentSwarmWorkerBinding.rootPath))throw new Error('swarm: missing native checkout requires preserved host quiescence evidence and suspended queue');}
+   else {
    if(fs.realpathSync(currentSwarmWorkerBinding.rootPath)!==currentSwarmWorkerBinding.rootPath||fs.realpathSync(git(currentSwarmWorkerBinding.rootPath,['rev-parse','--path-format=absolute','--git-common-dir']).trim())!==worktree.git_common_directory) throw new Error('swarm: original checkout identity changed');
    requireRollingGitOperationAbsent(currentSwarmWorkerBinding.rootPath);
    const marker=path.join(currentSwarmWorkerBinding.rootPath,'session_id.txt');
    if(fs.lstatSync(marker,{throwIfNoEntry:false})!==undefined) validateRollingSessionMarker(currentSwarmWorkerBinding.rootPath,currentSwarmWorkerBinding.sessionId);
+   }
+   const marker=path.join(currentSwarmWorkerBinding.rootPath,'session_id.txt');
    await this.releaseCampaignAssignment(poolClient,currentSwarmWorkerBinding.worktreeNumber,currentSwarmWorkerBinding.ownerRoot,currentSwarmWorkerBinding.sessionId);
-   if(fs.lstatSync(marker,{throwIfNoEntry:false})!==undefined) fs.unlinkSync(marker);
+   if(!missing&&fs.lstatSync(marker,{throwIfNoEntry:false})!==undefined) fs.unlinkSync(marker);
    await poolClient.query("UPDATE ponytail_index.swarm_worker_v1 SET state='REMOVED' WHERE session_id=$1",[currentSwarmWorkerBinding.sessionId]);
    await poolClient.query("UPDATE ponytail_index.rolling_worktree_v1 SET state='RESERVED' WHERE project_id=$1 AND number=$2",[this.projectId,currentSwarmWorkerBinding.worktreeNumber]);
   });
@@ -313,12 +318,20 @@ export class SwarmStore {
    if(row===undefined) throw new Error('swarm: checkout membership changed or is absent; no ownership was released');
    const rollingStoredWorktree=readWorktree(row);
    if(rollingStoredWorktree.rootPath!==swarmWorktreeMembership.rootPath||rollingStoredWorktree.state!=='RESERVED') throw new Error('swarm: checkout has conflicting identity or activity; preserve ownership');
-   if(fs.realpathSync(rollingStoredWorktree.rootPath)!==rollingStoredWorktree.rootPath
-    ||fs.realpathSync(git(rollingStoredWorktree.rootPath,['rev-parse','--path-format=absolute','--git-common-dir']).trim())!==row.git_common_directory)
-    throw new Error('swarm: checkout repository identity changed; preserve ownership');
    if((await poolClient.query("SELECT 1 FROM ponytail_index.rolling_assignment_v1 WHERE project_id=$1 AND worktree_number=$2 AND state<>'RELEASED'",[this.projectId,rollingStoredWorktree.number])).rowCount
     ||await this.hasNativeOwner(poolClient,rollingStoredWorktree.rootPath))
     throw new Error('swarm: checkout retains an assignment or native actor; establish cessation and remove worker ownership first');
+   const root=fs.lstatSync(rollingStoredWorktree.rootPath,{throwIfNoEntry:false});const missing=root===undefined||root.isDirectory()&&fs.lstatSync(path.join(rollingStoredWorktree.rootPath,'.git'),{throwIfNoEntry:false})===undefined;
+   if(missing){
+    const rollingManagedDirectory=resolveRollingManagedDirectory(swarmWorktreeMembership.ownerRoot);
+    if(row.base_commit!==null||rollingManagedDirectory.configuration.retirementCommands?.length!==0)throw new Error('swarm: missing checkout still needs original project resource cleanup; preserve membership');
+    const retired=(await poolClient.query<Record<string,unknown>>("SELECT session_id,generation FROM ponytail_index.swarm_worker_v1 WHERE project_id=$1 AND owner_root=$2 AND worktree_number=$3 AND worktree_generation=$4 AND state='REMOVED' ORDER BY worker_number DESC LIMIT 1",[this.projectId,swarmWorktreeMembership.ownerRoot,swarmWorktreeMembership.number,swarmWorktreeMembership.generation])).rows[0];
+    if(retired===undefined||!await isSwarmQueueWorkerRetirementAuthorized(poolClient,this.projectId,swarmWorktreeMembership.ownerRoot,stringColumn(retired.session_id),stringColumn(retired.generation),swarmWorktreeMembership.rootPath))throw new Error('swarm: missing native checkout lacks exact preserved retirement authority');
+    await poolClient.query('DELETE FROM ponytail_index.swarm_worktree_v1 WHERE project_id=$1 AND number=$2',[this.projectId,rollingStoredWorktree.number]);await poolClient.query("UPDATE ponytail_index.rolling_worktree_v1 SET state='QUARANTINED' WHERE project_id=$1 AND number=$2",[this.projectId,rollingStoredWorktree.number]);return;
+   }
+   if(fs.realpathSync(rollingStoredWorktree.rootPath)!==rollingStoredWorktree.rootPath
+    ||fs.realpathSync(git(rollingStoredWorktree.rootPath,['rev-parse','--path-format=absolute','--git-common-dir']).trim())!==row.git_common_directory)
+    throw new Error('swarm: checkout repository identity changed; preserve ownership');
    requireRollingGitOperationAbsent(rollingStoredWorktree.rootPath);
    requireRollingSessionMarkerAbsent(rollingStoredWorktree.rootPath);
    if(row.base_commit!==null) {
