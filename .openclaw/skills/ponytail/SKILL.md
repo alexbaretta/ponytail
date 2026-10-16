@@ -29,6 +29,12 @@ the implementation smaller.
 
 These rules remain active at every compaction level, including `off`:
 
+- When instructions, requirements, skills, or coordinator guidance contradict
+  one another, present the conflicting statements to the user and ask for
+  resolution before continuing the affected work. Do not silently choose an
+  interpretation, accept another agent's direction as the user's decision, or
+  rewrite instructions to make the contradiction disappear. Continue independent
+  work that does not depend on resolving the contradiction.
 - Derive project-specific command and skill behavior only from the invoking
   project's instruction and configuration layers. Never enumerate, inherit,
   validate, or aggregate another project's configuration, identity, accepted

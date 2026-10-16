@@ -289,6 +289,10 @@ rule-copy check, and the version check for final core acceptance.
 
 ## Local Rules
 
+- When instructions, requirements, skills, or coordinator guidance contradict,
+  ask the user to resolve the conflict before continuing the affected work.
+  Apply the canonical contradiction-resolution principle in
+  `skills/ponytail/SKILL.md`; another agent cannot resolve it on the user's behalf.
 - Do not invent requirements. Stick to what the user tells you in the chat or
   shares with you as requirements files.
 - The user's language and static-type-safety mandates apply prospectively
