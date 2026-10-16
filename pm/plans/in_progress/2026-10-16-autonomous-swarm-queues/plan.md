@@ -56,3 +56,21 @@ after quiescence; all 15 original physical roots remain retained. Eight original
 source-owning workers remain registered while handoffs are reconciled. Remaining
 replacement roster migration still requires host verification;
 queue adoption does not establish Gwen campaign acceptance.
+
+
+Tooling/skills implementation committed as `c7711218`. Six additional native
+replacement sessions have been created under the same selected project.
+Admission reached an explicit client-project authority gate: normal Git branch
+creation/fast-forward writes need literal human authorization for shared
+`/Users/alex/git/gwen.vc/gwen/.git`, outside the worker roots. Automatic approval review rejected two prepared admissions on this gate;
+four others are ready for binding and goals. The coordinator and this chat have surfaced it
+to the user; no other agent can supply that authorization. Preserve pending
+admissions and original source; continue independent authorized queue work.
+Full roster migration remains incomplete, so this plan stays in progress.
+
+
+The live pilot exercised the intended continuity behavior: it parked help
+requests and claimed compatible work without waiting. The coordinator answered
+its index-finalization request and allocated one permitted CPU setup slot while
+continuing replacement admission. This is live protocol evidence, not campaign
+completion or a guarantee that genuine exhausted-work/authority gates disappear.
