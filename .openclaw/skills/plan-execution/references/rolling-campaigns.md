@@ -202,9 +202,11 @@ Implement autonomously within that authority, synchronize requirements/UAT and
 traceability, query build impact, and run required focused QA/Arcs. Do not request
 routine implementation approvals or await coordinator instructions between edits.
 
-For code changes, freshly fetch the campaign branch and perform a full semantic
-rebase commit by commit. Correct textual and cleanly applied semantic conflicts,
-refresh affected evidence, and submit the exact final SHA/base with the required
+For code changes, freshly fetch the campaign branch and follow the
+[semantic-rebase procedure](../../semantic-rebase/SKILL.md): review the aggregate
+final-state changes once, select potential semantic conflicts, and stop only at
+contributing commits or unexpected textual conflicts. Correct the selected
+interactions, refresh affected evidence, and submit the exact final SHA/base with the required
 strict proof record. Git evidence contains the tested revision and relevant
 tracked paths/scopes, not per-file hash manifests or a repository-wide file list.
 Retain command output; ignored logs are outputs rather than source inputs.

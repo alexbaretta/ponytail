@@ -129,9 +129,11 @@ full-suite command remains a separate final gate.
    invalidate only proof whose dependency closure intersects the repair. When
    that closure is unknown, require a fresh complete slice run before acceptance.
 6. Collect a terminal submission only after the worker reports a fresh complete
-   green slice and stops the original turn. In a rolling campaign, call
-   `collect-submission`, `request-review`, `integrate` and bound-certificate
-   `accept` for that one terminal result. In a host-managed swarm, use its
+   green slice and stops the original turn. In a rolling campaign, collect the
+   original worker result through host tools and follow the canonical
+   [rolling submission, review and acceptance procedure](../plan-execution/references/rolling-campaigns.md)
+   for that one terminal result; session collection is not a Ponytail command.
+   In a host-managed swarm, use its
    existing final review and acceptance path once for the complete slice.
 7. Close or publish the campaign only after every slice gate and every
    additional configured final gate is satisfied on compatible final inputs.
