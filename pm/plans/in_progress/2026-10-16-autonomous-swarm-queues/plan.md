@@ -145,3 +145,13 @@ includes OBL7. Root-read accepted-resolution receipt confirms TASK-OBL-7 `done`
 and its request `resolved`/`accepted`, with no pending discovery. The 557 coverage
 gaps remain unresolved work, not a QA pass. All 23 needed chats have verified
 pins; missing native checkout and ignored-evidence restoration remain incomplete.
+
+
+A subsequent OBL17 proof-reuse report did not establish a tooling defect.
+Direct receipt/Git inspection shows candidate b8f1261cdf446753517ab868bddc0db925fcdd36
+changes `packages/incremental-build/test/incremental-vitest-cross-session.integration.test.ts`
+inside the original proof's declared `packages/incremental-build` inputs.
+Canonical `gitInputReasons` reports changed inputs. No reuse bypass, receipt
+relabeling or scope narrowing was implemented. The coordinator was instructed to
+correct its earlier no-rerun answer and perform only the configured focused
+selection for the changed inputs when its resource slot is available.
