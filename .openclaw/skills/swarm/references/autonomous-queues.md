@@ -237,6 +237,24 @@ ownership and lifecycle paths; no scripts/executable payloads or outside-project
 paths. Keep append-only obligation/history evidence and authority intact. Existing
 canonical obligations can be queued without rewriting their meaning.
 
+For an assessment of existing obligations with no new work, the coordinator uses
+`discover` with `kind: "work"`, `tasks: []`, and the canonical obligation document
+update appending its valid assessment checkpoint (and any new certificate). Include any new assessment
+artifacts under the configured plan root, referenced by those certificates.
+Baselines, obligation definitions and binding history remain unchanged. Only the
+checkpoint document and its referenced plan evidence may be updated in this
+mode; do not invent requirement IDs, UAT edits or another task. Canonical
+checkpoint validation still requires authority, fresh inputs and honest neutral
+or productive semantics. Workers propose assessments through handoff; the
+coordinator records host review and performs canonical publication.
+
+This persists PM assessment state without creating a source commit. For unchanged
+inspection candidates, retain the reviewed source revision and its exact inputs;
+queue resolution does not require an acceptance-only Git commit. Respect the
+project's commit policy: when it forbids such commits, include the assessment
+records in the next permitted productive change, retaining their exact source
+binding. PM publication, source integration and campaign completion are distinct.
+
 The CLI serializes discovery under the project fence, validates proposed canonical
 transitions against proposed inputs, durably records intent before publishing,
 then atomically makes tasks claimable only after all records are written. Stale

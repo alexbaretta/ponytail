@@ -74,3 +74,29 @@ requests and claimed compatible work without waiting. The coordinator answered
 its index-finalization request and allocated one permitted CPU setup slot while
 continuing replacement admission. This is live protocol evidence, not campaign
 completion or a guarantee that genuine exhausted-work/authority gates disappear.
+
+
+## Existing-obligation assessment correction
+
+The live coordinator exposed a canonical publication gap: `discover` required new
+tasks and requirement/UAT edits even for an unchanged-source requirementless gate
+assessment. Focused real-PostgreSQL reproduction confirmed the validator as the
+cause. The same physical V1 operation now supports coordinator `kind: work`
+with `tasks: []`, only the canonical checkpoint and referenced plan assessment
+artifacts, and unchanged baselines, obligation definitions and binding history.
+Canonical certificate additions and checkpoint reacceptance of existing certificates
+require coordinator authority regardless of task list, including identical
+existing-task no-ops. Freshness, neutral checkpoint
+semantics, exact host review and candidate-bound queue resolution remain intact.
+No source commit or invented execution receipt is required. Respect the client
+plan's prohibition on acceptance-only commits; fold PM records into its next
+permitted productive change.
+
+Focused queue tests pass (4), including real neutral requirementless gate
+publication/resolution, idempotence and rejection before publication of worker
+certification, no-op task authority bypass, unrelated PM edits and scope changes.
+Observation: [assessment coupled to discovery](../../../debugging-pattern-observations/2026-10-16-assessment_coupled_to_discovery.json).
+Correction acceptance: all 1029 tests passed. The full command reached the
+final static gate, which initially rejected the two untracked observations;
+after staging them, `npm run check:tsts` passed over 1681 files. Unchanged
+passing test suites were reused. Live coordinator discharge is verified below.

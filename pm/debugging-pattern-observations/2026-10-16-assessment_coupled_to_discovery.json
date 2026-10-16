@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-10-16-assessment_coupled_to_discovery",
+  "recorded_at": "2026-10-16T12:29:04-07:00",
+  "source_references": [
+    "pm/plans/in_progress/2026-10-16-autonomous-swarm-queues/plan.md",
+    "commit:c7711218"
+  ],
+  "context": {
+    "languages": [
+      "typescript"
+    ],
+    "frameworks": [],
+    "components": [
+      "autonomous swarm queues"
+    ],
+    "affected_boundaries": [
+      "canonical assessment publication",
+      "discovery authorization"
+    ],
+    "code_references": [
+      "src/swarm-queue.ts",
+      "tests/swarm-queue.integration.test.ts"
+    ]
+  },
+  "observed_behavior": "A reviewed requirementless inspection gate could not publish its canonical assessment without inventing new work and unrelated requirement/UAT updates.",
+  "expected_behavior": "The coordinator can persist an existing-obligation assessment checkpoint and referenced plan evidence without a new task or source commit.",
+  "causal_mechanism": "Discovery validation required a nonempty task list and requirement/UAT updates for every PM transition. Restricting the new assessment mode by task-list emptiness alone also allowed an identical existing task to bypass coordinator-only certificate publication.",
+  "anti_pattern": {
+    "structural_description": "Lifecycle authorization and required documents inferred from caller-supplied task-list shape instead of the canonical transition.",
+    "why_it_fails": "An assessment has no newly discovered task, while an identical existing task is a no-op and does not prove new work or authorize certification."
+  },
+  "correct_pattern": {
+    "required_invariant": "Only the coordinator publishes canonical certificates; an existing assessment retains scope and changes only its checkpoint and referenced plan evidence.",
+    "implementation_description": "Validate canonical acceptance and authorize actual appended certificate records or checkpoint certificate acceptance, including reaccepted historical certificates, independently of task list; permit coordinator empty-task assessment with unchanged scope."
+  },
+  "applicability_conditions": [
+    "The queue serializes both new-work discovery and existing-obligation assessment publication."
+  ],
+  "known_non_matches": [
+    "New-work discovery still requires its actual requirement/UAT/plan reconciliation."
+  ],
+  "confirmation_evidence": [
+    "Real PostgreSQL fixture with requirementless OBL-7 reproduces nonempty-task rejection.",
+    "Adding an identical existing requirement-backed task reproduced coordinator-authority bypass.",
+    "Explicit invalidation followed by worker reacceptance of the same certificate is rejected despite unchanged certificate count; coordinator reassessment passes."
+  ],
+  "regression_proofs": [
+    "tests/swarm-queue.integration.test.ts: inspection-only gate discharges with reviewed canonical source evidence and no invented execution receipt"
+  ]
+}

@@ -11,7 +11,7 @@ import {SwarmStore,type SwarmWorkerBinding,type SwarmWorkerAssignment} from '../
 import type {RollingProjectConfigV2} from '../src/rolling-campaign.js';
 import {SwarmQueueStore,type SwarmQueueCommandV1,type SwarmQueueActorV1,type SwarmQueueTaskInputV1,type SwarmQueueDiscoveryV1,type SwarmQueueCandidateV1,type SwarmQueueVerdictV1} from '../src/swarm-queue.js';
 import {fixture,git} from './helpers/obligation-fixture.js';
-import {type ObligationDocumentV1,type ObligationEvidence,type ObligationCertificate,inputDigest,acceptCheckpoint} from '../skills/plan-execution/scripts/obligations.js';
+import {type ObligationDocumentV1,type ObligationEvidence,type ObligationCertificate,inputDigest,parseObligationDocument,acceptCheckpoint} from '../skills/plan-execution/scripts/obligations.js';
 // Traceability: verifies REQ-SWARM-QUEUES
 test('autonomous queues preserve parked work, race exclusive claims, service FIFO and publish discovery through real CLI',async testContext=>{
  const obligationFixture=fixture(testContext);const root=obligationFixture.root;
@@ -167,11 +167,15 @@ test('autonomous queues preserve parked work, race exclusive claims, service FIF
 });
 
 // Traceability: verifies REQ-SWARM-QUEUES
-test('inspection-only inventory discharges with reviewed canonical source evidence and no invented execution receipt',async testContext=>{
+test('inspection-only gate discharges with reviewed canonical source evidence and no invented execution receipt',async testContext=>{
  const obligationFixture=fixture(testContext);const root=obligationFixture.root;const pool=new Pool(databaseOptions(process.cwd()));const projectId=crypto.randomUUID();
  testContext.after(async()=>{try{await pool.query('DELETE FROM ponytail_index.swarm_worktree_v1 WHERE project_id=$1',[projectId]);await pool.query('DELETE FROM ponytail_index.project_v1 WHERE project_id=$1',[projectId]);}finally{await pool.end();}});
  fs.appendFileSync(path.join(root,'.gitignore'),'managed/\nsession_id.txt\n');
  const rollingProjectConfigV2:RollingProjectConfigV2={schemaVersion:2,mainline:{remote:'origin',branch:'main'},managedWorktrees:{directory:path.join(root,'managed'),anchor:'main'},maxActiveWorkers:1,publicationSize:null,setupCommands:[],retirementCommands:[],qa:{focused:[],publication:[['node','--version']]}};
+ fs.mkdirSync(path.join(root,'pm/requirements'),{recursive:true});fs.copyFileSync(path.join(root,'requirement.md'),path.join(root,'pm/requirements/pilot.md'));
+ const firstObligation=obligationFixture.document.obligations[0];assert.ok(firstObligation);
+ const obligationDocumentV1:ObligationDocumentV1={...obligationFixture.document,baselines:obligationFixture.document.baselines.map(obligationBaseline=>({...obligationBaseline,requirements:obligationBaseline.requirements.map(obligationRequirement=>({...obligationRequirement,path:'pm/requirements/pilot.md'})),obligationIds:[...obligationBaseline.obligationIds,'OBL-7']})),obligations:[...obligationFixture.document.obligations,{...firstObligation,id:'OBL-7',category:'gate',requirementIds:[]}],checkpoints:obligationFixture.document.checkpoints.map(obligationCheckpoint=>({...obligationCheckpoint,registeredIds:[...obligationCheckpoint.registeredIds,'OBL-7']}))};
+ fs.writeFileSync(path.join(root,obligationFixture.documentPath),JSON.stringify(obligationDocumentV1));
  fs.writeFileSync(path.join(root,'.agents/config/project/rolling-campaigns.json'),JSON.stringify(rollingProjectConfigV2));git(root,['add','.']);git(root,['commit','-m','Inspection queue fixture']);
  await pool.query('INSERT INTO ponytail_index.project_v1(project_id,project_name) VALUES($1,$2)',[projectId,`inspection-${projectId}`]);
  const swarmStore=new SwarmStore(pool,projectId);await swarmStore.enrollOwner({rootPath:root,gitCommonDirectory:git(root,['rev-parse','--path-format=absolute','--git-common-dir'])});
@@ -183,8 +187,9 @@ test('inspection-only inventory discharges with reviewed canonical source eviden
  const swarmQueueStore=new SwarmQueueStore(pool,projectId,root);
  const initSwarmQueueCommandV1:SwarmQueueCommandV1={schemaVersion:1,campaignId:'pilot',actor:coordinatorSwarmQueueActorV1,command:'init',documentPath:obligationFixture.documentPath,bindingsPath:null,authority:['approved-CHNG'],assessor:'coordinator',recordRoots:{requirements:'pm/requirements',uat:'pm/uat',issues:'pm/bugs',plans:'pm/plans'}};
  await swarmQueueStore.execute(initSwarmQueueCommandV1,root);
- const swarmQueueTaskInputV1:SwarmQueueTaskInputV1={id:'inventory',title:'Assess finite T1 inventory',obligationIds:['OBL-1'],preferredWorker:sessionId,context:['source']};
- const addSwarmQueueCommandV1:SwarmQueueCommandV1={schemaVersion:1,campaignId:'pilot',actor:workerSwarmQueueActorV1,command:'add',tasks:[swarmQueueTaskInputV1]};await swarmQueueStore.execute(addSwarmQueueCommandV1,workerRoot);
+ const swarmQueueTaskInputV1:SwarmQueueTaskInputV1={id:'inventory',title:'Assess finite T1 inventory',obligationIds:['OBL-7'],preferredWorker:sessionId,context:['source']};
+ const requirementSwarmQueueTaskInputV1:SwarmQueueTaskInputV1={id:'requirements',title:'Existing requirement-backed work',obligationIds:['OBL-2'],preferredWorker:null,context:['source']};
+ const addSwarmQueueCommandV1:SwarmQueueCommandV1={schemaVersion:1,campaignId:'pilot',actor:workerSwarmQueueActorV1,command:'add',tasks:[swarmQueueTaskInputV1,requirementSwarmQueueTaskInputV1]};await swarmQueueStore.execute(addSwarmQueueCommandV1,workerRoot);
  const claimSwarmQueueCommandV1:SwarmQueueCommandV1={schemaVersion:1,campaignId:'pilot',actor:workerSwarmQueueActorV1,command:'claim'};
  const claimedSwarmQueueResultV1=await swarmQueueStore.execute(claimSwarmQueueCommandV1,workerRoot);const swarmQueueTaskV1=claimedSwarmQueueResultV1.task;assert.ok(swarmQueueTaskV1?.claim);
  fs.mkdirSync(path.join(workerRoot,'state'),{recursive:true});fs.writeFileSync(path.join(workerRoot,'state/assessment.txt'),'Finite T1 scope inspected at exact source revision; no omitted noninventory responsibilities. No test execution claimed.');
@@ -197,9 +202,33 @@ test('inspection-only inventory discharges with reviewed canonical source eviden
  const takeSwarmQueueCommandV1:SwarmQueueCommandV1={schemaVersion:1,campaignId:'pilot',actor:coordinatorSwarmQueueActorV1,command:'take'};await swarmQueueStore.execute(takeSwarmQueueCommandV1,root);
  fs.mkdirSync(path.join(root,'state'),{recursive:true});fs.copyFileSync(path.join(workerRoot,'state/assessment.txt'),path.join(root,'state/assessment.txt'));fs.writeFileSync(path.join(root,'state/host-review.txt'),'Controlled host review fixture: independently accepted exact source assessment and candidate identity.');
  const reviewSwarmQueueCommandV1:SwarmQueueCommandV1={schemaVersion:1,campaignId:'pilot',actor:coordinatorSwarmQueueActorV1,command:'record-review',taskId:swarmQueueTaskV1.id,generation:swarmQueueTaskV1.claim.generation,reviewer:swarmQueueVerdictV1.reviewer,hostEvidencePath:'state/host-review.txt'};await swarmQueueStore.execute(reviewSwarmQueueCommandV1,root);
- const obligationCertificate:ObligationCertificate={id:'CERT-inspection',obligationIds:['OBL-1'],inputs:{schemaVersion:2,revision,paths:['requirement.md','src.txt']},artifacts:['state/assessment.txt'],assessor:'coordinator',authority:['approved-CHNG'],adequate:true,reason:'Independent finite inventory assessment',disposition:null,evidence:[],inventoryIds:[]};
- const candidateObligationDocumentV1:ObligationDocumentV1={...obligationFixture.document,certificates:[obligationCertificate],checkpoints:[...obligationFixture.document.checkpoints,{id:'CP2',predecessorId:'CP1',baselineId:'B1',kind:'productive',selectedIds:['OBL-1'],registeredIds:[],certificateIds:[obligationCertificate.id],invalidatedIds:[],before:[1,1,1,1,1,1],after:[0,1,1,1,1,1],preparation:null,reason:'Reviewed source inventory complete',assessor:'coordinator'}]};
- const acceptedObligationDocumentV1=acceptCheckpoint(obligationFixture.document,candidateObligationDocumentV1,root);fs.writeFileSync(path.join(root,obligationFixture.documentPath),JSON.stringify(acceptedObligationDocumentV1));
+ const obligationCertificate:ObligationCertificate={id:'CERT-inspection',obligationIds:['OBL-7'],inputs:{schemaVersion:2,revision,paths:['requirement.md','src.txt']},artifacts:['pm/plans/in_progress/pilot/assessment.txt'],assessor:'coordinator',authority:['approved-CHNG'],adequate:true,reason:'Independent finite inventory assessment',disposition:null,evidence:[],inventoryIds:[]};
+ const candidateObligationDocumentV1:ObligationDocumentV1={...obligationDocumentV1,certificates:[obligationCertificate],checkpoints:[...obligationDocumentV1.checkpoints,{id:'CP2',predecessorId:'CP1',baselineId:'B1',kind:'neutral',selectedIds:['OBL-7'],registeredIds:[],certificateIds:[obligationCertificate.id],invalidatedIds:[],before:[1,1,1,1,1,1],after:[1,1,1,1,1,1],preparation:{obligationId:'OBL-7',operations:['inspect'],deliverable:'Finite gate assessment'},reason:'Reviewed source inventory complete',assessor:'coordinator'}]};
+ const swarmQueueDiscoveryV1:SwarmQueueDiscoveryV1={id:'assess-existing',kind:'work',actor:coordinatorSwarmQueueActorV1,tasks:[],updates:[
+  {path:obligationFixture.documentPath,beforeContent:fs.readFileSync(path.join(root,obligationFixture.documentPath),'utf8'),content:JSON.stringify(candidateObligationDocumentV1)},
+  {path:'pm/plans/in_progress/pilot/assessment.txt',beforeContent:null,content:fs.readFileSync(path.join(workerRoot,'state/assessment.txt'),'utf8')}]};
+ const discoverSwarmQueueCommandV1:SwarmQueueCommandV1={schemaVersion:1,campaignId:'pilot',actor:coordinatorSwarmQueueActorV1,command:'discover',discovery:swarmQueueDiscoveryV1};
+ await assert.rejects(swarmQueueStore.execute({...discoverSwarmQueueCommandV1,actor:workerSwarmQueueActorV1,discovery:{...swarmQueueDiscoveryV1,actor:workerSwarmQueueActorV1}},workerRoot),/requires coordinator/);
+ const workerSwarmQueueDiscoveryV1:SwarmQueueDiscoveryV1={...swarmQueueDiscoveryV1,actor:workerSwarmQueueActorV1,tasks:[requirementSwarmQueueTaskInputV1],updates:[...swarmQueueDiscoveryV1.updates,
+  {path:'pm/requirements/pilot.md',beforeContent:fs.readFileSync(path.join(root,'pm/requirements/pilot.md'),'utf8'),content:fs.readFileSync(path.join(root,'pm/requirements/pilot.md'),'utf8')},
+  {path:'pm/uat/pilot.md',beforeContent:null,content:'# REQ-PILOT accepted behavior'}]};
+ await assert.rejects(swarmQueueStore.execute({...discoverSwarmQueueCommandV1,actor:workerSwarmQueueActorV1,discovery:workerSwarmQueueDiscoveryV1},workerRoot),/requires coordinator/,'an identical existing task cannot bypass assessment authority');
+ await assert.rejects(swarmQueueStore.execute({...discoverSwarmQueueCommandV1,discovery:{...swarmQueueDiscoveryV1,updates:[...swarmQueueDiscoveryV1.updates,{path:'pm/requirements/unrelated.md',beforeContent:null,content:'Unrelated edit'}]}},root),/assessment updates/);
+ const firstSwarmQueueDocumentUpdateV1=swarmQueueDiscoveryV1.updates[0];assert.ok(firstSwarmQueueDocumentUpdateV1);
+ await assert.rejects(swarmQueueStore.execute({...discoverSwarmQueueCommandV1,discovery:{...swarmQueueDiscoveryV1,updates:swarmQueueDiscoveryV1.updates.map(updateSwarmQueueDocumentUpdateV1=>updateSwarmQueueDocumentUpdateV1.path===obligationFixture.documentPath?{...firstSwarmQueueDocumentUpdateV1,content:JSON.stringify({...candidateObligationDocumentV1,obligations:[...candidateObligationDocumentV1.obligations,{...firstObligation,id:'OBL-8'}]})}:updateSwarmQueueDocumentUpdateV1)}},root),/scope|baseline|obligation/i);
+ assert.equal((await swarmQueueStore.inspect('pilot')).pending,null,'invalid assessment cannot leave publication intent');
+ assert.equal(fs.existsSync(path.join(root,'pm/plans/in_progress/pilot/assessment.txt')),false,'preflight must not publish evidence');
+ await swarmQueueStore.execute(discoverSwarmQueueCommandV1,root);
+ await swarmQueueStore.execute(discoverSwarmQueueCommandV1,root);
+ const acceptedObligationDocumentV1=parseObligationDocument(fs.readFileSync(path.join(root,obligationFixture.documentPath),'utf8'));
+ assert.equal(git(root,['rev-parse','HEAD']),revision,'canonical assessment requires no acceptance-only source commit');
+ assert.equal((await swarmQueueStore.inspect('pilot')).tasks.length,2,'assessment must not invent another task');
+ const invalidatedObligationDocumentV1=acceptCheckpoint(acceptedObligationDocumentV1,{...acceptedObligationDocumentV1,checkpoints:[...acceptedObligationDocumentV1.checkpoints,{id:'CP3',predecessorId:'CP2',baselineId:'B1',kind:'disturbance',selectedIds:[],registeredIds:[],certificateIds:[],invalidatedIds:[obligationCertificate.id],before:[1,1,1,1,1,1],after:[1,1,1,1,1,1],preparation:null,reason:'Retest assessment after explicit invalidation',assessor:'coordinator'}]},root);
+ fs.writeFileSync(path.join(root,obligationFixture.documentPath),JSON.stringify(invalidatedObligationDocumentV1));
+ const reassessedObligationDocumentV1:ObligationDocumentV1={...invalidatedObligationDocumentV1,checkpoints:[...invalidatedObligationDocumentV1.checkpoints,{id:'CP4',predecessorId:'CP3',baselineId:'B1',kind:'neutral',selectedIds:['OBL-7'],registeredIds:[],certificateIds:[obligationCertificate.id],invalidatedIds:[],before:[1,1,1,1,1,1],after:[1,1,1,1,1,1],preparation:{obligationId:'OBL-7',operations:['inspect'],deliverable:'Source reassessment after explicit invalidation'},reason:'Fresh existing assessment reaccepted',assessor:'coordinator'}]};
+ const reassessmentSwarmQueueDocumentUpdateV1={path:obligationFixture.documentPath,beforeContent:JSON.stringify(invalidatedObligationDocumentV1),content:JSON.stringify(reassessedObligationDocumentV1)};
+ await assert.rejects(swarmQueueStore.execute({...discoverSwarmQueueCommandV1,actor:workerSwarmQueueActorV1,discovery:{...workerSwarmQueueDiscoveryV1,id:'worker-reaccept',updates:[reassessmentSwarmQueueDocumentUpdateV1,...workerSwarmQueueDiscoveryV1.updates.filter(updateSwarmQueueDocumentUpdateV1=>updateSwarmQueueDocumentUpdateV1.path.startsWith('pm/requirements/')||updateSwarmQueueDocumentUpdateV1.path.startsWith('pm/uat/'))]}},workerRoot),/requires coordinator/,'existing certificate reacceptance requires coordinator despite unchanged certificate count');
+ await swarmQueueStore.execute({...discoverSwarmQueueCommandV1,discovery:{...swarmQueueDiscoveryV1,id:'reaccept-existing',updates:[reassessmentSwarmQueueDocumentUpdateV1]}},root);
  const resolveSwarmQueueCommandV1:SwarmQueueCommandV1={schemaVersion:1,campaignId:'pilot',actor:coordinatorSwarmQueueActorV1,command:'resolve',requestId:'assessment',response:'Canonical finite source inventory accepted',outcome:'accepted'};
  assert.equal((await swarmQueueStore.execute(resolveSwarmQueueCommandV1,root)).queue.tasks[0]?.state,'done');assert.deepEqual(acceptedObligationDocumentV1.certificates[0]?.evidence,[]);
 });
