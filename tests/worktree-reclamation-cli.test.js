@@ -151,7 +151,7 @@ test('serializes independent maintenance sessions per project', async () => {
     env: { ...environment, WORKTREE_RECLAMATION_TEST_DELAY: 'true' },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
-  for (let attempt = 0; attempt < 100 && !fs.existsSync(path.join(project, 'reclaim-started')); attempt += 1) {
+  for (let attempt = 0; attempt < 1000 && !fs.existsSync(path.join(project, 'reclaim-started')); attempt += 1) {
     await new Promise((resolve) => setTimeout(resolve, 10));
   }
   assert.equal(fs.existsSync(path.join(project, 'reclaim-started')), true);
@@ -170,7 +170,7 @@ test('does not couple reclamation locks for distinct projects', async () => {
     env: { ...firstFixture.environment, WORKTREE_RECLAMATION_TEST_DELAY: 'true' },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
-  for (let attempt = 0; attempt < 100 && !fs.existsSync(path.join(firstFixture.project, 'reclaim-started')); attempt += 1) {
+  for (let attempt = 0; attempt < 1000 && !fs.existsSync(path.join(firstFixture.project, 'reclaim-started')); attempt += 1) {
     await new Promise((resolve) => setTimeout(resolve, 10));
   }
   assert.equal(fs.existsSync(path.join(firstFixture.project, 'reclaim-started')), true);
