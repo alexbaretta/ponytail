@@ -15,6 +15,14 @@ Licensed under the MIT License. See LICENSE in the project root.
 
 # QA Swarm
 
+New QA swarms use autonomous queues. For queue execution, use the swarm skill's
+[queue protocol](../swarm/references/autonomous-queues.md). Keep this skill's
+whole-slice QA and exact-candidate acceptance requirements, but use a campaign-wide
+worker goal. Workers claim complete compatible slices, hand off help/integration,
+register discoveries with canonical PM records and acquire more work without
+coordinator acknowledgment. Queue state does not establish QA acceptance.
+
+
 Traceability: implements REQ-QA-SWARM
 
 Apply this skill when the stakeholder has authorized a broad QA run through

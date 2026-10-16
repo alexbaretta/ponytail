@@ -5,6 +5,16 @@ Licensed under the MIT License. See LICENSE in the project root.
 
 # Rolling campaign operating procedure
 
+For new host-managed swarm execution, follow the swarm skill's
+[queue protocol](../../swarm/references/autonomous-queues.md) instead of the legacy
+coordinator allocation/resumption steps below. Initialize directly from canonical
+local obligation/binding documents; no remote publication is implied. Worker
+claims, parked handoffs and dynamically discovered obligations use the CLI's
+project fence. Both actors update applicable requirements, UAT, issue, plan and
+traceability records through discovery. Preserve the canonical acceptance,
+certificate binding and publication gates; queues do not discharge obligations.
+
+
 Traceability: implements REQ-ROLLING-CLIENT-PROTOCOL
 Traceability: implements REQ-ROLLING-PARALLEL-DISPATCH
 

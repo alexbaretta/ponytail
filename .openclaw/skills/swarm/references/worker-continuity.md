@@ -29,24 +29,13 @@ Preserve reviewed candidate identities; changed candidates require renewed exact
 review rather than borrowing an older verdict. For QA slices, retain the
 whole-slice acceptance contract in `qa-swarm`.
 
-Use the original session's goal for this complete assignment. A matching
-unfinished goal survives resource grants, progress reports, review and integration
-waits. If no goal exists, establish one before continuing authorized execution;
-if the previous goal legitimately finished, assign and establish the next complete
-eligible outcome. Never create a goal per small coordinator message. Completing
-a command or exhausting a resource grant does not discharge an unfinished goal.
-
-Temporary queueing, a running operation, pending local review or a coordinator
-reply is a wait to manage, not by itself proof that the goal is blocked. Keep
-independent assigned work moving and observe original live handles. Apply the
-host goal tool's actual blocked-state threshold only after genuine inability to
-progress is established; repeated verified waits are not repeated failed repair
-attempts. Do not manufacture activity with redundant commands or status-only
-turns. If a native goal is already blocked and the host exposes no resume API,
-report the exact unfinished originals once for the user's supported Resume
-operation. Do not fake completion, replace the worker or duplicate the goal to
-clear that state. Manual follow-ups can advance work but do not prove automatic
-continuation has been restored.
+For queue campaigns, use the stable campaign-wide goal and claim/handoff/discovery
+loop in [autonomous queues](autonomous-queues.md). Slice changes and pending
+coordinator requests do not replace or complete that goal. This supersedes the
+former assignment-local goal and coordinator dispatch requirements. Workers
+acquire compatible next work themselves instead of yielding to await replies.
+Real host blocking rules still apply when no authorized progress remains; do not
+fake completion, duplicate goals or invent a resume API.
 
 ## Make routine execution standing authority
 
@@ -82,13 +71,11 @@ do not require the user to decide routine implementation details.
 
 ## Service worker requests before starting more coordinator work
 
-Keep coordination responsive while workers execute. Use the host project's
-existing roster/journal or transient coordinator record; do not invent Ponytail
-commands, database fields or a second scope/ownership registry. Use the existing worker
-roster as the request queue: retain each unanswered request, its original worker,
-required decision/resource, independent next action and the response sent. A
-request is not resolved because a progress summary mentioned it. Respond in the
-original session and confirm that the reply reached that session.
+For queue campaigns the durable coordinator queue, not the roster, records
+unanswered requests and their processing/resolution. Follow the FIFO asynchronous
+service loop in [autonomous queues](autonomous-queues.md). Workers enqueue and
+continue without a reply. Host roster inspection is activity verification and
+recovery support, not routine assignment delivery.
 
 Where the user explicitly authorizes worker-to-coordinator messaging, include
 the exact coordinator thread and that authority in the assignment so workers

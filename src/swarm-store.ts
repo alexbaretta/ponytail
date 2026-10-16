@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Alex Baretta. All rights reserved.
 // Licensed under the MIT License. See LICENSE in the project root.
 import fs from 'node:fs';
+import {requireSwarmQueueLifecycleQuiescence} from './swarm-queue.js';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import {spawnSync} from 'node:child_process';
@@ -95,6 +96,7 @@ export class SwarmStore {
  async clear(ownerRoot:string):Promise<void> {
   return this.transaction(async poolClient=>{
    await poolClient.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))',[this.projectId]);
+   await requireSwarmQueueLifecycleQuiescence(poolClient,this.projectId,ownerRoot,null);
    const owner=(await poolClient.query<Record<string,unknown>>('SELECT * FROM ponytail_index.swarm_owner_v1 WHERE project_id=$1 AND owner_root=$2 FOR UPDATE',[this.projectId,ownerRoot])).rows[0];
    if(owner===undefined) throw new Error('swarm: enroll the user owner before clearing its associations');
    const swarmCoordinatorBinding=readBinding(owner);physicalOwner(swarmCoordinatorBinding.swarmUserWorktree);
@@ -180,6 +182,7 @@ export class SwarmStore {
  async prepareWorkerRemoval(ownerRoot:string,sessionId:string,generation:string):Promise<SwarmWorkerBinding> {
   return this.transaction(async poolClient=>{
    await poolClient.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))',[this.projectId]);
+   await requireSwarmQueueLifecycleQuiescence(poolClient,this.projectId,ownerRoot,sessionId);
    const owner=(await poolClient.query<Record<string,unknown>>('SELECT * FROM ponytail_index.swarm_owner_v1 WHERE project_id=$1 AND owner_root=$2 FOR UPDATE',[this.projectId,ownerRoot])).rows[0];
    if(owner===undefined||owner.coordinator_session_id===null) throw new Error('swarm: bind a coordinator before removing a worker');
    physicalOwner(readBinding(owner).swarmUserWorktree);
@@ -196,6 +199,7 @@ export class SwarmStore {
  async detachWorker(swarmWorkerBinding:SwarmWorkerBinding):Promise<void> {
   return this.transaction(async poolClient=>{
    await poolClient.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))',[this.projectId]);
+   await requireSwarmQueueLifecycleQuiescence(poolClient,this.projectId,swarmWorkerBinding.ownerRoot,swarmWorkerBinding.sessionId);
    const row=(await poolClient.query<Record<string,unknown>>(`SELECT k.*,n.thread_id,n.root_path FROM ponytail_index.swarm_worker_v1 k
     JOIN ponytail_index.swarm_native_session_v1 n USING(session_id) WHERE k.project_id=$1 AND k.owner_root=$2 AND k.session_id=$3 AND k.generation=$4 FOR UPDATE`,[this.projectId,swarmWorkerBinding.ownerRoot,swarmWorkerBinding.sessionId,swarmWorkerBinding.generation])).rows[0];
    if(row===undefined) throw new Error('swarm: worker binding changed or is absent');
@@ -236,6 +240,7 @@ export class SwarmStore {
  async completeWorker(ownerRoot:string,sessionId:string,generation:string):Promise<SwarmWorkerBinding> {
   return this.transaction(async poolClient=>{
    await poolClient.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))',[this.projectId]);
+   await requireSwarmQueueLifecycleQuiescence(poolClient,this.projectId,ownerRoot,sessionId);
    const owner=(await poolClient.query<Record<string,unknown>>('SELECT * FROM ponytail_index.swarm_owner_v1 WHERE project_id=$1 AND owner_root=$2 FOR UPDATE',[this.projectId,ownerRoot])).rows[0];
    if(owner===undefined||owner.coordinator_session_id===null) throw new Error('swarm: bind a coordinator before completing a worker');
    physicalOwner(readBinding(owner).swarmUserWorktree);

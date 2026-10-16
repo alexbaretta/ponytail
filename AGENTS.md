@@ -114,9 +114,18 @@ services. `PROJECT_STRUCTURE.md` is authoritative for that boundary.
   dist/tests/swarm-store.integration.test.js
   dist/tests/swarm-info.integration.test.js`; the integration selection uses
   disposable Git worktrees and isolated existing-PostgreSQL project rows.
+- Autonomous swarm queues: `ponytail swarm queue --help`; exact V1 command
+  schemas and campaign-wide worker goals are owned by
+  `skills/swarm/references/autonomous-queues.md`. Both coordinator and workers
+  may register discovered work with canonical PM updates; claims do not await
+  coordinator acknowledgment. Queue inventory is included in V5 `swarm info`.
+  Focused proof: `node --test dist/tests/swarm-queue.test.js
+  dist/tests/swarm-queue.integration.test.js dist/tests/swarm-info.test.js
+  dist/tests/swarm-info.integration.test.js`.
 - Swarm inventory: `ponytail swarm info [--json]`; resolves a managed checkout
   to its user-worktree owner and reports existing campaign-lease provenance.
-  V4 reports recorded session bindings and desired names; runtime activity remains unobserved.
+  V5 adds queue campaigns, current task claims and unresolved request composition;
+  physical V1–V4 readers remain supported. Runtime activity remains unobserved.
   Inspection does not mutate resources; the immutable V1 reader is retained.
 - Swarm owner enrollment: `ponytail swarm owner-enroll [--json]` declares a new
   configured user checkout's role without creating a session or worktree.

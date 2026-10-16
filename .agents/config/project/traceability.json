@@ -230,6 +230,10 @@
     {
       "id": "REQ-SWARM-SKILL",
       "sourcePath": "pm/requirements/swarms.md"
+    },
+    {
+      "id": "REQ-SWARM-QUEUES",
+      "sourcePath": "pm/requirements/swarms.md"
     }
   ],
   "artifacts": [
@@ -1662,6 +1666,36 @@
       "class": "issue",
       "path": "pm/bugs/in_progress/2026-10-15-BUG-swarm_worker_missing_codex_project.md",
       "locator": "text"
+    },
+    {
+      "class": "implementation",
+      "path": "src/swarm-queue.ts",
+      "locator": "text"
+    },
+    {
+      "class": "implementation",
+      "path": "src/swarm-queue-cli.ts",
+      "locator": "text"
+    },
+    {
+      "class": "unit-test",
+      "path": "tests/swarm-queue.test.ts",
+      "locator": "text"
+    },
+    {
+      "class": "integration-test",
+      "path": "tests/swarm-queue.integration.test.ts",
+      "locator": "text"
+    },
+    {
+      "class": "implementation",
+      "path": "skills/swarm/references/autonomous-queues.md",
+      "locator": "text"
+    },
+    {
+      "class": "plan",
+      "path": "pm/plans/in_progress/2026-10-16-autonomous-swarm-queues/plan.md",
+      "locator": "text"
     }
   ],
   "entities": [],
@@ -2005,6 +2039,14 @@
     {
       "path": "src/swarm-store.js",
       "sourcePath": "src/swarm-store.ts"
+    },
+    {
+      "path": "src/swarm-queue.js",
+      "sourcePath": "src/swarm-queue.ts"
+    },
+    {
+      "path": "src/swarm-queue-cli.js",
+      "sourcePath": "src/swarm-queue-cli.ts"
     }
   ],
   "reverseViewPath": "pm/requirements/traceability.generated.md",

@@ -25,6 +25,11 @@ dependency changes, QA, review, acceptance and publication gates, apply
 `plan-execution` and its rolling-campaign procedure. This skill owns session and
 checkout operations; campaign identity is not swarm identity.
 
+New execution swarms use [autonomous campaign queues](references/autonomous-queues.md).
+Adopt an existing swarm through that protocol's preserving migration. The legacy
+rolling allocation/resumption operations below remain for existing non-queue
+records; they are not an alternative dispatch path for new queue execution.
+
 ## Establish ownership
 
 Inspect `ponytail swarm info --json` and `ponytail swarm --help`. Each command's
@@ -78,7 +83,7 @@ Queue further setup while completing started setup; keep source-only work moving
        projectId: "<coordinator-project-id>",
        environment: {type: "worktree"}
      },
-     prompt: "Initialization only. Remain idle; do not use tools, inspect or edit files, run tests, provision resources, create sessions, or message other chats. Reply 'Worker ready and idle.' and end your turn. Await a bounded coordinator assignment."
+     prompt: "Initialization only. Remain idle; do not use tools, inspect or edit files, run tests, provision resources, create sessions, or message other chats. Reply 'Worker ready and idle.' and end your turn. Await campaign queue admission and execution authorization."
    })
    ```
 
@@ -135,7 +140,10 @@ Queue further setup while completing started setup; keep source-only work moving
    records the host identity against its original pending campaign action, using
    the current graph and exact plan/sprint scope. It starts no session. The worker has a permanent origin
    owner and checkout; do not invent identifiers or bind it elsewhere.
-   For a first campaign lease on an already-bound native worker, initialize the
+   For queue execution, bind the worker to the whole campaign plan and skip
+   the following legacy allocation steps. Initialize the local queue, seed known
+   work, and let each authorized worker claim its own current slice.
+   For a first legacy campaign lease on an already-bound native worker, initialize the
    authorized campaign and reconcile its adopted binding history. Establish
    quiescence through host tools, then invoke from the owner:
 
@@ -164,22 +172,19 @@ Queue further setup while completing started setup; keep source-only work moving
    work. Creation, admission and executing an assignment are distinct stages.
    Apply the returned desired name through host naming tools (`set_thread_title`
    in Codex): `W<nn> P<mm> <three words>` or `W<nn> S<mm> <three words>`. When
-   execution is authorized, send the bounded implementation assignment through the host messaging tool
+   execution is authorized, seed the campaign queue and send the campaign role
+   and autonomous CLI protocol through the host messaging tool
    (`send_message_to_thread`). The user's campaign execution authorization covers
-   these worker instructions. Include exact obligation IDs, requirements,
-   acceptance/Arc/Step references, paths, proof selections, prerequisites and base.
-   Explicitly instruct each worker to call `create_goal` in its own session for
-   the complete bounded assignment before implementation, so work continues beyond the
-   first turn. The goal must include the authorized obligations and acceptance
-   conditions; omit a token budget unless the user requested one. Have the worker
-   inspect `get_goal` first and retain a matching unfinished goal instead of
-   creating a duplicate. Verify its active goal from worker tool evidence before
-   counting it as executing. A prompt, binding or completed first turn does not
-   establish a goal. Initialization-only and held workers remain held; create
-   the execution goal when their assignment is authorized. Keep the goal active
-   through verification and durable discharge, and mark it complete only when
-   its assignment's acceptance conditions are satisfied. Report a missing goal
-   capability rather than claiming sustained execution.
+   these worker instructions. Provide canonical plan/requirement/UAT locations,
+   coordinator identity, original binding generation and actual resource limits.
+   The current claim supplies exact obligation IDs, paths, proof and base.
+   Establish the campaign-wide goal and autonomous acquisition loop in
+   [autonomous queues](references/autonomous-queues.md), not a goal for this
+   first slice. Seed all known canonical work before kickoff. A worker claims its
+   next task without coordinator acknowledgment, enqueues help/integration and
+   continues with compatible work. Verify its native goal and actual claim;
+   membership or a completed initialization turn is not execution.
+
 6. If the user requested a pilot for review, wait for that review before
    expanding. Otherwise start the other selected independent workers without awaiting the first
    worker's completion. Use host inspection/wait tools (`read_thread` and
@@ -211,6 +216,11 @@ capacity cannot be filled; never describe idle bindings as active development.
 
 ## Coordinate results and blockers
 
+Use [autonomous campaign queues](references/autonomous-queues.md) for queue
+campaigns; it supersedes assignment-local goals, coordinator-mediated allocation
+and roster-as-queue instructions below. Both workers and coordinator register
+discovered work and canonical PM updates through the queue CLI.
+
 Use the [worker continuity protocol](references/worker-continuity.md) for complete
 assignments, standing execution/resource authority, session-local goals, help
 requests and the coordinator service loop. Apply it when adopting an existing
@@ -220,7 +230,9 @@ unfinished assignment into a one-turn chore.
 Workers implement autonomously within their exact scope and run configured
 focused QA and Arcs. Actual host approval denials remain gates; retain the
 original candidate and use the continuity protocol for help and independent
-work rather than bypassing the denied operation. For changed code they fetch and semantically rebase against
+work rather than bypassing the denied operation. Queue workers use the queue
+protocol's autonomous `refresh-base` before a necessary semantic rebase, retaining
+its returned base/generation for exact proof and review. For changed code they fetch and semantically rebase against
 the campaign branch, commit the exact candidate, and have a local read-only
 reviewer subagent inspect that SHA and base before terminal submission. The
 worker corrects findings and returns the corrected candidate to the same

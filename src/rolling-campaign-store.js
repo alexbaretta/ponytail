@@ -1626,6 +1626,8 @@ class RollingCampaignStore {
                 requireState(/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/u.test(generation), 'native worker selectors require exact UUID generations');
         }
         return this.transaction(campaignId, async (poolClient, rollingCampaignRow, rollingPoolRow) => {
+            const queue = (await poolClient.query('SELECT campaign_id FROM ponytail_index.swarm_queue_v1 WHERE project_id=$1 AND owner_root=$2 AND NOT closed', [this.projectId, rollingCampaignRow.coordinator_root])).rows[0];
+            requireState(queue === undefined, 'swarm queue owns allocation; use swarm queue claim');
             const rollingGraph = this.graph(rollingCampaignRow, expectedDigest);
             if (release) {
                 const row = await this.assignment(poolClient, campaignId, release.id, release.generation);

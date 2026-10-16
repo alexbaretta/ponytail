@@ -12,6 +12,7 @@ exports.readSwarmInfoV1 = readSwarmInfoV1;
 exports.readSwarmInfoV2 = readSwarmInfoV2;
 exports.readSwarmInfoV3 = readSwarmInfoV3;
 exports.readSwarmInfoV4 = readSwarmInfoV4;
+exports.readSwarmInfoV5 = readSwarmInfoV5;
 exports.readSwarmInfo = readSwarmInfo;
 exports.inspectSwarmInfo = inspectSwarmInfo;
 exports.renderSwarmInfo = renderSwarmInfo;
@@ -22,6 +23,8 @@ const pg_1 = require("pg");
 const project_index_database_js_1 = require("./project-index-database.js");
 const rolling_integration_js_1 = require("./rolling-integration.js");
 const swarm_owner_js_1 = require("./swarm-owner.js");
+const swarm_queue_js_1 = require("./swarm-queue.js");
+const swarm_queue_cli_js_1 = require("./swarm-queue-cli.js");
 const cli_help_js_1 = require("./cli-help.js");
 const swarm_store_js_1 = require("./swarm-store.js");
 function readSwarmWorktreeDeletionReportV1(value) {
@@ -208,14 +211,45 @@ function readSwarmInfoV4(value) {
             return { binding: swarmWorkerBinding, desiredName: text(input.desiredName), nativeObservation: nativeObservation(input.nativeObservation) };
         }) };
 }
-exports.SwarmInfoReaders = { V1: readSwarmInfoV1, V2: readSwarmInfoV2, V3: readSwarmInfoV3, V4: readSwarmInfoV4 };
+function readSwarmInfoV5(value) {
+    const input = record(value);
+    keys(input, ['schemaVersion', 'ownerRoot', 'ownershipSource', 'coordinator', 'nativeActivity', 'worktrees', 'workers', 'queues']);
+    if (input.schemaVersion !== 5 || !Array.isArray(input.queues))
+        throw new Error('swarm: unsupported inventory version');
+    const { queues, ...base } = input;
+    const swarmInfoV4 = readSwarmInfoV4({ ...base, schemaVersion: 4 });
+    return { ...swarmInfoV4, schemaVersion: 5, queues: queues.map((value) => {
+            const input = record(value);
+            keys(input, ['campaignId', 'state', 'pendingDiscoveryId', 'tasks', 'requests']);
+            if ((input.state !== 'open' && input.state !== 'complete') || !Array.isArray(input.tasks) || !Array.isArray(input.requests))
+                throw new Error('swarm: invalid queue inventory');
+            return { campaignId: text(input.campaignId), state: input.state, pendingDiscoveryId: nullableText(input.pendingDiscoveryId), tasks: input.tasks.map((value) => {
+                    const input = record(value);
+                    keys(input, ['id', 'state', 'obligationIds', 'sessionId', 'rootPath', 'generation']);
+                    if (!['ready', 'working', 'help', 'integration', 'done'].includes(text(input.state)) || !Array.isArray(input.obligationIds))
+                        throw new Error('swarm: invalid queue task');
+                    const state = input.state;
+                    if (state !== 'ready' && state !== 'working' && state !== 'help' && state !== 'integration' && state !== 'done')
+                        throw new Error('swarm: invalid task state');
+                    return { id: text(input.id), state, obligationIds: input.obligationIds.map(text), sessionId: nullableText(input.sessionId), rootPath: input.rootPath === null ? null : absoluteRoot(input.rootPath), generation: nullableText(input.generation) };
+                }), requests: input.requests.map((value) => {
+                    const input = record(value);
+                    keys(input, ['id', 'taskId', 'kind', 'state']);
+                    if ((input.kind !== 'help' && input.kind !== 'integration') || (input.state !== 'open' && input.state !== 'processing' && input.state !== 'resolved'))
+                        throw new Error('swarm: invalid queue request');
+                    return { id: text(input.id), taskId: text(input.taskId), kind: input.kind, state: input.state };
+                }) };
+        }) };
+}
+exports.SwarmInfoReaders = { V1: readSwarmInfoV1, V2: readSwarmInfoV2, V3: readSwarmInfoV3, V4: readSwarmInfoV4, V5: readSwarmInfoV5 };
 function readSwarmInfo(value) {
     const input = record(value);
     switch (input.schemaVersion) {
-        case 1: return { ...normalizeSwarmInfoV2({ ...readSwarmInfoV1(input), schemaVersion: 2 }), schemaVersion: 4, workers: [] };
-        case 2: return { ...normalizeSwarmInfoV2(readSwarmInfoV2(input)), schemaVersion: 4, workers: [] };
-        case 3: return { ...readSwarmInfoV3(input), schemaVersion: 4, workers: [] };
-        case 4: return readSwarmInfoV4(input);
+        case 1: return { ...normalizeSwarmInfoV2({ ...readSwarmInfoV1(input), schemaVersion: 2 }), schemaVersion: 5, workers: [], queues: [] };
+        case 2: return { ...normalizeSwarmInfoV2(readSwarmInfoV2(input)), schemaVersion: 5, workers: [], queues: [] };
+        case 3: return { ...readSwarmInfoV3(input), schemaVersion: 5, workers: [], queues: [] };
+        case 4: return { ...readSwarmInfoV4(input), schemaVersion: 5, queues: [] };
+        case 5: return readSwarmInfoV5(input);
         default: throw new Error('swarm: unsupported inventory version');
     }
 }
@@ -269,8 +303,14 @@ async function inspectSwarmInfo(invokingPath, pool, projectId) {
             const swarmWorkerBinding = (0, swarm_store_js_1.readWorker)(row);
             return { binding: swarmWorkerBinding, desiredName: (0, swarm_store_js_1.swarmWorkerName)(swarmWorkerBinding), nativeObservation: { kind: 'unobserved' } };
         });
+        const queues = (await poolClient.query('SELECT state_text FROM ponytail_index.swarm_queue_v1 WHERE project_id=$1 AND owner_root=$2 ORDER BY campaign_id', [projectId, swarmUserWorktree.rootPath])).rows.map(row => {
+            const state = (0, swarm_queue_js_1.readSwarmQueueStateV1)((0, swarm_queue_js_1.parseSwarmQueueJson)(text(row.state_text)));
+            return { campaignId: state.campaignId, state: state.state, pendingDiscoveryId: state.pending?.id ?? null,
+                tasks: state.tasks.map(task => ({ id: task.id, state: task.state, obligationIds: task.obligationIds, sessionId: task.claim?.sessionId ?? null, rootPath: task.claim?.rootPath ?? null, generation: task.claim?.generation ?? null })),
+                requests: state.requests.map(request => ({ id: request.id, taskId: request.taskId, kind: request.kind, state: request.state })) };
+        });
         await poolClient.query('COMMIT');
-        return { schemaVersion: 4, ownerRoot: swarmUserWorktree.rootPath, ownershipSource: owner === undefined ? 'campaign-leases' : 'swarm-owners-and-campaign-leases', coordinator: swarmCoordinator, nativeActivity: 'unobserved', worktrees, workers };
+        return { schemaVersion: 5, queues, ownerRoot: swarmUserWorktree.rootPath, ownershipSource: owner === undefined ? 'campaign-leases' : 'swarm-owners-and-campaign-leases', coordinator: swarmCoordinator, nativeActivity: 'unobserved', worktrees, workers };
     }
     catch (cause) {
         await poolClient.query('ROLLBACK');
@@ -285,9 +325,13 @@ function renderSwarmInfo(swarmInfoV4) {
     return `Swarm owner: ${swarmInfoV4.ownerRoot}\nOwnership source: ${swarmInfoV4.ownershipSource}\nCoordinator session: ${coordinator}\nNative activity: ${swarmInfoV4.nativeActivity === 'unobserved' ? 'not observed' : 'see worker observations'}\n\nManaged worktrees (${swarmInfoV4.worktrees.length}):\n`
         + swarmInfoV4.worktrees.map(worktree => `  ${worktree.number} ${worktree.state}${worktree.present ? '' : ' (missing)'} ${worktree.rootPath}\n    session: ${worktree.assignment?.sessionId ?? '(not attached)'} | assignment: ${worktree.assignment?.assignmentId ?? '(none)'} | obligation: ${worktree.assignment?.obligationId ?? '(none)'} | campaign: ${worktree.assignment?.campaignId ?? '(none)'}\n    membership: ${worktree.membership.kind}${worktree.membership.kind === 'swarm' ? ` | generation: ${worktree.membership.generation}` : ''}\n`).join('') + `\nRecorded worker bindings (${swarmInfoV4.workers.length}):\n` + swarmInfoV4.workers.map(worker => `  desired name: ${worker.desiredName} | session: ${worker.binding.sessionId} | thread: ${worker.binding.threadId} | ${worker.binding.state}\n`
         + `    assignment: ${worker.binding.assignment.kind} ${worker.binding.assignment.id} | checkout: ${worker.binding.rootPath} | generation: ${worker.binding.generation}\n`
-        + `    native: ${worker.nativeObservation.kind === 'observed' ? `${worker.nativeObservation.status} | name: ${worker.nativeObservation.name ?? '(unnamed)'}` : worker.nativeObservation.kind === 'unavailable' ? `unavailable | ${worker.nativeObservation.reason}` : 'not observed'}\n`).join('');
+        + `    native: ${worker.nativeObservation.kind === 'observed' ? `${worker.nativeObservation.status} | name: ${worker.nativeObservation.name ?? '(unnamed)'}` : worker.nativeObservation.kind === 'unavailable' ? `unavailable | ${worker.nativeObservation.reason}` : 'not observed'}\n`).join('') + (swarmInfoV4.schemaVersion === 5 ? swarmInfoV4.queues.map(queue => `\nQueue campaign: ${queue.campaignId} | ${queue.state} | pending discovery: ${queue.pendingDiscoveryId ?? '(none)'}\n` + queue.tasks.map(task => `  ${task.id} ${task.state} | obligations: ${task.obligationIds.join(', ')} | session: ${task.sessionId ?? '(unclaimed)'} | root: ${task.rootPath ?? '(none)'}\n`).join('') + `  coordinator requests: ${queue.requests.filter(request => request.state !== 'resolved').length} unresolved\n`).join('') : '');
 }
 async function runSwarmCli(argv) {
+    if (argv[0] === 'queue') {
+        await (0, swarm_queue_cli_js_1.runSwarmQueueCli)(argv.slice(1));
+        return;
+    }
     if (argv.length === 0 || argv.includes('--help') || argv.includes('-h')) {
         process.stdout.write((0, cli_help_js_1.renderCliHelp)(['swarm', ...argv]) + '\n');
         return;

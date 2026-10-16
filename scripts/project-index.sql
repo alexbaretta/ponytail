@@ -813,6 +813,18 @@ BEGIN
 END;
 $function$;
 
+-- Traceability: implements REQ-SWARM-QUEUES
+CREATE TABLE IF NOT EXISTS ponytail_index.swarm_queue_v1 (
+ project_id uuid NOT NULL REFERENCES ponytail_index.project_v1(project_id) ON DELETE CASCADE,
+ owner_root text NOT NULL,
+ campaign_id text NOT NULL,
+ state_text text NOT NULL,
+ closed boolean NOT NULL DEFAULT false,
+ PRIMARY KEY(project_id,owner_root,campaign_id)
+);
+CREATE UNIQUE INDEX IF NOT EXISTS swarm_queue_open_owner_v1
+ ON ponytail_index.swarm_queue_v1(project_id,owner_root) WHERE NOT closed;
+
 REVOKE ALL ON SCHEMA ponytail_index FROM PUBLIC;
 REVOKE ALL ON ALL TABLES IN SCHEMA ponytail_index FROM PUBLIC;
 REVOKE ALL ON ALL FUNCTIONS IN SCHEMA ponytail_index FROM PUBLIC;

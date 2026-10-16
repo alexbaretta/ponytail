@@ -462,3 +462,13 @@ historical native-control Arcs are superseded and are not CLI acceptance gates.
 Complete `npm test` passed all 1,011 tests across its five families, the installer
 suite, generators, 1,085 traceability relationships and TSTS analysis of 1,649
 files. The closed swarm plan records the canonical assessments and evidence.
+
+## SWARM-AUTONOMOUS-QUEUE Arc
+
+Traceability: verifies REQ-SWARM-QUEUES
+
+Start one queue campaign on a disposable repository and isolated rows in the existing local database. Admit original workers with distinct worktrees. Queue preferred tasks, dependency-blocked tasks and conflicting paths. Race claims: each task has one owner; preferred ready work is FIFO; another worker steals compatible work with relevant context. Queue help from one worker and an exact reviewed candidate from another; preserve source/refs and acquire other compatible work before coordinator acknowledgment. Start the first request, leave its operation pending, and receive the next request in FIFO order. Restart and retry without duplicating work.
+
+Discover another obligation from a worker and from the coordinator during execution. Update applicable requirements/UAT/issue/plan/obligation records through the CLI. Concurrent edits must fail with actionable stale-input evidence. Interrupt document publication, recover the same operation, and prove that no task becomes claimable before all required records exist. Dependency satisfaction and final task/campaign completion require canonical acceptance, not queue receipts. Reject cross-owner/stale identity, path overlap, symlink escape, fabricated review, incomplete discovery and simultaneous legacy allocation.
+
+After repository acceptance, install the CLI and changed skills. The existing Gwen coordinator preserves every old worker candidate/dirty tree and pending request before retiring obsolete goal sessions. Replacement workers retain its exact project, have unique native worktrees and campaign-wide goals, and actually claim queue work. Record tool acceptance and live adoption separately.

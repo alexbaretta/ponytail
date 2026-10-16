@@ -87,9 +87,16 @@ while project-wide management records remain under `pm/`.
   checkpoints cleanup and exact removal in resource-scoped DB receipts, protects
   assigned roots, and retains committed source in revision-specific Git refs.
 
+- `src/swarm-queue.ts` owns V1 durable autonomous campaign/task/request/discovery
+  contracts, project-fenced claims and stealing, source/candidate preservation,
+  coordinator FIFO service, exact review/discharge gates and recoverable canonical
+  PM publication. `src/swarm-queue-cli.ts` is its invoking-project CLI boundary;
+  adjacent JavaScript is generated. `swarm_queue_v1` uses the existing project
+  database and serializes with existing swarm/rolling mutations. Queue campaigns
+  replace allocation ownership, rather than duplicating legacy campaign leases.
 - `src/swarm-info.ts` owns the swarm inventory/coordinator CLI adapter, physical
   Git/project-scoped inventory, supplied coordinator identity admission, immutable
-  V1/V2/V3/V4 result readers and normalization to V4, including standalone retained
+  V1/V2/V3/V4/V5 result readers and normalization to V5, including standalone retained
   membership without an invented campaign assignment. Its adjacent `.js` runtime is
   generated; V4 reports recorded bindings and desired names with runtime activity
   unobserved. All session operations and actual naming belong to coordinator host

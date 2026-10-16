@@ -3,6 +3,70 @@
   "schemaVersion": 1,
   "families": [
     {
+      "id": "swarm-queue-verdict",
+      "implementation": {
+        "workspace": "ponytail",
+        "module": "src/swarm-queue.ts",
+        "readerRegistryExport": "SwarmQueueVerdictReaders"
+      },
+      "currentVersion": "V1",
+      "versions": [
+        "V1"
+      ],
+      "supportedReadVersions": [
+        "V1"
+      ],
+      "supportedDowngradeVersions": []
+    },
+    {
+      "id": "swarm-queue-result",
+      "implementation": {
+        "workspace": "ponytail",
+        "module": "src/swarm-queue.ts",
+        "readerRegistryExport": "SwarmQueueResultReaders"
+      },
+      "currentVersion": "V1",
+      "versions": [
+        "V1"
+      ],
+      "supportedReadVersions": [
+        "V1"
+      ],
+      "supportedDowngradeVersions": []
+    },
+    {
+      "id": "swarm-queue-command",
+      "implementation": {
+        "workspace": "ponytail",
+        "module": "src/swarm-queue.ts",
+        "readerRegistryExport": "SwarmQueueCommandReaders"
+      },
+      "currentVersion": "V1",
+      "versions": [
+        "V1"
+      ],
+      "supportedReadVersions": [
+        "V1"
+      ],
+      "supportedDowngradeVersions": []
+    },
+    {
+      "id": "swarm-queue-state",
+      "implementation": {
+        "workspace": "ponytail",
+        "module": "src/swarm-queue.ts",
+        "readerRegistryExport": "SwarmQueueStateReaders"
+      },
+      "currentVersion": "V1",
+      "versions": [
+        "V1"
+      ],
+      "supportedReadVersions": [
+        "V1"
+      ],
+      "supportedDowngradeVersions": []
+    },
+    {
       "id": "rolling-mainline-refresh-intent",
       "implementation": {"workspace": "ponytail", "module": "src/rolling-publication.ts", "readerRegistryExport": "RollingMainlineRefreshIntentReaders"},
       "currentVersion": "V1",
@@ -1019,12 +1083,12 @@
         "module": "src/swarm-info.ts",
         "readerRegistryExport": "SwarmInfoReaders"
       },
-      "currentVersion": "V4",
+      "currentVersion": "V5",
       "versions": [
-        "V1", "V2", "V3", "V4"
+        "V1", "V2", "V3", "V4", "V5"
       ],
       "supportedReadVersions": [
-        "V1", "V2", "V3", "V4"
+        "V1", "V2", "V3", "V4", "V5"
       ],
       "supportedDowngradeVersions": []
     }

@@ -6,6 +6,8 @@ import {Pool} from 'pg';
 import {databaseOptions} from './project-index-database.js';
 import {git} from './rolling-integration.js';
 import {resolveSwarmOwner,type SwarmOwnershipInventory} from './swarm-owner.js';
+import {readSwarmQueueStateV1,parseSwarmQueueJson} from './swarm-queue.js';
+import {runSwarmQueueCli} from './swarm-queue-cli.js';
 import {renderCliHelp} from './cli-help.js';
 import type {RollingStoredWorktree} from './rolling-campaign-store.js';
 import {SwarmStore,type SwarmWorktreeMembership,type SwarmWorktreeDeletionResult,readWorker,swarmWorkerName,type SwarmWorkerBinding} from './swarm-store.js';
@@ -70,6 +72,12 @@ export interface SwarmInfoV4 {
  readonly worktrees:readonly SwarmWorktreeInfoV3[];
  readonly workers:readonly SwarmWorkerInfoV1[];
 }
+export interface SwarmQueueInventoryV1 {
+ readonly campaignId:string;readonly state:'open'|'complete';readonly pendingDiscoveryId:string|null;
+ readonly tasks:readonly {readonly id:string;readonly state:'ready'|'working'|'help'|'integration'|'done';readonly obligationIds:readonly string[];readonly sessionId:string|null;readonly rootPath:string|null;readonly generation:string|null}[];
+ readonly requests:readonly {readonly id:string;readonly taskId:string;readonly kind:'help'|'integration';readonly state:'open'|'processing'|'resolved'}[];
+}
+export interface SwarmInfoV5 extends Omit<SwarmInfoV4,'schemaVersion'> {readonly schemaVersion:5;readonly queues:readonly SwarmQueueInventoryV1[];}
 export interface SwarmWorktreeDeletionReportV1 {
  readonly schemaVersion:1;
  readonly ownerRoot:string;
@@ -207,20 +215,39 @@ export function readSwarmInfoV4(value:unknown):SwarmInfoV4 {
   return {binding:swarmWorkerBinding,desiredName:text(input.desiredName),nativeObservation:nativeObservation(input.nativeObservation)};
  })};
 }
-export const SwarmInfoReaders={V1:readSwarmInfoV1,V2:readSwarmInfoV2,V3:readSwarmInfoV3,V4:readSwarmInfoV4};
-export function readSwarmInfo(value:unknown):SwarmInfoV4 {
+export function readSwarmInfoV5(value:unknown):SwarmInfoV5 {
+ const input=record(value);keys(input,['schemaVersion','ownerRoot','ownershipSource','coordinator','nativeActivity','worktrees','workers','queues']);
+ if(input.schemaVersion!==5||!Array.isArray(input.queues))throw new Error('swarm: unsupported inventory version');
+ const {queues,...base}=input;const swarmInfoV4=readSwarmInfoV4({...base,schemaVersion:4});
+ return {...swarmInfoV4,schemaVersion:5,queues:queues.map((value:unknown)=>{
+  const input=record(value);keys(input,['campaignId','state','pendingDiscoveryId','tasks','requests']);
+  if((input.state!=='open'&&input.state!=='complete')||!Array.isArray(input.tasks)||!Array.isArray(input.requests))throw new Error('swarm: invalid queue inventory');
+  return {campaignId:text(input.campaignId),state:input.state,pendingDiscoveryId:nullableText(input.pendingDiscoveryId),tasks:input.tasks.map((value:unknown)=>{
+   const input=record(value);keys(input,['id','state','obligationIds','sessionId','rootPath','generation']);
+   if(!['ready','working','help','integration','done'].includes(text(input.state))||!Array.isArray(input.obligationIds))throw new Error('swarm: invalid queue task');
+   const state=input.state;if(state!=='ready'&&state!=='working'&&state!=='help'&&state!=='integration'&&state!=='done')throw new Error('swarm: invalid task state');
+   return {id:text(input.id),state,obligationIds:input.obligationIds.map(text),sessionId:nullableText(input.sessionId),rootPath:input.rootPath===null?null:absoluteRoot(input.rootPath),generation:nullableText(input.generation)};
+  }),requests:input.requests.map((value:unknown)=>{
+   const input=record(value);keys(input,['id','taskId','kind','state']);if((input.kind!=='help'&&input.kind!=='integration')||(input.state!=='open'&&input.state!=='processing'&&input.state!=='resolved'))throw new Error('swarm: invalid queue request');
+   return {id:text(input.id),taskId:text(input.taskId),kind:input.kind,state:input.state};
+  })};
+ })};
+}
+export const SwarmInfoReaders={V1:readSwarmInfoV1,V2:readSwarmInfoV2,V3:readSwarmInfoV3,V4:readSwarmInfoV4,V5:readSwarmInfoV5};
+export function readSwarmInfo(value:unknown):SwarmInfoV5 {
  const input=record(value);
  switch(input.schemaVersion) {
-  case 1:return {...normalizeSwarmInfoV2({...readSwarmInfoV1(input),schemaVersion:2}),schemaVersion:4,workers:[]};
-  case 2:return {...normalizeSwarmInfoV2(readSwarmInfoV2(input)),schemaVersion:4,workers:[]};
-  case 3:return {...readSwarmInfoV3(input),schemaVersion:4,workers:[]};
-  case 4:return readSwarmInfoV4(input);
+  case 1:return {...normalizeSwarmInfoV2({...readSwarmInfoV1(input),schemaVersion:2}),schemaVersion:5,workers:[],queues:[]};
+  case 2:return {...normalizeSwarmInfoV2(readSwarmInfoV2(input)),schemaVersion:5,workers:[],queues:[]};
+  case 3:return {...readSwarmInfoV3(input),schemaVersion:5,workers:[],queues:[]};
+  case 4:return {...readSwarmInfoV4(input),schemaVersion:5,queues:[]};
+  case 5:return readSwarmInfoV5(input);
   default:throw new Error('swarm: unsupported inventory version');
  }
 }
 // Traceability: implements REQ-SWARM-OWNERSHIP
 // Traceability: implements REQ-SWARM-INFO
-export async function inspectSwarmInfo(invokingPath:string,pool:Pool,projectId:string):Promise<SwarmInfoV4> {
+export async function inspectSwarmInfo(invokingPath:string,pool:Pool,projectId:string):Promise<SwarmInfoV5> {
  const invokingRoot=fs.realpathSync(git(invokingPath,['rev-parse','--show-toplevel']).trim());
  const gitCommonDirectory=fs.realpathSync(git(invokingRoot,['rev-parse','--path-format=absolute','--git-common-dir']).trim());
  const physicalRoots=git(invokingRoot,['worktree','list','--porcelain','-z']).split('\0')
@@ -263,23 +290,30 @@ export async function inspectSwarmInfo(invokingPath:string,pool:Pool,projectId:s
     const swarmWorkerBinding=readWorker(row);
     return {binding:swarmWorkerBinding,desiredName:swarmWorkerName(swarmWorkerBinding),nativeObservation:{kind:'unobserved'}} satisfies SwarmWorkerInfoV1;
    });
+  const queues:SwarmQueueInventoryV1[]=(await poolClient.query<Record<string,unknown>>('SELECT state_text FROM ponytail_index.swarm_queue_v1 WHERE project_id=$1 AND owner_root=$2 ORDER BY campaign_id',[projectId,swarmUserWorktree.rootPath])).rows.map(row=>{
+   const state=readSwarmQueueStateV1(parseSwarmQueueJson(text(row.state_text)));
+   return {campaignId:state.campaignId,state:state.state,pendingDiscoveryId:state.pending?.id??null,
+    tasks:state.tasks.map(task=>({id:task.id,state:task.state,obligationIds:task.obligationIds,sessionId:task.claim?.sessionId??null,rootPath:task.claim?.rootPath??null,generation:task.claim?.generation??null})),
+    requests:state.requests.map(request=>({id:request.id,taskId:request.taskId,kind:request.kind,state:request.state}))};
+  });
   await poolClient.query('COMMIT');
-  return {schemaVersion:4,ownerRoot:swarmUserWorktree.rootPath,ownershipSource:owner===undefined?'campaign-leases':'swarm-owners-and-campaign-leases',coordinator:swarmCoordinator,nativeActivity:'unobserved',worktrees,workers};
+  return {schemaVersion:5,queues,ownerRoot:swarmUserWorktree.rootPath,ownershipSource:owner===undefined?'campaign-leases':'swarm-owners-and-campaign-leases',coordinator:swarmCoordinator,nativeActivity:'unobserved',worktrees,workers};
  } catch(cause) {await poolClient.query('ROLLBACK');throw cause;}
  finally {poolClient.release();}
 }
 
-export function renderSwarmInfo(swarmInfoV4:SwarmInfoV4):string {
+export function renderSwarmInfo(swarmInfoV4:SwarmInfoV4|SwarmInfoV5):string {
  const coordinator=swarmInfoV4.coordinator.kind==='bound'?`${swarmInfoV4.coordinator.sessionId} | thread: ${swarmInfoV4.coordinator.threadId??'(not recorded)'}`:swarmInfoV4.coordinator.kind==='unbound'?'not bound':'not recorded';
  return `Swarm owner: ${swarmInfoV4.ownerRoot}\nOwnership source: ${swarmInfoV4.ownershipSource}\nCoordinator session: ${coordinator}\nNative activity: ${swarmInfoV4.nativeActivity==='unobserved'?'not observed':'see worker observations'}\n\nManaged worktrees (${swarmInfoV4.worktrees.length}):\n`
   +swarmInfoV4.worktrees.map(worktree=>`  ${worktree.number} ${worktree.state}${worktree.present?'':' (missing)'} ${worktree.rootPath}\n    session: ${worktree.assignment?.sessionId??'(not attached)'} | assignment: ${worktree.assignment?.assignmentId??'(none)'} | obligation: ${worktree.assignment?.obligationId??'(none)'} | campaign: ${worktree.assignment?.campaignId??'(none)'}\n    membership: ${worktree.membership.kind}${worktree.membership.kind==='swarm'?` | generation: ${worktree.membership.generation}`:''}\n`).join('')+`\nRecorded worker bindings (${swarmInfoV4.workers.length}):\n`+swarmInfoV4.workers.map(worker=>
    `  desired name: ${worker.desiredName} | session: ${worker.binding.sessionId} | thread: ${worker.binding.threadId} | ${worker.binding.state}\n`
    +`    assignment: ${worker.binding.assignment.kind} ${worker.binding.assignment.id} | checkout: ${worker.binding.rootPath} | generation: ${worker.binding.generation}\n`
-   +`    native: ${worker.nativeObservation.kind==='observed'?`${worker.nativeObservation.status} | name: ${worker.nativeObservation.name??'(unnamed)'}`:worker.nativeObservation.kind==='unavailable'?`unavailable | ${worker.nativeObservation.reason}`:'not observed'}\n`).join('');
+   +`    native: ${worker.nativeObservation.kind==='observed'?`${worker.nativeObservation.status} | name: ${worker.nativeObservation.name??'(unnamed)'}`:worker.nativeObservation.kind==='unavailable'?`unavailable | ${worker.nativeObservation.reason}`:'not observed'}\n`).join('')+(swarmInfoV4.schemaVersion===5?swarmInfoV4.queues.map(queue=>`\nQueue campaign: ${queue.campaignId} | ${queue.state} | pending discovery: ${queue.pendingDiscoveryId??'(none)'}\n`+queue.tasks.map(task=>`  ${task.id} ${task.state} | obligations: ${task.obligationIds.join(', ')} | session: ${task.sessionId??'(unclaimed)'} | root: ${task.rootPath??'(none)'}\n`).join('')+`  coordinator requests: ${queue.requests.filter(request=>request.state!=='resolved').length} unresolved\n`).join(''):'');
 }
 
 // Traceability: implements REQ-SWARM-CLI
 export async function runSwarmCli(argv:readonly string[]):Promise<void> {
+ if(argv[0]==='queue'){await runSwarmQueueCli(argv.slice(1));return;}
  if(argv.length===0||argv.includes('--help')||argv.includes('-h')) {process.stdout.write(renderCliHelp(['swarm',...argv])+'\n');return;}
  const fields=new Map<string,string>();let json=false,valid=true;
  for(let i=1;i<argv.length;i++) {

@@ -410,8 +410,10 @@ export const ObligationDocumentReaders = {
 };
 
 // Traceability: implements REQ-OBLIGATION-FRESHNESS
-export function inputDigest(root: string, relative: string): string {
+export function inputDigest(root: string, relative: string, proposedInputs?: ReadonlyMap<string, string>): string {
   relativePath(relative);
+  const proposed = proposedInputs?.get(relative);
+  if (proposed !== undefined) return crypto.createHash('sha256').update(proposed).digest('hex');
   const repositoryRoot = fs.realpathSync(root);
   const inputPath = fs.realpathSync(path.join(repositoryRoot, relative));
   const resolved = path.relative(repositoryRoot, inputPath);
@@ -420,8 +422,14 @@ export function inputDigest(root: string, relative: string): string {
   return crypto.createHash('sha256').update(fs.readFileSync(inputPath)).digest('hex');
 }
 
-export function gitInputReasons(root: string, obligationGitInputs: ObligationGitInputs): readonly string[] {
+export function gitInputReasons(root: string, obligationGitInputs: ObligationGitInputs, proposedInputs?: ReadonlyMap<string, string>): readonly string[] {
   const reasons: string[] = [];
+  if (proposedInputs !== undefined) for (const [relative, content] of proposedInputs) {
+    if (obligationGitInputs.paths.some(scope => relative === scope || relative.startsWith(scope + '/'))) {
+      const prior = spawnSync('git', ['-C', root, 'show', `${obligationGitInputs.revision}:${relative}`], {encoding: 'utf8'});
+      if (prior.status !== 0 || prior.stdout !== content) reasons.push(`changed proposed Git input: ${relative}`);
+    }
+  }
   const git = (args: readonly string[]) => spawnSync('git', ['--literal-pathspecs', '-C', root, ...args], {encoding: 'utf8'});
   if (git(['cat-file', '-e', `${obligationGitInputs.revision}^{commit}`]).status !== 0) return ['unavailable Git verification revision'];
   for (const relative of obligationGitInputs.paths) {
@@ -506,16 +514,16 @@ function certificateReasons(obligationDocument: ObligationDocumentV1, baseline: 
   return reasons;
 }
 
-export function freshCertificate(obligationDocument: ObligationDocumentV1, baseline: ObligationBaseline, certificate: ObligationCertificate, root: string): ObligationFreshness {
+export function freshCertificate(obligationDocument: ObligationDocumentV1, baseline: ObligationBaseline, certificate: ObligationCertificate, root: string, proposedInputs?: ReadonlyMap<string, string>): ObligationFreshness {
   const reasons = certificateReasons(obligationDocument, baseline, certificate);
   if (isObligationGitInputs(certificate.inputs)) {
-    reasons.push(...gitInputReasons(root, certificate.inputs));
-    for (const evidence of certificate.evidence) if (isObligationGitInputs(evidence.inputs)) reasons.push(...gitInputReasons(root, evidence.inputs));
+    reasons.push(...gitInputReasons(root, certificate.inputs, proposedInputs));
+    for (const evidence of certificate.evidence) if (isObligationGitInputs(evidence.inputs)) reasons.push(...gitInputReasons(root, evidence.inputs, proposedInputs));
     for (const relative of [...certificate.artifacts, ...certificate.evidence.map(evidence => evidence.outputPath)])
-      if (!fs.existsSync(path.join(root, relative))) reasons.push(`unavailable evidence: ${relative}`);
+      if (!proposedInputs?.has(relative) && !fs.existsSync(path.join(root, relative))) reasons.push(`unavailable evidence: ${relative}`);
   } else for (const input of certificate.inputs) {
     try {
-      if (inputDigest(root, input.path) !== input.digest) reasons.push(`changed input: ${input.path}`);
+      if (inputDigest(root, input.path, proposedInputs) !== input.digest) reasons.push(`changed input: ${input.path}`);
     } catch (error) {
       reasons.push(`unavailable input ${input.path}: ${error instanceof Error ? error.message : String(error)}`);
     }
@@ -530,14 +538,14 @@ function prerequisites(obligation: Obligation, bindings: ReadonlyMap<string, Obl
   return obligationEffectiveBinding.dependsOn;
 }
 function projectBaseline(obligationDocument: ObligationDocumentV1, baseline: ObligationBaseline, accepted: ReadonlySet<string>, root: string | null,
-  bindings?: ReadonlyMap<string, ObligationEffectiveBinding>, onProgress?:(completed:number,total:number)=>void): ObligationProjection {
+  bindings?: ReadonlyMap<string, ObligationEffectiveBinding>, onProgress?:(completed:number,total:number)=>void, proposedInputs?: ReadonlyMap<string,string>): ObligationProjection {
   const satisfied = new Set<string>();
   const assessments: ObligationAssessment[] = [];
   const certificates=obligationDocument.certificates.filter(certificate => accepted.has(certificate.id));
   onProgress?.(0,certificates.length);
   for (const [index,certificate] of certificates.entries()) {
     const reasons = root === null ? certificateReasons(obligationDocument, baseline, certificate)
-      : freshCertificate(obligationDocument, baseline, certificate, root).reasons;
+      : freshCertificate(obligationDocument, baseline, certificate, root, proposedInputs).reasons;
     assessments.push({ id: certificate.id, valid: reasons.length === 0, reasons });
     if (reasons.length === 0) certificate.obligationIds.forEach(id => satisfied.add(id));
     onProgress?.(index+1,certificates.length);
@@ -563,8 +571,8 @@ function projectBaseline(obligationDocument: ObligationDocumentV1, baseline: Obl
 
 // Traceability: implements REQ-OBLIGATION-DISCHARGE
 // Traceability: implements REQ-OBLIGATION-COMPLETENESS
-export function projectObligations(obligationDocument: ObligationDocumentV1, root: string,onProgress?:(completed:number,total:number)=>void): ObligationProjection {
-  return projectObligationScope(obligationDocument, root,undefined,onProgress).projection;
+export function projectObligations(obligationDocument: ObligationDocumentV1, root: string,onProgress?:(completed:number,total:number)=>void,proposedInputs?:ReadonlyMap<string,string>): ObligationProjection {
+  return projectObligationScope(obligationDocument, root,undefined,onProgress,proposedInputs).projection;
 }
 
 export interface ObligationHistoricalAcceptance {
@@ -584,12 +592,12 @@ export function projectObligationHistoricalAcceptance(obligationDocument: Obliga
 
 // Traceability: implements REQ-ROLLING-GRAPH
 export function projectObligationScope(obligationDocument: ObligationDocumentV1, root: string,
-  obligationBindingHistoryV1?: ObligationBindingHistoryV1,onProgress?:(completed:number,total:number)=>void): ObligationScopeProjection {
+  obligationBindingHistoryV1?: ObligationBindingHistoryV1,onProgress?:(completed:number,total:number)=>void,proposedInputs?:ReadonlyMap<string,string>): ObligationScopeProjection {
   readObligationDocumentV1(obligationDocument);
   const replay = replayHistory(obligationDocument);
   const bindings = projectObligationBindings(obligationDocument, obligationBindingHistoryV1 === undefined
     ? { schemaVersion: 1, scopeId: obligationDocument.scopeId, revisions: [] } : obligationBindingHistoryV1);
-  return { projection: projectBaseline(obligationDocument, replay.baseline, replay.accepted, root, bindings,onProgress), bindings };
+  return { projection: projectBaseline(obligationDocument, replay.baseline, replay.accepted, root, bindings,onProgress,proposedInputs), bindings };
 }
 
 // Traceability: implements REQ-OBLIGATION-TRANSITIONS
@@ -701,7 +709,7 @@ function appendOnly(previous: readonly unknown[], candidate: readonly unknown[],
 // Traceability: implements REQ-OBLIGATION-BASELINE
 // Traceability: implements REQ-OBLIGATION-TRANSITIONS
 // Traceability: implements REQ-OBLIGATION-COMPLETENESS
-export function acceptCheckpoint(previous: ObligationDocumentV1, candidate: ObligationDocumentV1, root: string): ObligationDocumentV1 {
+export function acceptCheckpoint(previous: ObligationDocumentV1, candidate: ObligationDocumentV1, root: string, proposedInputs?:ReadonlyMap<string,string>): ObligationDocumentV1 {
   readObligationDocumentV1(previous);
   readObligationDocumentV1(candidate);
   requireCondition(candidate.scopeId === previous.scopeId, 'scope identity is immutable');
@@ -732,13 +740,13 @@ export function acceptCheckpoint(previous: ObligationDocumentV1, candidate: Obli
     }
   }
   const replay = replayHistory(candidate);
-  for (const requirement of replay.baseline.requirements) requireCondition(inputDigest(root, requirement.path) === requirement.digest, `requirement meaning changed without activated baseline: ${requirement.id}`);
+  for (const requirement of replay.baseline.requirements) requireCondition(inputDigest(root, requirement.path, proposedInputs) === requirement.digest, `requirement meaning changed without activated baseline: ${requirement.id}`);
   for (const id of checkpoint.certificateIds) {
     const certificate = requireCertificate(candidate, id);
-    const assessment = freshCertificate(candidate, replay.baseline, certificate, root);
+    const assessment = freshCertificate(candidate, replay.baseline, certificate, root, proposedInputs);
     requireCondition(assessment.fresh, `cannot accept certificate ${id}: ${assessment.reasons.join('; ')}`);
   }
-  const after = projectObligations(candidate, root);
+  const after = projectObligations(candidate, root,undefined,proposedInputs);
   requireCondition(compareVectors(checkpoint.after, after.vector) === 0, 'checkpoint must expose all current stale evidence');
   const currentBaseline = candidate.baselines.at(-1);
   requireCondition(currentBaseline, 'a baseline is required');

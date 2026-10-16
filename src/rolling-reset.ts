@@ -164,6 +164,7 @@ export async function resetRollingProject(poolClient:PoolClient,projectId:string
  const locked=(await poolClient.query<Record<string,unknown>>('SELECT pg_try_advisory_lock(hashtextextended($1,0)) AS locked',[projectId])).rows[0];
  requireReset(locked?.locked===true,'another project operation owns reset/scheduling');
  try {
+  requireReset((await poolClient.query('SELECT 1 FROM ponytail_index.swarm_queue_v1 WHERE project_id=$1 AND NOT closed LIMIT 1',[projectId])).rowCount===0,'settle the open autonomous swarm queue before project reset');
   requireReset((await poolClient.query('SELECT 1 FROM ponytail_index.swarm_worktree_v1 WHERE project_id=$1 LIMIT 1',[projectId])).rowCount===0,'release retained swarm worktree memberships before project reset');
   requireReset((await poolClient.query("SELECT 1 FROM ponytail_index.swarm_worktree_deletion_v1 WHERE project_id=$1 AND state='PENDING' LIMIT 1",[projectId])).rowCount===0,'complete pending swarm worktree deletion before project reset');
   const existing=(await poolClient.query<Record<string,unknown>>('SELECT reset_text FROM ponytail_index.rolling_reset_v1 WHERE project_id=$1',[projectId])).rows[0];
