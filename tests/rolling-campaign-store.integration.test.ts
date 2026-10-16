@@ -399,10 +399,9 @@ export async function runRollingReviewScenario(t: TestContext, reviewScenario: R
   execFileSync('git', ['-C', workerRoot, 'add', '--', 'fixture/current.ts']);
   execFileSync('git', ['-C', workerRoot, '-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.test', 'commit', '-q', '-m', 'bounded submission fixture']);
   const revision = execFileSync('git', ['-C', workerRoot, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
-  const checkOutput = execFileSync(process.execPath, reviewScenario.canonicalIntegration
-   ? [path.join(workerRoot,'fixture/current.ts')] : ['--check', path.join(workerRoot, 'fixture/current.ts')], { encoding: 'utf8' });
+  const checkOutput = execFileSync(process.execPath, [path.join(workerRoot,'fixture/current.ts')], { encoding: 'utf8' });
   fs.writeFileSync(path.join(workerRoot, 'proof.txt'), `${checkOutput}Focused fixture command exited 0\n`);
-  const submissionObligationEvidence: ObligationEvidence = { command: reviewScenario.canonicalIntegration ? 'node fixture/current.ts' : 'node --check fixture/current.ts', selection: ['focused fixture proof'],
+  const submissionObligationEvidence: ObligationEvidence = { command: 'node fixture/current.ts', selection: ['focused fixture proof'],
     target: { identity: 'local', profile: 'fixture', verification: 'fixture/current.ts' }, revision, dirty: false,
     startedAt: new Date().toISOString(), completedAt: new Date().toISOString(), outcome: 'pass', skips: 0, failures: 0,
     inputs: reviewScenario.canonicalIntegration === 'upstream'
@@ -789,7 +788,7 @@ export async function runRollingReviewScenario(t: TestContext, reviewScenario: R
     await assert.rejects(rollingCampaignStore.recordIncrementProof('bound-fixture',rollingStoredReview.request.id,{...rollingWorkerSubmissionV1,revision:'f'.repeat(40)}),/another integration candidate/);
     assert.deepEqual(await rollingCampaignStore.recordIncrementProof('bound-fixture',rollingStoredReview.request.id,rollingWorkerSubmissionV1),rollingWorkerSubmissionV1);
     const refreshedProofStartedAt = new Date().toISOString();
-    execFileSync(process.execPath,['--check',path.join(workerRoot,'fixture/current.ts')]);
+    execFileSync(process.execPath,[path.join(workerRoot,'fixture/current.ts')]);
     const refreshedProofCompletedAt = new Date().toISOString();
     const refreshedRollingWorkerSubmissionV1: RollingWorkerSubmissionV1 = {...rollingWorkerSubmissionV1,proof:rollingWorkerSubmissionV1.proof.map((proof): RollingSubmissionProof => ({...proof,
       evidence:{...proof.evidence,startedAt:refreshedProofStartedAt,completedAt:refreshedProofCompletedAt}}))};

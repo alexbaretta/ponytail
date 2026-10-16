@@ -150,6 +150,27 @@ test('standalone and planned issue execution share the implementation activation
   assert.match(requirementsTraceability, /Issue intake alone never creates a requirement ID or an `introduces`\n+relationship/);
 });
 
+test('activated scope follows demonstrated continuation blockers without lateral expansion', () => {
+  const planExecution = fs.readFileSync(path.join(__dirname, '..', 'skills/plan-execution/SKILL.md'), 'utf8');
+  const debugging = fs.readFileSync(path.join(__dirname, '..', 'skills/debugging/SKILL.md'), 'utf8');
+  const requirement = fs.readFileSync(path.join(__dirname, '..', 'pm/requirements/issue-requirement-activation.md'), 'utf8');
+  const acceptance = fs.readFileSync(path.join(__dirname, '..', 'pm/uat/issue-requirement-activation.md'), 'utf8');
+
+  for (const policy of [planExecution, requirement]) {
+    assert.match(policy, /original required\s+reproduction or\s+acceptance/);
+    assert.match(policy, /same\s+approved outcome/);
+    assert.match(policy, /continuation\s+blocker/);
+  }
+  assert.match(planExecution, /must not fan out into adjacent defects/);
+  assert.match(planExecution, /Stop when the\n+approved outcome passes/);
+  assert.match(planExecution, /must update affected tasklets, dependencies\n+and exact path or operation boundaries before the continuation repair/);
+  assert.match(debugging, /exposes a different\n+causal defect before the same approved outcome can succeed/);
+  assert.match(debugging, /stop when the assigned outcome\n+passes/);
+  assert.match(acceptance, /Follow Only Demonstrated Continuation Blockers/);
+  assert.match(acceptance, /Neither enters the activated scope/);
+  assert.match(acceptance, /request the applicable approval before changing\n+     that boundary/);
+});
+
 // Traceability: verifies REQ-REPAIR-PLAN-STARTING-GATE
 test('starting policy admits only expressly owned reproduced failures and preserves final gates', () => {
   const policy = fs.readFileSync(path.join(__dirname, '..', 'skills/plan-execution/SKILL.md'), 'utf8');

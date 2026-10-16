@@ -16,7 +16,9 @@ authorized for standalone implementation with “Make it happen.”
 [`2026-09-29-BUG-premature_requirement_promotion`](../bugs/closed/2026-09-29-BUG-premature_requirement_promotion.md).
 The stakeholder extended this policy on 2026-10-08 with requirements-relative
 triage, separate approval and implementation authorization, and tested-version
-evidence for reports whose behavior is already correct.
+evidence for reports whose behavior is already correct. On 2026-10-15, the
+stakeholder clarified that activated scope follows causally necessary blockers
+on the demonstrated acceptance path without expanding into adjacent work.
 
 Ponytail must keep issue intake distinct from requirements activation.
 
@@ -105,6 +107,24 @@ At authorization, record missing implementation and verification in active
 scope without claiming completed coverage. At closure, reconcile the actual
 artifacts and evidence under the traceability contract; reuse exact existing
 coverage rather than duplicating it.
+
+## Continuation Blockers
+
+Activated scope is anchored to the approved outcome, not frozen to the first
+diagnosis. When an in-scope repair causes the original required reproduction or
+acceptance to advance and expose a different defect that still prevents that
+same approved outcome, the new causal defect is authorized as a continuation
+blocker.
+The agent must record and repair each causal class separately, make the smallest
+necessary ownership and path updates, and resume the original acceptance until
+the approved outcome passes.
+
+This authority advances only along the demonstrated execution path. It does not
+authorize adjacent defects found by broader inspection, speculative future
+failures, audits, migrations, cleanup, hardening, or unrelated improvements.
+A repair that materially changes an unapproved product, security, persistence,
+infrastructure, external-service, or other contract boundary still requires the
+applicable approval even when it blocks the outcome.
 
 Acceptance coverage:
 [Issue requirement activation Suite](../uat/issue-requirement-activation.md).

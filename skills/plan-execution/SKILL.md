@@ -562,10 +562,22 @@ classification, generated-source mappings, and generated reverse view. Keep
 one annotated forward map and derive reverse views; do not hand-maintain a
 second relationship map.
 
-Work discovered while implementing an approved objective may be added and
-performed without another approval when it remains inside the architectural
-areas and contract boundaries already approved. Extra files, tasklets, tests,
-control-flow cases, or effort do not alone broaden scope.
+Discovery does not expand scope merely because an issue lies within an approved
+architectural area or contract boundary. A newly discovered defect is an
+authorized continuation blocker only when rerunning the original required
+reproduction or acceptance after an in-scope repair reaches that defect and the
+defect prevents the same approved outcome. Record the newly exposed causal
+class, perform the smallest necessary repair and focused proof, then resume the
+original acceptance. Scope may advance through successive demonstrated blockers
+on that path, but must not fan out into adjacent defects, audits, migrations,
+cleanup, speculative failures, or unrelated improvements. Stop when the
+approved outcome passes.
+
+The coordinator or standalone owner must update affected tasklets, dependencies
+and exact path or operation boundaries before the continuation repair. This is
+maintenance of the already approved outcome, not authority for a worker to seize
+another owner's files or silently change a frozen lease. A continuation blocker
+that requires a material boundary change below still needs explicit approval.
 
 A narrow, source-proven, local project-configuration repair authorized by the
 host's synchronization policy is plan maintenance, not scope growth and not an

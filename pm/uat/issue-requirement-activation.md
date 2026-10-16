@@ -125,3 +125,31 @@ Traceability: verifies REQ-ISSUE-REQUIREMENT-ACTIVATION
    - At closure, discover the implementing source files and stable methods or
      endpoints, unit and integration tests, and reverse links. Configured
      traceability checks pass with only justified permitted dispositions.
+
+## Arc: Follow Only Demonstrated Continuation Blockers
+
+Traceability: verifies REQ-ISSUE-REQUIREMENT-ACTIVATION
+
+- **Actor:** Implementing agent or campaign coordinator.
+- **Prerequisites:** An activated bug with one required reproduction whose
+  first confirmed causal defect has an in-scope repair.
+- **Profiles:** Automated reusable-policy test and scenario review.
+- **External effects:** Updates only the activated issue's necessary scope and
+  owned implementation.
+
+1. Rerun the original reproduction after repairing its first causal defect.
+   - When execution advances and a different defect prevents the same approved
+     outcome, classify it as a continuation blocker, update exact ownership and
+     path boundaries, and repair that causal class without requesting another
+     scope approval.
+2. Rerun the original reproduction after each focused repair.
+   - Continue only through causally demonstrated blockers until the approved
+     outcome passes, then stop.
+3. Discover an adjacent defect by repository search and consider a speculative
+   future failure that the required path has not reached.
+   - Neither enters the activated scope. Record it separately when useful, but
+     do not investigate or repair it as part of this assignment.
+4. Make a demonstrated blocker require a material unapproved contract-boundary
+   change.
+   - Preserve the blocker and request the applicable approval before changing
+     that boundary; the continuation rule does not authorize the expansion.

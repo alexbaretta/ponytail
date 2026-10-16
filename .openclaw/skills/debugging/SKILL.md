@@ -81,6 +81,14 @@ repairs or unrelated cleanup. Re-run the focused reproduction first, then the
 smallest applicable regression and integration selections. Reuse passing
 evidence whose relevant inputs did not change.
 
+If that rerun advances the original required path and exposes a different
+causal defect before the same approved outcome can succeed, classify it as a
+continuation blocker under `plan-execution`. Diagnose and repair that causal
+class independently, then resume the same reproduction or acceptance. Do not
+use the newly exposed blocker to authorize repository-wide searching, adjacent
+repairs, prospective hardening, or cleanup; stop when the assigned outcome
+passes.
+
 When a repair crosses layers, prove why each changed layer participates in the
 same causal mechanism. Do not alter product behavior merely to accommodate a
 broken harness or fixture, and do not conceal a product defect in test support.
