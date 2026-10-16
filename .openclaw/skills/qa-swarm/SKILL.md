@@ -90,9 +90,10 @@ cannot execute one, record the configured disposition, such as `UNVERIFIED`,
 without converting non-execution into a pass or an approved skip.
 
 Use only a runner whose explicit multi-selection form fails when it cannot
-resolve or execute an assigned selector. The adversarial reviewer compares the
-retained output with the frozen `selection`; aggregate counts alone do not prove
-inventory completeness.
+resolve or execute an assigned selector. The worker's local read-only adversarial
+reviewer compares the retained output with the frozen `selection`; aggregate
+counts alone do not prove inventory completeness. The coordinator verifies and
+records that exact-candidate attestation instead of repeating the review.
 
 A sharded run replaces a configured full-suite command only when the host
 explicitly declares the exhaustive slice union semantically equivalent,
@@ -114,9 +115,11 @@ full-suite command remains a separate final gate.
 4. Observe repair progress in the original active worker turn while the slice
    remains open. This is an ordinary progress message, not a durable rolling
    operation: do not call `collect-submission`, `request-review`, `integrate` or
-   `accept` for it. Review and integrate each causal repair through the project's
-   configured reviewed Git-integration path. The message does not mutate rolling
-   assignment state and cannot create or update a slice certificate.
+   `accept` for it. The worker obtains a local read-only adversarial review of
+   each causal repair before the coordinator integrates it through the project's
+   configured Git-integration path. The coordinator does not repeat that review.
+   The message does not mutate rolling assignment state and cannot create or
+   update a slice certificate.
 5. Notify workers whose relevant inputs changed. Let unaffected work continue;
    invalidate only proof whose dependency closure intersects the repair. When
    that closure is unknown, require a fresh complete slice run before acceptance.

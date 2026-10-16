@@ -153,16 +153,22 @@ action, review and batch IDs.
    repeat `swarm worker-bind` with the new `--lease-generation` from replenishment;
    the command records assignment membership rather than actual execution. Permission
    and host-capability failures are concrete blockers, not invented dependencies.
-5. Collect the original worker's exact final commit/base and focused evidence.
-   Assign an allowed adversarial reviewer through coordinator host tools; send
-   corrections to the original worker and reviewer. Record the collected V1
-   proposal with `submit --campaign <id> --assignment <uuid> --generation <uuid>
-   --submission @submission.json`. After it becomes review-ready, bind the exact
-   candidate and independent reviewer with `request-review`. Collect the actual
-   verdict through host tools, then use `record-review --campaign <id>
-   --review <uuid> --outcome @outcome.json`. These commands only validate and store
-   supplied evidence; the coordinator establishes session quiescence through
-   host tools. Never fabricate reviewer identities or decisions.
+5. Collect the original worker's exact final commit/base, focused evidence and
+   accepted local-review verdict. The worker normally creates a read-only
+   reviewer subagent in its own session, binds the review to the exact candidate
+   SHA and base, corrects findings, and retains the same reviewer through
+   correction. It reports the host-issued reviewer identity and verdict; it must
+   not invent either. Record the collected V1 proposal with `submit --campaign
+   <id> --assignment <uuid> --generation <uuid> --submission @submission.json`.
+   Bind the exact candidate and independent reviewer with `request-review`, then
+   record the already completed verdict with `record-review --campaign <id>
+   --review <uuid> --outcome @outcome.json`. The `reviewerSessionId` field
+   carries the exact host-issued session identity of either a local reviewer
+   subagent or a top-level reviewer. Assign a top-level reviewer through coordinator
+   host tools only when the worker cannot create or identify a local reviewer.
+   The coordinator verifies and records the attestation; it does not repeat the
+   adversarial review. These commands only validate and store supplied evidence;
+   the coordinator establishes worker quiescence through host tools.
 6. After adversarial-review acceptance, `integrate` performs the coordinator fast rebase and campaign
    increment publication. Resolve textual conflicts and their semantic effects,
    then refresh affected focused proof. After confirmed increment publication,
@@ -202,9 +208,17 @@ tracked paths/scopes, not per-file hash manifests or a repository-wide file list
 Retain command output; ignored logs are outputs rather than source inputs.
 A no-edit obligation needs adequate inspection evidence, not an invented rebase.
 
-Stop activity when submitting for adversarial review and coordinator publication.
-Correct the original reviewer's findings autonomously, refresh QA/rebase and
-resubmit. Workers never publish to mainline or accept their own discharge.
+Before terminal submission, spawn a local read-only reviewer subagent when the
+host supports one with a stable identity. Give it the exact base, candidate SHA,
+approved obligation, requirements, acceptance, tests and retained proof. It must
+inspect only and return an accepted or rejected verdict with actionable findings.
+Correct findings autonomously and return the corrected exact candidate to the
+same reviewer. Stop activity only after local review accepts the candidate, then
+submit the candidate, proof, reviewer identity and verdict for coordinator
+recording and publication. Workers never publish to mainline or accept their own
+discharge. If no identifiable local reviewer is available, stop at the review
+boundary so the coordinator can assign a top-level reviewer; do not self-review
+or fabricate an identity.
 Report unknown prerequisites, blockers or required scope changes to the
 coordinator; retain the checkout and do not silently alter its authoritative graph.
 These are legitimate coordination boundaries, unlike routine coding decisions.

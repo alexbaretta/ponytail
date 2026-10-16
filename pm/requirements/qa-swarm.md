@@ -37,13 +37,14 @@ and executable policy proof to agree on that complete-slice procedure.
 ### QA-SWARM-002: Incremental causal repair
 
 A failing slice remains assigned while independently confirmed causal bugfixes
-are committed, reviewed and integrated incrementally. A repair progress message
+are committed, reviewed by worker-local read-only subagents and integrated
+incrementally by the coordinator. A repair progress message
 in the active worker turn contains its exact revisions, diagnosis, paths and
 focused proof but does not use the rolling terminal collection/review/acceptance
 operations and cannot satisfy the slice. The invoking project must configure a
-separate reviewed Git-integration path capable of landing that repair while the
-assignment remains active. Relevant integrated repairs invalidate only affected
-proof; unrelated compatible work continues.
+separate Git-integration path capable of landing the locally reviewed repair
+while the assignment remains active. Relevant integrated repairs invalidate
+only affected proof; unrelated compatible work continues.
 
 Discharge requires the exported procedure and executable policy proof to keep
 repair integration distinct from slice acceptance.
@@ -52,10 +53,12 @@ repair integration distinct from slice acceptance.
 
 The worker submits one schema-valid terminal proposal only after every declared
 selection is green on one exact reconciled revision with no missing result or
-unapproved skip. Its exact command carries configured concurrency, its frozen
+unapproved skip and a local read-only reviewer subagent accepts that exact
+candidate. Its exact command carries configured concurrency, its frozen
 selection is the complete selector inventory, and retained output accounts for
-every selector. The coordinator accepts that proposal atomically after ordinary
-review. It must reject partial, mixed-revision, stale or incrementally patched
+every selector. The coordinator verifies and records the reviewer attestation,
+then accepts that proposal atomically without repeating the review. It must
+reject partial, mixed-revision, stale or incrementally patched
 evidence.
 
 Discharge requires the canonical and generated skills, registered distribution,

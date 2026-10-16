@@ -37,6 +37,6 @@ test('OBL-116: rolling workers progress autonomously with explicit authority bou
  assert.doesNotMatch(skill,/Every long-lived plan uses one execution path/);
  assert.match(skill,/Plans using the legacy serial selectors use one execution path/);
  for (const invariant of [/Implement autonomously/,/Do not request\s+routine implementation approvals/,
-  /full semantic\s+rebase commit by commit/,/Correct the original reviewer's findings autonomously/,
+  /full semantic\s+rebase commit by commit/,/Correct findings autonomously and return the corrected exact candidate/,
   /Workers never publish to mainline/,/Report unknown prerequisites/]) assert.match(procedure,invariant);
 });

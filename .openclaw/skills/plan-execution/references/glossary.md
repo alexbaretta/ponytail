@@ -20,7 +20,7 @@ Generated host copies derive from this source.
 | Worker assignment | Gives a session bounded responsibility for selected obligations. |
 | Continuation blocker | A newly exposed causal defect reached by rerunning the original required reproduction or acceptance after an in-scope repair, where that defect prevents the same approved outcome. It extends execution only forward along that demonstrated path, not laterally into adjacent or speculative work. |
 | Worker | An executing session responsible for autonomously establishing its assigned atomic obligations within the authorized lease and submitting adequate evidence. |
-| Coordinator | The authorized session owning a campaign's authoritative dependency graph, scheduling, adversarial-review requests, acceptance and publication through Ponytail tooling. |
+| Coordinator | The authorized session owning a campaign's authoritative dependency graph, scheduling, review-attestation recording, acceptance and publication through Ponytail tooling. |
 | Swarm | A user-worktree-owned set of worker sessions and managed worktrees, with zero or one coordinator; either resource set may be empty. Membership is independent of campaign identity and observed session activity. |
 | User worktree | A user-owned Git checkout that owns a swarm. |
 | Managed worktree | A Git checkout allocated to a swarm for worker use; it belongs to at most one swarm at a time and may be released, reassigned or deleted when unassigned. |

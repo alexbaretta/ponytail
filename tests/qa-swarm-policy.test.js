@@ -30,6 +30,8 @@ test('QA swarm separates incremental repairs from acceptance', () => {
   assert.match(skill, /Do not stop the worker turn or emit a terminal rolling submission/u);
   assert.match(skill, /If no nonterminal reviewed Git-integration path is configured/u);
   assert.match(skill, /invalidate only proof whose dependency closure intersects the repair/u);
+  assert.match(skill, /worker obtains a local read-only adversarial review/u);
+  assert.match(skill, /coordinator does not repeat that review/u);
 });
 
 test('QA swarm accepts only one complete green revision-bound result', () => {

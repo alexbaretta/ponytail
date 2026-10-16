@@ -107,19 +107,23 @@ unfinished rebase, and resume through the same completion-first lifecycle.
 criteria are owned by the referenced campaign obligation document. The prose
 below explains their approved scope; it is not a substitute delivery unit.
 
-Workers perform full semantic rebases and focused QA; adversarial review binds
-the exact candidate and preserves reviewer identity through corrections. If that
-reviewer is lost, the coordinator records the loss reference and replacement,
-preserves previous requests and verdicts, fences the replaced request, and obtains
-a fresh review of the exact candidate from the replacement reviewer. The
+Workers perform full semantic rebases and focused QA, then normally use a local
+read-only reviewer subagent whose host-issued identity and verdict bind the exact
+candidate. The worker preserves that reviewer through corrections. The
+coordinator records and verifies the resulting attestation without repeating the
+review, then retains sole ownership of integration, acceptance and publication.
+If that reviewer is lost, the coordinator records the loss reference and
+replacement, preserves previous requests and verdicts, fences the replaced
+request, and obtains a fresh review of the exact candidate from the replacement reviewer. The
 coordinator uses the explicitly authorized interactive fast rebase, inspecting
 semantic conflicts when textual conflicts arise. Refresh required proof on
 changed inputs, push normally, and verify remote outcomes. Delivery does not
 by itself discharge obligations or establish mainline acceptance.
 
-The canonical `start-review` command creates a reviewer and starts its actual
-review on the same native connection before closing it. Rework resumes the
-recorded reviewer thread; retries retain its exact original turn. An empty native
+The canonical `start-review` command remains the fallback when a worker cannot
+create or identify a local reviewer: it creates a top-level reviewer and starts
+its actual review on the same native connection before closing it. Rework
+resumes the recorded reviewer thread; retries retain its exact original turn. An empty native
 thread is not a durable review actor, and replacement still requires an explicit
 observed loss reference.
 

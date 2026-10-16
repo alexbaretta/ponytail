@@ -32,8 +32,9 @@ Traceability: verifies REQ-QA-SWARM
    causal-repair procedure.
    - The repair handoff identifies the failure, diagnosis, commit/base, changed
      paths, focused proof and remaining slice state.
-   - The coordinator can review and integrate the repair while the slice stays
-     unresolved. The worker does not call any rolling terminal collection,
+   - The worker obtains a local read-only adversarial review; the coordinator
+     verifies the attestation and integrates the repair without repeating the
+     review while the slice stays unresolved. The worker does not call any rolling terminal collection,
      review, integration or acceptance operation for this progress message.
    - The host contract names a separate reviewed Git-integration path that can
      land the repair while the rolling assignment remains active.
@@ -46,8 +47,9 @@ Traceability: verifies REQ-QA-SWARM
    - The worker submits one exact-schema proposal. The coordinator rejects
      partial, stale, mixed-revision, missing-selection and unapproved-skip
      variants.
-   - Ordinary review and bound-certificate acceptance can satisfy the gate
-     only from the complete green packet.
+   - The worker-local reviewer accepts the exact complete green packet. The
+     coordinator records that attestation and performs bound-certificate
+     acceptance without repeating the review.
 4. **Acceptance QA-EXISTING-ADOPTION (QA-SWARM-004):** Inspect conversion of an
    already-running host-managed swarm.
    - Active tests, Git operations, sessions and checkouts continue to their next

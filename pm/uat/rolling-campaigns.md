@@ -140,7 +140,9 @@ Traceability: verifies REQ-ROLLING-WORKERS
 Traceability: verifies REQ-ROLLING-REVIEW
 
 1. **Step REVIEW-CORRECTION:** Acceptance contribution to [OBL-50](../plans/closed/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-50), [OBL-51](../plans/closed/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-51), [OBL-52](../plans/closed/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-52). Reject a candidate, return corrections, and submit
-   a newly semantically rebased revision. The original reviewer assesses it.
+   a newly semantically rebased revision. By default the worker's original
+   read-only reviewer subagent assesses it, and the coordinator records the
+   exact-candidate verdict without repeating the review.
    For OBL-52, establish reviewer loss, record its reference and replacement,
    reject late activity on the replaced request, and obtain a fresh exact-candidate
    review from the replacement. Verify both the replacement record and immutable

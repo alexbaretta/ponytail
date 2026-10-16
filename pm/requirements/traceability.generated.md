@@ -746,12 +746,12 @@ Requirement: [pm/requirements/rolling-campaigns.md](rolling-campaigns.md)
 - integration-test: verifies [tests/rolling-campaign.integration.test.ts:56](../../tests/rolling-campaign.integration.test.ts#L56)
 - integration-test: verifies [tests/rolling-codex.integration.ts:171](../../tests/rolling-codex.integration.ts#L171)
 - uat: verifies [pm/uat/rolling-campaigns.md:83](../../pm/uat/rolling-campaigns.md#L83)
-- uat: verifies [pm/uat/rolling-campaigns.md:247](../../pm/uat/rolling-campaigns.md#L247)
-- uat: verifies [pm/uat/rolling-campaigns.md:253](../../pm/uat/rolling-campaigns.md#L253)
-- uat: verifies [pm/uat/rolling-campaigns.md:259](../../pm/uat/rolling-campaigns.md#L259)
-- uat: verifies [pm/uat/rolling-campaigns.md:265](../../pm/uat/rolling-campaigns.md#L265)
-- uat: verifies [pm/uat/rolling-campaigns.md:273](../../pm/uat/rolling-campaigns.md#L273)
-- uat: verifies [pm/uat/rolling-campaigns.md:290](../../pm/uat/rolling-campaigns.md#L290)
+- uat: verifies [pm/uat/rolling-campaigns.md:249](../../pm/uat/rolling-campaigns.md#L249)
+- uat: verifies [pm/uat/rolling-campaigns.md:255](../../pm/uat/rolling-campaigns.md#L255)
+- uat: verifies [pm/uat/rolling-campaigns.md:261](../../pm/uat/rolling-campaigns.md#L261)
+- uat: verifies [pm/uat/rolling-campaigns.md:267](../../pm/uat/rolling-campaigns.md#L267)
+- uat: verifies [pm/uat/rolling-campaigns.md:275](../../pm/uat/rolling-campaigns.md#L275)
+- uat: verifies [pm/uat/rolling-campaigns.md:292](../../pm/uat/rolling-campaigns.md#L292)
 - plan: plans-implementation [pm/plans/closed/2026-10-10-rolling-obligation-campaigns/plan.md:264](../../pm/plans/closed/2026-10-10-rolling-obligation-campaigns/plan.md#L264)
 
 ## REQ-ROLLING-SCHEDULING
@@ -776,7 +776,7 @@ Requirement: [pm/requirements/rolling-campaigns.md](rolling-campaigns.md)
 - integration-test: verifies [tests/rolling-codex.integration.ts:109](../../tests/rolling-codex.integration.ts#L109)
 - integration-test: verifies [tests/rolling-operations.integration.test.ts:85](../../tests/rolling-operations.integration.test.ts#L85)
 - uat: verifies [pm/uat/rolling-campaigns.md:96](../../pm/uat/rolling-campaigns.md#L96)
-- uat: verifies [pm/uat/rolling-campaigns.md:267](../../pm/uat/rolling-campaigns.md#L267)
+- uat: verifies [pm/uat/rolling-campaigns.md:269](../../pm/uat/rolling-campaigns.md#L269)
 - plan: plans-implementation [pm/plans/closed/2026-10-10-rolling-obligation-campaigns/plan.md:265](../../pm/plans/closed/2026-10-10-rolling-obligation-campaigns/plan.md#L265)
 
 ## REQ-ROLLING-STATE
@@ -835,10 +835,10 @@ Requirement: [pm/requirements/rolling-campaigns.md](rolling-campaigns.md)
 - integration-test: verifies [tests/rolling-operations.integration.test.ts:84](../../tests/rolling-operations.integration.test.ts#L84)
 - integration-test: verifies [tests/rolling-operations.integration.test.ts:399](../../tests/rolling-operations.integration.test.ts#L399)
 - uat: verifies [pm/uat/rolling-campaigns.md:110](../../pm/uat/rolling-campaigns.md#L110)
-- uat: verifies [pm/uat/rolling-campaigns.md:228](../../pm/uat/rolling-campaigns.md#L228)
-- uat: verifies [pm/uat/rolling-campaigns.md:266](../../pm/uat/rolling-campaigns.md#L266)
-- uat: verifies [pm/uat/rolling-campaigns.md:274](../../pm/uat/rolling-campaigns.md#L274)
-- uat: verifies [pm/uat/rolling-campaigns.md:327](../../pm/uat/rolling-campaigns.md#L327)
+- uat: verifies [pm/uat/rolling-campaigns.md:230](../../pm/uat/rolling-campaigns.md#L230)
+- uat: verifies [pm/uat/rolling-campaigns.md:268](../../pm/uat/rolling-campaigns.md#L268)
+- uat: verifies [pm/uat/rolling-campaigns.md:276](../../pm/uat/rolling-campaigns.md#L276)
+- uat: verifies [pm/uat/rolling-campaigns.md:329](../../pm/uat/rolling-campaigns.md#L329)
 - plan: plans-implementation [pm/plans/closed/2026-10-10-rolling-obligation-campaigns/plan.md:266](../../pm/plans/closed/2026-10-10-rolling-obligation-campaigns/plan.md#L266)
 
 ## REQ-ROLLING-WORKERS
@@ -920,7 +920,7 @@ Requirement: [pm/requirements/rolling-campaigns.md](rolling-campaigns.md)
 - integration-test: verifies [tests/rolling-worktrees.integration.test.ts:75](../../tests/rolling-worktrees.integration.test.ts#L75)
 - integration-test: verifies [tests/rolling-worktrees.integration.test.ts:122](../../tests/rolling-worktrees.integration.test.ts#L122)
 - uat: verifies [pm/uat/rolling-campaigns.md:122](../../pm/uat/rolling-campaigns.md#L122)
-- uat: verifies [pm/uat/rolling-campaigns.md:275](../../pm/uat/rolling-campaigns.md#L275)
+- uat: verifies [pm/uat/rolling-campaigns.md:277](../../pm/uat/rolling-campaigns.md#L277)
 - plan: plans-implementation [pm/plans/closed/2026-10-10-rolling-obligation-campaigns/plan.md:267](../../pm/plans/closed/2026-10-10-rolling-obligation-campaigns/plan.md#L267)
 - issue: introduces [pm/bugs/closed/2026-10-12-BUG-rolling_adoption_legacy_worktrees.md:11](../../pm/bugs/closed/2026-10-12-BUG-rolling_adoption_legacy_worktrees.md#L11)
 - issue: introduces [pm/bugs/in_progress/2026-10-12-BUG-failed_worker_resumption.md:12](../../pm/bugs/in_progress/2026-10-12-BUG-failed_worker_resumption.md#L12)
@@ -1066,7 +1066,7 @@ Requirement: [pm/requirements/rolling-campaigns.md](rolling-campaigns.md)
 - integration-test: verifies [tests/rolling-campaign-store.integration.test.ts:2209](../../tests/rolling-campaign-store.integration.test.ts#L2209)
 - integration-test: verifies [tests/rolling-publication.integration.test.ts:15](../../tests/rolling-publication.integration.test.ts#L15)
 - integration-test: verifies [tests/rolling-publication.integration.test.ts:73](../../tests/rolling-publication.integration.test.ts#L73)
-- uat: verifies [pm/uat/rolling-campaigns.md:165](../../pm/uat/rolling-campaigns.md#L165)
+- uat: verifies [pm/uat/rolling-campaigns.md:167](../../pm/uat/rolling-campaigns.md#L167)
 - plan: plans-implementation [pm/plans/closed/2026-10-10-rolling-obligation-campaigns/plan.md:269](../../pm/plans/closed/2026-10-10-rolling-obligation-campaigns/plan.md#L269)
 - issue: introduces [pm/bugs/in_progress/2026-10-12-BUG-canonical_increment_integration.md:11](../../pm/bugs/in_progress/2026-10-12-BUG-canonical_increment_integration.md#L11)
 
@@ -1127,8 +1127,8 @@ Requirement: [pm/requirements/rolling-campaigns.md](rolling-campaigns.md)
 - integration-test: verifies [tests/rolling-operations.integration.test.ts:83](../../tests/rolling-operations.integration.test.ts#L83)
 - integration-test: verifies [tests/rolling-operations.integration.test.ts:398](../../tests/rolling-operations.integration.test.ts#L398)
 - uat: verifies [pm/uat/rolling-campaigns.md:36](../../pm/uat/rolling-campaigns.md#L36)
-- uat: verifies [pm/uat/rolling-campaigns.md:178](../../pm/uat/rolling-campaigns.md#L178)
-- uat: verifies [pm/uat/rolling-campaigns.md:229](../../pm/uat/rolling-campaigns.md#L229)
+- uat: verifies [pm/uat/rolling-campaigns.md:180](../../pm/uat/rolling-campaigns.md#L180)
+- uat: verifies [pm/uat/rolling-campaigns.md:231](../../pm/uat/rolling-campaigns.md#L231)
 - plan: plans-implementation [pm/plans/closed/2026-10-10-rolling-obligation-campaigns/plan.md:270](../../pm/plans/closed/2026-10-10-rolling-obligation-campaigns/plan.md#L270)
 - issue: introduces [pm/bugs/closed/2026-10-12-BUG-rolling_command_hook_classification.md:12](../../pm/bugs/closed/2026-10-12-BUG-rolling_command_hook_classification.md#L12)
 
@@ -1202,7 +1202,7 @@ Requirement: [pm/requirements/rolling-campaigns.md](rolling-campaigns.md)
 - implementation: implements [src/rolling-codex.ts:349](../../src/rolling-codex.ts#L349)
 - unit-test: verifies [tests/rolling-codex.test.ts:72](../../tests/rolling-codex.test.ts#L72)
 - integration-test: verifies [tests/rolling-campaign-store.integration.test.ts:2137](../../tests/rolling-campaign-store.integration.test.ts#L2137)
-- uat: verifies [pm/uat/rolling-campaigns.md:339](../../pm/uat/rolling-campaigns.md#L339)
+- uat: verifies [pm/uat/rolling-campaigns.md:341](../../pm/uat/rolling-campaigns.md#L341)
 
 ## REQ-ROLLING-PUBLICATION-REPAIR
 
@@ -1214,7 +1214,7 @@ Requirement: [pm/requirements/rolling-campaigns.md](rolling-campaigns.md)
 - implementation: implements [src/rolling-publication.ts:215](../../src/rolling-publication.ts#L215)
 - unit-test: verifies [tests/rolling-publication.test.ts:12](../../tests/rolling-publication.test.ts#L12)
 - integration-test: verifies [tests/rolling-campaign-store.integration.test.ts:2203](../../tests/rolling-campaign-store.integration.test.ts#L2203)
-- uat: verifies [pm/uat/rolling-campaigns.md:354](../../pm/uat/rolling-campaigns.md#L354)
+- uat: verifies [pm/uat/rolling-campaigns.md:356](../../pm/uat/rolling-campaigns.md#L356)
 
 ## REQ-ROLLING-CONFIGURATION-AMENDMENT
 
@@ -1225,7 +1225,7 @@ Requirement: [pm/requirements/rolling-campaigns.md](rolling-campaigns.md)
 - implementation: implements [src/rolling-campaign-store.ts:595](../../src/rolling-campaign-store.ts#L595)
 - unit-test: verifies [tests/rolling-campaign-store.test.ts:11](../../tests/rolling-campaign-store.test.ts#L11)
 - integration-test: verifies [tests/rolling-campaign-store.integration.test.ts:2220](../../tests/rolling-campaign-store.integration.test.ts#L2220)
-- uat: verifies [pm/uat/rolling-campaigns.md:371](../../pm/uat/rolling-campaigns.md#L371)
+- uat: verifies [pm/uat/rolling-campaigns.md:373](../../pm/uat/rolling-campaigns.md#L373)
 
 ## REQ-ROLLING-PUBLICATION-WITHDRAWAL
 
@@ -1235,7 +1235,7 @@ Requirement: [pm/requirements/rolling-campaigns.md](rolling-campaigns.md)
 - implementation: implements [src/rolling-campaign-store.ts:624](../../src/rolling-campaign-store.ts#L624)
 - unit-test: verifies [tests/rolling-campaign-store.test.ts:12](../../tests/rolling-campaign-store.test.ts#L12)
 - integration-test: verifies [tests/rolling-campaign-store.integration.test.ts:2221](../../tests/rolling-campaign-store.integration.test.ts#L2221)
-- uat: verifies [pm/uat/rolling-campaigns.md:379](../../pm/uat/rolling-campaigns.md#L379)
+- uat: verifies [pm/uat/rolling-campaigns.md:381](../../pm/uat/rolling-campaigns.md#L381)
 
 ## REQ-ROLLING-WORKER-CORRECTION
 
@@ -1245,7 +1245,7 @@ Requirement: [pm/requirements/rolling-campaigns.md](rolling-campaigns.md)
 - unit-test: verifies [tests/rolling-worker.test.ts:177](../../tests/rolling-worker.test.ts#L177)
 - integration-test: verifies [tests/rolling-campaign-store.integration.test.ts:2224](../../tests/rolling-campaign-store.integration.test.ts#L2224)
 - integration-test: verifies [tests/rolling-campaign-store.integration.test.ts:2227](../../tests/rolling-campaign-store.integration.test.ts#L2227)
-- uat: verifies [pm/uat/rolling-campaigns.md:390](../../pm/uat/rolling-campaigns.md#L390)
+- uat: verifies [pm/uat/rolling-campaigns.md:392](../../pm/uat/rolling-campaigns.md#L392)
 
 ## REQ-ROLLING-QA-APPROVAL
 
@@ -1254,7 +1254,7 @@ Requirement: [pm/requirements/rolling-campaigns.md](rolling-campaigns.md)
 - implementation: implements [src/rolling-operations.ts:219](../../src/rolling-operations.ts#L219)
 - unit-test: verifies [tests/rolling-worker.test.ts:62](../../tests/rolling-worker.test.ts#L62)
 - integration-test: verifies [tests/rolling-campaign-store.integration.test.ts:2124](../../tests/rolling-campaign-store.integration.test.ts#L2124)
-- uat: verifies [pm/uat/rolling-campaigns.md:399](../../pm/uat/rolling-campaigns.md#L399)
+- uat: verifies [pm/uat/rolling-campaigns.md:401](../../pm/uat/rolling-campaigns.md#L401)
 
 ## REQ-ROLLING-PARALLEL-DISPATCH
 
@@ -1263,7 +1263,7 @@ Requirement: [pm/requirements/rolling-campaigns.md](rolling-campaigns.md)
 - implementation: implements [skills/plan-execution/references/rolling-campaigns.md:9](../../skills/plan-execution/references/rolling-campaigns.md#L9)
 - unit-test: verifies [tests/rolling-campaign.test.ts:69](../../tests/rolling-campaign.test.ts#L69)
 - integration-test: verifies [tests/rolling-campaign-store.integration.test.ts:2125](../../tests/rolling-campaign-store.integration.test.ts#L2125)
-- uat: verifies [pm/uat/rolling-campaigns.md:408](../../pm/uat/rolling-campaigns.md#L408)
+- uat: verifies [pm/uat/rolling-campaigns.md:410](../../pm/uat/rolling-campaigns.md#L410)
 
 ## REQ-ROLLING-RESET
 
@@ -1274,7 +1274,7 @@ Requirement: [pm/requirements/rolling-campaigns.md](rolling-campaigns.md)
 - implementation: implements [src/rolling-reset.ts:161](../../src/rolling-reset.ts#L161)
 - unit-test: verifies [tests/rolling-reset.test.ts:6](../../tests/rolling-reset.test.ts#L6)
 - integration-test: verifies [tests/rolling-reset.integration.test.ts:18](../../tests/rolling-reset.integration.test.ts#L18)
-- uat: verifies [pm/uat/rolling-campaigns.md:418](../../pm/uat/rolling-campaigns.md#L418)
+- uat: verifies [pm/uat/rolling-campaigns.md:420](../../pm/uat/rolling-campaigns.md#L420)
 
 ## REQ-ROLLING-EXISTING-POOL
 
@@ -1283,7 +1283,7 @@ Requirement: [pm/requirements/rolling-campaigns.md](rolling-campaigns.md)
 - implementation: implements [src/rolling-campaign-store.ts:1909](../../src/rolling-campaign-store.ts#L1909)
 - unit-test: verifies [tests/rolling-operations.test.ts:258](../../tests/rolling-operations.test.ts#L258)
 - integration-test: verifies [tests/rolling-reset.integration.test.ts:19](../../tests/rolling-reset.integration.test.ts#L19)
-- uat: verifies [pm/uat/rolling-campaigns.md:436](../../pm/uat/rolling-campaigns.md#L436)
+- uat: verifies [pm/uat/rolling-campaigns.md:438](../../pm/uat/rolling-campaigns.md#L438)
 
 ## REQ-SWARM-OWNERSHIP
 

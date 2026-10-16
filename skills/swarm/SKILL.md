@@ -105,8 +105,12 @@ canonical graph is authoritative.
    results or approval/blocker requests. Preserve original handles and identities
    after uncertain sends; inspect before retrying rather than creating duplicates.
 
-Implementation workers are top-level sessions. Subagents may perform explicitly
-allowed work such as adversarial reviews; they do not replace worker sessions.
+Implementation workers are top-level sessions. Each worker uses a local,
+read-only subagent for adversarial review when the host exposes subagents and a
+stable reviewer identity. The subagent does not replace the worker session and
+must not edit files, commits, branches or project state. A coordinator-assigned
+top-level reviewer is a fallback only when the worker cannot create or identify
+an independent local reviewer.
 Keep compatible development overlapping up to N. Report the actual reason when
 capacity cannot be filled; never describe idle bindings as active development.
 
@@ -114,9 +118,12 @@ capacity cannot be filled; never describe idle bindings as active development.
 
 Workers implement autonomously within their exact scope and run configured
 focused QA and Arcs. For changed code they fetch and semantically rebase against
-the campaign branch before submitting the final commit/base and proof. They
-request adversarial review and coordinator publication; routine coding decisions
-remain worker-owned. Review corrections go to the original worker and reviewer.
+the campaign branch, commit the exact candidate, and have a local read-only
+reviewer subagent inspect that SHA and base before terminal submission. The
+worker corrects findings and returns the corrected candidate to the same
+reviewer until accepted. It then supplies the exact host-issued reviewer
+identity and verdict with its final commit/base and proof. The coordinator
+records that review and performs publication; it does not repeat the review.
 Record host-collected proposals and verdicts through the rolling procedure's
 `campaign submit` and `campaign record-review` commands; neither operates a
 session. The coordinator owns fast rebase, acceptance and publication under the plan's

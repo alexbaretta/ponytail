@@ -276,7 +276,12 @@ generated/installed host copies, and a plan with independent ready obligations.
    compatible original top-level workers concurrently up to configured N,
    without an extra instruction to parallelize. Verify actual native activity
    and exact instruction receipt; unknown sends do not cause duplicate dispatch.
-3. Follow completion-first and publication gates, rename completed sessions,
+3. Have each worker use an identifiable read-only local reviewer subagent for
+   its exact candidate and correct findings with that reviewer. Verify the
+   coordinator records the accepted attestation and proceeds to integration
+   without performing the review again. When the host cannot expose such a
+   reviewer, verify the coordinator assigns a top-level reviewer as a fallback.
+4. Follow completion-first and publication gates, rename completed sessions,
    then quiesce/remove workers and release or clear resources. Preserved sessions
    remain bound to their original user-worktree provenance; checkouts can transfer
    only after prior ownership is relinquished. Inspect both owner and managed
