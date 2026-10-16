@@ -26,5 +26,7 @@ test('swarm instructions use shipped resource commands and retire session API in
  assert.match(skill,/Never dispatch or bind a `projectless` worker/);
  assert.match(skill,/`move_thread_to_project`/);
  assert.match(skill,/worker and coordinator have the same non-null\n   `projectId`/);
+ assert.match(skill,/fresh worker with `create_thread`/);
+ assert.match(skill,/environment: \{type: "worktree"\}/);
  assert.match(procedure,/hostAction/);
 });

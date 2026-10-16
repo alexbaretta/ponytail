@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-10-15-native_worktree_admission",
+  "recorded_at": "2026-10-15T23:58:50-07:00",
+  "source_references": [
+    "pm/plans/in_progress/2026-10-15-native-fork-swarm/plan.md",
+    "pm/requirements/swarms.md#req-swarm-worktrees-transferable-managed-resources"
+  ],
+  "context": {
+    "languages": [
+      "typescript"
+    ],
+    "frameworks": [],
+    "components": [
+      "swarm"
+    ],
+    "affected_boundaries": [
+      "host checkout to swarm membership"
+    ],
+    "code_references": [
+      "src/swarm-store.ts",
+      "src/swarm-info.ts",
+      "skills/swarm/SKILL.md"
+    ]
+  },
+  "observed_behavior": "Native host worktree paths had no supported swarm enrollment operation; the coordinator created unbound parent-root standby chats.",
+  "expected_behavior": "A native isolated checkout can be recorded at its exact physical path and bound to its verified worker.",
+  "causal_mechanism": "Session creation was ordered after numbered-pool allocation, while native creation did not accept that arbitrary existing checkout. Bookkeeping only allocated numbered paths and could not enroll native roots.",
+  "anti_pattern": {
+    "structural_description": "A bookkeeping subsystem constrains the physical identity supplied by an independently owned host lifecycle.",
+    "why_it_fails": "Native creation returns a different valid checkout root; forcing a second path prevents truthful association."
+  },
+  "correct_pattern": {
+    "required_invariant": "Recorded membership preserves the verified host checkout identity without taking over its physical lifecycle.",
+    "implementation_description": "Enroll canonical registered same-repository roots under a fenced owner; reject foreign/user/conflicting roots and retain host roots outside numbered-pool reuse/deletion."
+  },
+  "applicability_conditions": [
+    "The host owns native worktree creation and returns an independently selected physical checkout path."
+  ],
+  "known_non_matches": [
+    "Existing numbered-pool provisioning remains valid for callers using that provisioning lifecycle."
+  ],
+  "confirmation_evidence": [
+    "Source inspection found no existing-root admission operation.",
+    "Focused real Git/PostgreSQL proof enrolls an external root, binds its worker and preserves its physical checkout after release and clear."
+  ],
+  "regression_proofs": [
+    "tests/swarm-worktrees.integration.test.ts: host worktree enrollment preserves native paths, fences owners and never recycles host checkouts"
+  ]
+}

@@ -3735,7 +3735,7 @@
         "REQ-ROLLING-WORKERS"
       ],
       "responsibilityId": "rolling-delivery-15",
-      "condition": "Resolve every checkout's managed directory to one physical main-root-anchored pool.",
+      "condition": "Resolve the invoking owner's managed directory without reading sibling checkout configurations; preserve recorded pool identity for numbered allocation (stakeholder Option 1 clarification, 2026-10-16).",
       "criterion": "`tests/rolling-worktrees.integration.test.ts`; physical-path unit proof demonstrates the complete declared outcome on identified inputs, with applicable strict compilation, unchanged TSTS, focused QA, structural checks and generated-source synchronization. Partial, stale, skipped or substitute proof is unresolved.",
       "dependsOn": [],
       "acceptanceGroups": [

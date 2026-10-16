@@ -36,7 +36,11 @@ In Codex, inspect the coordinator through `list_threads` and freeze its exact
 non-null `projectId` before allocating a worker. Confirm that `list_projects`
 contains that ID. The coordinator session's project is the project for every
 worker it creates; never derive worker project membership from the owner or
-managed-checkout path, repository identity or project name.
+managed-checkout path, repository identity or project name. If host metadata
+contradicts an explicitly selected project, present the conflict once. Preserve
+the user's direct resolution and label the read-back discrepancy; do not turn
+an already-confirmed selection into an endless gate or repeat an unchanged move.
+Independently verify every actual child's non-null project association.
 
 Ponytail CLI and MCP do not create, start, stop, inspect, rename, archive or delete
 Codex sessions. They record associations and manage Git worktrees. The coordinator
@@ -55,29 +59,64 @@ new session. Select dependency-ready obligations whose paths and exclusive
 resources are compatible using the project's planning tools; the coordinator's
 canonical graph is authoritative.
 
-1. Allocate a checkout with `worktree-assign --base <approved-commit-or-ref>`.
-   Retain its returned number, path and membership generation. Allocation chooses
-   the lowest eligible available number and creates/setup a checkout if needed.
-   A failed setup retains ownership: resume `worktree-setup --number <n>
-   --generation <worktree-generation>` rather than allocating a replacement.
-2. Create a top-level worker through the host's session-creation tool in that
-   existing checkout. Never dispatch or bind a `projectless` worker. Use a
-   project-targeted `create_thread` with the coordinator's frozen project ID
-   when the exposed schema can also preserve the designated checkout. If the
-   supported existing-checkout creation path returns a thread without that
-   association, immediately use `move_thread_to_project` with the coordinator's
-   frozen project ID before sending any initialization or assignment, then use
-   `list_threads` to verify that the worker and coordinator have the same non-null
-   `projectId` and that the worker has the designated checkout. Do not invent a
-   cwd argument, create a second Codex-managed worktree, or substitute a private
-   App Server controller. If the host cannot satisfy both identities, retain the
-   checkout reservation and report that concrete capability gap while continuing
-   independent work; a projectless thread is not a fallback.
+1. In Codex, create a fresh worker with `create_thread`, a target of type
+   `project`, the coordinator's frozen `projectId`, and
+   `environment: {type: "worktree"}`. Use this creation shape, substituting the
+   actual selected project and worker number:
+
+   ```javascript
+   create_thread({
+     title: "Worker 1 — initialization",
+     target: {
+       type: "project",
+       projectId: "<coordinator-project-id>",
+       environment: {type: "worktree"}
+     },
+     prompt: "Initialization only. Remain idle; do not use tools, inspect or edit files, run tests, provision resources, create sessions, or message other chats. Reply 'Worker ready and idle.' and end your turn. Await a bounded coordinator assignment."
+   })
+   ```
+
+   Omit model/thinking overrides unless authorized. Omit `startingState` unless
+   the user specified a Git starting state; otherwise report the actual resulting
+   base. Fresh conversation history does not mean empty Git history. Do not use
+   `fork_thread`: it copies the coordinator's conversation. A same-directory
+   session does not satisfy worker isolation. Do not allocate a numbered Ponytail
+   checkout first or create parent-root standby chats. If project-local
+   instructions conflict, ask the user before changing instructions or creating
+   a worker. If a specific parent directory is required, use the host's supported
+   setting before creation: Codex Settings > Worktrees > Worktree root. The
+   creation tool has no directory argument, and Ponytail's pool configuration
+   does not change that host setting. Preserve any explicit user resolution
+   allowing the current native location.
+2. Retain the returned child handle. A queued `clientThreadId` is not a usable
+   thread ID: retain it with `hostId`, wait for setup, and resolve the actual child
+   through supported host inventory or exact setup provenance. Inspect that
+   actual child; do not fabricate a UUID or retry uncertain creation. Use
+   `read_thread`/`wait_threads` to verify a completed initialization-only turn,
+   idle status and fresh history without inherited coordinator turns. Verify
+   that the worker and coordinator have the same non-null
+   `projectId` (or the user's explicitly resolved project identity), that the
+   child's native cwd is a distinct physical Git worktree,
+   and that it shares the coordinator's Git common directory. Never dispatch or bind a `projectless` worker.
+   If project association needs correction, use `move_thread_to_project` and
+   verify the result through host inventory; success without matching read-back
+   is unresolved. Command `workdir` overrides do not change native placement.
+   Run `ponytail swarm worktree-enroll --path <actual-native-cwd> --json` from
+   the owner checkout. Retain its returned number and membership generation;
+   these are bookkeeping selectors, not a requirement to rename the host path.
+   Enrollment neither creates nor moves the checkout and preserves any
+   uncommitted source in the checkout. The host owns its Git
+   lifecycle; run only the invoking project's authorized setup for that exact
+   root. Other hosts may use their supported native isolated-session workflow
+   and enroll its verified actual checkout by the same command.
 3. Retain the actual returned thread ID and host ID. Obtain the session ID from
-   trusted host metadata or the original worker's own session identity; inspect
+   trusted host metadata (including exact `session_meta` when available) or
+   the original worker's own session identity; inspect
    the exposed tools rather than assuming a field. Codex `create_thread` does not
    document a separate returned session ID. Never infer it equals the thread ID.
-   If the session identity is unavailable, retain the checkout reservation and
+   Do not make an idle worker execute tools solely to obtain identity when
+   trusted metadata already establishes it.
+   If the session identity is unavailable, retain the enrolled checkout and
    report that capability gap; do not bind an invented identity or write a marker.
    With that identity established, ask the worker to verify its designated root
    and exclusively create ignored `session_id.txt` with its exact session ID
@@ -90,17 +129,46 @@ canonical graph is authoritative.
    records the host identity against its original pending campaign action, using
    the current graph and exact plan/sprint scope. It starts no session. The worker has a permanent origin
    owner and checkout; do not invent identifiers or bind it elsewhere.
-5. Apply the returned desired name through host naming tools (`set_thread_title`
-   in Codex): `W<nn> P<mm> <three words>` or `W<nn> S<mm> <three words>`. Send the
-   bounded implementation assignment through the host messaging tool
+5. For initialization-only admission, stop after binding, naming and read-back;
+   do not analyze a plan, run tests, adopt runtime resources or dispatch product
+   work. Creation, admission and executing an assignment are distinct stages.
+   Apply the returned desired name through host naming tools (`set_thread_title`
+   in Codex): `W<nn> P<mm> <three words>` or `W<nn> S<mm> <three words>`. When
+   execution is authorized, send the bounded implementation assignment through the host messaging tool
    (`send_message_to_thread`). The user's campaign execution authorization covers
    these worker instructions. Include exact obligation IDs, requirements,
    acceptance/Arc/Step references, paths, proof selections, prerequisites and base.
-6. Start the other selected independent workers without awaiting the first
+   Explicitly instruct each worker to call `create_goal` in its own session for
+   that bounded assignment before implementation, so work continues beyond the
+   first turn. The goal must include the authorized obligations and acceptance
+   conditions; omit a token budget unless the user requested one. Have the worker
+   inspect `get_goal` first and retain a matching unfinished goal instead of
+   creating a duplicate. Verify its active goal from worker tool evidence before
+   counting it as executing. A prompt, binding or completed first turn does not
+   establish a goal. Initialization-only and held workers remain held; create
+   the execution goal when their assignment is authorized. Keep the goal active
+   through verification and durable discharge, and mark it complete only when
+   its assignment's acceptance conditions are satisfied. Report a missing goal
+   capability rather than claiming sustained execution.
+6. If the user requested a pilot for review, wait for that review before
+   expanding. Otherwise start the other selected independent workers without awaiting the first
    worker's completion. Use host inspection/wait tools (`read_thread` and
    `wait_threads`) to verify that implementation actually started and to collect
    results or approval/blocker requests. Preserve original handles and identities
    after uncertain sends; inspect before retrying rather than creating duplicates.
+
+Before reporting setup complete, read back `swarm info --json` and the host
+inventory. Match every requested worker's actual thread/session, exact project,
+native checkout, membership generation, assignment and applied name. Verify
+unique checkouts and one binding per requested worker. Classify every extra old
+binding or checkout explicitly; preserve unfinished source. Partial initialization
+or a proposed roster is incomplete setup. Establish this path with one worker
+before creating the rest of a requested replacement roster. Verify the worker
+has fresh conversation history as well as its own native checkout. Retire only
+explicitly superseded chats within user authority after verifying quiescence
+and preserving source. Use host lifecycle operations; a refusal to delete a
+task-primary checkout leaves a retained resource, not permission to force-delete
+it. Report archived sessions and retained physical checkouts separately.
 
 Implementation workers are top-level sessions. Each worker uses a local,
 read-only subagent for adversarial review when the host exposes subagents and a
@@ -145,6 +213,11 @@ DB projections directly or manufacture native activity observations.
 
 ## Complete, detach and reuse
 
+The existing numbered pool remains inspectable through `worktree-assign` and
+`worktree-setup` for workflows that use Ponytail-provisioned checkouts. Those
+commands do not place a Codex session and are not prerequisites for native worktree sessions.
+Never allocate a second checkout to represent a worker's actual host checkout.
+
 At final session completion, use `worker-complete --session <id>
 --generation <worker-generation>` and apply the returned DONE-prefixed name
 through host naming tools. Completion metadata does not rename the session,
@@ -160,7 +233,9 @@ session may reattach through `worker-bind` to its original owner and checkout;
 never attach it to another user-worktree swarm.
 
 Release the unowned checkout with `worktree-release --number <n>
---generation <worktree-generation>`. Release preserves source and checkout. It may
+--generation <worktree-generation>`. Release preserves source and checkout. Host-created checkouts remain retained
+outside numbered-pool reuse and deletion; use host lifecycle tools for their
+physical cleanup after project resource cleanup. A numbered pool checkout may
 subsequently be allocated to this or another swarm of the same repository,
 exclusively. Delete only unassigned checkouts with `worktree-delete --number <n>`
 or `worktree-delete --all`; inspect protected/retained results and preserve source.

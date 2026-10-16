@@ -76,16 +76,6 @@ export function resolveRollingManagedDirectory(coordinatorRoot: string): Rolling
   requireCheckout(mainRoot !== undefined, 'repository has no main worktree');
   const configuration = readConfiguration(root);
   const directory = readRollingPhysicalDirectory(path.resolve(mainRoot, configuration.managedWorktrees.directory));
-  for (const checkout of inventory) {
-    if (checkout === root) continue;
-    // Historical branches do not participate until they declare rolling policy.
-    // Every pool member must carry it, even during recovery of a missing root.
-    if (path.dirname(checkout) !== directory &&
-        !statIfPresent(path.join(checkout, '.agents/config/project/rolling-campaigns.json'))) continue;
-    const configured = readConfiguration(checkout);
-    requireCheckout(readRollingPhysicalDirectory(path.resolve(mainRoot, configured.managedWorktrees.directory)) === directory,
-      `managed directory differs in ${checkout}`);
-  }
   const relative = path.relative(mainRoot, directory);
   requireCheckout(relative !== '', 'managed directory cannot be the main checkout itself');
   if (!relative.startsWith(`..${path.sep}`) && relative !== '..' && !path.isAbsolute(relative)) {
@@ -167,7 +157,6 @@ export function provisionRollingWorktree(coordinatorRoot: string, lease: Rolling
   }
   requireCheckout(!statIfPresent(path.join(worktreeRoot, 'session_id.txt')), 'setup left a session marker before attachment');
   ensureRollingSessionIdIgnored(worktreeRoot);
-  requireCheckout(resolveRollingManagedDirectory(worktreeRoot).directory === pool.directory, 'setup changed the physical pool configuration');
   return { number: lease.number, rootPath: worktreeRoot, branch, baseCommit };
 }
 

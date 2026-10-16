@@ -30,6 +30,37 @@ resource generation, retains ownership for unknown resource provenance or failed
 checks, and refuses a foreign marker introduced during cleanup. The coordinator,
 not this command, establishes session quiescence before invocation.
 
+## Arc SWARM-NATIVE-FORK: Admit fresh native worktree sessions
+
+Traceability: verifies REQ-SWARM-WORKTREES
+Traceability: verifies REQ-SWARM-SKILL
+
+**Acceptances:** OBL-17, OBL-18. A native worker has its own checkout and retains the
+coordinator's exact non-null host project ID.
+
+1. Freeze the coordinator project ID. Create a fresh project-targeted session
+   with the host's worktree option,
+   wait for setup, and inspect the returned child. Verify the same project ID,
+   a distinct native cwd and the same Git common directory. Verify it has no inherited coordinator conversation. Keep the child on hold.
+2. Run `ponytail swarm worktree-enroll --path <actual-native-cwd> --json`.
+   Repeat and verify the same membership generation. Bind the verified child
+   identity and real plan/sprint assignment. Read back the exact association.
+   Include uncommitted source copied by the fork and verify its bytes remain
+   unchanged through enrollment and release; admission does not require deleting
+   or committing inherited source.
+3. Reject a foreign repository, user checkout and conflicting owner without
+   changing membership. Release or clear an admitted quiescent worker and verify
+   its checkout remains physically present and cannot enter numbered-pool reuse
+   or deletion. Preserve dirty or unknown resources.
+4. Before reporting the requested swarm configured, compare every requested
+   worker against both host identities and current DB inventory. Creating
+   chats, enrollment alone or parent-root commands do not establish admission.
+5. When execution is authorized, instruct each worker to establish its bounded
+   assignment through `create_goal` in that worker session. Inspect `get_goal`
+   evidence of the active goal and acceptance conditions, and verify work
+   continues after the first turn. A matching unfinished goal is retained.
+   Held initialization stays held; completion requires verification and discharge.
+
 ## Arc SWARM-OWNERS: Select the owner and retain orphaned workers
 
 Traceability: verifies REQ-SWARM-OWNERSHIP

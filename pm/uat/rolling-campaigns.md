@@ -73,10 +73,11 @@ Traceability: verifies REQ-ROLLING-CONFIGURATION
    requested precedence, remains fixed after default changes, and rejects an
    invalid ref or nonpositive/unsafe N/M.
 2. **Step CONFIG-POOL:** Acceptance contribution to [OBL-36](../plans/closed/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-36), [OBL-37](../plans/closed/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-37). Configure absolute and anchored-relative pool paths.
-   The coordinator, every registered pool member and every other configured checkout
-   resolve to the same physical directory. Unconfigured historical branches need
-   no edits; a missing configuration on a pool member fails closed. A mismatch
-   is rejected. First managed allocation uses number 101.
+   Resolve the invoking owner's configuration only. Differing, malformed or
+   missing sibling checkout configuration does not affect resolution, including
+   for registered pool members. Invoking directly from an unconfigured checkout
+   still fails. Owner configuration must match the recorded pool for numbered
+   allocation. First managed allocation uses number 101.
 
 ## Arc ROLL-GRAPH: Reconcile dependency discovery
 

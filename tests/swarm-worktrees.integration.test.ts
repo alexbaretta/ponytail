@@ -9,11 +9,76 @@ import {execFileSync,spawnSync} from 'node:child_process';
 import test from 'node:test';
 import {Pool} from 'pg';
 import {databaseOptions} from '../src/project-index-database.js';
-import {inspectSwarmInfo,readSwarmWorktreeDeletionReportV1} from '../src/swarm-info.js';
+import {inspectSwarmInfo,readSwarmWorktreeDeletionReportV1,readSwarmInfoV4} from '../src/swarm-info.js';
 import {SwarmStore} from '../src/swarm-store.js';
 import type {SwarmUserWorktree} from '../src/swarm-owner.js';
 import {resetRollingProject,type RollingResetRequestV1} from '../src/rolling-reset.js';
 import type {RollingProjectConfigV2} from '../src/rolling-campaign.js';
+
+// Traceability: verifies REQ-SWARM-WORKTREES
+// Traceability: verifies REQ-SWARM-CLI
+test('host worktree enrollment preserves native paths, fences owners and never recycles host checkouts',async t=>{
+ const repositoryRoot=path.resolve(__dirname,'../..');
+ const root=fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(),'swarm-host-')));
+ const mainRoot=path.join(root,'main');fs.mkdirSync(mainRoot);
+ const projectId=crypto.randomUUID();const pool=new Pool(databaseOptions(repositoryRoot));
+ t.after(async()=>{try {await pool.query('DELETE FROM ponytail_index.swarm_worktree_v1 WHERE project_id=$1',[projectId]);await pool.query('DELETE FROM ponytail_index.project_v1 WHERE project_id=$1',[projectId]);}
+  finally {await pool.end();fs.rmSync(root,{recursive:true,force:true});}});
+ const git=(args:readonly string[]):string=>execFileSync('git',['-C',mainRoot,...args],{encoding:'utf8'}).trim();
+ git(['init','-q','-b','main']);
+ const rollingProjectConfigV2:RollingProjectConfigV2={schemaVersion:2,mainline:{remote:'origin',branch:'main'},managedWorktrees:{directory:path.join(root,'managed'),anchor:'main'},
+  maxActiveWorkers:null,publicationSize:null,setupCommands:[],retirementCommands:[],qa:{focused:[],publication:[['node','--version']]}};
+ fs.mkdirSync(path.join(mainRoot,'.agents/config/project'),{recursive:true});
+ fs.writeFileSync(path.join(mainRoot,'.agents/config/project/rolling-campaigns.json'),JSON.stringify(rollingProjectConfigV2));
+ fs.writeFileSync(path.join(mainRoot,'.gitignore'),'/session_id.txt\n');
+ git(['add','.']);git(['-c','user.name=Fixture','-c','user.email=fixture@example.test','commit','-qm','fixture']);
+ const otherRoot=path.join(root,'other'),hostRoot=path.join(root,'managed/opaque/project'),secondHostRoot=path.join(root,'managed/second/project');
+ for(const checkout of [otherRoot,hostRoot,secondHostRoot]) git(['worktree','add','-q','--detach',checkout,'HEAD']);
+ const gitCommonDirectory=fs.realpathSync(git(['rev-parse','--path-format=absolute','--git-common-dir']));
+ await pool.query('INSERT INTO ponytail_index.project_v1(project_id,project_name) VALUES($1,$2)',[projectId,`swarm-host-${projectId}`]);
+ await pool.query('INSERT INTO ponytail_index.rolling_pool_v1(project_id,managed_directory) VALUES($1,$2)',[projectId,path.join(root,'historical-managed')]);
+ const swarmStore=new SwarmStore(pool,projectId);
+ await swarmStore.enrollOwner({rootPath:mainRoot,gitCommonDirectory});await swarmStore.enrollOwner({rootPath:otherRoot,gitCommonDirectory});
+ fs.writeFileSync(path.join(otherRoot,'.agents/config/project/rolling-campaigns.json'),'unrelated invalid configuration');
+ await swarmStore.bindCoordinator(mainRoot,{rootPath:mainRoot,threadId:'coordinator-thread',sessionId:'coordinator-session'});
+ await swarmStore.bindCoordinator(otherRoot,{rootPath:otherRoot,threadId:'other-thread',sessionId:'other-session'});
+ await assert.rejects(swarmStore.enrollWorktree(mainRoot,mainRoot),/user worktree/);
+ await assert.rejects(swarmStore.enrollWorktree(mainRoot,otherRoot),/user worktree/);
+ const foreignRoot=path.join(root,'foreign');fs.mkdirSync(foreignRoot);execFileSync('git',['-C',foreignRoot,'init','-q']);
+ await assert.rejects(swarmStore.enrollWorktree(mainRoot,foreignRoot),/canonical physical Git checkout/);
+ fs.writeFileSync(path.join(hostRoot,'unfinished.txt'),'preserve');
+ const swarmWorktreeMembership=await swarmStore.enrollWorktree(mainRoot,hostRoot);
+ assert.equal(swarmWorktreeMembership.rootPath,hostRoot);
+ assert.equal((await pool.query<Record<string,unknown>>('SELECT managed_directory FROM ponytail_index.rolling_pool_v1 WHERE project_id=$1',[projectId])).rows[0]?.managed_directory,path.join(root,'historical-managed'));
+ assert.equal(fs.readFileSync(path.join(hostRoot,'unfinished.txt'),'utf8'),'preserve');
+ assert.deepEqual(await swarmStore.enrollWorktree(mainRoot,hostRoot),swarmWorktreeMembership);
+ const journal:unknown=JSON.parse(fs.readFileSync(path.join(repositoryRoot,'ponytail-journal.json'),'utf8'));
+ assert.ok(journal!==null&&typeof journal==='object'&&!Array.isArray(journal));
+ fs.writeFileSync(path.join(mainRoot,'ponytail-journal.json'),JSON.stringify({...journal,projectId}));
+ const enrollment=spawnSync(process.execPath,[path.join(repositoryRoot,'src/swarm-info.js'),'worktree-enroll','--path',hostRoot,'--json'],{cwd:mainRoot,encoding:'utf8'});
+ assert.equal(enrollment.status,0,enrollment.stderr);
+ assert.deepEqual(readSwarmInfoV4(JSON.parse(enrollment.stdout)).worktrees[0]?.membership,{kind:'swarm',generation:swarmWorktreeMembership.generation});
+ await assert.rejects(swarmStore.enrollWorktree(otherRoot,hostRoot),/original ownership/);
+ fs.writeFileSync(path.join(hostRoot,'session_id.txt'),'host-session\n');
+ const swarmWorkerBinding=await swarmStore.bindWorker(swarmWorktreeMembership,{rootPath:hostRoot,sessionId:'host-session',threadId:'host-thread'},
+  {kind:'plan',id:'host-plan',summary:'Verify native placement'});
+ const swarmInfoV4=await inspectSwarmInfo(hostRoot,pool,projectId);
+ assert.equal(swarmInfoV4.ownerRoot,mainRoot);assert.equal(swarmInfoV4.workers[0]?.binding.rootPath,hostRoot);
+ await swarmStore.detachWorker(await swarmStore.prepareWorkerRemoval(mainRoot,swarmWorkerBinding.sessionId,swarmWorkerBinding.generation));
+ await swarmStore.releaseWorktree(swarmWorktreeMembership);
+ assert.ok(fs.existsSync(hostRoot));
+ assert.equal(fs.readFileSync(path.join(hostRoot,'unfinished.txt'),'utf8'),'preserve');
+ assert.equal((await pool.query<Record<string,unknown>>('SELECT state FROM ponytail_index.rolling_worktree_v1 WHERE project_id=$1 AND number=$2',[projectId,swarmWorktreeMembership.number])).rows[0]?.state,'QUARANTINED');
+ await assert.rejects(swarmStore.reserveWorktree(mainRoot,{kind:'retained'}),/configured physical directory differs/);
+ const deletion=await swarmStore.deleteWorktrees(mainRoot,swarmWorktreeMembership.number);
+ assert.equal(deletion[0]?.outcome,'retained');assert.ok(fs.existsSync(hostRoot));
+ const secondSwarmWorktreeMembership=await swarmStore.enrollWorktree(mainRoot,secondHostRoot);
+ await swarmStore.clear(mainRoot);
+ assert.equal((await inspectSwarmInfo(mainRoot,pool,projectId)).worktrees.length,0);
+ assert.ok(fs.existsSync(secondSwarmWorktreeMembership.rootPath));
+ assert.equal((await pool.query<Record<string,unknown>>('SELECT state FROM ponytail_index.rolling_worktree_v1 WHERE project_id=$1 AND number=$2',[projectId,secondSwarmWorktreeMembership.number])).rows[0]?.state,'QUARANTINED');
+ await assert.rejects(swarmStore.reserveWorktree(mainRoot,{kind:'retained'}),/configured physical directory differs/);
+});
 
 // Traceability: verifies REQ-SWARM-WORKTREES
 test('competing user swarms exclusively claim the lowest available retained checkout',async t=>{

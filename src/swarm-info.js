@@ -305,7 +305,7 @@ async function runSwarmCli(argv) {
             continue;
         }
         const value = argv[i + 1];
-        if ((flag === '--lease-generation' || flag === '--blockers' || flag === '--session' || flag === '--thread' || flag === '--base' || flag === '--number' || flag === '--generation' || flag === '--kind' || flag === '--assignment' || flag === '--summary') && !fields.has(flag) && typeof value === 'string' && value.length > 0 && !value.startsWith('--')) {
+        if ((flag === '--path' || flag === '--lease-generation' || flag === '--blockers' || flag === '--session' || flag === '--thread' || flag === '--base' || flag === '--number' || flag === '--generation' || flag === '--kind' || flag === '--assignment' || flag === '--summary') && !fields.has(flag) && typeof value === 'string' && value.length > 0 && !value.startsWith('--')) {
             fields.set(flag, value);
             i++;
             continue;
@@ -326,7 +326,8 @@ async function runSwarmCli(argv) {
     const workerComplete = argv[0] === 'worker-complete' && fields.size === 2 && fields.has('--session') && fields.has('--generation');
     const workerUnbind = argv[0] === 'worker-unbind' && fields.size === 2 && fields.has('--session') && fields.has('--generation');
     const clear = argv[0] === 'clear' && fields.size === 0;
-    if (!valid || !info && !enrollment && !bind && !unbind && !assign && !setup && !release && !deletion && !workerBind && !workerInactive && !workerComplete && !workerUnbind && !clear) {
+    const worktreeEnrollment = argv[0] === 'worktree-enroll' && fields.size === 1 && fields.has('--path');
+    if (!valid || !info && !enrollment && !bind && !unbind && !assign && !setup && !release && !deletion && !workerBind && !workerInactive && !workerComplete && !workerUnbind && !clear && !worktreeEnrollment) {
         process.stderr.write((0, cli_help_js_1.renderCliHelp)(['swarm', argv[0] ?? '']) + '\n');
         process.exitCode = 2;
         return;
@@ -341,12 +342,14 @@ async function runSwarmCli(argv) {
     const pool = new pg_1.Pool((0, project_index_database_js_1.databaseOptions)(root));
     let outputRoot = root;
     try {
-        if (enrollment || bind || unbind || assign || setup || release || deletion || workerBind || workerInactive || workerComplete || workerUnbind || clear) {
+        if (enrollment || bind || unbind || assign || setup || release || deletion || workerBind || workerInactive || workerComplete || workerUnbind || clear || worktreeEnrollment) {
             const swarmStore = new swarm_store_js_1.SwarmStore(pool, projectId);
             const ownerRoot = enrollment ? root : (await inspectSwarmInfo(root, pool, projectId)).ownerRoot;
             const swarmUserWorktree = { rootPath: ownerRoot, gitCommonDirectory: node_fs_1.default.realpathSync((0, rolling_integration_js_1.git)(ownerRoot, ['rev-parse', '--path-format=absolute', '--git-common-dir']).trim()) };
             outputRoot = ownerRoot;
-            if (clear)
+            if (worktreeEnrollment)
+                await swarmStore.enrollWorktree(ownerRoot, absoluteRoot(fields.get('--path')));
+            else if (clear)
                 await swarmStore.clear(ownerRoot);
             else if (workerInactive) {
                 const blockers = JSON.parse(fields.get('--blockers') ?? '[]');

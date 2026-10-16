@@ -70,10 +70,10 @@ retirement commands, and focused/publication QA argv selections. Resolve target
 selection from stakeholder request, project default, then Git init.defaultBranch.
 N defaults to 10 active workers; publication M defaults to 1, with campaign and
 project overrides. Worktree numbers begin at 101. Relative pool paths use the
-configured common main-checkout anchor. The coordinator, every managed pool
-member and every other rolling-configured checkout resolve the same pool.
-Historical checkouts without rolling configuration are not participants and
-need no edits; they cannot receive a rolling assignment without current policy.
+configured common main-checkout anchor. Resolve configuration only from the
+invoking owner; do not read or validate sibling checkout configurations.
+Numbered allocation still requires the owner configuration to match its recorded
+pool. Historical checkouts need no configuration edits.
 
 Initialize with `ponytail campaign init --request @request.json`. Physical V1
 request fields are `schemaVersion: 1`, absolute `coordinatorRoot`, repository-relative
@@ -135,15 +135,21 @@ action, review and batch IDs.
    returned assignment and generation forward; never allocate a second checkout
    for an already reserved obligation. With an enrolled owner and bound
    coordinator, allocation records swarm membership in the same transaction.
-   Read its number/generation with `swarm info`, then run `swarm worktree-setup`
-   on that exact reservation. Its base is the configured campaign increment,
-   even while the coordinator is on a publication branch. Create the worker
-   through host tools, establish its ignored session marker, and use `swarm
-   worker-bind` with the exact membership generation and full plan/sprint ID.
-   Binding records that identity in both swarm and campaign accounting and
+   Session creation and admission follow only the canonical
+   [swarm procedure](../../swarm/SKILL.md#start-compatible-workers-concurrently):
+   a fresh project-targeted `create_thread` in a native worktree, never a copy of
+   coordinator conversation history or a parent-root standby chat. Scheduling
+   must preserve that worker's verified actual checkout. Do not create a second
+   checkout to satisfy a numbered reservation or pretend it is the native root.
+   If a campaign reservation cannot use the enrolled checkout, preserve the
+   reservation and report that concrete scheduler/admission gap before dispatch;
+   allocation alone does not establish a session. Once the actual checkout and
+   campaign scope agree, `swarm worker-bind` records the verified identity and
    completes the pending creation action without invoking Codex. It refuses
    stale scope after reconciliation; resolve it before assigning work. Start
-   independent top-level workers concurrently and observe them through the host.
+   independent top-level workers concurrently, establish and verify their
+   assignment goals through the canonical swarm procedure, and observe them
+   through the host.
    Unknown dispatch blockers retain their original identities for observation.
 4. A blocked worker reports its discovered prerequisites. Reconcile first,
    quiesce it through host tools, then use `swarm worker-inactive` with the exact

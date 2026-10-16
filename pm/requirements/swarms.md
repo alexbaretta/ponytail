@@ -100,6 +100,20 @@ The coordinator establishes quiescence through host tools before invocation.
 
 ## REQ-SWARM-WORKTREES: Transferable managed resources
 
+**Stakeholder clarification, 2026-10-15:** Codex workers use fresh native worktree
+sessions and retain the coordinator's exact project association. The stakeholder
+clarified on 2026-10-16 that "fork" referred to checkout isolation, not copied
+conversation history: workers start with fresh prompts through `create_thread`,
+not history-copying `fork_thread`. Each worker
+executes in its own native checkout. Explicit command working directories in
+chats rooted at the parent checkout do not satisfy this requirement. Host-created
+worktrees are enrolled by their actual paths; they are not relocated into the
+numbered Ponytail pool. The host retains physical Git lifecycle ownership.
+
+| Obligation | Required condition | Discharge criterion |
+| --- | --- | --- |
+| OBL-17 | A coordinator enrolls an existing host-created worktree in its swarm, preserving its exact registered Git root and host lifecycle ownership. Admission rejects user checkouts, foreign repositories, conflicting owners and unsafe checkout state. Repeated enrollment by the same owner preserves its membership generation. | A fresh native worktree session retains the coordinator project ID and has a distinct actual checkout; enrollment and worker binding appear together in inventory. Automated lifecycle proof covers retry, conflicting-owner and foreign-root rejection, release and clear without physical deletion or admission into the numbered reusable pool. |
+
 The transferable resources in the stakeholder's lifecycle description are
 managed worktrees. User worktrees own swarms; managed worktrees may enter, leave
 and move between swarms. Session origin is permanent, while managed-worktree
@@ -166,3 +180,5 @@ includes parallelization; another human instruction is unnecessary. Inspect
 actual activity and blockers instead of equating reservations or membership
 with execution. Teach the real native transport representation and uncertain-send
 recovery; do not claim absent capabilities or invent unavailable commands.
+
+| OBL-18 | Before counting an authorized worker as executing, the coordinator explicitly instructs it to establish a session-local active goal for its bounded assignment and acceptance conditions, and verifies tool evidence. Preserve a matching unfinished goal and keep initialization-only or held workers on hold. | Canonical and generated/installed skills instruct worker-local `get_goal`/`create_goal`; host evidence shows each executing worker has its assignment goal and continues beyond its first turn. Completion requires verification and durable discharge; missing goal capability is reported. Stakeholder clarification: 2026-10-16. |

@@ -25,6 +25,7 @@
   "chapters": {
     "swarm": {
       "commands": [
+        "worktree-enroll",
         "clear",
         "worker-inactive",
         "worker-unbind",

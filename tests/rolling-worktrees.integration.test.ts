@@ -47,7 +47,7 @@ test('ordinary Git pool setup, identical intent recovery and reuse preserve conf
   fs.unlinkSync(path.join(lease.rootPath, 'session_id.txt'));
   const modifiedConfig: RollingProjectConfigV1 = { ...configuration, managedWorktrees: { directory: '../other-pool', anchor: 'main' } };
   fs.writeFileSync(path.join(lease.rootPath, configPath), JSON.stringify(modifiedConfig));
-  assert.throws(() => resolveRollingManagedDirectory(root), /directory differs/);
+  assert.equal(resolveRollingManagedDirectory(root).directory, pool.directory);
   fs.writeFileSync(path.join(lease.rootPath, configPath), JSON.stringify(configuration));
   fs.writeFileSync(path.join(lease.rootPath, 'owned.txt'), 'preserve uncommitted work');
   assert.throws(() => provisionRollingWorktree(root, { ...lease, generation: crypto.randomUUID() }, base), /uncommitted work/);
@@ -120,7 +120,7 @@ test('retirement cleanup verifies owner, preserves caches and user work, and ret
 });
 
 // Traceability: verifies REQ-ROLLING-WORKERS
-test('rolling adoption leaves unconfigured historical worktrees untouched and validates every participant', t => {
+test('rolling configuration resolves only the invoking checkout and ignores sibling configuration', t => {
  const fixture=fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(),'rolling-adoption-')));
  t.after(()=>fs.rmSync(fixture,{recursive:true,force:true}));
  const main=path.join(fixture,'main');fs.mkdirSync(main);
@@ -136,10 +136,14 @@ test('rolling adoption leaves unconfigured historical worktrees untouched and va
  assert.equal(fs.existsSync(path.join(main,configurationPath)),false);assert.equal(fs.existsSync(path.join(legacy,configurationPath)),false);
  fs.mkdirSync(path.join(legacy,path.dirname(configurationPath)),{recursive:true});
  const conflictingConfiguration:RollingProjectConfigV2={...configuration,managedWorktrees:{directory:path.join(fixture,'other-pool'),anchor:'main'}};
- fs.writeFileSync(path.join(legacy,configurationPath),JSON.stringify(conflictingConfiguration));assert.throws(()=>resolveRollingManagedDirectory(coordinator),/directory differs/);
+ fs.writeFileSync(path.join(legacy,configurationPath),JSON.stringify(conflictingConfiguration));assert.equal(resolveRollingManagedDirectory(coordinator).directory,configuration.managedWorktrees.directory);
  fs.unlinkSync(path.join(legacy,configurationPath));
  const worker=path.join(configuration.managedWorktrees.directory,'101');git(main,['worktree','add','-qb','worker',worker]);
- assert.throws(()=>resolveRollingManagedDirectory(coordinator),/missing regular project configuration/);
+ assert.equal(resolveRollingManagedDirectory(coordinator).directory,configuration.managedWorktrees.directory);
+ assert.throws(()=>resolveRollingManagedDirectory(worker),/missing regular project configuration/);
+ const ownerOnlyRoot=path.join(configuration.managedWorktrees.directory,'102');
+ provisionRollingWorktree(coordinator,{number:102,rootPath:ownerOnlyRoot,generation:crypto.randomUUID()},git(coordinator,['rev-parse','HEAD']));
+ assert.equal(fs.existsSync(path.join(ownerOnlyRoot,configurationPath)),false,'numbered setup uses owner configuration even when its base has none');
  fs.mkdirSync(path.join(worker,path.dirname(configurationPath)),{recursive:true});fs.writeFileSync(path.join(worker,configurationPath),JSON.stringify(configuration));
  assert.equal(resolveRollingManagedDirectory(worker).directory,configuration.managedWorktrees.directory);
  git(main,['worktree','remove',legacy]);git(main,['worktree','add','-qb','stale',legacy]);fs.rmSync(legacy,{recursive:true,force:true});

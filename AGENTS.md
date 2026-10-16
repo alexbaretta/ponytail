@@ -168,6 +168,11 @@ services. `PROJECT_STRUCTURE.md` is authoritative for that boundary.
   matching session marker; preserves sessions and checkouts. Refuses active Git
   operations and campaign ownership conflicts; releases its matching campaign
   lease and pending actions atomically. Does not contact Codex.
+- Host-native checkout admission: `ponytail swarm worktree-enroll --path
+  <absolute-host-checkout> [--json]`; registers the actual same-repository Git
+  root without provisioning or relocating it. The coordinator uses native
+  worktree sessions with fresh history, verifies project/cwd through host tools and retains host Git
+  lifecycle ownership. Released host paths stay outside numbered-pool reuse/deletion.
 - Swarm checkout lifecycle: `ponytail swarm worktree-assign --base <commit-or-ref>`;
   failed setup retains exact membership and reports number/generation. Resume with
   `ponytail swarm worktree-setup --number <n> --generation <uuid>`. Release with

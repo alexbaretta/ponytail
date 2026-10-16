@@ -22,11 +22,13 @@ Resolve mainline at planning from user request, project default, then effective
 Git `init.defaultBranch`; validate refs and persist remote/branch selection.
 Resolve active N with default 10 and publication M with campaign/project/global
 precedence and global default 1. Validate positive safe integers. Validate one
-physical managed-worktree directory across participating checkouts, accepting
-absolute or explicitly anchored relative configuration. The invoking coordinator,
-every registered checkout in the pool, and every other checkout declaring rolling
-configuration must agree. Unconfigured historical checkouts remain outside rolling
-participation; their absence must not force adoption or changes to their branches.
+physical managed-worktree directory from the invoking owner's configuration,
+accepting absolute or explicitly anchored relative configuration. Do not read or
+validate sibling checkout configurations, including registered numbered-pool
+members. Historical checkouts need no adoption or configuration changes. The
+owner's configured directory must still match its recorded pool when allocating
+numbered checkouts. This stakeholder clarification (2026-10-16, Option 1)
+supersedes the earlier cross-checkout agreement requirement.
 Numbers start at 101.
 
 ## REQ-ROLLING-GRAPH: Coordinator-authoritative dependencies

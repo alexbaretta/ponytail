@@ -76,6 +76,9 @@ while project-wide management records remain under `pm/`.
   owner/checkout provenance across removal, fence live checkout membership, and
   map full assignments to per-swarm worker and plan/sprint numbers. Desired-name
   construction does not itself perform native renaming or prove activity.
+  Host-native session roots enroll by exact registered path without relocation or
+  provisioning. Released host roots remain quarantined from the numbered pool;
+  physical deletion remains host-owned.
  Retained managed-checkout
   memberships reserve the canonical rolling pool under its existing project fence;
   claim/release preserve checkout content and refuse live assignments or Git operations.
