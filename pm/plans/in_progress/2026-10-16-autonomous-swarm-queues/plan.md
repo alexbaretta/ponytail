@@ -1,7 +1,7 @@
 <!-- Copyright (c) 2026 Alex Baretta. MIT License. -->
 # Autonomous swarm queues
 
-Status: in_progress
+Status: closed
 Approval: direct stakeholder implementation, installation and coordinator transition request, 2026-10-16.
 
 Traceability: plans-implementation REQ-SWARM-QUEUES from plan 2026-10-16-autonomous-swarm-queues
@@ -12,7 +12,7 @@ Canonical obligations: [REQ-SWARM-QUEUES](../../../requirements/swarms.md#req-sw
 1. Implement durable swarm-scoped task and coordinator request queues in the existing PostgreSQL database; atomic preferred acquisition and stealing; exact original-worker claims; parking and candidate preservation; FIFO request service; truthful inspection and legacy allocation fencing.
 2. Implement coordinator/worker discovery with canonical requirement, UAT, issue, plan and obligation updates through one serialized recoverable operation. Preserve prior evidence, gates, ownership and accepted conditions.
 3. Replace assignment-local goals and coordinator dispatch gates in swarm/QA/rolling skills with a campaign-wide autonomous worker goal and queue protocol. Generate copies, validate contracts, concurrency, recovery and real CLI behavior, run final repository acceptance.
-4. Install changed skills and CLI, give the authorized Gwen coordinator exact migration instructions, verify preservation and transition. Gracefully replace workers where their obsolete unfinished goals prevent adoption; never fake goal completion or erase source. Preserve pending work and real approval denials. Record actual host acceptance separately from policy/tool tests.
+4. Install changed skills and CLI, give the authorized Gwen coordinator the protocol and verify host behavior separately from policy/tool tests. The later stakeholder instruction supersedes further replacement/startup: drain and retire this swarm, preserve source/evidence and unfinished work, and verify zero worker bindings and managed memberships. Never fake goal completion or acceptance; retain the canceled live-rollout history explicitly.
 
 The two pre-existing staged repository-QA plan files are outside this change. No unrelated traceability-version or semantic-rebase proposal is included. No new cloud resource, daemon, native session API or publication authority is introduced.
 
@@ -231,3 +231,50 @@ release pass under `ponytail_index_writer`, including wrong-generation and worke
 actor rejection. Independent review caught table creation outside schema grants;
 it was moved inside the existing transaction/owner/grant boundary and verified.
 No new worker binding, source reconstruction or task completion is introduced.
+
+
+## Verified stakeholder-directed retirement
+
+The newer human instruction cancels live replacement/startup: retire inactive
+workers and drain/retire productive workers. All 23 targeted current-swarm chats
+are archived; seven earlier archived original workers were also verified. Direct
+read of the final V6 owner inventory confirms zero worker bindings and zero
+managed memberships. Queue V3 remains suspended at sequence 147 with 72 tasks,
+36 requests and no pending discovery. The recurring keepalive is paused. No
+unfinished task/obligation was falsely accepted, no replacement was started, and
+the coordinator remains available. Its final report is retained under the owner
+checkout's ignored `tmp/agents/traceability-retirement/`.
+
+The exact addendum for seven earlier-removed originals succeeded through the
+canonical CLI, followed by all seven ordinary exact-generation releases. Neither
+snapshot authority nor unrelated records were relaxed. The coordinator verified
+276 current preservation artifact hashes, the 535-object original source pack
+and the W24 source bundle. Of the 23 targeted native roots, 22 roots and their
+Git registrations are gone; W18 retains only a cache directory without a Git
+registration, intentionally untouched. Earlier native cleanup's historical
+ignored-evidence survival remains unverified; these new backup checks do not
+retroactively establish that every older ignored artifact survived.
+
+Tooling commits: `27c241df` payload recovery, `4f884b8f` shutdown/retirement,
+and `e8a24656` exact historical-retirement authority. The source and installed
+swarm/plugin skill copies match. Full shutdown acceptance passed 1029 tests;
+final acceptance after the historical-retirement addition is recorded below. Live activation of a replacement swarm was canceled by
+the stakeholder and is not claimed as completed campaign acceptance.
+
+
+Final acceptance: the full command passed 571 JavaScript tests and 330 typed
+tests, then exposed one missing command mention in the main swarm skill (the
+canonical detailed reference already documented it). Added the reference and
+reran affected skill checks; unchanged passing code-test inputs retain their
+proof under the configured reuse rule. The remaining installer, pi/MCP, TSTS
+unit/static and structural checks are recorded with the final result.
+
+
+Closed for the latest approved tooling-and-retirement scope. The original
+replacement rollout is explicitly canceled, not certified successful. The record
+retains its established path under project-local placement rules. Final proof:
+1029 unique tests pass (571 JavaScript, 331 typed including corrected skill
+coverage, 23 pi, 4 MCP, 100 TSTS), installer tests pass, TSTS checks 1685 files
+without violations, and traceability/registry/rule-copy/version/runtime checks
+pass. Unchanged passing suites were reused after the documentation-only fix.
+Source/evidence and inactive campaign ownership remain preserved as stated above.

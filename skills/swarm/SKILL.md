@@ -26,6 +26,8 @@ dependency changes, QA, review, acceptance and publication gates, apply
 checkout operations; campaign identity is not swarm identity.
 
 New execution swarms use [autonomous campaign queues](references/autonomous-queues.md).
+Stakeholder-directed shutdown and exact `retirement-authorize` addenda follow
+that same canonical queue procedure.
 Adopt an existing swarm through that protocol's preserving migration. The legacy
 rolling allocation/resumption operations below remain for existing non-queue
 records; they are not an alternative dispatch path for new queue execution.
