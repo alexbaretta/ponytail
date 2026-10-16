@@ -6,7 +6,9 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.SwarmQueueStore = exports.SwarmQueueStateReaders = exports.SwarmQueueCommandReaders = exports.SwarmQueueResultReaders = exports.SwarmQueueVerdictReaders = void 0;
+exports.SwarmQueueStore = exports.SwarmQueueStateReaders = exports.SwarmQueueCommandReaders = exports.SwarmQueueResultReaders = exports.SwarmQueueVerdictReaders = exports.SwarmRetirementAuthorizationReaders = exports.SwarmRetirementAuthorizationCommandReaders = void 0;
+exports.readSwarmRetirementAuthorizationCommandV1 = readSwarmRetirementAuthorizationCommandV1;
+exports.readSwarmRetirementAuthorizationV1 = readSwarmRetirementAuthorizationV1;
 exports.readSwarmQueueCommandV1 = readSwarmQueueCommandV1;
 exports.readSwarmQueueCommandV2 = readSwarmQueueCommandV2;
 exports.readSwarmQueueCommandV3 = readSwarmQueueCommandV3;
@@ -35,8 +37,13 @@ const lossless_json_1 = require("lossless-json");
 const rolling_integration_js_1 = require("./rolling-integration.js");
 const rolling_worktrees_js_1 = require("./rolling-worktrees.js");
 const obligations_js_1 = require("../skills/plan-execution/scripts/obligations.js");
+const swarm_owner_js_1 = require("./swarm-owner.js");
 const swarm_queue_payloads_js_1 = require("./swarm-queue-payloads.js");
 const obligation_binding_history_js_1 = require("../skills/plan-execution/scripts/obligation-binding-history.js");
+function readSwarmRetirementAuthorizationCommandV1(value) { const input = record(value, ['schemaVersion', 'campaignId', 'actor', 'id', 'reason', 'hostEvidencePath', 'worktrees']); requireQueue(input.schemaVersion === 1 && Array.isArray(input.worktrees) && input.worktrees.length > 0 && input.worktrees.length <= 32, 'invalid retirement selector list'); const worktrees = input.worktrees.map(value => { const selector = record(value, ['number', 'generation']); return { number: integer(selector.number), generation: text(selector.generation) }; }); requireQueue(new Set(worktrees.map(value => value.number)).size === worktrees.length, 'duplicate retirement membership'); return { schemaVersion: 1, campaignId: text(input.campaignId), actor: actor(input.actor), id: text(input.id), reason: text(input.reason), hostEvidencePath: relative(input.hostEvidencePath), worktrees }; }
+function readSwarmRetirementAuthorizationV1(value) { const input = record(value, ['schemaVersion', 'campaignId', 'ownerRoot', 'coordinatorSessionId', 'id', 'reason', 'hostEvidence', 'worktrees']); requireQueue(input.schemaVersion === 1 && Array.isArray(input.worktrees) && input.worktrees.length > 0 && input.worktrees.length <= 32, 'invalid retirement authority'); const artifact = record(input.hostEvidence, ['path', 'blob']); return { schemaVersion: 1, campaignId: text(input.campaignId), ownerRoot: text(input.ownerRoot), coordinatorSessionId: text(input.coordinatorSessionId), id: text(input.id), reason: text(input.reason), hostEvidence: { path: relative(artifact.path), blob: (0, swarm_queue_payloads_js_1.readSwarmQueueBlobV1)(artifact.blob) }, worktrees: input.worktrees.map(value => { const worker = record(value, ['number', 'generation', 'sessionId', 'workerGeneration', 'rootPath']); return { number: integer(worker.number), generation: text(worker.generation), sessionId: text(worker.sessionId), workerGeneration: text(worker.workerGeneration), rootPath: text(worker.rootPath) }; }) }; }
+exports.SwarmRetirementAuthorizationCommandReaders = { V1: readSwarmRetirementAuthorizationCommandV1 };
+exports.SwarmRetirementAuthorizationReaders = { V1: readSwarmRetirementAuthorizationV1 };
 function requireQueue(condition, message) { if (!condition)
     throw new Error(`swarm queue: ${message}`); }
 function isRecord(value) { return value !== null && typeof value === 'object' && !Array.isArray(value); }
@@ -489,6 +496,50 @@ class SwarmQueueStore {
             }
         }
     }
+    async authorizeRetirement(input, invokingRoot) {
+        const command = readSwarmRetirementAuthorizationCommandV1(input);
+        const poolClient = await this.pool.connect();
+        try {
+            await poolClient.query('BEGIN');
+            await poolClient.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))', [this.projectId]);
+            await this.validateActor(poolClient, command.actor, invokingRoot, command.campaignId);
+            requireQueue(command.actor.kind === 'coordinator', 'retirement authorization requires coordinator');
+            const row = (await poolClient.query('SELECT state_text FROM ponytail_index.swarm_queue_v1 WHERE project_id=$1 AND owner_root=$2 AND campaign_id=$3 AND storage_version=3 AND NOT closed FOR UPDATE', [this.projectId, this.ownerRoot, command.campaignId])).rows[0];
+            requireQueue(row !== undefined && typeof row.state_text === 'string' && readSwarmQueueStateV3(parseSwarmQueueJson(row.state_text)).state === 'suspended', 'retirement authorization requires this suspended campaign');
+            const existing = (await poolClient.query('SELECT authority_text FROM ponytail_index.swarm_queue_retirement_authority_v1 WHERE project_id=$1 AND owner_root=$2 AND campaign_id=$3 AND authorization_id=$4', [this.projectId, this.ownerRoot, command.campaignId, command.id])).rows[0];
+            if (existing !== undefined) {
+                requireQueue(typeof existing.authority_text === 'string', 'invalid retained authority');
+                const authority = readSwarmRetirementAuthorizationV1(parseSwarmQueueJson(existing.authority_text));
+                requireQueue(authority.reason === command.reason && authority.coordinatorSessionId === command.actor.sessionId && authority.hostEvidence.path === command.hostEvidencePath && authority.hostEvidence.blob.sha256 === await fileDigest(safeFile(this.ownerRoot, command.hostEvidencePath)) && (0, node_util_1.isDeepStrictEqual)(authority.worktrees.map(worker => ({ number: worker.number, generation: worker.generation })), command.worktrees), 'retirement authorization ID already differs');
+                await poolClient.query('COMMIT');
+                return authority;
+            }
+            const worktrees = [];
+            for (const selector of command.worktrees) {
+                const rows = (await poolClient.query("SELECT k.session_id,k.generation AS worker_generation,n.root_path FROM ponytail_index.swarm_worktree_v1 s JOIN ponytail_index.rolling_worktree_v1 w USING(project_id,number) JOIN ponytail_index.swarm_worker_v1 k ON k.project_id=s.project_id AND k.owner_root=s.owner_root AND k.worktree_number=s.number AND k.worktree_generation=s.generation JOIN ponytail_index.swarm_native_session_v1 n ON n.session_id=k.session_id AND n.project_id=k.project_id AND n.root_path=w.root_path WHERE s.project_id=$1 AND s.owner_root=$2 AND s.number=$3 AND s.generation=$4 AND k.state='REMOVED' ORDER BY k.worker_number DESC LIMIT 1", [this.projectId, this.ownerRoot, selector.number, selector.generation])).rows;
+                const worker = rows[0];
+                requireQueue(worker !== undefined, 'selector lacks an exact removed original worker/membership');
+                const rootPath = text(worker.root_path);
+                requireQueue(!node_fs_1.default.existsSync(rootPath) || node_fs_1.default.lstatSync(rootPath).isDirectory() && !node_fs_1.default.existsSync(node_path_1.default.join(rootPath, '.git')), 'authorization is only for already missing native checkouts');
+                requireQueue(!await (0, swarm_owner_js_1.hasSwarmNativeOwner)(poolClient, this.projectId, rootPath) && !(await poolClient.query("SELECT 1 FROM ponytail_index.rolling_assignment_v1 WHERE project_id=$1 AND worktree_number=$2 AND state<>'RELEASED'", [this.projectId, selector.number])).rowCount, 'checkout still has an active actor or assignment');
+                worktrees.push({ ...selector, sessionId: text(worker.session_id), workerGeneration: text(worker.worker_generation), rootPath });
+            }
+            const blob = await new swarm_queue_payloads_js_1.SwarmQueuePayloads(poolClient, this.projectId, this.ownerRoot, command.campaignId).file(safeFile(this.ownerRoot, command.hostEvidencePath));
+            requireQueue(blob.byteLength > 0, 'preservation evidence is empty');
+            const authority = { schemaVersion: 1, campaignId: command.campaignId, ownerRoot: this.ownerRoot, coordinatorSessionId: command.actor.sessionId, id: command.id, reason: command.reason, hostEvidence: { path: command.hostEvidencePath, blob }, worktrees };
+            readSwarmRetirementAuthorizationV1(authority);
+            await poolClient.query('INSERT INTO ponytail_index.swarm_queue_retirement_authority_v1(project_id,owner_root,campaign_id,authorization_id,authority_text) VALUES($1,$2,$3,$4,$5)', [this.projectId, this.ownerRoot, command.campaignId, command.id, JSON.stringify(authority)]);
+            await poolClient.query('COMMIT');
+            return authority;
+        }
+        catch (cause) {
+            await poolClient.query('ROLLBACK');
+            throw cause;
+        }
+        finally {
+            poolClient.release();
+        }
+    }
     async execute(inputSwarmQueueCommandV1, invokingRoot) {
         const swarmQueueCommandV3 = readSwarmQueueCommand(inputSwarmQueueCommandV1);
         const poolClient = await this.pool.connect();
@@ -853,4 +904,7 @@ async function requireSwarmQueueLifecycleQuiescence(poolClient, projectId, owner
         requireQueue(sessionId !== null && swarmQueueStateV3.pending === null && !swarmQueueStateV3.tasks.some(swarmQueueTaskV1 => swarmQueueTaskV1.state !== 'done' && swarmQueueTaskV1.claim?.sessionId === sessionId), 'preserve and settle unfinished queue ownership before lifecycle removal');
     }
 }
-async function isSwarmQueueWorkerRetirementAuthorized(poolClient, projectId, ownerRoot, sessionId, generation, rootPath) { const rows = (await poolClient.query('SELECT state_text FROM ponytail_index.swarm_queue_v1 WHERE project_id=$1 AND owner_root=$2 AND storage_version=3', [projectId, ownerRoot])).rows; return rows.some(row => { requireQueue(typeof row.state_text === 'string', 'invalid suspended queue'); const state = readSwarmQueueStateV3(parseSwarmQueueJson(row.state_text)); return state.state === 'suspended' && state.suspension?.workers.some(worker => worker.sessionId === sessionId && worker.generation === generation && worker.rootPath === rootPath) === true; }); }
+async function isSwarmQueueWorkerRetirementAuthorized(poolClient, projectId, ownerRoot, sessionId, generation, rootPath) { const row = (await poolClient.query('SELECT state_text FROM ponytail_index.swarm_queue_v1 WHERE project_id=$1 AND owner_root=$2 AND storage_version=3 AND NOT closed', [projectId, ownerRoot])).rows[0]; if (row === undefined)
+    return false; requireQueue(typeof row.state_text === 'string', 'invalid suspended queue'); const state = readSwarmQueueStateV3(parseSwarmQueueJson(row.state_text)); if (state.state !== 'suspended')
+    return false; if (state.suspension?.workers.some(worker => worker.sessionId === sessionId && worker.generation === generation && worker.rootPath === rootPath))
+    return true; const rows = (await poolClient.query('SELECT authority_text FROM ponytail_index.swarm_queue_retirement_authority_v1 WHERE project_id=$1 AND owner_root=$2 AND campaign_id=$3', [projectId, ownerRoot, state.campaignId])).rows; return rows.some(row => { requireQueue(typeof row.authority_text === 'string', 'invalid retirement authority'); const authority = readSwarmRetirementAuthorizationV1(parseSwarmQueueJson(row.authority_text)); requireQueue(authority.ownerRoot === ownerRoot && authority.campaignId === state.campaignId, 'retirement authority scope differs'); return authority.worktrees.some(worker => worker.sessionId === sessionId && worker.workerGeneration === generation && worker.rootPath === rootPath); }); }

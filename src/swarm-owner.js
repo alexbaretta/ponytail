@@ -4,6 +4,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.resolveSwarmOwner = resolveSwarmOwner;
+exports.hasSwarmNativeOwner = hasSwarmNativeOwner;
 function resolveSwarmOwner(invokingRoot, swarmOwnershipInventory) {
     const invokingUserWorktrees = swarmOwnershipInventory.userWorktrees.filter(swarmUserWorktree => swarmUserWorktree.rootPath === invokingRoot);
     const invokingManagedWorktrees = swarmOwnershipInventory.managedWorktrees.filter(swarmManagedWorktree => swarmManagedWorktree.rootPath === invokingRoot);
@@ -25,4 +26,8 @@ function resolveSwarmOwner(invokingRoot, swarmOwnershipInventory) {
     if (owningSwarmUserWorktree.gitCommonDirectory !== swarmManagedWorktree.gitCommonDirectory)
         throw new Error('swarm: managed worktree and owner belong to different repositories');
     return owningSwarmUserWorktree;
+}
+async function hasSwarmNativeOwner(poolClient, projectId, rootPath) {
+    return Boolean((await poolClient.query(`SELECT 1 FROM ponytail_index.swarm_native_session_v1 n LEFT JOIN ponytail_index.swarm_worker_v1 k USING(session_id)
+ WHERE n.project_id=$1 AND n.root_path=$2 AND (k.state IS NULL OR k.state<>'REMOVED')`, [projectId, rootPath])).rowCount);
 }

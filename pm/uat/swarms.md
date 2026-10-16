@@ -491,3 +491,13 @@ removed by its native host without recreating or editing its missing Git metadat
 reject any missing-root retirement not covered by that exact suspension generation.
 V6 inventory must show suspension and missing-directory/metadata distinctions.
 After unbind, preserved unfinished obligations remain unfinished.
+
+
+Earlier retirement reconciliation: remove an original worker before suspension,
+retain its exact membership and verified source, and simulate native root loss.
+Normal release must refuse missing retirement authority. The coordinator records
+an explicit addendum for the actual membership UUID through `retirement-authorize`;
+reject changed selectors and worker authority, verify immutable/idempotent evidence,
+then release that exact historical membership. Exercise authorization and release
+under the nonadministrator project-index writer role. Other memberships, queue
+state, earlier suspension evidence and unfinished obligations remain untouched.

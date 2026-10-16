@@ -338,6 +338,10 @@ function renderSwarmInfo(swarmInfoV4) {
         + `    native: ${worker.nativeObservation.kind === 'observed' ? `${worker.nativeObservation.status} | name: ${worker.nativeObservation.name ?? '(unnamed)'}` : worker.nativeObservation.kind === 'unavailable' ? `unavailable | ${worker.nativeObservation.reason}` : 'not observed'}\n`).join('') + ((swarmInfoV4.schemaVersion === 5 || swarmInfoV4.schemaVersion === 6) ? swarmInfoV4.queues.map(queue => `\nQueue campaign: ${queue.campaignId} | ${queue.state} | pending discovery: ${queue.pendingDiscoveryId ?? '(none)'}\n` + queue.tasks.map(task => `  ${task.id} ${task.state} | obligations: ${task.obligationIds.join(', ')} | session: ${task.sessionId ?? '(unclaimed)'} | root: ${task.rootPath ?? '(none)'}\n`).join('') + `  coordinator requests: ${queue.requests.filter(request => request.state !== 'resolved').length} unresolved\n`).join('') : '');
 }
 async function runSwarmCli(argv) {
+    if (argv[0] === 'retirement-authorize') {
+        await (0, swarm_queue_cli_js_1.runSwarmRetirementCli)(argv.slice(1));
+        return;
+    }
     if (argv[0] === 'queue') {
         await (0, swarm_queue_cli_js_1.runSwarmQueueCli)(argv.slice(1));
         return;

@@ -25,6 +25,7 @@
   "chapters": {
     "swarm": {
       "commands": [
+        "retirement-authorize",
         "queue",
         "worktree-enroll",
         "clear",

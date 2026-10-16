@@ -840,6 +840,17 @@ CREATE TABLE IF NOT EXISTS ponytail_index.swarm_queue_blob_chunk_v1 (
  FOREIGN KEY(project_id,owner_root,campaign_id,blob_id) REFERENCES ponytail_index.swarm_queue_blob_v1(project_id,owner_root,campaign_id,id) ON DELETE CASCADE
 );
 
+-- Explicit exact-generation evidence for workers retired before campaign suspension.
+CREATE TABLE IF NOT EXISTS ponytail_index.swarm_queue_retirement_authority_v1 (
+ project_id uuid NOT NULL,
+ owner_root text NOT NULL,
+ campaign_id text NOT NULL,
+ authorization_id text NOT NULL,
+ authority_text text NOT NULL,
+ PRIMARY KEY(project_id,owner_root,campaign_id,authorization_id),
+ FOREIGN KEY(project_id,owner_root,campaign_id) REFERENCES ponytail_index.swarm_queue_v1(project_id,owner_root,campaign_id) ON DELETE CASCADE
+);
+
 REVOKE ALL ON SCHEMA ponytail_index FROM PUBLIC;
 REVOKE ALL ON ALL TABLES IN SCHEMA ponytail_index FROM PUBLIC;
 REVOKE ALL ON ALL FUNCTIONS IN SCHEMA ponytail_index FROM PUBLIC;

@@ -359,3 +359,30 @@ suspended queues and distinguishes missing directories from missing Git metadata
 retained queue claims describe preserved historical ownership, not active workers.
 Unpin/archive chats only after verified preservation, and verify actual remaining
 bindings/chats. Keep unfinished project obligations unfinished.
+
+
+For an original worker already removed before suspension, do not fabricate a new
+binding or weaken the snapshot check. The coordinator may record an explicit
+append-only addendum with `ponytail swarm retirement-authorize --request @<file>`:
+
+```json
+{
+  "schemaVersion": 1,
+  "campaignId": "<suspended-campaign>",
+  "actor": {"kind": "coordinator", "sessionId": "<bound-coordinator>"},
+  "id": "<unique-retirement-addendum>",
+  "reason": "<stakeholder retirement direction>",
+  "hostEvidencePath": "<verified preservation and archival report>",
+  "worktrees": [{"number": 111, "generation": "<exact-membership-uuid>"}]
+}
+```
+
+Use only actual selectors read from this owner's inventory, at most 32 per
+addendum. Each must still match its removed original worker, membership generation
+and native root, without an active actor or assignment. The campaign must remain
+suspended. The command snapshots exact session/worker-generation/root identities
+and immutable evidence, and returns the strict V1 authority. An identical retry
+recovers the same record; changed selectors/evidence under the same ID are
+rejected. Prior suspension evidence and all queue state remain unchanged. Then
+invoke normal exact-generation `worktree-release`; its existing resource-cleanup
+and foreign-identity guards remain in force. Authorization alone releases nothing.

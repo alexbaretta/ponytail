@@ -90,7 +90,7 @@ while project-wide management records remain under `pm/`.
 - `src/swarm-queue.ts` owns V1–V3 durable autonomous campaign/task/request/discovery
   contracts, project-fenced claims and stealing, source/candidate preservation,
   coordinator FIFO service, exact review/discharge gates and recoverable canonical
-  PM publication and evidence-backed campaign suspension. `src/swarm-queue-payloads.ts` owns chunked immutable payloads, bounded reads and transactional streaming migration of archived V1 state. `src/swarm-queue-cli.ts` is its invoking-project CLI boundary;
+  PM publication and evidence-backed campaign suspension and exact retained-worker retirement addenda. `src/swarm-queue-payloads.ts` owns chunked immutable payloads, bounded reads and transactional streaming migration of archived V1 state. `src/swarm-queue-cli.ts` is its invoking-project CLI boundary;
   adjacent JavaScript is generated. `swarm_queue_v1` uses the existing project
   database and serializes with existing swarm/rolling mutations. Queue campaigns
   replace allocation ownership, rather than duplicating legacy campaign leases.

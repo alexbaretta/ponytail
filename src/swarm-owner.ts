@@ -1,6 +1,8 @@
 // Copyright (c) 2026 Alex Baretta. All rights reserved.
 // Licensed under the MIT License. See LICENSE in the project root.
 
+import type {PoolClient} from 'pg';
+
 export interface SwarmUserWorktree {
  readonly rootPath: string;
  readonly gitCommonDirectory: string;
@@ -32,3 +34,7 @@ export function resolveSwarmOwner(invokingRoot: string, swarmOwnershipInventory:
  if(owningSwarmUserWorktree.gitCommonDirectory!==swarmManagedWorktree.gitCommonDirectory) throw new Error('swarm: managed worktree and owner belong to different repositories');
  return owningSwarmUserWorktree;
 }
+
+// Traceability: supports REQ-SWARM-OWNERSHIP
+export async function hasSwarmNativeOwner(poolClient:PoolClient,projectId:string,rootPath:string):Promise<boolean>{return Boolean((await poolClient.query(`SELECT 1 FROM ponytail_index.swarm_native_session_v1 n LEFT JOIN ponytail_index.swarm_worker_v1 k USING(session_id)
+ WHERE n.project_id=$1 AND n.root_path=$2 AND (k.state IS NULL OR k.state<>'REMOVED')`,[projectId,rootPath])).rowCount);}

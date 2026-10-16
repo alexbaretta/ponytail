@@ -16,6 +16,7 @@ const node_path_1 = __importDefault(require("node:path"));
 const node_crypto_1 = __importDefault(require("node:crypto"));
 const node_child_process_1 = require("node:child_process");
 const rolling_integration_js_1 = require("./rolling-integration.js");
+const swarm_owner_js_1 = require("./swarm-owner.js");
 const rolling_worktrees_js_1 = require("./rolling-worktrees.js");
 const rolling_campaign_store_js_1 = require("./rolling-campaign-store.js");
 function readSwarmWorkerAssignment(value) {
@@ -161,10 +162,6 @@ class SwarmStore {
             await poolClient.query("UPDATE ponytail_index.rolling_action_v1 SET state='CANCELLED' WHERE project_id=$1 AND assignment_id=$2 AND state IN ('PENDING','STARTED')", [this.projectId, row.assignment_id]);
             await poolClient.query("UPDATE ponytail_index.rolling_assignment_v1 SET state='RELEASED',activity_stopped=true,retired=true WHERE project_id=$1 AND assignment_id=$2", [this.projectId, row.assignment_id]);
         }
-    }
-    async hasNativeOwner(poolClient, rootPath) {
-        return Boolean((await poolClient.query(`SELECT 1 FROM ponytail_index.swarm_native_session_v1 n LEFT JOIN ponytail_index.swarm_worker_v1 k USING(session_id)
-   WHERE n.project_id=$1 AND n.root_path=$2 AND (k.state IS NULL OR k.state<>'REMOVED')`, [this.projectId, rootPath])).rowCount);
     }
     async prepareWorkerRemoval(ownerRoot, sessionId, generation) {
         return this.transaction(async (poolClient) => {
@@ -333,7 +330,7 @@ class SwarmStore {
             if (rollingStoredWorktree.rootPath !== swarmWorktreeMembership.rootPath || rollingStoredWorktree.state !== 'RESERVED')
                 throw new Error('swarm: checkout has conflicting identity or activity; preserve ownership');
             if ((await poolClient.query("SELECT 1 FROM ponytail_index.rolling_assignment_v1 WHERE project_id=$1 AND worktree_number=$2 AND state<>'RELEASED'", [this.projectId, rollingStoredWorktree.number])).rowCount
-                || await this.hasNativeOwner(poolClient, rollingStoredWorktree.rootPath))
+                || await (0, swarm_owner_js_1.hasSwarmNativeOwner)(poolClient, this.projectId, rollingStoredWorktree.rootPath))
                 throw new Error('swarm: checkout retains an assignment or native actor; establish cessation and remove worker ownership first');
             const root = node_fs_1.default.lstatSync(rollingStoredWorktree.rootPath, { throwIfNoEntry: false });
             const missing = root === undefined || root.isDirectory() && node_fs_1.default.lstatSync(node_path_1.default.join(rollingStoredWorktree.rootPath, '.git'), { throwIfNoEntry: false }) === undefined;
@@ -397,7 +394,7 @@ class SwarmStore {
             }
             (0, rolling_worktrees_js_1.requireRollingGitOperationAbsent)(rootPath);
             (0, rolling_worktrees_js_1.requireRollingSessionMarkerAbsent)(rootPath);
-            if (await this.hasNativeOwner(poolClient, rootPath))
+            if (await (0, swarm_owner_js_1.hasSwarmNativeOwner)(poolClient, this.projectId, rootPath))
                 throw new Error('swarm: checkout retains a native owner');
             const rollingManagedDirectory = (0, rolling_worktrees_js_1.resolveRollingManagedDirectory)(ownerRoot);
             const pool = (await poolClient.query('SELECT managed_directory FROM ponytail_index.rolling_pool_v1 WHERE project_id=$1', [this.projectId])).rows[0];
@@ -469,7 +466,7 @@ class SwarmStore {
                     throw new Error('swarm: available checkout has inconsistent physical pool identity; preserve it for recovery');
                 (0, rolling_worktrees_js_1.requireRollingGitOperationAbsent)(rollingStoredWorktree.rootPath);
                 (0, rolling_worktrees_js_1.requireRollingSessionMarkerAbsent)(rollingStoredWorktree.rootPath);
-                if (await this.hasNativeOwner(poolClient, rollingStoredWorktree.rootPath))
+                if (await (0, swarm_owner_js_1.hasSwarmNativeOwner)(poolClient, this.projectId, rollingStoredWorktree.rootPath))
                     throw new Error('swarm: available checkout retains a native actor; establish cessation before reuse');
                 if ((0, rolling_integration_js_1.git)(rollingStoredWorktree.rootPath, ['status', '--porcelain']).trim())
                     throw new Error('swarm: available checkout contains uncommitted work; preserve it');
@@ -553,7 +550,7 @@ class SwarmStore {
                         throw new Error('swarm: checkout is outside the configured physical pool');
                     if ((await poolClient.query('SELECT 1 FROM ponytail_index.swarm_worktree_v1 WHERE project_id=$1 AND number=$2', [this.projectId, rollingStoredWorktree.number])).rowCount
                         || (await poolClient.query("SELECT 1 FROM ponytail_index.rolling_assignment_v1 WHERE project_id=$1 AND worktree_number=$2 AND state<>'RELEASED'", [this.projectId, rollingStoredWorktree.number])).rowCount
-                        || await this.hasNativeOwner(poolClient, rollingStoredWorktree.rootPath)) {
+                        || await (0, swarm_owner_js_1.hasSwarmNativeOwner)(poolClient, this.projectId, rollingStoredWorktree.rootPath)) {
                         results.push({ number: rollingStoredWorktree.number, rootPath: rollingStoredWorktree.rootPath, outcome: 'protected', reason: 'checkout remains assigned or has a retained native actor' });
                         continue;
                     }

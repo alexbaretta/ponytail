@@ -118,7 +118,7 @@ services. `PROJECT_STRUCTURE.md` is authoritative for that boundary.
   schemas (with V1/V2 input readers) and campaign-wide worker goals are owned by
   `skills/swarm/references/autonomous-queues.md`. Both coordinator and workers
   may register discovered work with canonical PM updates; claims do not await
-  coordinator acknowledgment. Queue inventory is included in V6 `swarm info`, with explicit suspension and physical availability. Current CLI receipts omit accumulated state; use `page` and `artifact-read` for bounded inspection. First authorized `status` upgrades V1 storage while preserving the exact original archive.
+  coordinator acknowledgment. `swarm retirement-authorize --request @<file>` records exact evidence for original workers removed before suspension; normal release guards remain required. Queue inventory is included in V6 `swarm info`, with explicit suspension and physical availability. Current CLI receipts omit accumulated state; use `page` and `artifact-read` for bounded inspection. First authorized `status` upgrades V1 storage while preserving the exact original archive.
   Focused proof: `node --test dist/tests/swarm-queue.test.js
   dist/tests/swarm-queue.integration.test.js dist/tests/swarm-info.test.js
   dist/tests/swarm-info.integration.test.js`.

@@ -219,3 +219,15 @@ membership release remains limited to removed original workers, exact suspended
 generations, host-origin checkouts and explicitly empty configured resource
 cleanup; other cleanup obligations remain protected. Independent review found no
 remaining demonstrated P1/P2 issue after the admission-fence correction.
+
+
+All 23 requested worker chats were archived and all 13 current bindings detached.
+Seven missing reservations remained from workers removed before the suspension
+snapshot. A proposed broad relaxation was rejected by automatic approval review;
+it was not applied. Instead, a separate exact-selector retirement authorization
+records append-only original worker/generation/root identities and preservation
+proof, leaving the snapshot guard unchanged. Focused real CLI authorization and
+release pass under `ponytail_index_writer`, including wrong-generation and worker
+actor rejection. Independent review caught table creation outside schema grants;
+it was moved inside the existing transaction/owner/grant boundary and verified.
+No new worker binding, source reconstruction or task completion is introduced.

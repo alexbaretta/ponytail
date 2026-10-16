@@ -7,7 +7,7 @@ import {databaseOptions} from './project-index-database.js';
 import {git} from './rolling-integration.js';
 import {resolveSwarmOwner,type SwarmOwnershipInventory} from './swarm-owner.js';
 import {readSwarmQueueState,parseSwarmQueueJson} from './swarm-queue.js';
-import {runSwarmQueueCli} from './swarm-queue-cli.js';
+import {runSwarmQueueCli,runSwarmRetirementCli} from './swarm-queue-cli.js';
 import {renderCliHelp} from './cli-help.js';
 import type {RollingStoredWorktree} from './rolling-campaign-store.js';
 import {SwarmStore,type SwarmWorktreeMembership,type SwarmWorktreeDeletionResult,readWorker,swarmWorkerName,type SwarmWorkerBinding} from './swarm-store.js';
@@ -319,6 +319,7 @@ export function renderSwarmInfo(swarmInfoV4:SwarmInfoV4|SwarmInfoV5|SwarmInfoV6)
 
 // Traceability: implements REQ-SWARM-CLI
 export async function runSwarmCli(argv:readonly string[]):Promise<void> {
+ if(argv[0]==='retirement-authorize'){await runSwarmRetirementCli(argv.slice(1));return;}
  if(argv[0]==='queue'){await runSwarmQueueCli(argv.slice(1));return;}
  if(argv.length===0||argv.includes('--help')||argv.includes('-h')) {process.stdout.write(renderCliHelp(['swarm',...argv])+'\n');return;}
  const fields=new Map<string,string>();let json=false,valid=true;
