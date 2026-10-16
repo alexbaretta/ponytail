@@ -290,7 +290,14 @@ and staged source, reviewed candidate/base/verdict/proof and pending requests.
 Quiesce through host tools at safe boundaries. Preserve source, exact index patches,
 untracked work and durable Git refs plus reviewer evidence. Do not erase held
 approval denials. Detach superseded bindings only after preservation and verify
-read-back; archive through host tools without deleting retained source checkouts.
+read-back. Keep required original chats stopped and protected from host cleanup;
+protect new idle workers before expanding the fleet. In Codex, pinning protects
+against automatic cleanup; archiving a managed-worktree chat removes its checkout,
+even when Ponytail still records it. Never use archival as harmless chat cleanup
+while the checkout or ignored evidence is retained. Recheck physical roots after
+host operations. If a root disappears, stop further creation/archival, preserve
+all remaining refs/snapshots/evidence and use the original host restoration path;
+do not reconstruct Git metadata or claim unverified ignored files survived.
 
 Where obsolete unfinished goals prevent adoption, create fresh top-level workers
 using the swarm skill's exact coordinator project/native-worktree creation path.

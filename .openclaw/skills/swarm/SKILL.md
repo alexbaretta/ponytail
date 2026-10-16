@@ -67,6 +67,15 @@ resource capacity: count dependency downloads, installation and package linking
 against the project's heavy-resource limits, alongside builds and runtime tests.
 Queue further setup while completing started setup; keep source-only work moving.
 
+Before creating native worktrees, inspect the host's retention and automatic
+cleanup rules separately from the active-worker limit. Protect every still-needed
+original chat and each new worker while it can become idle, using host pinning
+where supported. In Codex, pinning protects against automatic cleanup, while
+archiving a managed-worktree chat deletes its checkout. Do not archive a chat
+whose checkout or ignored evidence must remain available. Recheck retained roots
+after provisioning; a Ponytail binding does not prevent native host cleanup.
+See the host's [worktree cleanup documentation](https://learn.chatgpt.com/docs/environments/git-worktrees).
+
 1. In Codex, create a fresh worker with `create_thread`, a target of type
    `project`, the coordinator's frozen `projectId`, and
    `environment: {type: "worktree"}`. Use this creation shape, substituting the

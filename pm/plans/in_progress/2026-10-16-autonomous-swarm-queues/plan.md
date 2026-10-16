@@ -118,3 +118,30 @@ Continuation acceptance: 1029 tests passed, installer suite passed, and final
 TSTS passed after staging the two observation records. Rule copies (8),
 versions (7), registry (41), traceability (1115 relationships) and generated
 runtime checks passed.
+
+Correction to earlier physical-retention checkpoint: subsequent native host
+archive/automatic cleanup removed several original checkouts. Coordinator reports
+W12/13/14/15/16/19/20/21/22 roots missing and W18 present without valid Git
+metadata; original W9/10/11/17 remain valid. The earlier archived-chat guidance
+incorrectly assumed physical checkout preservation. Official host documentation
+confirms managed chat archival deletes the checkout and automatic cleanup has a
+separate native worktree limit; pinning protects against automatic cleanup.
+Skills now require retention protection before provisioning and prohibit archive
+while a checkout/ignored evidence must remain available. Creation is stopped;
+coordinator is pinning needed chats and investigating original host restoration.
+Exact dirty-source/index snapshots remain preserved, but survival of every ignored
+proof is unverified. No Git metadata is reconstructed and no source ownership is
+silently transferred. Migration remains incomplete pending verified restoration
+and the existing explicit shared-Git authority gate.
+
+
+Live correction acceptance: the coordinator recovered queue service with normal
+existing-PostgreSQL sandbox escalation and answered all 18 pending FIFO help
+requests. `OBL-7` canonical assessment publication succeeded with `tasks: []`,
+only the obligation document plus nine referenced plan artifacts, unchanged
+baselines/definitions/history, and no acceptance-only Git commit. Certificate
+`CERT-OBL7-diagnostic-parity-0d8fd7706e` is fresh and canonical satisfaction
+includes OBL7. Root-read accepted-resolution receipt confirms TASK-OBL-7 `done`
+and its request `resolved`/`accepted`, with no pending discovery. The 557 coverage
+gaps remain unresolved work, not a QA pass. All 23 needed chats have verified
+pins; missing native checkout and ignored-evidence restoration remain incomplete.
