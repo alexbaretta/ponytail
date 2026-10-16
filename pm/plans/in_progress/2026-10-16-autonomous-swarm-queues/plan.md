@@ -100,3 +100,21 @@ Correction acceptance: all 1029 tests passed. The full command reached the
 final static gate, which initially rejected the two untracked observations;
 after staging them, `npm run check:tsts` passed over 1681 files. Unchanged
 passing test suites were reused. Live coordinator discharge is verified below.
+
+
+## Queue service and native retention continuation
+
+The coordinator reported a second failure after native cleanup: a valid owner
+could not `take` requests because full swarm inventory rejected a retained sibling
+with missing Git metadata. A disposable peer-root regression reproduced the same
+fatal error. CLI owner resolution now queries only the invoking project/root,
+rejects ambiguous ownership, and retains execution-time owner/worker Git,
+session, generation and marker checks. Worker status and coordinator `take` pass
+with a stale sibling. Observation: [queue service depended on sibling health](../../../debugging-pattern-observations/2026-10-16-queue_service_depended_on_sibling_health.json).
+
+Both fixes passed the focused 11-test queue/inventory selection and independent
+read-only review. Installed skills/CLI were refreshed and byte-checked.
+Continuation acceptance: 1029 tests passed, installer suite passed, and final
+TSTS passed after staging the two observation records. Rule copies (8),
+versions (7), registry (41), traceability (1115 relationships) and generated
+runtime checks passed.

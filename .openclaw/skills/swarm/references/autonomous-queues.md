@@ -33,6 +33,10 @@ Generations come from `swarm info`; none are invented. JSON output contains
 `schemaVersion`, full `queue`, selected `task` or null, and selected `request` or
 null. `status` and `requests` show pending and processing entries as well as open
 ones. Queue receipts do not establish host execution or obligation acceptance.
+Queue commands resolve only the invoking checkout and its recorded owner; a
+stale retained sibling cannot suspend service. They still validate the actual
+owner/worker repository, session, generation and exclusive claim. Full swarm
+inventory and host recovery remain separate operations.
 
 `init` additionally requires `documentPath`, `bindingsPath` (the canonical
 `ObligationBindingHistoryV1` file containing exactly `schemaVersion`, `scopeId`

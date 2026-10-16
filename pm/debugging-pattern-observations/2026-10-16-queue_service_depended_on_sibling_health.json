@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-10-16-queue_service_depended_on_sibling_health",
+  "recorded_at": "2026-10-16T12:33:41-07:00",
+  "source_references": [
+    "pm/plans/in_progress/2026-10-16-autonomous-swarm-queues/plan.md",
+    "commit:c7711218"
+  ],
+  "context": {
+    "languages": [
+      "typescript"
+    ],
+    "frameworks": [],
+    "components": [
+      "swarm queue CLI"
+    ],
+    "affected_boundaries": [
+      "invoking checkout ownership resolution",
+      "coordinator request service"
+    ],
+    "code_references": [
+      "src/swarm-queue-cli.ts",
+      "src/swarm-queue.ts",
+      "tests/swarm-queue.integration.test.ts"
+    ]
+  },
+  "observed_behavior": "A valid owner and worker could not service queue commands when a retained sibling directory lost its native Git metadata.",
+  "expected_behavior": "Queue commands validate the invoking checkout and its owner without requiring unrelated retained checkouts to remain healthy.",
+  "causal_mechanism": "The CLI used full swarm inventory as its owner resolver; inventory checked Git metadata in every recorded sibling and propagated a sibling not-a-repository error before executing a queue command.",
+  "anti_pattern": {
+    "structural_description": "An operational request depends on a broader inventory health sweep than its authority and resource scope.",
+    "why_it_fails": "Failure of an unrelated retained checkout stops a valid coordinator from servicing help and recovery requests."
+  },
+  "correct_pattern": {
+    "required_invariant": "Resolve one exact project/root owner and validate the actual actor and repository at execution.",
+    "implementation_description": "Query owner/membership for the invoking root only, reject ambiguity, and retain strict SwarmQueueStore actor validation. Full inventory remains a separate inspection."
+  },
+  "applicability_conditions": [
+    "A project has multiple managed roots and one existing sibling loses Git metadata."
+  ],
+  "known_non_matches": [
+    "Invalid invoking owner or worker identities remain rejected by the execution boundary."
+  ],
+  "confirmation_evidence": [
+    "Disposable sibling with removed .git reproduced the same fatal not-a-repository failure through the real queue CLI."
+  ],
+  "regression_proofs": [
+    "tests/swarm-queue.integration.test.ts: autonomous queues preserve parked work, race exclusive claims, service FIFO and publish discovery through real CLI; worker status and coordinator take pass with stale retained sibling"
+  ]
+}

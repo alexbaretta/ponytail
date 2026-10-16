@@ -2,6 +2,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
+import os from 'node:os';
 import crypto from 'node:crypto';
 import {spawnSync} from 'node:child_process';
 import test from 'node:test';
@@ -9,7 +10,7 @@ import {Pool} from 'pg';
 import {databaseOptions} from '../src/project-index-database.js';
 import {SwarmStore,type SwarmWorkerBinding,type SwarmWorkerAssignment} from '../src/swarm-store.js';
 import type {RollingProjectConfigV2} from '../src/rolling-campaign.js';
-import {SwarmQueueStore,type SwarmQueueCommandV1,type SwarmQueueActorV1,type SwarmQueueTaskInputV1,type SwarmQueueDiscoveryV1,type SwarmQueueCandidateV1,type SwarmQueueVerdictV1} from '../src/swarm-queue.js';
+import {SwarmQueueStore,readSwarmQueueResultV1,parseSwarmQueueJson,type SwarmQueueCommandV1,type SwarmQueueActorV1,type SwarmQueueTaskInputV1,type SwarmQueueDiscoveryV1,type SwarmQueueCandidateV1,type SwarmQueueVerdictV1} from '../src/swarm-queue.js';
 import {fixture,git} from './helpers/obligation-fixture.js';
 import {type ObligationDocumentV1,type ObligationEvidence,type ObligationCertificate,inputDigest,parseObligationDocument,acceptCheckpoint} from '../skills/plan-execution/scripts/obligations.js';
 // Traceability: verifies REQ-SWARM-QUEUES
@@ -159,10 +160,18 @@ test('autonomous queues preserve parked work, race exclusive claims, service FIF
  fs.symlinkSync(path.join(root,'pm/uat'),path.join(root,'pm/uat/link'));
  const linkedSwarmQueueDiscoveryV1:SwarmQueueDiscoveryV1={...abortableSwarmQueueDiscoveryV1,id:'linked-documents',updates:abortableSwarmQueueDiscoveryV1.updates.map(updateSwarmQueueDocumentUpdateV1=>updateSwarmQueueDocumentUpdateV1.path==='pm/uat/runtime.md'?{path:'pm/uat/link/new.md',beforeContent:null,content:'REQ-PILOT'}:updateSwarmQueueDocumentUpdateV1)};
  await assert.rejects(swarmQueueStore.execute({...discoverSwarmQueueCommandV1,discovery:linkedSwarmQueueDiscoveryV1},firstSwarmWorkerBinding.rootPath),/symlink/);fs.unlinkSync(path.join(root,'pm/uat/link'));
+ // A retained sibling whose host metadata disappeared must not block this valid actor's queue.
+ const retainedRoot=fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(),'queue-retained-')));testContext.after(()=>fs.rmSync(retainedRoot,{recursive:true,force:true}));
+ git(root,['worktree','add','--detach',retainedRoot]);await swarmStore.enrollWorktree(root,retainedRoot);fs.unlinkSync(path.join(retainedRoot,'.git'));
  const statusSwarmQueueCommandV1:SwarmQueueCommandV1={schemaVersion:1,campaignId:'pilot',actor:firstActorSwarmQueueActorV1,command:'status'};
  const requestPath=path.join(firstSwarmWorkerBinding.rootPath,'state','status.json');fs.mkdirSync(path.dirname(requestPath),{recursive:true});fs.writeFileSync(requestPath,JSON.stringify(statusSwarmQueueCommandV1));
  const result=spawnSync('node',[path.join(process.cwd(),'dist/src/swarm-info.js'),'queue','status','--request','@'+requestPath],{cwd:firstSwarmWorkerBinding.rootPath,encoding:'utf8'});
- assert.equal(result.status,0,result.stderr);assert.equal(JSON.parse(result.stdout).queue.campaignId,'pilot');
+ assert.equal(result.status,0,result.stderr);assert.equal(readSwarmQueueResultV1(parseSwarmQueueJson(result.stdout)).queue.campaignId,'pilot');
+ const coordinatorTakeSwarmQueueCommandV1:SwarmQueueCommandV1={schemaVersion:1,campaignId:'pilot',actor:coordinatorSwarmQueueActorV1,command:'take'};
+ const coordinatorRequestPath=path.join(root,'state','take.json');fs.mkdirSync(path.dirname(coordinatorRequestPath),{recursive:true});fs.writeFileSync(coordinatorRequestPath,JSON.stringify(coordinatorTakeSwarmQueueCommandV1));
+ const coordinatorResult=spawnSync('node',[path.join(process.cwd(),'dist/src/swarm-info.js'),'queue','take','--request','@'+coordinatorRequestPath],{cwd:root,encoding:'utf8'});
+ assert.equal(coordinatorResult.status,0,coordinatorResult.stderr);assert.equal(readSwarmQueueResultV1(parseSwarmQueueJson(coordinatorResult.stdout)).queue.ownerRoot,root);
+
  const completeSwarmQueueCommandV1:SwarmQueueCommandV1={schemaVersion:1,campaignId:'pilot',actor:coordinatorSwarmQueueActorV1,command:'complete'};await assert.rejects(swarmQueueStore.execute(completeSwarmQueueCommandV1,root),/outstanding/);
 });
 
