@@ -18,6 +18,7 @@ const sources: readonly string[] = [
   'src/swarm-info.ts',
   'src/swarm-store.ts',
   'src/swarm-queue.ts',
+  'src/swarm-queue-payloads.ts',
   'src/swarm-queue-cli.ts',
   'src/rolling-worktrees.ts',
   'src/rolling-reset.ts',

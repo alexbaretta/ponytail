@@ -24,8 +24,10 @@ async function runSwarmQueueCli(argv) {
         process.exitCode = 2;
         return;
     }
-    const swarmQueueCommandV1 = (0, swarm_queue_js_1.readSwarmQueueCommandV1)((0, swarm_queue_js_1.parseSwarmQueueJson)(node_fs_1.default.readFileSync(argv[2].slice(1), 'utf8')));
-    if (swarmQueueCommandV1.command !== argv[0])
+    if (node_fs_1.default.statSync(argv[2].slice(1)).size > 8 * 1024 * 1024)
+        throw new Error('swarm queue: request metadata exceeds 8 MiB; retain large evidence in artifact files');
+    const swarmQueueCommandV2 = (0, swarm_queue_js_1.readSwarmQueueCommand)((0, swarm_queue_js_1.parseSwarmQueueJson)(node_fs_1.default.readFileSync(argv[2].slice(1), 'utf8')));
+    if (swarmQueueCommandV2.command !== argv[0])
         throw new Error('swarm queue: request command differs from CLI command');
     const root = node_fs_1.default.realpathSync((0, rolling_integration_js_1.git)(process.cwd(), ['rev-parse', '--show-toplevel']).trim());
     const journal = JSON.parse(node_fs_1.default.readFileSync(node_path_1.default.join(root, 'ponytail-journal.json'), 'utf8'));
@@ -40,8 +42,8 @@ async function runSwarmQueueCli(argv) {
         if (rows.length !== 1 || row === undefined || typeof row.owner_root !== 'string')
             throw new Error('swarm queue: invoking checkout requires one recorded owner');
         const swarmQueueStore = new swarm_queue_js_1.SwarmQueueStore(pool, journal.projectId, row.owner_root);
-        const resultSwarmQueueResultV1 = await swarmQueueStore.execute(swarmQueueCommandV1, root);
-        process.stdout.write(JSON.stringify(resultSwarmQueueResultV1) + '\n');
+        const swarmQueueOperation = await swarmQueueStore.execute(swarmQueueCommandV2, root);
+        process.stdout.write(JSON.stringify((0, swarm_queue_js_1.createSwarmQueueResultV2)(swarmQueueOperation)) + '\n');
     }
     finally {
         await pool.end();

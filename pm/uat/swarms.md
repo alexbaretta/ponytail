@@ -472,3 +472,12 @@ Start one queue campaign on a disposable repository and isolated rows in the exi
 Discover another obligation from a worker and from the coordinator during execution. Update applicable requirements/UAT/issue/plan/obligation records through the CLI. Concurrent edits must fail with actionable stale-input evidence. Interrupt document publication, recover the same operation, and prove that no task becomes claimable before all required records exist. Dependency satisfaction and final task/campaign completion require canonical acceptance, not queue receipts. Reject cross-owner/stale identity, path overlap, symlink escape, fabricated review, incomplete discovery and simultaneous legacy allocation.
 
 After repository acceptance, install the CLI and changed skills. The existing Gwen coordinator preserves every old worker candidate/dirty tree and pending request before retiring obsolete goal sessions. Replacement workers retain its exact project, have unique native worktrees and campaign-wide goals, and actually claim queue work. Record tool acceptance and live adoption separately.
+
+
+Queue growth recovery: retain a V1 queue larger than the process heap, containing
+nested historical queue-response evidence. Run the canonical CLI with a 128 MiB
+heap. Verify transactional streaming migration, exact original archive byte count
+and digest, unchanged tasks/ownership/candidates and evidence bytes, bounded V2
+receipts, explicit paginated inventory and cross-chunk evidence reads. Interrupt
+before publication and verify the original state and blob count are unchanged.
+After recovery, claim and hand off another task and service the FIFO queue.

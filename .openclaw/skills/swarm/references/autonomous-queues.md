@@ -14,7 +14,7 @@ reference canonical obligation IDs, not copied acceptance conditions. Reconcile
 requirements, UAT, issues, plan, obligation document, binding history and adopted
 traceability whenever discovered work changes them.
 
-Each command uses one strict V1 request file:
+Each command uses one strict V2 request file:
 
 ```text
 ponytail swarm queue <command> --request @<request.json>
@@ -24,15 +24,37 @@ Capture command JSON under the invoking project's ignored temporary directory
 and inspect the selected `task`/`request` or compact queue metadata. Do not load
 the accumulated source snapshots and discovery history into every worker turn.
 
-Every request has `schemaVersion: 1`, `command`, `campaignId`, and `actor`.
+Every new request has `schemaVersion: 2`, `command`, `campaignId`, and `actor`.
 A coordinator actor is `{kind: "coordinator", sessionId: "<bound-session>"}`;
 a worker actor is `{kind: "worker", sessionId: "<original-session>",
 generation: "<current-worker-generation>"}`. Run coordinator commands from the
 owner checkout and worker commands from their original enrolled checkout.
-Generations come from `swarm info`; none are invented. JSON output contains
-`schemaVersion`, full `queue`, selected `task` or null, and selected `request` or
-null. `status` and `requests` show pending and processing entries as well as open
-ones. Queue receipts do not establish host execution or obligation acceptance.
+Generations come from `swarm info`; none are invented. V1 request files remain readable. Output is physical V2: `schemaVersion: 2`,
+compact `queue` metadata (campaign, owner, state, sequence, pending discovery ID,
+task/request counts), selected `task`/`request`, `page`, and `artifact`, each
+selection nullable. It never returns the accumulated queue or source bytes.
+`requests` returns the first page of unresolved requests, including processing
+ones. Use `page` with `collection: "tasks"|"requests"`, `offset: 0`,
+`limit: 1..32`, and `unresolvedOnly: true|false`; continue at `page.nextOffset`
+until null. Offset pages are snapshots: restart inventory if concurrent mutation
+changes composition. `status` returns only metadata.
+
+Request evidence, source patches/untracked snapshots and host-review content are immutable database-backed `{path, blob: {id, byteLength,
+sha256}}`. Use `artifact-read` with `id`, `offset: 0`, and `length: 1..65536`;
+append decoded `artifact.contentBase64` bytes and continue at `artifact.nextOffset`
+until null, then verify the declared size and digest. Do not attach whole queue
+inventories or accumulated receipt collections as evidence: attach the specific
+proof/assessment file needed by the request. A selected task receipt omits
+historical claims and checkpoint payload bytes; it retains current ownership,
+lease, candidate/base, checkpoint revision/ref and review identity. Task inventory pages expose source/review blob references for exact bounded recovery; every referenced byte remains available through `artifact-read`.
+
+The first authorized command upgrades retained V1 storage transactionally using
+streamed decoding into chunked artifacts. Its exact original state text is
+retained in `legacy_state_text`; interruption rolls back the entire migration,
+including new chunks. Run `status` first after installation, verify preserved
+counts/ownership and original archive digest, then resume queue mutations. Never
+clear the queue, edit its database rows, or raise the heap to mask amplification.
+An uncertain mutation requires inspecting current state before retrying. Queue receipts do not establish host execution or obligation acceptance.
 Queue commands resolve only the invoking checkout and its recorded owner; a
 stale retained sibling cannot suspend service. They still validate the actual
 owner/worker repository, session, generation and exclusive claim. Full swarm

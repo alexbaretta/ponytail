@@ -114,11 +114,11 @@ services. `PROJECT_STRUCTURE.md` is authoritative for that boundary.
   dist/tests/swarm-store.integration.test.js
   dist/tests/swarm-info.integration.test.js`; the integration selection uses
   disposable Git worktrees and isolated existing-PostgreSQL project rows.
-- Autonomous swarm queues: `ponytail swarm queue --help`; exact V1 command
-  schemas and campaign-wide worker goals are owned by
+- Autonomous swarm queues: `ponytail swarm queue --help`; exact V2 command
+  schemas (with V1 input readers) and campaign-wide worker goals are owned by
   `skills/swarm/references/autonomous-queues.md`. Both coordinator and workers
   may register discovered work with canonical PM updates; claims do not await
-  coordinator acknowledgment. Queue inventory is included in V5 `swarm info`.
+  coordinator acknowledgment. Queue inventory is included in V5 `swarm info`. V2 CLI receipts omit accumulated state; use `page` and `artifact-read` for bounded inspection. First authorized `status` upgrades V1 storage while preserving the exact original archive.
   Focused proof: `node --test dist/tests/swarm-queue.test.js
   dist/tests/swarm-queue.integration.test.js dist/tests/swarm-info.test.js
   dist/tests/swarm-info.integration.test.js`.

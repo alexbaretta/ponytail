@@ -3,6 +3,22 @@
   "schemaVersion": 1,
   "families": [
     {
+      "id": "swarm-queue-blob",
+      "implementation": {
+        "workspace": "ponytail",
+        "module": "src/swarm-queue-payloads.ts",
+        "readerRegistryExport": "SwarmQueueBlobReaders"
+      },
+      "currentVersion": "V1",
+      "versions": [
+        "V1"
+      ],
+      "supportedReadVersions": [
+        "V1"
+      ],
+      "supportedDowngradeVersions": []
+    },
+    {
       "id": "swarm-queue-verdict",
       "implementation": {
         "workspace": "ponytail",
@@ -25,12 +41,12 @@
         "module": "src/swarm-queue.ts",
         "readerRegistryExport": "SwarmQueueResultReaders"
       },
-      "currentVersion": "V1",
+      "currentVersion": "V2",
       "versions": [
-        "V1"
+        "V1", "V2"
       ],
       "supportedReadVersions": [
-        "V1"
+        "V1", "V2"
       ],
       "supportedDowngradeVersions": []
     },
@@ -41,12 +57,12 @@
         "module": "src/swarm-queue.ts",
         "readerRegistryExport": "SwarmQueueCommandReaders"
       },
-      "currentVersion": "V1",
+      "currentVersion": "V2",
       "versions": [
-        "V1"
+        "V1", "V2"
       ],
       "supportedReadVersions": [
-        "V1"
+        "V1", "V2"
       ],
       "supportedDowngradeVersions": []
     },
@@ -57,12 +73,12 @@
         "module": "src/swarm-queue.ts",
         "readerRegistryExport": "SwarmQueueStateReaders"
       },
-      "currentVersion": "V1",
+      "currentVersion": "V2",
       "versions": [
-        "V1"
+        "V1", "V2"
       ],
       "supportedReadVersions": [
-        "V1"
+        "V1", "V2"
       ],
       "supportedDowngradeVersions": []
     },

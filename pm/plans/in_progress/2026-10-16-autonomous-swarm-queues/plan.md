@@ -171,3 +171,25 @@ only for a new configured focused run; no broad freshness bypass is introduced.
 Swarm and rolling guidance link to that one policy owner. Installed copies were
 refreshed. Focused policy/swarm checks passed (14); OpenClaw generation, rule
 copies, versions and traceability passed.
+
+
+## Queue payload recovery and migration correction
+
+The live queue grew to 188,884,016 bytes because V1 embedded evidence bytes and
+returned full accumulated state; workers retained earlier responses as evidence.
+The canonical commands then exhausted Node's heap. V2 retains immutable chunked
+request/source/review payloads in the existing database and returns bounded
+receipts, explicit inventory pages and artifact chunks. Strict historical V1
+readers remain; the first authorized command streams migration transactionally
+and preserves the exact original state text. A failed migration rolls back both
+state and new payload writes. Independent review caught eager file reads and
+inline source snapshots; those paths were corrected before release.
+
+Historical live counts and OBL7 freshness above describe their publication time.
+Later discovery added obligations 224–226 and changed canonical inputs; current
+freshness must be reassessed. The user has now explicitly authorized normal
+campaign Git metadata operations in the shared Gwen `.git` directory, excluding
+push, deployment, destructive resets and unrelated changes. The coordinator
+reports a shutdown/drain direction; no further replacement sessions are being
+created. Actual source restoration, retirement and bookkeeping must be verified
+separately from tooling acceptance. No full roster migration is claimed.

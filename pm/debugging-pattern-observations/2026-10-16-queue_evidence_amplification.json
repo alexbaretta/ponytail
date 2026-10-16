@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-10-16-queue_evidence_amplification",
+  "recorded_at": "2026-10-16T13:16:09-07:00",
+  "source_references": [
+    "pm/plans/in_progress/2026-10-16-autonomous-swarm-queues/plan.md",
+    "commit:c7711218"
+  ],
+  "context": {
+    "languages": [
+      "typescript"
+    ],
+    "frameworks": [],
+    "components": [
+      "swarm queue storage",
+      "swarm queue CLI"
+    ],
+    "affected_boundaries": [
+      "persisted queue state",
+      "evidence capture",
+      "CLI receipts"
+    ],
+    "code_references": [
+      "src/swarm-queue.ts",
+      "src/swarm-queue-payloads.ts",
+      "tests/swarm-queue.integration.test.ts"
+    ]
+  },
+  "observed_behavior": "Canonical queue operations exhausted the default Node heap on a 188884016-byte live state record.",
+  "expected_behavior": "Queue service and recovery preserve source/evidence without loading accumulated payloads into process memory.",
+  "causal_mechanism": "V1 embedded base64 evidence and returned full accumulated state. Workers attached those receipts as new evidence, recursively amplifying retained payloads and parsing costs.",
+  "anti_pattern": {
+    "structural_description": "Operational metadata embeds opaque payload bytes and every reply serializes the entire history.",
+    "why_it_fails": "Using earlier replies as evidence recursively duplicates historical content and makes even status/help require unbounded memory."
+  },
+  "correct_pattern": {
+    "required_invariant": "Operational state retains immutable payload references; receipts and payload reads are bounded; legacy recovery is transactional and lossless.",
+    "implementation_description": "Stream evidence, source patches, untracked files and reviews into chunked existing-database storage. Preserve exact V1 text while migrating to V2; use compact receipts, pages and artifact-read."
+  },
+  "applicability_conditions": [
+    "A durable workflow retains large evidence or receives earlier operational replies as evidence."
+  ],
+  "known_non_matches": [
+    "Small JSON metadata still uses strict lossless readers; chunking does not waive ownership, review or acceptance."
+  ],
+  "confirmation_evidence": [
+    "Live owner state measured 188884016 bytes; reproduction migrated a larger than 192 MiB record using a 128 MiB heap."
+  ],
+  "regression_proofs": [
+    "tests/swarm-queue.integration.test.ts: oversized legacy migration, exact archived bytes/digest, rollback without partial blobs, cross-chunk reads and future large evidence/source capture under a 128 MiB heap"
+  ]
+}

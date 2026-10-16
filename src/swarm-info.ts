@@ -6,7 +6,7 @@ import {Pool} from 'pg';
 import {databaseOptions} from './project-index-database.js';
 import {git} from './rolling-integration.js';
 import {resolveSwarmOwner,type SwarmOwnershipInventory} from './swarm-owner.js';
-import {readSwarmQueueStateV1,parseSwarmQueueJson} from './swarm-queue.js';
+import {readSwarmQueueState,parseSwarmQueueJson} from './swarm-queue.js';
 import {runSwarmQueueCli} from './swarm-queue-cli.js';
 import {renderCliHelp} from './cli-help.js';
 import type {RollingStoredWorktree} from './rolling-campaign-store.js';
@@ -290,8 +290,8 @@ export async function inspectSwarmInfo(invokingPath:string,pool:Pool,projectId:s
     const swarmWorkerBinding=readWorker(row);
     return {binding:swarmWorkerBinding,desiredName:swarmWorkerName(swarmWorkerBinding),nativeObservation:{kind:'unobserved'}} satisfies SwarmWorkerInfoV1;
    });
-  const queues:SwarmQueueInventoryV1[]=(await poolClient.query<Record<string,unknown>>('SELECT state_text FROM ponytail_index.swarm_queue_v1 WHERE project_id=$1 AND owner_root=$2 ORDER BY campaign_id',[projectId,swarmUserWorktree.rootPath])).rows.map(row=>{
-   const state=readSwarmQueueStateV1(parseSwarmQueueJson(text(row.state_text)));
+  const queues:SwarmQueueInventoryV1[]=(await poolClient.query<Record<string,unknown>>('SELECT CASE WHEN storage_version=2 THEN state_text ELSE NULL END AS state_text FROM ponytail_index.swarm_queue_v1 WHERE project_id=$1 AND owner_root=$2 ORDER BY campaign_id',[projectId,swarmUserWorktree.rootPath])).rows.map(row=>{
+   const state=readSwarmQueueState(parseSwarmQueueJson(text(row.state_text)));
    return {campaignId:state.campaignId,state:state.state,pendingDiscoveryId:state.pending?.id??null,
     tasks:state.tasks.map(task=>({id:task.id,state:task.state,obligationIds:task.obligationIds,sessionId:task.claim?.sessionId??null,rootPath:task.claim?.rootPath??null,generation:task.claim?.generation??null})),
     requests:state.requests.map(request=>({id:request.id,taskId:request.taskId,kind:request.kind,state:request.state}))};

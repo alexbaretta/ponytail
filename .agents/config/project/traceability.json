@@ -1696,6 +1696,11 @@
       "class": "plan",
       "path": "pm/plans/in_progress/2026-10-16-autonomous-swarm-queues/plan.md",
       "locator": "text"
+    },
+    {
+      "class": "implementation",
+      "path": "src/swarm-queue-payloads.ts",
+      "locator": "text"
     }
   ],
   "entities": [],
@@ -2047,6 +2052,10 @@
     {
       "path": "src/swarm-queue-cli.js",
       "sourcePath": "src/swarm-queue-cli.ts"
+    },
+    {
+      "path": "src/swarm-queue-payloads.js",
+      "sourcePath": "src/swarm-queue-payloads.ts"
     }
   ],
   "reverseViewPath": "pm/requirements/traceability.generated.md",

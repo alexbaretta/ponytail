@@ -303,8 +303,8 @@ async function inspectSwarmInfo(invokingPath, pool, projectId) {
             const swarmWorkerBinding = (0, swarm_store_js_1.readWorker)(row);
             return { binding: swarmWorkerBinding, desiredName: (0, swarm_store_js_1.swarmWorkerName)(swarmWorkerBinding), nativeObservation: { kind: 'unobserved' } };
         });
-        const queues = (await poolClient.query('SELECT state_text FROM ponytail_index.swarm_queue_v1 WHERE project_id=$1 AND owner_root=$2 ORDER BY campaign_id', [projectId, swarmUserWorktree.rootPath])).rows.map(row => {
-            const state = (0, swarm_queue_js_1.readSwarmQueueStateV1)((0, swarm_queue_js_1.parseSwarmQueueJson)(text(row.state_text)));
+        const queues = (await poolClient.query('SELECT CASE WHEN storage_version=2 THEN state_text ELSE NULL END AS state_text FROM ponytail_index.swarm_queue_v1 WHERE project_id=$1 AND owner_root=$2 ORDER BY campaign_id', [projectId, swarmUserWorktree.rootPath])).rows.map(row => {
+            const state = (0, swarm_queue_js_1.readSwarmQueueState)((0, swarm_queue_js_1.parseSwarmQueueJson)(text(row.state_text)));
             return { campaignId: state.campaignId, state: state.state, pendingDiscoveryId: state.pending?.id ?? null,
                 tasks: state.tasks.map(task => ({ id: task.id, state: task.state, obligationIds: task.obligationIds, sessionId: task.claim?.sessionId ?? null, rootPath: task.claim?.rootPath ?? null, generation: task.claim?.generation ?? null })),
                 requests: state.requests.map(request => ({ id: request.id, taskId: request.taskId, kind: request.kind, state: request.state })) };

@@ -825,6 +825,21 @@ CREATE TABLE IF NOT EXISTS ponytail_index.swarm_queue_v1 (
 CREATE UNIQUE INDEX IF NOT EXISTS swarm_queue_open_owner_v1
  ON ponytail_index.swarm_queue_v1(project_id,owner_root) WHERE NOT closed;
 
+ALTER TABLE ponytail_index.swarm_queue_v1 ADD COLUMN IF NOT EXISTS storage_version integer NOT NULL DEFAULT 1;
+ALTER TABLE ponytail_index.swarm_queue_v1 ADD COLUMN IF NOT EXISTS legacy_state_text text;
+CREATE TABLE IF NOT EXISTS ponytail_index.swarm_queue_blob_v1 (
+ project_id uuid NOT NULL REFERENCES ponytail_index.project_v1(project_id) ON DELETE CASCADE,
+ owner_root text NOT NULL, campaign_id text NOT NULL, id uuid NOT NULL,
+ byte_length bigint NOT NULL DEFAULT 0, sha256 text,
+ PRIMARY KEY(project_id,owner_root,campaign_id,id)
+);
+CREATE TABLE IF NOT EXISTS ponytail_index.swarm_queue_blob_chunk_v1 (
+ project_id uuid NOT NULL, owner_root text NOT NULL, campaign_id text NOT NULL,
+ blob_id uuid NOT NULL, ordinal integer NOT NULL, bytes bytea NOT NULL,
+ PRIMARY KEY(project_id,owner_root,campaign_id,blob_id,ordinal),
+ FOREIGN KEY(project_id,owner_root,campaign_id,blob_id) REFERENCES ponytail_index.swarm_queue_blob_v1(project_id,owner_root,campaign_id,id) ON DELETE CASCADE
+);
+
 REVOKE ALL ON SCHEMA ponytail_index FROM PUBLIC;
 REVOKE ALL ON ALL TABLES IN SCHEMA ponytail_index FROM PUBLIC;
 REVOKE ALL ON ALL FUNCTIONS IN SCHEMA ponytail_index FROM PUBLIC;
