@@ -155,3 +155,19 @@ Canonical `gitInputReasons` reports changed inputs. No reuse bypass, receipt
 relabeling or scope narrowing was implemented. The coordinator was instructed to
 correct its earlier no-rerun answer and perform only the configured focused
 selection for the changed inputs when its resource slot is available.
+
+
+## Proof input scope clarification
+
+W28's structural-proof receipt declared every tracked top-level root, including
+`pm` and `tmp`, so canonical assessment publication invalidated an unrelated
+bookkeeping input. Direct checker inspection confirms it actually reads UAT,
+requirement sources/coverage, the Arc registry and local-link targets: those
+consumed PM files remain relevant. Canonical plan-execution guidance now requires
+a complete consumer-derived scope before execution, rejects tracked-root
+fingerprinting as a shortcut, distinguishes artifacts/target verification from
+command inputs, and preserves old receipts unchanged. Correct a mistaken scope
+only for a new configured focused run; no broad freshness bypass is introduced.
+Swarm and rolling guidance link to that one policy owner. Installed copies were
+refreshed. Focused policy/swarm checks passed (14); OpenClaw generation, rule
+copies, versions and traceability passed.

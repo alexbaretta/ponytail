@@ -159,7 +159,10 @@ An integration candidate is exactly:
 The verdict file contains exactly `schemaVersion: 1`, `reviewer`, `base`,
 `revision`, `accepted: true`. Each proof file is the canonical `ObligationEvidence`
 contract, with exact candidate revision, frozen selections/target, finalized pass,
-no skips/failures and fresh inputs. Queue storage snapshots review/proof/output
+no skips/failures and fresh inputs. Define command-consumed scopes before the run
+using [proof input scopes](../../plan-execution/SKILL.md#proof-input-scopes);
+retain an overbroad old receipt unchanged and correct scope only for a new run.
+Queue storage snapshots review/proof/output
 bytes; paths alone are insufficient. Before a necessary semantic rebase onto an advanced campaign branch, call
 `refresh-base` with `taskId`, current claim `generation`, and exact new `base`.
 The CLI verifies descendant owner HEAD and unchanged bindings, preserves source

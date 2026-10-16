@@ -629,6 +629,30 @@ A tasklet is subject to the product-QA ladder when it edits a QA-relevant
 input. A feature, sprint, or plan is subject when any of its descendant work
 edits one. Assign proof to the smallest level that can meaningfully own it:
 
+### Proof input scopes
+
+Before executing a proof, derive its declared Git input paths from the exact
+configured command's consumers: entrypoint and imported code, selected tests,
+fixtures, generated inputs, dependency/tool configuration and any documents or
+data it reads. Use configured dependency tooling and inspect the command when
+needed. Include directory membership when it enumerates that directory. Choose
+the narrowest complete scopes; enumerating every tracked root is not a substitute
+for identifying consumers. Broad scopes require actual consumer coverage.
+
+Keep requirements and UAT records that the checker consumes. Exclude inert
+campaign checkpoints, queue state, scratch files and unrelated PM records from
+proof inputs. Retain logs, receipts and assessment outputs as artifacts; preserve
+the canonical evidence and target-verification contracts separately. Never omit
+a real consumed input merely to avoid invalidation, or introduce a bookkeeping
+self-dependency by treating unconsumed acceptance outputs as command inputs.
+
+Record the scope and actual tested revision before execution. Preserve an old
+receipt unchanged if its declared scope was wrong or a declared input changed;
+do not narrow it, relabel its revision or infer a new pass from source review.
+Correct the input scope and run only the configured focused proof against the
+actual current inputs. Reuse prior proof only while its declared relevant inputs
+remain unchanged and the canonical delivery contract supports that provenance.
+
 ### Tasklet
 
 - Add or adjust the smallest focused regression proof not already supplied by

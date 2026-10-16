@@ -219,6 +219,8 @@ interactions, refresh affected evidence, and submit the exact final SHA/base wit
 strict proof record. Git evidence contains the tested revision and relevant
 tracked paths/scopes, not per-file hash manifests or a repository-wide file list.
 Retain command output; ignored logs are outputs rather than source inputs.
+Derive these scopes before execution using [proof input scopes](../SKILL.md#proof-input-scopes);
+do not fingerprint unrelated PM state or the proof's own acceptance bookkeeping.
 A no-edit obligation needs adequate inspection evidence, not an invented rebase.
 
 Before terminal submission, spawn a local read-only reviewer subagent when the
