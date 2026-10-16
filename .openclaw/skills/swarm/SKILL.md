@@ -57,7 +57,10 @@ limit. Prefer completing started obligations, including proof and discharge,
 over new work. Prefer reactivating an unblocked retained worker over creating a
 new session. Select dependency-ready obligations whose paths and exclusive
 resources are compatible using the project's planning tools; the coordinator's
-canonical graph is authoritative.
+canonical graph is authoritative. Worker capacity is separate from setup and QA
+resource capacity: count dependency downloads, installation and package linking
+against the project's heavy-resource limits, alongside builds and runtime tests.
+Queue further setup while completing started setup; keep source-only work moving.
 
 1. In Codex, create a fresh worker with `create_thread`, a target of type
    `project`, the coordinator's frozen `projectId`, and
