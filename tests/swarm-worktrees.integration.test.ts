@@ -13,7 +13,13 @@ import {inspectSwarmInfo,readSwarmWorktreeDeletionReportV1,readSwarmInfoV4} from
 import {SwarmStore} from '../src/swarm-store.js';
 import type {SwarmUserWorktree} from '../src/swarm-owner.js';
 import {resetRollingProject,type RollingResetRequestV1} from '../src/rolling-reset.js';
-import type {RollingProjectConfigV2} from '../src/rolling-campaign.js';
+import {collectRollingGraph,type RollingProjectConfigV2,type RollingBinding,type RollingBindingsV1} from '../src/rolling-campaign.js';
+import {RollingCampaignStore,type RollingNativeWorkerSelection} from '../src/rolling-campaign-store.js';
+import {RollingCampaignOperations} from '../src/rolling-operations.js';
+import {readRollingObligationFixtureSource} from './helpers/rolling-obligation-source.js';
+import {inputDigest,type ObligationDocumentV1,type ObligationBaseline} from '../skills/plan-execution/scripts/obligations.js';
+import type {ObligationBindingHistoryV1,ObligationBindingRevisionV1} from '../skills/plan-execution/scripts/obligation-binding-history.js';
+import type {SwarmWorkerAssignment} from '../src/swarm-store.js';
 
 // Traceability: verifies REQ-SWARM-WORKTREES
 // Traceability: verifies REQ-SWARM-CLI
@@ -294,4 +300,92 @@ test('installed swarm CLI creates, reuses and resumes exact durable project setu
  const recreatedRevision=git(['rev-parse','HEAD']);assert.notEqual(recreatedRevision,retainedRevision);
  assert.equal(git(['rev-parse',`refs/ponytail/swarm/deleted/101/${recreatedRevision}`]),recreatedRevision);
  assert.equal(git(['show',`${retainedRevision}:retained-source.txt`]),'original source survives checkout deletion');
+});
+
+// Traceability: verifies REQ-SWARM-WORKTREES
+// Traceability: verifies REQ-ROLLING-SCHEDULING
+// Traceability: verifies REQ-ROLLING-WORKERS
+test('native campaign allocation freezes one lease on the original worker and resumes it without another checkout',async t=>{
+ const repositoryRoot=path.resolve(__dirname,'../..');
+ const root=fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(),'swarm-native-lease-')));
+ const mainRoot=path.join(root,'main');fs.mkdirSync(mainRoot);
+ const projectId=crypto.randomUUID(),pool=new Pool(databaseOptions(repositoryRoot));
+ t.after(async()=>{try{await pool.query('DELETE FROM ponytail_index.swarm_worktree_v1 WHERE project_id=$1',[projectId]);await pool.query('DELETE FROM ponytail_index.project_v1 WHERE project_id=$1',[projectId]);}finally{await pool.end();fs.rmSync(root,{recursive:true,force:true});}});
+ const git=(args:readonly string[]):string=>execFileSync('git',['-C',mainRoot,...args],{encoding:'utf8'}).trim();
+ git(['init','-q','-b','main']);
+ fs.mkdirSync(path.join(mainRoot,'.agents/config/project'),{recursive:true});
+ const rollingProjectConfigV2:RollingProjectConfigV2={schemaVersion:2,mainline:{remote:'origin',branch:'main'},managedWorktrees:{directory:path.join(root,'new-pool'),anchor:'main'},maxActiveWorkers:2,publicationSize:1,setupCommands:[],retirementCommands:[],qa:{focused:[],publication:[['node','--version']]}};
+ fs.writeFileSync(path.join(mainRoot,'.agents/config/project/rolling-campaigns.json'),JSON.stringify(rollingProjectConfigV2));
+ fs.writeFileSync(path.join(mainRoot,'.gitignore'),'/session_id.txt\n/ponytail-journal.json\n');
+ const sourceObligationDocumentV1:ObligationDocumentV1=readRollingObligationFixtureSource();
+ const originalObligationBaseline=sourceObligationDocumentV1.baselines[0];assert.ok(originalObligationBaseline);
+ for(const requirement of originalObligationBaseline.requirements){fs.mkdirSync(path.dirname(path.join(mainRoot,requirement.path)),{recursive:true});fs.copyFileSync(path.join(repositoryRoot,requirement.path),path.join(mainRoot,requirement.path));}
+ const obligationBaseline:ObligationBaseline={...originalObligationBaseline,requirements:originalObligationBaseline.requirements.map(requirement=>({...requirement,digest:inputDigest(mainRoot,requirement.path)}))};
+ const obligationDocumentV1:ObligationDocumentV1={...sourceObligationDocumentV1,scopeId:'native-fixture',baselines:[obligationBaseline],obligations:sourceObligationDocumentV1.obligations.filter(obligation=>obligationBaseline.obligationIds.includes(obligation.id)),certificates:[],checkpoints:[]};
+ const obligation=obligationDocumentV1.obligations[1];assert.ok(obligation);
+ const rollingBinding:RollingBinding={obligationId:obligation.id,implementationIds:[],sourcePaths:[],acceptances:[],unitTests:[],integrationTests:[],exclusiveResources:[]};
+ const rollingBindingsV1:RollingBindingsV1={schemaVersion:1,bindings:[rollingBinding]};
+ const obligationBindingRevisionV1:ObligationBindingRevisionV1={id:'BIND-1',obligationId:obligation.id,predecessorId:null,baselineId:obligationBaseline.id,assessor:'coordinator',authority:obligationBaseline.authority.references,reason:'Native assignment fixture',dependsOn:[],execution:{sprintId:null,taskletIds:[],plannedPaths:['fixture.ts'],operations:['inspect','edit','test'],selection:['fixture'],target:{identity:'local',profile:'fixture'}}};
+ const obligationBindingHistoryV1:ObligationBindingHistoryV1={schemaVersion:1,scopeId:'native-fixture',revisions:[obligationBindingRevisionV1]};
+ fs.writeFileSync(path.join(mainRoot,'obligations.json'),JSON.stringify(obligationDocumentV1));fs.writeFileSync(path.join(mainRoot,'bindings.json'),JSON.stringify(rollingBindingsV1));fs.writeFileSync(path.join(mainRoot,'history.json'),JSON.stringify(obligationBindingHistoryV1));
+ git(['add','.']);git(['-c','user.name=Fixture','-c','user.email=fixture@example.test','commit','-qm','fixture']);git(['branch','campaign/native-fixture']);
+ const hostRoot=path.join(root,'host/opaque/repo'),otherRoot=path.join(root,'other'),foreignHostRoot=path.join(root,'host/foreign/repo'),wrongScopeRoot=path.join(root,'host/wrong/repo');
+ for(const checkout of [hostRoot,otherRoot,foreignHostRoot,wrongScopeRoot])git(['worktree','add','-q','--detach',checkout,'HEAD']);
+ await pool.query('INSERT INTO ponytail_index.project_v1(project_id,project_name) VALUES($1,$2)',[projectId,`native-lease-${projectId}`]);
+ const historicalPool=path.join(root,'historical-pool');
+ await pool.query('INSERT INTO ponytail_index.rolling_pool_v1(project_id,managed_directory) VALUES($1,$2)',[projectId,historicalPool]);
+ const swarmStore=new SwarmStore(pool,projectId),rollingCampaignStore=new RollingCampaignStore(pool,projectId);
+ const gitCommonDirectory=fs.realpathSync(git(['rev-parse','--path-format=absolute','--git-common-dir']));
+ for(const ownerRoot of [mainRoot,otherRoot]){await swarmStore.enrollOwner({rootPath:ownerRoot,gitCommonDirectory});await swarmStore.bindCoordinator(ownerRoot,{rootPath:ownerRoot,threadId:ownerRoot,sessionId:ownerRoot});}
+ const nativeSessionId=crypto.randomUUID(),nativeThreadId=crypto.randomUUID(),foreignSessionId=crypto.randomUUID(),foreignThreadId=crypto.randomUUID();
+ const swarmWorktreeMembership=await swarmStore.enrollWorktree(mainRoot,hostRoot);
+ const foreignSwarmWorktreeMembership=await swarmStore.enrollWorktree(otherRoot,foreignHostRoot);
+ fs.writeFileSync(path.join(hostRoot,'session_id.txt'),nativeSessionId+'\n');fs.writeFileSync(path.join(hostRoot,'unfinished.txt'),'preserved source');
+ fs.writeFileSync(path.join(foreignHostRoot,'session_id.txt'),foreignSessionId+'\n');
+ const swarmWorkerAssignment:SwarmWorkerAssignment={kind:'plan',id:'native-fixture',summary:'Native frozen assignment'};
+ const swarmWorkerBinding=await swarmStore.bindWorker(swarmWorktreeMembership,{rootPath:hostRoot,threadId:nativeThreadId,sessionId:nativeSessionId},swarmWorkerAssignment);
+ const foreignSwarmWorkerBinding=await swarmStore.bindWorker(foreignSwarmWorktreeMembership,{rootPath:foreignHostRoot,threadId:foreignThreadId,sessionId:foreignSessionId},swarmWorkerAssignment);
+ const wrongSwarmWorktreeMembership=await swarmStore.enrollWorktree(mainRoot,wrongScopeRoot);
+ const wrongSessionId=crypto.randomUUID();fs.writeFileSync(path.join(wrongScopeRoot,'session_id.txt'),wrongSessionId+'\n');
+ const wrongSwarmWorkerAssignment:SwarmWorkerAssignment={kind:'plan',id:'different-plan',summary:'Different native assignment'};
+ const wrongSwarmWorkerBinding=await swarmStore.bindWorker(wrongSwarmWorktreeMembership,{rootPath:wrongScopeRoot,threadId:crypto.randomUUID(),sessionId:wrongSessionId},wrongSwarmWorkerAssignment);
+ const rollingGraph=collectRollingGraph(mainRoot,'obligations.json','bindings.json','history.json');
+ await rollingCampaignStore.registerCampaign({id:'native-fixture',coordinatorRoot:mainRoot,documentPath:'obligations.json',bindingsPath:'bindings.json',graphDigest:rollingGraph.digest,managedDirectory:rollingProjectConfigV2.managedWorktrees.directory,configuration:{mainline:{remote:'origin',branch:'main'},incrementRef:'campaign/native-fixture',maxActiveWorkers:2,publicationSize:1},bindingHistory:{path:'history.json',assessor:'coordinator',authority:obligationBaseline.authority.references}});
+ const rollingNativeWorkerSelection:RollingNativeWorkerSelection={sessionId:swarmWorkerBinding.sessionId,workerGeneration:swarmWorkerBinding.generation,worktreeGeneration:swarmWorkerBinding.worktreeGeneration};
+ await assert.rejects(rollingCampaignStore.allocate('native-fixture',rollingGraph.digest),/explicit worker selectors/);
+ const wrongRollingNativeWorkerSelection:RollingNativeWorkerSelection={sessionId:wrongSwarmWorkerBinding.sessionId,workerGeneration:wrongSwarmWorkerBinding.generation,worktreeGeneration:wrongSwarmWorkerBinding.worktreeGeneration};
+ await assert.rejects(rollingCampaignStore.allocate('native-fixture',rollingGraph.digest,null,true,wrongRollingNativeWorkerSelection),/assignment differs/);
+ await assert.rejects(rollingCampaignStore.allocate('native-fixture','stale',null,true,rollingNativeWorkerSelection),/stale/);
+ await assert.rejects(rollingCampaignStore.allocate('native-fixture',rollingGraph.digest,null,true,{...rollingNativeWorkerSelection,workerGeneration:crypto.randomUUID()}),/generation changed/);
+ await assert.rejects(rollingCampaignStore.allocate('native-fixture',rollingGraph.digest,null,true,{...rollingNativeWorkerSelection,worktreeGeneration:crypto.randomUUID()}),/generation changed/);
+ await assert.rejects(rollingCampaignStore.allocate('native-fixture',rollingGraph.digest,null,true,{sessionId:foreignSwarmWorkerBinding.sessionId,workerGeneration:foreignSwarmWorkerBinding.generation,worktreeGeneration:foreignSwarmWorkerBinding.worktreeGeneration}),/owner or coordinator differs/);
+ fs.writeFileSync(path.join(hostRoot,'session_id.txt'),'wrong-session\n');
+ await assert.rejects(rollingCampaignStore.allocate('native-fixture',rollingGraph.digest,null,true,rollingNativeWorkerSelection),/marker differs/);
+ fs.writeFileSync(path.join(hostRoot,'session_id.txt'),nativeSessionId+'\n');
+ assert.equal((await rollingCampaignStore.status('native-fixture')).assignments.length,0);
+ const journal:unknown=JSON.parse(fs.readFileSync(path.join(repositoryRoot,'ponytail-journal.json'),'utf8'));assert.ok(journal!==null&&typeof journal==='object'&&!Array.isArray(journal));
+ fs.writeFileSync(path.join(mainRoot,'ponytail-journal.json'),JSON.stringify({...journal,projectId}));
+ const args=['replenish','--campaign','native-fixture','--worker-session',rollingNativeWorkerSelection.sessionId,'--worker-generation',rollingNativeWorkerSelection.workerGeneration,'--worktree-generation',rollingNativeWorkerSelection.worktreeGeneration,'--existing-only','true'];
+ const result=spawnSync(process.execPath,[path.join(repositoryRoot,'src/rolling-operations.js'),...args],{cwd:mainRoot,encoding:'utf8'});assert.equal(result.status,0,result.stderr);
+ const response:unknown=JSON.parse(result.stdout);
+ assert.ok(response!==null&&typeof response==='object'&&'result' in response);
+ assert.ok(response.result!==null&&typeof response.result==='object'&&'allocations' in response.result&&Array.isArray(response.result.allocations));
+ assert.equal(response.result.allocations.length,1,'an explicit native worker request allocates one slot only');
+ const first=(await rollingCampaignStore.status('native-fixture')).assignments[0];assert.ok(first?.lease);
+ assert.equal(first.sessionId,swarmWorkerBinding.sessionId);assert.equal(first.worktreeNumber,swarmWorktreeMembership.number);assert.equal(first.state,'WORKING');assert.equal(first.lease.generation,first.generation);
+ assert.notEqual(first.generation,swarmWorktreeMembership.generation);
+ const retries=await Promise.all([rollingCampaignStore.allocate('native-fixture',rollingGraph.digest,null,true,rollingNativeWorkerSelection),rollingCampaignStore.allocate('native-fixture',rollingGraph.digest,null,true,rollingNativeWorkerSelection)]);
+ assert.ok(retries.every(allocation=>allocation.assignment?.id===first.id&&allocation.assignment.generation===first.generation));
+ assert.deepEqual(await swarmStore.workerBinding(mainRoot,swarmWorkerBinding.sessionId,swarmWorkerBinding.generation),swarmWorkerBinding);
+ const rollingCampaignOperations=new RollingCampaignOperations(rollingCampaignStore,mainRoot);
+ assert.ok((await rollingCampaignOperations.nextActions('native-fixture')).decisions.some(decision=>decision.kind==='host-assignment'&&decision.hostAction==='send-assignment'&&decision.assignment.id===first.id));
+ await swarmStore.recordWorkerInactive(mainRoot,swarmWorkerBinding.sessionId,swarmWorkerBinding.generation,first.generation,[]);
+ const resumed=await rollingCampaignStore.allocate('native-fixture',rollingGraph.digest,null,true,rollingNativeWorkerSelection);assert.ok(resumed.assignment&&resumed.actionId);
+ assert.equal(resumed.assignment.id,first.id);assert.notEqual(resumed.assignment.generation,first.generation);assert.equal(resumed.assignment.sessionId,swarmWorkerBinding.sessionId);
+ assert.deepEqual(await swarmStore.bindWorker(swarmWorktreeMembership,{rootPath:hostRoot,threadId:swarmWorkerBinding.threadId,sessionId:swarmWorkerBinding.sessionId},swarmWorkerAssignment,resumed.assignment.generation),swarmWorkerBinding);
+ assert.equal((await rollingCampaignStore.status('native-fixture')).assignments[0]?.state,'WORKING');
+ assert.equal((await pool.query<Record<string,unknown>>('SELECT count(*) AS count FROM ponytail_index.rolling_worktree_v1 WHERE project_id=$1',[projectId])).rows[0]?.count,'3');
+ assert.equal((await pool.query<Record<string,unknown>>('SELECT managed_directory FROM ponytail_index.rolling_pool_v1 WHERE project_id=$1',[projectId])).rows[0]?.managed_directory,historicalPool);
+ assert.equal(fs.existsSync(historicalPool),false);assert.equal(fs.readFileSync(path.join(hostRoot,'unfinished.txt'),'utf8'),'preserved source');
+ assert.ok(git(['worktree','list','--porcelain']).includes(hostRoot));
 });

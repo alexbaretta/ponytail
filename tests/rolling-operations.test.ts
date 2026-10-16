@@ -262,6 +262,9 @@ test('existing-only CLI admission rejects nonboolean boundary data before databa
   const rollingCampaignStore=new RollingCampaignStore(pool,'00000000-0000-0000-0000-000000000001');
   const rollingCampaignOperations=new RollingCampaignOperations(rollingCampaignStore,'/unused');
   await assert.rejects(rollingCampaignOperations.execute('replenish',{campaign:'pilot','existing-only':'true'}),/existing-only must be boolean/);
+  const incompleteNativeSelectors:readonly unknown[]=[{campaign:'pilot','worker-session':'session'},
+   {campaign:'pilot','worker-generation':'generation'},{campaign:'pilot','worktree-generation':'generation'}];
+  for(const input of incompleteNativeSelectors)await assert.rejects(rollingCampaignOperations.execute('replenish',input),/worker-session|worker-generation/);
  } finally {await pool.end();}
 });
 

@@ -148,6 +148,13 @@ services. `PROJECT_STRUCTURE.md` is authoritative for that boundary.
 - Rolling worker attachment focused proof: `node --test dist/tests/rolling-worker.test.js
   dist/tests/rolling-campaign-store.integration.test.js`; actual native provisioning
   uses the explicit live native acceptance command above.
+- Native campaign allocation: `ponytail campaign replenish --campaign <id>
+  --worker-session <session-id> --worker-generation <worker-uuid>
+  --worktree-generation <membership-uuid>` allocates one frozen assignment on
+  an already-bound original worker after host quiescence. Preserves its session,
+  root and membership generations; no second checkout or native API is used.
+  Focused proof: `node --test --test-name-pattern="native campaign allocation"
+  dist/tests/swarm-worktrees.integration.test.js`.
 - Original worker admission: `ponytail swarm worker-bind --thread <id> --session
   <id> --number <n> --generation <worktree-uuid> --kind <plan|sprint> --assignment
   <full-id> --summary "three word summary" [--lease-generation <campaign-uuid>] [--json]`. Requires an enrolled owner,

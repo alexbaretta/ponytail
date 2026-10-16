@@ -34,6 +34,7 @@ const rolling_worker_submission_js_1 = require("./rolling-worker-submission.js")
 const obligation_binding_history_js_1 = require("../skills/plan-execution/scripts/obligation-binding-history.js");
 const obligations_js_1 = require("../skills/plan-execution/scripts/obligations.js");
 const obligation_certificate_bindings_js_1 = require("../skills/plan-execution/scripts/obligation-certificate-bindings.js");
+const swarm_store_js_1 = require("./swarm-store.js");
 const rolling_worker_js_1 = require("./rolling-worker.js");
 const rolling_worktrees_js_1 = require("./rolling-worktrees.js");
 const rolling_review_js_1 = require("./rolling-review.js");
@@ -422,7 +423,11 @@ class RollingCampaignStore {
             requireState(pendingReset.length === 0, 'project reset is pending; resume reset before scheduling');
             await poolClient.query('INSERT INTO ponytail_index.rolling_pool_v1(project_id,managed_directory) VALUES($1,$2) ON CONFLICT DO NOTHING', [this.projectId, request.managedDirectory]);
             const pool = (await poolClient.query('SELECT managed_directory FROM ponytail_index.rolling_pool_v1 WHERE project_id=$1 FOR UPDATE', [this.projectId])).rows[0];
-            requireState(readPool(pool).managed_directory === request.managedDirectory, 'managed directory differs from project pool');
+            if (readPool(pool).managed_directory !== request.managedDirectory) {
+                const native = (await poolClient.query(`SELECT n.root_path,k.worktree_number FROM ponytail_index.swarm_worker_v1 k
+          JOIN ponytail_index.swarm_native_session_v1 n USING(session_id) WHERE k.project_id=$1 AND k.owner_root=$2 AND k.state='BOUND'`, [this.projectId, request.coordinatorRoot])).rows;
+                requireState(native.some(row => row.root_path !== node_path_1.default.join(readPool(pool).managed_directory, String(row.worktree_number))), 'managed directory differs from project pool');
+            }
             await poolClient.query('INSERT INTO ponytail_index.rolling_campaign_v1(project_id,campaign_id,coordinator_root,document_path,bindings_path,graph_digest,configuration_text) VALUES($1,$2,$3,$4,$5,$6,$7) ON CONFLICT (project_id,campaign_id) DO NOTHING', [this.projectId, request.id, rollingGraph.coordinatorRoot, request.documentPath, request.bindingsPath, rollingGraph.digest, JSON.stringify(rollingExecutionConfigV3)]);
             const registeredRollingCampaignRow = readCampaign((await poolClient.query('SELECT c.*, (SELECT receipt_text FROM ponytail_index.rolling_campaign_closure_v1 r WHERE r.project_id=c.project_id AND r.campaign_id=c.campaign_id) AS closure_text FROM ponytail_index.rolling_campaign_v1 c WHERE c.project_id=$1 AND c.campaign_id=$2', [this.projectId, request.id])).rows[0]);
             requireState(registeredRollingCampaignRow.closure_text === null, 'campaign is closed');
@@ -1614,7 +1619,12 @@ class RollingCampaignStore {
             return { id, generation: nextGeneration, lease: rollingAssignmentScopeV3.execution.lease };
         });
     }
-    async allocate(campaignId, expectedDigest, release = null, existingOnly = false) {
+    async allocate(campaignId, expectedDigest, release = null, existingOnly = false, rollingNativeWorkerSelection = null) {
+        if (rollingNativeWorkerSelection !== null) {
+            requireState(rollingNativeWorkerSelection.sessionId.trim() === rollingNativeWorkerSelection.sessionId && rollingNativeWorkerSelection.sessionId.length > 0, 'native session must be nonempty without surrounding whitespace');
+            for (const generation of [rollingNativeWorkerSelection.workerGeneration, rollingNativeWorkerSelection.worktreeGeneration])
+                requireState(/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/u.test(generation), 'native worker selectors require exact UUID generations');
+        }
         return this.transaction(campaignId, async (poolClient, rollingCampaignRow, rollingPoolRow) => {
             const rollingGraph = this.graph(rollingCampaignRow, expectedDigest);
             if (release) {
@@ -1629,6 +1639,45 @@ class RollingCampaignStore {
                 await poolClient.query("UPDATE ponytail_index.rolling_worktree_v1 SET state='AVAILABLE' WHERE project_id=$1 AND number=$2", [this.projectId, row.worktreeNumber]);
             }
             const assignments = (await poolClient.query("SELECT * FROM ponytail_index.rolling_assignment_v1 WHERE project_id=$1 AND state<>'RELEASED' ORDER BY created_at,assignment_id", [this.projectId])).rows.map(readAssignment);
+            let swarmWorkerBinding = null;
+            if (rollingNativeWorkerSelection !== null) {
+                const row = (await poolClient.query(`SELECT k.*,n.thread_id,n.root_path,m.generation AS membership_generation,m.owner_root AS membership_owner,
+          w.root_path AS checkout_root,w.state AS checkout_state,o.coordinator_session_id,o.git_common_directory FROM ponytail_index.swarm_worker_v1 k
+          JOIN ponytail_index.swarm_native_session_v1 n USING(session_id)
+          JOIN ponytail_index.swarm_worktree_v1 m ON m.project_id=k.project_id AND m.number=k.worktree_number
+          JOIN ponytail_index.rolling_worktree_v1 w ON w.project_id=m.project_id AND w.number=m.number
+          JOIN ponytail_index.swarm_owner_v1 o ON o.project_id=k.project_id AND o.owner_root=k.owner_root
+          WHERE k.project_id=$1 AND k.session_id=$2
+          AND NOT EXISTS(SELECT 1 FROM ponytail_index.swarm_worktree_deletion_v1 d WHERE d.project_id=k.project_id AND d.number=k.worktree_number) FOR UPDATE OF k,m,w,o`, [this.projectId, rollingNativeWorkerSelection.sessionId])).rows[0];
+                requireState(row !== undefined, 'native worker is not bound to an enrolled checkout');
+                swarmWorkerBinding = (0, swarm_store_js_1.readWorker)(row);
+                requireState(swarmWorkerBinding.state === 'BOUND' && !swarmWorkerBinding.completed
+                    && swarmWorkerBinding.ownerRoot === rollingCampaignRow.coordinator_root && row.membership_owner === swarmWorkerBinding.ownerRoot
+                    && typeof row.coordinator_session_id === 'string' && node_fs_1.default.realpathSync(rollingCampaignRow.coordinator_root) === rollingCampaignRow.coordinator_root
+                    && (row.checkout_state === 'ACTIVE' || row.checkout_state === 'RESERVED'), 'native worker owner or coordinator differs');
+                requireState(swarmWorkerBinding.generation === rollingNativeWorkerSelection.workerGeneration
+                    && swarmWorkerBinding.worktreeGeneration === rollingNativeWorkerSelection.worktreeGeneration
+                    && row.membership_generation === rollingNativeWorkerSelection.worktreeGeneration, 'native worker or checkout generation changed');
+                requireState(row.checkout_root === swarmWorkerBinding.rootPath && node_fs_1.default.realpathSync(swarmWorkerBinding.rootPath) === swarmWorkerBinding.rootPath
+                    && (0, rolling_integration_js_1.git)(swarmWorkerBinding.rootPath, ['rev-parse', '--show-toplevel']).trim() === swarmWorkerBinding.rootPath
+                    && (0, rolling_integration_js_1.git)(rollingCampaignRow.coordinator_root, ['worktree', 'list', '--porcelain', '-z']).split('\0').includes(`worktree ${swarmWorkerBinding.rootPath}`)
+                    && node_fs_1.default.realpathSync((0, rolling_integration_js_1.git)(swarmWorkerBinding.rootPath, ['rev-parse', '--path-format=absolute', '--git-common-dir']).trim()) === row.git_common_directory, 'native worker checkout identity changed');
+                (0, rolling_worktrees_js_1.requireRollingGitOperationAbsent)(swarmWorkerBinding.rootPath);
+                (0, rolling_worktrees_js_1.validateRollingSessionMarker)(swarmWorkerBinding.rootPath, swarmWorkerBinding.sessionId);
+                const owners = assignments.filter(assignment => assignment.worktreeNumber === swarmWorkerBinding?.worktreeNumber);
+                requireState(owners.length <= 1, 'native checkout has multiple campaign owners');
+                const owner = owners[0];
+                if (owner !== undefined) {
+                    requireState(owner.scopeId === campaignId && owner.sessionId === swarmWorkerBinding.sessionId && !owner.retired, 'native worker has another campaign owner');
+                    if (owner.state !== 'INACTIVE') {
+                        this.currentLease(owner, rollingGraph);
+                        const action = (await poolClient.query(`SELECT * FROM ponytail_index.rolling_action_v1 WHERE project_id=$1 AND assignment_id=$2 AND generation=$3
+              AND kind IN ('START_WORKER','RESUME_WORKER') ORDER BY created_at DESC LIMIT 1`, [this.projectId, owner.id, owner.generation])).rows[0];
+                        requireState(action !== undefined, 'native worker admission action is missing');
+                        return { assignment: owner, worktree: { number: swarmWorkerBinding.worktreeNumber, rootPath: swarmWorkerBinding.rootPath }, actionId: readAction(action).id, reason: null };
+                    }
+                }
+            }
             const rollingExecutionConfigV3 = parseRollingExecutionConfig(rollingCampaignRow.configuration_text);
             const rollingSchedulingResult = (0, rolling_campaign_js_1.selectRollingAssignments)(rollingGraph, assignments, rollingExecutionConfigV3.maxActiveWorkers, expectedDigest);
             const selected = rollingSchedulingResult.selected[0];
@@ -1636,9 +1685,16 @@ class RollingCampaignStore {
                 return { assignment: null, reason: rollingSchedulingResult.activeCount >= rollingExecutionConfigV3.maxActiveWorkers ? 'capacity_reached' : 'no_ready_obligation', blocked: rollingSchedulingResult.blocked };
             const generation = node_crypto_1.default.randomUUID();
             const rollingAssignmentScopeV3 = this.scope(rollingGraph, rollingExecutionConfigV3, generation, selected.obligationId, selected.binding, selected.plannedPaths);
+            if (swarmWorkerBinding !== null) {
+                requireState(rollingAssignmentScopeV3.execution.kind === 'leased', 'native allocation requires adopted frozen binding history');
+                requireState(swarmWorkerBinding.assignment.kind === 'plan' ? swarmWorkerBinding.assignment.id === campaignId
+                    : swarmWorkerBinding.assignment.id === rollingAssignmentScopeV3.execution.lease.binding.execution.sprintId, 'native worker assignment differs from campaign scope');
+                const owner = assignments.find(assignment => assignment.worktreeNumber === swarmWorkerBinding?.worktreeNumber);
+                requireState(owner === undefined ? selected.kind === 'start_worker' : selected.assignmentId === owner.id, 'resume the selected original worker before allocating another obligation');
+            }
             let id = selected.assignmentId;
             let worktree;
-            const rollingManagedDirectory = existingOnly ? (0, rolling_worktrees_js_1.resolveRollingManagedDirectory)(rollingCampaignRow.coordinator_root) : null;
+            const rollingManagedDirectory = existingOnly && swarmWorkerBinding === null ? (0, rolling_worktrees_js_1.resolveRollingManagedDirectory)(rollingCampaignRow.coordinator_root) : null;
             function validateExistingCheckout(rootPath, sessionId = null, expectedNumber = null) {
                 requireState(rollingManagedDirectory !== null && rollingManagedDirectory.worktrees.includes(rootPath) && node_fs_1.default.existsSync(rootPath) && node_fs_1.default.realpathSync(rootPath) === rootPath, 'available checkout has no registered physical root');
                 requireState(node_fs_1.default.realpathSync((0, rolling_integration_js_1.git)(rootPath, ['rev-parse', '--path-format=absolute', '--git-common-dir']).trim()) === node_fs_1.default.realpathSync((0, rolling_integration_js_1.git)(rollingCampaignRow.coordinator_root, ['rev-parse', '--path-format=absolute', '--git-common-dir']).trim()), 'pool checkout belongs to another repository');
@@ -1655,43 +1711,54 @@ class RollingCampaignStore {
                 const assignment = assignments.find(item => item.id === id);
                 requireState(assignment && assignment.sessionId, 'inactive assignment has no resumable session');
                 worktree = readWorktree((await poolClient.query('SELECT * FROM ponytail_index.rolling_worktree_v1 WHERE project_id=$1 AND number=$2', [this.projectId, assignment.worktreeNumber])).rows[0]);
-                if (existingOnly)
+                if (existingOnly && swarmWorkerBinding === null)
                     validateExistingCheckout(worktree.rootPath, assignment.sessionId, worktree.number);
+                if (swarmWorkerBinding !== null)
+                    requireState(assignment.sessionId === swarmWorkerBinding.sessionId && assignment.worktreeNumber === swarmWorkerBinding.worktreeNumber, 'selected retained assignment belongs to another worker');
                 await poolClient.query("UPDATE ponytail_index.rolling_assignment_v1 SET generation=$2,state='RESERVED',activity_stopped=false,blockers_text='[]',scope_text=$3 WHERE assignment_id=$1", [id, generation, JSON.stringify(rollingAssignmentScopeV3)]);
             }
             else {
-                if (rollingManagedDirectory !== null) {
-                    requireState(rollingManagedDirectory.directory === rollingPoolRow.managed_directory, 'physical pool differs from retained database identity');
-                    const known = (await poolClient.query('SELECT root_path FROM ponytail_index.rolling_worktree_v1 WHERE project_id=$1', [this.projectId])).rows;
-                    for (const rootPath of rollingManagedDirectory.worktrees) {
-                        const number = Number(node_path_1.default.basename(rootPath));
-                        if (node_path_1.default.dirname(rootPath) !== rollingManagedDirectory.directory || !Number.isSafeInteger(number) || number < 101 || String(number) !== node_path_1.default.basename(rootPath) || known.some(row => row.root_path === rootPath))
-                            continue;
-                        validateExistingCheckout(rootPath);
-                        await poolClient.query("INSERT INTO ponytail_index.rolling_worktree_v1(project_id,number,root_path,state) VALUES($1,$2,$3,'AVAILABLE')", [this.projectId, number, rootPath]);
-                    }
+                if (swarmWorkerBinding !== null) {
+                    worktree = readWorktree((await poolClient.query('SELECT * FROM ponytail_index.rolling_worktree_v1 WHERE project_id=$1 AND number=$2 FOR UPDATE', [this.projectId, swarmWorkerBinding.worktreeNumber])).rows[0]);
                 }
-                const available = (await poolClient.query(`SELECT w.* FROM ponytail_index.rolling_worktree_v1 w WHERE w.project_id=$1 AND w.state='AVAILABLE'
+                else {
+                    const bound = (await poolClient.query(`SELECT n.root_path,k.worktree_number FROM ponytail_index.swarm_worker_v1 k
+          JOIN ponytail_index.swarm_native_session_v1 n USING(session_id) WHERE k.project_id=$1 AND k.owner_root=$2 AND k.state='BOUND'`, [this.projectId, rollingCampaignRow.coordinator_root])).rows;
+                    requireState(!bound.some(row => row.root_path !== node_path_1.default.join(rollingPoolRow.managed_directory, String(row.worktree_number))), 'native swarm allocation requires explicit worker selectors; preserve existing checkouts');
+                    if (existingOnly) {
+                        requireState(rollingManagedDirectory !== null, 'numbered allocation requires owner configuration');
+                        requireState(rollingManagedDirectory.directory === rollingPoolRow.managed_directory, 'physical pool differs from retained database identity');
+                        const known = (await poolClient.query('SELECT root_path FROM ponytail_index.rolling_worktree_v1 WHERE project_id=$1', [this.projectId])).rows;
+                        for (const rootPath of rollingManagedDirectory.worktrees) {
+                            const number = Number(node_path_1.default.basename(rootPath));
+                            if (node_path_1.default.dirname(rootPath) !== rollingManagedDirectory.directory || !Number.isSafeInteger(number) || number < 101 || String(number) !== node_path_1.default.basename(rootPath) || known.some(row => row.root_path === rootPath))
+                                continue;
+                            validateExistingCheckout(rootPath);
+                            await poolClient.query("INSERT INTO ponytail_index.rolling_worktree_v1(project_id,number,root_path,state) VALUES($1,$2,$3,'AVAILABLE')", [this.projectId, number, rootPath]);
+                        }
+                    }
+                    const available = (await poolClient.query(`SELECT w.* FROM ponytail_index.rolling_worktree_v1 w WHERE w.project_id=$1 AND w.state='AVAILABLE'
           AND NOT EXISTS(SELECT 1 FROM ponytail_index.swarm_worktree_v1 s WHERE s.project_id=w.project_id AND s.number=w.number)
           AND NOT EXISTS(SELECT 1 FROM ponytail_index.swarm_worktree_deletion_v1 d WHERE d.project_id=w.project_id AND d.number=w.number)
           ORDER BY w.number LIMIT 1`, [this.projectId])).rows[0];
-                if (existingOnly && !available)
-                    return { assignment: null, reason: 'no_available_worktree' };
-                if (available) {
-                    worktree = readWorktree(available);
-                    if (existingOnly)
-                        validateExistingCheckout(worktree.rootPath, null, worktree.number);
-                }
-                else {
-                    const numbers = (await poolClient.query('SELECT number FROM ponytail_index.rolling_worktree_v1 WHERE project_id=$1 ORDER BY number', [this.projectId])).rows;
-                    let number = 101;
-                    for (const row of numbers) {
-                        if (worktreeNumber(row.number) !== number)
-                            break;
-                        number++;
+                    if (existingOnly && !available)
+                        return { assignment: null, reason: 'no_available_worktree' };
+                    if (available) {
+                        worktree = readWorktree(available);
+                        if (existingOnly)
+                            validateExistingCheckout(worktree.rootPath, null, worktree.number);
                     }
-                    requireState(Number.isSafeInteger(number), 'worktree numbers exhausted');
-                    worktree = readWorktree((await poolClient.query("INSERT INTO ponytail_index.rolling_worktree_v1(project_id,number,root_path,state) VALUES($1,$2,$3,'PROVISIONING') RETURNING *", [this.projectId, number, node_path_1.default.join(rollingPoolRow.managed_directory, String(number))])).rows[0]);
+                    else {
+                        const numbers = (await poolClient.query('SELECT number FROM ponytail_index.rolling_worktree_v1 WHERE project_id=$1 ORDER BY number', [this.projectId])).rows;
+                        let number = 101;
+                        for (const row of numbers) {
+                            if (worktreeNumber(row.number) !== number)
+                                break;
+                            number++;
+                        }
+                        requireState(Number.isSafeInteger(number), 'worktree numbers exhausted');
+                        worktree = readWorktree((await poolClient.query("INSERT INTO ponytail_index.rolling_worktree_v1(project_id,number,root_path,state) VALUES($1,$2,$3,'PROVISIONING') RETURNING *", [this.projectId, number, node_path_1.default.join(rollingPoolRow.managed_directory, String(number))])).rows[0]);
+                    }
                 }
                 id = node_crypto_1.default.randomUUID();
                 await poolClient.query("INSERT INTO ponytail_index.rolling_assignment_v1(project_id,campaign_id,assignment_id,obligation_id,worktree_number,generation,state,scope_text) VALUES($1,$2,$3,$4,$5,$6,'RESERVED',$7)", [this.projectId, campaignId, id, selected.obligationId, worktree.number, generation,
@@ -1699,7 +1766,7 @@ class RollingCampaignStore {
             }
             if (worktree.state !== 'PROVISIONING')
                 await poolClient.query("UPDATE ponytail_index.rolling_worktree_v1 SET state='RESERVED' WHERE project_id=$1 AND number=$2", [this.projectId, worktree.number]);
-            if (selected.kind === 'start_worker') {
+            if (selected.kind === 'start_worker' && swarmWorkerBinding === null) {
                 const owner = (await poolClient.query('SELECT coordinator_session_id FROM ponytail_index.swarm_owner_v1 WHERE project_id=$1 AND owner_root=$2 FOR UPDATE', [this.projectId, rollingCampaignRow.coordinator_root])).rows[0];
                 if (owner !== undefined) {
                     requireState(owner.coordinator_session_id !== null, 'swarm coordinator must be bound before campaign allocation');
@@ -1710,6 +1777,11 @@ class RollingCampaignStore {
             }
             const actionId = node_crypto_1.default.randomUUID();
             await poolClient.query("INSERT INTO ponytail_index.rolling_action_v1(project_id,campaign_id,action_id,assignment_id,kind,generation,state) VALUES($1,$2,$3,$4,$5,$6,'PENDING')", [this.projectId, campaignId, actionId, id, selected.kind === 'resume_worker' ? 'RESUME_WORKER' : 'START_WORKER', generation]);
+            if (swarmWorkerBinding !== null && selected.kind === 'start_worker') {
+                const rollingWorkerCreationV1 = { schemaVersion: 1, sessionId: swarmWorkerBinding.sessionId, threadId: swarmWorkerBinding.threadId, rootPath: swarmWorkerBinding.rootPath };
+                await poolClient.query("UPDATE ponytail_index.rolling_action_v1 SET state='COMPLETED',result_text=$2 WHERE action_id=$1", [actionId, JSON.stringify(rollingWorkerCreationV1)]);
+                await this.attachWorkerSession(poolClient, readAssignment((await poolClient.query('SELECT * FROM ponytail_index.rolling_assignment_v1 WHERE assignment_id=$1', [id])).rows[0]), swarmWorkerBinding.sessionId);
+            }
             const row = (await poolClient.query('SELECT * FROM ponytail_index.rolling_assignment_v1 WHERE assignment_id=$1', [id])).rows[0];
             return { assignment: readAssignment(row), worktree: { number: worktree.number, rootPath: worktree.rootPath }, actionId, reason: null };
         });

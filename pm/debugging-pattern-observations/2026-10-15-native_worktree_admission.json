@@ -3,7 +3,7 @@
   "observation_id": "2026-10-15-native_worktree_admission",
   "recorded_at": "2026-10-15T23:58:50-07:00",
   "source_references": [
-    "pm/plans/in_progress/2026-10-15-native-fork-swarm/plan.md",
+    "pm/plans/closed/2026-10-15-native-fork-swarm/plan.md",
     "pm/requirements/swarms.md#req-swarm-worktrees-transferable-managed-resources"
   ],
   "context": {

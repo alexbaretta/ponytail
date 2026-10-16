@@ -479,7 +479,9 @@ class RollingCampaignOperations {
                 }
                 if (input['existing-only'] !== undefined && typeof input['existing-only'] !== 'boolean')
                     throw new Error('rolling campaign: existing-only must be boolean');
-                return { command, result: await this.replenish(stringField(input, 'campaign'), trigger, rollingAssignmentRelease, input['existing-only'] === true) };
+                const rollingNativeWorkerSelection = ['worker-session', 'worker-generation', 'worktree-generation'].some(key => input[key] !== undefined)
+                    ? { sessionId: stringField(input, 'worker-session'), workerGeneration: stringField(input, 'worker-generation'), worktreeGeneration: stringField(input, 'worktree-generation') } : null;
+                return { command, result: await this.replenish(stringField(input, 'campaign'), trigger, rollingAssignmentRelease, input['existing-only'] === true, rollingNativeWorkerSelection) };
             }
             case 'provision-worker': return { command, result: await this.native(signal, async (rollingCodex) => {
                     const campaignId = stringField(input, 'campaign'), actionId = stringField(input, 'action'), generation = stringField(input, 'generation');
@@ -565,13 +567,13 @@ class RollingCampaignOperations {
             case 'close': return { command, result: await this.rollingCampaignStore.closeCampaign(stringField(input, 'campaign')) };
         }
     }
-    async replenish(campaignId, trigger, rollingAssignmentRelease = null, existingOnly = false) {
+    async replenish(campaignId, trigger, rollingAssignmentRelease = null, existingOnly = false, rollingNativeWorkerSelection = null) {
         const rollingGraphReconciliation = await this.reconcile(campaignId);
         const initialRollingCoordinatorSnapshot = await this.status(campaignId);
         const allocations = [];
         let stopReason = null;
-        for (let index = 0; index < initialRollingCoordinatorSnapshot.configuration.maxActiveWorkers; index++) {
-            const rollingAllocationResult = await this.rollingCampaignStore.allocate(campaignId, rollingGraphReconciliation.graphDigest, index === 0 && rollingAssignmentRelease !== null ? rollingAssignmentRelease : undefined, existingOnly);
+        for (let index = 0; index < (rollingNativeWorkerSelection === null ? initialRollingCoordinatorSnapshot.configuration.maxActiveWorkers : 1); index++) {
+            const rollingAllocationResult = await this.rollingCampaignStore.allocate(campaignId, rollingGraphReconciliation.graphDigest, index === 0 && rollingAssignmentRelease !== null ? rollingAssignmentRelease : undefined, existingOnly, rollingNativeWorkerSelection);
             if (rollingAllocationResult.assignment === null) {
                 stopReason = rollingAllocationResult.reason;
                 break;

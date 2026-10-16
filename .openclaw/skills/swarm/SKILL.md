@@ -132,6 +132,30 @@ Queue further setup while completing started setup; keep source-only work moving
    records the host identity against its original pending campaign action, using
    the current graph and exact plan/sprint scope. It starts no session. The worker has a permanent origin
    owner and checkout; do not invent identifiers or bind it elsewhere.
+   For a first campaign lease on an already-bound native worker, initialize the
+   authorized campaign and reconcile its adopted binding history. Establish
+   quiescence through host tools, then invoke from the owner:
+
+   ```text
+   ponytail campaign replenish --campaign <id> --worker-session <session-id> --worker-generation <worker-uuid> --worktree-generation <membership-uuid>
+   ```
+
+   All three worker selectors are required together and come from current
+   `swarm info`. This reserves at most one dependency-ready obligation through
+   the existing scheduler, freezes its lease and records admission of the
+   already-created original worker. It preserves its thread, session, root and
+   worker/checkout generations; the new assignment generation is separate.
+   Retrying a current allocation returns that same assignment. No second root,
+   session operation or fabricated identity is needed. An owner with native
+   workers must supply these selectors for a new allocation. Native admission
+   preserves historical numbered-pool metadata; numbered allocation still
+   requires owner configuration to match that recorded pool.
+   Read back `campaign status`/`next-actions`, carry the frozen assignment and
+   generation into the exact worker instructions, and follow the normal
+   submission/review/acceptance path. For an inactive original native worker,
+   use the same selectors; replenishment records the normal pending resumption,
+   and `worker-bind` with its returned `--lease-generation` completes it.
+   Campaign initialization/publication gates remain independently applicable.
 5. For initialization-only admission, stop after binding, naming and read-back;
    do not analyze a plan, run tests, adopt runtime resources or dispatch product
    work. Creation, admission and executing an assignment are distinct stages.

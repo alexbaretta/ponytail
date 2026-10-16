@@ -35,7 +35,7 @@ not this command, establishes session quiescence before invocation.
 Traceability: verifies REQ-SWARM-WORKTREES
 Traceability: verifies REQ-SWARM-SKILL
 
-**Acceptances:** OBL-17, OBL-18. A native worker has its own checkout and retains the
+**Acceptances:** OBL-17, OBL-18, OBL-19. A native worker has its own checkout and retains the
 coordinator's exact non-null host project ID.
 
 1. Freeze the coordinator project ID. Create a fresh project-targeted session
@@ -60,6 +60,14 @@ coordinator's exact non-null host project ID.
    evidence of the active goal and acceptance conditions, and verify work
    continues after the first turn. A matching unfinished goal is retained.
    Held initialization stays held; completion requires verification and discharge.
+
+6. In an authorized adopted campaign, replenish with the bound original session,
+   worker generation and checkout generation. Verify exactly one frozen lease
+   and the same native root/session/membership in campaign and swarm read-back.
+   Retry concurrently; retain the same assignment. Reject stale generations,
+   foreign ownership, changed markers and untargeted second-root allocation.
+   Record inactivity, replenish that original native worker, and bind its renewed
+   lease generation. Normal next-actions target its original session.
 
 ## Arc SWARM-OWNERS: Select the owner and retain orphaned workers
 

@@ -125,28 +125,23 @@ action, review and batch IDs.
    This freezes the approved reconciled scope with a new generation, preserving
    the session and checkout. It does not resume the session. Replenishment then
    selects the retained worker; use host tools and swarm binding for resumption.
-3. `replenish --campaign <id>` reserves compatible obligation/worktree pairs up
-   to N and prefers unblocked retained assignments. `--existing-only true` uses
-   only safe retained physical roots and reports lack of capacity. Carry each
-   returned assignment and generation forward; never allocate a second checkout
-   for an already reserved obligation. With an enrolled owner and bound
-   coordinator, allocation records swarm membership in the same transaction.
-   Session creation and admission follow only the canonical
-   [swarm procedure](../../swarm/SKILL.md#start-compatible-workers-concurrently):
-   a fresh project-targeted `create_thread` in a native worktree, never a copy of
-   coordinator conversation history or a parent-root standby chat. Scheduling
-   must preserve that worker's verified actual checkout. Do not create a second
-   checkout to satisfy a numbered reservation or pretend it is the native root.
-   If a campaign reservation cannot use the enrolled checkout, preserve the
-   reservation and report that concrete scheduler/admission gap before dispatch;
-   allocation alone does not establish a session. Once the actual checkout and
-   campaign scope agree, `swarm worker-bind` records the verified identity and
-   completes the pending creation action without invoking Codex. It refuses
-   stale scope after reconciliation; resolve it before assigning work. Start
-   independent top-level workers concurrently, establish and verify their
-   assignment goals through the canonical swarm procedure, and observe them
-   through the host.
-   Unknown dispatch blockers retain their original identities for observation.
+3. Allocate compatible obligation/worktree pairs through `replenish`. For fresh
+   native sessions, follow the canonical
+   [swarm creation and native allocation procedure](../../swarm/SKILL.md#start-compatible-workers-concurrently):
+   create a fresh project-targeted `create_thread` in its own native worktree,
+   verify actual identities, enroll and bind it, then establish host quiescence
+   and replenish with the exact worker/session and membership selectors. This
+   allocates one frozen assignment on that original checkout; it never creates
+   a second checkout or copies coordinator conversation history. Retain the
+   returned assignment generation independently of worker/checkout generations.
+   Numbered-pool workflows retain `replenish --campaign <id>` up to N and
+   `--existing-only true` for safe retained numbered roots. Neither path proves
+   execution. First native admission records the existing host identity and
+   exposes the normal assignment through `next-actions`; send its exact scope
+   and establish/verify the worker goal through the swarm procedure. Original
+   inactive workers take precedence; target the original identity for resumption.
+   Observe independent top-level workers concurrently through host tools.
+   Unknown dispatch outcomes retain their identities for observation.
 4. A blocked worker reports its discovered prerequisites. Reconcile first,
    quiesce it through host tools, then use `swarm worker-inactive` with the exact
    worker generation, campaign lease generation and declared blocker IDs. Retain

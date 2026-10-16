@@ -9,7 +9,7 @@ import {databaseOptions} from './project-index-database.js';
 import {relativePath} from '../skills/plan-execution/scripts/obligations.js';
 import {collectRollingGraph,loadRollingConfiguration,parseRollingProjectConfig,readRollingCampaignRequest,type RollingCampaignRequest} from './rolling-campaign.js';
 import {resolveRollingManagedDirectory,validateRollingSessionMarker} from './rolling-worktrees.js';
-import {RollingCampaignStore,readRollingConfigurationAmendmentRequestV1,readRollingBindingHistoryConfiguration,type RollingBindingHistoryConfiguration,type RollingCampaignRegistration,type RollingCampaignRegistrationResult,type RollingGraphReconciliation,type RollingCoordinatorSnapshot,type RollingAllocationResult,type RollingAction,type RollingStoredAssignment,type RollingPublicationStatus,type RollingAssignmentRelease,type RollingWorkerDispatchStarted,type RollingWorkerDispatch,type RollingReviewDispatchStarted,type RollingStoredIncrement} from './rolling-campaign-store.js';
+import {RollingCampaignStore,readRollingConfigurationAmendmentRequestV1,readRollingBindingHistoryConfiguration,type RollingBindingHistoryConfiguration,type RollingCampaignRegistration,type RollingCampaignRegistrationResult,type RollingGraphReconciliation,type RollingCoordinatorSnapshot,type RollingAllocationResult,type RollingNativeWorkerSelection,type RollingAction,type RollingStoredAssignment,type RollingPublicationStatus,type RollingAssignmentRelease,type RollingWorkerDispatchStarted,type RollingWorkerDispatch,type RollingReviewDispatchStarted,type RollingStoredIncrement} from './rolling-campaign-store.js';
 import {readRollingWorkerSubmissionV1} from './rolling-worker-submission.js';
 import {readRollingReviewOutcomeV1} from './rolling-review.js';
 import type {RollingStoredReview,RollingReviewerLoss} from './rolling-review.js';
@@ -457,7 +457,9 @@ export class RollingCampaignOperations {
     let rollingAssignmentRelease:RollingAssignmentRelease | null = null;
     if (input.release !== undefined) {const release = record(input.release);if (Object.keys(release).some(key=>!['id','generation'].includes(key))) throw new Error('rolling campaign: undeclared release fields');rollingAssignmentRelease={id:stringField(release,'id'),generation:stringField(release,'generation')};}
     if(input['existing-only']!==undefined&&typeof input['existing-only']!=='boolean')throw new Error('rolling campaign: existing-only must be boolean');
-    return {command,result:await this.replenish(stringField(input,'campaign'),trigger,rollingAssignmentRelease,input['existing-only']===true)};
+    const rollingNativeWorkerSelection:RollingNativeWorkerSelection|null=['worker-session','worker-generation','worktree-generation'].some(key=>input[key]!==undefined)
+     ?{sessionId:stringField(input,'worker-session'),workerGeneration:stringField(input,'worker-generation'),worktreeGeneration:stringField(input,'worktree-generation')}:null;
+    return {command,result:await this.replenish(stringField(input,'campaign'),trigger,rollingAssignmentRelease,input['existing-only']===true,rollingNativeWorkerSelection)};
    }
    case 'provision-worker': return {command,result:await this.native(signal,async rollingCodex=> {
     const campaignId = stringField(input,'campaign'),actionId = stringField(input,'action'),generation = stringField(input,'generation');
@@ -536,13 +538,13 @@ export class RollingCampaignOperations {
 
  // Traceability: implements REQ-ROLLING-SCHEDULING
  // A missed event and the periodic poll run the same fenced allocation path.
- async replenish(campaignId:string,trigger:RollingReplenishment['trigger'],rollingAssignmentRelease:RollingAssignmentRelease | null = null,existingOnly=false):Promise<RollingReplenishment> {
+ async replenish(campaignId:string,trigger:RollingReplenishment['trigger'],rollingAssignmentRelease:RollingAssignmentRelease | null = null,existingOnly=false,rollingNativeWorkerSelection:RollingNativeWorkerSelection|null=null):Promise<RollingReplenishment> {
   const rollingGraphReconciliation = await this.reconcile(campaignId);
   const initialRollingCoordinatorSnapshot = await this.status(campaignId);
   const allocations:RollingAllocationResult[] = [];
   let stopReason:RollingAllocationResult['reason']=null;
-  for (let index=0;index<initialRollingCoordinatorSnapshot.configuration.maxActiveWorkers;index++) {
-   const rollingAllocationResult = await this.rollingCampaignStore.allocate(campaignId,rollingGraphReconciliation.graphDigest,index === 0 && rollingAssignmentRelease !== null ? rollingAssignmentRelease : undefined,existingOnly);
+  for (let index=0;index<(rollingNativeWorkerSelection===null?initialRollingCoordinatorSnapshot.configuration.maxActiveWorkers:1);index++) {
+   const rollingAllocationResult = await this.rollingCampaignStore.allocate(campaignId,rollingGraphReconciliation.graphDigest,index === 0 && rollingAssignmentRelease !== null ? rollingAssignmentRelease : undefined,existingOnly,rollingNativeWorkerSelection);
    if (rollingAllocationResult.assignment === null) {stopReason=rollingAllocationResult.reason;break;}
    allocations.push(rollingAllocationResult);
   }

@@ -1,6 +1,6 @@
 # Native worktree swarm admission
 
-Status: IN_PROGRESS
+Status: closed
 
 Authority: stakeholder instructions of 2026-10-15 and 2026-10-16. Workers need
 fresh top-level conversations, distinct native worktrees, the coordinator's
@@ -107,3 +107,51 @@ reuse the existing scheduler and frozen-lease path on the already-bound native
 worker, preserving identities and avoiding second checkouts or fabricated state.
 Existing current membership is correct, but there is no first campaign lease
 until that repair is implemented. Publication remains independently gated.
+
+## Native campaign allocation implementation
+
+Added explicit original-worker selectors to the existing replenish operation.
+The canonical scheduler freezes one adopted assignment on the already-bound
+actual checkout, retains worker/membership identities and historical pool
+metadata, refuses untargeted second-root allocation, and uses normal host
+assignment and retained-worker resumption actions. See OBL-19 in the canonical
+swarm requirements. Runtime acceptance is pending; do not invoke on GWEN yet.
+
+The human also resolved the rebase contradiction in the GWEN chat in favor of
+aggregate semantic rebase. Canonical/generated campaign and QA swarm guidance
+was corrected in 27df5130. The human now gives standing authorization to refresh
+installed skills whenever their local canonical sources change.
+
+Native allocation focused acceptance passed: 41 lifecycle, operation and
+compliance tests plus the representative existing numbered-allocation/review
+PostgreSQL Arc. First CLI admission, same-generation concurrent retries, stale
+worker/membership/graph rejection, scope/owner/marker fencing, same-session
+inactivity/resumption and normal host-assignment next-actions are verified.
+The existing historical pool and unfinished native source remain unchanged;
+no extra physical checkout is made. Final core acceptance is now required on
+this runtime tree. Log: `/private/tmp/ponytail-native-allocation-final-acceptance.log`.
+
+## Final acceptance
+
+All requested Ponytail changes pass final core acceptance: 571 JavaScript,
+327 typed, 23 pi, four MCP and 100 TSTS tests (1025 total); TSTS checked
+1661 files without violations. The final compiled native regression also
+checks that one explicit worker request returns exactly one allocation.
+Generated runtime, rule/version checks, traceability and skill copies pass.
+Installed swarm, plan-execution and QA-swarm copies are refreshed.
+
+GWEN retains fifteen original worker/session bindings and fifteen native
+checkouts. Independent host observation confirmed all fifteen executing after
+the coordinator replaced completed preparation goals with repair work. W9's
+native goal flag still requires its host resume action; it is not forged.
+Native campaign lease allocation is now implemented and verified independently
+with real CLI/Git/PostgreSQL proof. Actual GWEN campaign initialization, leases
+and publication remain the coordinator's separately gated operations; no claim
+of completed GWEN campaign acceptance or authorized push is made here.
+
+Setup resource guidance now includes dependency downloads and package linking
+in configured heavy-resource limits. Read-only inspection of the reported
+GWEN QA lock found no current waiter on its exact repository row; the
+coordinator's fresh backend observation likewise reported active IO with no
+blocker. No speculative index repair, command restart or lock cancellation
+was performed.
