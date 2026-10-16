@@ -1647,6 +1647,11 @@
       "class": "integration-test",
       "path": "tests/swarm-skill.integration.test.ts",
       "locator": "text"
+    },
+    {
+      "class": "issue",
+      "path": "pm/bugs/in_progress/2026-10-15-BUG-swarm_worker_missing_codex_project.md",
+      "locator": "text"
     }
   ],
   "entities": [],

@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-10-15-managed_checkout_used_as_saved_project_identity",
+  "recorded_at": "2026-10-15T11:33:07-07:00",
+  "source_references": [
+    "pm/bugs/in_progress/2026-10-15-BUG-swarm_worker_missing_codex_project.md"
+  ],
+  "context": {
+    "languages": [],
+    "frameworks": [
+      "Codex"
+    ],
+    "components": [
+      "swarm skill"
+    ],
+    "affected_boundaries": [
+      "coordinator host session creation to worker admission"
+    ],
+    "code_references": [
+      "skills/swarm/SKILL.md",
+      "tests/swarm-skill.test.ts"
+    ]
+  },
+  "observed_behavior": "A swarm-created worker reports that its Codex projectId is null.",
+  "expected_behavior": "A swarm worker inherits its original coordinator session's Codex project association while executing in its designated managed checkout.",
+  "causal_mechanism": "The creation procedure tried to rediscover project membership by requiring a saved project's local root to equal the designated managed-checkout path instead of preserving the original coordinator session's project ID. The swarm ownership model intentionally gives those checkouts different paths, so project resolution failed and admitted projectless worker creation.",
+  "anti_pattern": {
+    "structural_description": "A child session's inherited host identity is rediscovered through a transient resource path from a different ownership layer.",
+    "why_it_fails": "The paths are intentionally distinct, so the identity lookup has no valid result and callers fall back to an unassociated resource."
+  },
+  "correct_pattern": {
+    "required_invariant": "Worker admission verifies that the worker has the coordinator session's exact non-null project ID and the distinct designated checkout before dispatch or binding.",
+    "implementation_description": "Freeze project membership from the original coordinator session, establish that same association with supported host tools, reject projectless admission, and independently verify the worker checkout."
+  },
+  "applicability_conditions": [
+    "A coordinator creates a worker in a separate managed checkout and the host project association must be inherited independently of that path."
+  ],
+  "known_non_matches": [
+    "A project-targeted worker whose host inventory already reports the expected non-null projectId is not affected merely because its cwd is a managed worktree."
+  ],
+  "confirmation_evidence": [
+    "The stakeholder repeatedly observed swarm workers reporting projectId null.",
+    "Codex project inventory shows correctly associated QA workers sharing the coordinator's ipg-001 project while executing in distinct managed-worktree paths.",
+    "The previous skill text ignored the coordinator project ID and required the impossible equality between saved-project and managed-checkout paths."
+  ],
+  "regression_proofs": [
+    "tests/swarm-skill.test.ts: swarm instructions use shipped resource commands and retire session API instructions"
+  ]
+}

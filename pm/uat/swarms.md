@@ -93,8 +93,12 @@ Traceability: verifies REQ-SWARM-SESSIONS
 **Prerequisites:** A native worker executing an assigned task in its recorded
 checkout, two user owners, and real host reattachment capability inspection.
 
-1. Bind the worker to its designated owner; conflicting/cross-owner binding
-   fails without modifying either swarm.
+1. Read the exact non-null Codex project ID of the original coordinator session
+   that the user created through the UI. Create the worker in its designated
+   checkout, establish and verify the same project association before dispatch
+   or binding, and ask the worker which Codex project it belongs to. It reports
+   the coordinator's project. A projectless or different-project worker is not
+   admitted; conflicting/cross-owner binding fails without modifying either swarm.
 2. Establish quiescence through host tools before invoking removal. Verify the
    CLI fences the matching assignment and removes membership, preserving source
    and evidence; active Git operations or conflicting ownership refuse removal.

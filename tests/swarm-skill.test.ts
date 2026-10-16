@@ -17,5 +17,10 @@ test('swarm instructions use shipped resource commands and retire session API in
   assert.ok(!procedure.includes(retired),`retired session instruction: ${retired}`);
  assert.match(skill,/coordinator\nperforms session operations through the host tools/);
  assert.match(skill,/Implementation workers are top-level sessions/);
+ assert.match(skill,/freeze its exact\nnon-null `projectId`/);
+ assert.match(skill,/coordinator session's project is the project for every\nworker it creates/);
+ assert.match(skill,/Never dispatch or bind a `projectless` worker/);
+ assert.match(skill,/`move_thread_to_project`/);
+ assert.match(skill,/worker and coordinator have the same non-null\n   `projectId`/);
  assert.match(procedure,/hostAction/);
 });

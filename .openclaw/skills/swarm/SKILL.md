@@ -32,6 +32,12 @@ There may be only one bound coordinator. Do not replace an existing binding
 without settling its ownership and activity. A successor may bind an orphaned
 swarm without discarding its workers or checkouts.
 
+In Codex, inspect the coordinator through `list_threads` and freeze its exact
+non-null `projectId` before allocating a worker. Confirm that `list_projects`
+contains that ID. The coordinator session's project is the project for every
+worker it creates; never derive worker project membership from the owner or
+managed-checkout path, repository identity or project name.
+
 Ponytail CLI and MCP do not create, start, stop, inspect, rename, archive or delete
 Codex sessions. They record associations and manage Git worktrees. The coordinator
 performs session operations through the host tools exposed in its environment.
@@ -55,12 +61,18 @@ canonical graph is authoritative.
    A failed setup retains ownership: resume `worktree-setup --number <n>
    --generation <worktree-generation>` rather than allocating a replacement.
 2. Create a top-level worker through the host's session-creation tool in that
-   existing checkout. In Codex, discover `list_projects` and `create_thread`;
-   select a saved project whose local root is the designated checkout. Use the
-   existing local environment, not Codex-managed worktree creation. Inspect the
-   actual tool schema: do not invent a cwd argument or substitute a private App
-   Server controller. If the host cannot start a session in the assigned root,
-   report that concrete capability gap while continuing independent work.
+   existing checkout. Never dispatch or bind a `projectless` worker. Use a
+   project-targeted `create_thread` with the coordinator's frozen project ID
+   when the exposed schema can also preserve the designated checkout. If the
+   supported existing-checkout creation path returns a thread without that
+   association, immediately use `move_thread_to_project` with the coordinator's
+   frozen project ID before sending any initialization or assignment, then use
+   `list_threads` to verify that the worker and coordinator have the same non-null
+   `projectId` and that the worker has the designated checkout. Do not invent a
+   cwd argument, create a second Codex-managed worktree, or substitute a private
+   App Server controller. If the host cannot satisfy both identities, retain the
+   checkout reservation and report that concrete capability gap while continuing
+   independent work; a projectless thread is not a fallback.
 3. Retain the actual returned thread ID and host ID. Obtain the session ID from
    trusted host metadata or the original worker's own session identity; inspect
    the exposed tools rather than assuming a field. Codex `create_thread` does not
