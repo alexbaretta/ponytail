@@ -863,6 +863,7 @@ function collectPlanProjection(root = fs.realpathSync(git(process.cwd(), ['rev-p
     try { plan = parsePlanSource(root, source.relativePlanFile, source.lifecycle, fs.readFileSync(path.join(root, source.relativePlanFile), 'utf8')); }
     catch { plan = null; }
     if (plan?.obligationDocument) {
+      onProgress?.(index, planSources.length, 'plans', 'plan manifests', undefined, true);
       const { inputDigest, parseObligationDocument, isObligationGitInputs, gitInputReasons } = require('../skills/plan-execution/scripts/obligations');
       const documentPath = plan.obligationDocument;
       const dependencyDigests = [];
@@ -871,15 +872,24 @@ function collectPlanProjection(root = fs.realpathSync(git(process.cwd(), ['rev-p
         const obligationDocument = parseObligationDocument(fs.readFileSync(path.join(root, documentPath), 'utf8'));
         const inputSets = new Map(obligationDocument.certificates.flatMap(certificate => [certificate.inputs, ...certificate.evidence.map(evidence => evidence.inputs)]).map(inputs => [JSON.stringify(inputs), inputs]));
         const inputs = new Set(obligationDocument.baselines.flatMap(baseline => baseline.requirements.map(requirement => requirement.path)));
+        for (const inputSet of inputSets.values()) if (!isObligationGitInputs(inputSet)) for (const input of inputSet) inputs.add(input.path);
+        const artifacts = new Set(obligationDocument.certificates.flatMap(certificate => [...certificate.artifacts, ...certificate.evidence.map(evidence => evidence.outputPath)]));
+        const total = inputSets.size + artifacts.size + inputs.size;
+        let completed = 0;
+        const inputProgress = () => onProgress?.(completed, total, 'plans', 'certificate inputs');
+        inputProgress();
         for (const [key, inputSet] of inputSets) {
           if (isObligationGitInputs(inputSet)) dependencyDigests.push(`git:${key}:${JSON.stringify(gitInputReasons(root, inputSet))}`);
-          else for (const input of inputSet) inputs.add(input.path);
+          completed++;inputProgress();
         }
-        for (const relative of new Set(obligationDocument.certificates.flatMap(certificate => [...certificate.artifacts, ...certificate.evidence.map(evidence => evidence.outputPath)])))
+        for (const relative of artifacts) {
           dependencyDigests.push(`artifact:${relative}:${fs.existsSync(path.join(root, relative))}`);
+          completed++;inputProgress();
+        }
         for (const relative of [...inputs].sort()) {
           try { dependencyDigests.push(`${relative}:${inputDigest(root, relative)}`); }
           catch (error) { dependencyDigests.push(`${relative}:unavailable:${error.message}`); }
+          completed++;inputProgress();
         }
       } catch (error) { dependencyDigests.push(`invalid:${error.message}`); }
       paths.add(documentPath);

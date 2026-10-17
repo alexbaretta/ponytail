@@ -52,3 +52,34 @@ passed and generated runtime matches. Rule-copy, traceability and version
 checks passed. Logs are retained under ignored `tmp/agents/index-progress-fix/`.
 
 [Confirmed pattern observation](../../debugging-pattern-observations/2026-10-17-delayed_index_publication_progress.json).
+
+## Reopened after Gwen reproduction
+
+The user reported a stationary `0/398 plan manifests` after the initial fix.
+A read-only collection against the named Gwen checkout reproduced a 37,324 ms
+callback gap before manifest 362. The expensive manifest references a 5.8 MB
+obligation document with 294 certificates. Certificate input verification occurs
+inside manifest collection, with no progress callback until that whole manifest
+finishes. Earlier fast manifest updates were throttled, leaving 0% displayed.
+The prior local acceptance did not cover this larger document shape.
+
+Flush the current manifest count before obligation verification and report
+certificate input work as a nested stage, counting completed input-set checks,
+artifact existence checks and file digests. Verify against the actual Gwen
+source collection without changing its files or database.
+
+### Follow-up acceptance
+
+The repeated read-only scan of Gwen's 398 manifests and 2,286 source files
+completed in 33,222 ms. It emitted 871 certificate-input callbacks; the maximum
+callback gap was 1,057 ms, compared with 37,324 ms before the correction.
+The large manifest displayed advancing progress across 868 certificate inputs.
+No Gwen files or database records were changed by this probe. Logs:
+`tmp/agents/index-progress-fix/gwen-manifest-probe.log` and
+`tmp/agents/index-progress-fix/gwen-manifest-after.log`.
+
+Both new TTY/redirected regression cases passed. Final `npm test` exited 0:
+580 JavaScript, 331 typed, 23 Pi, 4 MCP and 100 TSTS tests passed (1,038 total),
+with installer checks and final TSTS validation of 1,687 files passing.
+Rule-copy, generated-runtime, traceability and version checks also passed.
+The full result is retained in `tmp/agents/index-progress-fix/followup-full.log`.

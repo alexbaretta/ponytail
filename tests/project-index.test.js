@@ -111,6 +111,31 @@ for (const corpus of ['traceability', 'plans']) test(`${corpus} freshness valida
   assert.equal(events.at(-1).corpus, corpus);
 });
 
+// Traceability: verifies REQ-TRACEABILITY-PROGRESS
+for (const isTTY of [true, false]) test(`manifest obligation input verification reports its own progress; TTY=${isTTY}`, t => {
+  const obligationFixture = require('./helpers/obligation-fixture').fixture(t);
+  fs.writeFileSync(path.join(obligationFixture.root, 'ponytail-journal.json'), JSON.stringify({
+    schemaVersion: 1, projectId: '019c0000-0000-7000-8000-000000000001', projectName: 'fixture', database: { name: 'ponytail' },
+  }));
+  fs.writeFileSync(path.join(obligationFixture.root, '.agents/config/project/management.json'), JSON.stringify({
+    schemaVersion: 1, managementRoot: 'pm', planRoot: 'pm/plans', legacyPlanLayout: 'flat',
+    lifecycle: { directories: ['open', 'in_progress', 'closed', 'deferred', 'rejected'], roles: {
+      initial: 'open', activeWork: 'in_progress', successfulCompletion: 'closed', deferred: 'deferred', rejected: 'rejected',
+    } },
+  }));
+  let output = '';
+  const events = [];
+  const progress = indexProgress({ isTTY, write(text) { output += text; } }, () => 0);
+  try { collectPlanProjection(obligationFixture.root, (...args) => { events.push(args); progress.update(...args); }); }
+  finally { progress.stop(); }
+  const checks = events.filter(event => event[3] === 'certificate inputs');
+  assert.ok(checks.length > 1, 'manifest collection must expose its nested verification');
+  assert.equal(checks[0][0], 0);
+  assert.equal(checks.at(-1)[0], checks.at(-1)[1]);
+  assert.ok(checks.at(-1)[1] > 0);
+  assert.match(output, /certificate inputs/);
+});
+
 test('incremental commit preparation never rereads already indexed Git blobs', async () => {
   const { root } = fixture();
   const known = execFileSync('git', ['ls-tree', '-r', '--format=%(objectname)', 'HEAD'],

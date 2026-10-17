@@ -1,6 +1,6 @@
 // Copyright (c) 2026 Alex Baretta. All rights reserved.
 // Licensed under the MIT License. See LICENSE in the project root.
-export type IndexProgressPhase='files'|'source files'|'plan manifests'|'cached files'|'database records'|'certificate assessments';
+export type IndexProgressPhase='files'|'source files'|'plan manifests'|'cached files'|'database records'|'certificate assessments'|'certificate inputs';
 export interface IndexProgressDetails {readonly parsedFiles:number;readonly reusedFiles:number;}
 export interface IndexProgressStream {readonly isTTY?:boolean;write(text:string):unknown;}
 
