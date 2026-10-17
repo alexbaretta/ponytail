@@ -1,0 +1,352 @@
+{
+  "schemaVersion": 1,
+  "scopeId": "2026-10-15-repository-qa-swarm",
+  "baselines": [
+    {
+      "id": "QA-BASELINE-1",
+      "predecessorId": null,
+      "authority": {
+        "references": [
+          "user-goal-2026-10-15-repository-qa-swarm"
+        ],
+        "assessors": [
+          "coordinator"
+        ]
+      },
+      "requirements": [
+        {
+          "id": "REQ-QA-SWARM",
+          "path": "pm/requirements/qa-swarm.md",
+          "digest": "44a38fe398e3a760b5fa3080fc435b1ea47911f622a7e8b00d9ffe405c0fb39e"
+        }
+      ],
+      "obligationIds": [
+        "OBL-1",
+        "OBL-2",
+        "OBL-3",
+        "OBL-4",
+        "OBL-5",
+        "OBL-6",
+        "OBL-7",
+        "OBL-8",
+        "OBL-9",
+        "OBL-10",
+        "OBL-11",
+        "OBL-12"
+      ],
+      "inventoryIds": [
+        "OBL-1",
+        "OBL-2",
+        "OBL-3",
+        "OBL-4",
+        "OBL-5",
+        "OBL-6"
+      ]
+    }
+  ],
+  "obligations": [
+    {
+      "id": "OBL-1",
+      "category": "T1",
+      "requirementIds": [
+        "REQ-QA-SWARM"
+      ],
+      "responsibilityId": "qa-inventory-T1",
+      "condition": "The complete T1 responsibility inventory for the repository QA scope is identified.",
+      "criterion": "Inspect the configured requirement, artifact and test inventories; register every discovered responsibility and retain exact current-source evidence. Absence of reported gaps alone does not prove semantic compliance.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "2026-10-15-repository-qa-swarm"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-2",
+      "category": "T2",
+      "requirementIds": [
+        "REQ-QA-SWARM"
+      ],
+      "responsibilityId": "qa-inventory-T2",
+      "condition": "The complete T2 responsibility inventory for the repository QA scope is identified.",
+      "criterion": "Inspect the configured requirement, artifact and test inventories; register every discovered responsibility and retain exact current-source evidence. Absence of reported gaps alone does not prove semantic compliance.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "2026-10-15-repository-qa-swarm"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-3",
+      "category": "T3",
+      "requirementIds": [
+        "REQ-QA-SWARM"
+      ],
+      "responsibilityId": "qa-inventory-T3",
+      "condition": "The complete T3 responsibility inventory for the repository QA scope is identified.",
+      "criterion": "Inspect the configured requirement, artifact and test inventories; register every discovered responsibility and retain exact current-source evidence. Absence of reported gaps alone does not prove semantic compliance.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "2026-10-15-repository-qa-swarm"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-4",
+      "category": "T4",
+      "requirementIds": [
+        "REQ-QA-SWARM"
+      ],
+      "responsibilityId": "qa-inventory-T4",
+      "condition": "The complete T4 responsibility inventory for the repository QA scope is identified.",
+      "criterion": "Inspect the configured requirement, artifact and test inventories; register every discovered responsibility and retain exact current-source evidence. Absence of reported gaps alone does not prove semantic compliance.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "2026-10-15-repository-qa-swarm"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-5",
+      "category": "C1",
+      "requirementIds": [
+        "REQ-QA-SWARM"
+      ],
+      "responsibilityId": "qa-inventory-C1",
+      "condition": "The complete C1 responsibility inventory for the repository QA scope is identified.",
+      "criterion": "Inspect the configured requirement, artifact and test inventories; register every discovered responsibility and retain exact current-source evidence. Absence of reported gaps alone does not prove semantic compliance.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "2026-10-15-repository-qa-swarm"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-6",
+      "category": "C2",
+      "requirementIds": [
+        "REQ-QA-SWARM"
+      ],
+      "responsibilityId": "qa-inventory-C2",
+      "condition": "The complete C2 responsibility inventory for the repository QA scope is identified.",
+      "criterion": "Inspect the configured requirement, artifact and test inventories; register every discovered responsibility and retain exact current-source evidence. Absence of reported gaps alone does not prove semantic compliance.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "2026-10-15-repository-qa-swarm"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-7",
+      "category": "gate",
+      "requirementIds": [
+        "REQ-QA-SWARM"
+      ],
+      "responsibilityId": "qa-gate-traceability",
+      "condition": "Both indexed directional validation and configured structural/semantic traceability checks pass on current inputs.",
+      "criterion": "Retain exact command, complete selector inventory, tested revision and dirty state, target, timestamps, outcomes, skips, failures and finalization. Unavailable execution is unresolved. Swarm creation additionally requires actual host-issued session identities, assigned checkout/project verification and worker acknowledgments.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "2026-10-15-repository-qa-swarm"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "ponytail traceability validate --json",
+          "npm run check:traceability"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-8",
+      "category": "gate",
+      "requirementIds": [
+        "REQ-QA-SWARM"
+      ],
+      "responsibilityId": "qa-gate-full",
+      "condition": "The configured full QA command passes with all required tests executed and no unapproved skips.",
+      "criterion": "Retain exact command, complete selector inventory, tested revision and dirty state, target, timestamps, outcomes, skips, failures and finalization. Unavailable execution is unresolved. Swarm creation additionally requires actual host-issued session identities, assigned checkout/project verification and worker acknowledgments.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "2026-10-15-repository-qa-swarm"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "npm test"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-9",
+      "category": "gate",
+      "requirementIds": [
+        "REQ-QA-SWARM"
+      ],
+      "responsibilityId": "qa-gate-native",
+      "condition": "Explicit live native integration acceptance passes and finalizes its disposable resources.",
+      "criterion": "Retain exact command, complete selector inventory, tested revision and dirty state, target, timestamps, outcomes, skips, failures and finalization. Unavailable execution is unresolved. Swarm creation additionally requires actual host-issued session identities, assigned checkout/project verification and worker acknowledgments.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "2026-10-15-repository-qa-swarm"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "node --test dist/tests/rolling-codex.integration.js"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-10",
+      "category": "gate",
+      "requirementIds": [
+        "REQ-QA-SWARM"
+      ],
+      "responsibilityId": "qa-gate-tsts",
+      "condition": "The complete configured TSTS and directory-structure check passes.",
+      "criterion": "Retain exact command, complete selector inventory, tested revision and dirty state, target, timestamps, outcomes, skips, failures and finalization. Unavailable execution is unresolved. Swarm creation additionally requires actual host-issued session identities, assigned checkout/project verification and worker acknowledgments.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "2026-10-15-repository-qa-swarm"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "npm run check:tsts"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-11",
+      "category": "gate",
+      "requirementIds": [
+        "REQ-QA-SWARM"
+      ],
+      "responsibilityId": "qa-gate-neutrality",
+      "condition": "The stakeholder-requested neutrality verification has an authoritative project scope and adequate passing proof.",
+      "criterion": "Retain exact command, complete selector inventory, tested revision and dirty state, target, timestamps, outcomes, skips, failures and finalization. Unavailable execution is unresolved. Swarm creation additionally requires actual host-issued session identities, assigned checkout/project verification and worker acknowledgments.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "2026-10-15-repository-qa-swarm"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    },
+    {
+      "id": "OBL-12",
+      "category": "gate",
+      "requirementIds": [
+        "REQ-QA-SWARM"
+      ],
+      "responsibilityId": "qa-gate-swarm",
+      "condition": "The requested default-capacity QA swarm is established through supported host sessions and configured ownership, with autonomous whole-slice assignments and reviewed acceptance.",
+      "criterion": "Retain exact command, complete selector inventory, tested revision and dirty state, target, timestamps, outcomes, skips, failures and finalization. Unavailable execution is unresolved. Swarm creation additionally requires actual host-issued session identities, assigned checkout/project verification and worker acknowledgments.",
+      "dependsOn": [],
+      "acceptanceGroups": [
+        "2026-10-15-repository-qa-swarm"
+      ],
+      "supersedes": null,
+      "execution": {
+        "sprintId": null,
+        "taskletIds": [],
+        "plannedPaths": [],
+        "operations": [
+          "inspect"
+        ],
+        "selection": [],
+        "target": null
+      }
+    }
+  ],
+  "certificates": [],
+  "checkpoints": []
+}
