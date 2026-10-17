@@ -7,17 +7,17 @@ export interface IndexProgressStream {readonly isTTY?:boolean;write(text:string)
 // Traceability: implements REQ-TRACEABILITY-INDEX
 // Traceability: implements REQ-TRACEABILITY-PROGRESS
 export function indexProgress(indexProgressStream:IndexProgressStream=process.stdout,now:()=>number=Date.now):{
- update(completed:number,total:number,corpus:string,phase?:IndexProgressPhase,details?:IndexProgressDetails):void;stop():void;
+ update(completed:number,total:number,corpus:string,phase?:IndexProgressPhase,details?:IndexProgressDetails,force?:boolean):void;stop():void;
 } {
  const stageStarts=new Map<string,number>();
  let currentStage='';let startedAt=now();let lastPrintedAt=0;let lineOpen=false;let lineLength=0;
  const stop=():void=>{if(lineOpen) indexProgressStream.write('\n');lineOpen=false;lineLength=0;};
  return {
-  update(completed,total,corpus,phase='files',details) {
+  update(completed,total,corpus,phase='files',details,force=false) {
    const stage=`${corpus}:${phase}`;
    const first=stage!==currentStage;
    if(first) {stop();currentStage=stage;startedAt=completed===0?now():stageStarts.get(stage)??now();stageStarts.set(stage,startedAt);}
-   if(!first && completed!==total && now()-lastPrintedAt<1000) return;
+   if(!force && !first && completed!==total && now()-lastPrintedAt<1000) return;
    lastPrintedAt=now();
    const percentage=total===0?100:Math.floor(completed*100/total);
    const filled=Math.floor(percentage*40/100);

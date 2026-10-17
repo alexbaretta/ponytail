@@ -8,6 +8,7 @@ const os = require('node:os');
 const path = require('node:path');
 const { execFileSync } = require('node:child_process');
 const test = require('node:test');
+const { indexProgress } = require('../src/index-progress');
 
 const {
   collectPlanProjection,
@@ -92,6 +93,22 @@ test('source snapshots account for every file before database indexing', () => {
   assert.equal(counts[0].completed, 0);
   assert.equal(counts.at(-1).completed, projection.files.length);
   assert.ok(counts.every(count => count.phase === 'source files' && count.total === projection.files.length));
+});
+
+// Traceability: verifies REQ-TRACEABILITY-PROGRESS
+for (const corpus of ['traceability', 'plans']) test(`${corpus} freshness validation reports the repeated source scan`, () => {
+  const events = [];
+  const onProgress = (completed, total, corpus, phase) => events.push({ completed, total, corpus, phase });
+  const projection = corpus === 'traceability'
+    ? collectTraceabilityProjection(fixture().configurationPath, onProgress)
+    : collectPlanProjection(planFixture(), onProgress);
+  events.length = 0;
+  projection.assertCurrent();
+  assert.ok(events.length > 1, 'the freshness scan must not silently repeat expensive source collection');
+  assert.equal(events[0].completed, 0);
+  assert.equal(events.at(-1).completed, projection.files.length);
+  assert.equal(events.at(-1).phase, 'source files');
+  assert.equal(events.at(-1).corpus, corpus);
 });
 
 test('incremental commit preparation never rereads already indexed Git blobs', async () => {
@@ -530,6 +547,70 @@ test('publishes a complete generation with parameterized statements', async () =
     query.text.includes('INSERT INTO ponytail_index.published_generation_v1'));
   assert.deepEqual(publication.values, ['worktree', 'traceability', 'generation']);
   assert.equal(client.queries.every(query => !query.text.includes(projection.projectName)), true);
+});
+
+// Traceability: verifies REQ-TRACEABILITY-PROGRESS
+for (const isTTY of [true, false]) test(`database progress covers file writes and stale relationship removal; TTY=${isTTY}`, async () => {
+  const { configurationPath } = fixture();
+  const projection = collectTraceabilityProjection(configurationPath);
+  let output = '';
+  let milliseconds = 0;
+  let removals = 0;
+  const progress = indexProgress({ isTTY, write(text) { output += text; } }, () => milliseconds);
+  class SlowRetainedClient extends BoundaryClient {
+    async query(text, values = []) {
+      if (text.includes('FROM ponytail_index.published_generation_v1')) return { rows: [{ generation_id: 'generation' }] };
+      if (text.startsWith('SELECT path,')) assert.match(output, /0% +0\/ +\d+ database records/, 'publication starts before retained-row loading');
+      if (text.startsWith('SELECT source_entity_id')) return { rows: Array.from({ length: 3 }, (_, index) => ({
+        source_entity_id: `removed-${index}`, target_entity_id: 'REQ-VALUE', role: 'implements',
+      })) };
+      if (text.includes('INSERT INTO ponytail_index.file_v1')) {
+        assert.match(output, /0% +0\/ +\d+ database records/, 'publication starts before file writes');
+        milliseconds += 1100;
+      }
+      if (text.startsWith('DELETE FROM ponytail_index.relationship_v1')) {
+        assert.match(output, /[1-9]\d*% +[1-9]\d*\/ +\d+ database records/, 'file progress is visible before cleanup');
+        if (removals > 0) assert.match(output, new RegExp(`elapsed +${Math.floor(milliseconds / 1000)}s`), 'previous deletion was rendered');
+        removals++;
+        milliseconds += 1100;
+      }
+      return super.query(text, values);
+    }
+  }
+  try { await publishTraceabilityGeneration(new SlowRetainedClient(), projection, { onProgress: progress.update }); }
+  finally { progress.stop(); }
+  assert.equal(removals, 3);
+  assert.match(output, /100% +\d+\/ +\d+ database records/);
+});
+
+// Traceability: verifies REQ-TRACEABILITY-PROGRESS
+for (const isTTY of [true, false]) test(`database progress flushes processed records before slow freshness validation; TTY=${isTTY}`, async () => {
+  const { configurationPath } = fixture();
+  const projection = collectTraceabilityProjection(configurationPath);
+  let output = '';
+  let milliseconds = 0;
+  const progress = indexProgress({ isTTY, write(text) { output += text; } }, () => milliseconds);
+  projection.assertCurrent = () => {
+    assert.match(output, /[1-9]\d*% +[1-9]\d*\/ +\d+ database records/);
+    assert.doesNotMatch(output, /100% +\d+\/ +\d+ database records/, 'freshness validation has not committed');
+    milliseconds += 50000;
+  };
+  try { await publishTraceabilityGeneration(new BoundaryClient(), projection, { onProgress: progress.update }); }
+  finally { progress.stop(); }
+  assert.match(output, /100% +\d+\/ +\d+ database records +\| elapsed +50s/);
+});
+
+// Traceability: verifies REQ-TRACEABILITY-PROGRESS
+test('flushed database progress does not report success when freshness validation fails', async () => {
+  const projection = collectTraceabilityProjection(fixture().configurationPath);
+  let output = '';
+  const progress = indexProgress({ write(text) { output += text; } }, () => 0);
+  projection.assertCurrent = () => { throw new Error('changed inputs'); };
+  const client = new BoundaryClient();
+  try { await assert.rejects(publishTraceabilityGeneration(client, projection, { onProgress: progress.update }), /changed inputs/); }
+  finally { progress.stop(); }
+  assert.doesNotMatch(output, /100% +\d+\/ +\d+ database records/);
+  assert.ok(client.queries.some(query => query.text === 'ROLLBACK'));
 });
 
 test('rolls back failed and contended publications', async () => {

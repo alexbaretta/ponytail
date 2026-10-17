@@ -14,7 +14,7 @@ function indexProgress(indexProgressStream = process.stdout, now = Date.now) {
     const stop = () => { if (lineOpen)
         indexProgressStream.write('\n'); lineOpen = false; lineLength = 0; };
     return {
-        update(completed, total, corpus, phase = 'files', details) {
+        update(completed, total, corpus, phase = 'files', details, force = false) {
             const stage = `${corpus}:${phase}`;
             const first = stage !== currentStage;
             if (first) {
@@ -23,7 +23,7 @@ function indexProgress(indexProgressStream = process.stdout, now = Date.now) {
                 startedAt = completed === 0 ? now() : stageStarts.get(stage) ?? now();
                 stageStarts.set(stage, startedAt);
             }
-            if (!first && completed !== total && now() - lastPrintedAt < 1000)
+            if (!force && !first && completed !== total && now() - lastPrintedAt < 1000)
                 return;
             lastPrintedAt = now();
             const percentage = total === 0 ? 100 : Math.floor(completed * 100 / total);

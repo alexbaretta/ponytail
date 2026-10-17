@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-10-17-delayed_index_publication_progress",
+  "recorded_at": "2026-10-17T11:28:40-07:00",
+  "source_references": [
+    "pm/bugs/closed/2026-10-17-BUG-delayed_database_index_progress.md"
+  ],
+  "context": {
+    "languages": [
+      "javascript",
+      "typescript"
+    ],
+    "frameworks": [],
+    "components": [
+      "project-index",
+      "index-progress"
+    ],
+    "affected_boundaries": [
+      "database reconciliation to progress reporting",
+      "record processing to freshness validation"
+    ],
+    "code_references": [
+      "src/project-index.js",
+      "src/index-progress.ts"
+    ]
+  },
+  "observed_behavior": "Database progress starts after file writes and cleanup, or stays at 0% during a slow freshness scan after fast record loops.",
+  "expected_behavior": "Report ongoing reconciliation and flush processed counts before a slow following operation, without reporting publication success before commit.",
+  "causal_mechanism": "The progress lifecycle excluded file reconciliation and deletion. Its time throttle then suppressed all fast record updates before a synchronous freshness scan whose source collector did not receive the progress callback.",
+  "anti_pattern": {
+    "structural_description": "Progress callbacks cover only the final subset of a transaction and rely on future callbacks to flush throttled state across a blocking operation.",
+    "why_it_fails": "Slow omitted work is invisible, and a slow following operation prevents any newer callback from displaying work already completed."
+  },
+  "correct_pattern": {
+    "required_invariant": "Progress starts before reconciled database work, counts completed work, and flushes before entering the freshness scan; completion requires commit.",
+    "implementation_description": "Count files and removed records alongside entity/search records, force a boundary update before freshness validation, and forward source-progress callbacks through freshness collection."
+  },
+  "applicability_conditions": [
+    "Incremental reconciliation includes file writes or stale row deletion.",
+    "Record loops finish within the renderer throttle interval before an expensive freshness scan."
+  ],
+  "known_non_matches": [
+    "A genuinely sub-second phase that completes immediately has no prolonged hidden work."
+  ],
+  "confirmation_evidence": [
+    "Slow-client tests failed before the first file write in both TTY and redirected output.",
+    "Fixed-clock tests found only 0% at freshness entry despite completed record loops.",
+    "Focused regressions passed after correction, including no success after freshness failure."
+  ],
+  "regression_proofs": [
+    "tests/project-index.test.js: database progress covers file writes and stale relationship removal",
+    "tests/project-index.test.js: database progress flushes processed records before slow freshness validation",
+    "tests/project-index.test.js: freshness validation reports the repeated source scan",
+    "tests/project-index.test.js: flushed database progress does not report success when freshness validation fails"
+  ]
+}

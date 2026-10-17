@@ -650,7 +650,7 @@ function collectTraceabilityProjection(configurationPath, onProgress) {
     files,
   };
   projection.assertCurrent = () => assertProjectionCurrent(projection,
-    () => collectTraceabilityProjection(configurationPath));
+    () => collectTraceabilityProjection(configurationPath, onProgress));
   return projection;
 }
 
@@ -958,7 +958,7 @@ function collectPlanProjection(root = fs.realpathSync(git(process.cwd(), ['rev-p
     files,
   };
   projection.assertCurrent = () => assertProjectionCurrent(projection,
-    () => collectPlanProjection(root));
+    () => collectPlanProjection(root, onProgress));
   return projection;
 }
 
@@ -1097,6 +1097,18 @@ async function publishTraceabilityGeneration(client, projection, options = {}) {
       worktree.worktree_id, projection.corpus, projection.headCommit,
       projection.stateDigest, projection.configurationDigest, projection.parserIdentity,
     ]);
+    const normalized = projection.normalizePayloads === undefined
+      ? {
+        entities: payloads.flatMap(payload => payload.entities),
+        relationships: payloads.flatMap(payload => payload.relationships),
+      }
+      : projection.normalizePayloads(payloads);
+    const allEntities = normalized.entities;
+    const allRelationships = normalized.relationships;
+    let publicationTotal = projection.files.length + allEntities.length * 2 + allRelationships.length + 1;
+    let publishedRecords = 0;
+    const publicationProgress = (force = false) => onProgress?.(publishedRecords, publicationTotal, projection.corpus, 'database records', undefined, force);
+    publicationProgress();
     const readRows = async (table, columns, key) => {
       if (!retained) return new Map();
       const result = await client.query(`SELECT ${columns.join(', ')} FROM ponytail_index.${table} WHERE generation_id = $1::uuid`, [generation.generation_id]);
@@ -1109,6 +1121,14 @@ async function publishTraceabilityGeneration(client, projection, options = {}) {
     const oldEntities = await readRows('entity_v1', entityColumns, row => row.entity_id);
     const oldRelationships = await readRows('relationship_v1', relationshipColumns, row => JSON.stringify(relationshipColumns.map(column => row[column])));
     const oldSearch = await readRows('search_document_v2', searchColumns, row => row.entity_id);
+    const filePaths = new Set(projection.files.map(file => file.path));
+    const removedFiles = [...oldFiles.keys()].filter(relativePath => !filePaths.has(relativePath));
+    const entityIds = new Set(allEntities.map(entity => entity.entityId));
+    const removedEntities = [...oldEntities.keys()].filter(entityId => !entityIds.has(entityId));
+    const relationshipKeys = new Set(allRelationships.map(relationship => JSON.stringify([relationship.sourceEntityId,relationship.targetEntityId,relationship.role])));
+    const removedRelationships = [...oldRelationships.keys()].filter(key => !relationshipKeys.has(key));
+    publicationTotal += removedFiles.length + removedEntities.length + removedRelationships.length;
+    publicationProgress();
     for (const [index, file] of projection.files.entries()) {
       const fileValues = [file.path, file.contentDigest, file.gitState, parseResultIds[index]];
       if (oldFiles.get(file.path) !== JSON.stringify(fileValues)) await client.query(`
@@ -1122,29 +1142,20 @@ async function publishTraceabilityGeneration(client, projection, options = {}) {
         file.gitState,
         parseResultIds[index],
       ]);
+      publishedRecords++;publicationProgress();
     }
-    const normalized = projection.normalizePayloads === undefined
-      ? {
-        entities: payloads.flatMap(payload => payload.entities),
-        relationships: payloads.flatMap(payload => payload.relationships),
-      }
-      : projection.normalizePayloads(payloads);
-    const allEntities = normalized.entities;
-    const allRelationships = normalized.relationships;
-    if (retained) {
-      const filePaths = new Set(projection.files.map(file => file.path));
-      const removedFiles = [...oldFiles.keys()].filter(relativePath => !filePaths.has(relativePath));
-      if (removedFiles.length) await client.query('DELETE FROM ponytail_index.file_v1 WHERE generation_id = $1::uuid AND path = ANY($2::text[])', [generation.generation_id, removedFiles]);
-      const entityIds = new Set(allEntities.map(entity => entity.entityId));
-      const removedEntities = [...oldEntities.keys()].filter(entityId => !entityIds.has(entityId));
-      if (removedEntities.length) await client.query('DELETE FROM ponytail_index.entity_v1 WHERE generation_id = $1::uuid AND entity_id = ANY($2::text[])', [generation.generation_id, removedEntities]);
-      const relationshipKeys = new Set(allRelationships.map(relationship => JSON.stringify([relationship.sourceEntityId,relationship.targetEntityId,relationship.role])));
-      for (const key of oldRelationships.keys()) if (!relationshipKeys.has(key)) await client.query('DELETE FROM ponytail_index.relationship_v1 WHERE generation_id = $1::uuid AND source_entity_id = $2 AND target_entity_id = $3 AND role = $4', [generation.generation_id,...JSON.parse(key)]);
+    if (removedFiles.length) {
+      await client.query('DELETE FROM ponytail_index.file_v1 WHERE generation_id = $1::uuid AND path = ANY($2::text[])', [generation.generation_id, removedFiles]);
+      publishedRecords += removedFiles.length;publicationProgress();
     }
-    const publicationTotal = allEntities.length * 2 + allRelationships.length + 1;
-    let publishedRecords = 0;
-    const publicationProgress = () => onProgress?.(publishedRecords, publicationTotal, projection.corpus, 'database records');
-    publicationProgress();
+    if (removedEntities.length) {
+      await client.query('DELETE FROM ponytail_index.entity_v1 WHERE generation_id = $1::uuid AND entity_id = ANY($2::text[])', [generation.generation_id, removedEntities]);
+      publishedRecords += removedEntities.length;publicationProgress();
+    }
+    for (const key of removedRelationships) {
+      await client.query('DELETE FROM ponytail_index.relationship_v1 WHERE generation_id = $1::uuid AND source_entity_id = $2 AND target_entity_id = $3 AND role = $4', [generation.generation_id,...JSON.parse(key)]);
+      publishedRecords++;publicationProgress();
+    }
     const searchDocuments = new Map();
     for (const entity of allEntities) {
       const entityValues = [entity.entityId,entity.entityKind,entity.path,entity.line,entity.unitName,entity.annotation,entity.description];
@@ -1237,6 +1248,9 @@ async function publishTraceabilityGeneration(client, projection, options = {}) {
         previous.rows[0].generation_id,
       ]);
     }
+    // Flush throttled record counts before the potentially slow freshness scan.
+    // The remaining unit is reserved for successful publication COMMIT.
+    publicationProgress(true);
     projection.assertCurrent?.();
     options.signal?.throwIfAborted();
     await client.query('COMMIT');
