@@ -79,6 +79,11 @@ test('an untested second acceptance is a checker failure and an indexed gap', te
  assert.equal(checked.status,1);
  assert.match(checked.stderr,/missing-test.*ACC-B/);
  assert.deepEqual(evaluateTraceabilityV5Coverage(payload(root)).map(gap => [gap.sourceEntityId,gap.targetKind]),[['ACC-B','unit-test|integration-test']]);
+ fs.appendFileSync(path.join(root,'pm/requirements/a.md'),'## REQ-OTHER\n');
+ assert.equal(evaluateTraceabilityV5Coverage(payload(root)).length,2);
+ assert.deepEqual(evaluateTraceabilityV5Coverage(payload(root),['REQ-A']).map(gap => [gap.sourceEntityId,gap.targetKind]),[['ACC-B','unit-test|integration-test']]);
+ assert.throws(() => evaluateTraceabilityV5Coverage(payload(root),['REQ-UNKNOWN']),/declared requirement/);
+ assert.throws(() => evaluateTraceabilityV5Coverage(payload(root),[]),/must not be empty/);
  fs.appendFileSync(path.join(root,'pm/uat/a.md'),'## ACC-A\nTraceability: verifies OBL-A from acceptance ACC-A\n');
  assert.throws(() => payload(root),/multiple declarations/i);
 });

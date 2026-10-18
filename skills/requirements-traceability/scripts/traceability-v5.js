@@ -126,8 +126,9 @@ function traceabilityV5RequirementPredicate(parameter) {
   UNION SELECT relationship.source_entity_id FROM ponytail_index.relationship_v1 relationship JOIN linked ON relationship.target_entity_id = linked.entity_id WHERE relationship.generation_id = $1::uuid
  ) SELECT entity_id FROM linked)`;
 }
-function evaluateTraceabilityV5Coverage(payload) {
-    const graph = graphFromPayload(payload);
+function evaluateTraceabilityV5Coverage(payload, requirementIds) {
+    const completeTraceabilityGraph = graphFromPayload(payload);
+    const graph = requirementIds === undefined ? completeTraceabilityGraph : (0, traceability_graph_js_1.scopeTraceabilityGraph)(completeTraceabilityGraph, requirementIds);
     return (0, traceability_graph_js_1.validateTraceabilityGraph)(graph).map(finding => {
         const entity = graph.entities.find(candidate => candidate.id === finding.id);
         if (!entity || !finding.code.startsWith('missing-'))

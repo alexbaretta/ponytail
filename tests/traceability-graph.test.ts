@@ -2,7 +2,7 @@
 // Licensed under the MIT License. See LICENSE in the project root.
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import {validateTraceabilityGraph, type TraceabilityGraph, type TraceabilityGraphEntity} from '../skills/requirements-traceability/scripts/traceability-graph.js';
+import {validateTraceabilityGraph, scopeTraceabilityGraph, type TraceabilityGraph, type TraceabilityGraphEntity} from '../skills/requirements-traceability/scripts/traceability-graph.js';
 
 function completeGraph(testKind: 'unit-test' | 'integration-test' = 'unit-test'): TraceabilityGraph {
  return {
@@ -134,4 +134,74 @@ test('duplicate locators and conflicting kinds produce deterministic findings', 
  const reversedTraceabilityGraph: TraceabilityGraph = {entities:[...traceabilityGraph.entities].reverse(),relationships:[...traceabilityGraph.relationships].reverse()};
  assert.deepEqual(validateTraceabilityGraph(traceabilityGraph),validateTraceabilityGraph(reversedTraceabilityGraph));
  assert.equal(validateTraceabilityGraph(traceabilityGraph).filter(finding => finding.code === 'duplicate-id').length,2);
+});
+
+// Traceability: verifies ACC-CM-ACCEPTANCE-COVERAGE from unit-test TEST-CM-GRAPH-SCOPED-ACCEPTANCE
+test('requirement scope retains every descendant acceptance without importing unrelated gaps', () => {
+ const originalTraceabilityGraph: TraceabilityGraph = completeGraph();
+ const traceabilityGraph: TraceabilityGraph = {
+  entities:[...originalTraceabilityGraph.entities,
+   {id:'ACC-SECOND',kind:'acceptance',path:'pm/uat/a.md',line:8},
+   {id:'REQ-OTHER',kind:'requirement',path:'pm/requirements/other.md',line:1},
+  ],
+  relationships:[...originalTraceabilityGraph.relationships,{source:'ACC-SECOND',role:'verifies',target:'OBL-A'}],
+ };
+ const scopedTraceabilityGraph: TraceabilityGraph = scopeTraceabilityGraph(traceabilityGraph,['REQ-A']);
+ assert.deepEqual(scopedTraceabilityGraph.entities.map(entity => entity.id).sort(),['ACC-A','ACC-SECOND','CODE-A','OBL-A','REQ-A','TEST-A']);
+ assert.deepEqual(validateTraceabilityGraph(scopedTraceabilityGraph).map(finding => [finding.code,finding.id]),[['missing-test','ACC-SECOND']]);
+ const otherTraceabilityGraph: TraceabilityGraph = scopeTraceabilityGraph(traceabilityGraph,['REQ-OTHER']);
+ assert.deepEqual(validateTraceabilityGraph(otherTraceabilityGraph).map(finding => [finding.code,finding.id]),[['missing-obligation','REQ-OTHER']]);
+ assert.deepEqual(scopeTraceabilityGraph(traceabilityGraph,['REQ-A','REQ-OTHER']),traceabilityGraph);
+});
+
+// Traceability: verifies ACC-CM-GRAPH from unit-test TEST-CM-GRAPH-SCOPED-SHARED
+test('shared tests and code are selected without broadening to their other requirement', () => {
+ const originalTraceabilityGraph: TraceabilityGraph = completeGraph();
+ const traceabilityGraph: TraceabilityGraph = {
+  entities:[...originalTraceabilityGraph.entities,
+   {id:'REQ-B',kind:'requirement',path:'pm/requirements/b.md',line:1},
+   {id:'OBL-B',kind:'obligation',path:'pm/requirements/b.md',line:3},
+   {id:'ACC-B',kind:'acceptance',path:'pm/uat/b.md',line:1},
+  ],
+  relationships:[...originalTraceabilityGraph.relationships,
+   {source:'OBL-B',role:'decomposes',target:'REQ-B'},
+   {source:'ACC-B',role:'verifies',target:'OBL-B'},
+   {source:'TEST-A',role:'verifies',target:'ACC-B'},
+   {source:'CODE-A',role:'implements',target:'OBL-B'},
+  ],
+ };
+ assert.deepEqual(scopeTraceabilityGraph(traceabilityGraph,['REQ-A']),originalTraceabilityGraph);
+ assert.deepEqual(validateTraceabilityGraph(scopeTraceabilityGraph(traceabilityGraph,['REQ-B'])),[]);
+ // Reversed inventory order must not change membership or reveal unrelated scope.
+ const reversedTraceabilityGraph: TraceabilityGraph = {entities:[...traceabilityGraph.entities].reverse(),relationships:[...traceabilityGraph.relationships].reverse()};
+ assert.deepEqual(scopeTraceabilityGraph(reversedTraceabilityGraph,['REQ-A']).entities.map(entity => entity.id).sort(),originalTraceabilityGraph.entities.map(entity => entity.id).sort());
+});
+
+// Traceability: verifies ACC-CM-GRAPH from unit-test TEST-CM-GRAPH-SCOPE-IDENTITY
+test('scope refuses empty, duplicate, unknown and non-requirement selectors', () => {
+ const traceabilityGraph: TraceabilityGraph = completeGraph();
+ for (const ids of [[],['REQ-A','REQ-A'],['REQ-UNKNOWN'],['REQ-A','REQ-UNKNOWN'],['ACC-A']]) {
+  assert.throws(() => scopeTraceabilityGraph(traceabilityGraph,ids),/scope/);
+ }
+});
+
+// Traceability: verifies ACC-CM-ACCEPTANCE-COVERAGE from unit-test TEST-CM-GRAPH-SCOPE-AMBIGUITY
+test('scope cannot hide an orphan acceptance, duplicate identity or dangling edge', () => {
+ const originalTraceabilityGraph: TraceabilityGraph = completeGraph();
+ const orphanTraceabilityGraph: TraceabilityGraph = {
+  ...originalTraceabilityGraph,entities:[...originalTraceabilityGraph.entities,{id:'ACC-ORPHAN',kind:'acceptance',path:'pm/uat/orphan.md',line:1}],
+ };
+ assert.throws(() => scopeTraceabilityGraph(orphanTraceabilityGraph,['REQ-A']),/ACC-ORPHAN/);
+ const duplicateTraceabilityGraph: TraceabilityGraph = {
+  ...originalTraceabilityGraph,entities:[...originalTraceabilityGraph.entities,{id:'REQ-A',kind:'requirement',path:'pm/requirements/duplicate.md',line:1}],
+ };
+ assert.throws(() => scopeTraceabilityGraph(duplicateTraceabilityGraph,['REQ-A']),/multiple declarations/);
+ const danglingTraceabilityGraph: TraceabilityGraph = {
+  ...originalTraceabilityGraph,relationships:[...originalTraceabilityGraph.relationships,{source:'TEST-A',role:'verifies',target:'ACC-UNKNOWN'}],
+ };
+ assert.throws(() => scopeTraceabilityGraph(danglingTraceabilityGraph,['REQ-A']),/Unknown target/);
+ const invalidTraceabilityGraph: TraceabilityGraph = {
+  ...originalTraceabilityGraph,relationships:[...originalTraceabilityGraph.relationships,{source:'TEST-A',role:'verifies',target:'REQ-A'}],
+ };
+ assert.throws(() => scopeTraceabilityGraph(invalidTraceabilityGraph,['REQ-A']),/Invalid unit-test/);
 });

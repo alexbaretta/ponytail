@@ -5,7 +5,7 @@ import path from 'node:path';
 import {parse} from 'lossless-json';
 import {readTraceabilityConfigurationV5,discoverTraceabilityProject,traceabilityGeneratedHeader,traceabilityReverseViewPath,type TraceabilityConfigurationV5} from './traceability-project.js';
 import {discoverTraceabilitySource,type TraceabilitySource} from './traceability-discovery.js';
-import {validateTraceabilityGraph,type TraceabilityGraph,type TraceabilityGraphEntity,type TraceabilityGraphRelationship} from './traceability-graph.js';
+import {validateTraceabilityGraph,scopeTraceabilityGraph,type TraceabilityGraph,type TraceabilityGraphEntity,type TraceabilityGraphRelationship} from './traceability-graph.js';
 import {checkTraceabilityProjectTypescript} from './traceability-semantic.js';
 import type {TraceabilityPayload} from '../../../src/traceability-projection.js';
 import type {TstsDiagnostic} from '../../../tsts/src/index.js' with {'resolution-mode':'import'};
@@ -135,8 +135,9 @@ export function traceabilityV5RequirementPredicate(parameter: number): string {
 }
 
 // Traceability: implements OBL-CM-ACCEPTANCE-COVERAGE from implementation evaluateTraceabilityV5Coverage
-export function evaluateTraceabilityV5Coverage(payload: TraceabilityPayload): readonly TraceabilityValidationGap[] {
- const graph = graphFromPayload(payload);
+export function evaluateTraceabilityV5Coverage(payload: TraceabilityPayload, requirementIds?: readonly string[]): readonly TraceabilityValidationGap[] {
+ const completeTraceabilityGraph = graphFromPayload(payload);
+ const graph = requirementIds === undefined ? completeTraceabilityGraph : scopeTraceabilityGraph(completeTraceabilityGraph,requirementIds);
  return validateTraceabilityGraph(graph).map(finding => {
   const entity = graph.entities.find(candidate => candidate.id === finding.id);
   if (!entity || !finding.code.startsWith('missing-')) throw new Error(finding.message);

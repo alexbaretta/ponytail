@@ -3,7 +3,42 @@
 // Generated from skills/requirements-traceability/scripts/traceability-graph.ts by npm run build.
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.scopeTraceabilityGraph = scopeTraceabilityGraph;
 exports.validateTraceabilityGraph = validateTraceabilityGraph;
+function scopeTraceabilityGraph(traceabilityGraph, requirementIds) {
+    if (requirementIds.length === 0)
+        throw new Error('Traceability requirement scope must not be empty');
+    const selected = new Set(requirementIds);
+    if (selected.size !== requirementIds.length)
+        throw new Error('Traceability requirement scope contains duplicate IDs');
+    const unresolved = validateTraceabilityGraph(traceabilityGraph).filter(finding => finding.code === 'missing-parent' || !finding.code.startsWith('missing-'));
+    if (unresolved.length)
+        throw new Error(`Cannot scope an ambiguous graph: ${unresolved.map(finding => finding.message).join('; ')}`);
+    const entities = new Map(traceabilityGraph.entities.map(entity => [entity.id, entity]));
+    for (const id of selected) {
+        if (entities.get(id)?.kind !== 'requirement')
+            throw new Error(`Traceability scope does not identify a declared requirement: ${id}`);
+    }
+    const sourcesByTarget = new Map();
+    for (const relationship of traceabilityGraph.relationships) {
+        const sources = sourcesByTarget.get(relationship.target) ?? [];
+        sources.push(relationship.source);
+        sourcesByTarget.set(relationship.target, sources);
+    }
+    const pending = [...selected];
+    for (const target of pending) {
+        for (const source of sourcesByTarget.get(target) ?? []) {
+            if (!selected.has(source)) {
+                selected.add(source);
+                pending.push(source);
+            }
+        }
+    }
+    return {
+        entities: traceabilityGraph.entities.filter(entity => selected.has(entity.id)),
+        relationships: traceabilityGraph.relationships.filter(relationship => selected.has(relationship.source) && selected.has(relationship.target)),
+    };
+}
 function validateTraceabilityGraph(traceabilityGraph) {
     const findings = [];
     const entities = new Map();
