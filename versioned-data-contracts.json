@@ -3,6 +3,22 @@
   "schemaVersion": 1,
   "families": [
     {
+      "id": "validation-revocation",
+      "implementation": {
+        "workspace": "ponytail",
+        "module": "src/validation-certificate.ts",
+        "readerRegistryExport": "ValidationRevocationReaders"
+      },
+      "currentVersion": "V1",
+      "versions": [
+        "V1"
+      ],
+      "supportedReadVersions": [
+        "V1"
+      ],
+      "supportedDowngradeVersions": []
+    },
+    {
       "id": "validation-request",
       "implementation": {
         "workspace": "ponytail",

@@ -4,12 +4,21 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {spawn,spawnSync} from 'node:child_process';
-import {parseValidationJson,readValidationRequestV1,readValidationCertificateV1,type ValidationRequestV1,type ValidationCertificateV1,type ValidationCommand,type ValidationCommandResult} from './validation-certificate.js';
+import {parseValidationJson,readValidationRequestV1,readValidationCertificateV1,readValidationRevocationV1,type ValidationRequestV1,type ValidationCertificateV1,type ValidationRevocationV1,type ValidationCommand,type ValidationCommandResult} from './validation-certificate.js';
 
 export interface ValidationTag {
  readonly name: string;
  readonly objectId: string;
  readonly certificate: ValidationCertificateV1;
+}
+export interface ValidationRevocationTag {
+ readonly name: string;
+ readonly objectId: string;
+ readonly revocation: ValidationRevocationV1;
+}
+export interface ValidationTagInspection {
+ readonly tag: ValidationTag;
+ readonly revocations: readonly ValidationRevocationTag[];
 }
 export interface ValidationRun {
  readonly runId: string;
@@ -43,38 +52,85 @@ function tagName(name: string): string {
  return name;
 }
 
-// Traceability: implements OBL-CM-CERTIFICATES from implementation readValidationTag
-export function readValidationTag(root: string, name: string): ValidationTag {
- const ref = `refs/tags/${tagName(name)}`;
+function readAnnotatedTag(root: string, name: string): {readonly objectId:string;readonly candidate:string;readonly payload:unknown} {
+ const ref = `refs/tags/${name}`;
  const objectId = git(root,['rev-parse','--verify',ref]).trim();
  if (git(root,['cat-file','-t',objectId]).trim() !== 'tag') throw new Error('Validation certificate requires an annotated tag');
  const text = git(root,['cat-file','tag',objectId]);
  const separator = text.indexOf('\n\n');
  if (separator < 0) throw new Error('Malformed annotated validation tag');
  const headers = text.slice(0,separator).split('\n');
- const validationCertificateV1 = readValidationCertificateV1(parseValidationJson(text.slice(separator+2)));
- if (headers[0] !== `object ${validationCertificateV1.request.candidate}` || headers[1] !== 'type commit'
-  || headers[2] !== `tag ${name}` || headers.length !== 4 || !headers[3]?.startsWith('tagger ')
-  || certificateTagName(validationCertificateV1) !== name) throw new Error('Validation tag target, name and payload identity disagree');
- if (git(root,['cat-file','-t',validationCertificateV1.request.candidate]).trim() !== 'commit') throw new Error('Validation tag target is not a commit');
+ const candidate = headers[0]?.slice('object '.length);
+ if (!headers[0]?.startsWith('object ') || !candidate || !/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/u.test(candidate)
+  || headers[1] !== 'type commit' || headers[2] !== `tag ${name}` || headers.length !== 4 || !headers[3]?.startsWith('tagger ')) throw new Error('Malformed annotated validation tag headers');
+ if (git(root,['cat-file','-t',candidate]).trim() !== 'commit') throw new Error('Validation tag target is not a commit');
+ return {objectId,candidate,payload:parseValidationJson(text.slice(separator+2))};
+}
+function readCertificateTag(root: string, name: string): ValidationTag {
+ const annotatedTag = readAnnotatedTag(root,tagName(name));
+ const validationCertificateV1 = readValidationCertificateV1(annotatedTag.payload);
+ if (annotatedTag.candidate !== validationCertificateV1.request.candidate || certificateTagName(validationCertificateV1) !== name) throw new Error('Validation tag target, name and payload identity disagree');
+ const objectId = annotatedTag.objectId;
  return {name,objectId,certificate:validationCertificateV1};
+}
+function namesInCampaign(root: string, campaignId: string): readonly string[] {
+ if (!/^[a-z0-9][a-z0-9-]*$/u.test(campaignId)) throw new Error('Invalid campaign ID');
+ return git(root,['for-each-ref','--format=%(refname:strip=2)',`refs/tags/ponytail/validation/${campaignId}/`]).trim().split('\n')
+  .filter(Boolean);
+}
+function readRevocationTag(root: string, name: string): ValidationRevocationTag {
+ const annotatedTag = readAnnotatedTag(root,name);
+ const validationRevocationV1 = readValidationRevocationV1(annotatedTag.payload);
+ if (name !== `ponytail/validation/${validationRevocationV1.campaignId}/revocations/${validationRevocationV1.revocationId}` || annotatedTag.candidate !== validationRevocationV1.candidate) throw new Error('Revocation tag target, name and payload identity disagree');
+ const validationTag = readCertificateTag(root,validationRevocationV1.revokedTag);
+ if (validationTag.objectId !== validationRevocationV1.revokedObjectId || validationTag.certificate.request.candidate !== validationRevocationV1.candidate) throw new Error('Revocation does not bind the original certificate object and candidate');
+ return {name,objectId:annotatedTag.objectId,revocation:validationRevocationV1};
+}
+
+// Traceability: implements OBL-CM-CERTIFICATES from implementation inspectValidationTag
+export function inspectValidationTag(root: string, name: string): ValidationTagInspection {
+ const validationTag = readCertificateTag(root,name);
+ const campaignId = validationTag.certificate.request.campaignId;
+ const revocations = namesInCampaign(root,campaignId).filter(candidate => candidate.startsWith(`ponytail/validation/${campaignId}/revocations/`))
+  .map(candidate => readRevocationTag(root,candidate)).filter(tag => tag.revocation.revokedTag === name);
+ return {tag:validationTag,revocations};
+}
+
+// Traceability: implements OBL-CM-CERTIFICATES from implementation readValidationTag
+export function readValidationTag(root: string, name: string): ValidationTag {
+ const validationTagInspection = inspectValidationTag(root,name);
+ if (validationTagInspection.revocations.length) throw new Error(`Validation certificate is revoked: ${name}`);
+ return validationTagInspection.tag;
 }
 
 // Traceability: implements OBL-CM-CERTIFICATES from implementation listValidationTags
-export function listValidationTags(root: string, campaignId: string): readonly ValidationTag[] {
- if (!/^[a-z0-9][a-z0-9-]*$/u.test(campaignId)) throw new Error('Invalid campaign ID');
- return git(root,['for-each-ref','--format=%(refname:strip=2)',`refs/tags/ponytail/validation/${campaignId}/`]).trim().split('\n')
-  .filter(Boolean).map(name => readValidationTag(root,name));
+export function listValidationTags(root: string, campaignId: string): readonly ValidationTagInspection[] {
+ return namesInCampaign(root,campaignId).filter(name => !name.startsWith(`ponytail/validation/${campaignId}/revocations/`))
+  .map(name => inspectValidationTag(root,name));
+}
+function createAnnotatedTag(root: string, name: string, candidate: string, payload: string, verificationRef: string, expectedObject: string): void {
+ const tagger = git(root,['var','GIT_COMMITTER_IDENT']).trim();
+ const objectId = git(root,['mktag'],`object ${candidate}\ntype commit\ntag ${name}\ntagger ${tagger}\n\n${payload}\n`).trim();
+ if (verificationRef === 'HEAD') assertCandidate(root,expectedObject);
+ git(root,['update-ref','--stdin'],`start\nverify ${verificationRef} ${expectedObject}\ncreate refs/tags/${name} ${objectId}\nprepare\ncommit\n`);
 }
 function publishValidationTag(root: string, validationCertificateV1: ValidationCertificateV1): ValidationTag {
  const checkedValidationCertificateV1 = readValidationCertificateV1(validationCertificateV1);
  const name = certificateTagName(checkedValidationCertificateV1);
  const candidate = checkedValidationCertificateV1.request.candidate;
- const tagger = git(root,['var','GIT_COMMITTER_IDENT']).trim();
- const objectId = git(root,['mktag'],`object ${candidate}\ntype commit\ntag ${name}\ntagger ${tagger}\n\n${JSON.stringify(checkedValidationCertificateV1)}\n`).trim();
- assertCandidate(root,candidate);
- git(root,['update-ref','--stdin'],`start\nverify HEAD ${candidate}\ncreate refs/tags/${name} ${objectId}\nprepare\ncommit\n`);
+ createAnnotatedTag(root,name,candidate,JSON.stringify(checkedValidationCertificateV1),'HEAD',candidate);
  return readValidationTag(root,name);
+}
+
+// Traceability: implements OBL-CM-CERTIFICATES from implementation revokeValidationTag
+export function revokeValidationTag(root: string, name: string, reason: string): ValidationRevocationTag {
+ root = repositoryRoot(root);
+ const validationTag = readCertificateTag(root,name);
+ const validationRevocationV1 = readValidationRevocationV1({schemaVersion:1,revocationId:randomUUID(),campaignId:validationTag.certificate.request.campaignId,
+  candidate:validationTag.certificate.request.candidate,revokedTag:name,revokedObjectId:validationTag.objectId,reason,createdAt:new Date().toISOString()});
+ const revocationName = `ponytail/validation/${validationRevocationV1.campaignId}/revocations/${validationRevocationV1.revocationId}`;
+ createAnnotatedTag(root,revocationName,validationRevocationV1.candidate,JSON.stringify(validationRevocationV1),`refs/tags/${name}`,validationTag.objectId);
+ return readRevocationTag(root,revocationName);
 }
 function signalProcess(pid: number, signal: NodeJS.Signals): void {
  try { process.kill(process.platform === 'win32' ? pid : -pid,signal); }

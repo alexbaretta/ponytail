@@ -7,7 +7,7 @@ import path from 'node:path';
 import {execFileSync} from 'node:child_process';
 import {setTimeout as delay} from 'node:timers/promises';
 import test,{type TestContext} from 'node:test';
-import {runValidation,readValidationTag,listValidationTags} from '../src/validation-run.js';
+import {runValidation,readValidationTag,listValidationTags,inspectValidationTag,revokeValidationTag} from '../src/validation-run.js';
 import type {ValidationRequestV1,ValidationCommand} from '../src/validation-certificate.js';
 
 function git(root: string, args: readonly string[]): string {
@@ -122,4 +122,40 @@ test('tag readers reject lightweight tags and payloads bound to another commit',
  git(root,['tag','-a','-f',originalName,'-m',JSON.stringify(validationRun.tag.certificate)]);
  assert.throws(() => readValidationTag(root,originalName),/identity disagree/);
  assert.throws(() => readValidationTag(root,'../../HEAD'),/Invalid validation tag name/);
+});
+
+// Traceability: verifies ACC-CM-CERTIFICATES from integration-test TEST-CM-VALIDATION-REVOCATION
+test('revocation preserves the original and ordinary reads reject it while corrected runs remain usable', async testContext => {
+ const root = fixture(testContext);
+ const validationRequestV1: ValidationRequestV1 = request(root);
+ const originalValidationRun = await runValidation(root,validationRequestV1);
+ assert.ok(originalValidationRun.tag);
+ const validationRevocationTag = revokeValidationTag(root,originalValidationRun.tag.name,'Review found an unverified assertion');
+ assert.equal(validationRevocationTag.revocation.revokedObjectId,originalValidationRun.tag.objectId);
+ assert.equal(git(root,['rev-parse',`refs/tags/${originalValidationRun.tag.name}`]),originalValidationRun.tag.objectId);
+ assert.throws(() => { assert.ok(originalValidationRun.tag); return readValidationTag(root,originalValidationRun.tag.name); },/revoked/);
+ const validationTagInspection = inspectValidationTag(root,originalValidationRun.tag.name);
+ assert.deepEqual(validationTagInspection.tag,originalValidationRun.tag);
+ assert.deepEqual(validationTagInspection.revocations,[validationRevocationTag]);
+ const correctedValidationRun = await runValidation(root,validationRequestV1);
+ assert.ok(correctedValidationRun.tag);
+ assert.deepEqual(readValidationTag(root,correctedValidationRun.tag.name),correctedValidationRun.tag);
+ const inspections = listValidationTags(root,'campaign-a');
+ assert.equal(inspections.length,2);
+ assert.equal(inspections.filter(inspection => inspection.revocations.length > 0).length,1);
+ assert.equal(git(root,['rev-parse','HEAD']),validationRequestV1.candidate);
+ assert.equal(git(root,['status','--porcelain']),'');
+});
+
+// Traceability: verifies ACC-CM-CERTIFICATES from integration-test TEST-CM-VALIDATION-REVOCATION-IDENTITY
+test('forged revocations cannot bind another target or a replaced certificate object', async testContext => {
+ const root = fixture(testContext);
+ const validationRun = await runValidation(root,request(root));
+ assert.ok(validationRun.tag);
+ const validationRevocationTag = revokeValidationTag(root,validationRun.tag.name,'Incorrect selected tests');
+ git(root,['commit','--allow-empty','-qm','later revision']);
+ git(root,['tag','-a','-f',validationRevocationTag.name,'-m',JSON.stringify(validationRevocationTag.revocation)]);
+ assert.throws(() => { assert.ok(validationRun.tag); return inspectValidationTag(root,validationRun.tag.name); },/identity disagree/);
+ git(root,['tag','-a','-f',validationRevocationTag.name,validationRun.tag.certificate.request.candidate,'-m',JSON.stringify({...validationRevocationTag.revocation,revokedObjectId:'b'.repeat(40)})]);
+ assert.throws(() => { assert.ok(validationRun.tag); return inspectValidationTag(root,validationRun.tag.name); },/original certificate object/);
 });

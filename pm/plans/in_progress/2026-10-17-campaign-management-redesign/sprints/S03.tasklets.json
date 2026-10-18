@@ -11,6 +11,12 @@
         "S03-F01"
       ],
       "validation_tasklet": "S03-F02-T02"
+    },
+    "S03-F03": {
+      "depends_on": [
+        "S03-F02"
+      ],
+      "validation_tasklet": "S03-F03-T02"
     }
   },
   "tasklets": {
@@ -63,6 +69,35 @@
       ],
       "risk": "normal",
       "planned_paths": [
+        "tests/validation-run.test.ts"
+      ]
+    },
+    "S03-F03-T01": {
+      "feature": "S03-F03",
+      "depends_on": [
+        "S03-F02-T02"
+      ],
+      "affinity": [
+        "validation"
+      ],
+      "risk": "normal",
+      "planned_paths": [
+        "src/validation-certificate.ts",
+        "src/validation-run.ts",
+        "versioned-data-contracts.json"
+      ]
+    },
+    "S03-F03-T02": {
+      "feature": "S03-F03",
+      "depends_on": [
+        "S03-F03-T01"
+      ],
+      "affinity": [
+        "validation"
+      ],
+      "risk": "normal",
+      "planned_paths": [
+        "tests/validation-certificate.test.ts",
         "tests/validation-run.test.ts"
       ]
     }

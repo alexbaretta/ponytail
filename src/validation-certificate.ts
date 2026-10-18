@@ -41,6 +41,16 @@ export interface ValidationCertificateV1 {
  readonly results: readonly ValidationCommandResult[];
  readonly outcome: 'passed' | 'failed';
 }
+export interface ValidationRevocationV1 {
+ readonly schemaVersion: 1;
+ readonly revocationId: string;
+ readonly campaignId: string;
+ readonly candidate: string;
+ readonly revokedTag: string;
+ readonly revokedObjectId: string;
+ readonly reason: string;
+ readonly createdAt: string;
+}
 
 function isRecord(value: unknown): value is Record<string,unknown> {
  return value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -175,5 +185,18 @@ export function parseValidationJson(text: string): unknown {
   return Number(token);
  });
 }
+// Traceability: implements OBL-CM-CERTIFICATES from implementation readValidationRevocationV1
+export function readValidationRevocationV1(value: unknown): ValidationRevocationV1 {
+ const record = object(value,['schemaVersion','revocationId','campaignId','candidate','revokedTag','revokedObjectId','reason','createdAt'],'validation revocation V1');
+ version(record.schemaVersion);
+ const revocationId = string(record.revocationId,'revocationId');
+ if (!/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/u.test(revocationId)) throw new Error('revocationId must be a UUID v4');
+ const campaignId = string(record.campaignId,'campaignId');
+ if (!/^[a-z0-9][a-z0-9-]*$/u.test(campaignId)) throw new Error('Invalid revocation campaign ID');
+ const revokedTag = string(record.revokedTag,'revokedTag');
+ if (!revokedTag.startsWith(`ponytail/validation/${campaignId}/`) || !/^ponytail\/validation\/[^/]+\/[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/u.test(revokedTag)) throw new Error('Revocation must identify a validation tag in its campaign');
+ return {schemaVersion:1,revocationId,campaignId,candidate:commit(record.candidate),revokedTag,revokedObjectId:commit(record.revokedObjectId),reason:string(record.reason,'revocation reason'),createdAt:timestamp(record.createdAt)};
+}
 export const ValidationRequestReaders = {variants:{V1:readValidationRequestV1}};
 export const ValidationCertificateReaders = {variants:{V1:readValidationCertificateV1}};
+export const ValidationRevocationReaders = {variants:{V1:readValidationRevocationV1}};

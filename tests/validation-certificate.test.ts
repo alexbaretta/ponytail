@@ -2,7 +2,7 @@
 // Licensed under the MIT License. See LICENSE in the project root.
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import {parseValidationJson,readValidationRequestV1,readValidationCertificateV1,type ValidationCertificateV1,type ValidationTermination} from '../src/validation-certificate.js';
+import {parseValidationJson,readValidationRequestV1,readValidationCertificateV1,readValidationRevocationV1,type ValidationCertificateV1,type ValidationRevocationV1,type ValidationTermination} from '../src/validation-certificate.js';
 
 function certificate(): ValidationCertificateV1 {
  return {
@@ -69,4 +69,16 @@ test('exact readers reject unsupported fields, malformed identities and incohere
 test('raw validation JSON rejects numeric rounding and unsafe integer tokens', () => {
  for (const token of ['1.0000000000000001','9007199254740993','1e100','-1','0.1']) assert.throws(() => parseValidationJson(`{"schemaVersion":${token}}`),/Unsupported validation number/);
  assert.deepEqual(parseValidationJson('{"schemaVersion":1}'),{schemaVersion:1});
+});
+
+// Traceability: verifies ACC-CM-CERTIFICATES from unit-test TEST-CM-REVOCATION-CONTRACT
+test('revocations identify an exact original tag object in the same campaign', () => {
+ const validationRevocationV1: ValidationRevocationV1 = {schemaVersion:1,revocationId:'5c525fe4-280f-4cff-929e-ab8709b0b839',campaignId:'campaign-a',candidate:'a'.repeat(40),
+  revokedTag:'ponytail/validation/campaign-a/5c525fe4-280f-4cff-929e-ab8709b0b839',revokedObjectId:'b'.repeat(40),reason:'Review rejected scope',createdAt:'2026-10-18T01:00:00.000Z'};
+ assert.deepEqual(readValidationRevocationV1(parseValidationJson(JSON.stringify(validationRevocationV1))),validationRevocationV1);
+ for (const value of [
+  {...validationRevocationV1,schemaVersion:2}, {...validationRevocationV1,reason:''}, {...validationRevocationV1,revokedObjectId:'HEAD'},
+  {...validationRevocationV1,campaignId:'campaign-b'}, {...validationRevocationV1,createdAt:'yesterday'},
+  {...validationRevocationV1,revokedTag:'ponytail/validation/campaign-a/../other'},
+ ]) assert.throws(() => readValidationRevocationV1(value));
 });
