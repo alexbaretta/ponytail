@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-10-17-per_path_git_processes",
+  "recorded_at": "2026-10-17T19:50:07-07:00",
+  "source_references": [
+    "pm/bugs/in_progress/2026-10-17-TASK-batch_git_certificate_checks.md"
+  ],
+  "context": {
+    "languages": [
+      "typescript",
+      "javascript"
+    ],
+    "frameworks": [],
+    "components": [
+      "obligation freshness",
+      "plan index"
+    ],
+    "affected_boundaries": [
+      "certificate evidence to parse-cache validation"
+    ],
+    "code_references": [
+      "skills/plan-execution/scripts/obligations.ts",
+      "src/project-index.js"
+    ]
+  },
+  "observed_behavior": "Each certificate path launched a separate Git process; Gwen used 4,893 object processes in one scan.",
+  "expected_behavior": "Reuse unchanged relevant inputs without repeated per-path process overhead or inactive-input invalidation.",
+  "causal_mechanism": "Object inspection cost scaled with path occurrences through repeated synchronous process startup.",
+  "anti_pattern": {
+    "structural_description": "Object inspection cost scaled with path occurrences through repeated synchronous process startup.",
+    "why_it_fails": "Unchanged index updates repeat work unrelated to changed active evidence."
+  },
+  "correct_pattern": {
+    "required_invariant": "Current freshness results remain complete and isolated by scope; inactive evidence cannot affect active projection.",
+    "implementation_description": "Batch object checks and share index comparisons by revision plus one working-tree and untracked inspection per pass."
+  },
+  "applicability_conditions": [
+    "A growing certificate history with overlapping Git input scopes."
+  ],
+  "known_non_matches": [
+    "An actual active-input change must still invalidate cached assessment."
+  ],
+  "confirmation_evidence": [
+    "Git trace regression: 43 object commands before batching; one after."
+  ],
+  "regression_proofs": [
+    "tests/obligations.test.ts: Git input existence checks batch many paths and preserve unusual missing names",
+    "tests/obligations.test.ts: shared Git inspection isolates scopes, preserves staged restoration and refreshes each invocation"
+  ]
+}

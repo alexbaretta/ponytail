@@ -8,6 +8,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.git = git;
 exports.fixture = fixture;
+exports.certificateFixture = certificateFixture;
 const strict_1 = __importDefault(require("node:assert/strict"));
 const node_fs_1 = __importDefault(require("node:fs"));
 const node_os_1 = __importDefault(require("node:os"));
@@ -76,4 +77,24 @@ function fixture(testContext) {
     git(root, ['commit', '-m', 'Initial scoped fixture']);
     const environment = { ...process.env, PONYTAIL_SESSION_ID: 'coordinator', PONYTAIL_CAMPAIGN_STATE_DIR: node_path_1.default.join(root, 'state') };
     return { root, documentPath, planPath, planText, sprintPath, document: acceptedObligationDocumentV1, proofPath, environment };
+}
+function certificateFixture(testContext) {
+    const obligationFixture = fixture(testContext);
+    const obligationCertificate = { id: 'CERT-ACTIVE', obligationIds: ['OBL-1'],
+        inputs: (0, obligations_js_1.createObligationGitInputs)(obligationFixture.root, ['requirement.md', obligationFixture.proofPath]),
+        artifacts: [obligationFixture.proofPath], assessor: 'coordinator', authority: ['approved-CHNG'], adequate: true,
+        reason: 'Complete bounded inventory', disposition: null, evidence: [], inventoryIds: [] };
+    const candidateObligationDocumentV1 = { ...obligationFixture.document, certificates: [obligationCertificate],
+        checkpoints: [...obligationFixture.document.checkpoints, { id: 'CP2', predecessorId: 'CP1', baselineId: 'B1', kind: 'productive',
+                selectedIds: ['OBL-1'], registeredIds: [], certificateIds: [obligationCertificate.id], invalidatedIds: [],
+                before: [1, 1, 1, 1, 1, 1], after: [0, 1, 1, 1, 1, 1], preparation: null, reason: 'Accept inspected inventory', assessor: 'coordinator' }] };
+    const acceptedObligationDocumentV1 = (0, obligations_js_1.acceptCheckpoint)(obligationFixture.document, candidateObligationDocumentV1, obligationFixture.root);
+    node_fs_1.default.writeFileSync(node_path_1.default.join(obligationFixture.root, 'inactive-proof.txt'), 'inactive evidence');
+    const inactiveObligationCertificate = { ...obligationCertificate, id: 'CERT-INACTIVE',
+        inputs: [{ path: 'inactive-proof.txt', digest: (0, obligations_js_1.inputDigest)(obligationFixture.root, 'inactive-proof.txt') }], artifacts: ['inactive-proof.txt'] };
+    const obligationDocumentV1 = { ...acceptedObligationDocumentV1, certificates: [...acceptedObligationDocumentV1.certificates, inactiveObligationCertificate] };
+    node_fs_1.default.writeFileSync(node_path_1.default.join(obligationFixture.root, obligationFixture.documentPath), JSON.stringify(obligationDocumentV1));
+    node_fs_1.default.writeFileSync(node_path_1.default.join(obligationFixture.root, 'ponytail-journal.json'), JSON.stringify({ schemaVersion: 1,
+        projectId: '019c0000-0000-7000-8000-000000000001', projectName: 'fixture', database: { name: 'ponytail' } }));
+    return { ...obligationFixture, document: obligationDocumentV1 };
 }

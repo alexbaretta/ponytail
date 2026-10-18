@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-10-17-inactive_certificate_dependencies",
+  "recorded_at": "2026-10-17T19:50:07-07:00",
+  "source_references": [
+    "pm/bugs/in_progress/2026-10-17-TASK-batch_git_certificate_checks.md"
+  ],
+  "context": {
+    "languages": [
+      "typescript",
+      "javascript"
+    ],
+    "frameworks": [],
+    "components": [
+      "obligation freshness",
+      "plan index"
+    ],
+    "affected_boundaries": [
+      "certificate evidence to parse-cache validation"
+    ],
+    "code_references": [
+      "skills/plan-execution/scripts/obligations.ts",
+      "src/project-index.js"
+    ]
+  },
+  "observed_behavior": "The index cache key inspected 465 historical certificates although current projection assessed only 29.",
+  "expected_behavior": "Reuse unchanged relevant inputs without repeated per-path process overhead or inactive-input invalidation.",
+  "causal_mechanism": "Cache invalidation depended on files that cannot affect current accepted-certificate assessments.",
+  "anti_pattern": {
+    "structural_description": "Cache invalidation depended on files that cannot affect current accepted-certificate assessments.",
+    "why_it_fails": "Unchanged index updates repeat work unrelated to changed active evidence."
+  },
+  "correct_pattern": {
+    "required_invariant": "Current freshness results remain complete and isolated by scope; inactive evidence cannot affect active projection.",
+    "implementation_description": "Derive active certificate membership and current baseline through canonical history replay; retain historical source records but exclude their inactive filesystem dependencies."
+  },
+  "applicability_conditions": [
+    "A growing certificate history with overlapping Git input scopes."
+  ],
+  "known_non_matches": [
+    "An actual active-input change must still invalidate cached assessment."
+  ],
+  "confirmation_evidence": [
+    "Changing inactive evidence previously changed the parser identity; the regression now preserves it and still invalidates active proof edits."
+  ],
+  "regression_proofs": [
+    "tests/project-index.test.js: plan parse cache ignores inactive evidence but invalidates changed active certificate inputs"
+  ]
+}

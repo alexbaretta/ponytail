@@ -414,31 +414,85 @@ export function inputDigest(root: string, relative: string, proposedInputs?: Rea
   requireCondition(fs.statSync(inputPath).isFile(), `input must be a regular file: ${relative}`);
   return crypto.createHash('sha256').update(fs.readFileSync(inputPath)).digest('hex');
 }
+export function gitInputReasonsMany(root: string, inputSets: readonly ObligationGitInputs[], onProgress?: (completed: number, total: number) => void): ReadonlyMap<ObligationGitInputs, readonly string[]> {
+  const gitInputReasonsMap = new Map<ObligationGitInputs, string[]>();
+  const obligationGitInputsMap = new Map<string, ObligationGitInputs[]>();
+  const requests = new Set<string>();
+  for (const obligationGitInputs of inputSets) {
+    gitInputReasonsMap.set(obligationGitInputs, []);
+    const group = obligationGitInputsMap.get(obligationGitInputs.revision) ?? [];
+    group.push(obligationGitInputs);
+    obligationGitInputsMap.set(obligationGitInputs.revision, group);
+    requests.add(`${obligationGitInputs.revision}^{commit}`);
+    for (const relative of obligationGitInputs.paths) { relativePath(relative); requests.add(`${obligationGitInputs.revision}:${relative}`); }
+  }
+  onProgress?.(0, inputSets.length);
+  if (inputSets.length === 0) return gitInputReasonsMap;
+  const input = [...requests].map(request => `${request}\0`).join('');
+  const checked = spawnSync('git', ['--literal-pathspecs', '-C', root, 'cat-file', '--batch-check=%(objectname)', '-z'], {
+    encoding: 'utf8', input, maxBuffer: Math.max(1024 * 1024, Buffer.byteLength(input) + requests.size * 80),
+  });
+  const objectExistenceMap = new Map<string, boolean>();
+  let offset = 0;
+  if (checked.status === 0) for (const request of requests) {
+    // Known request framing disambiguates missing names containing linefeeds.
+    const missing = `${request} missing\n`;
+    if (checked.stdout.startsWith(missing, offset)) { objectExistenceMap.set(request, false); offset += missing.length; }
+    else {
+      const end = checked.stdout.indexOf('\n', offset);
+      if (end < 0 || !/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/.test(checked.stdout.slice(offset, end))) break;
+      objectExistenceMap.set(request, true); offset = end + 1;
+    }
+  }
+  if (checked.status !== 0 || objectExistenceMap.size !== requests.size || offset !== checked.stdout.length) {
+    for (const reasons of gitInputReasonsMap.values()) reasons.push('Git input comparison failed');
+    onProgress?.(inputSets.length, inputSets.length); return gitInputReasonsMap;
+  }
+  const git = (args: readonly string[]) => spawnSync('git', ['--literal-pathspecs', '-C', root, ...args], {encoding: 'utf8'});
+  const scopes = [...new Set(inputSets.filter(inputs => objectExistenceMap.get(`${inputs.revision}^{commit}`)).flatMap(inputs => inputs.paths))];
+  const untracked = scopes.length === 0 ? null : git(['ls-files', '--others', '--exclude-standard', '-z', '--', ...scopes]);
+  const changedPaths = (args: readonly string[]): readonly string[] | null => {
+    const result = git(['diff', '--name-only', '--no-renames', '-z', '--exit-code', ...args]);
+    return (result.status === 0 || result.status === 1) && (result.stdout === '' || result.stdout.endsWith('\0'))
+      ? result.stdout.split('\0').filter(Boolean) : null;
+  };
+  // Both the index and worktree must match the certificate. Comparing the
+  // worktree to the index once is sufficient: an index mismatch already fails.
+  const workingChanges = scopes.length === 0 ? [] : changedPaths(['--', ...scopes]);
+  const covers = (relative: string, paths: readonly string[]): boolean => paths.some(scope => relative === scope || relative.startsWith(`${scope}/`));
+  let completed = 0;
+  for (const [revision, group] of obligationGitInputsMap) {
+    const available = objectExistenceMap.get(`${revision}^{commit}`) === true;
+    const paths = [...new Set(group.flatMap(inputs => inputs.paths))];
+    const stagedChanges = available ? changedPaths(['--cached', revision, '--', ...paths]) : [];
+    for (const obligationGitInputs of group) {
+      const reasons = gitInputReasonsMap.get(obligationGitInputs);
+      requireCondition(reasons !== undefined, 'missing Git input assessment');
+      if (!available) reasons.push('unavailable Git verification revision');
+      else {
+        for (const relative of obligationGitInputs.paths) if (!objectExistenceMap.get(`${revision}:${relative}`)) reasons.push(`input absent from verified Git revision: ${relative}`);
+        if (workingChanges === null || stagedChanges === null) reasons.push('Git input comparison failed');
+        if (workingChanges?.some(relative => covers(relative, obligationGitInputs.paths)) || stagedChanges?.some(relative => covers(relative, obligationGitInputs.paths))) reasons.push('changed Git inputs');
+        if (untracked === null || untracked.status !== 0 || untracked.stdout !== '' && !untracked.stdout.endsWith('\0')) reasons.push('Git untracked input comparison failed');
+        else if (untracked.stdout.split('\0').filter(Boolean).some(relative => covers(relative, obligationGitInputs.paths))) reasons.push('new untracked Git inputs');
+      }
+      onProgress?.(++completed, inputSets.length);
+    }
+  }
+  return gitInputReasonsMap;
+}
 
 export function gitInputReasons(root: string, obligationGitInputs: ObligationGitInputs, proposedInputs?: ReadonlyMap<string, string>): readonly string[] {
-  const reasons: string[] = [];
+  const proposedReasons: string[] = [];
   if (proposedInputs !== undefined) for (const [relative, content] of proposedInputs) {
     if (obligationGitInputs.paths.some(scope => relative === scope || relative.startsWith(scope + '/'))) {
       const prior = spawnSync('git', ['-C', root, 'show', `${obligationGitInputs.revision}:${relative}`], {encoding: 'utf8'});
-      if (prior.status !== 0 || prior.stdout !== content) reasons.push(`changed proposed Git input: ${relative}`);
+      if (prior.status !== 0 || prior.stdout !== content) proposedReasons.push(`changed proposed Git input: ${relative}`);
     }
   }
-  const git = (args: readonly string[]) => spawnSync('git', ['--literal-pathspecs', '-C', root, ...args], {encoding: 'utf8'});
-  if (git(['cat-file', '-e', `${obligationGitInputs.revision}^{commit}`]).status !== 0) return ['unavailable Git verification revision'];
-  for (const relative of obligationGitInputs.paths) {
-    relativePath(relative);
-    if (git(['cat-file', '-e', `${obligationGitInputs.revision}:${relative}`]).status !== 0) reasons.push(`input absent from verified Git revision: ${relative}`);
-  }
-  for (const args of [['diff', '--quiet', obligationGitInputs.revision, '--', ...obligationGitInputs.paths],
-    ['diff', '--cached', '--quiet', obligationGitInputs.revision, '--', ...obligationGitInputs.paths]]) {
-    const result = git(args);
-    if (result.status === 1) reasons.push('changed Git inputs');
-    else if (result.status !== 0) reasons.push('Git input comparison failed');
-  }
-  const spawnSyncReturns = git(['ls-files', '--others', '--exclude-standard', '-z', '--', ...obligationGitInputs.paths]);
-  if (spawnSyncReturns.status !== 0) reasons.push('Git untracked input comparison failed');
-  else if (spawnSyncReturns.stdout.length > 0) reasons.push('new untracked Git inputs');
-  return reasons;
+  const reasons = gitInputReasonsMany(root, [obligationGitInputs]).get(obligationGitInputs);
+  requireCondition(reasons !== undefined, 'missing Git input assessment');
+  return reasons.includes('unavailable Git verification revision') ? reasons : [...proposedReasons, ...reasons];
 }
 
 export function createObligationGitInputs(root: string, paths: readonly string[]): ObligationGitInputs {
@@ -627,7 +681,7 @@ function checkpointTransition(obligationDocument: ObligationDocumentV1, checkpoi
   }
 }
 
-function replayHistory(obligationDocument: ObligationDocumentV1): ObligationHistory {
+export function replayHistory(obligationDocument: ObligationDocumentV1): ObligationHistory {
   const firstBaseline = obligationDocument.baselines[0];
   requireCondition(firstBaseline, 'a baseline is required');
   let baseline: ObligationBaseline = firstBaseline;

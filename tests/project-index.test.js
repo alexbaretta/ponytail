@@ -70,18 +70,14 @@ function fixture() {
 }
 
 test('plan parse cache tracks Git certificate input freshness without treating Git inputs as hash arrays', t => {
-  const obligationFixtureHelpers = require('../dist/tests/helpers/obligation-fixture');
-  const { createObligationGitInputs } = require('../skills/plan-execution/scripts/obligations');
-  const obligationFixture = obligationFixtureHelpers.fixture(t);
-  const { root, documentPath, document, proofPath } = obligationFixture;
-  fs.writeFileSync(path.join(root, 'ponytail-journal.json'), JSON.stringify({schemaVersion:1,projectId:'019c0000-0000-7000-8000-000000000099',projectName:'dependency-fixture',database:{name:'ponytail'}}));
-  const certificate = {id:'CERT-GIT',obligationIds:['OBL-1'],inputs:createObligationGitInputs(root,['src.txt']),artifacts:[proofPath],assessor:'coordinator',authority:['approved-CHNG'],adequate:true,reason:'Reviewed complete inventory',disposition:null,evidence:[],inventoryIds:[]};
-  fs.writeFileSync(path.join(root,documentPath),JSON.stringify({...document,certificates:[certificate]}));
+  const obligationFixture = require('./helpers/obligation-fixture').certificateFixture(t);
+  const { root, documentPath, proofPath } = obligationFixture;
+  const originalProof = fs.readFileSync(path.join(root, proofPath));
   const identity = () => collectPlanProjection(root).files.find(file=>file.path===documentPath).parserIdentity;
   const initial = identity();
-  fs.writeFileSync(path.join(root,'src.txt'),'changed certified input');
+  fs.writeFileSync(path.join(root,proofPath),'changed certified input');
   assert.notEqual(identity(),initial);
-  fs.writeFileSync(path.join(root,'src.txt'),'implementation input');
+  fs.writeFileSync(path.join(root,proofPath),originalProof);
   assert.equal(identity(),initial);
 });
 
@@ -113,16 +109,7 @@ for (const corpus of ['traceability', 'plans']) test(`${corpus} freshness valida
 
 // Traceability: verifies REQ-TRACEABILITY-PROGRESS
 for (const isTTY of [true, false]) test(`manifest obligation input verification reports its own progress; TTY=${isTTY}`, t => {
-  const obligationFixture = require('./helpers/obligation-fixture').fixture(t);
-  fs.writeFileSync(path.join(obligationFixture.root, 'ponytail-journal.json'), JSON.stringify({
-    schemaVersion: 1, projectId: '019c0000-0000-7000-8000-000000000001', projectName: 'fixture', database: { name: 'ponytail' },
-  }));
-  fs.writeFileSync(path.join(obligationFixture.root, '.agents/config/project/management.json'), JSON.stringify({
-    schemaVersion: 1, managementRoot: 'pm', planRoot: 'pm/plans', legacyPlanLayout: 'flat',
-    lifecycle: { directories: ['open', 'in_progress', 'closed', 'deferred', 'rejected'], roles: {
-      initial: 'open', activeWork: 'in_progress', successfulCompletion: 'closed', deferred: 'deferred', rejected: 'rejected',
-    } },
-  }));
+  const obligationFixture = require('./helpers/obligation-fixture').certificateFixture(t);
   let output = '';
   const events = [];
   const progress = indexProgress({ isTTY, write(text) { output += text; } }, () => 0);
@@ -134,6 +121,22 @@ for (const isTTY of [true, false]) test(`manifest obligation input verification 
   assert.equal(checks.at(-1)[0], checks.at(-1)[1]);
   assert.ok(checks.at(-1)[1] > 0);
   assert.match(output, /certificate inputs/);
+});
+
+// Traceability: verifies REQ-OBLIGATION-FRESHNESS
+test('plan parse cache ignores inactive evidence but invalidates changed active certificate inputs', t => {
+  const obligationFixture = require('./helpers/obligation-fixture').certificateFixture(t);
+  const document = () => collectPlanProjection(obligationFixture.root).files.find(file => file.path === obligationFixture.documentPath);
+  const first = document();
+  assert.ok(first);
+  assert.equal(first.parse().records.find(record => record.recordId === 'CERT-ACTIVE').status, 'VALID');
+  fs.writeFileSync(path.join(obligationFixture.root, 'inactive-proof.txt'), 'changed inactive evidence');
+  const inactiveChange = document();
+  assert.equal(inactiveChange.parserIdentity, first.parserIdentity, 'unaccepted historical evidence cannot affect current projection');
+  fs.writeFileSync(path.join(obligationFixture.root, obligationFixture.proofPath), 'changed active evidence');
+  const activeChange = document();
+  assert.notEqual(activeChange.parserIdentity, first.parserIdentity);
+  assert.equal(activeChange.parse().records.find(record => record.recordId === 'CERT-ACTIVE').status, 'UNACCEPTED_OR_INVALID');
 });
 
 test('incremental commit preparation never rereads already indexed Git blobs', async () => {

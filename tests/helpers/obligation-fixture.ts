@@ -6,8 +6,8 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { type TestContext } from 'node:test';
-import { inputDigest, acceptCheckpoint, type ObligationDocumentV1, type ObligationBaseline,
- type ObligationCoordinate } from '../../skills/plan-execution/scripts/obligations.js';
+import { inputDigest, acceptCheckpoint, createObligationGitInputs, type ObligationDocumentV1, type ObligationBaseline,
+ type ObligationCoordinate, type ObligationCertificate } from '../../skills/plan-execution/scripts/obligations.js';
 import { type CampaignPlanMetadataV3 } from '../../src/campaign-plan-metadata.js';
 import { type SprintMetadataV3 } from '../../skills/plan-execution/scripts/sprint-metadata.js';
 import { type TaskletMetadataV4 } from '../../skills/plan-execution/scripts/tasklet-metadata.js';
@@ -71,4 +71,25 @@ export function fixture(testContext: TestContext): ObligationFixture {
  git(root, ['config','user.name','Fixture']); git(root, ['add','.']); git(root, ['commit','-m','Initial scoped fixture']);
  const environment: NodeJS.ProcessEnv = { ...process.env, PONYTAIL_SESSION_ID: 'coordinator', PONYTAIL_CAMPAIGN_STATE_DIR: path.join(root, 'state') };
  return { root, documentPath, planPath, planText, sprintPath, document: acceptedObligationDocumentV1, proofPath, environment };
+}
+
+export function certificateFixture(testContext: TestContext): ObligationFixture {
+ const obligationFixture=fixture(testContext);
+ const obligationCertificate:ObligationCertificate={id:'CERT-ACTIVE',obligationIds:['OBL-1'],
+  inputs:createObligationGitInputs(obligationFixture.root,['requirement.md',obligationFixture.proofPath]),
+  artifacts:[obligationFixture.proofPath],assessor:'coordinator',authority:['approved-CHNG'],adequate:true,
+  reason:'Complete bounded inventory',disposition:null,evidence:[],inventoryIds:[]};
+ const candidateObligationDocumentV1:ObligationDocumentV1={...obligationFixture.document,certificates:[obligationCertificate],
+  checkpoints:[...obligationFixture.document.checkpoints,{id:'CP2',predecessorId:'CP1',baselineId:'B1',kind:'productive',
+   selectedIds:['OBL-1'],registeredIds:[],certificateIds:[obligationCertificate.id],invalidatedIds:[],
+   before:[1,1,1,1,1,1],after:[0,1,1,1,1,1],preparation:null,reason:'Accept inspected inventory',assessor:'coordinator'}]};
+ const acceptedObligationDocumentV1=acceptCheckpoint(obligationFixture.document,candidateObligationDocumentV1,obligationFixture.root);
+ fs.writeFileSync(path.join(obligationFixture.root,'inactive-proof.txt'),'inactive evidence');
+ const inactiveObligationCertificate:ObligationCertificate={...obligationCertificate,id:'CERT-INACTIVE',
+  inputs:[{path:'inactive-proof.txt',digest:inputDigest(obligationFixture.root,'inactive-proof.txt')}],artifacts:['inactive-proof.txt']};
+ const obligationDocumentV1:ObligationDocumentV1={...acceptedObligationDocumentV1,certificates:[...acceptedObligationDocumentV1.certificates,inactiveObligationCertificate]};
+ fs.writeFileSync(path.join(obligationFixture.root,obligationFixture.documentPath),JSON.stringify(obligationDocumentV1));
+ fs.writeFileSync(path.join(obligationFixture.root,'ponytail-journal.json'),JSON.stringify({schemaVersion:1,
+  projectId:'019c0000-0000-7000-8000-000000000001',projectName:'fixture',database:{name:'ponytail'}}));
+ return {...obligationFixture,document:obligationDocumentV1};
 }

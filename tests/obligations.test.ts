@@ -7,7 +7,7 @@ import path from 'node:path';
 import os from 'node:os';
 import { spawnSync } from 'node:child_process';
 import manifest from '../versioned-data-contracts.json';
-import { readObligationDocumentV1, parseObligationDocument, inputDigest, freshCertificate, projectObligations, isObligationGitInputs, createObligationGitInputs,
+import { readObligationDocumentV1, parseObligationDocument, inputDigest, freshCertificate, projectObligations, isObligationGitInputs, createObligationGitInputs, gitInputReasons, gitInputReasonsMany, type ObligationGitInputs,
  compareVectors, selectObligation, acceptCheckpoint, ObligationDocumentReaders, type ObligationDocumentV1,
  type Obligation, type ObligationCoordinate, type ObligationCertificate, type ObligationCheckpoint,
  type ObligationBaseline, type ObligationEvidence, type ObligationVector } from '../skills/plan-execution/scripts/obligations.js';
@@ -99,6 +99,80 @@ test('Git certificate serialization stores a revision and paths, without file ha
   {schemaVersion:2,revision:'a'.repeat(40),paths:['../proof.txt']},
   {schemaVersion:3,revision:'a'.repeat(40),paths:['proof.txt']}])
   assert.throws(()=>parseObligationDocument(JSON.stringify({...initial,certificates:[{...certificate,inputs}]})));
+});
+
+// Traceability: verifies REQ-OBLIGATION-FRESHNESS
+test('Git input existence checks batch many paths and preserve unusual missing names', testContext => {
+ const {root} = assessedFixture(testContext);
+ const paths = [...Array.from({length:40},(_,index)=>`input-${index}.txt`),'input with spaces.txt','input\nwith newline.txt'];
+ for(const relative of paths) fs.writeFileSync(path.join(root,relative),'verified');
+ const git = (args:readonly string[]):string => {
+  const result=spawnSync('git',['-C',root,...args],{encoding:'utf8'});
+  assert.equal(result.status,0,result.stderr);return result.stdout.trim();
+ };
+ git(['init','-q']);git(['add','.']);git(['-c','user.name=Fixture','-c','user.email=fixture@example.test','commit','-qm','inputs']);
+ const obligationGitInputs:ObligationGitInputs={schemaVersion:2,revision:git(['rev-parse','HEAD']),paths};
+ const traceFile=path.join(root,'git-trace.log');
+ const prior=process.env.GIT_TRACE;
+ try {process.env.GIT_TRACE=traceFile;assert.deepEqual(gitInputReasons(root,obligationGitInputs),[]);}
+ finally {if(prior===undefined) delete process.env.GIT_TRACE;else process.env.GIT_TRACE=prior;}
+ const objectChecks=fs.readFileSync(traceFile,'utf8').split('\n').filter(line=>line.includes('built-in: git cat-file '));
+ assert.equal(objectChecks.length,1,'one object batch, independent of the path count');
+ const missing='absent\nwith spaces.txt';
+ const missingObligationGitInputs:ObligationGitInputs={...obligationGitInputs,paths:[...paths,missing]};
+ assert.deepEqual(gitInputReasons(root,missingObligationGitInputs),[`input absent from verified Git revision: ${missing}`]);
+});
+
+// Traceability: verifies REQ-OBLIGATION-FRESHNESS
+test('shared Git inspection isolates scopes, preserves staged restoration and refreshes each invocation', testContext => {
+ const {root}=assessedFixture(testContext);
+ for(const directory of ['left','right']) {fs.mkdirSync(path.join(root,directory));fs.writeFileSync(path.join(root,directory,'input.txt'),'original');}
+ const git=(args:readonly string[]):string=>{const result=spawnSync('git',['-C',root,...args],{encoding:'utf8'});assert.equal(result.status,0,result.stderr);return result.stdout.trim();};
+ git(['init','-q']);git(['add','.']);git(['-c','user.name=Fixture','-c','user.email=fixture@example.test','commit','-qm','inputs']);
+ const revision=git(['rev-parse','HEAD']);
+ const leftObligationGitInputs:ObligationGitInputs={schemaVersion:2,revision,paths:['left']};
+ const rightObligationGitInputs:ObligationGitInputs={schemaVersion:2,revision,paths:['right']};
+ const fileObligationGitInputs:ObligationGitInputs={schemaVersion:2,revision,paths:['left/input.txt']};
+ const inputSets:readonly ObligationGitInputs[]=[leftObligationGitInputs,rightObligationGitInputs,fileObligationGitInputs];
+ const traceFile=path.join(root,'git-trace.log');const prior=process.env.GIT_TRACE;
+ try {
+  process.env.GIT_TRACE=traceFile;
+  for(const reasons of gitInputReasonsMany(root,inputSets).values()) assert.deepEqual(reasons,[]);
+ } finally {if(prior===undefined) delete process.env.GIT_TRACE;else process.env.GIT_TRACE=prior;}
+ const commands=fs.readFileSync(traceFile,'utf8').split('\n');
+ assert.equal(commands.filter(line=>line.includes('built-in: git cat-file ')).length,1);
+ assert.equal(commands.filter(line=>line.includes('built-in: git diff ')).length,2);
+ assert.equal(commands.filter(line=>line.includes('built-in: git ls-files ')).length,1);
+ fs.writeFileSync(path.join(root,'left/input.txt'),'changed');
+ let gitInputReasonsMap=gitInputReasonsMany(root,inputSets);
+ assert.deepEqual(gitInputReasonsMap.get(leftObligationGitInputs),['changed Git inputs']);
+ assert.deepEqual(gitInputReasonsMap.get(fileObligationGitInputs),['changed Git inputs']);
+ assert.deepEqual(gitInputReasonsMap.get(rightObligationGitInputs),[]);
+ git(['add','left/input.txt']);fs.writeFileSync(path.join(root,'left/input.txt'),'original');
+ fs.writeFileSync(path.join(root,'left/untracked.txt'),'new');
+ gitInputReasonsMap=gitInputReasonsMany(root,inputSets);
+ assert.deepEqual(gitInputReasonsMap.get(leftObligationGitInputs),['changed Git inputs','new untracked Git inputs']);
+ assert.deepEqual(gitInputReasonsMap.get(fileObligationGitInputs),['changed Git inputs']);
+ assert.deepEqual(gitInputReasonsMap.get(rightObligationGitInputs),[]);
+ fs.unlinkSync(path.join(root,'left/untracked.txt'));git(['restore','--staged','left/input.txt']);
+ git(['mv','left/input.txt','right/renamed.txt']);
+ gitInputReasonsMap=gitInputReasonsMany(root,inputSets);
+ assert.ok(gitInputReasonsMap.get(leftObligationGitInputs)?.includes('changed Git inputs'));
+ assert.ok(gitInputReasonsMap.get(rightObligationGitInputs)?.includes('changed Git inputs'));
+ git(['-c','user.name=Fixture','-c','user.email=fixture@example.test','commit','-qm','rename']);
+ const currentObligationGitInputs:ObligationGitInputs={schemaVersion:2,revision:git(['rev-parse','HEAD']),paths:['right']};
+ const missingObligationGitInputs:ObligationGitInputs={schemaVersion:2,revision:'0'.repeat(40),paths:['missing']};
+ gitInputReasonsMap=gitInputReasonsMany(root,[rightObligationGitInputs,currentObligationGitInputs,missingObligationGitInputs]);
+ assert.ok(gitInputReasonsMap.get(rightObligationGitInputs)?.includes('changed Git inputs'));
+ assert.deepEqual(gitInputReasonsMap.get(currentObligationGitInputs),[]);
+ assert.deepEqual(gitInputReasonsMap.get(missingObligationGitInputs),['unavailable Git verification revision']);
+});
+
+// Traceability: verifies REQ-OBLIGATION-FRESHNESS
+test('shared Git inspection never accepts unavailable repository inspection', testContext => {
+ const {root}=assessedFixture(testContext);
+ const obligationGitInputs:ObligationGitInputs={schemaVersion:2,revision:'0'.repeat(40),paths:['proof.txt']};
+ assert.deepEqual(gitInputReasonsMany(root,[obligationGitInputs]).get(obligationGitInputs),['Git input comparison failed']);
 });
 
 // Traceability: verifies REQ-OBLIGATION-FRESHNESS
