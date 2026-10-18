@@ -49,8 +49,10 @@ currently implemented state when they differ.
 
 Describe architecture at the level needed to make implementation boundaries
 and consequences understandable. Keep source-level algorithms, tasklets,
-incident history, command transcripts, and debugging evidence with their code,
-plan, or issue unless they establish a durable architectural constraint.
+incident history and confirmed diagnosis with their code, plan or issue unless
+they establish a durable architectural constraint. Captured command/test output
+belongs in ignored or external evidence storage, not architecture pages; reference
+commit-attached validation tags without copying their payloads.
 
 ## Reconciliation
 

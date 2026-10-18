@@ -219,3 +219,8 @@ shared plan; preserve each issue's own scope and acceptance evidence.
 Use `plan-execution` for implementation, diagnosis routing, validation cadence,
 approval, selective commits, and non-local mutation restrictions. This skill
 does not authorize external issue publication or notifications.
+
+Validation references identify the tested commit and its annotated tag. Keep raw
+output and certificate payloads outside tracked issue records; retain concise
+causal diagnosis and resolution details. Campaign closure follows
+`campaign-management`, including independent coordinator final QA.

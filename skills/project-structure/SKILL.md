@@ -261,6 +261,11 @@ as part of the approved work before creating an alternative layout.
 - Preserve one source of truth and update inbound links after a move.
 - Do not delete documentation without the authority required by the host.
 
+Campaign assignments and progress notes belong to native host context, not a
+new source ledger or project database. Passing validation certificates belong to
+annotated Git tags; keep their payloads and captured output out of tracked PM
+files. Canonical requirements, acceptances and durable design remain source.
+
 ## Temporary Artifacts
 
 - Store project-specific logs, downloads, screenshots, probes, traces, and
