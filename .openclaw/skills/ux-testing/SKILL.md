@@ -89,8 +89,11 @@ materially. Prefer the smallest selectable portion during development.
 - Test state is isolated from unrelated environments and data.
 - Applicable focused tests pass; broader gate results are owned and may be
   reused according to the host's configured cadence.
-- Required plan or bug records contain the implementation and validation
-  evidence.
+- Required plan or bug records identify the implementation and reference
+  validation evidence. Captured screenshots, recordings, logs and test output
+  stay in ignored temporary storage or the configured external evidence owner;
+  commit-attached certificates follow `user-acceptance-testing`. Do not copy
+  certificate payloads or passing-output ledgers into tracked source.
 
 If validation is impossible, report the missing connection capability,
 fixture, environment state, or integration seam. Do not claim full UX

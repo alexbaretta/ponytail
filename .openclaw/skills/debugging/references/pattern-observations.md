@@ -36,7 +36,12 @@ relationship proved by the repair. A patch description alone is neither.
 
 Record source and code references as repository-relative paths, stable issue or
 plan identifiers, or commit identities. Keep excerpts short and include them
-only when a reference cannot preserve the material distinction.
+only when a reference cannot preserve the material distinction. This record
+preserves the diagnosis, not a history of test runs. `confirmation_evidence`
+contains concise causal observations or evidence references; `regression_proofs`
+identifies executable regression tests. Reference any retained commit-attached
+certificate without copying its payload. Keep raw logs and captured test output
+outside tracked source, including passing output.
 
 `applicability_conditions` identifies conditions required for the causal
 mechanism. `known_non_matches` records similar-looking cases that the evidence

@@ -38,7 +38,13 @@ without immediately reproducing the entire workflow. When applicable, include:
 
 Automate this capture in the owning test or diagnostic harness when the same
 manual probes would otherwise recur. Keep secrets and unrelated tenant or user
-data out of the dossier.
+data out of the dossier. Store captured logs, traces, responses and test output
+in ignored temporary storage or the configured external evidence owner. Keep
+durable causal explanations and regression-test references in the bug or pattern
+record; do not append run output or passing-certificate ledgers to tracked source.
+Use the shared evidence/certificate definitions in `plan-execution` and the
+commit-attached validation policy in `user-acceptance-testing`. Failed-run
+certificates are optional and require an explicit decision to retain the run.
 
 ## Investigation
 
