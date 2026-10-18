@@ -114,37 +114,6 @@ services. `PROJECT_STRUCTURE.md` is authoritative for that boundary.
   dist/tests/swarm-store.integration.test.js
   dist/tests/swarm-info.integration.test.js`; the integration selection uses
   disposable Git worktrees and isolated existing-PostgreSQL project rows.
-- Git certificate focused proof: `node --test dist/tests/obligations.test.js
-  dist/tests/obligation-certificate-bindings.test.js
-  dist/tests/rolling-worker-submission.test.js dist/tests/rolling-worker.test.js`.
-  PostgreSQL acceptance proof: `node --test
-  --test-name-pattern="integrated certificate assessment"
-  dist/tests/rolling-campaign-store.integration.test.js`.
-- Campaign client/help compliance proof: `node --test
-  dist/tests/campaign-compliance.test.js
-  dist/tests/campaign-compliance.integration.test.js tests/cli-tools.test.js`.
-- Rolling review focused proof: `node --test dist/tests/rolling-review.test.js
-  dist/tests/rolling-codex.test.js dist/tests/rolling-campaign-store.test.js
-  dist/tests/rolling-campaign-store.integration.test.js`.
-  Explicit live native acceptance: `node --test dist/tests/rolling-codex.integration.js`;
-  preserves configured model/permissions and uses disposable checkouts and
-  isolated project records in the existing local PostgreSQL database. Includes
-  exact-candidate adversarial rejection and persisted decision recovery after
-  App Server restart, plus allocation-to-native-worker attachment and same-session
-  recovery and exact obligation/traceability/lease/QA instruction delivery to the
-  original session. The native worker harness removes inherited Node test-runner
-  metadata; model and permissions remain configured by the host. Ordinary focused
-  tests use the controlled protocol fixture.
-- Rolling worker attachment focused proof: `node --test dist/tests/rolling-worker.test.js
-  dist/tests/rolling-campaign-store.integration.test.js`; actual native provisioning
-  uses the explicit live native acceptance command above.
-- Swarm retained checkout focused proof: `node --test
-  dist/tests/swarm-worktrees.integration.test.js
-  dist/tests/swarm-store.integration.test.js dist/tests/rolling-reset.integration.test.js`;
-  uses disposable Git repositories and isolated project rows in existing PostgreSQL.
-- Explicit project reset focused proof: `node --test dist/tests/rolling-reset.test.js
-  dist/tests/rolling-reset.integration.test.js`; uses disposable Git repositories,
-  controlled native protocol and isolated project rows in existing PostgreSQL.
 - Rolling checkout focused proof: `node --test tests/rolling-worktrees.test.js
   tests/rolling-worktrees.integration.test.js`; all Git worktrees belong to
   disposable test repositories.
@@ -153,9 +122,6 @@ services. `PROJECT_STRUCTURE.md` is authoritative for that boundary.
 - Campaign configuration focused proof: `node --test dist/tests/campaign-configuration.test.js tests/campaign-census.test.js tests/campaign-census-format.test.js`.
 - Plan-input queue focused proof: `node --test dist/tests/plan-input-queue.test.js dist/tests/plan-input-command.test.js dist/tests/plan-input.test.js tests/plan-input-hooks.test.js`; the hook tests still await language migration.
 - Project database options focused proof: `node --test dist/tests/project-index-database.test.js`.
-- Rolling campaign store focused proof: `node --test dist/tests/rolling-campaign-store.test.js
-  dist/tests/rolling-campaign-store.integration.test.js`; uses isolated project rows in
-  the configured local PostgreSQL database after `./scripts/setup-project-journal.sh`.
 - Integration tests: no separate integration suite; supported adapter and
   bundled-subproject behavior is exercised by the Node full command.
 - Integration arc listing: not applicable.

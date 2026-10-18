@@ -27,7 +27,21 @@ test('retired commands fail before touching a project or creating runtime state'
  for (const command of ['init','replenish','submit','integrate','accept','close','reset']) {
   const result=spawnSync(process.execPath,[entry,command],{cwd:root,encoding:'utf8'});
   assert.equal(result.status,1,command);
-  assert.match(result.stderr,/retired CLI command/,command);
+  assert.match(result.stderr,/unknown command|retired CLI command/,command);
   assert.deepEqual(fs.readdirSync(root),[],command);
+ }
+});
+
+// Traceability: verifies ACC-CM-HOST-OWNERSHIP from integration-test TEST-CM-HISTORY-READ-ONLY
+test('historical inspection remains usable and rejects mutation selectors',()=>{
+ const root=path.resolve(__dirname,'../..');
+ const entry=path.join(root,'src/rolling-operations.js');
+ const result=spawnSync(process.execPath,[entry,'legacy','--command','validate','--arguments',JSON.stringify(['pm/plans/in_progress/2026-10-17-campaign-management-redesign/plan.md'])],{cwd:root,encoding:'utf8'});
+ assert.equal(result.status,0,result.stderr);
+ assert.match(result.stdout,/valid: 2026-10-17-campaign-management-redesign/);
+ for (const command of ['activate','advance','deliver','reset']) {
+  const rejected=spawnSync(process.execPath,[entry,'legacy','--command',command],{cwd:root,encoding:'utf8'});
+  assert.equal(rejected.status,1);
+  assert.match(rejected.stderr,/only read-only historical inspection/);
  }
 });

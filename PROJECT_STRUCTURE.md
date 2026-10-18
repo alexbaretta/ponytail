@@ -14,22 +14,15 @@ while project-wide management records remain under `pm/`.
 
 ## Ownership
 
-- `skills/` owns canonical reusable skills and the portable Ponytail policy.
-  `skills/plan-execution/references/rolling-campaigns.md` owns the configured
-  rolling planning, worker proof and publication procedure.
-  `skills/swarm/SKILL.md` owns coordinator host-session operations and swarm
-  bookkeeping for parallel execution. `src/cli-help.ts` owns
-  cross-chapter CLI help; campaign help remains owned by its command registry.
-  `scripts/build-runtime.ts` generates the shipped JavaScript launch files.
-  `skills/plan-execution/references/glossary.md` owns shared short definitions.
-  `skills/plan-execution/scripts/obligations.js` owns the portable V1 obligation
-  reader, certificate projection, checkpoint validation and scoped entrypoint.
-  Configured obligation documents beside their owning plan/issue own conditions,
-  certificate assessments and checkpoint history; campaign members reference the
-  root document rather than duplicate it. Assignments remain in their execution
-  owner, and canonical relationship annotations retain their existing ownership.
-  Campaign ledger V9 owns append-only frozen obligation lease history; delivery V2
-  proposes evidence and current status/ready responses project acceptance.
+- `skills/` owns canonical reusable skills and portable policy.
+  `skills/campaign-management/SKILL.md` owns native worker coordination,
+  Git delivery/tagging and independent final QA. `plan-execution` owns concise
+  planning; its glossary owns shared terms. Requirements/obligations and UAT
+  remain canonical PM records, with derived reverse discovery from the graph.
+  Historical obligation/checkpoint readers retain their original semantics;
+  they do not administer new campaigns.
+  `src/cli-help.ts` and the command registry own CLI help;
+  `scripts/build-runtime.ts` generates shipped JavaScript launch files.
 - `commands/` owns canonical command prompts.
 - `config/AGENTS.md` is the generated global Codex policy installed by the
   Codex installer.
@@ -167,39 +160,13 @@ while project-wide management records remain under `pm/`.
   plan metadata readers, scoped campaign discovery and validation,
   repository-wide campaign inventory, census normalization, and human/JSON
   reporting and canonical immediately-runnable tasklet projection.
-  `src/campaign-orchestration.js` owns the versioned Ponytail-user
-  assignment ledger, authenticated host-observation snapshot, dependency
-  scheduler, runnable-plan execution/anomaly summary, scoped blocker reports and batch reservation, reconciled status and ready-action projection, verified
-  fast-forward integration, and typed host-action protocol.
-  Its per-top-level-project ledgers own the retained worker pool and capacity
-  reservations. `src/worker-worktrees.js` owns exact-path Git reconstruction
-  and checkpointed pre-attachment upgrades from authenticated main-worktree
-  provenance, independently of host tools.
-  `src/rolling-campaign.ts` owns the new rolling execution configuration and
-  independently testable graph/scheduling boundary. Its project configuration
-  is `.agents/config/project/rolling-campaigns.json`. The installed campaign
-  chapter routes to the rolling operation layer; historical readers are available
-  through explicit read-only `campaign legacy` inspection.
-  `src/rolling-publication.ts` owns accepted-increment publication batch
-  selection, nonempty partial-flush policy, history-preserving mainline candidate
-  preparation and exact-candidate full QA validation. Its shipped `.js` entrypoint is
-  compiler output materialized by `scripts/build-runtime.ts`.
-  `src/rolling-operations.ts` owns shared typed campaign initialization,
-  coordinator decisions, event/periodic replenishment, native worker/reviewer
-  execution and publication operations. `src/rolling-cli-registry.ts` owns
-  the command names, fields and help used by CLI and MCP.
-  `ponytail-mcp/rolling.ts` registers those operations over stdio, with an
-  explicit invoking project root. Its entrypoint is `ponytail-mcp/index.ts`;
-  their `.js` files are compiler output from the runtime generator.
-  `src/rolling-campaign-store.ts` owns transactional PostgreSQL campaign,
-  checkout and assignment leases and durable external-action intents.
-  Its tables and indexes use the existing `scripts/project-index.sql` setup.
-  `src/rolling-worktrees.ts` validates the shared physical pool and provisions
-  generation-bound ordinary Git checkouts with project setup and marker ignore.
-  `src/rolling-codex.ts` owns direct stdio App Server connections, native
-  thread/session identity, turns, approval routing and interruption observation.
-  `tests/rolling-codex.integration.ts` is explicit live native acceptance and
-  is excluded from default fixture-only test discovery.
+  `src/campaign-orchestration.js` retains historical campaign record readers.
+  `src/rolling-operations.ts` permits only allowlisted historical inspection;
+  `src/rolling-cli-registry.ts` owns its fields/help, shared by CLI and the
+  `ponytail-mcp/rolling.ts` adapter. No controller, allocation or publication
+  operation is exposed. Remaining rolling/swarm storage and runtime modules are
+  legacy implementation pending dependency-based removal; they are not an
+  alternative execution workflow. Preserve historical data during that removal.
   `src/worktree-reclamation.js` owns the versioned
   project lifecycle-adapter contracts, project-scoped reclamation lock,
   deterministic claim selection, generation fencing, and verified cleanup

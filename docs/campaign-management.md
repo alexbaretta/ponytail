@@ -510,8 +510,8 @@ introduce another parallel policy layer:
   [UAT](../skills/user-acceptance-testing/SKILL.md), and
   [requirements traceability](../skills/requirements-traceability/SKILL.md).
 - [Plan execution](../skills/plan-execution/SKILL.md),
-  [rolling campaigns](../skills/plan-execution/references/rolling-campaigns.md), and
-  [swarm coordination](../skills/swarm/SKILL.md).
+  [campaign management](../skills/campaign-management/SKILL.md). The historical
+  rolling-campaign and swarm procedures were retired during reconciliation.
 - Structural/semantic traceability checking, graph indexing, generated reverse
   views, project configuration, obligation/binding schemas, campaign scheduling,
   review, acceptance, and publication tooling.
