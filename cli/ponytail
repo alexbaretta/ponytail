@@ -658,16 +658,6 @@ def run():
     if not known_command:
         print(f"error: unknown or missing command: {' '.join(arguments[:2])}\n", file=sys.stderr)
         return run_cli(["node", str(source_root / "src/cli-help.js"), *arguments[:2]], cwd=Path.cwd(), stdout=sys.stderr) or 2
-    if arguments[:2] == ["worktree", "recover"]:
-        if len(arguments) != 3:
-            fail("usage: ponytail worktree recover <attachment-token>")
-        source_root = source_root_for(script_path, None)
-        return run_cli(["node", str(source_root / "src/worker-worktrees.js"), arguments[2]])
-    if arguments[:2] == ["worktree", "upgrade"]:
-        if len(arguments) != 5 or arguments[3] != "--revision":
-            fail("usage: ponytail worktree upgrade <attachment-token> --revision <commit>")
-        source_root = source_root_for(script_path, None)
-        return run_cli(["node", str(source_root / "src/worker-worktrees.js"), *arguments[1:]])
     root, main_root = repository_roots(Path.cwd())
     operation = arguments.pop(0) if arguments else "help"
     home_value = os.environ.get("HOME")
@@ -774,8 +764,6 @@ def run():
             return run_cli(["node", str(campaign_cli), *arguments], cwd=root)
         except OSError as error:
             raise ProjectError(f"campaign CLI could not start: {error}", 2) from error
-    if operation == "swarm":
-        return run_cli(["node", str(source_root / "src/swarm-info.js"), *arguments], cwd=root)
     if operation == "worktree":
         worktree_cli = source_root / "src/worktree-reclamation.js"
         if not worktree_cli.is_file():

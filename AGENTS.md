@@ -16,18 +16,11 @@ policy belongs in `skills/ponytail/SKILL.md`; do not duplicate it here.
 - Repository and management root: this repository.
 - Structure and ownership: `PROJECT_STRUCTURE.md`.
 - Project-management root: `pm/`.
-- Obligation operations: plan campaign V3 explicitly names the canonical
-  repository-relative `obligation_document`. Portable inspection:
+- Campaign execution: use `campaign-management`, native host sessions and Git.
+  Historical obligation documents remain inspectable with
   `node skills/plan-execution/scripts/obligations.js <validate|status|select>
-  <document-path> <repository-root>`. Rolling campaign inspection:
-  `ponytail campaign status --campaign <id>`; coordinator certificate publication:
-  `ponytail campaign accept --campaign <id> --review <review-id>
-  --candidate <relative-path> --bindings <JSON-array>`. Retained inactive worker
-  reactivation uses `resume-worker` with its action ID and generation.
-  Adopted subordinate selection uses
-  `ready-tasklets.js <sprint.md> [last-id] --obligations <document> --root <root>`.
-  Legacy plan/sprint/tasklet readers remain supported. Shared vocabulary:
-  `skills/plan-execution/references/glossary.md`.
+  <document-path> <repository-root>`. These readers do not own new campaign
+  execution. Shared vocabulary: `skills/plan-execution/references/glossary.md`.
 - Long-lived plans: `pm/plans/<status>/<plan-id>/` for new records.
 - Issues (`BUG`, `FEAT`, `CHNG`, `TASK`, and project-defined extensions):
   `pm/bugs/<status>/`; semantics are owned by `issue-tracking`.
@@ -121,25 +114,6 @@ services. `PROJECT_STRUCTURE.md` is authoritative for that boundary.
   dist/tests/swarm-store.integration.test.js
   dist/tests/swarm-info.integration.test.js`; the integration selection uses
   disposable Git worktrees and isolated existing-PostgreSQL project rows.
-- Autonomous swarm queues: `ponytail swarm queue --help`; exact V3 command
-  schemas (with V1/V2 input readers) and campaign-wide worker goals are owned by
-  `skills/swarm/references/autonomous-queues.md`. Both coordinator and workers
-  may register discovered work with canonical PM updates; claims do not await
-  coordinator acknowledgment. `swarm retirement-authorize --request @<file>` records exact evidence for original workers removed before suspension; normal release guards remain required. Queue inventory is included in V6 `swarm info`, with explicit suspension and physical availability. Current CLI receipts omit accumulated state; use `page` and `artifact-read` for bounded inspection. First authorized `status` upgrades V1 storage while preserving the exact original archive.
-  Focused proof: `node --test dist/tests/swarm-queue.test.js
-  dist/tests/swarm-queue.integration.test.js dist/tests/swarm-info.test.js
-  dist/tests/swarm-info.integration.test.js`.
-- Swarm inventory: `ponytail swarm info [--json]`; resolves a managed checkout
-  to its user-worktree owner and reports existing campaign-lease provenance.
-  V5 adds queue campaigns, current task claims and unresolved request composition;
-  physical V1–V4 readers remain supported. Runtime activity remains unobserved.
-  Inspection does not mutate resources; the immutable V1 reader is retained.
-- Swarm owner enrollment: `ponytail swarm owner-enroll [--json]` declares a new
-  configured user checkout's role without creating a session or worktree.
-- Swarm coordinator binding: `ponytail swarm coordinator-bind --thread <id> --session <id>
-  [--json]` records the supplied identity and enrolls the configured user checkout;
-  `ponytail swarm coordinator-unbind --session <id> [--json]` releases only that
-  exact binding and preserves workers/checkouts. Each command has scoped help.
 - Git certificate focused proof: `node --test dist/tests/obligations.test.js
   dist/tests/obligation-certificate-bindings.test.js
   dist/tests/rolling-worker-submission.test.js dist/tests/rolling-worker.test.js`.
@@ -164,52 +138,6 @@ services. `PROJECT_STRUCTURE.md` is authoritative for that boundary.
 - Rolling worker attachment focused proof: `node --test dist/tests/rolling-worker.test.js
   dist/tests/rolling-campaign-store.integration.test.js`; actual native provisioning
   uses the explicit live native acceptance command above.
-- Native campaign allocation: `ponytail campaign replenish --campaign <id>
-  --worker-session <session-id> --worker-generation <worker-uuid>
-  --worktree-generation <membership-uuid>` allocates one frozen assignment on
-  an already-bound original worker after host quiescence. Preserves its session,
-  root and membership generations; no second checkout or native API is used.
-  Focused proof: `node --test --test-name-pattern="native campaign allocation"
-  dist/tests/swarm-worktrees.integration.test.js`.
-- Original worker admission: `ponytail swarm worker-bind --thread <id> --session
-  <id> --number <n> --generation <worktree-uuid> --kind <plan|sprint> --assignment
-  <full-id> --summary "three word summary" [--lease-generation <campaign-uuid>] [--json]`. Requires an enrolled owner,
-  bound coordinator and exact assigned checkout. Records the supplied identity
-  and reports the desired name for the coordinator to apply through host tools.
-  `swarm info` reports V4 bindings; no swarm command contacts Codex.
-- Retained worker inactivity: `ponytail swarm worker-inactive --session <id>
-  --generation <worker-uuid> --lease-generation <campaign-uuid>
-  [--blockers <JSON-array>] [--json]`. Coordinator establishes quiescence first;
-  the command records inactivity without operating the session. Replenish prefers
-  the unblocked original worker; renewed worker-bind uses its returned lease generation.
-- Final worker naming: `ponytail swarm worker-complete --session <id>
-  --generation <worker-uuid> [--json]`. Records completion and reports the desired
-  DONE-prefixed name; the coordinator renames the session through host tools.
-- Worker detachment: `ponytail swarm worker-unbind --session <id>
-  --generation <worker-uuid> [--json]`. The coordinator must stop assigned work and
-  establish quiescence before invoking it. Removes database membership and the
-  matching session marker; preserves sessions and checkouts. Refuses active Git
-  operations and campaign ownership conflicts; releases its matching campaign
-  lease and pending actions atomically. Does not contact Codex.
-- Host-native checkout admission: `ponytail swarm worktree-enroll --path
-  <absolute-host-checkout> [--json]`; registers the actual same-repository Git
-  root without provisioning or relocating it. The coordinator uses native
-  worktree sessions with fresh history, verifies project/cwd through host tools and retains host Git
-  lifecycle ownership. Released host paths stay outside numbered-pool reuse/deletion.
-- Swarm checkout lifecycle: `ponytail swarm worktree-assign --base <commit-or-ref>`;
-  failed setup retains exact membership and reports number/generation. Resume with
-  `ponytail swarm worktree-setup --number <n> --generation <uuid>`. Release with
-  `ponytail swarm worktree-release --number <n> --generation <uuid>`; this preserves
-  checkout/source, uses project cleanup and refuses retained native ownership.
-- Swarm clearing: `ponytail swarm clear [--json]`. The coordinator must first
-  establish quiescence through its host tools. Releases this owner’s worker,
-  checkout and coordinator associations plus campaign allocation leases/actions;
-  preserves session origins, checkouts, source and campaign evidence. Runs project
-  resource cleanup with original creation provenance. Does not contact Codex.
-- Swarm worktree deletion: `ponytail swarm worktree-delete --number <n>` or
-  `ponytail swarm worktree-delete --all [--json]`; checkpoints project cleanup and
-  exact Git removal, reports each protected/retained/deleted resource, preserves
-  committed source refs and pool history, and retries outstanding deletion only.
 - Swarm retained checkout focused proof: `node --test
   dist/tests/swarm-worktrees.integration.test.js
   dist/tests/swarm-store.integration.test.js dist/tests/rolling-reset.integration.test.js`;
@@ -254,27 +182,6 @@ services. `PROJECT_STRUCTURE.md` is authoritative for that boundary.
 - Traceability/plan index checkpoints: `ponytail traceability index
   [--batch-size <n>] [--rebuild] [--json]`; default batch size is 10 files.
   Durable compatible parse batches survive crashes; publication remains atomic.
-- Campaign coordination: `ponytail campaign --help` lists the canonical
-  rolling commands; `ponytail campaign <command> --help` describes arguments,
-  preconditions, mutations and results. Commands use named flags and return
-  `{command, result}` JSON. Initialization: `ponytail campaign init --request
-  @<request.json>`; status: `ponytail campaign status --campaign <id>`;
-  coordinator decisions: `ponytail campaign next-actions --campaign <id>`;
-  graph reconciliation: `ponytail campaign reconcile --campaign <id>`;
-  amended-scope renewal: `ponytail campaign renew-lease --campaign <id>
-  --assignment <id> --generation <current-uuid>`; requires a stopped inactive
-  original owner and renews only its frozen lease, preserving session/checkout.
-  allocation: `ponytail campaign replenish --campaign <id> [--release <JSON>]
-  [--existing-only true]`. Existing-only admission imports safe retained physical
-  pool roots after reset and refuses nonexistent checkout reservations.
-  The canonical command registry is `src/rolling-cli-registry.ts`; CLI and the
-  optional `ponytail-mcp/rolling.ts` adapter invoke the shared typed operations
-  in `src/rolling-operations.ts`. Session API commands are retired from CLI and
-  MCP registration; the coordinator operates sessions through host tools and
-  records associations with `ponytail swarm`. Historical inspection is explicit through
-  `ponytail campaign legacy --command <validate|report|list|status|reservation-audit>
-  [--arguments <JSON-array>]`. Legacy scheduling/dispatch is retired from this
-  chapter; historical persisted records and their readers remain intact.
 - Project initialization and registration: `ponytail register`; removal:
   `ponytail unregister <repository-root>`; listing: `ponytail list-projects`.
 - Worktree selection: `ponytail bless[-worktree]`; display it with `ponytail
@@ -287,12 +194,6 @@ services. `PROJECT_STRUCTURE.md` is authoritative for that boundary.
   stops with `ponytail rebase status`, advance with `ponytail rebase continue`,
   or restore the frozen source with `ponytail rebase abort`. These commands run
   no project tests, builds, QA, fetch, push, merge, or publication.
-- Worker-owned recovery: `ponytail worktree recover <attachment-token>` from
-  an existing neutral cwd; restores only the bound original checkout from its
-  main worktree. Campaign worker pairs are retained, not automatically retired.
-  An original provisioned worker may receive integrated adoption tooling with
-  `ponytail worktree upgrade <attachment-token> --revision <commit>` before
-  immediate adoption and attachment; pending upgrades resume through recovery.
 - Component registration: `ponytail register-component <name>` and
   `ponytail unregister-component <name>`; listing: `ponytail list-components`.
 - Project dependency registration: `ponytail register-dependency <project>` and

@@ -23,27 +23,6 @@
     "update"
   ],
   "chapters": {
-    "swarm": {
-      "commands": [
-        "retirement-authorize",
-        "queue",
-        "worktree-enroll",
-        "clear",
-        "worker-inactive",
-        "worker-unbind",
-        "worker-complete",
-        "worktree-delete",
-        "worktree-assign",
-        "worktree-setup",
-        "worktree-release",
-        "worker-bind",
-        "info",
-        "owner-enroll",
-        "coordinator-bind",
-        "coordinator-unbind"
-      ],
-      "freeform": false
-    },
     "search": {
       "commands": [
         "update-index",
@@ -81,9 +60,7 @@
     },
     "worktree": {
       "commands": [
-        "reclaim",
-        "recover",
-        "upgrade"
+        "reclaim"
       ],
       "freeform": false
     },
@@ -105,33 +82,6 @@
     },
     "campaign": {
       "commands": [
-        "init",
-        "reconcile",
-        "status",
-        "next-actions",
-        "replenish",
-        "renew-lease",
-        "submit",
-        "record-review",
-        "request-review",
-        "observe-increment",
-        "integrate",
-        "accept",
-        "amend-configuration",
-        "withdraw-publication",
-        "freeze-publication",
-        "prepare-publication",
-        "repair-publication",
-        "observe-preparation",
-        "inspect-publication-conflict",
-        "run-publication-qa",
-        "observe-publication-qa",
-        "publish-mainline",
-        "observe-mainline",
-        "refresh-mainline",
-        "observe-refresh",
-        "synchronize-campaign",
-        "close",
         "legacy"
       ],
       "freeform": false
