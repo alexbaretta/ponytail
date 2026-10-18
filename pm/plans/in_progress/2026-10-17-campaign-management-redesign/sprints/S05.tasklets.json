@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 4,
+  "sprint": "S05",
+  "features": {
+    "S05-F01": {
+      "depends_on": [],
+      "validation_tasklet": "S05-F01-T01"
+    }
+  },
+  "tasklets": {
+    "S05-F01-T01": {
+      "feature": "S05-F01",
+      "depends_on": [],
+      "affinity": [
+        "campaign-management"
+      ],
+      "risk": "normal",
+      "planned_paths": [
+        "skills",
+        "src",
+        "tests",
+        "cli",
+        "scripts",
+        "registry.tsv"
+      ]
+    }
+  },
+  "external_depends_on": {}
+}

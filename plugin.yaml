@@ -20,6 +20,7 @@ provides_skills:
   - bash-parse-safe-scripts
   - build-impact
   - cloud-cli-reauth
+  - campaign-management
   - codex-execpolicy
   - cross-session-effects
   - debugging
@@ -29,20 +30,17 @@ provides_skills:
   - lossless-json-contracts
   - monetary-contract-safety
   - plan-execution
-  - parallel-plan-scheduler
   - ponytail
   - ponytail-audit
   - ponytail-debt
   - ponytail-review
   - project-structure
-  - qa-swarm
   - production-test-boundaries
   - react-error-containment
   - requirements
   - requirements-traceability
   - semantic-rebase
   - static-type-safety
-  - swarm
   - test-credentials
   - typescript-unit-testing
   - user-acceptance-testing

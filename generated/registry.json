@@ -89,6 +89,23 @@
     {
       "kind": "skill",
       "status": "enabled",
+      "name": "campaign-management",
+      "source": "skills/campaign-management",
+      "hosts": [
+        "claude",
+        "codex",
+        "copilot",
+        "devin",
+        "hermes",
+        "openclaw",
+        "pi",
+        "qoder"
+      ],
+      "reason": "Native worker campaigns with reviewed Git delivery and independent final QA"
+    },
+    {
+      "kind": "skill",
+      "status": "enabled",
       "name": "codex-execpolicy",
       "source": "skills/codex-execpolicy",
       "hosts": [
@@ -249,20 +266,11 @@
     },
     {
       "kind": "skill",
-      "status": "enabled",
+      "status": "disabled",
       "name": "parallel-plan-scheduler",
-      "source": "skills/parallel-plan-scheduler",
-      "hosts": [
-        "claude",
-        "codex",
-        "copilot",
-        "devin",
-        "hermes",
-        "openclaw",
-        "pi",
-        "qoder"
-      ],
-      "reason": "Deprecated parallel campaign scheduler protocol"
+      "source": "-",
+      "hosts": [],
+      "reason": "Retired; native campaign-management owns coordination"
     },
     {
       "kind": "skill",
@@ -351,20 +359,11 @@
     },
     {
       "kind": "skill",
-      "status": "enabled",
+      "status": "disabled",
       "name": "qa-swarm",
-      "source": "skills/qa-swarm",
-      "hosts": [
-        "claude",
-        "codex",
-        "copilot",
-        "devin",
-        "hermes",
-        "openclaw",
-        "pi",
-        "qoder"
-      ],
-      "reason": "Parallel whole-slice QA with incremental repairs and atomic acceptance"
+      "source": "-",
+      "hosts": [],
+      "reason": "Retired; native campaign-management owns coordination"
     },
     {
       "kind": "skill",
@@ -470,20 +469,11 @@
     },
     {
       "kind": "skill",
-      "status": "enabled",
+      "status": "disabled",
       "name": "swarm",
-      "source": "skills/swarm",
-      "hosts": [
-        "claude",
-        "codex",
-        "copilot",
-        "devin",
-        "hermes",
-        "openclaw",
-        "pi",
-        "qoder"
-      ],
-      "reason": "Coordinate parallel sessions and managed worktree ownership"
+      "source": "-",
+      "hosts": [],
+      "reason": "Retired; native campaign-management owns coordination"
     },
     {
       "kind": "skill",

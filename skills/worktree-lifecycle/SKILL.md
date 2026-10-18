@@ -1,125 +1,48 @@
 ---
 name: worktree-lifecycle
 description: >-
-  Use when creating, assigning, retaining, handing off, abandoning, or removing
-  agent-owned Git worktrees. Require complete cleanup of abandoned worktrees
-  and their project resources without deleting active or user-owned work.
+  Create, retain and clean up authorized agent worktrees using their native
+  owner, preserving unfinished work and releasing project-owned resources.
 ---
 
 <!--
 Copyright (c) 2026 Alex Baretta. All rights reserved.
-Author: Alex Baretta <alex@baretta.com>.
 Licensed under the MIT License. See LICENSE in the project root.
 -->
 
-# Worktree Lifecycle
+# Worktree lifecycle
 
-Traceability: supports REQ-WORKER-WORKTREE-RETENTION
+Use the native host to create and manage its worktrees when authorized. Confirm
+the intended project/repository, actual checkout path and owning session. Respect
+project setup and resource limits. Do not create a Ponytail pool, enrollment,
+lease, session marker or duplicate membership record.
 
-Treat every agent-created worktree as a resource with an explicit owner and
-disposition. Record its repository, physical root, Git registration, task or
-agent owner, creation purpose, and project-local resources when it is created
-or assigned.
+Inspect actual session and Git state before reuse or cleanup. Active, blocked,
+ready-for-integration or otherwise unfinished workers retain their worktrees.
+Silence, an observation timeout or a missing session response is not abandonment.
+Campaign replacement uses a different compatible assignment and preserves the
+blocked worker. Completion naming does not itself authorize deletion.
 
-Authorization to create an ephemeral agent-owned worktree includes authority
-to remove that same worktree and its agent-created resources when its purpose
-ends, unless the user explicitly requests retention. It does not authorize
-removing a pre-existing, user-created, shared, or ambiguously owned worktree.
+Use the host's documented retention controls for needed checkouts. Do not assume
+archiving a chat preserves its worktree, ignored artifacts or local resources.
+If a retained checkout is missing, inspect the host's recovery/snapshot facilities
+and available Git refs. Preserve original work and identity where possible;
+committed Git state does not prove recovery of unsaved files. Report any genuine
+uncertainty instead of silently replacing lost work.
 
-## Ownership And State
+For abandoned agent-created worktrees whose cleanup is authorized:
 
-Before operating on a worktree, determine from authoritative task and Git state
-whether it is:
+1. Verify ownership and quiescence. Preserve required commits, unintegrated work
+   and non-disposable artifacts. Retain ambiguous or user-owned changes.
+2. Stop only its owned processes and run the project's cleanup for its databases,
+   containers, listeners and other resources. Verify cleanup; do not leave
+   resources behind when setup or execution failed.
+3. Use the native worktree lifecycle operation. Use ordinary Git removal only
+   when no host or configured project lifecycle owns the checkout.
+4. Confirm the checkout/registration and its project resources are gone.
 
-- active: its owning task or agent can still use it;
-- retained: the user or an active workflow explicitly needs it later; or
-- abandoned: its task completed, failed, was cancelled or replaced, and no
-  remaining work is assigned to it.
-
-Do not infer abandonment from silence, an observation timeout, a stale status
-message, or an inaccessible task. Poll the owning task or inspect its current
-authoritative state. Do not remove an active or explicitly retained worktree.
-For the deprecated parallel campaign scheduler, retain the session/worktree pair indefinitely, even
-after integration and successful plan closure. Logical assignment completion
-does not prove the session will never be needed again. Reuse the first safe
-inactive pair; do not archive the chat, delete the checkout, or release its
-resource claim to obtain capacity. The pool limit is fifteen worker slots per
-user-owned top-level Codex project, independently of other projects sharing
-the same main worktree. Wait at capacity rather than creating a sixteenth pair.
-Historical scheduler cleanup actions are not retirement authority.
-
-Adopted rolling campaigns use a project-owned numbered checkout pool and the
-campaign's configured worker limit. After integrated obligation acceptance,
-observe the owning native worker's terminal turn and idle activity, inform it
-that coordination has ended, and archive that worker. Revoke its assignment
-before releasing the checkout. Preserve the Git checkout and reusable build
-caches; a completed worker and an available checkout are different resources.
-Run the project's declared retirement commands for that exact owner and verify
-resource cleanup before removing its ignored session marker and making the
-checkout available. Unknown activity, unresolved external actions, dirty or
-unintegrated work, or incomplete cleanup retains the claim for reconciliation.
-
-Rolling project configuration V2 declares `retirementCommands`. Each executable
-argument array runs from the assigned checkout and must idempotently release
-and verify only resources owned by that assignment, using its declared owner
-identity. An empty array explicitly declares no additional project cleanup;
-`null`, including normalized historical V1 configuration, declares no cleanup
-contract and cannot authorize checkout reuse. Configuration normalization does
-not infer resource absence from an empty setup command list.
-
-If a retained worker's checkout disappears, that worker invokes `ponytail
-worktree recover <attachment-token>` from an existing neutral directory and
-runs canonical project adoption/setup from its restored original path. Its
-durable binding records the main worktree as a Git source, not a configuration
-source. Preserve session, branch, assignment, and any native snapshot; committed
-Git state cannot prove restoration of unsaved files. No coordinator-initiated
-recovery action is required. Disable host automatic deletion for retained pools.
-
-Before its first attachment, an enrolled original worker may need an integrated
-adoption-tooling repair. Use `ponytail worktree upgrade <attachment-token>
---revision <exact-owning-project-integration-commit>` rather than an informal
-detached switch. It checkpoints the same worker's descendant transition for
-recovery; pending intent must finish before immediate adoption, branch
-establishment, and original attachment. It does not replace the pair or allocate
-resources. Authenticated workers use their ordinary plan/rebase protocol.
-
-## Cleanup Contract
-
-Garbage-collect an abandoned agent-owned worktree promptly, and always before
-creating its replacement when the old worktree consumes a bounded slot or
-substantial disk space.
-
-1. Inspect status and ownership. Commit or transfer finalized work that must be
-   retained. Remove disposable agent-created diagnostics and generated state.
-   If user-owned or pre-existing uncommitted work cannot be distinguished,
-   retain the worktree and report the exact uncertainty.
-2. Stop its owned processes and release project resources such as databases,
-   roles, containers, listeners, locks, claims, caches, and generated profiles.
-3. Use the repository's canonical worktree retirement command when one exists.
-   Do not bypass its ownership, cleanliness, confirmation, or resource checks.
-4. Use the host task or worktree lifecycle operation for a host-owned Git
-   registration and physical root after project cleanup. Use raw Git removal
-   only when the repository has no canonical owner and the host does not own
-   the worktree lifecycle.
-5. Verify that the root and Git registration are absent and that every
-   project-owned resource assigned to it has been released. A missing root
-   with a live registration, claim, process, or database is incomplete cleanup.
-
-Only for explicit human-requested campaign retirement, archive the original owning chat and observe it as
-archived before invoking `ponytail campaign retire-worktree <campaign>
-<action-id>`. This is the canonical project-owned retirement path: its adapter
-must prove abandonment and release the exact worktree's resources. Do not use
-thread handoff for retirement; it can change the ordinary checkout and session
-identity without removing the source worktree. A missing adapter or retained
-claim leaves the original action pending; never substitute raw Git removal.
-
-Failure during setup does not make the partial worktree someone else's cleanup
-problem. Retire all resources that were successfully allocated before moving
-to another attempt. If cleanup itself fails, diagnose and repair the canonical
-lifecycle rather than accumulating additional abandoned worktrees.
-
-## Task Completion
-
-Before returning control after worktree-backed execution, reconcile every
-worktree created or assigned during the task. State which remain active or
-retained and why. Leave no abandoned agent-owned worktree behind.
+Authorization to create an ephemeral agent-owned checkout includes its eventual
+cleanup unless retention was requested; it does not authorize deleting shared,
+pre-existing or user-owned work. Failed cleanup remains work to resolve, not a
+reason to accumulate abandoned resources. Retained blocked work is not abandoned
+and must not be deleted to meet the campaign's worker target.

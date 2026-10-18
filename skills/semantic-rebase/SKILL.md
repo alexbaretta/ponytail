@@ -100,10 +100,8 @@ replayed, empty, equivalent, or conflict-adapted, every selected contributor
 was stopped, and the final range-diff is understood. Then run the repository's
 applicable validation outside the rebase lifecycle.
 
-## Authorized post-review campaign integration
+## Campaign delivery
 
-A rolling campaign may separately authorize its coordinator fast-rebase after
-an adversarial review accepts an exact candidate. That bounded publication
-exception retains its own authority and does not replace this worker workflow.
-Textual conflicts or substantive integration repairs return to semantic review
-and fresh acceptance before publication.
+The worker owns rebase and refreshed affected tests/review. The coordinator
+accepts only the exact reviewed/tagged candidate by fast-forward; it returns
+stale submissions to the worker. Follow `campaign-management` for delivery.

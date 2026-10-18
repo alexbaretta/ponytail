@@ -6,6 +6,7 @@ skill	enabled	architecture	skills/architecture	claude,codex,copilot,devin,hermes
 skill	enabled	bash-parse-safe-scripts	skills/bash-parse-safe-scripts	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Bash runtime safety
 skill	enabled	build-impact	skills/build-impact	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Build only affected targets
 skill	enabled	cloud-cli-reauth	skills/cloud-cli-reauth	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Cloud CLI authentication recovery
+skill	enabled	campaign-management	skills/campaign-management	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Native worker campaigns with reviewed Git delivery and independent final QA
 skill	enabled	codex-execpolicy	skills/codex-execpolicy	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Codex command policy proposals and accepted-state management
 skill	enabled	cross-session-effects	skills/cross-session-effects	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Product user-session interference approval and test-first safety
 skill	enabled	debugging	skills/debugging	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Differential diagnosis and root-cause hypothesis testing
@@ -16,20 +17,20 @@ skill	enabled	issue-tracking	skills/issue-tracking	claude,codex,copilot,devin,he
 skill	enabled	lossless-json-contracts	skills/lossless-json-contracts	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Exact JSON boundary rules
 skill	enabled	monetary-contract-safety	skills/monetary-contract-safety	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Monetary contract rules
 skill	enabled	plan-execution	skills/plan-execution	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Durable project management workflow
-skill	enabled	parallel-plan-scheduler	skills/parallel-plan-scheduler	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Deprecated parallel campaign scheduler protocol
+skill	disabled	parallel-plan-scheduler	-	-	Retired; native campaign-management owns coordination
 skill	enabled	ponytail	skills/ponytail	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Portable core policy
 skill	enabled	ponytail-audit	skills/ponytail-audit	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Repository complexity audit
 skill	enabled	ponytail-debt	skills/ponytail-debt	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Technical debt reconciliation
 skill	enabled	ponytail-review	skills/ponytail-review	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Change-set complexity review
 skill	enabled	project-structure	skills/project-structure	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Project configuration workflow
-skill	enabled	qa-swarm	skills/qa-swarm	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Parallel whole-slice QA with incremental repairs and atomic acceptance
+skill	disabled	qa-swarm	-	-	Retired; native campaign-management owns coordination
 skill	enabled	production-test-boundaries	skills/production-test-boundaries	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Production and test architecture separation
 skill	enabled	react-error-containment	skills/react-error-containment	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	React failure containment
 skill	enabled	requirements	skills/requirements	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Persist requirements from user, issue, or supplied sources and reconcile UAT coverage
 skill	enabled	requirements-traceability	skills/requirements-traceability	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Link approved requirements to implementation and verification
 skill	enabled	semantic-rebase	skills/semantic-rebase	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Commit-by-commit textual and semantic rebase review
 skill	enabled	static-type-safety	skills/static-type-safety	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Static type and contract safety
-skill	enabled	swarm	skills/swarm	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Coordinate parallel sessions and managed worktree ownership
+skill	disabled	swarm	-	-	Retired; native campaign-management owns coordination
 skill	enabled	test-credentials	skills/test-credentials	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Test credential discovery and safety
 skill	enabled	typescript-unit-testing	skills/typescript-unit-testing	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Contract-safe TypeScript unit testing
 skill	enabled	user-acceptance-testing	skills/user-acceptance-testing	claude,codex,copilot,devin,hermes,openclaw,pi,qoder	Reconcile requirement changes with traceable user acceptance and release evidence

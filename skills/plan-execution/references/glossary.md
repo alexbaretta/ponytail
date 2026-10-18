@@ -22,13 +22,13 @@ Generated host copies derive from this source.
 | Tasklet | An atomic implementation step toward discharge. |
 | Worker assignment | Gives a session bounded responsibility for selected obligations. |
 | Continuation blocker | A newly exposed causal defect reached by rerunning the original required reproduction or acceptance after an in-scope repair, where that defect prevents the same approved outcome. It extends execution only forward along that demonstrated path, not laterally into adjacent or speculative work. |
-| Worker | An executing session responsible for autonomously establishing its assigned atomic obligations within the authorized lease and submitting adequate evidence. |
-| Coordinator | The authorized session owning a campaign's authoritative dependency graph, scheduling, review-attestation recording, acceptance and publication through Ponytail tooling. |
-| Swarm | A user-worktree-owned set of worker sessions and managed worktrees, with zero or one coordinator; either resource set may be empty. Membership is independent of campaign identity and observed session activity. |
-| User worktree | A user-owned Git checkout that owns a swarm. |
-| Managed worktree | A Git checkout allocated to a swarm for worker use; it belongs to at most one swarm at a time and may be released, reassigned or deleted when unassigned. |
+| Worker | An executing session responsible for autonomously completing its assigned canonical scope through implementation, QA, local adversarial review and Git delivery. |
+| Coordinator | The authorized session maintaining native worker capacity, resolving blockers, serially accepting reviewed Git deliveries, reporting completeness and independently running final QA. |
+| Swarm | A campaign coordinator and its native worker sessions pursuing compatible assignments. Native host state identifies sessions and activity; no separate membership registry is required. |
+| User worktree | A user-owned Git checkout; it does not imply ownership of another session or authorize deleting its work. |
+| Managed worktree | An agent worktree whose lifecycle belongs to its native host or configured project owner; unfinished work must be preserved. |
 | Evidence | Observations produced by validation, including command selection, process outcomes and test results; observations alone do not certify adequacy. |
-| Certificate | A commit-bound attestation of validation scope, commands and results. The adopted workflow stores its versioned payload in an immutable annotated Git tag; historical certificate formats keep their original meaning. |
+| Certificate | A commit-bound attestation of validation scope, commands and results. The adopted workflow records commands and observed results in an immutable annotated Git tag; no mandatory payload schema is required. Historical certificate formats keep their original meaning. |
 | Review attestation | An independent review verdict identifying the reviewer, exact candidate and assessed IDs; it assesses semantic adequacy, not command execution. |
 | Campaign completeness vector | The lexicographically ordered unresolved-work vector `(R,A,T,I)` for an identified campaign scope and integrated revision. |
 | Suite | A named set of related Arcs. |
