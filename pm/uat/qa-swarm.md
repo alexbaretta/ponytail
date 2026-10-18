@@ -5,6 +5,14 @@ Licensed under the MIT License. See LICENSE in the project root.
 
 # QA swarm acceptance Suite
 
+
+**Redesign supersession:** For explicitly adopted redesigned campaigns, the
+[campaign-management contract](campaign-management.md) supersedes the
+six-coordinate progress model, direct requirement-only test coverage, mandatory
+unit-and-integration quotas, tracked passing-evidence ledgers and Ponytail swarm
+session/queue orchestration described below. Historical records and readers
+retain their original meanings. This notice does not claim adoption or completion.
+
 ## Arc QA-SWARM-SLICE
 
 Traceability: verifies REQ-QA-SWARM

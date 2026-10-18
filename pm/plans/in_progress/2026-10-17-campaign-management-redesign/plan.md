@@ -6,14 +6,20 @@ Licensed under the MIT License. See LICENSE in the project root.
 # Campaign management redesign
 
 - Plan ID: `2026-10-17-campaign-management-redesign`
-- Status: open
-- Authority: the stakeholder requested this implementation plan after discussing
-  and recording the methodology. Planning is authorized; implementation kickoff,
-  unresolved design choices, live swarm operation, and migration are not yet
-  authorized by this request.
+- Status: in_progress
+- Authority: the stakeholder explicitly authorized implementation, repeated
+  `scripts/install.sh` installation, and a new coordinator session in Codex project
+  gwen-001 to bring Gwen to full campaign completeness. The goal also authorizes
+  messaging and replacing that coordinator and its workers when necessary.
+  The Gwen coordinator and all Gwen workers, including replacements, must use
+  GPT 6.1 Sol (`gpt-6.1-sol`) with `medium` reasoning.
+  Kickoff preparation is active; product edits await contract reconciliation and
+  the starting-check assessment. No release publication or cloud topology change
+  is authorized.
 - Management and implementation repository: `/Users/alex/git/ctosclub/ponytail`.
 - Planning snapshot: `946e8f69285a597723c2e0eb008afb141cf4c32c`; the supplied
-  `docs/campaign-management.md` is an existing untracked discussion record.
+  `docs/campaign-management.md` was subsequently committed with this plan in
+  `4dd1fa69`; the final-QA clarification is part of the pending change-set.
 
 <!-- ponytail-plan-campaign
 {"schemaVersion":2,"id":"2026-10-17-campaign-management-redesign","parent_plan_id":null,"depends_on":[]}
@@ -29,7 +35,7 @@ supervised by a coordinator whose routine work stays small.
 
 That document is the design/provenance owner; this plan owns delivery sequencing
 and acceptance. It does not silently promote its proposed details to decisions.
-Resolve the questions below before execution approval. At implementation kickoff,
+Resolve the implementation questions below under the explicit kickoff authority. At implementation kickoff,
 reconcile authorized changes into canonical requirements, UAT, architecture, and
 their indexes and configuration. Do not activate new requirements just by drafting
 this plan.
@@ -56,7 +62,7 @@ requirement IDs or certificates. Canonical product IDs are reconciled at kickoff
 | CM-07 | Instability observations distinguish regression, stagnation, discoveries, authorized scope changes, and acknowledged waits under the chosen monitoring rule. |
 | CM-08 | The swarm CLI chapter and obsolete coordination protocols are retired across CLI, MCP, exports, permissions, documentation, installers, and generated adapters without losing unfinished work or historical interpretability. |
 | CM-09 | Ponytail's own active graph/configuration uses the new contract; historical records retain their original meanings; migration is explicit, bounded, restartable, and preserves unrelated projects. |
-| CM-10 | Distribution installs the intended skill set and runnable tooling; focused/integration checks and final repository acceptance establish the complete revised workflow. |
+| CM-10 | Distribution installs the intended skill set and runnable tooling. A worker-reported zero vector is provisional: all workers must be DONE and the coordinator must independently run and verify full automated QA on the integrated candidate. Failed QA reopens repair assignments; final acceptance repeats after repair until all required checks pass. |
 
 ## Scope and boundaries
 
@@ -111,9 +117,9 @@ owners. Changes to source skills that generators/tests consume are QA-relevant.
 
 ## Design questions before execution approval
 
-All items below are [OPEN]. S01 produces concrete proposed answers and records
-stakeholder resolutions where choices materially affect behavior. Routine naming
-and mechanical implementation choices are agent-owned, not new approval gates.
+S01 records implementation decisions under the explicit kickoff authority.
+These choices implement the approved outcomes; they do not authorize additional
+product scope. See its decision record for current resolution and remaining work.
 
 | ID | Decision and recommended starting point |
 | --- | --- |
@@ -121,7 +127,7 @@ and mechanical implementation choices are agent-owned, not new approval gates.
 | Q2 | Tag contract: settle commands, payload version, naming, trusted result capture, clean tested input identity, review binding, freshness, correction/revocation, and transfer/publication. Prefer one immutable focused-delivery tag and one final acceptance tag; do not require signatures or remote pushes without a stated need. |
 | Q3 | Minimal campaign operations/state: settle which current commands remain, how native assignment ownership survives restart, how duplicate/conflicting assignments are prevented, and where small scope/vector observations persist. Prefer host identity/activity plus minimal project-scoped operational state, not another session registry or queue bureaucracy. |
 | Q4 | Instability: settle the 30-minute comparison, sampling/active-time rules, scope amendments, churn criterion and escalation. Prefer a diagnostic alert rather than automatic cancellation; do not hide legitimate increases. |
-| Q5 | Swarm lifecycle: settle active/blocked/ready/DONE classification, exact assignment completion boundary, wakeup cadence, message authority and host capability limitations. Decide whether full final QA is delegated while the coordinator retains acceptance responsibility. |
+| Q5 | Swarm lifecycle: settle active/blocked/ready/DONE classification, exact assignment completion boundary, wakeup cadence, message authority and host capability limitations. Final QA ownership is resolved by stakeholder clarification: the coordinator independently runs and verifies it after worker completion; it is not delegated to a validation worker. |
 | Q6 | Retirement/adoption: choose the bounded transition for existing active campaigns and installed consumers. Preserve original work, branches, tags, historical physical formats and read-only inspection; never migrate or clear another project's live records implicitly. |
 
 ## Sprint manifest
@@ -173,6 +179,10 @@ misaligned proof cannot lower T/I; productive integrated descent and disturbance
 are distinct; worker-local review and exact tagged fast-forward delivery work;
 blocked replacement and resumed excess capacity work; restart does not duplicate
 ownership; and final QA certificates leave the tracked source tree unchanged.
+It must also prove that worker-reported zero cannot close the campaign, retained
+unfinished workers prevent DONE, failed coordinator QA reopens worker repair
+assignments, and only a subsequent independent full passing run on the repaired
+integrated candidate permits campaign DONE and its acceptance certificate.
 
 Use disposable in-scope Git fixtures and isolated rows in the existing local
 PostgreSQL where needed. Controlled host fixtures prove orchestration logic but
@@ -186,7 +196,15 @@ storage; never fabricate passing tags from prose or historical DONE flags.
 
 ## Current state
 
-Plan drafted only. No product, skill, CLI, database, generated export, or canonical
-requirement changes have been performed for this plan. No sprint is execution
-ready, no design question has been resolved by implication, and no final product
-acceptance has been run.
+S01 contract reconciliation is complete under explicit kickoff authority. Q1–Q6
+are resolved by the decision record in S01. Canonical activated requirements and
+acceptances are linked from their indexes; implementation remains outstanding.
+The starting suite completed on unchanged product inputs. Its final TSTS gate
+failed only on the two new untracked prose pages, then passed after staging
+(1,707 files, no violations). Diagnostic logs stay ignored in
+`tmp/campaign-redesign/`; do not rerun the completed baseline without new cause.
+
+The existing Gwen coordinator is `01a14dc3-a37a-7582-a6c9-cd132c8d8e7b`, named
+Gwen traceability campaign coordinator, created with `gpt-6.1-sol` / `medium`.
+It verified its identity and cwd and is idle awaiting installed tooling. No
+Gwen campaign or workers have started. Resume this coordinator at pilot kickoff.

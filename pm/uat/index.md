@@ -14,6 +14,8 @@ boundary by `tests/campaign-census.test.js`.
 
 ## Suite index
 
+- [Campaign management redesign](campaign-management.md)
+
 - [Swarms](swarms.md)
 - [Rolling campaigns](rolling-campaigns.md)
 - [QA swarm acceptance](qa-swarm.md)

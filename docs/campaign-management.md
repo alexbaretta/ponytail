@@ -194,14 +194,43 @@ scope can grow, proof can be invalidated, or necessary repairs are unavailable.
 ```text
 Campaign complete =
     (R,A,T,I) = (0,0,0,0)
+    AND all individual campaign workers are DONE
     AND required adversarial review is satisfied
-    AND all required QA passes for the final candidate
+    AND the coordinator independently runs and verifies all required automated QA
+        passes for the final integrated candidate
 ```
 
 Required final QA includes the full unit and integration suites and additional
 project-defined checks, such as tooling tests, TSTS, and other static analysis.
 Zero graph gaps do not substitute for passing execution. Conversely, passing
 suites do not substitute for complete, semantically adequate graph coverage.
+
+After accepting the last merge request from the last active worker, the
+coordinator may have a zero campaign completeness vector based on worker-reported
+progress. That zero is provisional: it does not establish independent coordinator
+verification or authorize a campaign DONE transition.
+
+The final acceptance loop is:
+
+1. After the last delivery is accepted, verify that every individual campaign
+   worker is DONE. Retained blocked or unfinished assignments prevent completion,
+   even if other workers have reported a zero vector.
+2. The coordinator independently runs the complete automated QA selection against
+   the integrated candidate and inspects actual results. Worker-focused tags and
+   worker-reported progress do not substitute for this run.
+3. If QA reveals bugs, reopen the campaign's repair phase, register the affected
+   unresolved obligations/acceptances/implementation honestly, and assign repairs
+   to workers. The vector may increase as an explicit disturbance. Never issue
+   a passing final certificate for the failed candidate.
+4. Accept reviewed, tested, tagged repairs through the usual merge workflow,
+   displaying the campaign completeness vector after every accepted merge.
+5. Once the vector is zero and all workers are DONE again, repeat independent
+   full automated QA on the resulting integrated candidate. Declare the campaign
+   DONE and issue its acceptance certificate only when every required check passes.
+
+This stakeholder clarification supersedes the earlier proposal to delegate the
+independent final QA run to a validation worker. The coordinator owns execution
+and verification of that final run, as well as campaign acceptance.
 
 The previous discussion suggested separate unit/integration execution-gap counts
 as an optional reporting aid. They are not additional coordinates of campaign
@@ -388,11 +417,11 @@ an active Git operation. Exact cadence, delivery behavior during an active turn,
 recovery after interruption, and host capability limits require verification.
 No scheduling or response-time guarantee has been established.
 
-The coordinator should not occupy itself with implementation, repeated reviews,
-or long synchronous QA commands while workers wait. The discussion proposed a
-dedicated validation session for full final QA, with the coordinator retaining
-responsibility for accepting its exact-candidate results and issuing the campaign
-acceptance certificate. This delegation remains a proposed operational detail.
+During worker execution, the coordinator should not occupy itself with
+implementation, repeated reviews, or long synchronous QA commands while workers
+wait. After the last accepted delivery and worker completion, it independently
+runs final full automated QA under the acceptance loop above. If that run exposes
+bugs, it returns to servicing repair workers before attempting final QA again.
 
 ### Integration and accepted progress
 

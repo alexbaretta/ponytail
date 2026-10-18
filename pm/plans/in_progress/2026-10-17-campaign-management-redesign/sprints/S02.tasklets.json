@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 4,
+  "sprint": "S02",
+  "features": {
+    "S02-F01": {
+      "depends_on": [],
+      "validation_tasklet": "S02-F01-T03"
+    }
+  },
+  "tasklets": {
+    "S02-F01-T01": {
+      "feature": "S02-F01",
+      "depends_on": [],
+      "affinity": [
+        "graph"
+      ],
+      "risk": "normal",
+      "planned_paths": [
+        "skills/requirements-traceability/scripts/traceability-graph.ts"
+      ]
+    },
+    "S02-F01-T02": {
+      "feature": "S02-F01",
+      "depends_on": [
+        "S02-F01-T01"
+      ],
+      "affinity": [
+        "graph"
+      ],
+      "risk": "normal",
+      "planned_paths": [
+        "skills/requirements-traceability/scripts/traceability-graph.ts"
+      ]
+    },
+    "S02-F01-T03": {
+      "feature": "S02-F01",
+      "depends_on": [
+        "S02-F01-T01",
+        "S02-F01-T02"
+      ],
+      "affinity": [
+        "graph"
+      ],
+      "risk": "normal",
+      "planned_paths": [
+        "tests/traceability-graph.test.ts"
+      ]
+    }
+  },
+  "external_depends_on": {}
+}

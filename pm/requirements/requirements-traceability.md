@@ -7,6 +7,14 @@ Licensed under the MIT License. See LICENSE in the project root.
 
 [Back to requirements index](index.md)
 
+**Redesign supersession:** For explicitly adopted redesigned campaigns, the
+[campaign-management contract](campaign-management.md) supersedes the
+six-coordinate progress model, direct requirement-only test coverage, mandatory
+unit-and-integration quotas, tracked passing-evidence ledgers and Ponytail swarm
+session/queue orchestration described below. Historical records and readers
+retain their original meanings. This notice does not claim adoption or completion.
+
+
 ## Portable bidirectional traceability
 
 **Identifier:** `REQ-REQUIREMENTS-TRACEABILITY`

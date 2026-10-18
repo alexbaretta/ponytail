@@ -12,6 +12,8 @@ behavior independently from implementation plans and architecture.
 
 ## Requirement sets
 
+- [Campaign management redesign](campaign-management.md)
+
 - [Swarms](swarms.md)
 - [Rolling campaigns](rolling-campaigns.md)
 - [QA swarm execution](qa-swarm.md)

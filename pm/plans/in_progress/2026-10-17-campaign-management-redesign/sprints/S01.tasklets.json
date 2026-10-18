@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 4,
+  "sprint": "S01",
+  "features": {
+    "S01-F01": {
+      "depends_on": [],
+      "validation_tasklet": "S01-F01-T01"
+    }
+  },
+  "tasklets": {
+    "S01-F01-T01": {
+      "feature": "S01-F01",
+      "depends_on": [],
+      "affinity": [
+        "contracts"
+      ],
+      "risk": "normal",
+      "planned_paths": [
+        "docs/campaign-management.md",
+        "pm/plans/in_progress/2026-10-17-campaign-management-redesign/plan.md",
+        "pm/plans/in_progress/2026-10-17-campaign-management-redesign/sprints/S04.md",
+        "pm/plans/in_progress/2026-10-17-campaign-management-redesign/sprints/S01.md",
+        "pm/plans/in_progress/2026-10-17-campaign-management-redesign/sprints/S05.md",
+        "pm/plans/in_progress/2026-10-17-campaign-management-redesign/sprints/S02.md",
+        "pm/plans/in_progress/2026-10-17-campaign-management-redesign/sprints/S06.md",
+        "pm/plans/in_progress/2026-10-17-campaign-management-redesign/sprints/S03.md",
+        "pm/requirements/campaign-management.md",
+        "pm/uat/campaign-management.md",
+        "pm/requirements/index.md",
+        "pm/uat/index.md"
+      ]
+    }
+  },
+  "external_depends_on": {}
+}
