@@ -2,7 +2,7 @@
 
 - ID: `2026-10-17-TASK-batch_git_certificate_checks`
 - Type: TASK
-- Status: in_progress
+- Status: closed
 - Authority: user's 2026-10-17 report of slow certificate-input verification.
 - Contract: [REQ-OBLIGATION-FRESHNESS](../../requirements/obligation-execution.md#req-obligation-freshness-obl-freshness); freshness semantics remain unchanged.
 - Scope: `gitInputReasons` in the portable obligation runtime, focused tests, generated copies and installed plan-execution skill.
@@ -49,4 +49,16 @@ project rows and left Gwen's files and index generations untouched. Full-build
 publication latency is a separate measured SQL bottleneck, handled separately.
 Logs: `tmp/agents/index-progress-fix/gwen-input-profile*.log`,
 `performance-focused.log`, and `performance-isolated-index.log` in that directory.
-Final core acceptance and installed-skill refresh remain pending.
+Final core acceptance and installed-skill refresh completed; see final acceptance below.
+
+## Final acceptance
+
+Resolved. Final `npm test` exited 0: 581 JavaScript, 337 typed, 23 Pi, 4 MCP and
+100 TSTS tests passed (1,045 total), with installer checks and final TSTS
+validation of 1,697 files passing. Rule-copy, version, generated-runtime,
+traceability and observation-schema checks passed. The installed plan-execution
+runtime matches its canonical source; local installer verification passed.
+No Gwen coordinator was contacted, and the isolated measurement projects were
+removed without modifying Gwen's files or published index generations.
+
+Final log: `tmp/agents/index-progress-fix/performance-full.log`.

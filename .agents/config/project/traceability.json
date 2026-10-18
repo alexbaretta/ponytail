@@ -1701,6 +1701,16 @@
       "class": "implementation",
       "path": "src/swarm-queue-payloads.ts",
       "locator": "text"
+    },
+    {
+      "class": "implementation",
+      "path": "src/project-index-search-publication.ts",
+      "locator": "text"
+    },
+    {
+      "class": "unit-test",
+      "path": "tests/project-index-search-publication.test.ts",
+      "locator": "text"
     }
   ],
   "entities": [],
@@ -2056,6 +2066,10 @@
     {
       "path": "src/swarm-queue-payloads.js",
       "sourcePath": "src/swarm-queue-payloads.ts"
+    },
+    {
+      "path": "src/project-index-search-publication.js",
+      "sourcePath": "src/project-index-search-publication.ts"
     }
   ],
   "reverseViewPath": "pm/requirements/traceability.generated.md",

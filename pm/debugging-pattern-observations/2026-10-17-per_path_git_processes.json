@@ -3,7 +3,7 @@
   "observation_id": "2026-10-17-per_path_git_processes",
   "recorded_at": "2026-10-17T19:50:07-07:00",
   "source_references": [
-    "pm/bugs/in_progress/2026-10-17-TASK-batch_git_certificate_checks.md"
+    "pm/bugs/closed/2026-10-17-TASK-batch_git_certificate_checks.md"
   ],
   "context": {
     "languages": [
