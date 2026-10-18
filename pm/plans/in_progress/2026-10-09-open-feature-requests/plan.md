@@ -156,5 +156,5 @@ Traceability: plans-implementation REQ-TRACEABILITY-PROGRESS from plan 2026-10-0
 Traceability: plans-verification REQ-TRACEABILITY-PROGRESS from plan 2026-10-09-open-feature-requests
 Traceability: plans-implementation REQ-TSTS-SHARED-MESSAGE-CONTRACTS from plan 2026-10-09-open-feature-requests
 Traceability: plans-verification REQ-TSTS-SHARED-MESSAGE-CONTRACTS from plan 2026-10-09-open-feature-requests
-Traceability: plans-implementation REQ-TYPESCRIPT-ONLY-SOURCE from plan 2026-10-09-open-feature-requests
-Traceability: plans-verification REQ-TYPESCRIPT-ONLY-SOURCE from plan 2026-10-09-open-feature-requests
+Historical coverage: plans-implementation REQ-TYPESCRIPT-ONLY-SOURCE from plan 2026-10-09-open-feature-requests
+Historical coverage: plans-verification REQ-TYPESCRIPT-ONLY-SOURCE from plan 2026-10-09-open-feature-requests

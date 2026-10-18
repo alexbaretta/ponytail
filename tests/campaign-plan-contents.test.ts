@@ -70,7 +70,7 @@ test('execution contents retain normalized statuses, feature paths and exact rea
   assert.equal(campaignPlanContents.reviewableSprint, null);
 });
 
-// Traceability: verifies REQ-ROLLING-STATE
+// Historical coverage: verifies REQ-ROLLING-STATE
 test('accepted plan history survives a status directory move',testContext=> {
  const obligationFixture = fixture(testContext);
  const {root} = obligationFixture;

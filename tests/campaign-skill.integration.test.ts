@@ -7,8 +7,8 @@ import path from 'node:path';
 import {spawnSync} from 'node:child_process';
 import test from 'node:test';
 
-// Traceability: verifies REQ-SWARM-SKILL
-test('Codex installer publishes the registered swarm skill as an independent copy',testContext=>{
+// Traceability: verifies ACC-CM-HOST-OWNERSHIP from integration-test TEST-CM-INSTALL
+test('Codex installer publishes campaign management and removes retired owned skills',testContext=>{
  const root=path.resolve(__dirname,'../..');
  const temporaryRoot=fs.mkdtempSync(path.join(os.tmpdir(),'ponytail-swarm-skill-'));
  testContext.after(()=>fs.rmSync(temporaryRoot,{recursive:true,force:true}));
@@ -17,11 +17,22 @@ test('Codex installer publishes the registered swarm skill as an independent cop
  fs.symlinkSync('/usr/bin/true',path.join(bin,'codex'));
  fs.symlinkSync('/usr/bin/true',path.join(bin,'npm'));
  const codexHome=path.join(temporaryRoot,'codex');
+ fs.mkdirSync(path.join(codexHome,'skills'),{recursive:true});
+ const retired=['swarm','qa-swarm','parallel-plan-scheduler'];
+ for(const name of retired) {
+  fs.mkdirSync(path.join(codexHome,'skills',name));
+  fs.writeFileSync(path.join(codexHome,'skills',name,'SKILL.md'),'old owned skill');
+ }
+ fs.mkdirSync(path.join(codexHome,'skills','personal'));
+ fs.writeFileSync(path.join(codexHome,'skills','personal','SKILL.md'),'user skill');
+ fs.writeFileSync(path.join(codexHome,'.ponytail-install.tsv'),retired.map(name=>`bundled\t${name}\t${root}/skills/${name}\n`).join(''));
  const result=spawnSync('bash',[path.join(root,'scripts/install-to-codex.sh'),'--codex-home',codexHome],
   {cwd:root,encoding:'utf8',env:{...process.env,PATH:`${bin}:${process.env.PATH ?? ''}`}});
  assert.equal(result.status,0,result.stderr);
- const source=path.join(root,'skills/swarm/SKILL.md');
- const installed=path.join(codexHome,'skills/swarm/SKILL.md');
+ for(const name of retired) assert.equal(fs.existsSync(path.join(codexHome,'skills',name)),false);
+ assert.equal(fs.readFileSync(path.join(codexHome,'skills/personal/SKILL.md'),'utf8'),'user skill');
+ const source=path.join(root,'skills/campaign-management/SKILL.md');
+ const installed=path.join(codexHome,'skills/campaign-management/SKILL.md');
  assert.equal(fs.readFileSync(installed,'utf8'),fs.readFileSync(source,'utf8'));
  assert.ok(!fs.lstatSync(path.dirname(installed)).isSymbolicLink());
  assert.notEqual(fs.statSync(installed).ino,fs.statSync(source).ino);

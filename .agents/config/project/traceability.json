@@ -15,10 +15,6 @@
       "sourcePath": "pm/requirements/open-features.md"
     },
     {
-      "id": "REQ-TYPESCRIPT-ONLY-SOURCE",
-      "sourcePath": "pm/requirements/open-features.md"
-    },
-    {
       "id": "REQ-CLI-INTERRUPTION",
       "sourcePath": "pm/requirements/cli-interruption.md"
     },
@@ -49,10 +45,6 @@
     {
       "id": "REQ-CAMPAIGN-ORCHESTRATION",
       "sourcePath": "pm/requirements/campaign-orchestration.md"
-    },
-    {
-      "id": "REQ-PONYTAIL-CLI-AGENT-HARNESS",
-      "sourcePath": "pm/requirements/ponytail-cli-agent-harness.md"
     },
     {
       "id": "REQ-ISSUE-REQUIREMENT-ACTIVATION",
@@ -120,120 +112,12 @@
       "noUnitTestReason": "The sole owned implementation is the agent instruction at skills/plan-execution/SKILL.md starting-checkpoint gate, with no independently executable product unit. The configured policy integration proof guards the instruction; scoped UAT assesses its application. This disposition covers only that declaration and does not waive future executable starting-gate units."
     },
     {
-      "id": "REQ-ROLLING-CONFIGURATION",
-      "sourcePath": "pm/requirements/rolling-campaigns.md"
-    },
-    {
-      "id": "REQ-ROLLING-GRAPH",
-      "sourcePath": "pm/requirements/rolling-campaigns.md"
-    },
-    {
-      "id": "REQ-ROLLING-SCHEDULING",
-      "sourcePath": "pm/requirements/rolling-campaigns.md"
-    },
-    {
-      "id": "REQ-ROLLING-STATE",
-      "sourcePath": "pm/requirements/rolling-campaigns.md"
-    },
-    {
-      "id": "REQ-ROLLING-WORKERS",
-      "sourcePath": "pm/requirements/rolling-campaigns.md"
-    },
-    {
-      "id": "REQ-ROLLING-REVIEW",
-      "sourcePath": "pm/requirements/rolling-campaigns.md"
-    },
-    {
-      "id": "REQ-ROLLING-PUBLICATION",
-      "sourcePath": "pm/requirements/rolling-campaigns.md"
-    },
-    {
-      "id": "REQ-ROLLING-INTERFACES",
-      "sourcePath": "pm/requirements/rolling-campaigns.md"
-    },
-    {
       "id": "REQ-PONYTAIL-STATIC-LANGUAGE",
       "sourcePath": "pm/requirements/static-language.md"
     },
     {
-      "id": "REQ-ROLLING-CLIENT-PROTOCOL",
-      "sourcePath": "pm/requirements/rolling-campaigns.md"
-    },
-    {
-      "id": "REQ-QA-SWARM",
-      "sourcePath": "pm/requirements/qa-swarm.md"
-    },
-    {
       "id": "REQ-FAST-SEMANTIC-REBASE",
       "sourcePath": "pm/requirements/fast-semantic-rebase.md"
-    },
-    {
-      "id": "REQ-ROLLING-READONLY-COLLECTION",
-      "sourcePath": "pm/requirements/rolling-campaigns.md"
-    },
-    {
-      "id": "REQ-ROLLING-PUBLICATION-REPAIR",
-      "sourcePath": "pm/requirements/rolling-campaigns.md"
-    },
-    {
-      "id": "REQ-ROLLING-CONFIGURATION-AMENDMENT",
-      "sourcePath": "pm/requirements/rolling-campaigns.md"
-    },
-    {
-      "id": "REQ-ROLLING-PUBLICATION-WITHDRAWAL",
-      "sourcePath": "pm/requirements/rolling-campaigns.md"
-    },
-    {
-      "id": "REQ-ROLLING-WORKER-CORRECTION",
-      "sourcePath": "pm/requirements/rolling-campaigns.md"
-    },
-    {
-      "id": "REQ-ROLLING-QA-APPROVAL",
-      "sourcePath": "pm/requirements/rolling-campaigns.md"
-    },
-    {
-      "id": "REQ-ROLLING-PARALLEL-DISPATCH",
-      "sourcePath": "pm/requirements/rolling-campaigns.md"
-    },
-    {
-      "id": "REQ-ROLLING-RESET",
-      "sourcePath": "pm/requirements/rolling-campaigns.md"
-    },
-    {
-      "id": "REQ-ROLLING-EXISTING-POOL",
-      "sourcePath": "pm/requirements/rolling-campaigns.md"
-    },
-    {
-      "id": "REQ-SWARM-OWNERSHIP",
-      "sourcePath": "pm/requirements/swarms.md"
-    },
-    {
-      "id": "REQ-SWARM-INFO",
-      "sourcePath": "pm/requirements/swarms.md"
-    },
-    {
-      "id": "REQ-SWARM-SESSIONS",
-      "sourcePath": "pm/requirements/swarms.md"
-    },
-    {
-      "id": "REQ-SWARM-WORKTREES",
-      "sourcePath": "pm/requirements/swarms.md"
-    },
-    {
-      "id": "REQ-SWARM-CLEAR",
-      "sourcePath": "pm/requirements/swarms.md"
-    },
-    {
-      "id": "REQ-SWARM-CLI",
-      "sourcePath": "pm/requirements/swarms.md"
-    },
-    {
-      "id": "REQ-SWARM-SKILL",
-      "sourcePath": "pm/requirements/swarms.md"
-    },
-    {
-      "id": "REQ-SWARM-QUEUES",
-      "sourcePath": "pm/requirements/swarms.md"
     }
   ],
   "artifacts": [
@@ -1003,16 +887,6 @@
       "locator": "text"
     },
     {
-      "class": "unit-test",
-      "path": "tests/qa-swarm-policy.test.js",
-      "locator": "text"
-    },
-    {
-      "class": "integration-test",
-      "path": "tests/qa-swarm.integration.test.js",
-      "locator": "text"
-    },
-    {
       "class": "uat",
       "path": "pm/uat/qa-swarm.md",
       "locator": "text"
@@ -1248,7 +1122,7 @@
       "locator": "text"
     },
     {
-      "class": "unit-test",
+      "class": "integration-test",
       "path": "tests/campaign-activation.test.ts",
       "locator": "text"
     },
@@ -1430,11 +1304,6 @@
     {
       "class": "plan",
       "path": "pm/plans/closed/2026-10-16-swarm-worker-continuity/plan.md",
-      "locator": "text"
-    },
-    {
-      "class": "integration-test",
-      "path": "tests/swarm-skill.integration.test.ts",
       "locator": "text"
     },
     {

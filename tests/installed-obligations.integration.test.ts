@@ -8,7 +8,7 @@ import {spawnSync} from 'node:child_process';
 import test from 'node:test';
 import {fixture} from './helpers/obligation-fixture.js';
 
-// Traceability: verifies REQ-ROLLING-CLIENT-PROTOCOL
+// Historical coverage: verifies REQ-ROLLING-CLIENT-PROTOCOL
 test('installed obligation runtime works outside the repository without Node dependency search overrides', testContext => {
   const obligationFixture = fixture(testContext);
   const home = path.join(obligationFixture.root, 'codex');

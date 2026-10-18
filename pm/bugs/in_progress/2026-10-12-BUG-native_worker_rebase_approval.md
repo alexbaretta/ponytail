@@ -8,7 +8,7 @@ Licensed under the MIT License. See LICENSE in the project root. -->
 - Status: IN_PROGRESS
 - Authority: stakeholder explicitly authorized required worker semantic rebase
   and Ponytail tooling repair during the GWEN N=10 campaign.
-Traceability: introduces REQ-ROLLING-WORKERS from issue 2026-10-12-BUG-native_worker_rebase_approval
+Historical coverage: introduces REQ-ROLLING-WORKERS from issue 2026-10-12-BUG-native_worker_rebase_approval
 - Atomic obligation: the active leased worker can perform its required scoped
   semantic replay without the adapter silently rejecting authorized escalation.
 - Root cause: production native adapter unconditionally declines every request,

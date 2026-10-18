@@ -7,8 +7,8 @@ Licensed under the MIT License. See LICENSE in the project root. -->
 - Type: BUG
 - Status: IN_PROGRESS
 - Authority: stakeholder authorized repairs to Ponytail coordination tooling.
-Traceability: introduces REQ-ROLLING-REVIEW from issue 2026-10-12-BUG-canonical_increment_integration
-Traceability: introduces REQ-ROLLING-PUBLICATION from issue 2026-10-12-BUG-canonical_increment_integration
+Historical coverage: introduces REQ-ROLLING-REVIEW from issue 2026-10-12-BUG-canonical_increment_integration
+Historical coverage: introduces REQ-ROLLING-PUBLICATION from issue 2026-10-12-BUG-canonical_increment_integration
 - Atomic obligation: an accepted exact candidate can traverse the complete
   canonical integrate command without manually invoking internal store methods.
 - Root cause: the command called publication directly, bypassing the required

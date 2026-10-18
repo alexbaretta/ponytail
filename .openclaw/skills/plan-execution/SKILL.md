@@ -58,6 +58,12 @@ then resume the reproduction. This does not authorize adjacent speculative fixes
 or repository-wide cleanup. Record genuinely new requirements or changed scope
 explicitly; ask only for a material decision or unavailable authority/capability.
 Continue independent authorized work while a genuine blocker remains.
+A repair may start with a reproduced pre-existing failure expressly owned
+by the approved repair objective. Before kickoff, record its exact failing
+selection and evidence, governing requirement, unresolved obligation and bounded
+repair scope. This exception does not admit unrelated, unplanned or newly
+introduced failures. The failure remains unresolved and prevents final acceptance
+until repaired; never weaken assertions to admit or complete the repair.
 
 ## Validation and status
 

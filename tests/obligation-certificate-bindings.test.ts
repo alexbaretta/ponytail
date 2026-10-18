@@ -75,7 +75,7 @@ function candidateWithBinding(certificateBindingFixture: CertificateBindingFixtu
     inputs: isObligationGitInputs(item.inputs) ? item.inputs : item.inputs.map(input => input.path === 'binding.json' ? { ...input, digest: inputDigest(certificateBindingFixture.root, input.path) } : input) })) };
 }
 
-// Traceability: verifies REQ-ROLLING-GRAPH
+// Historical coverage: verifies REQ-ROLLING-GRAPH
 test('bound acceptance preserves immutable V1 records and legacy adequacy while requiring retained proof', t => {
   const certificateBindingFixture: CertificateBindingFixture = fixture();
   t.after(() => fs.rmSync(certificateBindingFixture.root, { recursive: true, force: true }));
@@ -97,7 +97,7 @@ test('bound acceptance preserves immutable V1 records and legacy adequacy while 
     certificateBindingFixture.history, [certificateBindingFixture.request]), /actual bytes/);
 });
 
-// Traceability: verifies REQ-ROLLING-GRAPH
+// Historical coverage: verifies REQ-ROLLING-GRAPH
 test('bound acceptance fences retained generation/revision, current binding and current prerequisites', t => {
   const certificateBindingFixture: CertificateBindingFixture = fixture();
   t.after(() => fs.rmSync(certificateBindingFixture.root, { recursive: true, force: true }));
@@ -136,7 +136,7 @@ test('bound acceptance fences retained generation/revision, current binding and 
     changedObligationBindingHistoryV1, [obligationCertificateBindingRequest]), /prerequisites are unresolved/);
 });
 
-// Traceability: verifies REQ-ROLLING-GRAPH
+// Historical coverage: verifies REQ-ROLLING-GRAPH
 test('physical binding V1 rejects unsafe indices, ambiguous proof and unsupported identities', t => {
   const certificateBindingFixture: CertificateBindingFixture = fixture();
   t.after(() => fs.rmSync(certificateBindingFixture.root, { recursive: true, force: true }));
@@ -151,7 +151,7 @@ test('physical binding V1 rejects unsafe indices, ambiguous proof and unsupporte
   assert.throws(() => parseObligationCertificateBinding(JSON.stringify(certificateBindingFixture.binding).replace('"certificateEvidenceIndex":0', '"certificateEvidenceIndex":9007199254740993')), /safe integer/);
 });
 
-// Traceability: verifies REQ-ROLLING-GRAPH
+// Historical coverage: verifies REQ-ROLLING-GRAPH
 test('bound proof cannot change its candidate, frozen QA target, outcome or retained execution identity', t => {
   const certificateBindingFixture: CertificateBindingFixture = fixture();
   t.after(() => fs.rmSync(certificateBindingFixture.root, { recursive: true, force: true }));

@@ -7,8 +7,8 @@ Licensed under the MIT License. See LICENSE in the project root. -->
 - ID: 2026-10-12-BUG-rolling_adoption_legacy_worktrees
 - Type: BUG
 - Requirement: REQ-ROLLING-WORKERS / REQ-ROLLING-CONFIGURATION.
-Traceability: introduces REQ-ROLLING-CONFIGURATION from issue 2026-10-12-BUG-rolling_adoption_legacy_worktrees
-Traceability: introduces REQ-ROLLING-WORKERS from issue 2026-10-12-BUG-rolling_adoption_legacy_worktrees
+Historical coverage: introduces REQ-ROLLING-CONFIGURATION from issue 2026-10-12-BUG-rolling_adoption_legacy_worktrees
+Historical coverage: introduces REQ-ROLLING-WORKERS from issue 2026-10-12-BUG-rolling_adoption_legacy_worktrees
 
 - Authority: stakeholder requested rolling N=10 adoption for GWEN and authorized
   Ponytail tooling bug repairs in this repository.

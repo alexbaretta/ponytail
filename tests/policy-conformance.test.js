@@ -7,7 +7,7 @@ const test = require('node:test');
 const { getPonytailInstructions } = require('../hooks/ponytail-instructions');
 
 test('deprecated campaign scheduler owns observation and diagnostic priority', () => {
-  // Traceability: verifies REQ-PONYTAIL-CLI-AGENT-HARNESS
+  // Historical coverage: verifies REQ-PONYTAIL-CLI-AGENT-HARNESS
   const policy = require('node:fs').readFileSync(require('node:path').join(__dirname, '..', 'skills', 'parallel-plan-scheduler', 'SKILL.md'), 'utf8');
   assert.match(policy, /campaign\s+observe <campaign-root> --snapshot <json>/);
   assert.match(policy, /Blocking campaign diagnostics outrank new dispatch/);

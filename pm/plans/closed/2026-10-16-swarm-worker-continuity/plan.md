@@ -7,8 +7,8 @@ and the coordinator responsive after the supplied worker stopped after a short
 validation grant with its broader work unresolved. Canonical conditions and
 criteria: [REQ-SWARM-SKILL OBL-20 and OBL-21](../../../requirements/swarms.md#req-swarm-skill-export-the-parallel-execution-procedure).
 
-Traceability: plans-implementation REQ-SWARM-SKILL from plan 2026-10-16-swarm-worker-continuity
-Traceability: plans-verification REQ-SWARM-SKILL from plan 2026-10-16-swarm-worker-continuity
+Historical coverage: plans-implementation REQ-SWARM-SKILL from plan 2026-10-16-swarm-worker-continuity
+Historical coverage: plans-verification REQ-SWARM-SKILL from plan 2026-10-16-swarm-worker-continuity
 
 ## Confirmed cause and bounded repair
 

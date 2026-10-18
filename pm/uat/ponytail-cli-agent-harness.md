@@ -14,7 +14,7 @@ approved 2026-09-30.
 
 ## Arc: Rehydrate and monitor campaign workers
 
-Traceability: verifies REQ-PONYTAIL-CLI-AGENT-HARNESS
+Historical coverage: verifies REQ-PONYTAIL-CLI-AGENT-HARNESS
 
 - **Actor:** Authenticated campaign coordinator agent.
 - **Prerequisites:** A campaign containing working, waiting, finished, missing,

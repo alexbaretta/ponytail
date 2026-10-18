@@ -5,6 +5,11 @@ Licensed under the MIT License. See LICENSE in the project root.
 
 # Swarms
 
+Historical contract: superseded on 2026-10-18 by
+[campaign management](campaign-management.md) and the stakeholder-approved
+[redesign](../../docs/campaign-management.md). Retained for historical interpretation;
+its Ponytail controller/queue/session protocols are no longer active requirements.
+
 
 **Redesign supersession:** For explicitly adopted redesigned campaigns, the
 [campaign-management contract](campaign-management.md) supersedes the

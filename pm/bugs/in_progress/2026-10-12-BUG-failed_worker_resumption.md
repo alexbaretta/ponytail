@@ -9,7 +9,7 @@ Licensed under the MIT License. See LICENSE in the project root. -->
 - Authority: stakeholder authorized rolling worker lifecycle and Ponytail
   tooling repairs during the GWEN traceability campaign.
 - Requirements: [REQ-ROLLING-WORKERS](../../requirements/rolling-campaigns.md#req-rolling-workers-ponytail-owned-checkouts-and-direct-sessions), REQ-ROLLING-STATE.
-Traceability: introduces REQ-ROLLING-WORKERS from issue 2026-10-12-BUG-failed_worker_resumption
+Historical coverage: introduces REQ-ROLLING-WORKERS from issue 2026-10-12-BUG-failed_worker_resumption
 - Atomic obligation: an observed failed original instruction turn can resume
   the same actor and retained work without an invented obligation prerequisite.
 - Observation: original GWEN worker 105's turn failed with model capacity after

@@ -8,7 +8,7 @@ Licensed under the MIT License. See LICENSE in the project root. -->
 - Status: IN_PROGRESS
 - Authority: stakeholder reported the recurring defect and activated its repair
   on 2026-10-15.
-Traceability: introduces REQ-SWARM-SESSIONS from issue 2026-10-15-BUG-swarm_worker_missing_codex_project
+Historical coverage: introduces REQ-SWARM-SESSIONS from issue 2026-10-15-BUG-swarm_worker_missing_codex_project
 - Requirement: [REQ-SWARM-SESSIONS OBL-5](../../requirements/swarms.md#req-swarm-sessions-membership-quiescence-and-names).
 - UAT: [Arc SWARM-SESSIONS](../../uat/swarms.md#arc-swarm-sessions-remove-and-conditionally-reattach-originals), Step 1.
 - Observation: workers created through swarm guidance frequently answer that

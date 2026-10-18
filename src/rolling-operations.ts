@@ -11,7 +11,7 @@ class RollingLegacyInspectionError extends Error {
 function readJson(text:string):unknown {return JSON.parse(text);}
 export interface RollingOperationResponse {readonly command:'legacy';readonly result:string;}
 
-// Traceability: implements REQ-ROLLING-INTERFACES
+// Historical coverage: implements REQ-ROLLING-INTERFACES
 export async function executeRollingCommand(root:string,command:string,value:unknown,signal?:AbortSignal):Promise<RollingOperationResponse> {
  if (command !== 'legacy') throw new Error(`campaign: retired operation ${command}; use native host tools and Git`);
  if (!path.isAbsolute(root)) throw new Error('campaign: absolute invoking root required');
@@ -27,7 +27,7 @@ export async function executeRollingCommand(root:string,command:string,value:unk
  return {command:'legacy',result:result.stdout};
 }
 
-// Traceability: implements REQ-ROLLING-INTERFACES
+// Historical coverage: implements REQ-ROLLING-INTERFACES
 export async function runRollingOperationCli(argv:readonly string[]):Promise<void> {
  const [command,...arguments_] = argv;
  if (command === undefined || command === '--help') {process.stdout.write(rollingCampaignHelp());return;}

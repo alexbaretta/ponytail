@@ -4,8 +4,8 @@
 Status: closed
 Approval: direct stakeholder implementation, installation and coordinator transition request, 2026-10-16.
 
-Traceability: plans-implementation REQ-SWARM-QUEUES from plan 2026-10-16-autonomous-swarm-queues
-Traceability: plans-verification REQ-SWARM-QUEUES from plan 2026-10-16-autonomous-swarm-queues
+Historical coverage: plans-implementation REQ-SWARM-QUEUES from plan 2026-10-16-autonomous-swarm-queues
+Historical coverage: plans-verification REQ-SWARM-QUEUES from plan 2026-10-16-autonomous-swarm-queues
 
 Canonical obligations: [REQ-SWARM-QUEUES](../../../requirements/swarms.md#req-swarm-queues-autonomous-campaign-execution).
 

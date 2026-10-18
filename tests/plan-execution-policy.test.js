@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Traceability: verifies REQ-PLAN-INPUT-QUEUE
 // Traceability: verifies REQ-ISSUE-REQUIREMENT-ACTIVATION
-// Traceability: verifies REQ-PONYTAIL-CLI-AGENT-HARNESS
+// Historical coverage: verifies REQ-PONYTAIL-CLI-AGENT-HARNESS
 // Traceability: verifies REQ-WORKER-WORKTREE-RETENTION
 
 const test = require('node:test');

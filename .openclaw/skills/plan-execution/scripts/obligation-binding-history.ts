@@ -78,6 +78,8 @@ function isObligationBindingHistoryV1(value: unknown): value is ObligationBindin
   requireBinding(new Set(revisions.map(revision => revision.id)).size === revisions.length, 'duplicate revision identity');
   return true;
 }
+
+// Historical coverage: implements REQ-ROLLING-GRAPH
 export function readObligationBindingHistoryV1(value: unknown): ObligationBindingHistoryV1 {
   requireBinding(isObligationBindingHistoryV1(value), 'invalid history V1');
   return { schemaVersion: 1, scopeId: value.scopeId, revisions: value.revisions.map(readObligationBindingRevisionV1) };
@@ -116,6 +118,8 @@ function validateGraph(obligationBaseline: ObligationBaseline, bindings: Readonl
   }
   obligationBaseline.obligationIds.forEach(visit);
 }
+
+// Historical coverage: implements REQ-ROLLING-GRAPH
 export function projectObligationBindings(obligationDocumentV1: ObligationDocumentV1, obligationBindingHistoryV1: ObligationBindingHistoryV1): ReadonlyMap<string, ObligationEffectiveBinding> {
   readObligationDocumentV1(obligationDocumentV1);
   const checkedObligationBindingHistoryV1 = readObligationBindingHistoryV1(obligationBindingHistoryV1);
@@ -146,6 +150,8 @@ export function projectObligationBindings(obligationDocumentV1: ObligationDocume
     return [id, obligationEffectiveBinding];
   }));
 }
+
+// Historical coverage: implements REQ-ROLLING-GRAPH
 export function acceptObligationBindingRevision(obligationDocumentV1: ObligationDocumentV1, previousObligationBindingHistoryV1: ObligationBindingHistoryV1,
   candidateObligationBindingHistoryV1: ObligationBindingHistoryV1, expectedPredecessorId: string | null): ObligationBindingHistoryV1 {
   projectObligationBindings(obligationDocumentV1, previousObligationBindingHistoryV1);
@@ -158,6 +164,8 @@ export function acceptObligationBindingRevision(obligationDocumentV1: Obligation
   projectObligationBindings(obligationDocumentV1, checkedObligationBindingHistoryV1);
   return checkedObligationBindingHistoryV1;
 }
+
+// Historical coverage: implements REQ-ROLLING-GRAPH
 export function readObligationLeaseV1(value: unknown): ObligationLeaseV1 {
   exactRecord(value, ['schemaVersion', 'scopeId', 'baselineId', 'graphDigest', 'generation', 'assessor', 'authority', 'binding']);
   requireBinding(value.schemaVersion === 1, 'unsupported lease schemaVersion');
@@ -179,6 +187,8 @@ export const ObligationLeaseReaders = { V1: readObligationLeaseV1 };
 export function parseObligationLease(text: string): ObligationLeaseV1 {
   return readObligationLeaseV1(parseVersionOneRecord(text, 'lease'));
 }
+
+// Historical coverage: implements REQ-ROLLING-GRAPH
 export function freezeObligationLease(obligationDocumentV1: ObligationDocumentV1, obligationBindingHistoryV1: ObligationBindingHistoryV1,
   obligationLeaseRequest: ObligationLeaseRequest): ObligationLeaseV1 {
   exactRecord(obligationLeaseRequest, ['obligationId', 'graphDigest', 'generation', 'assessor', 'authority']);
@@ -193,6 +203,8 @@ export function freezeObligationLease(obligationDocumentV1: ObligationDocumentV1
     graphDigest: obligationLeaseRequest.graphDigest, generation: obligationLeaseRequest.generation,
     assessor: obligationLeaseRequest.assessor, authority, binding: obligationEffectiveBinding });
 }
+
+// Historical coverage: implements REQ-ROLLING-GRAPH
 export function assertObligationLeaseOperation(obligationLeaseV1: ObligationLeaseV1, generation: string, graphDigest: string,
   operation: string, changedPaths: readonly string[] = []): void {
   const checkedObligationLeaseV1 = readObligationLeaseV1(obligationLeaseV1);

@@ -9,7 +9,7 @@ Licensed under the MIT License. See LICENSE in the project root. -->
 - Authority: stakeholder authorized Ponytail tooling repairs for the parallel
   traceability campaign.
 Traceability: introduces REQ-PLAN-INPUT-QUEUE from issue 2026-10-12-BUG-rolling_command_hook_classification
-Traceability: introduces REQ-ROLLING-INTERFACES from issue 2026-10-12-BUG-rolling_command_hook_classification
+Historical coverage: introduces REQ-ROLLING-INTERFACES from issue 2026-10-12-BUG-rolling_command_hook_classification
 - Atomic obligation: the legacy plan-input hook leaves rolling named commands
   to the canonical CLI while preserving historical coordinator authentication.
 - Root cause: its legacy campaign regex interprets the first named rolling flag

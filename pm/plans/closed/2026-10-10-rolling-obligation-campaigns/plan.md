@@ -260,14 +260,14 @@ of directly created threads is a capability to verify, not a prerequisite for
 documented Codex execution. Tool/configuration gaps remain implementation-owned.
 No unavailable credential or external approval has yet been established.
 
-Traceability: plans-implementation REQ-ROLLING-CONFIGURATION from plan 2026-10-10-rolling-obligation-campaigns
-Traceability: plans-implementation REQ-ROLLING-GRAPH from plan 2026-10-10-rolling-obligation-campaigns
-Traceability: plans-implementation REQ-ROLLING-SCHEDULING from plan 2026-10-10-rolling-obligation-campaigns
-Traceability: plans-implementation REQ-ROLLING-STATE from plan 2026-10-10-rolling-obligation-campaigns
-Traceability: plans-implementation REQ-ROLLING-WORKERS from plan 2026-10-10-rolling-obligation-campaigns
-Traceability: plans-implementation REQ-ROLLING-REVIEW from plan 2026-10-10-rolling-obligation-campaigns
-Traceability: plans-implementation REQ-ROLLING-PUBLICATION from plan 2026-10-10-rolling-obligation-campaigns
-Traceability: plans-implementation REQ-ROLLING-INTERFACES from plan 2026-10-10-rolling-obligation-campaigns
+Historical coverage: plans-implementation REQ-ROLLING-CONFIGURATION from plan 2026-10-10-rolling-obligation-campaigns
+Historical coverage: plans-implementation REQ-ROLLING-GRAPH from plan 2026-10-10-rolling-obligation-campaigns
+Historical coverage: plans-implementation REQ-ROLLING-SCHEDULING from plan 2026-10-10-rolling-obligation-campaigns
+Historical coverage: plans-implementation REQ-ROLLING-STATE from plan 2026-10-10-rolling-obligation-campaigns
+Historical coverage: plans-implementation REQ-ROLLING-WORKERS from plan 2026-10-10-rolling-obligation-campaigns
+Historical coverage: plans-implementation REQ-ROLLING-REVIEW from plan 2026-10-10-rolling-obligation-campaigns
+Historical coverage: plans-implementation REQ-ROLLING-PUBLICATION from plan 2026-10-10-rolling-obligation-campaigns
+Historical coverage: plans-implementation REQ-ROLLING-INTERFACES from plan 2026-10-10-rolling-obligation-campaigns
 
 ## Final delivery checkpoint — 2026-10-12
 

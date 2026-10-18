@@ -3,7 +3,7 @@
 import { fail } from './plan-input-queue.js';
 import { isRollingCommandName } from './rolling-cli-registry.js';
 
-// Traceability: implements REQ-ROLLING-INTERFACES
+// Historical coverage: implements REQ-ROLLING-INTERFACES
 export function isRollingCampaignCommand(operation: string, argument: string | null): boolean {
   // Positional plan selectors and the historical --json reader retain the
   // legacy hook's authentication. Named rolling flags are checked by its CLI.

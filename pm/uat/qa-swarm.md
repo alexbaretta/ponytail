@@ -15,7 +15,7 @@ retain their original meanings. This notice does not claim adoption or completio
 
 ## Arc QA-SWARM-SLICE
 
-Traceability: verifies REQ-QA-SWARM
+Historical coverage: verifies REQ-QA-SWARM
 
 - **Actor:** QA coordinator and independent QA slice workers.
 - **Prerequisites:** An authoritative selector manifest, retained worker

@@ -15,7 +15,7 @@ retain their original meanings. This notice does not claim adoption or completio
 
 ## Arc ROLL-CLIENT-PROTOCOL
 
-Traceability: verifies REQ-ROLLING-CLIENT-PROTOCOL
+Historical coverage: verifies REQ-ROLLING-CLIENT-PROTOCOL
 
 Actor: client coordinator and worker agents. Profile: disposable local exported
 skill installation and controlled CLI/native-protocol fixtures.
@@ -41,7 +41,7 @@ skill installation and controlled CLI/native-protocol fixtures.
 
 ## Arc ROLL-CLI-HELP
 
-Traceability: verifies REQ-ROLLING-INTERFACES
+Historical coverage: verifies REQ-ROLLING-INTERFACES
 
 Actor: CLI user. Profile: isolated registered Git project with recorded original
 Git, filesystem and operational state. No cloud or remote publication effects.
@@ -74,7 +74,7 @@ entire requirement.
 
 ## Arc ROLL-CONFIG: Resolve and retain configuration
 
-Traceability: verifies REQ-ROLLING-CONFIGURATION
+Historical coverage: verifies REQ-ROLLING-CONFIGURATION
 
 1. **Step CONFIG-PRECEDENCE:** Acceptance contribution to [OBL-22](../plans/closed/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-22), [OBL-23](../plans/closed/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-23), [OBL-24](../plans/closed/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-24). Initialize campaigns with explicit, project and
    Git-default target selections; inspect persisted targets. Each uses the
@@ -89,7 +89,7 @@ Traceability: verifies REQ-ROLLING-CONFIGURATION
 
 ## Arc ROLL-GRAPH: Reconcile dependency discovery
 
-Traceability: verifies REQ-ROLLING-GRAPH
+Historical coverage: verifies REQ-ROLLING-GRAPH
 
 1. **Step GRAPH-AUTHORITY:** Acceptance contribution to [OBL-25](../plans/closed/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-25). Give a worker an older graph and change coordinator
    files. Scheduling uses only the accepted coordinator snapshot; an allocation
@@ -102,7 +102,7 @@ Traceability: verifies REQ-ROLLING-GRAPH
 
 ## Arc ROLL-SCHEDULE: Suspend and resume while filling capacity
 
-Traceability: verifies REQ-ROLLING-SCHEDULING
+Historical coverage: verifies REQ-ROLLING-SCHEDULING
 
 1. **Step SCHEDULE-FILL:** Acceptance contribution to [OBL-28](../plans/closed/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-28), [OBL-30](../plans/closed/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-30). Request more compatible obligations than N. Exactly
    available capacity is reserved; conflicting work is excluded deterministically.
@@ -116,7 +116,7 @@ Traceability: verifies REQ-ROLLING-SCHEDULING
 
 ## Arc ROLL-STATE: Recover ownership and external actions
 
-Traceability: verifies REQ-ROLLING-STATE
+Historical coverage: verifies REQ-ROLLING-STATE
 
 1. **Step STATE-CONTENTION:** Acceptance contribution to [OBL-31](../plans/closed/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-31). Race allocation in real PostgreSQL transactions.
    Capacity and exclusive ownership hold; the lowest available number is chosen.
@@ -128,7 +128,7 @@ Traceability: verifies REQ-ROLLING-STATE
 
 ## Arc ROLL-WORKER: Execute in a Ponytail-owned checkout
 
-Traceability: verifies REQ-ROLLING-WORKERS
+Historical coverage: verifies REQ-ROLLING-WORKERS
 
 1. **Step WORKER-START:** Acceptance contribution to [OBL-38](../plans/closed/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-38), [OBL-40](../plans/closed/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-40), [OBL-41](../plans/closed/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-41), [OBL-44](../plans/closed/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-44). Prepare an ordinary Git checkout and start a fresh
    native Codex thread with its exact cwd, without a Ponytail plugin. Verify
@@ -146,7 +146,7 @@ Traceability: verifies REQ-ROLLING-WORKERS
 
 ## Arc ROLL-REVIEW: Iterate and integrate exact candidates
 
-Traceability: verifies REQ-ROLLING-REVIEW
+Historical coverage: verifies REQ-ROLLING-REVIEW
 
 1. **Step REVIEW-CORRECTION:** Acceptance contribution to [OBL-50](../plans/closed/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-50), [OBL-51](../plans/closed/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-51), [OBL-52](../plans/closed/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-52). Reject a candidate, return corrections, and submit
    a newly semantically rebased revision. By default the worker's original
@@ -173,7 +173,7 @@ Traceability: verifies REQ-ROLLING-REVIEW
 
 ## Arc ROLL-PUBLISH: Publish tested batches
 
-Traceability: verifies REQ-ROLLING-PUBLICATION
+Historical coverage: verifies REQ-ROLLING-PUBLICATION
 
 1. **Step PUBLISH-BATCH:** Acceptance contribution to [OBL-58](../plans/closed/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-58), [OBL-60](../plans/closed/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-60). Set M=2; integrate one focused-QA increment, then a
    second. Campaign results are visible immediately; mainline changes only after
@@ -186,7 +186,7 @@ Traceability: verifies REQ-ROLLING-PUBLICATION
 
 ## Arc ROLL-INTERFACE: Coordinate through either transport
 
-Traceability: verifies REQ-ROLLING-INTERFACES
+Historical coverage: verifies REQ-ROLLING-INTERFACES
 
 1. **Step INTERFACE-HELP:** Acceptance contribution to [OBL-66](../plans/closed/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-66). Request root, campaign and command help. Each lists
    its scope and arguments/behavior without requiring knowledge of old commands.
@@ -236,8 +236,8 @@ native reviewer supplies a fresh verdict. A timeout alone is not a loss referenc
 
 ## Arc ROLL-CLOSE: Close only verified campaign scope
 
-Traceability: verifies REQ-ROLLING-STATE
-Traceability: verifies REQ-ROLLING-INTERFACES
+Historical coverage: verifies REQ-ROLLING-STATE
+Historical coverage: verifies REQ-ROLLING-INTERFACES
 
 1. **Step CAMPAIGN-CLOSE:** Acceptance contribution to
    [OBL-69](../plans/closed/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-69).
@@ -255,35 +255,35 @@ runtime results do not establish freshness after relevant inputs change.
 
 ### Acceptance ROLL-BINDING-AMENDMENT
 
-Traceability: verifies REQ-ROLLING-GRAPH
+Historical coverage: verifies REQ-ROLLING-GRAPH
 
 Demonstrates [OBL-107](../plans/closed/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-107) through Step ROLL-BINDING-API: exercise the typed amendment boundary and observe its entire canonical criterion, including preserved identities/history and rejected invalid revisions. Selector, live lease and acceptance integration still require their application Arcs.
 
 ### Acceptance ROLL-BINDING-SELECT
 
-Traceability: verifies REQ-ROLLING-GRAPH
+Historical coverage: verifies REQ-ROLLING-GRAPH
 
 Step ROLL-BINDING-QUERY demonstrates [OBL-108](../plans/closed/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-108): query portable and rolling selection against an explicitly identified coordinator binding history, observe its complete declared criterion, then amend that history and reject the obsolete graph identity. Live lease and candidate acceptance integration remain required.
 
 ### Acceptance ROLL-FROZEN-LEASE
 
-Traceability: verifies REQ-ROLLING-GRAPH
+Historical coverage: verifies REQ-ROLLING-GRAPH
 
 Step ROLL-LEASE-CONTRACT demonstrates [OBL-109](../plans/closed/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-109): issue an authorized portable frozen lease, amend coordinator bindings, and verify that the original lease retains its earlier permissions and rejects wrong generations, graph identities and out-of-scope changes. Live database and worker integration remain required.
 
 ### Acceptance ROLL-STORED-LEASE
 
-Traceability: verifies REQ-ROLLING-GRAPH
-Traceability: verifies REQ-ROLLING-STATE
-Traceability: verifies REQ-ROLLING-SCHEDULING
+Historical coverage: verifies REQ-ROLLING-GRAPH
+Historical coverage: verifies REQ-ROLLING-STATE
+Historical coverage: verifies REQ-ROLLING-SCHEDULING
 
 Step ROLL-STORE-REVISION demonstrates [OBL-110](../plans/closed/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-110): allocate against explicit coordinator binding history, amend it, reject old permissions, acknowledge cessation, adopt the new revision and resume the original session with a new generation. V1 records retain their meanings. Worker delivery and candidate acceptance still require application integration.
 
 ### Acceptance ROLL-SUBMISSION
 
-Traceability: verifies REQ-ROLLING-GRAPH
-Traceability: verifies REQ-ROLLING-STATE
-Traceability: verifies REQ-ROLLING-WORKERS
+Historical coverage: verifies REQ-ROLLING-GRAPH
+Historical coverage: verifies REQ-ROLLING-STATE
+Historical coverage: verifies REQ-ROLLING-WORKERS
 
 Step ROLL-WORKER-SUBMIT demonstrates [OBL-111](../plans/closed/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-111): submit an actual isolated Git candidate from its stopped retained owner, reject foreign changes and stale evidence, persist it atomically in PostgreSQL and replay the exact submission without duplicate review records. Submission alone leaves obligation acceptance unresolved.
 Advance the coordinator increment independently after the worker's finalized
@@ -298,7 +298,7 @@ stop record across restart.
 
 ### Acceptance ROLL-BOUND-ACCEPTANCE
 
-Traceability: verifies REQ-ROLLING-GRAPH
+Historical coverage: verifies REQ-ROLLING-GRAPH
 
 Step ROLL-ACCEPT-BINDING demonstrates [OBL-112](../plans/closed/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-112): read an actual retained PostgreSQL submission, reconcile its Git candidate in a disposable coordinator checkout, and accept only fresh proof for its frozen current binding. Reject stale or forged references, changed inputs and unmet current prerequisites while preserving legacy V1 meanings.
 
@@ -335,7 +335,7 @@ change or rebase on an inspection-only obligation.
 
 ### Acceptance ROLL-HISTORICAL-PLAN
 
-Traceability: verifies REQ-ROLLING-STATE
+Historical coverage: verifies REQ-ROLLING-STATE
 
 Demonstrates [OBL-113](../plans/closed/2026-10-10-rolling-obligation-campaigns/delivery-decomposition.md#obl-113). Establish fresh complete acceptance and DONE sprint/tasklet state in a disposable adopted plan. Move its directory to the configured successful-completion state and repair the manifest locator. Historical inspection preserves the accepted checkpoint and completed state without rewriting old certificate paths or digests. Current-input inspection still reports relocated or changed evidence as stale. Incomplete or invalidated accepted history cannot close a plan. Fixture-only consumers must remain independent of the active campaign's mutable location.
 
@@ -347,7 +347,7 @@ its words and indentation, and every output line fits the selected width.
 
 ## ACC-ROLLING-READONLY-COLLECTION
 
-Traceability: verifies REQ-ROLLING-READONLY-COLLECTION
+Historical coverage: verifies REQ-ROLLING-READONLY-COLLECTION
 Obligation: OBL-RECOVERY-1. Arc: ROLLING-READONLY-COLLECTION.
 
 1. Retain an original completed worker and its valid exact-candidate submission
@@ -362,7 +362,7 @@ Obligation: OBL-RECOVERY-1. Arc: ROLLING-READONLY-COLLECTION.
 
 ## ACC-ROLLING-PUBLICATION-REPAIR
 
-Traceability: verifies REQ-ROLLING-PUBLICATION-REPAIR
+Historical coverage: verifies REQ-ROLLING-PUBLICATION-REPAIR
 Obligation: OBL-RECOVERY-2. Arc: ROLLING-PUBLICATION-REPAIR.
 
 1. Freeze a batch, prepare its exact candidate and retain a failed full-QA job.
@@ -379,7 +379,7 @@ Obligation: OBL-RECOVERY-2. Arc: ROLLING-PUBLICATION-REPAIR.
 
 ## ACC-ROLLING-CONFIGURATION-AMENDMENT
 
-Traceability: verifies REQ-ROLLING-CONFIGURATION-AMENDMENT
+Historical coverage: verifies REQ-ROLLING-CONFIGURATION-AMENDMENT
 Obligation: OBL-RECOVERY-3. Arc: ROLLING-CONFIGURATION-AMENDMENT.
 Amend an existing campaign from master/M1 to another target/M5/N10. Verify the
 same campaign and workers, immutable previous configuration, new effective
@@ -387,7 +387,7 @@ configuration, stale-input refusal and identical-request replay after restart.
 
 ## ACC-ROLLING-PUBLICATION-WITHDRAWAL
 
-Traceability: verifies REQ-ROLLING-PUBLICATION-WITHDRAWAL
+Historical coverage: verifies REQ-ROLLING-PUBLICATION-WITHDRAWAL
 Obligation: OBL-RECOVERY-4. Arc: ROLLING-PUBLICATION-WITHDRAWAL.
 Withdraw a settled failed-QA batch, verify every original record and branch
 remains, verify its original push is refused, amend the campaign and refreeze its
@@ -398,7 +398,7 @@ one receipt; a changed reason/authority refuses.
 
 ## ACC-ROLLING-WORKER-CORRECTION
 
-Traceability: verifies REQ-ROLLING-WORKER-CORRECTION
+Historical coverage: verifies REQ-ROLLING-WORKER-CORRECTION
 Obligation: OBL-RECOVERY-5. Arc: ROLLING-WORKER-CORRECTION.
 Observe a completed blocker-prose turn with its original idle owning transport.
 Request correction with a real reason and no fabricated dependency; verify dirty
@@ -407,7 +407,7 @@ generation. Active/unknown ownership, newer turns and stale observations refuse.
 
 ## ACC-ROLLING-QA-APPROVAL
 
-Traceability: verifies REQ-ROLLING-QA-APPROVAL
+Historical coverage: verifies REQ-ROLLING-QA-APPROVAL
 Obligation: OBL-RECOVERY-6. Arc: ROLLING-QA-APPROVAL.
 Request the exact frozen focused QA in the owning turn and checkout, including a
 recognized shell wrapper. Verify bounded acceptance. Alter argv, append a shell
@@ -416,7 +416,7 @@ execution: verify refusal. Existing bounded rebase checks remain enforced.
 
 ## ACC-ROLLING-PARALLEL-DISPATCH
 
-Traceability: verifies REQ-ROLLING-PARALLEL-DISPATCH
+Historical coverage: verifies REQ-ROLLING-PARALLEL-DISPATCH
 Obligation: OBL-RECOVERY-7. Arc: ROLLING-PARALLEL-DISPATCH.
 On an authorized rolling campaign with multiple compatible obligations, follow
 the exported procedure and start multiple top-level worker dispatches before
@@ -426,7 +426,7 @@ projected scheduling capacity distinctly; retain actual checkout restrictions.
 
 ## ACC-ROLLING-RESET
 
-Traceability: verifies REQ-ROLLING-RESET
+Historical coverage: verifies REQ-ROLLING-RESET
 Obligation: OBL-RESET-1. Arc: ROLLING-RESET.
 
 1. Preview a project with retained numbered checkouts, an obsolete external
@@ -444,7 +444,7 @@ Obligation: OBL-RESET-1. Arc: ROLLING-RESET.
 
 ## ACC-ROLLING-EXISTING-POOL
 
-Traceability: verifies REQ-ROLLING-EXISTING-POOL
+Historical coverage: verifies REQ-ROLLING-EXISTING-POOL
 Obligation: OBL-RESTART-1. Arc: ROLLING-EXISTING-POOL.
 
 After project reset, keep physical checkouts 101 and 103 with DB pool rows

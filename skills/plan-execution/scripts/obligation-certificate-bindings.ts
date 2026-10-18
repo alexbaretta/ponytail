@@ -51,7 +51,7 @@ function readObligationCertificateProofReference(value: unknown): ObligationCert
   record(value, ['operation', 'certificateEvidenceIndex', 'submissionEvidenceIndex']);
   return { operation: text(value.operation), certificateEvidenceIndex: index(value.certificateEvidenceIndex), submissionEvidenceIndex: index(value.submissionEvidenceIndex) };
 }
-// Traceability: implements REQ-ROLLING-GRAPH
+// Historical coverage: implements REQ-ROLLING-GRAPH
 export function readObligationCertificateBindingV1(value: unknown): ObligationCertificateBindingV1 {
   record(value, ['schemaVersion', 'certificateId', 'lease', 'revision', 'proof']);
   requireCertificateBinding(value.schemaVersion === 1 && Array.isArray(value.proof) && value.proof.length > 0, 'unsupported version or absent proof');
@@ -72,7 +72,7 @@ export function parseObligationCertificateBinding(text: string): ObligationCerti
   }));
 }
 
-// Traceability: implements REQ-ROLLING-GRAPH
+// Historical coverage: implements REQ-ROLLING-GRAPH
 export function acceptBoundCheckpoint(previousObligationDocumentV1: ObligationDocumentV1, candidateObligationDocumentV1: ObligationDocumentV1,
   root: string, obligationBindingHistoryV1: ObligationBindingHistoryV1,
   obligationCertificateBindingRequests: readonly ObligationCertificateBindingRequest[]): ObligationDocumentV1 {

@@ -81,7 +81,7 @@ require a long-lived plan with atomic tasklets and an explicit ordering for
 compiler configuration, runtime build outputs, source migration, and final
 JavaScript prohibition.
 
-Traceability: introduces REQ-TYPESCRIPT-ONLY-SOURCE from issue 2026-10-01-FEAT-typescript_only_source
+Historical coverage: introduces REQ-TYPESCRIPT-ONLY-SOURCE from issue 2026-10-01-FEAT-typescript_only_source
 
 ## Implementation activation
 

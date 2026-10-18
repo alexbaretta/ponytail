@@ -7,7 +7,7 @@ import {z} from 'zod';
 import {rollingCommandDefinitions} from '../src/rolling-cli-registry.js';
 import {executeRollingCommand} from '../src/rolling-operations.js';
 
-// Traceability: implements REQ-ROLLING-INTERFACES
+// Historical coverage: implements REQ-ROLLING-INTERFACES
 export function registerRollingCampaignTools(mcpServer:McpServer):void {
  for (const rollingCommandDefinition of rollingCommandDefinitions.filter(command=>command.cli)) {
   const inputSchema:Record<string,z.ZodType<unknown>> = {

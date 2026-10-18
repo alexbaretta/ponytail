@@ -621,6 +621,8 @@ export interface ObligationHistoricalAcceptance {
   readonly checkpointId: string | null;
   readonly complete: boolean;
 }
+
+// Historical coverage: implements REQ-ROLLING-STATE
 // Historical acceptance is not current-input authorization for active work.
 export function projectObligationHistoricalAcceptance(obligationDocument: ObligationDocumentV1): ObligationHistoricalAcceptance {
   readObligationDocumentV1(obligationDocument);
@@ -628,6 +630,8 @@ export function projectObligationHistoricalAcceptance(obligationDocument: Obliga
   return { baselineId: replay.baseline.id, checkpointId: obligationDocument.checkpoints.at(-1)?.id ?? null,
     complete: projectBaseline(obligationDocument, replay.baseline, replay.accepted, null).complete };
 }
+
+// Historical coverage: implements REQ-ROLLING-GRAPH
 export function projectObligationScope(obligationDocument: ObligationDocumentV1, root: string,
   obligationBindingHistoryV1?: ObligationBindingHistoryV1,onProgress?:(completed:number,total:number)=>void,proposedInputs?:ReadonlyMap<string,string>): ObligationScopeProjection {
   readObligationDocumentV1(obligationDocument);

@@ -7,7 +7,7 @@ Licensed under the MIT License. See LICENSE in the project root. -->
 - Type: BUG
 - Status: CLOSED
 - Authority: stakeholder authorized repair of Ponytail coordination tooling.
-Traceability: introduces REQ-ROLLING-REVIEW from issue 2026-10-13-BUG-native_reviewer_empty_thread
+Historical coverage: introduces REQ-ROLLING-REVIEW from issue 2026-10-13-BUG-native_reviewer_empty_thread
 - Atomic obligation: the canonical reviewer creation command starts its actual
   review before closing the native connection, retaining that actor across retry
   and rework and permitting replacement only for explicitly observed loss.

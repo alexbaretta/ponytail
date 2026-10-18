@@ -8,7 +8,7 @@ import test from 'node:test';
 import { spawnSync } from 'node:child_process';
 
 // Traceability: verifies REQ-PLAN-INPUT-QUEUE
-// Traceability: verifies REQ-ROLLING-INTERFACES
+// Historical coverage: verifies REQ-ROLLING-INTERFACES
 test('plan-input hook delegates rolling flags/help and retains legacy authentication', t => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'rolling-hook-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));

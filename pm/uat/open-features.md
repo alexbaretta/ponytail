@@ -58,7 +58,7 @@ Traceability: verifies REQ-TSTS-SHARED-MESSAGE-CONTRACTS
 
 ## Arc: Validate the TypeScript-only final tree
 
-Traceability: verifies REQ-TYPESCRIPT-ONLY-SOURCE
+Historical coverage: verifies REQ-TYPESCRIPT-ONLY-SOURCE
 
 - Actor: maintainer; profile: real repository build/install/test workflow.
 - Prerequisite: final migration tree and complete source/generated inventory.

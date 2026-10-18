@@ -9,7 +9,7 @@ Licensed under the MIT License. See LICENSE in the project root. -->
 - Authority: stakeholder authorized Ponytail tool repairs found during GWEN audit.
 - Atomic obligation: installed obligation inspection executes independently of
   the source repository's Node dependency directory.
-Traceability: introduces REQ-ROLLING-CLIENT-PROTOCOL from issue 2026-10-12-BUG-installed_obligation_dependency
+Historical coverage: introduces REQ-ROLLING-CLIENT-PROTOCOL from issue 2026-10-12-BUG-installed_obligation_dependency
 - Root cause: generated portable modules required a bare npm package while the
   installer copies only the skill directory.
 - Repair: generate one licensed dependency module within the portable runtime

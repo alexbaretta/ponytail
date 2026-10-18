@@ -40,8 +40,8 @@ not this command, establishes session quiescence before invocation.
 
 ## Arc SWARM-NATIVE-FORK: Admit fresh native worktree sessions
 
-Traceability: verifies REQ-SWARM-WORKTREES
-Traceability: verifies REQ-SWARM-SKILL
+Historical coverage: verifies REQ-SWARM-WORKTREES
+Historical coverage: verifies REQ-SWARM-SKILL
 
 **Acceptances:** OBL-17, OBL-18, OBL-19. A native worker has its own checkout and retains the
 coordinator's exact non-null host project ID.
@@ -79,7 +79,7 @@ coordinator's exact non-null host project ID.
 
 ## Arc SWARM-CONTINUITY: Execute complete assignments and respond to help
 
-Traceability: verifies REQ-SWARM-SKILL
+Historical coverage: verifies REQ-SWARM-SKILL
 
 **Acceptances:** OBL-20, OBL-21. Use retained original sessions and the configured
 resource budgets; do not restart live operations to demonstrate adoption.
@@ -108,7 +108,7 @@ resource budgets; do not restart live operations to demonstrate adoption.
 
 ## Arc SWARM-OWNERS: Select the owner and retain orphaned workers
 
-Traceability: verifies REQ-SWARM-OWNERSHIP
+Historical coverage: verifies REQ-SWARM-OWNERSHIP
 
 **Acceptances:** ACC-SW-01 (OBL-1), ACC-SW-02 (OBL-2).
 **Requirements:** REQ-SWARM-OWNERSHIP.
@@ -145,7 +145,7 @@ Coordinator-loss recovery with explicitly bound workers remains pending.
 
 ## Arc SWARM-INFO: Diagnose membership and execution
 
-Traceability: verifies REQ-SWARM-INFO
+Historical coverage: verifies REQ-SWARM-INFO
 
 **Acceptances:** ACC-SW-03 (OBL-3), ACC-SW-04 (OBL-4).
 **Requirements:** REQ-SWARM-INFO.
@@ -162,7 +162,7 @@ executing workers, a missing checkout and an unavailable native observation.
 
 ## Arc SWARM-SESSIONS: Remove and conditionally reattach originals
 
-Traceability: verifies REQ-SWARM-SESSIONS
+Historical coverage: verifies REQ-SWARM-SESSIONS
 
 **Acceptances:** ACC-SW-05 (OBL-5), ACC-SW-06 (OBL-6), ACC-SW-07 (OBL-7).
 **Requirements:** REQ-SWARM-SESSIONS.
@@ -198,7 +198,7 @@ active-turn native cancellation and campaign-lease fencing remain pending.
 
 ## Arc SWARM-NAMES: Identify assignments and final completion
 
-Traceability: verifies REQ-SWARM-SESSIONS
+Historical coverage: verifies REQ-SWARM-SESSIONS
 
 **Acceptances:** ACC-SW-08 (OBL-8), ACC-SW-09 (OBL-9).
 **Requirements:** REQ-SWARM-SESSIONS.
@@ -246,7 +246,7 @@ pending.
 
 ## Arc SWARM-CHECKOUTS: Allocate, release, transfer and reclaim
 
-Traceability: verifies REQ-SWARM-WORKTREES
+Historical coverage: verifies REQ-SWARM-WORKTREES
 
 **Acceptances:** ACC-SW-10 (OBL-10), ACC-SW-11 (OBL-11),
 ACC-SW-12 (OBL-12), ACC-SW-13 (OBL-13).
@@ -305,7 +305,7 @@ accepted adversarial review. Native worker lifecycle acceptance remains pending.
 
 ## Arc SWARM-CLEAR: Release resources and restart
 
-Traceability: verifies REQ-SWARM-CLEAR
+Historical coverage: verifies REQ-SWARM-CLEAR
 
 **Acceptance:** ACC-SW-14 (OBL-14).
 **Requirement:** REQ-SWARM-CLEAR.
@@ -322,7 +322,7 @@ another owner's independent swarm; existing campaign delivery evidence.
 
 ## Arc SWARM-CLI: Discover the complete chapter
 
-Traceability: verifies REQ-SWARM-CLI
+Historical coverage: verifies REQ-SWARM-CLI
 
 **Acceptance:** ACC-SW-15 (OBL-15).
 **Requirement:** REQ-SWARM-CLI.
@@ -339,7 +339,7 @@ Traceability: verifies REQ-SWARM-CLI
 
 ## Arc SWARM-SKILL: Use exported guidance to execute in parallel
 
-Traceability: verifies REQ-SWARM-SKILL
+Historical coverage: verifies REQ-SWARM-SKILL
 
 **Acceptance:** ACC-SW-16 (OBL-16).
 **Requirement:** REQ-SWARM-SKILL.
@@ -473,7 +473,7 @@ files. The closed swarm plan records the canonical assessments and evidence.
 
 ## SWARM-AUTONOMOUS-QUEUE Arc
 
-Traceability: verifies REQ-SWARM-QUEUES
+Historical coverage: verifies REQ-SWARM-QUEUES
 
 Start one queue campaign on a disposable repository and isolated rows in the existing local database. Admit original workers with distinct worktrees. Queue preferred tasks, dependency-blocked tasks and conflicting paths. Race claims: each task has one owner; preferred ready work is FIFO; another worker steals compatible work with relevant context. Queue help from one worker and an exact reviewed candidate from another; preserve source/refs and acquire other compatible work before coordinator acknowledgment. Start the first request, leave its operation pending, and receive the next request in FIFO order. Restart and retry without duplicating work.
 

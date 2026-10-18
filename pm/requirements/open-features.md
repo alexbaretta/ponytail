@@ -45,6 +45,10 @@ Diagnostics identify offending units and canonical-contract remediation.
 
 ## REQ-TYPESCRIPT-ONLY-SOURCE: Fully typed authored JavaScript replacement
 
+Historical scope: superseded by the 2026-10-11 stakeholder correction in
+[REQ-PONYTAIL-STATIC-LANGUAGE](static-language.md). New implementation remains
+strictly typed; this record does not require a whole-repository migration.
+
 Source: [TypeScript migration issue](../bugs/in_progress/2026-10-01-FEAT-typescript_only_source.md).
 Replace every repository-owned handwritten JS/CJS/MJS source with strict
 TypeScript analyzed by TSTS, including runtime, hooks, scripts, tests, skills,

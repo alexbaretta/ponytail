@@ -17,7 +17,7 @@ function leaseRequest(obligationDocumentV1: ObligationDocumentV1): ObligationLea
   return { obligationId: 'OBL-83', graphDigest: 'a'.repeat(64), generation: 'generation-1', assessor: 'coordinator', authority: [reference] };
 }
 
-// Traceability: verifies REQ-ROLLING-GRAPH
+// Historical coverage: verifies REQ-ROLLING-GRAPH
 test('frozen lease retains its revision, scope and proof binding across coordinator amendments', () => {
   const obligationDocumentV1 = document();
   const firstObligationBindingRevisionV1 = revision(obligationDocumentV1);
@@ -40,7 +40,7 @@ test('frozen lease retains its revision, scope and proof binding across coordina
   assertObligationLeaseOperation(nextObligationLeaseV1, 'generation-2', 'b'.repeat(64), 'edit', ['tests/sprint-metadata.test.ts']);
 });
 
-// Traceability: verifies REQ-ROLLING-GRAPH
+// Historical coverage: verifies REQ-ROLLING-GRAPH
 test('lease issuance rejects foreign authority and out-of-baseline outcomes without widening defaults', () => {
   const obligationDocumentV1 = document();
   const obligationLeaseRequest = leaseRequest(obligationDocumentV1);
@@ -64,7 +64,7 @@ test('lease issuance rejects foreign authority and out-of-baseline outcomes with
     ...obligationLeaseRequest, assessor: 'worker', authority: ['proposed authority'] }), /unauthorized lease issuance/);
 });
 
-// Traceability: verifies REQ-ROLLING-GRAPH
+// Historical coverage: verifies REQ-ROLLING-GRAPH
 test('lease use fences graph and generation, operations and exact changed paths', () => {
   const obligationDocumentV1 = document();
   const obligationLeaseV1 = freezeObligationLease(obligationDocumentV1, history(obligationDocumentV1, [revision(obligationDocumentV1)]), leaseRequest(obligationDocumentV1));
@@ -80,7 +80,7 @@ test('lease use fences graph and generation, operations and exact changed paths'
   assert.throws(() => assertObligationLeaseOperation(directoryObligationLeaseV1, 'generation-1', 'a'.repeat(64), 'edit', ['tests-other/test.ts']));
 });
 
-// Traceability: verifies REQ-ROLLING-GRAPH
+// Historical coverage: verifies REQ-ROLLING-GRAPH
 test('physical lease reader retains exact V1 and rejects malformed identities and unbounded edit permission', () => {
   const obligationDocumentV1 = document();
   const obligationLeaseV1 = freezeObligationLease(obligationDocumentV1, history(obligationDocumentV1, [revision(obligationDocumentV1)]), leaseRequest(obligationDocumentV1));
@@ -120,7 +120,7 @@ function history(obligationDocumentV1: ObligationDocumentV1, revisions: readonly
   return { schemaVersion: 1, scopeId: obligationDocumentV1.scopeId, revisions };
 }
 
-// Traceability: verifies REQ-ROLLING-GRAPH
+// Historical coverage: verifies REQ-ROLLING-GRAPH
 // Traceability: verifies REQ-PONYTAIL-STATIC-LANGUAGE
 test('binding amendment preserves obligation identities, historical content and earlier projected permissions', () => {
   const obligationDocumentV1 = document();
@@ -149,7 +149,7 @@ test('binding amendment preserves obligation identities, historical content and 
   assert.equal(secondProjection.size, firstProjection.size);
 });
 
-// Traceability: verifies REQ-ROLLING-GRAPH
+// Historical coverage: verifies REQ-ROLLING-GRAPH
 test('amendment fences both global and per-obligation predecessors and the immutable accepted prefix', () => {
   const obligationDocumentV1 = document();
   const firstObligationBindingRevisionV1 = revision(obligationDocumentV1);
@@ -168,7 +168,7 @@ test('amendment fences both global and per-obligation predecessors and the immut
     history(obligationDocumentV1, [firstObligationBindingRevisionV1, nextObligationBindingRevisionV1, thirdObligationBindingRevisionV1]), 'BIND-1'), /append exactly one/);
 });
 
-// Traceability: verifies REQ-ROLLING-GRAPH
+// Historical coverage: verifies REQ-ROLLING-GRAPH
 test('binding history rejects undeclared authority, foreign scope, unknown members and prerequisite cycles', () => {
   const obligationDocumentV1 = document();
   const obligationBindingRevisionV1 = revision(obligationDocumentV1);
@@ -189,7 +189,7 @@ test('binding history rejects undeclared authority, foreign scope, unknown membe
     [firstObligationBindingRevisionV1, secondObligationBindingRevisionV1])), /cyclic prerequisite/);
 });
 
-// Traceability: verifies REQ-ROLLING-GRAPH
+// Historical coverage: verifies REQ-ROLLING-GRAPH
 test('physical binding reader retains exact paths, proof and target and rejects malformed or unbounded execution', () => {
   const obligationDocumentV1 = document();
   const obligationBindingRevisionV1 = revision(obligationDocumentV1);
@@ -212,7 +212,7 @@ test('physical binding reader retains exact paths, proof and target and rejects 
   assert.throws(() => readObligationBindingHistoryV1({ ...obligationBindingHistoryV1, revisions: [obligationBindingRevisionV1, obligationBindingRevisionV1] }), /duplicate revision/);
 });
 
-// Traceability: verifies REQ-ROLLING-GRAPH
+// Historical coverage: verifies REQ-ROLLING-GRAPH
 test('replaying every accepted binding prefix preserves default and historical projections and rejects no-op growth', () => {
   const obligationDocumentV1 = document();
   const defaultProjection = projectObligationBindings(obligationDocumentV1, history(obligationDocumentV1));
@@ -228,7 +228,7 @@ test('replaying every accepted binding prefix preserves default and historical p
   assert.deepEqual(projectObligationBindings(obligationDocumentV1, firstObligationBindingHistoryV1), prefixProjection);
 });
 
-// Traceability: verifies REQ-ROLLING-GRAPH
+// Historical coverage: verifies REQ-ROLLING-GRAPH
 test('new amendments require the current accepted baseline and cannot borrow authority from an unaccepted proposal', () => {
   const originalObligationDocumentV1 = document();
   const firstObligationBaseline = originalObligationDocumentV1.baselines[0];

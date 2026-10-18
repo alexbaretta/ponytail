@@ -4,7 +4,7 @@ import {rollingCampaignHelp,rollingCommandDefinitions} from './rolling-cli-regis
 
 export interface CliHelpCommand {readonly chapter:string;readonly name:string;readonly arguments:string;readonly behavior:string;}
 
-// Traceability: implements REQ-ROLLING-INTERFACES
+// Historical coverage: implements REQ-ROLLING-INTERFACES
 export const cliHelpCommands:readonly CliHelpCommand[] = [
  {chapter:'search',name:'update-index',arguments:'[-j <n_workers>] [-n <commits_per_db_transaction>]',behavior:'Fetch no remote data; index local Git history. -j controls workers; -n controls transaction checkpoint size. Interrupted updates resume completed checkpoints.'},
  {chapter:'search',name:'query',arguments:'<text> [--ref <ref> | --commit <commit-id> | --history <ref-or-commit>] [--path <path>] [-i|--ignore-case]',behavior:'Search indexed file text at a ref, exact commit or throughout selected history. --path restricts paths; -i ignores case. No matches exits 1.'},
@@ -55,7 +55,7 @@ export const cliHelpCommands:readonly CliHelpCommand[] = [
  })
 ];
 
-// Traceability: implements REQ-ROLLING-INTERFACES
+// Historical coverage: implements REQ-ROLLING-INTERFACES
 function cliHelpText(argv:readonly string[]):string {
  const separator = argv.indexOf('--');
  const args = (separator < 0 ? argv : argv.slice(0,separator)).filter(argument=>argument !== '--help' && argument !== '-h');
@@ -79,7 +79,7 @@ function cliHelpText(argv:readonly string[]):string {
  return `Usage: ponytail ${cliHelpCommand.chapter ? cliHelpCommand.chapter+' ' : ''}${cliHelpCommand.name} ${cliHelpCommand.arguments}\n\n${cliHelpCommand.behavior}\n\n--help, -h: Show this message without performing any command operation.\n`;
 }
 
-// Traceability: implements REQ-ROLLING-INTERFACES
+// Historical coverage: implements REQ-ROLLING-INTERFACES
 export function renderCliHelp(argv:readonly string[],width:number=process.stdout.columns||process.stderr.columns||80):string {
  const columns=Number.isSafeInteger(width)&&width>0?width:80;
  return cliHelpText(argv).split('\n').flatMap(line=>{
@@ -102,7 +102,7 @@ export interface CliCommandRegistryV1 {
  readonly rootCommands:readonly string[];
  readonly chapters:Readonly<Record<string,{readonly commands:readonly string[];readonly freeform:boolean}>>;
 }
-// Traceability: implements REQ-ROLLING-INTERFACES
+// Historical coverage: implements REQ-ROLLING-INTERFACES
 export const cliCommandRegistryV1:CliCommandRegistryV1={schemaVersion:1,
  rootCommands:cliHelpCommands.filter(item=>item.chapter==='').map(item=>item.name),
  chapters:{...Object.fromEntries([...new Set(cliHelpCommands.map(item=>item.chapter).filter(Boolean))].map(chapter=>[

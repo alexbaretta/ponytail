@@ -10,7 +10,7 @@ export const rollingCommandDefinitions = [
 export type RollingCommandName = 'legacy';
 export function isRollingCommandName(value:string):value is RollingCommandName {return value==='legacy';}
 
-// Traceability: implements REQ-ROLLING-INTERFACES
+// Historical coverage: implements REQ-ROLLING-INTERFACES
 export function rollingCampaignHelp(commandName?:string):string {
  if (commandName === undefined) return 'Usage: ponytail campaign <command> [arguments]\n\n'+rollingCommandDefinitions.filter(command=>command.cli).map(command=>`  ${command.name.padEnd(28)} ${command.description}`).join('\n')+'\n\nUse ponytail campaign <command> --help for arguments and behavior.\n';
  const command = rollingCommandDefinitions.find(item=>item.cli && item.name === commandName);

@@ -19,8 +19,8 @@
 
 Traceability: plans-implementation REQ-CAMPAIGN-ORCHESTRATION from plan 2026-09-30-campaign-session-observability
 Traceability: plans-verification REQ-CAMPAIGN-ORCHESTRATION from plan 2026-09-30-campaign-session-observability
-Traceability: plans-implementation REQ-PONYTAIL-CLI-AGENT-HARNESS from plan 2026-09-30-campaign-session-observability
-Traceability: plans-verification REQ-PONYTAIL-CLI-AGENT-HARNESS from plan 2026-09-30-campaign-session-observability
+Historical coverage: plans-implementation REQ-PONYTAIL-CLI-AGENT-HARNESS from plan 2026-09-30-campaign-session-observability
+Historical coverage: plans-verification REQ-PONYTAIL-CLI-AGENT-HARNESS from plan 2026-09-30-campaign-session-observability
 
 Provide a complete deterministic campaign view of session activity,
 assignments, managed worktrees, and contradictions, and teach the published
