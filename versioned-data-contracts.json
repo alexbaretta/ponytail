@@ -3,54 +3,6 @@
   "schemaVersion": 1,
   "families": [
     {
-      "id": "validation-revocation",
-      "implementation": {
-        "workspace": "ponytail",
-        "module": "src/validation-certificate.ts",
-        "readerRegistryExport": "ValidationRevocationReaders"
-      },
-      "currentVersion": "V1",
-      "versions": [
-        "V1"
-      ],
-      "supportedReadVersions": [
-        "V1"
-      ],
-      "supportedDowngradeVersions": []
-    },
-    {
-      "id": "validation-request",
-      "implementation": {
-        "workspace": "ponytail",
-        "module": "src/validation-certificate.ts",
-        "readerRegistryExport": "ValidationRequestReaders"
-      },
-      "currentVersion": "V1",
-      "versions": [
-        "V1"
-      ],
-      "supportedReadVersions": [
-        "V1"
-      ],
-      "supportedDowngradeVersions": []
-    },
-    {
-      "id": "validation-certificate",
-      "implementation": {
-        "workspace": "ponytail",
-        "module": "src/validation-certificate.ts",
-        "readerRegistryExport": "ValidationCertificateReaders"
-      },
-      "currentVersion": "V1",
-      "versions": [
-        "V1"
-      ],
-      "supportedReadVersions": [
-        "V1"
-      ],
-      "supportedDowngradeVersions": []
-    },
-    {
       "id": "traceability-typescript-response",
       "implementation": {
         "workspace": "ponytail",
