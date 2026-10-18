@@ -8,17 +8,10 @@ import test from 'node:test';
 import {spawnSync} from 'node:child_process';
 import {renderCliHelp} from '../src/cli-help.js';
 
-// Traceability: verifies REQ-SWARM-CLEAR
-test('swarm clear rejects unsupported arguments before reading project state',()=>{
- const result=spawnSync(process.execPath,[path.join(process.cwd(),'src/swarm-info.js'),'clear','--all'],{cwd:'/tmp',encoding:'utf8'});
- assert.equal(result.status,2);assert.match(result.stderr,/Usage: ponytail swarm clear/);
- assert.doesNotMatch(result.stderr,/ponytail-journal|not a git repository/);
-});
-
 // Traceability: verifies REQ-ROLLING-INTERFACES
 // Traceability: verifies REQ-SWARM-CLI
 test('help wraps chapter, command, campaign and root pages at word boundaries with indentation',()=>{
- for(const width of [40,80,120]) for(const args of [[],['traceability'],['traceability','search'],['campaign'],['campaign','request-review'],['swarm'],['swarm','info'],['swarm','owner-enroll'],['swarm','coordinator-bind'],['swarm','coordinator-unbind'],['swarm','worktree-assign'],['swarm','worktree-setup'],['swarm','worktree-release'],['swarm','worktree-delete'],['swarm','worker-bind']]) {
+ for(const width of [40,80,120]) for(const args of [[],['traceability'],['traceability','search'],['campaign'],['campaign','legacy'],['swarm'],['swarm','info'],['swarm','owner-enroll'],['swarm','coordinator-bind'],['swarm','coordinator-unbind'],['swarm','worktree-assign'],['swarm','worktree-setup'],['swarm','worktree-release'],['swarm','worktree-delete'],['swarm','worker-bind']]) {
   const text=renderCliHelp(args,width);
   assert.ok(text.split('\n').every(line=>line.length<=width));
   assert.equal(text.replace(/\s+/gu,' ').trim(),renderCliHelp(args,10000).replace(/\s+/gu,' ').trim());

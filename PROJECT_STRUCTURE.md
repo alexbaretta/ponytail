@@ -56,44 +56,6 @@ while project-wide management records remain under `pm/`.
 - `scripts/setup-project-journal.sh`, `scripts/project-journal.sql`, and
   `scripts/project-index.sql` own PostgreSQL 18 journal and project-index
   provisioning and their immutable V1 storage contracts.
-- `src/rolling-reset.ts` owns explicit project campaign reset, original actor
-  cessation, Git source recovery and exact registered checkout dispositions. Its
-  durable pending receipt fences scheduling until project resource cleanup and
-  campaign/lease removal complete.
-- `src/swarm-owner.ts` owns independently testable user/managed-worktree owner
-  resolution over a checked physical inventory. It rejects ambiguous, unassigned
-  and cross-repository ownership; its adjacent `.js` runtime is generated.
-- `src/swarm-store.ts` owns explicit user-worktree enrollment and exclusive
-  coordinator bindings in the existing project database, including canonical
-  native thread/session/checkout identity mappings. Worker records retain original
-  owner/checkout provenance across removal, fence live checkout membership, and
-  map full assignments to per-swarm worker and plan/sprint numbers. Desired-name
-  construction does not itself perform native renaming or prove activity.
-  Host-native session roots enroll by exact registered path without relocation or
-  provisioning. Released host roots remain quarantined from the numbered pool;
-  physical deletion remains host-owned.
- Retained managed-checkout
-  memberships reserve the canonical rolling pool under its existing project fence;
-  claim/release preserve checkout content and refuse live assignments or Git operations.
-  Durable base-commit setup intent precedes canonical worktree provisioning; exact
-  recovery checks the frozen owner and target repository identity. Deletion
-  checkpoints cleanup and exact removal in resource-scoped DB receipts, protects
-  assigned roots, and retains committed source in revision-specific Git refs.
-
-- `src/swarm-queue.ts` owns V1–V3 durable autonomous campaign/task/request/discovery
-  contracts, project-fenced claims and stealing, source/candidate preservation,
-  coordinator FIFO service, exact review/discharge gates and recoverable canonical
-  PM publication and evidence-backed campaign suspension and exact retained-worker retirement addenda. `src/swarm-queue-payloads.ts` owns chunked immutable payloads, bounded reads and transactional streaming migration of archived V1 state. `src/swarm-queue-cli.ts` is its invoking-project CLI boundary;
-  adjacent JavaScript is generated. `swarm_queue_v1` uses the existing project
-  database and serializes with existing swarm/rolling mutations. Queue campaigns
-  replace allocation ownership, rather than duplicating legacy campaign leases.
-- `src/swarm-info.ts` owns the swarm inventory/coordinator CLI adapter, physical
-  Git/project-scoped inventory, supplied coordinator identity admission, immutable
-  V1/V2/V3/V4/V5 result readers and normalization to V5, including standalone retained
-  membership without an invented campaign assignment. Its adjacent `.js` runtime is
-  generated; V4 reports recorded bindings and desired names with runtime activity
-  unobserved. All session operations and actual naming belong to coordinator host
-  tools; no swarm command contacts Codex. Legacy leases remain explicit.
 - `src/project-index-database.ts` owns the checked project-local PostgreSQL
   connection options and shared index error declaration. `src/project-index-database.js`
   is compiler-generated compatibility runtime.
@@ -164,9 +126,8 @@ while project-wide management records remain under `pm/`.
   `src/rolling-operations.ts` permits only allowlisted historical inspection;
   `src/rolling-cli-registry.ts` owns its fields/help, shared by CLI and the
   `ponytail-mcp/rolling.ts` adapter. No controller, allocation or publication
-  operation is exposed. Remaining rolling/swarm storage and runtime modules are
-  legacy implementation pending dependency-based removal; they are not an
-  alternative execution workflow. Preserve historical data during that removal.
+  operation is exposed. The orphaned rolling/swarm runtime cluster has been removed; historical
+  database records remain intact.
   `src/worktree-reclamation.js` owns the versioned
   project lifecycle-adapter contracts, project-scoped reclamation lock,
   deterministic claim selection, generation fencing, and verified cleanup
@@ -288,13 +249,6 @@ runtime imports, so installed skill copies include their dependency. Existing Op
 resource generation copies the typed owner and generated runtime. Traceability
 and versioned-contract ownership point to the typed source.
 
-The rolling configuration/graph/scheduler and checkout runtime entrypoints in
-`src/rolling-campaign.js` and `src/rolling-worktrees.js` are generated from their
-canonical `.ts` owners by `scripts/build-runtime.ts`. Their behavioral tests are
-migrated to checked TypeScript before language acceptance; checkout tests now
-execute their typed setup fixture and compiled test runtime.
-
-The rolling PostgreSQL store has a canonical checked TypeScript owner; its
-established `.js` entrypoint is materialized compiler output. Database rows are
-validated before entering owned typed contracts. Published `@types/pg` is a
-development dependency; runtime PostgreSQL topology and schema remain unchanged.
+The retired rolling/swarm controller modules are removed. Historical database
+records and source history are preserved; native sessions and Git own new
+campaigns. No retirement step resets live client state.

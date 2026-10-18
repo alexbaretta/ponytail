@@ -848,11 +848,6 @@
       "locator": "text"
     },
     {
-      "class": "implementation",
-      "path": "skills/parallel-plan-scheduler/SKILL.md",
-      "locator": "text"
-    },
-    {
       "class": "unit-test",
       "path": "tests/issue-requirement-activation-policy.test.js",
       "locator": "text"
@@ -1008,11 +1003,6 @@
       "locator": "text"
     },
     {
-      "class": "implementation",
-      "path": "skills/qa-swarm/SKILL.md",
-      "locator": "text"
-    },
-    {
       "class": "unit-test",
       "path": "tests/qa-swarm-policy.test.js",
       "locator": "text"
@@ -1028,83 +1018,8 @@
       "locator": "text"
     },
     {
-      "class": "implementation",
-      "path": "src/rolling-campaign.ts",
-      "locator": "text"
-    },
-    {
-      "class": "unit-test",
-      "path": "tests/rolling-campaign.test.ts",
-      "locator": "text"
-    },
-    {
       "class": "plan",
       "path": "pm/plans/closed/2026-10-10-rolling-obligation-campaigns/sprints/S02.md",
-      "locator": "text"
-    },
-    {
-      "class": "integration-test",
-      "path": "tests/rolling-campaign.integration.test.ts",
-      "locator": "text"
-    },
-    {
-      "class": "implementation",
-      "path": "src/rolling-campaign-store.ts",
-      "locator": "text"
-    },
-    {
-      "class": "implementation",
-      "path": "src/rolling-worker-submission.ts",
-      "locator": "text"
-    },
-    {
-      "class": "implementation",
-      "path": "src/rolling-review.ts",
-      "locator": "text"
-    },
-    {
-      "class": "implementation",
-      "path": "src/rolling-integration.ts",
-      "locator": "text"
-    },
-    {
-      "class": "implementation",
-      "path": "src/rolling-publication.ts",
-      "locator": "text"
-    },
-    {
-      "class": "unit-test",
-      "path": "tests/rolling-publication.test.ts",
-      "locator": "text"
-    },
-    {
-      "class": "integration-test",
-      "path": "tests/rolling-publication.integration.test.ts",
-      "locator": "text"
-    },
-    {
-      "class": "unit-test",
-      "path": "tests/rolling-integration.test.ts",
-      "locator": "text"
-    },
-    {
-      "class": "unit-test",
-      "path": "tests/rolling-review.test.ts",
-      "locator": "text"
-    },
-    {
-      "class": "unit-test",
-      "path": "tests/rolling-worker-submission.test.ts",
-      "locator": "text"
-    },
-    {
-      "class": "unit-test",
-      "path": "tests/rolling-campaign-store.test.ts",
-      "locator": "text"
-    },
-    {
-      "class": "integration-test",
-      "path": "tests/rolling-campaign-store.integration.test.ts",
       "locator": "text"
     },
     {
@@ -1113,38 +1028,8 @@
       "locator": "text"
     },
     {
-      "class": "implementation",
-      "path": "src/rolling-worktrees.ts",
-      "locator": "text"
-    },
-    {
-      "class": "unit-test",
-      "path": "tests/rolling-worktrees.test.ts",
-      "locator": "text"
-    },
-    {
-      "class": "integration-test",
-      "path": "tests/rolling-worktrees.integration.test.ts",
-      "locator": "text"
-    },
-    {
       "class": "plan",
       "path": "pm/plans/closed/2026-10-10-rolling-obligation-campaigns/sprints/S04.md",
-      "locator": "text"
-    },
-    {
-      "class": "implementation",
-      "path": "src/rolling-codex.ts",
-      "locator": "text"
-    },
-    {
-      "class": "unit-test",
-      "path": "tests/rolling-codex.test.ts",
-      "locator": "text"
-    },
-    {
-      "class": "integration-test",
-      "path": "tests/rolling-codex.integration.ts",
       "locator": "text"
     },
     {
@@ -1398,23 +1283,8 @@
       "locator": "text"
     },
     {
-      "class": "integration-test",
-      "path": "tests/binding-selectors.integration.test.ts",
-      "locator": "text"
-    },
-    {
       "class": "implementation",
       "path": "src/rolling-operations.ts",
-      "locator": "text"
-    },
-    {
-      "class": "unit-test",
-      "path": "tests/rolling-operations.test.ts",
-      "locator": "text"
-    },
-    {
-      "class": "integration-test",
-      "path": "tests/rolling-operations.integration.test.ts",
       "locator": "text"
     },
     {
@@ -1435,26 +1305,6 @@
     {
       "class": "unit-test",
       "path": "tests/rolling-cli-registry.test.ts",
-      "locator": "text"
-    },
-    {
-      "class": "integration-test",
-      "path": "tests/rolling-cli.integration.test.ts",
-      "locator": "text"
-    },
-    {
-      "class": "implementation",
-      "path": "skills/plan-execution/references/rolling-campaigns.md",
-      "locator": "text"
-    },
-    {
-      "class": "unit-test",
-      "path": "tests/campaign-compliance.test.ts",
-      "locator": "text"
-    },
-    {
-      "class": "integration-test",
-      "path": "tests/campaign-compliance.integration.test.ts",
       "locator": "text"
     },
     {
@@ -1563,28 +1413,8 @@
       "locator": "text"
     },
     {
-      "class": "unit-test",
-      "path": "tests/rolling-worker.test.ts",
-      "locator": "text"
-    },
-    {
       "class": "plan",
       "path": "pm/plans/closed/2026-10-13-project-campaign-reset/plan.md",
-      "locator": "text"
-    },
-    {
-      "class": "implementation",
-      "path": "src/rolling-reset.ts",
-      "locator": "text"
-    },
-    {
-      "class": "unit-test",
-      "path": "tests/rolling-reset.test.ts",
-      "locator": "text"
-    },
-    {
-      "class": "integration-test",
-      "path": "tests/rolling-reset.integration.test.ts",
       "locator": "text"
     },
     {
@@ -1593,68 +1423,13 @@
       "locator": "text"
     },
     {
-      "class": "implementation",
-      "path": "src/swarm-owner.ts",
-      "locator": "text"
-    },
-    {
-      "class": "unit-test",
-      "path": "tests/swarm-owner.test.ts",
-      "locator": "text"
-    },
-    {
       "class": "uat",
       "path": "pm/uat/swarms.md",
       "locator": "text"
     },
     {
-      "class": "implementation",
-      "path": "src/swarm-info.ts",
-      "locator": "text"
-    },
-    {
-      "class": "unit-test",
-      "path": "tests/swarm-info.test.ts",
-      "locator": "text"
-    },
-    {
-      "class": "integration-test",
-      "path": "tests/swarm-info.integration.test.ts",
-      "locator": "text"
-    },
-    {
-      "class": "implementation",
-      "path": "src/swarm-store.ts",
-      "locator": "text"
-    },
-    {
-      "class": "integration-test",
-      "path": "tests/swarm-store.integration.test.ts",
-      "locator": "text"
-    },
-    {
-      "class": "integration-test",
-      "path": "tests/swarm-worktrees.integration.test.ts",
-      "locator": "text"
-    },
-    {
-      "class": "implementation",
-      "path": "skills/swarm/SKILL.md",
-      "locator": "text"
-    },
-    {
-      "class": "implementation",
-      "path": "skills/swarm/references/worker-continuity.md",
-      "locator": "text"
-    },
-    {
       "class": "plan",
       "path": "pm/plans/closed/2026-10-16-swarm-worker-continuity/plan.md",
-      "locator": "text"
-    },
-    {
-      "class": "unit-test",
-      "path": "tests/swarm-skill.test.ts",
       "locator": "text"
     },
     {
@@ -1668,38 +1443,8 @@
       "locator": "text"
     },
     {
-      "class": "implementation",
-      "path": "src/swarm-queue.ts",
-      "locator": "text"
-    },
-    {
-      "class": "implementation",
-      "path": "src/swarm-queue-cli.ts",
-      "locator": "text"
-    },
-    {
-      "class": "unit-test",
-      "path": "tests/swarm-queue.test.ts",
-      "locator": "text"
-    },
-    {
-      "class": "integration-test",
-      "path": "tests/swarm-queue.integration.test.ts",
-      "locator": "text"
-    },
-    {
-      "class": "implementation",
-      "path": "skills/swarm/references/autonomous-queues.md",
-      "locator": "text"
-    },
-    {
       "class": "plan",
       "path": "pm/plans/in_progress/2026-10-16-autonomous-swarm-queues/plan.md",
-      "locator": "text"
-    },
-    {
-      "class": "implementation",
-      "path": "src/swarm-queue-payloads.ts",
       "locator": "text"
     },
     {
@@ -1752,10 +1497,6 @@
       "sourcePath": "skills/plan-execution/SKILL.md"
     },
     {
-      "path": ".openclaw/skills/qa-swarm/SKILL.md",
-      "sourcePath": "skills/qa-swarm/SKILL.md"
-    },
-    {
       "path": ".openclaw/skills/requirements/SKILL.md",
       "sourcePath": "skills/requirements/SKILL.md"
     },
@@ -1790,42 +1531,6 @@
     {
       "path": ".openclaw/skills/plan-execution/scripts/obligations.ts",
       "sourcePath": "skills/plan-execution/scripts/obligations.ts"
-    },
-    {
-      "path": "src/rolling-campaign.js",
-      "sourcePath": "src/rolling-campaign.ts"
-    },
-    {
-      "path": "src/rolling-worktrees.js",
-      "sourcePath": "src/rolling-worktrees.ts"
-    },
-    {
-      "path": "src/rolling-campaign-store.js",
-      "sourcePath": "src/rolling-campaign-store.ts"
-    },
-    {
-      "path": "src/rolling-worker-submission.js",
-      "sourcePath": "src/rolling-worker-submission.ts"
-    },
-    {
-      "path": "src/rolling-review.js",
-      "sourcePath": "src/rolling-review.ts"
-    },
-    {
-      "path": "src/rolling-integration.js",
-      "sourcePath": "src/rolling-integration.ts"
-    },
-    {
-      "path": "src/rolling-publication.js",
-      "sourcePath": "src/rolling-publication.ts"
-    },
-    {
-      "path": "src/rolling-codex.js",
-      "sourcePath": "src/rolling-codex.ts"
-    },
-    {
-      "path": "src/rolling-worker.js",
-      "sourcePath": "src/rolling-worker.ts"
     },
     {
       "path": "src/project-index-database.js",
@@ -2008,10 +1713,6 @@
       "sourcePath": "ponytail-mcp/rolling.ts"
     },
     {
-      "path": ".openclaw/skills/plan-execution/references/rolling-campaigns.md",
-      "sourcePath": "skills/plan-execution/references/rolling-campaigns.md"
-    },
-    {
       "path": "src/cli-help.js",
       "sourcePath": "src/cli-help.ts"
     },
@@ -2042,30 +1743,6 @@
     {
       "path": ".openclaw/skills/plan-execution/scripts/lossless-json.js",
       "sourcePath": "scripts/build-runtime.ts"
-    },
-    {
-      "path": "src/swarm-owner.js",
-      "sourcePath": "src/swarm-owner.ts"
-    },
-    {
-      "path": "src/swarm-info.js",
-      "sourcePath": "src/swarm-info.ts"
-    },
-    {
-      "path": "src/swarm-store.js",
-      "sourcePath": "src/swarm-store.ts"
-    },
-    {
-      "path": "src/swarm-queue.js",
-      "sourcePath": "src/swarm-queue.ts"
-    },
-    {
-      "path": "src/swarm-queue-cli.js",
-      "sourcePath": "src/swarm-queue-cli.ts"
-    },
-    {
-      "path": "src/swarm-queue-payloads.js",
-      "sourcePath": "src/swarm-queue-payloads.ts"
     },
     {
       "path": "src/project-index-search-publication.js",

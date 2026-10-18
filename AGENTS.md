@@ -62,8 +62,7 @@ services. `PROJECT_STRUCTURE.md` is authoritative for that boundary.
 - TSTS full unit tests: `npm run test:tsts` (included in `npm test`).
 - TypeScript test indexes/audit metadata: not configured; tests discovered in `tsts/test/`.
 - Lossless JSON boundaries: `tsts/src/lossless-json.ts`, portable obligation
-  parsing in `skills/plan-execution/scripts/obligations.js`, rolling project
-  configuration in `src/rolling-campaign.js`, and campaign ledger/
+  parsing in `skills/plan-execution/scripts/obligations.js`, and historical campaign ledger/
   delivery parsing in `src/campaign-orchestration.js`, and traceability graph
   stdin/stdout in `tsts/src/cli.ts` and
   `skills/requirements-traceability/scripts/traceability-semantic.ts`, using
@@ -76,8 +75,6 @@ services. `PROJECT_STRUCTURE.md` is authoritative for that boundary.
   TSTS retains lossless numeric values. Focused proof:
   `node --test tsts/dist/test/lossless-json.test.js`, `node --test
   dist/tests/obligations.test.js tests/obligation-execution.test.js dist/tests/obligation-tasklet-execution.test.js`.
-  Rolling configuration focused proof: `node --test dist/tests/rolling-campaign.test.js
-  dist/tests/rolling-campaign.integration.test.js`.
 - Campaign inventory focused proof: `node --test dist/tests/campaign-inventory.test.js
   dist/tests/campaign-report.test.js dist/tests/plan-execution-serial.test.js tests/campaign-census.test.js`.
 - Campaign report focused proof: `node --test dist/tests/campaign-report.test.js
@@ -108,15 +105,6 @@ services. `PROJECT_STRUCTURE.md` is authoritative for that boundary.
 - Unit-test command families:
   - Node focused: `node --test [--test-name-pattern=<pattern>] <test-files>`.
   - Node full: `npm test`.
-- Rolling Codex protocol proof: `node --test dist/tests/rolling-codex.test.js`.
-- Swarm owner focused proof: `node --test dist/tests/swarm-owner.test.js`.
-- Swarm inventory focused proof: `node --test dist/tests/swarm-info.test.js
-  dist/tests/swarm-store.integration.test.js
-  dist/tests/swarm-info.integration.test.js`; the integration selection uses
-  disposable Git worktrees and isolated existing-PostgreSQL project rows.
-- Rolling checkout focused proof: `node --test tests/rolling-worktrees.test.js
-  tests/rolling-worktrees.integration.test.js`; all Git worktrees belong to
-  disposable test repositories.
 - Campaign source discovery focused proof: `node --test dist/tests/campaign-plan-sources.test.js tests/campaign-census.test.js tests/project-index.test.js`.
 - Campaign plan metadata focused proof: `node --test dist/tests/campaign-plan-metadata.test.js tests/campaign-census.test.js dist/tests/obligations.test.js tests/obligation-execution.test.js dist/tests/obligation-tasklet-execution.test.js`.
 - Campaign configuration focused proof: `node --test dist/tests/campaign-configuration.test.js tests/campaign-census.test.js tests/campaign-census-format.test.js`.
