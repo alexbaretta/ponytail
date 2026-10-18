@@ -217,7 +217,6 @@ Requirement: [pm/requirements/repository-text-index.md](repository-text-index.md
 
 Requirement: [pm/requirements/campaign-orchestration.md](campaign-orchestration.md)
 
-- implementation: supports [hooks/plan-input.js:6](../../hooks/plan-input.js#L6)
 - implementation: implements [skills/plan-execution/scripts/ready-sprints.ts:80](../../skills/plan-execution/scripts/ready-sprints.ts#L80)
 - implementation: implements [src/campaign-inventory.ts:109](../../src/campaign-inventory.ts#L109)
 - implementation: implements [src/campaign-orchestration.js:7](../../src/campaign-orchestration.js#L7)
@@ -227,8 +226,6 @@ Requirement: [pm/requirements/campaign-orchestration.md](campaign-orchestration.
 - unit-test: verifies [tests/campaign-orchestration.test.js:7](../../tests/campaign-orchestration.test.js#L7)
 - unit-test: verifies [tests/ready-sprints.test.ts:52](../../tests/ready-sprints.test.ts#L52)
 - integration-test: verifies [tests/campaign-census.test.js:722](../../tests/campaign-census.test.js#L722)
-- integration-test: verifies [tests/plan-input-hooks.test.js:88](../../tests/plan-input-hooks.test.js#L88)
-- integration-test: verifies [tests/plan-input-hooks.test.js:121](../../tests/plan-input-hooks.test.js#L121)
 - integration-test: verifies [tests/project-validation.test.js:126](../../tests/project-validation.test.js#L126)
 - uat: verifies [pm/uat/campaign-orchestration.md:12](../../pm/uat/campaign-orchestration.md#L12)
 - uat: verifies [pm/uat/campaign-orchestration.md:34](../../pm/uat/campaign-orchestration.md#L34)

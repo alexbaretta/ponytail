@@ -173,17 +173,3 @@ function readWorkerRecoveryV2(value) {
 
 const WorkerRecoveryReaders = Object.freeze({ V1: readWorkerRecoveryV1, V2: readWorkerRecoveryV2 });
 module.exports = { recoverySource, recoverCheckout, recoverLegacyCheckout, upgradeCheckout, WorkerRecoveryReaders };
-
-if (require.main === module) {
-  try {
-    const { recoverWorker, upgradeWorker } = require('./campaign-orchestration');
-    let result;
-    if (process.argv.length === 3) result = recoverWorker(process.env, process.argv[2]);
-    else if (process.argv.length === 6 && process.argv[2] === 'upgrade' && process.argv[4] === '--revision') result = upgradeWorker(process.env, process.argv[3], process.argv[5]);
-    else throw new Error('usage: ponytail worktree recover <attachment-token> | ponytail worktree upgrade <attachment-token> --revision <commit>');
-    process.stdout.write(`${JSON.stringify(readWorkerRecoveryV2(result))}\n`);
-  } catch (error) {
-    process.stderr.write(`error: ${error.message}\n`);
-    process.exitCode = 1;
-  }
-}

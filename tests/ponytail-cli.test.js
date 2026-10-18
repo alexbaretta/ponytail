@@ -82,7 +82,7 @@ test('Ctrl-C is quiet in the wrapper and waits for delegated cleanup', async () 
     fs.writeFileSync(executable, delegated
       ? `#!${process.execPath}\nprocess.once('SIGINT', () => setTimeout(() => { console.log('cleanup complete'); process.exit(130); }, 700));\nconsole.log('ready');\nsetInterval(() => {}, 1000);\n`
       : `#!/usr/bin/env python3\nimport time\nfrom pathlib import Path\nPath(${JSON.stringify(ready)}).touch()\ntry:\n    time.sleep(60)\nexcept KeyboardInterrupt:\n    pass\n`, { mode: 0o755 });
-    const child = spawn(ponytail, delegated ? ['worktree', 'recover', 'fixture-token'] : ['validate'], {
+    const child = spawn(ponytail, delegated ? ['--help'] : ['validate'], {
       cwd: home, env: environment(home, { PATH: `${bin}:${process.env.PATH}` }),
       detached: true, stdio: ['ignore', 'pipe', 'pipe'],
     });

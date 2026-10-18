@@ -3,22 +3,11 @@
 // Licensed under the MIT License. See LICENSE in the project root.
 
 // Traceability: implements REQ-PLAN-INPUT-QUEUE
-// Traceability: supports REQ-CAMPAIGN-ORCHESTRATION
 
 const fs = require('node:fs');
 const path = require('node:path');
 const { resolveCampaignRoot } = require('../src/campaign-census');
 const { enqueue } = require('../src/plan-input');
-const { isRollingCampaignCommand } = require('../src/plan-input-command');
-const {
-  bindWorker,
-  releaseLedgerCoordinator,
-  resolveInvocationWorktree,
-  setLedgerCoordinator,
-  workerRecoveryBinding,
-  workerRecoveryContext,
-  workerRecoveryContextDetails,
-} = require('../src/campaign-orchestration');
 
 const PlanInputCoordinatorBindingReaders = Object.freeze({ V1: readBindingsV1 });
 
@@ -154,17 +143,6 @@ function coordinatorCommand(toolInput) {
   return null;
 }
 
-function campaignCommand(toolInput) {
-  for (const command of commandStrings(toolInput)) {
-    for (const match of command.matchAll(/(?:^|(?:&&|\|\||;)\s*)ponytail campaign (status|reservation-audit|runnable-plans|schedule-ready|schedule-review-ready|schedule-planning-ready|ready-actions|observe|advance|reconcile|retry-dispatch|action-result|report-blocker|attach)(?=\s|$|[;&|])(?:\s+([^\s;&|]+))?/g)) {
-      if (!isRollingCampaignCommand(match[1], match[2] ?? null)) {
-        return { operation: match[1], argument: match[2] ?? null };
-      }
-    }
-  }
-  return null;
-}
-
 function preToolOutput(additionalContext) {
   return { hookSpecificOutput: { hookEventName: 'PreToolUse', additionalContext } };
 }
@@ -175,77 +153,23 @@ function deniedPreToolOutput(reason) {
 
 function handle(data, environment = process.env) {
   if (data.hook_event_name === 'UserPromptSubmit') {
-    const recoveryContext = workerRecoveryContext(environment, data.session_id);
-    if (recoveryContext) {
-      if (/^\/ponytail-enqueue\s+/.test(data.prompt || '')) return { decision: 'block', reason: 'Only the campaign coordinator can enqueue plan input.' };
-      return { hookSpecificOutput: { hookEventName: 'UserPromptSubmit', additionalContext: recoveryContext } };
-    }
     if (!/^\/ponytail-enqueue\s+/.test(data.prompt || '')) return null;
   }
   if (data.hook_event_name === 'PreToolUse') {
-    const recovery = commandStrings(data.tool_input).map(command => /(?:^|(?:&&|\|\||;)\s*)ponytail worktree (?:recover ([A-Za-z0-9_-]+)|upgrade ([A-Za-z0-9_-]+) --revision [a-f0-9]{40})(?=\s*(?:$|&&|\|\||;))/.exec(command)).find(Boolean);
-    if (recovery) {
-      try {
-        if (typeof data.session_id !== 'string' || !data.session_id) fail('worker recovery requires a host-authenticated session identity');
-        workerRecoveryBinding(environment, recovery[1] ?? recovery[2], data.session_id);
-        const recoveryContext = workerRecoveryContext(environment, data.session_id);
-        if (!recoveryContext) fail('worker recovery context is unavailable for this authenticated session');
-        return preToolOutput(recoveryContext);
-      } catch (error) { return deniedPreToolOutput(error.message); }
-    }
-    const recoveryContextDetails = workerRecoveryContextDetails(environment, data.session_id);
-    if (recoveryContextDetails?.legacy && !campaignCommand(data.tool_input) && !coordinatorCommand(data.tool_input)) {
-      return preToolOutput(recoveryContextDetails.context);
-    }
-    if (!campaignCommand(data.tool_input) && !coordinatorCommand(data.tool_input)) return null;
+    if (!coordinatorCommand(data.tool_input)) return null;
   }
   const repository = repositoryRoot(data.cwd || process.cwd());
   if (data.hook_event_name === 'PreToolUse') {
-    const campaign = campaignCommand(data.tool_input);
-    if (campaign) {
-      try {
-        if (campaign.operation === 'attach') {
-          if (!campaign.argument) fail('campaign attach requires a token');
-          const binding = bindWorker(environment, repository, campaign.argument, data.session_id);
-          return preToolOutput(`Worker session authenticated for campaign ${binding.campaignId} owned by ${binding.repositoryRoot}. Main worktree: ${binding.mainWorktree}. Retain the attachment capability. If this checkout disappears, recover it yourself from an existing neutral cwd with ponytail worktree recover <attachment-token>, then run canonical project adoption/setup. No coordinator recovery action is required.`);
-        }
-        const readOnly = ['status', 'reservation-audit', 'runnable-plans'].includes(campaign.operation);
-        const resolution = resolveInvocationWorktree(repository, environment, readOnly);
-        if (!readOnly) {
-          const campaignId = campaign.argument
-            ? resolveCampaignRoot(resolution.effectiveWorktree, campaign.argument).campaignId
-            : null;
-          const coordinator = bindingForSession(environment.PLUGIN_DATA, resolution.effectiveWorktree, data.session_id, campaignId);
-          return preToolOutput(`Coordinator session authenticated for campaign ${coordinator.campaignId}.`);
-        }
-        if (resolution.workerBinding) return preToolOutput(`Read-only campaign ${campaign.operation} will use owning worktree ${resolution.effectiveWorktree}.`);
-      } catch (error) {
-        return deniedPreToolOutput(error.message);
-      }
-    }
     const command = coordinatorCommand(data.tool_input);
     if (!command) return null;
     try {
-      const resolution = resolveInvocationWorktree(repository, environment, false);
-      const { campaignId, submittedPlanId } = resolveCampaignRoot(resolution.effectiveWorktree, command.plan);
+      const { campaignId, submittedPlanId } = resolveCampaignRoot(repository, command.plan);
       if (command.operation === 'coordinate') {
-        bindCoordinator(environment.PLUGIN_DATA, resolution.effectiveWorktree, campaignId, submittedPlanId, data.session_id);
-        try {
-          setLedgerCoordinator(resolution.effectiveWorktree, campaignId, data.session_id, environment);
-        } catch (error) {
-          releaseCoordinator(environment.PLUGIN_DATA, resolution.effectiveWorktree, campaignId, data.session_id);
-          throw error;
-        }
+        bindCoordinator(environment.PLUGIN_DATA, repository, campaignId, submittedPlanId, data.session_id);
         return preToolOutput(`Coordinator session bound to campaign ${campaignId}.`);
       }
-      bindingForSession(environment.PLUGIN_DATA, resolution.effectiveWorktree, data.session_id, campaignId);
-      releaseLedgerCoordinator(resolution.effectiveWorktree, campaignId, data.session_id, environment);
-      try {
-        releaseCoordinator(environment.PLUGIN_DATA, resolution.effectiveWorktree, campaignId, data.session_id);
-      } catch (error) {
-        setLedgerCoordinator(resolution.effectiveWorktree, campaignId, data.session_id, environment);
-        throw error;
-      }
+      bindingForSession(environment.PLUGIN_DATA, repository, data.session_id, campaignId);
+      releaseCoordinator(environment.PLUGIN_DATA, repository, campaignId, data.session_id);
       return preToolOutput(`Coordinator session released campaign ${campaignId}.`);
     } catch (error) {
       return deniedPreToolOutput(error.message);
@@ -286,6 +210,6 @@ function run() {
   setTimeout(() => { finish(); process.exit(); }, 1000).unref();
 }
 
-module.exports = { PlanInputCoordinatorBindingReaders, bindCoordinator, bindingForSession, campaignCommand, coordinatorCommand, handle, readBindingsV1, releaseCoordinator };
+module.exports = { PlanInputCoordinatorBindingReaders, bindCoordinator, bindingForSession, coordinatorCommand, handle, readBindingsV1, releaseCoordinator };
 
 if (require.main === module) run();

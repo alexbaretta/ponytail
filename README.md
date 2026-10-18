@@ -107,7 +107,6 @@ Installed shell tools:
 | Tool | Purpose |
 | --- | --- |
 | `ponytail register\|unregister\|list-projects\|bless[-worktree]\|blessed[-worktree]\|register-component\|unregister-component\|list-components\|register-dependency\|unregister-dependency\|list-dependencies\|detect-components\|pre-commit\|validate\|qa\|update-permissions\|update-skills\|update` | Register, unregister, and list repositories; select worktree configuration; manage components and dependencies; install pre-commit QA; run local QA; and update Codex configuration |
-| `ponytail campaign <command> [arguments]` | Coordinate rolling obligation campaigns; use `campaign --help` for commands and `campaign <command> --help` for arguments and behavior |
 | `ponytail campaign legacy --command <validate\|report\|list\|status\|reservation-audit> [--arguments <JSON-array>]` | Explicit read-only inspection of historical campaign records |
 | `ponytail worktree reclaim [--dry-run] [--json]` | Inventory and reclaim worktree claims that the invoking project's lifecycle adapter proves abandoned |
 | `ponytail pm pdf <collection\|all> [--output-dir <path>]` | Render configured linked Markdown collections as PDFs using Pandoc and XeLaTeX |
@@ -118,11 +117,11 @@ Installed shell tools:
 | `condense_codex_rules.sh --project root [--dry-run\|--check\|--restore]` | Low-level isolated Codex command-policy compiler |
 | `project_journal.sh init\|start\|run_command\|over ...` | Initialize or record long-lived-plan telemetry in PostgreSQL |
 
-Rolling campaigns use Ponytail-managed Git checkouts and direct Codex App Server
-sessions. Campaign execution requires no Ponytail plugin; MCP is an optional
-transport for the same coordination operations. Commands use named arguments:
-`ponytail campaign status --campaign <id>` and
-`ponytail campaign next-actions --campaign <id>`.
+Campaigns use native host sessions, goals, messages and worktrees, with ordinary
+Git integration and annotated validation tags. The
+[campaign-management skill](skills/campaign-management/SKILL.md) owns coordinator
+and worker behavior. Ponytail provides traceability checks and historical
+inspection; it does not operate the swarm.
 
 The `issue-tracking` skill defines configurable issue types and shared
 issue/plan statuses. The `requirements` skill maintains a linked Markdown web
@@ -157,12 +156,6 @@ The human campaign report shows only the summary tasklet table by default.
 Enable or disable the summary, per-plan, and incomplete-sprint tables with
 their corresponding `--[no-]...-table` options. Use `--json` for the normalized
 tasklet-level records; JSON cannot be combined with table options.
-
-The parallel campaign scheduler is deprecated and is not part of ordinary
-`plan-execution`. Its historical action and recovery protocol is preserved in
-[parallel-plan-scheduler](skills/parallel-plan-scheduler/SKILL.md) for explicitly
-requested maintenance of existing campaign ledgers. Campaign census,
-validation, and serial plan execution remain available without scheduling.
 
 `ponytail worktree reclaim` reads the invoking project's committed
 `.agents/config/project/worktree-lifecycle.json`. Its committed executable

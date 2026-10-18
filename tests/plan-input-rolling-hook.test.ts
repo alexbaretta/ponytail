@@ -9,7 +9,7 @@ import { spawnSync } from 'node:child_process';
 
 // Traceability: verifies REQ-PLAN-INPUT-QUEUE
 // Historical coverage: verifies REQ-ROLLING-INTERFACES
-test('plan-input hook delegates rolling flags/help and retains legacy authentication', t => {
+test('plan-input hook ignores retired orchestration and recovery commands', t => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'rolling-hook-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   assert.equal(spawnSync('git', ['init', '-q'], { cwd: root }).status, 0);
@@ -25,6 +25,8 @@ test('plan-input hook delegates rolling flags/help and retains legacy authentica
     'ponytail campaign reconcile -h',
     'ponytail campaign suspend-worker --help',
     'ponytail campaign status --unknown',
+    'ponytail worktree recover old-token',
+    'ponytail worktree upgrade old-token --revision '+ 'a'.repeat(40),
   ]) {
     const result = invoke(cmd);
     assert.equal(result.status, 0, result.stderr);
@@ -36,6 +38,7 @@ test('plan-input hook delegates rolling flags/help and retains legacy authentica
     'ponytail campaign reconcile --campaign traceability; ponytail campaign advance legacy-plan',
   ]) {
     const result = invoke(cmd);
-    assert.match(result.stdout, /"permissionDecision":"deny"/, cmd);
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(result.stdout, '', cmd);
   }
 });

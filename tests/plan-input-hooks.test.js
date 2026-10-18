@@ -8,12 +8,7 @@ const os = require('node:os');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 const { entries } = require('../src/plan-input');
-const {
-  advanceLedger,
-  readWorkerBindings,
-  reconcile,
-  withLedgerLock,
-} = require('../src/campaign-orchestration');
+
 
 const hook = path.join(__dirname, '..', 'hooks', 'plan-input.js');
 
@@ -85,146 +80,6 @@ test('coordinator binding lets composer enqueue derive the campaign', () => {
   ]);
 });
 
-// Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
-test('blocker reporting authenticates the native coordinator across separate hook and command environments', () => {
-  const root = repository();
-  const pluginData = path.join(root, '.plugin-data');
-  assert.equal(tool(root, 'ponytail plan-input coordinate root').status, 0);
-  const environment = { ...process.env, PLUGIN_DATA: pluginData, PONYTAIL_CAMPAIGN_STATE_DIR: pluginData };
-  delete environment.PONYTAIL_SESSION_ID;
-  environment.CODEX_SESSION_ID = 'session';
-  const campaignGraph = { campaignId: 'root', submittedPlanId: 'root', lifecycle: { initial: 'open', activeWork: 'in_progress', successfulCompletion: 'closed', deferred: 'deferred', rejected: 'rejected' }, plans: [
-    { id: 'root', parentPlanId: null, dependsOn: [], lifecycle: 'in_progress', path: 'root' },
-    { id: 'child', parentPlanId: 'root', dependsOn: [], lifecycle: 'open', path: 'child', runnableTasklets: { sprintId: 'S01', taskletIds: ['S01-F01-T01'] } },
-  ] };
-  let pending;
-  withLedgerLock(root, 'root', environment, ledger => { pending = advanceLedger(campaignGraph, ledger); });
-  const report = { schemaVersion: 1, assignmentId: pending.assignmentId, actionId: pending.id, phase: 'DISPATCH', state: 'BLOCKED', code: 'HOST_REVIEW_REJECTED', summary: 'Native dispatch rejected before start.', requiredAction: 'Obtain exact pending human authority.' };
-  const command = `ponytail campaign report-blocker root --result '${JSON.stringify(report)}'`;
-  const permission = tool(root, command);
-  assert.equal(permission.status, 0, permission.stderr);
-  assert.match(JSON.parse(permission.stdout).hookSpecificOutput.additionalContext, /Coordinator session authenticated/);
-  const denied = tool(root, command, 'other-session');
-  assert.equal(JSON.parse(denied.stdout).hookSpecificOutput.permissionDecision, 'deny');
-  const commandEnvironment = { ...environment };
-  delete commandEnvironment.PLUGIN_DATA;
-  const result = spawnSync(process.execPath, [path.join(__dirname, '..', 'src', 'campaign-census.js'), 'report-blocker', 'root', '--result', JSON.stringify(report)], { cwd: root, env: commandEnvironment, encoding: 'utf8' });
-  assert.equal(result.status, 0, result.stderr);
-  const execution = JSON.parse(result.stdout).plans.find(item => item.planId === 'child').execution;
-  assert.equal(execution.actionId, pending.id);
-  assert.equal(execution.anomalies.some(item => item.code === report.code), true);
-  const wrongSession = spawnSync(process.execPath, [path.join(__dirname, '..', 'src', 'campaign-census.js'), 'report-blocker', 'root', '--result', JSON.stringify(report)], { cwd: root, env: { ...commandEnvironment, CODEX_SESSION_ID: 'other-session' }, encoding: 'utf8' });
-  assert.equal(wrongSession.status, 1);
-  assert.match(wrongSession.stderr, /CAMPAIGN_COORDINATOR_REQUIRED/);
-});
-
-// Traceability: verifies REQ-CAMPAIGN-ORCHESTRATION
-test('worker attach is one-time, status re-roots, and worker mutations fail closed', () => {
-  const root = repository();
-  const pluginData = path.join(root, '.plugin-data');
-  assert.equal(tool(root, 'ponytail plan-input coordinate root').status, 0);
-  const environment = { ...process.env, PLUGIN_DATA: pluginData, PONYTAIL_CAMPAIGN_STATE_DIR: pluginData };
-  const campaignGraph = {
-    campaignId: 'root',
-    submittedPlanId: 'root',
-    lifecycle: { initial: 'open', activeWork: 'in_progress', successfulCompletion: 'closed', deferred: 'deferred', rejected: 'rejected' },
-    plans: [
-      { id: 'root', parentPlanId: null, dependsOn: [], lifecycle: 'in_progress', path: 'root' },
-      { id: 'ready', parentPlanId: 'root', dependsOn: [], lifecycle: 'open', path: 'ready', runnableTasklets: { sprintId: 'S01', taskletIds: ['S01-T01'] } },
-    ],
-  };
-  let pending;
-  withLedgerLock(root, 'root', environment, (ledger) => { pending = advanceLedger(campaignGraph, ledger); });
-  const worker = fs.mkdtempSync(path.join(os.tmpdir(), 'ponytail-plan-input-worker-'));
-  fs.rmdirSync(worker);
-  const add = spawnSync('git', ['worktree', 'add', '-qb', 'worker', worker], { cwd: root, encoding: 'utf8' });
-  assert.equal(add.status, 0, add.stderr);
-
-  const attach = run(worker, { hook_event_name: 'PreToolUse', session_id: 'worker-session', tool_name: 'exec_command', tool_input: { cmd: `ponytail campaign attach ${pending.payload.attachToken}` } }, pluginData);
-  assert.equal(attach.status, 0, attach.stderr);
-  assert.match(JSON.parse(attach.stdout).hookSpecificOutput.additionalContext, /authenticated for campaign root/);
-  assert.equal(readWorkerBindings(environment).bindings[0].repositoryRoot, root);
-  const attachCli = spawnSync(process.execPath, [path.join(__dirname, '..', 'src', 'campaign-census.js'), 'attach', pending.payload.attachToken], {
-    cwd: worker,
-    env: { ...process.env, PLUGIN_DATA: pluginData, PONYTAIL_CAMPAIGN_STATE_DIR: pluginData },
-    encoding: 'utf8',
-  });
-  assert.equal(attachCli.status, 0, attachCli.stderr);
-  assert.match(attachCli.stdout, /Attached worker worker-session to campaign root/);
-  const workerBinding = readWorkerBindings(environment).bindings[0];
-  const actionResult = JSON.stringify({
-    ok: true,
-    sessionId: workerBinding.sessionId,
-    worktree: workerBinding.worktree,
-    branch: workerBinding.branch,
-    revision: workerBinding.revision,
-  });
-  const actionPermission = run(root, { hook_event_name: 'PreToolUse', tool_name: 'exec_command', tool_input: { cmd: `ponytail campaign action-result root ${pending.id} --result '${actionResult}'` } }, pluginData);
-  assert.match(JSON.parse(actionPermission.stdout).hookSpecificOutput.additionalContext, /Coordinator session authenticated/);
-  const observation = JSON.stringify({ schemaVersion: 1, campaignId: 'root', observedAt: '2026-09-30T12:00:00-07:00', completeSessionIds: ['worker-session'], sessions: [{ sessionId: 'worker-session', state: 'working', worktree: workerBinding.worktree, managedWorktree: true }] });
-  const observationPermission = run(root, { hook_event_name: 'PreToolUse', tool_name: 'exec_command', tool_input: { cmd: `ponytail campaign observe root --snapshot '${observation}'` } }, pluginData);
-  assert.match(JSON.parse(observationPermission.stdout).hookSpecificOutput.additionalContext, /Coordinator session authenticated/);
-  const readyActionsPermission = run(root, { hook_event_name: 'PreToolUse', tool_name: 'exec_command', tool_input: { cmd: 'ponytail campaign ready-actions root --json' } }, pluginData);
-  assert.match(JSON.parse(readyActionsPermission.stdout).hookSpecificOutput.additionalContext, /Coordinator session authenticated/);
-  const schedulePermission = run(root, { hook_event_name: 'PreToolUse', tool_name: 'exec_command', tool_input: { cmd: 'ponytail campaign schedule-ready root --json' } }, pluginData);
-  assert.match(JSON.parse(schedulePermission.stdout).hookSpecificOutput.additionalContext, /Coordinator session authenticated/);
-  const reviewPermission = run(root, { hook_event_name: 'PreToolUse', tool_name: 'exec_command', tool_input: { cmd: 'ponytail campaign schedule-review-ready root --json' } }, pluginData);
-  assert.match(JSON.parse(reviewPermission.stdout).hookSpecificOutput.additionalContext, /Coordinator session authenticated/);
-  const planningPermission = run(root, { hook_event_name: 'PreToolUse', tool_name: 'exec_command', tool_input: { cmd: 'ponytail campaign schedule-planning-ready root --json' } }, pluginData);
-  assert.match(JSON.parse(planningPermission.stdout).hookSpecificOutput.additionalContext, /Coordinator session authenticated/);
-  const actionCli = spawnSync(process.execPath, [path.join(__dirname, '..', 'src', 'campaign-census.js'), 'action-result', 'root', pending.id, '--result', actionResult], {
-    cwd: root,
-    env: { ...process.env, PLUGIN_DATA: pluginData, PONYTAIL_CAMPAIGN_STATE_DIR: pluginData },
-    encoding: 'utf8',
-  });
-  assert.equal(actionCli.status, 0, actionCli.stderr);
-  assert.deepEqual(JSON.parse(actionCli.stdout).pendingActions, []);
-  assert.equal(JSON.parse(actionCli.stdout).assignments[0].state, 'ACTIVE');
-
-  const status = run(worker, { hook_event_name: 'PreToolUse', session_id: 'worker-session', tool_name: 'exec_command', tool_input: { cmd: 'ponytail campaign status --json' } }, pluginData);
-  assert.match(JSON.parse(status.stdout).hookSpecificOutput.additionalContext, new RegExp(root.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
-  const runnable = run(worker, { hook_event_name: 'PreToolUse', session_id: 'worker-session', tool_name: 'exec_command', tool_input: { cmd: 'ponytail campaign runnable-plans --json' } }, pluginData);
-  assert.match(JSON.parse(runnable.stdout).hookSpecificOutput.additionalContext, /Read-only campaign runnable-plans/);
-  const schedule = run(worker, { hook_event_name: 'PreToolUse', session_id: 'worker-session', tool_name: 'exec_command', tool_input: { cmd: 'ponytail campaign schedule-ready --json' } }, pluginData);
-  assert.equal(JSON.parse(schedule.stdout).hookSpecificOutput.permissionDecision, 'deny');
-  const review = run(worker, { hook_event_name: 'PreToolUse', session_id: 'worker-session', tool_name: 'exec_command', tool_input: { cmd: 'ponytail campaign schedule-review-ready --json' } }, pluginData);
-  assert.equal(JSON.parse(review.stdout).hookSpecificOutput.permissionDecision, 'deny');
-  const planning = run(worker, { hook_event_name: 'PreToolUse', session_id: 'worker-session', tool_name: 'exec_command', tool_input: { cmd: 'ponytail campaign schedule-planning-ready --json' } }, pluginData);
-  assert.equal(JSON.parse(planning.stdout).hookSpecificOutput.permissionDecision, 'deny');
-  const reportPermission = run(worker, { hook_event_name: 'PreToolUse', session_id: 'worker-session', tool_name: 'exec_command', tool_input: { cmd: 'ponytail campaign report-blocker root --result {}' } }, pluginData);
-  assert.equal(JSON.parse(reportPermission.stdout).hookSpecificOutput.permissionDecision, 'deny');
-  const statusCli = spawnSync(process.execPath, [path.join(__dirname, '..', 'src', 'campaign-census.js'), 'status', 'root', '--json'], {
-    cwd: worker,
-    env: { ...process.env, PLUGIN_DATA: pluginData, PONYTAIL_CAMPAIGN_STATE_DIR: pluginData },
-    encoding: 'utf8',
-  });
-  assert.equal(statusCli.status, 0, statusCli.stderr);
-  assert.equal(JSON.parse(statusCli.stdout).effectiveWorktree, root);
-  assert.equal(JSON.parse(statusCli.stdout).invocationWorktree, fs.realpathSync(worker));
-  const reportCli = spawnSync(process.execPath, [path.join(__dirname, '..', 'src', 'campaign-census.js'), 'report', 'root', '--json'], {
-    cwd: worker,
-    env: { ...process.env, PLUGIN_DATA: pluginData, PONYTAIL_CAMPAIGN_STATE_DIR: pluginData },
-    encoding: 'utf8',
-  });
-  assert.equal(reportCli.status, 2);
-  assert.match(reportCli.stderr, /CAMPAIGN_WORKER_READ_SCOPE.*use campaign status/);
-  const mutation = run(worker, { hook_event_name: 'PreToolUse', session_id: 'worker-session', tool_name: 'exec_command', tool_input: { cmd: 'ponytail campaign advance --json' } }, pluginData);
-  assert.equal(JSON.parse(mutation.stdout).hookSpecificOutput.permissionDecision, 'deny');
-  assert.match(JSON.parse(mutation.stdout).hookSpecificOutput.permissionDecisionReason, /run the mutation from its coordinator worktree/);
-  const mutationCli = spawnSync(process.execPath, [path.join(__dirname, '..', 'src', 'campaign-census.js'), 'advance', 'root', '--json'], {
-    cwd: worker,
-    env: { ...process.env, PLUGIN_DATA: pluginData, PONYTAIL_CAMPAIGN_STATE_DIR: pluginData },
-    encoding: 'utf8',
-  });
-  assert.equal(mutationCli.status, 1);
-  assert.match(mutationCli.stderr, /CAMPAIGN_WORKER_MUTATION/);
-
-  const replay = run(worker, { hook_event_name: 'PreToolUse', session_id: 'different-worker', tool_name: 'exec_command', tool_input: { cmd: `ponytail campaign attach ${pending.payload.attachToken}` } }, pluginData);
-  assert.equal(JSON.parse(replay.stdout).hookSpecificOutput.permissionDecision, 'deny');
-  assert.match(JSON.parse(replay.stdout).hookSpecificOutput.permissionDecisionReason, /unknown, stale, or already used/);
-  assert.equal(reconcile(campaignGraph, require('../src/campaign-orchestration').readLedger(root, 'root', environment), worker).effectiveWorktree, root);
-});
-
 test('coordinator bindings are exclusive, releasable, and fail closed', () => {
   const root = repository();
   const unbound = run(root, { hook_event_name: 'UserPromptSubmit', session_id: 'other', prompt: '/ponytail-enqueue first' });
@@ -252,7 +107,6 @@ test('one coordinator session binds several campaigns while unscoped enqueue sta
   assert.deepEqual(state.bindings.map(({ campaignId }) => campaignId).sort(), ['root', 'second']);
   const enqueue = run(root, { hook_event_name: 'UserPromptSubmit', prompt: '/ponytail-enqueue ambiguous' });
   assert.match(JSON.parse(enqueue.stdout).reason, /select a campaign explicitly.*root, second/);
-  assert.equal(tool(root, 'ponytail campaign advance second --json').status, 0);
 
   const conflict = tool(root, 'ponytail plan-input coordinate second', 'other');
   assert.equal(JSON.parse(conflict.stdout).hookSpecificOutput.permissionDecision, 'deny');
@@ -295,8 +149,6 @@ test('free-form code-mode input binds and releases only the authenticated coordi
   const coordinate = 'text(await tools.exec_command({cmd:"ponytail plan-input coordinate child"}));';
   assert.match(JSON.parse(invoke(coordinate).stdout).hookSpecificOutput.additionalContext, /bound to campaign root/);
   assert.equal(JSON.parse(invoke(coordinate, 'other-session').stdout).hookSpecificOutput.permissionDecision, 'deny');
-  assert.equal(JSON.parse(invoke('await tools.exec_command({cmd:"ponytail campaign advance root --json"});', 'other-session').stdout).hookSpecificOutput.permissionDecision, 'deny');
-  assert.equal(JSON.parse(invoke('await tools.exec_command({cmd:"ponytail campaign schedule-ready root --json"});', 'other-session').stdout).hookSpecificOutput.permissionDecision, 'deny');
   assert.equal(invoke('await tools.exec_command({cmd:"npm test"});').stdout, '');
   assert.match(JSON.parse(invoke('await tools.exec_command({cmd:"ponytail plan-input release root"});').stdout).hookSpecificOutput.additionalContext, /released campaign root/);
 });
