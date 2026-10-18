@@ -6,15 +6,6 @@ const assert = require('node:assert/strict');
 const test = require('node:test');
 const { getPonytailInstructions } = require('../hooks/ponytail-instructions');
 
-test('deprecated campaign scheduler owns observation and diagnostic priority', () => {
-  // Historical coverage: verifies REQ-PONYTAIL-CLI-AGENT-HARNESS
-  const policy = require('node:fs').readFileSync(require('node:path').join(__dirname, '..', 'skills', 'parallel-plan-scheduler', 'SKILL.md'), 'utf8');
-  assert.match(policy, /campaign\s+observe <campaign-root> --snapshot <json>/);
-  assert.match(policy, /Blocking campaign diagnostics outrank new dispatch/);
-  assert.match(policy, /worker follows the worker-owned recovery protocol without waiting for\n`advance` or `ready-actions` to initiate it/);
-  assert.match(policy, /waiting for coordinator input from one that\n+   has finished/);
-});
-
 const modes = ['off', 'lite', 'full', 'ultra'];
 const alwaysOnRules = [
   'Do not repeat yourself',

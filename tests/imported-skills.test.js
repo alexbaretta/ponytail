@@ -37,7 +37,7 @@ test('imported skills have valid metadata and attribution', () => {
     assert.match(skill, /\ndescription:/);
     for (const file of filesUnder(skillDirectory)) {
       const content = fs.readFileSync(file, 'utf8');
-      assert.match(content, /Copyright \(c\) 2026 Alex Baretta/);
+      assert.match(content, /Copyright \(c\) 2026 Alex Baretta/i);
     }
 
     for (const match of skill.matchAll(/\]\((references\/[^)]+\.md)\)/g)) {

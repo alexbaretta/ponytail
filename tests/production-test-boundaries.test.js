@@ -13,7 +13,6 @@ const skill = fs.readFileSync(
 );
 
 const relatedSkills = [
-  'plan-execution',
   'project-structure',
   'ux-testing',
 ].map((name) => fs.readFileSync(

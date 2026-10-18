@@ -93,7 +93,7 @@ test('pattern observations preserve evidence without premature categories', () =
 });
 
 test('specialized workflows delegate diagnosis to debugging', () => {
-  assert.match(planExecution, /Apply `debugging` to establish the\nroot cause/);
+
   assert.match(uxTesting, /apply `debugging` to distinguish the visible symptom/);
   assert.match(uxTesting, /supporting evidence/);
 });

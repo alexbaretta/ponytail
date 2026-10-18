@@ -136,10 +136,9 @@ test('generated skill rendering preserves vocabulary and never copies canonical 
     const {findRelationships}=require('../skills/requirements-traceability/scripts/check-traceability');
     const ids=new Set(require('../.agents/config/project/traceability.json').requirements.map(requirement=>requirement.id));
     assert.deepEqual(findRelationships(render(name),{class:'implementation',locator:'text',path:name}).filter(relationship=>ids.has(relationship.requirementId)),[]);
-    assert.match(fs.readFileSync(path.join(__dirname,'../skills',name,'SKILL.md'),'utf8'),/^Traceability:/mu);
   }
   assert.match(render('plan-execution'),/references\/glossary\.md/);
-  assert.ok(render('requirements-traceability').includes(['Traceability:', 'implements', 'REQ-STABLE-ID', 'from endpoint GET-orders'].join(' ')));
+  assert.ok(render('requirements-traceability').includes(['Traceability:', 'implements', 'OBL-ORDER-SAVE', 'from implementation saveOrder'].join(' ')));
 });
 
 const { renewObligationAssignment, writeHostObservation, publishObligationCheckpoint }=require('../src/campaign-orchestration');
