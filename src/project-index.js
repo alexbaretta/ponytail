@@ -4,6 +4,7 @@
 
 const { normalizeTraceabilityPayloads } = require('./traceability-projection');
 const { indexProgress } = require('./index-progress');
+const { publishIndexSearchDocuments } = require('./project-index-search-publication');
 const { renderCliHelp } = require('./cli-help');
 const { requiredCoverageRules } = require('../skills/requirements-traceability/scripts/coverage-rules');
 const crypto = require('node:crypto');
@@ -1222,30 +1223,19 @@ async function publishTraceabilityGeneration(client, projection, options = {}) {
       const content = Object.values(document).filter(value => value !== null).join('\n');
       return { entityId, document, content, documentId: digest(content) };
     }).sort((left, right) => left.documentId.localeCompare(right.documentId));
-    for (const { entityId, document, content } of orderedSearchDocuments) {
-      const searchValues = [entityId,document.entityId,document.entityKind,document.path,document.unitName,document.annotation,document.description,document.role,document.requirementId];
-      if (oldSearch.get(entityId) === JSON.stringify(searchValues)) {publishedRecords++;publicationProgress();continue;}
-      const documentId = await insertTextDocument(client, Buffer.from(content));
-      await client.query(`
-        INSERT INTO ponytail_index.search_document_v2 (
-          generation_id, entity_id, document_id, searchable_entity_id, entity_kind,
-          path, unit_name, annotation, description, role, requirement_id
-        ) VALUES ($1::uuid, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-        ON CONFLICT (generation_id, entity_id) DO UPDATE SET document_id = EXCLUDED.document_id, searchable_entity_id = EXCLUDED.searchable_entity_id, entity_kind = EXCLUDED.entity_kind, path = EXCLUDED.path, unit_name = EXCLUDED.unit_name, annotation = EXCLUDED.annotation, description = EXCLUDED.description, role = EXCLUDED.role, requirement_id = EXCLUDED.requirement_id`, [
-        generation.generation_id,
-        entityId,
-        documentId,
-        document.entityId,
-        document.entityKind,
-        document.path,
-        document.unitName,
-        document.annotation,
-        document.description,
-        document.role,
-        document.requirementId,
-      ]);
-      publishedRecords++;publicationProgress();
+    function* changedSearchDocuments() {
+      for (const { entityId, document, content, documentId } of orderedSearchDocuments) {
+        const searchValues = [entityId,document.entityId,document.entityKind,document.path,document.unitName,document.annotation,document.description,document.role,document.requirementId];
+        if (oldSearch.get(entityId) === JSON.stringify(searchValues)) {publishedRecords++;publicationProgress();continue;}
+        yield {generationId:generation.generation_id,entityId,documentId,content,
+          searchableEntityId:document.entityId,entityKind:document.entityKind,path:document.path,
+          unitName:document.unitName,annotation:document.annotation,description:document.description,
+          role:document.role,requirementId:document.requirementId};
+      }
     }
+    await publishIndexSearchDocuments(client, changedSearchDocuments(), count => {
+      publishedRecords+=count;publicationProgress();
+    });
     await client.query(`
       INSERT INTO ponytail_index.published_generation_v1 (worktree_id, corpus, generation_id)
       VALUES ($1::uuid, $2, $3::uuid)
@@ -2038,16 +2028,6 @@ async function currentRefs(root) {
   return refs;
 }
 
-async function insertTextDocument(client, buffer) {
-  const content = textContent(buffer);
-  if (content === null) return null;
-  const documentId = digest(buffer);
-  await client.query(`
-    INSERT INTO ponytail_index.text_document_v1 (document_id, content)
-    VALUES ($1, $2)
-    ON CONFLICT (document_id) DO UPDATE SET document_id = EXCLUDED.document_id`, [documentId, content]);
-  return documentId;
-}
 
 async function prepareGitCommitBatch(client, context, commits, signal) {
   const prepared = [];

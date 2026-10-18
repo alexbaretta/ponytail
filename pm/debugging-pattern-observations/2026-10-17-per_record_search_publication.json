@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-10-17-per_record_search_publication",
+  "recorded_at": "2026-10-17T19:50:07-07:00",
+  "source_references": [
+    "pm/bugs/in_progress/2026-10-17-TASK-bulk_index_search_publication.md"
+  ],
+  "context": {
+    "languages": [
+      "typescript",
+      "javascript"
+    ],
+    "frameworks": [
+      "PostgreSQL"
+    ],
+    "components": [
+      "index publication"
+    ],
+    "affected_boundaries": [
+      "normalized records to transactional PostgreSQL search publication"
+    ],
+    "code_references": [
+      "src/project-index.js",
+      "src/project-index-search-publication.ts"
+    ]
+  },
+  "observed_behavior": "A full 212,720-record build took 118,941 ms, dominated by per-record search writes and updates of unchanged immutable text rows.",
+  "expected_behavior": "Publish large generations in tens of seconds while preserving atomicity and unchanged content.",
+  "causal_mechanism": "Search publication used two awaited SQL statements for every row and a conflict update for text already addressed by its content hash.",
+  "anti_pattern": {
+    "structural_description": "A bulk immutable publication was expressed as repeated individual mutable upserts.",
+    "why_it_fails": "Round trips and unnecessary physical tuple updates accumulate with every record."
+  },
+  "correct_pattern": {
+    "required_invariant": "Text is reused by content hash; bounded publication batches remain inside the original transaction and report completed writes only.",
+    "implementation_description": "Stream sorted search documents through batches bounded by rows and parameter bytes, insert text with conflict-ignore and upsert search metadata."
+  },
+  "applicability_conditions": [
+    "Large normalized generations and a shared content-addressed text table."
+  ],
+  "known_non_matches": [
+    "An unchanged generation bypasses record publication and reuses its existing generation."
+  ],
+  "confirmation_evidence": [
+    "The physical tuple regression failed before the repair and passed afterward.",
+    "The same isolated workload fell from 118,941 to 46,100 ms; an unchanged update took 4,843 ms."
+  ],
+  "regression_proofs": [
+    "tests/project-index-search-publication.test.ts",
+    "tests/traceability-incremental.integration.test.ts"
+  ]
+}

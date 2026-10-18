@@ -47,6 +47,7 @@ test('incremental CLI retains unchanged database rows, reconciles deletions, rol
  UNION ALL SELECT 'relationship',source_entity_id || target_entity_id || role,xmin::text || ':' || ctid::text FROM ponytail_index.relationship_v1 WHERE generation_id IN (SELECT generation_id FROM ids)
  UNION ALL SELECT 'search',entity_id,xmin::text || ':' || ctid::text FROM ponytail_index.search_document_v2 WHERE generation_id IN (SELECT generation_id FROM ids) ORDER BY kind,id`,[projectId])).rows;
  const validate=()=>spawnSync(process.execPath,[path.join(repositoryRoot,'src/project-index.js'),'traceability','validate','--json'],{cwd:root,encoding:'utf8'});
+ const textRows=async():Promise<readonly {document_id:string;tuple:string}[]> => (await pool.query<{document_id:string;tuple:string}>(`SELECT DISTINCT document.document_id,document.xmin::text || ':' || document.ctid::text AS tuple FROM ponytail_index.text_document_v1 document JOIN ponytail_index.search_document_v2 search USING(document_id) JOIN ponytail_index.generation_v1 generation USING(generation_id) JOIN ponytail_index.worktree_v1 worktree USING(worktree_id) JOIN ponytail_index.repository_v1 repository USING(repository_id) WHERE repository.project_id=$1::uuid ORDER BY document.document_id`,[projectId])).rows;
  update();
  const incomplete=validate();assert.equal(incomplete.status,1,incomplete.stderr);
  const validationResult:unknown=JSON.parse(incomplete.stdout);
@@ -64,7 +65,8 @@ test('incremental CLI retains unchanged database rows, reconciles deletions, rol
  const beforeFailure=await rows();fs.writeFileSync(path.join(root,'src/first.js'),'// '+traceabilityMarker + ': implements REQ-UNKNOWN\n');
  const failure=spawnSync(process.execPath,[path.join(repositoryRoot,'src/project-index.js'),'traceability','update-index','--json'],{cwd:root,encoding:'utf8'});assert.equal(failure.status,2);assert.deepEqual(await rows(),beforeFailure,'failed parse rolls back incremental generation');
  fs.writeFileSync(path.join(root,'src/first.js'),'// '+traceabilityMarker + ': implements REQ-VALUE\n');update();
- const beforeRebuild=await rows();update(['--rebuild']);assert.notEqual((await rows())[0]?.generation_id,beforeRebuild[0]?.generation_id);
+ const beforeRebuild=await rows();const textBeforeRebuild=await textRows();update(['--rebuild']);assert.notEqual((await rows())[0]?.generation_id,beforeRebuild[0]?.generation_id);
+ assert.deepEqual(await textRows(),textBeforeRebuild,'a new generation must reuse immutable shared text without physical updates');
  configuration.artifacts=configuration.artifacts.filter(artifact=>artifact.path!=='src/first.js');fs.writeFileSync(configurationPath,JSON.stringify(configuration));fs.unlinkSync(path.join(root,'src/first.js'));update();assert.ok(!(await rows()).some(row=>row.path==='src/first.js'));
  for(const artifactClass of ['unit-test','integration-test','uat']) {
   const artifactPath=`src/${artifactClass}.txt`;fs.writeFileSync(path.join(root,artifactPath),'// '+traceabilityMarker+': verifies REQ-VALUE\n');configuration.artifacts.push({class:artifactClass,path:artifactPath,locator:'text'});
