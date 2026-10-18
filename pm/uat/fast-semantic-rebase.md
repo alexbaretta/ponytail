@@ -35,7 +35,10 @@ Traceability: verifies REQ-FAST-SEMANTIC-REBASE
 5. Inspect completion and abort behavior in separate fixture runs.
    - Completion has target ancestry, complete original-to-replayed accounting,
      no rebase state, and only understood changes. Abort restores the exact
-     original source tip and leaves unrelated refs unchanged.
+     original source tip and leaves unrelated refs unchanged. Repeat completion,
+     selected-stop continuation and abort from a detached source; it remains
+     detached. A change between attached and detached source state after review
+     is rejected before replay. Retained V1 state remains readable.
 6. Inspect the command transcript.
    - No rebase command ran tests, builds, QA, fetch, push, publication, merge,
      worktree creation, autostash, autosquash, or update-refs behavior.

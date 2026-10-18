@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-10-18-detached_semantic_rebase",
+  "recorded_at": "2026-10-18T10:43:05-07:00",
+  "source_references": [
+    "pm/requirements/fast-semantic-rebase.md",
+    "pm/uat/fast-semantic-rebase.md"
+  ],
+  "context": {
+    "languages": [
+      "typescript"
+    ],
+    "frameworks": [],
+    "components": [
+      "semantic-rebase"
+    ],
+    "affected_boundaries": [
+      "native Git worktree source discovery",
+      "persisted rebase analysis and run state"
+    ],
+    "code_references": [
+      "src/semantic-rebase.ts"
+    ]
+  },
+  "observed_behavior": "Semantic rebase analysis rejected an authorized native worker checkout with detached HEAD.",
+  "expected_behavior": "Freeze and replay the exact detached source commit without requiring a branch or moving an existing branch.",
+  "causal_mechanism": "Source discovery treated symbolic-ref exit status 1 as an error, although it denotes the valid detached HEAD state; persisted sourceBranch also required a string.",
+  "anti_pattern": {
+    "structural_description": "Represent every valid source checkout as a symbolic branch.",
+    "why_it_fails": "Native worker checkouts may be detached, so analysis fails before reviewing their changes."
+  },
+  "correct_pattern": {
+    "required_invariant": "Freeze source commit and attachment state independently and reject changes to either before replay.",
+    "implementation_description": "Represent detached sourceBranch as null in V2, distinguish symbolic-ref detached status from actual failure, and preserve V1 readers and original digest bindings."
+  },
+  "applicability_conditions": [
+    "A clean authorized source checkout has detached HEAD and commits to replay."
+  ],
+  "known_non_matches": [
+    "An attached source branch already passed discovery."
+  ],
+  "confirmation_evidence": [
+    "A disposable detached fixture reproduced the symbolic-ref failure before repair; focused regression cases now exercise detached replay and retained V1 state."
+  ],
+  "regression_proofs": [
+    "tests/semantic-rebase.test.ts: detached source replays without attaching or moving the original branch",
+    "tests/semantic-rebase.test.ts: detached selected replay supports continue and abort",
+    "tests/semantic-rebase.test.ts: source attachment change after review is rejected",
+    "tests/semantic-rebase.test.ts: retained V1 analysis and run state resume without changing their digest binding"
+  ]
+}

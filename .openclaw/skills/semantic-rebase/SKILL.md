@@ -18,13 +18,14 @@ trees; do not inspect every cleanly replayed commit by default.
 
 ## Prepare one aggregate review
 
-Start from a clean attached source branch and invoke:
+Start from a clean source branch or an authorized native detached checkout and
+invoke:
 
 ```text
 ponytail rebase diff <target> [--output <review-file>]
 ```
 
-The command freezes the invoking worktree's source branch and tip, resolved
+The command freezes the invoking worktree's source branch (or detached state) and tip, resolved
 target tip, merge base, and ordered source commits. It emits one deterministic
 stream containing `base..target` and `base..source` final-state changes. Stable
 `TNNNN` and `SNNNN` identifiers belong only to that frozen analysis.

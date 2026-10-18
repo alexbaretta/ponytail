@@ -2,13 +2,14 @@
 // Licensed under the MIT License. See LICENSE in the project root.
 // Traceability: verifies REQ-FAST-SEMANTIC-REBASE
 import assert from 'node:assert/strict';
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import {spawnSync} from 'node:child_process';
 import test, {type TestContext} from 'node:test';
-import {readSemanticRebaseAnalysisV1,readSemanticRebaseSelectionV1,
- type SemanticRebaseAnalysisV1} from '../src/semantic-rebase.js';
+import {readSemanticRebaseAnalysisV1,readSemanticRebaseAnalysisV2,readSemanticRebaseSelectionV1,SemanticRebaseRunReaders,
+ type SemanticRebaseAnalysisV2} from '../src/semantic-rebase.js';
 
 interface Fixture {readonly root:string;readonly target:string;readonly cleanTarget:string;readonly source:string}
 function command(root:string,program:string,args:readonly string[]):string {const result=spawnSync(program,args,{cwd:root,encoding:'utf8'});assert.equal(result.status,0,result.stderr);return result.stdout;}
@@ -17,7 +18,7 @@ function write(root:string,relative:string,text:string):void {const file=path.jo
 function commit(root:string,message:string):string {git(root,['add','.']);git(root,['commit','-m',message]);return git(root,['rev-parse','HEAD']);}
 function fixture(testContext:TestContext):Fixture {const root=fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(),'ponytail-semantic-rebase-')));testContext.after(()=>fs.rmSync(root,{recursive:true,force:true}));git(root,['init','-b','main']);git(root,['config','user.name','Fixture']);git(root,['config','user.email','fixture@example.test']);write(root,'shared.txt','base\n');write(root,'base.txt','base\n');write(root,'delete.txt','delete me\n');write(root,'rename-old.txt','rename me\n');commit(root,'base');git(root,['checkout','-b','clean-target']);write(root,'clean-target.txt','clean target\n');commit(root,'Clean target');const cleanTarget=git(root,['rev-parse','HEAD']);git(root,['checkout','-b','target','main']);write(root,'target-prelude.txt','prelude\n');commit(root,'Target prelude');write(root,'equivalent.txt','same\n');commit(root,'Equivalent change');write(root,'shared.txt','base\ntarget\n');commit(root,'Similar change');write(root,'target-only.txt','target only\n');commit(root,'Target only');const target=git(root,['rev-parse','HEAD']);git(root,['checkout','-b','source','main']);write(root,'equivalent.txt','same\n');commit(root,'Equivalent change');write(root,'source.txt','first\n');commit(root,'Build final source hunk');write(root,'source.txt','first\nsecond\n');commit(root,'Build final source hunk further');write(root,'source-only.txt','source only\n');commit(root,'Source only');git(root,['mv','rename-old.txt','rename-new.txt']);commit(root,'Rename source path');fs.rmSync(path.join(root,'delete.txt'));commit(root,'Delete source path');fs.writeFileSync(path.join(root,'binary.bin'),Buffer.from([0,1,2,3,255]));commit(root,'Add binary source');const source=git(root,['rev-parse','HEAD']);return {root,target,cleanTarget,source};}
 function cli(root:string,args:readonly string[],expected=0):string {const executable=path.resolve('dist/src/semantic-rebase.js');const result=spawnSync(process.execPath,[executable,...args],{cwd:root,encoding:'utf8'});assert.equal(result.status,expected,result.stderr);return result.stdout;}
-function analysis(root:string):SemanticRebaseAnalysisV1 {const gitDirectory=git(root,['rev-parse','--absolute-git-dir']);const value:unknown=JSON.parse(fs.readFileSync(path.join(gitDirectory,'ponytail-semantic-rebase','analysis.json'),'utf8'));return readSemanticRebaseAnalysisV1(value);}
+function analysis(root:string):SemanticRebaseAnalysisV2 {const gitDirectory=git(root,['rev-parse','--absolute-git-dir']);const value:unknown=JSON.parse(fs.readFileSync(path.join(gitDirectory,'ponytail-semantic-rebase','analysis.json'),'utf8'));return readSemanticRebaseAnalysisV2(value);}
 
 test('aggregate analysis freezes both final states and exposes stable IDs',testContext=>{const value=fixture(testContext);const first=cli(value.root,['diff','target']);const frozen=analysis(value.root);assert.equal(frozen.sourceTip,value.source);assert.equal(frozen.targetTip,value.target);assert.deepEqual(frozen.sourceChanges.map(change=>change.id),frozen.sourceChanges.map((_change,index)=>`S${String(index+1).padStart(4,'0')}`));assert.deepEqual(frozen.targetChanges.map(change=>change.id),frozen.targetChanges.map((_change,index)=>`T${String(index+1).padStart(4,'0')}`));assert.ok(frozen.sourceChanges.some(change=>change.oldPath==='rename-old.txt'&&change.newPath==='rename-new.txt'));assert.ok(frozen.sourceChanges.some(change=>change.oldPath==='delete.txt'&&change.newPath==='/dev/null'));assert.ok(frozen.sourceChanges.some(change=>change.newPath==='binary.bin'&&change.kind==='file'));assert.match(first,/TARGET FINAL CHANGES/);assert.match(first,/SOURCE FINAL CHANGES/);assert.match(first,/equivalent\.txt/);assert.match(first,/target-only\.txt/);assert.match(first,/source-only\.txt/);const second=cli(value.root,['diff','target']);assert.equal(second,first);});
 
@@ -30,3 +31,77 @@ test('selected multi-commit final hunk stops at each contributor while clean com
 test('broadened resolution remains stopped and abort restores the frozen source tip',testContext=>{const value=fixture(testContext);cli(value.root,['diff','clean-target']);const frozen=analysis(value.root);const sourceChange=frozen.sourceChanges.find(change=>change.newPath==='source.txt');assert.ok(sourceChange);const stateDirectory=path.join(git(value.root,['rev-parse','--absolute-git-dir']),'ponytail-semantic-rebase');const selectionPath=path.join(stateDirectory,'selection.txt');fs.writeFileSync(selectionPath,`ponytail-semantic-rebase-selection-v1 ${frozen.analysisDigest}\n${sourceChange.id} - | broadened review fixture\n`);assert.match(cli(value.root,['run','clean-target','--conflicts',selectionPath]),/semantic rebase stop/);write(value.root,'base.txt','broadened\n');const residual=cli(value.root,['continue']);assert.match(residual,/residual review required/);assert.match(residual,/base\.txt/);assert.equal(fs.existsSync(path.join(git(value.root,['rev-parse','--absolute-git-dir']),'rebase-merge')),true);assert.match(cli(value.root,['abort']),/semantic rebase aborted/);assert.equal(git(value.root,['rev-parse','HEAD']),value.source);assert.equal(fs.readFileSync(path.join(value.root,'base.txt'),'utf8'),'base\n');assert.equal(cli(value.root,['abort']),'semantic rebase inactive\n');});
 
 test('run rejects a target ref that moved after frozen analysis',testContext=>{const value=fixture(testContext);cli(value.root,['diff','clean-target']);const frozen=analysis(value.root);const sourceChange=frozen.sourceChanges[0];assert.ok(sourceChange);const stateDirectory=path.join(git(value.root,['rev-parse','--absolute-git-dir']),'ponytail-semantic-rebase');const selectionPath=path.join(stateDirectory,'selection.txt');fs.writeFileSync(selectionPath,`ponytail-semantic-rebase-selection-v1 ${frozen.analysisDigest}\n${sourceChange.id} - | stale target fixture\n`);const tree=git(value.root,['rev-parse','clean-target^{tree}']);const advanced=spawnSync('git',['commit-tree',tree,'-p','clean-target','-m','Advance target'],{cwd:value.root,encoding:'utf8'});assert.equal(advanced.status,0,advanced.stderr);git(value.root,['branch','-f','clean-target',advanced.stdout.trim()]);const executable=path.resolve('dist/src/semantic-rebase.js');const result=spawnSync(process.execPath,[executable,'run','clean-target','--conflicts',selectionPath],{cwd:value.root,encoding:'utf8'});assert.equal(result.status,2);assert.match(result.stderr,/run target does not match frozen analysis|target changed after analysis/);assert.equal(git(value.root,['rev-parse','HEAD']),value.source);});
+
+
+test('detached source replays without attaching or moving the original branch',testContext=>{
+ const value=fixture(testContext);git(value.root,['checkout','--detach']);
+ cli(value.root,['diff','clean-target']);const frozen=analysis(value.root);
+ assert.equal(frozen.schemaVersion,2);assert.equal(frozen.sourceBranch,null);
+ const stateDirectory=path.join(git(value.root,['rev-parse','--absolute-git-dir']),'ponytail-semantic-rebase');
+ const selectionPath=path.join(stateDirectory,'selection.txt');
+ fs.writeFileSync(selectionPath,`ponytail-semantic-rebase-selection-v1 ${frozen.analysisDigest}\n`);
+ assert.match(cli(value.root,['run','clean-target','--conflicts',selectionPath]),/semantic rebase complete/);
+ assert.equal(git(value.root,['rev-parse','--abbrev-ref','HEAD']),'HEAD');
+ assert.equal(git(value.root,['rev-parse','source']),value.source);
+ git(value.root,['merge-base','--is-ancestor','clean-target','HEAD']);
+});
+
+for(const finish of ['continue','abort'])test(`detached selected replay supports ${finish}`,testContext=>{
+ const value=fixture(testContext);git(value.root,['checkout','--detach']);
+ cli(value.root,['diff','clean-target']);const frozen=analysis(value.root);
+ const change=frozen.sourceChanges.find(item=>item.newPath==='source.txt');assert.ok(change);
+ const stateDirectory=path.join(git(value.root,['rev-parse','--absolute-git-dir']),'ponytail-semantic-rebase');
+ const selectionPath=path.join(stateDirectory,'selection.txt');
+ fs.writeFileSync(selectionPath,`ponytail-semantic-rebase-selection-v1 ${frozen.analysisDigest}\n${change.id} - | detached selected unit\n`);
+ let output=cli(value.root,['run','clean-target','--conflicts',selectionPath]);assert.match(output,/semantic rebase stop/);
+ if(finish==='abort'){
+  assert.match(cli(value.root,['abort']),/semantic rebase aborted/);
+  assert.equal(git(value.root,['rev-parse','HEAD']),value.source);
+ }else{
+  let stops=0;while(/semantic rebase stop/.test(output)){assert.ok(stops++<3);output=cli(value.root,['continue']);}
+  assert.equal(stops,2);assert.match(output,/semantic rebase complete/);
+  git(value.root,['merge-base','--is-ancestor','clean-target','HEAD']);
+ }
+ assert.equal(git(value.root,['rev-parse','--abbrev-ref','HEAD']),'HEAD');
+ assert.equal(git(value.root,['rev-parse','source']),value.source);
+ assert.equal(fs.existsSync(path.join(git(value.root,['rev-parse','--absolute-git-dir']),'rebase-merge')),false);
+});
+
+for(const detached of [false,true])test(`source attachment change after review is rejected from detached=${detached}`,testContext=>{
+ const value=fixture(testContext);if(detached)git(value.root,['checkout','--detach']);
+ cli(value.root,['diff','clean-target']);const frozen=analysis(value.root);
+ const selectionPath=path.join(git(value.root,['rev-parse','--absolute-git-dir']),'ponytail-semantic-rebase','selection.txt');
+ fs.writeFileSync(selectionPath,`ponytail-semantic-rebase-selection-v1 ${frozen.analysisDigest}\n`);
+ git(value.root,detached?['checkout','source']:['checkout','--detach']);
+ const result=spawnSync(process.execPath,[path.resolve('dist/src/semantic-rebase.js'),'run','clean-target','--conflicts',selectionPath],{cwd:value.root,encoding:'utf8'});
+ assert.equal(result.status,2);assert.match(result.stderr,/source branch changed after analysis/);
+ assert.equal(git(value.root,['rev-parse','HEAD']),value.source);
+});
+
+test('retained V1 analysis and run state resume without changing their digest binding',testContext=>{
+ const value=fixture(testContext);cli(value.root,['diff','clean-target']);const frozen=analysis(value.root);
+ const {analysisDigest:ignoredDigest,...payload}=frozen;assert.ok(ignoredDigest);
+ const oldPayload={...payload,schemaVersion:1};
+ const oldAnalysis={...oldPayload,analysisDigest:crypto.createHash('sha256').update(JSON.stringify(oldPayload)).digest('hex')};
+ assert.equal(readSemanticRebaseAnalysisV1(oldAnalysis).sourceBranch,'source');
+ assert.throws(()=>readSemanticRebaseAnalysisV1({...oldAnalysis,sourceBranch:null}),/source branch/);
+ assert.throws(()=>readSemanticRebaseAnalysisV2(oldAnalysis),/schemaVersion/);
+ const stateDirectory=path.join(git(value.root,['rev-parse','--absolute-git-dir']),'ponytail-semantic-rebase');
+ fs.writeFileSync(path.join(stateDirectory,'analysis.json'),JSON.stringify(oldAnalysis));
+ const change=frozen.sourceChanges.find(item=>item.newPath==='source.txt');assert.ok(change);
+ const selectionPath=path.join(stateDirectory,'selection.txt');
+ fs.writeFileSync(selectionPath,`ponytail-semantic-rebase-selection-v1 ${oldAnalysis.analysisDigest}\n${change.id} - | retained analysis\n`);
+ assert.match(cli(value.root,['run','clean-target','--conflicts',selectionPath]),/semantic rebase stop/);
+ const currentRun:unknown=JSON.parse(fs.readFileSync(path.join(stateDirectory,'run.json'),'utf8'));
+ const parsedRun=SemanticRebaseRunReaders.V2(currentRun);
+ assert.equal(parsedRun.analysisDigest,oldAnalysis.analysisDigest);
+ const oldRun={...parsedRun,schemaVersion:1};
+ assert.throws(()=>SemanticRebaseRunReaders.V1({...oldRun,sourceBranch:null}),/source branch/);
+ fs.writeFileSync(path.join(stateDirectory,'run.json'),JSON.stringify(oldRun));
+ assert.match(cli(value.root,['status']),/semantic rebase stop/);
+ assert.match(cli(value.root,['continue']),/semantic rebase stop/);
+ const upgradedRun:unknown=JSON.parse(fs.readFileSync(path.join(stateDirectory,'run.json'),'utf8'));
+ assert.equal(SemanticRebaseRunReaders.V2(upgradedRun).analysisDigest,oldAnalysis.analysisDigest);
+ assert.match(cli(value.root,['abort']),/semantic rebase aborted/);
+ assert.equal(git(value.root,['rev-parse','HEAD']),value.source);
+});

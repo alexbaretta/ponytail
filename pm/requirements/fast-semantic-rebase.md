@@ -7,7 +7,8 @@
 **Approval:** Approved and activated by the stakeholder on 2026-10-13.
 
 **Source:** The stakeholder's 2026-10-13 aggregate-diff semantic-rebase design
-and explicit implementation instruction.
+and explicit implementation instruction. Native detached-source support follows
+the stakeholder-authorized 2026-10-18 campaign-management adoption.
 
 Ponytail must make semantic rebasing fast by separating semantic judgment from
 mechanical replay. An agent reviews one aggregate final-state diff for the
@@ -18,7 +19,7 @@ conflicts itself.
 The approved atomic obligations are:
 
 - `FSR-01`: `ponytail rebase diff <target>` freezes the merge base, source
-  tip, target tip, source branch, and ordered source commits, then emits one
+  tip, target tip, source branch or native detached state, and ordered source commits, then emits one
   deterministic human-readable stream containing stable IDs for both
   aggregate final-state diffs.
 - `FSR-02`: the agent records selected source changes and their optional

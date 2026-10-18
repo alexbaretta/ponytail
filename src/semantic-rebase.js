@@ -9,6 +9,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SemanticRebaseRunReaders = exports.SemanticRebaseSelectionReaders = exports.SemanticRebaseAnalysisReaders = void 0;
 exports.readSemanticRebaseAnalysisV1 = readSemanticRebaseAnalysisV1;
+exports.readSemanticRebaseAnalysisV2 = readSemanticRebaseAnalysisV2;
 exports.analyzeSemanticRebase = analyzeSemanticRebase;
 exports.readSemanticRebaseSelectionV1 = readSemanticRebaseSelectionV1;
 exports.startSemanticRebase = startSemanticRebase;
@@ -48,6 +49,14 @@ function git(args, options = {}) {
     return result;
 }
 function gitText(args) { return git(args).stdout.trim(); }
+function sourceBranch() {
+    const result = git(['symbolic-ref', '--quiet', '--short', 'HEAD'], { allowFailure: true });
+    if (result.status === 1)
+        return null;
+    if (result.status !== 0)
+        fail(result.stderr.trim() || 'cannot determine source branch', 1);
+    return result.stdout.trim();
+}
 function repositoryRoot() { return node_fs_1.default.realpathSync(gitText(['rev-parse', '--show-toplevel'])); }
 function gitDirectory() { return node_fs_1.default.realpathSync(gitText(['rev-parse', '--absolute-git-dir'])); }
 function stateDirectory() { return node_path_1.default.join(gitDirectory(), 'ponytail-semantic-rebase'); }
@@ -67,21 +76,23 @@ function changeValue(value) {
         fail('unsupported change kind');
     return { id: stringValue(value.id, 'change id'), side, kind, oldPath: stringValue(value.oldPath, 'old path'), newPath: stringValue(value.newPath, 'new path'), oldStart: integerValue(value.oldStart, 'old start'), oldCount: integerValue(value.oldCount, 'old count'), newStart: integerValue(value.newStart, 'new start'), newCount: integerValue(value.newCount, 'new count'), patch: stringValue(value.patch, 'change patch') };
 }
-function readSemanticRebaseAnalysisV1(value) {
+function analysisValue(value, schemaVersion) {
     if (!record(value))
         fail('analysis must be an object');
     exactKeys(value, ['schemaVersion', 'analysisDigest', 'repositoryRoot', 'gitDirectory', 'sourceBranch', 'sourceTip', 'target', 'targetTip', 'mergeBase', 'sourceCommits', 'targetChanges', 'sourceChanges'], 'analysis V1');
-    if (value.schemaVersion !== 1)
+    if (value.schemaVersion !== schemaVersion)
         fail('unsupported semantic rebase analysis schemaVersion');
     const targetChanges = Array.isArray(value.targetChanges) ? value.targetChanges.map(changeValue) : fail('targetChanges must be an array');
     const sourceChanges = Array.isArray(value.sourceChanges) ? value.sourceChanges.map(changeValue) : fail('sourceChanges must be an array');
-    const analysis = { schemaVersion: 1, analysisDigest: stringValue(value.analysisDigest, 'analysis digest'), repositoryRoot: stringValue(value.repositoryRoot, 'repository root'), gitDirectory: stringValue(value.gitDirectory, 'Git directory'), sourceBranch: stringValue(value.sourceBranch, 'source branch'), sourceTip: stringValue(value.sourceTip, 'source tip'), target: stringValue(value.target, 'target'), targetTip: stringValue(value.targetTip, 'target tip'), mergeBase: stringValue(value.mergeBase, 'merge base'), sourceCommits: stringArray(value.sourceCommits, 'source commits'), targetChanges, sourceChanges };
+    const analysis = { schemaVersion, analysisDigest: stringValue(value.analysisDigest, 'analysis digest'), repositoryRoot: stringValue(value.repositoryRoot, 'repository root'), gitDirectory: stringValue(value.gitDirectory, 'Git directory'), sourceBranch: schemaVersion === 2 && value.sourceBranch === null ? null : stringValue(value.sourceBranch, 'source branch'), sourceTip: stringValue(value.sourceTip, 'source tip'), target: stringValue(value.target, 'target'), targetTip: stringValue(value.targetTip, 'target tip'), mergeBase: stringValue(value.mergeBase, 'merge base'), sourceCommits: stringArray(value.sourceCommits, 'source commits'), targetChanges, sourceChanges };
     const { analysisDigest, ...payload } = analysis;
     if (analysisDigest !== sha256(canonicalAnalysis(payload)))
         fail('analysis digest mismatch');
-    return analysis;
+    return { ...analysis, schemaVersion: 2 };
 }
-exports.SemanticRebaseAnalysisReaders = { V1: readSemanticRebaseAnalysisV1 };
+function readSemanticRebaseAnalysisV1(value) { return analysisValue(value, 1); }
+function readSemanticRebaseAnalysisV2(value) { return analysisValue(value, 2); }
+exports.SemanticRebaseAnalysisReaders = { V1: readSemanticRebaseAnalysisV1, V2: readSemanticRebaseAnalysisV2 };
 exports.SemanticRebaseSelectionReaders = { V1: readSemanticRebaseSelectionV1 };
 function stripPrefixPath(line) { const value = line.slice(4); return value === '/dev/null' ? value : value.replace(/^[ab]\//u, ''); }
 function parseRange(text) { const [startText, countText] = text.split(','); const start = Number(startText); const count = countText === undefined ? 1 : Number(countText); if (!Number.isSafeInteger(start) || !Number.isSafeInteger(count) || start < 0 || count < 0)
@@ -162,7 +173,7 @@ function changes(side, text) {
     return result.map((item, index) => ({ ...item, id: `${prefix}${String(index + 1).padStart(4, '0')}` }));
 }
 function aggregateDiff(base, tip, context = 3) { return git(['diff', '--binary', '--find-renames', '--no-ext-diff', '--no-color', `--unified=${context}`, base, tip]).stdout; }
-function renderReview(analysis) { const section = (title, items) => `${title}\n${'='.repeat(title.length)}\n` + items.map(item => `\n[${item.id}] ${item.kind} ${item.oldPath} -> ${item.newPath} -${item.oldStart},${item.oldCount} +${item.newStart},${item.newCount}\n${item.patch}`).join(''); return `PONYTAIL SEMANTIC REBASE ANALYSIS V1\nanalysis ${analysis.analysisDigest}\nmerge-base ${analysis.mergeBase}\ntarget ${analysis.targetTip}\nsource ${analysis.sourceTip}\nsource-commits ${analysis.sourceCommits.join(' ')}\n\n${section('TARGET FINAL CHANGES', analysis.targetChanges)}\n${section('SOURCE FINAL CHANGES', analysis.sourceChanges)}`; }
+function renderReview(analysis) { const section = (title, items) => `${title}\n${'='.repeat(title.length)}\n` + items.map(item => `\n[${item.id}] ${item.kind} ${item.oldPath} -> ${item.newPath} -${item.oldStart},${item.oldCount} +${item.newStart},${item.newCount}\n${item.patch}`).join(''); return `PONYTAIL SEMANTIC REBASE ANALYSIS V${analysis.schemaVersion}\nanalysis ${analysis.analysisDigest}\nmerge-base ${analysis.mergeBase}\ntarget ${analysis.targetTip}\nsource ${analysis.sourceTip}\nsource-commits ${analysis.sourceCommits.join(' ')}\n\n${section('TARGET FINAL CHANGES', analysis.targetChanges)}\n${section('SOURCE FINAL CHANGES', analysis.sourceChanges)}`; }
 function ensureNoRebase() { if (node_fs_1.default.existsSync(node_path_1.default.join(gitDirectory(), 'rebase-merge')) || node_fs_1.default.existsSync(node_path_1.default.join(gitDirectory(), 'rebase-apply')))
     fail('a Git rebase is already active'); }
 function ensureClean() { if (gitText(['status', '--porcelain=v1', '--untracked-files=normal']).length > 0)
@@ -171,16 +182,16 @@ function resolveCommit(revision) { if (revision.startsWith('-'))
     fail('revision must not begin with -'); return gitText(['rev-parse', '--verify', `${revision}^{commit}`]); }
 function writeAnalysis(analysis) { writeAtomic(statePath(ANALYSIS_FILE), `${JSON.stringify(analysis, null, 2)}\n`); }
 function readAnalysis() { if (!node_fs_1.default.existsSync(statePath(ANALYSIS_FILE)))
-    fail('run ponytail rebase diff first'); return readSemanticRebaseAnalysisV1(JSON.parse(node_fs_1.default.readFileSync(statePath(ANALYSIS_FILE), 'utf8'))); }
+    fail('run ponytail rebase diff first'); const value = JSON.parse(node_fs_1.default.readFileSync(statePath(ANALYSIS_FILE), 'utf8')); return record(value) && value.schemaVersion === 1 ? readSemanticRebaseAnalysisV1(value) : readSemanticRebaseAnalysisV2(value); }
 function validateFrozen(analysis, requireSourceTip) { if (repositoryRoot() !== analysis.repositoryRoot || gitDirectory() !== analysis.gitDirectory)
     fail('analysis belongs to another worktree'); if (resolveCommit(analysis.target) !== analysis.targetTip)
     fail('target changed after analysis; rerun diff'); if (gitText(['merge-base', analysis.sourceTip, analysis.targetTip]) !== analysis.mergeBase)
     fail('merge base changed after analysis'); if (requireSourceTip && resolveCommit('HEAD') !== analysis.sourceTip)
-    fail('source tip changed after analysis'); const branch = gitText(['symbolic-ref', '--quiet', '--short', 'HEAD']); if (requireSourceTip && branch !== analysis.sourceBranch)
+    fail('source tip changed after analysis'); const branch = sourceBranch(); if (requireSourceTip && branch !== analysis.sourceBranch)
     fail('source branch changed after analysis'); }
-function analyzeSemanticRebase(target) { ensureNoRebase(); ensureClean(); const root = repositoryRoot(); const directory = gitDirectory(); const sourceBranch = gitText(['symbolic-ref', '--quiet', '--short', 'HEAD']); const sourceTip = resolveCommit('HEAD'); const targetTip = resolveCommit(target); const mergeBase = gitText(['merge-base', sourceTip, targetTip]); const sourceCommits = gitText(['rev-list', '--reverse', '--topo-order', `${mergeBase}..${sourceTip}`]).split('\n').filter(Boolean); if (sourceCommits.length === 0)
+function analyzeSemanticRebase(target) { ensureNoRebase(); ensureClean(); const root = repositoryRoot(); const directory = gitDirectory(); const branch = sourceBranch(); const sourceTip = resolveCommit('HEAD'); const targetTip = resolveCommit(target); const mergeBase = gitText(['merge-base', sourceTip, targetTip]); const sourceCommits = gitText(['rev-list', '--reverse', '--topo-order', `${mergeBase}..${sourceTip}`]).split('\n').filter(Boolean); if (sourceCommits.length === 0)
     fail('source branch has no commits to replay'); const parents = sourceCommits.map(commit => gitText(['rev-list', '--parents', '-n', '1', commit]).split(' ')); if (parents.some(parts => parts.length !== 2))
-    fail('merge commits are not supported by semantic rebase'); const targetChanges = changes('target', aggregateDiff(mergeBase, targetTip)); const sourceChanges = changes('source', aggregateDiff(mergeBase, sourceTip)); const analysis = encodeAnalysis({ schemaVersion: 1, repositoryRoot: root, gitDirectory: directory, sourceBranch, sourceTip, target, targetTip, mergeBase, sourceCommits, targetChanges, sourceChanges }); writeAnalysis(analysis); const review = renderReview(analysis); writeAtomic(statePath(REVIEW_FILE), review); return analysis; }
+    fail('merge commits are not supported by semantic rebase'); const targetChanges = changes('target', aggregateDiff(mergeBase, targetTip)); const sourceChanges = changes('source', aggregateDiff(mergeBase, sourceTip)); const analysis = encodeAnalysis({ schemaVersion: 2, repositoryRoot: root, gitDirectory: directory, sourceBranch: branch, sourceTip, target, targetTip, mergeBase, sourceCommits, targetChanges, sourceChanges }); writeAnalysis(analysis); const review = renderReview(analysis); writeAtomic(statePath(REVIEW_FILE), review); return analysis; }
 function readSemanticRebaseSelectionV1(text, analysis) { if (typeof text !== 'string')
     fail('selection must be text'); const lines = text.split(/\r?\n/u).filter(line => line.trim().length > 0); const header = /^ponytail-semantic-rebase-selection-v1 ([a-f0-9]{64})$/u.exec(lines.shift() ?? ''); if (!header?.[1])
     fail('selection requires a V1 analysis header'); const entries = lines.map((line, index) => { const match = /^(S\d{4})\s+(-|T\d{4}(?:,T\d{4})*)\s*(?:\|\s*(.*))?$/u.exec(line); if (!match?.[1] || !match[2])
@@ -247,13 +258,15 @@ function writeRun(run) { writeAtomic(statePath(RUN_FILE), `${JSON.stringify(run,
 function stringArrayRecord(value, label) { if (!record(value))
     fail(`${label} must be an object`); const result = {}; for (const [id, items] of Object.entries(value))
     result[id] = stringArray(items, `${label} ${id}`); return result; }
-function runValue(value) { if (!record(value))
-    fail('run state must be an object'); exactKeys(value, ['schemaVersion', 'analysisDigest', 'selectionDigest', 'originalTip', 'sourceBranch', 'targetTip', 'contributors', 'selectionTargets', 'plannedCommits', 'reviewedCommits', 'status', 'residualPath'], 'run V1'); if (value.schemaVersion !== 1)
+function runValue(value, schemaVersion) { if (!record(value))
+    fail('run state must be an object'); exactKeys(value, ['schemaVersion', 'analysisDigest', 'selectionDigest', 'originalTip', 'sourceBranch', 'targetTip', 'contributors', 'selectionTargets', 'plannedCommits', 'reviewedCommits', 'status', 'residualPath'], 'run V1'); if (value.schemaVersion !== schemaVersion)
     fail('unsupported run schemaVersion'); const contributors = stringArrayRecord(value.contributors, 'contributors'); const selectionTargets = stringArrayRecord(value.selectionTargets, 'selection targets'); const status = stringValue(value.status, 'run status'); if (status !== 'prepared' && status !== 'running' && status !== 'residual' && status !== 'completed')
-    fail('invalid run status'); const residualPath = value.residualPath === null ? null : stringValue(value.residualPath, 'residual path'); return { schemaVersion: 1, analysisDigest: stringValue(value.analysisDigest, 'analysis digest'), selectionDigest: stringValue(value.selectionDigest, 'selection digest'), originalTip: stringValue(value.originalTip, 'original tip'), sourceBranch: stringValue(value.sourceBranch, 'source branch'), targetTip: stringValue(value.targetTip, 'target tip'), contributors, selectionTargets, plannedCommits: stringArray(value.plannedCommits, 'planned commits'), reviewedCommits: stringArray(value.reviewedCommits, 'reviewed commits'), status, residualPath }; }
-exports.SemanticRebaseRunReaders = { V1: runValue };
+    fail('invalid run status'); const residualPath = value.residualPath === null ? null : stringValue(value.residualPath, 'residual path'); return { schemaVersion: 2, analysisDigest: stringValue(value.analysisDigest, 'analysis digest'), selectionDigest: stringValue(value.selectionDigest, 'selection digest'), originalTip: stringValue(value.originalTip, 'original tip'), sourceBranch: schemaVersion === 2 && value.sourceBranch === null ? null : stringValue(value.sourceBranch, 'source branch'), targetTip: stringValue(value.targetTip, 'target tip'), contributors, selectionTargets, plannedCommits: stringArray(value.plannedCommits, 'planned commits'), reviewedCommits: stringArray(value.reviewedCommits, 'reviewed commits'), status, residualPath }; }
+function readSemanticRebaseRunV1(value) { return runValue(value, 1); }
+function readSemanticRebaseRunV2(value) { return runValue(value, 2); }
+exports.SemanticRebaseRunReaders = { V1: readSemanticRebaseRunV1, V2: readSemanticRebaseRunV2 };
 function readRun() { if (!node_fs_1.default.existsSync(statePath(RUN_FILE)))
-    fail('no semantic rebase run is prepared'); return runValue(JSON.parse(node_fs_1.default.readFileSync(statePath(RUN_FILE), 'utf8'))); }
+    fail('no semantic rebase run is prepared'); const value = JSON.parse(node_fs_1.default.readFileSync(statePath(RUN_FILE), 'utf8')); return record(value) && value.schemaVersion === 1 ? readSemanticRebaseRunV1(value) : readSemanticRebaseRunV2(value); }
 function shellQuote(value) { return `'${value.replace(/'/gu, "'\\''")}'`; }
 function rebaseActive() { return node_fs_1.default.existsSync(node_path_1.default.join(gitDirectory(), 'rebase-merge')) || node_fs_1.default.existsSync(node_path_1.default.join(gitDirectory(), 'rebase-apply')); }
 function stoppedOriginalCommit() { const headTitle = gitText(['show', '-s', '--format=%s', 'HEAD']); const analysis = readAnalysis(); const titleMatches = analysis.sourceCommits.filter(commit => gitText(['show', '-s', '--format=%s', commit]) === headTitle); if (titleMatches.length === 1)
@@ -296,7 +309,7 @@ function startSemanticRebase(selectionFile) { ensureNoRebase(); ensureClean(); c
     contributors[entry.sourceId] = contributingCommits(analysis, change);
     selectionTargets[entry.sourceId] = entry.targetIds;
 } const plannedCommits = analysis.sourceCommits.filter(commit => Object.values(contributors).some(commits => commits.includes(commit))); if (selection.entries.length > 0 && plannedCommits.length === 0)
-    fail('selected changes have no contributing source commit'); const prepared = { schemaVersion: 1, analysisDigest: analysis.analysisDigest, selectionDigest: selectionDigest(selection), originalTip: analysis.sourceTip, sourceBranch: analysis.sourceBranch, targetTip: analysis.targetTip, contributors, selectionTargets, plannedCommits, reviewedCommits: [], status: 'prepared', residualPath: null }; writeRun(prepared); return dossier(analysis, launchRebase(analysis, prepared)); }
+    fail('selected changes have no contributing source commit'); const prepared = { schemaVersion: 2, analysisDigest: analysis.analysisDigest, selectionDigest: selectionDigest(selection), originalTip: analysis.sourceTip, sourceBranch: analysis.sourceBranch, targetTip: analysis.targetTip, contributors, selectionTargets, plannedCommits, reviewedCommits: [], status: 'prepared', residualPath: null }; writeRun(prepared); return dossier(analysis, launchRebase(analysis, prepared)); }
 function changedPaths() { const values = [gitText(['diff', '--name-only']), gitText(['diff', '--cached', '--name-only'])].flatMap(text => text.split('\n').filter(Boolean)); return [...new Set(values)]; }
 function continueSemanticRebase() { const analysis = readAnalysis(); const run = readRun(); if (run.analysisDigest !== analysis.analysisDigest)
     fail('run state belongs to another analysis'); if (run.status === 'completed')
