@@ -81,14 +81,14 @@ test('retains exact V1 reads and validates latest V2 search policy', () => {
     );
   }
 
-  traceabilityFixture.configuration.schemaVersion = 5;
+  traceabilityFixture.configuration.schemaVersion = 6;
   fs.writeFileSync(
     traceabilityFixture.configurationPath,
     `${JSON.stringify(traceabilityFixture.configuration, null, 2)}\n`,
   );
   assert.throws(
     () => loadTraceabilityConfiguration(traceabilityFixture.configurationPath),
-    /unsupported traceability configuration schemaVersion: 5/u,
+    /unsupported traceability configuration schemaVersion: 6/u,
   );
 });
 

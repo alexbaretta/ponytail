@@ -33,6 +33,11 @@ const sources: readonly string[] = [
   'src/semantic-rebase.ts',
   'src/traceability-projection.ts',
   'skills/requirements-traceability/scripts/coverage-rules.ts',
+  'skills/requirements-traceability/scripts/traceability-graph.ts',
+  'skills/requirements-traceability/scripts/traceability-discovery.ts',
+  'skills/requirements-traceability/scripts/traceability-project.ts',
+  'skills/requirements-traceability/scripts/traceability-semantic.ts',
+  'skills/requirements-traceability/scripts/traceability-v5.ts',
   'src/index-progress.ts',
   'src/project-index-search-publication.ts',
   'ponytail-mcp/index.ts',
@@ -77,6 +82,19 @@ if (!(argv.length === 0 || argv.length === 1 && argv[0] === '--check')) {
     process.stderr.write(`${portableLosslessJson} differs from its installed dependency; run npm run build\n`);
     process.exitCode = 1;
   }
+  const graphDependencies = [
+    {output:'skills/requirements-traceability/scripts/lossless-json.js',text:dependencyText},
+    {output:'skills/requirements-traceability/scripts/commonmark.js',text:
+      `// Ponytail packaging copyright (c) 2026 Alex Baretta. All rights reserved.\n// Generated from the installed commonmark dependency by npm run build.\n/*\n${fs.readFileSync(path.join(root,'node_modules/commonmark/LICENSE'),'utf8')}*/\n${fs.readFileSync(path.join(path.dirname(require.resolve('commonmark')),'commonmark.min.js'),'utf8')}`},
+  ];
+  for (const dependency of graphDependencies) {
+    const output = path.join(root,dependency.output);
+    if (argv.length === 0) fs.writeFileSync(output,dependency.text);
+    else if (fs.readFileSync(output,'utf8') !== dependency.text) {
+      process.stderr.write(`${dependency.output} differs from its installed dependency; run npm run build\n`);
+      process.exitCode = 1;
+    }
+  }
   const registryPath=path.join(root,'src/cli-command-registry.v1.json');
   const registryText=JSON.stringify(cliCommandRegistryV1,null,2)+'\n';
   if(argv.length===0) fs.writeFileSync(registryPath,registryText);
@@ -89,8 +107,8 @@ if (!(argv.length === 0 || argv.length === 1 && argv[0] === '--check')) {
     const compiled = fs.readFileSync(path.join(root, 'dist', relative), 'utf8');
     const sourceText = fs.readFileSync(path.join(root, source), 'utf8');
     const sourceHeader = sourceText.split('\n').slice(0, sourceText.startsWith('#!') ? 3 : 2).join('\n');
-    const portableCompiled = source.startsWith('skills/plan-execution/scripts/')
-      ? compiled.replaceAll('require("lossless-json")', 'require("./lossless-json.js")') : compiled;
+    const portableCompiled = source.startsWith('skills/plan-execution/scripts/') || source.startsWith('skills/requirements-traceability/scripts/')
+      ? compiled.replaceAll('require("lossless-json")', 'require("./lossless-json.js")').replaceAll('require("commonmark")','require("./commonmark.js")') : compiled;
     const generated = `${sourceHeader}\n// Generated from ${source} by npm run build.\n${portableCompiled.replace(/^#![^\n]*\n/, '')}`;
     const output = path.join(root, relative);
     if (argv.length === 0) fs.writeFileSync(output, generated);

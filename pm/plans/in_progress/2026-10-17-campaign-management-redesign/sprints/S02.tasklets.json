@@ -29,6 +29,12 @@
         "S02-F04"
       ],
       "validation_tasklet": "S02-F05-T02"
+    },
+    "S02-F06": {
+      "depends_on": [
+        "S02-F05"
+      ],
+      "validation_tasklet": "S02-F06-T03"
     }
   },
   "tasklets": {
@@ -183,6 +189,61 @@
       "planned_paths": [
         "tests/traceability-semantic.test.ts",
         "tsts/test/cli.test.ts"
+      ]
+    },
+    "S02-F06-T01": {
+      "feature": "S02-F06",
+      "depends_on": [
+        "S02-F05-T02"
+      ],
+      "affinity": [
+        "graph"
+      ],
+      "risk": "normal",
+      "planned_paths": [
+        "skills/requirements-traceability/scripts/traceability-v5.ts",
+        "skills/requirements-traceability/scripts/traceability-project.ts"
+      ]
+    },
+    "S02-F06-T02": {
+      "feature": "S02-F06",
+      "depends_on": [
+        "S02-F05-T02",
+        "S02-F06-T01"
+      ],
+      "affinity": [
+        "graph"
+      ],
+      "risk": "normal",
+      "planned_paths": [
+        "skills/requirements-traceability/scripts/check-traceability.js",
+        "src/project-index.js",
+        "scripts/build-runtime.ts",
+        "skills/requirements-traceability/scripts/traceability-graph.js",
+        "skills/requirements-traceability/scripts/traceability-discovery.js",
+        "skills/requirements-traceability/scripts/traceability-project.js",
+        "skills/requirements-traceability/scripts/traceability-semantic.js",
+        "skills/requirements-traceability/scripts/traceability-v5.js",
+        "skills/requirements-traceability/scripts/commonmark.js",
+        "skills/requirements-traceability/scripts/lossless-json.js",
+        "versioned-data-contracts.json",
+        "AGENTS.md"
+      ]
+    },
+    "S02-F06-T03": {
+      "feature": "S02-F06",
+      "depends_on": [
+        "S02-F05-T02",
+        "S02-F06-T01",
+        "S02-F06-T02"
+      ],
+      "affinity": [
+        "graph"
+      ],
+      "risk": "normal",
+      "planned_paths": [
+        "tests/traceability-v5.test.ts",
+        "tests/requirements-traceability.test.js"
       ]
     }
   },

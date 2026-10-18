@@ -7,6 +7,8 @@ const { indexProgress } = require('./index-progress');
 const { publishIndexSearchDocuments } = require('./project-index-search-publication');
 const { renderCliHelp } = require('./cli-help');
 const { requiredCoverageRules } = require('../skills/requirements-traceability/scripts/coverage-rules');
+const { traceabilityV5IndexSources, projectTraceabilityV5File, normalizeTraceabilityV5Payloads,
+  evaluateTraceabilityV5Coverage, traceabilityV5CoverageRuleCount, traceabilityV5RequirementPredicate } = require('../skills/requirements-traceability/scripts/traceability-v5');
 const crypto = require('node:crypto');
 const fs = require('node:fs');
 const os = require('node:os');
@@ -510,6 +512,7 @@ function declaredEntityId(kind, id, relativePath) {
 }
 
 function parseFile(configuration, relativePath, source) {
+  if (configuration.schemaVersion === 5) return {schemaVersion:1,...projectTraceabilityV5File(configuration,relativePath,source)};
   const entities = new Map();
   const relationships = new Map();
   for (const requirement of configuration.requirements.filter(
@@ -589,16 +592,18 @@ function assertProjectionCurrent(expected, collect) {
   }
 }
 
-function collectTraceabilityProjection(configurationPath, onProgress) {
+function collectTraceabilityProjection(configurationPath, onProgress, invokingRoot = process.cwd()) {
   configurationPath = fs.realpathSync(configurationPath);
-  const configuration = loadTraceabilityConfiguration(configurationPath);
+  const configuration = loadTraceabilityConfiguration(configurationPath, invokingRoot);
   const root = fs.realpathSync(configuration.root);
   const relativeConfigurationPath = path.relative(root, path.resolve(configurationPath));
   const paths = [...new Set([
     relativeConfigurationPath,
-    ...configuration.requirements.map(requirement => requirement.sourcePath),
-    ...configuration.artifacts.map(artifact => artifact.path),
-    ...configuration.entities.map(entity => entity.path),
+    ...(configuration.schemaVersion === 5 ? traceabilityV5IndexSources(configuration) : [
+      ...configuration.requirements.map(requirement => requirement.sourcePath),
+      ...configuration.artifacts.map(artifact => artifact.path),
+      ...configuration.entities.map(entity => entity.path),
+    ]),
   ])].sort();
   for (const relativePath of paths) {
     const absolutePath = path.join(root, relativePath);
@@ -615,6 +620,8 @@ function collectTraceabilityProjection(configurationPath, onProgress) {
     Buffer.from('traceability-v2\0'),
     fs.readFileSync(__filename),
     fs.readFileSync(require.resolve('../skills/requirements-traceability/scripts/check-traceability')),
+    ...(configuration.schemaVersion === 5 ? ['traceability-v5','traceability-project','traceability-discovery','traceability-graph','commonmark'].map(module =>
+      fs.readFileSync(require.resolve(`../skills/requirements-traceability/scripts/${module}`))) : []),
   ]));
   const states = repositoryFileStates(root);
   onProgress?.(0, paths.length, 'traceability', 'source files');
@@ -646,12 +653,13 @@ function collectTraceabilityProjection(configurationPath, onProgress) {
     parserIdentity,
     stateDigest,
     searchableFields: configuration.index.searchableFields,
+    graphVersion: configuration.schemaVersion,
     readPayload: ProjectIndexStorageReaders.variants.V1,
-    normalizePayloads: normalizeTraceabilityPayloads,
+    normalizePayloads: configuration.schemaVersion === 5 ? normalizeTraceabilityV5Payloads : normalizeTraceabilityPayloads,
     files,
   };
   projection.assertCurrent = () => assertProjectionCurrent(projection,
-    () => collectTraceabilityProjection(configurationPath, onProgress));
+    () => collectTraceabilityProjection(configurationPath, onProgress, invokingRoot));
   return projection;
 }
 
@@ -1214,7 +1222,7 @@ async function publishTraceabilityGeneration(client, projection, options = {}) {
           projection.searchableFields.includes('requirementId')) {
         const document = searchDocuments.get(relationship.sourceEntityId);
         document.role = projection.searchableFields.includes('role') ? relationship.role : null;
-        document.requirementId = projection.searchableFields.includes('requirementId')
+        document.requirementId = projection.graphVersion !== 5 && projection.searchableFields.includes('requirementId')
           ? relationship.targetEntityId : null;
       }
       publishedRecords++;publicationProgress();
@@ -1435,7 +1443,9 @@ async function searchTraceability(query, filters, options = {}) {
     })) {
       if (filters[key] !== null) {
         values.push(filters[key]);
-        clauses.push(`document.${column} = $${values.length}`);
+        clauses.push(projection.graphVersion === 5 && key === 'requirement'
+          ? traceabilityV5RequirementPredicate(values.length)
+          : `document.${column} = $${values.length}`);
       }
     }
     const result = await client.query(`
@@ -1499,6 +1509,7 @@ function scopedTraceabilityEntityIds(configuration, projection, scope, entities,
   if (scope.kind === 'repository') {
     return { id: null, entityIds: new Set(entities.map(entity => entity.entity_id)) };
   }
+  if (configuration.schemaVersion === 5) throw new ProjectIndexError('TRACEABILITY_SCOPE_UNSUPPORTED','V5 requires an explicit campaign graph scope; historical plan scope selection is unavailable');
   const campaign = resolveCampaignScope(projection.worktreePath, scope.input);
   const selectedPlans = scope.kind === 'campaign'
     ? campaign.plans
@@ -1543,6 +1554,10 @@ function scopedTraceabilityEntityIds(configuration, projection, scope, entities,
 }
 
 function evaluateValidationRules(configuration, entities, relationships, entityIds) {
+  if (configuration.schemaVersion === 5) return evaluateTraceabilityV5Coverage({
+    entities:entities.filter(entity => entityIds.has(entity.entity_id)).map(entity => ({entityId:entity.entity_id,entityKind:entity.entity_kind,path:entity.path,line:entity.line,unitName:entity.entity_id,annotation:null,description:null})),
+    relationships:relationships.filter(edge => entityIds.has(edge.source_entity_id) && entityIds.has(edge.target_entity_id)).map(edge => ({sourceEntityId:edge.source_entity_id,targetEntityId:edge.target_entity_id,role:edge.role})),
+  });
   const entityById = new Map(entities.map(entity => [entity.entity_id, entity]));
   const requirementById = new Map(configuration.requirements.map(requirement =>
     [requirement.id, requirement]));
@@ -1625,7 +1640,7 @@ async function validateTraceability(scope, options = {}) {
       corpus: 'traceability',
       scope: { kind: scope.kind, id: selected.id },
       generationId: generation.generation_id,
-      rules: requiredCoverageRules.length + configuration.validationRules.length,
+      rules: configuration.schemaVersion === 5 ? traceabilityV5CoverageRuleCount : requiredCoverageRules.length + configuration.validationRules.length,
       gaps: evaluateValidationRules(
         configuration,
         entityResult.rows,

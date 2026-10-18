@@ -447,9 +447,9 @@
         "module": "skills/requirements-traceability/scripts/check-traceability.js",
         "readerRegistryExport": "TraceabilityConfigReaders"
       },
-      "currentVersion": "V4",
-      "versions": ["V1", "V2", "V3", "V4"],
-      "supportedReadVersions": ["V1", "V2", "V3", "V4"],
+      "currentVersion": "V5",
+      "versions": ["V1", "V2", "V3", "V4", "V5"],
+      "supportedReadVersions": ["V1", "V2", "V3", "V4", "V5"],
       "supportedDowngradeVersions": []
     },
     {

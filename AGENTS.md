@@ -76,6 +76,9 @@ services. `PROJECT_STRUCTURE.md` is authoritative for that boundary.
   `skills/requirements-traceability/scripts/traceability-semantic.ts`, using
   `lossless-json`. Graph protocol numbers are nonnegative safe-integer tokens;
   focused proof: `node --test dist/tests/traceability-semantic.test.js`.
+  V5 traceability configuration uses the same integer-token policy through
+  `skills/requirements-traceability/scripts/traceability-v5.ts`; focused proof:
+  `node --test dist/tests/traceability-v5.test.js`.
   Obligation/campaign numbers are safe integers, validated before native conversion;
   TSTS retains lossless numeric values. Focused proof:
   `node --test tsts/dist/test/lossless-json.test.js`, `node --test
