@@ -29,11 +29,14 @@ function discoverTraceabilitySource(traceabilitySource) {
         if (traceabilitySource.kind === 'markdown') {
             if (codeLines.has(lineNumber))
                 continue;
-            const declaration = /^(?:#{1,6}\s+|(?:[-+*]|\d+[.)])\s+\*\*)(REQ-[A-Z0-9-]+|OBL-[A-Z0-9-]+|ACC-[A-Z0-9-]+)(?=\s|:|\*|$)/u.exec(trimmed)
-                ?? /^\*\*Identifier:\*\*\s+`?(REQ-[A-Z0-9-]+)`?\s*$/u.exec(trimmed);
-            const id = declaration?.[1];
+            const typedDeclaration = /^#{1,6}\s+(requirement|obligation|acceptance)\s+([A-Z][A-Z0-9-]*)(?=\s|:|$)/u.exec(trimmed);
+            const identifier = /^\*\*Identifier:\*\*\s+`?([A-Z][A-Z0-9-]*)`?\s*$/u.exec(trimmed);
+            const declaration = /^(?:#{1,6}\s+|(?:[-+*]|\d+[.)])\s+\*\*)(REQ-[A-Z0-9-]+|OBL-[A-Z0-9-]+|ACC-[A-Z0-9-]+)(?=\s|:|\*|$)/u.exec(trimmed);
+            const id = typedDeclaration?.[2] ?? identifier?.[1] ?? declaration?.[1];
             if (id) {
-                const kind = id.startsWith('REQ-') ? 'requirement' : id.startsWith('OBL-') ? 'obligation' : 'acceptance';
+                const declaredKind = typedDeclaration?.[1];
+                const kind = declaredKind === 'requirement' || declaredKind === 'obligation' || declaredKind === 'acceptance'
+                    ? declaredKind : identifier || id.startsWith('REQ-') ? 'requirement' : id.startsWith('OBL-') ? 'obligation' : 'acceptance';
                 markdownTraceabilityGraphEntity = { id, kind, path: traceabilitySource.path, line: lineNumber };
                 entities.push(markdownTraceabilityGraphEntity);
             }

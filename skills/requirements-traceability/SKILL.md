@@ -63,9 +63,13 @@ requirements root, normally `pm/requirements`. Keep individually identified
 acceptances in the UAT root, normally `pm/uat`. Every source has a stable ID;
 links must resolve to exactly one declaration of the expected kind.
 
-Declare Markdown IDs with an ATX heading beginning with `REQ-`, `OBL-` or `ACC-`,
-or a bold-ID list label. A requirement may also use `**Identifier:**` followed by
-its backticked ID. IDs use uppercase letters, digits and hyphens. Incidental
+Declare Markdown IDs with an ATX heading containing an explicit kind and ID,
+such as `## requirement ACC-LOGIN`, `## obligation LOGIN-ATOMIC`, or
+`## acceptance LOGIN-CHECK`. Preserve existing IDs; their prefixes need not
+encode their kind. Prefix-based headings and bold-ID list labels beginning with
+`REQ-`, `OBL-` or `ACC-` retain their respective kinds when no explicit kind is
+given. A requirement may also use `**Identifier:**` followed by its backticked
+ID, regardless of prefix. IDs use uppercase letters, digits and hyphens. Incidental
 mentions and fenced examples are not declarations. Place each Markdown edge
 after its own declaration, before another declaration:
 

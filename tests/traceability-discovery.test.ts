@@ -5,6 +5,32 @@ import test from 'node:test';
 import {discoverTraceabilitySource, type TraceabilitySource} from '../skills/requirements-traceability/scripts/traceability-discovery.js';
 import {validateTraceabilityGraph, type TraceabilityGraph} from '../skills/requirements-traceability/scripts/traceability-graph.js';
 
+// Traceability: verifies ACC-CM-GRAPH from unit-test TEST-CM-DISCOVER-EXPLICIT-KIND
+test('explicit Markdown kinds preserve IDs without interpreting their prefixes', () => {
+ const discovery = discoverTraceabilitySource({kind:'markdown',path:'pm/requirements/a.md',text:[
+  '## requirement ACC-LOGIN: existing requirement identity',
+  '## obligation LOGIN-ATOMIC: atomic condition',
+  'Traceability: decomposes ACC-LOGIN from obligation LOGIN-ATOMIC',
+  '## acceptance REQ-LOGIN-CHECK: existing acceptance identity',
+  'Traceability: verifies LOGIN-ATOMIC from acceptance REQ-LOGIN-CHECK',
+  '**Identifier:** `GWEN-IDENTITY`',
+  '```markdown',
+  '## requirement ACC-EXAMPLE',
+  '```',
+ ].join('\n')});
+ assert.deepEqual(discovery.findings, []);
+ assert.deepEqual(discovery.graph.entities.map(({id,kind}) => ({id,kind})), [
+  {id:'ACC-LOGIN',kind:'requirement'},
+  {id:'LOGIN-ATOMIC',kind:'obligation'},
+  {id:'REQ-LOGIN-CHECK',kind:'acceptance'},
+  {id:'GWEN-IDENTITY',kind:'requirement'},
+ ]);
+ assert.deepEqual(discovery.graph.relationships, [
+  {source:'LOGIN-ATOMIC',role:'decomposes',target:'ACC-LOGIN'},
+  {source:'REQ-LOGIN-CHECK',role:'verifies',target:'LOGIN-ATOMIC'},
+ ]);
+});
+
 // Traceability: verifies ACC-CM-ACCEPTANCE-COVERAGE from unit-test TEST-CM-DISCOVER-UNREFERENCED
 test('source discovery inventories an acceptance with no incoming test marker', () => {
  const traceabilitySource: TraceabilitySource = {kind:'markdown',path:'pm/uat/a.md',text:[

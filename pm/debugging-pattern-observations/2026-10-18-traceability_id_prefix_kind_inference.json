@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-10-18-traceability_id_prefix_kind_inference",
+  "recorded_at": "2026-10-18T09:46:57-07:00",
+  "source_references": [
+    "pm/plans/in_progress/2026-10-17-campaign-management-redesign/plan.md"
+  ],
+  "context": {
+    "languages": [
+      "typescript"
+    ],
+    "frameworks": [
+      "commonmark"
+    ],
+    "components": [
+      "traceability-discovery"
+    ],
+    "affected_boundaries": [
+      "canonical Markdown declaration discovery"
+    ],
+    "code_references": [
+      "skills/requirements-traceability/scripts/traceability-discovery.ts"
+    ]
+  },
+  "observed_behavior": "Gwen adoption could not retain requirement IDs outside REQ- or requirement IDs beginning ACC-.",
+  "expected_behavior": "Stable IDs can be preserved with their declared entity kinds.",
+  "causal_mechanism": "Markdown discovery recognized only three ID prefixes and inferred kind from the prefix.",
+  "anti_pattern": {
+    "structural_description": "Identity spelling doubled as an implicit type discriminator.",
+    "why_it_fails": "Existing project identities need not encode graph entity kind."
+  },
+  "correct_pattern": {
+    "required_invariant": "Explicit declaration kind determines entity kind independently of ID prefix.",
+    "implementation_description": "Typed ATX headings declare kind and ID; Identifier declares a requirement. Existing implicit prefix forms retain their meaning."
+  },
+  "applicability_conditions": [
+    "A project adopts the graph while retaining existing IDs."
+  ],
+  "known_non_matches": [
+    "Code annotations already declare source kind explicitly."
+  ],
+  "confirmation_evidence": [
+    "The focused explicit-kind regression failed with missing-declaration findings before the repair."
+  ],
+  "regression_proofs": [
+    "tests/traceability-discovery.test.ts: explicit Markdown kinds preserve IDs without interpreting their prefixes"
+  ]
+}
