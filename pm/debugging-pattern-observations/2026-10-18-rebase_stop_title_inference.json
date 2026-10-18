@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-10-18-rebase_stop_title_inference",
+  "recorded_at": "2026-10-18T11:01:12-07:00",
+  "source_references": [
+    "pm/requirements/fast-semantic-rebase.md",
+    "pm/uat/fast-semantic-rebase.md"
+  ],
+  "context": {
+    "languages": [
+      "typescript"
+    ],
+    "frameworks": [],
+    "components": [
+      "semantic-rebase"
+    ],
+    "affected_boundaries": [
+      "Git interactive rebase stop identification",
+      "conflict resolution and planned break continuation"
+    ],
+    "code_references": [
+      "src/semantic-rebase.ts"
+    ]
+  },
+  "observed_behavior": "A conflict on a later commit was attributed to a preceding successful commit, rejecting its resolved paths as residual. Repeated titles could also cause a selected conflict resolution to amend the preceding commit.",
+  "expected_behavior": "Identify the actual current original commit and distinguish its unresolved replay from the planned break after successful replay.",
+  "causal_mechanism": "HEAD remains on the preceding commit during a textual conflict. Matching its title against source history therefore selects the wrong identity; title equality also cannot distinguish a conflict from a completed planned replay.",
+  "anti_pattern": {
+    "structural_description": "Infer lifecycle identity and phase from human-readable commit titles and current HEAD.",
+    "why_it_fails": "Titles are neither unique identifiers nor sequencer phase markers, and HEAD has not advanced when replay conflicts."
+  },
+  "correct_pattern": {
+    "required_invariant": "Allowed paths and review completion belong to the current sequencer commit and phase.",
+    "implementation_description": "Read the last replayed pick from Git rebase-merge/done and recognize a planned stop only when its last command is break. Remove title inference and secondary identity lookup paths. Keep picks that become empty as separate replay commits so edits at their planned breaks cannot amend a predecessor."
+  },
+  "applicability_conditions": [
+    "A later source commit conflicts after an earlier commit replayed successfully."
+  ],
+  "known_non_matches": [
+    "A clean planned break already has its replayed commit at HEAD."
+  ],
+  "confirmation_evidence": [
+    "The distinct-title regression failed with the preceding commit and wrong allowed paths; the repeated-title regression lost a separate commit before repair. Both pass with sequencer-based identity and phase.",
+    "Adversarial review reproduced amendment of the frozen target after an empty selected pick; retaining its empty replay commit preserves target ancestry."
+  ],
+  "regression_proofs": [
+    "tests/semantic-rebase.test.ts: textual conflict identifies the current sequencer commit selected=false",
+    "tests/semantic-rebase.test.ts: textual conflict identifies the current sequencer commit selected=true",
+    "tests/semantic-rebase.test.ts: review edits after an empty selected pick preserve the frozen target"
+  ]
+}

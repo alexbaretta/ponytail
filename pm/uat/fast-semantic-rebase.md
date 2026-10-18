@@ -32,6 +32,11 @@ Traceability: verifies REQ-FAST-SEMANTIC-REBASE
 4. Let the worker resolve each retained stop and continue.
    - A resolution restricted to selected lineage proceeds. A deliberately
      broadened resolution is refused until the residual change is reviewed.
+   - A textual conflict uses the current sequencer commit for allowed paths,
+     even when its title matches an earlier commit. Resolving it preserves both
+     commits and still reaches any planned break after the conflicted commit.
+   - A selected pick that becomes empty retains its own replay commit; review
+     edits at its break preserve the frozen target and preceding commits.
 5. Inspect completion and abort behavior in separate fixture runs.
    - Completion has target ancestry, complete original-to-replayed accounting,
      no rebase state, and only understood changes. Abort restores the exact

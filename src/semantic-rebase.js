@@ -269,20 +269,15 @@ function readRun() { if (!node_fs_1.default.existsSync(statePath(RUN_FILE)))
     fail('no semantic rebase run is prepared'); const value = JSON.parse(node_fs_1.default.readFileSync(statePath(RUN_FILE), 'utf8')); return record(value) && value.schemaVersion === 1 ? readSemanticRebaseRunV1(value) : readSemanticRebaseRunV2(value); }
 function shellQuote(value) { return `'${value.replace(/'/gu, "'\\''")}'`; }
 function rebaseActive() { return node_fs_1.default.existsSync(node_path_1.default.join(gitDirectory(), 'rebase-merge')) || node_fs_1.default.existsSync(node_path_1.default.join(gitDirectory(), 'rebase-apply')); }
-function stoppedOriginalCommit() { const headTitle = gitText(['show', '-s', '--format=%s', 'HEAD']); const analysis = readAnalysis(); const titleMatches = analysis.sourceCommits.filter(commit => gitText(['show', '-s', '--format=%s', commit]) === headTitle); if (titleMatches.length === 1)
-    return titleMatches[0] ?? null; const done = node_path_1.default.join(gitDirectory(), 'rebase-merge', 'done'); if (node_fs_1.default.existsSync(done)) {
-    const commands = node_fs_1.default.readFileSync(done, 'utf8').split('\n').filter(line => /^(?:pick|edit) [a-f0-9]+/u.test(line));
-    const match = /^(?:pick|edit) ([a-f0-9]+)/u.exec(commands.at(-1) ?? '');
-    if (match?.[1])
-        return resolveCommit(match[1]);
-} for (const name of ['stopped-sha', 'original-commit']) {
-    const file = node_path_1.default.join(gitDirectory(), 'rebase-merge', name);
-    if (node_fs_1.default.existsSync(file)) {
-        const value = node_fs_1.default.readFileSync(file, 'utf8').trim();
-        if (value)
-            return resolveCommit(value);
-    }
-} return null; }
+function currentStop() {
+    const done = node_path_1.default.join(gitDirectory(), 'rebase-merge', 'done');
+    if (!node_fs_1.default.existsSync(done))
+        return null;
+    const commands = node_fs_1.default.readFileSync(done, 'utf8').split('\n').map(line => line.trim()).filter(line => line && !line.startsWith('#'));
+    const pick = commands.filter(line => /^(?:pick|edit) [a-f0-9]+/u.test(line)).at(-1);
+    const match = /^(?:pick|edit) ([a-f0-9]+)/u.exec(pick ?? '');
+    return match?.[1] ? { originalCommit: resolveCommit(match[1]), atBreak: commands.at(-1) === 'break' } : null;
+}
 function pathsForCommit(commit) { return [...new Set(perCommitFiles(commit).flatMap(file => [file.oldPath, file.newPath]).filter(item => item !== '/dev/null'))]; }
 function dossier(analysis, run) { if (run.status === 'completed') {
     if (git(['merge-base', '--is-ancestor', run.targetTip, 'HEAD'], { allowFailure: true }).status !== 0)
@@ -292,11 +287,11 @@ function dossier(analysis, run) { if (run.status === 'completed') {
         fail(`completed replay missed planned stops: ${missing.join(' ')}`);
     const rangeDiff = gitText(['range-diff', `${analysis.mergeBase}..${run.originalTip}`, `${run.targetTip}..HEAD`]);
     return `semantic rebase complete\ntarget ${run.targetTip}\nhead ${resolveCommit('HEAD')}\nreviewed ${run.reviewedCommits.join(' ') || '-'}\nrange-diff\n${rangeDiff}\n`;
-} const original = stoppedOriginalCommit(); if (!original)
+} const original = currentStop()?.originalCommit; if (!original)
     return `semantic rebase ${run.status}\n`; const sourceIds = Object.entries(run.contributors).filter(([, commits]) => commits.includes(original)).map(([id]) => id); const selected = analysis.sourceChanges.filter(change => sourceIds.includes(change.id)); const targetIds = new Set(sourceIds.flatMap(id => run.selectionTargets[id] ?? [])); const targetContext = analysis.targetChanges.filter(change => targetIds.has(change.id)); return `semantic rebase stop\noriginal-commit ${original}\nplanned ${run.plannedCommits.includes(original) ? 'yes' : 'no'}\nsource-changes ${sourceIds.join(' ') || '-'}\nallowed-paths ${[...new Set([...selected.flatMap(change => [change.oldPath, change.newPath]), ...pathsForCommit(original)])].filter(item => item !== '/dev/null').join(' ')}\ntarget-context ${[...targetIds].join(' ') || '-'}\n` + selected.map(change => `\n[${change.id}]\n${change.patch}`).join('') + targetContext.map(change => `\n[${change.id}]\n${change.patch}`).join(''); }
 function sequenceEditor(todoPath) { const run = readRun(); const planned = new Set(run.plannedCommits); const lines = node_fs_1.default.readFileSync(todoPath, 'utf8').split('\n').flatMap(line => { const match = /^(pick) ([a-f0-9]+)(.*)$/u.exec(line); if (!match?.[2])
     return [line]; const full = resolveCommit(match[2]); return planned.has(full) ? [line, 'break'] : [line]; }); const text = lines.join('\n'); writeAtomic(statePath('todo'), text); node_fs_1.default.writeFileSync(todoPath, text); }
-function launchRebase(analysis, run) { const editor = statePath('sequence-editor.sh'); writeAtomic(editor, `#!/bin/sh\nexec ${shellQuote(process.execPath)} ${shellQuote(node_path_1.default.resolve(process.argv[1] ?? ''))} sequence-editor "$1"\n`); node_fs_1.default.chmodSync(editor, 0o700); const env = { ...process.env, GIT_SEQUENCE_EDITOR: editor }; const result = git(['rebase', '-i', '--no-autostash', '--no-autosquash', '--no-update-refs', '--onto', analysis.targetTip, analysis.mergeBase, analysis.sourceTip], { allowFailure: true, env }); if (rebaseActive()) {
+function launchRebase(analysis, run) { const editor = statePath('sequence-editor.sh'); writeAtomic(editor, `#!/bin/sh\nexec ${shellQuote(process.execPath)} ${shellQuote(node_path_1.default.resolve(process.argv[1] ?? ''))} sequence-editor "$1"\n`); node_fs_1.default.chmodSync(editor, 0o700); const env = { ...process.env, GIT_SEQUENCE_EDITOR: editor }; const result = git(['rebase', '-i', '--empty=keep', '--no-autostash', '--no-autosquash', '--no-update-refs', '--onto', analysis.targetTip, analysis.mergeBase, analysis.sourceTip], { allowFailure: true, env }); if (rebaseActive()) {
     const running = { ...run, status: 'running' };
     writeRun(running);
     return running;
@@ -314,8 +309,8 @@ function changedPaths() { const values = [gitText(['diff', '--name-only']), gitT
 function continueSemanticRebase() { const analysis = readAnalysis(); const run = readRun(); if (run.analysisDigest !== analysis.analysisDigest)
     fail('run state belongs to another analysis'); if (run.status === 'completed')
     return dossier(analysis, run); if (!rebaseActive())
-    fail('Git rebase state is missing'); const original = stoppedOriginalCommit(); if (!original)
-    fail('cannot identify the stopped original commit'); const unresolved = gitText(['diff', '--name-only', '--diff-filter=U']); if (unresolved)
+    fail('Git rebase state is missing'); const semanticRebaseStop = currentStop(); if (!semanticRebaseStop)
+    fail('cannot identify the stopped original commit'); const original = semanticRebaseStop.originalCommit; const unresolved = gitText(['diff', '--name-only', '--diff-filter=U']); if (unresolved)
     fail(`resolve and stage textual conflicts before continuing: ${unresolved.split('\n').join(' ')}`); const allowed = new Set(pathsForCommit(original)); for (const [id, commits] of Object.entries(run.contributors))
     if (commits.includes(original)) {
         const change = analysis.sourceChanges.find(item => item.id === id);
@@ -329,7 +324,7 @@ function continueSemanticRebase() { const analysis = readAnalysis(); const run =
     const retained = { ...run, status: 'residual', residualPath: statePath(RESIDUAL_FILE) };
     writeRun(retained);
     return `semantic rebase residual review required\npaths ${outside.join(' ')}\n${residual}`;
-} const headTitle = gitText(['show', '-s', '--format=%s', 'HEAD']); const originalTitle = gitText(['show', '-s', '--format=%s', original]); const plannedStop = run.plannedCommits.includes(original) && headTitle === originalTitle; const continuedRun = plannedStop && !run.reviewedCommits.includes(original) ? { ...run, reviewedCommits: [...run.reviewedCommits, original] } : run; if (plannedStop && changed.length > 0) {
+} const plannedStop = run.plannedCommits.includes(original) && semanticRebaseStop.atBreak; const continuedRun = plannedStop && !run.reviewedCommits.includes(original) ? { ...run, reviewedCommits: [...run.reviewedCommits, original] } : run; if (plannedStop && changed.length > 0) {
     git(['add', '--', ...changed]);
     git(['commit', '--amend', '--no-edit']);
 } const result = git(['rebase', '--continue'], { allowFailure: true, env: { ...process.env, GIT_EDITOR: 'true' } }); if (result.status !== 0) {

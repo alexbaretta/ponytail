@@ -105,3 +105,49 @@ test('retained V1 analysis and run state resume without changing their digest bi
  assert.match(cli(value.root,['abort']),/semantic rebase aborted/);
  assert.equal(git(value.root,['rev-parse','HEAD']),value.source);
 });
+
+for(const selected of [false,true])test(`textual conflict identifies the current sequencer commit selected=${selected}`,testContext=>{
+ const value=fixture(testContext);
+ git(value.root,['checkout','-b','conflict-target','clean-target']);
+ write(value.root,'shared.txt','base\ntarget\n');commit(value.root,'Target conflict');
+ git(value.root,['checkout','source']);
+ const previous=git(value.root,['show','-s','--format=%s','HEAD']);
+ write(value.root,'shared.txt','base\nsource\n');
+ const conflictCommit=commit(value.root,selected?previous:'Conflicting source change');
+ cli(value.root,['diff','conflict-target']);const frozen=analysis(value.root);
+ const change=frozen.sourceChanges.find(item=>item.newPath==='shared.txt');assert.ok(change);
+ const selectionPath=path.join(git(value.root,['rev-parse','--absolute-git-dir']),'ponytail-semantic-rebase','selection.txt');
+ fs.writeFileSync(selectionPath,`ponytail-semantic-rebase-selection-v1 ${frozen.analysisDigest}\n${selected?`${change.id} - | conflicting selected change\n`:''}`);
+ const stopped=cli(value.root,['run','conflict-target','--conflicts',selectionPath]);
+ assert.ok(stopped.includes(`original-commit ${conflictCommit}`),stopped);
+ assert.match(stopped,/allowed-paths shared\.txt/);
+ write(value.root,'shared.txt','base\ntarget\nsource\n');git(value.root,['add','shared.txt']);
+ let output=cli(value.root,['continue']);assert.doesNotMatch(output,/residual review/);
+ if(selected){assert.match(output,/semantic rebase stop/);output=cli(value.root,['continue']);}
+ assert.match(output,/semantic rebase complete/);
+ assert.equal(fs.readFileSync(path.join(value.root,'shared.txt'),'utf8'),'base\ntarget\nsource\n');
+ assert.equal(git(value.root,['rev-list','--count','conflict-target..HEAD']),'8');
+ assert.equal(git(value.root,['status','--porcelain']),'');
+});
+
+test('review edits after an empty selected pick preserve the frozen target',testContext=>{
+ const value=fixture(testContext);
+ git(value.root,['checkout','-b','empty-target','main']);
+ write(value.root,'shared.txt','base\none\n');commit(value.root,'Target first half');
+ write(value.root,'shared.txt','base\none\ntwo\n');const target=commit(value.root,'Target second half');
+ git(value.root,['checkout','-b','empty-source','main']);
+ write(value.root,'shared.txt','base\none\ntwo\n');const source=commit(value.root,'Source combined change');
+ cli(value.root,['diff','empty-target']);const frozen=analysis(value.root);
+ const change=frozen.sourceChanges.find(item=>item.newPath==='shared.txt');assert.ok(change);
+ const selectionPath=path.join(git(value.root,['rev-parse','--absolute-git-dir']),'ponytail-semantic-rebase','selection.txt');
+ fs.writeFileSync(selectionPath,`ponytail-semantic-rebase-selection-v1 ${frozen.analysisDigest}\n${change.id} - | review equivalent combined change\n`);
+ const stopped=cli(value.root,['run','empty-target','--conflicts',selectionPath]);
+ assert.ok(stopped.includes(`original-commit ${source}`),stopped);
+ assert.notEqual(git(value.root,['rev-parse','HEAD']),target);
+ assert.equal(git(value.root,['rev-parse','HEAD^']),target);
+ write(value.root,'shared.txt','base\none\ntwo\nreview\n');
+ assert.match(cli(value.root,['continue']),/semantic rebase complete/);
+ git(value.root,['merge-base','--is-ancestor',target,'HEAD']);
+ assert.equal(git(value.root,['rev-list','--count',`${target}..HEAD`]),'1');
+ assert.equal(fs.readFileSync(path.join(value.root,'shared.txt'),'utf8'),'base\none\ntwo\nreview\n');
+});
