@@ -63,13 +63,16 @@ release preparation or test execution after implementation activation.
 - Identify the atomic obligation IDs each acceptance demonstrates, linking
   their canonical conditions and discharge criteria. Identify the proving Step
   when a specific Step supplies the observation; include necessary predecessors.
-- When the host configures `requirements-traceability`, keep that link as the
-  Arc's canonical `verifies` annotation and generate requirement-oriented
-  reverse links instead of maintaining another mapping.
+- When the host adopts V5 `requirements-traceability`, give each acceptance
+  an ACC ID and its own `verifies` annotation targeting the obligation ID.
+  Tests own identified `verifies` links to that acceptance. Follow the graph
+  to the requirement instead of maintaining another manual relationship map.
+  Historical V1–V4 annotations retain their original direct-requirement meaning.
 - When an existing Arc already proves the exact behavior, keep one canonical
   Arc and record that coverage instead of duplicating the test.
-- When the requirement has no meaningful user-acceptance behavior, record why
-  no UAT change is needed rather than fabricating a test.
+- For an engineering obligation, state an observable technical acceptance
+  with executable proof. V5 requires this acceptance even without a human UI;
+  do not fabricate a user journey or waive the test-to-acceptance link.
 - Preserve the requirement's approval state. Proposed or observed behavior may
   produce an explicitly exploratory Arc, but it cannot become release evidence
   until the requirement is approved.
@@ -121,6 +124,13 @@ without inventing behavior merely to make a Suite comprehensive. Preserve
 manual acceptance when automation cannot establish the human-observable
 outcome honestly.
 
+Each V5 acceptance must have at least one identified executable unit or
+integration test. Either layer can supply sufficient proof; manual acceptance
+supplements it. An acceptance without a test remains incomplete even when other
+acceptances of the obligation are covered. Give test registrations stable IDs
+and canonical acceptance links under `requirements-traceability`. Do not infer
+coverage from similar test names or an unrelated passing suite.
+
 Automation implements the plain-English Arc through the project-local harness.
 It must exercise the real product path and preserve the Arc's observable
 contract. A passing substitute, fake boundary, or test-only product path is not
@@ -134,7 +144,14 @@ exclusion.
 
 ## Release Evidence And Authorization
 
-For each candidate release, record:
+Keep validation results as commit-attached metadata. Passing command output,
+certificate ledgers and evidence-only commits must not pollute source history.
+Canonical UAT procedures stay in source; raw run output stays in ignored runtime
+storage or the configured external evidence owner. An annotated Git tag identifies
+the exact tested commit, commands, results and covered scope; it does not replace
+review or release authorization.
+
+For each candidate release, record in that metadata or its external references:
 
 - the exact release identity and tested revision;
 - target environment and execution profile;

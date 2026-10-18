@@ -50,6 +50,16 @@ Use the [Ponytail glossary](../plan-execution/references/glossary.md) for the
 canonical Suite, Arc and Step definitions. This skill owns execution semantics.
 Acceptance names a condition; its Arc supplies the ordered demonstration.
 
+For V5 traceability, each executable integration test registration has a stable
+ID and a canonical `verifies` link to its acceptance ID under
+`requirements-traceability`. Arc/Step identity does not replace test identity or
+the acceptance link. Tests may jointly prove an acceptance, and one test may
+prove several acceptances when it asserts each condition. Unit or integration
+proof may suffice; do not add a second test layer solely to satisfy a quota.
+Review checks that the selected commands actually run the identified tests.
+Passing substituted boundaries, skipped tests or unrelated selections do not
+reduce the campaign completeness vector.
+
 Steps execute in their declared Arc order. When a Step fails, stop that Arc's
 ordinary Steps after running required harness finalization. Do not stop the
 complete run: attempt every remaining selected Arc, report the aggregate

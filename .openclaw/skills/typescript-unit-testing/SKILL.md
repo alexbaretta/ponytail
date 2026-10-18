@@ -47,10 +47,18 @@ existing owning suite or shared double when one represents the required
 contract. Do not invent project-local indexing or auditing infrastructure as
 part of an ordinary unit-test change.
 
-When the host configures `requirements-traceability`, place each
-`verifies` annotation beside the smallest stable test declaration that proves
-the requirement. Classify the test file in the traceability configuration and
-run its configured checker. Do not duplicate the relationship in a test index.
+When the host adopts V5 `requirements-traceability`, give every covered test a
+stable ID and place its `verifies` annotation immediately before its executable
+runner registration, targeting the acceptance ID in UAT. A helper or suite name
+is not a test registration. Follow that skill's syntax and semantic checker;
+classify the file under the appropriate source scope. Several acceptance links
+may share one test only when its assertions prove each condition. Do not copy
+relationships into a test index or infer them from test names. V1–V4 projects
+retain their configured direct-requirement annotations until explicit adoption.
+
+A linked test is not passing proof: run the focused selection against the actual
+implementation. Skipped, todo, empty or unrelated tests cannot discharge the
+acceptance. Review must assess behavioral adequacy as well as attachment.
 
 ## Declare Valid Values With Production Types
 

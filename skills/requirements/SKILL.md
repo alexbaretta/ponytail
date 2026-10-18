@@ -36,7 +36,7 @@ Shared terms use the [Ponytail glossary](../plan-execution/references/glossary.m
 Traceability: supports REQ-OBLIGATION-BASELINE
 Traceability: supports REQ-OBLIGATION-COMPLETENESS
 
-For obligation execution, freeze selected approved IDs, canonical sources,
+For obligation execution, identify selected approved IDs, canonical sources,
 meanings and exact input identities. A scope move, deferral or decomposition
 cannot remove an approved responsibility. Unknown coverage remains unresolved.
 Express every approved requirement as an identified set of atomic
@@ -55,6 +55,13 @@ obligations, not one atomic work item. Preserve historical meanings and migrate
 active adopted scope through an explicit baseline amendment.
 Reconcile existing active requirements before their next assignment or acceptance;
 historical physical-reader compatibility does not waive this contract.
+
+For V5 traceability, each requirement has an individual REQ ID and each atomic
+obligation has an individual OBL ID in the configured requirements root. The
+obligation owns its `decomposes` reference to the requirement; acceptances in
+the UAT root own references to obligations. Apply `requirements-traceability`
+for declaration syntax and discovery. Do not add a second manual edge inventory
+or require a tracked baseline/certificate ledger to record this decomposition.
 
 An approved, implementation-activated FEAT or CHNG starts a successor baseline.
 Preserve its predecessor, authority, reason, superseded meanings and unresolved
@@ -149,12 +156,15 @@ For each activated new requirement or clarification:
    root in the same project change-set with the specific Arc, Step, and
    expected result needed to prove that requirement or clarification.
 3. When an existing UAT Arc already proves the exact behavior, preserve the
-   canonical Arc and record the existing coverage link. When UAT is not
-   applicable, record why rather than inventing an acceptance test.
+   canonical Arc and record the existing coverage link. Under V5, every atomic
+   obligation still needs an identified acceptance and executable test. For
+   engineering conditions, state the observable technical outcome rather than
+   fabricating a human workflow or waiving the acceptance link.
 4. When the host configures portable traceability, apply
-   `requirements-traceability` and add the approved requirement to its
-   project-owned configuration before implementation or verification claims
-   depend on it.
+   `requirements-traceability` and include the approved requirement in its
+   configured discovery scope before implementation or verification claims
+   depend on it. V5 discovers declarations in canonical Markdown; it does not
+   require individually listing each requirement in configuration.
 
 Complete this requirements and UAT reconciliation before continuing the
 activated implementation whose scope or acceptance depends on it. A missing

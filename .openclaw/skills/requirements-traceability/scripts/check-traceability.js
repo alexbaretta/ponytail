@@ -7,6 +7,7 @@ const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 
 const { requiredCoverageRules } = require('./coverage-rules');
+const { loadTraceabilityV5, parseTraceabilityV5, analyzeTraceabilityV5 } = require('./traceability-v5');
 const completedArtifactClasses = Object.freeze(requiredCoverageRules.map(rule => rule.targetKind));
 const artifactClasses = new Set([...completedArtifactClasses, 'plan', 'tasklet', 'issue']);
 const locatorKinds = new Set(['text', 'typescript']);
@@ -314,15 +315,18 @@ const TraceabilityConfigReaders = Object.freeze({
   V2: readTraceabilityConfigurationV2,
   V3: readTraceabilityConfigurationV3,
   V4: readTraceabilityConfigurationV4,
+  V5: loadTraceabilityV5,
 });
 
-function loadTraceabilityConfiguration(configurationPath) {
-  const document = JSON.parse(fs.readFileSync(configurationPath, 'utf8'));
+function loadTraceabilityConfiguration(configurationPath, invokingRoot = process.cwd()) {
+  const text = fs.readFileSync(configurationPath, 'utf8');
+  const parsed = JSON.parse(text);
+  const document = parsed?.schemaVersion === 5 ? parseTraceabilityV5(text) : parsed;
   const reader = TraceabilityConfigReaders[`V${document?.schemaVersion}`];
   if (reader === undefined) {
     throw new Error(`unsupported traceability configuration schemaVersion: ${document?.schemaVersion}`);
   }
-  return reader(document, configurationPath);
+  return reader(document, configurationPath, invokingRoot);
 }
 
 function findRelationships(source, artifact) {
@@ -494,7 +498,8 @@ function runTypescriptChecker(configuration) {
   return [diagnostic('traceability-typescript', message)];
 }
 function analyzeTraceability(configurationPath, options = {}) {
-  const configuration = loadTraceabilityConfiguration(configurationPath);
+  const configuration = loadTraceabilityConfiguration(configurationPath, options.invokingRoot);
+  if (configuration.schemaVersion === 5) return analyzeTraceabilityV5(configuration, options);
   const diagnostics = [];
   const relationships = [];
   const ids = new Set(configuration.requirements.map(requirement => requirement.id));

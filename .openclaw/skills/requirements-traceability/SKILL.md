@@ -13,13 +13,10 @@ Licensed under the MIT License. See LICENSE in the project root.
 
 # Requirements Traceability
 
-Maintain durable bidirectional discovery without maintaining two relationship
-maps. The annotation beside the smallest stable owned implementation or
-verification unit is the canonical relationship. Generate requirement-oriented
-reverse views from those annotations.
+Use the [Ponytail glossary](../plan-execution/references/glossary.md) for atomicity
+and terminology. Each relationship is owned by its source declaration. Generate
+reverse discovery from those annotations; do not maintain a second manual map.
 
-Shared terms use the [Ponytail glossary](../plan-execution/references/glossary.md).
-Acceptance conditions and their demonstration Arcs remain distinct.
 ## Project Configuration Contract
 
 The host configures this skill in `AGENTS.md`, directly or by reference, with:
@@ -29,233 +26,139 @@ The host configures this skill in `AGENTS.md`, directly or by reference, with:
 - `Traceability reverse-view generation command`; and
 - `Traceability TypeScript semantic checker`.
 
-Every value defaults to `not configured`. Do not invent paths, commands,
-requirement IDs, artifact classifications, or unit-test dispositions when the
-host has not adopted them.
+Each value defaults to `not configured`. Do not invent project paths, commands,
+approval, IDs or coverage. Explicit configuration version 5 adopts the contract
+below. Installation alone does not migrate a project. When inspecting or working
+on a V1–V4 project, read [legacy-graph.md](references/legacy-graph.md); its physical
+readers retain their original meanings. Do not silently reinterpret old direct
+requirement links as obligation or acceptance links.
 
-The versioned project configuration selects approved in-scope requirements,
-their canonical requirement sources, classified artifact files, explicit
-entity declarations, generated outputs and their canonical sources, any
-justified no-unit-test dispositions, the generated reverse-view path, and the
-TSTS project and entrypoint used for semantic TypeScript locators. An explicit
-entity declaration has one stable kind and ID, source path, optional line, and
-optional safe annotation and description. Use it for inventories such as
-endpoints; never infer an entity from a filename or prose.
+V5 configuration declares `projectRoot`, `requirementsRoot`, `uatRoot`, source
+scopes, exclusions with reasons, generated-source mappings, `reverseViewPath`
+and a TypeScript checker configuration or `null`. Paths are relative to the
+invoking project except `projectRoot`, which is relative to the configuration.
+Source scopes each declare `kind` (`implementation`, `unit-test` or
+`integration-test`), `include` globs and `locator` (`text` or `typescript`). Keep
+classification unambiguous. TypeScript source requires the semantic locator and
+its configured `cliPath` and `projectPath`. Do not classify TypeScript as text to
+avoid attachment checks. Generated output maps directly to a classified canonical
+source and contains no relationship annotations.
 
-A requirement source declares an ID only with one of these canonical Markdown
-forms: `**Identifier:** \`REQ-STABLE-ID\``, a list item whose bold label is the
-ID (for example, `- **REQ-STABLE-ID:** Description`), or an ATX heading that
-begins with the ID and a declaration delimiter (for example,
-`## REQ-STABLE-ID: Description`). An incidental mention is not a declaration.
+Canonical Markdown scopes enumerate every declaration, including unreferenced,
+untracked or ignored acceptances. Code scopes include tracked and unignored new
+files; exclusions cannot hide canonical requirements or UAT. Do not narrow scope
+to make coverage pass. The generated reverse view is excluded from discovery.
 
-## Canonical Relationships
+## Canonical Graph
 
-Use only these roles:
+| Source | Role | Target |
+| --- | --- | --- |
+| Obligation | `decomposes` | Requirement |
+| Acceptance | `verifies` | Obligation |
+| Unit or integration test | `verifies` | Acceptance |
+| Code block | `implements` | Obligation |
 
-- `implements`: the unit directly realizes required behavior;
-- `supports`: the unit is necessary supporting implementation but does not
-  independently realize the behavior; and
-- `verifies`: the unit proves required behavior.
+Keep individually identified requirements and atomic obligations in the configured
+requirements root, normally `pm/requirements`. Keep individually identified
+acceptances in the UAT root, normally `pm/uat`. Every source has a stable ID;
+links must resolve to exactly one declaration of the expected kind.
 
-Prospective project-management records use only these additional roles after
-the referenced approved requirement exists:
+Declare Markdown IDs with an ATX heading beginning with `REQ-`, `OBL-` or `ACC-`,
+or a bold-ID list label. A requirement may also use `**Identifier:**` followed by
+its backticked ID. IDs use uppercase letters, digits and hyphens. Incidental
+mentions and fenced examples are not declarations. Place each Markdown edge
+after its own declaration, before another declaration:
 
-- `plans-implementation`: a plan or tasklet intends to produce implementation;
-- `plans-verification`: a plan or tasklet intends to produce verification; and
-- `introduces`: an implementation-activated issue identifies an affected
-  requirement, whether existing, newly introduced, changed, or clarified.
+```markdown
+## REQ-ORDER: Place an order
+Approved behavior and provenance.
 
-Prospective roles are provenance and planning evidence. They never satisfy
-completed implementation, unit-test, integration-test, or UAT coverage.
-
-Write one annotation immediately beside the smallest stable owned unit that
-communicates the relationship:
-
-```text
-Traceability: implements REQ-STABLE-ID
-Traceability: supports REQ-STABLE-ID
-Traceability: verifies REQ-STABLE-ID
+## OBL-ORDER-SAVE: Persist the accepted order
+The atomic condition and discharge criterion.
+Traceability: decomposes REQ-ORDER from obligation OBL-ORDER-SAVE
 ```
 
-When the source entity needs its own stable identity, append the exact entity
-kind and ID:
-
-```text
-Traceability: implements REQ-STABLE-ID from endpoint GET-orders
-Traceability: plans-implementation REQ-STABLE-ID from tasklet S01-F02-T03
-Traceability: plans-verification REQ-STABLE-ID from plan 2026-09-29-example
-Traceability: introduces REQ-STABLE-ID from issue 2026-09-29-BUG-example
+```markdown
+## ACC-ORDER-SAVED: Accepted order can be retrieved
+Prerequisites, actions and expected observations.
+Traceability: verifies OBL-ORDER-SAVE from acceptance ACC-ORDER-SAVED
 ```
 
-Issue intake alone never creates a requirement ID or an `introduces`
-relationship. Add issue prospective relationships only when standalone
-implementation is authorized, or when the issue belongs to a plan or campaign
-whose implementation begins, as owned by `requirements` and `issue-tracking`.
-An explicitly authorized addition to an executing plan or campaign also meets
-that gate. Link every affected requirement from the issue, including unchanged
-requirements governing a BUG. Maintain the requirement's UAT, implementation,
-unit-test, and integration-test relationships as the work progresses; use
-stable methods or endpoints where those are the smallest owned units. Record
-missing implementation and verification in active scope at authorization,
-then reconcile actual coverage before completion. A planned test is not a
-passing or implemented test.
+Use an ordinary language comment immediately beside each stable owned code block
+or executable test registration:
 
-Every prospective annotation requires an explicit `plan`, `tasklet`, or
-`issue` identity. Other explicit identities must match a configured entity
-declaration at that source path. A plan artifact may own its plan and nested
-tasklet annotations; an issue artifact owns issue annotations.
+```typescript
+// Traceability: implements OBL-ORDER-SAVE from implementation saveOrder
+function saveOrder() { /* product behavior */ }
 
-Use the language's ordinary comment syntax in code, ordinary prose metadata in
-Markdown, and a native metadata field in declarative formats. Do not annotate
-every line, repeat the mapping in a requirement document, or add aliases for a
-requirement identifier.
+// Traceability: verifies ACC-ORDER-SAVED from unit-test TEST-ORDER-SAVED
+test('accepted order can be retrieved', () => { /* assertions */ });
+```
 
-Generated output has no relationship annotations. Configure its canonical
-generator or source and retain the relationships there.
+Use `integration-test` for an integration registration. Test and code IDs must be
+stable and unique across the graph; do not derive identity from a changing line
+number. Several adjacent annotations may give the same source unit multiple
+edges without duplicating its declaration. Shared helpers are implementation
+support, not executable tests; attach test IDs to the runner registrations.
 
-Artifact paths remain explicitly enumerated. A path normally has one artifact
-class. It may have multiple classes only when every registration declares a
-non-empty `roles` filter, the filters are disjoint, and each role is valid for
-its class: `implements` and `supports` for implementation; `verifies` for
-unit-test, integration-test, and UAT. This lets one canonical file carry its
-own implementation/support roles and a distinct verification role without a
-second metadata source.
+Do not annotate every line. Identify all blocks declaring that they implement
+an obligation so the reverse view can find them. Review verifies that the named
+blocks actually implement that condition. A direct test-to-requirement or
+code-to-requirement link cannot replace the required V5 edge. Plan, tasklet and
+issue references are provenance, not completed graph coverage.
 
-## Required Coverage
+## Coverage And Adequacy
 
-For every configured approved requirement:
+Every requirement needs adequate atomic decomposition. Every obligation needs
+adequate acceptance coverage and implementing code. Every acceptance needs an
+identified executable unit test or integration test. Either test layer may be
+sufficient; V5 has no mandatory per-layer quota and no no-unit-test waiver.
+Manual observations may supplement automated proof but cannot replace the
+required executable acceptance link. Multiple acceptances can jointly prove an
+obligation; every one remains individually accountable for its own tests.
 
-- at least one implementation unit `implements` or `supports` it;
-- at least one unit-test unit `verifies` it when unit testing is possible;
-- otherwise, one non-empty project-owned reason explains why no unit test is
-  possible;
-- at least one executable integration-test unit `verifies` it; and
-- at least one plain-English UAT Arc `verifies` it.
+The checker discovers declarations before assessing edges. A second acceptance
+without a test must remain a gap even if another acceptance of the same
+obligation has passing tests. Duplicate IDs, missing parents, dangling references,
+wrong kinds and malformed annotations fail validation. Planned tests, skipped
+registrations, helpers and empty assertions cannot establish behavioral proof.
 
-A no-unit-test disposition waives only the unit-test relationship class.
-Integration and UAT remain required. Do not use a disposition merely because a
-test is inconvenient, expensive, or not yet written.
+Structural validity establishes discoverability, not adequacy or execution.
+Adversarial review assesses whether decomposition, observations, selected tests
+and implementation establish the approved conditions. Unknown adequacy remains
+unresolved. T and I in the campaign completeness vector may decrease only when
+both linked tests and implementation exist and the implementation passes those
+tests. An unrelated successful command cannot establish their coverage.
 
-Indexed validation always checks the four required coverage classes above,
-even when the project configures no directional rules. Projects may configure
-additional explicit directional rules.
-Each rule names one stable ID, source and target entity kinds, allowed roles,
-forward or reverse traversal, and a positive minimum cardinality. Forward
-rules count relationships from each source; reverse rules count relationships
-into each source. Configure both directions when both are requirements—for
-example, endpoint-to-requirement and requirement-to-endpoint are independent
-rules. Gap reports identify every unmatched source; prospective roles never
-match completed-coverage rules.
+Validation evidence belongs to the tested commit's metadata, not source files.
+Do not add passing output, certificate ledgers or evidence-only commits. Keep
+requirements, acceptances and executable tests as durable source; diagnostic
+records are distinct from certificates. Historical certificates retain their
+original meaning and do not certify a changed candidate.
 
-Repository validation covers every indexed entity. `--plan` and `--campaign`
-scopes are mutually exclusive and use canonical plan/campaign membership,
-tasklets, linked issues, named requirements, and the actual artifacts related
-to those requirements. Invalid membership must fail; never fall back to a
-broader scope.
+## Checks And Workflow
 
-## Obligation certificates and completeness
-For a frozen approved baseline, assess these upstream certificates:
+1. Reconcile authorized requirements and atomic obligations with canonical UAT
+   acceptances. Preserve stakeholder provenance and unresolved scope.
+2. Maintain the four edges beside their source declarations; classify source and
+   test scopes and generated-source mappings in the same change.
+3. Run the configured reverse-view generation and structural/semantic check.
+4. Run the applicable focused tests and obtain adequacy review before claiming
+   discharged coverage. Preserve failures and unknowns as unfinished work.
 
-- T1: adequate linked plain-English acceptances demonstrate each atomic
-  obligation's complete condition; requirement coverage rolls up all its obligations.
-- T2: a selectable executable integration Arc implements the required UAT actions,
-  observations and lifecycle through the real product path.
-- T3: truthful annotations resolve acceptance responsibilities to actual stable
-  owned implementation units and necessary support.
-- T4: independently testable owned responsibilities have adequate executable
-  unit proof, or an admissible scoped no-unit-test disposition.
+TSTS owns only semantic TypeScript locators: real leading comments attached to
+supported declarations and executable test registrations in the configured
+program. It does not own Markdown, requirements, UAT, source inventory or reverse
+views. The structural checker owns that inventory and graph validation. Neither
+checker certifies runtime results or replaces adversarial review.
 
-Registration, valid IDs/roles, semantic attachment, generated-source integrity
-and reverse parity are necessary certificate conditions. They do not establish
-behavioral adequacy or passing execution. Planned units, empty tests and passing
-substitute paths cannot discharge proof. Keep the annotations above as the sole
-relationship source; certificate assessments reference them without another map.
+The generated reverse view exactly matches canonical annotations. It may be
+checked in as a derived navigation aid; it is not validation evidence. Existing
+authored files and symbolic links cannot be overwritten as generated output.
 
-Count responsibilities, not diagnostics: one T1 per atomic obligation, one T2
-per required UAT Arc, one T3 per acceptance Step/assertion responsibility, and one
-T4 per independently testable unit/responsibility. Optional redundant proof is not
-mandatory merely because it exists. Tests can discharge several responsibilities
-only when each is adequately asserted. Unit proof need not duplicate integration.
-Keep approved requirement annotations as the canonical artifact relationships.
-Their adequacy assessment must identify the atomic obligations demonstrated,
-including exact acceptance and Arc/Step references; requirement-level linkage
-alone does not establish coverage of every obligation. Use the canonical
-obligation references rather than introducing parallel relationship annotations.
-Preserve historical certificate meanings; apply the new decomposition through
-an explicit successor baseline rather than changing past T1 counts in place.
-
-Inventory review must examine requirements, acceptance observations, executable
-selection/lifecycle, actual implementation/support, unit proof and required
-execution targets. Until a category inventory is reviewed, retain an unresolved
-inventory obligation there. Closing it enumerates necessary responsibilities.
-Same-category discovery can increase counts: record it as disturbance, never
-manufacture a decreasing history. Later discovery invalidates prior completeness.
-
-A disposition covers only the exact genuinely untestable responsibility and its
-canonical justification. It creates no C1 execution obligation and waives neither
-integration nor UAT. A requirement-level legacy reason cannot waive discovered
-testable units. Unknown or inadequately assessed certificates remain unresolved.
-Immediately register every necessary downstream obligation exposed by repair.
-`plan-execution` owns the controller, execution evidence and acceptance boundary.
-## Enforcement Boundaries
-
-The project-neutral structural checker owns strict configuration parsing,
-requirement-source resolution, relationship discovery, approved-role and
-artifact-class completeness, non-TypeScript and declarative locators,
-generated-source resolution, deterministic diagnostics, and reverse-view
-parity.
-
-TSTS owns only semantic TypeScript locators. It verifies that a TypeScript
-annotation is a leading comment on a supported named declaration in the
-configured TypeScript program. It does not own Markdown, requirements, UAT,
-integration-Arc structure, generated views, or general repository traversal.
-
-Run the configured reverse-view generation command after relationship changes,
-then run the configured check. A stale checked-in reverse view is a failed
-reverse connection, not documentation drift to ignore.
-
-Projects adopting the Ponytail indexed CLI use `ponytail traceability update-index`
-before indexed queries. The default incrementally reconciles the invoking
-worktree's files and graph, retaining unchanged rows and valid immutable parses.
-Use `--rebuild` to explicitly replace the complete derived generation, and
-`--json` for machine-readable output. The old `traceability index` spelling is
-retired; configured structural and semantic checks remain separate gates.
-
-## Workflow
-
-1. Confirm that each requirement is approved, stable, and present in the
-   configured canonical requirement source.
-2. Annotate each affected stable owned implementation and verification unit.
-3. Classify new artifact files in the project traceability configuration.
-4. Declare new non-PM inventory entities explicitly and add prospective plan,
-   tasklet, and issue annotations beside their stable records.
-5. Record a no-unit-test disposition only when unit testing is genuinely
-   impossible.
-6. Map generated outputs to their canonical sources without copying
-   annotations.
-7. Generate the reverse view.
-8. Run the structural check and configured TypeScript semantic checker.
-9. Reconcile changed requirements, UAT, implementation, tests, configuration,
-   and generated views in the same project change-set.
-
-## Completion Check
-
-- Every discovered ID resolves to one configured approved requirement.
-- Every configured source, artifact, generated output, and canonical source
-  resolves.
-- Every relationship uses an approved role and the role is valid for its
-  artifact class.
-- Every explicit entity identity is unique, resolves to its canonical source,
-  and uses the exact declared kind and ID.
-- Prospective relationships remain distinct from completed coverage.
-- Every configured directional rule reports no unmatched in-scope source
-  entity, or the missing entities are added to the active plan.
-- Requirement sources use an explicit Identifier field, canonical bold-list
-  declaration, or canonical ATX requirement heading; incidental mentions do
-  not satisfy source resolution.
-- Duplicate artifact paths have explicit, disjoint, class-valid role filters.
-- Every approved requirement has the required implementation, unit or
-  disposition, integration, and UAT classes.
-- TypeScript annotations attach to supported named declarations.
-- The generated reverse view exactly matches canonical annotations.
-- Generated outputs contain no duplicated relationship annotations.
+For indexed inspection, run `ponytail traceability update-index` before queries;
+use `--rebuild` only for explicit reconstruction. V5 requirement filters follow
+the graph through obligations and acceptances. Repository validation includes
+every indexed acceptance. Historical `--plan` and `--campaign` selectors are
+not V5 scope selectors: they currently fail explicitly. Do not bypass that error
+by silently substituting repository scope or by claiming scoped completeness.

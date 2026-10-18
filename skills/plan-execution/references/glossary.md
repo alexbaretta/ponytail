@@ -27,7 +27,10 @@ Generated host copies derive from this source.
 | Swarm | A user-worktree-owned set of worker sessions and managed worktrees, with zero or one coordinator; either resource set may be empty. Membership is independent of campaign identity and observed session activity. |
 | User worktree | A user-owned Git checkout that owns a swarm. |
 | Managed worktree | A Git checkout allocated to a swarm for worker use; it belongs to at most one swarm at a time and may be released, reassigned or deleted when unassigned. |
-| Certificate | Establishes that an obligation is satisfied for identified inputs. |
+| Evidence | Observations produced by validation, including command selection, process outcomes and test results; observations alone do not certify adequacy. |
+| Certificate | A commit-bound attestation of validation scope, commands and results. The adopted workflow stores its versioned payload in an immutable annotated Git tag; historical certificate formats keep their original meaning. |
+| Review attestation | An independent review verdict identifying the reviewer, exact candidate and assessed IDs; it assesses semantic adequacy, not command execution. |
+| Campaign completeness vector | The lexicographically ordered unresolved-work vector `(R,A,T,I)` for an identified campaign scope and integrated revision. |
 | Suite | A named set of related Arcs. |
 | Arc | A named ordered sequence of one or more Steps demonstrating acceptance. |
 | Step | A user or system action and its expected observable result; an executable integration Step is an independently reported operation with assertions. |
@@ -83,3 +86,29 @@ Several independently complete Arcs may demonstrate one acceptance. A bare
 condition, planned procedure, or incidental mention does not establish coverage.
 Execution profiles do not create new Arcs. Suite/Arc/Step remains the integration
 hierarchy; ordinary plan and release acceptance still names their existing gates.
+
+## Adopted campaign completeness
+
+R counts requirements whose atomic decomposition is missing, incomplete or
+unreviewed. A counts obligations without adequate acceptance coverage. T counts
+acceptances without adequate executable test coverage. I counts obligations
+without adequate implementation. Unknown adequacy remains unresolved. A valid
+annotation alone cannot decrease T or I: the linked tests and implementation
+must exist, the implementation must pass those tests, and adversarial review
+must establish that they actually demonstrate the obligation. Unit or integration
+proof can suffice; no mandatory per-layer quota is implied.
+
+Productive integrated steps generally decrease `(R,A,T,I)` lexicographically:
+an earlier-coordinate decrease may expose later-coordinate work. Discoveries,
+invalidated proof and authorized scope additions may increase the vector; record
+them honestly. This vector replaces the historical six-coordinate progress
+vector for adopted campaigns. Existing certificate categories are historical
+interpretations, not new coordinates or additional bookkeeping requirements.
+
+A worker-reported zero is provisional. A campaign is DONE only when all its
+workers are DONE and the coordinator independently verifies every configured
+full automated QA command on the final integrated candidate. Final QA failure
+reopens repair work; after repair, the coordinator repeats full QA. Certificates
+are metadata attached to commits, never tracked passing output or an expanding
+source ledger. A certificate establishes only its actual validated scope and
+revision, not arbitrary future candidates or full product adequacy.
