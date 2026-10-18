@@ -88,6 +88,7 @@
   },
   "dependencies": {
     "cli-progress": "^3.12.0",
+    "commonmark": "^0.31.2",
     "pg": "^8.16.3",
     "smol-toml": "^1.8.0",
     "stream-json": "^3.7.0",
@@ -100,6 +101,7 @@
     "tsts": "cli/tsts"
   },
   "devDependencies": {
+    "@types/commonmark": "^0.27.10",
     "@types/node": "25.7.0",
     "@types/pg": "^8.23.1"
   }

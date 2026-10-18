@@ -5,6 +5,12 @@
     "S02-F01": {
       "depends_on": [],
       "validation_tasklet": "S02-F01-T03"
+    },
+    "S02-F02": {
+      "depends_on": [
+        "S02-F01"
+      ],
+      "validation_tasklet": "S02-F02-T02"
     }
   },
   "tasklets": {
@@ -44,6 +50,35 @@
       "risk": "normal",
       "planned_paths": [
         "tests/traceability-graph.test.ts"
+      ]
+    },
+    "S02-F02-T01": {
+      "feature": "S02-F02",
+      "depends_on": [
+        "S02-F01-T03"
+      ],
+      "affinity": [
+        "graph"
+      ],
+      "risk": "normal",
+      "planned_paths": [
+        "skills/requirements-traceability/scripts/traceability-discovery.ts",
+        "package.json",
+        "package-lock.json"
+      ]
+    },
+    "S02-F02-T02": {
+      "feature": "S02-F02",
+      "depends_on": [
+        "S02-F01-T03",
+        "S02-F02-T01"
+      ],
+      "affinity": [
+        "graph"
+      ],
+      "risk": "normal",
+      "planned_paths": [
+        "tests/traceability-discovery.test.ts"
       ]
     }
   },
