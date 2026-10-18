@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 4,
+  "sprint": "S03",
+  "features": {
+    "S03-F01": {
+      "depends_on": [],
+      "validation_tasklet": "S03-F01-T02"
+    }
+  },
+  "tasklets": {
+    "S03-F01-T01": {
+      "feature": "S03-F01",
+      "depends_on": [],
+      "affinity": [
+        "validation"
+      ],
+      "risk": "normal",
+      "planned_paths": [
+        "src/validation-certificate.ts",
+        "versioned-data-contracts.json",
+        "AGENTS.md"
+      ]
+    },
+    "S03-F01-T02": {
+      "feature": "S03-F01",
+      "depends_on": [
+        "S03-F01-T01"
+      ],
+      "affinity": [
+        "validation"
+      ],
+      "risk": "normal",
+      "planned_paths": [
+        "tests/validation-certificate.test.ts"
+      ]
+    }
+  },
+  "external_depends_on": {}
+}
