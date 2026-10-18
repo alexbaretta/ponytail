@@ -8,6 +8,11 @@ import { formatTextReport, type TstsCheckResult } from '../src/index.js';
 import { parseTstsCliArguments, usage, type TstsCliParseResult } from '../src/cli.js';
 
 describe('parseTstsCliArguments', (): void => {
+    it('selects graph stdin exclusively without changing legacy modes', (): void => {
+        const result: TstsCliParseResult = parseTstsCliArguments(['--traceability-graph-stdin']);
+        assert.deepEqual(result,{kind:'traceability-graph-stdin'});
+        assert.throws(() => parseTstsCliArguments(['--traceability-graph-stdin','--project','tsconfig.json']),/cannot be combined/);
+    });
     it('defaults to tsconfig.json', (): void => {
         const result: TstsCliParseResult = parseTstsCliArguments([]);
 

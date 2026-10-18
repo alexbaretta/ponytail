@@ -71,7 +71,11 @@ services. `PROJECT_STRUCTURE.md` is authoritative for that boundary.
 - Lossless JSON boundaries: `tsts/src/lossless-json.ts`, portable obligation
   parsing in `skills/plan-execution/scripts/obligations.js`, rolling project
   configuration in `src/rolling-campaign.js`, and campaign ledger/
-  delivery parsing in `src/campaign-orchestration.js`, using `lossless-json`.
+  delivery parsing in `src/campaign-orchestration.js`, and traceability graph
+  stdin/stdout in `tsts/src/cli.ts` and
+  `skills/requirements-traceability/scripts/traceability-semantic.ts`, using
+  `lossless-json`. Graph protocol numbers are nonnegative safe-integer tokens;
+  focused proof: `node --test dist/tests/traceability-semantic.test.js`.
   Obligation/campaign numbers are safe integers, validated before native conversion;
   TSTS retains lossless numeric values. Focused proof:
   `node --test tsts/dist/test/lossless-json.test.js`, `node --test

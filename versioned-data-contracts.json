@@ -3,6 +3,30 @@
   "schemaVersion": 1,
   "families": [
     {
+      "id": "traceability-typescript-response",
+      "implementation": {
+        "workspace": "ponytail",
+        "module": "skills/requirements-traceability/scripts/traceability-semantic.ts",
+        "readerRegistryExport": "TraceabilityGraphResponseReaders"
+      },
+      "currentVersion": "V1",
+      "versions": ["V1"],
+      "supportedReadVersions": ["V1"],
+      "supportedDowngradeVersions": []
+    },
+    {
+      "id": "traceability-typescript-request",
+      "implementation": {
+        "workspace": "tsts",
+        "module": "tsts/src/traceability-graph.ts",
+        "readerRegistryExport": "TraceabilityGraphRequestReaders"
+      },
+      "currentVersion": "V1",
+      "versions": ["V1"],
+      "supportedReadVersions": ["V1"],
+      "supportedDowngradeVersions": []
+    },
+    {
       "id": "swarm-retirement-authorization",
       "implementation": {
         "workspace": "ponytail",

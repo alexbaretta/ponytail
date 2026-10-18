@@ -16,6 +16,48 @@ export interface TraceabilityGraphAnnotationsInput {
  readonly units: readonly TraceabilityCodeUnit[];
 }
 
+export interface TraceabilityGraphRequestV1 {
+ readonly schemaVersion: 1;
+ readonly projectPath: string;
+ readonly units: readonly TraceabilityCodeUnit[];
+}
+
+export interface TraceabilityGraphResponseV1 {
+ readonly schemaVersion: 1;
+ readonly checkedUnitCount: number;
+ readonly checkedFileCount: number;
+ readonly success: boolean;
+ readonly report: string;
+}
+
+function record(value: unknown): value is Readonly<Record<string, unknown>> {
+ return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+function exact(value: unknown, keys: readonly string[]): value is Readonly<Record<string, unknown>> {
+ return record(value) && Object.keys(value).length === keys.length && keys.every(key => Object.hasOwn(value,key));
+}
+function relativeFile(value: unknown): value is string {
+ return typeof value === 'string' && value.length > 0 && value.trim() === value && !path.posix.isAbsolute(value)
+  && !path.win32.isAbsolute(value) && !value.includes('\\') && !value.includes('\0')
+  && value.split('/').every(part => part !== '' && part !== '.' && part !== '..');
+}
+function codeUnit(value: unknown): value is TraceabilityCodeUnit {
+ return exact(value,['id','kind','path','line']) && typeof value.id === 'string' && /^[^\s"'`,;]+$/u.test(value.id)
+  && (value.kind === 'implementation' || value.kind === 'unit-test' || value.kind === 'integration-test')
+  && relativeFile(value.path) && typeof value.line === 'number' && Number.isSafeInteger(value.line) && value.line > 0;
+}
+
+// Traceability: implements OBL-CM-GRAPH from implementation readTraceabilityGraphRequestV1
+function readTraceabilityGraphRequestV1(value: unknown): TraceabilityGraphRequestV1 {
+ if (!exact(value,['schemaVersion','projectPath','units']) || value.schemaVersion !== 1
+  || !relativeFile(value.projectPath) || !Array.isArray(value.units) || !value.units.every(codeUnit)) {
+  throw new Error('Invalid V1 traceability graph request');
+ }
+ return {schemaVersion:1,projectPath:value.projectPath,units:value.units};
+}
+
+export const TraceabilityGraphRequestReaders = {V1:readTraceabilityGraphRequestV1};
+
 function namedImplementation(node: ts.Node): boolean {
  if (ts.isFunctionDeclaration(node) || ts.isClassDeclaration(node) || ts.isInterfaceDeclaration(node)
   || ts.isTypeAliasDeclaration(node) || ts.isEnumDeclaration(node) || ts.isMethodDeclaration(node)

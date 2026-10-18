@@ -5,6 +5,10 @@
 
 import { checkProject, formatTextReport } from './index.js';
 import type { TstsCheckResult } from './index.js';
+import {readFileSync} from 'node:fs';
+import {parse} from 'lossless-json';
+import {checkTraceabilityGraphAnnotations,TraceabilityGraphRequestReaders} from './traceability-graph.js';
+import type {TraceabilityGraphResponseV1} from './traceability-graph.js';
 
 export interface TstsCliOptions {
     readonly configPath?: string | undefined;
@@ -22,12 +26,18 @@ export interface TstsCliRunRequest {
     readonly options: TstsCliOptions;
 }
 
+export interface TstsCliTraceabilityGraphRequest { readonly kind: 'traceability-graph-stdin' }
+
 // Discriminator: kind
-export type TstsCliParseResult = TstsCliHelpRequest | TstsCliRunRequest;
+export type TstsCliParseResult = TstsCliHelpRequest | TstsCliRunRequest | TstsCliTraceabilityGraphRequest;
 
 export function parseTstsCliArguments(args: readonly string[]): TstsCliParseResult {
     if (args.includes('--help') || args.includes('-h')) {
         return { kind: 'help' };
+    }
+    if (args.includes('--traceability-graph-stdin')) {
+        if (args.length !== 1) throw new Error('--traceability-graph-stdin cannot be combined with other options');
+        return {kind:'traceability-graph-stdin'};
     }
 
     const projectFlagIndex: number = args.indexOf('--project');
@@ -67,6 +77,23 @@ export async function runTstsCli(args: readonly string[]): Promise<number> {
     const parseResult: TstsCliParseResult = parseTstsCliArguments(args);
 
     switch (parseResult.kind) {
+        case 'traceability-graph-stdin': {
+            try {
+                const value: unknown = parse(readFileSync(0,'utf8'),null,token => {
+                    if (!/^(0|[1-9][0-9]*)$/u.test(token) || !Number.isSafeInteger(Number(token))) throw new Error(`Unsupported graph request number: ${token}`);
+                    return Number(token);
+                });
+                const request = TraceabilityGraphRequestReaders.V1(value);
+                const result = checkTraceabilityGraphAnnotations({projectRoot:process.cwd(),projectPath:request.projectPath,units:request.units});
+                const response: TraceabilityGraphResponseV1 = {schemaVersion:1,checkedUnitCount:request.units.length,checkedFileCount:result.checkedFileCount,
+                    success:!result.diagnostics.some(diagnostic => diagnostic.severity === 'error'),report:formatTextReport(result)};
+                process.stdout.write(`${JSON.stringify(response)}\n`);
+                return response.success ? 0 : 1;
+            } catch (error: unknown) {
+                process.stderr.write(`error traceability-graph-input: ${error instanceof Error ? error.message : String(error)}\n`);
+                return 1;
+            }
+        }
         case 'help': {
             process.stdout.write(`${usage()}\n`);
             return 0;
@@ -89,6 +116,7 @@ export async function runTstsCli(args: readonly string[]): Promise<number> {
 export function usage(): string {
     return [
         'Usage: tsts [--project <tsconfig.json>] [--config <tsts.json>] [--directory-structure <manifest.json>] [--traceability <traceability.json>]',
+        '       tsts --traceability-graph-stdin  (V1 discovered TypeScript units as JSON on stdin)',
         '',
         'TSTS strengthens TypeScript static type-safety checks.',
     ].join('\n');
