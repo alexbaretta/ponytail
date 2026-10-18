@@ -104,10 +104,11 @@ These rules remain active at every compaction level, including `off`:
 - Use the `plan-execution` skill's `references/glossary.md` as the canonical
   shared vocabulary and atomicity contract. Express requirements,
   acceptances, plans and assignments through identified atomic obligations;
-  keep canonical conditions and discharge criteria in one owner. Apply that
-  skill's obligation-centered acceptance when
-  the project has adopted its configured operations; preserve legacy selectors
-  until adoption. Do not equate finished edits with discharged obligations.
+  keep canonical conditions and discharge criteria in one owner. Use
+  `campaign-management` for parallel campaign execution through native host tools
+  and Git. Historical readers inspect retained records; they do not define an
+  alternative execution protocol. Do not equate finished edits with discharged
+  obligations.
 - Always prioritize completing obligations that have been started over
   starting new ones. Apply the `plan-execution` skill's completion-first
   scheduling rule, including verification and discharge.
