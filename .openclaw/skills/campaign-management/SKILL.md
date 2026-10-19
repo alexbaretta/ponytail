@@ -39,8 +39,8 @@ finishing started obligations; do not duplicate retained assignments or invent
 work to fill capacity. Use isolated host-managed worktrees when authorized and
 respect project resource limits independently of session parallelism.
 
-Name each worker `<campaign-id> W<sequence> <ABC>`: campaign-local increasing
-sequence, three letters summarizing the assignment. Replacements get new numbers;
+Name each worker `<campaign-id> W<sequence> <three word summary>`: campaign-local increasing
+sequence, three words summarizing the assignment. Replacements get new numbers;
 resumed workers retain theirs. Prepend `DONE` once only after accepted integration.
 
 Give each worker a complete assignment identifying canonical IDs, completion

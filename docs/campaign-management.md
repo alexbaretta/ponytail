@@ -322,17 +322,17 @@ actual project resource constraints.
 ### Worker session names
 
 The stakeholder requires each worker session name to identify the campaign,
-the session's sequence number within that campaign, and a three-letter summary
+the session's sequence number within that campaign, and a three-word summary
 of its assignment. Use this display convention:
 
 ```text
-<campaign-id> W<sequence> <ABC>
-DONE <campaign-id> W<sequence> <ABC>
+<campaign-id> W<sequence> <three word summary>
+DONE <campaign-id> W<sequence> <three word summary>
 ```
 
-For example, `campaign-redesign W001 TST` identifies the campaign's first worker
-and a testing assignment. The assignment summary is three letters, not three
-words. Allocate sequence numbers in creation order within the campaign,
+For example, `campaign-redesign W001 Repair acceptance tests` identifies the
+campaign's first worker and its assignment in three words. Allocate sequence
+numbers in creation order within the campaign,
 including replacement workers; do not reuse another session's number. Retained
 blocked sessions keep their number when resumed, even during excess parallelism.
 

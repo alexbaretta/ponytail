@@ -82,7 +82,7 @@ Obligation: [OBL-CM-REPORTING](../requirements/campaign-management.md#obl-cm-rep
 
 **Actor:** developer or campaign coordinator.
 
-**Procedure and expected observations:** Create workers and verify unique campaign sequence names. Blocking and readiness do not add DONE. Accept a delivery, verify the integrated vector is displayed, then verify final worker completion adds DONE exactly once.
+**Procedure and expected observations:** Create workers and verify unique campaign sequence names with a three-word assignment summary. Blocking and readiness do not add DONE. Accept a delivery, verify the integrated vector is displayed, then verify final worker completion adds DONE exactly once.
 
 ## ACC-CM-FINAL-QA
 
