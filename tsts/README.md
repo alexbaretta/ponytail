@@ -20,6 +20,8 @@ In a consuming Git project:
 ponytail register
 # Commit .agents/config/ponytail.json and .agents/config/codex-execpolicy.json.
 tsts --project tsconfig.json
+# Focus direct-project union/dispatch diagnostics on changed source files:
+tsts --project tsconfig.json --file src/changed.ts
 # For explicitly configured rules:
 tsts --config tsts.json
 # For repository placement rules:
@@ -32,6 +34,14 @@ The launcher runs `ponytail validate` first, preserving exit 2 for no worktree
 and 3 for unregistered repositories. The analyzer returns 1 for error-level
 violations and 0 when none occur. `ponytail qa` currently selects reference QA;
 TSTS is an explicitly invoked analyzer, never a whole integration-suite runner.
+
+`--file` is repeatable; paths resolve from the working directory. It limits
+union/dispatch diagnostics and the reported checked-file count to selected
+non-declaration sources, while retaining the entire compiler program and imported
+declarations for semantic analysis. Missing or out-of-program files fail; an empty
+selection cannot pass. It cannot be combined with config, directory-structure or
+traceability modes. Include every affected source in focused validation. A focused
+pass does not clear dependency findings or replace whole-project final QA.
 
 Traceability analysis is intentionally narrow: TSTS verifies that configured
 TypeScript annotations attach to supported named declarations. The

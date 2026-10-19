@@ -164,3 +164,14 @@ excluding all other sessions from the repository, followed by reconciliation of
 all worktrees to their updated branches. This supersedes the earlier no-history-
 rewrite boundary only for that corrective operation. No new exhaustive cleanup
 audit or remote publication is authorized.
+
+## Encountered tooling repair: focused TSTS source checks
+
+The Gwen trial exposed a missing focused direct-project union/dispatch selector:
+TypeScript follows imports even from a one-file tsconfig. Provide repeatable
+`--file` selection with the full compiler/type context retained, explicit
+unmatched-selection failures, and unchanged full-project QA. This implements the
+existing focused-validation rule under the authorized tooling-repair scope;
+it does not waive W7's dependency-wide failure or final campaign checks.
+Regression proof covers imported unions, selected dispatch failures, unrelated
+dependency findings, empty/unmatched selections and the actual CLI path.

@@ -5,6 +5,8 @@ import { mkdtemp, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import { describe, it } from 'node:test';
 
 import { checkProject } from '../src/index.js';
@@ -12,6 +14,52 @@ import { stringifyJsonLosslessly } from '../src/lossless-json.js';
 import type { TstsCheckResult, TstsConfig, TstsDiagnostic } from '../src/index.js';
 
 describe('public union dispatch rule', (): void => {
+  it('focuses diagnostics while retaining imported union context and rejecting unmatched selections', async (): Promise<void> => {
+    const projectPath: string = await createFixtureProject(`
+      import type { Command } from './dependency.js';
+      export function dispatch(command: Command): string {
+        switch (command.kind) { case 'a': return 'a'; }
+        return '';
+      }
+    `);
+    const filePath: string = path.join(path.dirname(projectPath), 'contract.ts');
+    const dependencyPath: string = path.join(path.dirname(projectPath), 'dependency.ts');
+    await writeFile(dependencyPath, `
+      export interface Alpha { readonly kind: 'a'; }
+      export interface Beta { readonly kind: 'b'; }
+      export type Command = Alpha | Beta;
+      export interface BadAlpha { readonly value: string; }
+      export interface BadBeta { readonly count: number; }
+      export type Bad = BadAlpha | BadBeta;
+    `);
+    const focused: TstsCheckResult = await checkProject({ projectPath, filePaths: [filePath] });
+    assert.equal(focused.checkedFileCount, 1);
+    assert(focused.diagnostics.some(diagnostic => diagnostic.ruleId === 'discriminated-union-exhaustive-dispatch'));
+    assert(focused.diagnostics.every(diagnostic => diagnostic.filePath === filePath));
+    const full: TstsCheckResult = await checkProject({ projectPath });
+    assert(full.diagnostics.some(diagnostic => diagnostic.filePath === dependencyPath));
+    const unmatched: TstsCheckResult = await checkProject({ projectPath, filePaths: [filePath, path.join(path.dirname(projectPath), 'missing.ts')] });
+    assert(unmatched.diagnostics.some(diagnostic => diagnostic.ruleId === 'focused-source-selection'));
+    const empty: TstsCheckResult = await checkProject({ projectPath, filePaths: [] });
+    assert.equal(empty.diagnostics[0]?.ruleId, 'focused-source-selection');
+    const incompatible: TstsCheckResult = await checkProject({ projectPath, filePaths: [filePath], configPath: 'not-read.json' });
+    assert.equal(incompatible.diagnostics[0]?.ruleId, 'focused-source-selection');
+    await writeFile(filePath, `
+      import type { Command } from './dependency.js';
+      export function dispatch(command: Command): string {
+        switch (command.kind) { case 'a': return 'a'; case 'b': return 'b'; }
+      }
+    `);
+    const passing: TstsCheckResult = await checkProject({ projectPath, filePaths: [filePath, filePath] });
+    assert.equal(passing.checkedFileCount, 1);
+    assert.deepEqual(passing.diagnostics, []);
+    const cliPath: string = fileURLToPath(new URL('../src/cli.js', import.meta.url));
+    assert.match(execFileSync(process.execPath, [cliPath, '--project', projectPath, '--file', filePath], { encoding: 'utf8' }), /checked 1 files: no violations/);
+    assert.throws(() => execFileSync(process.execPath, [cliPath, '--project', projectPath], { stdio: 'pipe' }));
+    const dependency: TstsCheckResult = await checkProject({ projectPath, filePaths: [dependencyPath] });
+    assert(dependency.diagnostics.some(diagnostic => diagnostic.filePath === dependencyPath));
+  });
+
   it('accepts exhaustive switch dispatch', async (): Promise<void> => {
     const projectPath: string = await createFixtureProject(`
       export interface LiteralAlphaCommand {

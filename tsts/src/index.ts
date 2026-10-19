@@ -26,6 +26,7 @@ export interface TstsDiagnostic {
 }
 
 export interface TstsCheckProjectInput {
+    readonly filePaths?: readonly string[] | undefined;
     readonly configPath?: string | undefined;
     readonly directoryStructurePath?: string | undefined;
     readonly projectPath?: string | undefined;
@@ -120,6 +121,13 @@ interface ExhaustiveSwitchValue {
 
 export async function checkProject(input: TstsCheckProjectInput): Promise<TstsCheckResult> {
     const diagnostics: TstsDiagnostic[] = [];
+    const selectedPaths: ReadonlySet<string> | undefined = input.filePaths === undefined
+        ? undefined : new Set(input.filePaths.map(filePath => path.resolve(filePath)));
+    if (selectedPaths !== undefined && (selectedPaths.size === 0 || input.configPath !== undefined ||
+        input.directoryStructurePath !== undefined || input.traceabilityPath !== undefined)) {
+        return { checkedFileCount: 0, diagnostics: [{ ruleId: 'focused-source-selection', severity: 'error',
+            message: '--file requires a nonempty direct-project selection without other analysis modes' }] };
+    }
     let checkedFileCount: number = 0;
     const projectPath: string | undefined =
         input.projectPath ?? (input.configPath === undefined ? 'tsconfig.json' : undefined);
@@ -155,9 +163,18 @@ export async function checkProject(input: TstsCheckProjectInput): Promise<TstsCh
             declarationIndex,
             sourceFiles,
         });
-        diagnostics.push(...publicUnionAnalysis.diagnostics);
+        const selectedSourceFiles: readonly ts.SourceFile[] = selectedPaths === undefined ? sourceFiles
+            : sourceFiles.filter(sourceFile => selectedPaths.has(path.resolve(sourceFile.fileName)));
+        for (const selectedPath of selectedPaths ?? []) {
+            if (!selectedSourceFiles.some(sourceFile => path.resolve(sourceFile.fileName) === selectedPath)) {
+                diagnostics.push({ ruleId: 'focused-source-selection', severity: 'error', filePath: selectedPath,
+                    message: 'Selected file is not a non-declaration source in the TypeScript program' });
+            }
+        }
+        diagnostics.push(...publicUnionAnalysis.diagnostics.filter(diagnostic => selectedPaths === undefined ||
+            diagnostic.filePath === undefined || selectedPaths.has(path.resolve(diagnostic.filePath))));
 
-        for (const sourceFile of sourceFiles) {
+        for (const sourceFile of selectedSourceFiles) {
             diagnostics.push(
                 ...checkSourceFileDiscriminatedUnionDispatch({
                     checker: program.getTypeChecker(),
@@ -167,7 +184,7 @@ export async function checkProject(input: TstsCheckProjectInput): Promise<TstsCh
             );
         }
 
-        checkedFileCount += sourceFiles.length;
+        checkedFileCount += selectedSourceFiles.length;
     }
 
     if (input.configPath !== undefined) {

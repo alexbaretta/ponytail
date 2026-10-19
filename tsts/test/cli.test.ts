@@ -13,6 +13,16 @@ describe('parseTstsCliArguments', (): void => {
         assert.deepEqual(result,{kind:'traceability-graph-stdin'});
         assert.throws(() => parseTstsCliArguments(['--traceability-graph-stdin','--project','tsconfig.json']),/cannot be combined/);
     });
+    it('parses repeated file selections and rejects a missing path', (): void => {
+        const result: TstsCliParseResult = parseTstsCliArguments(['--project', 'tsconfig.json', '--file', 'a.ts', '--file', 'b.ts']);
+        assert.deepEqual(result, { kind: 'run', options: { projectPath: 'tsconfig.json', filePaths: ['a.ts', 'b.ts'] } });
+        for (const flag of ['--config', '--directory-structure', '--traceability']) {
+            assert.throws(() => parseTstsCliArguments(['--file', 'a.ts', flag]), /cannot be combined/);
+            assert.throws(() => parseTstsCliArguments(['--file', 'a.ts', flag, 'config.json']), /cannot be combined/);
+        }
+        assert.throws(() => parseTstsCliArguments(['--file']), /requires a source path/);
+        assert.throws(() => parseTstsCliArguments(['--file', '--project', 'tsconfig.json']), /requires a source path/);
+    });
     it('defaults to tsconfig.json', (): void => {
         const result: TstsCliParseResult = parseTstsCliArguments([]);
 

@@ -11,6 +11,7 @@ import {checkTraceabilityGraphAnnotations,TraceabilityGraphRequestReaders} from 
 import type {TraceabilityGraphResponseV1} from './traceability-graph.js';
 
 export interface TstsCliOptions {
+    readonly filePaths?: readonly string[] | undefined;
     readonly configPath?: string | undefined;
     readonly directoryStructurePath?: string | undefined;
     readonly projectPath?: string | undefined;
@@ -40,6 +41,16 @@ export function parseTstsCliArguments(args: readonly string[]): TstsCliParseResu
         return {kind:'traceability-graph-stdin'};
     }
 
+    const filePaths: string[] = [];
+    for (let index: number = 0; index < args.length; index += 1) {
+        if (args[index] !== '--file') continue;
+        const filePath: string | undefined = args[index + 1];
+        if (filePath === undefined || filePath.trim() === '' || filePath.startsWith('--')) {
+            throw new Error('--file requires a source path');
+        }
+        filePaths.push(filePath);
+        index += 1;
+    }
     const projectFlagIndex: number = args.indexOf('--project');
     const projectPath: string | undefined =
         projectFlagIndex >= 0 ? args[projectFlagIndex + 1] : undefined;
@@ -54,7 +65,12 @@ export function parseTstsCliArguments(args: readonly string[]): TstsCliParseResu
     const traceabilityFlagIndex: number = args.indexOf('--traceability');
     const traceabilityPath: string | undefined =
         traceabilityFlagIndex >= 0 ? args[traceabilityFlagIndex + 1] : undefined;
+    if (filePaths.length > 0 &&
+        (configFlagIndex >= 0 || directoryStructureFlagIndex >= 0 || traceabilityFlagIndex >= 0)) {
+        throw new Error('--file cannot be combined with other analysis modes');
+    }
     const options: TstsCliOptions = {
+        ...(filePaths.length === 0 ? {} : { filePaths }),
         projectPath:
             projectPath ??
             (configPath === undefined &&
@@ -100,6 +116,7 @@ export async function runTstsCli(args: readonly string[]): Promise<number> {
         }
         case 'run': {
             const result: TstsCheckResult = await checkProject({
+                filePaths: parseResult.options.filePaths,
                 configPath: parseResult.options.configPath,
                 directoryStructurePath: parseResult.options.directoryStructurePath,
                 projectPath: parseResult.options.projectPath,
@@ -116,6 +133,7 @@ export async function runTstsCli(args: readonly string[]): Promise<number> {
 export function usage(): string {
     return [
         'Usage: tsts [--project <tsconfig.json>] [--config <tsts.json>] [--directory-structure <manifest.json>] [--traceability <traceability.json>]',
+        '       tsts --project <tsconfig.json> --file <source.ts> [--file <source.ts> ...]',
         '       tsts --traceability-graph-stdin  (V1 discovered TypeScript units as JSON on stdin)',
         '',
         'TSTS strengthens TypeScript static type-safety checks.',

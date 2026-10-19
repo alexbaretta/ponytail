@@ -111,6 +111,12 @@ When integrating such a checker:
 5. Report the full non-fatal violation list instead of stopping at the
    first violation.
 
+For direct-project union and dispatch checks, use
+`tsts --project <tsconfig> --file <source.ts>` (repeat `--file` for each affected
+source). Imported declarations remain available to the checker. This selection
+cannot be combined with other analysis modes and does not establish a pass for
+unselected dependencies or replace the full project gate.
+
 Expected checks:
 
 - Owned code must not contain prohibited type-system bypasses.
