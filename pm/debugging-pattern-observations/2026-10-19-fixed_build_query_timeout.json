@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-10-19-fixed_build_query_timeout",
+  "recorded_at": "2026-10-19T01:10:06-07:00",
+  "source_references": [
+    "pm/plans/in_progress/2026-10-17-campaign-management-redesign/sprints/S06.md"
+  ],
+  "context": {
+    "languages": [
+      "javascript"
+    ],
+    "frameworks": [
+      "typescript"
+    ],
+    "components": [
+      "build-impact"
+    ],
+    "affected_boundaries": [
+      "Compiler and custom adapter subprocess queries"
+    ],
+    "code_references": [
+      "skills/build-impact/scripts/build-impact.js"
+    ]
+  },
+  "observed_behavior": "Valid Gwen compiler inventories exceeded the fixed 30-second budget under concurrent workload; unchanged retries remained indeterminate.",
+  "expected_behavior": "Callers can select a larger bounded query budget without weakening failure classification.",
+  "causal_mechanism": "Both subprocess paths used an unchangeable 30000 millisecond timeout.",
+  "anti_pattern": {
+    "structural_description": "A workload-dependent resource budget was fixed inside a portable query implementation.",
+    "why_it_fails": "The caller could not accommodate an observed slower valid compiler query."
+  },
+  "correct_pattern": {
+    "required_invariant": "Every subprocess has a finite validated caller-selected budget and timeout remains indeterminate.",
+    "implementation_description": "Propagate --timeout-ms to both subprocess paths, preserving the existing default."
+  },
+  "applicability_conditions": [
+    "Real compiler or adapter queries exceed the default budget"
+  ],
+  "known_non_matches": [
+    "Compiler errors and malformed adapter responses remain failures regardless of budget"
+  ],
+  "confirmation_evidence": [
+    "Both query paths used the same fixed constant; controlled hanging subprocesses confirm the override reaches each timeout boundary."
+  ],
+  "regression_proofs": [
+    "tests/build-impact.test.js: explicit query budgets retain indeterminate compiler and adapter timeouts",
+    "tests/build-impact.test.js: query budgets accept longer bounded waits and reject unbounded or malformed values"
+  ]
+}

@@ -426,3 +426,38 @@ test('changed paths cannot escape the project root', () => withFixture((root) =>
     BuildImpactError,
   );
 }));
+
+test('explicit query budgets retain indeterminate compiler and adapter timeouts', () => withFixture((root) => {
+  writeFixtureFile(root, 'node_modules/typescript/bin/tsc', 'setInterval(() => {}, 1000);');
+  writeCustomAdapter(root, 'scripts/wait.js', 'setInterval(() => {}, 1000);');
+  const config = projectConfig([
+    { type: 'typescript', targets: [target('backend', 'apps/backend/tsconfig.json')] },
+    { type: 'custom', command: [process.execPath, 'scripts/wait.js'], targets: [{ name: 'native', buildCommand: 'build native' }] },
+  ]);
+  writeFixtureFile(root, 'ponytail.json', JSON.stringify(config));
+  const result = spawnSync(process.execPath,
+    [cli, '--project', root, '--timeout-ms', '20', '--file', 'apps/backend/src/index.ts'],
+    { encoding: 'utf8', timeout: 10000 });
+  assert.equal(result.status, 2, result.stderr);
+  const response = parseQueryResult(JSON.parse(result.stdout));
+  assert.equal(response.status, 'indeterminate');
+  assert.deepEqual(response.affectedTargets, []);
+  assert.deepEqual(response.indeterminateTargets.map(entry => entry.name), ['backend', 'native']);
+  for (const entry of response.indeterminateTargets) assert.match(entry.reason, /ETIMEDOUT/);
+}));
+
+test('query budgets accept longer bounded waits and reject unbounded or malformed values', () => withFixture((root) => {
+  writeFixtureFile(root, 'apps/backend/tsconfig.json', JSON.stringify({fixtureFiles: ['src/index.ts']}));
+  const config = projectConfig([{type: 'typescript', targets: [target('backend', 'apps/backend/tsconfig.json')]}]);
+  writeFixtureFile(root, 'ponytail.json', JSON.stringify(config));
+  const success = spawnSync(process.execPath,
+    [cli, '--project', root, '--timeout-ms', '120000', '--file', 'apps/backend/src/index.ts'],
+    {encoding: 'utf8'});
+  assert.equal(success.status, 0, success.stdout);
+  assert.deepEqual(parseQueryResult(JSON.parse(success.stdout)).affectedTargets[0].changedFiles, ['apps/backend/src/index.ts']);
+  for (const value of ['0', '-1', 'Infinity', '1.5', '2147483648', '9007199254740993']) {
+    const result = spawnSync(process.execPath, [cli, '--project', root, '--timeout-ms', value], {encoding: 'utf8'});
+    assert.equal(result.status, 2, value);
+    assert.match(parseQueryResult(JSON.parse(result.stdout)).error, /timeout/);
+  }
+}));

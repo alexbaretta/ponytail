@@ -52,6 +52,11 @@ changing `ponytail.json`.
 7. When a target input changes after its successful build, query again and
    rebuild only the newly affected targets.
 
+Each compiler query or custom adapter has a 30-second timeout by default. When
+a real query exceeds that budget, use `--timeout-ms <milliseconds>` with a
+bounded larger budget (for example, `--timeout-ms 120000`). Timeout remains an
+indeterminate result; never treat it as proof that no build is needed.
+
 Do not run a build merely because a tasklet, story, sprint, or plan completed.
 An explicit user request to build or validate a release artifact remains
 independent authority.

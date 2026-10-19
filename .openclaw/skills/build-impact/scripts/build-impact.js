@@ -10,7 +10,7 @@ const { spawnSync } = require('node:child_process');
 
 const PROJECT_CONFIG_VERSION = 2;
 const PROTOCOL_VERSION = 1;
-const QUERY_TIMEOUT_MS = 30000;
+const DEFAULT_QUERY_TIMEOUT_MS = 30000;
 
 class BuildImpactError extends Error {}
 
@@ -222,7 +222,7 @@ function resolveTypescript(projectRoot) {
   return compilerPath;
 }
 
-function listTypescriptFiles(projectRoot, compilerPath, tsconfig) {
+function listTypescriptFiles(projectRoot, compilerPath, tsconfig, timeoutMs = DEFAULT_QUERY_TIMEOUT_MS) {
   const root = fs.realpathSync(projectRoot);
   const result = spawnSync(
     process.execPath,
@@ -231,7 +231,7 @@ function listTypescriptFiles(projectRoot, compilerPath, tsconfig) {
       cwd: root,
       encoding: 'utf8',
       maxBuffer: 64 * 1024 * 1024,
-      timeout: QUERY_TIMEOUT_MS,
+      timeout: timeoutMs,
     },
   );
   if (result.error) throw new BuildImpactError(result.error.message);
@@ -251,7 +251,7 @@ function listTypescriptFiles(projectRoot, compilerPath, tsconfig) {
   return files;
 }
 
-function queryTypescriptAdapter(adapter, projectRoot, changedFiles) {
+function queryTypescriptAdapter(adapter, projectRoot, changedFiles, timeoutMs) {
   let compilerPath;
   let compilerError;
   const affected = [];
@@ -276,7 +276,7 @@ function queryTypescriptAdapter(adapter, projectRoot, changedFiles) {
         }
       }
       if (compilerError !== undefined) throw compilerError;
-      const compilerInputs = listTypescriptFiles(projectRoot, compilerPath, target.tsconfig);
+      const compilerInputs = listTypescriptFiles(projectRoot, compilerPath, target.tsconfig, timeoutMs);
       const compilerMatches = compilerCandidates.filter((changedFile) =>
         compilerInputs.has(changedFile));
       const unmatchedMissing = compilerCandidates.filter((changedFile) =>
@@ -417,7 +417,7 @@ function parseQueryResult(value) {
   };
 }
 
-function queryCustomAdapter(adapter, projectRoot, changedFiles) {
+function queryCustomAdapter(adapter, projectRoot, changedFiles, timeoutMs) {
   const command = [...adapter.command];
   if (command[0].includes('/') || command[0].includes('\\')) {
     command[0] = path.resolve(projectRoot, command[0]);
@@ -432,7 +432,7 @@ function queryCustomAdapter(adapter, projectRoot, changedFiles) {
     encoding: 'utf8',
     input: request,
     maxBuffer: 16 * 1024 * 1024,
-    timeout: QUERY_TIMEOUT_MS,
+    timeout: timeoutMs,
   });
   const failAll = (reason) => ({
     affected: [],
@@ -460,7 +460,10 @@ function queryCustomAdapter(adapter, projectRoot, changedFiles) {
   }
 }
 
-function queryBuildImpact(config, projectRoot, intendedFiles) {
+function queryBuildImpact(config, projectRoot, intendedFiles, timeoutMs = DEFAULT_QUERY_TIMEOUT_MS) {
+  if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 2147483647) {
+    throw new BuildImpactError('timeout must be an integer from 1 to 2147483647 milliseconds');
+  }
   const root = fs.realpathSync(path.resolve(projectRoot));
   const changedFiles = [...new Set(intendedFiles.map((file, index) =>
     normalizeChangedFile(root, file, `changedFiles[${index}]`)))].sort();
@@ -474,8 +477,8 @@ function queryBuildImpact(config, projectRoot, intendedFiles) {
   const indeterminate = [];
   for (const adapter of config.buildImpact.adapters) {
     const result = adapter.type === 'typescript'
-      ? queryTypescriptAdapter(adapter, root, changedFiles)
-      : queryCustomAdapter(adapter, root, changedFiles);
+      ? queryTypescriptAdapter(adapter, root, changedFiles, timeoutMs)
+      : queryCustomAdapter(adapter, root, changedFiles, timeoutMs);
     affected.push(...result.affected);
     indeterminate.push(...result.indeterminate);
   }
@@ -495,15 +498,20 @@ function makeResponse(affectedTargets, indeterminateTargets, error = null) {
 function parseArguments(argv) {
   let projectRoot = process.cwd();
   let configPath = 'ponytail.json';
+  let timeoutMs = DEFAULT_QUERY_TIMEOUT_MS;
   const files = [];
   for (let index = 0; index < argv.length; index += 1) {
     const argument = argv[index];
-    if (argument === '--project' || argument === '--config' || argument === '--file') {
+    if (argument === '--project' || argument === '--config' || argument === '--file' || argument === '--timeout-ms') {
       const value = argv[index + 1];
       if (value === undefined) throw new BuildImpactError(`${argument} requires a value`);
       index += 1;
       if (argument === '--project') projectRoot = value;
       else if (argument === '--config') configPath = value;
+      else if (argument === '--timeout-ms') {
+        if (!/^[0-9]+$/u.test(value)) throw new BuildImpactError('--timeout-ms requires a positive integer');
+        timeoutMs = Number(value);
+      }
       else files.push(value);
     } else if (argument === '--help') {
       return { help: true };
@@ -511,12 +519,12 @@ function parseArguments(argv) {
       throw new BuildImpactError(`unknown argument: ${argument}`);
     }
   }
-  return { help: false, projectRoot: path.resolve(projectRoot), configPath, files };
+  return { help: false, projectRoot: path.resolve(projectRoot), configPath, files, timeoutMs };
 }
 
 function printUsage() {
   process.stdout.write(
-    'Usage: build-impact.js [--project <directory>] [--config <path>] [--file <path>]...\n',
+    'Usage: build-impact.js [--project <directory>] [--config <path>] [--timeout-ms <milliseconds>] [--file <path>]...\n',
   );
 }
 
@@ -536,6 +544,7 @@ function run(argv = process.argv.slice(2)) {
       config,
       options.projectRoot,
       options.files,
+      options.timeoutMs,
     );
     process.stdout.write(`${JSON.stringify(response)}\n`);
     return response.status === 'ok' ? 0 : 2;
