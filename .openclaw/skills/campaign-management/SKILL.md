@@ -90,7 +90,7 @@ or rebase their submissions. Keep it available to:
    `git merge --ff-only <candidate>`. Return stale or non-fast-forward deliveries
    to their workers. Never repair them in the coordinator.
 4. Reassess the integrated scope and display
-   `Campaign completeness vector (R,A,T,I): (...)` after every accepted merge.
+   `Campaign completeness vector (O,A,T,I): (...)` after every accepted merge.
    Publish the updated commit-bound assessment tag and run
    `ponytail traceability completeness --campaign <name> --assessment-tag <tag>`.
    Use its vector and unresolved IDs; do not maintain a separate hand-counted
@@ -118,17 +118,21 @@ Count unresolved objects in the integrated scope:
 
 | Coordinate | Unresolved objects |
 | --- | --- |
-| R | Requirements with missing, incomplete or unreviewed obligation decomposition |
+| O | Requirements with missing, incomplete or unreviewed obligation decomposition |
 | A | Obligations without adequate acceptance coverage |
 | T | Acceptances without adequate executable test coverage |
 | I | Obligations without adequate implementation |
+
+The letters name the missing coverage: obligation decomposition, acceptance, tests,
+and implementation. Coordinates count entities lacking that coverage, not the
+unknown number of missing artifacts.
 
 Unknown adequacy remains unresolved. T and I decrease only when the linked tests
 and implementation exist, the implementation passes those tests, and adversarial
 review establishes adequacy. Unit or integration coverage may suffice. Never sum
 stale worker-local vectors. Use canonical IDs to retain unresolved scope.
 
-Generally favor coherent changes that decrease `(R,A,T,I)` lexicographically:
+Generally favor coherent changes that decrease `(O,A,T,I)` lexicographically:
 the first changed coordinate decreases; later coordinates may increase. Discoveries,
 invalidated proof and user-added scope may honestly increase it. Record those
 reasons rather than mislabeling them productive descent or hiding them.

@@ -160,7 +160,7 @@ No sidecar relationship map or duplicated policy is needed.
 
 Run `ponytail traceability completeness --campaign <name> --assessment-tag <tag>`
 on the clean integrated commit. It reads the invoking project's V5 graph directly,
-without a database, and prints `(R,A,T,I)` plus every unresolved ID. `--json`
+without a database, and prints `(O,A,T,I)` plus every unresolved ID. `--json`
 returns the same data for tooling. Without `--assessment-tag`, it selects the
 unique `ponytail/completeness/<name>/*` annotated tag at HEAD; no arguments work
 when exactly one campaign assessment tag exists there. Ambiguity requires an
@@ -174,16 +174,19 @@ then use `git tag -a ponytail/completeness/<name>/<unique> -F <file> HEAD`:
 
 ```json
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "campaign": "example",
   "requirementIds": ["REQ-A"],
-  "complete": {"R": [], "A": [], "T": [], "I": []},
+  "complete": {"O": [], "A": [], "T": [], "I": []},
   "reviewReferences": [],
   "validationTags": []
 }
 ```
 
-`complete.R` lists requirements with reviewed complete decomposition;
+Version 2 uses `O` for obligation decomposition. Existing version 1 tags with
+`complete.R` remain readable and normalize to `O`; create new assessments as version 2.
+
+`complete.O` lists requirements with reviewed complete decomposition;
 `complete.A` lists obligations with reviewed adequate acceptances;
 `complete.T` lists acceptances with adequate tests and passing implementation;
 `complete.I` lists adequately implemented obligations with passing coverage.
@@ -204,9 +207,9 @@ flags that hide inputs (`assume-unchanged`, `skip-worktree`) are rejected.
 Annotation findings, including legacy Markdown relationship markers, are
 returned in `findings` with `completionBlocked: true`. Malformed markers grant
 no coverage. Resolve every finding before final acceptance, even at zero.
-R/A completion attests adequate decomposition of the actual requirements and
+O/A completion attests adequate decomposition of the actual requirements and
 obligations, not merely the declarations currently parsed. Unidentified work
-remains unresolved in R/A until decomposed. Explicit scope, unique identities,
+remains unresolved in O/A until decomposed. Explicit scope, unique identities,
 valid edges and ownership of every declared entity remain mandatory; a declared
 acceptance with no valid obligation edge is a graph error.
 Exit zero means the report was computed, not that its vector is zero or completion

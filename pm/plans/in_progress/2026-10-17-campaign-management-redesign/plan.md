@@ -48,7 +48,7 @@ validation-interface and database design, including conflicting S01 decisions.
    No validation CLI chapter, MCP adapter, custom process runner, revocation
    service or mandatory machine-readable certificate schema. Corrections use
    new tags identifying the superseded tag; never move the original.
-4. **Coordinator assessment.** Compute the campaign completeness vector `(R,A,T,I)`
+4. **Coordinator assessment.** Compute the campaign completeness vector `(O,A,T,I)`
    from canonical scoped objects and reviewed, passing work. Unknown remains
    unresolved; links alone cannot reduce T/I. Display it after every accepted
    merge. Compare timestamped observations over 30 active minutes for regression

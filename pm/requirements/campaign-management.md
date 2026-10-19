@@ -51,7 +51,7 @@ Discharge: [ACC-CM-ACCEPTANCE-COVERAGE](../uat/campaign-management.md#acc-cm-acc
 
 Requirement: `REQ-CM-DESCENT`.
 
-Report the campaign completeness vector (R,A,T,I) as unresolved decomposition, acceptance, test and implementation counts. Unknown adequacy is unresolved. T and I decrease only with linked tests and implementations that pass; adversarial review assesses semantic adequacy. Productive accepted changes descend lexicographically; discoveries and scope changes may increase the vector honestly.
+Report the campaign completeness vector (O,A,T,I) as unresolved decomposition, acceptance, test and implementation counts. Unknown adequacy is unresolved. T and I decrease only with linked tests and implementations that pass; adversarial review assesses semantic adequacy. Productive accepted changes descend lexicographically; discoveries and scope changes may increase the vector honestly.
 
 `ponytail traceability completeness` computes this vector and unresolved IDs from
 canonical V5 source and an explicit, commit-bound assessment stored in an

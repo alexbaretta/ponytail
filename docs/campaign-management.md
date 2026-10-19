@@ -80,7 +80,7 @@ existing shared glossary remains reconciliation work.
 | Acceptance | An identified observable condition demonstrating one or more obligations, with a sufficient demonstration procedure. |
 | Test | An identified executable implementation of one or more acceptances, with assertions establishing their expected results. |
 | Code block | A stable implementation unit declaring the obligations it implements. |
-| Campaign completeness vector | The ordered nonnegative integer tuple `(R,A,T,I)` measuring unresolved decomposition, acceptance, test, and implementation coverage in the current campaign scope. |
+| Campaign completeness vector | The ordered nonnegative integer tuple `(O,A,T,I)` measuring unresolved decomposition, acceptance, test, and implementation coverage in the current campaign scope. |
 | Validation run | Execution of identified test or QA commands against an identified commit and applicable environment. |
 | Evidence | Observations produced by a validation run, including commands, outcomes, applicable counts, and diagnostic output. |
 | Validation certificate | A durable attestation of a commit's validation scope, commands, and observed results, stored in an annotated Git tag. |
@@ -109,14 +109,18 @@ only still-valid proof, runs the command and displays its result. This replaces
 hand-counted vectors; semantic review and independent final QA remain necessary.
 
 The official term is **campaign completeness vector**. Its fixed order is
-**`(R,A,T,I)`**:
+**`(O,A,T,I)`**:
 
 | Coordinate | Unresolved objects counted |
 | --- | --- |
-| R | Requirements whose obligation decomposition is missing or incomplete. |
+| O | Requirements whose obligation decomposition is missing or incomplete. |
 | A | Obligations whose acceptance coverage is missing or inadequate. |
 | T | Acceptances whose executable test coverage is missing or inadequate. |
 | I | Obligations whose implementation coverage is missing or inadequate. |
+
+The letters name the missing coverage: obligation decomposition, acceptance, tests,
+and implementation. Coordinates count entities lacking that coverage, not the
+unknown number of missing artifacts.
 
 Count unresolved objects, not lines, annotations, diagnostic messages, or raw test
 counts. Several partial links do not resolve an object unless they collectively
@@ -201,7 +205,7 @@ scope can grow, proof can be invalidated, or necessary repairs are unavailable.
 
 ```text
 Campaign complete =
-    (R,A,T,I) = (0,0,0,0)
+    (O,A,T,I) = (0,0,0,0)
     AND all individual campaign workers are DONE
     AND required adversarial review is satisfied
     AND the coordinator independently runs and verifies all required automated QA
@@ -466,7 +470,7 @@ campaign revision, not the worker's pre-merge branch. Use the official term and
 explicit coordinate order, for example:
 
 ```text
-Campaign completeness vector (R,A,T,I): (0,2,5,3)
+Campaign completeness vector (O,A,T,I): (0,2,5,3)
 ```
 
 This reporting requirement applies to each accepted merge, including acceptance
@@ -502,7 +506,7 @@ The reviewed system does not yet implement this revised model:
   be disentangled before adopting obligations as atomic requirements.
 - The old vector `(T1,T2,T3,T4,C1,C2)` counts acceptance adequacy, integration Arc
   adequacy, implementation mapping adequacy, unit-proof adequacy, and fresh unit
-  and integration execution gaps. It is replaced conceptually by `(R,A,T,I)`
+  and integration execution gaps. It is replaced conceptually by `(O,A,T,I)`
   plus the separate final QA gate, not renamed coordinate by coordinate.
 - Plan-execution explicitly instructs agents to commit integration evidence.
   Rolling obligation documents contain certificates and checkpoints beside

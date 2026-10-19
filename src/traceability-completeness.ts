@@ -9,9 +9,17 @@ import {loadTraceabilityV5,parseTraceabilityV5} from '../skills/requirements-tra
 import {discoverTraceabilityProject} from '../skills/requirements-traceability/scripts/traceability-project.js';
 import {scopeTraceabilityGraph,type TraceabilityGraph} from '../skills/requirements-traceability/scripts/traceability-graph.js';
 
-export interface CompletenessIds { readonly R: readonly string[]; readonly A: readonly string[]; readonly T: readonly string[]; readonly I: readonly string[] }
+export interface CompletenessIds { readonly O: readonly string[]; readonly A: readonly string[]; readonly T: readonly string[]; readonly I: readonly string[] }
 export interface CampaignAssessmentV1 {
  readonly schemaVersion: 1;
+ readonly campaign: string;
+ readonly requirementIds: readonly string[];
+ readonly complete: { readonly R: readonly string[]; readonly A: readonly string[]; readonly T: readonly string[]; readonly I: readonly string[] };
+ readonly reviewReferences: readonly string[];
+ readonly validationTags: readonly string[];
+}
+export interface CampaignAssessmentV2 {
+ readonly schemaVersion: 2;
  readonly campaign: string;
  readonly requirementIds: readonly string[];
  readonly complete: CompletenessIds;
@@ -60,18 +68,33 @@ function readCampaignAssessmentV1(value: unknown): CampaignAssessmentV1 {
  if ((result.complete.T.length > 0 || result.complete.I.length > 0) && result.validationTags.length === 0) throw new Error('T/I credit requires passing validation tag references');
  return result;
 }
-export const CampaignAssessmentReaders = {V1:readCampaignAssessmentV1};
+function readCampaignAssessmentV2(value: unknown): CampaignAssessmentV2 {
+ const record = object(value,['schemaVersion','campaign','requirementIds','complete','reviewReferences','validationTags']);
+ if (record.schemaVersion !== 2) throw new Error('Unsupported campaign assessment version');
+ const complete = object(record.complete,['O','A','T','I']);
+ const legacy = readCampaignAssessmentV1({...record,schemaVersion:1,complete:{R:complete.O,A:complete.A,T:complete.T,I:complete.I}});
+ return {...legacy,schemaVersion:2,complete:{O:legacy.complete.R,A:legacy.complete.A,T:legacy.complete.T,I:legacy.complete.I}};
+}
+export const CampaignAssessmentReaders = {V1:readCampaignAssessmentV1,V2:readCampaignAssessmentV2};
+function readCampaignAssessment(value: unknown): CampaignAssessmentV2 {
+ if (!isRecord(value)) throw new Error('Expected campaign assessment object');
+ if (value.schemaVersion === 1) {
+  const legacy = readCampaignAssessmentV1(value);
+  return {...legacy,schemaVersion:2,complete:{O:legacy.complete.R,A:legacy.complete.A,T:legacy.complete.T,I:legacy.complete.I}};
+ }
+ return readCampaignAssessmentV2(value);
+}
 
 // Traceability: implements OBL-CM-DESCENT from implementation computeCampaignCompleteness
-export function computeCampaignCompleteness(graph: TraceabilityGraph, assessment: CampaignAssessmentV1, commit: string, assessmentTag: string | null): CampaignCompleteness {
+export function computeCampaignCompleteness(graph: TraceabilityGraph, assessment: CampaignAssessmentV2, commit: string, assessmentTag: string | null): CampaignCompleteness {
  const scoped = scopeTraceabilityGraph(graph,assessment.requirementIds);
  const kindsById = new Map(scoped.entities.map(entity => [entity.id,entity.kind]));
  const byKind = (kind: string): readonly string[] => scoped.entities.filter(entity => entity.kind === kind).map(entity => entity.id).sort();
  const requirements = byKind('requirement');
  const obligations = byKind('obligation');
  const acceptances = byKind('acceptance');
- const expected: CompletenessIds = {R:requirements,A:obligations,T:acceptances,I:obligations};
- for (const coordinate of ['R','A','T','I'] as const) {
+ const expected: CompletenessIds = {O:requirements,A:obligations,T:acceptances,I:obligations};
+ for (const coordinate of ['O','A','T','I'] as const) {
   for (const id of assessment.complete[coordinate]) {
    if (!expected[coordinate].includes(id)) throw new Error(`Assessment ${coordinate} ID is outside scope or has the wrong kind: ${id}`);
   }
@@ -83,14 +106,14 @@ export function computeCampaignCompleteness(graph: TraceabilityGraph, assessment
  const tested = (id: string): boolean => assessment.complete.T.includes(id) && incoming(id,['unit-test','integration-test']).length > 0
   && scoped.relationships.filter(edge => edge.source === id).every(edge => implemented(edge.target));
  const unresolved: CompletenessIds = {
-  R:requirements.filter(id => !assessment.complete.R.includes(id) || incoming(id,['obligation']).length === 0),
+  O:requirements.filter(id => !assessment.complete.O.includes(id) || incoming(id,['obligation']).length === 0),
   A:obligations.filter(id => !assessment.complete.A.includes(id) || incoming(id,['acceptance']).length === 0),
   T:acceptances.filter(id => !tested(id)),
   I:obligations.filter(id => !assessment.complete.I.includes(id) || !implemented(id) || !assessment.complete.A.includes(id)
    || incoming(id,['acceptance']).length === 0 || !incoming(id,['acceptance']).every(tested)),
  };
  return {campaign:assessment.campaign,commit,assessmentTag,requirementIds:[...assessment.requirementIds].sort(),
-  vector:[unresolved.R.length,unresolved.A.length,unresolved.T.length,unresolved.I.length],unresolved};
+  vector:[unresolved.O.length,unresolved.A.length,unresolved.T.length,unresolved.I.length],unresolved};
 }
 
 function git(root: string, args: readonly string[]): string {
@@ -156,10 +179,10 @@ export function runTraceabilityCompleteness(argv: readonly string[], cwd = proce
  const commit = git(root,['rev-parse','HEAD']);
  requireVisibleIndex(root);
  if (git(root,['status','--porcelain','--untracked-files=all'])) throw new Error('Completeness requires a clean worktree so source and assessment identify the same commit');
- let assessment: CampaignAssessmentV1;
+ let assessment: CampaignAssessmentV2;
  if (requirementIds.length > 0) {
   if (campaign === undefined) throw new Error('Unassessed scope requires --campaign');
-  assessment = readCampaignAssessmentV1({schemaVersion:1,campaign,requirementIds,complete:{R:[],A:[],T:[],I:[]},reviewReferences:[],validationTags:[]});
+  assessment = readCampaignAssessmentV2({schemaVersion:2,campaign,requirementIds,complete:{O:[],A:[],T:[],I:[]},reviewReferences:[],validationTags:[]});
  } else {
   if (assessmentTag === undefined) {
    const pattern = campaign === undefined ? 'ponytail/completeness/*' : `ponytail/completeness/${campaign}/*`;
@@ -171,10 +194,10 @@ export function runTraceabilityCompleteness(argv: readonly string[], cwd = proce
   const tag = annotatedTag(root,assessmentTag);
   if (tag.commit !== commit) throw new Error('Assessment tag is stale: it must target HEAD');
   const payload: unknown = parse(tag.contents,null,token => {
-   if (token !== '1') throw new Error(`Unsupported assessment number: ${token}`);
-   return 1;
+   if (token !== '1' && token !== '2') throw new Error(`Unsupported assessment number: ${token}`);
+   return Number(token);
   });
-  assessment = readCampaignAssessmentV1(payload);
+  assessment = readCampaignAssessment(payload);
   if (campaign !== undefined && assessment.campaign !== campaign) throw new Error('Assessment campaign does not match --campaign');
   for (const name of assessment.validationTags) {
    const validation = annotatedTag(root,name);
@@ -203,8 +226,8 @@ export function runTraceabilityCompleteness(argv: readonly string[], cwd = proce
  if (git(root,['rev-parse','HEAD']) !== commit || git(root,['status','--porcelain','--untracked-files=all'])) throw new Error('Repository changed during completeness assessment');
  if (json) process.stdout.write(`${JSON.stringify(result)}\n`);
  else {
-  process.stdout.write(`Campaign completeness vector (R,A,T,I): (${result.vector.join(',')})\nCampaign: ${result.campaign}; commit: ${commit}; assessment: ${result.assessmentTag ?? 'none (all adequacy unknown)'}\n`);
-  for (const coordinate of ['R','A','T','I'] as const) process.stdout.write(`${coordinate} unresolved: ${result.unresolved[coordinate].join(', ') || 'none'}\n`);
+  process.stdout.write(`Campaign completeness vector (O,A,T,I): (${result.vector.join(',')})\nCampaign: ${result.campaign}; commit: ${commit}; assessment: ${result.assessmentTag ?? 'none (all adequacy unknown)'}\n`);
+  for (const coordinate of ['O','A','T','I'] as const) process.stdout.write(`${coordinate} unresolved: ${result.unresolved[coordinate].join(', ') || 'none'}\n`);
   process.stdout.write(`Annotation findings blocking completion: ${result.findings.length}\n`);
   for (const finding of result.findings) process.stdout.write(`${finding.path}:${finding.line} ${finding.code}: ${finding.message}\n`);
   process.stdout.write('Based on declared review and validation applicability; zero is provisional until all workers are DONE and independent final QA passes.\n');
