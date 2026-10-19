@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-10-19-private_member_locator",
+  "recorded_at": "2026-10-19T03:21:14-07:00",
+  "source_references": [
+    "pm/plans/in_progress/2026-10-17-campaign-management-redesign/sprints/S06.md"
+  ],
+  "context": {
+    "languages": [
+      "typescript"
+    ],
+    "frameworks": [],
+    "components": [
+      "requirements traceability"
+    ],
+    "affected_boundaries": [
+      "Implementation annotation attachment to class members"
+    ],
+    "code_references": [
+      "tsts/src/traceability-graph.ts"
+    ]
+  },
+  "observed_behavior": "The configured semantic check rejected implementation annotations on the private payment-executor factory method.",
+  "expected_behavior": "Named private class methods and properties can declare implementation links without exposing their boundary.",
+  "causal_mechanism": "The named-declaration predicate accepted Identifier names but omitted the distinct PrivateIdentifier AST node used for #private members.",
+  "anti_pattern": {
+    "structural_description": "An AST eligibility predicate represented a semantic category using only one of its valid syntax forms.",
+    "why_it_fails": "Equivalent named member declarations receive different traceability eligibility solely because of private-name syntax."
+  },
+  "correct_pattern": {
+    "required_invariant": "Named private members retain implementation attachment under the same leading-comment and declaration-kind rules as public members.",
+    "implementation_description": "Accept PrivateIdentifier alongside Identifier in the existing named implementation predicate."
+  },
+  "applicability_conditions": [
+    "Implementation annotations precede a supported class member with a #private name."
+  ],
+  "known_non_matches": [
+    "Public and private-keyword method names already pass.",
+    "Detached comments and string markers remain rejected by the unchanged attachment checks."
+  ],
+  "confirmation_evidence": [
+    "The differential regression passed ordinary and private-keyword methods but failed #work before the correction.",
+    "After the correction, private method, async method, static method and property fixtures pass."
+  ],
+  "regression_proofs": [
+    "tsts/test/traceability-graph.test.ts: implementation annotations attach to private class methods and properties"
+  ]
+}

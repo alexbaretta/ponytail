@@ -61,7 +61,7 @@ export const TraceabilityGraphRequestReaders = {V1:readTraceabilityGraphRequestV
 function namedImplementation(node: ts.Node): boolean {
  if (ts.isFunctionDeclaration(node) || ts.isClassDeclaration(node) || ts.isInterfaceDeclaration(node)
   || ts.isTypeAliasDeclaration(node) || ts.isEnumDeclaration(node) || ts.isMethodDeclaration(node)
-  || ts.isPropertyDeclaration(node)) return node.name !== undefined && ts.isIdentifier(node.name);
+  || ts.isPropertyDeclaration(node)) return node.name !== undefined && (ts.isIdentifier(node.name) || ts.isPrivateIdentifier(node.name));
  if (ts.isVariableStatement(node) && node.declarationList.declarations.length === 1) {
   const declaration = node.declarationList.declarations[0];
   return declaration !== undefined && ts.isIdentifier(declaration.name);

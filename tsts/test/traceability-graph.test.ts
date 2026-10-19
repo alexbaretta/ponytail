@@ -46,6 +46,14 @@ test('V5 implementation annotations attach to supported named declarations', tes
  }
 });
 
+// Traceability: verifies ACC-CM-GRAPH from unit-test TEST-CM-SEMANTIC-PRIVATE-MEMBER
+test('implementation annotations attach to private class methods and properties', testContext => {
+ for (const declaration of ['work() {}', 'private work() {}', '#work() {}', 'async #work() {}', 'static #work() {}', '#work = () => {};']) {
+  const source = `export class Work {\n${marker('implementation')}\n${declaration}\n}`;
+  assert.deepEqual(check(testContext,source,[unit('implementation',2)]).diagnostics,[],declaration);
+ }
+});
+
 // Traceability: verifies ACC-CM-ACCEPTANCE-COVERAGE from unit-test TEST-CM-SEMANTIC-TEST-CALL
 test('unit and integration annotations attach to actual test calls including import aliases', testContext => {
  const kinds: readonly TraceabilityCodeUnit['kind'][] = ['unit-test','integration-test'];
