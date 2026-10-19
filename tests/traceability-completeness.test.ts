@@ -146,7 +146,7 @@ test('commit binding accepts source bytes exceeding the former 64 MiB batch limi
 });
 
 // Traceability: verifies ACC-CM-DESCENT from unit-test TEST-CM-COMPLETENESS-MIGRATION
-test('executable migration findings retain the vector while canonical discovery errors reject it', context => {
+test('legacy marker diagnostics retain progress while broken declared ownership rejects it', context => {
  const root = fixture(context);
  fs.writeFileSync(path.join(root,'work.js'),'// Traceability: implements REQ-A\nfunction work() {}\n');
  git(root,['add','work.js']);git(root,['commit','--quiet','-m','legacy source marker']);
@@ -159,13 +159,17 @@ test('executable migration findings retain the vector while canonical discovery 
  assert.equal(report.completionBlocked,true);
  assert.ok(Array.isArray(report.findings));assert.equal(report.findings.length,2);
  const text = command(root,[]);
- assert.match(text.stdout,/Executable annotation findings blocking completion: 2/);
+ assert.match(text.stdout,/Annotation findings blocking completion: 2/);
  assert.match(text.stdout,/work.js:1 malformed-marker/);
  fs.appendFileSync(path.join(root,'pm/requirements/a.md'),'Traceability: decomposes broken\n');
  git(root,['add','.']);git(root,['commit','--quiet','-m','malformed canonical marker']);
+ const legacy = command(root,['--campaign','demo','--requirement','REQ-A']);
+ assert.equal(legacy.status,0,legacy.stderr);
+ assert.match(legacy.stdout,/pm\/requirements\/a.md:4 malformed-marker/);
+ fs.appendFileSync(path.join(root,'pm/uat/a.md'),'## ACC-B\nTraceability: verifies broken\n');
+ git(root,['add','.']);git(root,['commit','--quiet','-m','broken acceptance ownership']);
  const invalid = command(root,['--campaign','demo','--requirement','REQ-A']);
- assert.notEqual(invalid.status,0);
- assert.match(invalid.stderr,/pm\/requirements\/a.md:4 malformed-marker/);
+ assert.notEqual(invalid.status,0);assert.match(invalid.stderr,/ACC-B has no valid outgoing/);
 });
 
 // Traceability: verifies ACC-CM-DESCENT from unit-test TEST-CM-COMPLETENESS-DIAGNOSTIC-GATE

@@ -94,8 +94,8 @@ or rebase their submissions. Keep it available to:
    Publish the updated commit-bound assessment tag and run
    `ponytail traceability completeness --campaign <name> --assessment-tag <tag>`.
    Use its vector and unresolved IDs; do not maintain a separate hand-counted
-   vector. Returned executable annotation findings block final completion even
-   at zero; canonical inventory errors must be repaired before computing progress.
+   vector. Returned annotation findings block final completion even at zero; invalid
+   scope or ambiguous graph ownership must be repaired before computing progress.
    The `requirements-traceability` skill owns the compact snapshot format
    and initial unassessed-scope command. Carry forward only still-applicable
    review and passing-test claims; unknowns remain unresolved.

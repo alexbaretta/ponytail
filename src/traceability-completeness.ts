@@ -189,9 +189,7 @@ export function runTraceabilityCompleteness(argv: readonly string[], cwd = proce
  const inputs = new Map(project.sources.map(source => [source.path,source.text]));
  inputs.set('.agents/config/project/traceability.json',configurationText);
  const committed = committedInputs(root,commit,inputs);
- const markdownPaths = new Set(project.sources.filter(source => source.kind === 'markdown').map(source => source.path));
- const failures = [...project.discoveryFindings.filter(finding => markdownPaths.has(finding.path)),
-  ...project.projectFindings.filter(finding => finding.code !== 'empty-scope')];
+ const failures = project.projectFindings.filter(finding => finding.code !== 'empty-scope');
  if (failures.length > 0) throw new Error(`Cannot assess malformed canonical traceability sources: ${failures.map(finding => `${finding.path}:${finding.line} ${finding.code}: ${finding.message}`).join('; ')}`);
  const result: CampaignCompletenessReport = {
   ...computeCampaignCompleteness(project.graph,assessment,commit,assessmentTag ?? null),
@@ -207,7 +205,7 @@ export function runTraceabilityCompleteness(argv: readonly string[], cwd = proce
  else {
   process.stdout.write(`Campaign completeness vector (R,A,T,I): (${result.vector.join(',')})\nCampaign: ${result.campaign}; commit: ${commit}; assessment: ${result.assessmentTag ?? 'none (all adequacy unknown)'}\n`);
   for (const coordinate of ['R','A','T','I'] as const) process.stdout.write(`${coordinate} unresolved: ${result.unresolved[coordinate].join(', ') || 'none'}\n`);
-  process.stdout.write(`Executable annotation findings blocking completion: ${result.findings.length}\n`);
+  process.stdout.write(`Annotation findings blocking completion: ${result.findings.length}\n`);
   for (const finding of result.findings) process.stdout.write(`${finding.path}:${finding.line} ${finding.code}: ${finding.message}\n`);
   process.stdout.write('Based on declared review and validation applicability; zero is provisional until all workers are DONE and independent final QA passes.\n');
  }

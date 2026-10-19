@@ -162,16 +162,18 @@ failed, skipped, stale or inadequate proof in completed sets.
 
 The assessment cannot override missing graph relationships. Unassessed IDs stay
 unresolved; I also requires adequate acceptance coverage and passing linked
-tests. Malformed canonical Markdown or ambiguous graphs, wrong-kind/out-of-scope assessment IDs,
+tests. Ambiguous graphs, wrong-kind/out-of-scope assessment IDs,
 dirty worktrees, stale assessment tags and missing evidence references fail.
 Canonical inputs must match committed bytes; ignored canonical files and index
 flags that hide inputs (`assume-unchanged`, `skip-worktree`) are rejected.
-Executable-source annotation findings are returned in `findings` with
-`completionBlocked: true`; they do not suppress a vector over the complete
-canonical Markdown inventory. Malformed executable markers grant no coverage.
-Resolve every finding before final acceptance, even when another valid edge
-makes the vector zero. Canonical Markdown discovery errors remain fatal because
-they can hide obligations or acceptances and falsify the denominator.
+Annotation findings, including legacy Markdown relationship markers, are
+returned in `findings` with `completionBlocked: true`. Malformed markers grant
+no coverage. Resolve every finding before final acceptance, even at zero.
+R/A completion attests adequate decomposition of the actual requirements and
+obligations, not merely the declarations currently parsed. Unidentified work
+remains unresolved in R/A until decomposed. Explicit scope, unique identities,
+valid edges and ownership of every declared entity remain mandatory; a declared
+acceptance with no valid obligation edge is a graph error.
 Exit zero means the report was computed, not that its vector is zero or completion
 is permitted.
 
