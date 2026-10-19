@@ -59,7 +59,8 @@ function integerValue(value:unknown,label:string):number {if(typeof value!=='num
 function stringArray(value:unknown,label:string):readonly string[] {if(!Array.isArray(value))fail(`${label} must be an array`);const result=value.map(item=>stringValue(item,label));if(new Set(result).size!==result.length)fail(`${label} must be unique`);return result;}
 function sha256(value:string):string {return crypto.createHash('sha256').update(value).digest('hex');}
 function git(args:readonly string[],options:{readonly allowFailure?:boolean;readonly input?:string;readonly env?:NodeJS.ProcessEnv}={}):SpawnSyncReturns<string> {
- const result=spawnSync('git',args,{encoding:'utf8',input:options.input,env:options.env});
+ // Aggregate review requires the complete patch, not Node's default 1 MiB capture limit.
+ const result=spawnSync('git',args,{encoding:'utf8',input:options.input,env:options.env,maxBuffer:Infinity});
  if(result.error)fail(`git ${args[0]??''} failed: ${result.error.message}`);
  if(!options.allowFailure&&result.status!==0)fail((result.stderr||result.stdout||`git ${args.join(' ')} failed`).trim(),1);
  return result;

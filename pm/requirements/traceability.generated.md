@@ -666,7 +666,7 @@ Requirement: [pm/requirements/static-language.md](static-language.md)
 Requirement: [pm/requirements/fast-semantic-rebase.md](fast-semantic-rebase.md)
 
 - implementation: implements [skills/semantic-rebase/SKILL.md:17](../../skills/semantic-rebase/SKILL.md#L17)
-- implementation: implements [src/semantic-rebase.ts:125](../../src/semantic-rebase.ts#L125)
+- implementation: implements [src/semantic-rebase.ts:126](../../src/semantic-rebase.ts#L126)
 - unit-test: verifies [tests/semantic-rebase-policy.test.js:4](../../tests/semantic-rebase-policy.test.js#L4)
 - unit-test: verifies [tests/semantic-rebase.test.ts:3](../../tests/semantic-rebase.test.ts#L3)
 - integration-test: verifies [tests/semantic-rebase-worker.integration.test.ts:3](../../tests/semantic-rebase-worker.integration.test.ts#L3)

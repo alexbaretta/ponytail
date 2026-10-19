@@ -41,7 +41,7 @@ function stringArray(value, label) { if (!Array.isArray(value))
     fail(`${label} must be unique`); return result; }
 function sha256(value) { return node_crypto_1.default.createHash('sha256').update(value).digest('hex'); }
 function git(args, options = {}) {
-    const result = (0, node_child_process_1.spawnSync)('git', args, { encoding: 'utf8', input: options.input, env: options.env });
+    const result = (0, node_child_process_1.spawnSync)('git', args, { encoding: 'utf8', input: options.input, env: options.env, maxBuffer: Infinity });
     if (result.error)
         fail(`git ${args[0] ?? ''} failed: ${result.error.message}`);
     if (!options.allowFailure && result.status !== 0)

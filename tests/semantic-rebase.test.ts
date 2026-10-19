@@ -20,6 +20,31 @@ function fixture(testContext:TestContext):Fixture {const root=fs.realpathSync(fs
 function cli(root:string,args:readonly string[],expected=0):string {const executable=path.resolve('dist/src/semantic-rebase.js');const result=spawnSync(process.execPath,[executable,...args],{cwd:root,encoding:'utf8'});assert.equal(result.status,expected,result.stderr);return result.stdout;}
 function analysis(root:string):SemanticRebaseAnalysisV2 {const gitDirectory=git(root,['rev-parse','--absolute-git-dir']);const value:unknown=JSON.parse(fs.readFileSync(path.join(gitDirectory,'ponytail-semantic-rebase','analysis.json'),'utf8'));return readSemanticRebaseAnalysisV2(value);}
 
+test('aggregate review preserves complete source and target diffs above the default capture limit',testContext=>{
+ const value=fixture(testContext);
+ const payload=Array.from({length:20000},(_value,index)=>`${index}: ${'content '.repeat(16)}\n`).join('');
+ assert.ok(Buffer.byteLength(payload)>2*1024*1024);
+ git(value.root,['checkout','target']);write(value.root,'large-target.txt',payload);const target=commit(value.root,'Large target');
+ git(value.root,['checkout','source']);write(value.root,'large-source.txt',payload);const source=commit(value.root,'Large source');
+ const output=path.join(git(value.root,['rev-parse','--absolute-git-dir']),'large-review.diff');
+ cli(value.root,['diff','target','--output',output]);
+ const frozen=analysis(value.root);
+ const expected=payload.slice(0,-1).split('\n').map(line=>`+${line}\n`).join('');
+ for(const changes of [frozen.sourceChanges,frozen.targetChanges]){
+  const change=changes.find(item=>item.newPath.startsWith('large-'));
+  assert.ok(change);assert.ok(change.patch.endsWith(expected));
+ }
+ const first=fs.readFileSync(output,'utf8');
+ assert.ok(first.includes('large-source.txt'));assert.ok(first.includes('large-target.txt'));
+ assert.ok(first.includes(expected));
+ cli(value.root,['diff','target','--output',output]);
+ assert.equal(fs.readFileSync(output,'utf8'),first);
+ assert.equal(analysis(value.root).analysisDigest,frozen.analysisDigest);
+ assert.equal(git(value.root,['rev-parse','HEAD']),source);
+ assert.equal(git(value.root,['rev-parse','target']),target);
+ assert.equal(git(value.root,['status','--porcelain']),'');
+});
+
 test('aggregate analysis freezes both final states and exposes stable IDs',testContext=>{const value=fixture(testContext);const first=cli(value.root,['diff','target']);const frozen=analysis(value.root);assert.equal(frozen.sourceTip,value.source);assert.equal(frozen.targetTip,value.target);assert.deepEqual(frozen.sourceChanges.map(change=>change.id),frozen.sourceChanges.map((_change,index)=>`S${String(index+1).padStart(4,'0')}`));assert.deepEqual(frozen.targetChanges.map(change=>change.id),frozen.targetChanges.map((_change,index)=>`T${String(index+1).padStart(4,'0')}`));assert.ok(frozen.sourceChanges.some(change=>change.oldPath==='rename-old.txt'&&change.newPath==='rename-new.txt'));assert.ok(frozen.sourceChanges.some(change=>change.oldPath==='delete.txt'&&change.newPath==='/dev/null'));assert.ok(frozen.sourceChanges.some(change=>change.newPath==='binary.bin'&&change.kind==='file'));assert.match(first,/TARGET FINAL CHANGES/);assert.match(first,/SOURCE FINAL CHANGES/);assert.match(first,/equivalent\.txt/);assert.match(first,/target-only\.txt/);assert.match(first,/source-only\.txt/);const second=cli(value.root,['diff','target']);assert.equal(second,first);});
 
 test('selection parser binds source changes to one analysis and rejects malformed relations',testContext=>{const value=fixture(testContext);cli(value.root,['diff','target']);const frozen=analysis(value.root);const sourceId=frozen.sourceChanges[0]?.id;const targetId=frozen.targetChanges[0]?.id;assert.ok(sourceId);assert.ok(targetId);const selection=readSemanticRebaseSelectionV1(`ponytail-semantic-rebase-selection-v1 ${frozen.analysisDigest}\n${sourceId} ${targetId} | agent review\n`,frozen);assert.equal(selection.entries[0]?.reason,'agent review');assert.throws(()=>readSemanticRebaseSelectionV1(`ponytail-semantic-rebase-selection-v1 ${frozen.analysisDigest}\n${sourceId} T9999\n`,frozen),/unknown target change/);assert.throws(()=>readSemanticRebaseSelectionV1(`ponytail-semantic-rebase-selection-v1 ${frozen.analysisDigest}\n${sourceId} -\n${sourceId} -\n`,frozen),/duplicate source IDs/);});
