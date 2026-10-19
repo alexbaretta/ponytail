@@ -2761,6 +2761,10 @@ function printPlanGraphHuman(result) {
 async function run(args) {
   const family = args.shift();
   const operation = args.shift();
+  if (family === 'traceability' && operation === 'completeness') {
+    require('./traceability-completeness').runTraceabilityCompleteness(args);
+    return;
+  }
   if (family === 'search' && operation === 'update-index') {
     const update = parseRepositoryIndexUpdateArguments(args);
     const progress = repositoryIndexProgress();

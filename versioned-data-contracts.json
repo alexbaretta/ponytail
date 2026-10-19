@@ -3,6 +3,18 @@
   "schemaVersion": 1,
   "families": [
     {
+      "id": "campaign-completeness-assessment",
+      "implementation": {
+        "workspace": "ponytail",
+        "module": "src/traceability-completeness.ts",
+        "readerRegistryExport": "CampaignAssessmentReaders"
+      },
+      "currentVersion": "V1",
+      "versions": ["V1"],
+      "supportedReadVersions": ["V1"],
+      "supportedDowngradeVersions": []
+    },
+    {
       "id": "traceability-typescript-response",
       "implementation": {
         "workspace": "ponytail",

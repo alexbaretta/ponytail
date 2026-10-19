@@ -18,6 +18,7 @@ const sources: readonly string[] = [
   'src/cli-help.ts',
   'src/semantic-rebase.ts',
   'src/traceability-projection.ts',
+  'src/traceability-completeness.ts',
   'skills/requirements-traceability/scripts/coverage-rules.ts',
   'skills/requirements-traceability/scripts/traceability-graph.ts',
   'skills/requirements-traceability/scripts/traceability-discovery.ts',

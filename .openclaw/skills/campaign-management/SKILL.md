@@ -91,6 +91,12 @@ or rebase their submissions. Keep it available to:
    to their workers. Never repair them in the coordinator.
 4. Reassess the integrated scope and display
    `Campaign completeness vector (R,A,T,I): (...)` after every accepted merge.
+   Publish the updated commit-bound assessment tag and run
+   `ponytail traceability completeness --campaign <name> --assessment-tag <tag>`.
+   Use its vector and unresolved IDs; do not maintain a separate hand-counted
+   vector. The `requirements-traceability` skill owns the compact snapshot format
+   and initial unassessed-scope command. Carry forward only still-applicable
+   review and passing-test claims; unknowns remain unresolved.
    Mark the accepted worker DONE and rename it through native tools.
 5. Replenish only when active campaign workers fall below configured parallelism
    and compatible work exists. Blocked, DONE and merely ready workers do not fill

@@ -121,6 +121,61 @@ issue references are provenance, not completed graph coverage.
 
 ## Coverage And Adequacy
 
+### Campaign completeness command
+
+Run `ponytail traceability completeness --campaign <name> --assessment-tag <tag>`
+on the clean integrated commit. It reads the invoking project's V5 graph directly,
+without a database, and prints `(R,A,T,I)` plus every unresolved ID. `--json`
+returns the same data for tooling. Without `--assessment-tag`, it selects the
+unique `ponytail/completeness/<name>/*` annotated tag at HEAD; no arguments work
+when exactly one campaign assessment tag exists there. Ambiguity requires an
+explicit tag. For an initial unassessed scope, use
+`--campaign <name> --requirement REQ-A --requirement REQ-B`; repeat for the exact
+approved scope. All adequacy starts unresolved.
+
+The coordinator owns one compact assessment snapshot, stored only in an annotated
+Git tag on the assessed commit. Prepare its JSON in ignored temporary storage,
+then use `git tag -a ponytail/completeness/<name>/<unique> -F <file> HEAD`:
+
+```json
+{
+  "schemaVersion": 1,
+  "campaign": "example",
+  "requirementIds": ["REQ-A"],
+  "complete": {"R": [], "A": [], "T": [], "I": []},
+  "reviewReferences": [],
+  "validationTags": []
+}
+```
+
+`complete.R` lists requirements with reviewed complete decomposition;
+`complete.A` lists obligations with reviewed adequate acceptances;
+`complete.T` lists acceptances with adequate tests and passing implementation;
+`complete.I` lists adequately implemented obligations with passing coverage.
+Nonempty completion sets require review references covering those claims. T/I
+claims additionally require references to actual passing annotated validation
+tags on ancestor commits (including HEAD). The coordinator must inspect those
+results and confirm their continued applicability to HEAD. The command verifies
+tag existence, ancestry, exact assessment commit, scope and graph structure;
+it cannot establish the truth of a review or test claim from prose. Never include
+failed, skipped, stale or inadequate proof in completed sets.
+
+The assessment cannot override missing graph relationships. Unassessed IDs stay
+unresolved; I also requires adequate acceptance coverage and passing linked
+tests. Malformed or ambiguous graphs, wrong-kind/out-of-scope assessment IDs,
+dirty worktrees, stale assessment tags and missing evidence references fail.
+Canonical inputs must match committed bytes; ignored canonical files and index
+flags that hide inputs (`assume-unchanged`, `skip-worktree`) are rejected.
+Exit zero means the report was computed, not that its vector is zero.
+
+After a merge, create a new immutable assessment tag on the integrated commit.
+Carry forward only claims whose reviews and relevant test inputs remain valid;
+remove uncertain claims and rerun affected proof. Preserve the full approved
+requirement scope and newly discovered descendants. Do not copy logs, graph
+edges or worker bookkeeping into the snapshot, and never track its staging file.
+A zero vector is provisional until all workers are DONE and independent full QA
+passes on that commit.
+
 Every requirement needs adequate atomic decomposition. Every obligation needs
 adequate acceptance coverage and implementing code. Every acceptance needs an
 identified executable unit test or integration test. Either test layer may be

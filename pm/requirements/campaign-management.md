@@ -53,6 +53,14 @@ Requirement: `REQ-CM-DESCENT`.
 
 Report the campaign completeness vector (R,A,T,I) as unresolved decomposition, acceptance, test and implementation counts. Unknown adequacy is unresolved. T and I decrease only with linked tests and implementations that pass; adversarial review assesses semantic adequacy. Productive accepted changes descend lexicographically; discoveries and scope changes may increase the vector honestly.
 
+`ponytail traceability completeness` computes this vector and unresolved IDs from
+canonical V5 source and an explicit, commit-bound assessment stored in an
+annotated Git tag. No database or tracked evidence ledger is required. Missing
+structure or unassessed adequacy cannot receive credit. Reject stale assessments,
+invalid scope and unavailable evidence references. The coordinator remains
+responsible for truthful review and validation applicability; zero does not
+replace independent final QA.
+
 Discharge: [ACC-CM-DESCENT](../uat/campaign-management.md#acc-cm-descent) with adequate executable proof and adversarial assessment.
 
 ## Commit-attached validation

@@ -100,6 +100,14 @@ hierarchy is necessary belongs to reconciliation.
 
 ## Campaign completeness vector
 
+The executable report is `ponytail traceability completeness`. It combines the
+canonical V5 graph with the coordinator's compact assessment in an annotated tag
+on the current commit, and returns the vector plus unresolved IDs. The
+`requirements-traceability` skill defines its arguments and assessment format.
+After each accepted merge the coordinator updates the assessment, carries forward
+only still-valid proof, runs the command and displays its result. This replaces
+hand-counted vectors; semantic review and independent final QA remain necessary.
+
 The official term is **campaign completeness vector**. Its fixed order is
 **`(R,A,T,I)`**:
 
