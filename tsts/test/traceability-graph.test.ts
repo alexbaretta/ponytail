@@ -9,10 +9,11 @@ import test, {type TestContext} from 'node:test';
 import {checkTraceabilityGraphAnnotations,type TraceabilityCodeUnit,type TraceabilityGraphAnnotationsInput} from '../src/traceability-graph.js';
 import type {TstsCheckResult} from '../src/index.js';
 
-function check(testContext: TestContext, source: string, units: readonly TraceabilityCodeUnit[]): TstsCheckResult {
+function check(testContext: TestContext, source: string, units: readonly TraceabilityCodeUnit[], wrapperSource?: string): TstsCheckResult {
  const root = fs.mkdtempSync(path.join(os.tmpdir(),'tsts-graph-'));
  testContext.after(() => fs.rmSync(root,{recursive:true,force:true}));
  fs.writeFileSync(path.join(root,'source.ts'),source);
+ if (wrapperSource !== undefined) fs.writeFileSync(path.join(root,'wrapper.ts'),wrapperSource);
  // Third-party declaration fixture; no runtime execution or adequacy is asserted by these locator tests.
  fs.writeFileSync(path.join(root,'runner.d.ts'),`declare module 'vitest' {
   interface TestOptions { timeout?: number; skip?: boolean; todo?: boolean }
@@ -125,6 +126,50 @@ test('tests inside explicitly skipped suites cannot receive attachment credit', 
 test('an explicitly identified node test may use the callback-only runner overload', testContext => {
  const source = `import {test} from 'node:test';\n${marker('unit-test')}\ntest(() => {});`;
  assert.deepEqual(check(testContext,source,[unit('unit-test',2)]).diagnostics,[]);
+});
+
+// Traceability: verifies ACC-CM-ACCEPTANCE-COVERAGE from unit-test TEST-CM-SEMANTIC-OWNED-RUNNER
+test('reviewed exported custom runners opt in at their canonical declaration', testContext => {
+ for (const declaration of [
+  'export function it(name: string, run: () => void, timeout?: number) { vitestIt(name, run, timeout); }',
+  'export const it = Object.assign((name: string, run: () => void, timeout?: number) => vitestIt(name, run, timeout), {skip: () => {}});',
+ ]) {
+  const wrapper = `import {it as vitestIt} from 'vitest';\n/** @traceabilityRunner */\n${declaration}`;
+  const source = `import {it as run} from './wrapper.js';\n${marker('integration-test')}\nrun('work', () => {}, 300_000);`;
+  assert.deepEqual(check(testContext,source,[unit('integration-test',2)],wrapper).diagnostics,[]);
+ }
+});
+
+// Traceability: verifies ACC-CM-ACCEPTANCE-COVERAGE from unit-test TEST-CM-SEMANTIC-OWNED-RUNNER-EXCLUSIONS
+test('custom runner opt-in does not admit unmarked helpers, call-site tags or skipped registrations', testContext => {
+ const unmarked = "export function it(name: string, run: () => void) {}";
+ const cases: readonly [string,string][] = [
+  [unmarked, "it('work', () => {});"],
+  [unmarked, "/** @traceabilityRunner */\nit('work', () => {});"],
+  ["/** @traceabilityRunner */\nexport declare function it(name: string, run: () => void): void;", "it('work', () => {});"],
+  ["/** @traceabilityRunner */\nexport declare const it: (name: string, run: () => void) => void;", "it('work', () => {});"],
+  ["/** @traceabilityRunner */\nexport const it = Object.assign((name: string, run: () => void) => {}, {skip: (name: string, run: () => void) => {}});", "it.skip('work', () => {});"],
+ ];
+ for (const [wrapper,declaration] of cases) {
+  const source = `import {it} from './wrapper.js';\n${marker('integration-test')}\n${declaration}`;
+  assert.ok(check(testContext,source,[unit('integration-test',2)],wrapper).diagnostics.some(diagnostic => diagnostic.message.includes('executable test call')));
+ }
+ const local = `/** @traceabilityRunner */\nfunction it(name: string, run: () => void) {}\n${marker('unit-test')}\nit('work', () => {});`;
+ assert.ok(check(testContext,local,[unit('unit-test',3)]).diagnostics.some(diagnostic => diagnostic.message.includes('executable test call')));
+});
+
+// Traceability: verifies ACC-CM-ACCEPTANCE-COVERAGE from unit-test TEST-CM-SEMANTIC-OWNED-SUITE
+test('custom suite opt-in preserves skipped enclosing suite exclusion', testContext => {
+ const wrapper = `import {it as vitestIt} from 'vitest';
+/** @traceabilityRunner */
+export function it(name: string, run: () => void) { vitestIt(name, run); }
+/** @traceabilityRunner */
+export const describe = Object.assign((name: string, run: () => void) => run(), {skip: (name: string, run: () => void) => {}});`;
+ for (const suite of ['describe', 'describe.skip']) {
+  const source = `import {it,describe} from './wrapper.js';\n${suite}('group', () => {\n${marker('unit-test')}\nit('work', () => {});\n});`;
+  const result = check(testContext,source,[unit('unit-test',3)],wrapper);
+  assert.equal(result.diagnostics.length === 0,suite === 'describe');
+ }
 });
 
 // Traceability: verifies ACC-CM-GRAPH from unit-test TEST-CM-SEMANTIC-MISSING-SOURCE

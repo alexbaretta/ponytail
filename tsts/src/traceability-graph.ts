@@ -78,6 +78,10 @@ function runnerDeclaration(node: ts.Node): boolean {
    && ['node:test','vitest','@jest/globals','mocha','@playwright/test'].includes(specifier.text)) return true;
  }
  const sourceFile = node.getSourceFile();
+ if (!sourceFile.isDeclarationFile && ((ts.isFunctionDeclaration(node) && node.body !== undefined)
+  || (ts.isVariableDeclaration(node) && node.initializer !== undefined))
+  && (ts.getCombinedModifierFlags(node) & ts.ModifierFlags.Export) !== 0
+  && ts.getJSDocTags(node).some(tag => tag.tagName.text === 'traceabilityRunner' && tag.comment === undefined)) return true;
  return sourceFile.isDeclarationFile && /\/node_modules\/@types\/(?:jest|mocha)\/index\.d\.ts$/u.test(sourceFile.fileName.replace(/\\/gu,'/'));
 }
 

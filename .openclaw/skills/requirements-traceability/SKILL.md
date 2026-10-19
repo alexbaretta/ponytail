@@ -105,6 +105,14 @@ number. Several adjacent annotations may give the same source unit multiple
 edges without duplicating its declaration. Shared helpers are implementation
 support, not executable tests; attach test IDs to the runner registrations.
 
+For a project-owned test runner or wrapper, place `/** @traceabilityRunner */`
+on its canonical exported `test`, `it`, `describe` or `suite` function or variable
+declaration. TSTS resolves imports to that declaration; tags on calls or imports
+do not register a runner. Review must establish that this boundary actually
+registers and executes tests. The tag admits a locator, not behavioral adequacy
+or passing proof; skipped/todo registrations remain excluded. Do not tag ordinary
+helpers to obtain coverage credit.
+
 Do not annotate every line. Identify all blocks declaring that they implement
 an obligation so the reverse view can find them. Review verifies that the named
 blocks actually implement that condition. A direct test-to-requirement or

@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-10-19-owned_runner_registration",
+  "recorded_at": "2026-10-19T01:18:05-07:00",
+  "source_references": [
+    "pm/plans/in_progress/2026-10-17-campaign-management-redesign/sprints/S06.md"
+  ],
+  "context": {
+    "languages": [
+      "typescript"
+    ],
+    "frameworks": [
+      "vitest"
+    ],
+    "components": [
+      "TSTS traceability graph"
+    ],
+    "affected_boundaries": [
+      "Executable test annotation attachment"
+    ],
+    "code_references": [
+      "tsts/src/traceability-graph.ts: enabledBody"
+    ]
+  },
+  "observed_behavior": "Gwen tests registered through its reviewed dual Vitest and ordered runner wrapper were rejected.",
+  "expected_behavior": "Explicitly declared project-owned registration boundaries can supply executable test locators.",
+  "causal_mechanism": "The locator admitted only imports from a fixed third-party module list.",
+  "anti_pattern": {
+    "structural_description": "External runner provenance was treated as exhaustive of executable registration boundaries.",
+    "why_it_fails": "Owned wrappers preserve registration behavior but have their own symbol declaration."
+  },
+  "correct_pattern": {
+    "required_invariant": "Opt-in belongs to the canonical exported implemented runner, not a call, import, ambient declaration or ordinary helper.",
+    "implementation_description": "Resolve the symbol and require an exported body or initializer marked with the exact JSDoc tag traceabilityRunner; retain disabled-suite checks."
+  },
+  "applicability_conditions": [
+    "A reviewed project-owned runner registers actual tests"
+  ],
+  "known_non_matches": [
+    "Unmarked helpers and ambient declarations"
+  ],
+  "confirmation_evidence": [
+    "The imported custom wrapper reproduction failed before the change; declaration and suite regression cases pass after correction."
+  ],
+  "regression_proofs": [
+    "tsts/test/traceability-graph.test.ts: reviewed exported custom runners opt in at their canonical declaration",
+    "tsts/test/traceability-graph.test.ts: custom runner opt-in does not admit unmarked helpers, call-site tags or skipped registrations",
+    "tsts/test/traceability-graph.test.ts: custom suite opt-in preserves skipped enclosing suite exclusion"
+  ]
+}
