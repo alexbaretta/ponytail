@@ -235,19 +235,25 @@ async function checkReferences(root, project, projects, search) {
 if (require.main === module) {
   (async () => {
     const { root, project, projects } = JSON.parse(fs.readFileSync(0, 'utf8'));
-    const pool = new (require('pg').Pool)(databaseOptions(root));
+    let pool;
+    let refreshed;
     let findings;
     try {
-      const refreshed = await refreshRepositoryTextIndex({ root, pool, scope: 'worktree' });
-      findings = await checkReferences(root, project, projects, query => grepRepository({
-        query,
-        selector: 'worktree',
-        selectorValue: null,
-        path: null,
-        ignoreCase: true,
-      }, { root, pool, refreshed }));
+      findings = await checkReferences(root, project, projects, async query => {
+        if (pool === undefined) {
+          pool = new (require('pg').Pool)(databaseOptions(root));
+          refreshed = await refreshRepositoryTextIndex({ root, pool, scope: 'worktree' });
+        }
+        return grepRepository({
+          query,
+          selector: 'worktree',
+          selectorValue: null,
+          path: null,
+          ignoreCase: true,
+        }, { root, pool, refreshed });
+      });
     } finally {
-      await pool.end();
+      await pool?.end();
     }
     for (const finding of findings) process.stdout.write(`${finding.file}:${finding.line}: forbidden reference to ${JSON.stringify(finding.project)}: ${JSON.stringify(finding.name)}\n`);
     process.stdout.write(`references: ${findings.length} findings; ${Object.keys(projects).length} project identities checked\n`);

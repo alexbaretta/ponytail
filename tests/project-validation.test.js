@@ -14,6 +14,24 @@ const { databaseOptions } = require('../src/project-index');
 // Traceability: verifies REQ-PONYTAIL-PROJECT-ISOLATION
 const cli = path.resolve(__dirname, '../cli/ponytail');
 
+test('reference QA needs an index only when it searches for a reference', t => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ponytail-reference-demand-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  git(root, 'init', '-q');
+  const project = { manifests: [], components: [], dependencies: [], exceptions: [] };
+  write(root, '.agents/config/ponytail.json', JSON.stringify(project));
+  const check = projects => spawnSync(process.execPath, [path.resolve(__dirname, '../scripts/project-qa.js')], {
+    cwd: root, encoding: 'utf8', input: JSON.stringify({ root, project, projects }),
+  });
+  const empty = check({});
+  assert.equal(empty.status, 0, empty.stderr);
+  assert.match(empty.stdout, /references: 0 findings; 0 project identities checked/);
+
+  const searching = check({ '/foreign': { name: 'foreign', names: [], components: [], repositoryUrls: [], packages: [] } });
+  assert.equal(searching.status, 1);
+  assert.match(searching.stderr, /ponytail-journal/);
+});
+
 function fixture(t) {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'ponytail-validation-'));
   const projectIds = [];
