@@ -50,7 +50,9 @@ files; exclusions cannot hide canonical requirements or UAT. Do not narrow scope
 to make coverage pass. The generated reverse view is excluded from discovery. JavaScript and TypeScript
 files with canonical relationship declarations in comments must have an explicit
 source classification or exclusion; otherwise discovery reports `unclassified-source`
-at that file and comment line. String examples do not declare ownership.
+at that file and comment line. Comment parsing resolves TypeScript from the
+invoking project, not from the installed skill directory. String examples do not
+declare ownership.
 
 ## Canonical Graph
 

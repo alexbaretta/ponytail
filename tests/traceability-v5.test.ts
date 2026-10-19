@@ -74,8 +74,13 @@ test('public V5 checker and portable index preserve the complete graph and exclu
 // Traceability: verifies ACC-CM-GRAPH from unit-test TEST-CM-V5-UNCLASSIFIED-SOURCE
 test('unclassified annotated code cannot disappear while exclusions and literal examples remain outside scope', testContext => {
  const root = fixture(testContext);
+ fs.symlinkSync(path.join(repositoryRoot,'node_modules'),path.join(root,'node_modules'),'dir');
+ write(root,'.gitignore','node_modules/\n');
  write(root,'helper.ts','// Traceability: implements OBL-A from implementation helper\nexport function helper() {}\n');
- const failed = check(root,['--write']);
+ const installedScripts = fs.mkdtempSync(path.join(os.tmpdir(),'traceability-installed-'));
+ testContext.after(() => fs.rmSync(installedScripts,{recursive:true,force:true}));
+ fs.cpSync(path.dirname(checker),installedScripts,{recursive:true});
+ const failed = spawnSync(process.execPath,[path.join(installedScripts,'check-traceability.js'),'--config',path.join(root,'traceability.json'),'--write'],{cwd:root,encoding:'utf8'});
  assert.equal(failed.status,1);
  assert.match(failed.stderr,/helper\.ts:1.*unclassified-source/);
  const configuration = readTraceabilityConfigurationV5(JSON.parse(fs.readFileSync(path.join(root,'traceability.json'),'utf8')));

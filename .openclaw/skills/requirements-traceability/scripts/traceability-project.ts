@@ -2,7 +2,8 @@
 // Licensed under the MIT License. See LICENSE in the project root.
 import fs from 'node:fs';
 import path from 'node:path';
-import ts from 'typescript';
+import {createRequire} from 'node:module';
+import type ts from 'typescript';
 import {execFileSync} from 'node:child_process';
 import {discoverTraceabilitySource, type TraceabilityDiscoveryFinding, type TraceabilitySource} from './traceability-discovery.js';
 import {validateTraceabilityGraph, type TraceabilityGraph, type TraceabilityGraphEntity, type TraceabilityGraphRelationship, type TraceabilityGraphFinding} from './traceability-graph.js';
@@ -191,10 +192,12 @@ export function discoverTraceabilityProject(traceabilityConfigurationV5: Traceab
    if (!scopes.length) {
     if (stat.isFile() && /\.(?:[cm]?[jt]s|[jt]sx)$/u.test(file)) {
      const text = fs.readFileSync(regularFile(root,file),'utf8');
-     const sourceFile = ts.createSourceFile(file,text,ts.ScriptTarget.Latest,true);
+     if (!/Traceability\s*:/iu.test(text)) continue;
+     const typescript: typeof ts = createRequire(path.join(root,'package.json'))('typescript');
+     const sourceFile = typescript.createSourceFile(file,text,typescript.ScriptTarget.Latest,true);
      const positions = new Set<number>();
      const visit = (node: ts.Node): void => {
-      for (const commentRange of ts.getLeadingCommentRanges(text,node.pos) ?? []) {
+      for (const commentRange of typescript.getLeadingCommentRanges(text,node.pos) ?? []) {
        if (positions.has(commentRange.pos)) continue;
        positions.add(commentRange.pos);
        const discovery = discoverTraceabilitySource({kind:'implementation',path:file,text:text.slice(commentRange.pos,commentRange.end)});
@@ -203,7 +206,7 @@ export function discoverTraceabilityProject(traceabilityConfigurationV5: Traceab
          message:'Annotated source requires an explicit source classification or exclusion'});
        }
       }
-      ts.forEachChild(node,visit);
+      typescript.forEachChild(node,visit);
      };
      visit(sourceFile);
     }

@@ -12,7 +12,7 @@ exports.readTraceabilityConfigurationV5 = readTraceabilityConfigurationV5;
 exports.discoverTraceabilityProject = discoverTraceabilityProject;
 const node_fs_1 = __importDefault(require("node:fs"));
 const node_path_1 = __importDefault(require("node:path"));
-const typescript_1 = __importDefault(require("typescript"));
+const node_module_1 = require("node:module");
 const node_child_process_1 = require("node:child_process");
 const traceability_discovery_js_1 = require("./traceability-discovery.js");
 const traceability_graph_js_1 = require("./traceability-graph.js");
@@ -184,10 +184,13 @@ function discoverTraceabilityProject(traceabilityConfigurationV5, configurationP
             if (!scopes.length) {
                 if (stat.isFile() && /\.(?:[cm]?[jt]s|[jt]sx)$/u.test(file)) {
                     const text = node_fs_1.default.readFileSync(regularFile(root, file), 'utf8');
-                    const sourceFile = typescript_1.default.createSourceFile(file, text, typescript_1.default.ScriptTarget.Latest, true);
+                    if (!/Traceability\s*:/iu.test(text))
+                        continue;
+                    const typescript = (0, node_module_1.createRequire)(node_path_1.default.join(root, 'package.json'))('typescript');
+                    const sourceFile = typescript.createSourceFile(file, text, typescript.ScriptTarget.Latest, true);
                     const positions = new Set();
                     const visit = (node) => {
-                        for (const commentRange of typescript_1.default.getLeadingCommentRanges(text, node.pos) ?? []) {
+                        for (const commentRange of typescript.getLeadingCommentRanges(text, node.pos) ?? []) {
                             if (positions.has(commentRange.pos))
                                 continue;
                             positions.add(commentRange.pos);
@@ -197,7 +200,7 @@ function discoverTraceabilityProject(traceabilityConfigurationV5, configurationP
                                     message: 'Annotated source requires an explicit source classification or exclusion' });
                             }
                         }
-                        typescript_1.default.forEachChild(node, visit);
+                        typescript.forEachChild(node, visit);
                     };
                     visit(sourceFile);
                 }
