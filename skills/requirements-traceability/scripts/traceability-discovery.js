@@ -5,7 +5,84 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.discoverTraceabilitySource = discoverTraceabilitySource;
 const commonmark_1 = require("./commonmark.js");
+const lossless_json_1 = require("./lossless-json.js");
+const jsonc_parser_1 = require("./json-parser.js");
 function discoverTraceabilitySource(traceabilitySource) {
+    if (traceabilitySource.kind !== 'markdown' && traceabilitySource.path.endsWith('.json'))
+        return discoverJsonTraceabilitySource(traceabilitySource);
+    return discoverTextTraceabilitySource(traceabilitySource);
+}
+function discoverJsonTraceabilitySource(traceabilitySource) {
+    const entities = [];
+    const relationships = [];
+    const findings = [];
+    const report = (line, message) => { findings.push({ code: 'malformed-marker', path: traceabilitySource.path, line, message }); };
+    if (traceabilitySource.kind !== 'implementation')
+        return { graph: { entities, relationships }, findings: [{ code: 'unexpected-kind', path: traceabilitySource.path, line: 1, message: 'JSON configuration can declare implementation coverage only' }] };
+    try {
+        (0, lossless_json_1.parse)(traceabilitySource.text, null, { onDuplicateKey: duplicateKeyInfo => { throw new Error(`Duplicate JSON property: ${duplicateKeyInfo.key}`); } });
+    }
+    catch (error) {
+        report(1, `Invalid strict JSON: ${error instanceof Error ? error.message : String(error)}`);
+        return { graph: { entities, relationships }, findings };
+    }
+    const rootNode = (0, jsonc_parser_1.parseTree)(traceabilitySource.text, [], { disallowComments: true, allowTrailingComma: false });
+    if (!rootNode)
+        throw new Error('Validated JSON has no syntax tree');
+    const lineAt = (offset) => traceabilitySource.text.slice(0, offset).split('\n').length;
+    const duplicateProperties = (node) => {
+        if (node.type === 'object') {
+            const keys = new Set();
+            for (const propertyNode of node.children ?? []) {
+                const key = propertyNode.children?.[0]?.value;
+                if (typeof key !== 'string')
+                    throw new Error('Validated JSON property has no string key');
+                if (keys.has(key)) {
+                    report(lineAt(propertyNode.offset), `Duplicate JSON property: ${key}`);
+                    return true;
+                }
+                keys.add(key);
+            }
+        }
+        return (node.children ?? []).some(duplicateProperties);
+    };
+    if (duplicateProperties(rootNode))
+        return { graph: { entities, relationships }, findings };
+    const visit = (node) => {
+        const key = node.children?.[0]?.value;
+        if (node.type === 'property' && key === 'traceability') {
+            const line = lineAt(node.offset);
+            const arrayNode = node.children?.[1];
+            if (arrayNode?.type !== 'array') {
+                report(line, 'JSON traceability must be an array of canonical annotation strings');
+                return;
+            }
+            const markers = [];
+            const locations = [];
+            for (const childNode of arrayNode.children ?? []) {
+                const value = childNode.value;
+                if (childNode.type !== 'string' || typeof value !== 'string' || /[\r\n]/u.test(value) || !value.startsWith('Traceability:')) {
+                    report(lineAt(childNode.offset), 'JSON traceability requires single-line canonical annotations');
+                    return;
+                }
+                markers.push(`// ${value}`);
+                locations.push(lineAt(childNode.offset));
+            }
+            const traceabilityDiscovery = discoverTextTraceabilitySource({ ...traceabilitySource, text: markers.join('\n') });
+            entities.push(...traceabilityDiscovery.graph.entities.map(entity => ({ ...entity, line: locations[entity.line - 1] ?? line })));
+            relationships.push(...traceabilityDiscovery.graph.relationships);
+            findings.push(...traceabilityDiscovery.findings.map(finding => ({ ...finding, line: locations[finding.line - 1] ?? line })));
+            return;
+        }
+        for (const childNode of node.children ?? [])
+            visit(childNode);
+    };
+    visit(rootNode);
+    if (!entities.length && !findings.length)
+        findings.push({ code: 'missing-declaration', path: traceabilitySource.path, line: 1, message: 'Configured implementation source contains no identified unit' });
+    return { graph: { entities, relationships }, findings };
+}
+function discoverTextTraceabilitySource(traceabilitySource) {
     const entities = [];
     const relationships = [];
     const findings = [];

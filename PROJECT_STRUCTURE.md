@@ -245,7 +245,10 @@ During the static-language migration, portable obligation logic is canonical in
 its compiler output at the established portable `.js` launch path. That tracked
 text is generated runtime, not a second handwritten owner. The same generator
 ships one MIT-licensed upstream `lossless-json.js` module with relative portable
-runtime imports, so installed skill copies include their dependency. Existing OpenClaw
+runtime imports, so installed skill copies include their dependency. Traceability
+likewise packages the MIT-licensed JSON parser and scanner as generated
+`json-parser.js` and `json-scanner.js`, preserving upstream licenses and avoiding
+a compiler dependency in installed skills. Existing OpenClaw
 resource generation copies the typed owner and generated runtime. Traceability
 and versioned-contract ownership point to the typed source.
 

@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-10-19-json_implementation_annotations",
+  "recorded_at": "2026-10-19T02:02:06-07:00",
+  "source_references": [
+    "pm/plans/in_progress/2026-10-17-campaign-management-redesign/sprints/S06.md"
+  ],
+  "context": {
+    "languages": [
+      "typescript",
+      "javascript",
+      "json"
+    ],
+    "frameworks": [],
+    "components": [
+      "requirements traceability",
+      "build impact"
+    ],
+    "affected_boundaries": [
+      "Strict JSON source-owned implementation declarations"
+    ],
+    "code_references": [
+      "skills/requirements-traceability/scripts/traceability-discovery.ts",
+      "skills/build-impact/scripts/build-impact.js"
+    ]
+  },
+  "observed_behavior": "The legal build-input policy in strict JSON had no supported source-owned implementation annotation.",
+  "expected_behavior": "Identify the implementing input objects without sidecar maps, schema violations or attributing policy to the generic engine.",
+  "causal_mechanism": "Discovery admitted only source comments while strict build-impact V2 input schemas allowed only kind and path.",
+  "anti_pattern": {
+    "structural_description": "The annotation contract assumed every implementing source format supports comments.",
+    "why_it_fails": "Strict JSON policy objects cannot carry those comments and reject undeclared metadata fields."
+  },
+  "correct_pattern": {
+    "required_invariant": "Annotations belong to actual implementing source objects and must conform to the owning physical schema.",
+    "implementation_description": "V3 inputs allow canonical traceability arrays; strict JSON discovery reads only those object-local properties, rejects duplicate keys, and reuses the existing relationship parser. V1/V2 remain exact."
+  },
+  "applicability_conditions": [
+    "An implementation is owned by a strict JSON object whose schema supports the annotation field"
+  ],
+  "known_non_matches": [
+    "Ordinary JSON strings and JSON test declarations do not provide coverage."
+  ],
+  "confirmation_evidence": [
+    "The client V2 input parser rejected the new field; V3 real input queries and object-local graph discovery pass with an isolated portable runtime."
+  ],
+  "regression_proofs": [
+    "tests/build-impact.test.js: V3 source-owned annotations preserve real legal input selection and V1/V2 exact schemas",
+    "tests/traceability-discovery.test.ts: JSON annotations belong to their actual object and preserve source lines",
+    "tests/traceability-discovery.test.ts: JSON discovery rejects duplicate properties, malformed annotations and fake test declarations"
+  ]
+}

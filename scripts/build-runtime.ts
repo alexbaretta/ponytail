@@ -67,7 +67,11 @@ if (!(argv.length === 0 || argv.length === 1 && argv[0] === '--check')) {
     process.stderr.write(`${portableLosslessJson} differs from its installed dependency; run npm run build\n`);
     process.exitCode = 1;
   }
+  const jsonParserDirectory = path.join(path.dirname(require.resolve('jsonc-parser')),'impl');
+  const jsonParserLicense = fs.readFileSync(path.join(root,'node_modules/jsonc-parser/LICENSE.md'),'utf8');
   const graphDependencies = [
+    ...['parser','scanner'].map(name => ({output:`skills/requirements-traceability/scripts/json-${name}.js`,text:
+      `// Ponytail packaging copyright (c) 2026 Alex Baretta. All rights reserved.\n// Generated from the installed jsonc-parser dependency by npm run build.\n/*\n${jsonParserLicense}*/\n${fs.readFileSync(path.join(jsonParserDirectory,`${name}.js`),'utf8').replaceAll('"./scanner"','"./json-scanner.js"')}`})),
     {output:'skills/requirements-traceability/scripts/lossless-json.js',text:dependencyText},
     {output:'skills/requirements-traceability/scripts/commonmark.js',text:
       `// Ponytail packaging copyright (c) 2026 Alex Baretta. All rights reserved.\n// Generated from the installed commonmark dependency by npm run build.\n/*\n${fs.readFileSync(path.join(root,'node_modules/commonmark/LICENSE'),'utf8')}*/\n${fs.readFileSync(path.join(path.dirname(require.resolve('commonmark')),'commonmark.min.js'),'utf8')}`},
@@ -93,7 +97,7 @@ if (!(argv.length === 0 || argv.length === 1 && argv[0] === '--check')) {
     const sourceText = fs.readFileSync(path.join(root, source), 'utf8');
     const sourceHeader = sourceText.split('\n').slice(0, sourceText.startsWith('#!') ? 3 : 2).join('\n');
     const portableCompiled = source.startsWith('skills/plan-execution/scripts/') || source.startsWith('skills/requirements-traceability/scripts/')
-      ? compiled.replaceAll('require("lossless-json")', 'require("./lossless-json.js")').replaceAll('require("commonmark")','require("./commonmark.js")') : compiled;
+      ? compiled.replaceAll('require("lossless-json")', 'require("./lossless-json.js")').replaceAll('require("commonmark")','require("./commonmark.js")').replaceAll('require("jsonc-parser")','require("./json-parser.js")') : compiled;
     const generated = `${sourceHeader}\n// Generated from ${source} by npm run build.\n${portableCompiled.replace(/^#![^\n]*\n/, '')}`;
     const output = path.join(root, relative);
     if (argv.length === 0) fs.writeFileSync(output, generated);

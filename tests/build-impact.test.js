@@ -127,7 +127,7 @@ test('durable build-impact contracts have exact reader owners', () => {
     'build-impact-query-result',
   ]) {
     const family = families.get(id);
-    const versions = id === 'build-impact-project-config' ? ['V1', 'V2'] : ['V1'];
+    const versions = id === 'build-impact-project-config' ? ['V1', 'V2', 'V3'] : ['V1'];
     assert.deepEqual(family.versions, versions);
     assert.deepEqual(family.supportedReadVersions, versions);
     assert.equal(family.currentVersion, versions.at(-1));
@@ -460,4 +460,39 @@ test('query budgets accept longer bounded waits and reject unbounded or malforme
     assert.equal(result.status, 2, value);
     assert.match(parseQueryResult(JSON.parse(result.stdout)).error, /timeout/);
   }
+}));
+
+// Traceability: verifies ACC-CM-GRAPH from unit-test TEST-CM-BUILD-INPUT-JSON
+test('V3 source-owned annotations preserve real legal input selection and V1/V2 exact schemas', () => withFixture(root => {
+  writeFixtureFile(root,'apps/backend/tsconfig.json',JSON.stringify({fixtureFiles:[]}));
+  const paths = ['docs/legal/terms.md','docs/legal/privacy.md'];
+  for (const file of paths) writeFixtureFile(root,file,'legal source');
+  const annotatedTarget = {...target('backend','apps/backend/tsconfig.json'),additionalInputs:paths.map((file,index) => ({
+    kind:'file',path:file,traceability:[`Traceability: implements OBL-LEGAL from implementation legalInput${index}`],
+  }))};
+  const physical = {version:3,buildImpact:{version:3,globalInputs:[],adapters:[{type:'typescript',targets:[annotatedTarget]}]}};
+  const text = JSON.stringify(physical);
+  writeFixtureFile(root,'ponytail.json',text);
+  for (const file of paths) {
+    const result = spawnSync(process.execPath,[cli,'--project',root,'--file',file],{encoding:'utf8'});
+    assert.equal(result.status,0,result.stderr);
+    assert.deepEqual(JSON.parse(result.stdout).affectedTargets,[{name:'backend',buildCommand:'build backend',changedFiles:[file]}]);
+  }
+  const {discoverTraceabilitySource} = require('../skills/requirements-traceability/scripts/traceability-discovery.js');
+  const discovery = discoverTraceabilitySource({kind:'implementation',path:'ponytail.json',text});
+  assert.deepEqual(discovery.findings,[]);
+  assert.deepEqual(discovery.graph.relationships.map(edge => edge.source),['legalInput0','legalInput1']);
+  for (const version of [1,2]) assert.throws(() => parseProjectConfig({...physical,version,buildImpact:{...physical.buildImpact,version}}),/unknown field: traceability/);
+  const portable = path.join(root,'portable');
+  fs.mkdirSync(portable);
+  for (const file of ['traceability-discovery.js','commonmark.js','lossless-json.js','json-parser.js','json-scanner.js']) {
+    fs.copyFileSync(path.join(__dirname,'../skills/requirements-traceability/scripts',file),path.join(portable,file));
+  }
+  const isolated = spawnSync(process.execPath,['-e',
+    "const fs=require('fs');const d=require(process.argv[1]).discoverTraceabilitySource({kind:'implementation',path:'ponytail.json',text:fs.readFileSync('ponytail.json','utf8')});process.stdout.write(JSON.stringify(d));",
+    path.join(portable,'traceability-discovery.js')],{cwd:root,encoding:'utf8',env:{...process.env,NODE_PATH:''}});
+  assert.equal(isolated.status,0,isolated.stderr);
+  assert.deepEqual(JSON.parse(isolated.stdout),discovery);
+  const normalized = parseProjectConfig(physical);
+  assert.deepEqual(normalized.buildImpact.adapters[0].targets[0].additionalInputs,annotatedTarget.additionalInputs);
 }));

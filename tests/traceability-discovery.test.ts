@@ -139,3 +139,45 @@ test('discovered Markdown and executable declarations compose into the four-edge
  };
  assert.deepEqual(validateTraceabilityGraph(traceabilityGraph), []);
 });
+
+// Traceability: verifies ACC-CM-GRAPH from unit-test TEST-CM-DISCOVER-JSON
+test('JSON annotations belong to their actual object and preserve source lines', () => {
+ const traceabilitySource: TraceabilitySource = {kind:'implementation',path:'ponytail.json',text:[
+  '{"inputs":[',
+  ' {"path":"terms.md","traceability":[',
+  '  "Traceability: implements OBL-A from implementation legalInput",',
+  '  "Traceability: implements OBL-B from implementation legalInput"]},',
+  ' {"path":"privacy.md","traceability":["Traceability: implements OBL-A from implementation privacyInput"]}',
+  '],"description":"Traceability: implements OBL-C from implementation fake"}',
+ ].join('\n')};
+ const discovery = discoverTraceabilitySource(traceabilitySource);
+ assert.deepEqual(discovery.findings,[]);
+ assert.deepEqual(discovery.graph.entities.map(entity => [entity.id,entity.line]),[['legalInput',3],['privacyInput',5]]);
+ assert.deepEqual(discovery.graph.relationships.map(edge => edge.target),['OBL-A','OBL-B','OBL-A']);
+ const duplicate = discoverTraceabilitySource({...traceabilitySource,text:traceabilitySource.text.replace('privacyInput','legalInput')});
+ assert.ok(validateTraceabilityGraph(duplicate.graph).some(finding => finding.code === 'duplicate-id'));
+});
+
+// Traceability: verifies ACC-CM-GRAPH from unit-test TEST-CM-DISCOVER-JSON-BOUNDARIES
+test('JSON discovery rejects duplicate properties, malformed annotations and fake test declarations', () => {
+ for (const text of [
+  '{"traceability":[],"traceability":[]}',
+  '{"x":1,"x":2}',
+  '{"x":1,"x":1,"traceability":["Traceability: implements OBL-A from implementation invalid"]}',
+  '{"traceability":["Traceability: implements OBL-A from implementation invalid"],"traceability":["Traceability: implements OBL-A from implementation invalid"]}',
+  '{"traceability":"Traceability: implements OBL-A from implementation bad"}',
+  '{"traceability":[1]}',
+  '{"traceability":["Traceability: implements OBL-A from unit-test fake"]}',
+  '{"traceability":["Traceability: implements OBL-A from implementation a\\n// Traceability: implements OBL-B from implementation b"]}',
+  '{"traceability":["// Traceability: implements OBL-A from implementation bad"]}',
+  '{/*comment*/"traceability":[]}',
+ ]) {
+  const traceabilitySource: TraceabilitySource = {kind:'implementation',path:'a.json',text};
+  const discovery = discoverTraceabilitySource(traceabilitySource);
+  assert.ok(discovery.findings.length > 0,text);
+  assert.deepEqual(discovery.graph.entities,[],text);
+  assert.deepEqual(discovery.graph.relationships,[],text);
+ }
+ const traceabilitySource: TraceabilitySource = {kind:'unit-test',path:'test.json',text:'{"traceability":["Traceability: verifies ACC-A from unit-test fake"]}'};
+ assert.equal(discoverTraceabilitySource(traceabilitySource).findings[0]?.code,'unexpected-kind');
+});

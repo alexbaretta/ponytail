@@ -121,6 +121,32 @@ issue references are provenance, not completed graph coverage.
 
 ## Coverage And Adequacy
 
+### Strict JSON implementation declarations
+
+For an implementation-classified `.json` source using the text locator, put
+canonical annotations in a direct `traceability` string array on the object
+that implements the obligation. The owning JSON schema must explicitly allow
+that field; do not add unsupported metadata. Ponytail build-impact V3 permits
+it on input objects (see `build-impact`). Include that JSON path in the
+implementation source scope.
+
+```json
+{
+  "kind": "file",
+  "path": "docs/legal/terms.md",
+  "traceability": [
+    "Traceability: implements OBL-LEGAL-BUILD from implementation legalTermsBuildInput"
+  ]
+}
+```
+
+Discovery parses strict JSON, rejects duplicate properties, and uses the owning
+property's source location. Repeated edges within that object's array share
+one implementation ID; separate objects require distinct IDs. Other string
+values cannot declare coverage. JSON cannot declare executable tests; tests
+must separately reference the acceptance and exercise the actual behavior.
+No sidecar relationship map or duplicated policy is needed.
+
 ### Campaign completeness command
 
 Run `ponytail traceability completeness --campaign <name> --assessment-tag <tag>`

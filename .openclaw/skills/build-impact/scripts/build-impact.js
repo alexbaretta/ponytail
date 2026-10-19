@@ -8,7 +8,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 
-const PROJECT_CONFIG_VERSION = 2;
+const PROJECT_CONFIG_VERSION = 3;
 const PROTOCOL_VERSION = 1;
 const DEFAULT_QUERY_TIMEOUT_MS = 30000;
 
@@ -48,12 +48,15 @@ function assertArray(value, context) {
 }
 
 function parseInput(input, context, version) {
-  assertExactKeys(input, ['kind', 'path'], context);
+  assertExactKeys(input, version === 3 ? ['kind', 'path', 'traceability'] : ['kind', 'path'], context);
   const kinds = version === 1 ? ['file', 'directory'] : ['file', 'directory', 'glob'];
   if (!kinds.includes(input.kind)) {
     throw new BuildImpactError(`${context}.kind must be ${kinds.join(', ')}`);
   }
-  return { kind: input.kind, path: normalizeConfiguredPath(input.path, `${context}.path`) };
+  const current = { kind: input.kind, path: normalizeConfiguredPath(input.path, `${context}.path`) };
+  if (Object.hasOwn(input, 'traceability')) current.traceability = assertArray(input.traceability, `${context}.traceability`)
+    .map((marker, index) => assertString(marker, `${context}.traceability[${index}]`));
+  return current;
 }
 
 function parseTarget(target, context, type, version) {
@@ -145,11 +148,16 @@ function parseProjectConfigV2(value) {
   return parseProjectConfigVersion(value, 2);
 }
 
+function parseProjectConfigV3(value) {
+  return parseProjectConfigVersion(value, 3);
+}
+
 function parseProjectConfig(value) {
   assertObject(value, 'ponytail.json');
   if (value.version === 1) return parseProjectConfigV1(value);
   if (value.version === 2) return parseProjectConfigV2(value);
-  throw new BuildImpactError('ponytail.json.version must be 1 or 2');
+  if (value.version === 3) return parseProjectConfigV3(value);
+  throw new BuildImpactError('ponytail.json.version must be 1, 2 or 3');
 }
 
 function normalizeConfiguredPath(value, context) {
@@ -555,7 +563,7 @@ function run(argv = process.argv.slice(2)) {
   }
 }
 
-const BuildImpactProjectConfigReaders = { V1: parseProjectConfigV1, V2: parseProjectConfigV2 };
+const BuildImpactProjectConfigReaders = { V1: parseProjectConfigV1, V2: parseProjectConfigV2, V3: parseProjectConfigV3 };
 const BuildImpactCustomResultReaders = { V1: parseAdapterResult };
 const BuildImpactCustomRequestReaders = { V1: parseCustomRequest };
 const BuildImpactQueryResultReaders = { V1: parseQueryResult };
