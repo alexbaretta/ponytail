@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-10-19-conditional_runner_registration",
+  "recorded_at": "2026-10-19T02:56:49-07:00",
+  "source_references": [
+    "pm/plans/in_progress/2026-10-17-campaign-management-redesign/sprints/S06.md"
+  ],
+  "context": {
+    "languages": [
+      "typescript"
+    ],
+    "frameworks": [],
+    "components": [
+      "requirements traceability"
+    ],
+    "affected_boundaries": [
+      "Conditional test registration and runtime validation"
+    ],
+    "code_references": [
+      "tsts/src/traceability-graph.ts"
+    ]
+  },
+  "observed_behavior": "Four executed database tests were rejected as non-executable because their enclosing suites used environment-gated describe.runIf.",
+  "expected_behavior": "Retain conditional test declarations while excluding statically disabled registrations and requiring actual enabled test results for completeness credit.",
+  "causal_mechanism": "The runner locator marked every runIf and skipIf property disabled without examining the supplied condition.",
+  "anti_pattern": {
+    "structural_description": "Static discovery conflated conditional registration with an observed skipped execution.",
+    "why_it_fails": "Even runIf(true) and environment-enabled database suites were rejected before runtime evidence could be considered."
+  },
+  "correct_pattern": {
+    "required_invariant": "Declaration eligibility and passing execution are separate facts.",
+    "implementation_description": "Inspect conditional registration calls, reject statically disabling boolean conditions, preserve enclosing disabled suites, and leave dynamic execution proof to validation and adequacy review."
+  },
+  "applicability_conditions": [
+    "Recognized test runner conditional methods gate tests or enclosing suites."
+  ],
+  "known_non_matches": [
+    "Explicit skip/todo and statically disabled boolean gates remain ineligible."
+  ],
+  "confirmation_evidence": [
+    "An identical marked suite passed as plain describe but failed with describe.runIf(true), false or an environment condition.",
+    "The new regression failed for runIf(true) before the correction and passed afterward."
+  ],
+  "regression_proofs": [
+    "tsts/test/traceability-graph.test.ts: conditional runner declarations retain links without asserting runtime execution",
+    "tsts/test/traceability-graph.test.ts: custom suite opt-in preserves skipped enclosing suite exclusion"
+  ]
+}

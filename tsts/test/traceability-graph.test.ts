@@ -178,3 +178,30 @@ test('missing project sources and invalid TypeScript syntax fail', testContext =
  assert.ok(check(testContext,`${marker('implementation')}\nexport function work() {}`,[unit('implementation',1,'missing.ts')]).diagnostics.some(diagnostic => diagnostic.message.includes('not part')));
  assert.ok(check(testContext,`${marker('implementation')}\nexport function work() {}`,[unit('implementation',1,'../outside.ts')]).diagnostics.some(diagnostic => diagnostic.message.includes('inside')));
 });
+
+// Traceability: verifies ACC-CM-ACCEPTANCE-COVERAGE from unit-test TEST-CM-SEMANTIC-CONDITIONAL
+test('conditional runner declarations retain links without asserting runtime execution', testContext => {
+ const wrapper = `import {it as vitestIt} from 'vitest';
+/** @traceabilityRunner */
+export const it = Object.assign((name: string, run: () => void) => vitestIt(name,run), {
+ runIf: (condition: boolean) => (name: string, run: () => void) => { if (condition) vitestIt(name,run); },
+ skipIf: (condition: boolean) => (name: string, run: () => void) => { if (!condition) vitestIt(name,run); },
+});
+/** @traceabilityRunner */
+export const describe = Object.assign((name: string, run: () => void) => run(), {
+ runIf: (condition: boolean) => (name: string, run: () => void) => { if (condition) run(); },
+ skipIf: (condition: boolean) => (name: string, run: () => void) => { if (!condition) run(); },
+ skip: (name: string, run: () => void) => {},
+});`;
+ for (const [condition,eligible] of [['true',true],['false',false],["process.env.ENABLED === '1'",true]] as const) {
+  for (const method of ['runIf','skipIf']) {
+   const accepted = condition === "process.env.ENABLED === '1'" || (method === 'runIf' ? eligible : !eligible);
+   const source = `import {it,describe} from './wrapper.js';\n describe.${method}(${condition})('group', () => {\n${marker('integration-test')}\nit('work', () => {});\n});`;
+   assert.equal(check(testContext,source,[unit('integration-test',3)],wrapper).diagnostics.length === 0,accepted,source);
+   const direct = `import {it} from './wrapper.js';\n${marker('unit-test')}\nit.${method}(${condition})('work', () => {});`;
+   assert.equal(check(testContext,direct,[unit('unit-test',2)],wrapper).diagnostics.length === 0,accepted,direct);
+  }
+ }
+ const nested = `import {it,describe} from './wrapper.js';\ndescribe.skip('disabled', () => {\ndescribe.runIf(true)('inner', () => {\n${marker('integration-test')}\nit('work', () => {});\n});\n});`;
+ assert.ok(check(testContext,nested,[unit('integration-test',4)],wrapper).diagnostics.length > 0);
+});

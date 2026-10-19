@@ -86,7 +86,19 @@ function runnerDeclaration(node: ts.Node): boolean {
 }
 
 function runnerRegistration(expression: ts.Expression, typeChecker: ts.TypeChecker): RunnerRegistration | null {
- if (ts.isCallExpression(expression)) return runnerRegistration(expression.expression,typeChecker);
+ if (ts.isCallExpression(expression)) {
+  const callee = expression.expression;
+  if (ts.isPropertyAccessExpression(callee) && (callee.name.text === 'runIf' || callee.name.text === 'skipIf')) {
+   const registration = runnerRegistration(callee.expression,typeChecker);
+   const condition = expression.arguments[0];
+   if (!registration || !condition || expression.arguments.length !== 1) return null;
+   const conditionType = typeChecker.typeToString(typeChecker.getTypeAtLocation(condition));
+   const disabled = callee.name.text === 'runIf' ? conditionType === 'false' : conditionType === 'true';
+   // Dynamic environment gates retain a declaration; only actual non-skipped runs can prove coverage.
+   return {...registration,disabled:registration.disabled || disabled};
+  }
+  return runnerRegistration(expression.expression,typeChecker);
+ }
  if (ts.isPropertyAccessExpression(expression)) {
   if (['only','each','skip','todo','skipIf','runIf'].includes(expression.name.text)) {
    const registration = runnerRegistration(expression.expression,typeChecker);

@@ -110,8 +110,12 @@ on its canonical exported `test`, `it`, `describe` or `suite` function or variab
 declaration. TSTS resolves imports to that declaration; tags on calls or imports
 do not register a runner. Review must establish that this boundary actually
 registers and executes tests. The tag admits a locator, not behavioral adequacy
-or passing proof; skipped/todo registrations remain excluded. Do not tag ordinary
-helpers to obtain coverage credit.
+or passing proof; explicitly disabled and todo registrations remain excluded.
+Conditional `runIf`/`skipIf` registrations retain links unless their boolean
+condition statically disables them. A runtime-dependent condition is not passing
+proof: credit requires the configured run to enable and execute the identified
+tests without skips. Preserve real environment gates. Do not tag ordinary helpers
+to obtain coverage credit.
 
 Do not annotate every line. Identify all blocks declaring that they implement
 an obligation so the reverse view can find them. Review verifies that the named
