@@ -162,11 +162,18 @@ failed, skipped, stale or inadequate proof in completed sets.
 
 The assessment cannot override missing graph relationships. Unassessed IDs stay
 unresolved; I also requires adequate acceptance coverage and passing linked
-tests. Malformed or ambiguous graphs, wrong-kind/out-of-scope assessment IDs,
+tests. Malformed canonical Markdown or ambiguous graphs, wrong-kind/out-of-scope assessment IDs,
 dirty worktrees, stale assessment tags and missing evidence references fail.
 Canonical inputs must match committed bytes; ignored canonical files and index
 flags that hide inputs (`assume-unchanged`, `skip-worktree`) are rejected.
-Exit zero means the report was computed, not that its vector is zero.
+Executable-source annotation findings are returned in `findings` with
+`completionBlocked: true`; they do not suppress a vector over the complete
+canonical Markdown inventory. Malformed executable markers grant no coverage.
+Resolve every finding before final acceptance, even when another valid edge
+makes the vector zero. Canonical Markdown discovery errors remain fatal because
+they can hide obligations or acceptances and falsify the denominator.
+Exit zero means the report was computed, not that its vector is zero or completion
+is permitted.
 
 After a merge, create a new immutable assessment tag on the integrated commit.
 Carry forward only claims whose reviews and relevant test inputs remain valid;

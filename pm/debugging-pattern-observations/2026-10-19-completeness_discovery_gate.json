@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-10-19-completeness_discovery_gate",
+  "recorded_at": "2026-10-19T01:46:12-07:00",
+  "source_references": [
+    "src/traceability-completeness.ts"
+  ],
+  "context": {
+    "languages": [
+      "typescript"
+    ],
+    "frameworks": [],
+    "components": [
+      "campaign completeness"
+    ],
+    "affected_boundaries": [
+      "Discovery diagnostics and progress reporting"
+    ],
+    "code_references": [
+      "src/traceability-completeness.ts: runTraceabilityCompleteness"
+    ]
+  },
+  "observed_behavior": "Missing or legacy executable annotations prevented reporting any campaign vector.",
+  "expected_behavior": "Measure the complete canonical inventory while preserving executable annotation findings as completion blockers.",
+  "causal_mechanism": "All discovery findings were treated as inventory failures, including executable findings that cannot remove requirement, obligation or acceptance identities.",
+  "anti_pattern": {
+    "structural_description": "An acceptance gate was reused as a prerequisite for reporting incomplete progress.",
+    "why_it_fails": "The command could not report the unresolved implementation and test work it was intended to measure."
+  },
+  "correct_pattern": {
+    "required_invariant": "Canonical inventory must be sound; incomplete executable coverage must remain visible without masquerading as completion.",
+    "implementation_description": "Retain fatal canonical Markdown and graph errors, report executable diagnostics with completionBlocked, and keep missing relationships unresolved."
+  },
+  "applicability_conditions": [
+    "Canonical inventory is valid but executable annotations require migration"
+  ],
+  "known_non_matches": [
+    "Malformed canonical declarations can hide denominator entities and remain fatal."
+  ],
+  "confirmation_evidence": [
+    "Gwen discovery distinguished executable findings from canonical Markdown errors; fixtures verify both gates and zero-with-diagnostics behavior."
+  ],
+  "regression_proofs": [
+    "tests/traceability-completeness.test.ts: executable migration findings retain the vector while canonical discovery errors reject it",
+    "tests/traceability-completeness.test.ts: a zero vector with executable diagnostics still blocks completion"
+  ]
+}

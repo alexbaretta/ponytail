@@ -144,3 +144,40 @@ test('commit binding accepts source bytes exceeding the former 64 MiB batch limi
  assert.equal(result.status,0,result.stderr);
  assert.deepEqual(JSON.parse(result.stdout).vector,[1,1,1,1]);
 });
+
+// Traceability: verifies ACC-CM-DESCENT from unit-test TEST-CM-COMPLETENESS-MIGRATION
+test('executable migration findings retain the vector while canonical discovery errors reject it', context => {
+ const root = fixture(context);
+ fs.writeFileSync(path.join(root,'work.js'),'// Traceability: implements REQ-A\nfunction work() {}\n');
+ git(root,['add','work.js']);git(root,['commit','--quiet','-m','legacy source marker']);
+ git(root,['tag','-a','ponytail/completeness/demo/current','-m',JSON.stringify(assessment())]);
+ const result = command(root,['--json']);
+ assert.equal(result.status,0,result.stderr);
+ const report: unknown = JSON.parse(result.stdout);
+ assert.ok(typeof report === 'object' && report !== null && 'vector' in report && 'completionBlocked' in report && 'findings' in report);
+ assert.deepEqual(report.vector,[0,0,1,1]);
+ assert.equal(report.completionBlocked,true);
+ assert.ok(Array.isArray(report.findings));assert.equal(report.findings.length,2);
+ const text = command(root,[]);
+ assert.match(text.stdout,/Executable annotation findings blocking completion: 2/);
+ assert.match(text.stdout,/work.js:1 malformed-marker/);
+ fs.appendFileSync(path.join(root,'pm/requirements/a.md'),'Traceability: decomposes broken\n');
+ git(root,['add','.']);git(root,['commit','--quiet','-m','malformed canonical marker']);
+ const invalid = command(root,['--campaign','demo','--requirement','REQ-A']);
+ assert.notEqual(invalid.status,0);
+ assert.match(invalid.stderr,/pm\/requirements\/a.md:4 malformed-marker/);
+});
+
+// Traceability: verifies ACC-CM-DESCENT from unit-test TEST-CM-COMPLETENESS-DIAGNOSTIC-GATE
+test('a zero vector with executable diagnostics still blocks completion', context => {
+ const root = fixture(context);
+ fs.appendFileSync(path.join(root,'work.js'),'// Traceability: implements REQ-A\n');
+ git(root,['add','work.js']);git(root,['commit','--quiet','-m','mixed markers']);
+ git(root,['tag','-a','ponytail/completeness/demo/current','-m',JSON.stringify(assessment())]);
+ const result = command(root,['--json']);
+ assert.equal(result.status,0,result.stderr);
+ const report: unknown = JSON.parse(result.stdout);
+ assert.ok(typeof report === 'object' && report !== null && 'vector' in report && 'completionBlocked' in report);
+ assert.deepEqual(report.vector,[0,0,0,0]);
+ assert.equal(report.completionBlocked,true);
+});
