@@ -63,6 +63,12 @@ These rules remain active at every compaction level, including `off`:
   editing. Fix confirmed root causes, not reported symptoms.
 - Do not invent requirements. Stick to what the user tells you in the chat or
   shares with you as requirements files.
+- Never embed Git commit IDs, full or abbreviated, in tracked file content,
+  Git commit messages, or Git tag annotation text. This includes IDs embedded
+  in copied commands, paths, URLs, or reference names. Bind a validation or
+  assessment tag to its commit only through Git's tag target, never through
+  its annotation text. Use descriptive references without embedded commit IDs.
+  Git's structural object references are unaffected by this content prohibition.
 - Implement only expressed stakeholder requirements. Architectural elegance,
   comprehensiveness, consistency with a possible future direction,
   future-proofing, and hypothetical usefulness do not create requirements or

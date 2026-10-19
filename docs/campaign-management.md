@@ -252,6 +252,12 @@ or certificate files. A tag targets the tested commit; its annotation records
 which commands ran and their observed results. Source history must not accumulate
 validation JSON documents, raw output, or evidence-only commits.
 
+Git commit IDs, full or abbreviated, are prohibited as content in tracked files,
+Git commit messages, and tag annotations, including IDs embedded in commands,
+paths, URLs, or reference names. A certificate identifies its commit exclusively
+through the tag's Git target. Use descriptive tag names without commit IDs so
+references to certificates do not reintroduce them into annotation text.
+
 A worker runs the focused tests needed for its implemented obligations and records
 the passing commands and results in a worker validation tag. The coordinator runs
 the full required suites and additional QA against the final reconciled candidate

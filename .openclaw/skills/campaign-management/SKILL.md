@@ -149,8 +149,11 @@ again. A zero exit code cannot establish tests that did not run.
 Create a uniquely named annotated Git tag on that exact commit with `git tag -a`;
 never force-update a tag. Use `ponytail/validation/<campaign>/<unique-run>`.
 Keep the annotation compact: worker/coordinator identity, focused or final scope,
-covered IDs, commit, working directory, relevant environment, timestamp, commands,
+covered requirement/obligation/acceptance/test IDs, working directory, relevant environment, timestamp, commands,
 observed results and review references. Counts belong only when actually observed.
+The tag target alone identifies the commit. Apply Ponytail's commit-ID content
+prohibition to all annotation fields, including copied commands and references;
+choose tag names without embedded commit IDs so they can be cited safely.
 A plain-text annotation is sufficient; no mandatory JSON schema or custom runner.
 
 Keep raw output in ignored temporary storage or the project's external evidence

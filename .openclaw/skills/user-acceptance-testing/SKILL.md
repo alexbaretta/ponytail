@@ -148,12 +148,13 @@ Keep validation results as commit-attached metadata. Passing command output,
 certificate ledgers and evidence-only commits must not pollute source history.
 Canonical UAT procedures stay in source; raw run output stays in ignored runtime
 storage or the configured external evidence owner. An annotated Git tag identifies
-the exact tested commit, commands, results and covered scope; it does not replace
+the exact tested commit through its Git target, and commands, results and covered
+scope through its annotation; it does not replace
 review or release authorization.
 
 For each candidate release, record in that metadata or its external references:
 
-- the exact release identity and tested revision;
+- the release identity without an embedded commit ID (the tag target supplies the tested revision);
 - target environment and execution profile;
 - selected Suites and Arcs;
 - outcome and evidence for every selected Arc;

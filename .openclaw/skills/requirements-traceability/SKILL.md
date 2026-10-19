@@ -213,6 +213,8 @@ Exit zero means the report was computed, not that its vector is zero or completi
 is permitted.
 
 After a merge, create a new immutable assessment tag on the integrated commit.
+Its Git target supplies the commit binding; never put a commit ID in the
+annotation, including review references or validation tag names containing one.
 Carry forward only claims whose reviews and relevant test inputs remain valid;
 remove uncertain claims and rerun affected proof. Preserve the full approved
 requirement scope and newly discovered descendants. Do not copy logs, graph
