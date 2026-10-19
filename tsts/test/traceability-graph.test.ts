@@ -14,7 +14,15 @@ function check(testContext: TestContext, source: string, units: readonly Traceab
  testContext.after(() => fs.rmSync(root,{recursive:true,force:true}));
  fs.writeFileSync(path.join(root,'source.ts'),source);
  // Third-party declaration fixture; no runtime execution or adequacy is asserted by these locator tests.
- fs.writeFileSync(path.join(root,'runner.d.ts'),"declare module 'vitest' { export const it: {each(values: number[]): (name: string, body: () => void) => void}; }");
+ fs.writeFileSync(path.join(root,'runner.d.ts'),`declare module 'vitest' {
+  interface TestOptions { timeout?: number; skip?: boolean; todo?: boolean }
+  interface TestAPI {
+   (name: string, body: () => void, timeout?: number): void;
+   (name: string, options: TestOptions, body: () => void): void;
+   each(values: number[]): TestAPI;
+  }
+  export const it: TestAPI;
+ }`);
  fs.writeFileSync(path.join(root,'tsconfig.json'),JSON.stringify({compilerOptions:{target:'ES2024',strict:true,noEmit:true,skipLibCheck:true,
   types:['node'],typeRoots:[fileURLToPath(new URL('../../../node_modules/@types',import.meta.url))]},files:['source.ts','runner.d.ts']}));
  const input: TraceabilityGraphAnnotationsInput = {projectRoot:root,projectPath:'tsconfig.json',units};
@@ -50,6 +58,20 @@ test('unit and integration annotations attach to actual test calls including imp
 test('parameterized executable tests retain their identified call', testContext => {
  const source = `import {it} from 'vitest';\n${marker('unit-test')}\nit.each([1,2])('work', () => {});`;
  assert.deepEqual(check(testContext,source,[unit('unit-test',2)]).diagnostics,[]);
+});
+
+// Traceability: verifies ACC-CM-ACCEPTANCE-COVERAGE from unit-test TEST-CM-SEMANTIC-TIMEOUT
+test('Vitest timeout overloads retain executable test attachment', testContext => {
+ for (const declaration of [
+  "it('work', async () => {}, 300_000);",
+  "it('work', async () => {}, timeout);",
+  "it('work', async () => {}, unionTimeout);",
+  "it('work', {timeout:300_000}, async () => {});",
+  "it.each([1,2])('work', async () => {}, 300_000);",
+ ]) {
+  const source = `import {it} from 'vitest';\nconst timeout: number = 300_000;\ndeclare const unionTimeout: 100 | 200;\n${marker('integration-test')}\n${declaration}`;
+  assert.deepEqual(check(testContext,source,[unit('integration-test',4)]).diagnostics,[],declaration);
+ }
 });
 
 // Traceability: verifies ACC-CM-GRAPH from unit-test TEST-CM-SEMANTIC-MULTIPLE-OBLIGATIONS

@@ -99,12 +99,18 @@ function runnerRegistration(expression: ts.Expression, typeChecker: ts.TypeCheck
 }
 
 function enabledBody(call: ts.CallExpression, typeChecker: ts.TypeChecker): boolean {
- const callback = call.arguments[call.arguments.length - 1];
+ const last = call.arguments[call.arguments.length - 1];
+ const lastType = last && typeChecker.getTypeAtLocation(last);
+ // Vitest and Jest permit a numeric timeout after the body.
+ const hasTimeout = lastType !== undefined && (lastType.isUnion() ? lastType.types : [lastType])
+  .every(type => (type.flags & ts.TypeFlags.NumberLike) !== 0);
+ const callbackIndex = call.arguments.length - (hasTimeout ? 2 : 1);
+ const callback = call.arguments[callbackIndex];
  if (!callback || typeChecker.getTypeAtLocation(callback).getCallSignatures().length === 0) return false;
  // node:test permits options between the title and body. A skipped/todo call is not executable coverage.
  const first = call.arguments[0];
  const hasTitle = first !== undefined && (typeChecker.getTypeAtLocation(first).flags & ts.TypeFlags.StringLike) !== 0;
- for (const argument of call.arguments.slice(hasTitle ? 1 : 0,-1)) {
+ for (const argument of call.arguments.slice(hasTitle ? 1 : 0,callbackIndex)) {
   if (!ts.isObjectLiteralExpression(argument)) return false;
   for (const property of argument.properties) {
    if (!ts.isPropertyAssignment(property)) return false;

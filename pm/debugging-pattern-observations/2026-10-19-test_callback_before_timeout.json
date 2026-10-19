@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-10-19-test_callback_before_timeout",
+  "recorded_at": "2026-10-19T01:06:05-07:00",
+  "source_references": ["pm/plans/in_progress/2026-10-17-campaign-management-redesign/sprints/S06.md"],
+  "context": {
+    "languages": ["typescript"],
+    "frameworks": ["vitest"],
+    "components": ["TSTS traceability graph"],
+    "affected_boundaries": ["Executable test annotation attachment"],
+    "code_references": ["tsts/src/traceability-graph.ts: enabledBody"]
+  },
+  "observed_behavior": "A genuine Vitest registration with a trailing numeric timeout was rejected as non-executable.",
+  "expected_behavior": "The locator recognizes the callback before the timeout while retaining skip and todo exclusion.",
+  "causal_mechanism": "The locator selected the last argument as the callback unconditionally; the timeout has no call signature.",
+  "anti_pattern": {
+    "structural_description": "One positional form was treated as the complete external overload contract.",
+    "why_it_fails": "An optional trailing argument displaces the body without changing its executable role."
+  },
+  "correct_pattern": {
+    "required_invariant": "Callback selection accounts for the numeric timeout overload, including numeric unions.",
+    "implementation_description": "Select the preceding argument when every constituent of the final argument type is numeric; retain callable-body and option checks."
+  },
+  "applicability_conditions": ["Recognized runner registration with a numeric timeout after its callback"],
+  "known_non_matches": ["Callback-last registrations, including options before the callback"],
+  "confirmation_evidence": ["The focused regression rejected it('work', async () => {}, 300_000) before the repair and accepted the same registration afterward."],
+  "regression_proofs": ["tsts/test/traceability-graph.test.ts: Vitest timeout overloads retain executable test attachment"]
+}
