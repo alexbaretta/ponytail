@@ -39,7 +39,7 @@
     "An implementation is owned by a strict JSON object whose schema supports the annotation field"
   ],
   "known_non_matches": [
-    "Ordinary JSON strings and JSON test declarations do not provide coverage."
+    "Ordinary JSON strings and test declarations in implementation-classified JSON do not provide test coverage."
   ],
   "confirmation_evidence": [
     "The client V2 input parser rejected the new field; V3 real input queries and object-local graph discovery pass with an isolated portable runtime."

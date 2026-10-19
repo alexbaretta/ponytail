@@ -121,9 +121,9 @@ issue references are provenance, not completed graph coverage.
 
 ## Coverage And Adequacy
 
-### Strict JSON implementation declarations
+### JSON source declarations
 
-For an implementation-classified `.json` source using the text locator, put
+For an implementation-classified `.json` or `.jsonc` source using the text locator, put
 canonical annotations in a direct `traceability` string array on the object
 that implements the obligation. The owning JSON schema must explicitly allow
 that field; do not add unsupported metadata. Ponytail build-impact V3 permits
@@ -140,11 +140,16 @@ implementation source scope.
 }
 ```
 
-Discovery parses strict JSON, rejects duplicate properties, and uses the owning
-property's source location. Repeated edges within that object's array share
+Discovery parses JSON/JSONC, preserves existing comment annotations, rejects
+duplicate properties, and uses the owning property's source location. JSONC
+comments and trailing commas are supported even in `.json` files such as
+TypeScript configuration. The owning configuration reader still enforces its
+own dialect: build-impact files remain strict JSON. Repeated edges within that object's array share
 one implementation ID; separate objects require distinct IDs. Other string
-values cannot declare coverage. JSON cannot declare executable tests; tests
-must separately reference the acceptance and exercise the actual behavior.
+values cannot declare coverage. Configured executable JSON tests (such as registered
+interpreted integration Arcs) use their configured test kind and reference
+acceptances. Implementation-classified JSON cannot declare tests. Discovery
+establishes links only; runtime execution and adequacy review remain required.
 No sidecar relationship map or duplicated policy is needed.
 
 ### Campaign completeness command

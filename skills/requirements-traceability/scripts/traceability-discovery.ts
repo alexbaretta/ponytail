@@ -1,8 +1,7 @@
 // Copyright (c) 2026 Alex Baretta. All rights reserved.
 // Licensed under the MIT License. See LICENSE in the project root.
 import {Parser} from 'commonmark';
-import {parse} from 'lossless-json';
-import {parseTree,type Node} from 'jsonc-parser';
+import {parseTree,type Node,type ParseError} from 'jsonc-parser';
 import type {TraceabilityGraph, TraceabilityGraphEntity, TraceabilityGraphKind, TraceabilityGraphRelationship} from './traceability-graph.js';
 
 export interface TraceabilitySource {
@@ -24,7 +23,7 @@ export interface TraceabilityDiscovery {
 // Traceability: implements OBL-CM-GRAPH from implementation discoverTraceabilitySource
 // Traceability: implements OBL-CM-ACCEPTANCE-COVERAGE from implementation discoverTraceabilitySource
 export function discoverTraceabilitySource(traceabilitySource: TraceabilitySource): TraceabilityDiscovery {
- if (traceabilitySource.kind !== 'markdown' && traceabilitySource.path.endsWith('.json')) return discoverJsonTraceabilitySource(traceabilitySource);
+ if (traceabilitySource.kind !== 'markdown' && /\.jsonc?$/u.test(traceabilitySource.path)) return discoverJsonTraceabilitySource(traceabilitySource);
  return discoverTextTraceabilitySource(traceabilitySource);
 }
 
@@ -33,16 +32,14 @@ function discoverJsonTraceabilitySource(traceabilitySource: TraceabilitySource):
  const relationships: TraceabilityGraphRelationship[] = [];
  const findings: TraceabilityDiscoveryFinding[] = [];
  const report = (line: number, message: string): void => { findings.push({code:'malformed-marker',path:traceabilitySource.path,line,message}); };
- if (traceabilitySource.kind !== 'implementation') return {graph:{entities,relationships},findings:[{code:'unexpected-kind',path:traceabilitySource.path,line:1,message:'JSON configuration can declare implementation coverage only'}]};
- try {
-  parse(traceabilitySource.text,null,{onDuplicateKey:duplicateKeyInfo => { throw new Error(`Duplicate JSON property: ${duplicateKeyInfo.key}`); }});
- } catch (error) {
-  report(1,`Invalid strict JSON: ${error instanceof Error ? error.message : String(error)}`);
+ const parseErrors: ParseError[] = [];
+ // Only annotation strings and locations are consumed; numeric values are never read or serialized.
+ const rootNode = parseTree(traceabilitySource.text,parseErrors,{disallowComments:false,allowTrailingComma:true});
+ const lineAt = (offset: number): number => traceabilitySource.text.slice(0,offset).split('\n').length;
+ if (!rootNode || parseErrors.length > 0) {
+  report(lineAt(parseErrors[0]?.offset ?? 0),'Invalid JSON/JSONC syntax');
   return {graph:{entities,relationships},findings};
  }
- const rootNode = parseTree(traceabilitySource.text,[],{disallowComments:true,allowTrailingComma:false});
- if (!rootNode) throw new Error('Validated JSON has no syntax tree');
- const lineAt = (offset: number): number => traceabilitySource.text.slice(0,offset).split('\n').length;
  const duplicateProperties = (node: Node): boolean => {
   if (node.type === 'object') {
    const keys = new Set<string>();
@@ -56,6 +53,10 @@ function discoverJsonTraceabilitySource(traceabilitySource: TraceabilitySource):
   return (node.children ?? []).some(duplicateProperties);
  };
  if (duplicateProperties(rootNode)) return {graph:{entities,relationships},findings};
+ const commentTraceabilityDiscovery = discoverTextTraceabilitySource(traceabilitySource);
+ entities.push(...commentTraceabilityDiscovery.graph.entities);
+ relationships.push(...commentTraceabilityDiscovery.graph.relationships);
+ findings.push(...commentTraceabilityDiscovery.findings.filter(finding => finding.code !== 'missing-declaration'));
  const visit = (node: Node): void => {
   const key: unknown = node.children?.[0]?.value;
   if (node.type === 'property' && key === 'traceability') {
@@ -85,7 +86,7 @@ function discoverJsonTraceabilitySource(traceabilitySource: TraceabilitySource):
   for (const childNode of node.children ?? []) visit(childNode);
  };
  visit(rootNode);
- if (!entities.length && !findings.length) findings.push({code:'missing-declaration',path:traceabilitySource.path,line:1,message:'Configured implementation source contains no identified unit'});
+ if (!entities.length && !findings.length) findings.push({code:'missing-declaration',path:traceabilitySource.path,line:1,message:`Configured ${traceabilitySource.kind} source contains no identified unit`});
  return {graph:{entities,relationships},findings};
 }
 

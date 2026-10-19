@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-10-19-json_source_dispatch",
+  "recorded_at": "2026-10-19T02:13:11-07:00",
+  "source_references": [
+    "pm/plans/in_progress/2026-10-17-campaign-management-redesign/sprints/S06.md"
+  ],
+  "context": {
+    "languages": [
+      "typescript",
+      "javascript",
+      "json"
+    ],
+    "frameworks": [],
+    "components": [
+      "requirements traceability"
+    ],
+    "affected_boundaries": [
+      "JSON source dialect and configured executable source kind"
+    ],
+    "code_references": [
+      "skills/requirements-traceability/scripts/traceability-discovery.ts"
+    ]
+  },
+  "observed_behavior": "JSON dispatch dropped an existing JSONC comment unit and rejected a configured executable JSON integration Arc.",
+  "expected_behavior": "Preserve existing JSONC annotations and discover canonical JSON test annotations according to the configured source kind.",
+  "causal_mechanism": "Extension dispatch assumed every .json source was strict implementation configuration, overriding its actual dialect and configured kind.",
+  "anti_pattern": {
+    "structural_description": "A new format reader narrowed previously supported source semantics based on the filename extension.",
+    "why_it_fails": "JSON filenames can contain JSONC and can represent registered executable tests."
+  },
+  "correct_pattern": {
+    "required_invariant": "Format decoding must preserve configured source ownership and supported annotations.",
+    "implementation_description": "Parse JSON/JSONC once, reject duplicate properties, retain comment annotations and parse direct canonical arrays through the existing configured-kind checks."
+  },
+  "applicability_conditions": [
+    "JSON extension dispatch handles both configuration and registered executable sources."
+  ],
+  "known_non_matches": [
+    "Implementation-classified configuration cannot declare tests.",
+    "Host schemas still enforce their own dialect; build-impact remains strict JSON."
+  ],
+  "confirmation_evidence": [
+    "The JSONC fixture failed under strict decoding and passes after correction. The actual integrated tsconfig preserves its unit at line 14.",
+    "The explicit implementation-only gate rejected configured executable JSON; removing it retains existing kind checks and allows valid integration-test declarations."
+  ],
+  "regression_proofs": [
+    "tests/traceability-discovery.test.ts: JSONC configuration preserves existing comment annotations alongside structured declarations",
+    "tests/traceability-discovery.test.ts: configured executable JSON preserves test declarations without granting implementation-kind test coverage"
+  ]
+}

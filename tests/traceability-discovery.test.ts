@@ -170,7 +170,7 @@ test('JSON discovery rejects duplicate properties, malformed annotations and fak
   '{"traceability":["Traceability: implements OBL-A from unit-test fake"]}',
   '{"traceability":["Traceability: implements OBL-A from implementation a\\n// Traceability: implements OBL-B from implementation b"]}',
   '{"traceability":["// Traceability: implements OBL-A from implementation bad"]}',
-  '{/*comment*/"traceability":[]}',
+  '{"traceability":["Traceability: implements OBL-A from implementation invalid"] unquoted: true}',
  ]) {
   const traceabilitySource: TraceabilitySource = {kind:'implementation',path:'a.json',text};
   const discovery = discoverTraceabilitySource(traceabilitySource);
@@ -178,6 +178,37 @@ test('JSON discovery rejects duplicate properties, malformed annotations and fak
   assert.deepEqual(discovery.graph.entities,[],text);
   assert.deepEqual(discovery.graph.relationships,[],text);
  }
- const traceabilitySource: TraceabilitySource = {kind:'unit-test',path:'test.json',text:'{"traceability":["Traceability: verifies ACC-A from unit-test fake"]}'};
- assert.equal(discoverTraceabilitySource(traceabilitySource).findings[0]?.code,'unexpected-kind');
+
+});
+
+// Traceability: verifies ACC-CM-GRAPH from unit-test TEST-CM-DISCOVER-JSONC
+test('JSONC configuration preserves existing comment annotations alongside structured declarations', () => {
+ for (const file of ['scripts/tsconfig.traceability-component.json','settings.jsonc']) {
+  const traceabilitySource: TraceabilitySource = {kind:'implementation',path:file,text:[
+   '{',
+   ' /* Configuration copyright */',
+   ' // Traceability: implements OBL-INT-033-GRAPH from implementation traceabilityComponentStaticConfiguration',
+   ' "extends": "../tsconfig.unit-tests.json",',
+   ' "traceability": ["Traceability: implements OBL-A from implementation structuredInput"],',
+   ' "largeNumber": 123456789012345678901234567890,',
+   '}',
+  ].join('\n')};
+  const discovery = discoverTraceabilitySource(traceabilitySource);
+  assert.deepEqual(discovery.findings,[]);
+  assert.deepEqual(discovery.graph.entities.map(entity => [entity.id,entity.line]),[['traceabilityComponentStaticConfiguration',3],['structuredInput',5]]);
+  assert.deepEqual(discovery.graph.relationships.map(edge => edge.target),['OBL-INT-033-GRAPH','OBL-A']);
+ }
+});
+
+// Traceability: verifies ACC-CM-GRAPH from unit-test TEST-CM-DISCOVER-JSON-ARC
+test('configured executable JSON preserves test declarations without granting implementation-kind test coverage', () => {
+ const text = '{"traceability":["Traceability: verifies ACC-A from integration-test TEST-LEGAL-SEED"],"steps":[]}';
+ const discovery = discoverTraceabilitySource({kind:'integration-test',path:'arcs/legal-seed.json',text});
+ assert.deepEqual(discovery.findings,[]);
+ assert.deepEqual(discovery.graph.entities,[{id:'TEST-LEGAL-SEED',kind:'integration-test',path:'arcs/legal-seed.json',line:1}]);
+ assert.deepEqual(discovery.graph.relationships,[{source:'TEST-LEGAL-SEED',target:'ACC-A',role:'verifies'}]);
+ const rejected = discoverTraceabilitySource({kind:'implementation',path:'configuration.json',text});
+ assert.ok(rejected.findings.some(finding => finding.code === 'unexpected-kind'));
+ assert.deepEqual(rejected.graph.entities,[]);
+ assert.deepEqual(rejected.graph.relationships,[]);
 });

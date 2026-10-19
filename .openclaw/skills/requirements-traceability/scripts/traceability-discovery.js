@@ -5,10 +5,9 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.discoverTraceabilitySource = discoverTraceabilitySource;
 const commonmark_1 = require("./commonmark.js");
-const lossless_json_1 = require("./lossless-json.js");
 const jsonc_parser_1 = require("./json-parser.js");
 function discoverTraceabilitySource(traceabilitySource) {
-    if (traceabilitySource.kind !== 'markdown' && traceabilitySource.path.endsWith('.json'))
+    if (traceabilitySource.kind !== 'markdown' && /\.jsonc?$/u.test(traceabilitySource.path))
         return discoverJsonTraceabilitySource(traceabilitySource);
     return discoverTextTraceabilitySource(traceabilitySource);
 }
@@ -17,19 +16,13 @@ function discoverJsonTraceabilitySource(traceabilitySource) {
     const relationships = [];
     const findings = [];
     const report = (line, message) => { findings.push({ code: 'malformed-marker', path: traceabilitySource.path, line, message }); };
-    if (traceabilitySource.kind !== 'implementation')
-        return { graph: { entities, relationships }, findings: [{ code: 'unexpected-kind', path: traceabilitySource.path, line: 1, message: 'JSON configuration can declare implementation coverage only' }] };
-    try {
-        (0, lossless_json_1.parse)(traceabilitySource.text, null, { onDuplicateKey: duplicateKeyInfo => { throw new Error(`Duplicate JSON property: ${duplicateKeyInfo.key}`); } });
-    }
-    catch (error) {
-        report(1, `Invalid strict JSON: ${error instanceof Error ? error.message : String(error)}`);
+    const parseErrors = [];
+    const rootNode = (0, jsonc_parser_1.parseTree)(traceabilitySource.text, parseErrors, { disallowComments: false, allowTrailingComma: true });
+    const lineAt = (offset) => traceabilitySource.text.slice(0, offset).split('\n').length;
+    if (!rootNode || parseErrors.length > 0) {
+        report(lineAt(parseErrors[0]?.offset ?? 0), 'Invalid JSON/JSONC syntax');
         return { graph: { entities, relationships }, findings };
     }
-    const rootNode = (0, jsonc_parser_1.parseTree)(traceabilitySource.text, [], { disallowComments: true, allowTrailingComma: false });
-    if (!rootNode)
-        throw new Error('Validated JSON has no syntax tree');
-    const lineAt = (offset) => traceabilitySource.text.slice(0, offset).split('\n').length;
     const duplicateProperties = (node) => {
         if (node.type === 'object') {
             const keys = new Set();
@@ -48,6 +41,10 @@ function discoverJsonTraceabilitySource(traceabilitySource) {
     };
     if (duplicateProperties(rootNode))
         return { graph: { entities, relationships }, findings };
+    const commentTraceabilityDiscovery = discoverTextTraceabilitySource(traceabilitySource);
+    entities.push(...commentTraceabilityDiscovery.graph.entities);
+    relationships.push(...commentTraceabilityDiscovery.graph.relationships);
+    findings.push(...commentTraceabilityDiscovery.findings.filter(finding => finding.code !== 'missing-declaration'));
     const visit = (node) => {
         const key = node.children?.[0]?.value;
         if (node.type === 'property' && key === 'traceability') {
@@ -79,7 +76,7 @@ function discoverJsonTraceabilitySource(traceabilitySource) {
     };
     visit(rootNode);
     if (!entities.length && !findings.length)
-        findings.push({ code: 'missing-declaration', path: traceabilitySource.path, line: 1, message: 'Configured implementation source contains no identified unit' });
+        findings.push({ code: 'missing-declaration', path: traceabilitySource.path, line: 1, message: `Configured ${traceabilitySource.kind} source contains no identified unit` });
     return { graph: { entities, relationships }, findings };
 }
 function discoverTextTraceabilitySource(traceabilitySource) {
