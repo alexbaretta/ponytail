@@ -71,6 +71,21 @@ test('public V5 checker and portable index preserve the complete graph and exclu
  assert.deepEqual(indexed,projected);
 });
 
+// Traceability: verifies ACC-CM-GRAPH from unit-test TEST-CM-V5-UNCLASSIFIED-SOURCE
+test('unclassified annotated code cannot disappear while exclusions and literal examples remain outside scope', testContext => {
+ const root = fixture(testContext);
+ write(root,'helper.ts','// Traceability: implements OBL-A from implementation helper\nexport function helper() {}\n');
+ const failed = check(root,['--write']);
+ assert.equal(failed.status,1);
+ assert.match(failed.stderr,/helper\.ts:1.*unclassified-source/);
+ const configuration = readTraceabilityConfigurationV5(JSON.parse(fs.readFileSync(path.join(root,'traceability.json'),'utf8')));
+ write(root,'traceability.json',JSON.stringify({...configuration,exclusions:[{pattern:'helper.ts',reason:'External reference fixture'}]}));
+ write(root,'example.ts','const example = `\n// Traceability: implements OBL-A from implementation example\n`;');
+ write(root,'unowned.ts','export function unowned() {}');
+ const excluded = check(root,['--write']);
+ assert.equal(excluded.status,0,excluded.stderr);
+});
+
 // Traceability: verifies ACC-CM-ACCEPTANCE-COVERAGE from unit-test TEST-CM-V5-SECOND-ACCEPTANCE
 test('an untested second acceptance is a checker failure and an indexed gap', testContext => {
  const root = fixture(testContext);

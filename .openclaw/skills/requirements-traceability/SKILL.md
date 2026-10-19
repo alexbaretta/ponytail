@@ -47,7 +47,10 @@ source and contains no relationship annotations.
 Canonical Markdown scopes enumerate every declaration, including unreferenced,
 untracked or ignored acceptances. Code scopes include tracked and unignored new
 files; exclusions cannot hide canonical requirements or UAT. Do not narrow scope
-to make coverage pass. The generated reverse view is excluded from discovery.
+to make coverage pass. The generated reverse view is excluded from discovery. JavaScript and TypeScript
+files with canonical relationship declarations in comments must have an explicit
+source classification or exclusion; otherwise discovery reports `unclassified-source`
+at that file and comment line. String examples do not declare ownership.
 
 ## Canonical Graph
 

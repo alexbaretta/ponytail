@@ -12,6 +12,7 @@ exports.readTraceabilityConfigurationV5 = readTraceabilityConfigurationV5;
 exports.discoverTraceabilityProject = discoverTraceabilityProject;
 const node_fs_1 = __importDefault(require("node:fs"));
 const node_path_1 = __importDefault(require("node:path"));
+const typescript_1 = __importDefault(require("typescript"));
 const node_child_process_1 = require("node:child_process");
 const traceability_discovery_js_1 = require("./traceability-discovery.js");
 const traceability_graph_js_1 = require("./traceability-graph.js");
@@ -180,8 +181,28 @@ function discoverTraceabilityProject(traceabilityConfigurationV5, configurationP
             kind = 'markdown';
         }
         else {
-            if (!scopes.length)
+            if (!scopes.length) {
+                if (stat.isFile() && /\.(?:[cm]?[jt]s|[jt]sx)$/u.test(file)) {
+                    const text = node_fs_1.default.readFileSync(regularFile(root, file), 'utf8');
+                    const sourceFile = typescript_1.default.createSourceFile(file, text, typescript_1.default.ScriptTarget.Latest, true);
+                    const positions = new Set();
+                    const visit = (node) => {
+                        for (const commentRange of typescript_1.default.getLeadingCommentRanges(text, node.pos) ?? []) {
+                            if (positions.has(commentRange.pos))
+                                continue;
+                            positions.add(commentRange.pos);
+                            const discovery = (0, traceability_discovery_js_1.discoverTraceabilitySource)({ kind: 'implementation', path: file, text: text.slice(commentRange.pos, commentRange.end) });
+                            if (discovery.graph.entities.length || discovery.findings.some(finding => finding.code === 'unexpected-kind')) {
+                                projectFindings.push({ code: 'unclassified-source', path: file, line: sourceFile.getLineAndCharacterOfPosition(commentRange.pos).line + 1,
+                                    message: 'Annotated source requires an explicit source classification or exclusion' });
+                            }
+                        }
+                        typescript_1.default.forEachChild(node, visit);
+                    };
+                    visit(sourceFile);
+                }
                 continue;
+            }
             if (scopes.length !== 1) {
                 projectFindings.push({ code: 'ambiguous-source', path: file, line: 1, message: 'Source matches more than one classification' });
                 continue;

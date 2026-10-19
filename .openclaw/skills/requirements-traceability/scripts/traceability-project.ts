@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See LICENSE in the project root.
 import fs from 'node:fs';
 import path from 'node:path';
+import ts from 'typescript';
 import {execFileSync} from 'node:child_process';
 import {discoverTraceabilitySource, type TraceabilityDiscoveryFinding, type TraceabilitySource} from './traceability-discovery.js';
 import {validateTraceabilityGraph, type TraceabilityGraph, type TraceabilityGraphEntity, type TraceabilityGraphRelationship, type TraceabilityGraphFinding} from './traceability-graph.js';
@@ -26,7 +27,7 @@ export interface TraceabilityConfigurationV5 {
  readonly typescript: TraceabilityTypescriptV5 | null;
 }
 export interface TraceabilityProjectFinding {
- readonly code: 'empty-scope' | 'ambiguous-source' | 'unclassified-generated-source' | 'generated-marker' | 'misplaced-declaration';
+ readonly code: 'empty-scope' | 'unclassified-source' | 'ambiguous-source' | 'unclassified-generated-source' | 'generated-marker' | 'misplaced-declaration';
  readonly path: string;
  readonly line: number;
  readonly message: string;
@@ -187,7 +188,27 @@ export function discoverTraceabilityProject(traceabilityConfigurationV5: Traceab
    if (!file.endsWith('.md')) continue;
    kind = 'markdown';
   } else {
-   if (!scopes.length) continue;
+   if (!scopes.length) {
+    if (stat.isFile() && /\.(?:[cm]?[jt]s|[jt]sx)$/u.test(file)) {
+     const text = fs.readFileSync(regularFile(root,file),'utf8');
+     const sourceFile = ts.createSourceFile(file,text,ts.ScriptTarget.Latest,true);
+     const positions = new Set<number>();
+     const visit = (node: ts.Node): void => {
+      for (const commentRange of ts.getLeadingCommentRanges(text,node.pos) ?? []) {
+       if (positions.has(commentRange.pos)) continue;
+       positions.add(commentRange.pos);
+       const discovery = discoverTraceabilitySource({kind:'implementation',path:file,text:text.slice(commentRange.pos,commentRange.end)});
+       if (discovery.graph.entities.length || discovery.findings.some(finding => finding.code === 'unexpected-kind')) {
+        projectFindings.push({code:'unclassified-source',path:file,line:sourceFile.getLineAndCharacterOfPosition(commentRange.pos).line+1,
+         message:'Annotated source requires an explicit source classification or exclusion'});
+       }
+      }
+      ts.forEachChild(node,visit);
+     };
+     visit(sourceFile);
+    }
+    continue;
+   }
    if (scopes.length !== 1) {
     projectFindings.push({code:'ambiguous-source',path:file,line:1,message:'Source matches more than one classification'});
     continue;
