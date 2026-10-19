@@ -134,3 +134,13 @@ test('a skip-worktree deletion cannot silently remove an unresolved acceptance',
  const after = command(root,[]);
  assert.notEqual(after.status,0);assert.match(after.stderr,/hidden inputs/);
 });
+
+// Traceability: verifies ACC-CM-DESCENT from unit-test TEST-CM-COMPLETENESS-LARGE-INPUTS
+test('commit binding accepts source bytes exceeding the former 64 MiB batch limit', context => {
+ const root = fixture(context);
+ fs.appendFileSync(path.join(root,'work.js'),'//' + '€'.repeat(22*1024*1024) + '\n');
+ git(root,['add','work.js']);git(root,['commit','--quiet','-m','large source']);
+ const result = command(root,['--campaign','demo','--requirement','REQ-A','--json']);
+ assert.equal(result.status,0,result.stderr);
+ assert.deepEqual(JSON.parse(result.stdout).vector,[1,1,1,1]);
+});

@@ -103,7 +103,8 @@ function committedInputs(root, commit, inputs) {
     const paths = [...inputs.keys()];
     if (paths.some(file => /[\r\n]/u.test(file)))
         throw new Error('Unsupported newline in traceability input path');
-    const output = (0, node_child_process_1.execFileSync)('git', ['cat-file', '--batch'], { cwd: root, input: paths.map(file => `${commit}:${file}\n`).join(''), maxBuffer: 64 * 1024 * 1024 });
+    const maxBuffer = [...inputs].reduce((bytes, [file, text]) => bytes + Buffer.byteLength(text) + Buffer.byteLength(file) + 128, 1024);
+    const output = (0, node_child_process_1.execFileSync)('git', ['cat-file', '--batch'], { cwd: root, input: paths.map(file => `${commit}:${file}\n`).join(''), maxBuffer });
     const committed = new Map();
     let offset = 0;
     for (const file of paths) {

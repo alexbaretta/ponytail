@@ -106,7 +106,9 @@ function annotatedTag(root: string, name: string): {readonly commit: string; rea
 function committedInputs(root: string, commit: string, inputs: ReadonlyMap<string,string>): ReadonlyMap<string,Buffer> {
  const paths = [...inputs.keys()];
  if (paths.some(file => /[\r\n]/u.test(file))) throw new Error('Unsupported newline in traceability input path');
- const output = execFileSync('git',['cat-file','--batch'],{cwd:root,input:paths.map(file => `${commit}:${file}\n`).join(''),maxBuffer:64*1024*1024});
+ // Budget UTF-8 source bytes plus Git headers (including missing-path responses).
+ const maxBuffer = [...inputs].reduce((bytes,[file,text]) => bytes + Buffer.byteLength(text) + Buffer.byteLength(file) + 128,1024);
+ const output = execFileSync('git',['cat-file','--batch'],{cwd:root,input:paths.map(file => `${commit}:${file}\n`).join(''),maxBuffer});
  const committed = new Map<string,Buffer>();
  let offset = 0;
  for (const file of paths) {

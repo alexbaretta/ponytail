@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-10-19-completeness_batch_capacity",
+  "recorded_at": "2026-10-19T01:40:44-07:00",
+  "source_references": [
+    "src/traceability-completeness.ts"
+  ],
+  "context": {
+    "languages": [
+      "typescript"
+    ],
+    "frameworks": [],
+    "components": [
+      "campaign completeness"
+    ],
+    "affected_boundaries": [
+      "Git committed source batch"
+    ],
+    "code_references": [
+      "src/traceability-completeness.ts: committedInputs"
+    ]
+  },
+  "observed_behavior": "Gwen completeness terminated with ENOBUFS before reporting a vector.",
+  "expected_behavior": "Valid source sets larger than 64 MiB can be compared to their committed bytes.",
+  "causal_mechanism": "One cat-file batch returned all source blobs into a fixed 64 MiB subprocess output buffer.",
+  "anti_pattern": {
+    "structural_description": "A fixed transport capacity was imposed on a variable aggregate source set.",
+    "why_it_fails": "Valid repository inputs can exceed that capacity independently of graph correctness."
+  },
+  "correct_pattern": {
+    "required_invariant": "The buffer admits every expected source byte and Git framing while byte equality remains mandatory.",
+    "implementation_description": "Calculate capacity from already loaded UTF-8 source bytes and per-path framing overhead."
+  },
+  "applicability_conditions": [
+    "Aggregate traceability sources exceed 64 MiB"
+  ],
+  "known_non_matches": [
+    "Malformed or uncommitted source remains invalid."
+  ],
+  "confirmation_evidence": [
+    "Gwen stack identified committedInputs and captured more than 64 MiB; the multibyte CLI regression reproduced ENOBUFS before correction."
+  ],
+  "regression_proofs": [
+    "tests/traceability-completeness.test.ts: commit binding accepts source bytes exceeding the former 64 MiB batch limit"
+  ]
+}
