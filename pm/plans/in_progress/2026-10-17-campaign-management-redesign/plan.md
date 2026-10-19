@@ -148,11 +148,19 @@ cannot establish that result. Bugs discovered during QA return to workers.
 
 ## Native campaign handoff
 
-Use the existing **Gwen traceability campaign coordinator**:
-`01a14dc3-a37a-7582-a6c9-cd132c8d8e7b`, project `gwen-001`, host `local`, cwd
-`/Users/alex/git/gwen.vc/gwen-worktrees/gwen-001`. Its identity handshake succeeded.
-Inspect current native state before kickoff; it has separately received user
-rebase instructions. Do not create a duplicate or infer current readiness from
-that earlier handshake. Coordinator and every worker/replacement use
-`gpt-6.1-sol` with `medium` reasoning. Preserve the authorized messaging and
-replacement authority, unfinished work and genuine human approval boundaries.
+Use **gwen-traceability-2 coordinator**:
+`01a1531e-012f-7612-a8f4-9ceff55a627e`, project `gwen-001`, host `local`, cwd
+`/Users/alex/git/gwen.vc/gwen-worktrees/gwen-001`. The user explicitly retired the
+previous coordinator and workers and authorized fresh sessions after the Gwen
+history cleanup. This checkout belongs to the rewritten repository at
+`/Users/alex/git/gwen.vc/gwen`. Coordinator and every worker/replacement use
+`gpt-6.1-sol` with `medium` reasoning. Preserve useful committed work and genuine
+human approval boundaries; do not reactivate the retired swarm.
+
+The parent owns concrete history-rewrite errors encountered during the campaign
+and may make corrective/fixup commits in the main rewritten checkout. The user's
+additional authorization permits autosquash only after acquiring a write lock
+excluding all other sessions from the repository, followed by reconciliation of
+all worktrees to their updated branches. This supersedes the earlier no-history-
+rewrite boundary only for that corrective operation. No new exhaustive cleanup
+audit or remote publication is authorized.
