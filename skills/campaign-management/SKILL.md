@@ -41,6 +41,9 @@ respect project resource limits independently of session parallelism.
 Name each worker `<campaign-id> W<sequence> <three word summary>`: campaign-local increasing
 sequence, three words summarizing the assignment. Replacements get new numbers;
 resumed workers retain theirs. Prepend `DONE` once only after accepted integration.
+Choose informative, discriminating words that distinguish this assignment from
+its peers: specific domains, components or outcomes. Avoid repeated generic
+phrases such as `Complete … coverage`; spend all three words on useful detail.
 
 Give each worker a complete assignment identifying canonical IDs, completion
 conditions, scope/dependencies, integration branch/base, coordinator identity,

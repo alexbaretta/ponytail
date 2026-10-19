@@ -123,7 +123,7 @@ Discharge: [ACC-CM-HOST-OWNERSHIP](../uat/campaign-management.md#acc-cm-host-own
 
 Requirement: `REQ-CM-REPORTING`.
 
-Worker names identify campaign, sequence and a three-word assignment summary. Final worker completion prepends DONE. After every accepted merge request, the coordinator displays the campaign completeness vector from the resulting integrated revision.
+Worker names identify campaign, sequence and a three-word assignment summary. The summary uses informative, discriminating words identifying specific domains, components or outcomes; avoid repeated generic phrases such as `Complete … coverage`. Final worker completion prepends DONE. After every accepted merge request, the coordinator displays the campaign completeness vector from the resulting integrated revision.
 
 Discharge: [ACC-CM-REPORTING](../uat/campaign-management.md#acc-cm-reporting) with adequate executable proof and adversarial assessment.
 

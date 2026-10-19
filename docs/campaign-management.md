@@ -330,7 +330,11 @@ of its assignment. Use this display convention:
 DONE <campaign-id> W<sequence> <three word summary>
 ```
 
-For example, `campaign-redesign W001 Repair acceptance tests` identifies the
+Choose informative, discriminating words: specific domains, components or
+outcomes that distinguish workers at a glance. Avoid repeated generic phrases
+such as `Complete … coverage`; all three words should convey assignment detail.
+
+For example, `campaign-redesign W001 Vitest timeout recognition` identifies the
 campaign's first worker and its assignment in three words. Allocate sequence
 numbers in creation order within the campaign,
 including replacement workers; do not reuse another session's number. Retained
