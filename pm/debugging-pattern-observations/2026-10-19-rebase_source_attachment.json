@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "observation_id": "2026-10-19-rebase_source_attachment",
+  "recorded_at": "2026-10-19T01:39:11-07:00",
+  "source_references": [
+    "src/semantic-rebase.ts"
+  ],
+  "context": {
+    "languages": [
+      "typescript"
+    ],
+    "frameworks": [],
+    "components": [
+      "semantic rebase"
+    ],
+    "affected_boundaries": [
+      "Git source branch attachment"
+    ],
+    "code_references": [
+      "src/semantic-rebase.ts: launchRebase"
+    ]
+  },
+  "observed_behavior": "Named source branches remained at their old tip and HEAD became detached after replay or abort.",
+  "expected_behavior": "Named sources remain attached and advance on completion; abort restores the original attached source.",
+  "causal_mechanism": "Passing a commit SHA as the optional Git rebase branch argument detached HEAD before replay began.",
+  "anti_pattern": {
+    "structural_description": "Commit identity replaced branch identity at a stateful Git boundary.",
+    "why_it_fails": "The optional branch argument selects attachment as well as the source commit."
+  },
+  "correct_pattern": {
+    "required_invariant": "Preserve the frozen source attachment while replaying its validated tip.",
+    "implementation_description": "Omit the optional branch argument after validating current HEAD and attachment; Git uses the current source."
+  },
+  "applicability_conditions": [
+    "Rebase starts on a named source branch"
+  ],
+  "known_non_matches": [
+    "An intentionally detached source must stay detached."
+  ],
+  "confirmation_evidence": [
+    "Attachment assertions failed before correction for clean replay, selected continuation and abort."
+  ],
+  "regression_proofs": [
+    "tests/semantic-rebase.test.ts: header-only selection replays without planned stops",
+    "tests/semantic-rebase.test.ts: selected multi-commit final hunk stops at each contributor while clean commits replay automatically",
+    "tests/semantic-rebase.test.ts: broadened resolution remains stopped and abort restores the frozen source tip",
+    "tests/semantic-rebase.test.ts: detached source replays without attaching or moving the original branch"
+  ]
+}
