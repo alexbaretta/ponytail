@@ -176,3 +176,36 @@ test('review edits after an empty selected pick preserve the frozen target',test
  assert.equal(git(value.root,['rev-list','--count',`${target}..HEAD`]),'1');
  assert.equal(fs.readFileSync(path.join(value.root,'shared.txt'),'utf8'),'base\none\ntwo\nreview\n');
 });
+
+for(const finish of ['continue','abort'] as const)test(`unrelated untracked bytes survive review, planned stops and ${finish}`,testContext=>{
+ const value=fixture(testContext);const bytes=Buffer.from([0,255,13,10,42]);
+ fs.writeFileSync(path.join(value.root,'clean.sh'),bytes);
+ cli(value.root,['diff','clean-target']);const frozen=analysis(value.root);
+ const change=frozen.sourceChanges.find(item=>item.newPath==='source.txt');assert.ok(change);
+ const selectionPath=path.join(git(value.root,['rev-parse','--absolute-git-dir']),'selection.txt');
+ fs.writeFileSync(selectionPath,`ponytail-semantic-rebase-selection-v1 ${frozen.analysisDigest}\n${change.id} - | review source\n`);
+ let output=cli(value.root,['run','clean-target','--conflicts',selectionPath]);assert.match(output,/semantic rebase stop/);
+ if(finish==='abort'){cli(value.root,['abort']);assert.equal(git(value.root,['rev-parse','HEAD']),value.source);}
+ else {while(/semantic rebase stop/.test(output))output=cli(value.root,['continue']);assert.match(output,/semantic rebase complete/);}
+ assert.deepEqual(fs.readFileSync(path.join(value.root,'clean.sh')),bytes);
+ assert.equal(git(value.root,['status','--porcelain']),'?? clean.sh');
+});
+
+for(const file of ['clean-target.txt','clean-target.txt/child','delete.txt'])test(`untracked collision is rejected before analysis: ${file}`,testContext=>{
+ const value=fixture(testContext);write(value.root,file,'user-owned\n');
+ const result=spawnSync(process.execPath,[path.resolve('dist/src/semantic-rebase.js'),'diff','clean-target'],{cwd:value.root,encoding:'utf8'});
+ assert.equal(result.status,2);assert.match(result.stderr,/untracked path may collide/);
+ assert.equal(fs.readFileSync(path.join(value.root,file),'utf8'),'user-owned\n');assert.equal(git(value.root,['rev-parse','HEAD']),value.source);
+});
+
+test('untracked collisions appearing after review and tracked dirt both reject replay',testContext=>{
+ const value=fixture(testContext);cli(value.root,['diff','clean-target']);const frozen=analysis(value.root);
+ const selectionPath=path.join(git(value.root,['rev-parse','--absolute-git-dir']),'selection.txt');
+ fs.writeFileSync(selectionPath,`ponytail-semantic-rebase-selection-v1 ${frozen.analysisDigest}\n`);
+ write(value.root,'clean-target.txt','user-owned\n');
+ const invoke=()=>spawnSync(process.execPath,[path.resolve('dist/src/semantic-rebase.js'),'run','clean-target','--conflicts',selectionPath],{cwd:value.root,encoding:'utf8'});
+ const collision=invoke();assert.equal(collision.status,2);assert.match(collision.stderr,/untracked path may collide/);
+ fs.unlinkSync(path.join(value.root,'clean-target.txt'));write(value.root,'base.txt','dirty\n');
+ const dirty=invoke();assert.equal(dirty.status,2);assert.match(dirty.stderr,/clean tracked worktree/);
+ assert.equal(git(value.root,['rev-parse','HEAD']),value.source);
+});

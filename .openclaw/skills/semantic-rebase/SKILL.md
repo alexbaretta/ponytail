@@ -18,8 +18,13 @@ trees; do not inspect every cleanly replayed commit by default.
 
 ## Prepare one aggregate review
 
-Start from a clean source branch or an authorized native detached checkout and
-invoke:
+Start with a clean tracked worktree and index on the source branch or an
+authorized native detached checkout. Nonignored untracked files may remain only
+when their paths cannot collide with the frozen source/target trees or any
+replayed source change. The tool checks file/directory collisions before analysis,
+replay, continuation and abort; it never moves, stages, hides or deletes those
+files. Resolve a reported collision explicitly rather than bypassing the guard.
+Invoke:
 
 ```text
 ponytail rebase diff <target> [--output <review-file>]

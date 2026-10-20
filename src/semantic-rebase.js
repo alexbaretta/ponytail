@@ -174,10 +174,27 @@ function changes(side, text) {
 }
 function aggregateDiff(base, tip, context = 3) { return git(['diff', '--binary', '--find-renames', '--no-ext-diff', '--no-color', `--unified=${context}`, base, tip]).stdout; }
 function renderReview(analysis) { const section = (title, items) => `${title}\n${'='.repeat(title.length)}\n` + items.map(item => `\n[${item.id}] ${item.kind} ${item.oldPath} -> ${item.newPath} -${item.oldStart},${item.oldCount} +${item.newStart},${item.newCount}\n${item.patch}`).join(''); return `PONYTAIL SEMANTIC REBASE ANALYSIS V${analysis.schemaVersion}\nanalysis ${analysis.analysisDigest}\nmerge-base ${analysis.mergeBase}\ntarget ${analysis.targetTip}\nsource ${analysis.sourceTip}\nsource-commits ${analysis.sourceCommits.join(' ')}\n\n${section('TARGET FINAL CHANGES', analysis.targetChanges)}\n${section('SOURCE FINAL CHANGES', analysis.sourceChanges)}`; }
+function ensureUntrackedSafe(sourceTip, targetTip, sourceCommits) {
+    const untracked = git(['ls-files', '--others', '--exclude-standard', '-z']).stdout.split('\0').filter(Boolean);
+    if (untracked.length === 0)
+        return;
+    const ignoreCase = git(['config', '--get', 'core.ignorecase'], { allowFailure: true }).stdout.trim() === 'true';
+    const normalize = (file) => ignoreCase ? file.normalize('NFC').toLowerCase() : file;
+    const touched = new Set([sourceTip, targetTip].flatMap(tip => git(['ls-tree', '-r', '--name-only', '-z', tip]).stdout.split('\0').filter(Boolean)));
+    for (const commit of sourceCommits)
+        for (const file of git(['diff-tree', '--no-commit-id', '--name-only', '--no-renames', '-r', '-z', commit]).stdout.split('\0').filter(Boolean))
+            touched.add(file);
+    const paths = [...touched].map(normalize);
+    for (const file of untracked) {
+        const candidate = normalize(file);
+        if (paths.some(tracked => tracked === candidate || tracked.startsWith(candidate + '/') || candidate.startsWith(tracked + '/')))
+            fail(`untracked path may collide with semantic rebase: ${file}`);
+    }
+}
 function ensureNoRebase() { if (node_fs_1.default.existsSync(node_path_1.default.join(gitDirectory(), 'rebase-merge')) || node_fs_1.default.existsSync(node_path_1.default.join(gitDirectory(), 'rebase-apply')))
     fail('a Git rebase is already active'); }
-function ensureClean() { if (gitText(['status', '--porcelain=v1', '--untracked-files=normal']).length > 0)
-    fail('semantic rebase requires a clean worktree'); }
+function ensureClean() { if (gitText(['status', '--porcelain=v1', '--untracked-files=no']).length > 0)
+    fail('semantic rebase requires a clean tracked worktree and index'); }
 function resolveCommit(revision) { if (revision.startsWith('-'))
     fail('revision must not begin with -'); return gitText(['rev-parse', '--verify', `${revision}^{commit}`]); }
 function writeAnalysis(analysis) { writeAtomic(statePath(ANALYSIS_FILE), `${JSON.stringify(analysis, null, 2)}\n`); }
@@ -190,7 +207,7 @@ function validateFrozen(analysis, requireSourceTip) { if (repositoryRoot() !== a
     fail('source tip changed after analysis'); const branch = sourceBranch(); if (requireSourceTip && branch !== analysis.sourceBranch)
     fail('source branch changed after analysis'); }
 function analyzeSemanticRebase(target) { ensureNoRebase(); ensureClean(); const root = repositoryRoot(); const directory = gitDirectory(); const branch = sourceBranch(); const sourceTip = resolveCommit('HEAD'); const targetTip = resolveCommit(target); const mergeBase = gitText(['merge-base', sourceTip, targetTip]); const sourceCommits = gitText(['rev-list', '--reverse', '--topo-order', `${mergeBase}..${sourceTip}`]).split('\n').filter(Boolean); if (sourceCommits.length === 0)
-    fail('source branch has no commits to replay'); const parents = sourceCommits.map(commit => gitText(['rev-list', '--parents', '-n', '1', commit]).split(' ')); if (parents.some(parts => parts.length !== 2))
+    fail('source branch has no commits to replay'); ensureUntrackedSafe(sourceTip, targetTip, sourceCommits); const parents = sourceCommits.map(commit => gitText(['rev-list', '--parents', '-n', '1', commit]).split(' ')); if (parents.some(parts => parts.length !== 2))
     fail('merge commits are not supported by semantic rebase'); const targetChanges = changes('target', aggregateDiff(mergeBase, targetTip)); const sourceChanges = changes('source', aggregateDiff(mergeBase, sourceTip)); const analysis = encodeAnalysis({ schemaVersion: 2, repositoryRoot: root, gitDirectory: directory, sourceBranch: branch, sourceTip, target, targetTip, mergeBase, sourceCommits, targetChanges, sourceChanges }); writeAnalysis(analysis); const review = renderReview(analysis); writeAtomic(statePath(REVIEW_FILE), review); return analysis; }
 function readSemanticRebaseSelectionV1(text, analysis) { if (typeof text !== 'string')
     fail('selection must be text'); const lines = text.split(/\r?\n/u).filter(line => line.trim().length > 0); const header = /^ponytail-semantic-rebase-selection-v1 ([a-f0-9]{64})$/u.exec(lines.shift() ?? ''); if (!header?.[1])
@@ -297,7 +314,7 @@ function launchRebase(analysis, run) { const editor = statePath('sequence-editor
     return running;
 } if (result.status !== 0)
     fail((result.stderr || result.stdout || 'git rebase failed before retaining state').trim(), 1); const completed = { ...run, status: 'completed' }; writeRun(completed); return completed; }
-function startSemanticRebase(selectionFile) { ensureNoRebase(); ensureClean(); const analysis = readAnalysis(); validateFrozen(analysis, true); const selection = readSemanticRebaseSelectionV1(node_fs_1.default.readFileSync(selectionFile, 'utf8'), analysis); const contributors = {}; const selectionTargets = {}; for (const entry of selection.entries) {
+function startSemanticRebase(selectionFile) { ensureNoRebase(); ensureClean(); const analysis = readAnalysis(); validateFrozen(analysis, true); ensureUntrackedSafe(analysis.sourceTip, analysis.targetTip, analysis.sourceCommits); const selection = readSemanticRebaseSelectionV1(node_fs_1.default.readFileSync(selectionFile, 'utf8'), analysis); const contributors = {}; const selectionTargets = {}; for (const entry of selection.entries) {
     const change = analysis.sourceChanges.find(item => item.id === entry.sourceId);
     if (!change)
         fail(`unknown source change: ${entry.sourceId}`);
@@ -309,7 +326,7 @@ function changedPaths() { const values = [gitText(['diff', '--name-only']), gitT
 function continueSemanticRebase() { const analysis = readAnalysis(); const run = readRun(); if (run.analysisDigest !== analysis.analysisDigest)
     fail('run state belongs to another analysis'); if (run.status === 'completed')
     return dossier(analysis, run); if (!rebaseActive())
-    fail('Git rebase state is missing'); const semanticRebaseStop = currentStop(); if (!semanticRebaseStop)
+    fail('Git rebase state is missing'); ensureUntrackedSafe(analysis.sourceTip, analysis.targetTip, analysis.sourceCommits); const semanticRebaseStop = currentStop(); if (!semanticRebaseStop)
     fail('cannot identify the stopped original commit'); const original = semanticRebaseStop.originalCommit; const unresolved = gitText(['diff', '--name-only', '--diff-filter=U']); if (unresolved)
     fail(`resolve and stage textual conflicts before continuing: ${unresolved.split('\n').join(' ')}`); const allowed = new Set(pathsForCommit(original)); for (const [id, commits] of Object.entries(run.contributors))
     if (commits.includes(original)) {
@@ -341,8 +358,11 @@ function semanticRebaseStatus() { if (!node_fs_1.default.existsSync(statePath(AN
     return `semantic rebase analyzed\nanalysis ${analysis.analysisDigest}\nreview ${statePath(REVIEW_FILE)}\n`; return dossier(analysis, readRun()); }
 function abortSemanticRebase() { if (!node_fs_1.default.existsSync(statePath(RUN_FILE)))
     return 'semantic rebase inactive\n'; const run = readRun(); if (run.status === 'completed')
-    fail('completed semantic rebase cannot be aborted'); if (rebaseActive())
-    git(['rebase', '--abort']); if (resolveCommit('HEAD') !== run.originalTip)
+    fail('completed semantic rebase cannot be aborted'); if (rebaseActive()) {
+    const analysis = readAnalysis();
+    ensureUntrackedSafe(analysis.sourceTip, analysis.targetTip, analysis.sourceCommits);
+    git(['rebase', '--abort']);
+} if (resolveCommit('HEAD') !== run.originalTip)
     fail('Git abort did not restore the frozen source tip'); node_fs_1.default.rmSync(statePath(RUN_FILE), { force: true }); node_fs_1.default.rmSync(statePath(RESIDUAL_FILE), { force: true }); return `semantic rebase aborted\nrestored ${run.originalTip}\n`; }
 function usage() { fail('usage: semantic-rebase <diff <target> [--output <file>]|run <target> --conflicts <file>|status|continue|abort>', 2); }
 function main(argv = process.argv.slice(2)) { const [command, ...args] = argv; if (command === 'sequence-editor') {
