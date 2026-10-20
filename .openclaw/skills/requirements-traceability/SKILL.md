@@ -165,8 +165,12 @@ No sidecar relationship map or duplicated policy is needed.
 
 Run `ponytail traceability completeness --campaign <name> --assessment-tag <tag>`
 on the clean integrated commit. It reads the invoking project's V5 graph directly,
-without a database, and prints `(O,A,T,I)` plus every unresolved ID. `--json`
-returns the same data for tooling. Without `--assessment-tag`, it selects the
+without a database, and prints only the `(O,A,T,I)` vector by default. Use
+`--verbose` for unresolved IDs, assessment context and individual findings;
+`--json` retains the complete structured report with no progress output. Human
+output includes an early progress bar on stderr, beginning before repository
+inspection and updating during source discovery and verification. Blocking
+annotation findings produce a short stderr summary even without `--verbose`. Without `--assessment-tag`, it selects the
 unique `ponytail/completeness/<name>/*` annotated tag at HEAD; no arguments work
 when exactly one campaign assessment tag exists there. Ambiguity requires an
 explicit tag. For an initial unassessed scope, use

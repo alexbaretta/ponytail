@@ -108,6 +108,11 @@ After each accepted merge the coordinator updates the assessment, carries forwar
 only still-valid proof, runs the command and displays its result. This replaces
 hand-counted vectors; semantic review and independent final QA remain necessary.
 
+The CLI prints the vector alone by default, with progress on stderr starting
+before repository inspection. `--verbose` adds unresolved IDs and individual
+findings; `--json` returns the complete report without progress. Blocking
+annotation findings retain a concise stderr summary in default output.
+
 The official term is **campaign completeness vector**. Its fixed order is
 **`(O,A,T,I)`**:
 

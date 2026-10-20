@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {execFileSync} from 'node:child_process';
 import {parse} from 'lossless-json';
+import {indexProgress} from './index-progress.js';
 import type {TraceabilityDiscoveryFinding} from '../skills/requirements-traceability/scripts/traceability-discovery.js';
 import {loadTraceabilityV5,parseTraceabilityV5} from '../skills/requirements-traceability/scripts/traceability-v5.js';
 import {discoverTraceabilityProject} from '../skills/requirements-traceability/scripts/traceability-project.js';
@@ -159,13 +160,15 @@ export function runTraceabilityCompleteness(argv: readonly string[], cwd = proce
  let campaign: string | undefined;
  let assessmentTag: string | undefined;
  let json = false;
+ let verbose = false;
  const requirementIds: string[] = [];
  for (let index = 0; index < argv.length; index += 1) {
   const argument = argv[index];
   if (argument === '--help') {
-   process.stdout.write('Usage: ponytail traceability completeness [--campaign <name>] [--assessment-tag <tag> | --requirement <id> ...] [--json]\nWithout an explicit tag, select the unique current-commit assessment tag for the campaign. Explicit requirements inspect an unassessed scope.\n');
+   process.stdout.write('Usage: ponytail traceability completeness [--campaign <name>] [--assessment-tag <tag> | --requirement <id> ...] [--json] [--verbose]\nDefault output is the vector only; --verbose includes unresolved IDs and findings. Progress is written to stderr, except with --json.\nWithout an explicit tag, select the unique current-commit assessment tag for the campaign. Explicit requirements inspect an unassessed scope.\n');
    return null;
   }
+  if (argument === '--verbose') { verbose = true; continue; }
   if (argument === '--json') { json = true; continue; }
   if (argument !== '--campaign' && argument !== '--assessment-tag' && argument !== '--requirement') throw new Error(`Unknown completeness argument: ${argument}`);
   const value = argv[++index];
@@ -175,6 +178,10 @@ export function runTraceabilityCompleteness(argv: readonly string[], cwd = proce
   else requirementIds.push(value);
  }
  if (assessmentTag !== undefined && requirementIds.length > 0) throw new Error('Use the assessment scope or explicit requirements, not both');
+ const progress = indexProgress(process.stderr);
+ const update = (completed: number, total: number, stage: string): void => { if (!json) progress.update(completed,total,stage); };
+ update(0,1,'Preparation');
+ try {
  const root = fs.realpathSync(git(cwd,['rev-parse','--show-toplevel']));
  const commit = git(root,['rev-parse','HEAD']);
  requireVisibleIndex(root);
@@ -208,10 +215,15 @@ export function runTraceabilityCompleteness(argv: readonly string[], cwd = proce
  const configurationPath = path.join(root,'.agents/config/project/traceability.json');
  const configurationText = fs.readFileSync(configurationPath,'utf8');
  const configuration = loadTraceabilityV5(parseTraceabilityV5(configurationText),configurationPath,root);
- const project = discoverTraceabilityProject(configuration,configurationPath,root);
+ update(1,1,'Preparation');
+ update(0,1,'Inventory');
+ const project = discoverTraceabilityProject(configuration,configurationPath,root,(completed,total) => update(completed,total,'Sources'));
+ update(0,1,'Commit check');
  const inputs = new Map(project.sources.map(source => [source.path,source.text]));
  inputs.set('.agents/config/project/traceability.json',configurationText);
  const committed = committedInputs(root,commit,inputs);
+ update(1,1,'Commit check');
+ update(0,1,'Assessment');
  const failures = project.projectFindings.filter(finding => finding.code !== 'empty-scope');
  if (failures.length > 0) throw new Error(`Cannot assess malformed canonical traceability sources: ${failures.map(finding => `${finding.path}:${finding.line} ${finding.code}: ${finding.message}`).join('; ')}`);
  const result: CampaignCompletenessReport = {
@@ -219,18 +231,27 @@ export function runTraceabilityCompleteness(argv: readonly string[], cwd = proce
   findings:project.discoveryFindings,
   completionBlocked:project.discoveryFindings.length > 0,
  };
+ update(1,1,'Assessment');
+ update(0,committed.size,'Verify');
  requireVisibleIndex(root);
+ let verified = 0;
  for (const [file,content] of committed) {
   if (!fs.readFileSync(path.join(root,file)).equals(content)) throw new Error(`Traceability input changed during assessment: ${file}`);
+  update(++verified,committed.size,'Verify');
  }
  if (git(root,['rev-parse','HEAD']) !== commit || git(root,['status','--porcelain','--untracked-files=all'])) throw new Error('Repository changed during completeness assessment');
  if (json) process.stdout.write(`${JSON.stringify(result)}\n`);
  else {
-  process.stdout.write(`Campaign completeness vector (O,A,T,I): (${result.vector.join(',')})\nCampaign: ${result.campaign}; commit: ${commit}; assessment: ${result.assessmentTag ?? 'none (all adequacy unknown)'}\n`);
+  process.stdout.write(`Campaign completeness vector (O,A,T,I): (${result.vector.join(',')})\n`);
+  if (result.completionBlocked && !verbose) process.stderr.write(`Completion blocked by ${result.findings.length} annotation findings; use --verbose for details.\n`);
+  if (verbose) {
+  process.stdout.write(`Campaign: ${result.campaign}; commit: ${commit}; assessment: ${result.assessmentTag ?? 'none (all adequacy unknown)'}\n`);
   for (const coordinate of ['O','A','T','I'] as const) process.stdout.write(`${coordinate} unresolved: ${result.unresolved[coordinate].join(', ') || 'none'}\n`);
   process.stdout.write(`Annotation findings blocking completion: ${result.findings.length}\n`);
   for (const finding of result.findings) process.stdout.write(`${finding.path}:${finding.line} ${finding.code}: ${finding.message}\n`);
   process.stdout.write('Based on declared review and validation applicability; zero is provisional until all workers are DONE and independent final QA passes.\n');
+  }
  }
  return result;
+ } finally { progress.stop(); }
 }

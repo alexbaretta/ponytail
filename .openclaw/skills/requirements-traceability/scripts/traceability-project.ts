@@ -157,7 +157,7 @@ function markdownFiles(root: string, directory: string): readonly string[] {
 
 // Traceability: implements OBL-CM-GRAPH from implementation discoverTraceabilityProject
 // Traceability: implements OBL-CM-ACCEPTANCE-COVERAGE from implementation discoverTraceabilityProject
-export function discoverTraceabilityProject(traceabilityConfigurationV5: TraceabilityConfigurationV5, configurationPath: string, invokingRoot: string): TraceabilityProject {
+export function discoverTraceabilityProject(traceabilityConfigurationV5: TraceabilityConfigurationV5, configurationPath: string, invokingRoot: string, progress?: (completed: number, total: number) => void): TraceabilityProject {
  const root = fs.realpathSync(invokingRoot);
  const configuredRoot = fs.realpathSync(path.resolve(path.dirname(configurationPath), traceabilityConfigurationV5.projectRoot));
  if (root !== configuredRoot) throw new Error('Traceability configuration projectRoot does not match the invoking repository');
@@ -173,7 +173,8 @@ export function discoverTraceabilityProject(traceabilityConfigurationV5: Traceab
  const discoveryFindings: TraceabilityDiscoveryFinding[] = [];
  const projectFindings: TraceabilityProjectFinding[] = [];
  const generated = new Map(traceabilityConfigurationV5.generatedArtifacts.map(item => [item.path,item.sourcePath]));
- for (const file of files) {
+ for (const [index,file] of files.entries()) {
+  progress?.(index,files.length);
   if (file === traceabilityConfigurationV5.reverseViewPath) continue;
   // An unstaged deletion remains in the Git index; a dangling link is not a deletion.
   const stat = fs.lstatSync(path.join(root,file),{throwIfNoEntry:false});
@@ -232,6 +233,7 @@ export function discoverTraceabilityProject(traceabilityConfigurationV5: Traceab
   relationships.push(...discovery.graph.relationships);
   discoveryFindings.push(...discovery.findings);
  }
+ progress?.(files.length,files.length);
  for (const item of traceabilityConfigurationV5.generatedArtifacts) {
   if (!sources.some(source => source.path === item.sourcePath && source.kind !== 'markdown')) {
    projectFindings.push({code:'unclassified-generated-source',path:item.path,line:1,message:`Canonical source ${item.sourcePath} is not a discovered executable source`});

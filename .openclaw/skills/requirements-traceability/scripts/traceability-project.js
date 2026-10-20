@@ -142,7 +142,7 @@ function markdownFiles(root, directory) {
     }
     return files;
 }
-function discoverTraceabilityProject(traceabilityConfigurationV5, configurationPath, invokingRoot) {
+function discoverTraceabilityProject(traceabilityConfigurationV5, configurationPath, invokingRoot, progress) {
     const root = node_fs_1.default.realpathSync(invokingRoot);
     const configuredRoot = node_fs_1.default.realpathSync(node_path_1.default.resolve(node_path_1.default.dirname(configurationPath), traceabilityConfigurationV5.projectRoot));
     if (root !== configuredRoot)
@@ -159,7 +159,8 @@ function discoverTraceabilityProject(traceabilityConfigurationV5, configurationP
     const discoveryFindings = [];
     const projectFindings = [];
     const generated = new Map(traceabilityConfigurationV5.generatedArtifacts.map(item => [item.path, item.sourcePath]));
-    for (const file of files) {
+    for (const [index, file] of files.entries()) {
+        progress?.(index, files.length);
         if (file === traceabilityConfigurationV5.reverseViewPath)
             continue;
         const stat = node_fs_1.default.lstatSync(node_path_1.default.join(root, file), { throwIfNoEntry: false });
@@ -227,6 +228,7 @@ function discoverTraceabilityProject(traceabilityConfigurationV5, configurationP
         relationships.push(...discovery.graph.relationships);
         discoveryFindings.push(...discovery.findings);
     }
+    progress?.(files.length, files.length);
     for (const item of traceabilityConfigurationV5.generatedArtifacts) {
         if (!sources.some(source => source.path === item.sourcePath && source.kind !== 'markdown')) {
             projectFindings.push({ code: 'unclassified-generated-source', path: item.path, line: 1, message: `Canonical source ${item.sourcePath} is not a discovered executable source` });

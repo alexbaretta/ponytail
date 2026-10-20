@@ -73,6 +73,15 @@ test('CLI computes actual Git-bound scope without a database and rejects stale, 
  const unknown = command(root,['--campaign','demo','--requirement','REQ-A','--json']);
  assert.equal(unknown.status,0,unknown.stderr);
  assert.deepEqual(JSON.parse(unknown.stdout).vector,[1,1,1,1]);
+ assert.equal(unknown.stderr,'');
+ const concise = command(root,['--campaign','demo','--requirement','REQ-A']);
+ assert.equal(concise.stdout,'Campaign completeness vector (O,A,T,I): (1,1,1,1)\n');
+ assert.match(concise.stderr,/^Preparation\s+\[[ ]+\]\s+0%/);
+ assert.match(concise.stderr,/Sources\s+\[/);
+ const missing = command(root,[]);
+ assert.notEqual(missing.status,0);
+ assert.match(missing.stderr,/^Preparation\s+\[[ ]+\]\s+0%/);
+
  const complete: CampaignAssessmentV2 = assessment();
  const tag = 'ponytail/completeness/demo/run-1';
  git(root,['tag','-a',tag,'-m',JSON.stringify(complete)]);
@@ -85,7 +94,7 @@ test('CLI computes actual Git-bound scope without a database and rejects stale, 
  const legacyResult = command(root,['--assessment-tag','legacy-assessment','--json']);
  assert.equal(legacyResult.status,0,legacyResult.stderr);
  assert.deepEqual(JSON.parse(legacyResult.stdout).unresolved,JSON.parse(result.stdout).unresolved);
- const displayed = command(root,['--assessment-tag','legacy-assessment']);
+ const displayed = command(root,['--assessment-tag','legacy-assessment','--verbose']);
  assert.match(displayed.stdout,/vector \(O,A,T,I\)/);
  assert.match(displayed.stdout,/O unresolved: none/);
  assert.notEqual(command(root,['--campaign','other','--assessment-tag',tag]).status,0);
@@ -166,12 +175,12 @@ test('legacy marker diagnostics retain progress while broken declared ownership 
  assert.deepEqual(report.vector,[0,0,1,1]);
  assert.equal(report.completionBlocked,true);
  assert.ok(Array.isArray(report.findings));assert.equal(report.findings.length,2);
- const text = command(root,[]);
+ const text = command(root,['--verbose']);
  assert.match(text.stdout,/Annotation findings blocking completion: 2/);
  assert.match(text.stdout,/work.js:1 malformed-marker/);
  fs.appendFileSync(path.join(root,'pm/requirements/a.md'),'Traceability: decomposes broken\n');
  git(root,['add','.']);git(root,['commit','--quiet','-m','malformed canonical marker']);
- const legacy = command(root,['--campaign','demo','--requirement','REQ-A']);
+ const legacy = command(root,['--campaign','demo','--requirement','REQ-A','--verbose']);
  assert.equal(legacy.status,0,legacy.stderr);
  assert.match(legacy.stdout,/pm\/requirements\/a.md:4 malformed-marker/);
  fs.appendFileSync(path.join(root,'pm/uat/a.md'),'## ACC-B\nTraceability: verifies broken\n');

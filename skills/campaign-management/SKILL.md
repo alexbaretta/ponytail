@@ -92,6 +92,8 @@ or rebase their submissions. Keep it available to:
    `Campaign completeness vector (O,A,T,I): (...)` after every accepted merge.
    Publish the updated commit-bound assessment tag and run
    `ponytail traceability completeness --campaign <name> --assessment-tag <tag>`.
+   Default output is the vector with early progress on stderr; use `--verbose`
+   for individual findings or `--json` for the complete machine-readable report.
    Use its vector and unresolved IDs; do not maintain a separate hand-counted
    vector. Returned annotation findings block final completion even at zero; invalid
    scope or ambiguous graph ownership must be repaired before computing progress.
