@@ -56,6 +56,11 @@ export interface TstsConfigV3 extends Omit<TstsConfig, 'schemaVersion'> {
     readonly sharedMessageContracts?: TstsSharedMessageContractsConfig;
 }
 
+export interface TstsConfigV4 extends Omit<TstsConfigV3, 'schemaVersion'> {
+    readonly schemaVersion: 4;
+    readonly traceability?: readonly string[];
+}
+
 export interface TstsNoAliasingConfig {
     readonly severity?: TstsDiagnosticSeverity | undefined;
 }
@@ -265,7 +270,7 @@ async function checkConfiguredProject(input: {
     const diagnostics: TstsDiagnostic[] = [];
 
     try {
-        const config: TstsConfigV3 = await loadTstsConfig(resolvedConfigPath);
+        const config: TstsConfigV4 = await loadTstsConfig(resolvedConfigPath);
         const noAliasingSeverity: TstsDiagnosticSeverity = config.noAliasing?.severity ?? 'error';
         const configDirectory: string = path.dirname(resolvedConfigPath);
         const graph: UnusedCodeGraph = await buildUnusedCodeGraph({
@@ -523,7 +528,7 @@ interface ReachabilityState {
 }
 
 async function buildUnusedCodeGraph(input: {
-    readonly config: TstsConfigV3;
+    readonly config: TstsConfigV4;
     readonly configDirectory: string;
     readonly diagnostics: TstsDiagnostic[];
 }): Promise<UnusedCodeGraph> {
@@ -3030,10 +3035,15 @@ const versionedDataContractsConfigKeys: readonly string[] = [
     'severity',
 ];
 
-async function loadTstsConfig(configPath: string): Promise<TstsConfigV3> {
+async function loadTstsConfig(configPath: string): Promise<TstsConfigV4> {
     const absoluteConfigPath: string = path.resolve(configPath);
     const rawText: string = await readFile(absoluteConfigPath, 'utf8');
     const data: unknown = parseJsonLosslessly(rawText);
+
+    if (isObjectRecord(data) && (data.schemaVersion === 4 ||
+        (isLosslessNumber(data.schemaVersion) && data.schemaVersion.value === '4'))) {
+        return TstsConfigReaders.variants.V4(data);
+    }
 
     if (isObjectRecord(data) && (data.schemaVersion === 3 ||
         (isLosslessNumber(data.schemaVersion) && data.schemaVersion.value === '3'))) {
@@ -3066,7 +3076,7 @@ async function loadTstsConfig(configPath: string): Promise<TstsConfigV3> {
         );
     }
 
-    return { ...config, schemaVersion: 3 };
+    return { ...config, schemaVersion: 4 };
 }
 
 function parseMessageParameterPosition(value: unknown): number | undefined {
@@ -3145,29 +3155,44 @@ function parseTstsConfigV3(value: unknown): TstsConfigV3 | undefined {
         ...(messageConfig === undefined ? {} : { sharedMessageContracts: messageConfig }) };
 }
 
-export function readTstsConfigV2(value: unknown): TstsConfigV3 {
+export function readTstsConfigV2(value: unknown): TstsConfigV4 {
     const config: TstsConfig | undefined = parseTstsConfig(value);
     if (config === undefined) throw new Error('Invalid TSTS configuration V2.');
-    return { ...config, schemaVersion: 3 };
+    return { ...config, schemaVersion: 4 };
 }
 
-export function readTstsConfigV3(value: unknown): TstsConfigV3 {
+export function readTstsConfigV3(value: unknown): TstsConfigV4 {
     const config: TstsConfigV3 | undefined = parseTstsConfigV3(value);
     if (config === undefined) throw new Error('Invalid TSTS configuration V3; use documented sharedMessageContracts keys and value shapes.');
-    return config;
+    return { ...config, schemaVersion: 4 };
+}
+
+export function readTstsConfigV4(value: unknown): TstsConfigV4 {
+    if (!isObjectRecord(value) || !(value.schemaVersion === 4 ||
+        (isLosslessNumber(value.schemaVersion) && value.schemaVersion.value === '4')) ||
+        !hasOnlyKeys(value, [...tstsConfigKeys, 'sharedMessageContracts', 'traceability']) ||
+        (value.traceability !== undefined && (!Array.isArray(value.traceability) ||
+            !value.traceability.every((item: unknown): item is string => typeof item === 'string')))) {
+        throw new Error('Invalid TSTS configuration V4; traceability must be a string array and only documented keys are allowed.');
+    }
+    const {traceability, ...historicalFields} = value;
+    const config: TstsConfigV3 | undefined = parseTstsConfigV3({...historicalFields, schemaVersion: 3});
+    if (config === undefined) throw new Error('Invalid TSTS configuration V4; use documented keys and value shapes.');
+    return {...config, schemaVersion: 4, ...(traceability === undefined ? {} : {traceability})};
 }
 
 export interface TstsConfigReaders {
-    readonly writerVariant: 'V3';
+    readonly writerVariant: 'V4';
     readonly variants: {
         readonly V2: typeof readTstsConfigV2;
         readonly V3: typeof readTstsConfigV3;
+        readonly V4: typeof readTstsConfigV4;
     };
 }
 
 export const TstsConfigReaders: TstsConfigReaders = {
-    writerVariant: 'V3',
-    variants: { V2: readTstsConfigV2, V3: readTstsConfigV3 },
+    writerVariant: 'V4',
+    variants: { V2: readTstsConfigV2, V3: readTstsConfigV3, V4: readTstsConfigV4 },
 };
 
 function parseTstsConfig(value: unknown): TstsConfig | undefined {

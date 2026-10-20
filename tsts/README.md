@@ -78,8 +78,18 @@ TypeScript is a runtime dependency because TSTS uses the compiler API.
 The exported `checkProject` entry point owns reading the physical analysis
 configuration and versioned-contract manifest listed in the root contract
 inventory. V1 analysis configuration remains retired; V2 retains its exact
-fields and V3 adds shared message checking. Historical V2 input normalizes to
-V3 without activating the new rule.
+fields and V3 adds shared message checking. V4 adds an optional root
+`traceability` string array for source-owned relationship annotations. V2/V3
+inputs normalize to V4 without enabling new rules. To annotate a TSTS JSON
+configuration, set `schemaVersion` to `4` and add, for example:
+
+```json
+"traceability": ["Traceability: implements OBL-CONFIG from implementation focusedTstsConfig"]
+```
+
+Keep its existing workspace and rule fields unchanged. Metadata does not alter
+analysis behavior; the traceability checker validates its relationships. Unknown
+keys remain errors at every level, and V2/V3 do not accept this new field.
 
 Directory-structure analysis is independent of TypeScript analysis and may run
 alone or in the same invocation as `--project` or `--config`. Client projects

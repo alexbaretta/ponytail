@@ -137,7 +137,10 @@ canonical annotations in a direct `traceability` string array on the object
 that implements the obligation. The owning JSON schema must explicitly allow
 that field; do not add unsupported metadata. Ponytail build-impact V3 permits
 it on input objects (see `build-impact`). Include that JSON path in the
-implementation source scope.
+implementation source scope. TSTS analysis configuration V4 likewise permits a
+root `traceability` string array: change `schemaVersion` to `4`, retain existing
+workspace/rule fields, and place the annotation there. V2/V3 stay strict and do
+not accept that metadata; use V4 rather than comments or unknown properties.
 
 ```json
 {

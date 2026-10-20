@@ -549,9 +549,9 @@
         "module": "tsts/src/index.ts",
         "readerRegistryExport": "TstsConfigReaders"
       },
-      "currentVersion": "V3",
-      "versions": ["V1", "V2", "V3"],
-      "supportedReadVersions": ["V2", "V3"],
+      "currentVersion": "V4",
+      "versions": ["V1", "V2", "V3", "V4"],
+      "supportedReadVersions": ["V2", "V3", "V4"],
       "supportedDowngradeVersions": []
     },
     {

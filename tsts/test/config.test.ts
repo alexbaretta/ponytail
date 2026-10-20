@@ -40,12 +40,29 @@ describe('TSTS configuration v2', (): void => {
         assert.deepEqual(fixture.result.diagnostics, []);
     });
 
+    it('V4 accepts source-owned traceability without changing analysis and keeps historical schemas strict', async (): Promise<void> => {
+        const traceability: readonly string[] = ['Traceability: implements OBL-CONFIG from implementation focusedTstsConfig'];
+        const accepted: ConfigCheckFixture = await checkConfig({...validConfig,schemaVersion:4,traceability});
+        assert.equal(accepted.result.checkedFileCount,1);
+        assert.deepEqual(accepted.result.diagnostics,[]);
+        for (const config of [
+            {...validConfig,traceability}, {...validConfig,schemaVersion:3,traceability},
+            {...validConfig,schemaVersion:4,traceability:'invalid'},
+            {...validConfig,schemaVersion:4,traceability:[1]},
+            {...validConfig,schemaVersion:4,traceability,unexpected:true},
+            {...validConfig,schemaVersion:4,traceability,workspaces:[{projectPath:'records/tsconfig.json',unexpected:true}]},
+        ]) {
+            const rejected: ConfigCheckFixture = await checkConfig(config);
+            assert.ok(rejected.result.diagnostics.some(diagnostic => diagnostic.severity === 'error'));
+        }
+    });
+
     it('rejects missing and unsupported schema versions with upgrade guidance', async ():
         Promise<void> => {
         for (const config of [
             { workspaces: validConfig.workspaces },
             { schemaVersion: 1, workspaces: validConfig.workspaces },
-            { schemaVersion: 4, workspaces: validConfig.workspaces },
+            { schemaVersion: 5, workspaces: validConfig.workspaces },
         ]) {
             const fixture: ConfigCheckFixture = await checkConfig(config);
 

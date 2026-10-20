@@ -254,7 +254,7 @@ describe('canonical shared message contracts', () => {
 
     it('rejects malformed V3 rule configuration without accepting new keys in V2', () => {
         const legacy: TstsConfig = { schemaVersion: 2, workspaces: [] };
-        assert.equal(readTstsConfigV2(legacy).schemaVersion, 3);
+        assert.equal(readTstsConfigV2(legacy).schemaVersion, 4);
         const malformed: unknown = { schemaVersion: 2, workspaces: [], sharedMessageContracts: {} };
         assert.throws(() => readTstsConfigV2(malformed), /V2/u);
         for (const value of [0.5, -1, '0', 9007199254740992, NaN, Infinity]) {
@@ -277,7 +277,7 @@ describe('canonical shared message contracts', () => {
                 },
             };
             const json: string = stringifyJsonLosslessly(config);
-            assert.deepEqual(readTstsConfigV3(parseJsonLosslessly(json)), config);
+            assert.deepEqual(readTstsConfigV3(parseJsonLosslessly(json)), {...config,schemaVersion:4});
             assert.throws(() => readTstsConfigV3(parseJsonLosslessly(
                 json.replace(String(payloadParameter), '9007199254740993'))), /V3/u);
         }
