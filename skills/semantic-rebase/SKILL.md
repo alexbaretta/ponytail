@@ -20,6 +20,12 @@ A semantic rebase preserves the source branch's required intent on the target
 branch's final architecture. Perform semantic judgment once over both final
 trees; do not inspect every cleanly replayed commit by default.
 
+Preserve the order of commits within a linear source history unless the user
+explicitly approves an exception. This does not prescribe the integration order
+of independent worker branches: deliver a ready branch first, then rebase the
+other branch onto the integrated result while preserving its internal order.
+Never reorder an active replay's todo after Ponytail freezes its contributors.
+
 ## Prepare one aggregate review
 
 Start with a clean tracked worktree and index on the source branch or an
