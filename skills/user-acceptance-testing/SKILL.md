@@ -30,7 +30,6 @@ The host configures this skill in `AGENTS.md`, directly or by reference, with:
 - `UAT documentation root`;
 - `UAT operations skill`;
 - `UAT execution profiles`;
-- `UAT release-evidence owner`; and
 - `UAT release-authorization policy`.
 
 The UAT documentation root defaults to `pm/uat`. All other values default to
@@ -146,13 +145,14 @@ exclusion.
 
 Keep validation results as commit-attached metadata. Passing command output,
 certificate ledgers and evidence-only commits must not pollute source history.
-Canonical UAT procedures stay in source; raw run output stays in ignored runtime
-storage or the configured external evidence owner. An annotated Git tag identifies
+Canonical UAT procedures stay in source. Follow
+[plan-execution's annotated-tag-only policy](../plan-execution/SKILL.md#annotated-tag-only-validation).
+An annotated Git tag identifies
 the exact tested commit through its Git target, and commands, results and covered
 scope through its annotation; it does not replace
 review or release authorization.
 
-For each candidate release, record in that metadata or its external references:
+For each candidate release, record in the annotation:
 
 - the release identity without an embedded commit ID (the tag target supplies the tested revision);
 - target environment and execution profile;

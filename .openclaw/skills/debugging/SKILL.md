@@ -25,7 +25,7 @@ Account for known restart, retry, cleanup, credential, resource-contention, and
 partial-completion cases before testing rather than turning each observed case
 into newly discovered scope.
 
-Capture one bounded failure dossier that is sufficient for later diagnosis
+Capture bounded failure observations in session context sufficient for diagnosis
 without immediately reproducing the entire workflow. When applicable, include:
 
 - the exact selection, failed boundary, observed and expected behavior;
@@ -38,12 +38,12 @@ without immediately reproducing the entire workflow. When applicable, include:
 
 Automate this capture in the owning test or diagnostic harness when the same
 manual probes would otherwise recur. Keep secrets and unrelated tenant or user
-data out of the dossier. Store captured logs, traces, responses and test output
-in ignored temporary storage or the configured external evidence owner. Keep
+data out of observations. Inspect logs, traces, responses and test output
+in tool/session output; do not create a companion run dossier. Keep
 durable causal explanations and regression-test references in the bug or pattern
 record; do not append run output or passing-certificate ledgers to tracked source.
 Use the shared evidence/certificate definitions in `plan-execution` and the
-commit-attached validation policy in `user-acceptance-testing`. Failed-run
+annotated-tag-only validation policy in `plan-execution`. Failed-run
 certificates are optional and require an explicit decision to retain the run.
 
 ## Investigation

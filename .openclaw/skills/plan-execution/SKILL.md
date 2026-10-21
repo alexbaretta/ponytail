@@ -81,11 +81,35 @@ Do not widen external-mutation or destructive-action authority through plan text
 Update lifecycle records when the actual state changes. Finished edits and worker
 claims are not accepted obligations. A plan is complete only after its full scope
 and final gates are verified. Record precise remaining work when incomplete.
-Validation output stays outside tracked source; reference commit-attached tags
-using `campaign-management` rather than copying certificates into PM records.
+Validation records follow the annotated-tag-only policy below.
 Durable requirements, design decisions and causal diagnosis remain source records.
 
 Keep historical records and their physical meanings intact. Existing read-only
 validators may inspect them; do not restart retired queue, lease or certificate
 controllers to execute new work. Installation does not authorize migrating another
 project or discarding unfinished work.
+
+## Annotated-tag-only validation
+
+Record retained validation results only in immutable annotated Git tags on the
+exact tested commit. No companion administrative files are required or permitted,
+including ignored staging JSON, run dossiers, certificate bindings or ledgers.
+Use session/tool output to inspect runs; do not copy it into administrative files.
+Actual test fixtures, runtime/recovery data and product certificates remain governed
+by their product contracts. Durable requirements and causal diagnosis are source
+records, not validation transcripts. Historical readers do not authorize new records.
+
+Run the configured commands and inspect their actual results, including skips and
+missing selections. Confirm the tested inputs still match the tagged commit;
+changed inputs require affected validation again. Keep the annotation concise:
+scope and covered IDs, commands, environment, time, observed results and relevant
+review references. Use `git tag -a <unique-name> -F - <tested-ref>` with annotation
+text on stdin. The tag target alone supplies the revision; never embed commit IDs
+in the annotation or tag name. No mandatory payload schema or custom runner.
+
+Create passing tags for deliveries and final acceptance, not every exploratory
+run. Failed-run tags are optional. Never move a tag; corrections use a new tag
+naming the superseded tag and invalidate affected coverage. Verify delivery tags
+are annotated and target the reviewed candidate. A tag attests what ran, not
+independent execution or behavioral adequacy. Transfer tags only within authorized
+publication scope; worktrees already share their repository's refs.

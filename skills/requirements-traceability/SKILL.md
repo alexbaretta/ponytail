@@ -167,7 +167,7 @@ No sidecar relationship map or duplicated policy is needed.
 ### Campaign completeness command
 
 Run `ponytail traceability completeness --campaign <name> --assessment-tag <tag>`
-on the clean integrated commit. It reads the invoking project's V5 graph directly,
+on the integrated commit. It reads the invoking project's committed V5 graph directly,
 without a database, and prints only the `(O,A,T,I)` vector by default. Use
 `--verbose` for unresolved IDs, assessment context and individual findings;
 `--json` retains the complete structured report with no progress output. Human
@@ -176,13 +176,16 @@ inspection and updating during source discovery and verification. Blocking
 annotation findings produce a short stderr summary even without `--verbose`. Without `--assessment-tag`, it selects the
 unique `ponytail/completeness/<name>/*` annotated tag at HEAD; no arguments work
 when exactly one campaign assessment tag exists there. Ambiguity requires an
-explicit tag. For an initial unassessed scope, use
+explicit tag. An explicit tag assesses its target even when it differs from HEAD.
+Configuration and source content come from Git objects; staged, unstaged, ignored
+and untracked files do not affect the result and are never modified. This assesses
+the named commit, not unfinished working-tree changes. For an initial unassessed scope at HEAD, use
 `--campaign <name> --requirement REQ-A --requirement REQ-B`; repeat for the exact
 approved scope. All adequacy starts unresolved.
 
 The coordinator owns one compact assessment snapshot, stored only in an annotated
-Git tag on the assessed commit. Prepare its JSON in ignored temporary storage,
-then use `git tag -a ponytail/completeness/<name>/<unique> -F <file> HEAD`:
+Git tag on the assessed commit. Pass its JSON directly on stdin to
+`git tag -a ponytail/completeness/<name>/<unique> -F - HEAD`; do not create a staging file:
 
 ```json
 {
@@ -204,8 +207,8 @@ Version 2 uses `O` for obligation decomposition. Existing version 1 tags with
 `complete.I` lists adequately implemented obligations with passing coverage.
 Nonempty completion sets require review references covering those claims. T/I
 claims additionally require references to actual passing annotated validation
-tags on ancestor commits (including HEAD). The coordinator must inspect those
-results and confirm their continued applicability to HEAD. The command verifies
+tags on ancestor commits (including the assessed commit). The coordinator must inspect those
+results and confirm their continued applicability to the assessed commit. The command verifies
 tag existence, ancestry, exact assessment commit, scope and graph structure;
 it cannot establish the truth of a review or test claim from prose. Never include
 failed, skipped, stale or inadequate proof in completed sets.
@@ -213,9 +216,10 @@ failed, skipped, stale or inadequate proof in completed sets.
 The assessment cannot override missing graph relationships. Unassessed IDs stay
 unresolved; I also requires adequate acceptance coverage and passing linked
 tests. Ambiguous graphs, wrong-kind/out-of-scope assessment IDs,
-dirty worktrees, stale assessment tags and missing evidence references fail.
-Canonical inputs must match committed bytes; ignored canonical files and index
-flags that hide inputs (`assume-unchanged`, `skip-worktree`) are rejected.
+missing validation references and invalid committed configuration or source files fail.
+The committed inventory includes inputs hidden or deleted in the working tree;
+index flags cannot remove committed gaps. Default tag selection remains HEAD-only
+so an older assessment is never silently reported as current.
 Annotation findings, including legacy Markdown relationship markers, are
 returned in `findings` with `completionBlocked: true`. Malformed markers grant
 no coverage. Resolve every finding before final acceptance, even at zero.
@@ -233,7 +237,7 @@ annotation, including review references or validation tag names containing one.
 Carry forward only claims whose reviews and relevant test inputs remain valid;
 remove uncertain claims and rerun affected proof. Preserve the full approved
 requirement scope and newly discovered descendants. Do not copy logs, graph
-edges or worker bookkeeping into the snapshot, and never track its staging file.
+edges or worker bookkeeping into the annotation, or create a companion staging file.
 A zero vector is provisional until all workers are DONE and independent full QA
 passes on that commit.
 
@@ -258,7 +262,7 @@ unresolved. T and I in the campaign completeness vector may decrease only when
 both linked tests and implementation exist and the implementation passes those
 tests. An unrelated successful command cannot establish their coverage.
 
-Validation evidence belongs to the tested commit's metadata, not source files.
+Follow [plan-execution's annotated-tag-only policy](../plan-execution/SKILL.md#annotated-tag-only-validation).
 Do not add passing output, certificate ledgers or evidence-only commits. Keep
 requirements, acceptances and executable tests as durable source; diagnostic
 records are distinct from certificates. Historical certificates retain their

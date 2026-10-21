@@ -17,7 +17,7 @@ const configuredSkills = new Map([
   ['requirements-traceability', ['Traceability configuration', 'Traceability check command', 'Traceability reverse-view generation command', 'Traceability TypeScript semantic checker']],
   ['test-credentials', ['Test-credentials policy']],
   ['typescript-unit-testing', ['Unit-test command families', 'TypeScript unit-test indexes and discovery']],
-  ['user-acceptance-testing', ['UAT documentation root', 'UAT operations skill', 'UAT execution profiles', 'UAT release-evidence owner', 'UAT release-authorization policy']],
+  ['user-acceptance-testing', ['UAT documentation root', 'UAT operations skill', 'UAT execution profiles', 'UAT release-authorization policy']],
   ['ux-testing', ['UX connection skill']],
   ['variant-neutrality', ['Variant-neutrality\nconfiguration']],
 ]);

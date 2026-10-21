@@ -93,7 +93,8 @@ or rebase their submissions. Keep it available to:
    `Campaign completeness vector (O,A,T,I): (...)` after every accepted merge.
    Publish the updated commit-bound assessment tag and run
    `ponytail traceability completeness --campaign <name> --assessment-tag <tag>`.
-   Default output is the vector with early progress on stderr; use `--verbose`
+   The command reads the tag target directly from Git, preserving any local drafts;
+   its result covers that commit only. Default output is the vector with early progress on stderr; use `--verbose`
    for individual findings or `--json` for the complete machine-readable report.
    Use its vector and unresolved IDs; do not maintain a separate hand-counted
    vector. Returned annotation findings block final completion even at zero; invalid
@@ -147,32 +148,10 @@ or assignments, not automatic cancellation or a new monitoring service.
 
 ## Annotated validation tags
 
-Run the actual configured commands on the identified clean commit and inspect
-results, including failures, missing selections and unexpected skips. Recheck
-HEAD and tracked inputs afterward; changed inputs require applicable validation
-again. A zero exit code cannot establish tests that did not run.
-
-Create a uniquely named annotated Git tag on that exact commit with `git tag -a`;
-never force-update a tag. Use `ponytail/validation/<campaign>/<unique-run>`.
-Keep the annotation compact: worker/coordinator identity, focused or final scope,
-covered requirement/obligation/acceptance/test IDs, working directory, relevant environment, timestamp, commands,
-observed results and review references. Counts belong only when actually observed.
-The tag target alone identifies the commit. Apply Ponytail's commit-ID content
-prohibition to all annotation fields, including copied commands and references;
-choose tag names without embedded commit IDs so they can be cited safely.
-A plain-text annotation is sufficient; no mandatory JSON schema or custom runner.
-
-Keep raw output in ignored temporary storage or the project's external evidence
-owner. Do not commit passing output, certificate files or evidence-only updates.
-Create passing tags for deliveries/final acceptance, not every exploratory run.
-Failed-run tags are optional, never automatic. Corrections use a new tag naming
-the superseded tag; invalidate affected coverage and do not reuse known-bad proof.
-
-Verify a submitted tag is annotated and targets the exact reviewed candidate.
-A tag attests what ran; it does not independently prove execution or adequacy.
-Worktrees of one repository share Git refs. For separate repositories, explicitly
-transfer the required candidate and tag within authorized scope; no implicit push
-or release publication. Historical tags retain their original meaning.
+Follow [plan-execution's annotated-tag-only policy](../plan-execution/SKILL.md#annotated-tag-only-validation).
+Use `ponytail/validation/<campaign>/<unique-run>` and identify the worker or
+coordinator and focused or final scope. The coordinator accepts only the exact
+reviewed candidate targeted by the validation tag.
 
 ## Independent final acceptance
 

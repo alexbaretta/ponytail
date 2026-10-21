@@ -38,7 +38,7 @@ test('debugging applies beyond user-facing and planned bugs', () => {
 });
 
 test('debugging requires differential diagnosis before repair', () => {
-  assert.match(debugging, /Capture one bounded failure dossier/);
+  assert.match(debugging, /Capture bounded failure observations in session context/);
   assert.match(debugging, /Classify the owning layer before editing/);
   assert.match(debugging, /Build a differential diagnosis/);
   assert.match(debugging, /Select one hypothesis/);

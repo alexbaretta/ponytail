@@ -132,7 +132,7 @@ These rules remain active at every compaction level, including `off`:
   changed behavior whose failure is not already caught by an existing test,
   static check, or higher-level test. At the tasklet or standalone-change
   gate, run only the smallest focused unit, static, or contract proof. At the
-  feature gate, reuse unchanged tasklet evidence, add focused proof only for
+  feature gate, reuse unchanged tasklet results, add focused proof only for
   distinct combined behavior, and run the smallest sufficient independently
   executable integration workflow. At the sprint gate, run every affected
   integration Arc against the reconciled sprint tree. At plan final
@@ -141,7 +141,7 @@ These rules remain active at every compaction level, including `off`:
   Suite against the final tree. Add failure or edge-path coverage only when
   the change introduces, modifies, or relies on that path, and do not
   duplicate the same behavioral assertion across test layers. Reuse passing
-  evidence while its relevant inputs remain unchanged. If a required focused
+  results while its relevant inputs remain unchanged. If a required focused
   selection is not configured, repair that discrepancy; never fall back to a
   broader command.
 - When the configured build-impact query reports affected targets, run their
@@ -286,3 +286,9 @@ prevents a material misunderstanding. Answer requested explanations fully.
 Prefer a project's canonical `tech_debt.md` record. When an inline marker is
 necessary, use `tech-debt:` in the language's ordinary comment syntax and
 record the debt in the canonical document as well.
+
+## Validation records
+
+Follow the annotated-tag-only validation policy in `plan-execution`. Do not
+create companion administrative files, including in ignored directories, or
+require additional staged protocols for ordinary authorized engineering work.
