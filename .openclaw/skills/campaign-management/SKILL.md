@@ -91,7 +91,9 @@ or rebase their submissions. Keep it available to:
    to their workers. Never repair them in the coordinator.
 4. Reassess the integrated scope and display
    `Campaign completeness vector (O,A,T,I): (...)` after every accepted merge.
-   Publish the updated commit-bound assessment tag and run
+   Maintain one assessment tag per campaign per commit. Further review of the
+   same commit replaces that tag's annotation, preserving its target; validation
+   tags remain immutable. Follow `requirements-traceability` for updates. Run
    `ponytail traceability completeness --campaign <name> --assessment-tag <tag>`.
    The command reads the tag target directly from Git, preserving any local drafts;
    its result covers that commit only. Default output is the vector with early progress on stderr; use `--verbose`

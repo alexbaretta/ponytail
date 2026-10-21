@@ -46,7 +46,11 @@ staged, deleted, ignored or index-hidden local files, preserving those files and
 the index. Explicit historical tags assess their own committed configuration and
 sources; automatic selection must not silently select a historical assessment.
 Committed uncovered acceptances and invalid source types remain detectable even
-when local changes conceal them.
+when local changes conceal them. Revise the same commit's assessment in place:
+the no-argument command reads the revised judgment, the assessment tag count
+stays one and its target stays unchanged. Validation tags remain unchanged.
+A missing assessment and duplicate assessments produce distinct diagnostics;
+duplicates list their names for reconciliation.
 
 ## ACC-CM-CERTIFICATES
 

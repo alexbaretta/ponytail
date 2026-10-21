@@ -109,8 +109,13 @@ text on stdin. The tag target alone supplies the revision; never embed commit ID
 in the annotation or tag name. No mandatory payload schema or custom runner.
 
 Create passing tags for deliveries and final acceptance, not every exploratory
-run. Failed-run tags are optional. Never move a tag; corrections use a new tag
+run. Failed-run tags are optional. Never replace a validation tag; corrections use a new tag
 naming the superseded tag and invalidate affected coverage. Verify delivery tags
 are annotated and target the reviewed candidate. A tag attests what ran, not
 independent execution or behavioral adequacy. Transfer tags only within authorized
 publication scope; worktrees already share their repository's refs.
+
+Campaign completeness assessments are revisable judgments, not validation-run
+certificates. Maintain one assessment tag per campaign per commit and replace
+its annotation when review changes, preserving its name and commit target.
+Follow `requirements-traceability` for the assessment format and update command.

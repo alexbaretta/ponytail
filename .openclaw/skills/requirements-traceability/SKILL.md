@@ -175,8 +175,10 @@ output includes an early progress bar on stderr, beginning before repository
 inspection and updating during source discovery and verification. Blocking
 annotation findings produce a short stderr summary even without `--verbose`. Without `--assessment-tag`, it selects the
 unique `ponytail/completeness/<name>/*` annotated tag at HEAD; no arguments work
-when exactly one campaign assessment tag exists there. Ambiguity requires an
-explicit tag. An explicit tag assesses its target even when it differs from HEAD.
+when exactly one campaign assessment tag exists there. Use `--campaign` to
+select among distinct campaigns. Multiple assessments of the same campaign and
+commit are a workflow error: reconcile their claims into one tag and remove the
+obsolete assessment tags. Do not choose by timestamp or blindly union credit. An explicit tag assesses its target even when it differs from HEAD.
 Configuration and source content come from Git objects; staged, unstaged, ignored
 and untracked files do not affect the result and are never modified. This assesses
 the named commit, not unfinished working-tree changes. For an initial unassessed scope at HEAD, use
@@ -184,7 +186,7 @@ the named commit, not unfinished working-tree changes. For an initial unassessed
 approved scope. All adequacy starts unresolved.
 
 The coordinator owns one compact assessment snapshot, stored only in an annotated
-Git tag on the assessed commit. Pass its JSON directly on stdin to
+Git tag per campaign per assessed commit. Pass its JSON directly on stdin to
 `git tag -a ponytail/completeness/<name>/<unique> -F - HEAD`; do not create a staging file:
 
 ```json
@@ -231,7 +233,14 @@ acceptance with no valid obligation edge is a graph error.
 Exit zero means the report was computed, not that its vector is zero or completion
 is permitted.
 
-After a merge, create a new immutable assessment tag on the integrated commit.
+After a merge, create one assessment tag on the new integrated commit. Later
+review of that same commit replaces the existing tag's annotation using
+`git tag -f -a <existing-assessment-tag> -F - <existing-assessment-tag>^{commit}`
+with the full revised JSON on stdin. Reuse its name and preserve its commit
+target; do not create another tag for each review. Keep earlier commits' tags.
+An assessment is a revisable judgment, distinct from immutable validation tags
+attesting actual test runs. The coordinator serializes assessment updates.
+No supersession ledger or companion file is needed.
 Its Git target supplies the commit binding; never put a commit ID in the
 annotation, including review references or validation tag names containing one.
 Carry forward only claims whose reviews and relevant test inputs remain valid;

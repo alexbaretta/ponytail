@@ -62,11 +62,14 @@ responsible for truthful review and validation applicability; zero does not
 replace independent final QA.
 
 Completeness assessment reads configuration and canonical sources from the
-immutable assessment tag target, without requiring a clean working tree,
+immutable Git commit targeted by the assessment tag, without requiring a clean working tree,
 materializing another checkout, or creating administrative files. It preserves
 local drafts and index state. Explicit tags may assess earlier commits; automatic
 tag selection remains bound to HEAD. Results identify the assessed commit and
-never credit uncommitted work.
+never credit uncommitted work. Maintain one assessment tag per campaign per
+commit. Subsequent review replaces its annotation, preserving its name and target;
+validation-run tags remain immutable. Duplicate assessments must be reconciled
+rather than selected by timestamp. User decision: 2026-10-21.
 
 Discharge: [ACC-CM-DESCENT](../uat/campaign-management.md#acc-cm-descent) with adequate executable proof and adversarial assessment.
 

@@ -80,6 +80,7 @@ test('CLI computes actual Git-bound scope without a database and reads immutable
  assert.match(concise.stderr,/Sources\s+\[/);
  const missing = command(root,[]);
  assert.notEqual(missing.status,0);
+ assert.match(missing.stderr,/No campaign assessment tag targets HEAD/);
  assert.match(missing.stderr,/^Preparation\s+\[[ ]+\]\s+0%/);
 
  const complete: CampaignAssessmentV2 = assessment();
@@ -120,6 +121,8 @@ test('CLI requires existing annotated ancestor validation references and unambig
  git(root,['tag','-a','ponytail/completeness/demo/another','-m',JSON.stringify(assessment())]);
  const ambiguous = command(root,[]);
  assert.notEqual(ambiguous.status,0);assert.match(ambiguous.stderr,/exactly one/);
+ assert.match(ambiguous.stderr,/found 2:.*another.*bad/);
+ assert.match(ambiguous.stderr,/reconcile the review claims/);
 });
 
 // Traceability: verifies ACC-CM-DESCENT from unit-test TEST-CM-COMPLETENESS-COMMIT-INPUTS
@@ -242,4 +245,24 @@ test('assessment rejects a committed source symlink even when the working tree r
  fs.unlinkSync(path.join(root,'work.js'));fs.writeFileSync(path.join(root,'work.js'),content);
  const result = command(root,[]);
  assert.notEqual(result.status,0);assert.match(result.stderr,/regular committed file/);
+});
+
+// Traceability: verifies ACC-CM-DESCENT from unit-test TEST-CM-COMPLETENESS-REPLACEMENT
+test('replacing an assessment annotation revises the vector without duplicating tags or changing validation', context => {
+ const root = fixture(context);
+ const tag = 'ponytail/completeness/demo/review';
+ const initial: CampaignAssessmentV2 = {...assessment(),complete:{O:[],A:[],T:[],I:[]},reviewReferences:[],validationTags:[]};
+ git(root,['tag','-a',tag,'-m',JSON.stringify(initial)]);
+ const target = git(root,['rev-parse',`${tag}^{commit}`]);
+ const validation = git(root,['rev-parse','ponytail/validation/demo/pass-1']);
+ const before = command(root,['--json']);
+ assert.equal(before.status,0,before.stderr);
+ assert.deepEqual(JSON.parse(before.stdout).vector,[1,1,1,1]);
+ git(root,['tag','-f','-a',tag,'-m',JSON.stringify(assessment()),`${tag}^{commit}`]);
+ const after = command(root,['--json']);
+ assert.equal(after.status,0,after.stderr);
+ assert.deepEqual(JSON.parse(after.stdout).vector,[0,0,0,0]);
+ assert.equal(git(root,['tag','--points-at','HEAD','--list','ponytail/completeness/*']),tag);
+ assert.equal(git(root,['rev-parse',`${tag}^{commit}`]),target);
+ assert.equal(git(root,['rev-parse','ponytail/validation/demo/pass-1']),validation);
 });

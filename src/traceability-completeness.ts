@@ -167,7 +167,8 @@ export function runTraceabilityCompleteness(argv: readonly string[], cwd = proce
   if (assessmentTag === undefined) {
    const pattern = campaign === undefined ? 'ponytail/completeness/*' : `ponytail/completeness/${campaign}/*`;
    const tags = git(root,['tag','--points-at','HEAD','--list',pattern]).split('\n').filter(Boolean);
-   if (tags.length !== 1) throw new Error('Select exactly one current assessment with --assessment-tag, or provide --campaign and --requirement IDs for an unassessed scope');
+   if (tags.length === 0) throw new Error('No campaign assessment tag targets HEAD. Provide --campaign and --requirement IDs for an unassessed scope, or --assessment-tag to inspect an existing assessment.');
+   if (tags.length > 1) throw new Error(`Expected exactly one campaign assessment at HEAD; found ${tags.length}: ${tags.join(', ')}. Use --campaign for distinct campaigns. For duplicate assessments of the same campaign and commit, reconcile the review claims into one tag, replace its annotation and remove the obsolete assessment tags; never select by timestamp.`);
    assessmentTag = tags[0];
   }
   if (assessmentTag === undefined) throw new Error('Missing assessment tag');
