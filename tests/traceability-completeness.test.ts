@@ -68,7 +68,7 @@ function command(root: string, args: readonly string[]) {
 }
 
 // Traceability: verifies ACC-CM-DESCENT from unit-test TEST-CM-COMPLETENESS-CLI
-test('CLI computes actual Git-bound scope without a database and rejects stale, dirty and lightweight assessments', context => {
+test('CLI computes actual Git-bound scope without a database and reads immutable targets despite dirty files while rejecting lightweight assessments', context => {
  const root = fixture(context);
  const unknown = command(root,['--campaign','demo','--requirement','REQ-A','--json']);
  assert.equal(unknown.status,0,unknown.stderr);
@@ -99,11 +99,13 @@ test('CLI computes actual Git-bound scope without a database and rejects stale, 
  assert.match(displayed.stdout,/O unresolved: none/);
  assert.notEqual(command(root,['--campaign','other','--assessment-tag',tag]).status,0);
  fs.writeFileSync(path.join(root,'work.js'),'changed');
- const dirty = command(root,['--assessment-tag',tag]);
- assert.notEqual(dirty.status,0);assert.match(dirty.stderr,/clean worktree/);
+ const dirty = command(root,['--assessment-tag',tag,'--json']);
+ assert.equal(dirty.status,0,dirty.stderr);assert.deepEqual(JSON.parse(dirty.stdout),JSON.parse(result.stdout));
+ assert.equal(fs.readFileSync(path.join(root,'work.js'),'utf8'),'changed');
  git(root,['add','work.js']);git(root,['commit','--quiet','-m','change']);
- const stale = command(root,['--assessment-tag',tag]);
- assert.notEqual(stale.status,0);assert.match(stale.stderr,/stale/);
+ const historical = command(root,['--assessment-tag',tag,'--json']);
+ assert.equal(historical.status,0,historical.stderr);assert.deepEqual(JSON.parse(historical.stdout),JSON.parse(result.stdout));
+ assert.notEqual(command(root,[]).status,0);
  git(root,['tag','light']);
  const light = command(root,['--assessment-tag','light']);
  assert.notEqual(light.status,0);assert.match(light.stderr,/annotated tag/);
@@ -121,7 +123,7 @@ test('CLI requires existing annotated ancestor validation references and unambig
 });
 
 // Traceability: verifies ACC-CM-DESCENT from unit-test TEST-CM-COMPLETENESS-COMMIT-INPUTS
-test('commit binding rejects ignored canonical input and index-hidden edits but permits ignored build output', context => {
+test('commit assessment ignores uncommitted inputs and preserves index-hidden edits', context => {
  const root = fixture(context);
  fs.writeFileSync(path.join(root,'.gitignore'),'pm/uat/ignored.md\nbuild.log\n');
  git(root,['add','.gitignore']);git(root,['commit','--quiet','-m','ignore generated output']);
@@ -130,12 +132,14 @@ test('commit binding rejects ignored canonical input and index-hidden edits but 
  assert.equal(command(root,[]).status,0);
  fs.writeFileSync(path.join(root,'pm/uat/ignored.md'),'## ACC-B\nTraceability: verifies OBL-A from acceptance ACC-B\n');
  const ignored = command(root,[]);
- assert.notEqual(ignored.status,0);assert.match(ignored.stderr,/missing from assessed commit/);
+ assert.equal(ignored.status,0,ignored.stderr);
  fs.unlinkSync(path.join(root,'pm/uat/ignored.md'));
  git(root,['update-index','--assume-unchanged','work.js']);
  fs.appendFileSync(path.join(root,'work.js'),'// hidden modification\n');
  const hidden = command(root,[]);
- assert.notEqual(hidden.status,0);assert.match(hidden.stderr,/hidden inputs/);
+ assert.equal(hidden.status,0,hidden.stderr);
+ assert.match(fs.readFileSync(path.join(root,'work.js'),'utf8'),/hidden modification/);
+ assert.match(git(root,['ls-files','-v','work.js']),/^h /);
 });
 
 // Traceability: verifies ACC-CM-DESCENT from unit-test TEST-CM-COMPLETENESS-HIDDEN-DELETION
@@ -148,8 +152,9 @@ test('a skip-worktree deletion cannot silently remove an unresolved acceptance',
  assert.equal(before.status,0,before.stderr);assert.deepEqual(JSON.parse(before.stdout).vector,[0,0,1,1]);
  git(root,['update-index','--skip-worktree','pm/uat/uncovered.md']);
  fs.unlinkSync(path.join(root,'pm/uat/uncovered.md'));
- const after = command(root,[]);
- assert.notEqual(after.status,0);assert.match(after.stderr,/hidden inputs/);
+ const after = command(root,['--json']);
+ assert.equal(after.status,0,after.stderr);assert.deepEqual(JSON.parse(after.stdout),JSON.parse(before.stdout));
+ assert.equal(fs.existsSync(path.join(root,'pm/uat/uncovered.md')),false);
 });
 
 // Traceability: verifies ACC-CM-DESCENT from unit-test TEST-CM-COMPLETENESS-LARGE-INPUTS
@@ -201,4 +206,40 @@ test('a zero vector with executable diagnostics still blocks completion', contex
  assert.ok(typeof report === 'object' && report !== null && 'vector' in report && 'completionBlocked' in report);
  assert.deepEqual(report.vector,[0,0,0,0]);
  assert.equal(report.completionBlocked,true);
+});
+
+// Traceability: verifies ACC-CM-DESCENT from unit-test TEST-CM-COMPLETENESS-IMMUTABLE
+test('assessment uses committed configuration and deleted sources without touching drafts or the index', context => {
+ const root = fixture(context);
+ fs.writeFileSync(path.join(root,'pm/requirements/diagram.png'),Buffer.from([137,80,78,71,255]));
+ git(root,['add','pm/requirements/diagram.png']);git(root,['commit','--quiet','-m','reference diagram']);
+ const tag = 'ponytail/completeness/demo/immutable';
+ git(root,['tag','-a',tag,'-m',JSON.stringify(assessment())]);
+ const before = command(root,['--assessment-tag',tag,'--json']);
+ assert.equal(before.status,0,before.stderr);
+ fs.writeFileSync(path.join(root,'.agents/config/project/traceability.json'),'human draft, not JSON');
+ fs.unlinkSync(path.join(root,'pm/requirements/a.md'));
+ fs.writeFileSync(path.join(root,'pm/uat/new.md'),'uncommitted acceptance draft');
+ git(root,['add','pm/uat/new.md']);
+ const status = git(root,['status','--porcelain']);
+ const index = fs.readFileSync(path.join(root,'.git/index'));
+ const after = command(root,['--assessment-tag',tag,'--json']);
+ assert.equal(after.status,0,after.stderr);
+ assert.deepEqual(JSON.parse(after.stdout),JSON.parse(before.stdout));
+ assert.equal(git(root,['status','--porcelain']),status);
+ assert.deepEqual(fs.readFileSync(path.join(root,'.git/index')),index);
+ assert.equal(fs.readFileSync(path.join(root,'.agents/config/project/traceability.json'),'utf8'),'human draft, not JSON');
+});
+
+// Traceability: verifies ACC-CM-DESCENT from unit-test TEST-CM-COMPLETENESS-COMMITTED-SYMLINK
+test('assessment rejects a committed source symlink even when the working tree replaces it with valid content', context => {
+ const root = fixture(context);
+ const content = fs.readFileSync(path.join(root,'work.js'));
+ fs.unlinkSync(path.join(root,'work.js'));
+ fs.symlinkSync('test.js',path.join(root,'work.js'));
+ git(root,['add','work.js']);git(root,['commit','--quiet','-m','symbolic source']);
+ git(root,['tag','-a','ponytail/completeness/demo/link','-m',JSON.stringify(assessment())]);
+ fs.unlinkSync(path.join(root,'work.js'));fs.writeFileSync(path.join(root,'work.js'),content);
+ const result = command(root,[]);
+ assert.notEqual(result.status,0);assert.match(result.stderr,/regular committed file/);
 });

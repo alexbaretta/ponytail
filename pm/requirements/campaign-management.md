@@ -56,10 +56,17 @@ Report the campaign completeness vector (O,A,T,I) as unresolved decomposition, a
 `ponytail traceability completeness` computes this vector and unresolved IDs from
 canonical V5 source and an explicit, commit-bound assessment stored in an
 annotated Git tag. No database or tracked evidence ledger is required. Missing
-structure or unassessed adequacy cannot receive credit. Reject stale assessments,
+structure or unassessed adequacy cannot receive credit. Never present a historical assessment as current. Reject
 invalid scope and unavailable evidence references. The coordinator remains
 responsible for truthful review and validation applicability; zero does not
 replace independent final QA.
+
+Completeness assessment reads configuration and canonical sources from the
+immutable assessment tag target, without requiring a clean working tree,
+materializing another checkout, or creating administrative files. It preserves
+local drafts and index state. Explicit tags may assess earlier commits; automatic
+tag selection remains bound to HEAD. Results identify the assessed commit and
+never credit uncommitted work.
 
 Discharge: [ACC-CM-DESCENT](../uat/campaign-management.md#acc-cm-descent) with adequate executable proof and adversarial assessment.
 

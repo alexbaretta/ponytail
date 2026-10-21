@@ -142,17 +142,90 @@ function markdownFiles(root, directory) {
     }
     return files;
 }
-function discoverTraceabilityProject(traceabilityConfigurationV5, configurationPath, invokingRoot, progress) {
+function commitFiles(root, commit, configuration) {
+    const inventory = (0, node_child_process_1.execFileSync)('git', ['ls-tree', '-rlz', commit], { cwd: root, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
+    const files = new Map();
+    for (const entry of inventory.split('\0').filter(Boolean)) {
+        const separator = entry.indexOf('\t');
+        const match = /^(\d+) (?:blob|commit) ([a-f0-9]+)\s+(\d+|-)$/u.exec(entry.slice(0, separator));
+        if (separator < 0 || !match?.[1] || !match[2] || !match[3])
+            throw new Error('Invalid Git tree entry');
+        files.set(entry.slice(separator + 1), { mode: match[1], objectId: match[2], size: match[3] === '-' ? 0 : Number(match[3]) });
+    }
+    const selected = [...files].filter(([file, item]) => {
+        if (!item.mode.startsWith('100'))
+            return false;
+        if (file === configuration.reverseViewPath || configuration.generatedArtifacts.some(item => item.path === file))
+            return true;
+        if (within(configuration.requirementsRoot, file) || within(configuration.uatRoot, file))
+            return file.endsWith('.md');
+        if (configuration.exclusions.some(item => node_path_1.default.posix.matchesGlob(file, item.pattern)))
+            return false;
+        return configuration.sources.some(scope => scope.include.some(pattern => node_path_1.default.posix.matchesGlob(file, pattern)))
+            || /\.(?:[cm]?[jt]s|[jt]sx)$/u.test(file);
+    });
+    const maxBuffer = selected.reduce((size, [, item]) => size + item.size + 128, 1024);
+    if (!Number.isSafeInteger(maxBuffer))
+        throw new Error('Traceability input size exceeds safe integer range');
+    const output = (0, node_child_process_1.execFileSync)('git', ['cat-file', '--batch'], { cwd: root, input: selected.map(([, item]) => item.objectId + '\n').join(''), maxBuffer });
+    const contents = new Map();
+    let offset = 0;
+    for (const [file, item] of selected) {
+        const end = output.indexOf(10, offset);
+        if (end < offset || output.subarray(offset, end).toString('utf8') !== `${item.objectId} blob ${item.size}`)
+            throw new Error(`Invalid committed source: ${file}`);
+        offset = end + 1;
+        if (output[offset + item.size] !== 10)
+            throw new Error(`Truncated committed source: ${file}`);
+        const content = output.subarray(offset, offset + item.size);
+        const text = content.toString('utf8');
+        if (!Buffer.from(text).equals(content))
+            throw new Error(`Traceability source must contain UTF-8 text: ${file}`);
+        contents.set(file, text);
+        offset += item.size + 1;
+    }
+    for (const directory of [configuration.requirementsRoot, configuration.uatRoot]) {
+        const parts = directory.split('/');
+        if (parts.some((_, index) => files.has(parts.slice(0, index + 1).join('/'))))
+            throw new Error(`PM scope must be a directory without symbolic links: ${directory}`);
+    }
+    return { files, contents };
+}
+function discoverTraceabilityProject(traceabilityConfigurationV5, configurationPath, invokingRoot, progress, commit) {
     const root = node_fs_1.default.realpathSync(invokingRoot);
-    const configuredRoot = node_fs_1.default.realpathSync(node_path_1.default.resolve(node_path_1.default.dirname(configurationPath), traceabilityConfigurationV5.projectRoot));
+    const configuredPath = node_path_1.default.resolve(node_path_1.default.dirname(configurationPath), traceabilityConfigurationV5.projectRoot);
+    const configuredRoot = commit === undefined ? node_fs_1.default.realpathSync(configuredPath) : configuredPath;
     if (root !== configuredRoot)
         throw new Error('Traceability configuration projectRoot does not match the invoking repository');
-    traceabilityReverseViewPath(root, traceabilityConfigurationV5.reverseViewPath);
+    if (commit === undefined)
+        traceabilityReverseViewPath(root, traceabilityConfigurationV5.reverseViewPath);
     const gitRoot = (0, node_child_process_1.execFileSync)('git', ['rev-parse', '--show-toplevel'], { cwd: root, encoding: 'utf8' }).trim();
     if (node_fs_1.default.realpathSync(gitRoot) !== root)
         throw new Error('Invoking root must be the repository root');
-    const gitFiles = (0, node_child_process_1.execFileSync)('git', ['ls-files', '--cached', '--others', '--exclude-standard', '-z'], { cwd: root, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 }).split('\0').filter(Boolean);
-    const files = [...new Set([...gitFiles, ...markdownFiles(root, traceabilityConfigurationV5.requirementsRoot), ...markdownFiles(root, traceabilityConfigurationV5.uatRoot)])].sort();
+    const snapshot = commit === undefined ? undefined : commitFiles(root, commit, traceabilityConfigurationV5);
+    const readText = (file) => {
+        if (!snapshot)
+            return node_fs_1.default.readFileSync(regularFile(root, file), 'utf8');
+        const text = snapshot.contents.get(file);
+        if (text === undefined)
+            throw new Error(`Traceability source must be a regular committed file: ${file}`);
+        return text;
+    };
+    const fileKind = (file) => {
+        if (snapshot) {
+            const item = snapshot.files.get(file);
+            return !item ? undefined : item.mode.startsWith('100') ? 'file' : item.mode === '120000' ? 'symlink' : 'other';
+        }
+        const stat = node_fs_1.default.lstatSync(node_path_1.default.join(root, file), { throwIfNoEntry: false });
+        return !stat ? undefined : stat.isFile() ? 'file' : stat.isSymbolicLink() ? 'symlink' : 'other';
+    };
+    if (snapshot && fileKind(traceabilityConfigurationV5.reverseViewPath)) {
+        const text = readText(traceabilityConfigurationV5.reverseViewPath);
+        if (!text.startsWith(`${exports.traceabilityGeneratedHeader}\n`) && !text.startsWith('<!-- Generated by requirements-traceability. Do not edit. -->\n'))
+            throw new Error(`Refusing authored reverse-view path: ${traceabilityConfigurationV5.reverseViewPath}`);
+    }
+    const gitFiles = snapshot ? [...snapshot.files.keys()] : (0, node_child_process_1.execFileSync)('git', ['ls-files', '--cached', '--others', '--exclude-standard', '-z'], { cwd: root, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 }).split('\0').filter(Boolean);
+    const files = [...new Set([...gitFiles, ...(snapshot ? [] : [...markdownFiles(root, traceabilityConfigurationV5.requirementsRoot), ...markdownFiles(root, traceabilityConfigurationV5.uatRoot)])])].sort();
     const sources = [];
     const entities = [];
     const relationships = [];
@@ -163,8 +236,8 @@ function discoverTraceabilityProject(traceabilityConfigurationV5, configurationP
         progress?.(index, files.length);
         if (file === traceabilityConfigurationV5.reverseViewPath)
             continue;
-        const stat = node_fs_1.default.lstatSync(node_path_1.default.join(root, file), { throwIfNoEntry: false });
-        if (!stat)
+        const kindOnDisk = fileKind(file);
+        if (!kindOnDisk)
             continue;
         const requirement = within(traceabilityConfigurationV5.requirementsRoot, file);
         const acceptance = within(traceabilityConfigurationV5.uatRoot, file);
@@ -175,7 +248,7 @@ function discoverTraceabilityProject(traceabilityConfigurationV5, configurationP
             continue;
         let kind;
         if (requirement || acceptance) {
-            if (stat.isSymbolicLink())
+            if (kindOnDisk === 'symlink')
                 throw new Error(`Traceability PM scope must not contain a symbolic link: ${file}`);
             if (!file.endsWith('.md'))
                 continue;
@@ -183,8 +256,8 @@ function discoverTraceabilityProject(traceabilityConfigurationV5, configurationP
         }
         else {
             if (!scopes.length) {
-                if (stat.isFile() && /\.(?:[cm]?[jt]s|[jt]sx)$/u.test(file)) {
-                    const text = node_fs_1.default.readFileSync(regularFile(root, file), 'utf8');
+                if (kindOnDisk === 'file' && /\.(?:[cm]?[jt]s|[jt]sx)$/u.test(file)) {
+                    const text = readText(file);
                     if (!/Traceability\s*:/iu.test(text))
                         continue;
                     const typescript = (0, node_module_1.createRequire)(node_path_1.default.join(root, 'package.json'))('typescript');
@@ -216,7 +289,7 @@ function discoverTraceabilityProject(traceabilityConfigurationV5, configurationP
                 throw new Error('Missing selected source scope');
             kind = scope.kind;
         }
-        const traceabilitySource = { kind, path: file, text: node_fs_1.default.readFileSync(regularFile(root, file), 'utf8') };
+        const traceabilitySource = { kind, path: file, text: readText(file) };
         sources.push(traceabilitySource);
         const discovery = (0, traceability_discovery_js_1.discoverTraceabilitySource)(traceabilitySource);
         for (const entity of discovery.graph.entities) {
@@ -233,8 +306,8 @@ function discoverTraceabilityProject(traceabilityConfigurationV5, configurationP
         if (!sources.some(source => source.path === item.sourcePath && source.kind !== 'markdown')) {
             projectFindings.push({ code: 'unclassified-generated-source', path: item.path, line: 1, message: `Canonical source ${item.sourcePath} is not a discovered executable source` });
         }
-        if (node_fs_1.default.lstatSync(node_path_1.default.join(root, item.path), { throwIfNoEntry: false })) {
-            const text = node_fs_1.default.readFileSync(regularFile(root, item.path), 'utf8');
+        if (fileKind(item.path)) {
+            const text = readText(item.path);
             if (/Traceability\s*:/iu.test(text))
                 projectFindings.push({ code: 'generated-marker', path: item.path, line: 1, message: 'Generated output must not duplicate canonical source annotations' });
         }

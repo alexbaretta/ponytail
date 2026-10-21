@@ -104,42 +104,16 @@ function computeCampaignCompleteness(graph, assessment, commit, assessmentTag) {
 function git(root, args) {
     return (0, node_child_process_1.execFileSync)('git', [...args], { cwd: root, encoding: 'utf8', maxBuffer: 32 * 1024 * 1024 }).trim();
 }
-function requireVisibleIndex(root) {
-    if (git(root, ['ls-files', '-v', '-z']).split('\0').some(entry => /^[a-zS] /u.test(entry))) {
-        throw new Error('Completeness requires an index without assume-unchanged or skip-worktree flags; hidden inputs cannot be assessed');
-    }
-}
 function annotatedTag(root, name) {
     if (!name || name.startsWith('-') || /[\s~^:?*\[\\]/u.test(name))
         throw new Error(`Invalid tag name: ${name}`);
     const ref = `refs/tags/${name}`;
-    if (git(root, ['cat-file', '-t', ref]) !== 'tag')
+    const objectId = git(root, ['rev-parse', '--verify', ref]);
+    if (git(root, ['cat-file', '-t', objectId]) !== 'tag')
         throw new Error(`Expected annotated tag: ${name}`);
-    return { commit: git(root, ['rev-parse', `${ref}^{commit}`]), contents: git(root, ['for-each-ref', '--format=%(contents)', ref]) };
-}
-function committedInputs(root, commit, inputs) {
-    const paths = [...inputs.keys()];
-    if (paths.some(file => /[\r\n]/u.test(file)))
-        throw new Error('Unsupported newline in traceability input path');
-    const maxBuffer = [...inputs].reduce((bytes, [file, text]) => bytes + Buffer.byteLength(text) + Buffer.byteLength(file) + 128, 1024);
-    const output = (0, node_child_process_1.execFileSync)('git', ['cat-file', '--batch'], { cwd: root, input: paths.map(file => `${commit}:${file}\n`).join(''), maxBuffer });
-    const committed = new Map();
-    let offset = 0;
-    for (const file of paths) {
-        const end = output.indexOf(10, offset);
-        const header = output.subarray(offset, end).toString('utf8');
-        const match = /^[0-9a-f]+ blob ([0-9]+)$/u.exec(header);
-        const size = Number(match?.[1]);
-        if (end < offset || !match || !Number.isSafeInteger(size) || size < 0)
-            throw new Error(`Traceability input is missing from assessed commit: ${file}`);
-        offset = end + 1;
-        const content = output.subarray(offset, offset + size);
-        if (!content.equals(Buffer.from(inputs.get(file) ?? '', 'utf8')))
-            throw new Error(`Traceability input differs from assessed commit: ${file}`);
-        committed.set(file, content);
-        offset += size + 1;
-    }
-    return committed;
+    const text = git(root, ['cat-file', 'tag', objectId]);
+    const separator = text.indexOf('\n\n');
+    return { commit: git(root, ['rev-parse', `${objectId}^{commit}`]), contents: separator < 0 ? '' : text.slice(separator + 2) };
 }
 function runTraceabilityCompleteness(argv, cwd = process.cwd()) {
     let campaign;
@@ -150,7 +124,7 @@ function runTraceabilityCompleteness(argv, cwd = process.cwd()) {
     for (let index = 0; index < argv.length; index += 1) {
         const argument = argv[index];
         if (argument === '--help') {
-            process.stdout.write('Usage: ponytail traceability completeness [--campaign <name>] [--assessment-tag <tag> | --requirement <id> ...] [--json] [--verbose]\nDefault output is the vector only; --verbose includes unresolved IDs and findings. Progress is written to stderr, except with --json.\nWithout an explicit tag, select the unique current-commit assessment tag for the campaign. Explicit requirements inspect an unassessed scope.\n');
+            process.stdout.write('Usage: ponytail traceability completeness [--campaign <name>] [--assessment-tag <tag> | --requirement <id> ...] [--json] [--verbose]\nDefault output is the vector only; --verbose includes unresolved IDs and findings. Progress is written to stderr, except with --json.\nWithout an explicit tag, select the unique current-commit assessment tag for the campaign. Explicit tags assess their immutable target; explicit requirements assess HEAD. Working-tree edits are not included.\n');
             return null;
         }
         if (argument === '--verbose') {
@@ -181,10 +155,7 @@ function runTraceabilityCompleteness(argv, cwd = process.cwd()) {
     update(0, 1, 'Preparation');
     try {
         const root = node_fs_1.default.realpathSync(git(cwd, ['rev-parse', '--show-toplevel']));
-        const commit = git(root, ['rev-parse', 'HEAD']);
-        requireVisibleIndex(root);
-        if (git(root, ['status', '--porcelain', '--untracked-files=all']))
-            throw new Error('Completeness requires a clean worktree so source and assessment identify the same commit');
+        let commit = git(root, ['rev-parse', 'HEAD']);
         let assessment;
         if (requirementIds.length > 0) {
             if (campaign === undefined)
@@ -202,8 +173,7 @@ function runTraceabilityCompleteness(argv, cwd = process.cwd()) {
             if (assessmentTag === undefined)
                 throw new Error('Missing assessment tag');
             const tag = annotatedTag(root, assessmentTag);
-            if (tag.commit !== commit)
-                throw new Error('Assessment tag is stale: it must target HEAD');
+            commit = tag.commit;
             const payload = (0, lossless_json_1.parse)(tag.contents, null, token => {
                 if (token !== '1' && token !== '2')
                     throw new Error(`Unsupported assessment number: ${token}`);
@@ -220,16 +190,15 @@ function runTraceabilityCompleteness(argv, cwd = process.cwd()) {
             }
         }
         const configurationPath = node_path_1.default.join(root, '.agents/config/project/traceability.json');
-        const configurationText = node_fs_1.default.readFileSync(configurationPath, 'utf8');
-        const configuration = (0, traceability_v5_js_1.loadTraceabilityV5)((0, traceability_v5_js_1.parseTraceabilityV5)(configurationText), configurationPath, root);
+        const configurationFile = '.agents/config/project/traceability.json';
+        const configurationEntry = git(root, ['ls-tree', commit, '--', configurationFile]);
+        if (!/^100(?:644|755) blob /u.test(configurationEntry))
+            throw new Error('Traceability configuration must be a regular committed file');
+        const configurationText = git(root, ['show', `${commit}:${configurationFile}`]);
+        const configuration = (0, traceability_project_js_1.readTraceabilityConfigurationV5)((0, traceability_v5_js_1.parseTraceabilityV5)(configurationText));
         update(1, 1, 'Preparation');
         update(0, 1, 'Inventory');
-        const project = (0, traceability_project_js_1.discoverTraceabilityProject)(configuration, configurationPath, root, (completed, total) => update(completed, total, 'Sources'));
-        update(0, 1, 'Commit check');
-        const inputs = new Map(project.sources.map(source => [source.path, source.text]));
-        inputs.set('.agents/config/project/traceability.json', configurationText);
-        const committed = committedInputs(root, commit, inputs);
-        update(1, 1, 'Commit check');
+        const project = (0, traceability_project_js_1.discoverTraceabilityProject)(configuration, configurationPath, root, (completed, total) => update(completed, total, 'Sources'), commit);
         update(0, 1, 'Assessment');
         const failures = project.projectFindings.filter(finding => finding.code !== 'empty-scope');
         if (failures.length > 0)
@@ -240,16 +209,6 @@ function runTraceabilityCompleteness(argv, cwd = process.cwd()) {
             completionBlocked: project.discoveryFindings.length > 0,
         };
         update(1, 1, 'Assessment');
-        update(0, committed.size, 'Verify');
-        requireVisibleIndex(root);
-        let verified = 0;
-        for (const [file, content] of committed) {
-            if (!node_fs_1.default.readFileSync(node_path_1.default.join(root, file)).equals(content))
-                throw new Error(`Traceability input changed during assessment: ${file}`);
-            update(++verified, committed.size, 'Verify');
-        }
-        if (git(root, ['rev-parse', 'HEAD']) !== commit || git(root, ['status', '--porcelain', '--untracked-files=all']))
-            throw new Error('Repository changed during completeness assessment');
         if (json)
             process.stdout.write(`${JSON.stringify(result)}\n`);
         else {

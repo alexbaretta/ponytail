@@ -38,9 +38,15 @@ Obligation: [OBL-CM-DESCENT](../requirements/campaign-management.md#obl-cm-desce
 
 Run `ponytail traceability completeness` with explicit initial requirement IDs,
 then a reviewed assessment tag at HEAD. Verify exact unresolved IDs and vector,
-including missing structure despite claimed completion. Reject stale, lightweight,
-ambiguous or malformed assessment tags, missing validation tags, invalid IDs and
-dirty source. The command works without a database; zero remains provisional.
+including missing structure despite claimed completion. Reject lightweight, ambiguous or malformed assessment tags,
+missing validation tags, invalid IDs and invalid committed source. The command works without a database; zero remains provisional.
+
+Assessment of the same annotated-tag target returns the same vector with dirty,
+staged, deleted, ignored or index-hidden local files, preserving those files and
+the index. Explicit historical tags assess their own committed configuration and
+sources; automatic selection must not silently select a historical assessment.
+Committed uncovered acceptances and invalid source types remain detectable even
+when local changes conceal them.
 
 ## ACC-CM-CERTIFICATES
 
