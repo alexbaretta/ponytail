@@ -35,8 +35,9 @@ defect. Describe the correct pattern as the invariant or implementation
 relationship proved by the repair. A patch description alone is neither.
 
 Record source and code references as repository-relative paths, stable issue or
-plan identifiers, or commit identities. Keep excerpts short and include them
-only when a reference cannot preserve the material distinction. This record
+plan identifiers, or descriptive tag names without embedded commit IDs. Keep
+excerpts short and include them only when a reference cannot preserve the material
+distinction. This record
 preserves the diagnosis, not a history of test runs. `confirmation_evidence`
 contains concise causal observations or evidence references; `regression_proofs`
 identifies executable regression tests. Reference any retained commit-attached
@@ -62,7 +63,7 @@ do not rewrite an observation merely to make it fit a later cluster.
   "recorded_at": "2026-09-25T16:30:19-07:00",
   "source_references": [
     "pm/bugs/closed/2026-09-25-BUG-short_description.md",
-    "commit:0123456789abcdef"
+    "ponytail/validation/example/focused-check"
   ],
   "context": {
     "languages": ["typescript"],

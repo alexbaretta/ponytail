@@ -44,9 +44,8 @@ data out of observations. Inspect logs, traces, responses and test output
 in tool/session output; do not create a companion run dossier. Keep
 durable causal explanations and regression-test references in the bug or pattern
 record; do not append run output or passing-certificate ledgers to tracked source.
-Use the shared evidence/certificate definitions in `plan-execution` and the
-annotated-tag-only validation policy in `plan-execution`. Failed-run
-certificates are optional and require an explicit decision to retain the run.
+Use the shared [evidence and certificate definitions](../plan-execution/references/glossary.md)
+and [annotated-tag-only validation policy](../plan-execution/SKILL.md#annotated-tag-only-validation).
 
 ## Investigation
 
