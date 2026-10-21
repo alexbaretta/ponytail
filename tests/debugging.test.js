@@ -65,12 +65,12 @@ test('debugging defines safe stateful restart and outcome metrics', () => {
   assert.match(debugging, /their quantity is not evidence that the failing behavior improved/);
 });
 
-test('debugging harvests only confirmed independent pattern observations', () => {
-  assert.match(debugging, /correction passes its smallest\ndurable regression proof/);
-  assert.match(debugging, /default root is\n`pm\/debugging-pattern-observations\/`/);
-  assert.match(debugging, /One observation represents one independently occurring causal defect/);
-  assert.match(debugging, /Do not\s+record an unconfirmed hypothesis/);
-  assert.match(debugging, /Do not assign a proposed\ncategory, increment a pattern count/);
+test('debugging retires mandatory per-fix collection while preserving historical diagnosis', () => {
+  assert.match(debugging, /does not require a separate observation file or collection/);
+  assert.match(debugging, /do not duplicate them in a per-fix JSON record/);
+  assert.match(debugging, /Existing pattern observations remain historical diagnosis material/);
+  assert.match(debugging, /does not authorize automatic collection or impose a completion gate/);
+  assert.doesNotMatch(debugging, /record one bug-pattern observation/);
 });
 
 test('pattern observations preserve evidence without premature categories', () => {

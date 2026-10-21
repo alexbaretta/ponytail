@@ -13,37 +13,27 @@ Licensed under the MIT License. See LICENSE in the project root.
 
 ### Coverage
 
-- [DBG-OBS-001 through DBG-OBS-004](../requirements/debugging-pattern-observations.md#approved-requirements), approved 2026-09-25.
+The [current decision](../requirements/debugging-pattern-observations.md#current-decision)
+retires the former DBG-OBS-001 collection mandate as of 2026-10-21.
 
 ### Actor And Prerequisites
 
-The actor is a coding agent using Ponytail's `debugging` skill in a client
-project. The agent has confirmed one bug's causal mechanism, implemented its
-correction, and passed the smallest durable regression proof. The project may
-configure an observation root; otherwise the default applies.
+A coding agent has confirmed a bug's cause, completed its correction and passed
+the required regression proof. Existing historical observations may be present.
 
 ### Steps
 
-1. Complete the confirmed bug repair.
-   - Expected: the agent checks whether this causal incident already owns an
-     observation.
-2. Record a new independent occurrence.
-   - Expected: exactly one JSON record is written under the client-owned root
-     and conforms to the published schema.
-3. Inspect the record.
-   - Expected: it contains causal, anti-pattern, correct-pattern,
-     applicability, evidence, provenance, and regression-proof fields.
-   - Expected: it contains no derived category, occurrence count, promotion
-     status, or proposed skill.
-4. Encounter another symptom of the same incident.
-   - Expected: the existing observation is referenced rather than counted
-     again.
-5. Encounter a later independent defect with a similar mechanism.
-   - Expected: it receives a separate observation without being automatically
-     assigned to a category.
+1. Complete the repair under the debugging skill.
+   - Expected: no separate observation file, JSON collection step or observation
+     completion gate is required.
+2. Inspect the skill's diagnosis and validation guidance.
+   - Expected: useful causal explanations may remain in an existing bug or plan;
+     retained validation results use annotated Git tags, without companion files.
+3. Inspect retained historical observations.
+   - Expected: existing data and its schema remain readable. The historical
+     format does not authorize automatic collection.
 
 ### Profiles And Evidence
 
-Manual and automated execution profiles are not configured. The focused skill
-and schema conformance tests provide implementation evidence but are not
-release UAT evidence.
+The focused skill and schema conformance tests verify these policy boundaries.
+No product runtime or release UAT is implied by those checks.

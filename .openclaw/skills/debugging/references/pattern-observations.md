@@ -5,9 +5,9 @@ Licensed under the MIT License. See LICENSE in the project root.
 
 # Bug-Pattern Observations
 
-Use this format only after a bug's causal mechanism and corrective pattern have
-been proved. The observation preserves evidence from one occurrence without
-guessing the reusable category to which it may eventually belong.
+Historical reference only. Mandatory per-fix collection was retired by the user
+on 2026-10-21. Preserve existing records; the format below does not require or
+authorize new observation files during ordinary debugging.
 
 ## Placement And Identity
 

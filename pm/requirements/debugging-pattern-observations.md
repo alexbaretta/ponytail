@@ -14,7 +14,18 @@ on 2026-09-25 to collect anti-pattern and correct-pattern evidence as it emerges
 during bug-fixing work, before deriving prescriptive skills from repeated
 categories.
 
-## Approved Requirements
+## Current decision
+
+On 2026-10-21 the user explicitly retired mandatory per-fix collection.
+A confirmed repair must not require a new observation file, collection step or
+observation-based completion gate. Useful diagnosis may remain in existing bug
+or plan records; retained validation results belong only in annotated Git tags.
+Existing observations and their schema remain readable historical material.
+
+The original requirements below retain their identifiers and provenance for
+historical interpretation; they no longer mandate collection during debugging.
+
+## Approved Requirements (historical)
 
 ### DBG-OBS-001: Collection after proof
 
@@ -57,5 +68,5 @@ collection capability.
 ## Acceptance Coverage
 
 - [Debugging observation collection Arc](../uat/debugging-pattern-observations.md#arc-dbg-obs-collection)
-- DBG-OBS-005 is a boundary on future mining work; no mining or promotion
-  behavior is implemented by the collection Arc.
+- DBG-OBS-005 remains historical scope context; no mining or promotion workflow
+  is authorized by this change.
