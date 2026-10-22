@@ -145,7 +145,7 @@ function discoverTextTraceabilitySource(traceabilitySource) {
             }
         }
         else {
-            if (kind !== traceabilitySource.kind) {
+            if (kind !== traceabilitySource.kind && kind !== 'implementation') {
                 findings.push({ code: 'unexpected-kind', path: traceabilitySource.path, line: lineNumber, message: `Source classified ${traceabilitySource.kind} cannot declare ${kind}` });
                 continue;
             }

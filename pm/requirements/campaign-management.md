@@ -29,6 +29,11 @@ Requirement: `REQ-CM-GRAPH`.
 
 Every requirement, atomic obligation, acceptance and test has a stable ID. Obligations reference requirements, acceptances reference obligations, tests reference acceptances and stable code blocks reference obligations. References resolve and reverse discovery derives from the canonical declarations.
 
+File classification must not hide genuine implementing blocks co-located with
+executable tests. A unit- or integration-test scope may declare explicit
+implementation units while retaining its test layer and semantic attachment checks.
+Overlapping file classifications remain invalid; links alone grant no adequacy.
+
 Discharge: [ACC-CM-GRAPH](../uat/campaign-management.md#acc-cm-graph) with adequate executable proof and adversarial assessment.
 
 ## Acceptance coverage

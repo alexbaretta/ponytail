@@ -20,6 +20,12 @@ Obligation: [OBL-CM-GRAPH](../requirements/campaign-management.md#obl-cm-graph).
 
 **Procedure and expected observations:** Declare a requirement with two obligations, corresponding acceptances, identified tests and code blocks. Generate and query reverse links. Verify all four edges resolve to the declared units; corrupt each identity or attachment in turn and verify a precise diagnostic.
 
+A test-classified TypeScript file containing an identified QA assertion function
+and a real test registration discovers both units without overlapping scopes or
+file extraction. Repeat for unit and integration scopes. TSTS validates both
+attachments and still rejects an ordinary helper labeled as an executable test;
+implementation-classified files still cannot claim test coverage.
+
 ## ACC-CM-ACCEPTANCE-COVERAGE
 
 Obligation: [OBL-CM-ACCEPTANCE-COVERAGE](../requirements/campaign-management.md#obl-cm-acceptance-coverage).

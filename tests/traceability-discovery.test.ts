@@ -114,8 +114,8 @@ test('legacy implicit identities and malformed markers cannot silently supply co
 });
 
 // Traceability: verifies ACC-CM-GRAPH from unit-test TEST-CM-DISCOVER-KIND
-test('source classification and Markdown declaration kind must agree with marker source', () => {
- const codeTraceabilitySource: TraceabilitySource = {kind:'unit-test',path:'tests/a.ts',text:'// Traceability: implements OBL-A from implementation fn'};
+test('source classification still constrains test kinds and Markdown declarations', () => {
+ const codeTraceabilitySource: TraceabilitySource = {kind:'implementation',path:'src/a.ts',text:'// Traceability: verifies ACC-A from unit-test TEST-A'};
  assert.ok(discoverTraceabilitySource(codeTraceabilitySource).findings.some(finding => finding.code === 'unexpected-kind'));
  const markdownTraceabilitySource: TraceabilitySource = {kind:'markdown',path:'pm/uat/a.md',text:'## ACC-A\nTraceability: verifies OBL-A from obligation ACC-A'};
  const discovery = discoverTraceabilitySource(markdownTraceabilitySource);

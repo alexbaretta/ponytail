@@ -95,3 +95,28 @@ test('successful old or incompatible CLIs cannot silently skip graph validation'
  fs.writeFileSync(path.join(root,'tsts.js'),`process.stdout.write(${JSON.stringify(JSON.stringify(response))});`);
  assert.ok(checkTraceabilityProjectTypescript(config,project,root).some(finding => finding.message.includes('does not cover')));
 });
+
+// Traceability: verifies ACC-CM-GRAPH from unit-test TEST-CM-SEMANTIC-COLOCATED
+test('test scopes discover real co-located QA implementations without admitting helpers as tests', testContext => {
+ const root = fixture(testContext);
+ fs.writeFileSync(path.join(root,'implementation.ts'),'export {};');
+ for (const kind of ['unit-test','integration-test'] satisfies readonly ('unit-test' | 'integration-test')[]) {
+  const config: TraceabilityConfigurationV5 = {...configuration(),sources:[{kind,include:['test.ts'],locator:'typescript'}]};
+  const source = `import {test} from 'node:test';
+// Traceability: implements OBL-A from implementation assertRegistry
+function assertRegistry(count:number) { if(count !== 1) throw new Error('invalid registry'); }
+// Traceability: verifies ACC-A from ${kind} TEST-A
+test('registry accepts a valid entry',()=>{ assertRegistry(1); });
+`;
+  fs.writeFileSync(path.join(root,'test.ts'),source);
+  const project = discoverTraceabilityProject(config,path.join(root,'config.json'),root);
+  assert.deepEqual(project.projectFindings,[]);
+  assert.deepEqual(project.discoveryFindings,[]);
+  assert.deepEqual(project.graphFindings,[]);
+  assert.equal(project.graph.entities.filter(entity => entity.path === 'test.ts').length,2);
+  assert.deepEqual(checkTraceabilityProjectTypescript(config,project,root),[]);
+  fs.writeFileSync(path.join(root,'test.ts'),source.replace("test('registry accepts a valid entry',()=>{ assertRegistry(1); });",'function helper() { assertRegistry(1); }'));
+  const invalid = discoverTraceabilityProject(config,path.join(root,'config.json'),root);
+  assert.ok(checkTraceabilityProjectTypescript(config,invalid,root).length > 0);
+ }
+});

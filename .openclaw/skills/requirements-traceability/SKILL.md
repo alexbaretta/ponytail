@@ -39,7 +39,15 @@ and a TypeScript checker configuration or `null`. Paths are relative to the
 invoking project except `projectRoot`, which is relative to the configuration.
 Source scopes each declare `kind` (`implementation`, `unit-test` or
 `integration-test`), `include` globs and `locator` (`text` or `typescript`). Keep
-classification unambiguous. TypeScript source requires the semantic locator and
+classification unambiguous: each file matches one scope. A test-classified file
+may also contain explicitly identified `implementation` units, such as genuine
+QA assertion functions implementing QA obligations. Keep its test classification;
+do not add overlapping scopes or split files merely for traceability. The declared
+unit kind selects its semantic checks. Test annotations must still match the
+configured test layer; implementation-classified files cannot declare tests.
+Co-location alone grants no implementation credit: review must establish the
+named block implements the obligation, beyond merely calling a test helper.
+TypeScript source requires the semantic locator and
 its configured `cliPath` and `projectPath`. Do not classify TypeScript as text to
 avoid attachment checks. Generated output maps directly to a classified canonical
 source and contains no relationship annotations.
