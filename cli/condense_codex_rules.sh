@@ -1,15 +1,8 @@
-#!/usr/bin/env bash
-set -euo pipefail
-
+#!/usr/bin/env python3
 # Copyright (c) 2026 Alex Baretta. All rights reserved.
 # Licensed under the MIT License. See LICENSE in the project root.
 # Traceability: implements REQ-PONYTAIL-PROJECT-ISOLATION
 
-main() {
-  local python_source=''
-  local status=0
-
-  IFS= read -r -d '' python_source <<'PYTHON' || true
 import argparse
 import ast
 import fcntl
@@ -536,11 +529,3 @@ try:
     sys.exit(run())
 except KeyboardInterrupt:
     sys.exit(130)
-PYTHON
-
-  trap ':' INT
-  python3 -c "${python_source}" "$@" || status="$?"
-  exit "${status}"
-}
-
-main "$@"

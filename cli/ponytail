@@ -1,17 +1,11 @@
-#!/usr/bin/env bash
-set -euo pipefail
-
+#!/usr/bin/env python3
 # Copyright (c) 2026 Alex Baretta. All rights reserved.
 # Licensed under the MIT License. See LICENSE in the project root.
 # Traceability: implements REQ-PRECOMMIT-PROJECT-ISOLATION
 # Traceability: implements REQ-DEVELOPER-PRIVATE-AGENT-INSTRUCTIONS
 # Traceability: implements REQ-PONYTAIL-PROJECT-ISOLATION
 
-main() {
-  local python_source=''
-  local status=0
 
-  IFS= read -r -d '' python_source <<'PYTHON' || true
 import fcntl
 import hashlib
 import json
@@ -642,8 +636,8 @@ def update_permissions(source_root, root, main_root, arguments):
 
 
 def run():
-    script_path = Path(sys.argv[1])
-    arguments = sys.argv[2:]
+    script_path = Path(sys.argv[0])
+    arguments = sys.argv[1:]
     help_arguments = arguments[:arguments.index("--")] if "--" in arguments else arguments
     if not arguments or arguments[0] == "help" or any(value in {"--help", "-h"} for value in help_arguments):
         source_root = source_root_for(script_path, None)
@@ -832,11 +826,3 @@ except ProjectError as error:
 except (OSError, ValueError, subprocess.CalledProcessError) as error:
     print(f"error: {error}", file=sys.stderr)
     sys.exit(1)
-PYTHON
-
-  trap ':' INT
-  python3 -c "${python_source}" "${BASH_SOURCE[0]}" "$@" || status="$?"
-  exit "${status}"
-}
-
-main "$@"

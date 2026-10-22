@@ -57,3 +57,28 @@ test('invalid index arguments show full subcommand help through the index adapte
  assert.match(invalidSearch.stderr,/invalid search option: --bad/);
  assert.ok(invalidSearch.stderr.endsWith(renderCliHelp(['traceability','search'])));
 });
+
+// Traceability: verifies REQ-PONYTAIL-PROJECT-ISOLATION
+test('launcher starts directly without shell heredoc transport and preserves symlink arguments',t=>{
+ const root=path.resolve(__dirname,'../..');
+ const directory=fs.mkdtempSync(path.join(os.tmpdir(),'cli-direct-'));
+ t.after(()=>fs.rmSync(directory,{recursive:true,force:true}));
+ // A shell transport must not run before the real interpreter starts.
+ fs.writeFileSync(path.join(directory,'bash'),'#!/bin/sh\nexit 99\n',{mode:0o755});
+ const launcher=path.join(directory,'ponytail');
+ fs.symlinkSync(path.join(root,'cli/ponytail'),launcher);
+ const result=spawnSync(launcher,['traceability','completeness','--help'],{
+  cwd:directory,encoding:'utf8',timeout:10000,env:{...process.env,PATH:`${directory}:${process.env.PATH}`},
+ });
+ assert.equal(result.error,undefined);
+ assert.equal(result.status,0,result.stderr);
+ assert.equal(result.stdout,renderCliHelp(['traceability','completeness']));
+ const policyLauncher=path.join(directory,'condense_codex_rules.sh');
+ fs.symlinkSync(path.join(root,'cli/condense_codex_rules.sh'),policyLauncher);
+ const policy=spawnSync(policyLauncher,['--help'],{
+  cwd:directory,encoding:'utf8',timeout:10000,env:{...process.env,PATH:`${directory}:${process.env.PATH}`},
+ });
+ assert.equal(policy.error,undefined);
+ assert.equal(policy.status,0,policy.stderr);
+ assert.match(policy.stdout,/--validate-project/);
+});

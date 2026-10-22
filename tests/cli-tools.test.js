@@ -112,8 +112,6 @@ test('CLI shell scripts are parse-safe', () => {
     planPdf,
     bugStats,
     auditPm,
-    condenseCodexRules,
-    ponytail,
     path.join(root, "cli/tsts"),
     projectJournal,
     combinedInstaller,

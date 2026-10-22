@@ -56,8 +56,8 @@ Requirement: [pm/requirements/open-features.md](open-features.md)
 
 Requirement: [pm/requirements/cli-interruption.md](cli-interruption.md)
 
-- implementation: supports [cli/condense_codex_rules.sh:534](../../cli/condense_codex_rules.sh#L534)
-- implementation: implements [cli/ponytail:28](../../cli/ponytail#L28)
+- implementation: supports [cli/condense_codex_rules.sh:527](../../cli/condense_codex_rules.sh#L527)
+- implementation: implements [cli/ponytail:22](../../cli/ponytail#L22)
 - implementation: implements [src/pm-pdf.py:342](../../src/pm-pdf.py#L342)
 - unit-test: verifies [tests/ponytail-cli.test.js:74](../../tests/ponytail-cli.test.js#L74)
 - integration-test: verifies [scripts/test-project-index-postgres.sh:8](../../scripts/test-project-index-postgres.sh#L8)
@@ -378,7 +378,7 @@ Requirement: [pm/requirements/issue-requirement-activation.md](issue-requirement
 
 Requirement: [pm/requirements/precommit-project-isolation.md](precommit-project-isolation.md)
 
-- implementation: implements [cli/ponytail:6](../../cli/ponytail#L6)
+- implementation: implements [cli/ponytail:4](../../cli/ponytail#L4)
 - unit-test: verifies [tests/ponytail-cli.test.js:14](../../tests/ponytail-cli.test.js#L14)
 - integration-test: verifies [tests/project-validation.test.js:13](../../tests/project-validation.test.js#L13)
 - uat: verifies [pm/uat/precommit-project-isolation.md:13](../../pm/uat/precommit-project-isolation.md#L13)
@@ -392,9 +392,10 @@ Requirement: [pm/requirements/precommit-project-isolation.md](precommit-project-
 
 Requirement: [pm/requirements/project-isolation.md](project-isolation.md)
 
-- implementation: implements [cli/condense_codex_rules.sh:6](../../cli/condense_codex_rules.sh#L6)
-- implementation: implements [cli/ponytail:8](../../cli/ponytail#L8)
+- implementation: implements [cli/condense_codex_rules.sh:4](../../cli/condense_codex_rules.sh#L4)
+- implementation: implements [cli/ponytail:6](../../cli/ponytail#L6)
 - implementation: implements [scripts/project-qa.js:17](../../scripts/project-qa.js#L17)
+- unit-test: verifies [tests/cli-help.test.ts:61](../../tests/cli-help.test.ts#L61)
 - unit-test: verifies [tests/ponytail-cli.test.js:15](../../tests/ponytail-cli.test.js#L15)
 - integration-test: verifies [tests/condense-codex-rules.test.js:4](../../tests/condense-codex-rules.test.js#L4)
 - integration-test: verifies [tests/project-validation.test.js:14](../../tests/project-validation.test.js#L14)
@@ -408,7 +409,7 @@ Requirement: [pm/requirements/project-isolation.md](project-isolation.md)
 
 Requirement: [pm/requirements/developer-private-agent-instructions.md](developer-private-agent-instructions.md)
 
-- implementation: implements [cli/ponytail:7](../../cli/ponytail#L7)
+- implementation: implements [cli/ponytail:5](../../cli/ponytail#L5)
 - implementation: supports [skills/ponytail/SKILL.md:24](../../skills/ponytail/SKILL.md#L24)
 - unit-test: verifies [tests/policy-conformance.test.js:55](../../tests/policy-conformance.test.js#L55)
 - integration-test: verifies [tests/project-validation.test.js:201](../../tests/project-validation.test.js#L201)
