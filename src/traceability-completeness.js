@@ -71,7 +71,7 @@ function readCampaignAssessment(value) {
     }
     return readCampaignAssessmentV2(value);
 }
-function computeCampaignCompleteness(graph, assessment, commit, assessmentTag) {
+function computeCampaignCompleteness(graph, assessment, commit, assessmentTag, findings = []) {
     const scoped = (0, traceability_graph_js_1.scopeTraceabilityGraph)(graph, assessment.requirementIds);
     const kindsById = new Map(scoped.entities.map(entity => [entity.id, entity.kind]));
     const byKind = (kind) => scoped.entities.filter(entity => entity.kind === kind).map(entity => entity.id).sort();
@@ -99,7 +99,7 @@ function computeCampaignCompleteness(graph, assessment, commit, assessmentTag) {
             || incoming(id, ['acceptance']).length === 0 || !incoming(id, ['acceptance']).every(tested)),
     };
     return { campaign: assessment.campaign, commit, assessmentTag, requirementIds: [...assessment.requirementIds].sort(),
-        vector: [unresolved.O.length, unresolved.A.length, unresolved.T.length, unresolved.I.length], unresolved };
+        vector: [findings.length, unresolved.O.length, unresolved.A.length, unresolved.T.length, unresolved.I.length], unresolved };
 }
 function git(root, args) {
     return (0, node_child_process_1.execFileSync)('git', [...args], { cwd: root, encoding: 'utf8', maxBuffer: 32 * 1024 * 1024 }).trim();
@@ -206,7 +206,7 @@ function runTraceabilityCompleteness(argv, cwd = process.cwd()) {
         if (failures.length > 0)
             throw new Error(`Cannot assess malformed canonical traceability sources: ${failures.map(finding => `${finding.path}:${finding.line} ${finding.code}: ${finding.message}`).join('; ')}`);
         const result = {
-            ...computeCampaignCompleteness(project.graph, assessment, commit, assessmentTag ?? null),
+            ...computeCampaignCompleteness(project.graph, assessment, commit, assessmentTag ?? null, project.discoveryFindings),
             findings: project.discoveryFindings,
             completionBlocked: project.discoveryFindings.length > 0,
         };
@@ -214,9 +214,9 @@ function runTraceabilityCompleteness(argv, cwd = process.cwd()) {
         if (json)
             process.stdout.write(`${JSON.stringify(result)}\n`);
         else {
-            process.stdout.write(`Campaign completeness vector (O,A,T,I): (${result.vector.join(',')})\n`);
+            process.stdout.write(`Campaign completeness vector (F,O,A,T,I): (${result.vector.join(',')})\n`);
             if (result.completionBlocked && !verbose)
-                process.stderr.write(`Completion blocked by ${result.findings.length} annotation findings; use --verbose for details.\n`);
+                process.stderr.write(`O/A/T/I are provisional: completion blocked by ${result.findings.length} annotation findings; use --verbose for details.\n`);
             if (verbose) {
                 process.stdout.write(`Campaign: ${result.campaign}; commit: ${commit}; assessment: ${result.assessmentTag ?? 'none (all adequacy unknown)'}\n`);
                 for (const coordinate of ['O', 'A', 'T', 'I'])

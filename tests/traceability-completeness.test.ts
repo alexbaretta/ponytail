@@ -24,13 +24,13 @@ function assessment(): CampaignAssessmentV2 {
 // Traceability: verifies ACC-CM-DESCENT from unit-test TEST-CM-COMPLETENESS-COUNTS
 test('completeness derives unresolved IDs and never grants structural or unknown adequacy credit', () => {
  const complete: CampaignAssessmentV2 = assessment();
- assert.deepEqual(computeCampaignCompleteness(graph,complete,'commit','tag').vector,[0,0,0,0]);
+ assert.deepEqual(computeCampaignCompleteness(graph,complete,'commit','tag').vector,[0,0,0,0,0]);
  const unknown: CampaignAssessmentV2 = {...complete,complete:{O:[],A:[],T:[],I:[]},reviewReferences:[],validationTags:[]};
  assert.deepEqual(computeCampaignCompleteness(graph,unknown,'commit',null).unresolved,{O:['REQ-A'],A:['OBL-A'],T:['ACC-A'],I:['OBL-A']});
  const missingCode: TraceabilityGraph = {entities:graph.entities.filter(entity => entity.kind !== 'implementation'),relationships:graph.relationships.filter(edge => edge.source !== 'work')};
- assert.deepEqual(computeCampaignCompleteness(missingCode,complete,'commit','tag').vector,[0,0,1,1]);
+ assert.deepEqual(computeCampaignCompleteness(missingCode,complete,'commit','tag').vector,[0,0,0,1,1]);
  const noAcceptanceReview: CampaignAssessmentV2 = {...complete,complete:{...complete.complete,A:[]}};
- assert.deepEqual(computeCampaignCompleteness(graph,noAcceptanceReview,'commit','tag').vector,[0,1,0,1]);
+ assert.deepEqual(computeCampaignCompleteness(graph,noAcceptanceReview,'commit','tag').vector,[0,0,1,0,1]);
  const wrongKind: CampaignAssessmentV2 = {...complete,complete:{...complete.complete,O:['OBL-A']}};
  assert.throws(() => computeCampaignCompleteness(graph,wrongKind,'commit','tag'),/wrong kind/);
 });
@@ -72,10 +72,10 @@ test('CLI computes actual Git-bound scope without a database and reads immutable
  const root = fixture(context);
  const unknown = command(root,['--campaign','demo','--requirement','REQ-A','--json']);
  assert.equal(unknown.status,0,unknown.stderr);
- assert.deepEqual(JSON.parse(unknown.stdout).vector,[1,1,1,1]);
+ assert.deepEqual(JSON.parse(unknown.stdout).vector,[0,1,1,1,1]);
  assert.equal(unknown.stderr,'');
  const concise = command(root,['--campaign','demo','--requirement','REQ-A']);
- assert.equal(concise.stdout,'Campaign completeness vector (O,A,T,I): (1,1,1,1)\n');
+ assert.equal(concise.stdout,'Campaign completeness vector (F,O,A,T,I): (0,1,1,1,1)\n');
  assert.match(concise.stderr,/^Preparation\s+\[[ ]+\]\s+0%/);
  assert.match(concise.stderr,/Sources\s+\[/);
  const missing = command(root,[]);
@@ -88,7 +88,7 @@ test('CLI computes actual Git-bound scope without a database and reads immutable
  git(root,['tag','-a',tag,'-m',JSON.stringify(complete)]);
  const result = command(root,['--json']);
  assert.equal(result.status,0,result.stderr);
- assert.deepEqual(JSON.parse(result.stdout).vector,[0,0,0,0]);
+ assert.deepEqual(JSON.parse(result.stdout).vector,[0,0,0,0,0]);
  assert.equal(JSON.parse(result.stdout).commit,git(root,['rev-parse','HEAD']));
  const legacy = {...complete,schemaVersion:1,complete:{R:complete.complete.O,A:complete.complete.A,T:complete.complete.T,I:complete.complete.I}};
  git(root,['tag','-a','legacy-assessment','-m',JSON.stringify(legacy)]);
@@ -96,7 +96,7 @@ test('CLI computes actual Git-bound scope without a database and reads immutable
  assert.equal(legacyResult.status,0,legacyResult.stderr);
  assert.deepEqual(JSON.parse(legacyResult.stdout).unresolved,JSON.parse(result.stdout).unresolved);
  const displayed = command(root,['--assessment-tag','legacy-assessment','--verbose']);
- assert.match(displayed.stdout,/vector \(O,A,T,I\)/);
+ assert.match(displayed.stdout,/vector \(F,O,A,T,I\)/);
  assert.match(displayed.stdout,/O unresolved: none/);
  assert.notEqual(command(root,['--campaign','other','--assessment-tag',tag]).status,0);
  fs.writeFileSync(path.join(root,'work.js'),'changed');
@@ -152,7 +152,7 @@ test('a skip-worktree deletion cannot silently remove an unresolved acceptance',
  git(root,['add','pm/uat/uncovered.md']);git(root,['commit','--quiet','-m','uncovered acceptance']);
  git(root,['tag','-a','ponytail/completeness/demo/current','-m',JSON.stringify(assessment())]);
  const before = command(root,['--json']);
- assert.equal(before.status,0,before.stderr);assert.deepEqual(JSON.parse(before.stdout).vector,[0,0,1,1]);
+ assert.equal(before.status,0,before.stderr);assert.deepEqual(JSON.parse(before.stdout).vector,[0,0,0,1,1]);
  git(root,['update-index','--skip-worktree','pm/uat/uncovered.md']);
  fs.unlinkSync(path.join(root,'pm/uat/uncovered.md'));
  const after = command(root,['--json']);
@@ -167,7 +167,7 @@ test('commit binding accepts source bytes exceeding the former 64 MiB batch limi
  git(root,['add','work.js']);git(root,['commit','--quiet','-m','large source']);
  const result = command(root,['--campaign','demo','--requirement','REQ-A','--json']);
  assert.equal(result.status,0,result.stderr);
- assert.deepEqual(JSON.parse(result.stdout).vector,[1,1,1,1]);
+ assert.deepEqual(JSON.parse(result.stdout).vector,[0,1,1,1,1]);
 });
 
 // Traceability: verifies ACC-CM-DESCENT from unit-test TEST-CM-COMPLETENESS-MIGRATION
@@ -180,7 +180,7 @@ test('legacy marker diagnostics retain progress while broken declared ownership 
  assert.equal(result.status,0,result.stderr);
  const report: unknown = JSON.parse(result.stdout);
  assert.ok(typeof report === 'object' && report !== null && 'vector' in report && 'completionBlocked' in report && 'findings' in report);
- assert.deepEqual(report.vector,[0,0,1,1]);
+ assert.deepEqual(report.vector,[2,0,0,1,1]);
  assert.equal(report.completionBlocked,true);
  assert.ok(Array.isArray(report.findings));assert.equal(report.findings.length,2);
  const text = command(root,['--verbose']);
@@ -198,7 +198,7 @@ test('legacy marker diagnostics retain progress while broken declared ownership 
 });
 
 // Traceability: verifies ACC-CM-DESCENT from unit-test TEST-CM-COMPLETENESS-DIAGNOSTIC-GATE
-test('a zero vector with executable diagnostics still blocks completion', context => {
+test('findings lead the vector even when all coverage coordinates are zero', context => {
  const root = fixture(context);
  fs.appendFileSync(path.join(root,'work.js'),'// Traceability: implements REQ-A\n');
  git(root,['add','work.js']);git(root,['commit','--quiet','-m','mixed markers']);
@@ -207,7 +207,7 @@ test('a zero vector with executable diagnostics still blocks completion', contex
  assert.equal(result.status,0,result.stderr);
  const report: unknown = JSON.parse(result.stdout);
  assert.ok(typeof report === 'object' && report !== null && 'vector' in report && 'completionBlocked' in report);
- assert.deepEqual(report.vector,[0,0,0,0]);
+ assert.deepEqual(report.vector,[1,0,0,0,0]);
  assert.equal(report.completionBlocked,true);
 });
 
@@ -257,11 +257,11 @@ test('replacing an assessment annotation revises the vector without duplicating 
  const validation = git(root,['rev-parse','ponytail/validation/demo/pass-1']);
  const before = command(root,['--json']);
  assert.equal(before.status,0,before.stderr);
- assert.deepEqual(JSON.parse(before.stdout).vector,[1,1,1,1]);
+ assert.deepEqual(JSON.parse(before.stdout).vector,[0,1,1,1,1]);
  git(root,['tag','-f','-a',tag,'-m',JSON.stringify(assessment()),`${tag}^{commit}`]);
  const after = command(root,['--json']);
  assert.equal(after.status,0,after.stderr);
- assert.deepEqual(JSON.parse(after.stdout).vector,[0,0,0,0]);
+ assert.deepEqual(JSON.parse(after.stdout).vector,[0,0,0,0,0]);
  assert.equal(git(root,['tag','--points-at','HEAD','--list','ponytail/completeness/*']),tag);
  assert.equal(git(root,['rev-parse',`${tag}^{commit}`]),target);
  assert.equal(git(root,['rev-parse','ponytail/validation/demo/pass-1']),validation);

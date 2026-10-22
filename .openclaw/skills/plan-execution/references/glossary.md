@@ -27,7 +27,7 @@ Generated host copies derive from this source.
 | Evidence | Observations produced by validation, including command selection, process outcomes and test results; observations alone do not certify adequacy. |
 | Certificate | A commit-bound attestation of validation scope, commands and results. The adopted workflow records commands and observed results in an immutable annotated Git tag; no mandatory payload schema is required. Historical certificate formats keep their original meaning. |
 | Review attestation | An independent review verdict identifying the reviewer, exact candidate and assessed IDs; it assesses semantic adequacy, not command execution. |
-| Campaign completeness vector | The lexicographically ordered unresolved-work vector `(O,A,T,I)` for an identified campaign scope and integrated revision. |
+| Campaign completeness vector | The lexicographically ordered unresolved-work vector `(F,O,A,T,I)` for an identified campaign scope and integrated revision. |
 | Suite | A named set of related Arcs. |
 | Arc | A named ordered sequence of one or more Steps demonstrating acceptance. |
 | Step | A user or system action and its expected observable result; an executable integration Step is an independently reported operation with assertions. |
@@ -86,6 +86,9 @@ hierarchy; ordinary plan and release acceptance still names their existing gates
 
 ## Adopted campaign completeness
 
+F counts unresolved structural annotation findings. While F is nonzero, the
+coverage coordinates are provisional. F is computed, not an assessment credit.
+Removing invalid annotations must preserve required declarations and links.
 O counts requirements whose atomic decomposition is missing, incomplete or
 unreviewed. A counts obligations without adequate acceptance coverage. T counts
 acceptances without adequate executable test coverage. I counts obligations
@@ -95,7 +98,7 @@ must exist, the implementation must pass those tests, and adversarial review
 must establish that they actually demonstrate the obligation. Unit or integration
 proof can suffice; no mandatory per-layer quota is implied.
 
-Productive integrated steps generally decrease `(O,A,T,I)` lexicographically:
+Productive integrated steps generally decrease `(F,O,A,T,I)` lexicographically:
 an earlier-coordinate decrease may expose later-coordinate work. Discoveries,
 invalidated proof and authorized scope additions may increase the vector; record
 them honestly. This vector replaces the historical six-coordinate progress

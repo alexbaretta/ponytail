@@ -176,7 +176,7 @@ No sidecar relationship map or duplicated policy is needed.
 
 Run `ponytail traceability completeness --campaign <name> --assessment-tag <tag>`
 on the integrated commit. It reads the invoking project's committed V5 graph directly,
-without a database, and prints only the `(O,A,T,I)` vector by default. Use
+without a database, and prints only the `(F,O,A,T,I)` vector by default. Use
 `--verbose` for unresolved IDs, assessment context and individual findings;
 `--json` retains the complete structured report with no progress output. Human
 output includes an early progress bar on stderr, beginning before repository
@@ -192,6 +192,15 @@ and untracked files do not affect the result and are never modified. This assess
 the named commit, not unfinished working-tree changes. For an initial unassessed scope at HEAD, use
 `--campaign <name> --requirement REQ-A --requirement REQ-B`; repeat for the exact
 approved scope. All adequacy starts unresolved.
+
+F is the computed count of unresolved annotation findings, never a reviewed credit
+set in an assessment tag. While F is nonzero, O/A/T/I are provisional; prioritize
+reducing F lexicographically. Missing coverage is counted in O/A/T/I, not again
+in F. Ambiguous ownership or invalid inputs that prevent computing the graph
+still fail explicitly instead of producing invented counts. Remove obsolete or
+redundant invalid annotations only when canonical declarations and required links
+remain intact; repair necessary links and reopen affected coverage claims. Never
+delete requirements, obligations or acceptances merely to improve the vector.
 
 The coordinator owns one compact assessment snapshot, stored only in an annotated
 Git tag per campaign per assessed commit. Pass its JSON directly on stdin to
@@ -232,7 +241,8 @@ index flags cannot remove committed gaps. Default tag selection remains HEAD-onl
 so an older assessment is never silently reported as current.
 Annotation findings, including legacy Markdown relationship markers, are
 returned in `findings` with `completionBlocked: true`. Malformed markers grant
-no coverage. Resolve every finding before final acceptance, even at zero.
+no coverage. Resolve every finding before final acceptance; zero O/A/T/I alone
+is insufficient.
 O/A completion attests adequate decomposition of the actual requirements and
 obligations, not merely the declarations currently parsed. Unidentified work
 remains unresolved in O/A until decomposed. Explicit scope, unique identities,

@@ -90,7 +90,7 @@ or rebase their submissions. Keep it available to:
    `git merge --ff-only <candidate>`. Return stale or non-fast-forward deliveries
    to their workers. Never repair them in the coordinator.
 4. Reassess the integrated scope and display
-   `Campaign completeness vector (O,A,T,I): (...)` after every accepted merge.
+   `Campaign completeness vector (F,O,A,T,I): (...)` after every accepted merge.
    Maintain one assessment tag per campaign per commit. Further review of the
    same commit replaces that tag's annotation, preserving its target; validation
    tags remain immutable. Follow `requirements-traceability` for updates. Run
@@ -99,7 +99,7 @@ or rebase their submissions. Keep it available to:
    its result covers that commit only. Default output is the vector with early progress on stderr; use `--verbose`
    for individual findings or `--json` for the complete machine-readable report.
    Use its vector and unresolved IDs; do not maintain a separate hand-counted
-   vector. Returned annotation findings block final completion even at zero; invalid
+   vector. F counts returned annotation findings and must reach zero first; invalid
    scope or ambiguous graph ownership must be repaired before computing progress.
    The `requirements-traceability` skill owns the compact snapshot format
    and initial unassessed-scope command. Carry forward only still-applicable
@@ -123,12 +123,13 @@ Count unresolved objects in the integrated scope:
 
 | Coordinate | Unresolved objects |
 | --- | --- |
+| F | Unresolved structural annotation findings; O/A/T/I remain provisional until F is zero |
 | O | Requirements with missing, incomplete or unreviewed obligation decomposition |
 | A | Obligations without adequate acceptance coverage |
 | T | Acceptances without adequate executable test coverage |
 | I | Obligations without adequate implementation |
 
-The letters name the missing coverage: obligation decomposition, acceptance, tests,
+F counts findings directly. The remaining letters name the missing coverage: obligation decomposition, acceptance, tests,
 and implementation. Coordinates count entities lacking that coverage, not the
 unknown number of missing artifacts.
 
@@ -137,7 +138,7 @@ and implementation exist, the implementation passes those tests, and adversarial
 review establishes adequacy. Unit or integration coverage may suffice. Never sum
 stale worker-local vectors. Use canonical IDs to retain unresolved scope.
 
-Generally favor coherent changes that decrease `(O,A,T,I)` lexicographically:
+Generally favor coherent changes that decrease `(F,O,A,T,I)` lexicographically:
 the first changed coordinate decreases; later coordinates may increase. Discoveries,
 invalidated proof and user-added scope may honestly increase it. Record those
 reasons rather than mislabeling them productive descent or hiding them.

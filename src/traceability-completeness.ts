@@ -32,7 +32,7 @@ export interface CampaignCompleteness {
  readonly commit: string;
  readonly assessmentTag: string | null;
  readonly requirementIds: readonly string[];
- readonly vector: readonly [number,number,number,number];
+ readonly vector: readonly [number,number,number,number,number];
  readonly unresolved: CompletenessIds;
 }
 export interface CampaignCompletenessReport extends CampaignCompleteness {
@@ -87,7 +87,7 @@ function readCampaignAssessment(value: unknown): CampaignAssessmentV2 {
 }
 
 // Traceability: implements OBL-CM-DESCENT from implementation computeCampaignCompleteness
-export function computeCampaignCompleteness(graph: TraceabilityGraph, assessment: CampaignAssessmentV2, commit: string, assessmentTag: string | null): CampaignCompleteness {
+export function computeCampaignCompleteness(graph: TraceabilityGraph, assessment: CampaignAssessmentV2, commit: string, assessmentTag: string | null, findings: readonly TraceabilityDiscoveryFinding[] = []): CampaignCompleteness {
  const scoped = scopeTraceabilityGraph(graph,assessment.requirementIds);
  const kindsById = new Map(scoped.entities.map(entity => [entity.id,entity.kind]));
  const byKind = (kind: string): readonly string[] => scoped.entities.filter(entity => entity.kind === kind).map(entity => entity.id).sort();
@@ -114,7 +114,7 @@ export function computeCampaignCompleteness(graph: TraceabilityGraph, assessment
    || incoming(id,['acceptance']).length === 0 || !incoming(id,['acceptance']).every(tested)),
  };
  return {campaign:assessment.campaign,commit,assessmentTag,requirementIds:[...assessment.requirementIds].sort(),
-  vector:[unresolved.O.length,unresolved.A.length,unresolved.T.length,unresolved.I.length],unresolved};
+  vector:[findings.length,unresolved.O.length,unresolved.A.length,unresolved.T.length,unresolved.I.length],unresolved};
 }
 
 function git(root: string, args: readonly string[]): string {
@@ -199,15 +199,15 @@ export function runTraceabilityCompleteness(argv: readonly string[], cwd = proce
  const failures = project.projectFindings.filter(finding => finding.code !== 'empty-scope');
  if (failures.length > 0) throw new Error(`Cannot assess malformed canonical traceability sources: ${failures.map(finding => `${finding.path}:${finding.line} ${finding.code}: ${finding.message}`).join('; ')}`);
  const result: CampaignCompletenessReport = {
-  ...computeCampaignCompleteness(project.graph,assessment,commit,assessmentTag ?? null),
+  ...computeCampaignCompleteness(project.graph,assessment,commit,assessmentTag ?? null,project.discoveryFindings),
   findings:project.discoveryFindings,
   completionBlocked:project.discoveryFindings.length > 0,
  };
  update(1,1,'Assessment');
  if (json) process.stdout.write(`${JSON.stringify(result)}\n`);
  else {
-  process.stdout.write(`Campaign completeness vector (O,A,T,I): (${result.vector.join(',')})\n`);
-  if (result.completionBlocked && !verbose) process.stderr.write(`Completion blocked by ${result.findings.length} annotation findings; use --verbose for details.\n`);
+  process.stdout.write(`Campaign completeness vector (F,O,A,T,I): (${result.vector.join(',')})\n`);
+  if (result.completionBlocked && !verbose) process.stderr.write(`O/A/T/I are provisional: completion blocked by ${result.findings.length} annotation findings; use --verbose for details.\n`);
   if (verbose) {
   process.stdout.write(`Campaign: ${result.campaign}; commit: ${commit}; assessment: ${result.assessmentTag ?? 'none (all adequacy unknown)'}\n`);
   for (const coordinate of ['O','A','T','I'] as const) process.stdout.write(`${coordinate} unresolved: ${result.unresolved[coordinate].join(', ') || 'none'}\n`);

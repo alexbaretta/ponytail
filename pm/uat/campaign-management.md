@@ -43,7 +43,7 @@ Obligation: [OBL-CM-DESCENT](../requirements/campaign-management.md#obl-cm-desce
 **Procedure and expected observations:** Compare integrated candidates before and after a repair. Missing, failing or semantically inadequate proof cannot reduce T/I. A valid repair reduces the first changed coordinate while later coordinates may increase. A newly discovered gap raises the affected coordinate without being mislabeled progress.
 
 Run `ponytail traceability completeness` with explicit initial requirement IDs,
-then a reviewed assessment tag at HEAD. Verify exact unresolved IDs and vector,
+then a reviewed assessment tag at HEAD. Verify F equals the annotation finding count, precedes O/A/T/I, and is nonzero even when all coverage coordinates are zero. Verify exact unresolved IDs and vector,
 including missing structure despite claimed completion. Reject lightweight, ambiguous or malformed assessment tags,
 missing validation tags, invalid IDs and invalid committed source. The command works without a database; zero remains provisional.
 
