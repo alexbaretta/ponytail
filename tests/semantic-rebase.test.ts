@@ -20,6 +20,35 @@ function fixture(testContext:TestContext):Fixture {const root=fs.realpathSync(fs
 function cli(root:string,args:readonly string[],expected=0):string {const executable=path.resolve('dist/src/semantic-rebase.js');const result=spawnSync(process.execPath,[executable,...args],{cwd:root,encoding:'utf8'});assert.equal(result.status,expected,result.stderr);return result.stdout;}
 function analysis(root:string):SemanticRebaseAnalysisV2 {const gitDirectory=git(root,['rev-parse','--absolute-git-dir']);const value:unknown=JSON.parse(fs.readFileSync(path.join(gitDirectory,'ponytail-semantic-rebase','analysis.json'),'utf8'));return readSemanticRebaseAnalysisV2(value);}
 
+test('selected changes reuse commit diffs while preserving contributors and replay order',testContext=>{
+ const value=fixture(testContext);
+ cli(value.root,['diff','clean-target']);
+ const frozen=analysis(value.root);
+ const stateDirectory=path.join(git(value.root,['rev-parse','--absolute-git-dir']),'ponytail-semantic-rebase');
+ const selectionPath=path.join(stateDirectory,'selection.txt');
+ fs.writeFileSync(selectionPath,`ponytail-semantic-rebase-selection-v1 ${frozen.analysisDigest}\n${frozen.sourceChanges.map(change=>`${change.id} - | review all fixture changes`).join('\n')}\n`);
+ const tracePath=path.join(stateDirectory,'git-trace');
+ const result=spawnSync(process.execPath,[path.resolve('dist/src/semantic-rebase.js'),'run','clean-target','--conflicts',selectionPath],{cwd:value.root,encoding:'utf8',env:{...process.env,GIT_TRACE:tracePath}});
+ assert.equal(result.status,0,result.stderr);
+ const diffCalls=fs.readFileSync(tracePath,'utf8').split('\n').filter(line=>line.includes('built-in: git diff --binary')&&line.includes('--unified=0'));
+ // Contributor discovery reads each commit once; the first stop dossier reads it once more.
+ assert.equal(diffCalls.length,frozen.sourceCommits.length+1);
+ const run=SemanticRebaseRunReaders.V2(JSON.parse(fs.readFileSync(path.join(stateDirectory,'run.json'),'utf8')));
+ assert.deepEqual(run.plannedCommits,frozen.sourceCommits);
+ const expected=new Map<string,readonly string[]>([
+  ['equivalent.txt',frozen.sourceCommits.slice(0,1)],['source.txt',frozen.sourceCommits.slice(1,3)],
+  ['source-only.txt',frozen.sourceCommits.slice(3,4)],['rename-new.txt',frozen.sourceCommits.slice(4,5)],
+  ['/dev/null',frozen.sourceCommits.slice(5,6)],['binary.bin',frozen.sourceCommits.slice(6,7)],
+ ]);
+ for(const change of frozen.sourceChanges)assert.deepEqual(run.contributors[change.id],expected.get(change.newPath));
+ let output=result.stdout;
+ let stops=0;
+ while(/semantic rebase stop/.test(output)){stops++;output=cli(value.root,['continue']);}
+ assert.equal(stops,frozen.sourceCommits.length);
+ assert.equal(git(value.root,['diff',frozen.sourceTip,'HEAD','--','.',':(exclude)clean-target.txt']),'');
+ assert.deepEqual(git(value.root,['log','--reverse','--format=%s','clean-target..HEAD']).split('\n'),git(value.root,['log','--reverse','--format=%s',`${frozen.mergeBase}..${frozen.sourceTip}`]).split('\n'));
+});
+
 test('aggregate review preserves complete source and target diffs above the default capture limit',testContext=>{
  const value=fixture(testContext);
  const payload=Array.from({length:20000},(_value,index)=>`${index}: ${'content '.repeat(16)}\n`).join('');

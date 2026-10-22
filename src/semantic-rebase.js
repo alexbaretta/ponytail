@@ -229,13 +229,11 @@ function readSemanticRebaseSelectionV1(text, analysis) { if (typeof text !== 'st
 function selectionDigest(selection) { return sha256(JSON.stringify(selection)); }
 function perCommitFiles(commit) { const parent = gitText(['rev-parse', `${commit}^`]); return parseDiff(aggregateDiff(parent, commit, 0)); }
 function intersects(start, count, hunkStart, hunkCount) { const end = start + Math.max(count, 1); const hunkEnd = hunkStart + Math.max(hunkCount, 1); return start < hunkEnd && hunkStart < end; }
-function contributingCommits(analysis, change) {
+function contributingCommits(commitFiles, change) {
     let tracked = { path: change.newPath === '/dev/null' ? change.oldPath : change.newPath, start: change.newStart, count: change.newCount };
     const contributors = new Set();
     let ambiguous = change.kind === 'file' || change.newCount === 0 || change.oldPath === '/dev/null';
-    const commits = [...analysis.sourceCommits].reverse();
-    for (const commit of commits) {
-        const files = perCommitFiles(commit);
+    for (const [commit, files] of commitFiles) {
         const file = files.find(item => item.newPath === tracked.path || item.oldPath === tracked.path);
         if (!file)
             continue;
@@ -260,8 +258,8 @@ function contributingCommits(analysis, change) {
     if (contributors.size === 0) {
         ambiguous = true;
         tracked = { path: change.newPath === '/dev/null' ? change.oldPath : change.newPath, start: 0, count: 0 };
-        for (const commit of commits) {
-            const file = perCommitFiles(commit).find(item => item.newPath === tracked.path || item.oldPath === tracked.path);
+        for (const [commit, files] of commitFiles) {
+            const file = files.find(item => item.newPath === tracked.path || item.oldPath === tracked.path);
             if (file) {
                 contributors.add(commit);
                 if (file.newPath === tracked.path && file.oldPath !== file.newPath && file.oldPath !== '/dev/null')
@@ -269,7 +267,7 @@ function contributingCommits(analysis, change) {
             }
         }
     }
-    return analysis.sourceCommits.filter(commit => contributors.has(commit));
+    return [...commitFiles.keys()].reverse().filter(commit => contributors.has(commit));
 }
 function writeRun(run) { writeAtomic(statePath(RUN_FILE), `${JSON.stringify(run, null, 2)}\n`); }
 function stringArrayRecord(value, label) { if (!record(value))
@@ -314,11 +312,13 @@ function launchRebase(analysis, run) { const editor = statePath('sequence-editor
     return running;
 } if (result.status !== 0)
     fail((result.stderr || result.stdout || 'git rebase failed before retaining state').trim(), 1); const completed = { ...run, status: 'completed' }; writeRun(completed); return completed; }
-function startSemanticRebase(selectionFile) { ensureNoRebase(); ensureClean(); const analysis = readAnalysis(); validateFrozen(analysis, true); ensureUntrackedSafe(analysis.sourceTip, analysis.targetTip, analysis.sourceCommits); const selection = readSemanticRebaseSelectionV1(node_fs_1.default.readFileSync(selectionFile, 'utf8'), analysis); const contributors = {}; const selectionTargets = {}; for (const entry of selection.entries) {
+function startSemanticRebase(selectionFile) { ensureNoRebase(); ensureClean(); const analysis = readAnalysis(); validateFrozen(analysis, true); ensureUntrackedSafe(analysis.sourceTip, analysis.targetTip, analysis.sourceCommits); const selection = readSemanticRebaseSelectionV1(node_fs_1.default.readFileSync(selectionFile, 'utf8'), analysis); const contributors = {}; const selectionTargets = {}; const commitFiles = new Map(); if (selection.entries.length > 0)
+    for (const commit of [...analysis.sourceCommits].reverse())
+        commitFiles.set(commit, perCommitFiles(commit)); for (const entry of selection.entries) {
     const change = analysis.sourceChanges.find(item => item.id === entry.sourceId);
     if (!change)
         fail(`unknown source change: ${entry.sourceId}`);
-    contributors[entry.sourceId] = contributingCommits(analysis, change);
+    contributors[entry.sourceId] = contributingCommits(commitFiles, change);
     selectionTargets[entry.sourceId] = entry.targetIds;
 } const plannedCommits = analysis.sourceCommits.filter(commit => Object.values(contributors).some(commits => commits.includes(commit))); if (selection.entries.length > 0 && plannedCommits.length === 0)
     fail('selected changes have no contributing source commit'); const prepared = { schemaVersion: 2, analysisDigest: analysis.analysisDigest, selectionDigest: selectionDigest(selection), originalTip: analysis.sourceTip, sourceBranch: analysis.sourceBranch, targetTip: analysis.targetTip, contributors, selectionTargets, plannedCommits, reviewedCommits: [], status: 'prepared', residualPath: null }; writeRun(prepared); return dossier(analysis, launchRebase(analysis, prepared)); }
