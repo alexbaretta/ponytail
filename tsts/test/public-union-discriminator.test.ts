@@ -36,6 +36,32 @@ describe('public union discriminator rule', (): void => {
     assert.deepEqual(result.diagnostics, []);
   });
 
+  it('resolves instantiated generic discriminants through inheritance and aliases', async (): Promise<void> => {
+    const projectPath: string = await createFixtureProject(`
+      interface Metric<Kind extends string> { readonly kind: Kind; }
+      interface Recordable<Kind extends string> extends Metric<Kind> { readonly value: number; }
+      type Counter<Kind extends string = 'counter'> = Recordable<Kind>;
+      export type TelemetryApiMetric = Counter | Recordable<'histogram'>
+        | Recordable<'up_down_counter'> | Metric<'observable_gauge'>;
+    `);
+    const result: TstsCheckResult = await checkProject({ projectPath });
+    assert.deepEqual(result.diagnostics, []);
+  });
+
+  it('rejects generic discriminants that are duplicate, broad, optional or nonsingleton', async (): Promise<void> => {
+    for (const property of ["readonly kind: Kind", "readonly kind?: Kind"]) {
+      const projectPath: string = await createFixtureProject(`
+        interface Metric<Kind extends string> { ${property}; }
+        export type Broad = Metric<string> | Metric<'gauge'>;
+        export type Multiple = Metric<'counter' | 'histogram'> | Metric<'gauge'>;
+        export type Duplicate = Metric<'same'> | (Metric<'same'> & { readonly value: number });
+      `);
+      const result: TstsCheckResult = await checkProject({ projectPath });
+      assert.equal(result.diagnostics.length, 3);
+      assert.ok(result.diagnostics.every(diagnostic => diagnostic.ruleId === 'public-union-discriminator'));
+    }
+  });
+
   it('accepts const-backed string literal discriminants', async ():
     Promise<void> => {
     const projectPath: string = await createFixtureProject(`

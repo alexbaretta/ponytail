@@ -96,12 +96,6 @@ export interface TstsCheckResult {
     readonly diagnostics: readonly TstsDiagnostic[];
 }
 
-interface DeclarationIndex {
-    readonly interfaces: ReadonlyMap<string, ts.InterfaceDeclaration>;
-    readonly stringConstants: ReadonlyMap<string, string>;
-    readonly typeAliases: ReadonlyMap<string, ts.TypeAliasDeclaration>;
-}
-
 interface RequiredProperty {
     readonly literalValue?: string | undefined;
 }
@@ -163,9 +157,8 @@ export async function checkProject(input: TstsCheckProjectInput): Promise<TstsCh
         const sourceFiles: readonly ts.SourceFile[] = program
             .getSourceFiles()
             .filter((sourceFile: ts.SourceFile): boolean => !sourceFile.isDeclarationFile);
-        const declarationIndex: DeclarationIndex = buildDeclarationIndex(sourceFiles);
         const publicUnionAnalysis: PublicUnionAnalysis = analyzePublicUnions({
-            declarationIndex,
+            typeChecker: program.getTypeChecker(),
             sourceFiles,
         });
         const selectedSourceFiles: readonly ts.SourceFile[] = selectedPaths === undefined ? sourceFiles
@@ -3480,48 +3473,13 @@ function isOptionalSeverity(value: unknown): value is TstsDiagnosticSeverity | u
     return value === undefined || value === 'error' || value === 'warning';
 }
 
-function buildDeclarationIndex(sourceFiles: readonly ts.SourceFile[]): DeclarationIndex {
-    const interfaces: Map<string, ts.InterfaceDeclaration> = new Map();
-    const stringConstants: Map<string, string> = new Map();
-    const typeAliases: Map<string, ts.TypeAliasDeclaration> = new Map();
-
-    for (const sourceFile of sourceFiles) {
-        for (const statement of sourceFile.statements) {
-            if (ts.isInterfaceDeclaration(statement)) {
-                interfaces.set(statement.name.text, statement);
-            }
-
-            if (ts.isTypeAliasDeclaration(statement)) {
-                typeAliases.set(statement.name.text, statement);
-            }
-
-            if (
-                ts.isVariableStatement(statement) &&
-                (statement.declarationList.flags & ts.NodeFlags.Const) !== 0
-            ) {
-                for (const declaration of statement.declarationList.declarations) {
-                    if (
-                        ts.isIdentifier(declaration.name) &&
-                        declaration.initializer !== undefined &&
-                        ts.isStringLiteral(declaration.initializer)
-                    ) {
-                        stringConstants.set(declaration.name.text, declaration.initializer.text);
-                    }
-                }
-            }
-        }
-    }
-
-    return { interfaces, stringConstants, typeAliases };
-}
-
 interface PublicUnionAnalysis {
     readonly diagnostics: readonly TstsDiagnostic[];
     readonly publicUnionDescriptors: ReadonlyMap<string, DiscriminatedUnionDescriptor>;
 }
 
 function analyzePublicUnions(input: {
-    readonly declarationIndex: DeclarationIndex;
+    readonly typeChecker: ts.TypeChecker;
     readonly sourceFiles: readonly ts.SourceFile[];
 }): PublicUnionAnalysis {
     const diagnostics: TstsDiagnostic[] = [];
@@ -3536,7 +3494,7 @@ function analyzePublicUnions(input: {
             ) {
                 const analysisResult: PublicUnionDiscriminatorAnalysisResult =
                     analyzePublicUnionDiscriminator({
-                        declarationIndex: input.declarationIndex,
+                        typeChecker: input.typeChecker,
                         sourceFile,
                         typeAlias: statement,
                         unionTypeNode: statement.type,
@@ -3565,7 +3523,7 @@ interface PublicUnionDiscriminatorAnalysisResult {
 }
 
 function analyzePublicUnionDiscriminator(input: {
-    readonly declarationIndex: DeclarationIndex;
+    readonly typeChecker: ts.TypeChecker;
     readonly sourceFile: ts.SourceFile;
     readonly typeAlias: ts.TypeAliasDeclaration;
     readonly unionTypeNode: ts.UnionTypeNode;
@@ -3574,9 +3532,8 @@ function analyzePublicUnionDiscriminator(input: {
 
     for (const typeNode of input.unionTypeNode.types) {
         const variant: RequiredPropertyMap | undefined = collectRequiredProperties({
-            declarationIndex: input.declarationIndex,
+            typeChecker: input.typeChecker,
             typeNode,
-            visitedTypeNames: new Set(),
         });
 
         if (variant === undefined) {
@@ -3621,196 +3578,28 @@ function analyzePublicUnionDiscriminator(input: {
     };
 }
 
-interface CollectRequiredStringLiteralPropertiesInput {
-    readonly declarationIndex: DeclarationIndex;
+function collectRequiredProperties(input: {
+    readonly typeChecker: ts.TypeChecker;
     readonly typeNode: ts.TypeNode;
-    readonly visitedTypeNames: ReadonlySet<string>;
-}
-
-function collectRequiredProperties(
-    input: CollectRequiredStringLiteralPropertiesInput
-): RequiredPropertyMap | undefined {
-    if (ts.isParenthesizedTypeNode(input.typeNode)) {
-        return collectRequiredProperties({
-            ...input,
-            typeNode: input.typeNode.type,
-        });
-    }
-
-    if (ts.isTypeLiteralNode(input.typeNode)) {
-        return collectPropertiesFromMembers(input.declarationIndex, input.typeNode.members);
-    }
-
-    if (ts.isIntersectionTypeNode(input.typeNode)) {
-        return collectPropertiesFromIntersection(input);
-    }
-
-    if (ts.isTypeReferenceNode(input.typeNode)) {
-        return collectPropertiesFromTypeReference(input);
-    }
-
-    return undefined;
-}
-
-function collectPropertiesFromIntersection(
-    input: CollectRequiredStringLiteralPropertiesInput
-): RequiredPropertyMap | undefined {
-    if (!ts.isIntersectionTypeNode(input.typeNode)) {
-        return undefined;
-    }
-
-    const intersectionTypeNode: ts.IntersectionTypeNode = input.typeNode;
-    const properties: Map<string, RequiredProperty> = new Map();
-
-    for (const typeNode of intersectionTypeNode.types) {
-        const memberProperties: RequiredPropertyMap | undefined = collectRequiredProperties({
-            ...input,
-            typeNode,
-        });
-
-        if (memberProperties === undefined) {
-            return undefined;
-        }
-
-        for (const [propertyName, property] of memberProperties) {
-            properties.set(propertyName, property);
-        }
-    }
-
-    return properties;
-}
-
-function collectPropertiesFromTypeReference(
-    input: CollectRequiredStringLiteralPropertiesInput
-): RequiredPropertyMap | undefined {
-    if (!ts.isTypeReferenceNode(input.typeNode)) {
-        return undefined;
-    }
-
-    const typeReferenceNode: ts.TypeReferenceNode = input.typeNode;
-
-    if (!ts.isIdentifier(typeReferenceNode.typeName)) {
-        return undefined;
-    }
-
-    const typeName: string = typeReferenceNode.typeName.text;
-
-    if (input.visitedTypeNames.has(typeName)) {
-        return undefined;
-    }
-
-    const visitedTypeNames: Set<string> = new Set(input.visitedTypeNames);
-    visitedTypeNames.add(typeName);
-
-    const interfaceDeclaration: ts.InterfaceDeclaration | undefined =
-        input.declarationIndex.interfaces.get(typeName);
-
-    if (interfaceDeclaration !== undefined) {
-        return collectPropertiesFromInterface({
-            declarationIndex: input.declarationIndex,
-            interfaceDeclaration,
-            visitedTypeNames,
-        });
-    }
-
-    const typeAliasDeclaration: ts.TypeAliasDeclaration | undefined =
-        input.declarationIndex.typeAliases.get(typeName);
-
-    if (typeAliasDeclaration !== undefined) {
-        return collectRequiredProperties({
-            declarationIndex: input.declarationIndex,
-            typeNode: typeAliasDeclaration.type,
-            visitedTypeNames,
-        });
-    }
-
-    return undefined;
-}
-
-function collectPropertiesFromInterface(input: {
-    readonly declarationIndex: DeclarationIndex;
-    readonly interfaceDeclaration: ts.InterfaceDeclaration;
-    readonly visitedTypeNames: ReadonlySet<string>;
 }): RequiredPropertyMap | undefined {
+    const type: ts.Type = input.typeChecker.getTypeFromTypeNode(input.typeNode);
+    if ((type.flags & (ts.TypeFlags.Object | ts.TypeFlags.Intersection)) === 0) {
+        return undefined;
+    }
     const properties: Map<string, RequiredProperty> = new Map();
-
-    for (const heritageClause of input.interfaceDeclaration.heritageClauses ?? []) {
-        for (const heritageType of heritageClause.types) {
-            if (!ts.isIdentifier(heritageType.expression)) {
-                return undefined;
-            }
-
-            const inheritedProperties: RequiredPropertyMap | undefined = collectRequiredProperties({
-                declarationIndex: input.declarationIndex,
-                typeNode: ts.factory.createTypeReferenceNode(heritageType.expression.text),
-                visitedTypeNames: input.visitedTypeNames,
-            });
-
-            if (inheritedProperties === undefined) {
-                return undefined;
-            }
-
-            for (const [propertyName, property] of inheritedProperties) {
-                properties.set(propertyName, property);
-            }
-        }
+    for (const symbol of input.typeChecker.getPropertiesOfType(type)) {
+        if ((symbol.flags & ts.SymbolFlags.Optional) !== 0) continue;
+        const propertyType: ts.Type = input.typeChecker.getTypeOfSymbolAtLocation(symbol, input.typeNode);
+        properties.set(symbol.getName(), {
+            literalValue: propertyType.isStringLiteral() ? propertyType.value : undefined,
+        });
     }
-
-    for (const [propertyName, property] of collectPropertiesFromMembers(
-        input.declarationIndex,
-        input.interfaceDeclaration.members
-    )) {
-        properties.set(propertyName, property);
-    }
-
-    return properties;
-}
-
-function collectPropertiesFromMembers(
-    declarationIndex: DeclarationIndex,
-    members: ts.NodeArray<ts.TypeElement>
-): RequiredPropertyMap {
-    const properties: Map<string, RequiredProperty> = new Map();
-
-    for (const member of members) {
-        if (
-            ts.isPropertySignature(member) &&
-            member.questionToken === undefined &&
-            member.type !== undefined
-        ) {
-            const propertyName: string | undefined = getPropertyNameText(member.name);
-            const literalValue: string | undefined = getStringLiteralTypeValue(
-                declarationIndex,
-                member.type
-            );
-
-            if (propertyName !== undefined) {
-                properties.set(propertyName, { literalValue });
-            }
-        }
-    }
-
     return properties;
 }
 
 function getPropertyNameText(name: ts.PropertyName): string | undefined {
     if (ts.isIdentifier(name) || ts.isStringLiteral(name)) {
         return name.text;
-    }
-
-    return undefined;
-}
-
-function getStringLiteralTypeValue(
-    declarationIndex: DeclarationIndex,
-    typeNode: ts.TypeNode
-): string | undefined {
-    if (ts.isLiteralTypeNode(typeNode) && ts.isStringLiteral(typeNode.literal)) {
-        return typeNode.literal.text;
-    }
-
-    if (ts.isTypeQueryNode(typeNode) && ts.isIdentifier(typeNode.exprName)) {
-        return declarationIndex.stringConstants.get(typeNode.exprName.text);
     }
 
     return undefined;
