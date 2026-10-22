@@ -81,6 +81,28 @@ test('ambiguous code classification fails and exclusions cannot hide PM declarat
  assert.ok(result.graphFindings.some(finding => finding.code === 'missing-implementation'));
 });
 
+// Traceability: verifies ACC-CM-GRAPH from unit-test TEST-CM-PROJECT-MIGRATION-EXCLUSION
+test('excluded migration output preserves bytes and grants no coverage while authored sources stay strict', testContext => {
+ const root = project(testContext);
+ const migrationPath = 'migrations/released/migration.sql';
+ const migrationText = '-- Traceability: OLD-A, OLD-B\n-- Traceability: implements OBL-A from implementation migration\nCREATE TABLE example (id INTEGER);\n';
+ write(root,migrationPath,migrationText);
+ write(root,'src/a.js','export const enabled = true;');
+ const traceabilityConfigurationV5: TraceabilityConfigurationV5 = {...configuration(),
+  sources:[...configuration().sources,{kind:'implementation',include:['migrations/**/*.sql'],locator:'text'}],
+  exclusions:[{pattern:'migrations/**/*.sql',reason:'Generated migration artifacts; authored schema and supplemental inputs own traceability; migration QA remains mandatory'}]};
+ const result = discoverTraceabilityProject(traceabilityConfigurationV5,path.join(root,'config.json'),root);
+ assert.deepEqual(result.discoveryFindings,[]);
+ assert.deepEqual(result.projectFindings,[]);
+ assert.ok(!result.sources.some(source => source.path === migrationPath));
+ assert.ok(!result.graph.entities.some(entity => entity.kind === 'implementation'));
+ assert.ok(result.graphFindings.some(finding => finding.code === 'missing-implementation' && finding.id === 'OBL-A'));
+ assert.equal(fs.readFileSync(path.join(root,migrationPath),'utf8'),migrationText);
+ write(root,'src/a.js','// Traceability: OLD-A');
+ const malformed = discoverTraceabilityProject(traceabilityConfigurationV5,path.join(root,'config.json'),root);
+ assert.ok(malformed.discoveryFindings.some(finding => finding.path === 'src/a.js' && finding.code === 'malformed-marker'));
+});
+
 // Traceability: verifies ACC-CM-GRAPH from unit-test TEST-CM-PROJECT-GENERATED
 test('generated mapping uses discovered source and rejects duplicate output annotations', testContext => {
  const root = project(testContext);

@@ -49,8 +49,20 @@ Co-location alone grants no implementation credit: review must establish the
 named block implements the obligation, beyond merely calling a test helper.
 TypeScript source requires the semantic locator and
 its configured `cliPath` and `projectPath`. Do not classify TypeScript as text to
-avoid attachment checks. Generated output maps directly to a classified canonical
-source and contains no relationship annotations.
+avoid attachment checks. Output listed in `generatedArtifacts` maps directly to a
+classified canonical source and contains no relationship annotations.
+
+Exclude generated SQL migration artifacts from annotation discovery using existing
+`exclusions` with reasons; do not also list them in `generatedArtifacts`. Keep
+applied migration bytes and historical comments unchanged. Establish current
+traceability on the authored Prisma schemas and supplemental generators and inputs,
+classifying each actual source owner independently. Applied or immutable does not
+by itself mean generated: handwritten transformations not represented by those
+sources must not disappear from traceability through an artifact exclusion.
+Excluded output grants no graph entities, relationships, implementation or test
+credit. Migration correctness, inventory and immutability QA remain mandatory
+and independent of annotation discovery. No historical annotation classification,
+per-finding exception or additional ledger is needed.
 
 Canonical Markdown scopes enumerate every declaration, including unreferenced,
 untracked or ignored acceptances. Code scopes include tracked and unignored new
@@ -61,8 +73,9 @@ is not a structural finding and grants no graph entity, relationship or coverage
 credit. Do not invent an obligation link to satisfy a per-file quota. Explicit
 malformed claims still produce findings; missing obligation implementation or
 acceptance test coverage remains unresolved. Markdown declarations and their
-required ownership links remain mandatory. This changes no immutable-artifact
-policy and authorizes no blanket exclusion or QA waiver.
+required ownership links remain mandatory. Supporting-source treatment authorizes
+no blanket exclusion or QA waiver; generated SQL migrations follow the artifact
+policy above.
 The generated reverse view is excluded from discovery. JavaScript and TypeScript
 files with canonical relationship declarations in comments must have an explicit
 source classification or exclusion; otherwise discovery reports `unclassified-source`
