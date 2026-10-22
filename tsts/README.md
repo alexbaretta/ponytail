@@ -2,7 +2,7 @@
 
 TSTS is Ponytail's project-agnostic TypeScript static analyzer. Its canonical
 source lives here; consuming projects use the installed CLI instead of editing
-a Git submodule. It checks public union discriminators and exhaustive dispatch,
+a Git submodule. It checks owned object union discriminators and exhaustive dispatch,
 with additional configuration-driven no-aliasing, unique-exported-type-name,
 unused-code, type-safe serialization, shared-message-contract and versioned-data-contract rules.
 
@@ -42,6 +42,11 @@ declarations for semantic analysis. Missing or out-of-program files fail; an emp
 selection cannot pass. It cannot be combined with config, directory-structure or
 traceability modes. Include every affected source in focused validation. A focused
 pass does not clear dependency findings or replace whole-project final QA.
+
+Direct-project checks include private and local unions. A discriminator can be
+a nested path, such as `destination.kind`, with every segment required and one
+unique literal per variant. Optional paths and overlapping or multi-value
+discriminators fail. Historical `public-union-*` diagnostic IDs remain stable.
 
 Traceability analysis is intentionally narrow: TSTS verifies that configured
 TypeScript annotations attach to supported named declarations. The

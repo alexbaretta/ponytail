@@ -6,9 +6,9 @@ Licensed under the MIT License. See LICENSE in the project root.
 
 # TypeScript, Zod, And Compiler-Based Checks
 
-Use this reference when editing TypeScript public API contracts, Zod
+Use this reference when editing owned TypeScript contracts, Zod
 schemas, generated TypeScript contract surfaces, or TypeScript backend
-dispatch over public API variants.
+dispatch over owned variants.
 
 ## Type-System Integrity
 
@@ -26,10 +26,12 @@ dispatch over public API variants.
 
 ## TypeScript Contract Rules
 
-- Model owned public API unions as discriminated unions.
+- Model all owned object unions, including private internal types, as discriminated unions.
 - Add a comment above the union naming the discriminator field.
-- The discriminator property must be required in every variant.
-- Each variant must assign a unique string literal discriminator value.
+- The discriminator may be a nested path such as `destination.kind`; every
+  segment must be required in every variant. Preserve a valid nested path
+  rather than flattening the type or adding a duplicate tag for the checker.
+- Each variant must assign a unique singleton literal discriminator value.
 - Do not use a business-domain field as the discriminator unless its
   values are guaranteed to stay one-to-one with variants as the domain
   evolves.
@@ -82,7 +84,7 @@ export type PaymentRequest =
 
 - Use named exported schemas with explicit type annotations.
 - Use `z.discriminatedUnion(...)` when Zod supports the shape.
-- Do not validate a public API union by ordered `safeParse` attempts.
+- Do not validate an owned union by ordered `safeParse` attempts.
 - If Zod cannot model the shape directly, redesign the contract before
   adding fallback parsing.
 
@@ -104,23 +106,29 @@ rules that vanilla `tsc` accepts but the host project rejects.
 When integrating such a checker:
 
 1. Configure the TypeScript project files to analyze.
-2. Mark or include public contract source files.
+2. Include owned contract source files, including private internal types.
 3. Run the checker in focused mode while developing a contract change.
 4. Wire it into the host quality gate only after focused checks give
    actionable diagnostics.
 5. Report the full non-fatal violation list instead of stopping at the
    first violation.
 
+For direct-project union and dispatch checks, use
+`tsts --project <tsconfig> --file <source.ts>` (repeat `--file` for each affected
+source). Imported declarations remain available to the checker. This selection
+cannot be combined with other analysis modes and does not establish a pass for
+unselected dependencies or replace the full project gate.
+
 Expected checks:
 
 - Owned code must not contain prohibited type-system bypasses.
 - Valid contract fixtures must use their exact owned contract types.
-- A public union must have one shared required discriminator field.
+- An owned object union must have a shared required discriminator field or nested path.
 - Discriminator values must be unique across variants.
 - Candidate discriminator diagnostics must explain why each candidate
   failed.
-- Dispatch over public unions must be exhaustive.
-- Ordered trial parsing over public union variants must be rejected.
+- Dispatch over owned unions must be exhaustive.
+- Ordered trial parsing over owned union variants must be rejected.
 
 Treat a compiler-based contract violation as a design defect, not a lint
 style issue.

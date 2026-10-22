@@ -14,6 +14,27 @@ import { stringifyJsonLosslessly } from '../src/lossless-json.js';
 import type { TstsCheckResult, TstsConfig, TstsDiagnostic } from '../src/index.js';
 
 describe('public union dispatch rule', (): void => {
+  it('checks nested private dispatch and keeps same-named local unions distinct', async (): Promise<void> => {
+    const projectPath = await createFixtureProject(`
+      type Event = { destination: { kind: 'a' } } | { destination: { kind: 'b' } };
+      function complete(event: Event): void {
+        switch (event.destination.kind) { case 'a': return; case 'b': return; }
+      }
+      function incomplete(event: Event): void {
+        switch (event.destination.kind) { case 'a': return; }
+      }
+      function conditional(event: Event): void { if (event.destination.kind === 'a') return; }
+      function outer(): void {
+        type Event = { ok: true } | { ok: false };
+        function conditional(event: Event): void { if (event.ok === true) return; }
+      }
+    `);
+    const result = await checkProject({ projectPath });
+    assert.equal(result.diagnostics.length, 3);
+    assert.equal(result.diagnostics.filter(diagnostic => diagnostic.ruleId === 'public-union-exhaustive-dispatch').length, 2);
+    assert.ok(result.diagnostics.some(diagnostic => diagnostic.message.includes('Missing cases: b')));
+  });
+
   it('focuses diagnostics while retaining imported union context and rejecting unmatched selections', async (): Promise<void> => {
     const projectPath: string = await createFixtureProject(`
       import type { Command } from './dependency.js';

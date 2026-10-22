@@ -11,6 +11,57 @@ import { checkProject } from '../src/index.js';
 import type { TstsCheckResult, TstsDiagnostic } from '../src/index.js';
 
 describe('public union discriminator rule', (): void => {
+  it('does not impose owned discriminators on third-party declarations', async (): Promise<void> => {
+    const projectPath = await createFixtureProject(`
+      import type { ExternalNode, ExternalNodes } from './external.js';
+      interface Options { nodes: ExternalNode | ExternalNodes; }
+    `);
+    await writeFile(path.join(path.dirname(projectPath), 'external.d.ts'), `
+      export interface ExternalNode { text: string; }
+      export interface ExternalNodes { length: number; }
+    `);
+    const result = await checkProject({ projectPath });
+    assert.deepEqual(result.diagnostics, []);
+  });
+
+  it('accepts private nested paths and non-string singleton discriminators', async (): Promise<void> => {
+    const projectPath = await createFixtureProject(`
+      interface Destination<Kind extends string> { readonly kind: Kind; }
+      type Event = { destination: Destination<'admin'>; value: string }
+        | { destination: Destination<'project'>; value: number };
+      type Result = { ok: true; value: string } | { ok: false; error: string };
+      type Numeric = { kind: 1 } | { kind: 2 };
+      type Big = { kind: 1n } | { kind: 2n };
+      enum Kind { A = 1, B = 2 }
+      type Enumeration = { kind: Kind.A } | { kind: Kind.B };
+      type Mixed = { kind: '1' } | { kind: 1 } | { kind: null };
+      function local() { type Local = { destination: { kind: 'a' } } | { destination: { kind: 'b' } }; }
+    `);
+    const result = await checkProject({ projectPath });
+    assert.deepEqual(result.diagnostics, []);
+  });
+
+  it('rejects invalid nested paths in private, local and inline unions', async (): Promise<void> => {
+    const projectPath = await createFixtureProject(`
+      type Missing = { destination: { kind: 'a' } } | { destination: { other: 'b' } };
+      type OptionalParent = { destination?: { kind: 'a' } } | { destination: { kind: 'b' } };
+      type OptionalLeaf = { destination: { kind?: 'a' } } | { destination: { kind: 'b' } };
+      type Duplicate = { destination: { kind: 'a' }; value: string } | { destination: { kind: 'a' }; value: number };
+      type Multiple = { destination: { kind: 'a' | 'b' } } | { destination: { kind: 'c' } };
+      enum Kind { A = 1, B = 2 }
+      type EnumDuplicate = { kind: Kind.A; value: string } | { kind: 1; value: number };
+      type EnumMultiple = { kind: Kind } | { kind: 3 };
+      function local() { type Local = { value: string } | { value: number }; }
+      function inline(value: { data: string } | { data: number }): void {}
+      interface Cycle { next: Cycle; }
+      type Recursive = { destination: Cycle; value: string } | { destination: Cycle; value: number };
+    `);
+    const result = await checkProject({ projectPath });
+    assert.equal(result.diagnostics.length, 10);
+    assert.ok(result.diagnostics.every(diagnostic => diagnostic.ruleId === 'public-union-discriminator'));
+    assert.ok(result.diagnostics.some(diagnostic => diagnostic.message.includes('"destination.kind" reuses')));
+  });
+
   it('accepts a valid discriminated public union', async (): Promise<void> => {
     const projectPath: string = await createFixtureProject(`
       export interface LiteralAlphaCommand {
@@ -221,7 +272,7 @@ describe('public union discriminator rule', (): void => {
     const result: TstsCheckResult = await checkProject({ projectPath });
     const diagnostic: TstsDiagnostic = singleDiagnostic(result);
 
-    assert.match(diagnostic.message, /No required string-literal field/u);
+    assert.match(diagnostic.message, /No required singleton-literal field/u);
   });
 
   it('explains shared required fields that are not literal in every variant', async (): Promise<void> => {
@@ -243,7 +294,7 @@ describe('public union discriminator rule', (): void => {
     const diagnostic: TstsDiagnostic = singleDiagnostic(result);
 
     assert.match(diagnostic.message, /SyntheticLocation/u);
-    assert.match(diagnostic.message, /"category" is not a string literal/u);
+    assert.match(diagnostic.message, /"category" is not a singleton literal/u);
     assert.match(diagnostic.message, /1 variant/u);
   });
 
@@ -267,7 +318,7 @@ describe('public union discriminator rule', (): void => {
     const result: TstsCheckResult = await checkProject({ projectPath });
     const diagnostic: TstsDiagnostic = singleDiagnostic(result);
 
-    assert.match(diagnostic.message, /No required string-literal field/u);
+    assert.match(diagnostic.message, /No required singleton-literal field/u);
   });
 
   it('ignores non-object unions outside the rule scope', async (): Promise<void> => {

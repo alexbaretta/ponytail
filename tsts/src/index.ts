@@ -97,13 +97,14 @@ export interface TstsCheckResult {
 }
 
 interface RequiredProperty {
-    readonly literalValue?: string | undefined;
+    readonly fieldPath: readonly string[];
+    readonly literalValue?: ExhaustiveSwitchValue | undefined;
 }
 
 type RequiredPropertyMap = ReadonlyMap<string, RequiredProperty>;
 
 interface DiscriminatedUnionDescriptor {
-    readonly discriminatorFieldName: string;
+    readonly discriminatorPath: readonly string[];
     readonly discriminatorValues: readonly string[];
     readonly unionName: string;
 }
@@ -442,7 +443,7 @@ function checkDiscriminatedUnionDispatch(
     workspaces: readonly LoadedWorkspace[]
 ): readonly TstsDiagnostic[] {
     const diagnostics: TstsDiagnostic[] = [];
-    const publicUnionDescriptors: ReadonlyMap<string, DiscriminatedUnionDescriptor> = new Map();
+    const publicUnionDescriptors: ReadonlyMap<ts.Type, DiscriminatedUnionDescriptor> = new Map();
 
     for (const workspace of workspaces) {
         for (const sourceFile of workspace.sourceFiles) {
@@ -3475,7 +3476,7 @@ function isOptionalSeverity(value: unknown): value is TstsDiagnosticSeverity | u
 
 interface PublicUnionAnalysis {
     readonly diagnostics: readonly TstsDiagnostic[];
-    readonly publicUnionDescriptors: ReadonlyMap<string, DiscriminatedUnionDescriptor>;
+    readonly publicUnionDescriptors: ReadonlyMap<ts.Type, DiscriminatedUnionDescriptor>;
 }
 
 function analyzePublicUnions(input: {
@@ -3483,35 +3484,27 @@ function analyzePublicUnions(input: {
     readonly sourceFiles: readonly ts.SourceFile[];
 }): PublicUnionAnalysis {
     const diagnostics: TstsDiagnostic[] = [];
-    const publicUnionDescriptors: Map<string, DiscriminatedUnionDescriptor> = new Map();
+    const publicUnionDescriptors: Map<ts.Type, DiscriminatedUnionDescriptor> = new Map();
 
     for (const sourceFile of input.sourceFiles) {
-        for (const statement of sourceFile.statements) {
-            if (
-                ts.isTypeAliasDeclaration(statement) &&
-                isExportedDeclaration(statement) &&
-                ts.isUnionTypeNode(statement.type)
-            ) {
-                const analysisResult: PublicUnionDiscriminatorAnalysisResult =
-                    analyzePublicUnionDiscriminator({
-                        typeChecker: input.typeChecker,
-                        sourceFile,
-                        typeAlias: statement,
-                        unionTypeNode: statement.type,
-                    });
-
-                if (analysisResult.diagnostic !== undefined) {
-                    diagnostics.push(analysisResult.diagnostic);
-                }
-
+        const visit = (node: ts.Node): void => {
+            if (ts.isUnionTypeNode(node)) {
+                const unionName = ts.isTypeAliasDeclaration(node.parent)
+                    ? node.parent.name.text
+                    : input.typeChecker.typeToString(input.typeChecker.getTypeFromTypeNode(node));
+                const analysisResult = analyzePublicUnionDiscriminator({
+                    typeChecker: input.typeChecker, sourceFile, unionName,
+                    declaration: ts.isTypeAliasDeclaration(node.parent) ? node.parent.name : node,
+                    unionTypeNode: node,
+                });
+                if (analysisResult.diagnostic !== undefined) diagnostics.push(analysisResult.diagnostic);
                 if (analysisResult.publicUnionDescriptor !== undefined) {
-                    publicUnionDescriptors.set(
-                        analysisResult.publicUnionDescriptor.unionName,
-                        analysisResult.publicUnionDescriptor
-                    );
+                    publicUnionDescriptors.set(input.typeChecker.getTypeFromTypeNode(node), analysisResult.publicUnionDescriptor);
                 }
             }
-        }
+            ts.forEachChild(node, visit);
+        };
+        visit(sourceFile);
     }
 
     return { diagnostics, publicUnionDescriptors };
@@ -3525,7 +3518,8 @@ interface PublicUnionDiscriminatorAnalysisResult {
 function analyzePublicUnionDiscriminator(input: {
     readonly typeChecker: ts.TypeChecker;
     readonly sourceFile: ts.SourceFile;
-    readonly typeAlias: ts.TypeAliasDeclaration;
+    readonly unionName: string;
+    readonly declaration: ts.Node;
     readonly unionTypeNode: ts.UnionTypeNode;
 }): PublicUnionDiscriminatorAnalysisResult {
     const variants: RequiredPropertyMap[] = [];
@@ -3552,15 +3546,15 @@ function analyzePublicUnionDiscriminator(input: {
     if (discriminatorAnalysis.validDiscriminator !== undefined) {
         return {
             publicUnionDescriptor: {
-                discriminatorFieldName: discriminatorAnalysis.validDiscriminator.fieldName,
+                discriminatorPath: discriminatorAnalysis.validDiscriminator.fieldPath,
                 discriminatorValues: discriminatorAnalysis.validDiscriminator.literalValues,
-                unionName: input.typeAlias.name.text,
+                unionName: input.unionName,
             },
         };
     }
 
     const location: ts.LineAndCharacter = input.sourceFile.getLineAndCharacterOfPosition(
-        input.typeAlias.name.getStart(input.sourceFile)
+        input.declaration.getStart(input.sourceFile)
     );
 
     return {
@@ -3570,7 +3564,7 @@ function analyzePublicUnionDiscriminator(input: {
             line: location.line + 1,
             message: formatDiscriminatorFailureMessage({
                 analysis: discriminatorAnalysis,
-                unionName: input.typeAlias.name.text,
+                unionName: input.unionName,
             }),
             ruleId: 'public-union-discriminator',
             severity: 'error',
@@ -3583,17 +3577,32 @@ function collectRequiredProperties(input: {
     readonly typeNode: ts.TypeNode;
 }): RequiredPropertyMap | undefined {
     const type: ts.Type = input.typeChecker.getTypeFromTypeNode(input.typeNode);
+    const declarations = type.aliasSymbol?.declarations ?? type.symbol?.declarations;
+    if (declarations !== undefined && declarations.every(declaration => declaration.getSourceFile().isDeclarationFile)) {
+        return undefined;
+    }
     if ((type.flags & (ts.TypeFlags.Object | ts.TypeFlags.Intersection)) === 0) {
         return undefined;
     }
     const properties: Map<string, RequiredProperty> = new Map();
-    for (const symbol of input.typeChecker.getPropertiesOfType(type)) {
-        if ((symbol.flags & ts.SymbolFlags.Optional) !== 0) continue;
-        const propertyType: ts.Type = input.typeChecker.getTypeOfSymbolAtLocation(symbol, input.typeNode);
-        properties.set(symbol.getName(), {
-            literalValue: propertyType.isStringLiteral() ? propertyType.value : undefined,
-        });
-    }
+    const visit = (currentType: ts.Type, fieldPath: readonly string[], ancestors: ReadonlySet<ts.Type>): void => {
+        if ((currentType.flags & (ts.TypeFlags.Object | ts.TypeFlags.Intersection)) === 0
+            || ancestors.has(currentType) || currentType.getCallSignatures().length > 0) return;
+        const nextAncestors = new Set(ancestors);
+        nextAncestors.add(currentType);
+        for (const symbol of input.typeChecker.getPropertiesOfType(currentType)) {
+            if ((symbol.flags & ts.SymbolFlags.Optional) !== 0) continue;
+            const propertyType = input.typeChecker.getTypeOfSymbolAtLocation(symbol, input.typeNode);
+            const propertyPath = [...fieldPath, symbol.getName()];
+            properties.set(JSON.stringify(propertyPath), {
+                fieldPath: propertyPath,
+                literalValue: getExhaustiveSwitchValue({checker: input.typeChecker, type: propertyType}),
+            });
+            visit(propertyType, propertyPath, nextAncestors);
+        }
+    };
+    visit(type, [], new Set());
+
     return properties;
 }
 
@@ -3617,7 +3626,7 @@ interface DiscriminatorCandidateFailure {
 }
 
 interface ValidDiscriminator {
-    readonly fieldName: string;
+    readonly fieldPath: readonly string[];
     readonly literalValues: readonly string[];
 }
 
@@ -3630,16 +3639,20 @@ function analyzeDiscriminatorCandidates(
     );
     const candidateFailures: DiscriminatorCandidateFailure[] = [];
 
-    for (const fieldName of candidateFieldNames) {
+    for (const fieldKey of candidateFieldNames) {
+        const fieldPath = variants[0]?.get(fieldKey)?.fieldPath ?? [];
+        const fieldName = fieldPath.join('.');
+        const labels = new Map<string,string>();
         const valueCounts: Map<string, number> = new Map();
         let nonLiteralVariantCount: number = 0;
 
         for (const variant of variants) {
-            const property: RequiredProperty | undefined = variant.get(fieldName);
-            const literalValue: string | undefined = property?.literalValue;
+            const property: RequiredProperty | undefined = variant.get(fieldKey);
+            const literalValue: ExhaustiveSwitchValue | undefined = property?.literalValue;
 
             if (literalValue !== undefined) {
-                valueCounts.set(literalValue, (valueCounts.get(literalValue) ?? 0) + 1);
+                valueCounts.set(literalValue.key, (valueCounts.get(literalValue.key) ?? 0) + 1);
+                labels.set(literalValue.key,literalValue.label);
             } else {
                 nonLiteralVariantCount += 1;
             }
@@ -3650,7 +3663,7 @@ function analyzeDiscriminatorCandidates(
                 const duplicateCount: number = entry[1];
 
                 return duplicateCount > 1;
-            })
+            }).map(([key,count]) => [labels.get(key) ?? key,count])
         );
 
         if (
@@ -3661,7 +3674,7 @@ function analyzeDiscriminatorCandidates(
             return {
                 candidateFailures,
                 validDiscriminator: {
-                    fieldName,
+                    fieldPath,
                     literalValues: [...valueCounts.keys()],
                 },
             };
@@ -3681,7 +3694,7 @@ function analyzeDiscriminatorCandidates(
 
 function checkSourceFileDiscriminatedUnionDispatch(input: {
     readonly checker: ts.TypeChecker;
-    readonly publicUnionDescriptors: ReadonlyMap<string, DiscriminatedUnionDescriptor>;
+    readonly publicUnionDescriptors: ReadonlyMap<ts.Type, DiscriminatedUnionDescriptor>;
     readonly sourceFile: ts.SourceFile;
 }): readonly TstsDiagnostic[] {
     const diagnostics: TstsDiagnostic[] = [];
@@ -3799,11 +3812,11 @@ function checkDiscriminatedUnionSwitchStatement(input: {
 function checkPublicUnionIfStatement(input: {
     readonly checker: ts.TypeChecker;
     readonly ifStatement: ts.IfStatement;
-    readonly publicUnionDescriptors: ReadonlyMap<string, DiscriminatedUnionDescriptor>;
+    readonly publicUnionDescriptors: ReadonlyMap<ts.Type, DiscriminatedUnionDescriptor>;
     readonly sourceFile: ts.SourceFile;
 }): TstsDiagnostic | undefined {
     const propertyAccessExpression: ts.PropertyAccessExpression | undefined =
-        getComparedPropertyAccessExpression(input.ifStatement.expression);
+        getComparedPropertyAccessExpression(input.ifStatement.expression, input.checker);
 
     if (propertyAccessExpression === undefined) {
         return undefined;
@@ -3828,14 +3841,14 @@ function checkPublicUnionIfStatement(input: {
         column: location.character + 1,
         filePath: input.sourceFile.fileName,
         line: location.line + 1,
-        message: `Dispatch over public union ${descriptor.unionName}.${descriptor.discriminatorFieldName} must use an exhaustive switch, not an if statement.`,
+        message: `Dispatch over owned union ${descriptor.unionName}.${descriptor.discriminatorPath.join('.')} must use an exhaustive switch, not an if statement.`,
         ruleId: 'public-union-exhaustive-dispatch',
         severity: 'error',
     };
 }
 
 function getComparedPropertyAccessExpression(
-    expression: ts.Expression
+    expression: ts.Expression, checker: ts.TypeChecker
 ): ts.PropertyAccessExpression | undefined {
     if (!ts.isBinaryExpression(expression)) {
         return undefined;
@@ -3848,11 +3861,11 @@ function getComparedPropertyAccessExpression(
         return undefined;
     }
 
-    if (ts.isPropertyAccessExpression(expression.left) && ts.isStringLiteral(expression.right)) {
+    if (ts.isPropertyAccessExpression(expression.left) && getExhaustiveSwitchValue({checker, type: checker.getTypeAtLocation(expression.right)}) !== undefined) {
         return expression.left;
     }
 
-    if (ts.isPropertyAccessExpression(expression.right) && ts.isStringLiteral(expression.left)) {
+    if (ts.isPropertyAccessExpression(expression.right) && getExhaustiveSwitchValue({checker, type: checker.getTypeAtLocation(expression.left)}) !== undefined) {
         return expression.right;
     }
 
@@ -3916,11 +3929,17 @@ function getExhaustiveSwitchValue(input: {
     readonly checker: ts.TypeChecker;
     readonly type: ts.Type;
 }): ExhaustiveSwitchValue | undefined {
+    if (input.type.isUnionOrIntersection()) return undefined;
+
     if (input.type.isStringLiteral()) {
         return { key: `string:${input.type.value}`, label: input.type.value };
     }
+    if (input.type.isNumberLiteral()) {
+        const label = String(input.type.value);
+        return { key: `number:${label}`, label };
+    }
 
-    if ((input.type.flags & (ts.TypeFlags.Literal | ts.TypeFlags.EnumLiteral)) === 0) {
+    if ((input.type.flags & (ts.TypeFlags.Literal | ts.TypeFlags.EnumLiteral | ts.TypeFlags.Null)) === 0) {
         return undefined;
     }
 
@@ -3932,25 +3951,18 @@ function getExhaustiveSwitchValue(input: {
 function getPublicUnionDescriptorForPropertyAccess(input: {
     readonly checker: ts.TypeChecker;
     readonly propertyAccessExpression: ts.PropertyAccessExpression;
-    readonly publicUnionDescriptors: ReadonlyMap<string, DiscriminatedUnionDescriptor>;
+    readonly publicUnionDescriptors: ReadonlyMap<ts.Type, DiscriminatedUnionDescriptor>;
 }): DiscriminatedUnionDescriptor | undefined {
-    const receiverType: ts.Type = input.checker.getTypeAtLocation(
-        input.propertyAccessExpression.expression
-    );
-    const unionName: string | undefined =
-        receiverType.aliasSymbol?.getName() ?? input.checker.typeToString(receiverType);
-    const descriptor: DiscriminatedUnionDescriptor | undefined =
-        input.publicUnionDescriptors.get(unionName);
-
-    if (descriptor === undefined) {
-        return undefined;
+    const fieldPath: string[] = [];
+    let expression: ts.Expression = input.propertyAccessExpression;
+    while (ts.isPropertyAccessExpression(expression)) {
+        fieldPath.unshift(expression.name.text);
+        const receiverType = input.checker.getTypeAtLocation(expression.expression);
+        const descriptor = input.publicUnionDescriptors.get(receiverType);
+        if (descriptor !== undefined && JSON.stringify(fieldPath) === JSON.stringify(descriptor.discriminatorPath)) return descriptor;
+        expression = expression.expression;
     }
-
-    if (input.propertyAccessExpression.name.text !== descriptor.discriminatorFieldName) {
-        return undefined;
-    }
-
-    return descriptor;
+    return undefined;
 }
 
 function formatDiscriminatorFailureMessage(input: {
@@ -3958,7 +3970,7 @@ function formatDiscriminatorFailureMessage(input: {
     readonly unionName: string;
 }): string {
     if (input.analysis.candidateFailures.length === 0) {
-        return `Public union ${input.unionName} must have one required discriminator field with unique literal values across all variants. No required string-literal field is present in every variant.`;
+        return `Owned union ${input.unionName} must have one required discriminator field with unique literal values across all variants. No required singleton-literal field or nested path is present in every variant.`;
     }
 
     const candidateSummaries: string = input.analysis.candidateFailures
@@ -3969,7 +3981,7 @@ function formatDiscriminatorFailureMessage(input: {
                 const variantWord: string =
                     failure.nonLiteralVariantCount === 1 ? 'variant' : 'variants';
                 failureReasons.push(
-                    `is not a string literal in ${failure.nonLiteralVariantCount} ${variantWord}`
+                    `is not a singleton literal in ${failure.nonLiteralVariantCount} ${variantWord}`
                 );
             }
 
@@ -3994,7 +4006,7 @@ function formatDiscriminatorFailureMessage(input: {
         })
         .join('; ');
 
-    return `Public union ${input.unionName} must have one required discriminator field with unique literal values across all variants. Candidate ${candidateSummaries}.`;
+    return `Owned union ${input.unionName} must have one required discriminator field with unique literal values across all variants. Candidate ${candidateSummaries}.`;
 }
 
 function isExportedDeclaration(node: ts.Node): boolean {

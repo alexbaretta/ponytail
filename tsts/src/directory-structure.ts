@@ -145,9 +145,12 @@ export async function checkDirectoryStructure(
                 contentKinds: manifest.contentKinds,
                 filePath,
             });
-            if (classifiedPath.kind === 'invalid') {
-                diagnostics.push(classifiedPath.diagnostic);
-                continue;
+            switch (classifiedPath.kind) {
+                case 'invalid':
+                    diagnostics.push(classifiedPath.diagnostic);
+                    continue;
+                case 'classified':
+                    break;
             }
 
             const fileRule: DirectoryStructureFileRule | undefined = manifest.files.find(

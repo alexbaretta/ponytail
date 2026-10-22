@@ -5,7 +5,7 @@ description: >-
   statically typed code, owned contracts, union or sum types, runtime schemas,
   fixtures, exhaustive dispatch, OpenAPI oneOf schemas, compiler-based
   contract checks, or Rust serde enums. Prohibits type-system bypasses,
-  requires exact owned-contract fixtures, and makes public variants
+  requires exact owned-contract fixtures, and makes owned variants
   mechanically unambiguous.
 ---
 
@@ -58,21 +58,21 @@ contract value; keep it visibly outside the valid-fixture path.
 
 ## Union And Sum-Type Integrity
 
-Treat every owned public API union or sum type as a contract that must
+Treat every owned union or sum type, including private internal types, as a contract that must
 be mechanically and unambiguously narrowable.
 
 For each union:
 
-1. Identify the discriminator field.
-2. Verify that the discriminator is required in every variant.
+1. Identify the discriminator field or nested path.
+2. Verify that every segment of that path is required in every variant.
 3. Verify that every variant has exactly one unique literal
    discriminator value.
-4. Verify that the discriminator identifies the API variant, not a
+4. Verify that the discriminator identifies the variant, not a
    broader business-domain concept that multiple variants can share.
 5. Verify that validation and dispatch switch or match on the
    discriminator after validation.
 6. Reject ordered trial parsing, shape probing, or fallback dispatch
-   for owned public API variants.
+   for owned variants.
 
 Generated types are not enough. A generated type can compile while
 still leaving callers unable to narrow the variant safely.
@@ -82,7 +82,7 @@ still leaving callers unable to narrow the variant safely.
 1. Locate the canonical contract source before editing.
 2. Identify every owned type, fixture, and boundary affected by the change.
 3. Remove or reject type-system bypasses and model the correct named type.
-4. Enumerate every owned public API union or sum type introduced or changed and
+4. Enumerate every owned union or sum type, including private internal types, introduced or changed and
    name its discriminator.
 5. Check schema/runtime validation and generated OpenAPI or client
    artifacts for the same discriminator shape.
