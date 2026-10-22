@@ -26,6 +26,11 @@ file extraction. Repeat for unit and integration scopes. TSTS validates both
 attachments and still rejects an ordinary helper labeled as an executable test;
 implementation-classified files still cannot claim test coverage.
 
+Unannotated text and JSON supporting files remain in source discovery with no
+entities, edges or coverage credit and no per-file missing-declaration finding.
+Removing the only implementation claim leaves its obligation implementation gap
+open; malformed claims and broken Markdown ownership still produce findings.
+
 ## ACC-CM-ACCEPTANCE-COVERAGE
 
 Obligation: [OBL-CM-ACCEPTANCE-COVERAGE](../requirements/campaign-management.md#obl-cm-acceptance-coverage).

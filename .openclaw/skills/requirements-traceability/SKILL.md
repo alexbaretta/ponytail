@@ -55,7 +55,15 @@ source and contains no relationship annotations.
 Canonical Markdown scopes enumerate every declaration, including unreferenced,
 untracked or ignored acceptances. Code scopes include tracked and unignored new
 files; exclusions cannot hide canonical requirements or UAT. Do not narrow scope
-to make coverage pass. The generated reverse view is excluded from discovery. JavaScript and TypeScript
+to make coverage pass. Supporting text and JSON/JSONC files may remain in their
+configured source scope without a traceability declaration. Absence of a claim
+is not a structural finding and grants no graph entity, relationship or coverage
+credit. Do not invent an obligation link to satisfy a per-file quota. Explicit
+malformed claims still produce findings; missing obligation implementation or
+acceptance test coverage remains unresolved. Markdown declarations and their
+required ownership links remain mandatory. This changes no immutable-artifact
+policy and authorizes no blanket exclusion or QA waiver.
+The generated reverse view is excluded from discovery. JavaScript and TypeScript
 files with canonical relationship declarations in comments must have an explicit
 source classification or exclusion; otherwise discovery reports `unclassified-source`
 at that file and comment line. Comment parsing resolves TypeScript from the

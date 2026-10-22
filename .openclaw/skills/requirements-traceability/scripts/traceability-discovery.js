@@ -44,7 +44,7 @@ function discoverJsonTraceabilitySource(traceabilitySource) {
     const commentTraceabilityDiscovery = discoverTextTraceabilitySource(traceabilitySource);
     entities.push(...commentTraceabilityDiscovery.graph.entities);
     relationships.push(...commentTraceabilityDiscovery.graph.relationships);
-    findings.push(...commentTraceabilityDiscovery.findings.filter(finding => finding.code !== 'missing-declaration'));
+    findings.push(...commentTraceabilityDiscovery.findings);
     const visit = (node) => {
         const key = node.children?.[0]?.value;
         if (node.type === 'property' && key === 'traceability') {
@@ -75,8 +75,6 @@ function discoverJsonTraceabilitySource(traceabilitySource) {
             visit(childNode);
     };
     visit(rootNode);
-    if (!entities.length && !findings.length)
-        findings.push({ code: 'missing-declaration', path: traceabilitySource.path, line: 1, message: `Configured ${traceabilitySource.kind} source contains no identified unit` });
     return { graph: { entities, relationships }, findings };
 }
 function discoverTextTraceabilitySource(traceabilitySource) {
@@ -155,9 +153,6 @@ function discoverTextTraceabilitySource(traceabilitySource) {
             }
         }
         relationships.push({ source: id, target, role });
-    }
-    if (!entities.length && traceabilitySource.kind !== 'markdown') {
-        findings.push({ code: 'missing-declaration', path: traceabilitySource.path, line: 1, message: `Configured ${traceabilitySource.kind} source contains no identified unit` });
     }
     return { graph: { entities, relationships }, findings };
 }

@@ -28,6 +28,17 @@ function project(testContext: TestContext): string {
  return root;
 }
 
+// Traceability: verifies ACC-CM-GRAPH from unit-test TEST-CM-PROJECT-UNCLAIMED
+test('unclaimed supporting sources remain inventoried without satisfying implementation coverage', context => {
+ const root = project(context);
+ write(root,'src/a.js','export const enabled = true;');
+ const result = discoverTraceabilityProject(configuration(),path.join(root,'traceability.json'),root);
+ assert.ok(result.sources.some(source => source.path === 'src/a.js'));
+ assert.deepEqual(result.discoveryFindings,[]);
+ assert.ok(!result.graph.entities.some(entity => entity.kind === 'implementation'));
+ assert.ok(result.graphFindings.some(finding => finding.code === 'missing-implementation' && finding.id === 'OBL-A'));
+});
+
 // Traceability: verifies ACC-CM-GRAPH from unit-test TEST-CM-PROJECT-CONFIGURATION
 test('V5 reader checks exact physical configuration without legacy fallback', () => {
  const traceabilityConfigurationV5 = configuration();

@@ -110,7 +110,17 @@ test('legacy implicit identities and malformed markers cannot silently supply co
  const traceabilitySource: TraceabilitySource = {kind:'unit-test',path:'tests/a.ts',text:'// Traceability: verifies REQ-A\ntest("old test", () => {});'};
  const discovery = discoverTraceabilitySource(traceabilitySource);
  assert.deepEqual(discovery.graph,{entities:[],relationships:[]});
- assert.deepEqual(discovery.findings.map(finding => finding.code),['malformed-marker','missing-declaration']);
+ assert.deepEqual(discovery.findings.map(finding => finding.code),['malformed-marker']);
+});
+
+// Traceability: verifies ACC-CM-GRAPH from unit-test TEST-CM-DISCOVER-UNCLAIMED
+test('unclaimed text and JSON supporting sources grant no graph coverage', () => {
+ for (const kind of ['implementation','unit-test','integration-test'] as const) {
+  for (const [path,text] of [['support.ts','export const enabled = true;'],['support.json','{"enabled":true}'],['support.jsonc','{"traceability":[],}']] as const) {
+   const traceabilitySource: TraceabilitySource = {kind,path,text};
+   assert.deepEqual(discoverTraceabilitySource(traceabilitySource),{graph:{entities:[],relationships:[]},findings:[]});
+  }
+ }
 });
 
 // Traceability: verifies ACC-CM-GRAPH from unit-test TEST-CM-DISCOVER-KIND

@@ -34,6 +34,11 @@ executable tests. A unit- or integration-test scope may declare explicit
 implementation units while retaining its test layer and semantic attachment checks.
 Overlapping file classifications remain invalid; links alone grant no adequacy.
 
+Supporting files without a truthful obligation claim remain inventoried without
+a per-file missing-declaration finding. They grant no coverage credit. Malformed
+claims and missing obligation implementations or acceptance tests remain gaps;
+canonical Markdown ownership links remain required.
+
 Discharge: [ACC-CM-GRAPH](../uat/campaign-management.md#acc-cm-graph) with adequate executable proof and adversarial assessment.
 
 ## Acceptance coverage
