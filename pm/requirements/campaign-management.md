@@ -71,6 +71,14 @@ invalid scope and unavailable evidence references. The coordinator remains
 responsible for truthful review and validation applicability; zero does not
 replace independent final QA.
 
+Keep FOATI unchanged and report additional T/I statistics separating no linked
+artifact, linked but not accepted complete, and accepted complete, with totals.
+These count acceptances for T and obligations for I. Missing links do not prove
+physical absence; presence does not establish adequate passing coverage. Do not
+infer whether execution, review or assessment is missing from absent credit.
+User request: 2026-10-22, distinguish missing tests/implementations from present
+but unvalidated work.
+
 Completeness assessment reads configuration and canonical sources from the
 immutable Git commit targeted by the assessment tag, without requiring a clean working tree,
 materializing another checkout, or creating administrative files. It preserves

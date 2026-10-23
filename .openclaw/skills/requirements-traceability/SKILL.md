@@ -197,7 +197,7 @@ No sidecar relationship map or duplicated policy is needed.
 
 Run `ponytail traceability completeness --campaign <name> --assessment-tag <tag>`
 on the integrated commit. It reads the invoking project's committed V5 graph directly,
-without a database, and prints only the `(F,O,A,T,I)` vector by default. Use
+without a database, and prints the `(F,O,A,T,I)` vector and T/I coverage statistics by default. Use
 `--verbose` for unresolved IDs, assessment context and individual findings;
 `--json` retains the complete structured report with no progress output. Human
 output includes an early progress bar on stderr, beginning before repository
@@ -222,6 +222,18 @@ still fail explicitly instead of producing invented counts. Remove obsolete or
 redundant invalid annotations only when canonical declarations and required links
 remain intact; repair necessary links and reopen affected coverage claims. Never
 delete requirements, obligations or acceptances merely to improve the vector.
+
+For T (acceptances) and I (obligations), statistics partition the scope into
+`missingLink`, `linkedUnresolved`, and `complete`, plus `total`. T presence means
+at least one linked executable test; I presence means at least one linked
+implementation block. `missingLink + linkedUnresolved` equals that coordinate's
+unresolved count. Missing links do not prove physically absent code; linked
+artifacts do not prove adequate coverage. Linked unresolved items may need
+repair, execution, review, assessment credit, or completion of dependent coverage.
+The existing assessment cannot distinguish these causes. Do not describe all
+unresolved items as missing implementation or claim they merely need a test run.
+Statistics are provisional while F is nonzero. They add no completion credit and
+require no new assessment metadata.
 
 The coordinator owns one compact assessment snapshot, stored only in an annotated
 Git tag per campaign per assessed commit. Pass its JSON directly on stdin to

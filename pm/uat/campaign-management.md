@@ -52,6 +52,13 @@ then a reviewed assessment tag at HEAD. Verify F equals the annotation finding c
 including missing structure despite claimed completion. Reject lightweight, ambiguous or malformed assessment tags,
 missing validation tags, invalid IDs and invalid committed source. The command works without a database; zero remains provisional.
 
+Verify the default report and JSON separate T/I missing links from linked
+unresolved coverage and accepted completion. For each coordinate, the first two
+counts equal its unresolved count and all three equal its total scope. Exercise
+linked artifacts without assessment credit, missing tests despite claimed credit,
+and missing implementation with linked tests. Dependency failures must not label
+an existing test or implementation as absent; statistics grant no new credit.
+
 Assessment of the same annotated-tag target returns the same vector with dirty,
 staged, deleted, ignored or index-hidden local files, preserving those files and
 the index. Explicit historical tags assess their own committed configuration and

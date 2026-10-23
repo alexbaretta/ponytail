@@ -27,6 +27,12 @@ export interface CampaignAssessmentV2 {
  readonly reviewReferences: readonly string[];
  readonly validationTags: readonly string[];
 }
+export interface CoverageStatistics {
+ readonly total: number;
+ readonly missingLink: number;
+ readonly linkedUnresolved: number;
+ readonly complete: number;
+}
 export interface CampaignCompleteness {
  readonly campaign: string;
  readonly commit: string;
@@ -34,6 +40,7 @@ export interface CampaignCompleteness {
  readonly requirementIds: readonly string[];
  readonly vector: readonly [number,number,number,number,number];
  readonly unresolved: CompletenessIds;
+ readonly statistics: {readonly T: CoverageStatistics; readonly I: CoverageStatistics};
 }
 export interface CampaignCompletenessReport extends CampaignCompleteness {
  readonly findings: readonly TraceabilityDiscoveryFinding[];
@@ -113,8 +120,14 @@ export function computeCampaignCompleteness(graph: TraceabilityGraph, assessment
   I:obligations.filter(id => !assessment.complete.I.includes(id) || !implemented(id) || !assessment.complete.A.includes(id)
    || incoming(id,['acceptance']).length === 0 || !incoming(id,['acceptance']).every(tested)),
  };
+ const coverageStatistics = (ids: readonly string[], unresolvedIds: readonly string[], linked: (id: string) => boolean): CoverageStatistics => {
+  const missingLink = ids.filter(id => !linked(id)).length;
+  return {total:ids.length,missingLink,linkedUnresolved:unresolvedIds.length-missingLink,complete:ids.length-unresolvedIds.length};
+ };
  return {campaign:assessment.campaign,commit,assessmentTag,requirementIds:[...assessment.requirementIds].sort(),
-  vector:[findings.length,unresolved.O.length,unresolved.A.length,unresolved.T.length,unresolved.I.length],unresolved};
+  vector:[findings.length,unresolved.O.length,unresolved.A.length,unresolved.T.length,unresolved.I.length],unresolved,
+  statistics:{T:coverageStatistics(acceptances,unresolved.T,id => incoming(id,['unit-test','integration-test']).length > 0),
+   I:coverageStatistics(obligations,unresolved.I,implemented)}};
 }
 
 function git(root: string, args: readonly string[]): string {
@@ -207,6 +220,11 @@ export function runTraceabilityCompleteness(argv: readonly string[], cwd = proce
  if (json) process.stdout.write(`${JSON.stringify(result)}\n`);
  else {
   process.stdout.write(`Campaign completeness vector (F,O,A,T,I): (${result.vector.join(',')})\n`);
+  for (const coordinate of ['T','I'] as const) {
+   const coverageStatistics = result.statistics[coordinate];
+   process.stdout.write(`${coordinate} coverage: ${coverageStatistics.total} total; ${coverageStatistics.missingLink} no linked artifact; ${coverageStatistics.linkedUnresolved} linked but not accepted complete; ${coverageStatistics.complete} accepted complete\n`);
+  }
+  process.stdout.write('Links establish presence only; unresolved linked coverage may need repair, execution, review or assessment.\n');
   if (result.completionBlocked && !verbose) process.stderr.write(`O/A/T/I are provisional: completion blocked by ${result.findings.length} annotation findings; use --verbose for details.\n`);
   if (verbose) {
   process.stdout.write(`Campaign: ${result.campaign}; commit: ${commit}; assessment: ${result.assessmentTag ?? 'none (all adequacy unknown)'}\n`);

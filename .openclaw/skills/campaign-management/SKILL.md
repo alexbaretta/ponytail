@@ -96,8 +96,12 @@ or rebase their submissions. Keep it available to:
    tags remain immutable. Follow `requirements-traceability` for updates. Run
    `ponytail traceability completeness --campaign <name> --assessment-tag <tag>`.
    The command reads the tag target directly from Git, preserving any local drafts;
-   its result covers that commit only. Default output is the vector with early progress on stderr; use `--verbose`
+   its result covers that commit only. Default output includes the vector and T/I
+   presence/completion statistics, with early progress on stderr; use `--verbose`
    for individual findings or `--json` for the complete machine-readable report.
+   Use the statistics to distinguish missing links from linked unresolved work.
+   Reconcile existing adequate reviews and passing proof before assigning new
+   implementation; linked unresolved work is not automatically missing code.
    Use its vector and unresolved IDs; do not maintain a separate hand-counted
    vector. F counts returned annotation findings and must reach zero first; invalid
    scope or ambiguous graph ownership must be repaired before computing progress.

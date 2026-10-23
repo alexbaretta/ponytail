@@ -98,8 +98,14 @@ function computeCampaignCompleteness(graph, assessment, commit, assessmentTag, f
         I: obligations.filter(id => !assessment.complete.I.includes(id) || !implemented(id) || !assessment.complete.A.includes(id)
             || incoming(id, ['acceptance']).length === 0 || !incoming(id, ['acceptance']).every(tested)),
     };
+    const coverageStatistics = (ids, unresolvedIds, linked) => {
+        const missingLink = ids.filter(id => !linked(id)).length;
+        return { total: ids.length, missingLink, linkedUnresolved: unresolvedIds.length - missingLink, complete: ids.length - unresolvedIds.length };
+    };
     return { campaign: assessment.campaign, commit, assessmentTag, requirementIds: [...assessment.requirementIds].sort(),
-        vector: [findings.length, unresolved.O.length, unresolved.A.length, unresolved.T.length, unresolved.I.length], unresolved };
+        vector: [findings.length, unresolved.O.length, unresolved.A.length, unresolved.T.length, unresolved.I.length], unresolved,
+        statistics: { T: coverageStatistics(acceptances, unresolved.T, id => incoming(id, ['unit-test', 'integration-test']).length > 0),
+            I: coverageStatistics(obligations, unresolved.I, implemented) } };
 }
 function git(root, args) {
     return (0, node_child_process_1.execFileSync)('git', [...args], { cwd: root, encoding: 'utf8', maxBuffer: 32 * 1024 * 1024 }).trim();
@@ -215,6 +221,11 @@ function runTraceabilityCompleteness(argv, cwd = process.cwd()) {
             process.stdout.write(`${JSON.stringify(result)}\n`);
         else {
             process.stdout.write(`Campaign completeness vector (F,O,A,T,I): (${result.vector.join(',')})\n`);
+            for (const coordinate of ['T', 'I']) {
+                const coverageStatistics = result.statistics[coordinate];
+                process.stdout.write(`${coordinate} coverage: ${coverageStatistics.total} total; ${coverageStatistics.missingLink} no linked artifact; ${coverageStatistics.linkedUnresolved} linked but not accepted complete; ${coverageStatistics.complete} accepted complete\n`);
+            }
+            process.stdout.write('Links establish presence only; unresolved linked coverage may need repair, execution, review or assessment.\n');
             if (result.completionBlocked && !verbose)
                 process.stderr.write(`O/A/T/I are provisional: completion blocked by ${result.findings.length} annotation findings; use --verbose for details.\n`);
             if (verbose) {

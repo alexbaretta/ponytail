@@ -25,10 +25,19 @@ function assessment(): CampaignAssessmentV2 {
 test('completeness derives unresolved IDs and never grants structural or unknown adequacy credit', () => {
  const complete: CampaignAssessmentV2 = assessment();
  assert.deepEqual(computeCampaignCompleteness(graph,complete,'commit','tag').vector,[0,0,0,0,0]);
+ assert.deepEqual(computeCampaignCompleteness(graph,complete,'commit','tag').statistics,
+  {T:{total:1,missingLink:0,linkedUnresolved:0,complete:1},I:{total:1,missingLink:0,linkedUnresolved:0,complete:1}});
  const unknown: CampaignAssessmentV2 = {...complete,complete:{O:[],A:[],T:[],I:[]},reviewReferences:[],validationTags:[]};
  assert.deepEqual(computeCampaignCompleteness(graph,unknown,'commit',null).unresolved,{O:['REQ-A'],A:['OBL-A'],T:['ACC-A'],I:['OBL-A']});
+ assert.deepEqual(computeCampaignCompleteness(graph,unknown,'commit',null).statistics,
+  {T:{total:1,missingLink:0,linkedUnresolved:1,complete:0},I:{total:1,missingLink:0,linkedUnresolved:1,complete:0}});
  const missingCode: TraceabilityGraph = {entities:graph.entities.filter(entity => entity.kind !== 'implementation'),relationships:graph.relationships.filter(edge => edge.source !== 'work')};
  assert.deepEqual(computeCampaignCompleteness(missingCode,complete,'commit','tag').vector,[0,0,0,1,1]);
+ assert.deepEqual(computeCampaignCompleteness(missingCode,complete,'commit','tag').statistics,
+  {T:{total:1,missingLink:0,linkedUnresolved:1,complete:0},I:{total:1,missingLink:1,linkedUnresolved:0,complete:0}});
+ const missingTest: TraceabilityGraph = {entities:graph.entities.filter(entity => entity.kind !== 'unit-test'),relationships:graph.relationships.filter(edge => edge.source !== 'TEST-A')};
+ assert.deepEqual(computeCampaignCompleteness(missingTest,complete,'commit','tag').statistics,
+  {T:{total:1,missingLink:1,linkedUnresolved:0,complete:0},I:{total:1,missingLink:0,linkedUnresolved:1,complete:0}});
  const noAcceptanceReview: CampaignAssessmentV2 = {...complete,complete:{...complete.complete,A:[]}};
  assert.deepEqual(computeCampaignCompleteness(graph,noAcceptanceReview,'commit','tag').vector,[0,0,1,0,1]);
  const wrongKind: CampaignAssessmentV2 = {...complete,complete:{...complete.complete,O:['OBL-A']}};
@@ -75,7 +84,10 @@ test('CLI computes actual Git-bound scope without a database and reads immutable
  assert.deepEqual(JSON.parse(unknown.stdout).vector,[0,1,1,1,1]);
  assert.equal(unknown.stderr,'');
  const concise = command(root,['--campaign','demo','--requirement','REQ-A']);
- assert.equal(concise.stdout,'Campaign completeness vector (F,O,A,T,I): (0,1,1,1,1)\n');
+ assert.match(concise.stdout,/^Campaign completeness vector \(F,O,A,T,I\): \(0,1,1,1,1\)\n/);
+ assert.match(concise.stdout,/T coverage: 1 total; 0 no linked artifact; 1 linked but not accepted complete; 0 accepted complete/);
+ assert.match(concise.stdout,/I coverage: 1 total; 0 no linked artifact; 1 linked but not accepted complete; 0 accepted complete/);
+ assert.deepEqual(JSON.parse(unknown.stdout).statistics.T,{total:1,missingLink:0,linkedUnresolved:1,complete:0});
  assert.match(concise.stderr,/^Preparation\s+\[[ ]+\]\s+0%/);
  assert.match(concise.stderr,/Sources\s+\[/);
  const missing = command(root,[]);

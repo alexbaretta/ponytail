@@ -108,10 +108,18 @@ After each accepted merge the coordinator updates the assessment, carries forwar
 only still-valid proof, runs the command and displays its result. This replaces
 hand-counted vectors; semantic review and independent final QA remain necessary.
 
-The CLI prints the vector alone by default, with progress on stderr starting
+The CLI prints the vector and T/I coverage statistics by default, with progress on stderr starting
 before repository inspection. `--verbose` adds unresolved IDs and individual
 findings; `--json` returns the complete report without progress. Blocking
 annotation findings retain a concise stderr summary in default output.
+
+For each of T and I, report the total and three disjoint counts: no linked
+artifact, linked but not accepted complete, and accepted complete. The first two
+sum to the coordinate's unresolved count. These are acceptance/obligation counts,
+not numbers of test functions or code blocks. A missing link does not prove code
+is physically absent; linked unresolved work can need repair, execution, review,
+assessment or dependent coverage. Do not infer a specific validation blocker from
+absent assessment credit. The statistics do not change completion criteria.
 
 The official term is **campaign completeness vector**. Its fixed order is
 **`(F,O,A,T,I)`**:
