@@ -465,6 +465,15 @@ Workers develop in isolated native worktrees. The coordinator serializes
 integration into the campaign branch. Parallel workers may submit against the
 same base, so one integration can make another delivery stale.
 
+Approved heavy-operation limits are enforced by an automatic semaphore at the
+project's existing heavy-command entry points, shared across worktrees. Workers
+invoke commands autonomously and receive visible capacity-wait status. OS-managed
+permits cover the command's child processes, nested calls and cancellation without
+stale occupied markers. Lightweight work and Git operations require no heavy
+permit. The coordinator does not allocate these permits or impose rebase windows;
+resource capacity never substitutes for required user authorization. User decision:
+2026-10-22.
+
 The proposed integration contract is to fast-forward only the submitted,
 reviewed, tagged candidate. The coordinator checks candidate/base identity,
 review reference, validation tag, and scope mechanically. If the branch can no

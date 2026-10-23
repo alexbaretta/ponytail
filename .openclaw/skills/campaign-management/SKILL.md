@@ -38,6 +38,14 @@ Start the configured number of compatible, dependency-ready workers. Prefer
 finishing started obligations; do not duplicate retained assignments or invent
 work to fill capacity. Use isolated host-managed worktrees when authorized and
 respect project resource limits independently of session parallelism.
+Enforce approved heavy-operation limits automatically at project command entry
+points, using a semaphore shared across its worktrees. Workers acquire capacity
+without coordinator allocation or acknowledgment; waiting commands report the
+capacity wait. Use OS-managed permits whose lifetime covers the command and its
+children, including nested invocations and cancellation. Git operations and
+lightweight work do not acquire heavy permits. A permit grants capacity, not
+otherwise-missing authorization. Do not introduce manual rebase windows or
+per-command coordinator approval gates. Serialize shared-branch integration only.
 
 Name each worker `<campaign-id> W<sequence> <three word summary>`: campaign-local increasing
 sequence, three words summarizing the assignment. Replacements get new numbers;
