@@ -123,6 +123,17 @@ Requirement: `REQ-CM-CAPACITY`.
 
 The coordinator maintains configured active parallelism using native sessions. Workers pursue complete assignments autonomously. Unresolvable blockers retain original work while replacements receive other compatible assignments. Recovered workers may temporarily exceed target capacity.
 
+When authorized by the user, a persistent recovery deputy owns routine worker
+diagnosis, unblocking and verification of resumed work. Transfer the recovery
+heartbeat to that session without duplicating the loop or changing its schedule.
+Workers route operational blockers to the deputy and deliveries to the coordinator.
+The coordinator retains assignments/replacements, integration, assessments and
+final QA. The deputy does not count toward worker parallelism, modify the shared
+checkout, implement, review, merge or reassign. It escalates human-only gates,
+capacity/dependency decisions and delivery backlogs; unchanged external waits
+receive no repeated demands. Use native chat context, not another ledger or queue.
+User decision: 2026-10-22, activate this role for the Gwen campaign.
+
 Discharge: [ACC-CM-CAPACITY](../uat/campaign-management.md#acc-cm-capacity) with adequate executable proof and adversarial assessment.
 
 ## Worker-owned delivery

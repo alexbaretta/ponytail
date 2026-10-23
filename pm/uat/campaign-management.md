@@ -94,6 +94,14 @@ Obligation: [OBL-CM-CAPACITY](../requirements/campaign-management.md#obl-cm-capa
 
 **Procedure and expected observations:** Start the configured number of compatible assignments. Block one worker, retain it and start a replacement on other work. Unblock the original and permit excess capacity. Complete workers; replenish only below target and when authorized compatible work exists.
 
+With an authorized deputy, transfer the existing recovery heartbeat to its native
+chat and verify the original coordinator no longer receives that periodic prompt.
+Verify the deputy identifies itself, contacts workers under its granted authority,
+leaves running workers alone, resolves a routine stop and verifies resumed work.
+An unchanged human-only blocker remains preserved and is escalated without repeated
+continuation demands. The coordinator retains assignment and merge authority;
+the deputy creates no files or competing queue and is excluded from worker counts.
+
 ## ACC-CM-WORKER-DELIVERY
 
 Obligation: [OBL-CM-WORKER-DELIVERY](../requirements/campaign-management.md#obl-cm-worker-delivery).

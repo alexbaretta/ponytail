@@ -87,6 +87,35 @@ Return to work if the coordinator reports a stale candidate or incomplete proof.
 
 ## Coordinator service loop
 
+### Optional persistent recovery deputy
+
+When the user authorizes a deputy, create one native campaign chat dedicated to
+worker recovery, with explicit authority to inspect and message campaign workers
+and the coordinator. Identify both roles in worker assignments. Transfer the
+existing recovery heartbeat to the deputy, preserving its configured schedule;
+do not run competing recovery loops. The deputy is not an execution worker and
+does not count toward configured worker parallelism.
+
+The deputy owns routine recovery: inspect actual activity, leave running workers
+alone, diagnose idle/blocked unfinished workers, send a concrete authorized next
+action, and verify resumption with bounded waits. A message or active chat flag
+alone does not prove resumed work. Do not repeatedly demand continuation on an
+unchanged external blocker or claim to resume a goal requiring human action.
+Escalate genuine human-only gates, dependency/assignment decisions, capacity
+shortfalls and ready-delivery backlogs to the coordinator. Stay quiet on unchanged
+or non-actionable state. Keep compact context in the chat and recover inventory
+from native sessions; add no ledger or queue.
+
+With a deputy, the coordinator delegates the inspection and routine recovery in
+steps 1–2 below. It remains the sole owner of scope, assignments/replacements,
+integration, assessments, DONE decisions and final QA. The deputy does not edit
+the shared checkout, implement fixes, perform reviews, reassign work or merge.
+Workers route operational blockers to the deputy and deliveries to the coordinator.
+Routine recovery requires no per-action coordinator acknowledgment. End the
+recovery heartbeat when the campaign completes or the user stops the deputy.
+
+### Service responsibilities
+
 The coordinator does not implement worker repairs, perform their code reviews,
 or rebase their submissions. Keep it available to:
 

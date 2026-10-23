@@ -16,6 +16,14 @@ to that reconciliation; they are distinguished from stakeholder decisions.
 
 ## Motivation and scope
 
+Recovery deputy decision (2026-10-22): a user-authorized persistent native chat
+may own routine worker diagnosis, unblocking and verification of resumption.
+Transfer the existing recovery heartbeat to it rather than duplicate the loop.
+The coordinator retains assignments/replacements, merges, assessment and final
+QA; the deputy escalates genuine exceptions and does not implement, review or
+modify the shared checkout. Workers send operational blockers to the deputy and
+deliveries to the coordinator. No new CLI, ledger or queue is required.
+
 Manual execution decision (2026-10-22): human-intervention integration tests are
 disabled by default and run only on explicit user request. Keep the entire
 requirement/obligation/acceptance/test/implementation DAG. Disabled manual coverage
