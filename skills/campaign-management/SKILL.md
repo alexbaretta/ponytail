@@ -149,8 +149,12 @@ and implementation. Coordinates count entities lacking that coverage, not the
 unknown number of missing artifacts.
 
 Unknown adequacy remains unresolved. T and I decrease only when the linked tests
-and implementation exist, the implementation passes those tests, and adversarial
-review establishes adequacy. Unit or integration coverage may suffice. Never sum
+and implementation exist, the implementation passes required automated and
+explicitly requested manual tests, and adversarial review establishes adequacy.
+Manual tests are disabled by default: retain the complete DAG, but do not require
+their execution or passing credit. Use the assessment statuses and exact counting
+rules in `requirements-traceability`; do not reclassify broken automation as manual.
+Unit or integration coverage may suffice. Never sum
 stale worker-local vectors. Use canonical IDs to retain unresolved scope.
 
 Generally favor coherent changes that decrease `(F,O,A,T,I)` lexicographically:
@@ -178,6 +182,10 @@ all campaign workers DONE, including retained blocked workers, and no unresolved
 coverage. The coordinator then independently runs and verifies every configured
 full unit/integration suite and additional automated QA on the final integrated
 commit. Worker-focused tags or delegated QA do not replace this run.
+
+Do not run human-intervention tests without an explicit user request. Their
+default omission is non-blocking; enabled manual tests must pass. Keep their
+definitions and links in scope and report their status separately from FOATI.
 
 If any required QA fails or remains unavailable, the campaign is not DONE. Assign
 bugs to workers, record the reopened gaps, service and integrate their repairs,

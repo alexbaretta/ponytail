@@ -33,6 +33,22 @@ export interface CoverageStatistics {
  readonly linkedUnresolved: number;
  readonly complete: number;
 }
+export interface ManualTests {
+ readonly disabled: readonly string[];
+ readonly pending: readonly string[];
+ readonly passed: readonly string[];
+ readonly failed: readonly string[];
+ readonly requestReferences: readonly string[];
+}
+export interface CampaignAssessmentV3 {
+ readonly schemaVersion: 3;
+ readonly campaign: string;
+ readonly requirementIds: readonly string[];
+ readonly complete: CompletenessIds;
+ readonly reviewReferences: readonly string[];
+ readonly validationTags: readonly string[];
+ readonly manualTests: ManualTests;
+}
 export interface CampaignCompleteness {
  readonly campaign: string;
  readonly commit: string;
@@ -41,6 +57,7 @@ export interface CampaignCompleteness {
  readonly vector: readonly [number,number,number,number,number];
  readonly unresolved: CompletenessIds;
  readonly statistics: {readonly T: CoverageStatistics; readonly I: CoverageStatistics};
+ readonly manualTests: ManualTests;
 }
 export interface CampaignCompletenessReport extends CampaignCompleteness {
  readonly findings: readonly TraceabilityDiscoveryFinding[];
@@ -83,18 +100,35 @@ function readCampaignAssessmentV2(value: unknown): CampaignAssessmentV2 {
  const legacy = readCampaignAssessmentV1({...record,schemaVersion:1,complete:{R:complete.O,A:complete.A,T:complete.T,I:complete.I}});
  return {...legacy,schemaVersion:2,complete:{O:legacy.complete.R,A:legacy.complete.A,T:legacy.complete.T,I:legacy.complete.I}};
 }
-export const CampaignAssessmentReaders = {V1:readCampaignAssessmentV1,V2:readCampaignAssessmentV2};
-function readCampaignAssessment(value: unknown): CampaignAssessmentV2 {
+function readCampaignAssessmentV3(value: unknown): CampaignAssessmentV3 {
+ const record = object(value,['schemaVersion','campaign','requirementIds','complete','reviewReferences','validationTags','manualTests']);
+ if (record.schemaVersion !== 3) throw new Error('Unsupported campaign assessment version');
+ const {manualTests:rawManualTests,...previous} = record;
+ const previousAssessment = readCampaignAssessmentV2({...previous,schemaVersion:2});
+ const manual = object(rawManualTests,['disabled','pending','passed','failed','requestReferences']);
+ const manualTests: ManualTests = {disabled:strings(manual.disabled),pending:strings(manual.pending),passed:strings(manual.passed),failed:strings(manual.failed),requestReferences:strings(manual.requestReferences)};
+ const ids = [...manualTests.disabled,...manualTests.pending,...manualTests.passed,...manualTests.failed];
+ if (new Set(ids).size !== ids.length) throw new Error('Manual test statuses must be disjoint');
+ if (ids.length > 0 && previousAssessment.reviewReferences.length === 0) throw new Error('Manual classification requires review references');
+ if (manualTests.pending.length + manualTests.passed.length + manualTests.failed.length > 0 && manualTests.requestReferences.length === 0) throw new Error('Enabled manual tests require explicit user request references');
+ if (manualTests.passed.length > 0 && previousAssessment.validationTags.length === 0) throw new Error('Passed manual tests require validation tags');
+ return {...previousAssessment,schemaVersion:3,manualTests};
+}
+export const CampaignAssessmentReaders = {V1:readCampaignAssessmentV1,V2:readCampaignAssessmentV2,V3:readCampaignAssessmentV3};
+function readCampaignAssessment(value: unknown): CampaignAssessmentV3 {
  if (!isRecord(value)) throw new Error('Expected campaign assessment object');
+ if (value.schemaVersion === 3) return readCampaignAssessmentV3(value);
+ let previous: CampaignAssessmentV2;
  if (value.schemaVersion === 1) {
   const legacy = readCampaignAssessmentV1(value);
-  return {...legacy,schemaVersion:2,complete:{O:legacy.complete.R,A:legacy.complete.A,T:legacy.complete.T,I:legacy.complete.I}};
- }
- return readCampaignAssessmentV2(value);
+  previous = {...legacy,schemaVersion:2,complete:{O:legacy.complete.R,A:legacy.complete.A,T:legacy.complete.T,I:legacy.complete.I}};
+ } else previous = readCampaignAssessmentV2(value);
+ return {...previous,schemaVersion:3,manualTests:{disabled:[],pending:[],passed:[],failed:[],requestReferences:[]}};
 }
 
 // Traceability: implements OBL-CM-DESCENT from implementation computeCampaignCompleteness
-export function computeCampaignCompleteness(graph: TraceabilityGraph, assessment: CampaignAssessmentV2, commit: string, assessmentTag: string | null, findings: readonly TraceabilityDiscoveryFinding[] = []): CampaignCompleteness {
+export function computeCampaignCompleteness(graph: TraceabilityGraph, assessment: CampaignAssessmentV2 | CampaignAssessmentV3, commit: string, assessmentTag: string | null, findings: readonly TraceabilityDiscoveryFinding[] = []): CampaignCompleteness {
+ const manualTests = assessment.schemaVersion === 3 ? assessment.manualTests : {disabled:[],pending:[],passed:[],failed:[],requestReferences:[]};
  const scoped = scopeTraceabilityGraph(graph,assessment.requirementIds);
  const kindsById = new Map(scoped.entities.map(entity => [entity.id,entity.kind]));
  const byKind = (kind: string): readonly string[] => scoped.entities.filter(entity => entity.kind === kind).map(entity => entity.id).sort();
@@ -110,14 +144,20 @@ export function computeCampaignCompleteness(graph: TraceabilityGraph, assessment
  const incoming = (id: string, kinds: readonly string[]): readonly string[] => scoped.relationships
   .filter(edge => edge.target === id && kinds.includes(kindsById.get(edge.source) ?? ''))
   .map(edge => edge.source);
+ for (const id of [...manualTests.disabled,...manualTests.pending,...manualTests.passed,...manualTests.failed]) {
+  if (kindsById.get(id) !== 'integration-test') throw new Error(`Manual test must identify an in-scope integration test: ${id}`);
+ }
+ const tests = (id: string): readonly string[] => incoming(id,['unit-test','integration-test']);
+ const disabledOnly = (id: string): boolean => tests(id).length > 0 && tests(id).every(testId => manualTests.disabled.includes(testId));
  const implemented = (id: string): boolean => incoming(id,['implementation']).length > 0;
- const tested = (id: string): boolean => assessment.complete.T.includes(id) && incoming(id,['unit-test','integration-test']).length > 0
+ const tested = (id: string): boolean => (disabledOnly(id) || assessment.complete.T.includes(id)) && tests(id).length > 0
+  && !tests(id).some(testId => manualTests.pending.includes(testId) || manualTests.failed.includes(testId))
   && scoped.relationships.filter(edge => edge.source === id).every(edge => implemented(edge.target));
  const unresolved: CompletenessIds = {
   O:requirements.filter(id => !assessment.complete.O.includes(id) || incoming(id,['obligation']).length === 0),
   A:obligations.filter(id => !assessment.complete.A.includes(id) || incoming(id,['acceptance']).length === 0),
   T:acceptances.filter(id => !tested(id)),
-  I:obligations.filter(id => !assessment.complete.I.includes(id) || !implemented(id) || !assessment.complete.A.includes(id)
+  I:obligations.filter(id => (!assessment.complete.I.includes(id) && !incoming(id,['acceptance']).every(disabledOnly)) || !implemented(id) || !assessment.complete.A.includes(id)
    || incoming(id,['acceptance']).length === 0 || !incoming(id,['acceptance']).every(tested)),
  };
  const coverageStatistics = (ids: readonly string[], unresolvedIds: readonly string[], linked: (id: string) => boolean): CoverageStatistics => {
@@ -125,7 +165,7 @@ export function computeCampaignCompleteness(graph: TraceabilityGraph, assessment
   return {total:ids.length,missingLink,linkedUnresolved:unresolvedIds.length-missingLink,complete:ids.length-unresolvedIds.length};
  };
  return {campaign:assessment.campaign,commit,assessmentTag,requirementIds:[...assessment.requirementIds].sort(),
-  vector:[findings.length,unresolved.O.length,unresolved.A.length,unresolved.T.length,unresolved.I.length],unresolved,
+  vector:[findings.length,unresolved.O.length,unresolved.A.length,unresolved.T.length,unresolved.I.length],unresolved,manualTests,
   statistics:{T:coverageStatistics(acceptances,unresolved.T,id => incoming(id,['unit-test','integration-test']).length > 0),
    I:coverageStatistics(obligations,unresolved.I,implemented)}};
 }
@@ -153,7 +193,7 @@ export function runTraceabilityCompleteness(argv: readonly string[], cwd = proce
  for (let index = 0; index < argv.length; index += 1) {
   const argument = argv[index];
   if (argument === '--help') {
-   process.stdout.write('Usage: ponytail traceability completeness [--campaign <name>] [--assessment-tag <tag> | --requirement <id> ...] [--json] [--verbose]\nDefault output is the vector only; --verbose includes unresolved IDs and findings. Progress is written to stderr, except with --json.\nWithout an explicit tag, select the unique current-commit assessment tag for the campaign. Explicit tags assess their immutable target; explicit requirements assess HEAD. Working-tree edits are not included.\n');
+   process.stdout.write('Usage: ponytail traceability completeness [--campaign <name>] [--assessment-tag <tag> | --requirement <id> ...] [--json] [--verbose]\nDefault output includes the vector, T/I coverage and manual test statuses; --verbose adds unresolved IDs and findings. Progress is written to stderr, except with --json.\nV3 assessment tags classify manual integration tests: disabled by default, enabled only by explicit user request. Disabled manual tests require complete graph links, not passing execution credit.\nWithout an explicit tag, select the unique current-commit assessment tag for the campaign. Explicit tags assess their immutable target; explicit requirements assess HEAD. Working-tree edits are not included.\n');
    return null;
   }
   if (argument === '--verbose') { verbose = true; continue; }
@@ -172,10 +212,10 @@ export function runTraceabilityCompleteness(argv: readonly string[], cwd = proce
  try {
  const root = fs.realpathSync(git(cwd,['rev-parse','--show-toplevel']));
  let commit = git(root,['rev-parse','HEAD']);
- let assessment: CampaignAssessmentV2;
+ let assessment: CampaignAssessmentV3;
  if (requirementIds.length > 0) {
   if (campaign === undefined) throw new Error('Unassessed scope requires --campaign');
-  assessment = readCampaignAssessmentV2({schemaVersion:2,campaign,requirementIds,complete:{O:[],A:[],T:[],I:[]},reviewReferences:[],validationTags:[]});
+  assessment = readCampaignAssessment({schemaVersion:3,campaign,requirementIds,complete:{O:[],A:[],T:[],I:[]},reviewReferences:[],validationTags:[],manualTests:{disabled:[],pending:[],passed:[],failed:[],requestReferences:[]}});
  } else {
   if (assessmentTag === undefined) {
    const pattern = campaign === undefined ? 'ponytail/completeness/*' : `ponytail/completeness/${campaign}/*`;
@@ -188,7 +228,7 @@ export function runTraceabilityCompleteness(argv: readonly string[], cwd = proce
   const tag = annotatedTag(root,assessmentTag);
   commit = tag.commit;
   const payload: unknown = parse(tag.contents,null,token => {
-   if (token !== '1' && token !== '2') throw new Error(`Unsupported assessment number: ${token}`);
+   if (token !== '1' && token !== '2' && token !== '3') throw new Error(`Unsupported assessment number: ${token}`);
    return Number(token);
   });
   assessment = readCampaignAssessment(payload);
@@ -225,6 +265,7 @@ export function runTraceabilityCompleteness(argv: readonly string[], cwd = proce
    process.stdout.write(`${coordinate} coverage: ${coverageStatistics.total} total; ${coverageStatistics.missingLink} no linked artifact; ${coverageStatistics.linkedUnresolved} linked but not accepted complete; ${coverageStatistics.complete} accepted complete\n`);
   }
   process.stdout.write('Links establish presence only; unresolved linked coverage may need repair, execution, review or assessment.\n');
+  process.stdout.write(`Manual tests: ${result.manualTests.disabled.length} disabled/not run; ${result.manualTests.pending.length} enabled/pending; ${result.manualTests.passed.length} passed; ${result.manualTests.failed.length} failed\n`);
   if (result.completionBlocked && !verbose) process.stderr.write(`O/A/T/I are provisional: completion blocked by ${result.findings.length} annotation findings; use --verbose for details.\n`);
   if (verbose) {
   process.stdout.write(`Campaign: ${result.campaign}; commit: ${commit}; assessment: ${result.assessmentTag ?? 'none (all adequacy unknown)'}\n`);

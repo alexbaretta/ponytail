@@ -9,6 +9,14 @@ Licensed under the MIT License. See LICENSE in the project root.
 
 These acceptances are activated with the redesign. Executable test IDs and
 implementation links are pending; these procedures do not claim passing proof.
+
+For ACC-CM-DESCENT, also verify a complete manual-only graph reaches zero with
+manual execution disabled and no T/I execution credit; removing an implementation
+link still opens T/I. Adding an automated test requires passing assessment credit.
+Enabling manual tests requires a user-request reference: pending/failed opens T/I,
+while reviewed passing results permit completion. Reject duplicate statuses,
+out-of-scope IDs and manual classification of unit tests. Preserve V1/V2 behavior
+and display all four manual execution statuses in JSON and concise CLI output.
 Run automated fixtures through the owning project commands; real session
 continuity additionally requires the authorized Gwen pilot.
 

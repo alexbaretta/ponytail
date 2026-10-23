@@ -241,17 +241,41 @@ Git tag per campaign per assessed commit. Pass its JSON directly on stdin to
 
 ```json
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "campaign": "example",
   "requirementIds": ["REQ-A"],
   "complete": {"O": [], "A": [], "T": [], "I": []},
   "reviewReferences": [],
-  "validationTags": []
+  "validationTags": [],
+  "manualTests": {"disabled": [], "pending": [], "passed": [], "failed": [], "requestReferences": []}
 }
 ```
 
-Version 2 uses `O` for obligation decomposition. Existing version 1 tags with
-`complete.R` remain readable and normalize to `O`; create new assessments as version 2.
+Version 3 adds manual execution status. Versions 1 and 2 remain readable with
+their original execution requirements; version 1 `complete.R` normalizes to `O`.
+Create new assessments as version 3.
+
+`manualTests` partitions reviewed human-intervention integration test IDs into
+disjoint `disabled`, `pending`, `passed` and `failed` lists. IDs must identify
+actual in-scope integration registrations; no graph node or edge is removed.
+Unlisted tests retain mandatory automated validation. Classify a test as manual
+because its intended execution needs a human, never because automation is broken.
+Manual tests are disabled by default and run only at the user's explicit request.
+Record that request's reference in `requestReferences` before enabling the
+requested tests; do not infer authorization from general campaign approval.
+Passed manual tests require applicable validation tags; pending or failed enabled
+tests prevent completion of their linked acceptance and obligation.
+
+For acceptances covered exclusively by disabled manual tests, complete graph links
+satisfy T without `complete.T` execution credit. Obligations whose acceptances
+all have that status satisfy I when implementation links and reviewed acceptance
+coverage exist, without `complete.I` execution credit. O/A review remains required.
+Mixed manual/automated coverage still requires normal T/I review and passing
+automated proof. Disabled manual execution contributes no passing evidence and
+does not waive required automated QA. Adversarial review checks classification,
+test adequacy and implementation correspondence; placeholders are not coverage.
+The report's `manualTests` lists and human-readable counts distinguish disabled/not
+run, enabled/pending, passed and failed. FOATI and the full graph remain unchanged.
 
 `complete.O` lists requirements with reviewed complete decomposition;
 `complete.A` lists obligations with reviewed adequate acceptances;
@@ -265,7 +289,7 @@ tag existence, ancestry, exact assessment commit, scope and graph structure;
 it cannot establish the truth of a review or test claim from prose. Never include
 failed, skipped, stale or inadequate proof in completed sets.
 
-The assessment cannot override missing graph relationships. Unassessed IDs stay
+The assessment cannot override missing graph relationships. Except for reviewed disabled-manual coverage above, unassessed IDs stay
 unresolved; I also requires adequate acceptance coverage and passing linked
 tests. Ambiguous graphs, wrong-kind/out-of-scope assessment IDs,
 missing validation references and invalid committed configuration or source files fail.
@@ -305,8 +329,8 @@ Every requirement needs adequate atomic decomposition. Every obligation needs
 adequate acceptance coverage and implementing code. Every acceptance needs an
 identified executable unit test or integration test. Either test layer may be
 sufficient; V5 has no mandatory per-layer quota and no no-unit-test waiver.
-Manual observations may supplement automated proof but cannot replace the
-required executable acceptance link. Multiple acceptances can jointly prove an
+Integration tests requiring human intervention retain their executable acceptance
+links and follow the manual execution policy above. Multiple acceptances can jointly prove an
 obligation; every one remains individually accountable for its own tests.
 
 The checker discovers declarations before assessing edges. A second acceptance
@@ -319,8 +343,10 @@ Structural validity establishes discoverability, not adequacy or execution.
 Adversarial review assesses whether decomposition, observations, selected tests
 and implementation establish the approved conditions. Unknown adequacy remains
 unresolved. T and I in the campaign completeness vector may decrease only when
-both linked tests and implementation exist and the implementation passes those
-tests. An unrelated successful command cannot establish their coverage.
+both linked tests and implementation exist and the implementation passes required
+automated and explicitly enabled manual tests. Disabled manual tests require
+structural completeness under the policy above, not execution credit.
+An unrelated successful command cannot establish coverage.
 
 Follow [plan-execution's annotated-tag-only policy](../plan-execution/SKILL.md#annotated-tag-only-validation).
 Do not add passing output, certificate ledgers or evidence-only commits. Keep

@@ -6,7 +6,7 @@ import os from 'node:os';
 import path from 'node:path';
 import {execFileSync,spawnSync} from 'node:child_process';
 import test,{type TestContext} from 'node:test';
-import {CampaignAssessmentReaders,computeCampaignCompleteness,type CampaignAssessmentV2} from '../src/traceability-completeness.js';
+import {CampaignAssessmentReaders,computeCampaignCompleteness,type CampaignAssessmentV2,type CampaignAssessmentV3} from '../src/traceability-completeness.js';
 import type {TraceabilityGraph} from '../skills/requirements-traceability/scripts/traceability-graph.js';
 import type {TraceabilityConfigurationV5} from '../skills/requirements-traceability/scripts/traceability-project.js';
 
@@ -72,6 +72,39 @@ function fixture(context: TestContext): string {
 function git(root: string, args: readonly string[]): string {
  return execFileSync('git',['-c','user.name=Fixture','-c','user.email=fixture@example.test',...args],{cwd:root,encoding:'utf8'}).trim();
 }
+
+// Traceability: verifies ACC-CM-DESCENT from unit-test TEST-CM-MANUAL-COMPLETENESS
+test('manual execution is optional by default without waiving graph links or automated proof', context => {
+ const root = fixture(context);
+ const manualGraph: TraceabilityGraph = {...graph,entities:graph.entities.map(entity => entity.id === 'TEST-A' ? {...entity,kind:'integration-test'} : entity)};
+ const manualAssessment: CampaignAssessmentV3 = {...assessment(),schemaVersion:3,complete:{O:['REQ-A'],A:['OBL-A'],T:[],I:[]},validationTags:[],
+  manualTests:{disabled:['TEST-A'],pending:[],passed:[],failed:[],requestReferences:[]}};
+ assert.deepEqual(CampaignAssessmentReaders.V3(manualAssessment),manualAssessment);
+ assert.deepEqual(computeCampaignCompleteness(manualGraph,manualAssessment,'commit','tag').vector,[0,0,0,0,0]);
+ const missingCode: TraceabilityGraph = {...manualGraph,entities:manualGraph.entities.filter(entity => entity.id !== 'work'),relationships:manualGraph.relationships.filter(edge => edge.source !== 'work')};
+ assert.deepEqual(computeCampaignCompleteness(missingCode,manualAssessment,'commit','tag').vector,[0,0,0,1,1]);
+ assert.throws(() => computeCampaignCompleteness(graph,manualAssessment,'commit','tag'),/in-scope integration test/);
+ const mixedGraph: TraceabilityGraph = {entities:[...manualGraph.entities,{id:'AUTO',kind:'unit-test',path:'auto.js',line:1}],relationships:[...manualGraph.relationships,{source:'AUTO',target:'ACC-A',role:'verifies'}]};
+ assert.deepEqual(computeCampaignCompleteness(mixedGraph,manualAssessment,'commit','tag').vector,[0,0,0,1,1]);
+ for (const status of ['pending','passed','failed'] as const) {
+  const enabled: CampaignAssessmentV3 = {...manualAssessment,complete:assessment().complete,validationTags:assessment().validationTags,
+   manualTests:{disabled:[],pending:[],passed:[],failed:[],requestReferences:['user/request-manual-run'],[status]:['TEST-A']}};
+  assert.deepEqual(computeCampaignCompleteness(manualGraph,CampaignAssessmentReaders.V3(enabled),'commit','tag').vector,status === 'passed' ? [0,0,0,0,0] : [0,0,0,1,1]);
+  assert.throws(() => CampaignAssessmentReaders.V3({...enabled,manualTests:{...enabled.manualTests,requestReferences:[]}}),/explicit user request/);
+ }
+ assert.throws(() => CampaignAssessmentReaders.V3({...manualAssessment,manualTests:{...manualAssessment.manualTests,pending:['TEST-A']}}),/disjoint/);
+ assert.throws(() => CampaignAssessmentReaders.V3({...manualAssessment,reviewReferences:[]}),/review references/);
+ fs.writeFileSync(path.join(root,'test.js'),"// Traceability: verifies ACC-A from integration-test TEST-A\ntest('manual',()=>{});\n");
+ const configPath = path.join(root,'.agents/config/project/traceability.json');
+ fs.writeFileSync(configPath,fs.readFileSync(configPath,'utf8').replace('unit-test','integration-test'));
+ git(root,['add','.']);git(root,['commit','--quiet','-m','Classify manual integration test']);
+ git(root,['tag','-a','ponytail/completeness/demo/manual','-m',JSON.stringify(manualAssessment)]);
+ const result = command(root,['--json']);
+ assert.equal(result.status,0,result.stderr);
+ assert.deepEqual(JSON.parse(result.stdout).vector,[0,0,0,0,0]);
+ assert.deepEqual(JSON.parse(result.stdout).manualTests,manualAssessment.manualTests);
+ assert.match(command(root,[]).stdout,/Manual tests: 1 disabled\/not run; 0 enabled\/pending; 0 passed; 0 failed/);
+});
 function command(root: string, args: readonly string[]) {
  return spawnSync(process.execPath,[path.resolve(__dirname,'../../src/project-index.js'),'traceability','completeness',...args],{cwd:root,encoding:'utf8',env:{...process.env,PGHOST:'unreachable.invalid'}});
 }

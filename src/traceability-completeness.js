@@ -61,17 +61,42 @@ function readCampaignAssessmentV2(value) {
     const legacy = readCampaignAssessmentV1({ ...record, schemaVersion: 1, complete: { R: complete.O, A: complete.A, T: complete.T, I: complete.I } });
     return { ...legacy, schemaVersion: 2, complete: { O: legacy.complete.R, A: legacy.complete.A, T: legacy.complete.T, I: legacy.complete.I } };
 }
-exports.CampaignAssessmentReaders = { V1: readCampaignAssessmentV1, V2: readCampaignAssessmentV2 };
+function readCampaignAssessmentV3(value) {
+    const record = object(value, ['schemaVersion', 'campaign', 'requirementIds', 'complete', 'reviewReferences', 'validationTags', 'manualTests']);
+    if (record.schemaVersion !== 3)
+        throw new Error('Unsupported campaign assessment version');
+    const { manualTests: rawManualTests, ...previous } = record;
+    const previousAssessment = readCampaignAssessmentV2({ ...previous, schemaVersion: 2 });
+    const manual = object(rawManualTests, ['disabled', 'pending', 'passed', 'failed', 'requestReferences']);
+    const manualTests = { disabled: strings(manual.disabled), pending: strings(manual.pending), passed: strings(manual.passed), failed: strings(manual.failed), requestReferences: strings(manual.requestReferences) };
+    const ids = [...manualTests.disabled, ...manualTests.pending, ...manualTests.passed, ...manualTests.failed];
+    if (new Set(ids).size !== ids.length)
+        throw new Error('Manual test statuses must be disjoint');
+    if (ids.length > 0 && previousAssessment.reviewReferences.length === 0)
+        throw new Error('Manual classification requires review references');
+    if (manualTests.pending.length + manualTests.passed.length + manualTests.failed.length > 0 && manualTests.requestReferences.length === 0)
+        throw new Error('Enabled manual tests require explicit user request references');
+    if (manualTests.passed.length > 0 && previousAssessment.validationTags.length === 0)
+        throw new Error('Passed manual tests require validation tags');
+    return { ...previousAssessment, schemaVersion: 3, manualTests };
+}
+exports.CampaignAssessmentReaders = { V1: readCampaignAssessmentV1, V2: readCampaignAssessmentV2, V3: readCampaignAssessmentV3 };
 function readCampaignAssessment(value) {
     if (!isRecord(value))
         throw new Error('Expected campaign assessment object');
+    if (value.schemaVersion === 3)
+        return readCampaignAssessmentV3(value);
+    let previous;
     if (value.schemaVersion === 1) {
         const legacy = readCampaignAssessmentV1(value);
-        return { ...legacy, schemaVersion: 2, complete: { O: legacy.complete.R, A: legacy.complete.A, T: legacy.complete.T, I: legacy.complete.I } };
+        previous = { ...legacy, schemaVersion: 2, complete: { O: legacy.complete.R, A: legacy.complete.A, T: legacy.complete.T, I: legacy.complete.I } };
     }
-    return readCampaignAssessmentV2(value);
+    else
+        previous = readCampaignAssessmentV2(value);
+    return { ...previous, schemaVersion: 3, manualTests: { disabled: [], pending: [], passed: [], failed: [], requestReferences: [] } };
 }
 function computeCampaignCompleteness(graph, assessment, commit, assessmentTag, findings = []) {
+    const manualTests = assessment.schemaVersion === 3 ? assessment.manualTests : { disabled: [], pending: [], passed: [], failed: [], requestReferences: [] };
     const scoped = (0, traceability_graph_js_1.scopeTraceabilityGraph)(graph, assessment.requirementIds);
     const kindsById = new Map(scoped.entities.map(entity => [entity.id, entity.kind]));
     const byKind = (kind) => scoped.entities.filter(entity => entity.kind === kind).map(entity => entity.id).sort();
@@ -88,14 +113,21 @@ function computeCampaignCompleteness(graph, assessment, commit, assessmentTag, f
     const incoming = (id, kinds) => scoped.relationships
         .filter(edge => edge.target === id && kinds.includes(kindsById.get(edge.source) ?? ''))
         .map(edge => edge.source);
+    for (const id of [...manualTests.disabled, ...manualTests.pending, ...manualTests.passed, ...manualTests.failed]) {
+        if (kindsById.get(id) !== 'integration-test')
+            throw new Error(`Manual test must identify an in-scope integration test: ${id}`);
+    }
+    const tests = (id) => incoming(id, ['unit-test', 'integration-test']);
+    const disabledOnly = (id) => tests(id).length > 0 && tests(id).every(testId => manualTests.disabled.includes(testId));
     const implemented = (id) => incoming(id, ['implementation']).length > 0;
-    const tested = (id) => assessment.complete.T.includes(id) && incoming(id, ['unit-test', 'integration-test']).length > 0
+    const tested = (id) => (disabledOnly(id) || assessment.complete.T.includes(id)) && tests(id).length > 0
+        && !tests(id).some(testId => manualTests.pending.includes(testId) || manualTests.failed.includes(testId))
         && scoped.relationships.filter(edge => edge.source === id).every(edge => implemented(edge.target));
     const unresolved = {
         O: requirements.filter(id => !assessment.complete.O.includes(id) || incoming(id, ['obligation']).length === 0),
         A: obligations.filter(id => !assessment.complete.A.includes(id) || incoming(id, ['acceptance']).length === 0),
         T: acceptances.filter(id => !tested(id)),
-        I: obligations.filter(id => !assessment.complete.I.includes(id) || !implemented(id) || !assessment.complete.A.includes(id)
+        I: obligations.filter(id => (!assessment.complete.I.includes(id) && !incoming(id, ['acceptance']).every(disabledOnly)) || !implemented(id) || !assessment.complete.A.includes(id)
             || incoming(id, ['acceptance']).length === 0 || !incoming(id, ['acceptance']).every(tested)),
     };
     const coverageStatistics = (ids, unresolvedIds, linked) => {
@@ -103,7 +135,7 @@ function computeCampaignCompleteness(graph, assessment, commit, assessmentTag, f
         return { total: ids.length, missingLink, linkedUnresolved: unresolvedIds.length - missingLink, complete: ids.length - unresolvedIds.length };
     };
     return { campaign: assessment.campaign, commit, assessmentTag, requirementIds: [...assessment.requirementIds].sort(),
-        vector: [findings.length, unresolved.O.length, unresolved.A.length, unresolved.T.length, unresolved.I.length], unresolved,
+        vector: [findings.length, unresolved.O.length, unresolved.A.length, unresolved.T.length, unresolved.I.length], unresolved, manualTests,
         statistics: { T: coverageStatistics(acceptances, unresolved.T, id => incoming(id, ['unit-test', 'integration-test']).length > 0),
             I: coverageStatistics(obligations, unresolved.I, implemented) } };
 }
@@ -130,7 +162,7 @@ function runTraceabilityCompleteness(argv, cwd = process.cwd()) {
     for (let index = 0; index < argv.length; index += 1) {
         const argument = argv[index];
         if (argument === '--help') {
-            process.stdout.write('Usage: ponytail traceability completeness [--campaign <name>] [--assessment-tag <tag> | --requirement <id> ...] [--json] [--verbose]\nDefault output is the vector only; --verbose includes unresolved IDs and findings. Progress is written to stderr, except with --json.\nWithout an explicit tag, select the unique current-commit assessment tag for the campaign. Explicit tags assess their immutable target; explicit requirements assess HEAD. Working-tree edits are not included.\n');
+            process.stdout.write('Usage: ponytail traceability completeness [--campaign <name>] [--assessment-tag <tag> | --requirement <id> ...] [--json] [--verbose]\nDefault output includes the vector, T/I coverage and manual test statuses; --verbose adds unresolved IDs and findings. Progress is written to stderr, except with --json.\nV3 assessment tags classify manual integration tests: disabled by default, enabled only by explicit user request. Disabled manual tests require complete graph links, not passing execution credit.\nWithout an explicit tag, select the unique current-commit assessment tag for the campaign. Explicit tags assess their immutable target; explicit requirements assess HEAD. Working-tree edits are not included.\n');
             return null;
         }
         if (argument === '--verbose') {
@@ -166,7 +198,7 @@ function runTraceabilityCompleteness(argv, cwd = process.cwd()) {
         if (requirementIds.length > 0) {
             if (campaign === undefined)
                 throw new Error('Unassessed scope requires --campaign');
-            assessment = readCampaignAssessmentV2({ schemaVersion: 2, campaign, requirementIds, complete: { O: [], A: [], T: [], I: [] }, reviewReferences: [], validationTags: [] });
+            assessment = readCampaignAssessment({ schemaVersion: 3, campaign, requirementIds, complete: { O: [], A: [], T: [], I: [] }, reviewReferences: [], validationTags: [], manualTests: { disabled: [], pending: [], passed: [], failed: [], requestReferences: [] } });
         }
         else {
             if (assessmentTag === undefined) {
@@ -183,7 +215,7 @@ function runTraceabilityCompleteness(argv, cwd = process.cwd()) {
             const tag = annotatedTag(root, assessmentTag);
             commit = tag.commit;
             const payload = (0, lossless_json_1.parse)(tag.contents, null, token => {
-                if (token !== '1' && token !== '2')
+                if (token !== '1' && token !== '2' && token !== '3')
                     throw new Error(`Unsupported assessment number: ${token}`);
                 return Number(token);
             });
@@ -226,6 +258,7 @@ function runTraceabilityCompleteness(argv, cwd = process.cwd()) {
                 process.stdout.write(`${coordinate} coverage: ${coverageStatistics.total} total; ${coverageStatistics.missingLink} no linked artifact; ${coverageStatistics.linkedUnresolved} linked but not accepted complete; ${coverageStatistics.complete} accepted complete\n`);
             }
             process.stdout.write('Links establish presence only; unresolved linked coverage may need repair, execution, review or assessment.\n');
+            process.stdout.write(`Manual tests: ${result.manualTests.disabled.length} disabled/not run; ${result.manualTests.pending.length} enabled/pending; ${result.manualTests.passed.length} passed; ${result.manualTests.failed.length} failed\n`);
             if (result.completionBlocked && !verbose)
                 process.stderr.write(`O/A/T/I are provisional: completion blocked by ${result.findings.length} annotation findings; use --verbose for details.\n`);
             if (verbose) {

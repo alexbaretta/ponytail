@@ -16,6 +16,15 @@ to that reconciliation; they are distinguished from stakeholder decisions.
 
 ## Motivation and scope
 
+Manual execution decision (2026-10-22): human-intervention integration tests are
+disabled by default and run only on explicit user request. Keep the entire
+requirement/obligation/acceptance/test/implementation DAG. Disabled manual coverage
+requires structural completeness, not passing execution credit. Required automated
+and enabled manual tests must pass. FOATI is unchanged; report manual statuses
+separately. The requirements-traceability skill owns the assessment format and
+counting rules. This decision qualifies earlier unconditional passing-test wording
+below; it does not permit reclassifying broken automated tests as manual.
+
 A client-agent assessment reported approximately 126,000 added lines of
 ledger/evidence against 4,600 added lines of implementation/tooling and tests over
 ten hours. Those client figures were supplied as an assessment, not independently

@@ -35,7 +35,8 @@ test('V5 instructions separate executable acceptance coverage, adequacy and lega
  assert.match(skill,/Every acceptance needs an\nidentified executable unit test or integration test/);
  assert.match(skill,/second acceptance\nwithout a test must remain a gap/);
  assert.match(skill,/Unknown adequacy remains\nunresolved/);
- assert.match(skill,/implementation passes those\ntests/);
+ assert.match(skill,/implementation passes required\nautomated and explicitly enabled manual tests/);
+ assert.match(skill,/Manual tests are disabled by default/);
  assert.match(skill,/TSTS owns only semantic TypeScript locators/);
  const legacy = fs.readFileSync(path.join(root,'skills/requirements-traceability/references/legacy-graph.md'),'utf8');
  assert.match(legacy,/legacy green result cannot\nprove that every acceptance has an executable test/);

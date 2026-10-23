@@ -124,8 +124,11 @@ manual acceptance when automation cannot establish the human-observable
 outcome honestly.
 
 Each V5 acceptance must have at least one identified executable unit or
-integration test. Either layer can supply sufficient proof; manual acceptance
-supplements it. An acceptance without a test remains incomplete even when other
+integration test. Either layer can supply sufficient proof. Integration tests
+requiring human intervention retain their definitions and links but are disabled
+by default, non-blocking when omitted, and run only at the user's explicit request.
+Follow `requirements-traceability` for manual status and completion accounting;
+broken automated tests do not become manual tests. An acceptance without a test remains incomplete even when other
 acceptances of the obligation are covered. Give test registrations stable IDs
 and canonical acceptance links under `requirements-traceability`. Do not infer
 coverage from similar test names or an unrelated passing suite.
