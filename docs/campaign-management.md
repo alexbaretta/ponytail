@@ -472,7 +472,12 @@ permits cover the command's child processes, nested calls and cancellation witho
 stale occupied markers. Lightweight work and Git operations require no heavy
 permit. The coordinator does not allocate these permits or impose rebase windows;
 resource capacity never substitutes for required user authorization. User decision:
-2026-10-22.
+2026-10-22. For Gwen, the user explicitly permits temporary cap overshoot after
+abnormal Docker client exit: release the permit without requiring confirmation
+that daemon-side work has stopped, and report that work may remain. Normal
+admission retains the two-operation cap. This exception avoids indefinite permit
+retention and coordinator recovery approval for an ambiguous Docker client exit;
+it does not weaken other process-lifetime handling.
 
 The proposed integration contract is to fast-forward only the submitted,
 reviewed, tagged candidate. The coordinator checks candidate/base identity,

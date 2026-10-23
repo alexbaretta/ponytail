@@ -42,7 +42,11 @@ Enforce approved heavy-operation limits automatically at project command entry
 points, using a semaphore shared across its worktrees. Workers acquire capacity
 without coordinator allocation or acknowledgment; waiting commands report the
 capacity wait. Use OS-managed permits whose lifetime covers the command and its
-children, including nested invocations and cancellation. Git operations and
+children, including nested invocations and cancellation. Honor explicit
+project-specific user exceptions: when the user permits temporary cap overshoot
+after abnormal Docker client exit, release that permit without waiting for
+daemon-quiescence confirmation and report that daemon work may remain. Do not
+describe client exit as proof that daemon work stopped. Git operations and
 lightweight work do not acquire heavy permits. A permit grants capacity, not
 otherwise-missing authorization. Do not introduce manual rebase windows or
 per-command coordinator approval gates. Serialize shared-branch integration only.
