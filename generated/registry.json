@@ -431,7 +431,7 @@
         "pi",
         "qoder"
       ],
-      "reason": "Link approved requirements to implementation and verification"
+      "reason": "Create and check the typed SDLC compliance graph"
     },
     {
       "kind": "skill",

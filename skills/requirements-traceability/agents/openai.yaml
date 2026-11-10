@@ -2,5 +2,5 @@
 # Licensed under the MIT License. See LICENSE in the project root.
 interface:
   display_name: "Requirements Traceability"
-  short_description: "Link requirements to implementation and verification"
-  default_prompt: "Use $requirements-traceability to add or verify durable requirement relationships."
+  short_description: "Create and check the typed compliance graph"
+  default_prompt: "Use $requirements-traceability to create or check the project's traceability and completeness records."

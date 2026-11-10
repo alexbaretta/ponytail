@@ -4,42 +4,54 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
-import {discoverTraceabilitySource} from '../skills/requirements-traceability/scripts/traceability-discovery.js';
-import {validateTraceabilityGraph} from '../skills/requirements-traceability/scripts/traceability-graph.js';
 
 const root = path.resolve(__dirname,'../..');
 const skill = fs.readFileSync(path.join(root,'skills/requirements-traceability/SKILL.md'),'utf8');
 
+function tableRows(heading: string): readonly (readonly string[])[] {
+ const section = skill.match(new RegExp(`## ${heading}\\n([\\s\\S]*?)(?=\\n## |$)`,'u'))?.[1];
+ assert.ok(section,heading);
+ return [...section.matchAll(/^\|([^\n]+)\|$/gmu)]
+  .slice(2)
+  .map(match => match[1]?.split('|').map(cell => cell.trim()) ?? []);
+}
+
 // Traceability: verifies ACC-CM-GRAPH from unit-test TEST-CM-SKILL-GRAPH-EXAMPLES
-test('published graph examples compose a valid graph using the actual discovery parser', () => {
- const examples = [...skill.matchAll(/```(markdown|typescript)\n([\s\S]*?)\n```/gu)];
- assert.equal(examples.length,3);
- const requirement = examples[0]?.[2];
- const acceptance = examples[1]?.[2];
- const typescript = examples[2]?.[2];
- assert.ok(requirement && acceptance && typescript);
- const testStart = typescript.indexOf('// Traceability: verifies');
- assert.ok(testStart > 0);
- const discoveries = [
-  discoverTraceabilitySource({kind:'markdown',path:'pm/requirements/order.md',text:requirement}),
-  discoverTraceabilitySource({kind:'markdown',path:'pm/uat/order.md',text:acceptance}),
-  discoverTraceabilitySource({kind:'implementation',path:'src/order.ts',text:typescript.slice(0,testStart)}),
-  discoverTraceabilitySource({kind:'unit-test',path:'test/order.ts',text:typescript.slice(testStart)}),
- ];
- assert.deepEqual(discoveries.flatMap(item => item.findings),[]);
- assert.deepEqual(validateTraceabilityGraph({entities:discoveries.flatMap(item => item.graph.entities),relationships:discoveries.flatMap(item => item.graph.relationships)}),[]);
+test('expanded ontology and graph remain complete and source-owned', () => {
+ const kinds = tableRows('Canonical records').map(row => row[0]);
+ assert.deepEqual(kinds,[
+  'Requirement','Obligation','Constraint','Invariant','Structure',
+  'Component','Acceptance','Test','Implementation',
+ ]);
+
+ const graph = tableRows('Canonical graph').map(row => row.slice(0,3));
+ assert.deepEqual(graph,[
+  ['Obligation','`decomposes`','Requirement'],
+  ['Structure element','`satisfies`','Requirement'],
+  ['Component','`refines`','Structure element'],
+  ['Component element','`realizes`','Obligation'],
+  ['Invariant','`specializes`','Constraint'],
+  ['Component','`governed-by`','Invariant'],
+  ['Acceptance','`verifies`','Obligation'],
+  ['Unit or integration test','`verifies`','Acceptance or Invariant'],
+  ['Implementation','`implements`','Component element'],
+  ['Implementation','`upholds`','Invariant'],
+ ]);
+ assert.match(skill,/Each relationship is declared beside its source/);
+ assert.match(skill,/A component owns its\nidentified elements and declares which invariants govern it/);
 });
 
 // Traceability: verifies ACC-CM-ACCEPTANCE-COVERAGE from unit-test TEST-CM-SKILL-COVERAGE-BOUNDARY
-test('V5 instructions separate executable acceptance coverage, adequacy and legacy semantics', () => {
- assert.match(skill,/Every acceptance needs an\nidentified executable unit test or integration test/);
- assert.match(skill,/second acceptance\nwithout a test must remain a gap/);
- assert.match(skill,/Unknown adequacy remains\nunresolved/);
- assert.match(skill,/implementation passes required\nautomated and explicitly enabled manual tests/);
- assert.match(skill,/Manual tests are disabled by default/);
- assert.match(skill,/TSTS owns only semantic TypeScript locators/);
- const legacy = fs.readFileSync(path.join(root,'skills/requirements-traceability/references/legacy-graph.md'),'utf8');
- assert.match(legacy,/legacy green result cannot\nprove that every acceptance has an executable test/);
+test('expanded compliance instructions preserve evidence and scope gates', () => {
+ assert.match(skill,/\*\*Structural:\*\*/);
+ assert.match(skill,/\*\*Executional:\*\*/);
+ assert.match(skill,/\*\*Semantic:\*\*/);
+ assert.match(skill,/F \| \(Cn, R, S, O, Cm, In, A, T, Im\)/);
+ assert.match(skill,/Every revision must have `F = 0`/);
+ assert.match(skill,/Every integration into a shared line must leave the baseline vector zero/);
+ assert.match(skill,/Every release must have a zero baseline vector and make all in-flight behavior\n  unreachable/);
+ assert.match(skill,/A correction creates a new assessment naming the one it\nsupersedes/);
+ assert.match(skill,/Earlier traceability configurations retain their documented meanings/);
  for (const match of skill.matchAll(/\]\(([^)]+\.md)\)/gu)) {
   const relative = match[1];
   assert.ok(relative);
